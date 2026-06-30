@@ -2,10 +2,13 @@ package com.openggf.graphics;
 
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
-import com.openggf.game.GameRuntime;
-import com.openggf.game.RuntimeManager;
+import com.openggf.graphics.color.DisplayColorConverter;
+import com.openggf.graphics.color.DisplayColorProfile;
 import com.openggf.graphics.pipeline.UiRenderPipeline;
+import com.openggf.graphics.shaderlib.DisplayShaderPipeline;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
@@ -20,8 +23,13 @@ import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
 import static org.lwjgl.opengl.GL20.*;
 
+import java.util.Queue;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,11 +42,18 @@ public class GraphicsManager {
 
 	private static GraphicsManager graphicsManager;
 	List<GLCommandable> commands = new ArrayList<>();
+	private List<GLCommandable> commandCaptureTarget;
+	// Pool of reusable capture lists for executeCapturedCommands() (stack so
+	// nested captures don't share a list). Lists are cleared before pooling.
+	private final java.util.ArrayDeque<List<GLCommandable>> captureListPool = new java.util.ArrayDeque<>(2);
+	private final Queue<PendingRenderThreadTask<?>> pendingRenderThreadTasks = new ConcurrentLinkedQueue<>();
 
 	private final Map<String, Integer> paletteTextureMap = new HashMap<>(); // Map for palette textures
 	private Integer combinedPaletteTextureId;
 	private int currentPaletteTextureHeight = 0;
+	private DisplayColorProfile displayColorProfile = DisplayColorProfile.RAW_RGB;
 	private PatternAtlas patternAtlas;
+	private com.openggf.debug.PerformanceProfiler profiler;
 	// Lazily allocated to avoid LWJGL native library loading in headless tests
 	private ByteBuffer paletteUploadBuffer;
 	private ByteBuffer underwaterPaletteUploadBuffer;
@@ -76,9 +91,17 @@ public class GraphicsManager {
 	// Sprite priority shader mode flags
 	private boolean useSpritePriorityShader = false;
 	private boolean currentSpriteHighPriority = false;
+	private boolean ghostRenderEffectActive = false;
+	private float ghostRenderAlpha = 1.0f;
 	private boolean spriteSatCollectionActive = false;
 	private boolean spriteMaskRequested = false;
 	private final List<SpriteSatEntry> spriteSatEntries = new ArrayList<>();
+	// Reusable buffers/scratch for endSpriteSatCollectionAndReplay() — avoids per-frame
+	// ArrayList and PatternDesc allocations on the SAT replay hot path.
+	private final ArrayList<PatternRenderCommand> reusableReplayCommands = new ArrayList<>();
+	private final PatternDesc reusableReplayDesc = new PatternDesc();
+	// True while replaySpriteSatEntriesBatched has an instanced batch open.
+	private boolean satReplayBatchOpen = false;
 	private String currentSpriteSatDebugSource = null;
 	private int currentSpriteSatBucket = RenderPriority.MIN;
 	// Background renderer for per-scanline parallax scrolling
@@ -92,6 +115,7 @@ public class GraphicsManager {
 
 	// Unified UI render pipeline for overlay + fade ordering
 	private UiRenderPipeline uiRenderPipeline;
+	private DisplayShaderPipeline displayShaderPipeline;
 
 	// Batched rendering support
 	private boolean batchingEnabled = true;
@@ -112,11 +136,20 @@ public class GraphicsManager {
 	 */
 	private Engine engine;
 
+	public void setPerformanceProfiler(com.openggf.debug.PerformanceProfiler profiler) {
+		this.profiler = profiler;
+	}
+
 	/**
 	 * Projection matrix buffer for shader-based rendering.
 	 * Can be set directly by tests or other code that doesn't have an Engine instance.
 	 */
 	private float[] projectionMatrixBuffer;
+
+	/** Reusable JOML matrix for safe-area projection computation (avoids per-call allocation). */
+	private final org.joml.Matrix4f safeAreaMatrix = new org.joml.Matrix4f();
+	/** Reusable float buffer to receive the safe-area matrix for shader upload. */
+	private final float[] safeAreaBuffer = new float[16];
 
 	/**
 	 * Headless mode flag. When true, GL operations are skipped.
@@ -138,6 +171,14 @@ public class GraphicsManager {
 	private int viewportWidth = 320;
 	private int viewportHeight = 224;
 
+	// Cached SCREEN_HEIGHT_PIXELS config value used by PatternRenderCommand's
+	// per-obtain() display-height resolution. Invalidated on reshape (setViewport)
+	// and resetState so config changes are picked up; <= 0 means "not cached".
+	private int cachedConfigScreenHeightPx = -1;
+
+	// Projection-space width: the coordinate-space width of the full viewport.
+	private int projectionWidth = 320;
+
 	// Water-related state for sprite priority shader underwater palette support.
 	// These values are set by LevelManager.updateWaterShaderState() each frame.
 	private float waterlineScreenY = 0.0f;
@@ -146,7 +187,80 @@ public class GraphicsManager {
 	private boolean waterEnabled = false;
 
 	public void registerCommand(GLCommandable command) {
+		if (commandCaptureTarget != null) {
+			commandCaptureTarget.add(command);
+			return;
+		}
 		commands.add(command);
+	}
+
+	public void executeCapturedCommands(Runnable producer, int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+		List<GLCommandable> previousCaptureTarget = commandCaptureTarget;
+		// Reuse capture lists via a small pool (a stack, so nested captures each
+		// get their own list); returned to the pool cleared in the finally block.
+		List<GLCommandable> capturedCommands = captureListPool.pollLast();
+		if (capturedCommands == null) {
+			capturedCommands = new ArrayList<>();
+		}
+		commandCaptureTarget = capturedCommands;
+		try {
+			producer.run();
+			if (headlessMode || capturedCommands.isEmpty() || !glInitialized) {
+				return;
+			}
+			PatternRenderCommand.resetFrameState();
+			for (int i = 0, n = capturedCommands.size(); i < n; i++) {
+				capturedCommands.get(i).execute(cameraX, cameraY, cameraWidth, cameraHeight);
+			}
+			PatternRenderCommand.cleanupFrameState(this);
+		} finally {
+			commandCaptureTarget = previousCaptureTarget;
+			capturedCommands.clear();
+			captureListPool.addLast(capturedCommands);
+		}
+	}
+
+	public <T> CompletableFuture<T> submitRenderThreadTask(Callable<T> callable) {
+		CompletableFuture<T> future = new CompletableFuture<>();
+		pendingRenderThreadTasks.add(new PendingRenderThreadTask<>(callable, future));
+		return future;
+	}
+
+	public void runPendingRenderThreadTasks() {
+		PendingRenderThreadTask<?> task;
+		while ((task = pendingRenderThreadTasks.poll()) != null) {
+			task.run();
+		}
+	}
+
+	private void clearPendingRenderThreadTasks() {
+		PendingRenderThreadTask<?> task;
+		while ((task = pendingRenderThreadTasks.poll()) != null) {
+			task.cancel();
+		}
+	}
+
+	public void renderPatternWithIdScaled(int patternId, PatternDesc desc, float x, float y, float width, float height) {
+		if (headlessMode) {
+			return;
+		}
+
+		ensurePatternAtlas();
+		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
+
+		Integer paletteTextureId;
+		if (useUnderwaterPaletteForBackground && underwaterPaletteTextureId != null) {
+			paletteTextureId = underwaterPaletteTextureId;
+		} else {
+			paletteTextureId = combinedPaletteTextureId;
+		}
+
+		if (entry == null || paletteTextureId == null) {
+			return;
+		}
+
+		PatternRenderCommand command = PatternRenderCommand.obtain(entry, paletteTextureId, desc, x, y, width, height, this);
+		registerCommand(command);
 	}
 
 	/**
@@ -157,7 +271,7 @@ public class GraphicsManager {
 			return;
 		}
 		this.glInitialized = true;
-		this.patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT);
+		this.patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
 		this.patternAtlas.init();
 		this.defaultShaderProgram = new ShaderProgram(BASIC_VERTEX_SHADER_PATH, pixelShaderPath); // Load default shader
 		this.defaultShaderProgram.cacheUniformLocations();
@@ -171,17 +285,19 @@ public class GraphicsManager {
 		this.fadeShaderProgram = new ShaderProgram(ShaderProgram.FULLSCREEN_VERTEX_SHADER, FADE_SHADER_PATH);
 		this.shadowShaderProgram = new ShaderProgram(BASIC_VERTEX_SHADER_PATH, SHADOW_SHADER_PATH);
 		this.shadowShaderProgram.cacheUniformLocations();
-		this.tilemapGpuRenderer = new TilemapGpuRenderer();
+		SonicConfigurationService cfg = GameServices.configuration();
+		this.tilemapGpuRenderer = new TilemapGpuRenderer(cfg.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
 		this.tilemapGpuRenderer.init(TILEMAP_SHADER_PATH);
-		this.instancedPatternRenderer = new InstancedPatternRenderer(this, GameServices.configuration());
+		this.instancedPatternRenderer = new InstancedPatternRenderer(this, cfg);
 		this.instancedPatternRenderer.init(INSTANCED_VERTEX_SHADER_PATH, pixelShaderPath, WATER_SHADER_PATH);
 
-		syncRuntimeManagedReferences();
+		ensureRuntimeManagedReferences();
 		this.fadeManager.setFadeShader(this.fadeShaderProgram);
 
 		// Initialize unified UI render pipeline
 		this.uiRenderPipeline = new UiRenderPipeline(this);
 		this.uiRenderPipeline.setFadeManager(this.fadeManager);
+		this.displayShaderPipeline = new DisplayShaderPipeline();
 
 		// Initialize sprite priority rendering system
 		this.spritePriorityShaderProgram = new SpritePriorityShaderProgram(SPRITE_PRIORITY_SHADER_PATH);
@@ -198,7 +314,7 @@ public class GraphicsManager {
 		this.headlessMode = true;
 		this.glInitialized = false;
 		if (this.patternAtlas == null) {
-			this.patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT);
+			this.patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
 		}
 		this.tilemapGpuRenderer = null;
 		this.instancedPatternRenderer = null;
@@ -230,18 +346,37 @@ public class GraphicsManager {
 	 * This avoids triggering Camera singleton initialization during GraphicsManager construction.
 	 */
 	private Camera getCamera() {
-		syncRuntimeManagedReferences();
+		ensureRuntimeManagedReferences();
 		return camera;
 	}
 
-	private void syncRuntimeManagedReferences() {
-		GameRuntime runtime = RuntimeManager.getActiveRuntime();
-		Camera resolvedCamera = runtime != null ? runtime.getCamera() : getOrCreateBootstrapCamera();
-		if (camera != resolvedCamera) {
-			camera = resolvedCamera;
-		}
+	public void bindRuntimeManagedReferences(Camera runtimeCamera, FadeManager runtimeFadeManager) {
+		camera = Objects.requireNonNull(runtimeCamera, "runtimeCamera");
+		setActiveFadeManager(Objects.requireNonNull(runtimeFadeManager, "runtimeFadeManager"));
+	}
 
-		FadeManager resolvedFadeManager = runtime != null ? runtime.getFadeManager() : getOrCreateBootstrapFadeManager();
+	public void clearRuntimeManagedReferences() {
+		if (camera != null || bootstrapCamera != null) {
+			camera = getOrCreateBootstrapCamera();
+		}
+		if (uiRenderPipeline != null) {
+			uiRenderPipeline.setHudRenderManager(null);
+		}
+		if (fadeManager != null || bootstrapFadeManager != null || uiRenderPipeline != null) {
+			setActiveFadeManager(getOrCreateBootstrapFadeManager());
+		}
+	}
+
+	private void ensureRuntimeManagedReferences() {
+		if (camera == null) {
+			camera = getOrCreateBootstrapCamera();
+		}
+		if (fadeManager == null) {
+			setActiveFadeManager(getOrCreateBootstrapFadeManager());
+		}
+	}
+
+	private void setActiveFadeManager(FadeManager resolvedFadeManager) {
 		if (fadeManager != resolvedFadeManager) {
 			fadeManager = resolvedFadeManager;
 			if (fadeShaderProgram != null) {
@@ -287,6 +422,34 @@ public class GraphicsManager {
 			underwaterPaletteUploadBuffer = MemoryUtil.memAlloc(64 * 4);
 		}
 		return underwaterPaletteUploadBuffer;
+	}
+
+	public void setDisplayColorProfile(DisplayColorProfile displayColorProfile) {
+		this.displayColorProfile = displayColorProfile != null ? displayColorProfile : DisplayColorProfile.RAW_RGB;
+	}
+
+	public DisplayColorProfile getDisplayColorProfile() {
+		return displayColorProfile;
+	}
+
+	void writePaletteColor(ByteBuffer buffer, int r, int g, int b, int colorIndex) {
+		int[] rgb = DisplayColorConverter.toRgbBytes(r, g, b, displayColorProfile);
+		buffer.put((byte) rgb[0]);
+		buffer.put((byte) rgb[1]);
+		buffer.put((byte) rgb[2]);
+		buffer.put((byte) (colorIndex == 0 ? 0 : 255));
+	}
+
+	int[] paletteUploadRgbaForTest(int r, int g, int b, int colorIndex) {
+		ByteBuffer buffer = ByteBuffer.allocate(4);
+		writePaletteColor(buffer, r, g, b, colorIndex);
+		buffer.flip();
+		return new int[] {
+				Byte.toUnsignedInt(buffer.get()),
+				Byte.toUnsignedInt(buffer.get()),
+				Byte.toUnsignedInt(buffer.get()),
+				Byte.toUnsignedInt(buffer.get())
+		};
 	}
 
 	/**
@@ -496,14 +659,11 @@ public class GraphicsManager {
 		paletteBuffer.clear();
 		for (int i = 0; i < COLORS_PER_PALETTE; i++) {
 			Palette.Color color = palette.getColor(i);
-			paletteBuffer.put((byte) Byte.toUnsignedInt(color.r));
-			paletteBuffer.put((byte) Byte.toUnsignedInt(color.g));
-			paletteBuffer.put((byte) Byte.toUnsignedInt(color.b));
-			if (i == 0) {
-				paletteBuffer.put((byte) 0);
-			} else {
-				paletteBuffer.put((byte) 255);
-			}
+			writePaletteColor(paletteBuffer,
+					Byte.toUnsignedInt(color.r),
+					Byte.toUnsignedInt(color.g),
+					Byte.toUnsignedInt(color.b),
+					i);
 		}
 		paletteBuffer.flip();
 
@@ -575,6 +735,24 @@ public class GraphicsManager {
 			PatternRenderCommand command = PatternRenderCommand.obtain(entry, paletteTextureId, desc, x, y, this);
 			registerCommand(command);
 		}
+	}
+
+	public void beginGhostRenderEffect(float alpha) {
+		this.ghostRenderEffectActive = true;
+		this.ghostRenderAlpha = Math.max(0.0f, Math.min(1.0f, alpha));
+	}
+
+	public void endGhostRenderEffect() {
+		this.ghostRenderEffectActive = false;
+		this.ghostRenderAlpha = 1.0f;
+	}
+
+	public boolean isGhostRenderEffectActive() {
+		return ghostRenderEffectActive;
+	}
+
+	public float getGhostRenderAlpha() {
+		return ghostRenderAlpha;
 	}
 
 	/**
@@ -808,6 +986,23 @@ public class GraphicsManager {
 		this.viewportY = y;
 		this.viewportWidth = width;
 		this.viewportHeight = height;
+		// Reshape may follow a config change; re-resolve the configured screen height lazily.
+		this.cachedConfigScreenHeightPx = -1;
+	}
+
+	/**
+	 * Returns the configured logical screen height (SCREEN_HEIGHT_PIXELS), cached
+	 * to avoid a config-service lookup per rendered pattern. The cache is
+	 * invalidated by {@link #setViewport} (called from Engine.reshape()) and
+	 * {@link #resetState()}.
+	 */
+	public int getConfiguredScreenHeightPx() {
+		int cached = cachedConfigScreenHeightPx;
+		if (cached <= 0) {
+			cached = GameServices.configuration().getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+			cachedConfigScreenHeightPx = cached;
+		}
+		return cached;
 	}
 
 	public int getViewportX() {
@@ -824,6 +1019,14 @@ public class GraphicsManager {
 
 	public int getViewportHeight() {
 		return viewportHeight;
+	}
+
+	public void setProjectionWidth(int width) {
+		this.projectionWidth = Math.max(320, width);
+	}
+
+	public int getProjectionWidth() {
+		return projectionWidth;
 	}
 
 	/**
@@ -940,14 +1143,11 @@ public class GraphicsManager {
 					try {
 						if (p != null) {
 							Palette.Color color = p.getColor(i);
-							paletteBuffer.put((byte) Byte.toUnsignedInt(color.r));
-							paletteBuffer.put((byte) Byte.toUnsignedInt(color.g));
-							paletteBuffer.put((byte) Byte.toUnsignedInt(color.b));
-							if (i == 0) {
-								paletteBuffer.put((byte) 0);
-							} else {
-								paletteBuffer.put((byte) 255);
-							}
+							writePaletteColor(paletteBuffer,
+									Byte.toUnsignedInt(color.r),
+									Byte.toUnsignedInt(color.g),
+									Byte.toUnsignedInt(color.b),
+									i);
 						} else {
 							// Empty/Black for missing palette lines
 							paletteBuffer.put((byte) 0).put((byte) 0).put((byte) 0).put((byte) 0);
@@ -1007,9 +1207,34 @@ public class GraphicsManager {
 	}
 
 	/**
+	 * Resets the pattern atlas and palette textures without destroying shaders
+	 * or the GL context.  Use after preview capture to discard all stale pattern
+	 * data and palette state so subsequent rendering starts from a clean GPU.
+	 */
+	public void resetPatternAndPaletteState() {
+		if (headlessMode || !glInitialized) {
+			return;
+		}
+		if (patternAtlas != null) {
+			patternAtlas.cleanup();
+			patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
+			patternAtlas.init();
+		}
+		// Reset combined palette texture so it's rebuilt from scratch
+		if (combinedPaletteTextureId != null) {
+			glDeleteTextures(combinedPaletteTextureId);
+			combinedPaletteTextureId = null;
+			currentPaletteTextureHeight = 0;
+		}
+		paletteTextureMap.clear();
+		commands.clear();
+	}
+
+	/**
 	 * Cleanup method to delete textures and release resources.
 	 */
 	public void cleanup() {
+		clearPendingRenderThreadTasks();
 		if (headlessMode || !glInitialized) {
 			// In headless mode, just clear the tracking maps
 			if (patternAtlas != null) {
@@ -1062,6 +1287,10 @@ public class GraphicsManager {
 			fadeManager.cancel();
 			fadeManager = null;
 		}
+		if (displayShaderPipeline != null) {
+			displayShaderPipeline.dispose();
+			displayShaderPipeline = null;
+		}
 		// Release renderers, palette textures, native buffers
 		releasePerLevelResources();
 		glInitialized = false;
@@ -1069,7 +1298,7 @@ public class GraphicsManager {
 
 	private void ensurePatternAtlas() {
 		if (patternAtlas == null) {
-			patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT);
+			patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
 		}
 		if (!patternAtlas.isInitialized() && glInitialized) {
 			patternAtlas.init();
@@ -1093,22 +1322,29 @@ public class GraphicsManager {
 	 */
 	public void resetState() {
 		commands.clear();
+		clearPendingRenderThreadTasks();
 		releasePerLevelResources();
 		camera = null;
 		bootstrapCamera = null;
 		fadeManager = null;
 		bootstrapFadeManager = null;
+		if (displayShaderPipeline != null) {
+			displayShaderPipeline.dispose();
+			displayShaderPipeline = null;
+		}
 		useUnderwaterPaletteForBackground = false;
 		useSpritePriorityShader = false;
 		currentSpriteHighPriority = false;
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
+		satReplayBatchOpen = false;
 		spriteSatEntries.clear();
 		currentSpriteSatDebugSource = null;
 		waterlineScreenY = 0;
 		windowHeight = 224;
 		screenHeight = 224;
 		waterEnabled = false;
+		cachedConfigScreenHeightPx = -1;
 		if (patternAtlas != null) {
 			if (headlessMode) {
 				patternAtlas.cleanupHeadless();
@@ -1179,6 +1415,35 @@ public class GraphicsManager {
 			return engine.getProjectionMatrixBuffer();
 		}
 		return null;
+	}
+
+	/**
+	 * Push a centered-320 safe-area projection for the configured viewport width.
+	 * At native width (320) the safe-area ortho equals the scene ortho [0, 320] — a no-op.
+	 * <p>
+	 * Callers MUST pair every call to this method with a call to
+	 * {@link #endSafeAreaProjection()} before {@code UiRenderPipeline.renderFadePass()}
+	 * so the fade pass runs at the full viewport projection, not the safe-area.
+	 *
+	 * @param viewportWidth       physical viewport width in pixels
+	 * @param viewportHeightPixels physical viewport height in pixels
+	 */
+	public void beginSafeAreaProjection(int viewportWidth, int viewportHeightPixels) {
+		safeAreaMatrix.identity().ortho2D(
+				com.openggf.graphics.pipeline.SafeAreaProjection.orthoLeft(viewportWidth),
+				com.openggf.graphics.pipeline.SafeAreaProjection.orthoRight(viewportWidth),
+				0f, viewportHeightPixels);
+		safeAreaMatrix.get(safeAreaBuffer);
+		setProjectionMatrixBuffer(safeAreaBuffer);
+	}
+
+	/**
+	 * Restore the engine's scene projection by clearing the local override.
+	 * Must be called after safe-area UI drawing and BEFORE
+	 * {@code UiRenderPipeline.renderFadePass()} so the fade runs at the full viewport.
+	 */
+	public void endSafeAreaProjection() {
+		setProjectionMatrixBuffer(null);
 	}
 
 	/**
@@ -1253,48 +1518,164 @@ public class GraphicsManager {
 			return;
 		}
 
-		List<SpriteSatEntry> collectedEntries = new ArrayList<>(spriteSatEntries);
 		boolean applyMask = spriteMaskRequested;
+
+		// SpriteSatMaskPostProcessor.process(...) never retains the input reference:
+		// with masking on it builds a fresh list; with masking off it returns
+		// `spriteSatEntries` itself (no defensive copy). The replay below consumes
+		// the processed list synchronously, so the live buffer is cleared in the
+		// finally block only after the replay finished with it.
+		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.process(spriteSatEntries, applyMask);
 
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
-		spriteSatEntries.clear();
 		currentSpriteSatDebugSource = null;
 		currentSpriteSatBucket = RenderPriority.MIN;
 
-		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.process(collectedEntries, applyMask);
-		if (processedEntries.isEmpty()) {
-			return;
-		}
+		try {
+			if (processedEntries.isEmpty()) {
+				return;
+			}
 
-		// Replay SAT entries as direct individual commands, not through renderPatternWithId().
-		// Re-entering the normal render path allows the replay to be re-batched, which can
-		// flatten or reorder the final SAT sequence again.
-		flushPatternBatch();
-		setCurrentSpriteHighPriority(false);
-		for (PatternRenderCommand command : buildSpriteSatReplayCommands(processedEntries)) {
-			registerCommand(command);
+			// The SAT replay must not re-enter renderPatternWithId(): that could merge the
+			// carefully ordered SAT sequence into a still-open batch owned by another layer,
+			// flattening or reordering it. Instead the replay owns its emission: a dedicated
+			// instanced batch (flushed before any direct command so order is preserved, with
+			// per-instance VDP priority carried in the instance data), or — when instanced
+			// batching is unavailable — the original direct per-tile commands.
+			flushPatternBatch();
+			setCurrentSpriteHighPriority(false);
+			if (canBatchSpriteSatReplay()) {
+				replaySpriteSatEntriesBatched(processedEntries);
+				return;
+			}
+			List<PatternRenderCommand> commands = buildSpriteSatReplayCommands(processedEntries);
+			// `commands` is a reused buffer (`reusableReplayCommands`); copy via index iteration
+			// without releasing the reference, then clear the buffer once registerCommand has
+			// consumed each entry.
+			for (int i = 0, n = commands.size(); i < n; i++) {
+				registerCommand(commands.get(i));
+			}
+			reusableReplayCommands.clear();
+		} finally {
+			spriteSatEntries.clear();
 		}
 	}
 
+	private boolean canBatchSpriteSatReplay() {
+		return batchingEnabled
+				&& instancedBatchingEnabled
+				&& instancedPatternRenderer != null
+				&& instancedPatternRenderer.isSupported()
+				&& !instancedBatchActive;
+	}
+
+	/**
+	 * Replays the processed SAT entries through dedicated instanced batches instead
+	 * of one PatternRenderCommand (3 glBufferData + 1 draw) per 8x8 tile. Tiles are
+	 * emitted in exactly the same bucket-major order as the direct path; within an
+	 * instanced draw, instances render in submission order, and any tile that cannot
+	 * join the batch (overflow atlas, batch full) flushes the open batch first so
+	 * the final draw order matches the direct path's command order.
+	 */
+	private void replaySpriteSatEntriesBatched(List<SpriteSatEntry> processedEntries) {
+		ensurePatternAtlas();
+		Integer paletteTextureId = resolveSpriteSatReplayPaletteTextureId();
+		if (paletteTextureId == null) {
+			return;
+		}
+		// Parity with the direct path: its PatternRenderCommands resolve the shader at
+		// flush time, when the sprite pass has already cleared useSpritePriorityShader,
+		// so the replay renders with the plain shader. endBatch() captures the flag at
+		// build time instead, so clear it for the duration of the replay batches.
+		boolean savedUseSpritePriorityShader = useSpritePriorityShader;
+		useSpritePriorityShader = false;
+		try {
+			satReplayBatchOpen = false;
+			int paletteTexId = paletteTextureId;
+			for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
+				for (int i = 0, n = processedEntries.size(); i < n; i++) {
+					SpriteSatEntry processedEntry = processedEntries.get(i);
+					if (processedEntry.priorityBucket() == bucket) {
+						appendBatchedReplayCommands(processedEntry, paletteTexId);
+					}
+				}
+			}
+			flushSatReplayBatch();
+		} finally {
+			useSpritePriorityShader = savedUseSpritePriorityShader;
+			// An exception mid-replay must not strand an open instanced batch.
+			satReplayBatchOpen = false;
+		}
+	}
+
+	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
+		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
+				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
+					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
+					if (atlasEntry == null) {
+						return;
+					}
+					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+					if (atlasEntry.atlasIndex() == 0
+							&& addToSatReplayBatch(atlasEntry, paletteIndex, drawX, drawY)) {
+						return;
+					}
+					// Overflow-atlas tile (the instanced renderer only binds atlas 0):
+					// flush the open batch first so draw order is preserved, then draw direct.
+					flushSatReplayBatch();
+					registerCommand(PatternRenderCommand.obtain(atlasEntry, paletteTextureId,
+							reusableReplayDesc, drawX, drawY, this));
+				});
+	}
+
+	private boolean addToSatReplayBatch(PatternAtlas.Entry atlasEntry, int paletteIndex, int drawX, int drawY) {
+		if (!satReplayBatchOpen) {
+			instancedPatternRenderer.beginBatch();
+			satReplayBatchOpen = true;
+		}
+		if (instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY)) {
+			return true;
+		}
+		// Batch full: flush and retry once in a fresh batch.
+		flushSatReplayBatch();
+		instancedPatternRenderer.beginBatch();
+		satReplayBatchOpen = true;
+		return instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY);
+	}
+
+	private void flushSatReplayBatch() {
+		if (!satReplayBatchOpen) {
+			return;
+		}
+		GLCommandable batchCommand = instancedPatternRenderer.endBatch();
+		if (batchCommand != null) {
+			registerCommand(batchCommand);
+		}
+		satReplayBatchOpen = false;
+	}
+
 	List<PatternRenderCommand> buildSpriteSatReplayCommands(List<SpriteSatEntry> processedEntries) {
-		List<PatternRenderCommand> replayCommands = new ArrayList<>();
+		// Reuse a single ArrayList across calls instead of allocating one per replay frame.
+		// Callers must consume the contents before the next invocation; the only caller is
+		// endSpriteSatCollectionAndReplay() which drains-then-clears in the same statement.
+		reusableReplayCommands.clear();
 		if (processedEntries == null || processedEntries.isEmpty()) {
-			return replayCommands;
+			return reusableReplayCommands;
 		}
 		ensurePatternAtlas();
 		Integer paletteTextureId = resolveSpriteSatReplayPaletteTextureId();
 		if (paletteTextureId == null) {
-			return replayCommands;
+			return reusableReplayCommands;
 		}
 		for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
 			for (SpriteSatEntry processedEntry : processedEntries) {
 				if (processedEntry.priorityBucket() == bucket) {
-					appendDirectReplayCommands(processedEntry, paletteTextureId, replayCommands);
+					appendDirectReplayCommands(processedEntry, paletteTextureId, reusableReplayCommands);
 				}
 			}
 		}
-		return replayCommands;
+		return reusableReplayCommands;
 	}
 
 	private Integer resolveSpriteSatReplayPaletteTextureId() {
@@ -1320,22 +1701,34 @@ public class GraphicsManager {
 					if (atlasEntry == null) {
 						return;
 					}
-					int descIndex = patternIndex & 0x7FF;
-					if (entry.piecePriority() || entry.globalHighPriority()) {
-						descIndex |= 0x8000;
-					}
-					if (pieceHFlip) {
-						descIndex |= 0x800;
-					}
-					if (pieceVFlip) {
-						descIndex |= 0x1000;
-					}
-					descIndex |= (paletteIndex & 0x3) << 13;
-					PatternDesc desc = new PatternDesc();
-					desc.set(descIndex);
-					desc.setPaletteIndex(paletteIndex);
-					replayCommands.add(PatternRenderCommand.obtain(atlasEntry, paletteTextureId, desc, drawX, drawY, this));
+					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+					replayCommands.add(PatternRenderCommand.obtain(atlasEntry, paletteTextureId, reusableReplayDesc, drawX, drawY, this));
 				});
+	}
+
+	/**
+	 * Loads the shared replay PatternDesc with the tile word for one replayed SAT
+	 * tile. Reuses a single PatternDesc across the entire SAT replay: both
+	 * PatternRenderCommand.init() and InstancedPatternRenderer.addPattern() copy
+	 * all needed fields out of the desc and do not retain a reference, so mutating
+	 * it before the next tile is safe. PatternDesc.set() resets every derived
+	 * field via updateFields().
+	 */
+	private void prepareReplayDesc(SpriteSatEntry entry, int patternIndex,
+			boolean pieceHFlip, boolean pieceVFlip, int paletteIndex) {
+		int descIndex = patternIndex & 0x7FF;
+		if (entry.piecePriority() || entry.globalHighPriority()) {
+			descIndex |= 0x8000;
+		}
+		if (pieceHFlip) {
+			descIndex |= 0x800;
+		}
+		if (pieceVFlip) {
+			descIndex |= 0x1000;
+		}
+		descIndex |= (paletteIndex & 0x3) << 13;
+		reusableReplayDesc.set(descIndex);
+		reusableReplayDesc.setPaletteIndex(paletteIndex);
 	}
 
 	public WaterShaderProgram getWaterShaderProgram() {
@@ -1391,6 +1784,13 @@ public class GraphicsManager {
 		return tilemapGpuRenderer;
 	}
 
+	public void applyResolvedDisplayWidth(int pixelWidth) {
+		if (tilemapGpuRenderer == null) {
+			return;
+		}
+		tilemapGpuRenderer.applyResolvedDisplayWidth(pixelWidth);
+	}
+
 	public ShaderProgram getShadowShaderProgram() {
 		return shadowShaderProgram;
 	}
@@ -1399,7 +1799,7 @@ public class GraphicsManager {
 	 * Get the fade manager for screen transitions.
 	 */
 	public FadeManager getFadeManager() {
-		syncRuntimeManagedReferences();
+		ensureRuntimeManagedReferences();
 		return fadeManager;
 	}
 
@@ -1486,7 +1886,12 @@ public class GraphicsManager {
 	 * Get the unified UI render pipeline for overlay + fade ordering.
 	 */
 	public UiRenderPipeline getUiRenderPipeline() {
+		ensureRuntimeManagedReferences();
 		return uiRenderPipeline;
+	}
+
+	public DisplayShaderPipeline getDisplayShaderPipeline() {
+		return displayShaderPipeline;
 	}
 
 	// ==================== Sprite Priority Rendering ====================
@@ -1553,5 +1958,18 @@ public class GraphicsManager {
 		}
 		tilePriorityFBO.end();
 	}
-}
 
+	private record PendingRenderThreadTask<T>(Callable<T> callable, CompletableFuture<T> future) {
+		void run() {
+			try {
+				future.complete(callable.call());
+			} catch (Throwable t) {
+				future.completeExceptionally(t);
+			}
+		}
+
+		void cancel() {
+			future.cancel(false);
+		}
+	}
+}

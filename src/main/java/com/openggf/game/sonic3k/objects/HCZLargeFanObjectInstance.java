@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -24,10 +26,11 @@ import static com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBre
  * the shared HCZ tunnel/bar block state and keeps cycling its 5-frame animation
  * while playing the big fan SFX every 16 frames.
  */
-public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
+public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int PRIORITY = 4; // ROM: priority = $200
     private static final int FAN_FRAME_COUNT = 5;
+    private static final int KOS_MODULE_WAIT_FRAMES = 3;
     private static final int DROP_FRAMES = 8;
     private static final int DROP_SPEED = 8;
 
@@ -39,11 +42,13 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
     private static final int PLAYER_Y_TRIGGER_RANGE = 0x40;
 
     private static final int PHASE_WAITING = 0;
-    private static final int PHASE_ACTIVE = 1;
+    private static final int PHASE_LOADING_ART = 1;
+    private static final int PHASE_ACTIVE = 2;
 
-    private final int x;
+    private int x;
     private int y;
     private int phase;
+    private int artWaitFramesRemaining;
     private int dropFramesRemaining;
     private int mappingFrame;
     private int animFrameTimer;
@@ -56,6 +61,11 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
     }
 
     @Override
+    public HCZLargeFanObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HCZLargeFanObjectInstance(ctx.spawn());
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (playerEntity instanceof AbstractPlayableSprite sprite)
                 ? sprite : null;
@@ -63,6 +73,16 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
         if (phase == PHASE_WAITING) {
             HCZBreakableBarState.setState(3);
             if (!shouldActivate(player)) {
+                return;
+            }
+            phase = PHASE_LOADING_ART;
+            artWaitFramesRemaining = KOS_MODULE_WAIT_FRAMES;
+            return;
+        }
+
+        if (phase == PHASE_LOADING_ART) {
+            if (artWaitFramesRemaining > 0) {
+                artWaitFramesRemaining--;
                 return;
             }
             phase = PHASE_ACTIVE;
@@ -78,8 +98,15 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
             }
         }
 
+        // ROM: sfx_FanBig every 16 frames (sonic3k.asm:65632-65636)
+        // ROM uses (Level_frame_counter+1) & $F, matching global frame counter
         if ((frameCounter & 0x0F) == 0) {
-            services().playSfx(Sonic3kSfx.FAN_BIG.id);
+            // ROM: only reaches this code if Sprite_OnScreen_Test passes (object
+            // is deleted when off-screen).  Guard with isOnScreen() so we don't
+            // play the sound for a fan that has scrolled out of view.
+            if (isOnScreen()) {
+                services().playSfx(Sonic3kSfx.FAN_BIG.id);
+            }
         }
 
         animFrameTimer--;
@@ -90,6 +117,14 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
                 mappingFrame = 0;
             }
         }
+
+        // ROM: jmp (Sprite_OnScreen_Test).l — deletes sprite when off-screen.
+        // Our object manager handles OOR culling, but the ROM uses a tighter
+        // on-screen window.  Self-destroy when clearly off-screen to match ROM
+        // lifetime and prevent lingering SFX.
+        if (!isOnScreen(64)) {
+            setDestroyed(true);
+        }
     }
 
     private boolean shouldActivate(AbstractPlayableSprite player) {
@@ -97,12 +132,12 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
             return false;
         }
 
-        int playerX = player.getX() & 0xFFFF;
+        int playerX = player.getCentreX() & 0xFFFF;
         if (playerX - PLAYER_X_TRIGGER_OFFSET < x) {
             return false;
         }
 
-        int relY = player.getY() - PLAYER_Y_TRIGGER_OFFSET - y;
+        int relY = player.getCentreY() - PLAYER_Y_TRIGGER_OFFSET - y;
         return relY >= 0 && relY < PLAYER_Y_TRIGGER_RANGE;
     }
 

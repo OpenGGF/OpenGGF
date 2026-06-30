@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -38,7 +40,7 @@ import java.util.List;
  *   <li>After burst completes, add 128-255 frame delay before next burst</li>
  * </ol>
  */
-public class BubbleGeneratorObjectInstance extends AbstractObjectInstance {
+public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // Bubble sequence table (byte_1FAF0 from ROM, line 45055 of s2.asm)
     // 18-entry overlapping table with 4 sequences at offsets 0, 4, 8, 12
@@ -91,6 +93,11 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance {
         this.frameTimer = 0;
         this.bubblesRemainingInBurst = 0;
         this.sequenceOffset = 0;
+    }
+
+    @Override
+    public BubbleGeneratorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new BubbleGeneratorObjectInstance(ctx.spawn(), getName());
     }
 
     @Override
@@ -227,10 +234,10 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance {
         if (bubbleSubtype == 2) {
             bubbleSize = 5; // Large breathable bubble needs size >= 3
         }
+        int finalBubbleSize = bubbleSize;
 
         int wobbleAngle = rng.nextByte();
-        BubbleObjectInstance bubble = new BubbleObjectInstance(spawnX, spawnY, bubbleSize, wobbleAngle);
-        services().objectManager().addDynamicObject(bubble);
+        spawnFreeChild(() -> new BubbleObjectInstance(spawnX, spawnY, finalBubbleSize, wobbleAngle));
 
         // ROM: Decrement bubble counter
         // subq.b #1,objoff_34(a0) / bpl.s loc_1FAC2

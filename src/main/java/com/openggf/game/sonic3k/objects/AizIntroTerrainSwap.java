@@ -1,13 +1,15 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
+import com.openggf.game.mutation.LayoutMutationContext;
+import com.openggf.game.mutation.LevelMutationSurface;
+import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kPlcLoader;
 import com.openggf.level.resources.PlcParser.PlcDefinition;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
-import com.openggf.level.objects.BootstrapObjectServices;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
@@ -37,12 +39,24 @@ public final class AizIntroTerrainSwap {
     private AizIntroTerrainSwap() {
     }
 
+    public static synchronized void reset() {
+        cachedOverlayData = null;
+    }
+
     /**
      * Pre-decompress the overlay data during level load so that the
      * transition frame doesn't pay the Kosinski decompression cost.
      */
-    public static synchronized void preloadOverlayData() {
-        preloadOverlayData(new BootstrapObjectServices());
+    public static synchronized void preloadOverlayData(Rom rom) {
+        if (cachedOverlayData != null) {
+            return;
+        }
+        try {
+            cachedOverlayData = loadOverlayData(rom);
+            LOG.info("AIZ intro overlay data pre-loaded successfully");
+        } catch (IOException e) {
+            LOG.warning("AIZ intro overlay preload failed (will retry on transition): " + e.getMessage());
+        }
     }
 
     public static synchronized void preloadOverlayData(ObjectServices services) {
@@ -50,7 +64,7 @@ public final class AizIntroTerrainSwap {
             return;
         }
         try {
-            cachedOverlayData = loadOverlayData(services);
+            cachedOverlayData = loadOverlayData(services.rom());
             LOG.info("AIZ intro overlay data pre-loaded successfully");
         } catch (IOException e) {
             LOG.warning("AIZ intro overlay preload failed (will retry on transition): " + e.getMessage());
@@ -62,10 +76,6 @@ public final class AizIntroTerrainSwap {
      * chunk overlay, building tilemaps, then restoring the original chunks.
      * This moves the expensive tilemap rebuild from the transition frame to level load.
      */
-    public static synchronized void precomputeTransitionTilemaps() {
-        precomputeTransitionTilemaps(new BootstrapObjectServices());
-    }
-
     public static synchronized void precomputeTransitionTilemaps(ObjectServices services) {
         preloadOverlayData(services);
         OverlayData overlay = cachedOverlayData;
@@ -97,10 +107,6 @@ public final class AizIntroTerrainSwap {
         LOG.info("AIZ intro transition tilemaps pre-computed successfully");
     }
 
-    public static synchronized boolean applyMainLevelOverlays() {
-        return applyMainLevelOverlays(new BootstrapObjectServices());
-    }
-
     public static synchronized boolean applyMainLevelOverlays(ObjectServices services) {
         LevelManager levelManager = services.levelManager();
         if (levelManager == null) {
@@ -114,7 +120,7 @@ public final class AizIntroTerrainSwap {
         OverlayData overlay = cachedOverlayData;
         if (overlay == null) {
             try {
-                overlay = loadOverlayData(services);
+                overlay = loadOverlayData(services.rom());
                 cachedOverlayData = overlay;
             } catch (IOException e) {
                 LOG.warning("AIZ intro terrain swap failed to load overlay data: " + e.getMessage());
@@ -122,8 +128,16 @@ public final class AizIntroTerrainSwap {
             }
         }
 
-        sonic3kLevel.applyChunkOverlay(overlay.mainLevelBlocks16x16(), overlay.chunkOverlayOffsetBytes());
-        sonic3kLevel.applyPatternOverlay(overlay.mainLevelTiles8x8(), overlay.patternOverlayOffsetBytes());
+        OverlayData overlayData = overlay;
+        applyImmediateMutation(services, levelManager, level, context -> {
+            sonic3kLevel.applyChunkOverlay(
+                    overlayData.mainLevelBlocks16x16(),
+                    overlayData.chunkOverlayOffsetBytes());
+            sonic3kLevel.applyPatternOverlay(
+                    overlayData.mainLevelTiles8x8(),
+                    overlayData.patternOverlayOffsetBytes());
+            return MutationEffects.NONE;
+        });
 
         // Apply PLC 0x0B (zone art) Nemesis overlays. During the intro, Load_PLC_2
         // clears the PLC queue before PLC 0x0B is decompressed, so zone object art
@@ -150,7 +164,7 @@ public final class AizIntroTerrainSwap {
     private static List<Sonic3kPlcLoader.TileRange> applyZoneArtOverlays(
             Sonic3kLevel level, ObjectServices services) {
         try {
-            Rom rom = rom(services);
+            Rom rom = services.rom();
             PlcDefinition plc = Sonic3kPlcLoader.parsePlc(rom, 0x0B);
             return Sonic3kPlcLoader.applyToLevel(plc, level);
         } catch (IOException e) {
@@ -159,8 +173,18 @@ public final class AizIntroTerrainSwap {
         }
     }
 
-    private static OverlayData loadOverlayData(ObjectServices services) throws IOException {
-        Rom rom = rom(services);
+    private static void applyImmediateMutation(
+            ObjectServices services,
+            LevelManager levelManager,
+            Level level,
+            com.openggf.game.mutation.LayoutMutationIntent intent) {
+        LayoutMutationContext context = new LayoutMutationContext(
+                LevelMutationSurface.forLevel(level),
+                levelManager::applyMutationEffects);
+        services.zoneLayoutMutationPipeline().applyImmediately(intent, context);
+    }
+
+    private static OverlayData loadOverlayData(Rom rom) throws IOException {
         ResourceLoader loader = new ResourceLoader(rom);
 
         int baseEntryAddr = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR;
@@ -192,10 +216,6 @@ public final class AizIntroTerrainSwap {
                 chunkOffset,
                 mainLevelTiles8x8,
                 mainLevelBlocks16x16);
-    }
-
-    private static Rom rom(ObjectServices services) throws IOException {
-        return services.rom();
     }
 
     private record OverlayData(

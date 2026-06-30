@@ -62,15 +62,16 @@ public class TestCamera {
 
     @Test
     public void testForceUpdateCentersPlayerOnScreen() {
-        // Force update should position camera so player appears at screen position (152, 96)
+        // Force update should match ROM's level-load camera placement: sprite at
+        // screen-x=160 (right edge of 144-160 horizontal scroll deadzone) and
+        // screen-y=96, per s1disasm _inc/LevelSizeLoad & BgScrollSpeed.asm:111,124,
+        // s2.asm:14787,14798, sonic3k.asm:38241.
         when(mockSprite.getCentreX()).thenReturn((short) 1000);
         when(mockSprite.getCentreY()).thenReturn((short) 500);
 
         camera.updatePosition(true);
 
-        // Camera position = sprite centre - screen offset
-        // Screen offset for "look at" point is (152, 96)
-        assertEquals(1000 - 152, camera.getX(), "Force update should center player horizontally");
+        assertEquals(1000 - 160, camera.getX(), "Force update should center player horizontally");
         assertEquals(500 - 96, camera.getY(), "Force update should center player vertically");
     }
 
@@ -190,6 +191,26 @@ public class TestCamera {
         assertEquals(6, camera.getY(), "Camera should use medium scroll (6px) when inertia is low");
     }
 
+    @Test
+    public void testFastVerticalScrollRequestUsesFastCapForOneFrame() {
+        // S3K moving platforms set Fast_V_scroll_flag so grounded camera follow uses
+        // the fast vertical cap even when Sonic's own ground speed is low.
+        when(mockSprite.getAir()).thenReturn(false);
+        when(mockSprite.getGSpeed()).thenReturn((short) 0);
+        camera.setFastScrollCap(24);
+        camera.setY((short) 0);
+        when(mockSprite.getCentreY()).thenReturn((short) 200);
+
+        camera.requestFastVerticalScroll();
+        camera.updatePosition();
+
+        assertEquals(24, camera.getY(), "Camera should use the requested fast vertical cap");
+
+        camera.updatePosition();
+
+        assertEquals(30, camera.getY(), "Fast vertical scroll request should not persist to the next frame");
+    }
+
     // ==================== Boundary Tests ====================
 
     @Test
@@ -227,7 +248,7 @@ public class TestCamera {
     public void testWrappedHorizontalBoundsDoNotForceBackwardClamp() {
         camera.setMinX((short) 146);
         camera.setMaxX((short) 106); // Wrapped range (ObjB2 SCZ writes Camera_X - $40)
-        when(mockSprite.getCentreX()).thenReturn((short) 304); // Forced target X = 152
+        when(mockSprite.getCentreX()).thenReturn((short) 312); // Forced target X = 312 - 160 = 152
         when(mockSprite.getCentreY()).thenReturn((short) 200);
 
         camera.updatePosition(true);
@@ -327,6 +348,19 @@ public class TestCamera {
         assertFalse(camera.isOnScreen(offscreenSprite), "Sprite right of camera should not be on screen");
     }
 
+    @Test
+    public void testWrappedPlayableRenderFlagVisibilityUsesRelativeYMask() {
+        camera.setX((short) 0x0840);
+        camera.setY((short) 0x07DE);
+        camera.setVerticalWrapEnabled(true, 0x0800);
+        when(mockSprite.getRenderCentreX()).thenReturn((short) 0x08B7);
+        when(mockSprite.getRenderCentreY()).thenReturn((short) 0x0051);
+        when(mockSprite.getRenderFlagWidthPixels()).thenReturn(0x18);
+
+        assertTrue(camera.isVisibleForRenderFlag(mockSprite),
+                "S2 BuildSprites_ApproxYCheck masks relative Y with $7FF before the 32px render-flag band");
+    }
+
     // ==================== Increment Tests ====================
 
     @Test
@@ -349,5 +383,4 @@ public class TestCamera {
         assertEquals(120, camera.getY(), "incrementY should subtract when negative");
     }
 }
-
 

@@ -8,6 +8,8 @@ import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectConstants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.credits.Sonic2EndingProvider;
+import com.openggf.game.sonic2.dataselect.S2SaveSnapshotProvider;
+import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
 import com.openggf.game.sonic2.debug.Sonic2DebugModeProvider;
 import com.openggf.game.sonic2.levelselect.LevelSelectManager;
 import com.openggf.game.sonic2.objects.BlueBallsObjectInstance;
@@ -24,6 +26,7 @@ import com.openggf.game.sonic2.titlescreen.TitleScreenManager;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.CrossGameFeatureProvider;
+import com.openggf.game.CrossGameDonorProvider;
 import com.openggf.game.DonorCapabilities;
 import com.openggf.game.EndingProvider;
 import com.openggf.game.PlayerCharacter;
@@ -51,12 +54,26 @@ import com.openggf.game.GameId;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.ZoneArtProvider;
 import com.openggf.game.TitleScreenProvider;
+import com.openggf.game.dataselect.CrossGameDataSelectPresentations;
+import com.openggf.game.dataselect.DataSelectHostProfile;
+import com.openggf.game.dataselect.DataSelectPresentationProvider;
+import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
+import com.openggf.game.sonic2.dataselect.S2DataSelectProfile;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.PlaneSwitcherConfig;
 import com.openggf.level.objects.TouchResponseTable;
+import com.openggf.level.Palette;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+import java.util.Optional;
+
+import static java.security.MessageDigest.getInstance;
 
 public class Sonic2GameModule implements GameModule {
     private final GameAudioProfile audioProfile = new Sonic2AudioProfile();
@@ -73,6 +90,10 @@ public class Sonic2GameModule implements GameModule {
     private final TitleCardManager titleCardProvider = new TitleCardManager();
     private final TitleScreenManager titleScreenProvider = new TitleScreenManager();
     private final LevelSelectManager levelSelectProvider = new LevelSelectManager();
+    private final S2DataSelectProfile dataSelectHostProfile = new S2DataSelectProfile();
+    private final CrossGameDonorProvider donorProvider = new Sonic2CrossGameDonorProvider();
+    private DataSelectPresentationProvider dataSelectPresentationProvider;
+    private S2DataSelectImageCacheManager dataSelectImageCacheManager;
     private Sonic2ObjectArtProvider objectArtProvider;
     private Sonic2ZoneFeatureProvider zoneFeatureProvider;
     private PhysicsProvider physicsProvider;
@@ -226,6 +247,7 @@ public class Sonic2GameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == S2DataSelectImageCacheManager.class) return (T) getDataSelectImageCacheManager();
         if (type == Sonic2LevelEventManager.class) return (T) levelEventManager;
         if (type == Sonic2ZoneRegistry.class) return (T) zoneRegistry;
         if (type == com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug.class)
@@ -233,6 +255,15 @@ public class Sonic2GameModule implements GameModule {
         if (type == com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager.class)
             return (T) specialStageManager;
         return null;
+    }
+
+    @Override
+    public Optional<DonatedDataSelectWarmupTask> getDonatedDataSelectWarmupTask() {
+        S2DataSelectImageCacheManager manager = getDataSelectImageCacheManager();
+        if (manager instanceof DonatedDataSelectWarmupTask warmup) {
+            return Optional.of(warmup);
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -257,6 +288,25 @@ public class Sonic2GameModule implements GameModule {
     @Override
     public LevelSelectProvider getLevelSelectProvider() {
         return levelSelectProvider;
+    }
+
+    @Override
+    public com.openggf.game.DataSelectProvider getDataSelectProvider() {
+        return getDataSelectPresentationProvider();
+    }
+
+    @Override
+    public DataSelectPresentationProvider getDataSelectPresentationProvider() {
+        if (dataSelectPresentationProvider == null) {
+            dataSelectPresentationProvider = CrossGameDataSelectPresentations.donated(
+                    CrossGameDataSelectPresentations.DONOR_S3K, dataSelectHostProfile);
+        }
+        return dataSelectPresentationProvider;
+    }
+
+    @Override
+    public DataSelectHostProfile getDataSelectHostProfile() {
+        return dataSelectHostProfile;
     }
 
     // Lazily cached — same instance across level loads. Reset via module replacement.
@@ -310,8 +360,69 @@ public class Sonic2GameModule implements GameModule {
     }
 
     @Override
+    public com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider() {
+        return new S2SaveSnapshotProvider();
+    }
+
+    private S2DataSelectImageCacheManager getDataSelectImageCacheManager() {
+        if (dataSelectImageCacheManager == null) {
+            dataSelectImageCacheManager = new WarmupAwareS2DataSelectImageCacheManager(
+                    Path.of("saves", "image-cache", "s2"),
+                    GameServices.configuration(),
+                    this::romSha256,
+                    new ObjectMapper());
+        }
+        return dataSelectImageCacheManager;
+    }
+
+    private String romSha256() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            MessageDigest digest = getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(rom.readAllBytes()));
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to hash Sonic 2 ROM for data select image generation", e);
+        }
+    }
+
+    public interface S2DataSelectImageWarmup {
+        void ensureGenerationStarted();
+    }
+
+    private static final class WarmupAwareS2DataSelectImageCacheManager
+            extends S2DataSelectImageCacheManager implements S2DataSelectImageWarmup, DonatedDataSelectWarmupTask {
+
+        private WarmupAwareS2DataSelectImageCacheManager(Path cacheRoot,
+                                                         com.openggf.configuration.SonicConfigurationService config,
+                                                         java.util.function.Supplier<String> romSha256Supplier,
+                                                         ObjectMapper mapper) {
+            super(cacheRoot, config, romSha256Supplier, mapper);
+        }
+
+        @Override
+        public void ensureGenerationStarted() {
+            super.ensureGenerationStarted();
+        }
+
+        @Override
+        public void start() {
+            ensureGenerationStarted();
+        }
+
+        @Override
+        public boolean isRunning() {
+            return isGenerationRunning();
+        }
+    }
+
+    @Override
     public DonorCapabilities getDonorCapabilities() {
         return Sonic2DonorCapabilities.INSTANCE;
+    }
+
+    @Override
+    public CrossGameDonorProvider getCrossGameDonorProvider() {
+        return donorProvider;
     }
 
     /** Lazily-constructed singleton holding S2 donation metadata. */
@@ -396,6 +507,42 @@ public class Sonic2GameModule implements GameModule {
                 com.openggf.data.RomByteReader reader) {
             var art = new Sonic2PlayerArt(reader);
             return art::loadForCharacter;
+        }
+    }
+
+    private static final class Sonic2CrossGameDonorProvider implements CrossGameDonorProvider {
+        @Override
+        public DonorCapabilities getDonorCapabilities() {
+            return Sonic2DonorCapabilities.INSTANCE;
+        }
+
+        @Override
+        public com.openggf.data.PlayerSpriteArtProvider createPlayerArtProvider(RomByteReader reader) {
+            return Sonic2DonorCapabilities.INSTANCE.getPlayerArtProvider(reader);
+        }
+
+        @Override
+        public com.openggf.data.SpindashDustArtProvider createSpindashDustArtProvider(RomByteReader reader) {
+            Sonic2DustArt dustArt = new Sonic2DustArt(reader);
+            return dustArt::loadForCharacter;
+        }
+
+        @Override
+        public GameAudioProfile getAudioProfile() {
+            return new Sonic2AudioProfile();
+        }
+
+        @Override
+        public Palette loadCharacterPalette(RomByteReader reader, String characterCode) {
+            byte[] data = reader.slice(Sonic2Constants.SONIC_TAILS_PALETTE_ADDR, Palette.PALETTE_SIZE_IN_ROM);
+            Palette palette = new Palette();
+            palette.fromSegaFormat(data);
+            return palette;
+        }
+
+        @Override
+        public SuperStateController createSuperStateController(AbstractPlayableSprite player) {
+            return new Sonic2SuperStateController(player);
         }
     }
 }

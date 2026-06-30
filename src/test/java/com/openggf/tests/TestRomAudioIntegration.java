@@ -110,20 +110,40 @@ public class TestRomAudioIntegration {
 
     @Test
     public void testSequencerPlayback() {
-        AbstractSmpsData data = loader.loadMusic(0x82); // Metropolis
-        DacData dac = loader.loadDacData();
+        // We cannot assert non-silent audio here because full instrument parameter
+        // loading (SMPS Flag EF) is not yet implemented, so output may be silent.
+        // Instead the oracle is twofold: (1) playback is deterministic across two
+        // independent sequencer instances over the same ROM data + config, and
+        // (2) the sequencer's timing engine makes real progress (not deadlocked).
+        short[][] firstRun = renderSequencer(50);
+        short[][] secondRun = renderSequencer(50);
+        for (int i = 0; i < firstRun.length; i++) {
+            assertArrayEquals(firstRun[i], secondRun[i],
+                    "Sequencer PCM output must be deterministic; diverged on iteration " + i);
+        }
 
-        SmpsSequencer seq = new SmpsSequencer(data, dac, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(loader.loadMusic(0x82), loader.loadDacData(),
+                Sonic2SmpsSequencerConfig.CONFIG);
         short[] buffer = new short[4096];
-
-        // Run for more ticks (50 iterations * 4096 samples ~ 5 seconds)
         for (int i = 0; i < 50; i++) {
             seq.read(buffer);
         }
+        assertTrue(seq.isComplete() || seq.getSamplesUntilNextTempoFrame() > 0,
+                "Sequencer should keep a live tempo schedule after playback, not deadlock");
+    }
 
-        // Note: We do not assert non-silent audio here because full instrument parameter loading
-        // (SMPS Flag EF) is not yet implemented, which may result in default (silent or low) output.
-        // The test passes if the sequencer runs without exception.
+    /** Renders {@code iterations} buffers from a freshly loaded Metropolis sequencer. */
+    private short[][] renderSequencer(int iterations) {
+        AbstractSmpsData data = loader.loadMusic(0x82); // Metropolis
+        DacData dac = loader.loadDacData();
+        SmpsSequencer seq = new SmpsSequencer(data, dac, Sonic2SmpsSequencerConfig.CONFIG);
+        short[][] frames = new short[iterations][];
+        short[] buffer = new short[4096];
+        for (int i = 0; i < iterations; i++) {
+            seq.read(buffer);
+            frames[i] = buffer.clone();
+        }
+        return frames;
     }
 
     @Test
@@ -164,6 +184,31 @@ public class TestRomAudioIntegration {
         assertSame(dacData, synth.configuredDacData, "Sequencer should wire ROM DAC data into the synthesizer");
         assertFalse(dacData.samples.isEmpty(), "ROM DAC table should expose samples");
         assertTrue(dacData.mapping.containsKey(0x81), "ROM DAC table should map drum notes");
+    }
+
+    @Test
+    public void metropolisFirstBufferMatchesSingleFrameReferenceDriver() {
+        AbstractSmpsData data = loader.loadMusic(0x82);
+        DacData dac = loader.loadDacData();
+
+        com.openggf.audio.driver.SmpsDriver bulkDriver = new com.openggf.audio.driver.SmpsDriver();
+        com.openggf.audio.driver.SmpsDriver singleFrameDriver = new com.openggf.audio.driver.SmpsDriver();
+        bulkDriver.addSequencer(new SmpsSequencer(data, dac, bulkDriver, Sonic2SmpsSequencerConfig.CONFIG), false);
+        singleFrameDriver.addSequencer(new SmpsSequencer(data, dac, singleFrameDriver, Sonic2SmpsSequencerConfig.CONFIG), false);
+
+        short[] actual = new short[1024];
+        short[] expected = new short[1024];
+        short[] frame = new short[2];
+
+        bulkDriver.read(actual);
+        for (int i = 0; i < expected.length / 2; i++) {
+            singleFrameDriver.read(frame);
+            expected[i * 2] = frame[0];
+            expected[i * 2 + 1] = frame[1];
+        }
+
+        assertArrayEquals(expected, actual,
+                "Metropolis playback should match the single-frame reference driver output");
     }
 
     @Test

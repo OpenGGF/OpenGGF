@@ -1,0 +1,4 @@
+.githooks/* text eol=lf
+*.sh text eol=lf
+.github/workflows/*.yml text eol=lf
+.mvn/maven.config text eol=lf

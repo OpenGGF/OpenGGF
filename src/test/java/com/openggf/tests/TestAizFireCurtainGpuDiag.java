@@ -3,7 +3,6 @@ package com.openggf.tests;
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
@@ -14,6 +13,7 @@ import com.openggf.game.sonic3k.events.FireCurtainRenderState;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
@@ -31,8 +31,6 @@ import org.junit.jupiter.api.Test;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -161,7 +159,7 @@ public class TestAizFireCurtainGpuDiag {
         }
         glfwTerminate();
         GraphicsManager.getInstance().resetState();
-        if (RuntimeManager.getCurrent() != null) {
+        if (TestEnvironment.activeGameplayMode() != null) {
             GameServices.camera().resetState();
         }
     }
@@ -231,14 +229,14 @@ public class TestAizFireCurtainGpuDiag {
                 glFinish();
 
                 // Capture
-                BufferedImage img = ScreenshotCapture.captureFramebuffer(W, H);
+                RgbaImage img = ScreenshotCapture.captureFramebuffer(W, H);
                 assertNotNull(img, "Framebuffer capture returned null");
 
                 // Count non-black pixels in bottom third (fire region)
                 int firePixels = countFirePixels(img);
                 String filename = String.format("fire_gpu_frame_%03d.png", frame);
                 Path outPath = OUT_DIR.resolve(filename);
-                ImageIO.write(img, "PNG", outPath.toFile());
+                ScreenshotCapture.savePNG(img, outPath);
 
                 System.out.println("Frame " + frame + ": " + filename
                         + " firePixels=" + firePixels
@@ -269,11 +267,11 @@ public class TestAizFireCurtainGpuDiag {
      * Count pixels that look like fire (warm colors: red/orange/yellow).
      * Fire palette uses reds, oranges, and yellows.
      */
-    private static int countFirePixels(BufferedImage img) {
+    private static int countFirePixels(RgbaImage img) {
         int count = 0;
-        for (int y = 0; y < img.getHeight(); y++) {
-            for (int x = 0; x < img.getWidth(); x++) {
-                int rgb = img.getRGB(x, y);
+        for (int y = 0; y < img.height(); y++) {
+            for (int x = 0; x < img.width(); x++) {
+                int rgb = img.argb(x, y);
                 int r = (rgb >> 16) & 0xFF;
                 int g = (rgb >> 8) & 0xFF;
                 int b = rgb & 0xFF;

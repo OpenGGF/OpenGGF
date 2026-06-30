@@ -2,12 +2,15 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.CheckpointState;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance.BonusStarVariant;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -46,7 +49,7 @@ import java.util.logging.Logger;
  * On player touch, determines bonus stage type based on ring count formula
  * and triggers special stage entry.
  */
-public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance {
+public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kStarPostBonusStarChild.class.getName());
 
     // ROM lifecycle constants
@@ -57,11 +60,15 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance {
 
     // S3K ring threshold for bonus stars
     private static final int RING_THRESHOLD = 20;
-
+    @RewindTransient(reason = "Structural parent link; relinked to the nearest live "
+            + "S3K starpost on rewind recreate. Scalar bonus-star state, including "
+            + "variant, is reapplied by the generic field capturer.")
     private final Sonic3kStarPostObjectInstance parentStarPost;
-    private final BonusStarVariant variant;
-    private final int centerX;  // $30
-    private final int centerY;  // $32
+    // Non-final so the generic field capturer reapplies it after a rewind
+    // recreate (the bonus-stage type is not derivable from the spawn/parent).
+    private BonusStarVariant variant;
+    private int centerX;  // $30
+    private int centerY;  // $32
     private int angle;          // $34
     private int lifetime;       // $36
     private int animFrame;
@@ -87,8 +94,25 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance {
         this.currentY = centerY;
     }
 
+    Sonic3kStarPostBonusStarChild(Sonic3kStarPostObjectInstance parent) {
+        this(parent, 0, BonusStarVariant.YELLOW);
+    }
+
     private static ObjectSpawn createDummySpawn(Sonic3kStarPostObjectInstance parent) {
         return new ObjectSpawn(parent.getCenterX(), parent.getCenterY(), 0x34, 0, 0, false, 0);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+            return null;
+        }
+        Sonic3kStarPostObjectInstance liveParent =
+                Sonic3kStarPostStarChild.findNearestLiveParentForRewind(
+                        ctx.objectServices().objectManager(), ctx.spawn());
+        return liveParent == null
+                ? null
+                : new Sonic3kStarPostBonusStarChild(liveParent, 0, BonusStarVariant.YELLOW);
     }
 
     @Override

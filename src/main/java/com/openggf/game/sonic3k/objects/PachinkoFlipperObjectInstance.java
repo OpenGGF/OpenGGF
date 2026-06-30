@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -26,7 +27,7 @@ import java.util.List;
  * the surface, and launches them when jump is pressed.
  */
 public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener {
+        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x20, 0x1C, 0x1D);
 
@@ -46,7 +47,6 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
 
     private static final int SURFACE_ACCEL = 0x18;
     private static final int SURFACE_ACCEL_FLIPPED = -0x19; // ROM uses NOT.W on 0x18, yielding -25.
-
     private AbstractPlayableSprite lockedPlayer;
     private boolean contactThisFrame;
     private int triggerFrame = -1;
@@ -54,6 +54,15 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
     public PachinkoFlipperObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PachinkoFlipper");
     }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Self-contained: rebuilds from the captured spawn. Scalar fields are reapplied
+     * by the standard scalar-restore pass after recreate; the locked-player back-reference
+     * is not wired here (it was not captured by the deleted explicit restore path either).
+     * Replaces the former explicit dynamic restore path (Phase-2 codec-deletion batch 2).
+     */
 
     @Override
     public SolidObjectParams getSolidParams() {
@@ -137,7 +146,7 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
     }
 
     private void launchPlayer(AbstractPlayableSprite player) {
-        int launchDistance = player.getX() - spawn.x();
+        int launchDistance = player.getCentreX() - spawn.x();
         if (isFlippedHorizontal()) {
             launchDistance = -launchDistance;
         }

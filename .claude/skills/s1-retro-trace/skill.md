@@ -74,6 +74,12 @@ The ROM's SHA-1 must match `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` (Sonic 1 R
 
 stable-retro's genesis_plus_gx core exposes 68K work RAM with **bytes swapped within each 16-bit word** (little-endian x86 order). The `GenesisRAM` class in `trace_core.py` handles this transparently. If reading RAM directly, remember: byte at 68K address `$FFxxxx` (even) is at `ram[xxxx ^ 1]`.
 
+### Coordinate semantics
+
+Recorded `x_pos` / `y_pos` values are ROM centre coordinates. Engine comparisons must use `getCentreX()` / `getCentreY()`, not debug HUD `Pos:` values or `getX()` / `getY()` top-left bounds.
+
+For object/contact/frontier work, keep the recorder comparison-only. New stable-retro diagnostics may expose fields that help classify `ObjectControlState`, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy`, `ObjectLifetimeOps`, and canonical profile decisions, but they must not hydrate engine state. If a generic guard is added around these patterns, ratchet its baseline from current violations rather than broadening the rule.
+
 ## Step 1: Record Trace with stable-retro
 
 Scripts are in `tools/retro/`. Run from the project root.

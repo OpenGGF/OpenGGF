@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.audio;
 
 import com.openggf.audio.AbstractAudioProfile;
+import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -23,6 +24,7 @@ public class Sonic1AudioProfile extends AbstractAudioProfile {
      * Sonic 1 has no spindash, CNZ-specific sounds, or casino bonus sounds.
      */
     private static final Map<GameSound, Integer> SOUND_MAP;
+    private static final Map<GameMusic, Integer> MUSIC_MAP;
 
     static {
         Map<GameSound, Integer> map = new EnumMap<>(GameSound.class);
@@ -53,10 +55,19 @@ public class Sonic1AudioProfile extends AbstractAudioProfile {
         // GameSound.ERROR - no direct S1 equivalent
         // GameSound.CASINO_BONUS - CNZ-specific, not in S1
         SOUND_MAP = Collections.unmodifiableMap(map);
+
+        Map<GameMusic, Integer> music = new EnumMap<>(GameMusic.class);
+        music.put(GameMusic.ACT_CLEAR, Sonic1Music.GOT_THROUGH.id);
+        music.put(GameMusic.DROWNING, Sonic1Music.DROWNING.id);
+        music.put(GameMusic.EMERALD, Sonic1Music.CHAOS_EMERALD.id);
+        music.put(GameMusic.EXTRA_LIFE, Sonic1Music.EXTRA_LIFE.id);
+        music.put(GameMusic.INVINCIBILITY, Sonic1Music.INVINCIBILITY.id);
+        music.put(GameMusic.SPECIAL_STAGE, Sonic1Music.SPECIAL_STAGE.id);
+        MUSIC_MAP = Collections.unmodifiableMap(music);
     }
 
     public Sonic1AudioProfile() {
-        super(SOUND_MAP);
+        super(SOUND_MAP, MUSIC_MAP);
     }
 
     @Override

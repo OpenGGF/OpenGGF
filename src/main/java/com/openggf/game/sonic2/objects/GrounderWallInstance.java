@@ -47,7 +47,7 @@ import java.util.List;
  * Index 6: X=-1, Y=-1
  * </pre>
  */
-public class GrounderWallInstance extends AbstractObjectInstance {
+public class GrounderWallInstance extends AbstractObjectInstance implements GrounderZeroIndexChildRewindRecreatable {
 
     private static final int GRAVITY = 0x38; // 0.21875 pixels/frame (from ObjectMoveAndFall)
     private static final int PALETTE_INDEX = 1;  // Level art palette (matches FallingPillar)
@@ -105,6 +105,10 @@ public class GrounderWallInstance extends AbstractObjectInstance {
         int[] vel = WALL_VELOCITIES[idx];
         this.xVelocity = vel[0];
         this.yVelocity = vel[1];
+    }
+
+    private GrounderWallInstance() {
+        this(0, 0, 0, null);
     }
 
     private static ObjectSpawn createWallSpawn(int x, int y) {
@@ -196,4 +200,3 @@ public class GrounderWallInstance extends AbstractObjectInstance {
         }
     }
 }
-

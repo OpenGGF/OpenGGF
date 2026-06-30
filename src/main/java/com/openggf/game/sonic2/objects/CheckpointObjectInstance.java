@@ -5,9 +5,10 @@ import com.openggf.game.CheckpointState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -33,7 +34,7 @@ import java.util.logging.Logger;
  * - Anim 2: frames 0,4 alternating (blinking after dongle expires)
  * </p>
  */
-public class CheckpointObjectInstance extends BoxObjectInstance {
+public class CheckpointObjectInstance extends BoxObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(CheckpointObjectInstance.class.getName());
 
     // Activation zone dimensions (ROM: x_delta + 8 < $10, y_delta + $40 < $68)
@@ -53,8 +54,8 @@ public class CheckpointObjectInstance extends BoxObjectInstance {
     private static final int FRAME_HEAD = 3; // Head alone
     private static final int FRAME_BLUE_BALL = 4; // Pole + blue ball
 
-    private final int checkpointIndex;
-    private final boolean cameraLockFlag;
+    private int checkpointIndex;
+    private boolean cameraLockFlag;
     private int animId;
     private int mappingFrame;
     private int animTimer;
@@ -73,6 +74,11 @@ public class CheckpointObjectInstance extends BoxObjectInstance {
         this.animTimer = 0;
         this.animFrameIndex = 0;
         this.dongleActive = false;
+    }
+
+    @Override
+    public CheckpointObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CheckpointObjectInstance(ctx.spawn(), getName());
     }
 
     private void ensureInitialized() {
@@ -195,10 +201,7 @@ public class CheckpointObjectInstance extends BoxObjectInstance {
     }
 
     private void spawnDongle() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.addDynamicObject(new CheckpointDongleInstance(this));
-        }
+        spawnFreeChild(() -> new CheckpointDongleInstance(this));
     }
 
     private boolean shouldSpawnStars(AbstractPlayableSprite player) {
@@ -229,14 +232,10 @@ public class CheckpointObjectInstance extends BoxObjectInstance {
     }
 
     private void spawnStars() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
         // Spawn 4 stars at angle offsets 0, 0x40, 0x80, 0xC0
         for (int i = 0; i < 4; i++) {
             int angleOffset = i * 0x40;
-            objectManager.addDynamicObject(new CheckpointStarInstance(this, angleOffset));
+            spawnFreeChild(() -> new CheckpointStarInstance(this, angleOffset));
         }
     }
 
@@ -287,4 +286,3 @@ public class CheckpointObjectInstance extends BoxObjectInstance {
         return RenderPriority.clamp(5);
     }
 }
-

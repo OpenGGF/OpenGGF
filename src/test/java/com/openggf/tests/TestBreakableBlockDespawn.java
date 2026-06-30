@@ -120,29 +120,45 @@ public class TestBreakableBlockDespawn {
 
         System.out.printf("Found breakable block at X=%d, Y=%d%n", blockSpawn.x(), blockSpawn.y());
 
-        // Position Sonic near the block and roll through it
-        sprite.setCentreX((short) (blockX - 32));
-        sprite.setCentreY((short) blockSpawn.y());
+        // Position Sonic ABOVE the block in a rolling jump so SolidObject seats him
+        // on top with status.standing set + rolling anim active. ROM Obj32_Main only
+        // breaks the block when the player is STANDING on it AND rolling
+        // (s2.asm:48889-48959). Side-roll-into-block no longer breaks (engine matches
+        // ROM after iter-3 fix).
+        // Block half-height is 16, Sonic standing y_radius is ~19, rolling y_radius=14.
+        // Sonic's centre when standing on block top = block.y - block_halfH - sonic_yRadius.
+        // Place Sonic ~40px above so he falls a clean rolling distance onto the block.
+        sprite.setCentreX((short) blockX);
+        sprite.setCentreY((short) (blockSpawn.y() - 60));
         sprite.setRolling(true);
-        sprite.setGSpeed((short) 0x800);
-        sprite.setXSpeed((short) 0x800);
+        sprite.setGSpeed((short) 0);
+        sprite.setXSpeed((short) 0);
+        sprite.setYSpeed((short) 0x100);
+        sprite.setAir(true);
         fixture.camera().updatePosition(true);
         objMgr.reset(fixture.camera().getX());
 
-        logState("Positioned near block, rolling");
+        logState("Positioned above block, rolling+falling");
 
-        // Step frames to roll through the block
+        // Step frames so the player lands rolling on top of the block, satisfying
+        // ROM's standing+rolling break condition.
         boolean blockBroken = false;
-        for (int frame = 0; frame < 60; frame++) {
-            fixture.stepFrame(false, false, false, true, false);
+        for (int frame = 0; frame < 120; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            // Keep rolling state asserted: setAir() resets rolling, so re-roll if
+            // the engine cleared it (we want the player rolling at impact).
+            if (!sprite.getRolling()) {
+                sprite.setRolling(true);
+            }
             if (objMgr.isRemembered(blockSpawn)) {
                 blockBroken = true;
-                System.out.printf("Block broken at frame %d%n", frame);
+                System.out.printf("Block broken at frame %d, sprite Y=%d, blockY=%d%n",
+                        frame, sprite.getY(), blockSpawn.y());
                 break;
             }
         }
 
-        Assumptions.assumeTrue(blockBroken, "Failed to break the block by rolling through it");
+        Assumptions.assumeTrue(blockBroken, "Failed to break the block by landing rolling on top");
 
         System.out.printf("Block at X=%d broken and remembered%n", blockX);
 

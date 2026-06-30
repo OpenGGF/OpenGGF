@@ -1,9 +1,8 @@
 package com.openggf.level.objects.boss;
 
 import com.openggf.debug.DebugRenderContext;
-import com.openggf.graphics.GraphicsManager;
+import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.level.Palette;
-import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -36,6 +35,11 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     protected static final int DEFAULT_INVULNERABILITY_DURATION = 32;
     /** Boss explosion spawn interval (every 8 frames) */
     protected static final int EXPLOSION_INTERVAL = 8;
+    private static final String BOSS_FLASH_PALETTE_OWNER = "boss.flash";
+    private static final int BOSS_FLASH_PALETTE_PRIORITY = 200;
+    private static final int BOSS_FLASH_COLOR_INDEX = 1;
+    private static final int BOSS_FLASH_BLACK_WORD = 0x0000;
+    private static final int BOSS_FLASH_WHITE_WORD = 0x0EEE;
 
     protected final BossStateContext state;
     protected final BossHitHandler hitHandler;
@@ -44,6 +48,23 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     protected final List<BossChildComponent> childComponents;
     protected final Map<Integer, Integer> customMemory;
     private ObjectSpawn dynamicSpawn;
+
+    /**
+     * Set when {@link BossHitHandler#triggerDefeat()} flips the boss to defeated and
+     * switches its routine to the defeat handler during touch-response processing
+     * (which, for the S2 post-physics object ordering, runs <em>before</em> this
+     * object's own {@code update()} on the same frame). It defers the first defeat
+     * routine dispatch to the following frame.
+     *
+     * <p>ROM model: ObjAF reads {@code routine(a0)} once at the top of its dispatch
+     * (docs/s2disasm/s2.asm:77412-77415). When loc_39CF0 sets {@code routine=$C}
+     * mid-frame (docs/s2disasm/s2.asm:78003-78004), routine $C (loc_39B92:
+     * {@code subq.w #1,objoff_32; bmi}, docs/s2disasm/s2.asm:77848-77853) does not
+     * begin its per-frame countdown until the next frame. Without this deferral the
+     * engine would run an extra same-frame countdown decrement, releasing
+     * Camera_Max_X_pos (loc_39BA4, docs/s2disasm/s2.asm:77856-77857) one frame early.
+     */
+    private boolean deferDefeatRoutineDispatch;
 
     public AbstractBossInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -84,13 +105,21 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
-        if (!state.defeated) {
+        if (!state.defeated && usesBaseHitHandler()) {
             hitHandler.update();
             // Note: paletteFlasher.update() is now called inside hitHandler.update()
             // to match ROM order: flash first, then decrement timer
         }
 
-        if (!state.defeated || !usesDefeatSequencer()) {
+        // ROM routine-read-once deferral: if the boss became defeated during this
+        // frame's touch-response pass (before this object's own update ran), the
+        // newly-selected defeat routine must not be dispatched until the next frame,
+        // mirroring ObjAF reading routine(a0) once at the top of its dispatch
+        // (docs/s2disasm/s2.asm:77412-77415). Consume the one-frame deferral here so
+        // the defeat countdown's first decrement lands one frame later, as in ROM.
+        boolean deferThisFrame = deferDefeatRoutineDispatch;
+        deferDefeatRoutineDispatch = false;
+        if ((!state.defeated || !usesDefeatSequencer()) && !deferThisFrame) {
             updateBossLogic(frameCounter, player);
         }
 
@@ -105,7 +134,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
     private void updateChildren(int frameCounter, PlayableEntity player) {
         childComponents.removeIf(BossChildComponent::isDestroyed);
-        for (BossChildComponent child : childComponents) {
+        for (BossChildComponent child : List.copyOf(childComponents)) {
             child.update(frameCounter, player);
         }
     }
@@ -167,6 +196,19 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     }
 
     /**
+     * Whether this boss uses the base class hit handler for invulnerability
+     * timer management and palette flashing.
+     * <p>S3K bosses with custom palette flash (sub_69C5C-style) should override
+     * this to return {@code false} and manage invulnerability entirely in
+     * {@link #updateBossLogic}. This prevents the base {@code hitHandler} from
+     * decrementing the timer before the custom flash reads bit&nbsp;0, which
+     * would invert the flash/normal alternation.
+     */
+    protected boolean usesBaseHitHandler() {
+        return true;
+    }
+
+    /**
      * SFX played when the boss takes damage.
      */
     protected abstract int getBossHitSfxId();
@@ -197,8 +239,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      * Uses standard random offset calculation: (random >> 2) - 0x20.
      */
     protected void spawnDefeatExplosion() {
-        ObjectRenderManager renderManager = services().renderManager();
-        if (renderManager == null || services().objectManager() == null) {
+        if (services().renderManager() == null || services().objectManager() == null) {
             return;
         }
         int random = services().rng().nextWord();
@@ -207,7 +248,6 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         BossExplosionObjectInstance explosion = new BossExplosionObjectInstance(
                 state.x + xOffset,
                 state.y + yOffset,
-                renderManager,
                 getBossExplosionSfxId());
         services().objectManager().addDynamicObject(explosion);
     }
@@ -229,6 +269,34 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      */
     protected boolean usesDefeatSequencer() {
         return true;
+    }
+
+    /**
+     * Whether this boss's defeat needs the one-frame "routine-read-once" dispatch
+     * deferral (see {@link #deferDefeatRoutineDispatch}).
+     *
+     * <p>Models <em>which ROM defeat-dispatch mechanism</em> the boss uses, exposed
+     * at the owning boss class. The deferral is only correct for bosses whose defeat
+     * is selected by overwriting the <strong>primary {@code routine}</strong> during
+     * the hit pass, where the object dispatches on {@code routine(a0)} read <em>once</em>
+     * at the top of its update (ObjAF / DEZ Mecha Sonic:
+     * docs/s2disasm/s2.asm:77412-77415, loc_39CF0 sets {@code routine=$C} at
+     * docs/s2disasm/s2.asm:78003-78004). For those, the newly-selected defeat routine
+     * must not be dispatched until the next frame, and because the engine runs touch
+     * responses before this object's own {@code update()}, the deferral restores that
+     * one-frame offset.
+     *
+     * <p>It must stay {@code false} for bosses whose defeat is selected via a different
+     * dispatch — e.g. ObjC5 / Wing Fortress, which sets {@code routine_secondary=$1E}
+     * (docs/s2disasm/s2.asm:81954-81962) dispatched fresh every frame from within the
+     * already-running main routine ({@code ObjC5_LaserCase} reads
+     * {@code routine_secondary} each frame, docs/s2disasm/s2.asm:81155-81160). That path
+     * does not carry ObjAF's primary-routine read-once offset, so the engine's existing
+     * post-hit countdown already matches the ROM camera-release timing. Defaults to
+     * {@code false}; override {@code true} only on the ObjAF main-routine defeat path.
+     */
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        return false;
     }
 
     /**
@@ -283,6 +351,21 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
             } else {
                 services().gameState().addScore(1000);
                 onDefeatStarted();
+                // onDefeatStarted() switched state.routine to the defeat handler.
+                // For the S2 post-physics ordering this triggerDefeat() runs in the
+                // touch-response pass BEFORE this object's own update() this frame, so
+                // without deferral updateBossLogic() would dispatch the defeat routine
+                // (and decrement its countdown) on the same frame the routine changed.
+                // ROM reads routine(a0) once per object update, so the defeat routine
+                // first runs next frame (docs/s2disasm/s2.asm:77412-77415, 78003-78004,
+                // 77848-77853). Defer the first defeat dispatch by one frame -- but ONLY
+                // for bosses whose defeat overwrites the primary routine dispatched
+                // read-once at the top of their update (ObjAF / DEZ Mecha Sonic).
+                // Bosses that select defeat via routine_secondary dispatched fresh each
+                // frame (ObjC5 / WFZ) do not carry this offset and must not be deferred.
+                if (defeatDeferralAppliesToThisBoss()) {
+                    deferDefeatRoutineDispatch = true;
+                }
             }
         }
     }
@@ -292,14 +375,9 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      * ROM Reference: s2.asm:60748-60754 (Boss_HandleHits palette flash)
      */
     protected class BossPaletteFlasher {
-        // ROM: s2.asm:60749 - moveq #0,d0 (black = 0x0000)
-        private static final Palette.Color BLACK = new Palette.Color((byte) 0, (byte) 0, (byte) 0);
-        // ROM: s2.asm:60752 - move.w #$EEE,d0 (white = 0x0EEE)
-        private static final Palette.Color WHITE = new Palette.Color((byte) 255, (byte) 255, (byte) 255); // 0xEEE scaled to RGB
-
         private boolean flashing;
         private int flashFrame;
-        private Palette.Color originalColor;
+        private int originalColorWord;
         private boolean colorStored;
         private boolean useWhite; // Internal toggle - immune to external palette modifications
 
@@ -312,13 +390,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
         public void stopFlash() {
             if (flashing && colorStored) {
-                // Restore original color
-                Palette palette = getPaletteForFlash();
-                if (palette != null) {
-                    palette.setColor(1, originalColor);
-                    // Upload restored palette to GPU
-                    uploadPaletteToGpu(palette);
-                }
+                applyFlashColor(originalColorWord);
             }
             flashing = false;
             flashFrame = 0;
@@ -337,30 +409,30 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
             // Store original color on first flash (make a copy to avoid reference issues)
             if (!colorStored) {
-                Palette.Color orig = palette.getColor(1);
-                originalColor = new Palette.Color(orig.r, orig.g, orig.b);
+                originalColorWord = PaletteWriteSupport.segaWordFromColor(palette.getColor(BOSS_FLASH_COLOR_INDEX));
                 colorStored = true;
             }
 
             // ROM: s2.asm:60749-60754 - Toggle between black (0x0000) and white (0x0EEE)
             // Use internal toggle state to ensure reliable alternation even if
             // palette cyclers or other systems modify the palette between frames
-            Palette.Color newColor = useWhite ? WHITE : BLACK;
-            palette.setColor(1, newColor);
+            int newColor = useWhite ? BOSS_FLASH_WHITE_WORD : BOSS_FLASH_BLACK_WORD;
+            applyFlashColor(newColor);
             useWhite = !useWhite; // Toggle for next frame
-
-            // Upload modified palette to GPU so the change is visible
-            uploadPaletteToGpu(palette);
 
             flashFrame++;
         }
 
-        private void uploadPaletteToGpu(Palette palette) {
-            GraphicsManager gm = services().graphicsManager();
-            if (gm.isGlInitialized()) {
-                int paletteIndex = getPaletteLineForFlash();
-                gm.cachePaletteTexture(palette, paletteIndex);
-            }
+        private void applyFlashColor(int segaWord) {
+            PaletteWriteSupport.applyColor(
+                    services().paletteOwnershipRegistryOrNull(),
+                    services().currentLevel(),
+                    services().graphicsManager(),
+                    BOSS_FLASH_PALETTE_OWNER,
+                    BOSS_FLASH_PALETTE_PRIORITY,
+                    getPaletteLineForFlash(),
+                    BOSS_FLASH_COLOR_INDEX,
+                    segaWord);
         }
 
         private Palette getPaletteForFlash() {

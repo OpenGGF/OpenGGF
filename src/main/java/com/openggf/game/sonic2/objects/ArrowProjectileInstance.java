@@ -3,12 +3,15 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -30,7 +33,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class ArrowProjectileInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(ArrowProjectileInstance.class.getName());
 
     private static final int ARROW_VELOCITY = 0x400; // Fixed-point 8.8 = 4 pixels/frame
@@ -47,6 +50,10 @@ public class ArrowProjectileInstance extends AbstractObjectInstance
     private int xSubpixel; // Fractional part
     private boolean facingLeft;
     private boolean initialized;
+
+    private ArrowProjectileInstance() {
+        this(new ObjectSpawn(0, 0, Sonic2ObjectIds.ARROW_SHOOTER, 0, 0, false, 0), 0, 0, false);
+    }
 
     public ArrowProjectileInstance(ObjectSpawn parentSpawn, int startX, int startY, boolean facingLeft) {
         super(createArrowSpawn(parentSpawn, startX, startY), "Arrow");
@@ -72,6 +79,11 @@ public class ArrowProjectileInstance extends AbstractObjectInstance
                 parent.renderFlags(),
                 false, // Don't track respawn for projectiles
                 parent.rawYWord());
+    }
+
+    @Override
+    public boolean skipsSameFrameUpdateAfterSpawn() {
+        return true;
     }
 
     @Override
@@ -126,6 +138,11 @@ public class ArrowProjectileInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TouchResponseProfile.standardEnemy();
     }
 
     @Override

@@ -7,6 +7,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
@@ -30,7 +31,7 @@ import java.util.List;
  * - No updates: Just renders, no logic
  */
 public class DestroyedEggPrisonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable {
 
     private static final int FRAME_BODY_OPEN_3 = 3; // Fully open capsule frame
 
@@ -38,8 +39,8 @@ public class DestroyedEggPrisonObjectInstance extends AbstractObjectInstance
     private static final int BODY_HALF_WIDTH = 0x2B;  // 43 pixels
     private static final int BODY_HALF_HEIGHT = 0x18; // 24 pixels
 
-    private final int positionX;
-    private final int positionY;
+    private int positionX;
+    private int positionY;
 
     /**
      * Create a static destroyed capsule visual at the given position.
@@ -52,6 +53,10 @@ public class DestroyedEggPrisonObjectInstance extends AbstractObjectInstance
         super(spawn, "Destroyed EggPrison");
         this.positionX = x;
         this.positionY = y;
+    }
+
+    DestroyedEggPrisonObjectInstance(ObjectSpawn spawn) {
+        this(spawn, spawn.x(), spawn.y());
     }
 
     @Override

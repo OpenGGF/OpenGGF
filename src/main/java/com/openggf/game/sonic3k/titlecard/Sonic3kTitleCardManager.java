@@ -7,6 +7,7 @@ import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.TitleCardSpriteRenderer;
 import com.openggf.level.Pattern;
 import com.openggf.tools.KosinskiReader;
@@ -45,6 +46,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     // Display hold duration (frames). ROM: Level routine overwrites $2E to $16 (22)
     // at line 7878, synchronizing the hold with Palette_fade_timer.
     private static final int DISPLAY_HOLD_FRAMES = 90;
+    private static final int IN_LEVEL_WAIT_FRAMES_BEFORE_HUD_RESET = 4;
 
     // ROM palette fade duration: 22 frames (sonic3k.asm line 7877, Palette_fade_timer = $16).
     // In the ROM, the title card is already visible for many frames during level loading
@@ -52,11 +54,33 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     // synchronously, so we use the full 90-frame hold but run the fade in the last 22.
     private static final int BONUS_BG_FADE_FRAMES = 22;
 
+    /** Native game width (320-pixel frame everything is authored for). */
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
 
+    /**
+     * Returns the configured viewport width in game pixels.
+     * At native 320 equals SCREEN_WIDTH exactly (xOffset == 0 — byte-identical).
+     */
+    private int viewportWidth() {
+        try {
+            int w = GameServices.graphics().getProjectionWidth();
+            return w > 0 ? w : SCREEN_WIDTH;
+        } catch (Exception ignored) {
+            return SCREEN_WIDTH;
+        }
+    }
+
+    /**
+     * Horizontal offset to centre the 320-wide title-card composition in the
+     * configured viewport.  Zero at native 320 — byte-identical.
+     */
+    private int xOffset() {
+        return (viewportWidth() - SCREEN_WIDTH) / 2;
+    }
+
     // Pattern base ID for GPU caching (high to avoid conflicts)
-    private static final int PATTERN_BASE = 0x50000;
+    private static final int PATTERN_BASE = PatternAtlasRange.MENU_AND_DATA_SELECT.base();
 
     // VRAM base tile for title card art
     private static final int VRAM_BASE = Sonic3kConstants.VRAM_TITLE_CARD_BASE;
@@ -86,6 +110,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private int stateTimer;
     private int phaseCounter;  // Exit phase counter for staggered exit
     private boolean inLevelMode;  // No black background, control released immediately
+    private boolean resetLevelGamestateOnInLevelComplete;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
     private float bonusFadeProgress; // 0.0→1.0 over BONUS_DISPLAY_HOLD_FRAMES during DISPLAY
 
@@ -136,6 +161,18 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     }
 
     /**
+     * S3K Act 1 results mutate into an in-level title card. The ROM clears
+     * {@code Ring_count}/timer when {@code Obj_TitleCardWait} starts the
+     * in-level wait, not when Obj_LevelResults first switches
+     * {@code Apparent_act} (sonic3k.asm:62708-62720, 62214-62235).
+     */
+    public void requestLevelGamestateResetOnInLevelComplete() {
+        if (inLevelMode) {
+            resetLevelGamestateOnInLevelComplete = true;
+        }
+    }
+
+    /**
      * Initializes for bonus stage mode — shows "BONUS STAGE" text.
      * Uses 2 horizontal elements (frames 19/20) instead of the normal 4-element layout.
      * Both elements have exit priority 1 (exit simultaneously).
@@ -177,6 +214,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.currentAct = actIndex;
         this.bonusMode = false;
         this.inLevelMode = inLevel;
+        this.resetLevelGamestateOnInLevelComplete = false;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.phaseCounter = 0;
@@ -240,6 +278,38 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         return state == Sonic3kTitleCardState.COMPLETE;
     }
 
+    public boolean isInLevelExitPhaseFor(int zoneIndex, int actIndex) {
+        return inLevelMode
+                && currentZone == zoneIndex
+                && currentAct == actIndex
+                && state == Sonic3kTitleCardState.EXIT;
+    }
+
+    public boolean willSetInLevelEndOfLevelFlagThisUpdate() {
+        if (!inLevelMode || state != Sonic3kTitleCardState.EXIT) {
+            return false;
+        }
+        // Engine ordering: Sonic3kTitleCardManager advances before object
+        // updates, while the ROM title-card wait object and end-sign
+        // controller run in the same object pass. Predict one title-card
+        // manager tick ahead so AIZ's level-size proxy can start on the ROM
+        // frame where Obj_TitleCardWait2 raises End_of_level_flag.
+        int count = bonusMode ? BONUS_ELEMENT_COUNT : ELEMENT_COUNT;
+        for (int i = 0; i < count; i++) {
+            if (!bonusMode && !actNumberVisible && i == ELEM_ACT_NUM) {
+                continue;
+            }
+            if (!willElementBeExitedWithinUpdates(i, 2)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public int getExitPhaseCounter() {
+        return phaseCounter;
+    }
+
     /**
      * S3K ROM: the pre-level title card completes its blocking setup work before
      * normal gameplay begins, so the player does not keep advancing physics during
@@ -265,6 +335,9 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         // ROM: Pal_FadeFromBlack runs simultaneously with the title card wait.
         if (!inLevelMode &&
                 (state == Sonic3kTitleCardState.SLIDE_IN || state == Sonic3kTitleCardState.DISPLAY)) {
+            // Span the full viewport so no level bleeds through on wider screens.
+            // viewportWidth()==SCREEN_WIDTH at native 320 — byte-identical.
+            int vw = viewportWidth();
             if (bonusMode && state == Sonic3kTitleCardState.DISPLAY && bonusFadeProgress > 0f) {
                 // Per-channel subtractive fade matching FadeManager.updateFadeFromBlack()
                 // B fades first (0→1/3), then G (1/3→2/3), then R (2/3→1)
@@ -277,14 +350,14 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
                     gm.registerCommand(new GLCommand(
                             GLCommand.CommandType.RECTI, -1, GLCommand.BlendType.SUBTRACTIVE,
                             darkR, darkG, darkB, 1.0f,
-                            0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                            0, 0, vw, SCREEN_HEIGHT
                     ));
                 }
             } else {
                 gm.registerCommand(new GLCommand(
                         GLCommand.CommandType.RECTI, -1,
                         0.0f, 0.0f, 0.0f,
-                        0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                        0, 0, vw, SCREEN_HEIGHT
                 ));
             }
         }
@@ -314,6 +387,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         inLevelMode = false;
         bonusMode = false;
         bonusFadeProgress = 0f;
+        resetLevelGamestateOnInLevelComplete = false;
         currentZone = 0;
         currentAct = 0;
         actNumberVisible = false;
@@ -361,6 +435,9 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
     private void updateDisplay() {
         stateTimer++;
+        if (inLevelMode && stateTimer >= IN_LEVEL_WAIT_FRAMES_BEFORE_HUD_RESET) {
+            consumeLevelGamestateResetRequest();
+        }
 
         // In bonus mode, run the per-channel fade during the last 22 frames of the hold.
         // ROM: Palette_fade_timer runs after level loading completes, but the title card
@@ -407,8 +484,56 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
         if (allExited) {
             state = Sonic3kTitleCardState.COMPLETE;
+            if (inLevelMode) {
+                // ROM Obj_TitleCardWait2 sets End_of_level_flag only after the
+                // in-level title-card timer has elapsed and its child objects
+                // have disappeared (sonic3k.asm:62244-62279).
+                GameServices.gameState().setEndOfLevelFlag(true);
+            }
             LOG.fine("S3K title card: COMPLETE");
         }
+    }
+
+    private void consumeLevelGamestateResetRequest() {
+        if (!resetLevelGamestateOnInLevelComplete) {
+            return;
+        }
+        resetLevelGamestateOnInLevelComplete = false;
+        var levelManager = GameServices.levelOrNull();
+        if (levelManager != null) {
+            levelManager.resetLevelGamestate(GameServices.module().createLevelState());
+        }
+    }
+
+    private boolean willElementBeExitedWithinUpdates(int idx, int updates) {
+        if (elemExited[idx]) {
+            return true;
+        }
+        int[] priorities = bonusMode ? BONUS_EXIT_PRIORITY : EXIT_PRIORITY;
+        if (phaseCounter + updates < priorities[idx]) {
+            return false;
+        }
+        int speed = SLIDE_SPEED_OUT;
+        int start = isElementVertical(idx) ? elementStartY(idx) : elementStartX(idx);
+        int current = isElementVertical(idx) ? elemY[idx] : elemX[idx];
+        int dir = Integer.compare(start, current);
+        if (dir == 0) {
+            return true;
+        }
+        int next = current + dir * speed * updates;
+        return (dir > 0 && next >= start) || (dir < 0 && next <= start);
+    }
+
+    private boolean isElementVertical(int idx) {
+        return !bonusMode && IS_VERTICAL[idx];
+    }
+
+    private int elementStartX(int idx) {
+        return bonusMode ? BONUS_START_X[idx] : START_X[idx];
+    }
+
+    private int elementStartY(int idx) {
+        return bonusMode ? BONUS_Y : START_Y[idx];
     }
 
     /**
@@ -605,7 +730,9 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
         int frameIndex = elemFrame[elemIdx];
         TitleCardMappings.SpritePiece[] pieces = Sonic3kTitleCardMappings.getFrame(frameIndex);
-        int centerX = elemX[elemIdx];
+        // xOffset() centres the 320-wide composition in the viewport.
+        // At native 320 xOffset()==0 — byte-identical.
+        int centerX = elemX[elemIdx] + xOffset();
         int centerY = elemY[elemIdx];
 
         // Render back-to-front: VDP sprites earlier in the mapping have higher

@@ -4,6 +4,7 @@ import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -12,6 +13,9 @@ import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -31,7 +35,7 @@ import java.util.List;
  *
  * SubObjData: collision_flags=$0B, priority=4, width_pixels=$10.
  */
-public class AsteronBadnikInstance extends AbstractBadnikInstance {
+public class AsteronBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     // From ObjA4_SubObjData: collision_flags = $0B
     private static final int COLLISION_SIZE_INDEX = 0x0B;
 
@@ -40,6 +44,7 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
 
     // Timer for routine 6 movement phase: objoff_2A = $40 (64 frames)
     private static final int MOVE_TIMER_INIT = 0x40;
+    private static final int PROJECTILE_SUBTYPE = 0x30;
 
     // Detection ranges from routine 2 (loc_389B6)
     // d2 + $60 compared to $C0 → player within -$60..$60 horizontally
@@ -65,6 +70,9 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
             {-8, -4, -3 * 256, -1 * 256, 3, 0},     // Up-left
     };
 
+    // ROM ObjA4_SubObjData: make_art_tile(ArtTile_ArtNem_MtzSupernova,0,1).
+    private static final boolean HIGH_PRIORITY_SPRITE = true;
+
     private enum State {
         IDLE,       // Routine 2: waiting for player in range
         ARMED,      // Routine 4: checking direction to fire
@@ -80,6 +88,11 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
         this.state = State.IDLE;
         this.moveTimer = 0;
         this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+    }
+
+    @Override
+    public AsteronBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AsteronBadnikInstance(ctx.spawn());
     }
 
     @Override
@@ -165,6 +178,10 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
      * When timer reaches 0: convert to explosion + spawn 5 projectiles.
      */
     private void updateMoving() {
+        // ROM loc_38A2C (s2.asm:75838-75844): subq.w #1,objoff_2A(a0) / bmi.s →
+        // explode. The counter is decremented first; only when it BECOMES negative
+        // (i.e. underflows past 0) does the Asteron explode. The frame where the
+        // counter reaches 0 still runs ObjectMove + AnimateSprite.
         moveTimer--;
         if (moveTimer < 0) {
             explode();
@@ -179,6 +196,10 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
         SubpixelMotion.moveSprite2(motionState);
         currentX = motionState.x;
         currentY = motionState.y;
+
+        // ROM also calls AnimateSprite on this frame (Ani_objA4). Animation is
+        // driven centrally by updateAnimation() while state == MOVING, so the
+        // reaching-0 frame still advances the animation.
     }
 
     /**
@@ -187,19 +208,20 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
      * Obj_CreateProjectiles with the 5-entry projectile table.
      */
     private void explode() {
-        // Destroy self (the Asteron becomes an explosion)
-        setDestroyed(true);
-        setDestroyed(true);
-
         var objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.removeFromActiveSpawns(spawn);
-        }
+        int transferredSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+        ObjectLifetimeOps.destroyLatched(this);
+        ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
 
-        // Spawn explosion at current position
-        var explosion = new ExplosionObjectInstance(
-                0x27, currentX, currentY, services().renderManager());
-        objectManager.addDynamicObject(explosion);
+        // ROM loc_38A44 changes this SST slot in-place to Obj27, leaving the
+        // Asteron slot occupied before Obj_CreateProjectiles allocates children.
+        final int explosionX = currentX;
+        final int explosionY = currentY;
+        ObjectLifetimeOps.addReplacementAtTransferredSlot(
+                objectManager,
+                new ExplosionObjectInstance(
+                        Sonic2ObjectIds.EXPLOSION, explosionX, explosionY, services().renderManager()),
+                transferredSlot);
 
         // Play explosion SFX
         services().playSfx(
@@ -207,24 +229,26 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
 
         // Spawn 5 projectiles (from word_38A68 / Obj_CreateProjectiles)
         for (int[] data : PROJECTILE_DATA) {
-            int projX = currentX + data[0];
-            int projY = currentY + data[1];
-            int projXVel = data[2];
-            int projYVel = data[3];
-            int mappingFrame = data[4];
-            boolean hFlip = data[5] != 0;
+            final int projX = currentX + data[0];
+            final int projY = currentY + data[1];
+            final int projXVel = data[2];
+            final int projYVel = data[3];
+            final int mappingFrame = data[4];
+            final boolean hFlip = data[5] != 0;
 
-            BadnikProjectileInstance projectile = new BadnikProjectileInstance(
-                    spawn,
+            ObjectSpawn projectileSpawn = new ObjectSpawn(
+                    projX, projY, Sonic2ObjectIds.PROJECTILE, PROJECTILE_SUBTYPE,
+                    0, false, 0);
+            BadnikProjectileInstance projectile = spawnChild(() -> new BadnikProjectileInstance(
+                    projectileSpawn,
                     BadnikProjectileInstance.ProjectileType.ASTERON_SPIKE,
                     projX, projY,
                     projXVel, projYVel,
                     false,  // No gravity - uses ObjectMove (straight line)
                     hFlip,
                     0,      // No initial delay
-                    mappingFrame);
-
-            objectManager.addDynamicObject(projectile);
+                    mappingFrame));
+            projectile.deferFirstMovementForLoadSubObjectInit();
         }
     }
 
@@ -260,7 +284,8 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
         if (renderer == null) return;
 
         // Asteron has no directional flipping - it's a symmetric starfish
-        renderer.drawFrameIndex(animFrame, currentX, currentY, false, false);
+        renderer.drawFrameIndexForcedPriority(
+                animFrame, currentX, currentY, false, false, -1, HIGH_PRIORITY_SPRITE);
     }
 
     @Override

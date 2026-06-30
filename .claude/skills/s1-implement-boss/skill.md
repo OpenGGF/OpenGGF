@@ -81,6 +81,8 @@ Delegate multiple agents to explore the disassembly. **Include this instruction 
 - Camera boundary manipulation for arena lock
 - Sub-object data tables: `BossName_ObjData` defines children with offsets and IDs
 
+When porting boss object positions, ROM `obX` / `obY` are centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
+
 ### Phase 2: Arena & Level Event Setup
 
 S1 bosses use `Sonic1LevelEventManager` (at `game/sonic1/events/Sonic1LevelEventManager.java`) for arena setup and boss spawning. This manager extends `AbstractLevelEventManager` and delegates to per-zone handler classes.
@@ -184,17 +186,14 @@ S1 bosses use `ObjData` tables to define child objects. Parse these tables and s
 ```java
 // S1 pattern: sub-objects defined as data table entries
 private void spawnChildComponents() {
-    ObjectManager manager = services().objectManager();
-
     // From BossName_ObjData table in disassembly
     // Each entry typically: x_offset, y_offset, mapping_frame, subtype
-    BossChildInstance child = new BossChildInstance(this, xOffset, yOffset);
-    manager.addDynamicObject(child);
+    BossChildInstance child = spawnChild(() -> new BossChildInstance(this, xOffset, yOffset));
     childComponents.add(child);
 }
 ```
 
-Children can extend `AbstractBossChild` (shared with S2) or be simple independent objects depending on the boss pattern.
+Children can extend `AbstractBossChild` (shared with S2) or be simple independent objects depending on the boss pattern. Prefer `spawnChild(...)`, `spawnFreeChild(...)`, or an existing `level.objects` lifecycle helper instead of direct `ObjectManager.addDynamicObject(...)`.
 
 ### Phase 5: Hit Handling
 
@@ -217,6 +216,51 @@ The hit response typically:
 3. Applies palette flash to boss sprite
 4. Sets invulnerability timer
 5. May trigger behavior change (some bosses speed up at low health)
+
+#### Shared defeat / escape / camera-unlock pitfalls (all 5 Eggman-ship bosses)
+
+The GHZ/MZ/SYZ/SLZ/LZ bosses (`AbstractS1EggmanBossInstance`) share three ROM
+behaviours that each caused a distinct trace divergence in the post-boss
+camera-unlock tail (SYZ3 f12490 -> GREEN, commit on `bugfix/ai-syz3-f12490`;
+GHZ3 had the same defeat-deferral fix earlier):
+
+1. **Defeat routine is dispatched read-once — defer the first defeat frame.**
+   The killing hit sets the defeated flag, but the boss only acts on it when its
+   own routine reaches its status-update tail, where `B*_Defeated` does
+   `move.b #<explode>,ob2ndRout` + `move.w #<timer>,GenericTimer` then **`rts`**
+   (it does NOT fall through to the explode routine). `B*_ShipMain` re-reads
+   `ob2ndRout` at the top of its dispatch next frame, so the defeat countdown's
+   first decrement lands one frame after the hit. The engine selects the defeat
+   routine in the touch-response pass that runs *before* the boss's own
+   `update()`, so set `defeatDeferralAppliesToThisBoss()=true` to restore that
+   one-frame offset (otherwise the whole defeat→ascent→escape sequence — and the
+   escape's `addq.w #2,(v_limitright2)` camera scroll — runs one frame early).
+   Watch the per-boss defeat timer value (GHZ `$B3`, SYZ `$B4=180`).
+   (`docs/s1disasm/_incObj/75, 76 Boss - SYZ Main and Blocks.asm:70-74,154-160`.)
+
+2. **Eggman bosses are never `out_of_range`-culled — make them persistent.**
+   `B*_ShipMain` ends with `jmp (DisplaySprite).l`, never `MarkObjGone` /
+   `out_of_range`; the boss owns its whole lifecycle and self-deletes only from
+   its escape routine once `v_limitright2` reaches `boss_*_end`. During the
+   escape the ship flies right at 8px/frame (two BossMoves) and outruns the
+   2px/frame camera, so the generic engine off-screen unload culls it mid-escape
+   and freezes the right-boundary scroll short of `boss_*_end` (SYZ3 f12575:
+   `maxX` stuck at 0x2CA4 instead of 0x2D40). `AbstractS1EggmanBossInstance`
+   returns `isPersistent()=true` for the whole family. (asm:84.)
+
+3. **Defeat does NOT clear `f_lockscreen` — the Egg Prison does.**
+   `B*_Explode .transition` clears velocities and the defeated status bit but
+   never touches `f_lockscreen`; the screen lock stays set through the ascent,
+   escape, and the run to the egg capsule, and is cleared only by the Egg Prison
+   (Obj3E `clr.b (f_lockscreen).w`). The engine models `f_lockscreen` via
+   `currentBossId` (which the Egg Prison clears). Do NOT call
+   `setCurrentBossId(0)` from the boss's defeat code — clearing it early drops
+   the strict right-boundary (the `RIGHT_EXTRA` +0x40 in `doLevelBoundary` is
+   re-enabled), letting the player overrun `v_limitright2+0x128` before reaching
+   the capsule (SYZ3 f12767: ROM wall-stops the player, engine kept running).
+   NOTE: as of `bugfix/ai-syz3-f12490` only the SYZ boss had this `setCurrentBossId(0)`
+   removed; GHZ/MZ/SLZ still call it at defeat (latent — their players don't reach
+   the boundary band in that window). Remove it there too if a trace exposes it.
 
 ### Phase 6: Art Loading
 
@@ -262,7 +306,28 @@ registerFactory(Sonic1ObjectIds.ZONE_BOSS,
 
 `Sonic1ObjectRegistry` already has `registerDefaultFactories()` — add your factory registration there.
 
-### Phase 8: Code Quality
+### Phase 8: Rewind Synchronization Fields
+
+Before finalizing a boss or boss child, classify every instance field for rewind. Key synchronization-relevant fields must remain captured: routine/state variables, phase flags, hit counters, timers, attack cooldowns, arena/camera-lock latches, subpixel positions, velocities, movement helper state, child component state, defeat-flow state, per-player contact/carry/rider latches, and dynamic spawn coordinates. Do not add `@RewindTransient` to these fields just to satisfy `GenericFieldCapturer` or audit tests.
+
+Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable spawn identity, parent/child graph references, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Boss `dynamicSpawn` references are not structural by default; capture coordinates explicitly or defer generic migration.
+
+Prefer standard value forms before boss-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+Bosses participate in player/object lifecycle beyond hit counts. Cross-check player and sidekick contacts, carried state, invulnerability/hurt timing, child despawn, and arena-lock latches against the ROM, especially across defeat and transition frames.
+
+### Phase 8.5: Shared Object Contracts
+
+Bosses and boss children may need bespoke state, but still prefer shared contracts when they fit:
+
+- Use `ObjectControlState` for forced-control and cutscene-control predicates instead of raw boolean combinations.
+- Use `ObjectPlayerQuery` and `ObjectPlayerParticipationPolicy` for hit, contact, and targeting decisions. S1 native boss logic is main-player focused; OpenGGF sidekick participation must be explicit when extended.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes; reserve raw preserve-subpixel setters for lower-level sprite internals or non-playable boss-local state.
+- Use `ObjectLifetimeOps` for child deletion, despawn, and dynamic-expire semantics.
+- Reuse canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` compatibility wrappers where they preserve existing boss behavior.
+- Ratchet guard baselines when adding source guards; do not let historical direct-control or lifecycle calls block new hard-fail enforcement.
+
+### Phase 9: Code Quality
 
 Ensure the implementation:
 - Has no TODOs or placeholder code
@@ -357,6 +422,7 @@ Report any discrepancies with specific line references.
 - Drops spikes from above
 - Retracting platforms in arena
 - Spike timing pattern from disassembly
+- **objoff_3C/3D word/byte aliasing trap:** the block-drop hold/break shake reads `btst #1/#0,PhaseTimer` where `PhaseTimer` (objoff_3D) is the LOW BYTE of the WORD timer `GenericTimer` (objoff_3C). The `subq.w #1,GenericTimer` each frame overwrites objoff_3D, so the ±2 shake alternates with the decrementing timer's low bits — it is NOT a separate persistent flag (objoff_3D doubles as a patrol "already attacked" flag, but only because the word ops clobber it during the drop). If you model objoff_3D as its own field, the shake freezes and the ship's collision Y stops oscillating, mistiming the rolling-player boss-hit bounce by a frame (SYZ3 f11169, commit on `bugfix/ai-syz3-f11169`). Read the timer's low byte for the shake: `(timer & 2)` / `(timer & 1)`. (`docs/s1disasm/_incObj/75, 76 Boss - SYZ Main and Blocks.asm:20-21,264-295`.) General lesson: any S1 boss that decrements a WORD timer while also `btst`-ing an adjacent BYTE at the timer's low offset is using ROM memory aliasing — model them as one storage location.
 
 ### LZ Boss (0x77) - Rising Water
 - Unique chase boss (not arena-based)

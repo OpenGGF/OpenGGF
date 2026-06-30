@@ -2,6 +2,9 @@ package com.openggf.audio.smps;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.rewind.SmpsSequencerSnapshot;
+import com.openggf.audio.rewind.SmpsTrackSnapshot;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.audio.AudioStream;
 import com.openggf.audio.synth.Synthesizer;
@@ -20,6 +23,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private final AbstractSmpsData smpsData;
     private final AudioManager audioManager;
     private AbstractSmpsData fallbackVoiceData;
+    private SmpsSourceDescriptor sourceDescriptor;
     private final byte[] data;
     private final Synthesizer synth;
     private final SmpsSequencerConfig config;
@@ -117,6 +121,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      */
     public void setOnFadeComplete(Runnable callback) {
         this.onFadeComplete = callback;
+    }
+
+    public boolean hasFadeCompleteCallback() {
+        return onFadeComplete != null;
     }
 
     private static class FadeState {
@@ -236,6 +244,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         public int modDelta;
         public int modSteps;
         public int modStepsFull;
+        public int modPendingDelayInit;
+        public int modPendingRate;
+        public int modPendingDelta;
+        public int modPendingSteps;
+        public int modPendingStepsFull;
         public int modRateCounter;
         public int modStepCounter;
         public short modAccumulator;
@@ -279,6 +292,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         boolean modStepInEffect;
         boolean modStepChanged;
         int modStepDelta;
+        boolean forceModulationWrite;
 
         // Mutable result fields for stepModEnvelope() – avoids per-tick allocation
         boolean modEnvStepInEffect;
@@ -309,6 +323,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, Synthesizer synth,
             AudioManager audioManager, SmpsSequencerConfig config) {
         this.smpsData = smpsData;
+        this.sourceDescriptor = SmpsSourceDescriptor.from(smpsData);
         this.audioManager = Objects.requireNonNull(audioManager, "audioManager");
         this.data = smpsData.getData();
         this.synth = synth;
@@ -332,6 +347,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         int z80Start = smpsData.getZ80StartAddress();
 
         if (smpsData instanceof SmpsSfxData sfxData) {
+            CoordFlagHandler handler = config.getCoordFlagHandler();
+            if (handler != null) {
+                handler.onSfxStart(smpsData.getId());
+            }
             initSfxTracks(sfxData, z80Start);
             setSfxMode(true);
             return;
@@ -427,8 +446,20 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return smpsData;
     }
 
+    public SmpsSourceDescriptor getSourceDescriptor() {
+        return sourceDescriptor;
+    }
+
+    public void setSourceDescriptor(SmpsSourceDescriptor sourceDescriptor) {
+        this.sourceDescriptor = Objects.requireNonNull(sourceDescriptor, "sourceDescriptor");
+    }
+
     public DacData getDacData() {
         return dacData;
+    }
+
+    public AudioManager getAudioManager() {
+        return audioManager;
     }
 
     /**
@@ -437,6 +468,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      */
     public void setFallbackVoiceData(AbstractSmpsData fallbackVoiceData) {
         this.fallbackVoiceData = fallbackVoiceData;
+    }
+
+    public AbstractSmpsData getFallbackVoiceData() {
+        return fallbackVoiceData;
     }
 
     /**
@@ -740,6 +775,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     @Override
     public int read(short[] buffer) {
+        return read(buffer, buffer.length);
+    }
+
+    @Override
+    public int read(short[] buffer, int length) {
         if (!primed) {
             if (config.isTempoOnFirstTick()) {
                 if (tempoWeight != 0) {
@@ -758,17 +798,17 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
 
         if (tempoWeight == 0 && config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
-            return buffer.length;
+            return length;
         }
 
-        for (int i = 0; i < buffer.length; i++) {
+        for (int i = 0; i < length; i++) {
             advance(1.0);
             if (synth instanceof VirtualSynthesizer) {
                 ((VirtualSynthesizer) synth).render(scratchSample);
             }
             buffer[i] = scratchSample[0];
         }
-        return buffer.length;
+        return length;
     }
 
     public void advance(double samples) {
@@ -800,7 +840,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * @return Number of samples until next tempo frame, or Integer.MAX_VALUE if no tempo
      */
     public int getSamplesUntilNextTempoFrame() {
-        if (tempoWeight == 0 || samplesPerFrame <= 0) {
+        if ((tempoWeight == 0 && !ticksEveryFrameWithZeroTempo()) || samplesPerFrame <= 0) {
             return Integer.MAX_VALUE;
         }
         double remaining = samplesPerFrame - sampleCounter;
@@ -808,6 +848,98 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             return 0;
         }
         return (int) Math.ceil(remaining);
+    }
+
+    /**
+     * Return the next observable boundary caused by driver state changes that are
+     * scheduled from tempo ticks.
+     *
+     * Tick-scoped chip writes (PSG envelope, FM volume envelope, modulation,
+     * track commands, DAC rate changes) all happen inside {@link #tick()}, and
+     * the driver's {@link #getSamplesUntilNextTempoFrame()} - 1 cap handles those.
+     */
+    public int getSamplesUntilNextObservableEvent() {
+        int nextEvent = Integer.MAX_VALUE;
+
+        if (fadeState.active) {
+            nextEvent = Math.min(nextEvent, getSamplesUntilNextTempoFrame());
+        }
+
+        if (sfxMode && maxTicks <= 1) {
+            nextEvent = Math.min(nextEvent, getSamplesUntilNextTempoFrame());
+        }
+
+        for (Track t : tracks) {
+            if (!t.active) {
+                continue;
+            }
+
+            if (t.duration <= 0) {
+                return 0;
+            }
+
+            nextEvent = Math.min(nextEvent, samplesUntilTempoTicks(t.duration));
+
+            if (t.fill > 0 && !t.tieNext && t.type != TrackType.DAC) {
+                int fillTicks = Math.max(0, t.fill + t.duration - t.scaledDuration);
+                nextEvent = Math.min(nextEvent, samplesUntilTempoTicks(fillTicks));
+            }
+        }
+
+        return nextEvent;
+    }
+
+    public boolean requiresSampleAccurateFallback() {
+        // Fades do not force per-sample rendering: fade volume steps are applied only
+        // inside processTempoFrame() (processFade), hybrid chunks never cross a
+        // tempo-frame boundary, and getSamplesUntilNextObservableEvent() clamps to
+        // the next tempo frame while a fade is active. Proven PCM-identical by
+        // TestSmpsFadeHybridParity (fade-out, fade-in, and fade-with-SFX windows).
+        return speedMultiplier > 1;
+    }
+
+    // Package-private for TestSmpsSequencerTempoMath equivalence proofs.
+    int samplesUntilTempoTicks(int ticks) {
+        if (ticks <= 0) {
+            return 0;
+        }
+        if ((tempoWeight == 0 && !ticksEveryFrameWithZeroTempo()) || samplesPerFrame <= 0) {
+            return Integer.MAX_VALUE;
+        }
+
+        double firstRemaining = samplesPerFrame - sampleCounter;
+        // Closed form: after the first frame boundary every later frame costs exactly
+        // samplesPerFrame, so the total is firstRemaining + (ticks - 1) * samplesPerFrame.
+        // That matches the reference loop bit-for-bit only when both doubles are exact
+        // integers (then every sum/product below 2^53 is exact regardless of evaluation
+        // order, and totals beyond int range saturate identically through the cast).
+        // Production rates (e.g. 44100/48000 Hz over 60/50 fps) hit this path; the
+        // fractional internal-rate output keeps the loop to preserve exact behaviour,
+        // as does a counter left above the frame size by a PAL->NTSC region switch.
+        if (firstRemaining > 0.0
+                && samplesPerFrame == Math.floor(samplesPerFrame)
+                && sampleCounter == Math.floor(sampleCounter)) {
+            return (int) Math.ceil(firstRemaining + (ticks - 1) * samplesPerFrame);
+        }
+
+        double counter = sampleCounter;
+        double total = 0.0;
+        for (int i = 0; i < ticks; i++) {
+            double remaining = samplesPerFrame - counter;
+            if (remaining <= 0.0) {
+                remaining = samplesPerFrame;
+            }
+            total += remaining;
+            counter += remaining;
+            while (counter >= samplesPerFrame) {
+                counter -= samplesPerFrame;
+            }
+        }
+        return (int) Math.ceil(total);
+    }
+
+    private boolean ticksEveryFrameWithZeroTempo() {
+        return config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW;
     }
 
     private void tick() {
@@ -919,6 +1051,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     private void processTempoFrame() {
+        processFade();
+
         if (tempoWeight == 0 && config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
             return;
         }
@@ -937,7 +1071,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     }
                 }
             }
-            processFade();
             tick();
             if (sfxMode) {
                 maxTicks--;
@@ -953,10 +1086,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             tempoAccumulator += tempoWeight;
             if (tempoAccumulator >= tempoModBase) {
                 tempoAccumulator -= tempoModBase;
-                processFade();
                 tick();
                 for (int m = 1; m < speedMultiplier; m++) {
-                    processFade();
                     tick();
                 }
                 if (sfxMode) {
@@ -975,7 +1106,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             // independent of music tempo. Without this, tempoWeight=tempoModBase
             // causes overflow every frame → SFX never ticks.
             if (sfxMode) {
-                processFade();
                 tick();
                 maxTicks--;
                 if (maxTicks <= 0) {
@@ -991,7 +1121,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     // Overflow → skip this frame (delay)
                 } else {
                     // No overflow → tick normally
-                    processFade();
                     tick();
                 }
                 // S3K speed-up: timeout-based double update (ROM: zDoSpeedUp)
@@ -1004,7 +1133,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                         if (tempoAccumulator >= tempoModBase) {
                             tempoAccumulator -= tempoModBase;
                         } else {
-                            processFade();
                             tick();
                         }
                     } else {
@@ -1395,21 +1523,17 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     private void handleModulation(Track t) {
         if (t.pos + 4 <= data.length) {
-            t.modDelayInit = data[t.pos++] & 0xFF;
-            t.modDelay = t.modDelayInit;
+            t.modPendingDelayInit = data[t.pos++] & 0xFF;
             int rate = data[t.pos++] & 0xFF;
-            t.modRate = (rate == 0) ? 256 : rate;
-            t.modDelta = data[t.pos++];
+            t.modPendingRate = (rate == 0) ? 256 : rate;
+            t.modPendingDelta = data[t.pos++];
             int steps = data[t.pos++] & 0xFF;
-            t.modStepsFull = steps;
+            t.modPendingStepsFull = steps;
             // Z80 driver (S2): srl a (halve). 68k driver (S1): no halving.
-            t.modSteps = config.isHalveModSteps() ? steps / 2 : steps;
+            t.modPendingSteps = config.isHalveModSteps() ? steps / 2 : steps;
 
-            t.modRateCounter = t.modRate;
-            t.modStepCounter = t.modSteps;
-            t.modAccumulator = 0;
-            t.modCurrentDelta = t.modDelta;
             t.customModEnabled = true;
+            prepareCustomModulation(t);
             t.modEnvId = 0;
             t.modEnvData = null;
             t.modEnvPos = 0;
@@ -1431,6 +1555,19 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         t.modEnvCache = 0;
         t.modEnvHold = false;
         t.modAccumulator = 0;
+    }
+
+    private void prepareCustomModulation(Track t) {
+        t.modDelayInit = t.modPendingDelayInit;
+        t.modRate = t.modPendingRate;
+        t.modDelta = t.modPendingDelta;
+        t.modSteps = t.modPendingSteps;
+        t.modStepsFull = t.modPendingStepsFull;
+        t.modDelay = t.modDelayInit;
+        t.modRateCounter = t.modRate;
+        t.modStepCounter = t.modSteps;
+        t.modAccumulator = 0;
+        t.modCurrentDelta = t.modDelta;
     }
 
     private void resetModEnvelopeState(Track t) {
@@ -1647,11 +1784,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             t.baseBlock = block;
 
             if (t.customModEnabled && !preventAttack) {
-                t.modDelay = t.modDelayInit;
-                t.modRateCounter = t.modRate;
-                t.modStepCounter = t.modSteps;
-                t.modAccumulator = 0;
-                t.modCurrentDelta = t.modDelta;
+                prepareCustomModulation(t);
             }
 
             int packed = (block << 11) | fnum;
@@ -1688,6 +1821,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             applyFmPanAmsFms(t);
             // S2 (ModAlgo 68k_a) applies modulation before note-on; S1 (ModAlgo 68k) does not.
             if (t.modEnabled && config.isApplyModOnNote()) {
+                t.forceModulationWrite = true;
                 applyModulation(t);
             }
 
@@ -1727,15 +1861,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
 
             if (t.customModEnabled && !preventAttack) {
-                t.modDelay = t.modDelayInit;
-                t.modRateCounter = t.modRate;
-                t.modStepCounter = t.modSteps;
-                t.modAccumulator = 0;
-                t.modCurrentDelta = t.modDelta;
+                prepareCustomModulation(t);
             }
 
             // S2 (ModAlgo 68k_a) applies modulation before PSG volume write; S1 (ModAlgo 68k) does not.
             if (t.modEnabled && config.isApplyModOnNote()) {
+                t.forceModulationWrite = true;
                 applyModulation(t);
             }
 
@@ -1796,11 +1927,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             t.baseBlock = block;
 
             if (t.customModEnabled && !preventAttack) {
-                t.modDelay = t.modDelayInit;
-                t.modRateCounter = t.modRate;
-                t.modStepCounter = t.modSteps;
-                t.modAccumulator = 0;
-                t.modCurrentDelta = t.modDelta;
+                prepareCustomModulation(t);
             }
 
             int hwCh = t.channelId;
@@ -1813,6 +1940,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             writeFmFreq(port, ch, fnum, block);
             applyFmPanAmsFms(t);
             if (t.modEnabled && config.isApplyModOnNote()) {
+                t.forceModulationWrite = true;
                 applyModulation(t);
             }
             if (!preventAttack) {
@@ -1839,13 +1967,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
 
             if (t.customModEnabled && !preventAttack) {
-                t.modDelay = t.modDelayInit;
-                t.modRateCounter = t.modRate;
-                t.modStepCounter = t.modSteps;
-                t.modAccumulator = 0;
-                t.modCurrentDelta = t.modDelta;
+                prepareCustomModulation(t);
             }
             if (t.modEnabled && config.isApplyModOnNote()) {
+                t.forceModulationWrite = true;
                 applyModulation(t);
             }
 
@@ -2207,7 +2332,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
 
         int freqDelta = t.modStepDelta + t.modEnvStepDelta;
-        boolean changed = t.modStepChanged || t.modEnvStepChanged;
+        boolean changed = t.modStepChanged || t.modEnvStepChanged || t.forceModulationWrite;
+        t.forceModulationWrite = false;
         if (!changed) {
             return;
         }
@@ -2247,6 +2373,41 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             return;
         }
 
+        if (config.getModAlgo() == SmpsSequencerConfig.ModAlgo.MOD_Z80) {
+            t.modDelay = (t.modDelay - 1) & 0xFF;
+            if (t.modDelay != 0) {
+                t.modStepInEffect = true;
+                t.modStepChanged = false;
+                t.modStepDelta = t.modAccumulator;
+                return;
+            }
+            t.modDelay = 1;
+
+            boolean accumulatorChanged = false;
+            if (t.modRateCounter > 0) {
+                t.modRateCounter--;
+            }
+            if (t.modRateCounter == 0) {
+                t.modRateCounter = t.modPendingRate;
+                t.modAccumulator += t.modCurrentDelta;
+                t.modAccumulator = (short) t.modAccumulator; // 16-bit signed wrap
+                accumulatorChanged = true;
+            }
+
+            // Z80 zDoModulation decrements ModulationSteps on every sustain tick,
+            // after applying the current accumulated delta to the note frequency.
+            t.modStepCounter = (t.modStepCounter - 1) & 0xFF;
+            if (t.modStepCounter == 0) {
+                t.modStepCounter = t.modPendingStepsFull; // reload from current ModData[0x03]
+                t.modCurrentDelta = -t.modCurrentDelta;
+            }
+
+            t.modStepInEffect = true;
+            t.modStepChanged = accumulatorChanged;
+            t.modStepDelta = t.modAccumulator;
+            return;
+        }
+
         if (t.modDelay > 0) {
             t.modDelay--;
             t.modStepInEffect = true;
@@ -2260,33 +2421,19 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
 
         if (t.modRateCounter == 0) {
-            t.modRateCounter = t.modRate;
+            t.modRateCounter = t.modPendingRate;
 
-            if (config.getModAlgo() == SmpsSequencerConfig.ModAlgo.MOD_Z80) {
-                // S3K (MODALGO_Z80): post-decrement with 8-bit wrap, then check.
-                // dec (ix+zModStepCount) ; jr nz,.no_reversal
-                t.modStepCounter = (t.modStepCounter - 1) & 0xFF;
-                if (t.modStepCounter == 0) {
-                    t.modStepCounter = t.modStepsFull; // reload from RAW (ModData[0x03])
-                    t.modCurrentDelta = -t.modCurrentDelta;
-                    t.modStepInEffect = true;
-                    t.modStepChanged = false;
-                    t.modStepDelta = t.modAccumulator;
-                    return;
-                }
-            } else {
-                // S1/S2 (MODALGO_68K): pre-check, then decrement.
-                // ld a,(ix+zModStepCount) ; or a ; jr nz,.calcfreq
-                if (t.modStepCounter == 0) {
-                    t.modStepCounter = t.modStepsFull; // reload from RAW (ModData[0x03])
-                    t.modCurrentDelta = -t.modCurrentDelta;
-                    t.modStepInEffect = true;
-                    t.modStepChanged = false;
-                    t.modStepDelta = t.modAccumulator;
-                    return;
-                }
-                t.modStepCounter--;
+            // S1/S2 (MODALGO_68K): pre-check, then decrement.
+            // ld a,(ix+zModStepCount) ; or a ; jr nz,.calcfreq
+            if (t.modStepCounter == 0) {
+                t.modStepCounter = t.modPendingStepsFull; // reload from current ModData[0x03]
+                t.modCurrentDelta = -t.modCurrentDelta;
+                t.modStepInEffect = true;
+                t.modStepChanged = false;
+                t.modStepDelta = t.modAccumulator;
+                return;
             }
+            t.modStepCounter--;
 
             t.modAccumulator += t.modCurrentDelta;
             t.modAccumulator = (short) t.modAccumulator; // 16-bit signed wrap
@@ -2422,7 +2569,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             track.active = false;
             stopNote(track);
         }
-        audioManager.getBackend().restoreMusic();
+        audioManager.restoreMusic();
     }
 
     public void triggerFadeIn(int steps, int delay) {
@@ -2627,6 +2774,265 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             state.tracks.add(dt);
         }
         return state;
+    }
+
+    public SmpsSequencerSnapshot captureSnapshot() {
+        List<SmpsTrackSnapshot> trackSnapshots = new ArrayList<>(tracks.size());
+        for (Track track : tracks) {
+            trackSnapshots.add(captureTrack(track));
+        }
+        return new SmpsSequencerSnapshot(
+                region,
+                speedShoes,
+                sfxMode,
+                normalTempo,
+                commData,
+                fm6DacOff,
+                maxTicks,
+                pitch,
+                sfxPriority,
+                specialSfx,
+                isSfx,
+                psgLatchChannel,
+                speedMultiplier,
+                speedupTimeout,
+                new SmpsSequencerSnapshot.FadeSnapshot(
+                        fadeState.steps,
+                        fadeState.delayInit,
+                        fadeState.delayCounter,
+                        fadeState.addFm,
+                        fadeState.addPsg,
+                        fadeState.active,
+                        fadeState.fadeOut),
+                sampleRate,
+                samplesPerFrame,
+                sampleCounter,
+                tempoWeight,
+                tempoAccumulator,
+                dividingTiming,
+                primed,
+                trackSnapshots);
+    }
+
+    /**
+     * Restores backend-agnostic SMPS sequencing state only. This does not replay chip writes
+     * or rebuild presentation state for an already-started audio backend.
+     */
+    public void restoreSnapshot(SmpsSequencerSnapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        region = snapshot.region();
+        speedShoes = snapshot.speedShoes();
+        sfxMode = snapshot.sfxMode();
+        normalTempo = snapshot.normalTempo();
+        commData = snapshot.commData();
+        fm6DacOff = snapshot.fm6DacOff();
+        maxTicks = snapshot.maxTicks();
+        pitch = snapshot.pitch();
+        sfxPriority = snapshot.sfxPriority();
+        specialSfx = snapshot.specialSfx();
+        isSfx = snapshot.sfx();
+        psgLatchChannel = snapshot.psgLatchChannel();
+        speedMultiplier = snapshot.speedMultiplier();
+        speedupTimeout = snapshot.speedupTimeout();
+        fadeState.steps = snapshot.fade().steps();
+        fadeState.delayInit = snapshot.fade().delayInit();
+        fadeState.delayCounter = snapshot.fade().delayCounter();
+        fadeState.addFm = snapshot.fade().addFm();
+        fadeState.addPsg = snapshot.fade().addPsg();
+        fadeState.active = snapshot.fade().active();
+        fadeState.fadeOut = snapshot.fade().fadeOut();
+        sampleRate = snapshot.sampleRate();
+        samplesPerFrame = snapshot.samplesPerFrame();
+        sampleCounter = snapshot.sampleCounter();
+        tempoWeight = snapshot.tempoWeight();
+        tempoAccumulator = snapshot.tempoAccumulator();
+        dividingTiming = snapshot.dividingTiming();
+        primed = snapshot.primed();
+
+        tracks.clear();
+        for (SmpsTrackSnapshot trackSnapshot : snapshot.tracks()) {
+            tracks.add(restoreTrack(trackSnapshot));
+        }
+    }
+
+    private static SmpsTrackSnapshot captureTrack(Track track) {
+        return new SmpsTrackSnapshot(
+                track.pos,
+                track.type,
+                track.channelId,
+                track.duration,
+                track.note,
+                track.active,
+                track.overridden,
+                track.rawDuration,
+                track.scaledDuration,
+                track.fill,
+                track.keyOffset,
+                track.volumeOffset,
+                track.tieNext,
+                track.pan,
+                track.ams,
+                track.fms,
+                track.voiceData,
+                track.voiceScratch,
+                track.voiceId,
+                track.baseFnum,
+                track.baseBlock,
+                track.loopCounters,
+                track.loopTarget,
+                track.returnStack,
+                track.returnSp,
+                track.dividingTiming,
+                track.modDelay,
+                track.modDelayInit,
+                track.modRate,
+                track.modDelta,
+                track.modSteps,
+                track.modStepsFull,
+                track.modPendingDelayInit,
+                track.modPendingRate,
+                track.modPendingDelta,
+                track.modPendingSteps,
+                track.modPendingStepsFull,
+                track.modRateCounter,
+                track.modStepCounter,
+                track.modAccumulator,
+                track.modCurrentDelta,
+                track.modEnabled,
+                track.customModEnabled,
+                track.detune,
+                track.modEnvId,
+                track.modEnvData,
+                track.modEnvPos,
+                track.modEnvMult,
+                track.modEnvCache,
+                track.modEnvHold,
+                track.rawFreqMode,
+                track.rawFrequency,
+                track.instrumentId,
+                track.noiseMode,
+                track.psgNoiseParam,
+                track.decayOffset,
+                track.decayTimer,
+                track.envData,
+                track.envPos,
+                track.envValue,
+                track.envHold,
+                track.envAtRest,
+                track.fmVolEnvData,
+                track.fmVolEnvPos,
+                track.fmVolEnvValue,
+                track.fmVolEnvHold,
+                track.fmVolEnvOpMask,
+                track.forceRefresh,
+                track.ssgEg,
+                track.dacMuted,
+                track.modStepInEffect,
+                track.modStepChanged,
+                track.modStepDelta,
+                track.modEnvStepInEffect,
+                track.modEnvStepChanged,
+                track.modEnvStepDelta);
+    }
+
+    private static Track restoreTrack(SmpsTrackSnapshot snapshot) {
+        Track track = new Track(snapshot.pos(), snapshot.type(), snapshot.channelId());
+        track.duration = snapshot.duration();
+        track.note = snapshot.note();
+        track.active = snapshot.active();
+        track.overridden = snapshot.overridden();
+        track.rawDuration = snapshot.rawDuration();
+        track.scaledDuration = snapshot.scaledDuration();
+        track.fill = snapshot.fill();
+        track.keyOffset = snapshot.keyOffset();
+        track.volumeOffset = snapshot.volumeOffset();
+        track.tieNext = snapshot.tieNext();
+        track.pan = snapshot.pan();
+        track.ams = snapshot.ams();
+        track.fms = snapshot.fms();
+        track.voiceData = copy(snapshot.voiceData());
+        copyInto(snapshot.voiceScratch(), track.voiceScratch);
+        track.voiceId = snapshot.voiceId();
+        track.baseFnum = snapshot.baseFnum();
+        track.baseBlock = snapshot.baseBlock();
+        track.loopCounters = copy(snapshot.loopCounters());
+        track.loopTarget = snapshot.loopTarget();
+        copyInto(snapshot.returnStack(), track.returnStack);
+        track.returnSp = snapshot.returnSp();
+        track.dividingTiming = snapshot.dividingTiming();
+        track.modDelay = snapshot.modDelay();
+        track.modDelayInit = snapshot.modDelayInit();
+        track.modRate = snapshot.modRate();
+        track.modDelta = snapshot.modDelta();
+        track.modSteps = snapshot.modSteps();
+        track.modStepsFull = snapshot.modStepsFull();
+        track.modPendingDelayInit = snapshot.modPendingDelayInit();
+        track.modPendingRate = snapshot.modPendingRate();
+        track.modPendingDelta = snapshot.modPendingDelta();
+        track.modPendingSteps = snapshot.modPendingSteps();
+        track.modPendingStepsFull = snapshot.modPendingStepsFull();
+        track.modRateCounter = snapshot.modRateCounter();
+        track.modStepCounter = snapshot.modStepCounter();
+        track.modAccumulator = snapshot.modAccumulator();
+        track.modCurrentDelta = snapshot.modCurrentDelta();
+        track.modEnabled = snapshot.modEnabled();
+        track.customModEnabled = snapshot.customModEnabled();
+        track.detune = snapshot.detune();
+        track.modEnvId = snapshot.modEnvId();
+        track.modEnvData = copy(snapshot.modEnvData());
+        track.modEnvPos = snapshot.modEnvPos();
+        track.modEnvMult = snapshot.modEnvMult();
+        track.modEnvCache = snapshot.modEnvCache();
+        track.modEnvHold = snapshot.modEnvHold();
+        track.rawFreqMode = snapshot.rawFreqMode();
+        track.rawFrequency = snapshot.rawFrequency();
+        track.instrumentId = snapshot.instrumentId();
+        track.noiseMode = snapshot.noiseMode();
+        track.psgNoiseParam = snapshot.psgNoiseParam();
+        track.decayOffset = snapshot.decayOffset();
+        track.decayTimer = snapshot.decayTimer();
+        track.envData = copy(snapshot.envData());
+        track.envPos = snapshot.envPos();
+        track.envValue = snapshot.envValue();
+        track.envHold = snapshot.envHold();
+        track.envAtRest = snapshot.envAtRest();
+        track.fmVolEnvData = copy(snapshot.fmVolEnvData());
+        track.fmVolEnvPos = snapshot.fmVolEnvPos();
+        track.fmVolEnvValue = snapshot.fmVolEnvValue();
+        track.fmVolEnvHold = snapshot.fmVolEnvHold();
+        track.fmVolEnvOpMask = snapshot.fmVolEnvOpMask();
+        track.forceRefresh = snapshot.forceRefresh();
+        copyInto(snapshot.ssgEg(), track.ssgEg);
+        track.dacMuted = snapshot.dacMuted();
+        track.modStepInEffect = snapshot.modStepInEffect();
+        track.modStepChanged = snapshot.modStepChanged();
+        track.modStepDelta = snapshot.modStepDelta();
+        track.modEnvStepInEffect = snapshot.modEnvStepInEffect();
+        track.modEnvStepChanged = snapshot.modEnvStepChanged();
+        track.modEnvStepDelta = snapshot.modEnvStepDelta();
+        return track;
+    }
+
+    private static byte[] copy(byte[] values) {
+        return values == null ? null : Arrays.copyOf(values, values.length);
+    }
+
+    private static int[] copy(int[] values) {
+        return values == null ? null : Arrays.copyOf(values, values.length);
+    }
+
+    private static void copyInto(byte[] source, byte[] target) {
+        Arrays.fill(target, (byte) 0);
+        if (source != null) {
+            System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+        }
+    }
+
+    private static void copyInto(int[] source, int[] target) {
+        Arrays.fill(target, 0);
+        if (source != null) {
+            System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+        }
     }
 
     public static class DebugState {

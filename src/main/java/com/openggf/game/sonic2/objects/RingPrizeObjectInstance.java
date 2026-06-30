@@ -5,6 +5,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NullableSpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -28,7 +29,8 @@ import java.util.List;
  * <b>Key insight:</b> ObjDC does NOT use collision detection. Rings are awarded
  * automatically when displayDelay expires.
  */
-public class RingPrizeObjectInstance extends AbstractObjectInstance {
+public class RingPrizeObjectInstance extends AbstractObjectInstance
+        implements NullableSpawnCoordinateZeroScalarArgsRewindRecreatable {
 
     // State machine constants (from s2.asm ObjDC state routines)
     private static final int STATE_SPIRAL = 0;    // Moving toward center (ObjDC_Main)
@@ -41,8 +43,11 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
     // Position tracking (16.16 fixed point for precision)
     private int currentX;      // 16.16 fixed point X
     private int currentY;      // 16.16 fixed point Y
-    private final int machineX; // Machine center X
-    private final int machineY; // Machine center Y
+    // Un-final: not spawn-derivable (cage center, distinct from spawn position) and not
+    // captured by GenericFieldCapturer when final. Reapplied by restoreObjectRewindState
+    // after recreate uses placeholder 0 (mirrors BombPrizeObjectInstance).
+    private int machineX; // Machine center X
+    private int machineY; // Machine center Y
 
     // Display delay before becoming collectible
     private int displayDelay;
@@ -57,7 +62,6 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
     // State machine
     private int state = STATE_SPIRAL;
     private boolean ringCollected = false;
-    private boolean destroyed = false;
 
     // Sparkle animation tracking
     private int sparkleStartFrame = -1;
@@ -88,10 +92,14 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
         this.prizeCounter = prizeCounter;
     }
 
+    RingPrizeObjectInstance(int x, int y, int ignoredSubtype, boolean ignoredFlag) {
+        this(x, y, x, y, 0, new int[]{0});
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (destroyed) {
+        if (isDestroyed()) {
             return;
         }
 
@@ -111,7 +119,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
 
         // Check if off-screen for cleanup (only in spiral state)
         if (state == STATE_SPIRAL && !isOnScreen(64)) {
-            destroyed = true;
+            setDestroyed(true);
         }
     }
 
@@ -166,7 +174,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
         RingManager ringManager = services().ringManager();
         if (ringManager == null || sparkleStartFrame < 0) {
             // No sparkle available, destroy immediately
-            destroyed = true;
+            setDestroyed(true);
             return;
         }
 
@@ -175,7 +183,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
 
         if (sparkleFrameCount <= 0) {
             // No sparkle animation, destroy immediately
-            destroyed = true;
+            setDestroyed(true);
             return;
         }
 
@@ -186,7 +194,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
         int sparkleFrameOffset = elapsed / frameDelay;
         if (sparkleFrameOffset >= sparkleFrameCount) {
             // Sparkle animation complete, destroy the ring
-            destroyed = true;
+            setDestroyed(true);
         }
     }
 
@@ -225,7 +233,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (destroyed) {
+        if (isDestroyed()) {
             return;
         }
 
@@ -312,8 +320,4 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
         return RenderPriority.clamp(3);
     }
 
-    @Override
-    public boolean isDestroyed() {
-        return destroyed;
-    }
 }

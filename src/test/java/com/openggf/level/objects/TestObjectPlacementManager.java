@@ -1,9 +1,12 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.sonic2.objects.S2ObjectWindowing;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -11,9 +14,12 @@ public class TestObjectPlacementManager {
     @Test
     public void testWindowingAndRememberedObjects() {
         ObjectSpawn spawnA = new ObjectSpawn(0, 0, 0x01, 0, 0, false, 0);
-        ObjectSpawn spawnB = new ObjectSpawn(800, 0, 0x02, 0, 0, false, 0);
+        // ROM parity: only respawn-tracked layout entries own a respawn-table
+        // slot (obRespawnNo != 0) and can persist destruction. Use a
+        // respawn-tracked spawn here (id-byte remember bit / yWord bit 15).
+        ObjectSpawn spawnB = new ObjectSpawn(800, 0, 0x02, 0, 0, true, 0x8000);
 
-        ObjectManager.Placement manager = new ObjectManager.Placement(List.of(spawnA, spawnB));
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawnA, spawnB), () -> 320);
         manager.reset(0);
 
         assertTrue(manager.getActiveSpawns().contains(spawnA));
@@ -39,10 +45,34 @@ public class TestObjectPlacementManager {
     }
 
     @Test
+    public void testNonRespawnTrackedSpawnIsNotRemembered() {
+        // ROM parity: a layout entry without the remember bit gets obRespawnNo == 0,
+        // so RememberState simply DeleteObjects it without touching any respawn-table
+        // bit (docs/s1disasm/_incObj/sub RememberState.asm:16-21). The next ObjPosLoad
+        // cursor crossing re-creates a fresh copy, so markRemembered must be a no-op
+        // for non-respawn-tracked spawns (e.g. MZ3's below-screen SmashBlock cluster).
+        ObjectSpawn spawn = new ObjectSpawn(500, 0, 0x51, 0, 0, false, 0);
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
+        manager.reset(0);
+        assertTrue(manager.getActiveSpawns().contains(spawn));
+
+        manager.markRemembered(spawn);
+        assertFalse(manager.isRemembered(spawn),
+                "Non-respawn-tracked spawns cannot persist destruction (ROM obRespawnNo == 0)");
+
+        // Scroll away and back: the spawn re-loads fresh because it was never remembered.
+        manager.update(2000);
+        assertFalse(manager.getActiveSpawns().contains(spawn));
+        manager.update(0);
+        assertTrue(manager.getActiveSpawns().contains(spawn),
+                "Non-respawn-tracked spawn re-creates fresh on camera return");
+    }
+
+    @Test
     public void testRememberedObjectDoesNotRespawnOnCameraReturn() {
         // Simulates: break a block, scroll away, scroll back - block should NOT reappear
         ObjectSpawn spawn = new ObjectSpawn(500, 0, 0x32, 0, 0, true, 0x8000);
-        ObjectManager.Placement manager = new ObjectManager.Placement(List.of(spawn));
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
 
         // Camera starts at 0 - spawn at x=500 is within load-ahead range (0x280=640)
         manager.reset(0);
@@ -76,7 +106,7 @@ public class TestObjectPlacementManager {
         // the old instance gone from activeObjects, and will create a NEW instance.
         // This is the "broken blocks reappear" bug.
         ObjectSpawn spawn = new ObjectSpawn(500, 0, 0x32, 0, 0, true, 0x8000);
-        ObjectManager.Placement manager = new ObjectManager.Placement(List.of(spawn));
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
 
         manager.reset(0);
         assertTrue(manager.getActiveSpawns().contains(spawn), "Spawn should be in active window");
@@ -103,7 +133,7 @@ public class TestObjectPlacementManager {
         // equal but NOT identity-equal to the canonical reference in the spawns list,
         // the fallback should still find the correct index and set the remembered bit.
         ObjectSpawn canonical = new ObjectSpawn(500, 0, 0x32, 0, 0, true, 0x8000);
-        ObjectManager.Placement manager = new ObjectManager.Placement(List.of(canonical));
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(canonical), () -> 320);
 
         manager.reset(0);
         assertTrue(manager.getActiveSpawns().contains(canonical), "Spawn should be in active window");
@@ -127,9 +157,18 @@ public class TestObjectPlacementManager {
     }
 
     @Test
-    public void testRemoveFromActiveRequiresWindowExitBeforeRespawn() {
+    public void testRemoveFromActiveLatchesPermanentlyUntilLevelReset() {
+        // ROM parity: bit 7 of Object_respawn_table (sonic3k.asm Touch_EnemyNormal
+        // line 20945; S2/S1 RememberState in sub RememberState.asm) is set on spawn
+        // and cleared only when a still-alive object self-destructs via
+        // Sprite_OnScreen_Test family (sonic3k.asm:37271-37388, bclr #7,(a2)).
+        // After a player kill the badnik becomes Obj_Explosion and never walks
+        // that path, so destroyedInWindow stays latched permanently for the rest
+        // of the level (until level-init wipes the table at sonic3k.asm loc_1B784).
+        // See AIZ trace F2202 fix.
         ObjectSpawn spawn = new ObjectSpawn(500, 0, 0x1A, 0, 0, false, 0);
-        ObjectManager.Placement manager = new ObjectManager.Placement(List.of(spawn));
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
+        manager.enablePermanentDestroyLatch();
 
         manager.reset(0);
         assertTrue(manager.getActiveSpawns().contains(spawn));
@@ -141,14 +180,90 @@ public class TestObjectPlacementManager {
         assertFalse(manager.getActiveSpawns().contains(spawn));
 
         // Move forward far enough that spawn leaves the active window.
-        // This goes through trimActive(), which clears the temporary destroyed lock.
+        // ROM parity: cursor advancement past a destroyed badnik does NOT
+        // clear bit 7 of Object_respawn_table.
         manager.update(1400);
         assertFalse(manager.getActiveSpawns().contains(spawn));
 
-        // Returning camera into range should allow respawn.
+        // Returning camera into range must NOT respawn the destroyed badnik:
+        // ROM keeps bit 7 of Object_respawn_table set permanently after a kill.
         manager.update(200);
+        assertFalse(manager.getActiveSpawns().contains(spawn),
+                "ROM keeps destroyed badniks permanently absent (Object_respawn_table bit 7 stays set)");
+
+        // Wholesale reset (level reload) clears the latch.
+        manager.reset(0);
+        assertTrue(manager.getActiveSpawns().contains(spawn),
+                "Level reset (sonic3k.asm loc_1B784 clr.l (a3)+) wipes the respawn table");
+    }
+
+    @Test
+    public void testDormantNonCounterSpawnSurvivesSmallBackwardCameraMotion() {
+        ObjectSpawn spawn = new ObjectSpawn(0x17C0, 0x0860, 0x41, 0, 0, false, 0x0860);
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
+
+        manager.reset(0x1736);
         assertTrue(manager.getActiveSpawns().contains(spawn));
+
+        manager.markDormant(spawn);
+        manager.update(0x16F0);
+
+        assertTrue(manager.getActiveSpawns().contains(spawn),
+                "Spawn remains inside the front/back cursor window");
+        assertTrue(manager.isDormant(spawn),
+                "Backward camera movement inside the same cursor window must not re-enable it");
+
+        manager.update(0x1540);
+        assertFalse(manager.getActiveSpawns().contains(spawn),
+                "Retreating the front cursor past the spawn removes it from the active window");
+        assertFalse(manager.isDormant(spawn),
+                "Once the cursor has passed the entry, a later scan can load it again");
+    }
+
+    @Test
+    public void testBackwardCounteredNonTrackedSpawnCreatesInlineDuringUpdateAndLoad() {
+        ObjectSpawn spawn = new ObjectSpawn(0x0AD0, 0, 0x32, 0, 0, false, 0);
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
+        manager.enableCounterBasedRespawn();
+        manager.reset(0x0B82);
+
+        List<ObjectSpawn> created = new ArrayList<>();
+        manager.updateAndLoad(0x0B7E, (newSpawn, counterValue) -> {
+            created.add(newSpawn);
+            return true;
+        });
+
+        assertTrue(manager.getActiveSpawns().contains(spawn),
+                "Backward scan should add the non-tracked spawn to the active window");
+        assertEquals(List.of(spawn), created,
+                "Backward counter-based post-camera scan should inline-create non-tracked spawns");
+    }
+
+    @Test
+    public void postCameraBackwardScanCreatesLeftGapSpawnsInRomOrder() {
+        ObjectSpawn outside = new ObjectSpawn(0x04C0, 0, 0x06, 0, 0, false, 0);
+        ObjectSpawn left = new ObjectSpawn(0x0520, 0, 0x65, 0, 0, false, 0);
+        ObjectSpawn right = new ObjectSpawn(0x0568, 0, 0x9F, 0, 0, false, 0);
+        ObjectSpawn inWindow = new ObjectSpawn(0x0600, 0, 0x47, 0, 0, false, 0);
+        ObjectPlacementController manager =
+                new ObjectPlacementController(List.of(outside, left, right, inWindow), () -> 320);
+        manager.setWindowingStrategy(S2ObjectWindowing.INSTANCE);
+        manager.reset(0x0600);
+
+        List<ObjectSpawn> created = new ArrayList<>();
+        manager.extendForPostCamera(0x05FF, (newSpawn, counterValue) -> {
+            created.add(newSpawn);
+            return true;
+        });
+
+        assertEquals(List.of(right, left), created,
+                "S2 backward ObjPosLoad scans descending X across the newly exposed left gap");
+        assertFalse(manager.getActiveSpawns().contains(outside),
+                "Spawns at or left of the new left edge remain outside the load window");
+        assertTrue(manager.getActiveSpawns().contains(left));
+        assertTrue(manager.getActiveSpawns().contains(right));
+        assertEquals(0x0600, manager.getLastCameraChunk(),
+                "Post-camera gap creation must not advance the primary placement cursor");
     }
 }
-
 

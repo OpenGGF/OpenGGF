@@ -38,6 +38,9 @@ public class Sonic2CPZEvents extends Sonic2ZoneEvents {
         updateCPZBossEvents();
     }
 
+    public boolean isCpzWaterTriggered()       { return cpzWaterTriggered; }
+    public void setCpzWaterTriggered(boolean v){ cpzWaterTriggered = v; }
+
     private void updateCPZWaterRise() {
         if (cpzWaterTriggered) {
             return;
@@ -46,7 +49,7 @@ public class Sonic2CPZEvents extends Sonic2ZoneEvents {
         final int WATER_RISE_TRIGGER_X = 0x1E80;
         final int WATER_TARGET_Y = 0x508;
         var player = camera().getFocusedSprite();
-        if (player != null && player.getX() >= WATER_RISE_TRIGGER_X) {
+        if (player != null && player.getCentreX() >= WATER_RISE_TRIGGER_X) {
             waterSystem().setWaterLevelTarget(
                     ZONE_ID_CPZ_ROM, 1, WATER_TARGET_Y);
             cpzWaterTriggered = true;

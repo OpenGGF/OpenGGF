@@ -10,10 +10,14 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PowerUpObject;
+import com.openggf.game.ShieldType;
+import com.openggf.game.rewind.RewindTransient;
 
 import java.util.List;
 
-public class ShieldObjectInstance extends AbstractObjectInstance implements PowerUpObject {
+public class ShieldObjectInstance extends AbstractObjectInstance
+        implements PowerUpObject, PlayerBoundShieldRewindRecreatable {
+    @RewindTransient(reason = "player binding is structural and restored by the power-up spawner")
     private final PlayableEntity player;
     private final PatternSpriteRenderer renderer;
 
@@ -29,7 +33,9 @@ public class ShieldObjectInstance extends AbstractObjectInstance implements Powe
     private static final int S2_ANIMATION_SPEED = 1;
     private static final int S1_ANIMATION_SPEED = 2;
 
+    @RewindTransient(reason = "animation sequence is constructor-selected immutable game/art configuration")
     private final int[] animationSequence;
+    @RewindTransient(reason = "animation speed is constructor-selected immutable game/art configuration")
     private final int animationSpeed;
     private int sequenceIndex = 0;
     private boolean destroyed = false;
@@ -59,6 +65,11 @@ public class ShieldObjectInstance extends AbstractObjectInstance implements Powe
 
     public void setVisible(boolean visible) {
         this.visible = visible;
+    }
+
+    @Override
+    public boolean isShieldFor(PlayableEntity target, ShieldType type) {
+        return player == target && matchesShieldType(type);
     }
 
     @Override
@@ -96,7 +107,7 @@ public class ShieldObjectInstance extends AbstractObjectInstance implements Powe
     }
 
     public void destroy() {
-        setDestroyed(true);
+        ObjectLifetimeOps.destroyLatched(this);
     }
 
     protected PlayableEntity getPlayer() {
@@ -118,4 +129,5 @@ public class ShieldObjectInstance extends AbstractObjectInstance implements Powe
     protected int getSequenceIndex() {
         return sequenceIndex;
     }
+
 }

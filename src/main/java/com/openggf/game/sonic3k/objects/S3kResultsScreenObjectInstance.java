@@ -1,22 +1,32 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.data.Rom;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.save.SaveReason;
 import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.game.sonic3k.Sonic3kObjectArt;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.tools.NemesisReader;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
@@ -39,13 +49,14 @@ import java.util.logging.Logger;
  *   <li>Act 1 exit shows act 2 title card; act 2 exit sets End_of_level_flag</li>
  * </ul>
  */
-public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
+public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(S3kResultsScreenObjectInstance.class.getName());
 
     // ROM-accurate timing
     private static final int S3K_PRE_TALLY_DELAY = 360;  // 6*60 frames (ROM line 62580)
     private static final int S3K_WAIT_DURATION = 90;      // ROM line 62676
     private static final int MUSIC_TRIGGER_FRAME = 71;    // 360 - 289 = 71 (ROM line 62626)
+    private static final int RESULTS_CREATE_KOS_GATE_FRAMES = 9;
 
     // Time bonus table (ROM lines 62910-62918)
     private static final int[] TIME_BONUSES = {5000, 5000, 1000, 500, 400, 300, 100, 10};
@@ -57,7 +68,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
     private static final int SLIDE_OUT_SPEED = 32;  // move.w #-$20,d0
 
     // Pattern caching
-    private static final int PATTERN_BASE = 0x60000;  // High ID to avoid conflicts
+    private static final int PATTERN_BASE = PatternAtlasRange.RESULTS_SCREENS.base();
 
     // Digit rendering constants
     private static final int DIGIT_OFFSET_X = -0x38;  // Digits start 0x38 pixels left of element X
@@ -66,8 +77,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
     private static final int[] DIVISORS = {1000000, 100000, 10000, 1000, 100, 10, 1};
 
     // State
-    private final PlayerCharacter character;
-    private final int act;  // 0-indexed: 0=Act 1, 1=Act 2
+    // Un-finaled for rewind: character/act are constructor args not carried by any
+    // ObjectSpawn, so recreate uses placeholders and GenericFieldCapturer (which
+    // skips final scalars) reapplies the captured values
+    // after recreate. Covers this class and its Mgz2 subclass.
+    private PlayerCharacter character;
+    private int act;  // 0-indexed: 0=Act 1, 1=Act 2
 
     // Tally values
     private int timeBonus;
@@ -94,6 +109,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
     private final ResultsElement[] elements = new ResultsElement[12];
     private int exitQueueCounter;
     private int childrenRemaining;
+    private int createGateFrames = RESULTS_CREATE_KOS_GATE_FRAMES;
+    private boolean actTransitionSignaled;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
         super("S3kResults");
@@ -112,13 +129,35 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
         // Create elements
         createElements();
 
-        // ROM: Obj_LevelResultsCreate (line 62616) — set Events_fg_5 at creation
-        // time so the background event can prepare the transition. The actual level
-        // reload is gated on endOfLevelFlag (results complete) in the HCZ BG handler.
-        signalActTransitionIfNeeded();
-
         LOG.fine(() -> String.format("S3K results init: character=%s act=%d timeBonus=%d ringBonus=%d",
                 character, act, timeBonus, ringBonus));
+    }
+
+    private S3kResultsScreenObjectInstance() {
+        this(PlayerCharacter.SONIC_AND_TAILS, 0);
+    }
+
+    @Override
+    public AbstractResultsScreen recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format(
+                "state=%02X timer=%04X total=%04X act=%d create=%02X sig=%b time=%d ring=%d total=%d music=%b complete=%b",
+                state,
+                stateTimer & 0xFFFF,
+                totalFrames & 0xFFFF,
+                act,
+                createGateFrames & 0xFFFF,
+                actTransitionSignaled,
+                timeBonus,
+                ringBonus,
+                totalBonusCountUp,
+                musicPlayed,
+                complete);
     }
 
     // ---- Element data structure ----
@@ -291,6 +330,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         this.playerRef = player;
         this.frameCounter = frameCounter;
+        updateCreateGate();
         stateTimer++;
         totalFrames++;
 
@@ -325,6 +365,26 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
             stateTimer = 0;
             // Do NOT call onExitReady() here — wait for exit queue to finish
         }
+    }
+
+    private void updateCreateGate() {
+        if (actTransitionSignaled) {
+            return;
+        }
+
+        createGateFrames--;
+        if (romResultsCreateGateReady(createGateFrames)) {
+            // ROM Obj_LevelResultsInit queues three Kosinski module loads and
+            // advances to Obj_LevelResultsCreate; Create polls Kos_modules_left
+            // before allocating child objects and setting Events_fg_5
+            // (docs/skdisasm/sonic3k.asm:62512-62584, 62586-62616).
+            signalActTransitionIfNeeded();
+            actTransitionSignaled = true;
+        }
+    }
+
+    static boolean romResultsCreateGateReady(int framesAfterDecrement) {
+        return framesAfterDecrement <= 0;
     }
 
     /**
@@ -362,7 +422,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
         if (!musicPlayed && stateTimer == MUSIC_TRIGGER_FRAME) {
             musicPlayed = true;
             try {
-                services().playMusic(Sonic3kMusic.ACT_CLEAR.id);
+                services().playMusic(GameMusic.ACT_CLEAR);
             } catch (Exception e) {
                 // Ignore audio errors
             }
@@ -413,6 +473,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
 
         if (!result.anyRemaining()) {
             playTallyEndSound();
+            int zone = services().romZoneId();
+            if ((act != 0) || (zone == 0x0A)) {
+                services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
+            }
             state = STATE_WAIT;
             stateTimer = 0;
         }
@@ -451,9 +515,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
      * Sets Events_fg_5 for Act 1 zones (except AIZ zone 0 and ICZ zone 5)
      * to trigger the background event handler's seamless act transition.
      *
-     * <p>In the ROM this fires at creation time and the Kos queue delays the
-     * actual transition. Our engine has no Kos queue, so we defer this to
-     * {@link #onExitReady()} after the tally completes.
+     * <p>ROM Obj_LevelResultsInit queues the Kosinski module loads first; the
+     * create gate above models Obj_LevelResultsCreate polling Kos_modules_left
+     * before this flag is written.
      */
     private void signalActTransitionIfNeeded() {
         if (act != 0) return;  // Act 2 — no transition
@@ -461,10 +525,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
             int zone = services().romZoneId();
             if (zone == 0x00) return;  // AIZ — handled by fire transition
             if (zone == 0x05) return;  // ICZ — different transition mechanism
-            var eventManager = services().levelEventProvider();
-            if (eventManager instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kEvents) {
-                s3kEvents.setEventsFg5ForActTransition();
-            }
+            S3kTransitionWriteSupport.signalActTransition(services());
         } catch (Exception e) {
             LOG.fine("Could not signal act transition: " + e.getMessage());
         }
@@ -475,36 +536,52 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
     @Override
     protected void onExitReady() {
         int zone = services().romZoneId();
-        boolean hasSeamlessTransition = (act == 0) && (zone == 0x01); // HCZ Act 1
+        // Zones whose Act 1 → Act 2 boundary is a seamless level reload:
+        //   HCZ (zone $01): HCZ1BGE_DoTransition
+        //   MGZ (zone $02): MGZ1BGE_Transition
+        boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02);
 
         // Restore player controls (locked by signpost in Set_PlayerEndingPose).
         // For zones with seamless transitions (HCZ), defer unlocking — the player
         // must remain in the victory pose (objectControlled) while the terrain
         // changes underneath. The seamless transition handler in executeActTransition
         // resets the player state after the layout reload, so they fall naturally.
-        if (!hasSeamlessTransition) {
-            if (playerRef != null) {
-                playerRef.setControlLocked(false);
-                playerRef.setObjectControlled(false);
-                playerRef.setForcedAnimationId(-1);
-            }
-            for (PlayableEntity sidekickEntity : services().sidekicks()) {
-                AbstractPlayableSprite sidekick = (AbstractPlayableSprite) sidekickEntity;
-                sidekick.setControlLocked(false);
-                sidekick.setObjectControlled(false);
-                sidekick.setForcedAnimationId(-1);
+        boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
+        if (!hasSeamlessTransition && !lbzAct2PostBossHandoff && shouldRestorePlayerControlsOnExit()) {
+            for (PlayableEntity candidate : playerQuery()
+                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (candidate instanceof AbstractPlayableSprite sprite) {
+                    sprite.setControlLocked(false);
+                    ObjectControlState.none().applyTo(sprite);
+                    sprite.setForcedAnimationId(-1);
+                }
             }
         }
-        // Restore camera. When the AIZ2 cutscene override is active, the
+        boolean aizAct1MinibossTitleHandoff = zone == 0x00 && act == 0;
+
+        // Restore camera. AIZ Act 1 is excluded because ROM Obj_LevelResults
+        // changes into the in-level Act 2 title card without touching camera
+        // bounds; Obj_EndSignControlDoStart waits for that title card to set
+        // End_of_level_flag before Change_Act2Sizes creates the gradual
+        // level-size objects (sonic3k.asm:62708-62720,62276-62279,
+        // 180415-180419,180575-180609).
+        // When the AIZ2 cutscene override is active, the
         // Aiz2BossEndSequenceController manages camera bounds for the walk-right
         // sequence. Restoring full level bounds here would snap the camera back
         // to the pre-boss area (ROM: loc_694D4 uses Obj_IncLevEndXGradual).
+        boolean iczAct2EndBossHandoff = zone == 0x05 && act == 1;
         var cam = services().camera();
-        cam.setFrozen(false);
-        if (!Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
+        if (!lbzAct2PostBossHandoff) {
+            cam.setFrozen(false);
+        }
+        if (!aizAct1MinibossTitleHandoff
+                && !lbzAct2PostBossHandoff
+                && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
             if (level != null) {
-                cam.setMinX((short) level.getMinX());
+                if (!iczAct2EndBossHandoff) {
+                    cam.setMinX((short) level.getMinX());
+                }
                 cam.setMaxX((short) level.getMaxX());
                 cam.setMinY((short) level.getMinY());
                 cam.setMaxY((short) level.getMaxY());
@@ -517,12 +594,21 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
 
         services().gameState().setEndOfLevelActive(false);
 
-        // Always set endOfLevelFlag so S3kBossDefeatSignpostFlow can self-destruct
-        // and release camera boundaries. For act 2 this also triggers the zone transition.
-        services().gameState().setEndOfLevelFlag(true);
+        if (isAct2OrSpecial || hasSeamlessTransition) {
+            // ROM loc_2DCF8 sets End_of_level_flag directly for Act 2/Sky
+            // Sanctuary/LRZ boss results (sonic3k.asm:62693-62705).
+            // For HCZ/MGZ Act 1, the engine's BG event handlers use the same
+            // flag as their post-results gate before executeActTransition()
+            // resets gameplay state for the reloaded act.
+            services().gameState().setEndOfLevelFlag(true);
+        }
 
         if (!isAct2OrSpecial) {
             // Act 1: transition to act 2 (ROM lines 62708-62720)
+            // ROM loc_2DD06 mutates the results object into Obj_TitleCard
+            // without setting End_of_level_flag. The in-level title-card wait
+            // path sets it after its children are gone (sonic3k.asm:62708-62720,
+            // 62244-62279).
             // ROM: move.b #1,(Apparent_act).w — update display act so
             // death/restart title cards show "Act 2" from this point on.
             services().setApparentAct(1);
@@ -541,13 +627,54 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
             // ROM lines 62713-62720
             boolean skipTitleCard = (zone == 0x08) || (zone == 0x0B);
             if (!skipTitleCard && !hasSeamlessTransition) {
-                services().titleCardProvider().initializeInLevel(zone, 1);
+                var titleCardProvider = services().titleCardProvider();
+                titleCardProvider.initializeInLevel(zone, 1);
+                if (aizAct1MinibossTitleHandoff
+                        && titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
+                    s3kTitleCard.requestLevelGamestateResetOnInLevelComplete();
+                }
+            }
+
+            // ROM: Timer and ring count reset on act transition. For zones with
+            // seamless transitions (HCZ), the level reload in executeActTransition
+            // creates a fresh LevelGamestate. For non-seamless S3K act transitions
+            // (where acts share level data), the results screen must reset the
+            // gamestate directly since no level reload occurs. AIZ's miniboss
+            // handoff is the ROM's Obj_TitleCard in-level path; it changes
+            // Apparent_act before the title card but does not clear Ring_count
+            // at this point (sonic3k.asm:62708-62720, 62244-62279).
+            if (!hasSeamlessTransition && !aizAct1MinibossTitleHandoff) {
+                resetLevelGamestateForActTransition();
             }
         }
 
-        setDestroyed(true);
+        ObjectLifetimeOps.deleteNoRespawn(this);
         LOG.fine(() -> String.format("S3K results exit: zone=%X act=%d isAct2OrSpecial=%b",
                 zone, act, isAct2OrSpecial));
+    }
+
+    protected boolean shouldRestorePlayerControlsOnExit() {
+        return true;
+    }
+
+    private ObjectPlayerQuery playerQuery() {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> playerRef, query::sidekicks);
+    }
+
+    /**
+     * Resets the LevelGamestate (timer + rings) for a non-seamless act transition.
+     * ROM: Timer and ring count reset to zero when entering a new act.
+     * Score carries over.
+     */
+    private void resetLevelGamestateForActTransition() {
+        var levelManager = services().levelManager();
+        if (levelManager != null) {
+            var gameModule = services().gameModule();
+            if (gameModule != null) {
+                levelManager.resetLevelGamestate(gameModule.createLevelState());
+            }
+        }
     }
 
     // ---- Persistence ----
@@ -693,7 +820,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
         var camera = services().camera();
         if (camera == null) return;
 
-        int baseX = camera.getX();
+        // xOffset() is (viewportWidth - 320) / 2; 0 at native 320 (byte-identical).
+        int baseX = camera.getX() + xOffset();
         int baseY = camera.getY();
 
         for (ResultsElement elem : elements) {

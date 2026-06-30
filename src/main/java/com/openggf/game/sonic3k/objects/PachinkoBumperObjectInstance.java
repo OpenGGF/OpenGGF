@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -19,7 +21,7 @@ import java.util.List;
  * <p>This shares the same core bumper physics as the CNZ bumper path in the ROM, but
  * uses the Pachinko-specific mappings and vertical off-screen despawn behavior.
  */
-public class PachinkoBumperObjectInstance extends AbstractObjectInstance {
+public class PachinkoBumperObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int BOUNCE_VELOCITY = 0x700;
     private static final int COLLISION_HALF_WIDTH = 8;
@@ -33,6 +35,11 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance {
 
     public PachinkoBumperObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PachinkoBumper");
+    }
+
+    @Override
+    public PachinkoBumperObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new PachinkoBumperObjectInstance(ctx.spawn());
     }
 
     @Override

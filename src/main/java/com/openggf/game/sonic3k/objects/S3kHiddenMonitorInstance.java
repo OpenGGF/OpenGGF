@@ -5,7 +5,11 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -20,7 +24,7 @@ import java.util.logging.Logger;
  *
  * <p>Subtype encodes the monitor contents type.
  */
-public class S3kHiddenMonitorInstance extends AbstractObjectInstance {
+public class S3kHiddenMonitorInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(S3kHiddenMonitorInstance.class.getName());
 
     // Range check box: signpost position relative to THIS hidden monitor
@@ -29,9 +33,9 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance {
     private static final int RANGE_TOP = -0x80;
     private static final int RANGE_BOTTOM = 0xC0;
 
-    private final int monitorX;
-    private final int monitorY;
-    private final int monitorSubtype;
+    private int monitorX;
+    private int monitorY;
+    private int monitorSubtype;
     private boolean resolved;
 
     public S3kHiddenMonitorInstance(ObjectSpawn spawn) {
@@ -42,13 +46,25 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance {
     }
 
     @Override
+    public S3kHiddenMonitorInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new S3kHiddenMonitorInstance(ctx.spawn());
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (isDestroyed() || resolved) {
+        if (isDestroyed()) {
             return;
         }
 
-        S3kSignpostInstance signpost = S3kSignpostInstance.getActiveSignpost();
+        if (resolved) {
+            if (!isOnScreenX()) {
+                setDestroyedByOffscreen();
+            }
+            return;
+        }
+
+        S3kSignpostInstance signpost = S3kSignpostInstance.activeSignpost(services().objectManager());
         if (signpost == null) {
             return;
         }
@@ -81,18 +97,22 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance {
                     monitorX, monitorY, 0x01, monitorSubtype, 0, false, 0);
             Sonic3kMonitorObjectInstance monitor = new Sonic3kMonitorObjectInstance(monitorSpawn);
             monitor.revealFromHidden();
-            spawnDynamicObject(monitor);
+            ObjectManager objectManager = services().objectManager();
+            if (objectManager != null) {
+                ObjectLifetimeOps.addReplacementAtTransferredSlot(objectManager, monitor, getSlotIndex());
+            } else {
+                spawnDynamicObject(monitor);
+            }
             setDestroyed(true);
         } else {
-            // Out of range: play sound and disappear
+            // Out of range: switch to the ROM Sprite_OnScreen_Test path.
             LOG.fine("Hidden monitor at (" + monitorX + "," + monitorY
-                    + ") OUT OF RANGE of signpost — dismissing");
+                    + ") OUT OF RANGE of signpost — waiting for offscreen delete");
             try {
                 services().playSfx(Sonic3kSfx.GROUND_SLIDE.id);
             } catch (Exception e) {
                 LOG.fine("Could not play ground slide SFX: " + e.getMessage());
             }
-            setDestroyed(true);
         }
     }
 

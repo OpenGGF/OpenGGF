@@ -1,20 +1,32 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.Sonic3kPlcLoader.TileRange;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@RequiresRom(SonicGame.SONIC_3K)
 public class TestSonic3kObjectArtProvider {
 
     private Sonic3kObjectArtProvider provider;
@@ -74,6 +86,132 @@ public class TestSonic3kObjectArtProvider {
     }
 
     @Test
+    public void cnzTraversalSheetsAreRegisteredDuringCnzLoad() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+
+        Sonic3kObjectArtProvider currentProvider =
+                (Sonic3kObjectArtProvider) GameModuleRegistry.getCurrent().getObjectArtProvider();
+
+        assertNotNull(currentProvider.getSheet("cnz_balloon"));
+        assertNotNull(currentProvider.getSheet("cnz_cannon"));
+    }
+
+    @Test
+    public void mgz2RegistersScaledEndBossCueAsGeneratedMapScaledArtBank() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MGZ, 1)
+                .build();
+
+        Sonic3kObjectArtProvider currentProvider =
+                (Sonic3kObjectArtProvider) GameModuleRegistry.getCurrent().getObjectArtProvider();
+
+        ObjectSpriteSheet sheet = currentProvider.getSheet(Sonic3kObjectArtKeys.MGZ_ENDBOSS_SCALED);
+        assertNotNull(sheet, "MGZ2 loc_6CFF4 needs a generated ArtTile_MGZEndBossScaled bank");
+        assertEquals(0x100, sheet.getPatterns().length,
+                "Perform_Art_Scaling can DMA up to the 256-tile Map_ScaledArt frame");
+        assertEquals(0x20, sheet.getFrameCount(),
+                "loc_6CFF4 draws the generated art through Map_ScaledArt, indexed by $40(a0)");
+        assertEquals(4, sheet.getFrame(4).pieces().size(),
+                "Initial $40=4 uses Map_ScaledArt frame 4, not Map_MGZEndBoss source pieces");
+        assertEquals(0x30, sheet.getFrame(4).pieces().get(3).tileIndex());
+    }
+
+    @Test
+    public void mgz2RegistersEndBossDrillSheetWithRuntimeFrames() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MGZ, 1)
+                .build();
+
+        Sonic3kObjectArtProvider currentProvider =
+                (Sonic3kObjectArtProvider) GameModuleRegistry.getCurrent().getObjectArtProvider();
+
+        ObjectSpriteSheet sheet = currentProvider.getSheet(Sonic3kObjectArtKeys.MGZ_ENDBOSS);
+        assertNotNull(sheet, "MGZ2 endboss drill craft should register Map_MGZEndBoss without range warnings");
+        assertTrue(sheet.getFrameCount() > 0x30,
+                "Obj_MGZEndBoss draws drill poses through $25 and defeat debris frames $2E-$30");
+        assertFalse(sheet.getFrame(0x25).pieces().isEmpty(),
+                "Drill flame pose $25 must remain drawable from the base MGZ endboss bank");
+        assertFalse(sheet.getFrame(0x2E).pieces().isEmpty(),
+                "Defeat debris frame $2E must remain drawable from Map_MGZEndBoss");
+        assertFalse(sheet.getFrame(0x30).pieces().isEmpty(),
+                "Defeat debris frame $30 must remain drawable from Map_MGZEndBoss");
+    }
+
+    @Test
+    public void cnzTraversalSheetsParticipateInLevelArtRefreshTracking() throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+
+        Sonic3kObjectArtProvider currentProvider =
+                (Sonic3kObjectArtProvider) GameModuleRegistry.getCurrent().getObjectArtProvider();
+
+        Field field = Sonic3kObjectArtProvider.class.getDeclaredField("levelArtTileRanges");
+        field.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, TileRange> ranges = (Map<String, TileRange>) field.get(currentProvider);
+
+        assertTrue(ranges.containsKey(Sonic3kObjectArtKeys.CNZ_BALLOON));
+        assertTrue(ranges.containsKey(Sonic3kObjectArtKeys.CNZ_CANNON));
+        assertTrue(ranges.containsKey(Sonic3kObjectArtKeys.CNZ_RISING_PLATFORM));
+        assertTrue(ranges.containsKey(Sonic3kObjectArtKeys.CNZ_TRAP_DOOR));
+        assertTrue(ranges.containsKey(Sonic3kObjectArtKeys.CNZ_HOVER_FAN));
+        assertTrue(ranges.containsKey(Sonic3kObjectArtKeys.CNZ_CYLINDER));
+        assertFalse(ranges.containsKey(Sonic3kObjectArtKeys.CNZ_VACUUM_TUBE));
+        assertFalse(ranges.containsKey(Sonic3kObjectArtKeys.CNZ_SPIRAL_TUBE));
+    }
+
+    @Test
+    public void hczMinibossSheetIsRegisteredDuringHczLoad() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0)
+                .build();
+
+        Sonic3kObjectArtProvider currentProvider =
+                (Sonic3kObjectArtProvider) GameModuleRegistry.getCurrent().getObjectArtProvider();
+
+        ObjectSpriteSheet sheet = currentProvider.getSheet(Sonic3kObjectArtKeys.HCZ_MINIBOSS);
+        assertNotNull(sheet, "HCZ miniboss sheet should be registered after HCZ load");
+        assertNotNull(sheet.getPatterns());
+        assertTrue(sheet.getPatterns().length > 0, "HCZ miniboss sheet should have non-empty patterns");
+        assertTrue(sheet.getFrameCount() > 0, "HCZ miniboss sheet should have non-empty frames");
+    }
+
+    @Test
+    public void hczEndBossSheetIsRegisteredDuringHczLoad() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0)
+                .build();
+
+        Sonic3kObjectArtProvider currentProvider =
+                (Sonic3kObjectArtProvider) GameModuleRegistry.getCurrent().getObjectArtProvider();
+
+        ObjectSpriteSheet sheet = currentProvider.getSheet(Sonic3kObjectArtKeys.HCZ_END_BOSS);
+        assertNotNull(sheet, "HCZ end boss sheet should be registered after HCZ load");
+        assertNotNull(sheet.getPatterns());
+        assertTrue(sheet.getPatterns().length > 0, "HCZ end boss sheet should have non-empty patterns");
+        assertTrue(sheet.getFrameCount() > 0, "HCZ end boss sheet should have non-empty frames");
+    }
+
+    @Test
+    public void hczGeyserCutsceneSheetIsRegisteredDuringHczLoad() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0)
+                .build();
+
+        Sonic3kObjectArtProvider currentProvider =
+                (Sonic3kObjectArtProvider) GameModuleRegistry.getCurrent().getObjectArtProvider();
+
+        ObjectSpriteSheet sheet = currentProvider.getSheet(Sonic3kObjectArtKeys.HCZ_GEYSER_CUTSCENE);
+        assertNotNull(sheet, "HCZ geyser cutscene (waterwall) sheet should be registered after HCZ load");
+        assertNotNull(sheet.getPatterns());
+        assertTrue(sheet.getPatterns().length > 0, "HCZ geyser cutscene sheet should have non-empty patterns");
+        assertTrue(sheet.getFrameCount() > 0, "HCZ geyser cutscene sheet should have non-empty frames");
+    }
+
+    @Test
     public void aiz2SmallRobotnikCraftUsesSourceTile86FromBombershipArt() throws Exception {
         Pattern[] patterns = new Pattern[176];
         for (int i = 0; i < patterns.length; i++) {
@@ -116,5 +254,3 @@ public class TestSonic3kObjectArtProvider {
         return (ObjectSpriteSheet) buildSheet.invoke(null, patterns, frames, 0);
     }
 }
-
-

@@ -10,6 +10,7 @@ import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenDataLoader;
 import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -76,9 +77,9 @@ public class TryAgainEndManager {
     private static final int DISASM_SONIC_PALID = 3;
 
     /** Pattern base for Eggman art in the GPU pattern atlas. */
-    private static final int EGGMAN_PATTERN_BASE = 0x60000;
+    private static final int EGGMAN_PATTERN_BASE = PatternAtlasRange.RESULTS_SCREENS.base();
     /** Pattern base for emerald art in the GPU pattern atlas. */
-    private static final int EMERALD_PATTERN_BASE = 0x61000;
+    private static final int EMERALD_PATTERN_BASE = PatternAtlasRange.RESULTS_SCREENS.base() + 0x1000;
 
     // ---- Renderers ----
     private PatternSpriteRenderer eggmanRenderer;

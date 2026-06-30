@@ -6,9 +6,16 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.game.sonic2.scroll.SwScrlDez;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -17,6 +24,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * DEZ Death Egg Robot (Object 0xC7).
@@ -41,7 +49,7 @@ import java.util.List;
  * - Type 2: Jet-Stomp (fly up, target player, stomp down, screen shake)
  * - Type 4: Stomp-Turn-Bombs (walk toward player, drop 2 bombs)
  */
-public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
+public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements RewindRecreatable {
 
     // ========================================================================
     // BODY STATE MACHINE CONSTANTS
@@ -136,7 +144,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     private static final int DEFEAT_ENDING_PLAYER_X = 0xEC0;
     /** ROM: Initial robot follow-offset behind player (ObjC7_SetupEnding) */
     private static final int INITIAL_ROBOT_FOLLOW_OFFSET = 0x20;
-    /** ROM: Fade duration before credits transition (approx $16 = 22 frames) */
+    /** ROM: Fade duration before credits transition ($16 = 22 frames) */
     private static final int FADE_DURATION = 0x16;
     /** Break-apart velocities for 8 body parts (from ObjC7_BreakSpeeds, s2.asm:83258-83267) */
     static final int[][] BREAK_VELOCITIES = {
@@ -454,35 +462,47 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         bodyXFixed = (long) state.x << 16;
         bodyYFixed = (long) state.y << 16;
 
-        // Spawn 10 permanent children (ROM: loc_3D52A)
-        spawnChildren();
+        if (getSpawn().objectId() == Sonic2ObjectIds.DEATH_EGG_ROBOT) {
+            // Spawn 10 permanent children (ROM: loc_3D52A). Rewind probe construction
+            // uses a zero object id and must not leak child side effects.
+            spawnChildren();
+        }
 
         // Advance to WaitEggman (auto-skip Eggman boarding for now)
         bodyRoutine = BODY_WAIT_EGGMAN;
     }
 
+    @Override
+    public Sonic2DeathEggRobotInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+            return null;
+        }
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> new Sonic2DeathEggRobotInstance(ctx.spawn()));
+    }
+
     private void spawnChildren() {
         // Front parts: priority 4 (in front of body at priority 5)
-        shoulder = new ArticulatedChild(this, "Shoulder", 4, FRAME_SHOULDER);
-        frontLowerLeg = new ArticulatedChild(this, "FrontLowerLeg", 4, FRAME_LOWER_LEG);
-        frontForearm = new ForearmChild(this, "FrontForearm", 4, true);
-        upperArm = new ArticulatedChild(this, "UpperArm", 4, FRAME_ARM);
-        frontThigh = new ArticulatedChild(this, "FrontThigh", 4, FRAME_THIGH);
+        shoulder = createPermanentChild(() -> new ArticulatedChild(this, "Shoulder", 4, FRAME_SHOULDER));
+        frontLowerLeg = createPermanentChild(() -> new ArticulatedChild(this, "FrontLowerLeg", 4, FRAME_LOWER_LEG));
+        frontForearm = createPermanentChild(() -> new ForearmChild(this, "FrontForearm", 4, true));
+        upperArm = createPermanentChild(() -> new ArticulatedChild(this, "UpperArm", 4, FRAME_ARM));
+        frontThigh = createPermanentChild(() -> new ArticulatedChild(this, "FrontThigh", 4, FRAME_THIGH));
 
         // Head: priority 4 (same as front parts, ROM: subObjData inherited)
-        head = new HeadChild(this, 4);
+        head = createPermanentChild(() -> new HeadChild(this, 4));
 
         // Jet: priority 4 (same as front parts, ROM: subObjData inherited)
-        jet = new JetChild(this, 4);
+        jet = createPermanentChild(() -> new JetChild(this, 4));
         // Back parts: priority 6 (behind body at priority 5).
         // ROM: Within the same VDP priority, earlier sprites appear in front. The body
         // is spawned before its children, so it appears in front of the back parts.
         // In the Java engine's painter's algorithm, later = in front (opposite of VDP).
         // Bucket 6 renders before bucket 5 (render loop goes high to low), so back parts
         // at priority 6 render first (behind), and the body at priority 5 renders after (in front).
-        backLowerLeg = new ArticulatedChild(this, "BackLowerLeg", 6, FRAME_LOWER_LEG);
-        backForearm = new ForearmChild(this, "BackForearm", 6, false);
-        backThigh = new ArticulatedChild(this, "BackThigh", 6, FRAME_THIGH);
+        backLowerLeg = createPermanentChild(() -> new ArticulatedChild(this, "BackLowerLeg", 6, FRAME_LOWER_LEG));
+        backForearm = createPermanentChild(() -> new ForearmChild(this, "BackForearm", 6, false));
+        backThigh = createPermanentChild(() -> new ArticulatedChild(this, "BackThigh", 6, FRAME_THIGH));
 
         childComponents.add(shoulder);
         childComponents.add(frontForearm);
@@ -495,17 +515,11 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         childComponents.add(backForearm);
         childComponents.add(backThigh);
 
-        // Register children with ObjectManager for rendering (matches Silver Sonic pattern)
-        var objectManager = services().objectManager();
-        if (objectManager != null) {
-            for (var child : childComponents) {
-                if (child instanceof com.openggf.level.objects.boss.AbstractBossChild bossChild) {
-                    objectManager.addDynamicObject(bossChild);
-                }
-            }
-        }
-
         positionChildren();
+    }
+
+    private <T extends AbstractBossChild> T createPermanentChild(Supplier<T> factory) {
+        return spawnFreeChild(factory);
     }
 
     @Override
@@ -594,9 +608,15 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // BODY STATE IMPLEMENTATIONS
     // ========================================================================
 
-    /** State 2: WaitEggman - wait for head to signal Eggman has boarded */
+    /** State 2: WaitEggman - wait for the body's misc bit to be set.
+     *  ROM loc_3D5A8: btst #status.npc.misc,status(a0) on the body's OWN status.
+     *  That bit is set by the head at the end of its routine-6 countdown
+     *  (loc_3DC2A), i.e. only after the head has observed Eggman board the
+     *  cockpit, played its glow once, and counted down 64 frames. Polling the
+     *  earlier p1_standing/boarding moment released the body ~150 frames early,
+     *  walking its body west into Sonic's hurtbox (spurious HURT). */
     private void updateWaitEggman() {
-        if (head != null && head.isEggmanBoarded()) {
+        if (head != null && head.isBodyMiscSignaled()) {
             bodyRoutine = BODY_COUNTDOWN;
             actionTimer = COUNTDOWN_TIMER;
             services().fadeOutMusic();
@@ -759,10 +779,22 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                 positionChildren();
             }
             case 6 -> { // Wait for sensor to report player X
+                // ROM ObjC7 loc_3D784 reads the body's objoff_28 (the sensor's
+                // reported X) at the START of the body's frame, but the targeting
+                // sensor (ChildObjC7_TargettingSensor) is a separate object in a
+                // HIGHER RAM slot, so it runs AFTER the body in ExecuteObjects and
+                // writes objoff_28 only on its lock-on-report frame (loc_3DE62).
+                // The body therefore observes the report ONE frame after the sensor
+                // produces it. Check targetedPlayerX BEFORE advancing the sensor so
+                // we read the prior frame's value, then advance the sensor for next
+                // frame -- otherwise the engine descends one frame early (the body
+                // reads the same-frame inline report), drifting every jet-stomp by a
+                // frame across the DEZ fight.
+                boolean sensorReported = targetedPlayerX != 0;
                 if (sensorChild != null) {
                     sensorChild.update(frameCounter, player);
                 }
-                if (targetedPlayerX != 0) {
+                if (sensorReported) {
                     attackPhase = 8;
                     state.x = targetedPlayerX;
                     bodyXFixed = (long) state.x << 16;
@@ -779,16 +811,8 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                 if (actionTimer < 0) {
                     attackPhase = 0x0A;
                     state.yVel = 0;
-                    // Screen shake on stomp landing
-                    // TODO: ROM uses a 64-frame oscillating ripple table for screen shake,
-                    //       not a static offset. Camera currently has no timed/oscillating
-                    //       shake API. Using static offset as stub until Camera supports
-                    //       duration-based shake (ROM: ObjC7 stomp sets $40 frames of
-                    //       oscillating Y shake via the ripple/shake system).
-                    Camera camera = services().camera();
-                    if (camera != null) {
-                        camera.setShakeOffsets(0, 4);
-                    }
+                    // ROM: Screen_Shaking_Flag=1, DEZ_Shake_Timer=$40.
+                    triggerDezScreenShake(0x40);
                     if (jet != null) {
                         jet.setJetRoutine(6);
                     }
@@ -857,27 +881,43 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                     }
                 }
             }
-            case 4 -> { // Front punch pause ($40 frames), then advance to back punch phase
+            case 4 -> { // prev_anim 4 idle pause ($40 frames) — ROM loc_3D6C0
+                // ROM: prev_anim 4 just counts anim_frame_duration down, then
+                // advances prev_anim 4->6. No punch signal here.
                 actionTimer--;
                 if (actionTimer < 0) {
-                    // ROM: Advance prev_anim to 6. On the NEXT frame, loc_3D89E
-                    // runs and sets the back punch signal. 1-frame gap.
                     attackPhase = 6;
                     actionTimer = 0x40;
                 }
             }
-            case 6 -> { // Back punch display ($40 frames), then walk backward
-                // ROM: loc_3D89E — back punch signal fires on first frame of this phase
-                if (!backPunchTriggered) {
-                    backPunchTriggered = true;
-                }
+            case 6 -> { // prev_anim 6 — ROM loc_3D89E (s2.asm:82848-82857)
+                // ROM loc_3D89E: subq.b #1,anim_frame_duration; bmi.s + ; rts
+                //   On underflow: addq.b #2,prev_anim (6->8);
+                //                 bset #p1_pushing,status(a0) (BACK punch signal, ONCE);
+                //                 move.b #$40,anim_frame_duration.
+                // CRITICAL: prev_anim 4 (loc_3D6C0, s2.asm:82647) advances 4->6 WITHOUT
+                // resetting anim_frame_duration, so it enters prev_anim 6 already at -1.
+                // loc_3D89E's subq therefore underflows on the VERY FIRST frame of
+                // prev_anim 6, firing p1_pushing immediately (the 4->6 boundary) and
+                // resetting the $40 timer for prev_anim 8. So the back punch is a
+                // one-shot fired at the START of phase 6, NOT after a countdown.
+                // The back forearm consumes p1_pushing via test-and-clear (bclr,
+                // loc_3DD00, s2.asm:83372), so the one-shot never re-fires even if the
+                // forearm's own punch outlasts this phase.
+                backPunchTriggered = true; // one-shot edge, consumed by back forearm
+                attackPhase = 8;
+                actionTimer = 0x40;
+            }
+            case 8 -> { // prev_anim 8 idle pause ($40 frames) — ROM loc_3D6C0
+                // ROM: after p1_pushing fires (6->8), prev_anim 8 idles $40 frames
+                // before prev_anim $A walks backward. No punch signal here.
                 actionTimer--;
                 if (actionTimer < 0) {
-                    attackPhase = 8;
+                    attackPhase = 14;
                     resetGroupAnim();
                 }
             }
-            case 8 -> { // Walk backward (ROM: off_3E300 half-step backward)
+            case 14 -> { // prev_anim $A walk backward — ROM loc_3D8B8 (off_3E300)
                 if (stepGroupAnimation(SCRIPT_HALF_WALK_BWD)) {
                     bodyRoutine = BODY_SELECT_ATTACK;
                 }
@@ -968,8 +1008,8 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             Camera camera = services().camera();
             if (camera != null) {
                 camera.setMaxX((short) DEFEAT_CAMERA_MAX_X);
-                // TODO: ROM sets (Vint_Count_addr+2).w = $1000 for persistent screen rumble.
-                // Camera has no timed/persistent shake API yet.
+                // ROM: Screen_Shaking_Flag=1, DEZ_Shake_Timer=$1000.
+                triggerDezScreenShake(0x1000);
             }
         }
     }
@@ -997,7 +1037,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             defeatFrameCounter = 0;
 
             // ROM: set screen shake flag and DEZ shake timer ($1000)
-            camera.setShakeOffsets(0, 4);
+            triggerDezScreenShake(0x1000);
 
             if (head != null) {
                 head.setDestroyed(true);
@@ -1078,14 +1118,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     private void checkHit() {
         if (state.hitCount <= 0 && !state.defeated) {
             triggerDefeatSequence();
-        }
-    }
-
-    /** Called by HeadChild when routine 6's countdown expires — head signals body is ready.
-     *  If the body is already waiting in BODY_WAIT_READY, advance to BODY_SELECT_ATTACK. */
-    void onHeadReady() {
-        if (bodyRoutine == BODY_WAIT_READY) {
-            bodyRoutine = BODY_SELECT_ATTACK;
         }
     }
 
@@ -1191,10 +1223,20 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                 groupAnimFrameIdx++;
             }
 
-            if (groupAnimFrameIdx >= sequence.length) {
-                resetGroupAnim();
-                return true;
-            }
+            // ROM off_3Exxx scripts terminate with a $C0 end-marker "keyframe"
+            // (e.g. off_3E3D0 crouch = 0,1,2,$C0; off_3E30A walk = 0..8,$C0).
+            // ROM ObjC7_GroupAni (loc_3E1AA) reads anim_frame at the START of the
+            // frame: it plays the last real keyframe's final substep on frame N,
+            // then on frame N+1 reads the $C0 entry and returns "done" (loc_3E23E
+            // -> loc_3E27E -> loc_3E236 clr anim_frame / moveq #1,d1) WITHOUT
+            // applying deltas. So completion costs ONE extra frame after the last
+            // keyframe's substeps finish. The engine's sequences omit the $C0
+            // marker, so model that frame here: when idx now == sequence.length we
+            // deliberately FALL THROUGH without returning true (the last real
+            // keyframe's deltas were applied above this frame); the marker frame
+            // (N+1) returns true via the top-of-method end check. Omitting this
+            // 1-frame end cost made each crouch/walk advance one frame early,
+            // drifting the whole DEZ attack clock (jet-stomp sensor snap 7-8f early).
         }
 
         // Update body pixel position from fixed-point
@@ -1374,7 +1416,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
      */
     private void clampPlayerToGround(AbstractPlayableSprite player) {
         // Use the defeat floor Y as the maximum safe ground level.
-        // The player's centre Y at the arena floor is approximately at DEFEAT_FLOOR_Y.
+        // The player's centre Y at the arena floor is represented by DEFEAT_FLOOR_Y.
         // If the player's Y exceeds this by more than a small margin, they've fallen
         // off the level geometry — clamp them back.
         int maxSafeY = DEFEAT_FLOOR_Y + 0x20; // small margin for normal ground height variation
@@ -1410,23 +1452,19 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         int spawnX = state.x + (BOMB_SPAWN_DX * xSign);
         int spawnY = state.y + BOMB_SPAWN_DY;
 
-        BombChild bomb1 = new BombChild(this, spawnX, spawnY, 0x60 * xSign, -0x800);
+        BombChild bomb1 = spawnFreeChild(() -> new BombChild(this, spawnX, spawnY, 0x60 * xSign, -0x800));
         childComponents.add(bomb1);
-        services().objectManager().addDynamicObject(bomb1);
 
-        BombChild bomb2 = new BombChild(this, spawnX, spawnY, 0xC0 * xSign, -0xA00);
+        BombChild bomb2 = spawnFreeChild(() -> new BombChild(this, spawnX, spawnY, 0xC0 * xSign, -0xA00));
         childComponents.add(bomb2);
-        services().objectManager().addDynamicObject(bomb2);
     }
 
     /** Spawn the targeting sensor child */
     private void spawnSensor(AbstractPlayableSprite player) {
         if (player == null) return;
-        sensorChild = new SensorChild(this, player.getCentreX(), player.getCentreY());
-        // Register with ObjectManager for rendering if available
-        if (services().objectManager() != null) {
-            services().objectManager().addDynamicObject(sensorChild);
-        }
+        int playerX = player.getCentreX();
+        int playerY = player.getCentreY();
+        sensorChild = spawnFreeChild(() -> new SensorChild(this, playerX, playerY));
     }
 
     /** Report player X from targeting sensor */
@@ -1449,15 +1487,62 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
 
     /**
      * Signal that Eggman has boarded the cockpit (called by Sonic2DEZEggmanInstance).
-     * ROM: ObjC7 head child polls (DEZ_Eggman).w for status.npc.p1_standing bit.
-     * This flag replaces the timer-based stub in HeadChild.isEggmanBoarded().
+     * ROM: ObjC7 head child polls (DEZ_Eggman).w for status.npc.p1_standing bit
+     * (loc_3DC02). This flag mirrors that p1_standing bit; the head consumes it in
+     * its routine-2 poll, then plays its glow + 64-frame countdown before setting
+     * the body's misc bit that actually releases the body's WAIT_EGGMAN state.
      */
     public void setEggmanBoarded() {
         this.eggmanBoardedFlag = true;
     }
 
+    private static Sonic2DeathEggRobotInstance nearestLiveBossForRewind(RewindRecreateContext ctx) {
+        ObjectManager objectManager = null;
+        if (ctx != null) {
+            objectManager = ctx.objectManager();
+            if (objectManager == null && ctx.objectServices() != null) {
+                objectManager = ctx.objectServices().objectManager();
+            }
+        }
+        if (objectManager == null || ctx == null || ctx.spawn() == null) {
+            return null;
+        }
+        Sonic2DeathEggRobotInstance nearest = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (instance instanceof Sonic2DeathEggRobotInstance boss && !boss.isDestroyed()) {
+                long dx = boss.getX() - (long) ctx.spawn().x();
+                long dy = boss.getY() - (long) ctx.spawn().y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    nearest = boss;
+                }
+            }
+        }
+        return nearest;
+    }
+
+    private static void addChildComponentOnce(Sonic2DeathEggRobotInstance boss, AbstractBossChild child) {
+        if (boss != null && child != null && !boss.childComponents.contains(child)) {
+            boss.childComponents.add(child);
+        }
+    }
+
     /** Eggman boarding flag, set by Sonic2DEZEggmanInstance when jump starts */
     private boolean eggmanBoardedFlag = false;
+
+    private void triggerDezScreenShake(int frames) {
+        if (services().gameState() != null) {
+            services().gameState().setScreenShakeActive(true);
+        }
+        if (services().parallaxManager() == null) {
+            return;
+        }
+        if (services().parallaxManager().getHandler(Sonic2ZoneConstants.ZONE_DEZ) instanceof SwScrlDez dez) {
+            dez.triggerScreenShake(frames);
+        }
+    }
 
     boolean consumeFrontPunchTrigger() {
         boolean val = frontPunchTriggered;
@@ -1511,7 +1596,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // INNER CLASS: ArticulatedChild - Body part with subpixel position tracking
     // ========================================================================
 
-    static class ArticulatedChild extends AbstractBossChild implements TouchResponseProvider {
+    static class ArticulatedChild extends AbstractBossChild implements TouchResponseProvider, RewindRecreatable {
         int frame;
         long xFixed;  // 32-bit subpixel position (as long for Java sign safety)
         long yFixed;
@@ -1531,6 +1616,17 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             this.fallTimer = 0x80;
             this.xFixed = (long) currentX << 16;
             this.yFixed = (long) currentY << 16;
+        }
+
+        @Override
+        public ArticulatedChild recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2DeathEggRobotInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            ArticulatedChild child = new ArticulatedChild(boss, "RewindArticulated", 4, FRAME_SHOULDER);
+            addChildComponentOnce(boss, child);
+            return child;
         }
 
         void startFalling(int xVel, int yVel) {
@@ -1594,7 +1690,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // ========================================================================
 
     static class ForearmChild extends ArticulatedChild {
-        private final boolean isFront;
+        private boolean isFront;
         private boolean punching;
         private int punchPhase;
         private int punchTimer;
@@ -1612,6 +1708,17 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             this.punchXVel = 0;
             this.punchYVel = 0;
             this.savedY = 0;
+        }
+
+        @Override
+        public ForearmChild recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2DeathEggRobotInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            ForearmChild child = new ForearmChild(boss, "RewindForearm", 4, false);
+            addChildComponentOnce(boss, child);
+            return child;
         }
 
         boolean isPunching() {
@@ -1721,10 +1828,14 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // ROM: Ani_objC7_a: speed 7, $15×8, 0, 1, 2, $FA (loop)
     // ========================================================================
 
-    static class HeadChild extends AbstractBossChild implements com.openggf.level.objects.TouchResponseProvider, com.openggf.level.objects.TouchResponseAttackable {
+    static class HeadChild extends AbstractBossChild
+            implements com.openggf.level.objects.TouchResponseProvider,
+            com.openggf.level.objects.TouchResponseAttackable,
+            RewindRecreatable {
         private int headRoutine;
         private int waitTimer;
-        private boolean eggmanBoarded;
+        private boolean bodyMiscSignaled; // ROM: head r6 end -> bset misc on body (loc_3DC2A)
+        private int eggmanPollTimer;      // Fallback timer when no DEZ_Eggman object is present
         private int glowIndex;     // Current index in HEAD_GLOW_FRAMES
         private int glowTimer;     // Frame counter for glow animation speed
         private boolean glowComplete; // ROM: $FA terminator — glow plays once then advances routine
@@ -1733,42 +1844,41 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             super(parent, "Head", priority, Sonic2ObjectIds.DEATH_EGG_ROBOT);
             this.headRoutine = 0;
             this.waitTimer = 0;
-            this.eggmanBoarded = false;
+            this.bodyMiscSignaled = false;
+            this.eggmanPollTimer = 0;
             this.glowIndex = 0;
             this.glowTimer = 0;
             this.glowComplete = false;
         }
 
+        @Override
+        public HeadChild recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2DeathEggRobotInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            HeadChild child = new HeadChild(boss, 4);
+            addChildComponentOnce(boss, child);
+            return child;
+        }
+
         /**
-         * Check if Eggman has boarded the cockpit.
-         * ROM: loc_3DC02 — polls (DEZ_Eggman).w status.npc.p1_standing bit.
-         * When the Sonic2DEZEggmanInstance signals boarding (via parent's
-         * eggmanBoardedFlag), advance head routine and signal the body.
-         * Falls back to the original timer if no Eggman object is present
-         * (e.g., when the DER is spawned without Silver Sonic fight).
+         * Whether the head has finished its boarding sequence and set the body's
+         * misc bit, which is what releases the body's WAIT_EGGMAN state.
+         *
+         * ROM: the body's WAIT_EGGMAN (loc_3D5A8) polls {@code status.npc.misc}
+         * on its OWN status word. That bit is set by the head at the END of its
+         * routine 6 countdown (loc_3DC2A: {@code bset #status.npc.misc,status(a1)}
+         * where a1 = the body via objoff_2C), i.e. only AFTER the head has:
+         *   1. seen DEZ_Eggman set p1_standing (the cockpit jump, loc_3DC02),
+         *   2. played the Ani_objC7_a glow once (head r4, loc_3DC1C), and
+         *   3. counted down objoff_2A = $40 = 64 frames (head r6, loc_3DC2A).
+         * The head drives this whole sequence in its own update(); the body must
+         * NOT release at the earlier p1_standing moment, which is ~150 frames too
+         * early and walks the boss body west into the player's hurtbox.
          */
-        boolean isEggmanBoarded() {
-            if (headRoutine == 0) {
-                headRoutine = 2;
-            }
-            if (headRoutine == 2) {
-                Sonic2DeathEggRobotInstance boss = (Sonic2DeathEggRobotInstance) parent;
-                if (boss.eggmanBoardedFlag) {
-                    // Eggman transition object signaled boarding
-                    headRoutine = 4;
-                    waitTimer = 0x40;
-                    eggmanBoarded = true;
-                } else {
-                    // Fallback timer for cases without Eggman object (debug/test)
-                    waitTimer++;
-                    if (waitTimer > 180) {
-                        headRoutine = 4;
-                        waitTimer = 0x40;
-                        eggmanBoarded = true;
-                    }
-                }
-            }
-            return eggmanBoarded;
+        boolean isBodyMiscSignaled() {
+            return bodyMiscSignaled;
         }
 
         @Override
@@ -1777,26 +1887,48 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             if (!beginUpdate(frameCounter)) return;
 
             switch (headRoutine) {
+                case 0 -> {
+                    // ROM loc_3DBF6: set mapping_frame $15, advance to routine 2.
+                    headRoutine = 2;
+                }
+                case 2 -> {
+                    // ROM loc_3DC02: poll (DEZ_Eggman).w for status.npc.p1_standing
+                    // (the cockpit-jump bit set by ObjC6 at loc_3CFC0). When set,
+                    // arm the 64-frame countdown and advance to the glow routine.
+                    Sonic2DeathEggRobotInstance boss = (Sonic2DeathEggRobotInstance) parent;
+                    if (boss.eggmanBoardedFlag) {
+                        headRoutine = 4;
+                        waitTimer = 0x40; // ROM: move.w #$40,objoff_2A(a0)
+                    } else {
+                        // Fallback for debug/test spawns without the DEZ_Eggman object.
+                        eggmanPollTimer++;
+                        if (eggmanPollTimer > 180) {
+                            headRoutine = 4;
+                            waitTimer = 0x40;
+                        }
+                    }
+                }
                 case 4 -> {
-                    // ROM routine 4: ONLY animation (Ani_objC7_a glow).
+                    // ROM routine 4 (loc_3DC1C): ONLY animation (Ani_objC7_a glow).
                     // $FA terminator advances routine_secondary by 2 (4->6).
                     stepGlow();
                     if (glowComplete) {
                         headRoutine = 6;
-                        waitTimer = 0x40; // ROM: move.b #$40,anim_frame_duration(a0)
+                        // ROM keeps the objoff_2A value armed in routine 2; do NOT
+                        // re-arm here (the $40 set at routine 2 is the countdown).
                     }
                 }
                 case 6 -> {
-                    // ROM routine 6: countdown timer, then signal body and advance.
+                    // ROM routine 6 (loc_3DC2A): countdown objoff_2A, then set the
+                    // body's misc bit (releasing the body's WAIT_EGGMAN) and advance.
                     waitTimer--;
                     if (waitTimer < 0) {
-                        Sonic2DeathEggRobotInstance boss = (Sonic2DeathEggRobotInstance) parent;
-                        boss.onHeadReady();
+                        bodyMiscSignaled = true; // ROM: bset #status.npc.misc,status(body)
                         headRoutine = 8;
                     }
                 }
                 case 8 -> {
-                    // ROM routine 8: Active fight state — head is hittable.
+                    // ROM routine 8 (loc_3DC46): Active fight state — head is hittable.
                     // ROM: move.b #-1,collision_property(a0) every frame
                     collisionFlags = COLLISION_HEAD;
                 }
@@ -1858,7 +1990,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // ROM: Ani_objC7_b (4 animations)
     // ========================================================================
 
-    static class JetChild extends AbstractBossChild implements TouchResponseProvider {
+    static class JetChild extends AbstractBossChild implements TouchResponseProvider, RewindRecreatable {
         private int jetRoutine;
         private int jetAnimId;  // Current animation ID (0-3)
         private int jetFrame;
@@ -1872,6 +2004,17 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             this.jetFrame = FRAME_JET_OFF;
             this.animIdx = 0;
             this.animTimer = 0;
+        }
+
+        @Override
+        public JetChild recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2DeathEggRobotInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null) {
+                return null;
+            }
+            JetChild child = new JetChild(boss, 4);
+            addChildComponentOnce(boss, child);
+            return child;
         }
 
         void setJetRoutine(int routine) {
@@ -1966,7 +2109,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // ROM: ObjC7_TargettingSensor (s2.asm:82951-83044)
     // ========================================================================
 
-    static class SensorChild extends AbstractBossChild {
+    static class SensorChild extends AbstractBossChild implements RewindRecreatable {
         private int sensorRoutine;  // 0=init, 2=tracking, 4=lock-on
         private int countdown;      // ROM: objoff_2A
         private int beepInterval;   // ROM: angle — current beep interval
@@ -2005,6 +2148,17 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             this.lockOnActive = false;
             this.lockOnPaletteFlip = false;
             this.lockOnFlashCounter = 0;
+        }
+
+        @Override
+        public SensorChild recreateForRewind(RewindRecreateContext ctx) {
+            Sonic2DeathEggRobotInstance boss = nearestLiveBossForRewind(ctx);
+            if (boss == null || ctx == null || ctx.spawn() == null) {
+                return null;
+            }
+            SensorChild sensor = new SensorChild(boss, ctx.spawn().x(), ctx.spawn().y());
+            boss.sensorChild = sensor;
+            return sensor;
         }
 
         @Override
@@ -2150,7 +2304,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // INNER CLASS: BombChild - Projectile with arc trajectory
     // ========================================================================
 
-    static class BombChild extends AbstractBossChild implements TouchResponseProvider {
+    static class BombChild extends AbstractBossChild implements RewindRecreatable, TouchResponseProvider {
         private int xVel;
         private int yVel;
         private int groundTimer;
@@ -2171,6 +2325,42 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             this.onGround = false;
             this.detonating = false;
             this.groundTimer = BOMB_GROUND_TIMER;
+        }
+
+        @Override
+        public BombChild recreateForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
+                    || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            ObjectManager objectManager = ctx.objectServices().objectManager();
+            ObjectSpawn spawn = ctx.spawn();
+            Sonic2DeathEggRobotInstance boss = nearestLiveBoss(objectManager, spawn.x(), spawn.y());
+            if (boss == null) {
+                return null;
+            }
+            BombChild bomb = new BombChild(boss, spawn.x(), spawn.y(), 0, 0);
+            if (!boss.childComponents.contains(bomb)) {
+                boss.childComponents.add(bomb);
+            }
+            return bomb;
+        }
+
+        private static Sonic2DeathEggRobotInstance nearestLiveBoss(ObjectManager objectManager, int x, int y) {
+            Sonic2DeathEggRobotInstance nearest = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance instance : objectManager.getActiveObjects()) {
+                if (instance instanceof Sonic2DeathEggRobotInstance boss && !boss.isDestroyed()) {
+                    long dx = boss.getX() - (long) x;
+                    long dy = boss.getY() - (long) y;
+                    long distance = dx * dx + dy * dy;
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        nearest = boss;
+                    }
+                }
+            }
+            return nearest;
         }
 
         @Override
@@ -2229,14 +2419,12 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         public void appendRenderCommands(List<GLCommand> commands) {
             ObjectRenderManager renderManager = ((Sonic2DeathEggRobotInstance) parent).services().renderManager();
             if (renderManager == null) return;
-            PatternSpriteRenderer renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.DEZ_BOSS);
+            PatternSpriteRenderer renderer = detonating
+                    ? renderManager.getBossExplosionRenderer()
+                    : renderManager.getRenderer(Sonic2ObjectArtKeys.DEZ_BOSS);
             if (renderer == null || !renderer.isReady()) return;
             if (detonating) {
-                // ROM uses FieryExplosion (Obj58) mappings during detonation.
-                // Frame 0x0F from ObjC7_MapUnc_3E5F8 is the explosion frame.
-                // TODO: Use proper Obj58 explosion mappings when available.
-                //       For now, use FRAME_BOMB as placeholder during detonation.
-                renderer.drawFrameIndex(FRAME_BOMB, currentX, currentY, false, false);
+                renderer.drawFrameIndex(detonateFrame, currentX, currentY, false, false);
             } else {
                 renderer.drawFrameIndex(FRAME_BOMB, currentX, currentY, false, false);
             }

@@ -73,6 +73,21 @@ public class TestSonic3kBonusTitleCard {
         manager.initializeBonus();
         assertFalse(manager.shouldRunPlayerPhysics());
     }
+
+    @Test
+    public void inLevelEndFlagPredictionLeadsManagerCompletionByOneTick() {
+        manager.initializeInLevel(0, 1);
+
+        for (int i = 0; i < 200 && !manager.willSetInLevelEndOfLevelFlagThisUpdate(); i++) {
+            manager.update();
+        }
+
+        assertTrue(manager.willSetInLevelEndOfLevelFlagThisUpdate(),
+                "AIZ miniboss camera release asks after the title-card manager has already advanced for the frame");
+        manager.update();
+        assertFalse(manager.isComplete(),
+                "the prediction must start one title-card manager tick before manager completion");
+    }
 }
 
 

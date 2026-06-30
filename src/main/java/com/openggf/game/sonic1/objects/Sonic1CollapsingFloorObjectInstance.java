@@ -1,7 +1,6 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
 
-import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
@@ -11,14 +10,18 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractFallingFragment;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -59,7 +62,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/53 Collapsing Floors.asm
  */
 public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRomZoneRewindRecreatable {
 
     // From disassembly: move.w #$20,d1 (half-width for PlatformObject)
     private static final int PLATFORM_HALF_WIDTH = 0x20;
@@ -102,7 +105,7 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
     };
 
     // The subtype byte from ROM placement
-    private final int subtype;
+    private int subtype;
 
     // The art key for rendering (zone-specific)
     private final String artKey;
@@ -125,6 +128,16 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
 
     // Whether fragments have been spawned
     private boolean fragmented;
+
+    // ROM enters routine 4 (CFlo_OnPlatform) via PlatformObject's addq #2,obRoutine
+    // during the routine-2 (CFlo_ChkTouch) execution, so the routine-4 code (which
+    // sets the flag and decrements the timer) only runs on the FOLLOWING frame.
+    // The engine's onSolidContact sets routine=4 during the solid pass, BEFORE the
+    // object's update dispatches that frame, so without this guard routine 4 would
+    // run (and decrement) the same frame the player lands -- one frame early,
+    // making the collapse timer reach 0 (and the drop fire) one frame before ROM
+    // (MZ3 f2173 vs ROM f2174). Skip the first routine-4 update to match ROM.
+    private boolean collapseEnteredThisFrame;
 
     // X-flip state (obRender bit 0). Can change dynamically for subtype bit 7 objects.
     private boolean hFlip;
@@ -238,6 +251,13 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
      * Falls through to CFlo_WalkOff: ExitPlatform + MvSonicOnPtfm2 + RememberState.
      */
     private void updateCollapse(AbstractPlayableSprite player) {
+        if (collapseEnteredThisFrame) {
+            // ROM: PlatformObject set routine 4 during routine-2 execution, so
+            // CFlo_OnPlatform first runs (and decrements) only next frame.
+            collapseEnteredThisFrame = false;
+            collapseFlag = true;
+            return;
+        }
         if (collapseDelay <= 0) {
             // loc_8458 (line 128): enters fragment code WITHOUT clearing collapse_flag.
             // The flag remains set so routine 6 runs WalkOff behavior (loc_8402).
@@ -303,9 +323,17 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
                 collapseFlag = false;
                 routine = 6;
             } else if (collapseDelay <= 0) {
-                // Timer expired with player still standing:
-                // bclr #3,obStatus(a1) / bclr #5,obStatus(a1)
+                // Timer expired with player still standing — ROM `.delayCollapse`
+                // (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:
+                // 233-240): `bclr #3,obStatus(a1)` clears Sonic's on-platform flag
+                // so he loses support and goes airborne, plus `bclr #5` (pushing).
+                // clearRidingObject only drops the engine's riding-state link; it
+                // leaves the player's onObject flag set and grounded, so he never
+                // goes airborne. Mirror `bclr #3` directly: clear onObject + set
+                // airborne (MZ3 f2174: ROM air 0->1 here).
                 objectManager.clearRidingObject(player);
+                player.setOnObject(false);
+                player.setAir(true);
                 // move.b #id_Run,obPrevAni(a1) - restart Sonic's animation
                 // loc_842E: clear flag
                 collapseFlag = false;
@@ -384,9 +412,10 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         // Spawn remaining 7 fragments as dynamic objects
         int maxFragments = Math.min(FRAGMENT_COUNT, delays.length);
         for (int i = 1; i < maxFragments; i++) {
-            CollapsingFloorFragmentInstance fragment = new CollapsingFloorFragmentInstance(
-                    x, y, FRAME_SMASH, i, delays[i], hFlip, artKey);
-            objectManager.addDynamicObject(fragment);
+            final int idx = i;
+            final int delay = delays[i];
+            spawnFreeChild(() -> new CollapsingFloorFragmentInstance(
+                    x, y, FRAME_SMASH, idx, delay, hFlip, artKey));
         }
 
         // Play collapse sound: move.w #sfx_Collapse,d0 / jmp (QueueSound2).l
@@ -410,9 +439,7 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
     private void destroyWithWindowGatedRespawn() {
         if (!isDestroyed()) {
             ObjectManager objectManager = services().objectManager();
-            if (objectManager != null) {
-                objectManager.removeFromActiveSpawns(spawn);
-            }
+            ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
         }
         setDestroyed(true);
     }
@@ -454,14 +481,46 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        // PlatformObject uses half-width for platform checks.
-        // Half-height of 8 models PlatformObject's subq.w #8,d0 (surface 8px above center).
+        // PLATFORM_HALF_HEIGHT (9) models the continued-riding surface obY-9 from
+        // CFlo_WalkOff -> MvSonicOnPtfm2 (subi.w #9,d0). The first landing instead
+        // uses CFlo_ChkTouch -> PlatformObject's obY-8 surface, recovered via
+        // getTopLandingSnapAdjustment().
         return new SolidObjectParams(PLATFORM_HALF_WIDTH, PLATFORM_HALF_HEIGHT, PLATFORM_HALF_HEIGHT);
     }
 
     @Override
     public boolean isTopSolidOnly() {
         return true;
+    }
+
+    @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // CFlo_ChkTouch passes #64/2 directly as PlatformObject's d1
+        // (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:184-185),
+        // so the collision half-width is already the standable width and must not
+        // receive the generic SolidObjectFull +$B narrowing.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM PlatformObject/Plat_NoXCheck_AltY gates the land band with an
+        // UNSIGNED cmpi.w #-16,d0 / blo (docs/s1disasm/_incObj/sub PlatformObject.asm:51-52),
+        // which rejects the exact-touch case d0 = 0: the standable band is
+        // d0 in [-16,-1] (strict penetration). Combined with the obY-8 detection
+        // offset below, this lands on the same frame as ROM.
+        return true;
+    }
+
+    @Override
+    public int getTopLandingSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
+        // PlatformObject builds its entry surface from obY-8 and snaps via
+        // add.w d0,d2 / addq.w #3,d2 (docs/s1disasm/_incObj/sub PlatformObject.asm:37-65),
+        // while continued riding uses CFlo_WalkOff -> MvSonicOnPtfm2's obY-9 surface
+        // (modeled by PLATFORM_HALF_HEIGHT = 9). This -1 recovers the obY-8 surface
+        // for the first landing snap and, via the controller's detection-band offset,
+        // makes the engine land on ROM's frame rather than one frame late.
+        return -1;
     }
 
     @Override
@@ -478,13 +537,56 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         return routine == 6 && collapseFlag;
     }
 
+    /**
+     * True on the routine-4 frame where the collapse timer has reached zero and
+     * the floor is about to fragment via {@code Fragmentate_8x2Floor_NoReset}.
+     * <p>
+     * ROM {@code CFlo_OnPlatform} (docs/s1disasm/_incObj/1A, 53 Collapsing
+     * Ledges and Floors.asm:203-205): when {@code collapsible_timedelay} is zero
+     * the routine branches to {@code Fragmentate_8x2Floor_NoReset} and
+     * <em>skips</em> the fall-through to {@code CFlo_WalkOff} (ExitPlatform +
+     * MvSonicOnPtfm2, lines 210-216) that every other routine-4 frame runs. So
+     * on the fragment frame the rider is neither re-seated nor unseated -- it
+     * keeps {@code Status_OnObj} exactly as it was, and is only walked off the
+     * next frame by routine 6's {@code CFlo_FragmentPiece .delayCollapse} path
+     * (lines 228-231). This mirrors the S3K {@code Obj_CollapsingPlatform}
+     * transition-frame skip modelled by
+     * {@code Sonic3kCollapsingPlatformObjectInstance.suppressSlopeSampleThisFrame}.
+     * <p>
+     * The engine evaluates the continued-riding solid pass AFTER each object's
+     * {@code update()}, so {@code updateCollapse} has already decremented the
+     * timer to zero (still routine 4, not yet fragmented) by the time the solid
+     * pass runs on this frame: the predicate is therefore correct precisely on
+     * the frame the rider must be held in place. The discriminator is ROM state
+     * (routine + {@code objoff_38} timer + collapse flag), never zone/encounter:
+     * it fires for SLZ's walk-off rider and MZ's collapse-release rider alike,
+     * and is a no-op for any rider already off the floor's solid band.
+     */
+    private boolean pendingNoResetFragment() {
+        return routine == 4 && collapseFlag && collapseDelay <= 0 && !fragmented;
+    }
+
+    @Override
+    public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
+        return pendingNoResetFragment();
+    }
+
+    @Override
+    public boolean defersAirborneRiderUnseatThisFrame(PlayableEntity player) {
+        return pendingNoResetFragment();
+    }
+
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (routine == 2 && contact.standing()) {
             // Player stepped on floor: transition to routine 4 (CFlo_Collapse)
-            // From disassembly: addq.b #2,obRoutine(a0) in PlatformObject
+            // From disassembly: addq.b #2,obRoutine(a0) in PlatformObject.
+            // ROM runs routine 4 only on the NEXT frame (PlatformObject sets the
+            // routine during routine-2 execution); mark the transition so the
+            // routine-4 update skips this frame, matching that one-frame deferral.
             routine = 4;
+            collapseEnteredThisFrame = true;
         }
     }
 
@@ -499,14 +601,7 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isOnScreenX(int objectX, int range) {
-        Camera camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
+        return isInRangeAt(objectX);
     }
 
     /**
@@ -523,22 +618,43 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
      *   <li>Falls via ObjectFall when delay reaches 0</li>
      * </ul>
      */
-    public static class CollapsingFloorFragmentInstance extends AbstractFallingFragment {
+    public static class CollapsingFloorFragmentInstance extends AbstractFallingFragment
+            implements RewindRecreatable {
 
-        private final int smashFrameIndex;
-        private final int pieceIndex;
-        private final boolean hFlip;
-        private final String artKey;
+        private static final int PIECE_MASK = 0x0F;
+        private static final int FRAME_SHIFT = 4;
+        private static final int FRAME_MASK = 0x03;
+        private static final int ART_SHIFT = 6;
+        private static final int ART_MASK = 0x03;
+
+        private int smashFrameIndex;
+        private int pieceIndex;
+        private boolean hFlip;
+        private String artKey;
+
+        CollapsingFloorFragmentInstance(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(),
+                    smashFrameIndex(spawn),
+                    pieceIndex(spawn),
+                    spawn.rawYWord(),
+                    (spawn.renderFlags() & 0x01) != 0,
+                    artKey(spawn));
+        }
 
         public CollapsingFloorFragmentInstance(int parentX, int parentY,
                                                int smashFrameIndex, int pieceIndex,
                                                int delay, boolean hFlip, String artKey) {
-            super(new ObjectSpawn(parentX, parentY, Sonic1ObjectIds.COLLAPSING_FLOOR,
-                    0, 0, false, 0), "CFloFragment", delay, PRIORITY);
+            super(fragmentSpawn(parentX, parentY, smashFrameIndex, pieceIndex, delay, hFlip, artKey),
+                    "CFloFragment", delay, PRIORITY);
             this.smashFrameIndex = smashFrameIndex;
             this.pieceIndex = pieceIndex;
             this.hFlip = hFlip;
             this.artKey = artKey;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new CollapsingFloorFragmentInstance(ctx.spawn());
         }
 
         @Override
@@ -552,6 +668,53 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
             }
 
             renderer.drawFramePieceByIndex(smashFrameIndex, pieceIndex, getX(), getY(), hFlip, false);
+        }
+
+        private static ObjectSpawn fragmentSpawn(
+                int x,
+                int y,
+                int smashFrameIndex,
+                int pieceIndex,
+                int delay,
+                boolean hFlip,
+                String artKey) {
+            return new ObjectSpawn(x, y, Sonic1ObjectIds.COLLAPSING_FLOOR,
+                    fragmentSubtype(smashFrameIndex, pieceIndex, artKey),
+                    hFlip ? 0x01 : 0,
+                    false,
+                    delay);
+        }
+
+        private static int fragmentSubtype(int smashFrameIndex, int pieceIndex, String artKey) {
+            return ((artCode(artKey) & ART_MASK) << ART_SHIFT)
+                    | ((smashFrameIndex & FRAME_MASK) << FRAME_SHIFT)
+                    | (pieceIndex & PIECE_MASK);
+        }
+
+        private static int smashFrameIndex(ObjectSpawn spawn) {
+            return (spawn.subtype() >> FRAME_SHIFT) & FRAME_MASK;
+        }
+
+        private static int pieceIndex(ObjectSpawn spawn) {
+            return spawn.subtype() & PIECE_MASK;
+        }
+
+        private static String artKey(ObjectSpawn spawn) {
+            return switch ((spawn.subtype() >> ART_SHIFT) & ART_MASK) {
+                case 1 -> ObjectArtKeys.SLZ_COLLAPSING_FLOOR;
+                case 2 -> ObjectArtKeys.SBZ_COLLAPSING_FLOOR;
+                default -> ObjectArtKeys.MZ_COLLAPSING_FLOOR;
+            };
+        }
+
+        private static int artCode(String artKey) {
+            if (ObjectArtKeys.SLZ_COLLAPSING_FLOOR.equals(artKey)) {
+                return 1;
+            }
+            if (ObjectArtKeys.SBZ_COLLAPSING_FLOOR.equals(artKey)) {
+                return 2;
+            }
+            return 0;
         }
     }
 }

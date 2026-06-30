@@ -1,11 +1,16 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
@@ -24,7 +29,7 @@ import java.util.List;
  *   <li>Timer goes from $20 to -1 with bpl check, giving 33 frames of visible motion</li>
  * </ul>
  */
-public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance {
+public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // From disassembly: move.w #$20,lamp_time(a1)
     // Timer counts $20 → 0 (positive, bpl branches), then 0 → -1 (negative, falls through
@@ -40,14 +45,17 @@ public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance {
 
     // Mapping frame for red ball only
     private static final int TWIRL_FRAME = 2;
-
+    @RewindTransient(reason = "Structural parent link; relinked to the nearest live "
+            + "S1 lamppost on rewind recreate. Scalar orbit state is reapplied by "
+            + "the generic field capturer.")
     private final Sonic1LamppostObjectInstance parent;
-    private final int centerX;
-    private final int centerY;
+    private int centerX;
+    private int centerY;
     private int lifetime;
     private int angle;
     private int currentX;
     private int currentY;
+    private boolean finished;
 
     public Sonic1LamppostTwirlInstance(Sonic1LamppostObjectInstance parent) {
         super(createDummySpawn(parent), "LamppostTwirl");
@@ -66,13 +74,52 @@ public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance {
     }
 
     @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
+            return null;
+        }
+        Sonic1LamppostObjectInstance liveParent =
+                findNearestLiveParentForRewind(ctx.objectServices().objectManager(), ctx.spawn());
+        return liveParent == null ? null : new Sonic1LamppostTwirlInstance(liveParent);
+    }
+
+    private static Sonic1LamppostObjectInstance findNearestLiveParentForRewind(
+            ObjectManager objectManager,
+            ObjectSpawn spawn) {
+        if (objectManager == null || spawn == null) {
+            return null;
+        }
+        Sonic1LamppostObjectInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (!(instance instanceof Sonic1LamppostObjectInstance parent) || parent.isDestroyed()) {
+                continue;
+            }
+            long dx = parent.getCenterX() - spawn.x();
+            long dy = parent.getCenterY() - spawn.y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = parent;
+            }
+        }
+        return best;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (finished) {
+            return;
+        }
+
         lifetime--;
         if (lifetime < 0) {
+            // docs/s1disasm/s1disasm/_incObj/79 Lamppost.asm:116-134:
+            // Lamp_Twirl switches the child to Lamp_Finish, then still runs
+            // the final CalcSine position update. Lamp_Finish only returns;
+            // the child is not deleted here and keeps occupying its object slot.
+            finished = true;
             parent.onTwirlComplete();
-            setDestroyed(true);
-            return;
         }
 
         // From disassembly:
@@ -114,5 +161,10 @@ public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance {
     public int getPriorityBucket() {
         // From disassembly: move.b #4,obPriority(a1)
         return RenderPriority.clamp(4);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("twirl time=%d angle=%02X finished=%s", lifetime, angle & 0xFF, finished);
     }
 }

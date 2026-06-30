@@ -42,6 +42,46 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
     }
 
     /**
+     * Whether sibling pieces before the currently ridden piece should resolve
+     * contact before the continued-riding exit/carry branch.
+     * <p>
+     * Most aggregate objects are native engine groupings and keep the historical
+     * "ride first, siblings after" order. Objects that compress several ROM SST
+     * slots into one engine instance can opt in so earlier ROM slots can apply
+     * side/push contact before a later slot runs its standing-bit exit check.
+     */
+    default boolean resolvesEarlierPiecesBeforeRidingPiece() {
+        return false;
+    }
+
+    /**
+     * Whether each piece owns an independent ROM standing bit.
+     * <p>
+     * Most engine multi-piece providers are aggregate collision shapes and keep
+     * one latch for the logical object. Providers that compress separate ROM
+     * child slots into one instance can opt in so a standing bit set by one
+     * child does not suppress another child's fresh SolidObject contact path.
+     */
+    default boolean usesPieceScopedStandingBits() {
+        return false;
+    }
+
+    /**
+     * Half-width of a piece's narrow Solid_Landed top-landing window, used to
+     * decide which piece owns the player's standing when several pieces' wider
+     * collision boxes overlap. ROM Solid_Landed gates the landing/standonobject
+     * assignment on {@code obActWid} (docs/s1disasm/_incObj/sub SolidObject.asm:307-315),
+     * which for spaced multi-piece objects is half the piece spacing — narrower
+     * than the full collision half-width used for side/push contact. Defaults to
+     * the full collision half-width (single-box objects have no distinction).
+     *
+     * @param pieceIndex 0-based index of the piece
+     */
+    default int getPieceLandingHalfWidth(int pieceIndex) {
+        return getPieceParams(pieceIndex).halfWidth();
+    }
+
+    /**
      * Called when a piece makes contact with the player.
      * Allows the object to track which pieces are being touched.
      *

@@ -7,13 +7,14 @@ import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -62,14 +63,11 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/6B SBZ Stomper and Door.asm
  */
 public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRomZoneRewindRecreatable {
 
     // ---- v_obj6B: singleton slot for SBZ3 instances (lines 38-65 in disasm) ----
-    // Only one SBZ3 StomperDoor may exist at a time. In the ROM the spawn window
-    // naturally loads the switch-activated door (at X=$A80) before the static one
-    // (at X~$980) because the camera starts on the right side of SBZ3. Our engine
-    // may spawn them in ascending-X order instead, so we give priority to the
-    // switch-activated (type 5) instance over the static (type 0) one.
+    // Only one SBZ3 StomperDoor may exist at a time. The first instance to run
+    // Sto_Main sets v_obj6B; later instances branch to .chkdel and delete.
     private static Sonic1StomperDoorObjectInstance sbz3Instance = null;
 
     /**
@@ -125,39 +123,40 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
     // ---- Instance state ----
 
     // Visual properties from Sto_Var
-    private final int actWidth;       // obActWid
-    private final int height;         // obHeight
-    private final int moveDistance;    // objoff_3C - maximum travel distance
-    private final int mappingFrame;   // obFrame
+    private int actWidth;       // obActWid
+    private int height;         // obHeight
+    private int moveDistance;    // objoff_3C - maximum travel distance
+    private int mappingFrame;   // obFrame
 
     // Position (mutable - this object moves)
     private int x;
     private int y;
 
     // Original positions saved for movement and range checks
-    private final int origX;          // sto_origX = objoff_34
-    private final int origY;          // sto_origY = objoff_30
+    private int origX;                // sto_origX = objoff_34
+    private int origY;          // sto_origY = objoff_30
 
     // Movement state
     private int moveType;             // Current movement type (obSubtype low nybble, may change)
     private int currentOffset;        // objoff_3A - current displacement from origin
     private int timer;                // objoff_36 - countdown timer
     private boolean active;           // sto_active = objoff_38
+    private boolean firstUpdate = true;
 
     // Switch index for type 1 and type 5 (from original subtype low nybble when bit 7 set)
-    private final int switchIndex;    // objoff_3E
+    private int switchIndex;    // objoff_3E
 
     // obStatus bit 0 for flip direction
-    private final boolean xFlipped;
+    private boolean xFlipped;
 
     // Whether this is an SBZ3 instance (zone == LZ)
-    private final boolean isSbz3;
+    private boolean isSbz3;
 
-    // Type 5: sub-pixel Y accumulator for 0.5px/frame movement
-    private int ySubPixel;
+    /** Subpixel accumulators (xSub / ySub) for ROM-accurate 16.16 fixed-point integration. */
+    private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
 
     // Whether render flags bit 4 is set (SBZ3 bigdoor uses bg render)
-    private final boolean bgRender;
+    private boolean bgRender;
 
     // SolidObject params computed from width/height
     private final SolidObjectParams solidParams;
@@ -210,22 +209,13 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
 
         // ---- v_obj6B singleton check (lines 38-65) ----
         // In SBZ3 (zone == LZ), only one StomperDoor may exist at a time.
-        // The ROM relies on spawn-window ordering (camera starts right, so the
-        // switch-activated door at X=$A80 loads first). Our engine may load both
-        // simultaneously in ascending-X order, so we give the switch-activated
-        // instance (type 5) priority over the static one (type 0).
+        // ROM Sto_Main: bset #0,(v_obj6B).w; if the bit was already set,
+        // branch to .chkdel and delete this object. Do not replace the
+        // existing holder based on subtype; the first loaded slot wins.
         if (isSbz3) {
             if (sbz3Instance != null) {
-                boolean existingIsSwitchActivated = (sbz3Instance.switchIndex >= 0);
-                boolean newIsSwitchActivated = (this.switchIndex >= 0);
-                if (newIsSwitchActivated && !existingIsSwitchActivated) {
-                    // New switch-activated door replaces existing static door
-                    sbz3Instance.setDestroyed(true);
-                    sbz3Instance = this;
-                } else {
-                    // Block duplicate (lines 43-51)
-                    setDestroyed(true);
-                }
+                // Block duplicate (lines 43-51)
+                setDestroyed(true);
             } else {
                 // First SBZ3 instance: claim the singleton slot
                 sbz3Instance = this;
@@ -239,7 +229,6 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
         this.currentOffset = 0;
         this.timer = 0;
         this.active = false;
-        this.ySubPixel = 0;
 
         // SolidObject params: d1=obActWid+$B, d2=obHeight, d3=obHeight+1
         int halfWidth = actWidth + 0x0B;
@@ -275,6 +264,24 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Save X before movement for SolidObject platform delta
         int prevX = x;
+
+        if (isDestroyed()) {
+            deleteFromSbz3Singleton();
+            services().objectManager().clearSpawnCounterActiveBit(getSpawn());
+            setDestroyedByOffscreen();
+            return;
+        }
+
+        if (firstUpdate && isCompletedSbz3TopDoorReload()) {
+            // docs/s1disasm/s1disasm/_incObj/6B SBZ Stomper and Sliding Door.asm:56-65
+            // x=$A80 with objstate bit 0 set clears v_obj6B, then falls into
+            // .chkdel to clear bit 7 and delete the object.
+            deleteFromSbz3Singleton();
+            services().objectManager().clearSpawnCounterActiveBit(getSpawn());
+            setDestroyedByOffscreen();
+            return;
+        }
+        firstUpdate = false;
 
         // Execute movement type
         switch (moveType) {
@@ -509,13 +516,11 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
                 Sonic1SwitchManager switches = services().gameService(Sonic1SwitchManager.class);
                 if ((switches.getRaw(switchIndex) & 0x01) != 0) {
                     active = true;
-                    // bset #0,2(a2,d0.w) — set respawn flag so this door won't
-                    // reappear at its original position if the player leaves and
-                    // returns. Equivalent to ROM v_objstate respawn bit.
-                    ObjectManager objectManager = services().objectManager();
-                    if (objectManager != null) {
-                        objectManager.markRemembered(getSpawn());
-                    }
+                    // docs/s1disasm/s1disasm/_incObj/6B SBZ Stomper and Sliding Door.asm:309-313
+                    // bset #0,2(a2,d0.w) marks the opened top door. It is not
+                    // ObjPosLoad's bit 7 active flag and must not remove the
+                    // spawn from placement.
+                    services().objectManager().setSpawnStateBit(getSpawn(), 0);
                 }
             }
             if (!active) {
@@ -526,16 +531,17 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
         // subi.l #$10000,obX(a0) -> X -= 1.0 pixel (in 16.16 fixed point)
         x -= TYPE5_X_SPEED;
 
-        // addi.l #$8000,obY(a0) -> Y += 0.5 pixel (sub-pixel accumulation)
-        ySubPixel += TYPE5_Y_SUBPIXEL;
-        if (ySubPixel >= 0x10000) {
-            y += ySubPixel >> 16;
-            ySubPixel &= 0xFFFF;
-        }
+        // addi.l #$8000,obY(a0) -> Y += 0.5 pixel (sub-pixel accumulation).
+        // Direct 16.16 add (not velocity-driven), so update the accumulator
+        // on the State directly — same pattern as PushBlock's slow sink.
+        int yPos32 = (y << 16) | (motion.ySub & 0xFFFF);
+        yPos32 += TYPE5_Y_SUBPIXEL;
+        y = yPos32 >> 16;
+        motion.ySub = yPos32 & 0xFFFF;
 
         // Update origX for range checking
         // move.w obX(a0),sto_origX(a0)
-        // (origX is final, but the range check uses the actual x position for type 5)
+        origX = x;
 
         // cmpi.w #$980,obX(a0) / beq.s .loc_15F5E
         if (x == TYPE5_TARGET_X) {
@@ -634,12 +640,6 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean shouldStayActiveWhenRemembered() {
-        // Type 5 marks itself as remembered when the switch is pressed, but must
-        // stay active to complete the diagonal slide animation. Returning false
-        // removes the spawn from the active set (so it won't be re-created on
-        // respawn), but the instance stays alive via isPersistent() while on-screen.
-        // This avoids setting the stayActive bit, which would cause the top-position
-        // door to incorrectly respawn instead of the bottom-position static door.
         return false;
     }
 
@@ -655,13 +655,7 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
             }
             return false;
         }
-        boolean onScreen;
-        if (moveType == 5 && active) {
-            // Type 5 updates sto_origX to current X, so use x for range check
-            onScreen = isOnScreenXFromPos(x);
-        } else {
-            onScreen = isOnScreenXFromPos(origX);
-        }
+        boolean onScreen = isOnScreenXFromPos(origX);
         if (!onScreen && isSbz3 && sbz3Instance == this) {
             // .chkgone (lines 118-120): clr.b (v_obj6B).w when zone == LZ
             sbz3Instance = null;
@@ -674,9 +668,19 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
      * Mirrors the out_of_range macro behavior (checks against camera + margin).
      */
     private boolean isOnScreenXFromPos(int posX) {
-        // out_of_range uses a standard margin (default ~$180 = 384 pixels)
-        // We use the engine's built-in margin check
-        return isOnScreenX(160);
+        return isInRangeAt(posX);
+    }
+
+    private boolean isCompletedSbz3TopDoorReload() {
+        return isSbz3
+                && (getSpawn().x() & 0xFFFF) == 0x0A80
+                && services().objectManager().isSpawnStateBitSet(getSpawn(), 0);
+    }
+
+    private void deleteFromSbz3Singleton() {
+        if (isSbz3 && sbz3Instance == this) {
+            sbz3Instance = null;
+        }
     }
 
     // ---- Debug Rendering ----

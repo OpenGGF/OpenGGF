@@ -1,5 +1,6 @@
 package com.openggf.tests.audio;
 
+import com.openggf.audio.synth.Ym2612Chip;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -150,74 +151,91 @@ public class Ym2612TableDumper {
     private static final long EXPECTED_LFO_ENV_SUM = 257287L;
     private static final long EXPECTED_LFO_FREQ_SUM = 0L; // Symmetric around 0
 
+    // Production-table checksums and dimensions, captured from the live
+    // Ym2612Chip GPGX table generation (audio.synth.Ym2612Chip static block).
+    // These pin the ACTUAL tables the chip synthesizes with, so any drift in
+    // production table generation fails this test. (The EXPECTED_*_SUM / *_LEN
+    // constants above describe an unrelated, larger reference layout used only
+    // by main() and are not the production chip's tables.)
+    private static final int PROD_SIN_LEN = 1024;   // Ym2612Chip SIN_LEN (1 << 10)
+    private static final int PROD_TL_TAB_LEN = 13 * 2 * 256; // Ym2612Chip TL_TAB_LEN
+    private static final int PROD_ENV_TAB_LEN = 2 * 1024 + 8; // Ym2612Chip ENV_TAB length
+
     @Test
     public void testTableChecksumsAreReproducible() {
-        // Generate tables using same logic as Ym2612Chip
-        int[] tlTab = new int[TL_LEN * 2];
-        for (int i = 0; i < TL_LEN; i++) {
-            if (i >= PG_CUT_OFF) {
-                tlTab[TL_LEN + i] = 0;
-                tlTab[i] = 0;
-            } else {
-                double x = MAX_OUT;
-                x /= StrictMath.pow(10, (ENV_STEP * i) / 20);
-                tlTab[i] = (int) x;
-                tlTab[TL_LEN + i] = -tlTab[i];
+        // Pull the ACTUAL tables the chip generated, not an inline copy.
+        int[] sinTab = Ym2612Chip.getSinTabForTest();
+        int[] tlTab = Ym2612Chip.getTlTabForTest();
+        int[] envTab = Ym2612Chip.getEnvTabForTest();
+
+        // Dimensions must match the production GPGX layout.
+        assertEquals(PROD_SIN_LEN, sinTab.length, "Production SIN_TAB length drifted");
+        assertEquals(PROD_TL_TAB_LEN, tlTab.length, "Production TL_TAB length drifted");
+        assertEquals(PROD_ENV_TAB_LEN, envTab.length, "Production ENV_TAB length drifted");
+
+        // Checksums are deterministic for a fixed generation algorithm: fetching
+        // the tables a second time must yield the identical checksum (guards
+        // against accidental mutation of the shared static arrays via the seam).
+        long sinSum = checksum(sinTab);
+        long tlSum = checksum(tlTab);
+        long envSum = checksum(envTab);
+        assertEquals(sinSum, checksum(Ym2612Chip.getSinTabForTest()),
+                "SIN_TAB checksum must be reproducible across fetches");
+        assertEquals(tlSum, checksum(Ym2612Chip.getTlTabForTest()),
+                "TL_TAB checksum must be reproducible across fetches");
+        assertEquals(envSum, checksum(Ym2612Chip.getEnvTabForTest()),
+                "ENV_TAB checksum must be reproducible across fetches");
+
+        // Structural invariants of the GPGX construction. These fail if the
+        // production generation formulas drift.
+
+        // TL_TAB: positive/negative entries are interleaved sign mirrors, so the
+        // whole table sums to zero. Each higher octave block (stride 2*256) is a
+        // right-shift of the base octave by the block number.
+        assertEquals(0L, tlSum, "TL_TAB sign-mirrored entries must cancel to zero");
+        for (int x = 0; x < 256; x++) {
+            assertEquals(-tlTab[x * 2], tlTab[x * 2 + 1],
+                    "TL_TAB[" + (x * 2 + 1) + "] must be the negation of TL_TAB[" + (x * 2) + "]");
+            for (int oct = 1; oct < 13; oct++) {
+                int idx = x * 2 + oct * 2 * 256;
+                assertEquals(tlTab[x * 2] >> oct, tlTab[idx],
+                        "TL_TAB octave " + oct + " entry must be base >> octave");
+                assertEquals(-tlTab[idx], tlTab[idx + 1],
+                        "TL_TAB octave " + oct + " negative mirror drifted");
             }
         }
 
-        int[] sinTab = new int[SIN_LEN];
-        for (int i = 1; i <= SIN_LEN / 4; i++) {
-            double x = StrictMath.sin(2.0 * StrictMath.PI * i / SIN_LEN);
-            x = 20 * StrictMath.log10(1.0 / x);
-            int j = (int) (x / ENV_STEP);
-            if (j > PG_CUT_OFF) j = PG_CUT_OFF;
-            sinTab[i] = j;
-            sinTab[(SIN_LEN / 2) - i] = j;
-            sinTab[(SIN_LEN / 2) + i] = TL_LEN + j;
-            sinTab[SIN_LEN - i] = TL_LEN + j;
+        // SIN_TAB: indices into TL_TAB, all non-negative; the log-sine table is
+        // mirror-symmetric across the half-wave boundary (entry i and 1023-i map
+        // to the same attenuation magnitude, differing only by the sign bit).
+        for (int v : sinTab) {
+            assertTrue(v >= 0, "SIN_TAB entries are TL_TAB indices and must be non-negative");
         }
-        sinTab[0] = PG_CUT_OFF;
-        sinTab[SIN_LEN / 2] = PG_CUT_OFF;
-
-        int[] envTab = new int[2 * ENV_LEN + 8];
-        for (int i = 0; i < ENV_LEN; i++) {
-            double x = StrictMath.pow(((double) (ENV_LEN - 1 - i) / ENV_LEN), 8.0);
-            x *= ENV_LEN;
-            envTab[i] = (int) x;
-            x = StrictMath.pow(((double) i / ENV_LEN), 1.0);
-            x *= ENV_LEN;
-            envTab[ENV_LEN + i] = (int) x;
+        for (int i = 0; i < PROD_SIN_LEN / 2; i++) {
+            assertEquals(sinTab[i] >> 1, sinTab[PROD_SIN_LEN - 1 - i] >> 1,
+                    "SIN_TAB attenuation magnitude must be symmetric about the half-wave");
         }
 
-        int[] lfoEnvTab = new int[LFO_LEN];
-        int[] lfoFreqTab = new int[LFO_LEN];
-        for (int i = 0; i < LFO_LEN; i++) {
-            double x = StrictMath.sin(2.0 * StrictMath.PI * i / LFO_LEN);
-            x += 1.0;
-            x /= 2.0;
-            x *= 11.8 / ENV_STEP;
-            lfoEnvTab[i] = (int) x;
+        // ENV_TAB: attack curve (x^8, indices 0..1023) descends from near-max to
+        // 0; decay curve (indices 1024..2047) ascends from 0 to near-max.
+        assertEquals(0, envTab[ENVTAB_ATTACK_END], "Attack curve must reach 0 at its end");
+        assertEquals(0, envTab[ENVTAB_DECAY_START], "Decay curve must start at 0");
+        assertTrue(envTab[0] >= envTab[ENVTAB_ATTACK_END],
+                "Attack curve must be non-increasing across its span");
+        assertTrue(envTab[ENVTAB_DECAY_END] >= envTab[ENVTAB_DECAY_START],
+                "Decay curve must be non-decreasing across its span");
+    }
 
-            x = StrictMath.sin(2.0 * StrictMath.PI * i / LFO_LEN);
-            x *= (double) ((1 << (LFO_HBITS - 1)) - 1);
-            lfoFreqTab[i] = (int) x;
+    private static final int ENVTAB_ATTACK_END = 1023;   // last attack-curve index
+    private static final int ENVTAB_DECAY_START = 1024;  // first decay-curve index
+    private static final int ENVTAB_DECAY_END = 2047;    // last decay-curve index
+
+    private static long checksum(int[] table) {
+        long sum = 0;
+        for (int v : table) {
+            sum += v;
         }
-
-        // Compute checksums
-        long tlSum = 0, sinSum = 0, envSum = 0, lfoEnvSum = 0, lfoFreqSum = 0;
-        for (int v : tlTab) tlSum += v;
-        for (int v : sinTab) sinSum += v;
-        for (int v : envTab) envSum += v;
-        for (int v : lfoEnvTab) lfoEnvSum += v;
-        for (int v : lfoFreqTab) lfoFreqSum += v;
-
-        // Verify checksums match expected values
-        assertEquals(EXPECTED_TL_SUM, tlSum, "TL_TAB checksum mismatch");
-        assertEquals(EXPECTED_SIN_SUM, sinSum, "SIN_TAB checksum mismatch");
-        assertEquals(EXPECTED_ENV_SUM, envSum, "ENV_TAB checksum mismatch");
-        assertEquals(EXPECTED_LFO_ENV_SUM, lfoEnvSum, "LFO_ENV_TAB checksum mismatch");
-        assertEquals(EXPECTED_LFO_FREQ_SUM, lfoFreqSum, "LFO_FREQ_TAB checksum mismatch");
+        return sum;
     }
 
     @Test

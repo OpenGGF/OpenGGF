@@ -2,6 +2,8 @@ package com.openggf.game;
 
 import static org.lwjgl.opengl.GL11.glClearColor;
 
+import com.openggf.audio.GameMusic;
+
 import java.io.IOException;
 
 /**
@@ -17,6 +19,15 @@ import java.io.IOException;
  * </ul>
  */
 public interface SpecialStageProvider extends MiniGameProvider {
+    /**
+     * Selects the special-stage index for a new entry and advances any
+     * game-owned cursor state. The default matches the S1/S2 sequential
+     * cursor; games with different ROM selection policy override here.
+     */
+    default int consumeStageIndexForEntry(GameStateManager gameState) {
+        return gameState.consumeCurrentSpecialStageIndexAndAdvance();
+    }
+
     /**
      * Gets the SFX ID to play when entering/exiting the special stage flow.
      *
@@ -36,12 +47,30 @@ public interface SpecialStageProvider extends MiniGameProvider {
     }
 
     /**
+     * Gets the shared music cue to play while the special stage is active.
+     *
+     * @return generic music cue, or null to use {@link #getStageMusicId()}
+     */
+    default GameMusic getStageMusic() {
+        return null;
+    }
+
+    /**
      * Gets the music ID to play for special stage results.
      *
      * @return game-specific music ID, or -1 to use the engine fallback
      */
     default int getResultsMusicId() {
         return -1;
+    }
+
+    /**
+     * Gets the shared music cue to play for special stage results.
+     *
+     * @return generic music cue, or null to use {@link #getResultsMusicId()}
+     */
+    default GameMusic getResultsMusic() {
+        return null;
     }
 
     /**
@@ -236,6 +265,37 @@ public interface SpecialStageProvider extends MiniGameProvider {
      * @param viewportHeight viewport height in pixels
      */
     void renderLagCompensationOverlay(int viewportWidth, int viewportHeight);
+
+    /**
+     * Checks whether the lag compensation debug display is enabled.
+     *
+     * @return true if the lag compensation display and F6/F7 adjustments are enabled
+     */
+    default boolean isLagCompensationDisplayEnabled() {
+        return false;
+    }
+
+    /**
+     * Toggles the lag compensation debug display on/off.
+     */
+    default void toggleLagCompensationDisplay() {
+        // No-op by default.
+    }
+
+    /**
+     * Adjusts lag compensation only when the debug display is enabled.
+     *
+     * @param delta amount to adjust the lag compensation factor
+     * @return true if the adjustment was applied
+     */
+    default boolean adjustLagCompensationIfDisplayEnabled(double delta) {
+        if (!isLagCompensationDisplayEnabled()) {
+            return false;
+        }
+
+        setLagCompensation(getLagCompensation() + delta);
+        return true;
+    }
 
     /**
      * Gets the current lag compensation factor.

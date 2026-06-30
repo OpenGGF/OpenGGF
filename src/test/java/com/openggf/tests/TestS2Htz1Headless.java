@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.Sonic2LevelEventManager;
+import com.openggf.game.sonic2.runtime.HtzRuntimeState;
 import com.openggf.level.Chunk;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.Level;
@@ -90,7 +91,7 @@ public class TestS2Htz1Headless {
         }
 
         // Verify earthquake activated
-        assertTrue(lem.getCameraBgYOffset() > 0 || lem.getEventRoutine() >= 2, "Earthquake should have triggered (camera in zone)");
+        assertTrue(htzState().cameraBgYOffset() > 0 || lem.getEventRoutine() >= 2, "Earthquake should have triggered (camera in zone)");
 
         int baseY = sprite.getY();
         int maxY = baseY;
@@ -524,7 +525,7 @@ public class TestS2Htz1Headless {
         boolean enteredZone = false;
         for (int i = 0; i < 10 && !enteredZone; i++) {
             fixture.stepFrame(false, false, false, false, false);
-            if (GameServices.gameState().isHtzScreenShakeActive()) {
+            if (htzState().earthquakeActive()) {
                 enteredZone = true;
                 System.out.println("Earthquake triggered at frame " + i);
             }
@@ -533,15 +534,18 @@ public class TestS2Htz1Headless {
         System.out.println("After settling:");
         System.out.println("  Camera: (" + camera.getX() + ", " + camera.getY() + ")");
         System.out.println("  Sonic: (" + sprite.getX() + ", " + sprite.getY() + ")");
-        System.out.println("  HTZ shake active: " + GameServices.gameState().isHtzScreenShakeActive());
+        System.out.println("  HTZ shake active: " + htzState().earthquakeActive());
         System.out.println("  Screen shake active: " + GameServices.gameState().isScreenShakeActive());
-        System.out.println("  cameraBgYOffset: " + levelEventManager.getCameraBgYOffset());
+        System.out.println("  cameraBgYOffset: " + htzState().cameraBgYOffset());
 
         if (!enteredZone) {
-            // Try forcing the shake manually to test the offset logic
             System.out.println("\nManually enabling earthquake for offset testing...");
-            parallaxManager.setHtzScreenShake(true);
         }
+        // Force the earthquake active so the offset-sync invariant is always exercised,
+        // even when headless camera clamping prevents the natural trigger.
+        levelEventManager.getHtzEvents().setEarthquakeActive(true);
+        assertTrue(htzState().earthquakeActive(),
+                "Earthquake should be active before verifying offset synchronization");
 
         System.out.println("\n=== Verifying offset values during earthquake ===");
         System.out.println("Frame | cameraBgYOffset | shakeOffsetY | Combined | screenShakeActive");
@@ -554,7 +558,7 @@ public class TestS2Htz1Headless {
         for (int frame = 0; frame < 60; frame++) {
             fixture.stepFrame(false, false, false, false, false);
 
-            int cameraBgYOffset = levelEventManager.getCameraBgYOffset();
+            int cameraBgYOffset = htzState().cameraBgYOffset();
             int shakeOffsetY = parallaxManager.getShakeOffsetY();
             boolean screenShakeActive = GameServices.gameState().isScreenShakeActive();
             int combinedOffset = cameraBgYOffset + shakeOffsetY;
@@ -567,18 +571,29 @@ public class TestS2Htz1Headless {
                 lastBgYOffset = cameraBgYOffset;
                 lastShakeY = shakeOffsetY;
             }
+
+            // Synchronization invariant: during the earthquake, SwScrlHtz computes
+            // Vscroll_Factor_BG = (Camera_Y_pos - cameraBgYOffset) + shakeOffsetY
+            // (see SwScrlHtz.updateEarthquakeMode). The BG scroll factor must stay
+            // locked to BOTH the camera BG offset and the per-frame shake offset; if
+            // they diverged, visual terrain and collision platforms would desync
+            // (the invisible-wall symptom). Verify the relationship every frame.
+            short expectedBgVscroll = (short) ((camera.getY() - cameraBgYOffset) + shakeOffsetY);
+            assertEquals(expectedBgVscroll, parallaxManager.getVscrollFactorBG(),
+                    "BG vscroll factor must stay synchronized with cameraBgYOffset and shakeOffsetY "
+                            + "during the earthquake (frame " + frame + ", cameraY=" + camera.getY()
+                            + ", cameraBgYOffset=" + cameraBgYOffset + ", shakeOffsetY=" + shakeOffsetY + ")");
         }
 
         System.out.println("\n=== Test Complete ===");
         System.out.println("Final position: (" + sprite.getX() + ", " + sprite.getY() + ")");
 
-        // Diagnostic only: earthquake trigger depends on camera bounds after ROM level load,
-        // which may clamp camera outside the trigger zone in headless mode.
-        // Manual inspection of the printed offset table above verifies synchronization.
-        if (GameServices.gameState().isScreenShakeActive()) {
-            int shakeY = parallaxManager.getShakeOffsetY();
-            System.out.println("shakeOffsetY during active shake: " + shakeY);
-        }
+        // The earthquake must remain active across the observation window so the
+        // synchronization checks above were actually exercised on the shake path.
+        assertTrue(GameServices.gameState().isScreenShakeActive(),
+                "Screen shake should remain active throughout the offset-sync observation window");
+        assertTrue(htzState().earthquakeActive(),
+                "HTZ earthquake should remain active throughout the offset-sync observation window");
     }
 
     /**
@@ -630,10 +645,9 @@ public class TestS2Htz1Headless {
                     System.out.println("This indicates an invisible wall!");
 
                     // Log earthquake state
-                    boolean htzShake = GameServices.gameState().isHtzScreenShakeActive();
+                    boolean htzShake = htzState().earthquakeActive();
                     boolean screenShake = GameServices.gameState().isScreenShakeActive();
-                    int bgYOffset = ((Sonic2LevelEventManager) GameServices.module()
-                            .getLevelEventProvider()).getCameraBgYOffset();
+                    int bgYOffset = htzState().cameraBgYOffset();
                     int shakeY = GameServices.parallax().getShakeOffsetY();
 
                     System.out.println("HTZ shake active: " + htzShake);
@@ -776,6 +790,12 @@ public class TestS2Htz1Headless {
                 }
             }
         }
+    }
+
+    private static HtzRuntimeState htzState() {
+        return GameServices.zoneRuntimeRegistry()
+                .currentAs(HtzRuntimeState.class)
+                .orElseThrow(() -> new AssertionError("Expected HTZ runtime state to be installed"));
     }
 }
 

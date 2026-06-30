@@ -7,6 +7,8 @@ import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -30,7 +32,7 @@ import java.util.List;
  * - SUB6: Descending and spawning lava balls
  * - SUB8: Defeated (explosion sequence)
  */
-public class Sonic2HTZBossInstance extends AbstractBossInstance {
+public class Sonic2HTZBossInstance extends AbstractBossInstance implements RewindRecreatable {
 
     // State machine constants (ROM: boss_routine values)
     private static final int SUB0_RISING = 0x00;
@@ -115,6 +117,11 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance {
 
     public Sonic2HTZBossInstance(ObjectSpawn spawn) {
         super(spawn, "HTZ Boss");
+    }
+
+    @Override
+    public Sonic2HTZBossInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic2HTZBossInstance(ctx.spawn());
     }
 
     @Override
@@ -474,15 +481,14 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance {
 
         boolean flipped = (getCustomFlag(OBJOFF_SIDE_FLAG) == 0); // Left side = flipped
 
-        HTZBossFlamethrower flamethrower = new HTZBossFlamethrower(
+        HTZBossFlamethrower flamethrower = spawnChild(() -> new HTZBossFlamethrower(
                 this,
                 state.x,
                 state.y - 0x1C,  // ROM: subi.w #$1C,y_pos(a1)
                 flipped
-        );
+        ));
 
         childComponents.add(flamethrower);
-        services().objectManager().addDynamicObject(flamethrower);
     }
 
     /**
@@ -497,26 +503,24 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance {
         boolean leftSide = (getCustomFlag(OBJOFF_SIDE_FLAG) == 0);
 
         // Spawn left ball
-        HTZBossLavaBall leftBall = new HTZBossLavaBall(
+        HTZBossLavaBall leftBall = spawnChild(() -> new HTZBossLavaBall(
                 this,
                 state.x,
                 state.y,
                 true,  // Left ball
                 leftSide
-        );
+        ));
         childComponents.add(leftBall);
-        services().objectManager().addDynamicObject(leftBall);
 
         // Spawn right ball
-        HTZBossLavaBall rightBall = new HTZBossLavaBall(
+        HTZBossLavaBall rightBall = spawnChild(() -> new HTZBossLavaBall(
                 this,
                 state.x,
                 state.y,
                 false, // Right ball
                 leftSide
-        );
+        ));
         childComponents.add(rightBall);
-        services().objectManager().addDynamicObject(rightBall);
     }
 
     /**
@@ -528,12 +532,10 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance {
             return;
         }
 
-        HTZBossSmokeParticle smoke = new HTZBossSmokeParticle(
+        spawnFreeChild(() -> new HTZBossSmokeParticle(
                 state.x,
                 state.y - 0x28
-        );
-
-        services().objectManager().addDynamicObject(smoke);
+        ));
     }
 
     // Note: The ROM does NOT spawn an EggPrison from the HTZ boss code.

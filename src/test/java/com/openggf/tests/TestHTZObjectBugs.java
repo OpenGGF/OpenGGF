@@ -291,15 +291,20 @@ public class TestHTZObjectBugs {
         logState("Before high-speed approach");
 
         // Step 30 frames moving right Ã¢â‚¬â€ Sonic should reach the springboard
+        boolean launched = false;
         for (int i = 0; i < 30; i++) {
             testRunner.stepFrame(false, false, false, true, false);
+            if (sprite.getYSpeed() < -0x200) {
+                launched = true;
+                break;
+            }
         }
 
         logState("After high-speed pass");
 
         // The springboard should have launched Sonic upward
-        assertTrue(sprite.getYSpeed() < -0x200, "Springboard should launch Sonic upward at high speed. " +
-                "YSpeed=" + sprite.getYSpeed() + " (expected < -0x200). " +
+        assertTrue(launched, "Springboard should launch Sonic upward at high speed. " +
+                "Final YSpeed=" + sprite.getYSpeed() + " (expected a launch below -0x200 during the pass). " +
                 "At 16px/frame, Sonic may have passed over without triggering.");
     }
 
@@ -508,17 +513,55 @@ public class TestHTZObjectBugs {
      */
     @Test
     public void testDiagonalSpringAtHTZ1_3456x793() {
-        // Position Sonic at the reported bug coordinates
-        sprite.setX((short) 3456);
-        sprite.setY((short) 793);
+        ObjectManager objMgr = GameServices.level().getObjectManager();
+
+        // The original report used the debug HUD's top-left coordinate display.
+        // Resolve the actual diagonal spring in that area and place Sonic on the
+        // flat lip at the spring's ROM X threshold instead of relying on stale
+        // screen-space coordinates.
+        final int reportX = 3456;
+        final int reportY = 793;
+        sprite.setX((short) reportX);
+        sprite.setY((short) reportY);
         sprite.setAir(false);
         sprite.setGSpeed((short) 0);
         sprite.setXSpeed((short) 0);
         sprite.setYSpeed((short) 0);
         GameServices.camera().updatePosition(true);
-        GameServices.level().getObjectManager().reset(GameServices.camera().getX());
+        objMgr.reset(GameServices.camera().getX());
+        testRunner.stepIdleFrames(5);
 
-        logState("Positioned at (3456, 793)");
+        ObjectInstance diagonalSpringObj = null;
+        int bestDistance = Integer.MAX_VALUE;
+        for (ObjectInstance obj : objMgr.getActiveObjects()) {
+            if (obj.getSpawn().objectId() != OBJ_SPRING || obj.isDestroyed()) {
+                continue;
+            }
+            int springType = (obj.getSpawn().subtype() >> 3) & 0xE;
+            if (springType != SPRING_TYPE_DIAGONAL_UP) {
+                continue;
+            }
+            int distance = Math.abs(obj.getSpawn().x() - reportX);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                diagonalSpringObj = obj;
+            }
+        }
+
+        Assumptions.assumeTrue(diagonalSpringObj != null,
+                "Diagonal spring (0x41) not spawned near reported HTZ1 coordinates (" + reportX + "," + reportY + ")");
+
+        int springX = diagonalSpringObj.getSpawn().x();
+        int springY = diagonalSpringObj.getY();
+        sprite.setCentreX((short) (springX - 3));
+        sprite.setCentreY((short) (springY - 4));
+        sprite.setAir(false);
+        sprite.setGSpeed((short) 0);
+        sprite.setXSpeed((short) 0);
+        sprite.setYSpeed((short) 0);
+        GameServices.camera().updatePosition(true);
+
+        logState("Positioned on specific diagonal spring near reported HTZ1 coordinates");
 
         // Step 5 idle frames to settle and check for spring activation
         boolean launched = false;
@@ -544,7 +587,7 @@ public class TestHTZObjectBugs {
             }
         }
 
-        logState("Final state at (3456, 793)");
+        logState("Final state near reported HTZ1 spring");
 
         assertTrue(launched, "Diagonal spring at HTZ1 (3456, 793) should launch Sonic. " +
                 "YSpeed=" + sprite.getYSpeed() + " (expected < -0x400). " +

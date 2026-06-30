@@ -11,16 +11,19 @@ import com.openggf.data.RomByteReader;
 import com.openggf.data.SpindashDustArtProvider;
 import com.openggf.game.DynamicStartPositionProvider;
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelLoadPaletteOverrideProvider;
+import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.level.resources.LevelResourcePlan;
 import com.openggf.level.resources.LoadOp;
-import com.openggf.level.resources.ResourceLoader;
 import com.openggf.game.sonic3k.objects.AizIntroTerrainSwap;
 
 import java.util.LinkedHashSet;
@@ -36,12 +39,19 @@ import java.util.logging.Logger;
  * ROM addresses for all level resources, then using LevelResourcePlan to
  * compose them via the standard resource loading pipeline.
  *
- * <p>Phase 1 supports terrain, collision, and basic palettes. No objects,
- * rings, or zone-specific features.
+ * <p>The current module loads level resources, objects, rings, animation and
+ * palette providers, zone features, and bonus-stage coordination through the
+ * shared runtime pipeline.
  */
 public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDustArtProvider,
-        DynamicStartPositionProvider, AnimatedPatternProvider, AnimatedPaletteProvider {
+        DynamicStartPositionProvider, AnimatedPatternProvider, AnimatedPaletteProvider,
+        LevelLoadPaletteOverrideProvider {
     private static final Logger LOG = Logger.getLogger(Sonic3k.class.getName());
+    private static final int[] ICZ1_LOCK_ON_INTRO_PALETTE_LINE4_COLORS_1_TO_15 = {
+            0x0EEE, 0x0EEC, 0x0EEA, 0x0ECA, 0x0EC8,
+            0x0EA6, 0x0E86, 0x0E64, 0x0E40, 0x0E00,
+            0x0C00, 0x0000, 0x0AEC, 0x0CEA, 0x0E80
+    };
 
     private final Rom rom;
     private final Sonic3kZoneRegistry fallbackZoneRegistry = new Sonic3kZoneRegistry();
@@ -252,21 +262,10 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
 
         // Build resource plan
         LevelResourcePlan.Builder planBuilder = LevelResourcePlan.builder();
-        ResourceLoader resourceLoader = new ResourceLoader(rom);
-
         // Patterns (KosM)
-        // Use decompressed lengths for KosM overlay offsets.
-        // Header-only size reads are not reliable across all module streams.
-        int primaryArtSize = resourceLoader.loadSingle(LoadOp.kosinskiMBase(primaryArtAddr)).length;
-        LOG.info(String.format("  Primary art KosinskiM decompressed size = 0x%04X (%d bytes, %d tiles)",
-                primaryArtSize, primaryArtSize, primaryArtSize / 32));
-
         planBuilder.addPatternOp(LoadOp.kosinskiMBase(primaryArtAddr));
         if (secondaryArtAddr != primaryArtAddr && secondaryArtAddr > 0) {
-            int secondaryArtSize = resourceLoader.loadSingle(LoadOp.kosinskiMBase(secondaryArtAddr)).length;
-            LOG.info(String.format("  Secondary art KosinskiM decompressed size = 0x%04X (%d bytes, %d tiles)",
-                    secondaryArtSize, secondaryArtSize, secondaryArtSize / 32));
-            planBuilder.addPatternOp(LoadOp.kosinskiMOverlay(secondaryArtAddr, primaryArtSize));
+            planBuilder.addPatternOp(LoadOp.kosinskiMAppend(secondaryArtAddr));
         }
         addLevelPlcPatternOps(planBuilder, zone, act, bootstrap, plcPrimary, plcSecondary);
 
@@ -275,11 +274,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         // second stream appends immediately after the first in Block_table.
         planBuilder.addChunkOp(LoadOp.kosinskiBase(primaryBlocksAddr));
         if (secondaryBlocksAddr != primaryBlocksAddr && secondaryBlocksAddr > 0) {
-            int primaryBlocksSize = resourceLoader.loadSingle(LoadOp.kosinskiBase(primaryBlocksAddr)).length;
-            int secondaryBlocksSize = resourceLoader.loadSingle(LoadOp.kosinskiBase(secondaryBlocksAddr)).length;
-            LOG.info(String.format("  16x16 sizes: primary=0x%04X (%d bytes) secondary=0x%04X (%d bytes) append@0x%04X",
-                    primaryBlocksSize, primaryBlocksSize, secondaryBlocksSize, secondaryBlocksSize, primaryBlocksSize));
-            planBuilder.addChunkOp(LoadOp.kosinskiOverlay(secondaryBlocksAddr, primaryBlocksSize));
+            planBuilder.addChunkOp(LoadOp.kosinskiAppend(secondaryBlocksAddr));
         }
 
         // Chunks (128x128, Kosinski) - "blocks" in engine terminology.
@@ -287,11 +282,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         // the secondary stream appends after primary in RAM_start.
         planBuilder.addBlockOp(LoadOp.kosinskiBase(primaryChunksAddr));
         if (secondaryChunksAddr != primaryChunksAddr && secondaryChunksAddr > 0) {
-            int primaryChunksSize = resourceLoader.loadSingle(LoadOp.kosinskiBase(primaryChunksAddr)).length;
-            int secondaryChunksSize = resourceLoader.loadSingle(LoadOp.kosinskiBase(secondaryChunksAddr)).length;
-            LOG.info(String.format("  128x128 sizes: primary=0x%04X (%d bytes) secondary=0x%04X (%d bytes) append@0x%04X",
-                    primaryChunksSize, primaryChunksSize, secondaryChunksSize, secondaryChunksSize, primaryChunksSize));
-            planBuilder.addBlockOp(LoadOp.kosinskiOverlay(secondaryChunksAddr, primaryChunksSize));
+            planBuilder.addBlockOp(LoadOp.kosinskiAppend(secondaryChunksAddr));
         }
 
         // Collision indices (loaded directly, not through resource plan)
@@ -321,8 +312,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         int levelPaletteAddr = getLevelPaletteAddr(paletteIndex);
 
         // Character palette — Knuckles uses Pal_Knuckles, Sonic/Tails share Pal_SonicTails
-        String mainCharCode = GameServices.configuration()
-                .getString(SonicConfiguration.MAIN_CHARACTER_CODE);
+        String mainCharCode = resolveActiveMainCharacterCode();
         int characterPaletteAddr;
         if ("knuckles".equalsIgnoreCase(mainCharCode)) {
             characterPaletteAddr = Sonic3kConstants.KNUCKLES_PALETTE_ADDR;
@@ -352,18 +342,59 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                 characterPaletteAddr, levelPaletteAddr,
                 boundariesMinXOverride,
                 objectSpawns, ringSpawns, ringSpriteSheet);
+        applyLockOnStartupPalette(level, zone, act);
 
         // Pre-decompress AIZ intro overlay data during level load so the
-        // terrain swap at camera X=0x1400 doesn't cause a frame hitch.
+        // terrain swap at camera X=0x1400 doesn't pay the Kosinski decode cost.
+        // This path also runs in raw level-loading tests without a gameplay
+        // runtime, so keep it ROM-backed rather than resolving ObjectServices.
         boolean isAizIntro = zone == 0 && act == 0
                 && bootstrap != null
                 && bootstrap.mode() == Sonic3kLoadBootstrap.Mode.INTRO;
         if (isAizIntro) {
-            AizIntroTerrainSwap.preloadOverlayData();
-            AizIntroTerrainSwap.precomputeTransitionTilemaps();
+            AizIntroTerrainSwap.preloadOverlayData(rom);
         }
 
         return level;
+    }
+
+    @Override
+    public void applyLevelLoadPaletteOverrides(Level level, int zone, int act) {
+        if (level instanceof Sonic3kLevel sonic3kLevel) {
+            applyLockOnStartupPalette(sonic3kLevel, zone, act);
+        }
+    }
+
+    private static void applyLockOnStartupPalette(Sonic3kLevel level, int zone, int act) {
+        if (zone == Sonic3kZoneIds.ZONE_ICZ && act == 0) {
+            // Lockon S3/Screen Events.asm ICZ1_SetIntroPal updates line 4 after
+            // Pal_ICZ1 loads; without it the opening mountain BG uses the cave colors.
+            GraphicsManager graphics = GameServices.graphics();
+            S3kPaletteWriteSupport.applyContiguousPatch(
+                    GameServices.paletteOwnershipRegistryOrNull(),
+                    level,
+                    graphics,
+                    S3kPaletteOwners.ICZ_STARTUP_PALETTE,
+                    S3kPaletteOwners.PRIORITY_ZONE_EVENT,
+                    3,
+                    1,
+                    paletteWordsToBytes(ICZ1_LOCK_ON_INTRO_PALETTE_LINE4_COLORS_1_TO_15));
+            S3kPaletteWriteSupport.resolvePendingWritesNow(
+                    GameServices.paletteOwnershipRegistryOrNull(),
+                    level,
+                    graphics);
+        }
+    }
+
+    private static byte[] paletteWordsToBytes(int[] segaWords) {
+        byte[] colorData = new byte[segaWords.length * Palette.BYTES_PER_COLOR];
+        for (int i = 0; i < segaWords.length; i++) {
+            int segaWord = segaWords[i];
+            int offset = i * Palette.BYTES_PER_COLOR;
+            colorData[offset] = (byte) ((segaWord >>> 8) & 0xFF);
+            colorData[offset + 1] = (byte) (segaWord & 0xFF);
+        }
+        return colorData;
     }
 
     @Override
@@ -518,8 +549,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     }
 
     private int getCharacterStartTableAddr() {
-        String mainCharacterCode = GameServices.configuration()
-                .getString(SonicConfiguration.MAIN_CHARACTER_CODE);
+        String mainCharacterCode = resolveActiveMainCharacterCode();
         if ("knuckles".equalsIgnoreCase(mainCharacterCode)) {
             return Sonic3kConstants.KNUX_START_LOCATIONS_ADDR;
         }
@@ -725,8 +755,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     }
 
     private int resolveStartupCharacterPlcIndex() {
-        String mainCharacterCode = GameServices.configuration()
-                .getString(SonicConfiguration.MAIN_CHARACTER_CODE);
+        String mainCharacterCode = resolveActiveMainCharacterCode();
         if ("knuckles".equalsIgnoreCase(mainCharacterCode)) {
             return 0x05;
         }
@@ -734,6 +763,16 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             return 0x07;
         }
         return 0x01;
+    }
+
+    private String resolveActiveMainCharacterCode() {
+        var worldSession = SessionManager.getCurrentWorldSession();
+        if (worldSession != null
+                && worldSession.getSaveSessionContext() != null
+                && worldSession.getSaveSessionContext().selectedTeam() != null) {
+            return worldSession.getSaveSessionContext().selectedTeam().mainCharacter();
+        }
+        return GameServices.configuration().getString(SonicConfiguration.MAIN_CHARACTER_CODE);
     }
 
     private void appendPlcPatternOps(LevelResourcePlan.Builder planBuilder, int plcIndex) {

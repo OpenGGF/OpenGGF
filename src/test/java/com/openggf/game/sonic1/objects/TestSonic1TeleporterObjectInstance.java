@@ -20,6 +20,9 @@ public class TestSonic1TeleporterObjectInstance {
         // Capture on first update.
         teleporter.update(1, player);
         assertTrue(player.isObjectControlled());
+        assertFalse(player.isObjectControlAllowsCpu());
+        assertTrue(player.isObjectControlSuppressesMovement());
+        assertTrue(player.isTouchResponseSuppressedByObjectControl());
         assertTrue(player.isControlLocked());
         assertEquals(Sonic1AnimationIds.ROLL.id(), player.getForcedAnimationId());
 
@@ -34,6 +37,9 @@ public class TestSonic1TeleporterObjectInstance {
         }
 
         assertFalse(player.isObjectControlled(), "teleporter should release within expected frame budget");
+        assertFalse(player.isObjectControlAllowsCpu());
+        assertFalse(player.isObjectControlSuppressesMovement());
+        assertFalse(player.isTouchResponseSuppressedByObjectControl());
         assertFalse(player.isControlLocked());
         assertEquals(-1, player.getForcedAnimationId());
     }
@@ -47,11 +53,15 @@ public class TestSonic1TeleporterObjectInstance {
 
         teleporter.update(1, player);
         assertTrue(player.isObjectControlled());
+        assertTrue(player.isTouchResponseSuppressedByObjectControl());
         assertEquals(Sonic1AnimationIds.ROLL.id(), player.getForcedAnimationId());
 
         teleporter.onUnload();
 
         assertFalse(player.isObjectControlled());
+        assertFalse(player.isObjectControlAllowsCpu());
+        assertFalse(player.isObjectControlSuppressesMovement());
+        assertFalse(player.isTouchResponseSuppressedByObjectControl());
         assertFalse(player.isControlLocked());
         assertEquals(-1, player.getForcedAnimationId());
     }

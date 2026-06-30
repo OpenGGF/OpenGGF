@@ -9,6 +9,8 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -34,7 +36,7 @@ import java.util.List;
  *
  * Face, flame, and tube are rendered as overlays on the ship (not separate object instances).
  */
-public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance {
+public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implements RewindRecreatable {
 
     // State machine constants (routineSecondary values, matching ROM's even-numbered index)
     private static final int STATE_ENTRANCE = 0;
@@ -87,6 +89,11 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance {
     }
 
     @Override
+    public Sonic1SLZBossInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic1SLZBossInstance(ctx.spawn());
+    }
+
+    @Override
     protected void initializeBossState() {
         state.routineSecondary = STATE_ENTRANCE;
         state.xVel = ENTRANCE_X_VEL; // -$100 — move left
@@ -116,6 +123,33 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance {
     @Override
     protected boolean usesDefeatSequencer() {
         return false; // SLZ boss has custom defeat logic in states 6-10
+    }
+
+    @Override
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        // ROM: the killing hit only sets obStatus bit 7 on the boss; the boss acts on
+        // it when its own routine reaches BSLZ_StatusUpdate (run from the end of
+        // BossStarLight_ShipMain), where BSLZ_Defeated does
+        //   move.b #6,ob2ndRout(a0)   ; select BSLZ_Explode
+        //   move.b #120,BossStarLight_GenericTimer(a0)
+        //   clr.w obVelX(a0)
+        //   rts
+        // (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:186-192,
+        // loc_18A46). BSLZ_Defeated returns WITHOUT falling through to BSLZ_Explode, so
+        // the newly selected secondary routine -- and its first defeat-timer decrement
+        // (BSLZ_Explode subq.b #1,GenericTimer at loc_18B48, lines 313-314) -- is not
+        // dispatched until the next frame, when BossStarLight_ShipMain re-reads
+        // ob2ndRout at the top via BossStarLight_ShipIndex (lines 102-104). The engine
+        // selects the defeat routine during the spikeball's update / touch-response pass
+        // that runs before this boss's own update(), so without this one-frame deferral
+        // updateDefeatWait() decrements the $78 timer on the same frame the routine
+        // changed. The deferral restores that settle frame, which propagates through the
+        // exit jump (BSLZ_Recover) to BSLZ_Escape so the `addq.w #2,(v_limitright2)`
+        // camera scroll (runCameraExpandEscape) starts on the correct frame (SLZ3 trace
+        // f12785, not f12784). Same ROM dispatch shape as the GHZ, SYZ, and MZ bosses
+        // (Sonic1GHZBossInstance / Sonic1SYZBossInstance / Sonic1MZBossInstance
+        // .defeatDeferralAppliesToThisBoss).
+        return true;
     }
 
     @Override
@@ -242,11 +276,15 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance {
             int seesawX = seesaw.getSpawn().x();
             // ROM: exact match (beq.s loc_18AC0)
             if (seesawX + d4 == bossX) {
-                // Matched seesaw — advance to ball spawn
+                // Matched seesaw — advance to ball spawn. ROM .prepDrop only arms
+                // the timer and advances the routine here; the ball itself is
+                // created one frame later on the first MakeBall frame (see
+                // updateBallSpawn), so it inherits the boss X/Y AFTER this match
+                // frame's BossMove (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main
+                // and Spike Balls.asm:251-255).
                 targetSeesawIndex = i;
                 state.routineSecondary = STATE_BALL_SPAWN;
                 timer = BALL_SPAWN_DELAY; // $28 = 40 frames
-                spawnBossSpikeball();
                 return;
             }
         }
@@ -257,6 +295,31 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance {
     // ROM: BossStarLight_MakeBall — timer countdown, then back to scanning
     // Returns true on timer expiry (BossMove + sine should run via loc_189CA)
     private boolean updateBallSpawn() {
+        // ROM BSLZ_MakeBall: on the first MakeBall frame (timer still == 40) it
+        // allocates the spikeball via FindNextFreeObj, THEN decrements the timer.
+        // Creating the ball here (rather than on the SCANNING match frame) makes it
+        // spawn at the boss's post-match-move X/Y and fall the ROM-correct number of
+        // gravity steps (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike
+        // Balls.asm:259-302).
+        if (timer == BALL_SPAWN_DELAY) {
+            // ROM BSLZ_MakeBall .checkForBall: before allocating the ball, scan
+            // object RAM for an object whose objoff_3C already points at the target
+            // seesaw (i.e. a boss spikeball already in flight toward it) and abort
+            // the drop if found (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and
+            // Spike Balls.asm:280-285,307-309). The released REV00/REV01 ROM builds
+            // with FixBugs=0, so the scan covers only object slots 1..63 (the buggy
+            // half-pool range at lines 275-278) -- a duplicate ball that spilled into
+            // a slot >= 64 is NOT detected, which is exactly how the ROM ends up with
+            // two balls on one seesaw. On abort the routine returns to ShipMove
+            // (.abortDrop subtracts 2 from ob2ndRout and branches to BSLZ_ShipUpdate,
+            // which runs BossMove + sine), so model it as an immediate return to
+            // SCANNING with BossMove/sine enabled.
+            if (targetSeesawHasPendingBall()) {
+                state.routineSecondary = STATE_SCANNING;
+                return true;
+            }
+            spawnBossSpikeball();
+        }
         timer--;
         if (timer <= 0) {
             // ROM: subq.b #2,ob2ndRout(a0) — back to scanning (loc_18B40 -> loc_189CA)
@@ -427,6 +490,39 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance {
         }
     }
 
+    // ROM FixBugs=0 BSLZ_MakeBall .checkForBall scans object slots 1..63 only
+    // (docs/s1disasm/_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:275-285).
+    private static final int FIXBUGS_DUP_SCAN_LAST_SLOT = 63;
+
+    /**
+     * ROM BSLZ_MakeBall .checkForBall: is there already an object pointing at the
+     * target seesaw (objoff_3C == seesaw address) within the FixBugs=0 half-pool
+     * scan range (slots 1..63)? Balls in slots >= 64 are invisible to the buggy
+     * scan and therefore do NOT block a new drop.
+     */
+    private boolean targetSeesawHasPendingBall() {
+        if (targetSeesawIndex < 0 || targetSeesawIndex >= seesaws.size()) {
+            return false;
+        }
+        if (services().objectManager() == null) {
+            return false;
+        }
+        Sonic1SeesawObjectInstance target = seesaws.get(targetSeesawIndex);
+        for (ObjectInstance obj : services().objectManager().getActiveObjects()) {
+            if (!(obj instanceof Sonic1SLZBossSpikeball ball) || ball.isDestroyed()) {
+                continue;
+            }
+            if (ball.isFragment() || ball.getTargetSeesaw() != target) {
+                continue;
+            }
+            // FixBugs=0: only slots 1..63 are scanned.
+            if (ball.getSlotIndex() >= 0 && ball.getSlotIndex() <= FIXBUGS_DUP_SCAN_LAST_SLOT) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Spawn a boss spikeball aimed at the target seesaw.
      * ROM: creates BossSpikeball (id_BossSpikeball) with seesaw reference.
@@ -442,14 +538,12 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance {
         }
 
         // ROM: move.w obY(a0),obY(a1) / addi.w #$20,obY(a1) — spawn +$20 below boss
-        Sonic1SLZBossSpikeball spikeball = new Sonic1SLZBossSpikeball(
-                this,
-                targetSeesaw,
-                state.x,
-                state.y + 0x20);
-
         if (services().objectManager() != null) {
-            services().objectManager().addDynamicObject(spikeball);
+            spawnFreeChild(() -> new Sonic1SLZBossSpikeball(
+                    this,
+                    targetSeesaw,
+                    state.x,
+                    state.y + 0x20));
         }
     }
 

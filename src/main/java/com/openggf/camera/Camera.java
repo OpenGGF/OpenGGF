@@ -1,13 +1,17 @@
 package com.openggf.camera;
 
+import com.openggf.configuration.DeadzoneMode;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.snapshot.CameraSnapshot;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Tails;
 
-public class Camera {
+public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private short x = 0;
 	private short y = 0;
 
@@ -34,6 +38,16 @@ public class Camera {
 	// When true, normal vertical scroll rules may be modified
 	private boolean maxYChanging = false;
 
+	// ROM camera/boundary ordering (S1 DeformLayers (REV01).asm:16-18): ScrollHoriz
+	// + ScrollVertical (camera move + clamp to the prior-frame v_limitbtm2) run
+	// BEFORE DynamicLevelEvents (zone handler + bottom-boundary easing).
+	// LevelFrameStep mirrors this: updatePosition() runs before the zone event
+	// handler + updateBoundaryEasing(). So updatePosition() clamps to the maxY left
+	// by the PREVIOUS frame's easing, and the airborne +8 boundary acceleration
+	// applied by this frame's updateBoundaryEasing() (which reads the POST-scroll
+	// camera, ROM v_screenposy) reaches the camera on the NEXT frame — matching ROM
+	// without any explicit one-frame deferral state.
+
 	// ROM: Horiz_scroll_delay_val - horizontal scroll delay counter
 	// When > 0, horizontal scroll uses position history while vertical scroll continues normally
 	private int horizScrollDelayFrames = 0;
@@ -41,18 +55,22 @@ public class Camera {
 	// Full camera freeze (both X and Y) - used for death, cutscenes, etc.
 	// This is separate from horizScrollDelayFrames which only affects horizontal scroll.
 	private boolean frozen = false;
+	private boolean deferHorizontalBoundaryClampOnce = false;
+	private boolean deferMaxYWriteUntilAfterUpdate = false;
+	private short deferredMaxYValue = 0;
 
 	// ROM: Level_started_flag.
 	// Used by HUD/start-state flow and intro/cutscene sequencing.
 	// This flag does NOT freeze camera scroll; use `frozen` for camera suppression.
 	private boolean levelStarted = true;
 
-	// ROM: LZ3/SBZ2 vertical wrapping (DeformLayers.asm lines 542-580)
-	// When top boundary is negative (e.g. 0xFF00 = -256), coordinates wrap modularly
-	// to create an infinite-falling effect. The wrap range is 0x800 (2048 pixels).
+	// ROM: Vertical wrapping — coordinates wrap modularly when top boundary is negative.
+	// S1 LZ3/SBZ2: range 0x800 (DeformLayers.asm lines 542-580)
+	// S3K zones with negative minY: range = level height (e.g. 0x1000 for MGZ1's 32-row map)
 	private boolean verticalWrapEnabled = false;
-	public static final int VERTICAL_WRAP_RANGE = 0x800;  // 2048 pixels
-	private static final int VERTICAL_WRAP_MASK = 0x7FF;   // AND mask for camera/player Y
+	private int verticalWrapRange = 0x800;     // Default S1 range; overridden per-level
+	private int verticalWrapMask = 0x7FF;      // Range - 1
+	public static final int VERTICAL_WRAP_RANGE = 0x800;  // S1 default; referenced by LevelManager and GraphicsManager
 	private static final int VERTICAL_WRAP_BG_MASK = 0x3FF; // AND mask for BG Y
 	// Tracks whether a wrap occurred this frame, and the delta applied
 	private boolean lastFrameWrapped = false;
@@ -62,6 +80,7 @@ public class Camera {
 
 	private short width;
 	private short height;
+	private DeadzoneMode deadzoneMode = DeadzoneMode.PROPORTIONAL;
 
 	// ROM: Camera_Y_pos_bias - vertical position target for camera centering
 	// Default is (224/2)-16 = 96 (0x60). Used as center point for scroll windows.
@@ -83,12 +102,27 @@ public class Camera {
 	// ROM: Inertia threshold for fast scroll (0x800 = 2048)
 	private static final short FAST_SCROLL_INERTIA_THRESHOLD = 0x800;
 
-	// ROM: Maximum vertical scroll speed for airborne + fast-ground paths.
-	// S1/S2: 16 (0x10) pixels/frame  (s2.asm:18190 ".doScroll_fast")
-	// S3K:   24 (0x18) pixels/frame  (sonic3k.asm:loc_1C1B0; comment "S3K uses 24 instead of 16")
+	// ROM: Maximum per-frame camera step used by the fast vertical paths and by
+	// the horizontal catch-up clamp in ScrollHoriz / MoveCameraX.
+	// S1/S2: 16 (0x10) pixels/frame.
+	// S3K:   24 (0x18) pixels/frame.
 	// Set per-game via setFastScrollCap().
 	private static final short DEFAULT_FAST_SCROLL_CAP = 16;
 	private short fastScrollCap = DEFAULT_FAST_SCROLL_CAP;
+
+	// ROM S1 (FixBugs=0): the leftward horizontal camera move is UNCAPPED — only the
+	// rightward move caps at fastScrollCap. The leftward cap is gated behind
+	// `if FixBugs` (FixBugs=0 in the shipped ROM), so SH_MoveCameraLeft runs straight
+	// to .moveLeft and adds the full (possibly >16px) offset
+	// (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:59-99). S2 (s2.asm:18102-
+	// 18105) and S3K (sonic3k.asm:38403-38406) cap BOTH directions, so this stays
+	// false for them. Set per-game from PhysicsFeatureSet.uncappedLeftwardHorizontalScroll.
+	private boolean uncappedLeftwardHorizontalScroll = false;
+
+	// ROM: Fast_V_scroll_flag. Moving solids request this for the current frame
+	// when the player is standing on them, so grounded vertical follow uses the
+	// fast cap even if the player's own ground speed is low.
+	private boolean fastVerticalScrollRequested = false;
 
 	public Camera() {
 		this(GameServices.configuration());
@@ -97,6 +131,8 @@ public class Camera {
 	public Camera(SonicConfigurationService configService) {
 		width = configService.getShort(SonicConfiguration.SCREEN_WIDTH_PIXELS);
 		height = configService.getShort(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+		deadzoneMode = DeadzoneMode.parse(
+				configService.getString(SonicConfiguration.WIDESCREEN_DEADZONE_MODE));
 	}
 
 	public void updatePosition() {
@@ -105,10 +141,15 @@ public class Camera {
 
 	public void updatePosition(boolean force) {
 		if (force) {
-			// Position camera so sprite is at the standard target position:
-			// X: 152 pixels from left edge (midpoint between 144-160 window)
-			// Y: 96 pixels from top edge (standard ground camera position)
-			x = (short) (focusedSprite.getCentreX() - 152);
+			// Position camera using ROM's level-load formula:
+			//   v_screenposx = MainCharacter.x_pos - $A0  (subi.w #160,d1)
+			//   v_screenposy = MainCharacter.y_pos - $60  (subi.w  #96,d0)
+			// then clamp to the level bounds. References: s1disasm
+			// _inc/LevelSizeLoad & BgScrollSpeed.asm:111,124; s2.asm:14787,14798;
+			// sonic3k.asm:38241. ROM places the sprite at screen-x=160 (right edge
+			// of the 144-160 horizontal scroll deadzone), not the deadzone
+			// midpoint at 152.
+			x = (short) (focusedSprite.getCentreX() - DeadzoneGeometry.rightEdge(width));
 			y = (short) (focusedSprite.getCentreY() - 96);
 
 			// Apply bounds clamping.
@@ -117,11 +158,15 @@ public class Camera {
 			// produce max < min at low X in this engine representation.
 			x = clampAxisWithWrap(x, minX, maxX);
 			y = clampAxisWithWrap(y, minY, maxY);
+			fastVerticalScrollRequested = false;
+			applyDeferredMaxYWrite();
 			return;
 		}
 
 		// Full camera freeze (death, cutscenes) - don't update X or Y at all
 		if (frozen) {
+			fastVerticalScrollRequested = false;
+			applyDeferredMaxYWrite();
 			return;
 		}
 
@@ -130,16 +175,9 @@ public class Camera {
 		// See s2.asm ScrollHoriz (line ~18009) vs ScrollVerti (line ~18112).
 
 		// Horizontal scroll - may use position history if delay is active
-		short focusedSpriteRealX;
-		if (horizScrollDelayFrames > 0) {
-			// ROM: ScrollHoriz uses position buffer when Horiz_scroll_delay_val is set
-			// Use historical X position, clamped to buffer size (64 entries)
-			int historyIndex = Math.min(horizScrollDelayFrames, 63);
-			focusedSpriteRealX = (short) (focusedSprite.getCentreX(historyIndex) - x);
-			horizScrollDelayFrames--;
-		} else {
-			focusedSpriteRealX = (short) (focusedSprite.getCentreX() - x);
-		}
+		boolean deferHorizontalClampThisFrame = deferHorizontalBoundaryClampOnce;
+		deferHorizontalBoundaryClampOnce = false;
+		x = computeNextHorizontalCameraX(true, !deferHorizontalClampThisFrame);
 
 		// Vertical scroll - always uses current position (ROM: ScrollVerti has no delay)
 		// ROM: d0 = (v_player+obY).w - (v_screenposy).w
@@ -149,14 +187,16 @@ public class Camera {
 		short focusedSpriteRealY;
 		if (verticalWrapEnabled) {
 			int diff = (int) focusedSprite.getCentreY() - (int) y;
-			diff = ((diff % VERTICAL_WRAP_RANGE) + VERTICAL_WRAP_RANGE) % VERTICAL_WRAP_RANGE;
-			if (diff > VERTICAL_WRAP_RANGE / 2) {
-				diff -= VERTICAL_WRAP_RANGE;
+			diff = ((diff % verticalWrapRange) + verticalWrapRange) % verticalWrapRange;
+			if (diff > verticalWrapRange / 2) {
+				diff -= verticalWrapRange;
 			}
 			focusedSpriteRealY = (short) diff;
 		} else {
 			focusedSpriteRealY = (short) (focusedSprite.getCentreY() - y);
 		}
+
+		short yBeforeVerticalScroll = y;
 
 		// ROM: s2.asm:18121-18132 - Rolling height compensation
 		// When rolling, Sonic's center shifts down by ~5px due to height change.
@@ -166,23 +206,6 @@ public class Camera {
 			focusedSpriteRealY -= 5;
 			if (focusedSprite instanceof Tails) {
 				focusedSpriteRealY += 4; // Net: subtract 1 for Tails
-			}
-		}
-
-		// Horizontal scroll logic (ROM: ScrollHoriz)
-		if (focusedSpriteRealX < 144) {
-			short difference = (short) (focusedSpriteRealX - 144);
-			if (difference < -16) {
-				x -= 16;
-			} else {
-				x += difference;
-			}
-		} else if (focusedSpriteRealX > 160) {
-			short difference = (short) (focusedSpriteRealX - 160);
-			if (difference > 16) {
-				x += 16;
-			} else {
-				x += difference;
 			}
 		}
 
@@ -222,7 +245,7 @@ public class Camera {
 				} else {
 					// Bias is normal (96) - check inertia for medium vs fast
 					short absInertia = (short) Math.abs(focusedSprite.getGSpeed());
-					if (absInertia >= FAST_SCROLL_INERTIA_THRESHOLD) {
+					if (fastVerticalScrollRequested || absInertia >= FAST_SCROLL_INERTIA_THRESHOLD) {
 						// ROM: .doScroll_fast - player moving very fast on ground
 						// S2: 16px cap, S3K: 24px cap
 						tolerance = fastScrollCap;
@@ -262,37 +285,240 @@ public class Camera {
 			// ROM: cmpi.w #-$100,d1 / bgt.s .noupwrap — wraps when d1 <= -$100
 			if (y <= -0x100) {
 				short oldY = y;
-				y = (short) (y & VERTICAL_WRAP_MASK);
-				if (focusedSprite != null) {
-					focusedSprite.setCentreY((short) (focusedSprite.getCentreY() & VERTICAL_WRAP_MASK));
-				}
+				y = (short) (y & verticalWrapMask);
+				wrapFocusedSpriteYPositionWord();
 				lastFrameWrapped = true;
 				wrapDeltaY = (short) (y - oldY);
 			}
-			// Downward wrap: camera Y reached bottom boundary (0x800)
+			// Downward wrap: camera Y reached bottom boundary
 			// ROM: cmp.w (Camera_Max_Y_pos).w,d1 / blt.s .nodownwrap / sub.w d0,y
-			else if (y >= VERTICAL_WRAP_RANGE) {
+			else if (y >= verticalWrapRange) {
 				short oldY = y;
-				y = (short) (y - VERTICAL_WRAP_RANGE);
-				if (focusedSprite != null) {
-					focusedSprite.setCentreY((short) (focusedSprite.getCentreY() & VERTICAL_WRAP_MASK));
-				}
+				y = (short) (y - verticalWrapRange);
+				wrapFocusedSpriteYPositionWord();
 				lastFrameWrapped = true;
 				wrapDeltaY = (short) (y - oldY);
 			}
 		}
 
-		// Clamp to boundaries (ROM: ScrollHoriz lines 18077-18092, ScrollVerti similar)
-		x = clampAxisWithWrap(x, minX, maxX);
+		// Horizontal boundary clamping already happened inside
+		// computeNextHorizontalCameraX (ROM MoveScreenHoriz applies the boundary
+		// directionally, inside the scroll branch). A symmetric re-clamp here would
+		// re-introduce the left-boundary pull on a rightward scroll, so only the
+		// vertical clamp remains below.
 		// ROM: After a vertical wrap, DeformLayers.asm branches directly to loc_6724
 		// (the store), skipping the normal boundary clamp. This is critical because
 		// after wrapping from e.g. -260 to 1788, clamping to maxY could force the
 		// camera to a different position than Sonic was wrapped to.
 		// Normal (non-wrap) frames still clamp, which handles pit death in SBZ2
 		// where v_limitbtm2=$510 constrains the camera even though wrapping is active.
+		// ROM applies the VERTICAL level boundaries DIRECTIONALLY, mirroring the
+		// horizontal MoveScreenHoriz split — NOT as a symmetric [minY, maxY] clamp:
+		//   - SV_MoveCameraUp (camera scrolling up) falls through to SV_TopBoundary
+		//     (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:204-218), which
+		//     clamps ONLY against the top boundary (v_limittop2 / engine minY).
+		//   - SV_MoveCameraDown (camera scrolling down) falls through to
+		//     SV_BottomBoundary (line 248-261), which clamps ONLY against the bottom
+		//     boundary (v_limitbtm2 / engine maxY).
+		//   - The sweet-spot path consults f_bgscrollvert (lines 148-149, 157-158):
+		//     when the bottom level boundary moved on the PREVIOUS frame it branches
+		//     to SV_BottomBoundaryMoving (line 210), forcing d0=0 and falling through
+		//     SV_SweetSpot -> SV_BottomBoundary (line 259) — a BOTTOM-only clamp,
+		//     EVEN when the normal scroll produced no movement. Without that flag it
+		//     hits SV_NoUpdate (line 152) and clamps against NOTHING.
+		// A symmetric [minY, maxY] clamp wrongly re-clamps an upward scroll against
+		// the bottom boundary: when the bottom boundary eases UP into the rising
+		// camera (S1 MZ2 f13473, camera air-tracking up to 0x201 while v_limitbtm2
+		// just eased to 0x200), the bottom clamp yanked the camera one pixel early to
+		// 0x200. The ROM's up path never consults the bottom boundary, so the camera
+		// is allowed to sit transiently below it.
+		//
+		// ROM order (DeformLayers (REV01).asm:16-18): ScrollVertical runs BEFORE
+		// DynamicLevelEvents, so it clamps to the v_limitbtm2 left by the PREVIOUS
+		// frame's DynamicLevelEvents, and consults the f_bgscrollvert that frame set.
+		// LevelFrameStep mirrors this: updatePosition() (ScrollVertical) runs before
+		// the zone event handler + updateBoundaryEasing() (DynamicLevelEvents). So at
+		// this point maxY already holds the prior-frame boundary and maxYChanging
+		// mirrors the prior-frame f_bgscrollvert — both ROM-correct without any extra
+		// one-frame deferral. (The airborne +8 boundary acceleration applied by
+		// updateBoundaryEasing later this frame therefore reaches the camera on the
+		// NEXT frame, matching ROM — S1 MZ1 f2101.) The GHZ2 f3349 rising-boundary
+		// case is covered because maxYChanging keeps the bottom clamp live on a
+		// sweet-spot frame whose scroll produced no movement.
+		//
+		// After a vertical wrap, ROM DeformLayers.asm branches directly to loc_6724
+		// (the store), skipping the normal boundary clamp, so a wrapped frame clamps
+		// nothing here. Non-wrap frames still clamp (handles SBZ2 pit death where
+		// v_limitbtm2=$510 constrains the downward camera even though wrapping is
+		// active).
 		if (!lastFrameWrapped) {
-			y = clampAxisWithWrap(y, minY, maxY);
+			if (y < yBeforeVerticalScroll) {
+				// Camera scrolled up -> SV_TopBoundary (top boundary only).
+				y = clampTopBoundary(y);
+			} else if (y > yBeforeVerticalScroll) {
+				// Camera scrolled down -> SV_BottomBoundary (bottom boundary only).
+				y = clampBottomBoundary(y);
+			} else if (maxYChanging) {
+				// No scroll, but bottom boundary moved last frame
+				// (f_bgscrollvert) -> SV_BottomBoundaryMoving -> SV_BottomBoundary.
+				y = clampBottomBoundary(y);
+			}
+			// else: ROM SV_NoUpdate - no scroll, no boundary clamp.
 		}
+		fastVerticalScrollRequested = false;
+		applyDeferredMaxYWrite();
+	}
+
+	private void applyDeferredMaxYWrite() {
+		if (!deferMaxYWriteUntilAfterUpdate) {
+			return;
+		}
+		setMaxY(deferredMaxYValue);
+		deferMaxYWriteUntilAfterUpdate = false;
+	}
+
+	private void wrapFocusedSpriteYPositionWord() {
+		if (focusedSprite == null) {
+			return;
+		}
+		// ROM masks only the y_pos word when Screen_Y_wrap_value is active
+		// (sonic3k.asm:21989-21992, 26233-26236; MGZ sets #$FFF at
+		// sonic3k.asm:102200). Preserve y_sub just like a 68000 word write.
+		focusedSprite.setCentreYPreserveSubpixel((short) (focusedSprite.getCentreY() & verticalWrapMask));
+	}
+
+	/**
+	 * Predicts the horizontal camera position that {@link #updatePosition()} will
+	 * commit on this frame without consuming scroll-delay history.
+	 * This lets event scripts reason about end-of-frame camera thresholds while
+	 * preserving the actual camera state for the later camera step.
+	 */
+	public short previewNextX() {
+		if (focusedSprite == null || frozen) {
+			return x;
+		}
+		return computeNextHorizontalCameraX(false, true);
+	}
+
+	private short computeNextHorizontalCameraX(boolean consumeDelayState, boolean applyBoundaryClamp) {
+		short nextX = x;
+		short focusedSpriteRealX;
+		if (horizScrollDelayFrames > 0) {
+			// ROM: MoveCameraX stores the delay count in the high byte of
+			// H_scroll_frame_offset and subtracts $100 before sampling Pos_table.
+			// Our history buffer is also one frame behind by the time camera scroll
+			// runs, so delay N maps to the buffered position from N-1 frames ago.
+			int historyIndex = Math.max(0, Math.min(horizScrollDelayFrames - 1, 63));
+			focusedSpriteRealX = (short) (focusedSprite.getCentreX(historyIndex) - nextX);
+			if (consumeDelayState) {
+				horizScrollDelayFrames--;
+			}
+		} else {
+			focusedSpriteRealX = (short) (focusedSprite.getCentreX() - nextX);
+		}
+
+		short cameraStepCap = fastScrollCap;
+
+		// Horizontal scroll logic (ROM: ScrollHoriz / MoveScreenHoriz).
+		//
+		// ROM applies the horizontal level boundaries DIRECTIONALLY, not as a
+		// symmetric [min,max] clamp:
+		//   - SH_MoveCameraLeft (camera scrolling left) clamps ONLY against
+		//     v_limitleft2 (engine minX).
+		//   - SH_MoveCameraRight (camera scrolling right) clamps ONLY against
+		//     v_limitright2 (engine maxX).
+		//   - The sweet-spot path (Sonic within the 144-160 deadzone) performs no
+		//     scroll and no boundary clamp at all.
+		// (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm MoveScreenHoriz;
+		//  s2.asm / sonic3k.asm share the same direction-split structure.)
+		//
+		// This matters at the end of an act: the signpost sets
+		// v_limitleft2 = v_limitright2 to lock the screen, but while Sonic keeps
+		// running right the camera only ever consults v_limitright2, so the raised
+		// left boundary never yanks the camera forward. A symmetric clamp here
+		// clamped the camera UP to the new minX a few frames early (S1 LZ1 f12463).
+		int deadzoneLeft = DeadzoneGeometry.leftEdge(width, deadzoneMode);
+		int deadzoneRight = DeadzoneGeometry.rightEdge(width);
+		if (focusedSpriteRealX < deadzoneLeft) {
+			short difference = (short) (focusedSpriteRealX - deadzoneLeft);
+			// ROM S1 leaves the leftward move uncapped (FixBugs=0); S2/S3K cap it.
+			if (!uncappedLeftwardHorizontalScroll && difference < -cameraStepCap) {
+				nextX -= cameraStepCap;
+			} else {
+				nextX += difference;
+			}
+			// ROM SH_MoveCameraLeft: clamp only against the left boundary.
+			if (applyBoundaryClamp) {
+				nextX = clampLeftBoundary(nextX);
+			}
+		} else if (focusedSpriteRealX > deadzoneRight) {
+			short difference = (short) (focusedSpriteRealX - deadzoneRight);
+			if (difference > cameraStepCap) {
+				nextX += cameraStepCap;
+			} else {
+				nextX += difference;
+			}
+			// ROM SH_MoveCameraRight: clamp only against the right boundary.
+			if (applyBoundaryClamp) {
+				nextX = clampRightBoundary(nextX);
+			}
+		}
+		// else: ROM sweet spot - no scroll, no boundary clamp.
+
+		return nextX;
+	}
+
+	/**
+	 * ROM SH_MoveCameraLeft clamp: enforce only the left boundary (v_limitleft2).
+	 */
+	private short clampLeftBoundary(short value) {
+		return value < minX ? minX : value;
+	}
+
+	/**
+	 * ROM SH_MoveCameraRight clamp: enforce only the right boundary
+	 * (v_limitright2). When the right bound is transiently below the left bound
+	 * (e.g. S2 SCZ ObjB2 writes Camera_Max_X_pos = Camera_X_pos - $40), fall back
+	 * to the wrapped-domain handling that enforces only the left bound, matching
+	 * the prior {@code clampAxisWithWrap} behaviour for that case.
+	 */
+	private short clampRightBoundary(short value) {
+		if (maxX < minX) {
+			return value < minX ? minX : value;
+		}
+		return value > maxX ? maxX : value;
+	}
+
+	/**
+	 * Keeps newly written horizontal bounds available to object/player logic while
+	 * delaying the visible camera clamp until the following camera step.
+	 */
+	public void deferHorizontalBoundaryClampOnce() {
+		deferHorizontalBoundaryClampOnce = true;
+	}
+
+	/**
+	 * ROM SV_TopBoundary clamp: enforce only the top boundary (v_limittop2 / minY)
+	 * when the camera scrolled up. The bottom boundary is never consulted on the
+	 * up path (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:204-218).
+	 */
+	private short clampTopBoundary(short value) {
+		return value < minY ? minY : value;
+	}
+
+	/**
+	 * ROM SV_BottomBoundary clamp: enforce only the bottom boundary (v_limitbtm2 /
+	 * maxY) when the camera scrolled down (or the bottom boundary is moving). The
+	 * top boundary is never consulted on the down path
+	 * (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:248-261). Mirror
+	 * {@link #clampAxisWithWrap}'s degenerate handling: if the bottom bound is
+	 * transiently above the top bound, enforce only the top bound.
+	 */
+	private short clampBottomBoundary(short value) {
+		if (maxY < minY) {
+			return value < minY ? minY : value;
+		}
+		return value > maxY ? maxY : value;
 	}
 
 	private short clampAxisWithWrap(short value, short min, short max) {
@@ -396,18 +622,30 @@ public class Camera {
 				// Always add step (subtract 2) after potential snap
 				maxY += step;
 			} else {
-				// Increasing max Y (target > current) - ROM lines 20320-20331
-				// Check for acceleration: camera Y + 8 >= maxY AND player airborne
+				// Increasing max Y (target > current) - ROM lines 20320-20331.
+				// Boundary moving DOWN: check for the airborne acceleration
+				// (ROM DynamicLevelEvents.asm:35-49). This reads the camera (y) and
+				// the player airborne bit; because LevelFrameStep now runs
+				// updateBoundaryEasing() AFTER updatePosition() (matching ROM
+				// DynamicLevelEvents running after ScrollVertical), y here is the
+				// POST-scroll camera, exactly as ROM reads v_screenposy. The +8 step
+				// therefore reaches next frame's camera clamp, not this frame's.
 				if (focusedSprite != null && (y + 8) >= maxY && focusedSprite.getAir()) {
 					step = (short) (BOUNDARY_EASE_STEP * 4); // 8 pixels/frame
 				}
 				maxY += step;
 			}
 
-			// Clamp to target if we overshot
-			if ((diff > 0 && maxY > maxYTarget) || (diff < 0 && maxY < maxYTarget)) {
-				maxY = maxYTarget;
-			}
+			// ROM does NOT clamp the eased boundary to its target on either path
+			// (S1 DynamicLevelEvents.asm:5-49; S2 RunDynamicLevelEvents s2.asm:20329-
+			// 20364). On the move-up (decreasing) path, the snap deliberately sets
+			// Camera_Max_Y_pos = (Camera_Y_pos & $FFFE) - 2, which lands one step
+			// BELOW the target, and the ROM leaves it there; the boundary converges
+			// the next frame via the move-down (+2) path. From even start to even
+			// target the un-snapped 2px steps land on the target exactly, so no
+			// clamp is needed there either. An overshoot clamp here would override
+			// the deliberate below-target snap and produce a 2px-high bottom-boundary
+			// clamp on the following frame's ScrollVertical (S1 MZ3 f15324).
 
 			maxYChanging = true;
 		}
@@ -460,6 +698,70 @@ public class Camera {
 		int spriteY = sprite.getY();
 		return spriteX >= xLower && spriteY >= yLower && spriteX <= xUpper
 				&& spriteY <= yUpper;
+	}
+
+	/**
+	 * Computes the current-frame BuildSprites visibility that feeds
+	 * {@code render_flags.on_screen}.
+	 * <p>S3K {@code Render_Sprites} (sonic3k.asm:36336) does:
+	 * <pre>
+	 *   d1 = (y_pos - Camera_Y) + height_pixels  ; height_pixels = 0x18 = 24
+	 *   d1 &= Screen_Y_wrap_value                ; default 0xFFFF (no mask)
+	 *   if d1 &gt;= 2*height_pixels + 224:           ; threshold = 272
+	 *       off-screen
+	 * </pre>
+	 * With the default {@code Screen_Y_wrap_value = 0xFFFF}, this is equivalent
+	 * to {@code relY in [-24, 248)} — i.e., Y margin = {@code height_pixels = 24}
+	 * symmetrically, NOT 32.
+	 * <p>S1/S2 don't have a {@code Screen_Y_wrap_value} mechanism and the ROM
+	 * routines use slightly different margins. Gate the S3K-specific 24-margin
+	 * via {@link com.openggf.game.PhysicsFeatureSet#useScreenYWrapValueForVisibility()}
+	 * so existing S1/S2 traces keep their 32-margin behaviour.
+	 *
+	 * <p><b>Vertical-wrap windowing (the off-screen-flag Y boundary):</b> the ROM
+	 * does not mask the raw {@code relY} — it first biases by the low margin (so a
+	 * sprite a few pixels above the camera top stays inside the window) and only
+	 * then masks into the VDP plane wrap range before a single unsigned-range
+	 * compare. Masking the raw signed {@code relY} (as an earlier version did)
+	 * mapped a small negative {@code relY} to a huge unsigned value and wrongly
+	 * reported off-screen one frame early. The two games:
+	 * <ul>
+	 *   <li>S2 {@code BuildSprites_ApproxYCheck} (s2.asm:30597-30605):
+	 *       {@code d2 = (y_pos - Camera_Y_pos_copy + sprite_top_boundary) & $7FF};
+	 *       on-screen iff {@code (sprite_top_boundary-32) <= d2 < (sprite_top_boundary+screen_height+32)}
+	 *       with {@code sprite_top_boundary=$80}, {@code screen_height=224}. This is
+	 *       algebraically {@code ((relY + 32) & $7FF) < screen_height + 64}. The mask
+	 *       is the literal VDP {@code $7FF}, independent of the level's vertical
+	 *       wrap range. S1 uses the same routine/margin.</li>
+	 *   <li>S3K {@code Render_Sprites} (sonic3k.asm:36356-36364):
+	 *       {@code d1 = ((y_pos - Camera_Y_pos_copy) + height_pixels) & Screen_Y_wrap_value};
+	 *       off-screen iff {@code d1 >= 2*height_pixels + 224}. That is
+	 *       {@code ((relY + margin) & Screen_Y_wrap_value) < screen_height + 2*margin}
+	 *       with {@code margin = height_pixels = 24}, masked by the level-configured
+	 *       {@code Screen_Y_wrap_value}.</li>
+	 * </ul>
+	 * Both reduce to {@code ((relY + yMargin) & mask) < height + 2*yMargin}.
+	 */
+	public boolean isVisibleForRenderFlag(AbstractPlayableSprite sprite) {
+		int widthPixels = sprite.getRenderFlagWidthPixels();
+		int relX = sprite.getRenderCentreX() - x;
+		if (relX + widthPixels < 0 || relX - widthPixels >= width) {
+			return false;
+		}
+		int relY = sprite.getRenderCentreY() - y;
+		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+		boolean useS3kMargin = fs != null && fs.useScreenYWrapValueForVisibility();
+		int yMargin = useS3kMargin ? widthPixels : 32;
+		if (verticalWrapEnabled) {
+			// ROM-accurate wrap window: bias by the low margin BEFORE masking, then
+			// one unsigned-range compare. S2/S1 BuildSprites masks with the literal
+			// VDP $7FF (s2.asm:30601); S3K masks with Screen_Y_wrap_value
+			// (sonic3k.asm:36360, modelled by verticalWrapMask).
+			int mask = useS3kMargin ? verticalWrapMask : 0x7FF;
+			int wrapped = (relY + yMargin) & mask;
+			return wrapped < height + 2 * yMargin;
+		}
+		return relY >= -yMargin && relY < height + yMargin;
 	}
 
 	public void setFocusedSprite(AbstractPlayableSprite sprite) {
@@ -569,13 +871,66 @@ public class Camera {
 	 * Sets minY immediately (both current and target).
 	 * Use setMinYTarget() for smooth easing.
 	 *
-	 * ROM: When minY is negative (e.g. LZ3 top=0xFF00=-256), vertical wrapping
-	 * is automatically enabled (DeformLayers.asm lines 542-580).
+	 * ROM: In S1, negative minY (e.g. LZ3 top=0xFF00=-256) indicates vertical
+	 * wrapping (DeformLayers.asm lines 542-580). S3K zones can have negative
+	 * minY without wrapping (e.g. MGZ1 minY=-$100 for falling intro headroom).
+	 * Use {@link #setVerticalWrapEnabled(boolean)} to control wrapping explicitly.
 	 */
 	public void setMinY(short minY) {
 		this.minY = minY;
 		this.minYTarget = minY;
-		this.verticalWrapEnabled = (minY < 0);
+	}
+
+	/**
+	 * Explicitly enables or disables vertical wrapping.
+	 * When enabled, the camera and player Y coordinates wrap at the given range.
+	 *
+	 * @param enabled whether to enable vertical wrapping
+	 * @param range   wrap range in pixels (must be a power of 2; e.g. 0x800 for S1, 0x1000 for S3K 32-row levels)
+	 */
+	public void setVerticalWrapEnabled(boolean enabled, int range) {
+		this.verticalWrapEnabled = enabled;
+		if (enabled && range > 0) {
+			this.verticalWrapRange = range;
+			this.verticalWrapMask = range - 1;
+		}
+	}
+
+	/**
+	 * Convenience overload that uses the default S1 range (0x800).
+	 */
+	public void setVerticalWrapEnabled(boolean enabled) {
+		setVerticalWrapEnabled(enabled, VERTICAL_WRAP_RANGE);
+	}
+
+	/**
+	 * Applies the active vertical wrap mask to a playable object's ROM
+	 * {@code y_pos} equivalent when vertical wrapping is active.
+	 * <p>ROM references:
+	 * {@code docs/skdisasm/sonic3k.asm:21989-21992} (Sonic),
+	 * {@code docs/skdisasm/sonic3k.asm:25708-25711} (Tails/player display path),
+	 * {@code docs/skdisasm/sonic3k.asm:26233-26236} (Tails control).
+	 *
+	 * @return true when the sprite's Y coordinate changed.
+	 */
+	public boolean applyScreenYWrapValue(AbstractPlayableSprite sprite) {
+		if (!verticalWrapEnabled || sprite == null) {
+			return false;
+		}
+		// This is separate from the render visibility wrap margin: S2 control
+		// paths apply the $7FF y_pos mask, while S1 LZ3/SBZ2 only masks Sonic on
+		// the camera wrap-crossing frame mirrored by updatePosition().
+		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+		if (fs == null || !fs.playerControlAppliesVerticalWrapMask()) {
+			return false;
+		}
+		short before = sprite.getCentreY();
+		short after = (short) (before & verticalWrapMask);
+		if (after == before) {
+			return false;
+		}
+		sprite.setCentreYPreserveSubpixel(after);
+		return true;
 	}
 
 	/**
@@ -626,6 +981,16 @@ public class Camera {
 	public void setMaxY(short maxY) {
 		this.maxY = maxY;
 		this.maxYTarget = maxY;
+	}
+
+	/**
+	 * Defers an object-side max-Y boundary write until the current camera step has
+	 * consumed the previous boundary. This matches ROM paths where an object
+	 * routine runs after ScrollVerti for the visible frame.
+	 */
+	public void setMaxYAfterNextUpdate(short maxY) {
+		this.deferredMaxYValue = maxY;
+		this.deferMaxYWriteUntilAfterUpdate = true;
 	}
 
 	/**
@@ -795,10 +1160,10 @@ public class Camera {
 	}
 
 	/**
-	 * @return the vertical wrap range (0x800 = 2048 pixels)
+	 * @return the current vertical wrap range for this camera instance
 	 */
-	public static int getVerticalWrapRange() {
-		return VERTICAL_WRAP_RANGE;
+	public int getVerticalWrapRange() {
+		return verticalWrapRange;
 	}
 
 	/**
@@ -828,11 +1193,17 @@ public class Camera {
 		maxYChanging = false;
 		horizScrollDelayFrames = 0;
 		frozen = false;
+		deferHorizontalBoundaryClampOnce = false;
+		deferMaxYWriteUntilAfterUpdate = false;
+		deferredMaxYValue = 0;
 		levelStarted = true;
 		focusedSprite = null;
 		yPosBias = DEFAULT_Y_BIAS;
 		fastScrollCap = DEFAULT_FAST_SCROLL_CAP;
+		fastVerticalScrollRequested = false;
 		verticalWrapEnabled = false;
+		verticalWrapRange = VERTICAL_WRAP_RANGE;
+		verticalWrapMask = VERTICAL_WRAP_RANGE - 1;
 		lastFrameWrapped = false;
 		wrapDeltaY = 0;
 	}
@@ -848,9 +1219,99 @@ public class Camera {
 		this.fastScrollCap = (short) cap;
 	}
 
+	/**
+	 * Sets whether leftward horizontal camera scrolling is uncapped (ROM S1
+	 * FixBugs=0 behavior). When true, the per-frame cap applies only to rightward
+	 * scrolling. Set per-game from
+	 * {@link PhysicsFeatureSet#uncappedLeftwardHorizontalScroll()}.
+	 */
+	public void setUncappedLeftwardScroll(boolean uncapped) {
+		this.uncappedLeftwardHorizontalScroll = uncapped;
+	}
+
 	/** Returns the current fast vertical scroll cap in pixels/frame. */
 	public int getFastScrollCap() {
 		return fastScrollCap;
+	}
+
+	/**
+	 * Requests ROM {@code Fast_V_scroll_flag} behavior for the next camera update.
+	 * The request is frame-scoped and is cleared by {@link #updatePosition()}.
+	 */
+	public void requestFastVerticalScroll() {
+		fastVerticalScrollRequested = true;
+	}
+
+	@Override
+	public String key() {
+		return "camera";
+	}
+
+	@Override
+	public CameraSnapshot capture() {
+		return new CameraSnapshot(
+				x, y, minX, minY, maxX, maxY,
+				shakeOffsetX, shakeOffsetY,
+				minXTarget, minYTarget, maxXTarget, maxYTarget,
+				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce,
+				deferMaxYWriteUntilAfterUpdate, deferredMaxYValue, levelStarted,
+				verticalWrapEnabled, verticalWrapRange, verticalWrapMask,
+				lastFrameWrapped, wrapDeltaY, yPosBias, fastScrollCap);
+	}
+
+	@Override
+	public void restore(CameraSnapshot snapshot) {
+		x = snapshot.x();
+		y = snapshot.y();
+		minX = snapshot.minX();
+		minY = snapshot.minY();
+		maxX = snapshot.maxX();
+		maxY = snapshot.maxY();
+		shakeOffsetX = snapshot.shakeOffsetX();
+		shakeOffsetY = snapshot.shakeOffsetY();
+		minXTarget = snapshot.minXTarget();
+		minYTarget = snapshot.minYTarget();
+		maxXTarget = snapshot.maxXTarget();
+		maxYTarget = snapshot.maxYTarget();
+		maxYChanging = snapshot.maxYChanging();
+		horizScrollDelayFrames = snapshot.horizScrollDelayFrames();
+		frozen = snapshot.frozen();
+		deferHorizontalBoundaryClampOnce = snapshot.deferHorizontalBoundaryClampOnce();
+		deferMaxYWriteUntilAfterUpdate = snapshot.deferMaxYWriteUntilAfterUpdate();
+		deferredMaxYValue = snapshot.deferredMaxYValue();
+		levelStarted = snapshot.levelStarted();
+		verticalWrapEnabled = snapshot.verticalWrapEnabled();
+		verticalWrapRange = snapshot.verticalWrapRange();
+		verticalWrapMask = snapshot.verticalWrapMask();
+		lastFrameWrapped = snapshot.lastFrameWrapped();
+		wrapDeltaY = snapshot.wrapDeltaY();
+		yPosBias = snapshot.yPosBias();
+		fastScrollCap = snapshot.fastScrollCap();
+		// Re-resolve focused sprite via SpriteManager after restore. Object instances
+		// are rebuilt during rewind; this ensures Camera tracks the live main player
+		// sprite rather than a stale or null reference (Track C / H.1).
+		rebindFocusedSprite();
+	}
+
+	/**
+	 * Re-resolves the focused sprite from the active SpriteManager using the
+	 * configured main character code. Called from {@link #restore} to ensure the
+	 * camera target is up-to-date after a rewind snapshot restore.
+	 */
+	private void rebindFocusedSprite() {
+		com.openggf.sprites.managers.SpriteManager sm = GameServices.spritesOrNull();
+		if (sm == null) {
+			return;
+		}
+		String mainCode = GameServices.configuration()
+				.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
+		if (mainCode == null || mainCode.isBlank()) {
+			mainCode = "sonic";
+		}
+		Sprite candidate = sm.getSprite(mainCode);
+		if (candidate instanceof AbstractPlayableSprite aps) {
+			focusedSprite = aps;
+		}
 	}
 
 }

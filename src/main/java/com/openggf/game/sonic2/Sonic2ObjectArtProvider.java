@@ -2,6 +2,7 @@ package com.openggf.game.sonic2;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 
@@ -10,9 +11,12 @@ import com.openggf.data.RomByteReader;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.HudStaticArt;
 import com.openggf.level.objects.ObjectArtData;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.art.ObjectArtBundle;
+import com.openggf.level.objects.art.ObjectArtRegistration;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -31,12 +35,35 @@ import java.util.logging.Logger;
  * This provider lazily initializes the art loader when first needed, obtaining the ROM
  * from RomManager.
  */
-public class Sonic2ObjectArtProvider implements ObjectArtProvider {
+public class Sonic2ObjectArtProvider implements ObjectArtProvider,
+        com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectArtProvider.class.getName());
+
+    @FunctionalInterface
+    private interface ZoneSheetBuilder {
+        ObjectSpriteSheet build(Sonic2ObjectArt artLoader, int zoneIndex);
+    }
+
+    private record SheetRegistration(ObjectArtRegistration metadata, ZoneSheetBuilder builder) {}
+
+    private static final List<SheetRegistration> EAGER_SHEET_REGISTRATIONS = List.of(
+            new SheetRegistration(
+                    ObjectArtRegistration.sheet(Sonic2ObjectArtKeys.BREAKABLE_BLOCK),
+                    Sonic2ObjectArt::loadBreakableBlockSheet),
+            new SheetRegistration(
+                    ObjectArtRegistration.sheet(Sonic2ObjectArtKeys.CPZ_PLATFORM),
+                    Sonic2ObjectArt::loadGenericPlatformBSheet),
+            new SheetRegistration(
+                    ObjectArtRegistration.sheet(Sonic2ObjectArtKeys.CPZ_STAIR_BLOCK),
+                    (artLoader, zoneIndex) -> artLoader.loadCpzStairBlockSheet()),
+            new SheetRegistration(
+                    ObjectArtRegistration.sheet(Sonic2ObjectArtKeys.SIDEWAYS_PFORM),
+                    (artLoader, zoneIndex) -> artLoader.loadSidewaysPformSheet()));
 
     private Sonic2ObjectArt artLoader;
     private ObjectArtData artData;
     private int currentZoneIndex = -2; // Use -2 to distinguish from explicit -1
+    private int loadEpoch = 0;
 
     private final Map<String, PatternSpriteRenderer> renderers = new HashMap<>();
     private final Map<String, ObjectSpriteSheet> sheets = new HashMap<>();
@@ -54,6 +81,9 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
     private Pattern[] hudTextPatterns;
     private Pattern[] hudLivesPatterns;
     private Pattern[] hudLivesNumbers;
+    private Pattern[] hudHexDigits;
+    private HudStaticArt hudStaticArt;
+    private boolean livesNameUsesIconPalette;
 
     /**
      * Creates a new Sonic2ObjectArtProvider.
@@ -90,6 +120,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
         ensureArtLoader();
         artData = artLoader.loadForZone(zoneIndex);
         currentZoneIndex = zoneIndex;
+        loadEpoch++;
 
         // Clear previous registrations
         renderers.clear();
@@ -103,13 +134,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
         registerSheet(ObjectArtKeys.MONITOR, artData.monitorSheet());
         registerSheet(Sonic2ObjectArtKeys.WATERFALL, artData.waterfallSheet());
         registerSheet(ObjectArtKeys.ANIMAL, artData.animalSheet());
-        registerSheet(Sonic2ObjectArtKeys.BREAKABLE_BLOCK, artData.breakableBlockSheet());
-        registerSheet(Sonic2ObjectArtKeys.CPZ_PLATFORM, artData.cpzPlatformSheet());
-        // MTZPlatform (Obj6B) and MTZLongPlatform (Obj65) use ArtTile_ArtKos_LevelArt (level art)
-        // and have no dedicated Nemesis art file. CPZ_STAIR_BLOCK provides the closest compatible
-        // sprite sheet for rendering. Must be loaded for all zones, not just CPZ.
-        registerSheet(Sonic2ObjectArtKeys.CPZ_STAIR_BLOCK, artLoader.loadCpzStairBlockSheet());
-        registerSheet(Sonic2ObjectArtKeys.SIDEWAYS_PFORM, artData.sidewaysPformSheet());
+        registerEagerSheets(zoneIndex);
         // Red spring variants (share base spring art, different mappings — not PLC entries)
         registerSheet(ObjectArtKeys.SPRING_VERTICAL_RED, artData.springVerticalRedSheet());
         registerSheet(ObjectArtKeys.SPRING_HORIZONTAL_RED, artData.springHorizontalRedSheet());
@@ -154,6 +179,9 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
         if (sheets.containsKey(Sonic2ObjectArtKeys.MTZ_FLOOR_SPIKE)) {
             registerSheet(Sonic2ObjectArtKeys.MTZ_SPIKE, artLoader.loadMTZSpikeSheet());
         }
+        if (sheets.containsKey(Sonic2ObjectArtKeys.WFZ_HOOK)) {
+            registerSheet(Sonic2ObjectArtKeys.WFZ_UNKNOWN, artLoader.loadWfzUnknownSheet());
+        }
 
         // === Zone-specific overrides ===
         // HTZ barrier uses zone-specific art instead of CPZ ConstructionStripes
@@ -194,9 +222,16 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
         hudTextPatterns = artData.getHudTextPatterns();
         hudLivesPatterns = artData.getHudLivesPatterns();
         hudLivesNumbers = artData.getHudLivesNumbers();
+        hudHexDigits = artData.getDebugFontPatterns();
+        livesNameUsesIconPalette = false;
 
         // Cross-game: override lives icon with donor character art (e.g., Knuckles from S3K)
         overrideLivesArtFromDonor();
+        rebuildHudStaticArt();
+
+        // The 1-up monitor icon shares VRAM with the life counter, so it must show
+        // the same main-character face the HUD does (Tails-alone / Knuckles lock-on).
+        overrideMonitorIconArtForMainCharacter();
 
         LOGGER.info("Sonic2ObjectArtProvider loaded for zone " + zoneIndex +
                 " with " + rendererKeys.size() + " renderers (PLC-driven)");
@@ -215,6 +250,25 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
                 registerSheet(registration.key(), sheet);
             }
         }
+    }
+
+    private void registerEagerSheets(int zoneIndex) {
+        for (SheetRegistration registration : EAGER_SHEET_REGISTRATIONS) {
+            ObjectSpriteSheet sheet = registration.builder().build(artLoader, zoneIndex);
+            registerSheet(registration.metadata().key(), sheet);
+        }
+    }
+
+    /**
+     * Loads a Sonic 2 PLC on demand, matching runtime event-triggered PLC requests.
+     * Re-requesting an already loaded PLC is harmless because individual art keys
+     * are skipped when present.
+     */
+    public void requestPlc(int plcId) throws IOException {
+        ensureArtLoader();
+        Rom rom = GameServices.rom().getRom();
+        loadPlcEntries(rom, plcId);
+        loadEpoch++;
     }
 
     /**
@@ -259,6 +313,9 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
             case 0x0B: // ROM_ZONE_MCZ
                 registerIfAbsent(Sonic2ObjectArtKeys.MCZ_BOSS, artLoader::loadMCZBossSheet);
                 registerIfAbsent(Sonic2ObjectArtKeys.MCZ_FALLING_ROCKS, artLoader::loadMCZFallingRocksSheet);
+                break;
+            case 0x0A: // ROM_ZONE_OOZ
+                registerIfAbsent(Sonic2ObjectArtKeys.OOZ_BOSS, artLoader::loadOOZBossSheet);
                 break;
             case 0x04: // ROM_ZONE_MTZ
                 registerIfAbsent(Sonic2ObjectArtKeys.MTZ_BOSS, artLoader::loadMTZBossSheet);
@@ -306,6 +363,23 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
     }
 
     @Override
+    public ObjectArtBundle getArtBundle() {
+        ObjectArtBundle.Builder builder = ObjectArtBundle.builder()
+                .sheets(sheets)
+                .animations(animations)
+                .hudDigitPatterns(hudDigitPatterns)
+                .hudTextPatterns(hudTextPatterns)
+                .hudLivesPatterns(hudLivesPatterns)
+                .hudLivesNumbers(hudLivesNumbers)
+                .hudHexDigitPatterns(hudHexDigits);
+        if (artData != null) {
+            builder.zoneData(ObjectArtKeys.ANIMAL_TYPE_A, artData.getAnimalTypeA())
+                    .zoneData(ObjectArtKeys.ANIMAL_TYPE_B, artData.getAnimalTypeB());
+        }
+        return builder.build();
+    }
+
+    @Override
     public int getZoneData(String key, int zoneIndex) {
         if (artData == null) {
             return -1;
@@ -337,26 +411,98 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
         return hudLivesNumbers;
     }
 
+    @Override
+    public Pattern[] getHudHexDigitPatterns() {
+        return hudHexDigits;
+    }
+
+    @Override
+    public HudStaticArt getHudStaticArt() {
+        return hudStaticArt;
+    }
+
     /**
      * When cross-game features are active and the character is Knuckles,
      * loads the Knuckles life icon from the S3K donor ROM to replace the
      * S2 Sonic life icon.
      */
     private void overrideLivesArtFromDonor() {
-        if (!com.openggf.game.CrossGameFeatureProvider.isActive()) {
+        if (!com.openggf.game.CrossGameFeatureProvider.isS3kDonorActive()) {
             return;
         }
-        com.openggf.game.CrossGameFeatureProvider crossGame = GameServices.crossGameFeatures();
-        String mainChar = GameServices.configuration()
-                .getString(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE);
+        String mainChar = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
         if (!"knuckles".equalsIgnoreCase(mainChar)) {
             return;
         }
-        // Load Knuckles life icon from donor S3K ROM
-        String donorId = crossGame.getDonorGameId();
-        if (!"s3k".equals(donorId)) {
+        Pattern[] knuxLife = loadS3kKnucklesLivesPatterns();
+        if (knuxLife != null && knuxLife.length > 0) {
+            hudLivesPatterns = knuxLife;
+            livesNameUsesIconPalette = true;
+            rebuildHudStaticArt();
+            LOGGER.info("Overrode lives icon with Knuckles art from S3K donor (" + knuxLife.length + " tiles)");
+        }
+    }
+
+    private void rebuildHudStaticArt() {
+        hudStaticArt = Sonic2HudStaticArtFactory.create(
+                hudTextPatterns,
+                hudLivesPatterns,
+                livesNameUsesIconPalette);
+    }
+
+    /**
+     * Overrides the 1-up monitor's life-counter icon tile with the main character's
+     * face when it is not Sonic.
+     *
+     * <p>The Sonic 1-up monitor icon piece maps to tile {@code $154}, which in the ROM
+     * is {@code ArtTile_ArtNem_life_counter} — VRAM shared with the HUD life counter.
+     * {@code PlrList_Std1} loads Sonic's life art there by default (handled in
+     * {@link Sonic2ObjectArt}); {@code PlrList_TailsLife} and the Knuckles lock-on patch
+     * replace it for Tails-alone and Knuckles games. We mirror that here so the standard
+     * monitor shows the lead character's face. (s2.asm:89193, 89271)
+     */
+    private void overrideMonitorIconArtForMainCharacter() {
+        if (artData == null || artData.monitorSheet() == null) {
             return;
         }
+        String mainChar = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
+        Pattern[] lifeArt = resolveMonitorIconLifeArt(mainChar);
+        if (lifeArt == null || lifeArt.length == 0) {
+            return; // Sonic (the default already loaded), or Knuckles without an active donor
+        }
+        Pattern[] monitorPatterns = artData.monitorSheet().getPatterns();
+        int offset = Sonic2ObjectArt.MONITOR_LIFE_ICON_TILE;
+        int copied = 0;
+        for (int i = 0; i < lifeArt.length && offset + i < monitorPatterns.length; i++) {
+            monitorPatterns[offset + i] = lifeArt[i];
+            copied++;
+        }
+        LOGGER.info("Overrode 1-up monitor icon with " + mainChar + " life art (" + copied + " tiles)");
+    }
+
+    /**
+     * Returns the life-counter art to draw on the 1-up monitor for {@code mainChar},
+     * or {@code null} to keep the Sonic default. Tails uses native S2 art; Knuckles
+     * uses the palette-remapped S3K donor art (only when the donor is active).
+     */
+    private Pattern[] resolveMonitorIconLifeArt(String mainChar) {
+        if ("tails".equalsIgnoreCase(mainChar)) {
+            try {
+                return com.openggf.util.PatternDecompressor.nemesis(
+                        GameServices.rom().getRom(), Sonic2Constants.ART_NEM_TAILS_LIFE_ADDR);
+            } catch (Exception e) {
+                LOGGER.warning("Failed to load Tails life icon for monitor: " + e.getMessage());
+                return null;
+            }
+        }
+        if ("knuckles".equalsIgnoreCase(mainChar)
+                && com.openggf.game.CrossGameFeatureProvider.isS3kDonorActive()) {
+            return loadS3kKnucklesLivesPatterns();
+        }
+        return null;
+    }
+
+    Pattern[] loadS3kKnucklesLivesPatterns() {
         try {
             com.openggf.data.Rom donorRom = GameServices.rom().getSecondaryRom("s3k");
             Pattern[] knuxLife = com.openggf.util.PatternDecompressor.nemesis(donorRom,
@@ -365,12 +511,12 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
                 // Remap pixel indices from S3K palette layout to S2-compatible layout.
                 // Both palettes have the same colors but at different indices.
                 remapPaletteIndices(knuxLife);
-                hudLivesPatterns = knuxLife;
-                LOGGER.info("Overrode lives icon with Knuckles art from S3K donor (" + knuxLife.length + " tiles)");
+                return knuxLife;
             }
         } catch (Exception e) {
             LOGGER.warning("Failed to load Knuckles life icon from donor: " + e.getMessage());
         }
+        return null;
     }
 
     /**
@@ -515,5 +661,27 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
         if (sheet != null) {
             registerSheet(Sonic2ObjectArtKeys.MTZ_STEAM_PISTON, sheet);
         }
+    }
+
+    // --- RewindSnapshottable<PlcProgressSnapshot> ---
+
+    @Override
+    public String key() {
+        return "s2-plc-art";
+    }
+
+    @Override
+    public com.openggf.game.rewind.snapshot.PlcProgressSnapshot capture() {
+        return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(loadEpoch);
+    }
+
+    /**
+     * Restore is a no-op for v1: all PLC art is loaded at zone-load time and
+     * does not change per-frame. The epoch is recorded in the snapshot as a
+     * diagnostic check but is not re-applied here.
+     */
+    @Override
+    public void restore(com.openggf.game.rewind.snapshot.PlcProgressSnapshot snap) {
+        // No per-frame PLC state to restore in v1.
     }
 }

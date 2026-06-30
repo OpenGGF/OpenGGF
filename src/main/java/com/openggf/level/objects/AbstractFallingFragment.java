@@ -1,6 +1,5 @@
 package com.openggf.level.objects;
 
-import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.game.PlayableEntity;
 
@@ -31,10 +30,10 @@ public abstract class AbstractFallingFragment extends AbstractObjectInstance {
     /** Off-screen margin for destroy check (pixels beyond camera viewport). */
     private static final int OFF_SCREEN_MARGIN = 128;
 
-    private final int x;
+    private int x;
     private final SubpixelMotion.State motion;
     private int delayTimer;
-    private final int priority;
+    private int priority;
 
     /**
      * @param spawn      spawn point (typically parent position)
@@ -74,8 +73,8 @@ public abstract class AbstractFallingFragment extends AbstractObjectInstance {
 
         SubpixelMotion.objectFall(motion, GRAVITY);
 
-        if (!isOnScreen(OFF_SCREEN_MARGIN)) {
-            setDestroyed(true);
+        if (shouldDeleteAfterFall()) {
+            ObjectLifetimeOps.expireDynamic(this);
         }
     }
 
@@ -87,5 +86,9 @@ public abstract class AbstractFallingFragment extends AbstractObjectInstance {
     @Override
     public boolean isPersistent() {
         return !isDestroyed();
+    }
+
+    protected boolean shouldDeleteAfterFall() {
+        return !isOnScreen(OFF_SCREEN_MARGIN);
     }
 }

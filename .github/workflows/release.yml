@@ -10,8 +10,29 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  policy:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate branch policy
+        if: github.event_name == 'pull_request'
+        run: bash .githooks/validate-policy.sh ci-pr "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" "${{ github.base_ref }}" "${{ github.head_ref }}"
+
+      - name: Validate branch policy (push)
+        if: github.event_name == 'push'
+        run: bash .githooks/validate-policy.sh ci-push "${{ github.event.before }}" "${{ github.sha }}" "${{ github.ref_name }}"
+
+  test:
+    runs-on: [self-hosted, release-fixtures]
+    env:
+      SONIC1_ROM_PATH: ${{ vars.SONIC1_ROM_PATH }}
+      SONIC2_ROM_PATH: ${{ vars.SONIC2_ROM_PATH }}
+      S3K_ROM_PATH: ${{ vars.S3K_ROM_PATH }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -23,8 +44,173 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Verify trace replay ROM paths
+        shell: bash
+        run: |
+          missing=0
+          for var in SONIC1_ROM_PATH SONIC2_ROM_PATH S3K_ROM_PATH; do
+            value="${!var:-}"
+            if [ -z "$value" ]; then
+              echo "::error ::$var must point to a release-validation ROM fixture."
+              missing=1
+            elif [ ! -f "$value" ]; then
+              echo "::error ::$var points to '$value', but that file does not exist."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       - name: Run tests
-        run: mvn test -B
+        shell: bash
+        run: |
+          mvn -Dmse=off test -B \
+            -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
+            -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
+            -Ds3k.rom.path="${S3K_ROM_PATH}"
+
+      - name: Run trace replay policy tests
+        shell: bash
+        run: |
+          mvn -Dmse=off test -Ptrace-replay -B \
+            -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
+            -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
+            -Ds3k.rom.path="${S3K_ROM_PATH}"
+
+      - name: Assert trace replay coverage
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import fnmatch
+          import json
+          import re
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          surefire_dir = Path("target/surefire-reports")
+          source_root = Path("src/test/java/com/openggf/tests/trace")
+          TRACE_REPLAY_DIAGNOSTIC_EXCLUDES = (
+              "Debug*.java",
+              "*Debug*.java",
+              "*Probe.java",
+              "*Probe*.java",
+          )
+
+          def is_diagnostic_trace_source(source):
+              return any(fnmatch.fnmatch(source.name, pattern)
+                         for pattern in TRACE_REPLAY_DIAGNOSTIC_EXCLUDES)
+
+          expected_policy_reports = set()
+          expected_trace_reports = set()
+          for source in sorted(source_root.rglob("Test*.java")):
+              if is_diagnostic_trace_source(source):
+                  continue
+              rel = source.relative_to(Path("src/test/java")).with_suffix("")
+              class_name = ".".join(rel.parts)
+              report_name = f"TEST-{class_name}.xml"
+              expected_policy_reports.add(report_name)
+              if source.name.endswith("TraceReplay.java"):
+                  expected_trace_reports.add(report_name)
+
+          missing_policy = [
+              report_name for report_name in sorted(expected_policy_reports)
+              if not (surefire_dir / report_name).exists()
+          ]
+          if missing_policy:
+              print("Missing expected trace policy reports:", file=sys.stderr)
+              for report_name in missing_policy:
+                  print(f"{surefire_dir / report_name}", file=sys.stderr)
+              sys.exit(1)
+
+          missing_expected = [
+              report_name for report_name in sorted(expected_trace_reports)
+              if not (surefire_dir / report_name).exists()
+          ]
+          if missing_expected:
+              print("Missing expected trace replay reports:", file=sys.stderr)
+              for report_name in missing_expected:
+                  print(f"{surefire_dir / report_name}", file=sys.stderr)
+              sys.exit(1)
+
+          expected_policy_executed = 0
+          expected_executed = 0
+          for report_name in sorted(expected_policy_reports):
+              report = surefire_dir / report_name
+              if not report.exists():
+                  continue
+              root = ET.parse(report).getroot()
+              tests = int(root.attrib.get("tests", "0"))
+              skipped_count = int(root.attrib.get("skipped", "0"))
+              executed_count = tests - skipped_count
+              if executed_count <= 0:
+                  if report_name in expected_trace_reports:
+                      print(
+                          f"Expected trace replay report did not execute: {report} "
+                          f"tests={tests} skipped={skipped_count}",
+                          file=sys.stderr)
+                  else:
+                      print(
+                          f"Expected trace policy report did not execute: {report} "
+                          f"tests={tests} skipped={skipped_count}",
+                          file=sys.stderr)
+                  sys.exit(1)
+              expected_policy_executed += executed_count
+              if report_name in expected_trace_reports:
+                  expected_executed += executed_count
+
+          reports = sorted(surefire_dir.glob("com.openggf.tests.trace*TraceReplay.txt"))
+          total = 0
+          skipped = 0
+          skipped_reports = []
+          for report in reports:
+              text = report.read_text(encoding="utf-8", errors="replace")
+              match = re.search(r"Tests run: (\d+), Failures: \d+, Errors: \d+, Skipped: (\d+)", text)
+              if match:
+                  run_count = int(match.group(1))
+                  skipped_count = int(match.group(2))
+                  total += run_count
+                  skipped += skipped_count
+                  if skipped_count > 0:
+                      skipped_reports.append((report, skipped_count))
+
+          executed = total - skipped
+          if executed == 0:
+              print("Trace replay profile produced no executed ROM-backed trace tests", file=sys.stderr)
+              print(f"trace_reports={len(reports)} total={total} skipped={skipped}", file=sys.stderr)
+              sys.exit(1)
+
+          unexpected_skipped = [
+              (report, skipped_count)
+              for report, skipped_count in skipped_reports
+          ]
+          if unexpected_skipped:
+              print("Trace replay skipped tests are release-blocking",
+                    file=sys.stderr)
+              for report, skipped_count in unexpected_skipped:
+                  print(f"{report}: skipped={skipped_count}", file=sys.stderr)
+              sys.exit(1)
+
+          warning_reports = []
+          for report in sorted(Path("target/trace-reports").glob("*_report.json")):
+              data = json.loads(report.read_text(encoding="utf-8"))
+              warning_count = int(data.get("warning_count", 0))
+              if warning_count > 0:
+                  warning_reports.append((report, warning_count))
+
+          if warning_reports:
+              print("Trace replay warnings are release-blocking; warning-only fields do not certify parity",
+                    file=sys.stderr)
+              for report, warning_count in warning_reports:
+                  print(f"{report}: warning_count={warning_count}", file=sys.stderr)
+              sys.exit(1)
+
+          print(
+              f"Trace replay coverage: executed={executed} total={total} skipped={skipped} "
+              f"expected_trace_executed={expected_executed} "
+              f"expected_trace_reports={len(expected_trace_reports)} "
+              f"expected_policy_executed={expected_policy_executed} "
+              f"expected_policy_reports={len(expected_policy_reports)}")
+          PY
 
   build:
     needs: test
@@ -53,7 +239,7 @@ jobs:
           cache: maven
 
       - name: Build native image
-        run: mvn package -Pnative -DskipTests -B
+        run: mvn -Dmse=off package -Pnative -DskipTests -B
 
       - name: Package (Windows)
         if: matrix.platform == 'windows'
@@ -61,6 +247,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path dist/OpenGGF
           Copy-Item "target/OpenGGF.exe" "dist/OpenGGF/"
+          Copy-Item "target/config.yaml" "dist/OpenGGF/"
           Copy-Item "target/native-libs/*.dll" "dist/OpenGGF/"
           Compress-Archive -Path "dist/OpenGGF" -DestinationPath "dist/OpenGGF-windows.zip"
           Remove-Item -Recurse -Force "dist/OpenGGF"
@@ -71,7 +258,7 @@ jobs:
           mkdir -p dist
           bash src/packaging/assemble-macos-app.sh target/OpenGGF dist
           cd dist
-          zip -r OpenGGF-macos.zip OpenGGF.app
+          zip -r OpenGGF-macos.zip OpenGGF.app config.yaml
           rm -rf OpenGGF.app
 
       - name: Package (Linux)
@@ -79,9 +266,114 @@ jobs:
         run: |
           mkdir -p dist/OpenGGF
           cp target/OpenGGF dist/OpenGGF/
+          cp target/config.yaml dist/OpenGGF/
           cp target/native-libs/*.so dist/OpenGGF/
           tar -czvf dist/OpenGGF-linux.tar.gz -C dist OpenGGF
           rm -rf dist/OpenGGF
+
+      - name: Smoke validate packaged artifact
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          if command -v python3 >/dev/null 2>&1; then
+            PYTHON=python3
+          else
+            PYTHON=python
+          fi
+          "$PYTHON" - <<'PY'
+          import re
+          import stat
+          import sys
+          import tarfile
+          import zipfile
+          from pathlib import Path
+          import os
+
+          platform = os.environ["PLATFORM"]
+
+          def fail(message):
+              print(f"::error ::{message}", file=sys.stderr)
+              sys.exit(1)
+
+          pom = Path("pom.xml").read_text(encoding="utf-8")
+          match = re.search(r"<version>([^<]+)</version>", pom)
+          if not match:
+              fail("Could not read project version from pom.xml")
+          version = match.group(1)
+
+          jar = Path(f"target/OpenGGF-{version}-jar-with-dependencies.jar")
+          if not jar.is_file():
+              fail(f"Missing packaged JVM jar: {jar}")
+          with zipfile.ZipFile(jar) as archive:
+              try:
+                  manifest = archive.read("META-INF/MANIFEST.MF").decode("utf-8", errors="replace")
+              except KeyError:
+                  fail(f"{jar} is missing META-INF/MANIFEST.MF")
+          if "Main-Class: com.openggf.Engine" not in manifest:
+              fail(f"{jar} manifest does not bootstrap com.openggf.Engine")
+          stale_manifest_terms = ["jogl", "gluegen", "joal", "jocl"]
+          stale_terms = [term for term in stale_manifest_terms if term in manifest.lower()]
+          if stale_terms:
+              fail(f"{jar} manifest contains obsolete dependency metadata: {', '.join(stale_terms)}")
+
+          if platform == "windows":
+              archive_path = Path("dist/OpenGGF-windows.zip")
+              if not archive_path.is_file():
+                  fail(f"Missing Windows archive: {archive_path}")
+              with zipfile.ZipFile(archive_path) as archive:
+                  names = set(archive.namelist())
+              required = {"OpenGGF/OpenGGF.exe", "OpenGGF/config.yaml"}
+              missing = sorted(required - names)
+              if missing:
+                  fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
+              if not any(name.startswith("OpenGGF/") and name.endswith(".dll") for name in names):
+                  fail(f"{archive_path} does not include packaged LWJGL .dll libraries")
+          elif platform == "macos":
+              archive_path = Path("dist/OpenGGF-macos.zip")
+              if not archive_path.is_file():
+                  fail(f"Missing macOS archive: {archive_path}")
+              with zipfile.ZipFile(archive_path) as archive:
+                  names = set(archive.namelist())
+                  required = {
+                      "OpenGGF.app/Contents/Info.plist",
+                      "OpenGGF.app/Contents/MacOS/OpenGGF",
+                      "OpenGGF.app/Contents/MacOS/OpenGGF.bin",
+                      "config.yaml",
+                  }
+                  missing = sorted(required - names)
+                  if missing:
+                      fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
+                  info_plist = archive.read("OpenGGF.app/Contents/Info.plist").decode(
+                      "utf-8", errors="replace")
+                  for executable in ("OpenGGF.app/Contents/MacOS/OpenGGF",
+                                     "OpenGGF.app/Contents/MacOS/OpenGGF.bin"):
+                      mode = archive.getinfo(executable).external_attr >> 16
+                      if mode and (mode & stat.S_IXUSR) == 0:
+                          fail(f"{archive_path} entry is not executable: {executable}")
+              for key in ("CFBundleVersion", "CFBundleShortVersionString"):
+                  pattern = rf"<key>\s*{re.escape(key)}\s*</key>\s*<string>\s*{re.escape(version)}\s*</string>"
+                  if not re.search(pattern, info_plist, re.DOTALL):
+                      fail(f"{archive_path} {key} does not match Maven version {version}")
+          elif platform == "linux":
+              archive_path = Path("dist/OpenGGF-linux.tar.gz")
+              if not archive_path.is_file():
+                  fail(f"Missing Linux archive: {archive_path}")
+              with tarfile.open(archive_path, "r:gz") as archive:
+                  members = {member.name: member for member in archive.getmembers()}
+              required = {"OpenGGF/OpenGGF", "OpenGGF/config.yaml"}
+              missing = sorted(required - set(members))
+              if missing:
+                  fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
+              if (members["OpenGGF/OpenGGF"].mode & stat.S_IXUSR) == 0:
+                  fail(f"{archive_path} OpenGGF/OpenGGF is not executable")
+              if not any(name.startswith("OpenGGF/") and name.endswith(".so") for name in members):
+                  fail(f"{archive_path} does not include packaged LWJGL .so libraries")
+          else:
+              fail(f"Unknown release platform: {platform}")
+
+          print(f"Smoke validated {platform} release artifact for version {version}")
+          PY
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -90,9 +382,85 @@ jobs:
           path: dist/*
           retention-days: 30
 
+  universal-jar:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build universal JVM jar
+        run: mvn -Dmse=off package -Puniversal-jar -DskipTests -B
+
+      - name: Smoke validate universal JVM jar
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re
+          import sys
+          import zipfile
+          from pathlib import Path
+
+          def fail(message):
+              print(f"::error ::{message}", file=sys.stderr)
+              sys.exit(1)
+
+          pom = Path("pom.xml").read_text(encoding="utf-8")
+          match = re.search(r"<version>([^<]+)</version>", pom)
+          if not match:
+              fail("Could not read project version from pom.xml")
+          version = match.group(1)
+
+          jar = Path(f"target/OpenGGF-{version}-jar-with-dependencies.jar")
+          if not jar.is_file():
+              fail(f"Missing packaged universal JVM jar: {jar}")
+          with zipfile.ZipFile(jar) as archive:
+              names = set(archive.namelist())
+              try:
+                  manifest = archive.read("META-INF/MANIFEST.MF").decode("utf-8", errors="replace")
+              except KeyError:
+                  fail(f"{jar} is missing META-INF/MANIFEST.MF")
+          if "Main-Class: com.openggf.Engine" not in manifest:
+              fail(f"{jar} manifest does not bootstrap com.openggf.Engine")
+
+          required_native_payloads = {
+              "natives-linux": ("linux/x64/", ".so"),
+              "natives-linux-arm32": ("linux/arm32/", ".so"),
+              "natives-linux-arm64": ("linux/arm64/", ".so"),
+              "natives-windows": ("windows/x64/", ".dll"),
+              "natives-windows-arm64": ("windows/arm64/", ".dll"),
+              "natives-windows-x86": ("windows/x86/", ".dll"),
+              "natives-macos": ("macos/x64/", ".dylib"),
+              "natives-macos-arm64": ("macos/arm64/", ".dylib"),
+          }
+          for classifier, (prefix, suffix) in required_native_payloads.items():
+              if not any(name.startswith(prefix) and name.endswith(suffix) for name in names):
+                  fail(f"{jar} is missing LWJGL {classifier} payload entries under {prefix} ending in {suffix}")
+
+          Path("dist").mkdir(exist_ok=True)
+          stable_jar = Path("dist/OpenGGF-universal.jar")
+          stable_jar.write_bytes(jar.read_bytes())
+          print(f"Smoke validated universal JVM jar for version {version}: {stable_jar}")
+          PY
+
+      - name: Upload universal JVM jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: openggf-universal-jar
+          path: dist/OpenGGF-universal.jar
+          retention-days: 30
+
   release:
-    needs: build
-    if: github.event_name == 'push'
+    needs: [build, universal-jar]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -106,6 +474,14 @@ jobs:
         run: |
           VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check release tag does not already exist
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+            echo "::error ::Release tag v${VERSION} already exists. Bump pom.xml or delete the stale tag before publishing."
+            exit 1
+          fi
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4

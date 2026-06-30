@@ -10,8 +10,8 @@ import java.util.List;
  * Uses modern OpenGL (VAO/VBO) for core profile compatibility.
  */
 public class GLCommandGroup implements GLCommandable {
-	private int drawMethod;
-	private List<GLCommand> commands;
+	private final int drawMethod;
+	private final List<GLCommand> commands;
 
 	// Vertex size: 2 floats position + 4 floats color = 6 floats
 	private static final int VERTEX_SIZE = 6;
@@ -19,7 +19,7 @@ public class GLCommandGroup implements GLCommandable {
 
 	public GLCommandGroup(int drawMethod, List<GLCommand> commands) {
 		this.drawMethod = drawMethod;
-		this.commands = commands;
+		this.commands = List.copyOf(commands);
 	}
 
 	public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {

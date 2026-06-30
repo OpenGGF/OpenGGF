@@ -30,6 +30,10 @@ import java.util.logging.Logger;
  */
 public class Sonic3kObjectArt {
     private static final Logger LOG = Logger.getLogger(Sonic3kObjectArt.class.getName());
+    private static final int CNZ_CANNON_DPLC_DEST_TILE =
+            Sonic3kConstants.ARTTILE_CNZ_CANNON_DPLC_DEST - Sonic3kConstants.ARTTILE_CNZ_CANNON;
+    private static final int CNZ_CANNON_SOURCE_BANK = 0x200;
+    private static final int CNZ_CANNON_BASE_FRAME = 9;
 
     private final Level level;
     private final RomByteReader reader;
@@ -113,6 +117,21 @@ public class Sonic3kObjectArt {
             int artTileBase, int sheetPalette, S3kSpriteDataLoader.MappingFormat mappingFormat) {
         if (reader == null) return null;
         List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr, mappingFormat);
+        return buildLevelArtSheetFromRomFrames(artTileBase, sheetPalette, frames);
+    }
+
+    public ObjectSpriteSheet buildLevelArtSheetFromRom(int mappingAddr,
+            int artTileBase, int sheetPalette, S3kSpriteDataLoader.MappingFormat mappingFormat,
+            int mappingFrameCount) {
+        if (reader == null) return null;
+        List<SpriteMappingFrame> frames = mappingFrameCount > 0
+                ? S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr, mappingFrameCount, mappingFormat)
+                : S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr, mappingFormat);
+        return buildLevelArtSheetFromRomFrames(artTileBase, sheetPalette, frames);
+    }
+
+    private ObjectSpriteSheet buildLevelArtSheetFromRomFrames(
+            int artTileBase, int sheetPalette, List<SpriteMappingFrame> frames) {
         if (frames.isEmpty()) return null;
 
         int minTile = Integer.MAX_VALUE;
@@ -137,21 +156,8 @@ public class Sonic3kObjectArt {
      * Mapping: 1 frame, 3 pieces (2x2 each), tile index 0x38
      * Y offsets: -24, -8, +8; X offset: -8
      */
-    public ObjectSpriteSheet buildAiz1TreeSheet() {
-        // Mapping pieces from Map - Act 1 Tree.asm
-        // 3 pieces, each 2x2 tiles (16x16px), all tile index 0x38, palette 0
-        List<SpriteMappingPiece> pieces = List.of(
-                new SpriteMappingPiece(-8, -24, 2, 2, 0x38, false, false, 0),
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x38, false, false, 0),
-                new SpriteMappingPiece(-8, 8, 2, 2, 0x38, false, false, 0)
-        );
-        SpriteMappingFrame frame = new SpriteMappingFrame(pieces);
-        List<SpriteMappingFrame> frames = List.of(frame);
-
-        // art_tile base = 1, palette = 2
-        // Tile range: 0x38 to 0x38+3 = 0x3B (each 2x2 piece uses 4 tiles)
-        // minTile = 0x38, maxTileExclusive = 0x3C
-        return buildLevelArtSheet(1, 2, frames, 0x38, 0x3C);
+    public ObjectSpriteSheet buildAiz1TreeSheet(int artTileBase) {
+        return buildLevelArtSheetFromRom(Sonic3kConstants.MAP_AIZ1_TREE_ADDR, artTileBase, 2);
     }
 
     /**
@@ -164,19 +170,8 @@ public class Sonic3kObjectArt {
      * Piece 1: 2x1 (16x8px), tile 4, Y=-4, X=-8
      * Piece 2: 3x3 (24x24px), tile 6, Y=-12, X=+8
      */
-    public ObjectSpriteSheet buildAiz1ZiplinePegSheet() {
-        // Mapping pieces from Map - Act 1 Zipline Peg.asm
-        List<SpriteMappingPiece> pieces = List.of(
-                new SpriteMappingPiece(-32, -12, 4, 1, 0, false, false, 0),
-                new SpriteMappingPiece(-8, -4, 2, 1, 4, false, false, 0),
-                new SpriteMappingPiece(8, -12, 3, 3, 6, false, false, 0)
-        );
-        SpriteMappingFrame frame = new SpriteMappingFrame(pieces);
-        List<SpriteMappingFrame> frames = List.of(frame);
-
-        // art_tile base = 0x324, palette = 2
-        // Tile range: 0 to 6 + (3*3) - 1 = 14 → maxTileExclusive = 15
-        return buildLevelArtSheet(0x324, 2, frames, 0, 15);
+    public ObjectSpriteSheet buildAiz1ZiplinePegSheet(int artTileBase) {
+        return buildLevelArtSheetFromRom(Sonic3kConstants.MAP_AIZ1_ZIPLINE_PEG_ADDR, artTileBase, 2);
     }
 
     /**
@@ -201,8 +196,8 @@ public class Sonic3kObjectArt {
      * Map_AnimatedStillSprites / Ani_AnimatedStillSprites (sonic3k.asm:60424+).
      * art_tile = make_art_tile(ArtTile_AIZMisc2,3,0). Frames 0-8.
      */
-    public ObjectSpriteSheet buildAnimatedStillSpritesSheet() {
-        return buildAnimStillSheet(Sonic3kConstants.ARTTILE_AIZ_MISC2, 3, 0, 8);
+    public ObjectSpriteSheet buildAnimatedStillSpritesSheet(int artTileBase) {
+        return buildAnimStillSheet(artTileBase, 3, 0, 8);
     }
 
     /**
@@ -215,34 +210,29 @@ public class Sonic3kObjectArt {
      * The ROM overrides art_tile for sideways spikes (size index >= 4) to use
      * tiles $0494-$049B instead of $049C-$04A3. Sheet covers both ranges (16 tiles).
      */
-    public ObjectSpriteSheet buildSpikesSheet() {
-        // Sheet base = $0494, covering tiles 0-15 (sideways=0-7, upright=8-15)
-        List<SpriteMappingFrame> frames = new ArrayList<>(8);
-
-        // Frames 0-3: upright spikes (2w×4h = 16×32px pieces)
-        // art_tile = $049C = base + 8, so piece tile index = 8
-        for (int count = 2; count <= 8; count += 2) {
-            List<SpriteMappingPiece> pieces = new ArrayList<>(count);
-            int startX = -(count / 2) * 16;
-            for (int i = 0; i < count; i++) {
-                pieces.add(new SpriteMappingPiece(startX + i * 16, -16, 2, 4, 8, false, false, 0));
+    public ObjectSpriteSheet buildSpikesSheet(int artTileBase) {
+        if (reader == null) return null;
+        List<SpriteMappingFrame> romFrames = S3kSpriteDataLoader.loadMappingFrames(
+                reader, Sonic3kConstants.MAP_SPIKES_ADDR, 8);
+        List<SpriteMappingFrame> frames = new ArrayList<>(romFrames.size());
+        for (int i = 0; i < romFrames.size(); i++) {
+            int tileDelta = i < 4 ? 8 : 0;
+            List<SpriteMappingPiece> pieces = new ArrayList<>(romFrames.get(i).pieces().size());
+            for (SpriteMappingPiece piece : romFrames.get(i).pieces()) {
+                pieces.add(new SpriteMappingPiece(
+                        piece.xOffset(),
+                        piece.yOffset(),
+                        piece.widthTiles(),
+                        piece.heightTiles(),
+                        piece.tileIndex() + tileDelta,
+                        piece.hFlip(),
+                        piece.vFlip(),
+                        piece.paletteIndex(),
+                        piece.priority()));
             }
             frames.add(new SpriteMappingFrame(pieces));
         }
-
-        // Frames 4-7: sideways spikes (4w×2h = 32×16px pieces, hflip=true)
-        // art_tile = $0494 = base, so piece tile index = 0
-        for (int count = 2; count <= 8; count += 2) {
-            List<SpriteMappingPiece> pieces = new ArrayList<>(count);
-            int startY = -(count / 2) * 16;
-            for (int i = 0; i < count; i++) {
-                pieces.add(new SpriteMappingPiece(-16, startY + i * 16, 4, 2, 0, true, false, 0));
-            }
-            frames.add(new SpriteMappingFrame(pieces));
-        }
-
-        // 16 tiles: sideways art (0-7) + upright art (8-15)
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_SPIKES_SPRINGS, 0, frames, 0, 16);
+        return buildLevelArtSheet(artTileBase, 0, frames, 0, 16);
     }
 
     // --- Spring art sheets ---
@@ -252,7 +242,7 @@ public class Sonic3kObjectArt {
     // Diagonal springs: art_tile = ArtTile_DiagonalSpring = $043A
 
     /** Red vertical spring: 3 frames (idle, triggered-compress, triggered-extend). */
-    public ObjectSpriteSheet buildSpringVerticalSheet() {
+    public ObjectSpriteSheet buildSpringVerticalSheet(int artTileBase) {
         List<SpriteMappingFrame> frames = List.of(
                 // Frame 0 (idle): coil plate + base plate
                 new SpriteMappingFrame(List.of(
@@ -265,11 +255,11 @@ public class Sonic3kObjectArt {
                 new SpriteMappingFrame(List.of(
                         new SpriteMappingPiece(-16, -24, 4, 1, 0, false, false, 0),
                         new SpriteMappingPiece(-8, -16, 2, 3, 0xA, false, false, 0))));
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 0x10, 0, frames, 0, 0x10);
+        return buildLevelArtSheet(artTileBase, 0, frames, 0, 0x10);
     }
 
     /** Yellow vertical spring: same layout as red, different coil tiles (4) and palette (1). */
-    public ObjectSpriteSheet buildSpringVerticalYellowSheet() {
+    public ObjectSpriteSheet buildSpringVerticalYellowSheet(int artTileBase) {
         List<SpriteMappingFrame> frames = List.of(
                 new SpriteMappingFrame(List.of(
                         new SpriteMappingPiece(-16, -8, 4, 1, 4, false, false, 1),
@@ -279,11 +269,11 @@ public class Sonic3kObjectArt {
                 new SpriteMappingFrame(List.of(
                         new SpriteMappingPiece(-16, -24, 4, 1, 4, false, false, 1),
                         new SpriteMappingPiece(-8, -16, 2, 3, 0xA, false, false, 0))));
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 0x10, 0, frames, 0, 0x10);
+        return buildLevelArtSheet(artTileBase, 0, frames, 0, 0x10);
     }
 
     /** Red horizontal spring: 3 frames. */
-    public ObjectSpriteSheet buildSpringHorizontalSheet() {
+    public ObjectSpriteSheet buildSpringHorizontalSheet(int artTileBase) {
         List<SpriteMappingFrame> frames = List.of(
                 // Frame 0 (idle): coil column + base column
                 new SpriteMappingFrame(List.of(
@@ -296,11 +286,11 @@ public class Sonic3kObjectArt {
                 new SpriteMappingFrame(List.of(
                         new SpriteMappingPiece(16, -16, 1, 4, 0, false, false, 0),
                         new SpriteMappingPiece(-8, -8, 3, 2, 0xA, false, false, 0))));
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 0x20, 0, frames, 0, 0x10);
+        return buildLevelArtSheet(artTileBase, 0, frames, 0, 0x10);
     }
 
     /** Yellow horizontal spring: same layout, different coil tiles. */
-    public ObjectSpriteSheet buildSpringHorizontalYellowSheet() {
+    public ObjectSpriteSheet buildSpringHorizontalYellowSheet(int artTileBase) {
         List<SpriteMappingFrame> frames = List.of(
                 new SpriteMappingFrame(List.of(
                         new SpriteMappingPiece(0, -16, 1, 4, 4, false, false, 1),
@@ -310,11 +300,11 @@ public class Sonic3kObjectArt {
                 new SpriteMappingFrame(List.of(
                         new SpriteMappingPiece(16, -16, 1, 4, 4, false, false, 1),
                         new SpriteMappingPiece(-8, -8, 3, 2, 0xA, false, false, 0))));
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 0x20, 0, frames, 0, 0x10);
+        return buildLevelArtSheet(artTileBase, 0, frames, 0, 0x10);
     }
 
     /** Red diagonal spring: 3 frames. */
-    public ObjectSpriteSheet buildSpringDiagonalSheet() {
+    public ObjectSpriteSheet buildSpringDiagonalSheet(int artTileBase) {
         List<SpriteMappingFrame> frames = List.of(
                 // Frame 0 (idle): 4 pieces
                 new SpriteMappingFrame(List.of(
@@ -334,11 +324,11 @@ public class Sonic3kObjectArt {
                         new SpriteMappingPiece(6, -10, 2, 2, 6, false, false, 0),
                         new SpriteMappingPiece(-6, -11, 2, 1, 0x18, false, false, 0),
                         new SpriteMappingPiece(-14, -3, 2, 1, 0x1A, false, false, 0))));
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_DIAGONAL_SPRING, 0, frames, 0, 0x1C);
+        return buildLevelArtSheet(artTileBase, 0, frames, 0, 0x1C);
     }
 
     /** Yellow diagonal spring: different coil tiles (0xA/0xD/0x10), palette 1. */
-    public ObjectSpriteSheet buildSpringDiagonalYellowSheet() {
+    public ObjectSpriteSheet buildSpringDiagonalYellowSheet(int artTileBase) {
         List<SpriteMappingFrame> frames = List.of(
                 new SpriteMappingFrame(List.of(
                         new SpriteMappingPiece(-21, -15, 3, 1, 0xA, false, false, 1),
@@ -355,7 +345,7 @@ public class Sonic3kObjectArt {
                         new SpriteMappingPiece(6, -10, 2, 2, 0x10, false, false, 1),
                         new SpriteMappingPiece(-6, -11, 2, 1, 0x18, false, false, 0),
                         new SpriteMappingPiece(-14, -3, 2, 1, 0x1A, false, false, 0))));
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_DIAGONAL_SPRING, 0, frames, 0, 0x1C);
+        return buildLevelArtSheet(artTileBase, 0, frames, 0, 0x1C);
     }
 
     /**
@@ -366,36 +356,8 @@ public class Sonic3kObjectArt {
      * Mapping: 2 frames (0=with flowers, 1=without flowers), 8 pieces each.
      * Tile range: 0x64 to 0x9B (56 patterns from level art).
      */
-    public ObjectSpriteSheet buildAizForegroundPlantSheet() {
-        // Frame 0: with flowers (8 pieces)
-        List<SpriteMappingPiece> frame0Pieces = List.of(
-                new SpriteMappingPiece(-32, -48, 4, 3, 0x64, false, false, 0),
-                new SpriteMappingPiece(-32, -24, 4, 4, 0x70, false, false, 0),
-                new SpriteMappingPiece(-24, 8, 3, 2, 0x80, false, false, 0),
-                new SpriteMappingPiece(-8, 24, 1, 3, 0x86, false, false, 0),
-                new SpriteMappingPiece(16, -24, 2, 1, 0x89, false, false, 0),
-                new SpriteMappingPiece(0, -16, 4, 2, 0x8B, false, false, 0),
-                new SpriteMappingPiece(0, 0, 3, 2, 0x93, false, false, 0),
-                new SpriteMappingPiece(0, 16, 1, 3, 0x99, false, false, 0));
-
-        // Frame 1: without flowers (8 pieces)
-        List<SpriteMappingPiece> frame1Pieces = List.of(
-                new SpriteMappingPiece(0, -60, 4, 3, 0x64, true, false, 0),
-                new SpriteMappingPiece(0, -36, 4, 4, 0x70, true, false, 0),
-                new SpriteMappingPiece(0, -4, 3, 2, 0x80, true, false, 0),
-                new SpriteMappingPiece(0, 12, 1, 3, 0x86, true, false, 0),
-                new SpriteMappingPiece(-32, -36, 4, 3, 0x64, false, false, 0),
-                new SpriteMappingPiece(-32, -12, 4, 4, 0x70, false, false, 0),
-                new SpriteMappingPiece(-24, 20, 3, 2, 0x80, false, false, 0),
-                new SpriteMappingPiece(-8, 36, 1, 3, 0x86, false, false, 0));
-
-        List<SpriteMappingFrame> frames = List.of(
-                new SpriteMappingFrame(frame0Pieces),
-                new SpriteMappingFrame(frame1Pieces));
-
-        // art_tile base = 0x333, palette = 2
-        // Tile range: 0x64 to 0x9C (exclusive) = 56 patterns
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_AIZ_MISC1, 2, frames, 0x64, 0x9C);
+    public ObjectSpriteSheet buildAizForegroundPlantSheet(int artTileBase) {
+        return buildLevelArtSheetFromRom(Sonic3kConstants.MAP_AIZ_FOREGROUND_PLANT_ADDR, artTileBase, 2);
     }
 
     /**
@@ -418,8 +380,17 @@ public class Sonic3kObjectArt {
     public ObjectSpriteSheet buildLevelArtSheetFromRomFiltered(int mappingAddr,
             int artTileBase, int sheetPalette, int[] frameIndices,
             S3kSpriteDataLoader.MappingFormat mappingFormat) {
+        return buildLevelArtSheetFromRomFiltered(mappingAddr, artTileBase, sheetPalette,
+                frameIndices, mappingFormat, -1);
+    }
+
+    public ObjectSpriteSheet buildLevelArtSheetFromRomFiltered(int mappingAddr,
+            int artTileBase, int sheetPalette, int[] frameIndices,
+            S3kSpriteDataLoader.MappingFormat mappingFormat, int mappingFrameCount) {
         if (reader == null || frameIndices == null || frameIndices.length == 0) return null;
-        List<SpriteMappingFrame> allFrames = S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr, mappingFormat);
+        List<SpriteMappingFrame> allFrames = mappingFrameCount > 0
+                ? S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr, mappingFrameCount, mappingFormat)
+                : S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr, mappingFormat);
         if (allFrames.isEmpty()) return null;
 
         List<SpriteMappingFrame> selected = new ArrayList<>(frameIndices.length);
@@ -448,24 +419,24 @@ public class Sonic3kObjectArt {
      * Builds AnimatedStillSprite sheet for LRZ subtype 2 (ceiling rock flicker).
      * art_tile = $0D3, palette 2. Animation frames 9-10.
      */
-    public ObjectSpriteSheet buildAnimStillLrzD3Sheet() {
-        return buildAnimStillSheet(0x00D3, 2, 9, 10);
+    public ObjectSpriteSheet buildAnimStillLrzD3Sheet(int artTileBase) {
+        return buildAnimStillSheet(artTileBase, 2, 9, 10);
     }
 
     /**
      * Builds AnimatedStillSprite sheet for LRZ2 subtype 3 (torch flame).
      * art_tile = LRZ2Misc ($040D), palette 1. Animation frames 11-13.
      */
-    public ObjectSpriteSheet buildAnimStillLrz2Sheet() {
-        return buildAnimStillSheet(Sonic3kConstants.ARTTILE_LRZ2_MISC, 1, 11, 13);
+    public ObjectSpriteSheet buildAnimStillLrz2Sheet(int artTileBase) {
+        return buildAnimStillSheet(artTileBase, 1, 11, 13);
     }
 
     /**
      * Builds AnimatedStillSprite sheet for SOZ subtypes 4-7 (torches).
      * art_tile = SOZMisc+$46 ($040F), palette 2. Animation frames 14-29.
      */
-    public ObjectSpriteSheet buildAnimStillSozSheet() {
-        return buildAnimStillSheet(Sonic3kConstants.ARTTILE_SOZ_MISC + 0x46, 2, 14, 29);
+    public ObjectSpriteSheet buildAnimStillSozSheet(int artTileBase) {
+        return buildAnimStillSheet(artTileBase, 2, 14, 29);
     }
 
     private ObjectSpriteSheet buildAnimStillSheet(int artTileBase, int palette,
@@ -531,7 +502,7 @@ public class Sonic3kObjectArt {
      * so the auto-detect frame count method would compute 60 instead of 32. Uses explicit
      * frame count.
      */
-    public ObjectSpriteSheet buildFlippingBridgeSheet() {
+    public ObjectSpriteSheet buildFlippingBridgeSheet(int artTileBase) {
         if (reader == null) return null;
         List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
                 reader, Sonic3kConstants.MAP_AIZ_FLIPPING_BRIDGE_ADDR, 32);
@@ -548,7 +519,7 @@ public class Sonic3kObjectArt {
         }
         if (minTile == Integer.MAX_VALUE) return null;
 
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_AIZ_MISC2, 2, frames, minTile, maxTile);
+        return buildLevelArtSheet(artTileBase, 2, frames, minTile, maxTile);
     }
 
     /**
@@ -556,10 +527,10 @@ public class Sonic3kObjectArt {
      * ROM: Obj_AIZDrawBridge uses art_tile = make_art_tile(ArtTile_AIZMisc2, 2, 1).
      * Map_AIZDrawBridge has 2 frames: frame 0 = empty, frame 1 = single 2x2 segment.
      */
-    public ObjectSpriteSheet buildDrawBridgeSheet() {
+    public ObjectSpriteSheet buildDrawBridgeSheet(int artTileBase) {
         return buildLevelArtSheetFromRom(
                 Sonic3kConstants.MAP_AIZ_DRAW_BRIDGE_ADDR,
-                Sonic3kConstants.ARTTILE_AIZ_MISC2,
+                artTileBase,
                 2);
     }
 
@@ -572,7 +543,7 @@ public class Sonic3kObjectArt {
      * Note: Map_AIZDisappearingFloor and Map_AIZDisappearingFloor2 share a memory region
      * (interleaved offset tables), so auto-detect frame count would fail. Uses explicit count 6.
      */
-    public ObjectSpriteSheet buildDisappearingFloorSheet() {
+    public ObjectSpriteSheet buildDisappearingFloorSheet(int artTileBase) {
         if (reader == null) return null;
         List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
                 reader, Sonic3kConstants.MAP_AIZ_DISAPPEARING_FLOOR_ADDR, 6);
@@ -589,7 +560,7 @@ public class Sonic3kObjectArt {
         }
         if (minTile == Integer.MAX_VALUE) return null;
 
-        return buildLevelArtSheet(1, 2, frames, minTile, maxTile);
+        return buildLevelArtSheet(artTileBase, 2, frames, minTile, maxTile);
     }
 
     /**
@@ -599,7 +570,7 @@ public class Sonic3kObjectArt {
      * <p>
      * Interleaved with Map_AIZDisappearingFloor; uses explicit count 4.
      */
-    public ObjectSpriteSheet buildDisappearingFloorBorderSheet() {
+    public ObjectSpriteSheet buildDisappearingFloorBorderSheet(int artTileBase) {
         if (reader == null) return null;
         List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
                 reader, Sonic3kConstants.MAP_AIZ_DISAPPEARING_FLOOR_BORDER_ADDR, 4);
@@ -616,7 +587,7 @@ public class Sonic3kObjectArt {
         }
         if (minTile == Integer.MAX_VALUE) return null;
 
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_AIZ_MISC2, 3, frames, minTile, maxTile);
+        return buildLevelArtSheet(artTileBase, 3, frames, minTile, maxTile);
     }
 
     // ===== AIZ Spiked Log sprite sheet (parsed from ROM) =====
@@ -784,6 +755,34 @@ public class Sonic3kObjectArt {
     }
 
     /**
+     * Loads the dedicated CNZ teleporter beam sheet used by {@code Obj_CNZTeleporter}
+     * and the shared {@code Obj_TeleporterBeam} route in CNZ.
+     *
+     * <p>ROM behavior:
+     * {@code Obj_CNZTeleporter} queues {@code ArtKosM_CNZTeleport} directly rather
+     * than relying on a zone PLC, then both the teleporter and beam objects render
+     * through {@code Map_SSZHPZTeleporter}. Palette writes and control-lock
+     * timing are owned by the concrete CNZ teleporter route objects.
+     */
+    public ObjectSpriteSheet loadCnzTeleporterSheet(Rom rom) {
+        if (rom == null || reader == null) {
+            return null;
+        }
+        try {
+            Pattern[] patterns = loadKosinskiModuledPatterns(rom, Sonic3kConstants.ART_KOSM_CNZ_TELEPORT_ADDR);
+            if (patterns == null || patterns.length == 0) {
+                return null;
+            }
+            List<SpriteMappingFrame> mappings =
+                    S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_SSZ_HPZ_TELEPORTER_ADDR);
+            return new ObjectSpriteSheet(patterns, mappings, 0, 1);
+        } catch (IOException e) {
+            LOG.warning("Failed loading CNZ teleporter art: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Loads a standalone art sheet from a registry entry.
      * Dispatches based on the entry's compression type and DPLC presence.
      */
@@ -804,33 +803,193 @@ public class Sonic3kObjectArt {
         if (patterns == null || patterns.length == 0) return null;
 
         if (entry.mappingAddr() <= 0) {
-            List<SpriteMappingFrame> hardcoded = switch (entry.key()) {
-                case Sonic3kObjectArtKeys.HCZ_WATER_RUSH -> buildHczWaterRushMappings();
-                case Sonic3kObjectArtKeys.HCZ_GEYSER_HORZ -> buildHczGeyserHorzMappings();
-                case Sonic3kObjectArtKeys.HCZ_GEYSER_VERT -> buildHczGeyserVertMappings();
-                case Sonic3kObjectArtKeys.HCZ_GEYSER_DEBRIS -> buildHczGeyserDebrisMappings();
-                case Sonic3kObjectArtKeys.HCZ_GEYSER_SPRAY -> buildHczGeyserSprayMappings();
-                case Sonic3kObjectArtKeys.HCZ_BUBBLES -> buildHczGeyserAllFrames();
-                case Sonic3kObjectArtKeys.HCZ_FAN_BUBBLE -> buildHczFanBubbleMappings();
-                case Sonic3kObjectArtKeys.BUBBLER -> buildBubblerMappings();
-                default -> null;
-            };
-            if (hardcoded == null || hardcoded.isEmpty()) {
-                LOG.warning("No hardcoded mappings for standalone '" + entry.key() + "'");
-                return null;
+            if (Sonic3kObjectArtKeys.MGZ_ENDBOSS_SCALED.equals(entry.key())) {
+                List<SpriteMappingFrame> mappings =
+                        S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_SCALED_ART_ADDR);
+                Pattern[] generatedBank = new Pattern[0x100];
+                for (int i = 0; i < generatedBank.length; i++) {
+                    generatedBank[i] = new Pattern();
+                }
+                return new ObjectSpriteSheet(generatedBank, mappings, entry.palette(), 1);
             }
-            return new ObjectSpriteSheet(patterns, hardcoded, entry.palette(), 1);
+            LOG.warning("Standalone object art '" + entry.key() + "' has no ROM mapping address");
+            return null;
         }
 
-        List<SpriteMappingFrame> mappings =
-                S3kSpriteDataLoader.loadMappingFrames(reader, entry.mappingAddr(), entry.mappingFormat());
+        List<SpriteMappingFrame> mappings = entry.mappingFrameCount() > 0
+                ? S3kSpriteDataLoader.loadMappingFrames(reader, entry.mappingAddr(), entry.mappingFrameCount())
+                : S3kSpriteDataLoader.loadMappingFrames(reader, entry.mappingAddr(), entry.mappingFormat());
+        if (Sonic3kObjectArtKeys.CNZ_CLAMER_SHOT.equals(entry.key())) {
+            mappings = List.of(mappings.get(9));
+        } else if (Sonic3kObjectArtKeys.MGZ_ENDBOSS.equals(entry.key())) {
+            mappings = selectFramesPreservingIndices(mappings,
+                    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                    0x0C, 0x0F,
+                    0x12, 0x13, 0x14,
+                    0x18, 0x19, 0x1A, 0x1B,
+                    0x1E, 0x1F, 0x20,
+                    0x23, 0x24, 0x25,
+                    0x2E, 0x2F, 0x30);
+        } else if (Sonic3kObjectArtKeys.MHZ_END_BOSS_PILLAR.equals(entry.key())) {
+            mappings = selectFramesPreservingIndices(mappings, 0, 1);
+        } else if (Sonic3kObjectArtKeys.MHZ_END_BOSS_SPIKES.equals(entry.key())) {
+            mappings = selectFramesPreservingIndices(mappings, 2, 3, 4);
+        } else if (Sonic3kObjectArtKeys.MHZ_SHIP_PROPELLER.equals(entry.key())) {
+            mappings = selectFramesPreservingIndices(mappings, 5, 6, 7);
+        } else if (Sonic3kObjectArtKeys.HCZ_GEYSER_SPRAY.equals(entry.key())) {
+            mappings = selectFramesPreservingIndices(mappings, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        } else if (Sonic3kObjectArtKeys.BUBBLER.equals(entry.key())) {
+            mappings = blankFrames(mappings, 9, 18);
+        } else if (Sonic3kObjectArtKeys.HCZ_WATER_SPLASH.equals(entry.key())) {
+            mappings = offsetDmaWindowFrames(mappings, 24);
+        }
 
         if (entry.dplcAddr() > 0) {
             List<SpriteDplcFrame> dplcFrames = loadObjectDplcFrames(reader, entry.dplcAddr());
             mappings = applyDplcRemap(mappings, dplcFrames);
+        } else {
+            if (entry.mappingTileOffset() != 0) {
+                mappings = adjustTileIndices(mappings, entry.mappingTileOffset());
+            } else {
+                mappings = normalizeStandaloneMappings(entry, patterns, mappings);
+            }
+            patterns = padSparseStandalonePatterns(entry, patterns, mappings);
         }
+        validateStandaloneMappings(entry, patterns, mappings);
 
         return new ObjectSpriteSheet(patterns, mappings, entry.palette(), 1);
+    }
+
+    private static Pattern[] padSparseStandalonePatterns(
+            Sonic3kPlcArtRegistry.StandaloneArtEntry entry,
+            Pattern[] patterns,
+            List<SpriteMappingFrame> mappings) {
+        if (!Sonic3kObjectArtKeys.GUMBALL_BONUS.equals(entry.key())
+                && !Sonic3kObjectArtKeys.GUMBALL_SPRING.equals(entry.key())) {
+            return patterns;
+        }
+        TileRange range = mappingTileRange(mappings);
+        if (range.empty() || range.maxExclusive() <= patterns.length) {
+            return patterns;
+        }
+
+        Pattern[] padded = Arrays.copyOf(patterns, range.maxExclusive());
+        for (int i = patterns.length; i < padded.length; i++) {
+            padded[i] = new Pattern();
+        }
+        return padded;
+    }
+
+    private static List<SpriteMappingFrame> normalizeStandaloneMappings(
+            Sonic3kPlcArtRegistry.StandaloneArtEntry entry,
+            Pattern[] patterns,
+            List<SpriteMappingFrame> mappings) {
+        TileRange range = mappingTileRange(mappings);
+        if (range.empty() || range.maxExclusive() <= patterns.length) {
+            return mappings;
+        }
+        int tileCount = range.maxExclusive() - range.min();
+        if (range.min() <= 0 || tileCount > patterns.length) {
+            return mappings;
+        }
+        LOG.fine("Normalizing standalone object art '" + entry.key()
+                + "' mapping tiles 0x" + Integer.toHexString(range.min())
+                + "-0x" + Integer.toHexString(range.maxExclusive() - 1)
+                + " against " + patterns.length + " decompressed tiles");
+        return adjustTileIndices(mappings, -range.min());
+    }
+
+    private static List<SpriteMappingFrame> selectFramesPreservingIndices(
+            List<SpriteMappingFrame> mappings, int... frameIndices) {
+        int maxFrame = -1;
+        for (int frameIndex : frameIndices) {
+            maxFrame = Math.max(maxFrame, frameIndex);
+        }
+        if (maxFrame < 0 || mappings == null || mappings.isEmpty()) {
+            return mappings;
+        }
+
+        List<SpriteMappingFrame> selected = new ArrayList<>(maxFrame + 1);
+        for (int i = 0; i <= maxFrame; i++) {
+            selected.add(new SpriteMappingFrame(List.of()));
+        }
+        for (int frameIndex : frameIndices) {
+            if (frameIndex >= 0 && frameIndex < mappings.size()) {
+                selected.set(frameIndex, mappings.get(frameIndex));
+            }
+        }
+        return selected;
+    }
+
+    private static List<SpriteMappingFrame> blankFrames(
+            List<SpriteMappingFrame> mappings, int firstFrame, int lastFrame) {
+        if (mappings == null || mappings.isEmpty()) {
+            return mappings;
+        }
+        List<SpriteMappingFrame> adjusted = new ArrayList<>(mappings);
+        for (int i = Math.max(0, firstFrame); i <= lastFrame && i < adjusted.size(); i++) {
+            adjusted.set(i, new SpriteMappingFrame(List.of()));
+        }
+        return adjusted;
+    }
+
+    private static List<SpriteMappingFrame> offsetDmaWindowFrames(
+            List<SpriteMappingFrame> mappings, int tilesPerFrame) {
+        if (mappings == null || mappings.isEmpty() || tilesPerFrame == 0) {
+            return mappings;
+        }
+        List<SpriteMappingFrame> adjusted = new ArrayList<>(mappings.size());
+        for (int i = 0; i < mappings.size(); i++) {
+            adjusted.add(adjustTileIndices(List.of(mappings.get(i)), i * tilesPerFrame).get(0));
+        }
+        return adjusted;
+    }
+
+    private static void validateStandaloneMappings(
+            Sonic3kPlcArtRegistry.StandaloneArtEntry entry,
+            Pattern[] patterns,
+            List<SpriteMappingFrame> mappings) throws IOException {
+        TileRange range = mappingTileRange(mappings);
+        if (range.empty()) {
+            return;
+        }
+        if (range.min() < 0 || range.maxExclusive() > patterns.length) {
+            throw new IOException("Standalone art '" + entry.key()
+                    + "' has mapping tile range 0x" + Integer.toHexString(range.min())
+                    + "-0x" + Integer.toHexString(range.maxExclusive() - 1)
+                    + " outside decompressed " + entry.compression()
+                    + " art at 0x" + Integer.toHexString(entry.artAddr())
+                    + " (" + patterns.length + " tiles)");
+        }
+    }
+
+    private static TileRange mappingTileRange(List<SpriteMappingFrame> frames) {
+        int minTile = Integer.MAX_VALUE;
+        int maxTile = Integer.MIN_VALUE;
+        if (frames == null) {
+            return TileRange.emptyRange();
+        }
+        for (SpriteMappingFrame frame : frames) {
+            for (SpriteMappingPiece piece : frame.pieces()) {
+                minTile = Math.min(minTile, piece.tileIndex());
+                maxTile = Math.max(maxTile,
+                        piece.tileIndex() + (piece.widthTiles() * piece.heightTiles()));
+            }
+        }
+        if (minTile == Integer.MAX_VALUE) {
+            return TileRange.emptyRange();
+        }
+        return new TileRange(minTile, maxTile);
+    }
+
+    private record TileRange(int min, int maxExclusive) {
+        private static TileRange emptyRange() {
+            return new TileRange(0, 0);
+        }
+
+        private boolean empty() {
+            return maxExclusive <= min;
+        }
     }
 
     // ===== Results Screen art loading =====
@@ -1107,6 +1266,18 @@ public class Sonic3kObjectArt {
         return PatternDecompressor.fromBytes(data);
     }
 
+    private Pattern[] buildCnzCannonMixedPatterns(Pattern[] cannonPatterns) {
+        int patternCount = CNZ_CANNON_SOURCE_BANK + cannonPatterns.length;
+        Pattern[] patterns = new Pattern[patternCount];
+        int levelPatternCount = level.getPatternCount();
+        for (int i = 0; i < CNZ_CANNON_SOURCE_BANK; i++) {
+            int levelIndex = Sonic3kConstants.ARTTILE_CNZ_CANNON + i;
+            patterns[i] = levelIndex < levelPatternCount ? level.getPattern(levelIndex) : new Pattern();
+        }
+        System.arraycopy(cannonPatterns, 0, patterns, CNZ_CANNON_SOURCE_BANK, cannonPatterns.length);
+        return patterns;
+    }
+
     /**
      * S3K object DPLC parser (Perform_DPLC format):
      * startTile in upper 12 bits, (count-1) in lower 4 bits.
@@ -1217,6 +1388,80 @@ public class Sonic3kObjectArt {
         return remapped;
     }
 
+    private static List<SpriteMappingFrame> applyDplcRemapWithDestinationBase(
+            List<SpriteMappingFrame> mappings,
+            List<SpriteDplcFrame> dplcFrames,
+            int destinationBaseTile,
+            int sourceBankTile) {
+        if (dplcFrames == null || dplcFrames.isEmpty()) {
+            return mappings;
+        }
+
+        List<SpriteMappingFrame> remapped = new ArrayList<>(mappings.size());
+        for (int i = 0; i < mappings.size(); i++) {
+            SpriteMappingFrame frame = mappings.get(i);
+            if (i >= dplcFrames.size()) {
+                remapped.add(frame);
+                continue;
+            }
+
+            SpriteDplcFrame dplc = dplcFrames.get(i);
+            int totalSlots = 0;
+            for (TileLoadRequest req : dplc.requests()) {
+                totalSlots += req.count();
+            }
+
+            int[] vramToSource = new int[totalSlots];
+            int slot = 0;
+            for (TileLoadRequest req : dplc.requests()) {
+                for (int t = 0; t < req.count(); t++) {
+                    vramToSource[slot++] = sourceBankTile + req.startTile() + t;
+                }
+            }
+
+            List<SpriteMappingPiece> remappedPieces = new ArrayList<>(frame.pieces().size());
+            for (SpriteMappingPiece piece : frame.pieces()) {
+                int relativeDest = piece.tileIndex() - destinationBaseTile;
+                int remappedBase = relativeDest >= 0 && relativeDest < vramToSource.length
+                        ? vramToSource[relativeDest]
+                        : piece.tileIndex();
+                remappedPieces.add(new SpriteMappingPiece(
+                        piece.xOffset(), piece.yOffset(),
+                        piece.widthTiles(), piece.heightTiles(),
+                        remappedBase, piece.hFlip(), piece.vFlip(),
+                        piece.paletteIndex(), piece.priority()));
+            }
+            remapped.add(new SpriteMappingFrame(remappedPieces));
+        }
+        return remapped;
+    }
+
+    private static List<SpriteMappingFrame> combineCnzCannonChildAndBaseFrames(
+            List<SpriteMappingFrame> frames) {
+        if (frames == null || frames.size() <= CNZ_CANNON_BASE_FRAME) {
+            return frames;
+        }
+
+        SpriteMappingFrame baseFrame = frames.get(CNZ_CANNON_BASE_FRAME);
+        List<SpriteMappingFrame> combined = new ArrayList<>(frames.size());
+        for (int i = 0; i < frames.size(); i++) {
+            SpriteMappingFrame frame = frames.get(i);
+            if (i >= CNZ_CANNON_BASE_FRAME) {
+                combined.add(frame);
+                continue;
+            }
+
+            List<SpriteMappingPiece> pieces = new ArrayList<>(
+                    frame.pieces().size() + baseFrame.pieces().size());
+            // ROM submits the parent/base sprite before the child chamber sprite;
+            // earlier sprite slots render in front.
+            pieces.addAll(baseFrame.pieces());
+            pieces.addAll(frame.pieces());
+            combined.add(new SpriteMappingFrame(pieces));
+        }
+        return combined;
+    }
+
     private static SpriteMappingFrame singlePieceFrame(
             int xOffset, int yOffset, int widthTiles, int heightTiles, int tileIndex, boolean hFlip) {
         SpriteMappingPiece piece = new SpriteMappingPiece(
@@ -1245,314 +1490,212 @@ public class Sonic3kObjectArt {
         return adjusted;
     }
 
-    List<SpriteMappingFrame> buildHczWaterRushMappings() {
-        SpriteMappingFrame frame0 = new SpriteMappingFrame(List.of(new SpriteMappingPiece(-64, -32, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(-32, -32, 2, 4, 0x10, false, false, 0), new SpriteMappingPiece(-16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(48, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(80, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(112, -32, 2, 4, 0x18, false, false, 0), new SpriteMappingPiece(-48, 0, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(-16, 0, 2, 4, 0x28, false, false, 0), new SpriteMappingPiece(0, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(32, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(64, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(96, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(-32, 32, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(0, 32, 2, 4, 0x28, false, false, 0), new SpriteMappingPiece(16, 32, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(48, 32, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(80, 32, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(112, 32, 2, 4, 0x30, false, false, 0)));
-        SpriteMappingFrame frame1 = new SpriteMappingFrame(List.of(new SpriteMappingPiece(-48, -32, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(-16, -32, 2, 4, 0x40, false, false, 0), new SpriteMappingPiece(0, -32, 2, 4, 0x20, false, false, 0), new SpriteMappingPiece(16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(48, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(80, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(112, -32, 2, 4, 0x18, false, false, 0), new SpriteMappingPiece(-32, 0, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(0, 0, 2, 4, 0x48, false, false, 0), new SpriteMappingPiece(16, 0, 2, 4, 0x38, false, false, 0), new SpriteMappingPiece(32, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(64, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(96, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(-16, 32, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(16, 32, 2, 4, 0x48, false, false, 0), new SpriteMappingPiece(32, 32, 2, 4, 0x38, false, false, 0), new SpriteMappingPiece(48, 32, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(80, 32, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(112, 32, 2, 4, 0x30, false, false, 0)));
-        SpriteMappingFrame frame2 = new SpriteMappingFrame(List.of(new SpriteMappingPiece(-32, -32, 2, 4, 0x20, false, false, 0), new SpriteMappingPiece(-16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(48, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(-32, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(0, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(32, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(64, 0, 2, 4, 0x30, false, false, 0)));
-        SpriteMappingFrame frame3 = new SpriteMappingFrame(List.of(new SpriteMappingPiece(-32, -32, 2, 4, 0x20, false, false, 0), new SpriteMappingPiece(-16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(48, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(-64, 0, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(-32, 0, 2, 4, 0x48, false, false, 0), new SpriteMappingPiece(-16, 0, 2, 4, 0x38, false, false, 0), new SpriteMappingPiece(0, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(32, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(64, 0, 2, 4, 0x30, false, false, 0)));
-        return List.of(frame0, frame1, frame2, frame3);
-    }
-
     /**
-     * Builds hardcoded mappings for HCZ horizontal geyser art (Map_HCZWaterWall).
-     * All 11 frames: frame 0 is the wide horizontal wall, frame 1 is the vertical
-     * column, frames 2-10 are small splash/debris pieces used by child objects.
-     */
-    List<SpriteMappingFrame> buildHczGeyserHorzMappings() {
-        return buildHczGeyserAllFrames();
-    }
-
-    /**
-     * Builds hardcoded mappings for HCZ vertical geyser art (Map_HCZWaterWall).
-     * All 11 frames shared with horizontal art — frame 1 is the vertical column,
-     * frame 0 is the horizontal wall, frames 2-10 are splash/debris.
-     */
-    List<SpriteMappingFrame> buildHczGeyserVertMappings() {
-        return buildHczGeyserAllFrames();
-    }
-
-    /**
-     * Builds hardcoded mappings for HCZ geyser debris art (Map_HCZWaterWallDebris).
-     * ROM: 8 single-piece frames. Tile indices are relative to ArtTile_HCZGeyser+$58,
-     * so we offset by 0x58 into the geyser pattern array.
+     * Builds the CNZ Balloon sprite sheet.
      *
-     * <p>Size byte decoding: bits 2-3 = (width-1), bits 0-1 = (height-1).
-     * $0E = 4w×3h, $0F = 4w×4h, $0B = 3w×4h.
+     * <p>ROM anchor: {@code Obj_CNZBalloon}.
+     * <p>Mapping table: {@code Map_CNZBalloon} (25 frames).
+     * <p>Art tile: {@code ArtTile_CNZMisc} (palette 0). Frames 20-24 also
+     * reference the separately PLC-loaded {@code ArtTile_CNZBalloon} body art
+     * at {@code ArtTile_CNZMisc+$223}; the string pieces remain in CNZ misc.
+     * <p>The mapping address is the final S3K lock-on offset published in
+     * {@link Sonic3kConstants}; it is not the raw Sonic 3-side disassembly
+     * address.
      */
-    List<SpriteMappingFrame> buildHczGeyserDebrisMappings() {
-        int tileBase = 0x58; // ArtTile_HCZGeyser+$58 offset into decompressed patterns
-        return List.of(
-                // Frame 0: ($F8,$0E,$00,$00,$FF,$F0) y=-8, 4×3, tile 0x00
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-16, -8, 4, 3, tileBase + 0x00, false, false, 0))),
-                // Frame 1: ($F0,$0F,$00,$0C,$FF,$F0) y=-16, 4×4, tile 0x0C
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-16, -16, 4, 4, tileBase + 0x0C, false, false, 0))),
-                // Frame 2: ($F0,$0B,$00,$1C,$FF,$F0) y=-16, 3×4, tile 0x1C
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-16, -16, 3, 4, tileBase + 0x1C, false, false, 0))),
-                // Frame 3: ($F0,$0F,$08,$0C,$FF,$F0) y=-16, 4×4, hflip, tile 0x0C
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-16, -16, 4, 4, tileBase + 0x0C, true, false, 0))),
-                // Frame 4: ($F0,$0E,$10,$00,$FF,$F0) y=-16, 4×3, vflip, tile 0x00
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-16, -16, 4, 3, tileBase + 0x00, false, true, 0))),
-                // Frame 5: ($F0,$0F,$18,$0C,$FF,$F0) y=-16, 4×4, hflip+vflip, tile 0x0C
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-16, -16, 4, 4, tileBase + 0x0C, true, true, 0))),
-                // Frame 6: ($F0,$0B,$08,$1C,$FF,$F8) y=-16, 3×4, hflip, tile 0x1C, x=-8
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-8, -16, 3, 4, tileBase + 0x1C, true, false, 0))),
-                // Frame 7: ($F0,$0F,$10,$0C,$FF,$F0) y=-16, 4×4, vflip, tile 0x0C
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-16, -16, 4, 4, tileBase + 0x0C, false, true, 0)))
-        );
+    public ObjectSpriteSheet buildCnzBalloonSheet() {
+        ObjectSpriteSheet sheet = buildLevelArtSheetFromRom(
+                Sonic3kConstants.MAP_CNZ_BALLOON_ADDR,
+                Sonic3kConstants.ARTTILE_CNZ_BALLOON,
+                0);
+        spliceCnzBalloonPlcArt(sheet);
+        return sheet;
     }
 
-    /**
-     * All 11 frames from Map_HCZWaterWall in the S3K disassembly.
-     * <p>Frame 0: 14-piece horizontal geyser wall (256x64).
-     * <p>Frame 1: 12-piece vertical geyser column (64x192).
-     * <p>Frames 2-10: small splash/debris pieces (1 piece each).
-     */
-    private List<SpriteMappingFrame> buildHczGeyserAllFrames() {
-        // Frame 0 — horizontal geyser wall (14 pieces)
-        SpriteMappingFrame frame0 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-128, -32, 4, 4, 0x00, false, false, 0),
-                new SpriteMappingPiece(-96, -32, 4, 4, 0x00, false, false, 0),
-                new SpriteMappingPiece(-64, -32, 4, 4, 0x00, false, false, 0),
-                new SpriteMappingPiece(-32, -32, 4, 4, 0x00, false, false, 0),
-                new SpriteMappingPiece(0, -32, 4, 4, 0x00, false, false, 0),
-                new SpriteMappingPiece(32, -32, 4, 4, 0x10, false, false, 0),
-                new SpriteMappingPiece(64, -32, 4, 4, 0x20, false, false, 0),
-                new SpriteMappingPiece(-128, 0, 4, 4, 0x00, false, true, 0),
-                new SpriteMappingPiece(-96, 0, 4, 4, 0x00, false, true, 0),
-                new SpriteMappingPiece(-64, 0, 4, 4, 0x00, false, true, 0),
-                new SpriteMappingPiece(-32, 0, 4, 4, 0x00, false, true, 0),
-                new SpriteMappingPiece(0, 0, 4, 4, 0x00, false, true, 0),
-                new SpriteMappingPiece(32, 0, 4, 4, 0x10, false, true, 0),
-                new SpriteMappingPiece(64, 0, 4, 4, 0x20, false, true, 0)));
-
-        // Frame 1 — vertical geyser column (12 pieces)
-        SpriteMappingFrame frame1 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-32, -96, 4, 4, 0x00, false, false, 0),
-                new SpriteMappingPiece(0, -96, 4, 4, 0x00, true, false, 0),
-                new SpriteMappingPiece(-32, -64, 4, 4, 0x10, false, false, 0),
-                new SpriteMappingPiece(0, -64, 4, 4, 0x10, true, false, 0),
-                new SpriteMappingPiece(-32, -32, 4, 4, 0x20, false, false, 0),
-                new SpriteMappingPiece(0, -32, 4, 4, 0x20, true, false, 0),
-                new SpriteMappingPiece(-32, 0, 4, 4, 0x20, false, false, 0),
-                new SpriteMappingPiece(0, 0, 4, 4, 0x20, true, false, 0),
-                new SpriteMappingPiece(-32, 32, 4, 4, 0x20, false, false, 0),
-                new SpriteMappingPiece(0, 32, 4, 4, 0x20, true, false, 0),
-                new SpriteMappingPiece(-32, 64, 4, 4, 0x20, false, false, 0),
-                new SpriteMappingPiece(0, 64, 4, 4, 0x20, true, false, 0)));
-
-        // Frames 2-10 — small splash/debris pieces (1 piece each)
-        SpriteMappingFrame frame2 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -4, 1, 1, 0x00, false, false, 0)));
-        SpriteMappingFrame frame3 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x1A, false, false, 0)));
-        SpriteMappingFrame frame4 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x1E, false, false, 0)));
-        SpriteMappingFrame frame5 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x22, false, false, 0)));
-        SpriteMappingFrame frame6 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -4, 1, 1, 0x26, false, false, 0)));
-        SpriteMappingFrame frame7 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -4, 1, 1, 0x27, false, false, 0)));
-        SpriteMappingFrame frame8 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -6, 2, 1, 0x00, false, false, 0)));
-        SpriteMappingFrame frame9 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-16, -22, 4, 3, 0x02, false, false, 0)));
-        SpriteMappingFrame frame10 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-16, -22, 4, 3, 0x0E, false, false, 0)));
-
-        return List.of(frame0, frame1, frame2, frame3, frame4, frame5,
-                frame6, frame7, frame8, frame9, frame10);
-    }
-
-    /**
-     * Builds mappings for HCZ geyser spray/splash art.
-     * ROM: spray children use art_tile = ArtTile_HCZGeyser+$30, meaning all mapping
-     * tile indices are relative to offset $30 within the decompressed geyser patterns.
-     * Since our standalone sheets index from 0, we add $30 to every tile index.
-     * Only frames 2-10 are used by spray/splash children.
-     */
-    /**
-     * Builds hardcoded mappings for HCZ fan bubble (Map_Bubbler, frames 0-5).
-     * Small bubble sprites spawned by Obj_HCZCGZFan when subtype bit 6 is set.
-     * <p>
-     * ROM: Map_Bubbler (docs/skdisasm/General/Sprites/Bubbles/Map - Bubbler.asm).
-     * Frame 0: 1×1 tile (8×8), tile 0 — tiny bubble dot.
-     * Frame 1: 1×1 tile (8×8), tile 1 — slightly different dot.
-     * Frame 2: 1×1 tile (8×8), tile 2 — medium dot.
-     * Frame 3: 2×2 tile (16×16), tile 3 — small bubble.
-     * Frame 4: 2×2 tile (16×16), tile 7 — medium bubble.
-     * Frame 5: 3×3 tile (24×24), tile $B — large bubble.
-     */
-    List<SpriteMappingFrame> buildHczFanBubbleMappings() {
-        return List.of(
-                // Frame 0: dc.b $FC,$00,$00,$00,$FF,$FC — 1×1 at (-4,-4), tile 0
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-4, -4, 1, 1, 0, false, false, 0))),
-                // Frame 1: dc.b $FC,$00,$00,$01,$FF,$FC — 1×1 at (-4,-4), tile 1
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-4, -4, 1, 1, 1, false, false, 0))),
-                // Frame 2: dc.b $FC,$00,$00,$02,$FF,$FC — 1×1 at (-4,-4), tile 2
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-4, -4, 1, 1, 2, false, false, 0))),
-                // Frame 3: dc.b $F8,$05,$00,$03,$FF,$F8 — 2×2 at (-8,-8), tile 3
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-8, -8, 2, 2, 3, false, false, 0))),
-                // Frame 4: dc.b $F8,$05,$00,$07,$FF,$F8 — 2×2 at (-8,-8), tile 7
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-8, -8, 2, 2, 7, false, false, 0))),
-                // Frame 5: dc.b $F4,$0A,$00,$0B,$FF,$F4 — 3×3 at (-12,-12), tile $B
-                new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-12, -12, 3, 3, 0x0B, false, false, 0)))
-        );
-    }
-
-    /**
-     * Builds the subset of Map_Bubbler frames used by Obj_Bubbler.
-     * <p>
-     * The object only references frames 0-8 (bubble growth/burst) and 19-21
-     * (floor vent animation). Frames 9-18 reference high VRAM countdown tiles
-     * and are left blank here because the Bubbler object never animates through them.
-     * <p>
-     * ROM: General/Sprites/Bubbles/Map - Bubbler.asm
-     */
-    List<SpriteMappingFrame> buildBubblerMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>(22);
-
-        frames.add(single(-4, -4, 1, 1, 0x00));   // 0
-        frames.add(single(-4, -4, 1, 1, 0x01));   // 1
-        frames.add(single(-4, -4, 1, 1, 0x02));   // 2
-        frames.add(single(-8, -8, 2, 2, 0x03));   // 3
-        frames.add(single(-8, -8, 2, 2, 0x07));   // 4
-        frames.add(single(-12, -12, 3, 3, 0x0B)); // 5
-        frames.add(single(-16, -16, 4, 4, 0x14)); // 6
-        frames.add(new SpriteMappingFrame(List.of( // 7
-                new SpriteMappingPiece(-16, -16, 2, 2, 0x24, false, false, 0),
-                new SpriteMappingPiece(0, -16, 2, 2, 0x24, true, false, 0),
-                new SpriteMappingPiece(-16, 0, 2, 2, 0x24, false, true, 0),
-                new SpriteMappingPiece(0, 0, 2, 2, 0x24, true, true, 0))));
-        frames.add(new SpriteMappingFrame(List.of( // 8
-                new SpriteMappingPiece(-16, -16, 2, 2, 0x28, false, false, 0),
-                new SpriteMappingPiece(0, -16, 2, 2, 0x28, true, false, 0),
-                new SpriteMappingPiece(-16, 0, 2, 2, 0x28, false, true, 0),
-                new SpriteMappingPiece(0, 0, 2, 2, 0x28, true, true, 0))));
-
-        for (int i = 9; i <= 18; i++) {
-            frames.add(new SpriteMappingFrame(List.of()));
+    private void spliceCnzBalloonPlcArt(ObjectSpriteSheet sheet) {
+        if (sheet == null) {
+            return;
         }
-
-        frames.add(single(-8, -8, 2, 2, 0x2C));   // 19
-        frames.add(single(-8, -8, 2, 2, 0x30));   // 20
-        frames.add(single(-8, -8, 2, 2, 0x34));   // 21
-
-        return frames;
-    }
-
-    private SpriteMappingFrame single(int x, int y, int w, int h, int tile) {
-        return new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(x, y, w, h, tile, false, false, 0)));
-    }
-
-    List<SpriteMappingFrame> buildHczGeyserSprayMappings() {
-        int ofs = 0x30; // ArtTile_HCZGeyser+$30 offset
-        // Frame 0 and 1 are unused placeholders (spray only uses frames 2-10)
-        SpriteMappingFrame placeholder = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0, 0, 1, 1, ofs, false, false, 0)));
-        // Frames 2-10: same layout as main geyser but tile indices + $30
-        SpriteMappingFrame f2 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -4, 1, 1, ofs + 0x00, false, false, 0)));
-        SpriteMappingFrame f3 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, ofs + 0x1A, false, false, 0)));
-        SpriteMappingFrame f4 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, ofs + 0x1E, false, false, 0)));
-        SpriteMappingFrame f5 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, ofs + 0x22, false, false, 0)));
-        SpriteMappingFrame f6 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -4, 1, 1, ofs + 0x26, false, false, 0)));
-        SpriteMappingFrame f7 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -4, 1, 1, ofs + 0x27, false, false, 0)));
-        SpriteMappingFrame f8 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -6, 2, 1, ofs + 0x00, false, false, 0)));
-        SpriteMappingFrame f9 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-16, -22, 4, 3, ofs + 0x02, false, false, 0)));
-        SpriteMappingFrame f10 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-16, -22, 4, 3, ofs + 0x0E, false, false, 0)));
-        return List.of(placeholder, placeholder, f2, f3, f4, f5, f6, f7, f8, f9, f10);
-    }
-
-    public ObjectSpriteSheet buildHczWaterRushBlockSheet() {
-        SpriteMappingFrame f0 = new SpriteMappingFrame(List.of(new SpriteMappingPiece(-16, -16, 4, 4, 0x00, false, false, 0)));
-        SpriteMappingFrame f1 = new SpriteMappingFrame(List.of(new SpriteMappingPiece(-16, -32, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(-16, 0, 4, 4, 0x00, false, false, 0)));
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_HCZ_WATER_RUSH_BLOCK, 2, List.of(f0, f1), 0, 16);
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) {
+                return;
+            }
+            Pattern[] plcPatterns = loadKosinskiModuledPatterns(rom, Sonic3kConstants.ART_KOSM_CNZ_BALLOON_ADDR);
+            Pattern[] sheetPatterns = sheet.getPatterns();
+            int dest = Sonic3kConstants.ARTTILE_CNZ_BALLOON_PLC - Sonic3kConstants.ARTTILE_CNZ_BALLOON;
+            int count = Math.min(plcPatterns.length, sheetPatterns.length - dest);
+            if (count > 0) {
+                System.arraycopy(plcPatterns, 0, sheetPatterns, dest, count);
+            }
+        } catch (IOException e) {
+            LOG.warning("Failed splicing CNZ balloon PLC art: " + e.getMessage());
+        }
     }
 
     /**
-     * Builds vertical door sheet for HCZ.
-     * Uses ArtTile_HCZMisc + $0A = $03D4, palette 2.
-     * Subtype 0 / mapping frame 0.
-     * From Map - (&CNZ &DEZ) Door.asm (Map_HCZCNZDEZDoor).
+     * Loads the CNZ Cannon sprite sheet from the ROM's dedicated Cannon.bin art.
+     *
+     * <p>Verified ROM anchors:
+     * <ul>
+     *   <li>{@code Obj_CNZCannon}</li>
+     *   <li>{@code Map_CNZCannon} at the final lock-on offset published in
+     *   {@link Sonic3kConstants#MAP_CNZ_CANNON_ADDR}</li>
+     *   <li>{@code DPLC_CNZCannon} at {@link Sonic3kConstants#DPLC_CNZ_CANNON_ADDR}</li>
+     *   <li>Dedicated art block {@code Cannon.bin} at
+     *   {@link Sonic3kConstants#ART_UNC_CNZ_CANNON_ADDR}</li>
+     * </ul>
+     *
+     * <p>The sheet is built from ROM-parsed mappings plus the DPLC remap table so
+     * the animated chamber pieces keep their original tile selection instead of
+     * relying on a level-art subset.
      */
-    public ObjectSpriteSheet buildDoorVerticalHczSheet() {
-        SpriteMappingFrame f0 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-16, -32, 4, 4, 0, false, false, 0, false),
-                new SpriteMappingPiece(-16, 0, 4, 4, 0, false, false, 0, false)
-        ));
-        int artTileBase = Sonic3kConstants.ARTTILE_HCZ_MISC + 0x0A;
-        return buildLevelArtSheet(artTileBase, 2, List.of(f0), 0, 16);
+    public ObjectSpriteSheet loadCnzCannonSheet(Rom rom) {
+        if (rom == null || reader == null) {
+            return null;
+        }
+        try {
+            Pattern[] cannonPatterns = loadUncompressedPatterns(rom,
+                    Sonic3kConstants.ART_UNC_CNZ_CANNON_ADDR,
+                    Sonic3kConstants.ART_UNC_CNZ_CANNON_SIZE);
+            if (cannonPatterns.length == 0 || level == null) {
+                return null;
+            }
+
+            List<SpriteMappingFrame> rawMappings =
+                    S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_CNZ_CANNON_ADDR, 10);
+            List<SpriteDplcFrame> dplcFrames =
+                    S3kSpriteDataLoader.loadDplcFrames(reader, Sonic3kConstants.DPLC_CNZ_CANNON_ADDR, 9);
+            List<SpriteMappingFrame> remapped = applyDplcRemapWithDestinationBase(
+                    rawMappings,
+                    dplcFrames,
+                    CNZ_CANNON_DPLC_DEST_TILE,
+                    CNZ_CANNON_SOURCE_BANK);
+            remapped = combineCnzCannonChildAndBaseFrames(remapped);
+            Pattern[] patterns = buildCnzCannonMixedPatterns(cannonPatterns);
+
+            lastBuildStartTile = Sonic3kConstants.ARTTILE_CNZ_CANNON;
+            lastBuildTileCount = patterns.length;
+            return new ObjectSpriteSheet(patterns, remapped, 2, 1);
+        } catch (IOException e) {
+            LOG.warning("Failed loading CNZ cannon art: " + e.getMessage());
+            return null;
+        }
     }
 
     /**
-     * Builds vertical door sheet for CNZ.
-     * Uses ArtTile_CNZMisc + $C5 = $0416, palette 2.
-     * Subtype 1 / mapping frame 1.
-     * From Map - (&CNZ &DEZ) Door.asm (Map_HCZCNZDEZDoor).
+     * Backwards-compatible wrapper used by the registry builder path.
      */
-    public ObjectSpriteSheet buildDoorVerticalCnzSheet() {
-        SpriteMappingFrame f1 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -32, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-8, -16, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-8, 0, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-8, 16, 2, 2, 0, false, false, 0, false)
-        ));
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_CNZ_MISC + 0xC5, 2, List.of(f1), 0, 16);
+    public ObjectSpriteSheet buildCnzCannonSheet() {
+        try {
+            return loadCnzCannonSheet(GameServices.rom().getRom());
+        } catch (IOException e) {
+            LOG.warning("Failed to load CNZ cannon art via compatibility wrapper: " + e.getMessage());
+            return null;
+        }
     }
 
     /**
-     * Builds vertical door sheet for DEZ.
-     * Uses ArtTile_DEZMisc + $1E = $036B, palette 1.
-     * Subtype 2 / mapping frame 2.
-     * From Map - (&CNZ &DEZ) Door.asm (Map_HCZCNZDEZDoor).
+     * Builds the CNZ Rising Platform sprite sheet.
+     *
+     * <p>ROM anchor: {@code Obj_CNZRisingPlatform}.
+     * <p>Mapping table: {@code Map_CNZRisingPlatform} (3 frames).
+     * <p>Art tile: {@code ArtTile_CNZMisc+$6D} (palette 2).
+     * <p>The mapping address is the final S3K lock-on offset published in
+     * {@link Sonic3kConstants}; the table is shared by both the idle and rising
+     * animation states.
      */
-    public ObjectSpriteSheet buildDoorVerticalDezSheet() {
-        SpriteMappingFrame f2 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-16, -32, 2, 4, 0, false, false, 0, false),
-                new SpriteMappingPiece(0, -32, 2, 4, 8, false, false, 0, false),
-                new SpriteMappingPiece(-16, 0, 2, 4, 0, false, false, 0, false),
-                new SpriteMappingPiece(0, 0, 2, 4, 8, false, false, 0, false)
-        ));
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_DEZ_MISC + 0x1E, 1, List.of(f2), 0, 16);
+    public ObjectSpriteSheet buildCnzRisingPlatformSheet() {
+        return buildLevelArtSheetFromRom(
+                Sonic3kConstants.MAP_CNZ_RISING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_CNZ_RISING_PLATFORM,
+                2);
     }
 
     /**
-     * Builds horizontal door sheet.
-     * Uses ArtTile_CNZMisc + $C5 = $0416, palette 2.
-     * One frame: 4 pieces (size=$05, 2x2=16x16 each), tile 0
-     * From Map - Door Horizontal.asm (Map_CNZDoorHorizontal).
+     * Builds the CNZ Trap Door sprite sheet.
+     *
+     * <p>ROM anchor: {@code Obj_CNZTrapDoor}.
+     * <p>Mapping table: {@code Map_CNZTrapDoor} (3 frames).
+     * <p>Art tile: {@code ArtTile_CNZMisc+$9F} (palette 2).
      */
-    public ObjectSpriteSheet buildDoorHorizontalSheet() {
-        SpriteMappingFrame f0 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-32, -8, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-16, -8, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(   0, -8, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(  16, -8, 2, 2, 0, false, false, 0, false)
-        ));
-        return buildLevelArtSheet(Sonic3kConstants.ARTTILE_CNZ_MISC + 0xC5, 2, List.of(f0), 0, 4);
+    public ObjectSpriteSheet buildCnzTrapDoorSheet() {
+        return buildLevelArtSheetFromRom(
+                Sonic3kConstants.MAP_CNZ_TRAP_DOOR_ADDR,
+                Sonic3kConstants.ARTTILE_CNZ_TRAP_DOOR,
+                2);
+    }
+
+    /**
+     * Builds the CNZ Light Bulb sprite sheet.
+     *
+     * <p>ROM anchor: {@code Obj_CNZLightBulb}.
+     * <p>Mapping table: {@code Map_CNZLightBulb} (2 frames).
+     * <p>Art tile: {@code ArtTile_CNZMisc+$B3} (palette 2).
+     */
+    public ObjectSpriteSheet buildCnzLightBulbSheet() {
+        return buildLevelArtSheetFromRom(
+                Sonic3kConstants.MAP_CNZ_LIGHT_BULB_ADDR,
+                Sonic3kConstants.ARTTILE_CNZ_LIGHT_BULB,
+                2);
+    }
+
+    /**
+     * Builds the CNZ Hover Fan sprite sheet.
+     *
+     * <p>ROM anchor: {@code Obj_CNZHoverFan}.
+     * <p>Mapping table: {@code Map_CNZHoverFan} (8 frames, repeated idle frames).
+     * <p>Art tile: {@code ArtTile_CNZMisc+$97} (palette 2).
+     */
+    public ObjectSpriteSheet buildCnzHoverFanSheet() {
+        return buildLevelArtSheetFromRom(
+                Sonic3kConstants.MAP_CNZ_HOVER_FAN_ADDR,
+                Sonic3kConstants.ARTTILE_CNZ_HOVER_FAN,
+                2);
+    }
+
+    /**
+     * Builds the CNZ Cylinder sprite sheet.
+     *
+     * <p>ROM anchor: {@code Obj_CNZCylinder}.
+     * <p>Mapping table: {@code Map_CNZCylinder} (4 frames), parsed directly from
+     * {@code Map - Cylinder.asm} rather than falling back to a hand-authored
+     * mapping transcription.
+     * <p>Art tile: {@code ArtTile_CNZMisc+$3D} (palette 2).
+     */
+    public ObjectSpriteSheet buildCnzCylinderSheet() {
+        return buildLevelArtSheetFromRom(
+                Sonic3kConstants.MAP_CNZ_CYLINDER_ADDR,
+                Sonic3kConstants.ARTTILE_CNZ_CYLINDER,
+                2);
+    }
+
+    /**
+     * Builds the CNZ Bumper sprite sheet.
+     *
+     * <p>ROM anchor: {@code Obj_Bumper}, non-Pachinko/non-competition path.
+     * <p>Mapping table: {@code Map_Bumper} (2 frames).
+     * <p>Art tile: {@code ArtTile_CNZMisc+$13} (palette 2).
+     */
+    public ObjectSpriteSheet buildCnzBumperSheet() {
+        return buildLevelArtSheetFromRom(
+                Sonic3kConstants.MAP_CNZ_BUMPER_ADDR,
+                Sonic3kConstants.ARTTILE_CNZ_BUMPER,
+                2);
+    }
+
+    /**
+     * CNZ Vacuum Tube is controller-only in this task slice.
+     * The ROM object exists, but no dedicated traversal sprite sheet is claimed here.
+     */
+    public ObjectSpriteSheet buildCnzVacuumTubeSheet() {
+        return null;
+    }
+
+    /**
+     * CNZ Spiral Tube is controller-only in this task slice.
+     * The ROM object exists, but no dedicated traversal sprite sheet is claimed here.
+     */
+    public ObjectSpriteSheet buildCnzSpiralTubeSheet() {
+        return null;
     }
 }

@@ -1,12 +1,18 @@
 package com.openggf.tests;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.GameServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.timer.AbstractTimer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -58,6 +64,22 @@ public class TestHeadlessTestFixture {
     }
 
     @Test
+    public void testFixtureRegistersConfiguredSidekickTeam() {
+        HeadlessTestFixture.builder()
+                .withSharedLevel(shared)
+                .startPosition((short) 96, (short) 655)
+                .build();
+
+        var sidekicks = GameServices.sprites().getSidekicks();
+        assertEquals(1, sidekicks.size(), "EHZ1 headless fixture should include Sonic 2's default Tails sidekick");
+        AbstractPlayableSprite tails = sidekicks.getFirst();
+        assertTrue(tails.isCpuControlled(), "Configured sidekick should be CPU-controlled");
+        assertNotNull(tails.getCpuController(), "Configured sidekick should have an active CPU controller");
+        assertEquals("tails", GameServices.sprites().getSidekickCharacterName(tails),
+                "Registered sidekick should preserve the configured character name");
+    }
+
+    @Test
     public void testFixtureCanStepFrames() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withSharedLevel(shared)
@@ -75,6 +97,52 @@ public class TestHeadlessTestFixture {
         assertTrue(finalX > initialX, "Sprite should have moved right after 10 frames. "
                 + "Initial=" + initialX + ", Final=" + finalX);
         assertEquals(10, fixture.frameCount(), "Frame counter should be 10");
+    }
+
+    @Test
+    public void testFixtureStepsRuntimeTimersBeforeLevelFrame() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withSharedLevel(shared)
+                .startPosition((short) 96, (short) 655)
+                .build();
+
+        AtomicBoolean fired = new AtomicBoolean(false);
+        GameServices.timers().registerTimer(new AbstractTimer("headless-step-test", 1) {
+            @Override
+            public boolean perform() {
+                fired.set(true);
+                return true;
+            }
+        });
+
+        fixture.stepFrame(false, false, false, false, false);
+
+        assertTrue(fired.get(), "Headless frame stepping should advance runtime timers like GameLoop");
+        assertNull(GameServices.timers().getTimerForCode("headless-step-test"));
+    }
+
+    @Test
+    public void testZoneAndActBuildRegistersPlayerBeforeLoad() {
+        Logger logger = Logger.getLogger("com.openggf.level.LevelManager");
+        LogCaptureHandler handler = new LogCaptureHandler();
+        boolean useParentHandlers = logger.getUseParentHandlers();
+        Level previousLevel = logger.getLevel();
+        logger.addHandler(handler);
+        logger.setUseParentHandlers(false);
+        logger.setLevel(Level.ALL);
+        try {
+            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                    .withZoneAndAct(0, 0)
+                    .build();
+
+            assertNotNull(fixture.sprite(), "Fixture should still create a sprite for zone/act loads");
+            assertEquals(0, handler.countAtOrAbove(Level.WARNING),
+                    "Fixture build should not warn that no player sprite was registered before load");
+        } finally {
+            logger.removeHandler(handler);
+            logger.setUseParentHandlers(useParentHandlers);
+            logger.setLevel(previousLevel);
+        }
     }
 
     @Test
@@ -112,5 +180,4 @@ public class TestHeadlessTestFixture {
         assertNotSame(fixture1.sprite(), fixture2.sprite(), "Fixtures should have different sprite instances");
     }
 }
-
 

@@ -1,7 +1,9 @@
 package com.openggf.game.sonic2.scroll;
 
+import com.openggf.game.GameServices;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.M68KMath;
+import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
 /**
  * ROM-accurate implementation of SwScrl_DEZ (Death Egg Zone scroll routine).
@@ -48,6 +50,11 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
 
     private int[] rowHeights = DEFAULT_ROW_HEIGHTS;
 
+    private final ScrollEffectComposer composer = new ScrollEffectComposer();
+    private int shakeTimer = -1;
+    private int shakeOffsetX;
+    private int shakeOffsetY;
+
     public SwScrlDez(ParallaxTables tables) {
         this.tables = tables;
         loadRowHeights();
@@ -73,6 +80,25 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
                        int actId) {
 
         resetScrollTracking();
+        composer.reset();
+        shakeOffsetX = 0;
+        shakeOffsetY = 0;
+
+        int effectiveBgY = vscrollFactorBG & 0xFFFF;
+        if (shakeTimer >= 0) {
+            int rippleIndex = frameCounter & 0x3F;
+            shakeOffsetY = tables != null ? tables.getRippleSigned(rippleIndex) : 0;
+            shakeOffsetX = tables != null ? tables.getRippleSigned(rippleIndex + 1) : 0;
+            composer.setVscrollFactorFG((short) (cameraY + shakeOffsetY));
+            composer.setVscrollFactorBG((short) ((short) vscrollFactorBG + shakeOffsetY));
+            effectiveBgY = (effectiveBgY + shakeOffsetY) & 0xFFFF;
+            shakeTimer--;
+            if (shakeTimer < 0 && GameServices.gameStateOrNull() != null) {
+                GameServices.gameStateOrNull().setScreenShakeActive(false);
+            }
+        } else {
+            composer.setVscrollFactorBG(vscrollFactorBG);
+        }
 
         // ==================== Step 1: Vertical Scroll ====================
         // DEZ BG Y tracks via Camera_Y_pos_diff << 8 through SetHorizVertiScrollFlagsBG
@@ -84,7 +110,7 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
         updateTempArray(cameraX);
 
         // ==================== Step 3: Fill hscroll buffer ====================
-        fillScrollBuffer(horizScrollBuf, cameraX);
+        fillScrollBuffer(horizScrollBuf, cameraX, effectiveBgY);
     }
 
     /**
@@ -173,12 +199,12 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
      * FG scroll = negWord(cameraX) for all lines
      * BG scroll = negWord(tempArray[segmentIndex]) for each segment
      */
-    private void fillScrollBuffer(int[] horizScrollBuf, int cameraX) {
+    private void fillScrollBuffer(int[] horizScrollBuf, int cameraX, int effectiveBgY) {
         int[] heights = rowHeights;
         int numSegments = Math.min(heights.length, tempArray.length);
 
         // d1 = Camera_BG_Y_pos (word)
-        int d1 = vscrollFactorBG & 0xFFFF;
+        int d1 = effectiveBgY & 0xFFFF;
 
         // Find first visible segment by subtracting row heights
         int segIdx = 0;
@@ -214,13 +240,11 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
 
         // Get initial BG scroll from tempArray
         short bgScroll = M68KMath.negWord(tempArray[segIdx]);
-        int packed = M68KMath.packScrollWords(fgScroll, bgScroll);
-        trackOffset(fgScroll, bgScroll);
         segIdx++;
 
         // Fill 224 lines (dbf d2,.rowLoop with d2 starting at 223)
         for (int line = 0; line < M68KMath.VISIBLE_LINES; line++) {
-            horizScrollBuf[line] = packed;
+            composer.writePackedScrollWord(line, fgScroll, bgScroll);
 
             linesInSegment--;
             if (linesInSegment == 0 && line < M68KMath.VISIBLE_LINES - 1) {
@@ -228,12 +252,14 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
                 if (segIdx < numSegments) {
                     linesInSegment = heights[segIdx] & 0xFF;
                     bgScroll = M68KMath.negWord(tempArray[segIdx]);
-                    packed = M68KMath.packScrollWords(fgScroll, bgScroll);
-                    trackOffset(fgScroll, bgScroll);
                     segIdx++;
                 }
             }
         }
+
+        composer.copyPackedScrollWordsTo(horizScrollBuf);
+        minScrollOffset = composer.getMinScrollOffset();
+        maxScrollOffset = composer.getMaxScrollOffset();
     }
 
     /**
@@ -242,6 +268,38 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
      */
     public void setVscrollFactorBG(short value) {
         this.vscrollFactorBG = value;
+    }
+
+    /**
+     * ROM: ObjC7 writes Screen_Shaking_Flag=1 and DEZ_Shake_Timer to drive
+     * SwScrl_DEZ's ripple offsets during stomp and ending rumble sequences.
+     */
+    public void triggerScreenShake(int frames) {
+        this.shakeTimer = Math.max(0, frames);
+    }
+
+    public int getDezShakeTimer() {
+        return shakeTimer;
+    }
+
+    @Override
+    public short getVscrollFactorFG() {
+        return composer.getVscrollFactorFG();
+    }
+
+    @Override
+    public short getVscrollFactorBG() {
+        return composer.getVscrollFactorBG();
+    }
+
+    @Override
+    public int getShakeOffsetX() {
+        return shakeOffsetX;
+    }
+
+    @Override
+    public int getShakeOffsetY() {
+        return shakeOffsetY;
     }
 
     // ==================== Test Access Methods ====================

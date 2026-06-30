@@ -1,13 +1,18 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.EngineContext;
 import com.openggf.Engine;
+import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.graphics.RenderPriority;
+import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.GroundSensor;
@@ -24,12 +29,12 @@ import org.junit.jupiter.api.Test;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 
-import java.awt.image.BufferedImage;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_CONTEXT_VERSION_MAJOR;
@@ -91,6 +96,9 @@ public class TestInstaShieldVisual {
     @BeforeAll
     static void setUpClass() {
         try {
+            EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+            SessionManager.clear();
+
             GLFWErrorCallback.createPrint(System.err).set();
             if (!glfwInit()) {
                 throw new IllegalStateException("GLFW init failed");
@@ -109,24 +117,6 @@ public class TestInstaShieldVisual {
             glfwMakeContextCurrent(window);
             GL.createCapabilities();
 
-            GraphicsManager gm = GraphicsManager.getInstance();
-            gm.resetState();
-            gm.init(Engine.RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
-            glViewport(0, 0, W, H);
-
-            glMatrixMode(GL_PROJECTION);
-            glLoadIdentity();
-            projectionMatrix.identity().ortho2D(0, W, 0, H);
-            projectionMatrix.get(matrixBuffer);
-            glLoadMatrixf(matrixBuffer);
-            gm.setProjectionMatrixBuffer(matrixBuffer.clone());
-
-            glMatrixMode(GL_MODELVIEW);
-            glLoadIdentity();
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            gm.setViewport(0, 0, W, H);
-
             initialized = true;
         } catch (Exception e) {
             System.err.println("Init failed: " + e.getMessage());
@@ -138,6 +128,30 @@ public class TestInstaShieldVisual {
     @BeforeEach
     void setUpTest() throws Exception {
         assumeTrue(initialized, "GPU init failed");
+
+        GraphicsManager.destroyForReinit();
+        GraphicsManager gm = GraphicsManager.getInstance();
+        gm.init(Engine.RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
+        glViewport(0, 0, W, H);
+
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        projectionMatrix.identity().ortho2D(0, W, 0, H);
+        projectionMatrix.get(matrixBuffer);
+        glLoadMatrixf(matrixBuffer);
+        gm.setProjectionMatrixBuffer(matrixBuffer.clone());
+
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        gm.setViewport(0, 0, W, H);
+
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
+        assertSame(gm, GameServices.graphics(),
+                "Visual test runtime must use the reinitialized GraphicsManager");
 
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
@@ -177,6 +191,7 @@ public class TestInstaShieldVisual {
             }
         }
         glfwTerminate();
+        SessionManager.clear();
         GraphicsManager.getInstance().resetState();
     }
 
@@ -213,7 +228,7 @@ public class TestInstaShieldVisual {
             System.out.println("After extended jump: isAir=" + isAir);
         }
 
-        BufferedImage preFrame = renderFrame(lm, sm);
+        RgbaImage preFrame = renderFrame(lm, sm);
         ScreenshotCapture.savePNG(preFrame, OUT_DIR.resolve("frame_pre_activation.png"));
         System.out.println("Saved pre-activation frame");
 
@@ -234,7 +249,7 @@ public class TestInstaShieldVisual {
         for (int i = 0; i < 20; i++) {
             stepFrame(false, false, false, false, false);
 
-            BufferedImage frame = renderFrame(lm, sm);
+            RgbaImage frame = renderFrame(lm, sm);
             assertNotNull(frame, "Framebuffer capture returned null at frame " + i);
 
             String filename = String.format("frame_%02d.png", i);
@@ -243,7 +258,7 @@ public class TestInstaShieldVisual {
 
             int centerX = player.getCentreX() - camera.getX();
             int centerY = player.getCentreY() - camera.getY();
-            int shieldPixels = countNonBackgroundPixelsAround(frame, centerX, centerY, 40);
+            int shieldPixels = countChangedPixelsAround(preFrame, frame, centerX, centerY, 40);
 
             System.out.println("Frame " + i + ": " + filename
                     + " doubleJumpFlag=" + player.getDoubleJumpFlag()
@@ -272,7 +287,8 @@ public class TestInstaShieldVisual {
 
         LevelManager lm = GameServices.level();
 
-        LevelFrameStep.execute(lm, GameServices.camera(), () -> {
+        LevelFrameStep.execute(LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+                lm, GameServices.camera(), () -> {
             boolean controlLocked = player.isControlLocked();
             boolean forcedRight = player.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT)
                     || player.isForceInputRight();
@@ -292,23 +308,12 @@ public class TestInstaShieldVisual {
         });
     }
 
-    private BufferedImage renderFrame(LevelManager lm, SpriteManager sm) {
-        glClearColor(0f, 0f, 0f, 1f);
+    private RgbaImage renderFrame(LevelManager lm, SpriteManager sm) {
+        lm.setClearColor();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         GraphicsManager gm = GraphicsManager.getInstance();
-
-        gm.setUseSpritePriorityShader(true);
-        for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-            if (sm != null) {
-                sm.drawUnifiedBucketWithPriority(bucket, gm);
-            }
-            if (lm.getObjectManager() != null) {
-                lm.getObjectManager().drawUnifiedBucketWithPriority(bucket, gm);
-            }
-        }
-        gm.flushPatternBatch();
-        gm.setUseSpritePriorityShader(false);
+        lm.drawWithSpritePriority(sm);
 
         gm.flush();
         glFinish();
@@ -316,25 +321,21 @@ public class TestInstaShieldVisual {
         return ScreenshotCapture.captureFramebuffer(W, H);
     }
 
-    private static int countNonBackgroundPixelsAround(BufferedImage img, int cx, int cy, int halfSize) {
-        int bgRgb = img.getRGB(0, 0);
-        int bgR = (bgRgb >> 16) & 0xFF;
-        int bgG = (bgRgb >> 8) & 0xFF;
-        int bgB = bgRgb & 0xFF;
-
+    private static int countChangedPixelsAround(RgbaImage baseline, RgbaImage img, int cx, int cy, int halfSize) {
         int count = 0;
         int startX = Math.max(0, cx - halfSize);
-        int endX = Math.min(img.getWidth(), cx + halfSize);
+        int endX = Math.min(img.width(), cx + halfSize);
         int startY = Math.max(0, cy - halfSize);
-        int endY = Math.min(img.getHeight(), cy + halfSize);
+        int endY = Math.min(img.height(), cy + halfSize);
 
         for (int y = startY; y < endY; y++) {
             for (int x = startX; x < endX; x++) {
-                int rgb = img.getRGB(x, y);
-                int r = (rgb >> 16) & 0xFF;
-                int g = (rgb >> 8) & 0xFF;
-                int b = rgb & 0xFF;
-                if (Math.abs(r - bgR) > 20 || Math.abs(g - bgG) > 20 || Math.abs(b - bgB) > 20) {
+                int before = baseline.argb(x, y);
+                int after = img.argb(x, y);
+                int dr = Math.abs(((before >> 16) & 0xFF) - ((after >> 16) & 0xFF));
+                int dg = Math.abs(((before >> 8) & 0xFF) - ((after >> 8) & 0xFF));
+                int db = Math.abs((before & 0xFF) - (after & 0xFF));
+                if (dr > 20 || dg > 20 || db > 20) {
                     count++;
                 }
             }

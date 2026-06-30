@@ -8,10 +8,13 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -27,7 +30,7 @@ import java.util.List;
  * directly from the parent for simplicity.
  */
 public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final int PRIORITY = 5;
     private static final int SEGMENT_COUNT = 14;
@@ -38,12 +41,12 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     private static final int COLLAPSE_DELAY = 0x0E;
     private static final int[] FALL_DELAYS = {8, 0x10, 0x0C, 0x0E, 6, 0x0A, 4, 2, 8, 0x10, 0x0C, 0x0E, 6, 0x0A};
 
-    private final int pivotX;
-    private final int pivotY;
-    private final boolean xFlip;
-    private final boolean reverseVertical;
-    private final int settledAngle;
-    private final boolean cutsceneOverride;
+    private int pivotX;
+    private int pivotY;
+    private boolean xFlip;
+    private boolean reverseVertical;
+    private int settledAngle;
+    private boolean cutsceneOverride;
 
     private int currentX;
     private int currentY;
@@ -51,6 +54,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     private int angleStep;
     private boolean dropStarted;
     private boolean settled;
+    private boolean settledAngleReached;
     private boolean collapseStarted;
     private int collapseTimer;
 
@@ -109,17 +113,30 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(HALF_WIDTH, HEIGHT, HEIGHT + 1);
+        return new SolidObjectParams(HALF_WIDTH, HEIGHT, HEIGHT);
     }
 
     @Override
     public boolean isTopSolidOnly() {
+        // Obj_AIZDrawBridge calls SolidObjectFull2, not SolidObjectTop
+        // (sonic3k.asm:59625-59643). New top landings therefore narrow
+        // d1=$6B back to width_pixels=$60 before RideObject_SetRide.
+        return false;
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // SolidObjectFull2_1P falls through to SolidObject_cont without the
+        // SolidObject_OnScreenTest used by SolidObjectFull_1P.
         return true;
     }
 
     @Override
     public boolean isSolidFor(PlayableEntity player) {
-        return settled && !collapseStarted;
+        // ROM loc_2B2E8 still falls through to SolidObjectFull2 while the
+        // collapse delay counts down. Player support ends only when loc_2B45E
+        // ejects the standing players and deletes the parent object.
+        return settled && !isDestroyed();
     }
 
     @Override
@@ -132,7 +149,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (!cutsceneOverride && Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
 
@@ -144,13 +161,20 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         }
 
         if (dropStarted && !settled) {
-            angle += angleStep;
-            if ((angleStep > 0 && angle >= settledAngle) || (angleStep < 0 && angle <= settledAngle)) {
-                angle = settledAngle;
+            if (settledAngleReached) {
+                // Obj_AIZDrawBridge checks $38 for $80/0 before adding $34; the
+                // flat/full SolidObjectFull2 phase starts on the next routine
+                // entry after the angle reaches its target (sonic3k.asm:59591-59613, 59625-59643).
                 settled = true;
                 services().playSfx(Sonic3kSfx.FLIP_BRIDGE.id);
+            } else {
+                angle += angleStep;
+                if ((angleStep > 0 && angle >= settledAngle) || (angleStep < 0 && angle <= settledAngle)) {
+                    angle = settledAngle;
+                    settledAngleReached = true;
+                }
+                updateBridgePieces();
             }
-            updateBridgePieces();
         }
 
         if (settled && !collapseStarted && Aiz2BossEndSequenceState.isButtonPressed()) {
@@ -165,7 +189,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
                 collapseTimer--;
             } else {
                 ejectStandingPlayers();
-                setDestroyed(true);
+                ObjectLifetimeOps.deleteNoRespawn(this);
             }
         }
     }
@@ -194,6 +218,10 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
             player.setOnObject(false);
             player.setPushing(false);
             player.setAir(true);
+            ObjectManager objectManager = services().objectManager();
+            if (objectManager != null) {
+                objectManager.clearRidingObject(player);
+            }
             if (player instanceof AbstractPlayableSprite sprite) {
                 // Use forcedAnimationId so the normal animation system doesn't
                 // overwrite HURT_FALL on the next frame based on movement state.
@@ -217,18 +245,26 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private static final class FallingBridgeSegment extends AbstractObjectInstance {
+    private static final class FallingBridgeSegment extends AbstractObjectInstance implements SpawnRewindRecreatable {
         private int x;
         private int y;
         private int delay;
         private final SubpixelMotion.State motion;
 
         private FallingBridgeSegment(int x, int y, int delay) {
-            super(new ObjectSpawn(x, y, 0x32, 0, 0, false, 0), "AIZDrawBridgeSegment");
+            super(new ObjectSpawn(x, y, 0x32, 0, 0, false, delay), "AIZDrawBridgeSegment");
             this.x = x;
             this.y = y;
             this.delay = delay;
-            this.motion = new SubpixelMotion.State(0, y, 0, x, 0, 0);
+            this.motion = new SubpixelMotion.State(x, y, 0, 0, 0, 0);
+        }
+
+        private FallingBridgeSegment(ObjectSpawn spawn) {
+            super(spawn, "AIZDrawBridgeSegment");
+            this.x = spawn.x();
+            this.y = spawn.y();
+            this.delay = spawn.rawYWord();
+            this.motion = new SubpixelMotion.State(x, y, 0, 0, 0, 0);
         }
 
         @Override
@@ -252,6 +288,11 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         }
 
         @Override
+        public boolean isHighPriority() {
+            return true;
+        }
+
+        @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
             if (delay > 0) {
                 delay--;
@@ -261,7 +302,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
             x = motion.x;
             y = motion.y;
             if (!isOnScreen(128)) {
-                setDestroyed(true);
+                ObjectLifetimeOps.expireDynamic(this);
             }
         }
 

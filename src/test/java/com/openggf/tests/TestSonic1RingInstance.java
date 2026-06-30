@@ -1,21 +1,36 @@
 package com.openggf.tests;
 
 import com.openggf.game.sonic1.objects.Sonic1RingInstance;
+import com.openggf.game.rewind.snapshot.RingSnapshot;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.rings.RingManager;
+import com.openggf.level.rings.RingFrame;
+import com.openggf.level.rings.RingFramePiece;
 import com.openggf.level.rings.RingSpawn;
+import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Pattern;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.BitSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestSonic1RingInstance {
 
@@ -135,7 +150,101 @@ public class TestSonic1RingInstance {
         assertEquals(0, ring.getCollisionFlags(), "SPARKLE state should return 0 collision flags");
     }
 
-    // â”€â”€ Helper methods â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    @Test
+    public void testSparkleDeletionUsesGameplayFrameCounterNotAdvancedVblankCounter() {
+        TestEnvironment.resetAll();
+
+        RingSpawn ringSpawn = new RingSpawn(100, 100);
+        RingManager ringManager = buildRenderCapableRingManager(List.of(ringSpawn));
+        ringManager.reset(0);
+
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 100);
+        when(player.getCentreY()).thenReturn((short) 100);
+        when(player.getRolling()).thenReturn(false);
+        when(player.getYRadius()).thenReturn((short) 19);
+        when(player.getCrouching()).thenReturn(false);
+        when(player.getDead()).thenReturn(false);
+        ringManager.update(0, player, 350);
+
+        Sonic1RingInstance ring = buildParentRingFromSpawns(100, 100, List.of(ringSpawn));
+        forceState(ring, "SPARKLE");
+
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.getFrameCounter()).thenReturn(351);
+
+        ObjectServices svc = new StubObjectServices() {
+            @Override public RingManager ringManager() { return ringManager; }
+            @Override public ObjectManager objectManager() { return objectManager; }
+        };
+        ring.setServices(svc);
+
+        withContext(svc, () -> ring.update(353, null));
+
+        assertFalse(ring.isDestroyed(),
+                "Lagged VBlank time must not end Ring_Sparkle before gameplay time does");
+    }
+
+    @Test
+    public void testCollectedChildRingsDoNotReserveSlots() {
+        TestEnvironment.resetAll();
+
+        List<RingSpawn> spawns = List.of(
+                new RingSpawn(0x0100, 0x0080),
+                new RingSpawn(0x0110, 0x0080),
+                new RingSpawn(0x0120, 0x0080)
+        );
+        RingManager ringManager = new RingManager(spawns, null, null, null);
+        BitSet collected = new BitSet();
+        collected.set(1);
+        ringManager.restore(new RingSnapshot(
+                collected,
+                new RingSnapshot.SparkleEntry[0],
+                0,
+                0,
+                new int[0],
+                0,
+                0,
+                0,
+                0,
+                0,
+                new RingSnapshot.LostRingEntry[0],
+                new RingSnapshot.AttractedRingEntry[0]));
+
+        ObjectManager[] managerHolder = new ObjectManager[1];
+        ObjectServices services = new StubObjectServices() {
+            @Override public RingManager ringManager() { return ringManager; }
+            @Override public ObjectManager objectManager() { return managerHolder[0]; }
+        };
+        ObjectManager objectManager = new ObjectManager(List.of(), new Sonic1SlotRegistry(),
+                0, null, null, null, null, services);
+        managerHolder[0] = objectManager;
+
+        Sonic1RingInstance ring = buildParentRingFromSpawns(0x0100, 0x0080, spawns);
+        ring.setServices(services);
+        ring.update(1, null);
+
+        List<Sonic1RingInstance> childRings = objectManager.getActiveObjects().stream()
+                .filter(Sonic1RingInstance.class::isInstance)
+                .map(Sonic1RingInstance.class::cast)
+                .toList();
+        assertEquals(1, childRings.size(),
+                "Only the uncollected child ring should spawn an object");
+
+        Sonic1RingInstance child = childRings.get(0);
+        assertEquals(0x0120, child.getSpawn().x(),
+                "The surviving child keeps its original Ring_PosData offset");
+        assertEquals(ObjectSlotLayout.SONIC_1.firstDynamicSlot(),
+                ((AbstractObjectInstance) child).getSlotIndex(),
+                "Collected children skip FindFreeObj, so the first live child uses the first free slot");
+
+        TestObject next = new TestObject(new ObjectSpawn(0x0200, 0x0080, 0x7E, 0, 0, false, 0));
+        objectManager.addDynamicObject(next);
+        assertEquals(ObjectSlotLayout.SONIC_1.firstDynamicSlot() + 1, next.getSlotIndex(),
+                "No phantom reservation should block the next dynamic object slot");
+    }
+
+    // ── Helper methods ─────────────────────────────────────────────────────
 
     private static void withContext(ObjectServices svc, Runnable action) {
         setConstructionContext(svc);
@@ -159,6 +268,23 @@ public class TestSonic1RingInstance {
             holder[0].setServices(new StubObjectServices());
         });
         return holder[0];
+    }
+
+    private static RingManager buildRenderCapableRingManager(List<RingSpawn> spawns) {
+        Pattern pattern = new Pattern();
+        pattern.setPixel(0, 0, (byte) 1);
+
+        RingFrame frame = new RingFrame(List.of(new RingFramePiece(0, 0, 1, 1, 0, false, false, 0)));
+        Pattern[] patterns = new Pattern[16];
+        for (int i = 0; i < patterns.length; i++) {
+            patterns[i] = pattern;
+        }
+
+        RingSpriteSheet spriteSheet = new RingSpriteSheet(patterns, List.of(frame, frame, frame), 1, 1, 1, 2);
+        RingManager ringManager = new RingManager(spawns, spriteSheet, null, null);
+        GraphicsManager.getInstance().initHeadless();
+        ringManager.ensurePatternsCached(GraphicsManager.getInstance(), 0);
+        return ringManager;
     }
 
     @SuppressWarnings("unchecked")
@@ -198,6 +324,38 @@ public class TestSonic1RingInstance {
             throw new IllegalArgumentException("Unknown state: " + stateName);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static final class Sonic1SlotRegistry implements ObjectRegistry {
+        @Override
+        public ObjectSlotLayout objectSlotLayout() {
+            return ObjectSlotLayout.SONIC_1;
+        }
+
+        @Override
+        public ObjectInstance create(ObjectSpawn spawn) {
+            return null;
+        }
+
+        @Override
+        public void reportCoverage(List<ObjectSpawn> spawns) {
+        }
+
+        @Override
+        public String getPrimaryName(int objectId) {
+            return "test";
+        }
+    }
+
+    private static final class TestObject extends AbstractObjectInstance {
+        private TestObject(ObjectSpawn spawn) {
+            super(spawn, "test-object");
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // no rendering in headless tests
         }
     }
 }

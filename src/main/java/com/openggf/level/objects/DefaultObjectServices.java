@@ -4,16 +4,17 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.BonusStageProvider;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.game.BonusStageType;
+import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.CrossGameFeatureProvider;
-import com.openggf.game.EngineServices;
+import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameRng;
-import com.openggf.game.GameRuntime;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
@@ -22,7 +23,15 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.RespawnState;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.save.SaveReason;
+import com.openggf.game.save.SessionSaveRequests;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.WorldSession;
+import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.zone.ZoneRuntimeRegistry;
+import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.BigRingReturnState;
@@ -31,17 +40,15 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
+import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.managers.SpriteManager;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.List;
 
 /**
- * Production implementation of {@link ObjectServices} backed by {@link GameRuntime}.
+ * Production implementation of {@link ObjectServices} backed by gameplay session managers.
  * A single instance is held by {@link ObjectManager} and shared across all objects.
- *
- * <p>The constructor accepts a {@link GameRuntime} reference so that
- * every runtime-owned method reads from the runtime container.</p>
  */
 public class DefaultObjectServices implements ObjectServices {
 
@@ -55,26 +62,49 @@ public class DefaultObjectServices implements ObjectServices {
     private final FadeManager fadeManager;
     private final WaterSystem waterSystem;
     private final ParallaxManager parallaxManager;
+    private final CollisionSystem collisionSystem;
     private final WorldSession worldSession;
     private final GameRng rng;
-    private final EngineServices engineServices;
+    private final ZoneRuntimeRegistry zoneRuntimeRegistry;
+    private final PaletteOwnershipRegistry paletteOwnershipRegistry;
+    private final ZoneLayoutMutationPipeline zoneLayoutMutationPipeline;
+    private final SolidExecutionRegistry solidExecutionRegistry;
+    private final EngineContext engineServices;
+    private final BonusStageProvider bonusStageProvider;
 
     /**
-     * Primary constructor backed by a GameRuntime.
+     * Primary constructor backed by the session-owned gameplay context.
      */
-    public DefaultObjectServices(GameRuntime runtime) {
-        this(Objects.requireNonNull(runtime, "runtime").getLevelManager(),
-                runtime.getCamera(),
-                runtime.getGameState(),
-                runtime.getSpriteManager(),
-                runtime.getFadeManager(),
-                runtime.getWaterSystem(),
-                runtime.getParallaxManager(),
-                runtime.getWorldSession(),
-                runtime.getRng(),
-                runtime.getEngineServices());
+    public DefaultObjectServices(GameplayModeContext gameplayMode,
+                                 EngineContext engineServices) {
+        this(Objects.requireNonNull(gameplayMode, "gameplayMode").getLevelManager(),
+                gameplayMode.getCamera(),
+                gameplayMode.getGameStateManager(),
+                gameplayMode.getSpriteManager(),
+                gameplayMode.getFadeManager(),
+                gameplayMode.getWaterSystem(),
+                gameplayMode.getParallaxManager(),
+                gameplayMode.getCollisionSystem(),
+                gameplayMode.getWorldSession(),
+                gameplayMode.getRng(),
+                gameplayMode.getZoneRuntimeRegistry(),
+                gameplayMode.getPaletteOwnershipRegistry(),
+                gameplayMode.getZoneLayoutMutationPipeline(),
+                gameplayMode.getSolidExecutionRegistry(),
+                engineServices,
+                gameplayMode.getActiveBonusStageProvider());
     }
 
+    /**
+     * Legacy fallback constructor that reconstitutes the engine context from
+     * {@link GameServices} static accessors. Retained only for test/bootstrap
+     * paths that predate session ownership; production code must use the
+     * {@link #DefaultObjectServices(GameplayModeContext, EngineContext)} form.
+     *
+     * @deprecated Migrate callers to the session-backed constructor; this
+     * constructor will be removed once all legacy paths have been updated.
+     */
+    @Deprecated
     public DefaultObjectServices(LevelManager levelManager,
                                  Camera camera,
                                  GameStateManager gameState,
@@ -83,8 +113,10 @@ public class DefaultObjectServices implements ObjectServices {
                                  WaterSystem waterSystem,
                                  ParallaxManager parallaxManager) {
         this(levelManager, camera, gameState, spriteManager, fadeManager, waterSystem,
-                parallaxManager, null, new GameRng(GameRng.Flavour.S1_S2),
-                engineServicesFromGameServices());
+                parallaxManager, legacyCollisionSystem(), legacyWorldSession(), legacyRng(),
+                legacyZoneRuntimeRegistry(), legacyPaletteOwnershipRegistry(), legacyZoneLayoutMutationPipeline(),
+                legacySolidExecutionRegistry(),
+                engineServicesFromGameServices(), NoOpBonusStageProvider.INSTANCE);
     }
 
     private DefaultObjectServices(LevelManager levelManager,
@@ -94,9 +126,15 @@ public class DefaultObjectServices implements ObjectServices {
                                  FadeManager fadeManager,
                                  WaterSystem waterSystem,
                                  ParallaxManager parallaxManager,
+                                 CollisionSystem collisionSystem,
                                  WorldSession worldSession,
                                  GameRng rng,
-                                 EngineServices engineServices) {
+                                 ZoneRuntimeRegistry zoneRuntimeRegistry,
+                                 PaletteOwnershipRegistry paletteOwnershipRegistry,
+                                 ZoneLayoutMutationPipeline zoneLayoutMutationPipeline,
+                                 SolidExecutionRegistry solidExecutionRegistry,
+                                 EngineContext engineServices,
+                                 BonusStageProvider bonusStageProvider) {
         this.levelManager = Objects.requireNonNull(levelManager, "levelManager");
         this.camera = Objects.requireNonNull(camera, "camera");
         this.gameState = Objects.requireNonNull(gameState, "gameState");
@@ -104,13 +142,19 @@ public class DefaultObjectServices implements ObjectServices {
         this.fadeManager = Objects.requireNonNull(fadeManager, "fadeManager");
         this.waterSystem = Objects.requireNonNull(waterSystem, "waterSystem");
         this.parallaxManager = Objects.requireNonNull(parallaxManager, "parallaxManager");
+        this.collisionSystem = Objects.requireNonNull(collisionSystem, "collisionSystem");
         this.worldSession = worldSession;
         this.rng = Objects.requireNonNull(rng, "rng");
+        this.zoneRuntimeRegistry = Objects.requireNonNull(zoneRuntimeRegistry, "zoneRuntimeRegistry");
+        this.paletteOwnershipRegistry = paletteOwnershipRegistry;
+        this.zoneLayoutMutationPipeline = Objects.requireNonNull(zoneLayoutMutationPipeline, "zoneLayoutMutationPipeline");
+        this.solidExecutionRegistry = Objects.requireNonNull(solidExecutionRegistry, "solidExecutionRegistry");
         this.engineServices = Objects.requireNonNull(engineServices, "engineServices");
+        this.bonusStageProvider = Objects.requireNonNull(bonusStageProvider, "bonusStageProvider");
     }
 
-    private static EngineServices engineServicesFromGameServices() {
-        return new EngineServices(
+    private static EngineContext engineServicesFromGameServices() {
+        return new EngineContext(
                 GameServices.configuration(),
                 GameServices.graphics(),
                 GameServices.audio(),
@@ -120,6 +164,48 @@ public class DefaultObjectServices implements ObjectServices {
                 GameServices.playbackDebug(),
                 GameServices.romDetection(),
                 GameServices.crossGameFeatures());
+    }
+
+    private static CollisionSystem legacyCollisionSystem() {
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.collision();
+    }
+
+    private static WorldSession legacyWorldSession() {
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.worldSession();
+    }
+
+    private static GameRng legacyRng() {
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.rng();
+    }
+
+    private static ZoneRuntimeRegistry legacyZoneRuntimeRegistry() {
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.zoneRuntimeRegistry();
+    }
+
+    private static PaletteOwnershipRegistry legacyPaletteOwnershipRegistry() {
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.paletteOwnershipRegistryOrNull();
+    }
+
+    private static ZoneLayoutMutationPipeline legacyZoneLayoutMutationPipeline() {
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.zoneLayoutMutationPipeline();
+    }
+
+    private static SolidExecutionRegistry legacySolidExecutionRegistry() {
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.solidExecutionRegistry();
+    }
+
+    private static void requireActiveRuntimeForLegacyConstructor() {
+        if (!GameServices.hasRuntime()) {
+            throw new IllegalStateException(
+                    "DefaultObjectServices legacy constructor requires an active gameplay runtime");
+        }
     }
 
     private LevelManager lm() {
@@ -224,6 +310,11 @@ public class DefaultObjectServices implements ObjectServices {
     }
 
     @Override
+    public CollisionSystem collisionSystem() {
+        return collisionSystem;
+    }
+
+    @Override
     public FadeManager fadeManager() {
         return fadeManager;
     }
@@ -243,6 +334,31 @@ public class DefaultObjectServices implements ObjectServices {
         return rng;
     }
 
+    @Override
+    public ZoneRuntimeRegistry zoneRuntimeRegistry() {
+        return zoneRuntimeRegistry;
+    }
+
+    @Override
+    public ZoneRuntimeState zoneRuntimeState() {
+        return zoneRuntimeRegistry.current();
+    }
+
+    @Override
+    public PaletteOwnershipRegistry paletteOwnershipRegistryOrNull() {
+        return paletteOwnershipRegistry;
+    }
+
+    @Override
+    public ZoneLayoutMutationPipeline zoneLayoutMutationPipeline() {
+        return zoneLayoutMutationPipeline;
+    }
+
+    @Override
+    public SolidExecutionRegistry solidExecutionRegistry() {
+        return solidExecutionRegistry;
+    }
+
     // ── Engine globals (not runtime-owned) ──────────────────────────────
 
     @Override
@@ -256,7 +372,7 @@ public class DefaultObjectServices implements ObjectServices {
     }
 
     @Override
-    public EngineServices engineServices() {
+    public EngineContext engineServices() {
         return engineServices;
     }
 
@@ -332,6 +448,15 @@ public class DefaultObjectServices implements ObjectServices {
         }
     }
 
+    @Override
+    public void spawnLostRingsAfterCurrentFrame(PlayableEntity player, int frameCounter) {
+        if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite aps) {
+            lm().spawnLostRingsAfterCurrentFrame(aps, frameCounter);
+        } else {
+            LOG.warning("spawnLostRingsAfterCurrentFrame: player is not AbstractPlayableSprite, rings not spawned");
+        }
+    }
+
     // ── Level actions ───────────────────────────────────────────────────
 
     @Override
@@ -388,16 +513,21 @@ public class DefaultObjectServices implements ObjectServices {
     @Override
     public void requestBonusStageExit() {
         try {
-            com.openggf.game.GameServices.bonusStage().requestExit();
+            bonusStageProvider.requestExit();
         } catch (Exception e) {
             LOG.warning("requestBonusStageExit failed: " + e.getMessage());
         }
     }
 
     @Override
+    public BonusStageProvider bonusStageProviderOrNull() {
+        return bonusStageProvider;
+    }
+
+    @Override
     public void addBonusStageRings(int count) {
         try {
-            com.openggf.game.GameServices.bonusStage().addRings(count);
+            bonusStageProvider.addRings(count);
         } catch (Exception e) {
             LOG.warning("addBonusStageRings failed: " + e.getMessage());
         }
@@ -406,7 +536,7 @@ public class DefaultObjectServices implements ObjectServices {
     @Override
     public void setBonusStageShield(com.openggf.game.ShieldType type) {
         try {
-            com.openggf.game.GameServices.bonusStage().setAwardedShield(type);
+            bonusStageProvider.setAwardedShield(type);
         } catch (Exception e) {
             LOG.warning("setBonusStageShield failed: " + e.getMessage());
         }
@@ -420,6 +550,11 @@ public class DefaultObjectServices implements ObjectServices {
     @Override
     public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow) {
         lm().requestZoneAndAct(zone, act, deactivateLevelNow);
+    }
+
+    @Override
+    public void requestSeamlessTransition(com.openggf.level.SeamlessLevelTransitionRequest request) {
+        lm().requestSeamlessTransition(request);
     }
 
     // ── Level queries ──────────────────────────────────────────────────
@@ -437,6 +572,11 @@ public class DefaultObjectServices implements ObjectServices {
     @Override
     public void saveBigRingReturn(BigRingReturnState state) {
         lm().saveBigRingReturn(state);
+    }
+
+    @Override
+    public void requestSessionSave(SaveReason reason) {
+        SessionSaveRequests.requestCurrentSessionSave(reason);
     }
 
     // ── Game-specific providers ─────────────────────────────────────────

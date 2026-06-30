@@ -9,9 +9,9 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -36,7 +36,7 @@ import java.util.logging.Logger;
  *   <li>Frame 3 (.red): Pole + red ball (visited)</li>
  * </ul>
  */
-public class Sonic1LamppostObjectInstance extends AbstractObjectInstance {
+public class Sonic1LamppostObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1LamppostObjectInstance.class.getName());
 
     // Mapping frame indices from Map_Lamp_internal
@@ -55,8 +55,8 @@ public class Sonic1LamppostObjectInstance extends AbstractObjectInstance {
     // From disassembly: subi.w #$18,lamp_origY(a1)
     static final int TWIRL_Y_OFFSET = 0x18;
 
-    private final int checkpointIndex;
-    private final boolean cameraLockFlag;
+    private int checkpointIndex;
+    private boolean cameraLockFlag;
     private int mappingFrame;
     private boolean activated;
     private boolean twirlActive;
@@ -149,10 +149,9 @@ public class Sonic1LamppostObjectInstance extends AbstractObjectInstance {
         }
 
         // Spawn twirl child: jsr (FindFreeObj).l
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
+        if (services().objectManager() != null) {
             twirlActive = true;
-            objectManager.addDynamicObject(new Sonic1LamppostTwirlInstance(this));
+            spawnFreeChild(() -> new Sonic1LamppostTwirlInstance(this));
         }
 
         // Set frame to pole only: move.b #1,obFrame(a0)

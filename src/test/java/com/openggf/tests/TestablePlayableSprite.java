@@ -57,6 +57,16 @@ public class TestablePlayableSprite extends AbstractPlayableSprite {
     public void setShieldStateForTest(boolean hasShield, ShieldType type) {
         setShieldState(hasShield, type);
     }
+
+    public void setAirForTest(boolean air) {
+        this.air = air;
+    }
+
+    public void setSpeedConstantsForTest(short accel, short decel, short maxSpeed) {
+        this.runAccel = accel;
+        this.runDecel = decel;
+        this.max = maxSpeed;
+    }
 }
 
 

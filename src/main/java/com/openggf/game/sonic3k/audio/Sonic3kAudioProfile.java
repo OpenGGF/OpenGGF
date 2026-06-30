@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.audio;
 
 import com.openggf.audio.AbstractAudioProfile;
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -26,6 +27,7 @@ import java.util.Map;
 public class Sonic3kAudioProfile extends AbstractAudioProfile {
 
     private static final Map<GameSound, Integer> SOUND_MAP;
+    private static final Map<GameMusic, Integer> MUSIC_MAP;
 
     static {
         Map<GameSound, Integer> map = new EnumMap<>(GameSound.class);
@@ -34,7 +36,7 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
         map.put(GameSound.RING_RIGHT, Sonic3kSfx.RING_RIGHT.id);
         map.put(GameSound.RING_SPILL, Sonic3kSfx.RING_LOSS.id);
         map.put(GameSound.SPINDASH_CHARGE, Sonic3kSfx.SPINDASH.id);
-        map.put(GameSound.SPINDASH_RELEASE, Sonic3kSfx.SPINDASH.id);
+        map.put(GameSound.SPINDASH_RELEASE, Sonic3kSfx.DASH.id);
         map.put(GameSound.SKID, Sonic3kSfx.SKID.id);
         map.put(GameSound.HURT, Sonic3kSfx.DEATH.id);
         map.put(GameSound.HURT_SPIKE, Sonic3kSfx.SPIKE_HIT.id);
@@ -56,10 +58,20 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
         map.put(GameSound.GRAB, Sonic3kSfx.GRAB.id);
         map.put(GameSound.GLIDE_LAND, Sonic3kSfx.GLIDE_LAND.id);
         SOUND_MAP = Collections.unmodifiableMap(map);
+
+        Map<GameMusic, Integer> music = new EnumMap<>(GameMusic.class);
+        music.put(GameMusic.ACT_CLEAR, Sonic3kMusic.ACT_CLEAR.id);
+        music.put(GameMusic.DROWNING, Sonic3kMusic.DROWNING.id);
+        music.put(GameMusic.EMERALD, Sonic3kMusic.EMERALD.id);
+        music.put(GameMusic.EXTRA_LIFE, Sonic3kMusic.EXTRA_LIFE.id);
+        music.put(GameMusic.INVINCIBILITY, Sonic3kMusic.INVINCIBILITY.id);
+        music.put(GameMusic.SPECIAL_STAGE, Sonic3kMusic.SPECIAL_STAGE.id);
+        music.put(GameMusic.SUPER, Sonic3kMusic.INVINCIBILITY.id);
+        MUSIC_MAP = Collections.unmodifiableMap(music);
     }
 
     public Sonic3kAudioProfile() {
-        super(SOUND_MAP);
+        super(SOUND_MAP, MUSIC_MAP);
     }
 
     @Override
@@ -98,6 +110,11 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     }
 
     @Override
+    public boolean blocksSfxDuringMusicRestoreFadeIn() {
+        return false;
+    }
+
+    @Override
     public int getSuperSonicMusicId() {
         return Sonic3kMusic.INVINCIBILITY.id;
     }
@@ -127,6 +144,14 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     public boolean isContinuousSfx(int sfxId) {
         // ROM: sfx__FirstContinuous = 0xBC (sfx_SlideSkidLoud)
         return sfxId >= Sonic3kSfx.SLIDE_SKID_LOUD.id;
+    }
+
+    @Override
+    public float adjustSfxPitch(GameSound sound, float requestedPitch) {
+        if (sound == GameSound.SPINDASH_CHARGE) {
+            return 1.0f;
+        }
+        return requestedPitch;
     }
 
     @Override

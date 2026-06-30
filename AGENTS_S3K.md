@@ -3,6 +3,24 @@
 This document captures S3K-specific implementation intricacies for AI agents and developers.
 Referenced from [CLAUDE.md](CLAUDE.md) § "Sonic 3&K Bring-up Notes".
 
+## Current Delivery Priority
+
+S3K work should be planned around playable vertical slices, not isolated checklist closure.
+AIZ through HCZ remains the primary release slice, but CNZ, MGZ, ICZ, MHZ, and LBZ now
+have enough object/event/trace coverage that new work should be chosen from route blockers,
+complete-run trace frontiers, and release-readiness gaps rather than first-pass zone bring-up.
+A slice is not "done" because its level loads or an object exists; it needs coherent traversal,
+event/camera flow, scroll/parallax, animated tiles, palette/PLC state, boss or transition
+behavior, sidekick-sensitive interactions, rewind-relevant state capture, and trace or visual
+validation for known blockers.
+
+When implementing slice features, use the runtime-owned shared systems where they apply:
+`ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`,
+`ZoneLayoutMutationPipeline`, `ScrollEffectComposer`, `SpecialRenderEffectRegistry`, and
+`AdvancedRenderModeController`. Broad S1/S2 or old-S3K migration is useful when it removes
+active duplication or risk in code already touched by the slice; it should not displace
+playable S3K progress.
+
 ## Per-Frame Palette Animation
 
 ### Overview
@@ -11,8 +29,13 @@ The ROM's `AnimatePalettes` routine runs **every frame** and dispatches to per-z
 that cycle palette colors through ROM data tables. This is the `AnPal_*` system in the
 disassembly (`sonic3k.asm:3105-3282`, `s3.asm:3245-3414`).
 
-**Implementation:** `Sonic3kPaletteCycler` (called via `Sonic3kLevelAnimationManager` →
-`LevelManager.update()` each frame).
+**Implementation:** `Sonic3kPaletteCycler` (called via `Sonic3kLevelAnimationManager` from
+the level draw path — `LevelRenderer.drawWithRenderOptions` ticks
+`animatedPaletteManager.update()` each frame), with writes composed through the runtime-owned
+`PaletteOwnershipRegistry` via `S3kPaletteWriteSupport` before the frame is committed.
+
+> Headless tests that bypass the renderer must explicitly tick the cycler — e.g.
+> `LevelManager.getAnimatedPaletteManager().update()` — to advance palette state.
 
 ### Palette Animation vs. Palette Mutation
 
@@ -21,10 +44,11 @@ These are two distinct systems that both modify palette colors at runtime:
 | System | Trigger | Example | Implementation |
 |--------|---------|---------|----------------|
 | **Palette Animation** (AnPal) | Timer-based, every N frames | AIZ waterfall shimmer, torch glow cycling | `Sonic3kPaletteCycler` |
-| **Palette Mutation** (_Resize) | Camera-position threshold | AIZ1 hollow tree color 15 darkening at X≥$2B00 | `Sonic3kAIZEvents.updateStage2PaletteColor()` |
+| **Palette Mutation** (_Resize) | Camera-position threshold | AIZ1 hollow tree color 15 darkening at X≥$2B00 | `Sonic3kAIZEvents.applyResizePaletteMutation()` |
 
 Palette mutations are one-shot writes in `_Resize` routines (event handlers), not cycling.
-They should stay in `Sonic3kAIZEvents` (or the zone's event handler), not in the cycler.
+They should stay in `Sonic3kAIZEvents` (or the zone's event handler), typically routed through
+the event helper methods backed by `PaletteOwnershipRegistry`, not in the cycler.
 
 ### The Counter/Step/Limit Pattern
 
@@ -65,6 +89,10 @@ Each channel has:
 Zones with **no** palette animation (rts in dispatch): MGZ, MHZ, SOZ, SSZ, DEZ, DDZ, ALZ, DPZ.
 
 ### Implementation Priority
+
+This priority list is historical. Palette cycling is largely implemented for zones with ROM
+AnPal handlers; new palette work should be driven by route, trace, or visual discrepancies in the
+active release slices first (AIZ/HCZ, then CNZ/MGZ/ICZ/MHZ/LBZ), not by this old sequence alone.
 
 1. **AIZ** — Done. Fixes green fire in Act 2 (torch glow cycling) and waterfall shimmer.
 2. **HCZ, LBZ, LRZ** — Commonly played zones with visible palette effects.
@@ -128,9 +156,35 @@ through ROM data tables. Without implementing this, fire objects in AIZ Act 2 re
 (camera-threshold writes in `_Resize` routines) are separate systems that both modify palettes
 at runtime. Both must be implemented for visual accuracy.
 
+## Agent Workflow Tooling
+
+Five `com.openggf.tools` CLIs cut context loss on S3K object/zone/trace work. Full
+PowerShell-quoted invocations and companion docs are in
+[docs/agent-workflow/README.md](docs/agent-workflow/README.md) (with per-task runbooks under
+`docs/agent-workflow/runbooks/`, plus a CI guard-failure explainer, pitfall index,
+documentation-obligation checklist, and delegation prompt templates).
+
+| Tool | Purpose | Invocation |
+|------|---------|------------|
+| `AgentWorkflowTool` | Preflight checklist for an object task: resolves the S3K object space (`S3KL` / `SKL` / `S3L`), registry status, `RomOffsetFinder` commands, required guards, and docs. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.AgentWorkflowTool" "-Dexec.args=object s3k MHZ 0x8A"` |
+| `RomArtIntakeTool` | S&K-side-preferring ROM art/mapping/PLC intake; wraps `RomOffsetFinder --game s3k`. **Flags** (caution, not a hard reject) `s3.asm`-sourced labels (the S3L standalone half) — it classifies by source file, since a label search carries no ROM offset. Prefer an S&K equivalent; if an object has none, the S3-half reference is legitimate (rare; verify). Recommends `StandaloneArtEntry` vs `LevelArtEntry`, suggests `Sonic3kConstants` names + `Sonic3kPlcArtRegistry` hints. Accepts multiple labels. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=ArtNem_AIZSwingVine Map_AIZSwingVine"` |
+| `ObjectScaffoldTool` | Guard-friendly object/badnik skeleton + JUnit5 test shell (no `getInstance()`, no ctor `services()`, no `addDynamicObject`/`setDestroyed`; center-coord note). `--game s3k --badnik` emits the `com.openggf.game.sonic3k.objects.badniks` package extending `AbstractS3kBadnikInstance`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ObjectScaffoldTool" "-Dexec.args=--game s3k --class MhzFooObjectInstance --id 0x8A --badnik"` |
+| `TraceTriageTool` | Reads `target/trace-reports/<game>_<zone>_report.json` and prints a first-divergence brief (frame/field, ROM vs engine, likely owning subsystem, disasm search terms). Comparison-only; never hydrates engine state. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=s2 mtz1"` |
+| `ZoneSpecNormalizerTool` | Normalizes an `s3k-zone-analysis` spec into the stable 13-section layout (palette cycling vs mutation kept separate; `(not analyzed)` placeholders for gaps). | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=<path-to-zone-analysis-spec.md>"` |
+
 ## Reusable Engine Utilities for S3K Objects
 
 When implementing S3K objects, bosses, or badniks, **always check for existing utilities before writing new code**. The following patterns have been reimplemented multiple times and should be reused:
+
+### Object Behavior Contracts
+
+New S3K object, boss, badnik, and trace work should use the shared object-physics contracts when they fit:
+
+- Use `ObjectControlState` for native object-control bit intent and derived movement, touch, solid, and CPU predicates. Do not add raw object-control setter combinations unless they are compatibility bridges with tests.
+- Use `ObjectPlayerQuery` plus an explicit `ObjectPlayerParticipationPolicy` for player selection. Distinguish native P1/P2 slot behavior from OpenGGF's extended multi-sidekick behavior deliberately.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
+- Use `ObjectLifetimeOps` for destruction, offscreen expiry, respawn-latch updates, dynamic expiry, and slot transfer semantics.
+- Declare canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` values when they preserve current behavior. Leave bespoke boss or multi-part object behavior explicit and covered by focused tests.
 
 ### Physics & Movement
 

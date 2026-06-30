@@ -1,10 +1,13 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Block;
@@ -50,7 +53,7 @@ public class TestS3kSlotsPaletteCycling {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.setCurrent(previousModule);
     }
@@ -108,6 +111,24 @@ public class TestS3kSlotsPaletteCycling {
     }
 
     @Test
+    public void idleCycleSubmitsPaletteOwnershipClaims() throws IOException {
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+        Sonic3kPaletteCycler registryCycler = new Sonic3kPaletteCycler(reader, level, 0x15, 0, registry, null);
+
+        registryCycler.update();
+
+        for (int color = 10; color <= 14; color++) {
+            assertEquals(S3kPaletteOwners.SLOTS_ZONE_CYCLE,
+                    registry.ownerAt(PaletteSurface.NORMAL, 2, color),
+                    "Slots idle cycle should claim palette[2] color " + color);
+        }
+        assertEquals(S3kPaletteOwners.SLOTS_ZONE_CYCLE,
+                registry.ownerAt(PaletteSurface.NORMAL, 3, 14),
+                "Slots idle cycle should claim the shared line-4 accent");
+    }
+
+    @Test
     public void slotModeTracksAuthoritativeStageState() {
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
         runtime.bootstrap();
@@ -130,10 +151,10 @@ public class TestS3kSlotsPaletteCycling {
         slotRuntimeField.setAccessible(true);
         slotRuntimeField.set(coordinator, runtime);
 
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         SessionManager.openGameplaySession(new TestSonic3kModule(coordinator));
-        RuntimeManager.createGameplay(SessionManager.getCurrentGameplayMode());
+        TestEnvironment.activeGameplayMode();
 
         assertEquals(1, Sonic3kPaletteCycler.resolveSlotsModeFromSessionForTest());
     }

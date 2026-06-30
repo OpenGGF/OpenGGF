@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import com.openggf.data.RomByteReader;
+import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.Level;
@@ -9,8 +11,9 @@ import com.openggf.level.Pattern;
 import com.openggf.level.SolidTile;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,10 +54,10 @@ public class TestSonic1PaletteCyclerLz {
 
     @Test
     public void firstUpdateAppliesLzWaterfallAndConveyorToNormalPalettes() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             TestLevel level = new TestLevel();
-            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState);
+            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState, testCycleData());
 
             cycler.update();
 
@@ -67,16 +70,16 @@ public class TestSonic1PaletteCyclerLz {
             assertColorMatches(PAL_LZ_CYC2, 8, level.getPalette(3), 12);
             assertColorMatches(PAL_LZ_CYC2, 10, level.getPalette(3), 13);
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
     @Test
     public void firstUpdateAppliesUnderwaterWaterfallAndConveyorPalettes() throws Exception {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             TestLevel level = new TestLevel();
-            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState);
+            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState, testCycleData());
 
             cycler.update();
 
@@ -91,17 +94,17 @@ public class TestSonic1PaletteCyclerLz {
             assertColorMatches(PAL_LZ_CYC3, 8, underwater[3], 12);
             assertColorMatches(PAL_LZ_CYC3, 10, underwater[3], 13);
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
     @Test
     public void reversedConveyorUsesOppositeFrameOrder() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             TestLevel level = new TestLevel();
             conveyorState.setReversed(true);
-            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState);
+            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState, testCycleData());
 
             cycler.update();
 
@@ -109,7 +112,7 @@ public class TestSonic1PaletteCyclerLz {
             assertColorMatches(PAL_LZ_CYC2, 14, level.getPalette(3), 12);
             assertColorMatches(PAL_LZ_CYC2, 16, level.getPalette(3), 13);
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
@@ -121,6 +124,18 @@ public class TestSonic1PaletteCyclerLz {
         assertEquals(expected.r, actual.r);
         assertEquals(expected.g, actual.g);
         assertEquals(expected.b, actual.b);
+    }
+
+    private static Sonic1PaletteCycler.CycleData testCycleData() {
+        byte[] rom = new byte[Sonic1Constants.PAL_SBZ_CYCLE10_ADDR + 12];
+        copy(rom, Sonic1Constants.PAL_LZ_CYCLE1_ADDR, PAL_LZ_CYC1);
+        copy(rom, Sonic1Constants.PAL_LZ_CYCLE2_ADDR, PAL_LZ_CYC2);
+        copy(rom, Sonic1Constants.PAL_LZ_CYCLE3_ADDR, PAL_LZ_CYC3);
+        return Sonic1PaletteCycler.loadCycleData(new RomByteReader(rom));
+    }
+
+    private static void copy(byte[] target, int offset, byte[] source) {
+        System.arraycopy(source, 0, target, offset, source.length);
     }
 
     @SuppressWarnings("unchecked")

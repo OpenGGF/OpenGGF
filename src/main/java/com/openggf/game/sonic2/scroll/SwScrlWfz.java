@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.scroll;
 
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.M68KMath;
+import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
 import java.util.Arrays;
 
@@ -31,10 +32,11 @@ import java.util.Arrays;
  * skips entries based on Camera_BG_Y_pos to find the first visible segment,
  * then fills 224 scanlines from the active segments.
  *
- * The normal array is missing data for the last $80 lines compared to the
- * transition array. In the original ROM, this causes the lower clouds to
- * read data from the start of SwScrl_HTZ. We reproduce this behavior by
- * falling through to a default layer (0) when the array runs out.
+ * The normal array differs from the transition array and the disassembly notes
+ * that the ROM would continue into SwScrl_HTZ if the segment reader exhausted
+ * it. With the ROM's masked BG Y range and 224 visible lines, the shipped
+ * normal table still covers every reachable visible span, so the guard path below
+ * is only a malformed-table guard.
  */
 public class SwScrlWfz extends AbstractZoneScrollHandler {
 
@@ -64,6 +66,8 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
     // Pre-allocated array for per-frame layer scroll values
     private final int[] layerScrollWord = new int[5];
 
+    private final ScrollEffectComposer composer = new ScrollEffectComposer();
+
     public SwScrlWfz(ParallaxTables tables, BackgroundCamera bgCamera) {
         this.tables = tables;
         this.bgCamera = bgCamera;
@@ -77,10 +81,11 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
                        int actId) {
 
         resetScrollTracking();
+        composer.reset();
 
         // ==================== Step 1: Update VScroll factor ====================
         // move.w (Camera_BG_Y_pos).w,(Vscroll_Factor_BG).w
-        vscrollFactorBG = (short) bgCamera.getBgYPos();
+        composer.setVscrollFactorBG((short) bgCamera.getBgYPos());
 
         // ==================== Step 2: Build TempArray_LayerDef ====================
         // move.l (Camera_BG_X_pos).w,d0  -- reads 32-bit (integer.subpixel)
@@ -178,8 +183,7 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
         // .next_row:
         //   dbf d2,.row_loop
         for (int screenLine = 0; screenLine < M68KMath.VISIBLE_LINES; screenLine++) {
-            horizScrollBuf[screenLine] = M68KMath.packScrollWords(fgScroll, bgScroll);
-            trackOffset(fgScroll, bgScroll);
+            composer.writePackedScrollWord(screenLine, fgScroll, bgScroll);
 
             linesInCurrentSeg--;
             if (linesInCurrentSeg == 0) {
@@ -192,24 +196,28 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
                     bgScroll = M68KMath.negWord(layerScrollWord[layerIndex]);
                     arrayPos += 2;
                 } else {
-                    // Array exhausted - in original ROM this reads past the array into
-                    // SwScrl_HTZ code bytes. We fall back to the static BG layer.
+                    // Malformed table guard. The ROM-backed WFZ arrays cover all
+                    // reachable 224-line spans selected by BG Y & $7FF.
                     linesInCurrentSeg = M68KMath.VISIBLE_LINES; // Won't run out again
                     bgScroll = M68KMath.negWord(layerScrollWord[LAYER_STATIC_BG]);
                 }
             }
         }
+
+        composer.copyPackedScrollWordsTo(horizScrollBuf);
+        vscrollFactorBG = composer.getVscrollFactorBG();
+        minScrollOffset = composer.getMinScrollOffset();
+        maxScrollOffset = composer.getMaxScrollOffset();
     }
 
     private void fillFallback(int[] horizScrollBuf, int cameraX) {
         short fgScroll = M68KMath.negWord(cameraX);
         short bgScroll = M68KMath.negWord(cameraX >> 4);
-        int packed = M68KMath.packScrollWords(fgScroll, bgScroll);
-        for (int i = 0; i < M68KMath.VISIBLE_LINES; i++) {
-            horizScrollBuf[i] = packed;
-        }
-        minScrollOffset = bgScroll - fgScroll;
-        maxScrollOffset = minScrollOffset;
+        composer.fillPackedScrollWords(0, M68KMath.VISIBLE_LINES, fgScroll, bgScroll);
+        composer.copyPackedScrollWordsTo(horizScrollBuf);
+        vscrollFactorBG = composer.getVscrollFactorBG();
+        minScrollOffset = composer.getMinScrollOffset();
+        maxScrollOffset = composer.getMaxScrollOffset();
     }
 
 }

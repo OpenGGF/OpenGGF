@@ -7,15 +7,24 @@ description: Use when navigating the Sonic 3&K disassembly — label conventions
 
 This skill provides guidance on finding, identifying, and interpreting items in the Sonic 3 & Knuckles disassembly (`docs/skdisasm/`).
 
+## Agent Workflow Tooling
+
+These tools wrap the RomOffsetFinder lookups described below with S3K-safe guardrails:
+
+- **RomArtIntakeTool** — S3K ROM-backed art/mapping/PLC intake. Wraps `RomOffsetFinder --game s3k`, **flags `s3.asm`-sourced labels** as a caution (the S3 standalone / S3L half — classifies by source file). Prefer an S&K equivalent; if an object has none, the S3-half reference is legitimate (rare; verify). Recommends `StandaloneArtEntry` vs `LevelArtEntry`, and suggests `Sonic3kConstants` names + `Sonic3kPlcArtRegistry` hints. Accepts multiple labels:
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=ArtNem_AIZSwingVine Map_AIZSwingVine"`
+- **AgentWorkflowTool** — prints the exact `RomOffsetFinder` commands to run for a task (plus zone-set resolution and required guards):
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.AgentWorkflowTool" "-Dexec.args=object s3k MHZ 0x8A"`
+
 ## S&K vs S3 ROM Halves — Address Selection Rule
 
 The locked-on ROM ("Sonic and Knuckles & Sonic 3") contains **two halves**:
 - **S&K half** (0x000000–0x1FFFFF): The primary S&K code and data — this is what the engine runs
 - **S3 half** (0x200000–0x3FFFFF): The Sonic 3 standalone code and data
 
-Many shared assets (art, mappings, palettes) exist in **both halves** with identical binary content. **Always use S&K-side addresses (< 0x200000)** for all ROM constants. The S3 copies at >= 0x200000 are not referenced by the S3KL code path.
+Many shared assets (art, mappings, palettes) exist in **both halves** with identical binary content. **Prefer S&K-side addresses (< 0x200000)** for ROM constants — for the overwhelming majority of assets the S3KL (locked-on) code path references the S&K half, so a casually-chosen `s3.asm` address (>= 0x200000) is usually silently wrong. Always look up S3K data with `--game s3k` (never `--game s2` or default/no-flag), and do not read offsets from a Sonic 3 standalone ROM. **Rare exception:** depending on who implemented an object and when, some S3K objects reference S3-half (`s3.asm`) assets directly. If, after exhausting S&K-side variants, there is genuinely no S&K equivalent, the `s3.asm` reference is the one the runtime uses — use it after verifying the object's code points there. Don't substitute an `s3.asm` address just because the S&K one is hard to find, but don't loop forever on a non-existent S&K variant either.
 
-When RomOffsetFinder returns multiple results for the same label — one from `sonic3k.asm` (S&K) and one from `s3.asm` (S3) — always use the `sonic3k.asm` result. Similarly, when reading disassembly source, prefer `sonic3k.asm` over `s3.asm` for object code, as the S3KL versions may contain zone-specific overrides (e.g., FBZ art tile) absent from the S3 version.
+When RomOffsetFinder returns multiple results for the same label — one from `sonic3k.asm` (S&K) and one from `s3.asm` (S3) — **use the `sonic3k.asm` result**. If only `s3.asm` results come back, first re-search with different label variants (the S&K-side label may live under `Levels/{ZONE}/` or carry a zone-specific suffix). If that genuinely turns up no S&K equivalent, the `s3.asm` reference is the one the object uses — use it after verifying, rather than looping forever (rare). Similarly, when reading disassembly source, prefer `sonic3k.asm` over `s3.asm` for object code, as the S3KL versions may contain zone-specific overrides (e.g., FBZ art tile, Knuckles variants) absent from the S3 version.
 
 ## Directory Structure
 
@@ -106,7 +115,14 @@ mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" -Dexec
 
 ### Search ROM Binary
 
-Use `search-rom` to find inline assembly data (pointer tables, animation scripts, AniPLC tables, `dc.w`/`dc.b` directives) that have no binary file — the `search` and `find` commands only work with `binclude` items. This is especially useful for S3K where many data structures are inline.
+Use `search` or `find` first for labeled inline assembly data, including S3K mapping/DPLC/animation labels inside files reached by `include` directives. RomOffsetFinder indexes labels inside included `.asm` files and calculates their S&K-side ROM offset from address-bearing local labels such as `word_3DC64`.
+
+```bash
+# Resolve an included mapping table label directly
+mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" -Dexec.args="--game s3k find Map_MHZPollen" -q
+```
+
+Use `search-rom` only when the data has no usable label or when you are cross-checking a known byte pattern.
 
 ```bash
 # Search for known hex byte pattern (spaces optional)

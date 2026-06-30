@@ -5,6 +5,7 @@ import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.ChunkDesc;
@@ -46,19 +47,19 @@ public class Sonic1TitleScreenDataLoader {
     private static final Logger LOGGER = Logger.getLogger(Sonic1TitleScreenDataLoader.class.getName());
 
     /** Pattern base ID for title foreground (Plane A). */
-    static final int FG_PATTERN_BASE = 0x90000;
+    static final int FG_PATTERN_BASE = PatternAtlasRange.SONIC1_TITLE_FOREGROUND.base();
 
     /** Pattern base ID for Sonic sprite art. */
-    static final int SPRITE_PATTERN_BASE = 0xA0000;
+    static final int SPRITE_PATTERN_BASE = PatternAtlasRange.SONIC1_TITLE_SPRITES.base();
 
     /** Pattern base ID for credit text font. */
-    public static final int CREDIT_TEXT_PATTERN_BASE = 0xB0000;
+    public static final int CREDIT_TEXT_PATTERN_BASE = PatternAtlasRange.SONIC1_CREDIT_TEXT.base();
 
     /** Pattern base ID for TM symbol. */
-    static final int TM_PATTERN_BASE = 0xC0000;
+    static final int TM_PATTERN_BASE = PatternAtlasRange.SONIC1_TITLE_TM.base();
 
     /** Pattern base ID for GHZ background patterns. */
-    static final int GHZ_PATTERN_BASE = 0xD0000;
+    static final int GHZ_PATTERN_BASE = PatternAtlasRange.SONIC1_TITLE_GHZ_BACKGROUND.base();
 
     // Plane A dimensions from PlaneEd: x-Size=0x22 (34), y-Size=0x16 (22)
     private static final int PLANE_A_WIDTH = 34;
@@ -215,14 +216,22 @@ public class Sonic1TitleScreenDataLoader {
      * is required by GraphicsManager.renderPatternWithId().
      */
     public void cachePalettesToGpu(GraphicsManager gm) {
-        if (palettesCached || titlePaletteLines == null) {
+        if (titlePaletteLines == null) {
             return;
         }
+        boolean uploadedAny = false;
         for (int line = 0; line < titlePaletteLines.length; line++) {
-            gm.cachePaletteTexture(titlePaletteLines[line], line);
+            Palette palette = titlePaletteLines[line];
+            if (palette == null) {
+                continue;
+            }
+            gm.cachePaletteTexture(palette, line);
+            uploadedAny = true;
         }
-        palettesCached = true;
-        LOGGER.info("Cached S1 title palettes to GPU (4 lines)");
+        if (uploadedAny && !palettesCached) {
+            palettesCached = true;
+            LOGGER.info("Cached S1 title palettes to GPU (4 lines)");
+        }
     }
 
     /**

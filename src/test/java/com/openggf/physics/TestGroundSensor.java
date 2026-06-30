@@ -1,20 +1,32 @@
 package com.openggf.physics;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.GameServices;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.ScrollHandlerProvider;
+import com.openggf.level.scroll.ZoneScrollHandler;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.CollisionMode;
 import com.openggf.level.LevelManager;
+import com.openggf.level.ParallaxManager;
 import com.openggf.level.SolidTile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.GroundMode;
-
+import java.lang.reflect.Field;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyByte;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -23,33 +35,41 @@ public class TestGroundSensor {
     private LevelManager mockLevelManager;
     private AbstractPlayableSprite mockSprite;
 
-    private ChunkDesc[][] chunkMap;
+    private ChunkDesc[][] fgChunkMap;
+    private ChunkDesc[][] bgChunkMap;
     private SolidTile[] tiles;
 
     @BeforeEach
     public void setUp() {
-        chunkMap = new ChunkDesc[20][20];
+        fgChunkMap = new ChunkDesc[20][20];
+        bgChunkMap = new ChunkDesc[20][20];
+
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
 
         mockLevelManager = mock(LevelManager.class);
         when(mockLevelManager.getChunkDescAt(anyByte(), anyInt(), anyInt()))
                 .thenAnswer(invocation -> {
+                    byte layer = invocation.getArgument(0);
                     int x = invocation.getArgument(1);
                     int y = invocation.getArgument(2);
                     int gridX = x / 16;
                     int gridY = y / 16;
                     if (gridX >= 0 && gridX < 20 && gridY >= 0 && gridY < 20) {
-                        return chunkMap[gridX][gridY];
+                        return chunkMapForLayer(layer)[gridX][gridY];
                     }
                     return null;
                 });
         when(mockLevelManager.getChunkDescAt(anyByte(), anyInt(), anyInt(), anyBoolean()))
                 .thenAnswer(invocation -> {
+                    byte layer = invocation.getArgument(0);
                     int x = invocation.getArgument(1);
                     int y = invocation.getArgument(2);
                     int gridX = x / 16;
                     int gridY = y / 16;
                     if (gridX >= 0 && gridX < 20 && gridY >= 0 && gridY < 20) {
-                        return chunkMap[gridX][gridY];
+                        return chunkMapForLayer(layer)[gridX][gridY];
                     }
                     return null;
                 });
@@ -113,11 +133,25 @@ public class TestGroundSensor {
         tiles[3] = new SolidTile(3, emptyHeights, fullWidths, (byte) 0);
     }
 
+    @AfterEach
+    void tearDown() {
+        GroundSensor.setLevelManager(null);
+        SessionManager.clear();
+    }
+
     private void setTileAt(int x, int y, int tileIndex) {
-        setTileAt(x, y, tileIndex, CollisionMode.ALL_SOLID);
+        setTileAt((byte) 0, x, y, tileIndex, CollisionMode.ALL_SOLID);
     }
 
     private void setTileAt(int x, int y, int tileIndex, CollisionMode mode) {
+        setTileAt((byte) 0, x, y, tileIndex, mode);
+    }
+
+    private void setTileAt(byte layer, int x, int y, int tileIndex) {
+        setTileAt(layer, x, y, tileIndex, CollisionMode.ALL_SOLID);
+    }
+
+    private void setTileAt(byte layer, int x, int y, int tileIndex, CollisionMode mode) {
         int gridX = x / 16;
         int gridY = y / 16;
         ChunkDesc desc = new ChunkDesc(tileIndex);
@@ -127,7 +161,28 @@ public class TestGroundSensor {
         int modeBits = mode.getValue() << 12;
         desc.set(tileIndex | modeBits);
 
-        chunkMap[gridX][gridY] = desc;
+        chunkMapForLayer(layer)[gridX][gridY] = desc;
+    }
+
+    private ChunkDesc[][] chunkMapForLayer(byte layer) {
+        return layer == 1 ? bgChunkMap : fgChunkMap;
+    }
+
+    @Test
+    public void resetAllClearsStaticLevelManagerOverride() throws Exception {
+        assertNotNull(groundSensorOverrideLevelManager(),
+                "setUp should install a GroundSensor level-manager override");
+
+        TestEnvironment.resetAll();
+
+        assertNull(groundSensorOverrideLevelManager(),
+                "Test reset must clear GroundSensor's static level-manager override");
+    }
+
+    private static Object groundSensorOverrideLevelManager() throws Exception {
+        Field field = GroundSensor.class.getDeclaredField("overrideLevelManager");
+        field.setAccessible(true);
+        return field.get(null);
     }
 
     @Test
@@ -338,6 +393,61 @@ public class TestGroundSensor {
     }
 
     @Test
+    public void ceilingEmptyExtensionDistanceUsesMirroredLowNibble() {
+        // No ceiling tile is present. ROM WalkCeiling mirrors the probe low Y
+        // nibble before FindFloor returns its empty extension default.
+        // Center 100 with y_radius 19 gives probe Y 81 (low nibble 1);
+        // mirrored low nibble is 14, so distance is 31 - 14 = 17.
+        mockSprite.setGroundMode(GroundMode.CEILING);
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 100);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.DOWN, (byte) 0, (byte) 19, true);
+        SensorResult result = sensor.scan();
+
+        assertNotNull(result);
+        assertEquals(17, result.distance());
+    }
+
+    @Test
+    public void upwardCeilingProbeAboveLevelTopUsesBlankChunkDistance() {
+        // S1 Sonic_FindCeiling transforms obY-obHeight and calls FindFloor;
+        // FindNearestTile masks above-top lookups into the layout window. If
+        // that wrapped row is blank, the result is non-penetrating rather than
+        // a hard absolute-top ceiling collision.
+        mockSprite.setGroundMode(GroundMode.GROUND);
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 15);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.UP, (byte) 0, (byte) -19, true);
+        SensorResult result = sensor.scan();
+
+        assertNotNull(result);
+        assertEquals(Direction.UP, result.direction());
+        assertTrue(result.distance() > 0);
+    }
+
+    @Test
+    public void upwardCeilingProbeAboveLevelTopUsesRomWrappedLookupWhenSolid() {
+        // The same above-top probe can collide when the ROM's masked layout
+        // row contains solid terrain.
+        ChunkDesc wrappedSolid = new ChunkDesc(1 | (CollisionMode.ALL_SOLID.getValue() << 12));
+        when(mockLevelManager.getChunkDescAt(eq((byte) 0), anyInt(), eq(0x07F3), anyBoolean()))
+                .thenReturn(wrappedSolid);
+
+        mockSprite.setGroundMode(GroundMode.GROUND);
+        mockSprite.setX((short) 0x0E74);
+        mockSprite.setY((short) 15);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.UP, (byte) 0, (byte) -19, true);
+        SensorResult result = sensor.scan();
+
+        assertNotNull(result);
+        assertEquals(Direction.UP, result.direction());
+        assertEquals(-4, result.distance());
+    }
+
+    @Test
     public void testLeftWallSensorRotation() {
         // Mode: LEFTWALL.
         // Sensor: (x=5, y=10) [Relative to Sprite in GROUND mode].
@@ -413,11 +523,10 @@ public class TestGroundSensor {
         // If solid, distance = 4.
 
         SensorResult upResult = upSensor.scan();
-        // Should be 20 (distance to empty tile at 80), not 4 (distance to solid tile at
-        // 80).
-        // 100 - (80 + 0) = 20.
+        // Should use the empty-tile extension path, not 4 (distance to the ignored
+        // top-solid tile at 80).
         assertNotNull(upResult);
-        assertEquals(20, upResult.distance(), "UP sensor should ignore TOP_SOLID");
+        assertEquals(27, upResult.distance(), "UP sensor should ignore TOP_SOLID");
     }
 
     @Test
@@ -443,6 +552,172 @@ public class TestGroundSensor {
         SensorResult upResult = upSensor.scan();
         assertEquals(4, upResult.distance(), "UP sensor should detect L_R_B_SOLID");
     }
+
+    @Test
+    public void backgroundCollisionPrefersCloserBgFloorOverEmptyFgFallback() throws Exception {
+        setTileAt((byte) 0, 100, 112, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 0, 100, 128, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 1, 100, 112, 1);
+
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 100);
+
+        GameServices.gameState().setBackgroundCollisionFlag(true);
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setY((short) 0);
+        setParallaxField("cachedBgCameraX", Integer.MIN_VALUE);
+        setParallaxField("vscrollFactorBG", (short) 0);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.DOWN, (byte) 0, (byte) 0, true);
+        SensorResult bgOnly = invokeBackgroundScan(sensor, (short) 100, (short) 100, mockSprite.getTopSolidBit(),
+                Direction.DOWN, true);
+        assertNotNull(bgOnly, "background scan should find the BG floor tile");
+        assertEquals(11, bgOnly.distance(),
+                "background scan alone should report the closer BG floor tile from the extension pass");
+        SensorResult result = sensor.scan();
+
+        assertNotNull(result);
+        assertEquals(11, result.distance(),
+                "BG floor should beat the empty FG fallback when it is closer to the probe");
+        assertEquals(1, result.tileId(),
+                "Result should come from the BG floor tile, not the empty FG path");
+    }
+
+    @Test
+    public void backgroundCollisionUsesLiveHandlerStateWhenParallaxCacheIsStale() throws Exception {
+        setTileAt((byte) 0, 100, 112, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 0, 100, 128, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 1, 4, 112, 1);
+
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 100);
+
+        GameServices.gameState().setBackgroundCollisionFlag(true);
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setY((short) 0);
+        when(mockLevelManager.getFeatureZoneId()).thenReturn(7);
+        setParallaxField("cachedBgCameraX", Integer.MIN_VALUE);
+        setParallaxField("vscrollFactorBG", (short) 0);
+        installParallaxHandler(7, new TestZoneScrollHandler(-96, (short) 0));
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.DOWN, (byte) 0, (byte) 0, true);
+        SensorResult result = invokeBackgroundScan(sensor, (short) 100, (short) 100, mockSprite.getTopSolidBit(),
+                Direction.DOWN, true);
+
+        assertNotNull(result, "background scan should consult live handler state before stale parallax cache");
+        assertEquals(11, result.distance(),
+                "live handler bgCameraX should translate the probe onto the populated BG tile");
+    }
+
+    @Test
+    public void backgroundCollisionExtendsHorizontalWallScanOnBgLayer() throws Exception {
+        setTileAt((byte) 1, 100, 100, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 1, 116, 100, 1);
+
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 100);
+
+        GameServices.gameState().setBackgroundCollisionFlag(true);
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setY((short) 0);
+        setParallaxField("cachedBgCameraX", Integer.MIN_VALUE);
+        setParallaxField("vscrollFactorBG", (short) 0);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.RIGHT, (byte) 0, (byte) 0, true);
+        SensorResult result = invokeBackgroundScan(sensor, (short) 100, (short) 100, mockSprite.getLrbSolidBit(),
+                Direction.RIGHT, false);
+
+        assertNotNull(result, "background wall scan should extend into the next BG tile");
+        assertEquals(11, result.distance(),
+                "BG wall extension should mirror the foreground wall-scan distance");
+    }
+
+    @Test
+    public void backgroundCollisionDoesNotOverwriteCloserForegroundLeftWallHit() {
+        setTileAt((byte) 0, 100, 100, 1);
+
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 100);
+
+        GameServices.gameState().setBackgroundCollisionFlag(true);
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setY((short) 0);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.LEFT, (byte) 0, (byte) 0, true);
+        SensorResult result = sensor.scan();
+
+        assertNotNull(result, "foreground left-wall hit should still resolve while BG collision is enabled");
+        assertEquals(-12, result.distance(),
+                "BG wall fallback must not overwrite a closer penetrating FG wall hit");
+        assertEquals(1, result.tileId(),
+                "selected wall result should come from the foreground solid tile");
+    }
+
+    private void setParallaxField(String fieldName, Object value) throws Exception {
+        ParallaxManager parallaxManager = GameServices.parallax();
+        Field field = ParallaxManager.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(parallaxManager, value);
+    }
+
+    private void installParallaxHandler(int zoneId, ZoneScrollHandler handler) throws Exception {
+        ScrollHandlerProvider provider = new ScrollHandlerProvider() {
+            @Override
+            public void load(com.openggf.data.Rom rom) {
+            }
+
+            @Override
+            public ZoneScrollHandler getHandler(int zoneIndex) {
+                return zoneIndex == zoneId ? handler : null;
+            }
+
+            @Override
+            public ZoneConstants getZoneConstants() {
+                return mock(ZoneConstants.class);
+            }
+        };
+        ParallaxManager parallaxManager = GameServices.parallax();
+        Field field = ParallaxManager.class.getDeclaredField("scrollProvider");
+        field.setAccessible(true);
+        field.set(parallaxManager, provider);
+    }
+
+    private SensorResult invokeBackgroundScan(GroundSensor sensor,
+                                              short fgX,
+                                              short fgY,
+                                              int solidityBit,
+                                              Direction direction,
+                                              boolean vertical) throws Exception {
+        var method = GroundSensor.class.getDeclaredMethod(
+                "scanBackgroundCollision",
+                LevelManager.class, short.class, short.class, int.class, Direction.class, boolean.class);
+        method.setAccessible(true);
+        return (SensorResult) method.invoke(sensor, mockLevelManager, fgX, fgY, solidityBit, direction, vertical);
+    }
+
+    private record TestZoneScrollHandler(int bgCameraX, short bgVscroll) implements ZoneScrollHandler {
+        @Override
+        public void update(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+        }
+
+        @Override
+        public short getVscrollFactorBG() {
+            return bgVscroll;
+        }
+
+        @Override
+        public int getMinScrollOffset() {
+            return 0;
+        }
+
+        @Override
+        public int getMaxScrollOffset() {
+            return 0;
+        }
+
+        @Override
+        public int getBgCameraX() {
+            return bgCameraX;
+        }
+    }
 }
-
-

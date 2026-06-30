@@ -1,5 +1,9 @@
 package com.openggf.game;
 
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.snapshot.GameStateSnapshot;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -10,19 +14,21 @@ import java.util.logging.Logger;
  * - Emerald_count: number of emeralds collected (0-7)
  * - Got_Emeralds_array: which specific emeralds have been obtained
  */
-public class GameStateManager {
+public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(GameStateManager.class.getName());
     private static final int DEFAULT_SPECIAL_STAGE_COUNT = 7;
     private static final int DEFAULT_CHAOS_EMERALD_COUNT = 7;
 
     private int score;
     private int lives;
+    private int continues;
 
     private int currentSpecialStageIndex;
     private int emeraldCount;
     private int specialStageCount;
     private int chaosEmeraldCount;
     private boolean[] gotEmeralds;
+    private boolean[] gotSuperEmeralds;
 
     /**
      * Current boss ID (ROM: Current_Boss_ID).
@@ -30,6 +36,23 @@ public class GameStateManager {
      * Used by level boundary logic to remove the +64 right buffer during boss fights.
      */
     private int currentBossId;
+
+    /**
+     * Screen-lock flag (ROM: {@code f_lockscreen} at $FFFFF7AA).
+     *
+     * <p>S1 {@code Sonic_LevelBound} gates the +64 right level-boundary
+     * extension on this flag (s1disasm/_incObj/01 Sonic.asm:1047-1049). The ROM
+     * sets it at boss spawn via the dynamic level events
+     * ({@code move.b #1,(f_lockscreen).w}) and clears it ONLY at the Egg Prison
+     * (s1disasm/_incObj/3E Prison Capsule.asm:97) or the LZ boss
+     * (s1disasm/_incObj/77 Boss - LZ Main.asm:288). Unlike {@link #currentBossId}
+     * (which is cleared on every boss defeat), it therefore stays set through and
+     * after boss defeat in the Final Zone (no Egg Prison), keeping Sonic clamped
+     * to the locked arena edge. Set automatically when a boss id is assigned via
+     * {@link #setCurrentBossId(int)} (the ROM's per-boss
+     * {@code move.b #1,(f_lockscreen).w}); never auto-cleared on defeat.
+     */
+    private boolean screenLocked;
 
     /**
      * Screen shake flag (ROM: Screen_Shaking_Flag at $FFFFF72C).
@@ -47,24 +70,6 @@ public class GameStateManager {
      * (e.g., HCZ2 wall chase, SSZ moving platforms).
      */
     private boolean backgroundCollisionFlag;
-
-    /**
-     * BG high-priority overlay flag. When set, the renderer performs an extra
-     * BG pass (high-priority tiles only) between FG-low and FG-high, matching
-     * hardware VDP layer compositing where high-priority Plane B tiles render
-     * in front of low-priority Plane A tiles. Used by HCZ2 wall chase (wall
-     * rendered as high-priority BG tiles in front of FG terrain).
-     */
-    private boolean bgHighPriorityOverlayActive;
-
-    /**
-     * HTZ-specific screen shake flag (ROM: Screen_Shaking_Flag_HTZ at $FFFFF7C3).
-     * This is the master flag for HTZ earthquake sequences. Unlike the general
-     * Screen_Shaking_Flag which gets cleared during delay periods, this flag
-     * stays active for the entire earthquake sequence.
-     * Used by Obj30 (RisingLava) to determine if the platform should be solid.
-     */
-    private boolean htzScreenShakeActive;
 
     /**
      * Giant Ring collected flag (S1 ROM: f_bigring at $FFFFF7AA).
@@ -120,6 +125,28 @@ public class GameStateManager {
      */
     private boolean endOfLevelFlag;
 
+    /**
+     * In-game pause flag (ROM: Game_paused at $FFFFF63A for S3K, $FFFFFE5C for
+     * S1, $FFFFFF7E for S2). Distinct from the loop/timing-level window-focus and
+     * keyboard-toggle pauses in {@link com.openggf.GameLoop}: when this flag is
+     * set the whole level update (objects, physics, camera, scroll) is skipped for
+     * the frame while the V-int / frame counter still advances, exactly matching
+     * the ROM {@code Pause_Loop} which only runs the V-int routine while paused.
+     * <p>
+     * ROM pause routines (universal across all three games — the trigger and
+     * unpause are a Start-press edge in every case; per-game divergences are
+     * debug-only cheats gated by Slow_motion_flag and are inert in normal play):
+     * <ul>
+     *   <li>S1 {@code PauseGame} / {@code Pause_Loop} —
+     *       {@code docs/s1disasm/_inc/PauseGame.asm:5-54}</li>
+     *   <li>S2 {@code PauseGame} / {@code Pause_Loop} —
+     *       {@code docs/s2disasm/s2.asm:1585-1633}</li>
+     *   <li>S3K {@code Pause_Game} / {@code Pause_Loop} —
+     *       {@code docs/skdisasm/s3.asm:1690-1761}</li>
+     * </ul>
+     */
+    private boolean gamePaused;
+
     public GameStateManager() {
         configureSpecialStageProgress(DEFAULT_SPECIAL_STAGE_COUNT, DEFAULT_CHAOS_EMERALD_COUNT);
         resetSession();
@@ -131,18 +158,23 @@ public class GameStateManager {
     public void resetSession() {
         this.score = 0;
         this.lives = 3;
+        this.continues = 0;
 
         this.currentSpecialStageIndex = 0;
         this.emeraldCount = 0;
         for (int i = 0; i < gotEmeralds.length; i++) {
             gotEmeralds[i] = false;
         }
+        if (gotSuperEmeralds != null) {
+            for (int i = 0; i < gotSuperEmeralds.length; i++) {
+                gotSuperEmeralds[i] = false;
+            }
+        }
 
         this.currentBossId = 0;
+        this.screenLocked = false;
         this.screenShakeActive = false;
         this.backgroundCollisionFlag = false;
-        this.bgHighPriorityOverlayActive = false;
-        this.htzScreenShakeActive = false;
         this.bigRingCollected = false;
         this.wfzFireToggle = false;
         this.itemBonus = 0;
@@ -150,6 +182,7 @@ public class GameStateManager {
         this.collectedSpecialRings = 0;
         this.endOfLevelActive = false;
         this.endOfLevelFlag = false;
+        this.gamePaused = false;
     }
 
     /**
@@ -169,6 +202,11 @@ public class GameStateManager {
     public void resetForLevel() {
         endOfLevelActive = false;
         endOfLevelFlag = false;
+        gamePaused = false;
+        // ROM clears f_lockscreen at level load; the per-act boss DLE re-sets it
+        // when the boss spawns. Resetting here prevents a prior act's screen lock
+        // from leaking into the next act's free-scroll approach.
+        screenLocked = false;
     }
 
     public int getScore() {
@@ -187,6 +225,45 @@ public class GameStateManager {
 
     public void addLife() {
         this.lives++;
+    }
+
+    public int getContinues() {
+        return continues;
+    }
+
+    public void addContinue() {
+        this.continues++;
+    }
+
+    public void restoreSaveProgress(int lives, int continues, List<Integer> chaosEmeralds, List<Integer> superEmeralds) {
+        this.lives = Math.max(0, lives);
+        this.continues = Math.max(0, continues);
+        this.emeraldCount = 0;
+        for (int i = 0; i < gotEmeralds.length; i++) {
+            gotEmeralds[i] = false;
+        }
+        if (gotSuperEmeralds != null) {
+            for (int i = 0; i < gotSuperEmeralds.length; i++) {
+                gotSuperEmeralds[i] = false;
+            }
+        }
+        if (chaosEmeralds != null) {
+            for (Integer emeraldIndex : chaosEmeralds) {
+                if (emeraldIndex != null && emeraldIndex >= 0 && emeraldIndex < gotEmeralds.length
+                        && !gotEmeralds[emeraldIndex]) {
+                    gotEmeralds[emeraldIndex] = true;
+                    emeraldCount++;
+                }
+            }
+        }
+        if (gotSuperEmeralds != null && superEmeralds != null) {
+            for (Integer emeraldIndex : superEmeralds) {
+                if (emeraldIndex != null && emeraldIndex >= 0 && emeraldIndex < gotSuperEmeralds.length
+                        && gotEmeralds[emeraldIndex]) {
+                    gotSuperEmeralds[emeraldIndex] = true;
+                }
+            }
+        }
     }
 
     public void loseLife() {
@@ -217,6 +294,36 @@ public class GameStateManager {
     }
 
     /**
+     * Scans from the current special stage index until an uncollected stage
+     * for the requested emerald set is found, then advances the cursor to the
+     * following slot. Used by games whose ROM stage-selection policy skips
+     * already-collected emerald stages.
+     */
+    public int consumeCurrentSpecialStageIndexAndAdvanceSkippingCollected(boolean superEmeraldMode) {
+        if (specialStageCount <= 0) {
+            return 0;
+        }
+        int startIndex = Math.floorMod(currentSpecialStageIndex, specialStageCount);
+        int selectedIndex = startIndex;
+        for (int offset = 0; offset < specialStageCount; offset++) {
+            int candidateIndex = (startIndex + offset) % specialStageCount;
+            if (isSpecialStageUncollected(candidateIndex, superEmeraldMode)) {
+                selectedIndex = candidateIndex;
+                break;
+            }
+        }
+        currentSpecialStageIndex = (selectedIndex + 1) % specialStageCount;
+        return selectedIndex;
+    }
+
+    private boolean isSpecialStageUncollected(int index, boolean superEmeraldMode) {
+        if (superEmeraldMode) {
+            return !hasSuperEmerald(index);
+        }
+        return !hasEmerald(index);
+    }
+
+    /**
      * Gets the total number of emeralds collected (0-7).
      */
     public int getEmeraldCount() {
@@ -229,6 +336,29 @@ public class GameStateManager {
      */
     public boolean hasEmerald(int index) {
         return index >= 0 && index < gotEmeralds.length && gotEmeralds[index];
+    }
+
+    public List<Integer> getCollectedChaosEmeraldIndices() {
+        List<Integer> indices = new ArrayList<>();
+        for (int i = 0; i < gotEmeralds.length; i++) {
+            if (gotEmeralds[i]) {
+                indices.add(i);
+            }
+        }
+        return List.copyOf(indices);
+    }
+
+    public List<Integer> getCollectedSuperEmeraldIndices() {
+        List<Integer> indices = new ArrayList<>();
+        if (gotSuperEmeralds == null) {
+            return List.of();
+        }
+        for (int i = 0; i < gotSuperEmeralds.length; i++) {
+            if (gotSuperEmeralds[i]) {
+                indices.add(i);
+            }
+        }
+        return List.copyOf(indices);
     }
 
     /**
@@ -245,6 +375,34 @@ public class GameStateManager {
             gotEmeralds[index] = true;
             emeraldCount++;
         }
+    }
+
+    public boolean hasSuperEmerald(int index) {
+        return gotSuperEmeralds != null
+                && index >= 0
+                && index < gotSuperEmeralds.length
+                && gotSuperEmeralds[index];
+    }
+
+    public synchronized void markSuperEmeraldCollected(int index) {
+        if (gotSuperEmeralds == null || index < 0 || index >= gotSuperEmeralds.length) {
+            LOGGER.warning("Attempted to mark super emerald " + index +
+                    " but valid range is 0-" + ((gotSuperEmeralds == null ? 0 : gotSuperEmeralds.length) - 1));
+            return;
+        }
+        gotSuperEmeralds[index] = true;
+    }
+
+    public boolean hasAllSuperEmeralds() {
+        if (gotSuperEmeralds == null || gotSuperEmeralds.length == 0) {
+            return false;
+        }
+        for (boolean gotSuperEmerald : gotSuperEmeralds) {
+            if (!gotSuperEmerald) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -267,6 +425,7 @@ public class GameStateManager {
         this.specialStageCount = safeStageCount;
         this.chaosEmeraldCount = safeEmeraldTarget;
         this.gotEmeralds = new boolean[safeEmeraldTarget];
+        this.gotSuperEmeralds = new boolean[safeEmeraldTarget];
         this.currentSpecialStageIndex = 0;
         this.emeraldCount = 0;
     }
@@ -311,6 +470,14 @@ public class GameStateManager {
      */
     public void setCurrentBossId(int bossId) {
         this.currentBossId = bossId;
+        if (bossId != 0) {
+            // ROM: each boss's dynamic-level-event spawn does
+            // move.b #1,(f_lockscreen).w alongside loading the boss object.
+            // Setting the boss id is the engine's spawn point, so latch the
+            // persistent screen lock here. It is NOT cleared when bossId is set
+            // back to 0 on defeat — only the Egg Prison / LZ boss clear it.
+            this.screenLocked = true;
+        }
     }
 
     /**
@@ -318,6 +485,22 @@ public class GameStateManager {
      */
     public boolean isBossFightActive() {
         return currentBossId != 0;
+    }
+
+    /**
+     * Returns the ROM {@code f_lockscreen} state. See {@link #screenLocked}.
+     */
+    public boolean isScreenLocked() {
+        return screenLocked;
+    }
+
+    /**
+     * Sets the ROM {@code f_lockscreen} state. Call with {@code false} at the
+     * ROM clear sites (Egg Prison Obj3E, LZ boss) where the ROM does
+     * {@code clr.b (f_lockscreen).w}.
+     */
+    public void setScreenLocked(boolean locked) {
+        this.screenLocked = locked;
     }
 
     /**
@@ -362,42 +545,6 @@ public class GameStateManager {
      */
     public void setBackgroundCollisionFlag(boolean flag) {
         this.backgroundCollisionFlag = flag;
-    }
-
-    public boolean isBgHighPriorityOverlayActive() {
-        return bgHighPriorityOverlayActive;
-    }
-
-    public void setBgHighPriorityOverlayActive(boolean active) {
-        this.bgHighPriorityOverlayActive = active;
-    }
-
-    /**
-     * Gets the HTZ-specific screen shake flag.
-     * ROM: tst.b (Screen_Shaking_Flag_HTZ).w
-     *
-     * This is the master flag checked by Obj30 (RisingLava) to determine
-     * if the invisible solid platforms should be active. Unlike the general
-     * Screen_Shaking_Flag, this stays on during delay periods.
-     *
-     * @return true if HTZ earthquake sequence is active
-     */
-    public boolean isHtzScreenShakeActive() {
-        return htzScreenShakeActive;
-    }
-
-    /**
-     * Sets the HTZ-specific screen shake flag.
-     * ROM: move.b #1,(Screen_Shaking_Flag_HTZ).w to enable
-     * ROM: move.b #0,(Screen_Shaking_Flag_HTZ).w to disable
-     *
-     * This is set when entering an HTZ earthquake area and cleared when exiting.
-     * The flag persists through delay periods when the lava pauses at limits.
-     *
-     * @param active true to enable HTZ earthquake mode, false to disable
-     */
-    public void setHtzScreenShakeActive(boolean active) {
-        this.htzScreenShakeActive = active;
     }
 
     /**
@@ -509,5 +656,93 @@ public class GameStateManager {
      * ROM: move.b #1,(End_of_level_flag).w
      */
     public void setEndOfLevelFlag(boolean flag) { this.endOfLevelFlag = flag; }
-}
 
+    /**
+     * Whether the game is currently in-game paused (ROM {@code Game_paused != 0}).
+     *
+     * @return true if the level update should be skipped this frame
+     */
+    public boolean isGamePaused() { return gamePaused; }
+
+    /**
+     * Sets the in-game pause flag directly. Prefer {@link #applyPauseToggle(boolean)}
+     * from the frame loop so the Start-edge toggle semantics are modelled in one
+     * place; this setter exists for tests and bootstrap.
+     */
+    public void setGamePaused(boolean paused) { this.gamePaused = paused; }
+
+    /**
+     * Applies one frame of ROM {@code Pause_Game} toggle logic and reports whether
+     * the level update should run this frame.
+     * <p>
+     * Mirrors the universal Start-edge toggle (S1 {@code PauseGame}
+     * {@code docs/s1disasm/_inc/PauseGame.asm:5-54}; S2 {@code PauseGame}
+     * {@code docs/s2disasm/s2.asm:1585-1633}; S3K {@code Pause_Game}
+     * {@code docs/skdisasm/s3.asm:1690-1761}):
+     * <ul>
+     *   <li>The ROM gates pause on {@code Life_count != 0} because a zero-life
+     *       death enters the Game Over flow. OpenGGF does not yet implement
+     *       that flow, so zero-life gameplay keeps the normal pause semantics
+     *       until the missing Game Over / Continue state is added.</li>
+     *   <li>{@code Pause_Game} sits at the very top of {@code LevelLoop}
+     *       ({@code docs/skdisasm/sonic3k.asm:7884-7894}). On the press frame it
+     *       enters {@code Pause_Loop}, which runs only the V-int until Start is
+     *       pressed again, so the rest of the level update never runs while
+     *       paused. On the unpause-press frame it clears {@code Game_paused} and
+     *       {@code rts}, and the remainder of {@code LevelLoop} (objects, physics,
+     *       camera, scroll) <em>does</em> run that frame.</li>
+     * </ul>
+     * Therefore: the level update is skipped this frame iff the game is paused
+     * <em>after</em> applying this frame's toggle.
+     *
+     * @param startEdgePressed true on the single frame Start transitions from
+     *                         released to pressed (ROM {@code Ctrl_x_pressed} &
+     *                         Start). Held Start across multiple frames must
+     *                         report false except on the leading edge.
+     * @return true if the level update should be skipped this frame (game is
+     *         paused), false if it should run normally.
+     */
+    public boolean applyPauseToggle(boolean startEdgePressed) {
+        if (startEdgePressed) {
+            gamePaused = !gamePaused;
+        }
+        return gamePaused;
+    }
+
+    @Override
+    public String key() {
+        return "gamestate";
+    }
+
+    @Override
+    public GameStateSnapshot capture() {
+        return new GameStateSnapshot(
+                score, lives, continues, currentSpecialStageIndex, emeraldCount,
+                gotEmeralds, gotSuperEmeralds, currentBossId,
+                screenShakeActive, backgroundCollisionFlag, bigRingCollected,
+                wfzFireToggle, itemBonus, reverseGravityActive,
+                collectedSpecialRings, endOfLevelActive, endOfLevelFlag, screenLocked);
+    }
+
+    @Override
+    public void restore(GameStateSnapshot snapshot) {
+        this.score = snapshot.score();
+        this.lives = snapshot.lives();
+        this.continues = snapshot.continues();
+        this.currentSpecialStageIndex = snapshot.currentSpecialStageIndex();
+        this.emeraldCount = snapshot.emeraldCount();
+        this.gotEmeralds = snapshot.gotEmeralds().clone();
+        this.gotSuperEmeralds = snapshot.gotSuperEmeralds().clone();
+        this.currentBossId = snapshot.currentBossId();
+        this.screenShakeActive = snapshot.screenShakeActive();
+        this.backgroundCollisionFlag = snapshot.backgroundCollisionFlag();
+        this.bigRingCollected = snapshot.bigRingCollected();
+        this.wfzFireToggle = snapshot.wfzFireToggle();
+        this.itemBonus = snapshot.itemBonus();
+        this.reverseGravityActive = snapshot.reverseGravityActive();
+        this.collectedSpecialRings = snapshot.collectedSpecialRings();
+        this.endOfLevelActive = snapshot.endOfLevelActive();
+        this.endOfLevelFlag = snapshot.endOfLevelFlag();
+        this.screenLocked = snapshot.screenLocked();
+    }
+}

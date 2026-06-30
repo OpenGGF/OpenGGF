@@ -4,14 +4,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
+import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.tests.TestEnvironment;
 
 import java.util.List;
 
@@ -127,13 +130,14 @@ public class TestBuzzBomberLifecycle {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     /**
@@ -204,8 +208,8 @@ public class TestBuzzBomberLifecycle {
         manager.update(400, null, null, 1);
         assertEquals(1, manager.getActiveObjects().size());
 
-        // Object flies left to X=600.
-        registry.flyingInstance.setCurrentX(600);
+        // Move beyond both the persistence margin and MarkObjGone's 640px X window.
+        registry.flyingInstance.setCurrentX(700);
 
         // Camera backs up far to X=0.
         //   placement.update() streams new window at end of frame 2.

@@ -33,8 +33,8 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
     protected static final int SPIKE_RETRACT_MAX = 0x2000;
     protected static final int SPIKE_RETRACT_DELAY = 60;
 
-    protected final int baseX;
-    protected final int baseY;
+    protected int baseX;
+    protected int baseY;
     protected int currentX;
     protected int currentY;
     protected int retractOffset;
@@ -58,6 +58,31 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM SolidObject_cont keeps relX == width * 2 in contact; it rejects
+        // only relX > width * 2 (sonic3k.asm:41395-41401).
+        return true;
+    }
+
+    @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // S2 Obj36 and S3K Obj_Spikes call SolidObjectFull. If this object's
+        // standing bit is still set while the player is already airborne, the
+        // helper clears Status_OnObj / the object bit and returns before
+        // SolidObject_cont can create a fresh contact.
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // S2 Obj36 and S3K Obj_Spikes store standing/pushing bits in the live
+        // object status byte. Moving/retracting spikes rebuild their dynamic
+        // engine spawn as they move, so the solid latch must follow the object
+        // slot, not the value-equal spawn position.
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
         if (player == null) {
             return;
@@ -65,9 +90,15 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
         if (!shouldHurt(contact)) {
             return;
         }
+        if (player.getDead()) {
+            // SolidObject_Squash can call KillCharacter before Obj36 reaches Touch_ChkHurt2;
+            // the ROM helper then skips players whose routine is already >= 4.
+            return;
+        }
         if (player.getInvulnerable()) {
             return;
         }
+        rewindPlayerYBeforeHurt(player);
         // ROM: Hurt_Sidekick - CPU Tails only gets knockback, no ring scatter or death
         if (player.isCpuControlled()) {
             player.applyHurt(currentX);
@@ -98,8 +129,34 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOutOfRangeReferenceX() {
+        // S2 Obj36 and S3K Obj_Spikes store the placement X in objoff_30/$30
+        // and feed that saved origin to MarkObjGone2/Sprite_OnScreen_Test2
+        // after live spike movement (docs/s2disasm/s2.asm:29221-29226;
+        // docs/skdisasm/sonic3k.asm:49038-49039,49071-49072,49102-49103).
+        return baseX;
+    }
+
+    @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(4);
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // ROM Obj36 (S2 s2.asm:29341-29345) sets only
+        // render_flags.level_fg in their init -- never render_flags.explicit_height.
+        // BuildSprites therefore evaluates the on-screen flag through the
+        // approximate Y check (BuildSprites_ApproxYCheck, s2.asm:30606-30619),
+        // which assumes a 32px (0x20) Y radius regardless of the spike's actual
+        // y_radius: on-screen when (y_pos - Camera_Y) is within [-32, screen_height+32).
+        // The shared gate default (16px) clipped the spike off-screen one frame
+        // early near the bottom of the viewport, so SolidObject_OnScreenTest
+        // (s2.asm:35330-35336) skipped the side push that ROM applies. Use the
+        // ROM approximate radius so the inline solid gate matches render_flags
+        // bit 7. S3K overrides this because Render_Sprites reads height_pixels(a0)
+        // directly.
+        return 0x20;
     }
 
     // ---- Movement ----
@@ -177,6 +234,16 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
 
     protected boolean isUpsideDown() {
         return (spawn.renderFlags() & 0x2) != 0;
+    }
+
+    protected void rewindPlayerYBeforeHurt(PlayableEntity player) {
+        short ySpeed = player.getYSpeed();
+        if (ySpeed != 0) {
+            // ROM Touch_ChkHurt2/sub_24280 subtract y_vel<<8 from y_pos before
+            // HurtCharacter (docs/s2disasm/s2.asm:29297-29312;
+            // docs/skdisasm/sonic3k.asm:49211-49220).
+            player.move((short) 0, (short) -ySpeed);
+        }
     }
 
     // ---- Dimension lookup ----

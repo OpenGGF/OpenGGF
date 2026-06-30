@@ -2,12 +2,15 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -34,7 +37,7 @@ import java.util.logging.Logger;
  * Initial mapping_frame = 3 (set by parent: move.b #3,mapping_frame(a1)).
  */
 public class WallTurretShotInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(WallTurretShotInstance.class.getName());
 
     // From ObjB8_SubObjData2: priority=3, width_pixels=4, collision_flags=$98
@@ -58,6 +61,11 @@ public class WallTurretShotInstance extends AbstractObjectInstance
     private int animIndex;
     private int mappingFrame; // 3 or 4 (projectile art frames from shared mapping set)
 
+    private WallTurretShotInstance() {
+        this(new ObjectSpawn(0, 0, Sonic2ObjectIds.PROJECTILE, 0x8E, 0, false, 0),
+                0, 0, 0, 0);
+    }
+
     public WallTurretShotInstance(ObjectSpawn parentSpawn, int startX, int startY,
                                   int xVel, int yVel) {
         super(createShotSpawn(parentSpawn, startX, startY), "WallTurretShot");
@@ -78,8 +86,8 @@ public class WallTurretShotInstance extends AbstractObjectInstance
     private static ObjectSpawn createShotSpawn(ObjectSpawn parent, int x, int y) {
         return new ObjectSpawn(
                 x, y,
-                parent.objectId(),
-                parent.subtype(),
+                Sonic2ObjectIds.PROJECTILE,
+                0x8E,
                 parent.renderFlags(),
                 false, // Don't track respawn for projectiles
                 parent.rawYWord());
@@ -106,8 +114,8 @@ public class WallTurretShotInstance extends AbstractObjectInstance
         animTimer--;
         if (animTimer < 0) {
             animTimer = ANIM_DELAY;
-            animIndex = (animIndex + 1) % ANIM_FRAMES.length;
             mappingFrame = ANIM_FRAMES[animIndex];
+            animIndex = (animIndex + 1) % ANIM_FRAMES.length;
         }
 
         // Obj98_Main: _btst #render_flags.on_screen / _beq.w JmpTo65_DeleteObject
@@ -125,6 +133,11 @@ public class WallTurretShotInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TouchResponseProfile.standardEnemy();
     }
 
     @Override
@@ -146,6 +159,11 @@ public class WallTurretShotInstance extends AbstractObjectInstance
     @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY);
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return WIDTH_PIXELS;
     }
 
     @Override

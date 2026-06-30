@@ -2,6 +2,7 @@ package com.openggf.sprites.animation;
 
 import com.openggf.game.AnimationId;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.managers.PlayableSpriteAnimation;
 
 /**
  * Chooses animation script IDs based on simple movement state.
@@ -92,6 +93,18 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
 
     @Override
     public Integer resolveAnimationId(AbstractPlayableSprite sprite, int frameCounter, int scriptCount) {
+        return resolveAnimationId(sprite, frameCounter, scriptCount, true);
+    }
+
+    /**
+     * @param applyPushRenderSubstitution when false, skips the {@link #pushAnimId}
+     *        render substitution so the result is the ROM {@code anim} byte the
+     *        movement/state code actually writes (push display is a sub-handler of
+     *        the walk script in ROM, not a distinct anim byte). Used by the
+     *        Status_Push frame-end clear, which keys on the real anim byte.
+     */
+    public Integer resolveAnimationId(AbstractPlayableSprite sprite, int frameCounter, int scriptCount,
+                                      boolean applyPushRenderSubstitution) {
         // ROM: when f_playerctrl is set, Sonic_Move and normal movement routines don't run,
         // so they never overwrite obAnim. Let the controlling object's animation stick.
         if (sprite.isObjectControlled()) {
@@ -127,24 +140,48 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         if (sprite.isSliding() && !sprite.getAir() && slideAnimId >= 0) {
             return slideAnimId;
         }
-        // ROM: when flip_angle is non-zero, the walk animation handler shows
-        // tumble frames (Anim_Tumble). Objects like TwistedRamp set anim=0 (walk)
-        // + flip_angle to trigger this. Don't override with roll in that case.
-        if (sprite.getRolling() && sprite.getFlipAngle() == 0) {
-            return rollAnimId;
-        }
         if (sprite.getAir()) {
             // ROM: Sonic_MdAir/Sonic_MdJump do NOT call Sonic_Move, so the anim
             // field is never overwritten while airborne. Only the ground routine
             // (Sonic_MdNormal) calls Sonic_Move which selects walk/run/idle anim.
-            // When jumping=false and rolling=false, the player was placed into
-            // the air by an external force (fan updraft, walking off edge, spring
-            // after springing flag clears). In these cases, let whatever animation
-            // was last set persist — matching ROM behavior.
-            if (!sprite.isJumping() && !sprite.getRolling()) {
+            //
+            // The ROM anim byte stays AniIDSonAni_Roll for the WHOLE airborne arc
+            // of any roll/jump: Sonic_Jump writes anim=Roll + sets status.rolling
+            // together (s2.asm:37387-37388), Sonic_RollJump only sets the
+            // rolljumping bit and leaves the already-Roll anim alone
+            // (s2.asm:37395-37397), and Sonic_MdAir never re-runs Sonic_Move
+            // (s2.asm:36791+). So the engine model is: while airborne, if the
+            // Status_Roll bit is set, the animation is Roll — independent of the
+            // engine's jumping/rollingJump bookkeeping, which can be cleared mid-air
+            // by platform/slot/object code that the ROM does not key the anim on.
+            // This is what lets a rolling jump break a Monitor on the way down
+            // (Touch_Monitor / SolidObject_Monitor_Sonic gate on
+            // anim==AniIDSonAni_Roll, s2.asm:25611-25616,85245-85255); S1 and S3K
+            // monitor roll gates match (s1disasm/_incObj/26 Monitor.asm,
+            // sonic3k.asm Touch_Monitor), so this is a universal correction.
+            //
+            // Exception: a non-zero flip_angle means a tumble/flip handler owns the
+            // frame selection (e.g. S3K CNZ hover fans clear jumping/rollingJump
+            // but set flip_angle + an object-written walk/tumble anim, s3.asm
+            // sub_31E96). Fall through to the object-anim / walk-tumble path so the
+            // fan's frames persist instead of snapping back to the ball.
+            if (sprite.getRolling() && sprite.getFlipAngle() == 0) {
+                return rollAnimId;
+            }
+            // When jumping=false and roll-jump=false (and not rolling/sliding), the
+            // player was placed into the air by an external force; keep its
+            // object-written animation rather than resolving back to walk/roll.
+            if (!sprite.isJumping() && !sprite.getRollingJump() && !sprite.isSliding()) {
                 return null;
             }
-            return airAnimId;
+            // ROM: rolling/jump state writes AniIDSonAni_Roll directly. A non-zero
+            // flip_angle only diverts the walk/run animation handler into tumble
+            // frames; it does not keep externally-set animations like Float2 active
+            // once Sonic is actively rolling/jumping.
+            return sprite.getRolling() ? rollAnimId : airAnimId;
+        }
+        if (sprite.getRolling()) {
+            return rollAnimId;
         }
         if (sprite.getLookingUp() && lookUpAnimId >= 0) {
             return lookUpAnimId;
@@ -153,9 +190,25 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             return duckAnimId;
         }
         // ROM-accurate: Pushing state takes priority over speed-based animations
-        if (sprite.getPushing() && pushAnimId >= 0) {
+        // for RENDERING only. ROM keeps the anim byte at the movement-selected
+        // value (walk/wait) and shows the push frames inside the walk script's
+        // special handler (Animate_Sonic loc_12A72 btst #5,status, sonic3k.asm
+        // 24832; Animate_Tails reads anim directly, 29356-29364). So skip this
+        // substitution when the caller wants the real ROM anim byte.
+        if (applyPushRenderSubstitution && sprite.getPushing() && pushAnimId >= 0) {
             return pushAnimId;
         }
+        return resolveGroundMovementAnimId(sprite);
+    }
+
+    /**
+     * Resolves the grounded movement-selected animation id (walk / run / balance /
+     * idle). Only reached after the higher-priority state branches in
+     * {@link #resolveAnimationId} (air/roll/hurt/spring/...), so callers wanting
+     * the full ROM anim byte must go through
+     * {@code resolveAnimationId(..., false)} rather than calling this directly.
+     */
+    public int resolveGroundMovementAnimId(AbstractPlayableSprite sprite) {
         // ROM-accurate: Skidding state (braking at speed >= 0x400)
         if (sprite.getSkidding() && skidAnimId >= 0) {
             return skidAnimId;
@@ -168,7 +221,14 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // Use isMovementInputActive() which reflects EFFECTIVE input (after control lock filtering),
         // not raw button state, to match ROM behavior where animation is only set in movement routines.
         boolean pressingDirection = sprite.isMovementInputActive();
-        int speed = Math.abs(sprite.getGSpeed());
+        // Ground movement chooses Wait/Walk before the no-input friction and
+        // ground-wall probe can zero inertia (S2 Tails_Move s2.asm:39689-39693,
+        // Obj02_UpdateSpeedOnGround/Obj02_CheckWallsOnGround s2.asm:39789-39865).
+        PlayableSpriteAnimation animation = sprite.getAnimationManager();
+        int animSpeed = animation != null && animation.hasGroundMovementAnimSpeed()
+                ? animation.getGroundMovementAnimSpeed()
+                : sprite.getGSpeed();
+        int speed = Math.abs(animSpeed);
 
         // Run animation at high speeds (ROM: cmpi.w #$600,d2)
         if (speed >= runSpeedThreshold) {
@@ -184,6 +244,14 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // Balance state is set by movement code based on terrain/object edge detection
         int balanceState = sprite.getBalanceState();
         if (balanceState > 0 && balanceAnimId >= 0) {
+            var featureSet = sprite.getPhysicsFeatureSet();
+            if (featureSet != null && featureSet.singleFacingBalanceAnimationSet()) {
+                balanceState = switch (balanceState) {
+                    case 3 -> 1;
+                    case 4 -> 2;
+                    default -> balanceState;
+                };
+            }
             return switch (balanceState) {
                 case 1 -> balanceAnimId;      // Balance - facing edge, safe distance
                 case 2 -> balance2AnimId >= 0 ? balance2AnimId : balanceAnimId;  // Balance2 - facing edge, closer

@@ -1,13 +1,11 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.PhysicsProfile;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
-import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.Palette;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -185,9 +183,9 @@ public class Sonic3kSuperStateController extends SuperStateController {
             if (CrossGameFeatureProvider.isActive()) {
                 GameServices.audio().playDonorMusic(
                         GameServices.crossGameFeatures().getDonorGameId(),
-                        Sonic3kMusic.INVINCIBILITY.id);
+                        GameMusic.SUPER);
             } else {
-                GameServices.audio().playMusic(Sonic3kMusic.INVINCIBILITY.id);
+                GameServices.audio().playMusic(GameMusic.SUPER);
             }
         } catch (Exception e) {
             LOGGER.fine("Could not play Super Sonic music: " + e.getMessage());
@@ -208,6 +206,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     protected void updateSuperPalette() {
+        var paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
+        if (paletteRegistry != null && paletteRegistry.isPaletteRotationDisabled()) {
+            return;
+        }
         if (paletteState != -1) return;
 
         paletteTimer--;
@@ -243,7 +245,13 @@ public class Sonic3kSuperStateController extends SuperStateController {
         player.setShieldVisible(true);
         // Revert to zone music
         try {
-            GameServices.audio().endMusicOverride(Sonic3kMusic.INVINCIBILITY.id);
+            if (CrossGameFeatureProvider.isActive()) {
+                GameServices.audio().endDonorMusicOverride(
+                        GameServices.crossGameFeatures().getDonorGameId(),
+                        GameMusic.SUPER);
+            } else {
+                GameServices.audio().endMusicOverride(GameMusic.SUPER);
+            }
         } catch (Exception e) {
             LOGGER.fine("Could not revert Super Sonic music: " + e.getMessage());
         }
@@ -307,16 +315,17 @@ public class Sonic3kSuperStateController extends SuperStateController {
         PaletteTarget target = resolvePaletteTarget(SONIC_PALETTE_INDEX);
         if (target == null) return;
 
-        Palette palette = target.palette();
-
-        for (int i = 0; i < COLORS_PER_FRAME; i++) {
-            palette.getColor(FIRST_COLOR_INDEX + i)
-                    .fromSegaFormat(paletteData, frameOffset + i * 2);
-        }
-
-        GraphicsManager gfx = GameServices.graphics();
-        if (gfx.isGlInitialized()) {
-            gfx.cachePaletteTexture(palette, target.gpuLine());
-        }
+        byte[] patch = new byte[BYTES_PER_FRAME];
+        System.arraycopy(paletteData, frameOffset, patch, 0, patch.length);
+        S3kPaletteWriteSupport.applyContiguousPatchToPalette(
+                GameServices.paletteOwnershipRegistryOrNull(),
+                GameServices.levelOrNull() != null ? GameServices.levelOrNull().getCurrentLevel() : null,
+                GameServices.graphics(),
+                target.palette(),
+                target.gpuLine(),
+                S3kPaletteOwners.SUPER_PALETTE,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                FIRST_COLOR_INDEX,
+                patch);
     }
 }

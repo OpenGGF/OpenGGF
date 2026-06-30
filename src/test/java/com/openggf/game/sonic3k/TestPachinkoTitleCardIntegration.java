@@ -11,7 +11,7 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.sonic3k.objects.InstaShieldObjectInstance;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -28,6 +28,7 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -96,12 +97,14 @@ public class TestPachinkoTitleCardIntegration {
         AbstractPlayableSprite player = fixture.sprite();
         DefaultPowerUpSpawner spawner = new DefaultPowerUpSpawner(GameServices.level().getObjectManager());
         if (player.getInstaShieldObject() == null) {
-            player.setInstaShieldObject(new InstaShieldObjectInstance(player));
+            player.setInstaShieldObject(spawner.createInstaShield(player));
         }
         assertNotNull(player.getInstaShieldObject(), "Sonic should have a persistent insta-shield object");
         spawner.registerObject(player.getInstaShieldObject());
 
-        assertTrue(((AbstractObjectInstance) player.getInstaShieldObject()).getSlotIndex() >= 32, "Insta-shield should be registered in the level before bonus entry");
+        int instaShieldSlot = ((AbstractObjectInstance) player.getInstaShieldObject()).getSlotIndex();
+        assertEquals(PhysicsFeatureSet.SONIC_3K.shieldObjectFixedSlotIndex(), instaShieldSlot,
+                "S3K insta-shield reuses the ROM shield fixed Level_object_RAM slot before bonus entry");
 
         BonusStageProvider provider = GameModuleRegistry.getCurrent().getBonusStageProvider();
         BonusStageState savedState = captureSavedState(player, fixture.camera());
@@ -124,14 +127,13 @@ public class TestPachinkoTitleCardIntegration {
         assertNotNull(trap, "Trap should exist after bonus title card exit");
 
         int updatesAtExit = trap.getUpdateCount();
-        int trapSlot = trap.getSlotIndex();
-
         for (int i = 0; i < 120; i++) {
             loop.step();
         }
 
         assertTrue(trap.getUpdateCount() > updatesAtExit, "Trap update count should continue advancing after title card exit");
-        assertEquals(1, countObjectsAtSlot(trapSlot), "Trap slot should not be shared after insta-shield re-registration");
+        assertSame(trap, findTrap(),
+                "The same trap instance should remain active after insta-shield re-registration");
     }
 
     private static BonusStageState captureSavedState(AbstractPlayableSprite player, Camera camera) {
@@ -174,16 +176,6 @@ public class TestPachinkoTitleCardIntegration {
             }
         }
         return null;
-    }
-
-    private static int countObjectsAtSlot(int slotIndex) {
-        int count = 0;
-        for (ObjectInstance instance : GameServices.level().getObjectManager().getActiveObjects()) {
-            if (instance instanceof AbstractObjectInstance aoi && aoi.getSlotIndex() == slotIndex) {
-                count++;
-            }
-        }
-        return count;
     }
 }
 

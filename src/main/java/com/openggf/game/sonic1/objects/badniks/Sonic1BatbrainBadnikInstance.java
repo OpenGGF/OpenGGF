@@ -10,8 +10,10 @@ import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -51,7 +53,7 @@ import java.util.List;
  *   <li>2 (.fly): frames 1, 2, 3, 2 at speed 3 - wing flapping cycle</li>
  * </ul>
  */
-public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance {
+public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
 
     // From disassembly: obColType = $B (enemy category 0x00, size index $0B)
     private static final int COLLISION_SIZE_INDEX = 0x0B;
@@ -400,9 +402,7 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance {
             setDestroyed(true);
             ObjectServices svc = tryServices();
             var objectManager = svc != null ? svc.objectManager() : null;
-            if (objectManager != null) {
-                objectManager.markRemembered(spawn);
-            }
+            ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
         }
     }
 

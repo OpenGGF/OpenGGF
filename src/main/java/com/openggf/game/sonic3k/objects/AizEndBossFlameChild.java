@@ -2,13 +2,19 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -27,9 +33,20 @@ import java.util.logging.Logger;
  * - Angles 0/$C: byte_69DC9 (frames 7,8,9,$A)
  * - Angles 4/8: byte_69DF3 (frames $B,$C,$D,$E)
  */
-public class AizEndBossFlameChild extends AbstractObjectInstance implements TouchResponseProvider {
+public class AizEndBossFlameChild extends AbstractObjectInstance
+        implements TouchResponseProvider, RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizEndBossFlameChild.class.getName());
     private static final int SHIELD_REACTION_FIRE = 1 << 4;
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            false,
+            true,
+            false,
+            TouchShieldDeflectCapability.NONE,
+            SHIELD_REACTION_FIRE,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     private static final int COLLISION_FLAGS = 0x97; // Hurts player, size index $17
     private static final int FLAME_DURATION = 40;    // Approximate flame animation duration
@@ -39,12 +56,13 @@ public class AizEndBossFlameChild extends AbstractObjectInstance implements Touc
             {0x00, 0x07},
             {-0x03, 0x05}
     };
-
     private final AizEndBossInstance boss;
     private final AizEndBossPropellerChild propeller;
-    private final int angle;
-    private final int offsetX;
-    private final int offsetY;
+    // angle and its derived offsets are non-final so the rewind field capturer
+    // reapplies them after the recreate hook rebuilds the flame with placeholder angle 0.
+    private int angle;
+    private int offsetX;
+    private int offsetY;
     private int currentX;
     private int currentY;
     private int animTimer;
@@ -68,6 +86,18 @@ public class AizEndBossFlameChild extends AbstractObjectInstance implements Touc
         // Select initial frame based on angle
         boolean vertical = (angle == 4 || angle == 8);
         this.mappingFrame = vertical ? 0x0B : 0x07;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        AizEndBossInstance restoredBoss = AizEndBossRewindLinks.nearestBoss(ctx);
+        AizEndBossPropellerChild restoredPropeller = AizEndBossRewindLinks.nearestPropeller(ctx);
+        if (restoredBoss == null || restoredPropeller == null) {
+            return null;
+        }
+        AizEndBossFlameChild restored = new AizEndBossFlameChild(restoredBoss, restoredPropeller, 0);
+        AizEndBossRewindLinks.seedCapturedScalars(restored, ctx);
+        return restored;
     }
 
     @Override
@@ -109,11 +139,9 @@ public class AizEndBossFlameChild extends AbstractObjectInstance implements Touc
 
     /** ROM: ChildObjDat_69D56 — Spawn bomb projectile at flame position. */
     private void spawnBomb() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) return;
+        if (services().objectManager() == null) return;
 
-        AizEndBossBombChild bomb = new AizEndBossBombChild(boss, currentX, currentY, angle);
-        objectManager.addDynamicObject(bomb);
+        spawnChild(() -> new AizEndBossBombChild(boss, currentX, currentY, angle));
     }
 
     @Override
@@ -129,6 +157,16 @@ public class AizEndBossFlameChild extends AbstractObjectInstance implements Touc
     @Override
     public int getShieldReactionFlags() {
         return SHIELD_REACTION_FIRE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override

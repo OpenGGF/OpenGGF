@@ -3,8 +3,10 @@ package com.openggf.game.sonic3k.objects.badniks;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 
-import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -26,7 +28,8 @@ import java.util.List;
  *   <li>Routine 8: Continue swing, at next peak: return to step 1</li>
  * </ol>
  */
-public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance {
+public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
+        implements SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x17;
     private static final int PRIORITY_BUCKET = 5;
@@ -56,22 +59,24 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance {
         initSwingPhase1();
     }
 
-    private void spawnBodySegments() {
-        ObjectManager objectManager = services().objectManager();
-
-        for (int i = 0; i < BODY_SEGMENT_COUNT; i++) {
-            CaterkillerJrBodyInstance segment = new CaterkillerJrBodyInstance(
-                    spawn, i, SEGMENT_WAIT_DELAYS[i]);
-            bodySegments.add(segment);
-            objectManager.addDynamicObject(segment);
-        }
-        bodySpawned = true;
-    }
-
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (destroyed) return;
+        if (isDestroyed()) return;
+
+        // Obj_WaitOffscreen parity: ROM Obj_CaterKillerJr (sonic3k.asm:183317-183323)
+        // begins with `jsr (Obj_WaitOffscreen).l`. Obj_WaitOffscreen
+        // (sonic3k.asm:180266-180297) suppresses all logic every frame until
+        // render_flags bit 7 (on-screen X) is set; until then it draws the
+        // offscreen indicator and returns. The cursor advance allocates the
+        // slot at the chunk transition (~0x40 frames before camera reaches
+        // the spawn x), but the active state is gated by on-screen visibility.
+        // Without this guard the engine activates the caterkiller as soon as
+        // it enters the spawn window, which causes its position to drift
+        // ~41 px further left than ROM by the time Sonic encounters it
+        // (AIZ trace F6066 hurt-Sonic divergence).
+        if (!isOnScreenX()) return;
+
         if (!bodySpawned) spawnBodySegments();
 
         boolean shouldMove = switch (phase) {
@@ -82,6 +87,48 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance {
         if (shouldMove) {
             moveWithVelocity();
         }
+    }
+
+    private void spawnBodySegments() {
+        for (int i = 0; i < BODY_SEGMENT_COUNT; i++) {
+            int segmentIndex = i;
+            CaterkillerJrBodyInstance segment = spawnFreeChild(
+                    () -> new CaterkillerJrBodyInstance(
+                            spawn, segmentIndex, SEGMENT_WAIT_DELAYS[segmentIndex]));
+            if (!segment.isDestroyed() && segment.getSlotIndex() >= 0) {
+                bodySegments.add(segment);
+            }
+        }
+        bodySpawned = true;
+    }
+
+    void attachBodySegmentForRewind(CaterkillerJrBodyInstance segment) {
+        if (!bodySegments.contains(segment)) {
+            bodySegments.add(segment);
+        }
+        bodySpawned = true;
+    }
+
+    static CaterkillerJrHeadInstance findLiveHeadForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
+                || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        CaterkillerJrHeadInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (!(instance instanceof CaterkillerJrHeadInstance head) || head.isDestroyed()) {
+                continue;
+            }
+            long dx = head.getX() - ctx.spawn().x();
+            long dy = head.getY() - ctx.spawn().y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = head;
+            }
+        }
+        return best;
     }
 
     /** Routine 4: swing with counter. Skip movement on transition to phase 2. */

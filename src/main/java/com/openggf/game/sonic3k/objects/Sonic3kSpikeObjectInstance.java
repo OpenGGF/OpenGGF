@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractSpikeObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -25,8 +27,7 @@ import java.util.List;
  *   <li>Lower nibble (bits 3-0): behavior (0=static, 1=vertical, 2=horizontal, 3=push)</li>
  * </ul>
  */
-public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance {
-
+public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance implements RewindRecreatable {
     // Push mode constants (ROM: sub_2438A)
     private static final int PUSH_RATE_PERIOD = 0x10;   // $3A reset value: every 17 frames
     private static final int PUSH_MAX_DISTANCE = 0x20;  // $3C init: 32 pixels total
@@ -35,9 +36,16 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance {
     private boolean contactPushingActive;   // Set by onSolidContact, consumed by next update()
     private int pushRateTimer;              // $3A: frames until next push allowed
     private int pushDistanceRemaining = PUSH_MAX_DISTANCE; // $3C: remaining 1px pushes
+    private boolean mainRoutineReached;
+    private boolean suppressSolidThisFrame = true;
 
     public Sonic3kSpikeObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Spikes");
+    }
+
+    @Override
+    public Sonic3kSpikeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic3kSpikeObjectInstance(ctx.spawn());
     }
 
     @Override
@@ -57,6 +65,18 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance {
 
     @Override
     protected void moveSpikes(PlayableEntity playerEntity) {
+        if (!mainRoutineReached) {
+            // Obj_Spikes initialization stores loc_2413E/loc_24090/etc. in (a0)
+            // and returns before the movement + SolidObjectFull body can run
+            // (sonic3k.asm:48925-49012).  The first main-routine frame starts
+            // on the next object execution.
+            mainRoutineReached = true;
+            suppressSolidThisFrame = true;
+            currentX = baseX;
+            currentY = baseY;
+            return;
+        }
+        suppressSolidThisFrame = false;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         int behavior = spawn.subtype() & 0xF;
         switch (behavior) {
@@ -68,6 +88,19 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance {
                 currentY = baseY;
             }
         }
+    }
+
+    @Override
+    public boolean isSolidFor(PlayableEntity player) {
+        return !suppressSolidThisFrame;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // S3K Render_Sprites reads height_pixels(a0) directly. Obj_Spikes
+        // initializes that from byte_23F74, which matches the shared y-radius
+        // table for the spike subtypes.
+        return getEntryValue(Y_RADIUS);
     }
 
     @Override

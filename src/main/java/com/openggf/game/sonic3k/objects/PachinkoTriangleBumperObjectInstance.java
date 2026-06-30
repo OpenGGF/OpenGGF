@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -25,7 +27,7 @@ import java.util.List;
  * sets an in-air flip state, and runs the two-frame hit animation.
  */
 public class PachinkoTriangleBumperObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x23, 0x40, 0x41);
     private static final int BOUNCE_X_SPEED = 0x800;
@@ -35,6 +37,11 @@ public class PachinkoTriangleBumperObjectInstance extends AbstractObjectInstance
 
     public PachinkoTriangleBumperObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PachinkoTriangleBumper");
+    }
+
+    @Override
+    public PachinkoTriangleBumperObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new PachinkoTriangleBumperObjectInstance(ctx.spawn());
     }
 
     @Override

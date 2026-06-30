@@ -2,7 +2,6 @@ package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
-import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.rings.RingManager;
 import com.openggf.game.PlayableEntity;
 
@@ -13,7 +12,8 @@ import java.util.List;
  * Uses ring sparkle animation frames.
  * Self-destructs after animation completes.
  */
-public class SignpostSparkleObjectInstance extends AbstractObjectInstance {
+public class SignpostSparkleObjectInstance extends AbstractObjectInstance
+        implements ZeroScalarArgsRewindRecreatable {
 
     // Animation timing
     private static final int FRAME_DELAY = 4; // Frames between animation steps
@@ -22,8 +22,10 @@ public class SignpostSparkleObjectInstance extends AbstractObjectInstance {
     private int animFrame = 0;
     private int totalFrames = 4; // Default, will be updated from RingManager
     private int sparkleStartIndex = 4; // Default sparkle frame start
-    private final int worldX;
-    private final int worldY;
+    // Non-final so GenericFieldCapturer captures them and restoreObjectRewindState reapplies
+    // them after a rewind recreate (the base `spawn` is null, so position is not spawn-derivable).
+    private int worldX;
+    private int worldY;
 
     public SignpostSparkleObjectInstance(int x, int y) {
         super(null, "signpost_sparkle_" + x + "_" + y);
@@ -48,7 +50,7 @@ public class SignpostSparkleObjectInstance extends AbstractObjectInstance {
             animTimer = 0;
             animFrame++;
             if (animFrame >= totalFrames) {
-                setDestroyed(true);
+                ObjectLifetimeOps.expireDynamic(this);
             }
         }
     }

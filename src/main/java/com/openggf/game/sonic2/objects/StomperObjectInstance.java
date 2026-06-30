@@ -11,6 +11,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.SpriteMappingFrame;
@@ -48,7 +50,7 @@ import java.util.List;
  * Uses MCZ level art tiles (palette 2).
  */
 public class StomperObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider {
+        implements SolidObjectProvider, RewindRecreatable {
 
     private static final boolean DEBUG_VIEW_ENABLED = staticDebugViewEnabled();
     private static final DebugOverlayManager OVERLAY_MANAGER = staticDebugOverlay();
@@ -77,7 +79,7 @@ public class StomperObjectInstance extends AbstractObjectInstance
     ));
 
     // State
-    private final int baseY;           // Original spawn Y position (objoff_32)
+    private int baseY;           // Original spawn Y position (objoff_32)
     private int currentY;              // Current Y position
     private int timer = 0;             // Movement timer (objoff_30)
     private boolean crushing = false;  // routine_secondary != 0
@@ -87,6 +89,11 @@ public class StomperObjectInstance extends AbstractObjectInstance
         this.baseY = spawn.y();
         this.currentY = baseY;
         updateDynamicSpawn(spawn.x(), currentY);
+    }
+
+    @Override
+    public StomperObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new StomperObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

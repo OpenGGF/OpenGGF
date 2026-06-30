@@ -11,8 +11,10 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 
 import java.util.List;
@@ -24,7 +26,7 @@ import java.util.List;
  *
  * Based on ObjA7 from Sonic 2 disassembly.
  */
-public class GrabberBadnikInstance extends AbstractBadnikInstance {
+public class GrabberBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B; // From disassembly
 
     // Movement constants from disassembly
@@ -60,9 +62,33 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
     private int directionToggleCount;   // Button presses in current check window (objoff_38)
     private boolean inputDetectedThisCycle; // Has input been detected this cycle (objoff_31)
     private int lastDirectionBits;          // Last direction pressed as bitmask (objoff_36)
+    // Previous-frame HELD direction bits, used to derive the freshly-PRESSED edge
+    // the ROM escape window actually consumes. loc_390BC reads `move.w (Ctrl_1_Held),d0`
+    // then `andi.b #$C,d0` — the .b operates on the LOW byte of the word, which is
+    // Ctrl_1_Press (the newly-pressed edge), NOT Ctrl_1_Held. So the escape both
+    // latches (loc_390E6) and tallies toggles on pressed edges. See the Ctrl_1 word
+    // layout (Ctrl_1_Held=high byte, Ctrl_1_Press=low byte) at
+    // s2.constants.asm:1387-1389, the `move.w (a1),d0` read at s2.asm:76916, and
+    // loc_390BC s2.asm:76915-76930.
+    private int prevHeldDirectionBits;
+    // ROM parity (s2.asm:76947): on escape, loc_390FA executes `clr.b collision_flags(a0)`,
+    // making the Grabber non-interactive so the freed (still-rolling) player does NOT
+    // touch-kill it and receive a spurious enemy bounce. The engine's touch scanner
+    // skips any object whose getCollisionFlags() returns 0 (ObjectManager.java:5181),
+    // so we mirror the ROM clear with this latch.
+    private boolean collisionFlagsCleared;
     private boolean paletteFlipped;         // Palette bit toggle for blink effect (not visibility)
     private int anchorY;            // Y position of anchor point (where Grabber starts)
     private AbstractPlayableSprite grabbedPlayer;
+    // ROM parity: the legs touch->collision_property->grab handshake is a
+    // frame-delayed pipeline. TouchResponse runs at the end of a frame and sets
+    // the legs' collision_property; ObjA8 loc_38F88 reads that property on the
+    // FOLLOWING frame to set objoff_30 (the grab flag), which the body's dive
+    // routine then consumes. We reproduce that one-frame deferral so the grab
+    // (and the resulting velocity zero) lands on the same frame as the ROM
+    // rather than one frame early. See s2.asm:76756-76777 (ObjA8) and the
+    // TouchResponse pipeline ordering at s2.asm:84955-85049.
+    private AbstractPlayableSprite pendingGrabPlayer;
 
     // Sub-object positions
     private int legsFrame;          // Frame index for legs (3 or 4)
@@ -93,6 +119,8 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
         this.directionToggleCount = 0;
         this.inputDetectedThisCycle = false;
         this.lastDirectionBits = 0;
+        this.prevHeldDirectionBits = 0;
+        this.collisionFlagsCleared = false;
         this.paletteFlipped = false;
         this.grabbedPlayer = null;
         this.legsFrame = 3;
@@ -176,10 +204,23 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
     }
 
     private void updateDiving(AbstractPlayableSprite player) {
-        // Check for grab collision
+        // ROM parity (one-frame grab deferral): the legs touch overlap is latched
+        // by TouchResponse at the end of one frame and only consumed by the body
+        // (ObjA7_GrabCharacter, s2.asm:76653-76655 -> 76676) on the next frame.
+        // So a previously-latched overlap grabs FIRST, before this frame's dive
+        // movement, exactly as loc_38EB4 tests objoff_30 before ObjectMove.
+        if (pendingGrabPlayer != null) {
+            AbstractPlayableSprite p = pendingGrabPlayer;
+            pendingGrabPlayer = null;
+            if (p != null && !p.getInvulnerable()) {
+                grabPlayer(p);
+                return;
+            }
+        }
+
+        // Detect the legs touch overlap this frame; it is applied next frame.
         if (player != null && checkGrabCollision(player)) {
-            grabPlayer(player);
-            return;
+            pendingGrabPlayer = player;
         }
 
         diveTimer--;
@@ -202,15 +243,66 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
     }
 
     private boolean checkGrabCollision(AbstractPlayableSprite player) {
-        // Check if legs are overlapping player
-        // Legs are offset below the main body
-        int legsY = currentY + 16;
-        int dx = Math.abs(currentX - player.getCentreX());
-        int dy = Math.abs(legsY - player.getCentreY());
+        // ROM parity: the grab is NOT a self-computed loose AABB. In the ROM the
+        // capture is driven by the Grabber's LEGS sub-object (ObjA8) through the
+        // normal TouchResponse pipeline, then gated on the body actively diving:
+        //   - ObjA8 loc_38F88 (s2.asm:76756-76777) only sets the grab flag
+        //     (objoff_30) when its collision_property was set by a touch overlap
+        //     AND cmpi.b #4,routine_secondary(a1) (the body is in the DIVING
+        //     sub-state).
+        //   - The body's dive routine loc_38EB4 (s2.asm:76653-76655) consumes
+        //     objoff_30 -> ObjA7_GrabCharacter.
+        // This method is only ever called from updateDiving(), so the "body is
+        // diving" gate is already satisfied; here we reproduce the ObjA8 legs
+        // touch box exactly so a fast rolling Sonic merely flying past the legs
+        // does NOT get captured (the previous 48x32 box grabbed him; the ROM box
+        // is far tighter).
+        //
+        // ObjA8 legs collision_flags = $D7 (ObjA7_SubObjData2, s2.asm:77042).
+        // Touch index = $D7 & $3F = $17 -> Touch_Sizes[$17] = (8,8) half-extents
+        // (s2.asm:85008-85010, 85077). The body aligns the legs at body_y + $10
+        // via Obj_AlignChildXY (moveq #$10,d1 at s2.asm:76593-76595), matching
+        // the legsY = currentY + 16 used elsewhere here.
+        if (player.getInvulnerable()) {
+            return false;
+        }
 
-        // Collision box approximately 24x16 pixels
-        // Can't grab if player is invulnerable or invincible
-        return dx < 24 && dy < 16 && !player.getInvulnerable();
+        final int legsBoxHalfWidth = 0x08;   // Touch_Sizes[$17] width  half-extent
+        final int legsBoxHalfHeight = 0x08;  // Touch_Sizes[$17] height half-extent
+        int legsX = currentX;
+        int legsY = currentY + 0x10;
+
+        // Reproduce TouchResponse's player box (s2.asm:84966-84987):
+        //   d2 = player_x - 8 ; d4 = $10 (player box spans player_x-8 .. player_x+8)
+        //   d5 = (y_radius - 3) ; player box spans player_y-d5 .. player_y+d5
+        int playerX = player.getCentreX();
+        int playerY = player.getCentreY();
+        int d2 = playerX - 8;
+        int d4 = 0x10;
+        int d5 = (player.getYRadius() & 0xFF) - 3;
+
+        // Width check (s2.asm:85016-85030): object box [legsX - hw, legsX + hw]
+        // overlaps player box [d2, d2 + d4].
+        int wd0 = legsX - legsBoxHalfWidth - d2;
+        if (wd0 < 0) {
+            wd0 += legsBoxHalfWidth * 2;
+            if (wd0 < 0) {
+                return false; // fully left of player box
+            }
+        } else if (wd0 > d4) {
+            return false; // fully right of player box
+        }
+
+        // Height check (s2.asm:85032-85047): object box [legsY - hh, legsY + hh]
+        // overlaps player box [player_y - d5, player_y + d5] i.e. d3 = player_y - d5
+        // spanning 2*d5.
+        int d3 = playerY - d5;
+        int hd0 = legsY - legsBoxHalfHeight - d3;
+        if (hd0 < 0) {
+            hd0 += legsBoxHalfHeight * 2;
+            return hd0 >= 0;
+        }
+        return hd0 <= (d5 * 2);
     }
 
     private void grabPlayer(AbstractPlayableSprite player) {
@@ -224,12 +316,29 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
         directionToggleCount = 0;                // objoff_38 = 0 (button press counter)
         inputDetectedThisCycle = false;          // objoff_31 = 0
         lastDirectionBits = 0;                   // objoff_36 = 0
+        // Seed the held-edge history from the player's held direction bits AT the
+        // grab frame. The ROM escape consumes Ctrl_1_Pressed, a GLOBAL edge computed
+        // every frame as (held & ~heldPrev) independent of the grab. So on the first
+        // carry frame the pressed edge is taken against the true previous frame's
+        // held state, not against zero. Seeding from 0 would make a direction the
+        // player was already holding at grab spuriously read as freshly pressed and
+        // over-count the first window's toggles, firing the escape several frames
+        // early (CPZ2: seed=0 escapes at csvrow 1612, ROM/seed-from-grab at 1619).
+        prevHeldDirectionBits = heldDirectionBits(player);
 
         // Lock player movement (obj_control = $81)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setAnimationId(Sonic2AnimationIds.FLOAT);  // Per disassembly line 76221
+
+        // ROM parity: on the frame the grab is consumed, ObjA8 routine 4
+        // loc_38FE8 (s2.asm:76790-76799) pins the grabbed player's x_pos/y_pos to
+        // the legs sub-object position (body x, body y + $10). Snap immediately so
+        // the player's position matches the ROM on the grab frame, not one frame
+        // later via updateCarrying().
+        player.setX((short) (currentX - player.getWidth() / 2));
+        player.setY((short) (currentY + 0x10 - player.getHeight() / 2));
 
         // Reverse dive direction to go back up
         if (yVelocity > 0) {
@@ -241,6 +350,17 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
 
         animFrame = 1; // Closed claws frame
         // Note: Per disassembly, no sound effect plays on grab
+    }
+
+    /**
+     * Held direction bits (left=$04, right=$08, mask $0C), mirroring the high byte
+     * of the ROM {@code Ctrl_1_Held} word that loc_390BC reads (s2.asm:76916).
+     */
+    private static int heldDirectionBits(AbstractPlayableSprite player) {
+        int bits = 0;
+        if (player.isLeftPressed()) bits |= 0x04;
+        if (player.isRightPressed()) bits |= 0x08;
+        return bits & 0x0C;
     }
 
     private void updateCarrying() {
@@ -255,42 +375,11 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
             return;
         }
 
-        // === Input checking (loc_390BC in disassembly) ===
-        // Track directional input changes using bitmask like the disassembly
-        // Bit 2 = left ($04), Bit 3 = right ($08), mask = $0C
-        int currentDirectionBits = 0;
-        if (grabbedPlayer.isLeftPressed()) currentDirectionBits |= 0x04;
-        if (grabbedPlayer.isRightPressed()) currentDirectionBits |= 0x08;
-        currentDirectionBits &= 0x0C;  // Mask to direction bits only
-
-        if (currentDirectionBits != 0) {
-            if (!inputDetectedThisCycle) {
-                // First direction press in this cycle - set baseline
-                inputDetectedThisCycle = true;
-                lastDirectionBits = currentDirectionBits;
-            } else if (currentDirectionBits != lastDirectionBits) {
-                // Direction changed - count the toggle
-                directionToggleCount++;
-                lastDirectionBits = currentDirectionBits;
-            }
-        }
-
-        // Every 32 frames, check if player has escaped (objoff_37 countdown)
-        inputCheckTimer--;
-        if (inputCheckTimer <= 0) {
-            if (directionToggleCount >= ESCAPE_BUTTON_COUNT) {
-                // Player escaped! Grabber survives and returns to patrol
-                releasePlayer(true);
-                return;
-            }
-            // Reset for next check window
-            inputCheckTimer = INPUT_CHECK_INTERVAL;
-            directionToggleCount = 0;
-            inputDetectedThisCycle = false;
-        }
-
-        // === Blink mechanism (ObjA7_CheckExplode) ===
-        // Decrement blink counter each frame
+        // === Blink mechanism (ObjA7_CheckExplode, s2.asm:76967-76975) ===
+        // ROM ordering: the carry routines loc_38F3E (s2.asm:76708-76710) and
+        // loc_38F58 (s2.asm:76722-76724) call ObjA7_CheckExplode BEFORE loc_390BC
+        // every frame. Run the blink countdown first so a same-frame blink-timeout
+        // (ObjA7_Poof) wins over the escape evaluation exactly as the ROM does.
         blinkCounter--;
         if (blinkCounter <= 0) {
             // Reload counter and decrement blink count
@@ -307,6 +396,67 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
             }
         }
 
+        // === Escape-window input checking (loc_390BC, s2.asm:76915-76957) ===
+        // Track directional input changes using a bitmask like the disassembly:
+        // Bit 2 = left ($04), Bit 3 = right ($08), mask = $0C (objoff_36/objoff_38).
+        //
+        // ROM-faithful PRESSED-edge input: loc_390BC does `move.w (Ctrl_1_Held),d0`
+        // then `andi.b #$C,d0`. The `.b` masks the LOW byte of that word, which is
+        // Ctrl_1_Pressed (the freshly-pressed edge), NOT the held byte. So both the
+        // first-input latch (loc_390E6 s2.asm:76933-76940) and the toggle tally
+        // (loc_390BC s2.asm:76922-76928) operate on newly-pressed direction edges.
+        // isLeftPressed()/isRightPressed() return HELD state, so derive the press
+        // edge here: pressed = held & ~prevHeld. Consuming held bits (the prior
+        // engine behaviour) over-counted toggles and fired the escape ~11 frames
+        // early (CPZ2 release at csvrow 1609 vs ROM 1619/gfc 0x0652).
+        int heldDirectionBits = heldDirectionBits(grabbedPlayer);
+        int currentDirectionBits = heldDirectionBits & ~prevHeldDirectionBits;
+        prevHeldDirectionBits = heldDirectionBits;
+
+        // ROM gate (s2.asm:76918-76919): tst.b objoff_31 / beq loc_390E6.
+        // The 32-frame escape window (objoff_37) only begins counting AFTER the
+        // first directional press of the cycle has been latched into objoff_31.
+        // On that first-input frame the ROM takes the loc_390E6 path
+        // (s2.asm:76933-76940) which sets objoff_31 + objoff_36 and returns
+        // WITHOUT decrementing objoff_37 and WITHOUT counting a toggle. Only on
+        // subsequent frames (objoff_31 already set) does loc_390BC decrement
+        // objoff_37 and tally toggles. The previous engine code decremented the
+        // timer unconditionally every carrying frame, which started the window at
+        // the grab frame instead of at first input and fired the escape ~12 frames
+        // early (CPZ2 f1607 divergence: ROM keeps Sonic pinned, engine released).
+        if (!inputDetectedThisCycle) {
+            // loc_390E6: waiting for the first directional press of this cycle.
+            if (currentDirectionBits != 0) {
+                inputDetectedThisCycle = true;          // st.b objoff_31
+                lastDirectionBits = currentDirectionBits; // move.b d0,objoff_36
+            }
+            // No objoff_37 decrement on the latch (or idle) frame.
+        } else {
+            // objoff_31 set: now the window counts down (subq.b #1,objoff_37).
+            inputCheckTimer--;
+            if (inputCheckTimer <= 0) {
+                // loc_390FA (s2.asm:76942-76956): window expired. Escape only when
+                // >=4 toggles were tallied this window; either way reset the timer
+                // to $20 AND clear the first-input latch + toggle count so the next
+                // window again waits for first input.
+                if (directionToggleCount >= ESCAPE_BUTTON_COUNT) {
+                    // Player escaped: obj_control=0, in_air, Walk anim, NO velocity
+                    // imparted (s2.asm:76945-76951). Sonic drops from rest.
+                    releasePlayer(true);
+                    return;
+                }
+                inputCheckTimer = INPUT_CHECK_INTERVAL;  // move.b #$20,objoff_37
+                directionToggleCount = 0;                // clr.b objoff_38
+                inputDetectedThisCycle = false;          // clr.b objoff_31
+            } else if (currentDirectionBits != 0
+                    && currentDirectionBits != lastDirectionBits) {
+                // s2.asm:76922-76928: count a toggle only when a direction is held
+                // this frame and it differs from the last latched direction.
+                directionToggleCount++;
+                lastDirectionBits = currentDirectionBits;
+            }
+        }
+
         // === Movement back to anchor ===
         if (currentY > anchorY) {
             int yPos32 = (currentY << 8) | (ySubpixel & 0xFF);
@@ -315,9 +465,13 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
             ySubpixel = yPos32 & 0xFF;
         }
 
-        // Update grabbed player position (center below grabber's claws)
+        // Update grabbed player position. ROM ObjA8 loc_38FE8 (s2.asm:76790-76799)
+        // pins the grabbed player's x_pos/y_pos directly to the LEGS sub-object's
+        // x_pos/y_pos. The legs are aligned to body_y + $10 via Obj_AlignChildXY
+        // (moveq #$10,d1 at s2.asm:76593-76595), so the player's ROM-centre is
+        // (currentX, currentY + 16), not body + 24.
         grabbedPlayer.setX((short) (currentX - grabbedPlayer.getWidth() / 2));
-        grabbedPlayer.setY((short) (currentY + 24 - grabbedPlayer.getHeight() / 2));
+        grabbedPlayer.setY((short) (currentY + 0x10 - grabbedPlayer.getHeight() / 2));
     }
 
     /**
@@ -326,7 +480,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
      */
     private void hurtAndReleasePlayer() {
         if (grabbedPlayer != null) {
-            grabbedPlayer.setObjectControlled(false);
+            ObjectControlState.none().applyTo(grabbedPlayer);
             grabbedPlayer.setAir(true);
 
             // ROM: Hurt_Sidekick - CPU Tails only gets knockback, no ring scatter or death
@@ -356,16 +510,51 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
 
     private void releasePlayer(boolean escaped) {
         if (grabbedPlayer != null) {
-            grabbedPlayer.setObjectControlled(false);
+            ObjectControlState.none().applyTo(grabbedPlayer);
             grabbedPlayer.setAir(true);
             // Per disassembly: player just becomes airborne and falls naturally
             // No velocity change on escape
             grabbedPlayer = null;
         }
 
+        if (escaped) {
+            // ROM loc_390FA (s2.asm:76942-76951): on a successful button-mash escape
+            // the Grabber clears its own collision_flags (`clr.b collision_flags(a0)`,
+            // s2.asm:76947) and frees the player WITHOUT imparting any velocity. The
+            // freed player is still rolling, so without this clear the engine's
+            // per-frame ENEMY touch poll would touch-kill the Grabber on the very
+            // next frame and give the player a spurious enemy-destruction bounce
+            // (-0x00C8). Latch the clear so getCollisionFlags() returns 0 and the
+            // touch scanner skips this object (ObjectManager.java:5181).
+            collisionFlagsCleared = true;
+
+            // ROM loc_390FA sets routine_secondary=$A (s2.asm:76945). Routine $A is
+            // BranchTo_ObjA7_CheckExplode (s2.asm:76610, off_38E46 entry $A): the
+            // Grabber does NOT return to patrol or hunt again — it only continues the
+            // ObjA7_CheckExplode blink countdown until ObjA7_Poof transforms it into
+            // an explosion. Routing escape into State.DEATH (= routine $A) instead of
+            // RELEASING/returnToPatrol prevents the engine from re-diving and
+            // re-grabbing the just-freed player (CPZ2 second-grab at frame 1737).
+            state = State.DEATH;
+            animFrame = 0; // Open claws
+            // Keep the blink countdown (blinkCounter/blinkCount) where it is so the
+            // remaining objoff_2A/objoff_2B frames run out exactly as in routine $A.
+            return;
+        }
+
         state = State.RELEASING;
         animFrame = 0; // Open claws
         paletteFlipped = false;  // Reset palette
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        if (collisionFlagsCleared) {
+            // ROM loc_390FA `clr.b collision_flags(a0)` — Grabber is no longer
+            // interactive after a button-mash escape (s2.asm:76947).
+            return 0;
+        }
+        return super.getCollisionFlags();
     }
 
     /**
@@ -399,11 +588,33 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
     }
 
     private void updateDeath() {
-        // Release any grabbed player
+        // ROM routine_secondary=$A (BranchTo_ObjA7_CheckExplode, off_38E46 entry $A
+        // at s2.asm:76610): the Grabber runs ONLY ObjA7_CheckExplode each frame
+        // (s2.asm:76967-76975) — no patrol, no dive, no escape window. The blink
+        // countdown (objoff_2A/objoff_2B) continues from where the escape left it,
+        // and when objoff_2B reaches 0 ObjA7_Poof (s2.asm:76977-76989) transforms the
+        // Grabber into an Explosion. Because the player was freed at escape
+        // (objoff_32 cleared, loc_390FA s2.asm:76951), Poof's player-hurt branch
+        // (`tst.w objoff_32; beq +`, s2.asm:76981-76982) is skipped: NO player hurt.
         if (grabbedPlayer != null) {
-            releasePlayer(true);
+            // Safety: if somehow still holding a player when entering DEATH via a
+            // non-escape path, release without imparting velocity.
+            ObjectControlState.none().applyTo(grabbedPlayer);
+            grabbedPlayer.setAir(true);
+            grabbedPlayer = null;
         }
-        // Death is handled by AbstractBadnikInstance
+
+        // Continue the ObjA7_CheckExplode blink countdown.
+        blinkCounter--;
+        if (blinkCounter <= 0) {
+            blinkCounter = blinkCount;
+            blinkCount--;
+            paletteFlipped = !paletteFlipped;  // bchg #palette_bit_0,art_tile(a0)
+            if (blinkCount <= 0) {
+                // ObjA7_Poof: transform into an explosion (no animal, no hurt).
+                triggerDestruction();
+            }
+        }
     }
 
     private void updateStringFrame() {
@@ -445,20 +656,19 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
             return;
         }
 
-        // Grabber is ceiling-mounted - can only be destroyed from above
-        // Player must be above the Grabber's center and moving downward (or at least not upward)
-        int playerCentreY = player.getCentreY();
-        int grabberCentreY = currentY;
+        // ROM parity: Touch_Enemy / Touch_KillEnemy (s2.asm:84807-84890) destroys
+        // the badnik whenever Sonic is rolling, spindashing, or invincible — the
+        // touch response is direction-agnostic.  Only the bounce-back direction
+        // depends on Sonic's relative position; the kill itself is unconditional.
+        // The Grabber is no exception (collision_flags=$B in ObjA7_SubObjData at
+        // s2.asm:76603, which is the standard "kill on roll" mask).  The previous
+        // "only destroy from above" guard rejected legitimate roll-jump kills
+        // from below (CPZ f680 trace divergence: Sonic kept his roll arc through
+        // the Grabber but the engine never killed it, then DIVING/grabPlayer
+        // zeroed his speeds).  ROM destroys the Grabber the moment Sonic's roll
+        // sensor overlaps it regardless of vertical direction.
 
-        // Only allow attack if player is above the grabber
-        if (playerCentreY >= grabberCentreY) {
-            // Player is at same level or below - ignore the attack
-            // This prevents destruction from jumping up into it from below
-            return;
-        }
-
-        // Player is above - allow the attack
-        // Release any grabbed player before destruction
+        // Release any grabbed player before destruction.
         if (grabbedPlayer != null) {
             releasePlayer(true);
         }

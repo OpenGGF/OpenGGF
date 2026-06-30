@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k;
 import org.junit.jupiter.api.Test;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
@@ -18,6 +20,7 @@ import com.openggf.tests.rules.SonicGame;
 import java.io.IOException;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -110,6 +113,32 @@ public class TestS3kCgzPaletteCycling {
         assertTrue(color5R > 200 && color5G > 200 && color5B > 200, "Color 5 should be white from $0EEE (r=7,g=7,b=7)");
     }
 
+    @Test
+    public void cgzCycleSubmitsPaletteOwnershipClaims() throws IOException {
+        GraphicsManager.getInstance().initHeadless();
+
+        CgzTestLevel level = new CgzTestLevel();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(reader, level, ZONE_CGZ, ACT_1, registry, null);
+
+        registry.beginFrame();
+        cycler.update();
+        registry.resolveInto(level.palettes(), null, null, null);
+
+        for (int c = 2; c <= 5; c++) {
+            assertEquals(S3kPaletteOwners.CGZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 2, c));
+        }
+        int color2R = level.getPalette(2).getColor(2).r & 0xFF;
+        int color5R = level.getPalette(2).getColor(5).r & 0xFF;
+        int color5G = level.getPalette(2).getColor(5).g & 0xFF;
+        int color5B = level.getPalette(2).getColor(5).b & 0xFF;
+        assertTrue(color2R > 200, "CGZ owned color 2 should resolve from ROM frame 0");
+        assertTrue(color5R > 200 && color5G > 200 && color5B > 200,
+                "CGZ owned color 5 should resolve from ROM frame 0");
+    }
+
     /**
      * Minimal Level implementation that only provides 4 palette lines.
      * Sufficient for testing palette cycling without a full level load.
@@ -121,6 +150,10 @@ public class TestS3kCgzPaletteCycling {
             for (int i = 0; i < palettes.length; i++) {
                 palettes[i] = new Palette();
             }
+        }
+
+        Palette[] palettes() {
+            return palettes;
         }
 
         @Override public int getPaletteCount() { return palettes.length; }

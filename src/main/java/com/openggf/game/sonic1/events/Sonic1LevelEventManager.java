@@ -6,7 +6,8 @@ import com.openggf.game.sonic1.Sonic1LoopManager;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.game.GameServices;
+
+import java.nio.ByteBuffer;
 
 /**
  * Sonic 1 implementation of dynamic level events.
@@ -33,6 +34,8 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
     private final Sonic1SYZEvents syzEvents;
     private final Sonic1SBZEvents sbzEvents;
     private final Sonic1EndingEvents endingEvents;
+    private final Sonic1FixedAirCountdownManager fixedAirCountdownManager =
+            new Sonic1FixedAirCountdownManager(Sonic1ZoneEvents::focusedSpriteOrNull);
 
     // Loop/plane switching manager
     private final Sonic1LoopManager loopManager = new Sonic1LoopManager();
@@ -87,6 +90,7 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         sbzEvents.init();
         endingEvents.init();
         loopManager.initLevel(zone, act);
+        fixedAirCountdownManager.reset();
         sbz3TransitionRequested = false;
     }
 
@@ -107,6 +111,16 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
             case Sonic1ZoneConstants.ZONE_ENDING -> endingEvents.update(currentAct);
             default -> { /* DLE_Ending: rts */ }
         }
+    }
+
+    @Override
+    public void updateFixedInLevelObjectsBeforeDynamicObjects() {
+        fixedAirCountdownManager.update();
+    }
+
+    @Override
+    public boolean ownsFixedDrowningBubbleCadence(AbstractPlayableSprite player) {
+        return fixedAirCountdownManager.ownsCadenceFor(player);
     }
 
     // =========================================================================
@@ -130,6 +144,63 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         var handler = getActiveHandler();
         if (handler != null) {
             handler.setEventRoutine(routine);
+        }
+    }
+
+    // =========================================================================
+    // RewindSnapshottable extra-state hooks (C.2)
+    // =========================================================================
+
+    /**
+     * Packs S1-specific extra state into a byte array:
+     * <ol>
+     *   <li>1 byte: sbz3TransitionRequested flag</li>
+     *   <li>7 × 4 bytes: per-zone handler eventRoutine (ghz, lz, mz, slz, syz, sbz, ending)</li>
+     *   <li>1 byte: sbzEvents.fzTransitionRequested</li>
+     *   <li>1 byte: endingEvents.bootstrapApplied</li>
+     *   <li>1 byte: endingEvents.endingSonicSpawned</li>
+     *   <li>14 bytes: fixed v_sonicbubbles countdown sidecar</li>
+     * </ol>
+     */
+    @Override
+    protected byte[] captureExtra() {
+        ByteBuffer buf = ByteBuffer.allocate(1 + 7 * 4 + 3
+                + Sonic1FixedAirCountdownManager.REWIND_STATE_BYTES);
+        buf.put((byte) (sbz3TransitionRequested ? 1 : 0));
+        buf.putInt(ghzEvents.eventRoutine);
+        buf.putInt(lzEvents.eventRoutine);
+        buf.putInt(mzEvents.eventRoutine);
+        buf.putInt(slzEvents.eventRoutine);
+        buf.putInt(syzEvents.eventRoutine);
+        buf.putInt(sbzEvents.eventRoutine);
+        buf.putInt(endingEvents.eventRoutine);
+        buf.put((byte) (sbzEvents.isFzTransitionRequested() ? 1 : 0));
+        buf.put((byte) (endingEvents.isBootstrapApplied() ? 1 : 0));
+        buf.put((byte) (endingEvents.isEndingSonicSpawned() ? 1 : 0));
+        fixedAirCountdownManager.writeRewindState(buf);
+        return buf.array();
+    }
+
+    @Override
+    protected void restoreExtra(byte[] extra) {
+        int baseSize = 1 + 7 * 4 + 3;
+        if (extra == null || extra.length < baseSize) {
+            return;
+        }
+        ByteBuffer buf = ByteBuffer.wrap(extra);
+        sbz3TransitionRequested         = buf.get() != 0;
+        ghzEvents.eventRoutine          = buf.getInt();
+        lzEvents.eventRoutine           = buf.getInt();
+        mzEvents.eventRoutine           = buf.getInt();
+        slzEvents.eventRoutine          = buf.getInt();
+        syzEvents.eventRoutine          = buf.getInt();
+        sbzEvents.eventRoutine          = buf.getInt();
+        endingEvents.eventRoutine       = buf.getInt();
+        sbzEvents.setFzTransitionRequested(buf.get() != 0);
+        endingEvents.setBootstrapApplied(buf.get() != 0);
+        endingEvents.setEndingSonicSpawned(buf.get() != 0);
+        if (buf.remaining() >= Sonic1FixedAirCountdownManager.REWIND_STATE_BYTES) {
+            fixedAirCountdownManager.readRewindState(buf);
         }
     }
 

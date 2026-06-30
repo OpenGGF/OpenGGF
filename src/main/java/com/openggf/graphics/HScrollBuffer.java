@@ -33,6 +33,10 @@ public class HScrollBuffer {
     private final float[] scrollData = new float[VISIBLE_LINES];
     private final boolean foregroundWord;
     private boolean initialized = false;
+    // Persistent native staging buffer, reused across frames (BG HScroll uploads
+    // every frame). Lazily allocated on first upload (after GL init, so headless
+    // code paths never touch native memory); freed in cleanup().
+    private FloatBuffer uploadBuffer;
 
     public HScrollBuffer() {
         this(false);
@@ -104,24 +108,23 @@ public class HScrollBuffer {
             scrollData[i] = normalized;
         }
 
-        FloatBuffer buffer = MemoryUtil.memAllocFloat(VISIBLE_LINES);
-        try {
-            buffer.put(scrollData);
-            buffer.flip();
-
-            glBindTexture(GL_TEXTURE_1D, textureId);
-            glTexSubImage1D(
-                    GL_TEXTURE_1D,
-                    0,
-                    0,
-                    VISIBLE_LINES,
-                    GL_RED,
-                    GL_FLOAT,
-                    buffer);
-            glBindTexture(GL_TEXTURE_1D, 0);
-        } finally {
-            MemoryUtil.memFree(buffer);
+        if (uploadBuffer == null) {
+            uploadBuffer = MemoryUtil.memAllocFloat(VISIBLE_LINES);
         }
+        uploadBuffer.clear();
+        uploadBuffer.put(scrollData);
+        uploadBuffer.flip();
+
+        glBindTexture(GL_TEXTURE_1D, textureId);
+        glTexSubImage1D(
+                GL_TEXTURE_1D,
+                0,
+                0,
+                VISIBLE_LINES,
+                GL_RED,
+                GL_FLOAT,
+                uploadBuffer);
+        glBindTexture(GL_TEXTURE_1D, 0);
     }
 
     /**
@@ -168,5 +171,9 @@ public class HScrollBuffer {
             textureId = -1;
         }
         initialized = false;
+        if (uploadBuffer != null) {
+            MemoryUtil.memFree(uploadBuffer);
+            uploadBuffer = null;
+        }
     }
 }

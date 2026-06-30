@@ -9,6 +9,7 @@ import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.TitleCardSpriteRenderer;
 import com.openggf.level.Pattern;
 import com.openggf.util.PatternDecompressor;
@@ -54,10 +55,32 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
     private static final int DISPLAY_HOLD_DURATION = 60;
 
     /** Pattern base ID for S1 title card art (high to avoid conflicts with S2's 0x40000) */
-    private static final int PATTERN_BASE = 0x50000;
+    private static final int PATTERN_BASE = PatternAtlasRange.MENU_AND_DATA_SELECT.base();
 
+    /** Native game width (320-pixel frame everything is authored for). */
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
+
+    /**
+     * Returns the configured viewport width in game pixels.
+     * At native 320 equals SCREEN_WIDTH exactly (xOffset == 0 — byte-identical).
+     */
+    private int viewportWidth() {
+        try {
+            int w = GameServices.graphics().getProjectionWidth();
+            return w > 0 ? w : SCREEN_WIDTH;
+        } catch (Exception ignored) {
+            return SCREEN_WIDTH;
+        }
+    }
+
+    /**
+     * Horizontal offset to centre the 320-wide title-card composition in the
+     * configured viewport.  Zero at native 320 — byte-identical.
+     */
+    private int xOffset() {
+        return (viewportWidth() - SCREEN_WIDTH) / 2;
+    }
 
     /** Duration of PalFadeIn_Alt: palette fades from black to full color over 22 frames */
     private static final int PALETTE_FADE_FRAMES = 22;
@@ -161,6 +184,15 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
                 conData[6], conData[7],
                 Sonic1TitleCardMappings.Y_OVAL,
                 0, 0x40));
+
+        // Extend each element's off-screen entry/exit endpoint so the elements
+        // slide fully on/off a wider-than-320 viewport. Zero at native 320 —
+        // byte-identical. Without this, the centred (xOffset-shifted) elements
+        // do not fully leave the screen at widescreen widths.
+        int edgeMargin = Math.max(0, viewportWidth() - SCREEN_WIDTH);
+        for (TitleCardElement element : elements) {
+            element.setEdgeMargin(edgeMargin);
+        }
     }
 
     private void loadArt() {
@@ -290,11 +322,13 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
             }
 
             if (bgAlpha > 0f) {
+                // Span the full viewport so no level bleeds through on wider screens.
+                // viewportWidth()==SCREEN_WIDTH at native 320 — byte-identical.
                 graphicsManager.registerCommand(new GLCommand(
                         GLCommand.CommandType.RECTI, -1,
                         GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                         0.0f, 0.0f, 0.0f, bgAlpha,
-                        0, 0, SCREEN_WIDTH, SCREEN_HEIGHT));
+                        0, 0, viewportWidth(), SCREEN_HEIGHT));
             }
         }
 
@@ -325,7 +359,9 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
         }
 
         TitleCardMappings.SpritePiece[] pieces = Sonic1TitleCardMappings.getFrame(frameIndex);
-        int centerX = element.getCurrentX();
+        // xOffset() centres the 320-wide composition in the viewport.
+        // At native 320 xOffset()==0 — byte-identical.
+        int centerX = element.getCurrentX() + xOffset();
         int centerY = element.getY();
 
         // Render pieces in reverse order so that earlier pieces (higher VDP sprite

@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -17,13 +18,18 @@ import java.util.List;
  * that the music transition survives the destruction of the cutscene object
  * that initiated it.
  */
-public class SongFadeTransitionInstance extends AbstractObjectInstance {
+public class SongFadeTransitionInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+
+    // Non-final: delayFrames/musicId are not derivable from the dummy
+    // ObjectSpawn (the ctor passes ObjectSpawn(0,0,0,0,0,false,0) to super).
+    // Generic rewind recreate constructs with placeholder (0, 0), then the
+    // GenericFieldCapturer reapplies these captured values after recreate.
 
     /** Number of frames to wait after fade-out starts before playing new music. */
-    private final int delayFrames;
+    private int delayFrames;
 
     /** Music ID to play when the delay expires. */
-    private final int musicId;
+    private int musicId;
 
     /** Frame counter since creation. */
     private int timer;
@@ -41,6 +47,14 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance {
         this.musicId = musicId;
         this.timer = 0;
         this.fadeStarted = false;
+    }
+
+    SongFadeTransitionInstance(ObjectSpawn spawn) {
+        this(0, 0);
+    }
+
+    int getMusicIdForTest() {
+        return musicId;
     }
 
     @Override

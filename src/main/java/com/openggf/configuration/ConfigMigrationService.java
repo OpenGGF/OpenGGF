@@ -1,10 +1,13 @@
 package com.openggf.configuration;
 
-import com.openggf.control.InputHandler;
-
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_APOSTROPHE;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_F8;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_V;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_WORLD_1;
 
 /**
  * Service to detect and migrate AWT key codes to GLFW key codes in config files.
@@ -39,7 +42,11 @@ public class ConfigMigrationService {
         SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY,
         SonicConfiguration.PAUSE_KEY,
         SonicConfiguration.FRAME_STEP_KEY,
-        SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY
+        SonicConfiguration.TRACE_REWIND_KEY,
+        SonicConfiguration.LIVE_REWIND_KEY,
+        SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY,
+        SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY,
+        SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY
     );
 
     /**
@@ -76,7 +83,7 @@ public class ConfigMigrationService {
         for (SonicConfiguration keyConfig : KEY_CONFIGS) {
             Integer awtCode = getIntValue(config, keyConfig.name());
             if (awtCode != null) {
-                int glfwCode = InputHandler.awtToGlfw(awtCode);
+                int glfwCode = LegacyAwtKeyCodeMapper.toGlfw(awtCode);
                 if (glfwCode != awtCode) {
                     config.put(keyConfig.name(), glfwCode);
                     LOGGER.info("[ConfigMigration] Migrated " + keyConfig.name() + ": " + awtCode + " -> " + glfwCode);
@@ -86,6 +93,65 @@ public class ConfigMigrationService {
         }
 
         LOGGER.info("[ConfigMigration] Migrated " + migrated + " key bindings to GLFW codes");
+    }
+
+    /**
+     * Migrates the S1 preview-coordinate log key off deprecated defaults.
+     * Only rewrites the binding when it still matches an old generated default,
+     * leaving any user-customized binding untouched.
+     *
+     * @param config The config map to migrate (modified in place)
+     * @return true if the key binding was updated
+     */
+    public boolean migrateDeprecatedS1PreviewCoordLogKey(Map<String, Object> config) {
+        Integer keyCode = getIntValue(config, SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY.name());
+        if (keyCode == null) {
+            return false;
+        }
+        if (keyCode != GLFW_KEY_WORLD_1 && keyCode != GLFW_KEY_F8) {
+            return false;
+        }
+        config.put(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY.name(), GLFW_KEY_APOSTROPHE);
+        LOGGER.info("[ConfigMigration] Migrated CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY: "
+                + keyCode + " -> " + GLFW_KEY_APOSTROPHE);
+        return true;
+    }
+
+    /**
+     * Migrates the display color-profile toggle off the layout-dependent '#'
+     * binding. GLFW reports that key differently across keyboard layouts, so the
+     * default is now the plain V key.
+     *
+     * @param config The config map to migrate (modified in place)
+     * @return true if the key binding was updated
+     */
+    public boolean migrateDeprecatedDisplayColorProfileToggleKey(Map<String, Object> config) {
+        String key = SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY.name();
+        Object value = config.get(key);
+        if (value instanceof Number number) {
+            int keyCode = number.intValue();
+            if (keyCode != GLFW_KEY_WORLD_1) {
+                return false;
+            }
+            config.put(key, GLFW_KEY_V);
+            LOGGER.info("[ConfigMigration] Migrated DISPLAY_COLOR_PROFILE_TOGGLE_KEY: "
+                    + keyCode + " -> " + GLFW_KEY_V);
+            return true;
+        }
+        if (value instanceof String text) {
+            String normalized = text.trim().toUpperCase();
+            if (!normalized.equals("#")
+                    && !normalized.equals("WORLD_1")
+                    && !normalized.equals("GLFW_KEY_WORLD_1")
+                    && !normalized.equals("KEY_WORLD_1")) {
+                return false;
+            }
+            config.put(key, "V");
+            LOGGER.info("[ConfigMigration] Migrated DISPLAY_COLOR_PROFILE_TOGGLE_KEY: "
+                    + text + " -> V");
+            return true;
+        }
+        return false;
     }
 
     private Integer getIntValue(Map<String, Object> config, String key) {

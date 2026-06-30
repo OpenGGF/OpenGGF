@@ -7,14 +7,17 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.boss.BossChildComponent;
+import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -212,6 +217,67 @@ public class TestDEZDeathEggRobot {
         // 10 permanent children: Shoulder, FrontLowerLeg, FrontForearm, UpperArm,
         // FrontThigh, Head, Jet, BackLowerLeg, BackForearm, BackThigh
         assertEquals(10, boss.getChildComponents().size(), "Should have 10 child components");
+    }
+
+    @Test
+    public void allPermanentChildrenReceiveServices() throws Exception {
+        // Regression: the boss spawns its 10 permanent children from inside its own
+        // constructor (initializeBossState -> spawnChildren -> createPermanentChild),
+        // which itself runs under the ObjectManager placement path's CONSTRUCTION_CONTEXT.
+        // createPermanentChild wraps each child in ObjectConstructionContext.construct().
+        // Previously that helper's finally block REMOVED the construction context, so
+        // after the first child the boss's own outer context was gone: children 2..10
+        // skipped both the construction-context injection AND the addDynamicObject()
+        // setServices() call, leaving their services field null. The crash surfaced as
+        // ForearmChild.updatePunch -> services().playSfx(...) throwing
+        // "services not available" once the Death Egg Robot fight reached a punch.
+        // ObjectConstructionContext.construct now save-and-restores the prior context,
+        // so every nested child is added through the manager and gets services injected.
+        com.openggf.camera.Camera camera = mock(com.openggf.camera.Camera.class);
+        when(camera.getX()).thenReturn((short) 0);
+        when(camera.getY()).thenReturn((short) 0);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        when(camera.isVerticalWrapEnabled()).thenReturn(false);
+
+        com.openggf.level.objects.ObjectManager[] holder =
+                new com.openggf.level.objects.ObjectManager[1];
+        ObjectServices managerServices = new com.openggf.level.objects.StubObjectServices() {
+            @Override
+            public com.openggf.level.objects.ObjectManager objectManager() {
+                return holder[0];
+            }
+        };
+        com.openggf.level.objects.ObjectManager manager =
+                new com.openggf.level.objects.ObjectManager(
+                        List.of(), null, 0, null, null, null, camera, managerServices);
+        holder[0] = manager;
+
+        // Spawn the boss exactly the way the placement path does: set the
+        // construction context, run the constructor (which spawns the children),
+        // then inject services on the parent.
+        Sonic2DeathEggRobotInstance spawnedBoss =
+                com.openggf.level.objects.ObjectConstructionContext.construct(
+                        managerServices,
+                        () -> new Sonic2DeathEggRobotInstance(new ObjectSpawn(
+                                BOSS_X, BOSS_Y, Sonic2ObjectIds.DEATH_EGG_ROBOT,
+                                0, 0, false, 0)));
+        spawnedBoss.setServices(managerServices);
+
+        Field servicesField =
+                AbstractObjectInstance.class.getDeclaredField("services");
+        servicesField.setAccessible(true);
+
+        assertEquals(10, spawnedBoss.getChildComponents().size(),
+                "Boss should spawn its 10 permanent children");
+        for (BossChildComponent child : spawnedBoss.getChildComponents()) {
+            assertTrue(child instanceof AbstractObjectInstance,
+                    "Each child component should be an AbstractObjectInstance");
+            Object svc = servicesField.get(child);
+            assertNotNull(svc,
+                    "Child '" + ((AbstractObjectInstance) child).getName()
+                    + "' must have services injected (no 'services not available' crash)");
+        }
     }
 
     @Test
@@ -486,6 +552,61 @@ public class TestDEZDeathEggRobot {
         int[] yBuf = (int[]) yBufField.get(sensor);
         assertEquals(4, xBuf.length, "xVelBuffer should have 4 elements (3-frame delay)");
         assertEquals(4, yBuf.length, "yVelBuffer should have 4 elements (3-frame delay)");
+    }
+
+    @Test
+    public void bombDetonationRendersObj58BossExplosionFrames() throws Exception {
+        Class<?> bombClass = null;
+        for (Class<?> inner : Sonic2DeathEggRobotInstance.class.getDeclaredClasses()) {
+            if (inner.getSimpleName().equals("BombChild")) {
+                bombClass = inner;
+                break;
+            }
+        }
+        assertNotNull(bombClass, "BombChild inner class should exist");
+
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer bossExplosionRenderer = mock(PatternSpriteRenderer.class);
+        when(bossExplosionRenderer.isReady()).thenReturn(true);
+        when(renderManager.getBossExplosionRenderer()).thenReturn(bossExplosionRenderer);
+
+        ObjectServices renderServices = new TestObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+
+            @Override
+            public void playSfx(int soundId) {
+                // no-op
+            }
+        };
+        boss.setServices(renderServices);
+
+        java.lang.reflect.Constructor<?> ctor = bombClass.getDeclaredConstructor(
+                Sonic2DeathEggRobotInstance.class, int.class, int.class, int.class, int.class);
+        ctor.setAccessible(true);
+        setConstructionContext(renderServices);
+        AbstractObjectInstance bomb;
+        try {
+            bomb = (AbstractObjectInstance) ctor.newInstance(boss, 0x700, 0x120, 0, 0);
+        } finally {
+            clearConstructionContext();
+        }
+        bomb.setServices(renderServices);
+
+        Field detonatingField = bombClass.getDeclaredField("detonating");
+        detonatingField.setAccessible(true);
+        detonatingField.setBoolean(bomb, true);
+        Field frameField = bombClass.getDeclaredField("detonateFrame");
+        frameField.setAccessible(true);
+        frameField.setInt(bomb, 3);
+
+        bomb.appendRenderCommands(List.of());
+
+        verify(renderManager).getBossExplosionRenderer();
+        verify(renderManager, never()).getRenderer(com.openggf.game.sonic2.Sonic2ObjectArtKeys.DEZ_BOSS);
+        verify(bossExplosionRenderer).drawFrameIndex(3, 0x700, 0x120, false, false);
     }
 
     // ========================================================================

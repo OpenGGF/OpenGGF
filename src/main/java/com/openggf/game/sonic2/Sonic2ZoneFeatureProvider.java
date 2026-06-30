@@ -5,8 +5,15 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.ZoneFeatureRenderer;
+import com.openggf.game.render.SpecialRenderEffect;
+import com.openggf.game.render.SpecialRenderEffectContext;
+import com.openggf.game.render.SpecialRenderEffectRegistry;
+import com.openggf.game.render.SpecialRenderEffectStage;
+import com.openggf.game.LevelEventProvider;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.objects.CPZPylonObjectInstance;
+import com.openggf.game.sonic2.render.HtzEarthquakeBgOverlayEffect;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.ShaderProgram;
@@ -57,10 +64,34 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     private WaterSurfaceManager waterSurfaceManager;
     private int currentZone = -1;
     private int currentAct = -1;
+    private boolean wfzWindTunnelActive;
 
     // Deferred slot machine renders (queued during object phase, rendered after tilemap)
     // Each entry: {worldX, worldY, offsetX, offsetY} - offset values are from cage to display
     private final java.util.List<int[]> pendingSlotRenders = new java.util.ArrayList<>();
+    private final SpecialRenderEffect cnzSlotOverlayEffect = new SpecialRenderEffect() {
+        @Override
+        public SpecialRenderEffectStage stage() {
+            return SpecialRenderEffectStage.AFTER_FOREGROUND;
+        }
+
+        @Override
+        public void render(SpecialRenderEffectContext context) {
+            renderCnzSlotOverlay(context.camera());
+        }
+    };
+    private final SpecialRenderEffect htzEarthquakeBgOverlayEffect = new HtzEarthquakeBgOverlayEffect();
+    private final SpecialRenderEffect waterSurfaceEffect = new SpecialRenderEffect() {
+        @Override
+        public SpecialRenderEffectStage stage() {
+            return SpecialRenderEffectStage.AFTER_SPRITES;
+        }
+
+        @Override
+        public void render(SpecialRenderEffectContext context) {
+            renderWaterSurface(context.camera(), context.frameCounter());
+        }
+    };
 
     @Override
     public void initZoneFeatures(Rom rom, int zoneIndex, int actIndex, int cameraX) throws IOException {
@@ -242,17 +273,41 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public void render(Camera camera, int frameCounter) {
-        if (waterSurfaceManager != null && waterSurfaceManager.isInitialized()) {
-            waterSurfaceManager.render(camera, frameCounter);
-        }
-        // Note: Slot machine rendering moved to renderAfterForeground() so it appears
-        // behind sprites but on top of the corrupted foreground tiles
+        // Water surfaces now render through the staged special render effect registry.
     }
 
     @Override
     public void renderAfterForeground(Camera camera) {
-        // Queue slot machine display commands (executed during flush, after high-priority foreground but before sprites)
-        if (!pendingSlotRenders.isEmpty() && cnzSlotMachineRenderer != null && cnzSlotMachineRenderer.isInitialized()) {
+        // Slot rendering is now dispatched through the staged special render effect
+        // registry. This remains as a compatibility no-op for the provider hook.
+    }
+
+    @Override
+    public void registerSpecialRenderEffects(SpecialRenderEffectRegistry registry, int zoneIndex, int actIndex) {
+        if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CNZ) {
+            registry.register(cnzSlotOverlayEffect);
+        }
+        if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_HTZ) {
+            registry.register(htzEarthquakeBgOverlayEffect);
+        }
+        if ((zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CPZ && actIndex == 1)
+                || zoneIndex == Sonic2ZoneConstants.ROM_ZONE_ARZ) {
+            registry.register(waterSurfaceEffect);
+        }
+    }
+
+    private void renderWaterSurface(Camera camera, int frameCounter) {
+        if (waterSurfaceManager != null && waterSurfaceManager.isInitialized()) {
+            waterSurfaceManager.render(camera, frameCounter);
+        }
+    }
+
+    private void renderCnzSlotOverlay(Camera camera) {
+        if (pendingSlotRenders.isEmpty()) {
+            return;
+        }
+        try {
+            if (cnzSlotMachineRenderer != null && cnzSlotMachineRenderer.isInitialized()) {
             GraphicsManager graphicsManager = GameServices.graphics();
             if (!graphicsManager.isHeadlessMode() && cnzSlotMachineManager != null) {
                 Integer paletteTextureId = graphicsManager.getCombinedPaletteTextureId();
@@ -276,6 +331,8 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
                     }
                 }
             }
+            }
+        } finally {
             pendingSlotRenders.clear();
         }
     }
@@ -289,13 +346,80 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     }
 
     @Override
+    public void updatePrePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CNZ && cnzSlotMachineManager != null) {
+            // ROM LevEvents_CNZ calls SlotMachine before object execution
+            // (s2.asm:21494, 58827-58840), so PointPokey sees completion
+            // on the same frame the slot routine goes inactive.
+            cnzSlotMachineManager.update();
+        }
+        if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_WFZ) {
+            updateWfzPrePhysicsLevelEvents();
+            updateWfzWindTunnel(player);
+        } else {
+            wfzWindTunnelActive = false;
+        }
+    }
+
+    private void updateWfzPrePhysicsLevelEvents() {
+        LevelEventProvider provider = GameServices.module().getLevelEventProvider();
+        if (provider instanceof Sonic2LevelEventManager events) {
+            events.getWfzEvents().updatePrePhysicsControlLock();
+        }
+    }
+
+    private void updateWfzWindTunnel(AbstractPlayableSprite player) {
+        if (player == null) {
+            wfzWindTunnelActive = false;
+            return;
+        }
+
+        int x = player.getCentreX() & 0xFFFF;
+        int y = player.getCentreY() & 0xFFFF;
+        if (player.isObjectControlled()
+                || player.isHurt()
+                || player.getDead()
+                || !isInsideWfzWindTunnel(x, y)) {
+            if (wfzWindTunnelActive) {
+                player.setAnimationId(Sonic2AnimationIds.WALK);
+            }
+            wfzWindTunnelActive = false;
+            return;
+        }
+
+        // ROM WindTunnel (s2.asm:5474-5524): this level-event routine runs
+        // before Obj01_Control. It nudges the player left, forces airborne
+        // wind velocity, then normal airborne input immediately adjusts x_vel.
+        wfzWindTunnelActive = true;
+        player.shiftX(-4);
+        player.setXSpeed((short) -0x400);
+        player.setYSpeed((short) 0);
+        player.setAnimationId(Sonic2AnimationIds.FLOAT2);
+        player.setAir(true);
+        if (player.isUpPressed()) {
+            player.shiftY(-1);
+        }
+        if (player.isDownPressed()) {
+            player.shiftY(1);
+        }
+    }
+
+    private boolean isInsideWfzWindTunnel(int x, int y) {
+        return (x >= 0x1510 && x < 0x1AF0 && y >= 0x0400 && y < 0x0580)
+                || (x >= 0x20F0 && x < 0x2500 && y >= 0x0618 && y < 0x0680);
+    }
+
+    @Override
     public void update(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        // CNZ map bumpers run from updateAfterPlayablePhysics so their bounce
+        // velocity is visible to later playable slots in the same frame.
+    }
+
+    @Override
+    public void updateAfterPlayablePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
         if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CNZ) {
             if (cnzBumperManager != null) {
                 cnzBumperManager.update(player, cameraX, zoneIndex);
-            }
-            if (cnzSlotMachineManager != null) {
-                cnzSlotMachineManager.update();
             }
         }
     }
@@ -304,6 +428,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     public void reset() {
         cnzBumperManager = null;
         cnzSlotMachineManager = null;
+        pendingSlotRenders.clear();
         if (cnzSlotMachineRenderer != null) {
             cnzSlotMachineRenderer.cleanup();
             cnzSlotMachineRenderer = null;
@@ -314,6 +439,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
         }
         cpzPylon = null;
         waterSurfaceManager = null;
+        wfzWindTunnelActive = false;
         currentZone = -1;
         currentAct = -1;
     }

@@ -1,5 +1,5 @@
 ---
-title: S3K Pattern Load Cue (PLC) System
+name: s3k-plc-system
 description: Reference for Sonic 3 and Knuckles PLC IDs, runtime loading, GPU refresh behavior, and S3K-specific PLC integration.
 ---
 
@@ -8,6 +8,27 @@ description: Reference for Sonic 3 and Knuckles PLC IDs, runtime loading, GPU re
 > **Cross-game note:** The PLC binary format is shared across S1, S2, and S3K. The game-agnostic parser is `PlcParser` in `level.resources`. See the `plc-system` skill for the cross-game reference. This file covers S3K-specific PLC IDs, runtime loading, and GPU texture refresh.
 
 Reference for the S3K Pattern Load Cue system: ROM format, runtime loading, GPU texture refresh, and zone event integration.
+
+## Mandatory Art Corruption Guard Tests
+
+When adding or changing S3K PLC-backed object art, standalone art, level-art mapping addresses, decompression sources, or `Sonic3kPlcArtRegistry` entries, run:
+
+```bash
+mvn "-Dtest=TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits" test
+```
+
+For assets with a known disassembly shape, add a focused `TestSonic3kPlcArtRegistry` test for exact frame count, piece count, tile dimensions, and tile indices. Keep `TestPatternSpriteRendererCorruptionGuard` passing when changing sprite rendering or sheet construction; it is the engine-level guard that logs and suppresses massive corrupted sprite frames at runtime.
+
+## Agent Workflow Tooling
+
+Use these when sourcing PLC/art/mapping bytes from the ROM and wiring them into `Sonic3kPlcArtRegistry`:
+
+- **`RomArtIntakeTool`** — S3K ROM-backed art/mapping/PLC intake. Wraps `RomOffsetFinder --game s3k`, flags (caution, not a hard reject) `s3.asm`-sourced labels (the S3L standalone half — classifies by source file). Prefer an S&K equivalent; if an object has none, the S3-half reference is legitimate (rare; verify). Recommends `StandaloneArtEntry` vs `LevelArtEntry`, and suggests `Sonic3kConstants` names plus `Sonic3kPlcArtRegistry` hints. Accepts multiple labels:
+  ```bash
+  mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=ArtNem_AIZSwingVine Map_AIZSwingVine"
+  ```
+- **Runbook:** `docs/agent-workflow/runbooks/runbook-rom-art-mappings-plc.md` — step-by-step ROM art/mapping/PLC intake workflow.
+- **CI guard explainer:** `docs/agent-workflow/ci-guard-failure-explainer.md` — maps `TestSonic3kPlcArtRegistry` / `TestPatternSpriteRendererCorruptionGuard` failures to the correct fix.
 
 ## PLC Table Format
 

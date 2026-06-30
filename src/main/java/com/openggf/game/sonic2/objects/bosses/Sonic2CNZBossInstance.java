@@ -11,6 +11,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -36,7 +37,7 @@ import java.util.List;
  * - 8: Bounce/settle after defeat
  * - A: Flee off-screen
  */
-public class Sonic2CNZBossInstance extends AbstractBossInstance {
+public class Sonic2CNZBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
 
     // Boss routine states (ROM: boss_routine)
     private static final int ROUTINE_PATROL = 0x00;
@@ -685,8 +686,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance {
         // ROM: move.b #4,boss_subtype(a1) / move.l a0,objoff_34(a1)
         // The spawn coordinates are informational - ball uses parent position directly
         ObjectSpawn ballSpawn = new ObjectSpawn(state.x, state.y, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0);
-        CNZBossElectricBall ball = new CNZBossElectricBall(ballSpawn, this);
-        services().objectManager().addDynamicObject(ball);
+        spawnFreeChild(() -> new CNZBossElectricBall(ballSpawn, this));
     }
 
     // ========================================================================

@@ -25,7 +25,8 @@ import java.util.List;
  * byte_1DB42: 32-entry orbit offset table. Each dc.w encodes X (high byte) and Y (low byte),
  * both sign-extended. Index is a byte value masked by 0x3E (0-62 even = 32 entries).
  */
-public class InvincibilityStarsObjectInstance extends AbstractObjectInstance implements PowerUpObject {
+public class InvincibilityStarsObjectInstance extends AbstractObjectInstance
+        implements PowerUpObject, PlayerBoundInvincibilityStarsRewindRecreatable {
     private final PlayableEntity player;
     private final PatternSpriteRenderer renderer;
     private Boolean sonic1TrailMode;
@@ -100,6 +101,10 @@ public class InvincibilityStarsObjectInstance extends AbstractObjectInstance imp
     private int s1TrailPhase = 0;
     private final int[] s1AnimationIndices = new int[STAR_COUNT];
     private final int[] s1AnimationTimers = new int[STAR_COUNT];
+
+    InvincibilityStarsObjectInstance() {
+        this(null);
+    }
 
     public InvincibilityStarsObjectInstance(PlayableEntity player) {
         super(null, "InvincibilityStars");
@@ -259,4 +264,10 @@ public class InvincibilityStarsObjectInstance extends AbstractObjectInstance imp
     public void setVisible(boolean visible) {
         // Invincibility stars are always visible while alive; no-op.
     }
+
+    @Override
+    public boolean isInvincibilityStars() {
+        return true;
+    }
+
 }

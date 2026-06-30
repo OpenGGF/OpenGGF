@@ -267,7 +267,10 @@ public class Sonic2Constants {
     public static final int MAP_UNC_OBJ15_MCZ_ADDR = 0x10256;       // MCZ mappings (Obj15_Obj7A_MapUnc_10256)
     public static final int MAP_UNC_OBJ15_TRAP_ADDR = 0x102DE;      // MCZ trap mappings (Obj15_MapUnc_102DE)
 
-    public static final int ZONE_AQUATIC_RUIN = 2;
+    // NOTE: ARZ is identified by its ROM zone id, ZONE_ARZ (0x0F), to match Level.getZoneIndex().
+    // A former ZONE_AQUATIC_RUIN = 2 (a level-select index) was removed: it never matched
+    // getZoneIndex()'s ROM zone id, which left ARZ's floating platform (Obj18) using the EHZ
+    // Obj18A mappings and rendering corrupted graphics.
 
     // Checkpoint/Starpost (Object $79)
     public static final int ART_NEM_CHECKPOINT_ADDR = 0x79A86; // Star pole.nem
@@ -290,10 +293,12 @@ public class Sonic2Constants {
     public static final int ART_UNC_HUD_NUMBERS_SIZE = 0x300; // 24 tiles (10 digits x 2 tiles + extras?)
     public static final int ART_UNC_LIVES_NUMBERS_ADDR = 0x4164C; // Small numbers for lives counter
     public static final int ART_UNC_LIVES_NUMBERS_SIZE = 320; // 10 tiles (0-9)
-    // Debug font (italic hex digits 0-9, A-F with slashed zeros - leftover from
-    // Sonic 1 level select)
-    public static final int ART_UNC_DEBUG_FONT_ADDR = 0x45D74; // Art_Text (Debug font)
-    public static final int ART_UNC_DEBUG_FONT_SIZE = 512; // 16 tiles (0-9, A-F) * 32 bytes each
+    // Art_Text: Uncompressed 8x8 font used by the debug HUD (HudDb_XY) to render hex
+    // player/camera coords. ASCII-aligned layout: digits 0-9 at tiles 0-9, A-F at
+    // tiles 17-22 ('0'=0x30, 'A'=0x41 -> offset 0x11). Shared binary with
+    // "Big and small numbers used on counters - 3.bin".
+    public static final int ART_UNC_DEBUG_FONT_ADDR = 0x4178C;
+    public static final int ART_UNC_DEBUG_FONT_SIZE = 736; // 23 tiles
     public static final int ART_NEM_HUD_ADDR = 0x7923E; // HUD.nem (SCORE/TIME/RING text)
     public static final int ART_NEM_TITLE_CARD_ADDR = 0x7D22C; // Title card.nem (E, N, O, Z letters)
     public static final int ART_NEM_TITLE_CARD2_ADDR = 0x7D58A; // Font using large broken letters.nem (other letters)
@@ -497,6 +502,7 @@ public class Sonic2Constants {
     // OOZ Badnik Art (Nemesis compressed)
     public static final int ART_NEM_OCTUS_ADDR = 0x8336A;    // Octus (octopus badnik from OOZ)
     public static final int ART_NEM_AQUIS_ADDR = 0x8368A;    // Aquis (seahorse badnik from OOZ)
+    public static final int ART_NEM_OOZ_BOSS_ADDR = 0x882D6; // ArtNem_OOZBoss (verified via RomOffsetFinder)
 
     // CNZ Badnik Art (Nemesis compressed)
     public static final int ART_NEM_CRAWL_ADDR = 0x901A4;    // Crawl (bouncer badnik from CNZ, 42 tiles)
@@ -514,6 +520,7 @@ public class Sonic2Constants {
     public static final int MAP_UNC_MCZ_BOSS_ADDR = 0x316EC;         // Obj57_MapUnc_316EC (21 frames)
     public static final int PAL_MCZ_BOSS_ADDR = 0x3082;              // Pal_MCZ_B (32 bytes, verified)
     public static final int PAL_CNZ_BOSS_ADDR = 0x30A2;              // Pal_CNZ_B (32 bytes, verified)
+    public static final int PAL_OOZ_BOSS_ADDR = 0x30C2;              // Pal_OOZ_B (32 bytes, after Pal_CNZ_B)
 
     // Boss art (Nemesis compressed, verified offsets)
     public static final int ART_NEM_EGGPOD_ADDR = 0x83BF6;     // ArtNem_Eggpod (flying vehicle)
@@ -544,6 +551,7 @@ public class Sonic2Constants {
     public static final int ART_TILE_CNZ_BOSS_FUDGE = 0x03A7; // ArtTile_ArtNem_CNZBoss_Fudge (= 0x0407 - 0x60)
     public static final int ART_TILE_HTZ_BOSS = 0x0421;  // ArtTile_ArtNem_HTZBoss (flamethrower/lava ball)
     public static final int ART_TILE_EGGPOD_2 = 0x03C1;  // ArtTile_ArtNem_Eggpod_2 (HTZ boss uses this)
+    public static final int ART_TILE_OOZ_BOSS = 0x03E8;  // ArtTile_ArtNem_OOZBoss
 
     // CNZ Boss mappings (uncompressed)
     public static final int MAP_UNC_CNZ_BOSS_ADDR = 0x320EA;  // Obj51_MapUnc_320EA (21 frames)
@@ -593,6 +601,7 @@ public class Sonic2Constants {
     // MTZ Boss art and mappings
     public static final int ART_NEM_MTZ_BOSS_ADDR = 0x88DA6;        // ArtNem_MTZBoss (verified via RomOffsetFinder)
     public static final int MAP_UNC_MTZ_BOSS_ADDR = 0x32DC6;        // Obj54_MapUnc_32DC6 (verified via ROM search)
+    public static final int MAP_UNC_OOZ_BOSS_ADDR = 0x33756;        // Obj55_MapUnc_33756
 
     // Animal art (Nemesis compressed, verified offsets)
     public static final int ART_NEM_FLICKY_ADDR = 0x7EF60;
@@ -781,6 +790,7 @@ public class Sonic2Constants {
     // SmallMetalPform (Object 0xBD) - ascending/descending metal platform from WFZ
     // ROM Reference: s2.asm lines 79938-80074 (ObjBD code)
     public static final int ART_NEM_WFZ_BELT_PLATFORM_ADDR = 0x8DD0C; // ArtNem_WfzBeltPlatform (verified via RomOffsetFinder)
+    public static final int ART_NEM_WFZ_UNUSED_BADNIK_ADDR = 0x8DDF6; // ArtNem_WfzUnusedBadnik (ObjBF, verified via RomOffsetFinder)
 
     // LateralCannon (Object 0xBE) - retracting platform from WFZ
     // ROM Reference: s2.asm lines 80080-80170 (ObjBE code)
@@ -859,6 +869,10 @@ public class Sonic2Constants {
     // OOZPoppingPform (Object 0x33) - green burner platform
     public static final int ART_NEM_BURNER_LID_ADDR = 0x80274;   // ArtNem_BurnerLid (verified via RomOffsetFinder)
     public static final int ART_NEM_OOZ_BURN_ADDR = 0x81514;     // ArtNem_OOZBurn (verified via RomOffsetFinder)
+
+    // SlidingSpike / OOZSpring (Objects 0x43/0x45)
+    public static final int ART_NEM_SPIKY_THING_ADDR = 0x8007C;   // ArtNem_SpikyThing (verified via RomOffsetFinder)
+    public static final int ART_NEM_PUSH_SPRING_ADDR = 0x80C64;   // ArtNem_PushSpring (verified via RomOffsetFinder)
 
     // OOZ Launcher (Object 0x3D) - striped blocks that launch rolling player
     public static final int ART_NEM_STRIPED_BLOCKS_VERT_ADDR = 0x8030A;  // ArtNem_StripedBlocksVert (CPZ)
@@ -984,6 +998,8 @@ public class Sonic2Constants {
     public static final int MAP_UNC_OBJ33_B_ADDR = 0x23DF0;          // Obj33_MapUnc_23DF0 (Burn Flame)
     public static final int MAP_UNC_OBJ3F_HORIZ_ADDR = 0x2AA12;      // Obj3F_MapUnc_2AA12 (Fan Horiz)
     public static final int MAP_UNC_OBJ3F_VERT_ADDR = 0x2AAC4;       // Obj3F_MapUnc_2AAC4 (Fan Vert)
+    public static final int MAP_UNC_OBJ43_ADDR = 0x23FE0;            // Obj43_MapUnc_23FE0 (OOZ SlidingSpike)
+    public static final int MAP_UNC_OBJ45_ADDR = 0x2451A;            // Obj45_MapUnc_2451A (OOZ Pressure Spring)
     public static final int MAP_UNC_LAUNCH_BALL_ADDR = 0x254FE;      // Obj48_MapUnc_254FE
     public static final int MAP_UNC_OBJ3D_ADDR = 0x250BA;            // Obj3D_MapUnc_250BA (OOZ Launcher)
     public static final int MAP_UNC_OBJ1F_A_ADDR = 0x10F0C;          // Obj1F_MapUnc_10F0C (default/MZ/SLZ/SBZ Collapsing - obj1F_a.asm)
@@ -998,7 +1014,14 @@ public class Sonic2Constants {
     public static final int MAP_UNC_CLOUD_ADDR = 0x3B32C;            // ObjB3_MapUnc_3B32C
     public static final int MAP_UNC_VPROPELLER_ADDR = 0x3B3BE;       // ObjB4_MapUnc_3B3BE
     public static final int MAP_UNC_HPROPELLER_ADDR = 0x3B548;       // ObjB5_MapUnc_3B548
-    public static final int MAP_UNC_MTZ_COG_ADDR = 0x26EC8;          // Obj65_Obj6A_Obj6B_MapUnc_26EC8
+    // Obj65 standalone/child cog mappings (Obj65_MapUnc_26F04 = obj65_b.asm, 3 frames).
+    // Used by MTZLongPlatformCogInstance with ArtNem_MtzCog (s2.asm:52402/52436/52754).
+    public static final int MAP_UNC_MTZ_COG_ADDR = 0x26F04;          // Obj65_MapUnc_26F04 (obj65_b)
+    // Shared Obj65/Obj6A/Obj6B MTZ moving-platform level-art mappings
+    // (Obj65_Obj6A_Obj6B_MapUnc_26EC8 = obj65_a.asm, 4 frames), rendered against level art
+    // (ArtTile_ArtKos_LevelArt) on VDP palette line 3. Used by Obj65 (s2.asm:52381),
+    // Obj6A MTZ (s2.asm:53688), and Obj6B MTZ (s2.asm:53911).
+    public static final int MAP_UNC_MTZ_PLATFORM_LEVELART_ADDR = 0x26EC8; // Obj65_Obj6A_Obj6B_MapUnc_26EC8 (obj65_a)
     public static final int MAP_UNC_BUTTON_ADDR = 0x24D96;           // Obj47_MapUnc_24D96
     public static final int MAP_UNC_MTZ_FLOOR_SPIKE_ADDR = 0x27750;  // Obj68_Obj6D_MapUnc_27750
     public static final int MAP_UNC_MTZ_SPIKE_BLOCK_ADDR = MAP_UNC_MTZ_FLOOR_SPIKE_ADDR; // Same table (Obj68)
@@ -1015,8 +1038,8 @@ public class Sonic2Constants {
     public static final int MAP_UNC_MTZ_NUT_ADDR = 0x27A26;          // Obj69_MapUnc_27A26
     public static final int MAP_UNC_MTZ_LAVA_BUBBLE_A_ADDR = 0x11396; // Obj71_MapUnc_11396
     public static final int MAP_UNC_MTZ_LAVA_BUBBLE_B_ADDR = 0x11576; // Obj71_MapUnc_11576 (MTZ lava bubble)
-    public static final int MAP_UNC_OBJBB_ADDR = 0x3BBA0;            // ObjBB_MapUnc_3BBA0 (WFZ Thrust)
-    public static final int MAP_UNC_OBJBF_ADDR = 0x3BEE0;            // ObjBF_MapUnc_3BEE0 (WFZ BreakPanels)
+    public static final int MAP_UNC_OBJBB_ADDR = 0x3BBA0;            // ObjBB_MapUnc_3BBA0 (removed WFZ unknown object)
+    public static final int MAP_UNC_OBJBF_ADDR = 0x3BEE0;            // ObjBF_MapUnc_3BEE0 (WFZStick / unused badnik)
 
     public static final int[][] START_POSITIONS = {
             { 0x0060, 0x028F }, // 0 Emerald Hill 1 (EHZ_1.bin)
@@ -1170,7 +1193,6 @@ public class Sonic2Constants {
         offsets.put("MAP_UNC_OBJ15_A_ADDR", MAP_UNC_OBJ15_A_ADDR);
         offsets.put("MAP_UNC_OBJ15_MCZ_ADDR", MAP_UNC_OBJ15_MCZ_ADDR);
         offsets.put("MAP_UNC_OBJ15_TRAP_ADDR", MAP_UNC_OBJ15_TRAP_ADDR);
-        offsets.put("ZONE_AQUATIC_RUIN", ZONE_AQUATIC_RUIN);
         offsets.put("ART_NEM_CHECKPOINT_ADDR", ART_NEM_CHECKPOINT_ADDR);
         offsets.put("MAP_UNC_CHECKPOINT_ADDR", MAP_UNC_CHECKPOINT_ADDR);
         offsets.put("MAP_UNC_CHECKPOINT_STAR_ADDR", MAP_UNC_CHECKPOINT_STAR_ADDR);
@@ -1232,6 +1254,7 @@ public class Sonic2Constants {
         offsets.put("ART_NEM_REXON_ADDR", ART_NEM_REXON_ADDR);
         offsets.put("ART_NEM_OCTUS_ADDR", ART_NEM_OCTUS_ADDR);
         offsets.put("ART_NEM_AQUIS_ADDR", ART_NEM_AQUIS_ADDR);
+        offsets.put("ART_NEM_OOZ_BOSS_ADDR", ART_NEM_OOZ_BOSS_ADDR);
         offsets.put("ART_NEM_CRAWL_ADDR", ART_NEM_CRAWL_ADDR);
         offsets.put("ART_NEM_ARROW_SHOOTER_ADDR", ART_NEM_ARROW_SHOOTER_ADDR);
         offsets.put("MAP_UNC_ARROW_SHOOTER_ADDR", MAP_UNC_ARROW_SHOOTER_ADDR);
@@ -1257,11 +1280,13 @@ public class Sonic2Constants {
         offsets.put("ART_TILE_EGGPOD_4", ART_TILE_EGGPOD_4);
         offsets.put("ART_TILE_CNZ_BOSS", ART_TILE_CNZ_BOSS);
         offsets.put("ART_TILE_CNZ_BOSS_FUDGE", ART_TILE_CNZ_BOSS_FUDGE);
+        offsets.put("ART_TILE_OOZ_BOSS", ART_TILE_OOZ_BOSS);
         offsets.put("ART_NEM_MCZ_BOSS_ADDR", ART_NEM_MCZ_BOSS_ADDR);
         offsets.put("ART_UNC_FALLING_ROCKS_ADDR", ART_UNC_FALLING_ROCKS_ADDR);
         offsets.put("MAP_UNC_MCZ_BOSS_ADDR", MAP_UNC_MCZ_BOSS_ADDR);
         offsets.put("PAL_MCZ_BOSS_ADDR", PAL_MCZ_BOSS_ADDR);
         offsets.put("PAL_CNZ_BOSS_ADDR", PAL_CNZ_BOSS_ADDR);
+        offsets.put("PAL_OOZ_BOSS_ADDR", PAL_OOZ_BOSS_ADDR);
         offsets.put("MAP_UNC_CNZ_BOSS_ADDR", MAP_UNC_CNZ_BOSS_ADDR);
         offsets.put("CYCLING_PAL_CNZ_BOSS1_ADDR", CYCLING_PAL_CNZ_BOSS1_ADDR);
         offsets.put("CYCLING_PAL_CNZ_BOSS1_LEN", CYCLING_PAL_CNZ_BOSS1_LEN);
@@ -1276,6 +1301,7 @@ public class Sonic2Constants {
         offsets.put("MAP_UNC_BOSS_EXPLOSION_ADDR", MAP_UNC_BOSS_EXPLOSION_ADDR);
         offsets.put("MAP_UNC_ARZ_BOSS_PARTS_ADDR", MAP_UNC_ARZ_BOSS_PARTS_ADDR);
         offsets.put("MAP_UNC_ARZ_BOSS_MAIN_ADDR", MAP_UNC_ARZ_BOSS_MAIN_ADDR);
+        offsets.put("MAP_UNC_OOZ_BOSS_ADDR", MAP_UNC_OOZ_BOSS_ADDR);
         offsets.put("ART_NEM_FLICKY_ADDR", ART_NEM_FLICKY_ADDR);
         offsets.put("ART_NEM_SQUIRREL_ADDR", ART_NEM_SQUIRREL_ADDR);
         offsets.put("ART_NEM_MOUSE_ADDR", ART_NEM_MOUSE_ADDR);

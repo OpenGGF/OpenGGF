@@ -361,21 +361,22 @@ public class Sonic3kLevel extends AbstractLevel {
         int requiredChunkCount = startChunkIndex + overlayChunkCount;
         ensureChunkCapacity(requiredChunkCount);
 
+        // Rewind keyframes share the live chunks array by reference
+        // (LevelSnapshot contract): write into a cloned array with freshly
+        // constructed Chunk instances so previously captured keyframes keep
+        // the pre-overlay terrain and collision.
+        Chunk[] newChunks = chunks.clone();
         byte[] chunkBytes = new byte[Chunk.CHUNK_SIZE_IN_ROM];
         for (int i = 0; i < overlayChunkCount; i++) {
             int src = i * Chunk.CHUNK_SIZE_IN_ROM;
             System.arraycopy(overlayData, src, chunkBytes, 0, Chunk.CHUNK_SIZE_IN_ROM);
 
             int chunkIndex = startChunkIndex + i;
-            Chunk chunk = chunks[chunkIndex];
-            if (chunk == null) {
-                chunk = new Chunk();
-                chunks[chunkIndex] = chunk;
-            }
-
             int solidIndex = readCollisionIndex(primaryCollisionIndexTable, chunkIndex);
             int altSolidIndex = readCollisionIndex(secondaryCollisionIndexTable, chunkIndex);
+            Chunk chunk = new Chunk();
             chunk.fromSegaFormat(chunkBytes, solidIndex, altSolidIndex);
+            newChunks[chunkIndex] = chunk;
         }
 
         // Some event paths intentionally patch only a subset of the chunk table.
@@ -384,10 +385,40 @@ public class Sonic3kLevel extends AbstractLevel {
         if (clearTrailing && requiredChunkCount < chunkCount) {
             byte[] emptyChunkBytes = new byte[Chunk.CHUNK_SIZE_IN_ROM];
             for (int i = requiredChunkCount; i < chunkCount; i++) {
-                if (chunks[i] != null) {
-                    chunks[i].fromSegaFormat(emptyChunkBytes, 0, 0);
+                if (newChunks[i] != null) {
+                    Chunk cleared = new Chunk();
+                    cleared.fromSegaFormat(emptyChunkBytes, 0, 0);
+                    newChunks[i] = cleared;
                 }
             }
+        }
+        chunks = newChunks;
+    }
+
+    /**
+     * Rotates a 128x128 block definition's 16x16 descriptors right by the
+     * given number of grid entries (row-major), preserving rewind snapshots
+     * via copy-on-write.
+     *
+     * <p>ROM: {@code LBZ1_RotateChunks} rotates chunk {@code $DB}'s 64-word
+     * chunk-table definition by 24 words during {@code Adjust_LBZ2Layout},
+     * shifting the chunk graphics down three 16x16 rows.
+     */
+    public synchronized void rotateBlockChunkDescs(int blockIndex, int rotateBy) {
+        Block block = getBlock(blockIndex);
+        if (block == null) {
+            return;
+        }
+        block.cowEnsureWritable(currentEpoch());
+        int side = block.getGridSide();
+        int total = side * side;
+        ChunkDesc[] original = new ChunkDesc[total];
+        for (int i = 0; i < total; i++) {
+            original[i] = block.getChunkDesc(i % side, i / side);
+        }
+        for (int i = 0; i < total; i++) {
+            ChunkDesc source = original[((i - rotateBy) % total + total) % total];
+            block.setChunkDesc(i % side, i / side, source);
         }
     }
 
@@ -405,11 +436,17 @@ public class Sonic3kLevel extends AbstractLevel {
 
     /**
      * Restores all chunks from a previously saved snapshot.
+     * Installs fresh Chunk instances into a cloned array so rewind keyframes
+     * sharing the previous array (LevelSnapshot contract) are not mutated.
      */
     public void restoreChunks(int[][] snapshot) {
+        Chunk[] newChunks = chunks.clone();
         for (int i = 0; i < snapshot.length && i < chunkCount; i++) {
-            chunks[i].restoreState(snapshot[i]);
+            Chunk chunk = new Chunk();
+            chunk.restoreState(snapshot[i]);
+            newChunks[i] = chunk;
         }
+        chunks = newChunks;
     }
 
     /**
@@ -446,28 +483,33 @@ public class Sonic3kLevel extends AbstractLevel {
         int requiredBlockCount = startBlockIndex + overlayBlockCount;
         ensureBlockCapacity(requiredBlockCount);
 
+        // Same rewind-keyframe isolation contract as applyChunkOverlay: clone
+        // the array and install fresh Block instances instead of mutating
+        // entries shared with captured LevelSnapshots.
+        Block[] newBlocks = blocks.clone();
         byte[] blockBytes = new byte[LevelConstants.BLOCK_SIZE_IN_ROM];
         for (int i = 0; i < overlayBlockCount; i++) {
             int src = i * LevelConstants.BLOCK_SIZE_IN_ROM;
             System.arraycopy(overlayData, src, blockBytes, 0, LevelConstants.BLOCK_SIZE_IN_ROM);
 
             int blockIndex = startBlockIndex + i;
-            Block block = blocks[blockIndex];
-            if (block == null) {
-                block = new Block();
-                blocks[blockIndex] = block;
-            }
+            Block prior = newBlocks[blockIndex];
+            Block block = prior != null ? new Block(prior.getGridSide()) : new Block();
             block.fromSegaFormat(blockBytes);
+            newBlocks[blockIndex] = block;
         }
 
         if (clearTrailing && requiredBlockCount < blockCount) {
             byte[] emptyBlockBytes = new byte[LevelConstants.BLOCK_SIZE_IN_ROM];
             for (int i = requiredBlockCount; i < blockCount; i++) {
-                if (blocks[i] != null) {
-                    blocks[i].fromSegaFormat(emptyBlockBytes);
+                if (newBlocks[i] != null) {
+                    Block cleared = new Block(newBlocks[i].getGridSide());
+                    cleared.fromSegaFormat(emptyBlockBytes);
+                    newBlocks[i] = cleared;
                 }
             }
         }
+        blocks = newBlocks;
     }
 
     private void ensureChunkCapacity(int minCount) {

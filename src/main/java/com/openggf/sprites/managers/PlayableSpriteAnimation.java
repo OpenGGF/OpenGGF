@@ -13,9 +13,69 @@ public class PlayableSpriteAnimation {
     private static final int DEFAULT_RUN_SPEED_THRESHOLD = 0x600;
     private final AbstractPlayableSprite sprite;
     private int lastAnimationId = -1;
+    // ROM prev_anim equivalent for the Status_Push frame-end clear: the grounded
+    // movement-selected anim byte (WAIT/WALK/BALANCE/...), tracked separately from
+    // lastAnimationId because lastAnimationId also carries the engine's push render
+    // animation substitution, which the ROM anim byte does not. See
+    // ScriptedVelocityAnimationProfile.resolveGroundMovementAnimId.
+    private int lastGroundMovementAnimId = -1;
+    private int groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
+
+    /**
+     * Resets the tracked animation ID so the next update sees a mismatch
+     * and restarts the current animation script.
+     * ROM equivalent: clearing prev_anim to 0 when anim stays the same.
+     */
+    public void resetLastAnimationId() {
+        lastAnimationId = -1;
+    }
 
     public PlayableSpriteAnimation(AbstractPlayableSprite sprite) {
         this.sprite = sprite;
+    }
+
+    /**
+     * Captures the previous-animation tracker. {@link #lastAnimationId} gates
+     * {@link #resetScriptState()} on every {@link #update(int)} call: when the
+     * sprite's {@code animationId} differs from {@code lastAnimationId}, the
+     * script's frame index/tick are reset to 0. Without snapshotting it,
+     * a rewound run can have the same {@code animationId} in the sprite
+     * snapshot but a stale {@code lastAnimationId} from the live forward run,
+     * causing a spurious script reset (or skipping a real one) on the first
+     * replay tick. That drift propagates into {@code mappingFrame},
+     * {@code animationFrameIndex}, and {@code animationTick} after long
+     * forward+rewind cycles (surfaced by TestRewindTorture).
+     */
+    public RewindState captureRewindState() {
+        return new RewindState(lastAnimationId, lastGroundMovementAnimId);
+    }
+
+    public void restoreRewindState(RewindState state) {
+        if (state == null) {
+            lastAnimationId = -1;
+            lastGroundMovementAnimId = -1;
+            return;
+        }
+        lastAnimationId = state.lastAnimationId();
+        lastGroundMovementAnimId = state.lastGroundMovementAnimId();
+    }
+
+    public record RewindState(int lastAnimationId, int lastGroundMovementAnimId) {}
+
+    public void captureGroundMovementAnimSpeed(short speed) {
+        groundMovementAnimSpeedSnapshot = speed;
+    }
+
+    public void clearGroundMovementAnimSpeed() {
+        groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
+    }
+
+    public boolean hasGroundMovementAnimSpeed() {
+        return groundMovementAnimSpeedSnapshot != Integer.MIN_VALUE;
+    }
+
+    public short getGroundMovementAnimSpeed() {
+        return hasGroundMovementAnimSpeed() ? (short) groundMovementAnimSpeedSnapshot : sprite.getGSpeed();
     }
 
     public void update(int frameCounter) {
@@ -35,6 +95,10 @@ public class PlayableSpriteAnimation {
         SpriteAnimationProfile profile = sprite.getAnimationProfile();
         if (sprite.getAnimationSet() != null && !sprite.getAnimationSet().getAllScripts().isEmpty()) {
             int forced = sprite.getForcedAnimationId();
+            if (forced < 0 && profile instanceof ScriptedVelocityAnimationProfile velocityProfile) {
+                clearPushForAnimationChange(velocityProfile, frameCounter,
+                        sprite.getAnimationSet().getScriptCount());
+            }
             // Both branches must be Integer (not int) so null from resolveAnimationId
             // doesn't trigger auto-unboxing NPE via JLS ternary type inference.
             Integer desiredAnimId = forced >= 0
@@ -242,39 +306,61 @@ public class PlayableSpriteAnimation {
         }
 
         int duration = sprite.getAnimationTick() - 1;
-        boolean advanceFrame = duration < 0;
-        if (advanceFrame) {
-            duration = delay;
+        if (duration >= 0) {
+            sprite.setAnimationTick(duration);
+            refreshDelayedMappingFrame(script, frameOffset);
+            return;
         }
+
+        duration = delay;
         sprite.setAnimationTick(duration);
 
         int frameIndex = sprite.getAnimationFrameIndex();
-        if (frameIndex < 0 || frameIndex >= script.frames().size()) {
+        if (frameIndex < 0) {
             frameIndex = 0;
             sprite.setAnimationFrameIndex(0);
         }
+        if (frameIndex >= script.frames().size()) {
+            if (!processEndAction(script)) {
+                return;
+            }
+            frameIndex = sprite.getAnimationFrameIndex();
+            if (frameIndex < 0 || frameIndex >= script.frames().size()) {
+                frameIndex = 0;
+                sprite.setAnimationFrameIndex(0);
+            }
+        }
         int mappingFrame = script.frames().get(frameIndex) + frameOffset;
         sprite.setMappingFrame(mappingFrame);
-
-        if (advanceFrame) {
-            advanceFrameIndex(script);
-        }
+        sprite.setAnimationFrameIndex(frameIndex + 1);
     }
 
-    private void advanceFrameIndex(SpriteAnimationScript script) {
-        int frameIndex = sprite.getAnimationFrameIndex() + 1;
-        if (frameIndex < script.frames().size()) {
-            sprite.setAnimationFrameIndex(frameIndex);
-            return;
+    private void refreshDelayedMappingFrame(SpriteAnimationScript script, int frameOffset) {
+        int displayedFrameIndex = sprite.getAnimationFrameIndex() - 1;
+        if (displayedFrameIndex < 0) {
+            displayedFrameIndex = 0;
         }
+        if (displayedFrameIndex >= script.frames().size()) {
+            displayedFrameIndex = script.frames().size() - 1;
+        }
+        sprite.setMappingFrame(script.frames().get(displayedFrameIndex) + frameOffset);
+    }
+
+    private boolean processEndAction(SpriteAnimationScript script) {
         switch (script.endAction()) {
-            case HOLD -> sprite.setAnimationFrameIndex(script.frames().size() - 1);
-            case LOOP_BACK -> sprite.setAnimationFrameIndex(resolveLoopBackIndex(script));
+            case HOLD -> {
+                sprite.setAnimationFrameIndex(script.frames().size() - 1);
+                return true;
+            }
+            case LOOP_BACK -> {
+                sprite.setAnimationFrameIndex(resolveLoopBackIndex(script));
+                return true;
+            }
             case SWITCH -> {
                 int nextAnimId = script.endParam();
                 if (nextAnimId == sprite.getAnimationId()) {
                     sprite.setAnimationFrameIndex(0);
-                    return;
+                    return true;
                 }
                 // ROM ACCURACY: Check if the profile wants the CURRENT animation to continue.
                 // In the original game, $FD only sets 'anim' but not 'prev_anim'. If the
@@ -290,15 +376,21 @@ public class PlayableSpriteAnimation {
                     if (desired != null && desired == sprite.getAnimationId()) {
                         // Profile wants current animation - HOLD on last frame instead of switching
                         sprite.setAnimationFrameIndex(script.frames().size() - 1);
-                        return;
+                        return true;
                     }
                 }
                 sprite.setAnimationId(nextAnimId);
                 resetScriptState();
-                return;
+                return false;
             }
-            case LOOP -> sprite.setAnimationFrameIndex(0);
-            default -> sprite.setAnimationFrameIndex(0);
+            case LOOP -> {
+                sprite.setAnimationFrameIndex(0);
+                return true;
+            }
+            default -> {
+                sprite.setAnimationFrameIndex(0);
+                return true;
+            }
         }
     }
 
@@ -404,4 +496,69 @@ public class PlayableSpriteAnimation {
         sprite.setAnimationTick(0);
         lastAnimationId = sprite.getAnimationId();
     }
+
+    private void clearPushForAnimationChange(ScriptedVelocityAnimationProfile profile,
+                                             int frameCounter, int scriptCount) {
+        // ROM Animate_Sonic/Animate_Tails clear Status_Push whenever the anim byte
+        // differs from prev_anim, then store anim into prev_anim
+        // (s2.asm:38033-38038,40879-40884; sonic3k.asm:29359-29364,29681-29686).
+        // The byte that drives this is the real ROM anim byte the movement/state
+        // code writes (roll/air/walk/wait/balance/...), NOT the engine's push
+        // render substitution: ROM shows the push frames inside the walk script's
+        // special handler while the anim byte stays at the movement value
+        // (Animate_Sonic loc_12A72, sonic3k.asm:24832). Resolve the anim id with
+        // the push render substitution disabled and compare against the previous
+        // frame's. Track every grounded scripted frame so prev_anim stays current
+        // even when no push is set (push-clear is then a no-op, as in ROM).
+        // S1 leaves the clear behind FixBugs.
+        Integer resolved = profile.resolveAnimationId(sprite, frameCounter, scriptCount, false);
+        if (resolved == null) {
+            // Object-controlled / move-locked: ROM movement routine does not run,
+            // so prev_anim is not updated here. Leave the tracker untouched.
+            return;
+        }
+        int animByteId = groundMoveAnimByte(profile, resolved.intValue());
+        int prevAnimByteId = lastGroundMovementAnimId;
+        lastGroundMovementAnimId = animByteId;
+
+        if (!sprite.getPushing()) {
+            return;
+        }
+        if (sprite.getPhysicsFeatureSet() == null
+                || !sprite.getPhysicsFeatureSet().animationChangeClearsPush()) {
+            return;
+        }
+        if (prevAnimByteId < 0 || animByteId == prevAnimByteId) {
+            return;
+        }
+
+        sprite.setPushing(false);
+    }
+
+    /**
+     * Collapses the engine's distinct Run animation id onto the Walk id for the
+     * purpose of the ROM {@code anim != prev_anim} push-clear comparison.
+     *
+     * <p>In both S2 and S3K the ground directional-movement routines write the
+     * Walk animation id into the {@code anim} byte regardless of speed — S2
+     * {@code Sonic_MoveRight}/{@code Sonic_MoveLeft} (s2.asm:36956,36891
+     * {@code move.b #AniIDSonAni_Walk,anim(a0)}), S3K {@code sub_14CAC}/
+     * {@code sub_14C20} and {@code SonicKnux_Move} (sonic3k.asm:28122,28056,
+     * 22811,22877 {@code move.b #0,anim(a0)}). The Run frames are a render-time
+     * selection inside that same {@code AniXXX00} script (S2 SonAni_Walk vs
+     * SonAni_Run pointers are dispatched by speed in the animation routine; S3K
+     * {@code Animate_Sonic}/{@code Animate_Tails} loc_15A14 selects Run frames
+     * by {@code ground_vel} within the Walk script). The engine instead models
+     * Run as its own animation id, so a Run->Walk transition that ROM never
+     * records as an {@code anim}-byte change would otherwise trip
+     * {@code Animate}'s {@code anim != prev_anim} push-clear. Treating Run as the
+     * Walk byte here matches the ROM comparison: a CPU sidekick decelerating
+     * from a run into a wall keeps Status_Push across the speed step
+     * (sonic3k.asm:29360-29364,28122 — {@code anim} stays Walk so push is not
+     * cleared).
+     */
+    private static int groundMoveAnimByte(ScriptedVelocityAnimationProfile profile, int animId) {
+        return animId == profile.getRunAnimId() ? profile.getWalkAnimId() : animId;
+    }
+
 }

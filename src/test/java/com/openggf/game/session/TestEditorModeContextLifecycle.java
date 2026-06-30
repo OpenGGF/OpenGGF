@@ -1,10 +1,12 @@
 package com.openggf.game.session;
 
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -18,7 +20,7 @@ class TestEditorModeContextLifecycle {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }
@@ -72,6 +74,39 @@ class TestEditorModeContextLifecycle {
         assertEquals(88, gameplay.getSpawnY());
         assertTrue(gameplay.hasResumeStash());
         assertSame(stash, gameplay.getResumeStash().orElseThrow());
+    }
+
+    @Test
+    void enterEditorMode_preservesWorldAndOwnsEditorManagers() {
+        GameplayModeContext gameplay = SessionManager.openGameplaySession(new Sonic2GameModule());
+        WorldSession world = gameplay.getWorldSession();
+
+        EditorModeContext editor = SessionManager.enterEditorMode(new EditorCursorState(77, 88));
+
+        assertSame(world, editor.getWorldSession());
+        assertNotNull(editor.getCamera());
+        assertNotNull(editor.getSpriteManager());
+        assertNotNull(editor.getLevelManager());
+    }
+
+    @Test
+    void editorModeDestroyResetsEveryEditorOwnedManager() throws Exception {
+        String source = Files.readString(Path.of(
+                "src/main/java/com/openggf/game/session/EditorModeContext.java"));
+        String destroy = methodBody(source, "public void destroy()");
+
+        for (String resetCall : new String[] {
+                "levelManager.resetGameplayState()",
+                "spriteManager.resetState()",
+                "collisionSystem.resetState()",
+                "terrainCollisionManager.resetState()",
+                "parallaxManager.resetState()",
+                "waterSystem.reset()",
+                "gameStateManager.resetState()",
+                "camera.resetState()"
+        }) {
+            assertTrue(destroy.contains(resetCall), "EditorModeContext.destroy must call " + resetCall);
+        }
     }
 
     @Test
@@ -133,6 +168,26 @@ class TestEditorModeContextLifecycle {
         assertEquals(34, editor.getCursor().y());
         assertFalse(editor.hasPlaytestStash());
         assertNull(editor.getPlaytestStash());
+    }
+
+    private static String methodBody(String text, String signature) {
+        int start = text.indexOf(signature);
+        assertTrue(start >= 0, "Missing method signature: " + signature);
+        int brace = text.indexOf('{', start);
+        assertTrue(brace >= 0, "Missing method body: " + signature);
+        int depth = 0;
+        for (int i = brace; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (ch == '{') {
+                depth++;
+            } else if (ch == '}') {
+                depth--;
+                if (depth == 0) {
+                    return text.substring(brace + 1, i);
+                }
+            }
+        }
+        throw new AssertionError("Unclosed method body: " + signature);
     }
 }
 

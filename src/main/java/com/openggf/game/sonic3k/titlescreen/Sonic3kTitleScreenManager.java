@@ -5,6 +5,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameServices;
 import com.openggf.game.TitleScreenProvider;
+import com.openggf.game.sonic3k.S3kFrontendPaletteUploader;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsConstants;
@@ -12,6 +13,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
+import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -64,6 +66,34 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     private static final int MAP_HEIGHT = 28;
 
     // -----------------------------------------------------------------------
+    // Widescreen helpers
+    // -----------------------------------------------------------------------
+
+    /**
+     * Returns the current projection viewport width in game pixels.
+     * At native 320 this equals SCREEN_WIDTH exactly.
+     */
+    private int viewportWidth() {
+        try {
+            int w = GameServices.graphics().getProjectionWidth();
+            return w > 0 ? w : SCREEN_WIDTH;
+        } catch (Exception ignored) {
+            return SCREEN_WIDTH;
+        }
+    }
+
+    /**
+     * Horizontal offset that shifts the native-320 content block to the centre
+     * of the current viewport.  Zero at native (byte-identical); positive at
+     * wider resolutions.
+     *
+     * <p>Package-visible for unit tests.
+     */
+    int xOffset() {
+        return (viewportWidth() - SCREEN_WIDTH) / 2;
+    }
+
+    // -----------------------------------------------------------------------
     // Internal phase state machine
     // -----------------------------------------------------------------------
 
@@ -84,9 +114,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         WHITE_FLASH,
         /** Banner bounce + menu selection. */
         INTERACTIVE,
-        /** Fade to black before exiting (handles fade ourselves since
-         *  FadeManager instance may differ between GameLoop and UiRenderPipeline
-         *  after the RuntimeManager singleton migration). */
+        /** Fade to black before exiting. */
         FADE_OUT,
         /** Fade complete, ready to exit. */
         EXITING
@@ -439,11 +467,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         segaSoundPlayed = false;
         spritesInitialized = false;
 
-        // Cancel any stale FadeManager overlay. The GameLoop's exitTitleScreen()
-        // uses fadeManager.startFadeToBlack() with a callback to doExitTitleScreen(),
-        // which calls this reset(). After the callback, FadeManager.completeFade()
-        // would persist the black overlay indefinitely (holdDuration = MAX_VALUE).
-        // Cancelling here clears the overlay so the level can render.
+        // Defensive cleanup in case some earlier flow left a generic FadeManager
+        // overlay active before the title screen was reset.
         GameServices.fade().cancel();
 
         LOGGER.info("S3K title screen reset to inactive");
@@ -462,6 +487,11 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     @Override
     public boolean isActive() {
         return state != State.INACTIVE;
+    }
+
+    @Override
+    public TitleScreenAction consumeExitAction() {
+        return menuSelection == 0 ? TitleScreenAction.ONE_PLAYER : TitleScreenAction.TWO_PLAYER;
     }
 
     @Override
@@ -580,9 +610,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Overwrite colors 0-6 (14 bytes) with transition data
         System.arraycopy(transitionData, offset, line0Data, 0, PAL_TRANSITION_BYTES_PER_STEP);
 
-        Palette palette = new Palette();
-        palette.fromSegaFormat(line0Data);
-        gm.cachePaletteTexture(palette, 0);
+        S3kFrontendPaletteUploader.cacheLineFromBytes(gm, line0Data, 0);
     }
 
     private void updateSonicAnimation(InputHandler input) {
@@ -633,9 +661,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      *
      * <p>We handle the full exit transition ourselves rather than relying on
      * the GameLoop's {@code exitTitleScreen()} → FadeManager → callback chain,
-     * because the upstream RuntimeManager singleton migration can cause the
-     * FadeManager instance in GameLoop to differ from the one that the
-     * UiRenderPipeline updates, preventing the fade callback from ever firing.
+     * because title transitions may run across differently scoped fade managers.
      *
      * <p>When our visual fade completes, we directly reset, set the game mode
      * to LEVEL, and load the first zone.
@@ -679,13 +705,18 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
             GameServices.audio().playSfx(Sonic3kSfx.SWITCH.id);
         }
 
-        // Start pressed - begin exit fade
+        // Start pressed - 1 PLAYER hands off through GameLoop routing, while the
+        // competition path keeps the provider-owned fade sequence.
         if (input.isKeyPressed(jumpKey)) {
+            if (menuSelection == 0) {
+                state = State.EXITING;
+                LOGGER.info("S3K title screen handing off to GameLoop for 1 PLAYER");
+                return;
+            }
             phase = Phase.FADE_OUT;
             phaseTimer = 0;
             // State stays ACTIVE during our fade — we only set EXITING once
-            // the visual fade is complete, so the GameLoop's exitTitleScreen()
-            // finds the screen already black and can transition immediately.
+            // the visual fade is complete, so GameLoop can hand off immediately.
             GameServices.audio().fadeOutMusic();
             LOGGER.info("S3K title screen starting exit fade (menu selection: " + menuSelection + ")");
             return;
@@ -1030,9 +1061,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
 
         // Re-upload palette line 2 (0-indexed)
-        Palette palette = new Palette();
-        palette.fromSegaFormat(lineData);
-        gm.cachePaletteTexture(palette, 2);
+        S3kFrontendPaletteUploader.cacheLineFromBytes(gm, lineData, 2);
     }
 
     // -----------------------------------------------------------------------
@@ -1050,6 +1079,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
 
         int animPatternBase = dataLoader.getAnimPatternBase();
+        // xOffset() is 0 at native 320 — byte-identical at native width.
+        int ox = xOffset();
 
         gm.beginPatternBatch();
         int mapSize = MAP_WIDTH * MAP_HEIGHT;
@@ -1066,7 +1097,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
                 // Extract pattern fields from nametable word
                 int tileIndex = word & 0x7FF;
                 reusableDesc.set(word);
-                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, col * 8, row * 8);
+                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, ox + col * 8, row * 8);
             }
         }
         gm.flushPatternBatch();
@@ -1074,6 +1105,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Apply fade overlay for SEGA fade-in only.
         // PAL_TRANSITION uses actual per-color palette modification (not an overlay)
         // so the SEGA text stays white while the background goes dark.
+        // Width extended to viewportWidth() so side-bars are covered at widescreen;
+        // at native 320 viewportWidth() == SCREEN_WIDTH — byte-identical.
         if (phase == Phase.SEGA_FADE_IN) {
             float fadeAmount = 1.0f - (float) phaseTimer / SEGA_FADE_DURATION;
             if (fadeAmount > 0.0f) {
@@ -1081,7 +1114,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
                         GLCommand.CommandType.RECTI, -1,
                         GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                         0.0f, 0.0f, 0.0f, fadeAmount,
-                        0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                        0, 0, viewportWidth(), SCREEN_HEIGHT
                 ));
             }
         }
@@ -1095,6 +1128,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         int[] nametable = dataLoader.getAnimationMapping(FINAL_FRAME_INDEX);
         if (nametable != null && nametable.length > 0) {
             int animPatternBase = dataLoader.getAnimPatternBase();
+            // xOffset() is 0 at native 320 — byte-identical at native width.
+            int ox = xOffset();
             gm.beginPatternBatch();
             for (int row = 0; row < MAP_HEIGHT; row++) {
                 for (int col = 0; col < MAP_WIDTH; col++) {
@@ -1108,20 +1143,22 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
                     }
                     int tileIndex = word & 0x7FF;
                     reusableDesc.set(word);
-                    gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, col * 8, row * 8);
+                    gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, ox + col * 8, row * 8);
                 }
             }
             gm.flushPatternBatch();
         }
 
-        // White flash overlay, fading out
+        // White flash overlay, fading out.
+        // Width extended to viewportWidth() so side-bars are also covered;
+        // at native 320 viewportWidth() == SCREEN_WIDTH — byte-identical.
         float flashAlpha = 1.0f - (float) phaseTimer / WHITE_FLASH_DURATION;
         if (flashAlpha > 0.0f) {
             gm.registerCommand(new GLCommand(
                     GLCommand.CommandType.RECTI, -1,
                     GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                     1.0f, 1.0f, 1.0f, flashAlpha,
-                    0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                    0, 0, viewportWidth(), SCREEN_HEIGHT
             ));
         }
     }
@@ -1134,14 +1171,16 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Draw the interactive scene underneath
         drawInteractivePhase(gm);
 
-        // Black overlay, fading in
+        // Black overlay, fading in.
+        // Width extended to viewportWidth() so side-bars are also covered;
+        // at native 320 viewportWidth() == SCREEN_WIDTH — byte-identical.
         float fadeAlpha = (float) phaseTimer / EXIT_FADE_DURATION;
         if (fadeAlpha > 0.0f) {
             gm.registerCommand(new GLCommand(
                     GLCommand.CommandType.RECTI, -1,
                     GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                     0.0f, 0.0f, 0.0f, Math.min(1.0f, fadeAlpha),
-                    0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                    0, 0, viewportWidth(), SCREEN_HEIGHT
             ));
         }
     }
@@ -1150,12 +1189,20 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * Draws the interactive phase: background plane, foreground plane, and all sprites.
      */
     private void drawInteractivePhase(GraphicsManager gm) {
-        // 1. Render Plane B (background)
+        // xOffset() is 0 at native 320 — byte-identical at native width.
+        int ox = xOffset();
+
+        // 0. Fill the widescreen side bands with a flat colour from the picture's
+        //    top-left tile so they read as sky rather than black bars. No-op at
+        //    native 320 (no bands).
+        drawBackgroundBands(gm);
+
+        // 1. Render Plane B (background) — centred over the bands.
         renderPlaneB(gm);
 
         // 2. Render Tails plane sprite (no priority, renders behind Plane A)
         if (tailsPlaneSprite.active && tailsPlaneRenderer != null && tailsPlaneRenderer.isReady()) {
-            int tailsScreenX = tailsPlaneVdpX - 128;
+            int tailsScreenX = ox + tailsPlaneVdpX - 128;
             int tailsVdpY = tailsPlaneGoingRight ? 0xC0 : 0xD0;
             int tailsScreenY = tailsVdpY - 128;
             gm.beginPatternBatch();
@@ -1164,7 +1211,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
             gm.flushPatternBatch();
         }
 
-        // 3. Render Plane A (final Sonic frame, shifted by vScroll)
+        // 3. Render Plane A (final Sonic frame, shifted by vScroll) — centered
         renderPlaneA(gm);
 
         // 4. Render sprites in VDP priority order (back to front in painter's algorithm).
@@ -1176,9 +1223,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         gm.beginPatternBatch();
 
         // Sonic finger wag — priority $180, drawn BEHIND the banner
-        // VDP x=$148, y=($DC - vScroll)
+        // VDP x=$148, y=($DC - vScroll); ox centres on the viewport.
         if (sonicFingerSprite.active && sonicAnimRenderer != null && sonicAnimRenderer.isReady()) {
-            int fingerScreenX = 0x148 - 128; // 200
+            int fingerScreenX = ox + 0x148 - 128; // native: 200
             int fingerScreenY = 0xDC - vScroll - 128;
             sonicAnimRenderer.drawFrameIndex(sonicFingerSprite.mappingFrame,
                     fingerScreenX, fingerScreenY);
@@ -1187,7 +1234,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Sonic wink — priority $180, drawn BEHIND the banner
         // VDP x=$F8, y=($C8 - vScroll)
         if (sonicWinkSprite.active && sonicAnimRenderer != null && sonicAnimRenderer.isReady()) {
-            int winkScreenX = 0xF8 - 128; // 120
+            int winkScreenX = ox + 0xF8 - 128; // native: 120
             int winkScreenY = 0xC8 - vScroll - 128;
             sonicAnimRenderer.drawFrameIndex(sonicWinkSprite.mappingFrame,
                     winkScreenX, winkScreenY);
@@ -1195,13 +1242,13 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
         // Banner — priority $80, drawn IN FRONT of finger/wink
         if (bannerSprite.active && bannerRenderer != null && bannerRenderer.isReady()) {
-            int bannerScreenX = 0x120 - 128; // VDP $120 -> screen 160
+            int bannerScreenX = ox + 0x120 - 128; // native: 160
             int bannerScreenY = getBannerScreenY();
             bannerRenderer.drawFrameIndex(0, bannerScreenX, bannerScreenY);
 
             // TM symbol — VDP x=$188, y=$EC (fixed position)
             if (tmSprite.active && bannerSettled) {
-                int tmScreenX = 0x188 - 128; // 264
+                int tmScreenX = ox + 0x188 - 128; // native: 264
                 int tmScreenY = 0xEC - 128;  // 108
                 bannerRenderer.drawFrameIndex(1, tmScreenX, tmScreenY);
             }
@@ -1209,14 +1256,14 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
         // & KNUCKLES — priority $80
         if (andKnucklesSprite.active && andKnucklesRenderer != null && andKnucklesRenderer.isReady()) {
-            int andKnucklesScreenX = 0x120 - 128;
+            int andKnucklesScreenX = ox + 0x120 - 128; // native: 160
             int andKnucklesScreenY = getAndKnucklesScreenY();
             andKnucklesRenderer.drawFrameIndex(0, andKnucklesScreenX, andKnucklesScreenY);
         }
 
         // Menu selection — VDP x=$F0, y=$140
         if (selectionSprite.active && selectionRenderer != null && selectionRenderer.isReady()) {
-            int selScreenX = 0xF0 - 128; // 112
+            int selScreenX = ox + 0xF0 - 128; // native: 112
             int selScreenY = 0x140 - 128; // 192
             selectionRenderer.drawFrameIndex(selectionSprite.mappingFrame,
                     selScreenX, selScreenY);
@@ -1224,7 +1271,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
         // Copyright text — VDP x=$158, y=$14C
         if (copyrightSprite.active && copyrightRenderer != null && copyrightRenderer.isReady()) {
-            int copyScreenX = 0x158 - 128; // 216
+            int copyScreenX = ox + 0x158 - 128; // native: 216
             int copyScreenY = 0x14C - 128; // 204
             copyrightRenderer.drawFrameIndex(0, copyScreenX, copyScreenY);
         }
@@ -1240,6 +1287,13 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * Renders Plane B (background) for the interactive phase.
      * NOT affected by vScroll — on VDP, V_scroll_value is written to VSRAM
      * word 0 (Plane A only). Plane B has its own V_scroll (word 1) which stays at 0.
+     *
+     * <p><b>Widescreen:</b> the fixed 40×28 picture is centred (pillarboxed).
+     * Edge-tiling the picture to fill the viewport was tried but smeared the
+     * cloud/skyline edge columns. Instead {@link #drawBackgroundBands} fills the
+     * side bands with a single flat colour from the picture's top-left tile, so
+     * they read as sky rather than black bars. At native 320 the centred frame
+     * exactly fills the viewport (xOffset 0) — byte-identical.
      */
     private void renderPlaneB(GraphicsManager gm) {
         int[] bgMap = dataLoader.getBackgroundMapping();
@@ -1248,6 +1302,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
 
         int animPatternBase = dataLoader.getAnimPatternBase();
+        // xOffset() is 0 at native 320 — byte-identical at native width.
+        int ox = xOffset();
 
         gm.beginPatternBatch();
         for (int row = 0; row < MAP_HEIGHT; row++) {
@@ -1262,10 +1318,72 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
                 }
                 int tileIndex = word & 0x7FF;
                 reusableDesc.set(word);
-                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, col * 8, row * 8);
+                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, ox + col * 8, row * 8);
             }
         }
         gm.flushPatternBatch();
+    }
+
+    /**
+     * Fills the widescreen side bands (outside the centred 320 frame) with a
+     * single flat colour taken from the picture's top-left tile, so the bands
+     * read as sky instead of black bars. One colour for the whole band avoids
+     * the cloud smear that tiling or per-row sampling produced. No-op at native
+     * 320 (no bands).
+     */
+    private void drawBackgroundBands(GraphicsManager gm) {
+        int ox = xOffset();
+        if (ox <= 0) {
+            return; // native width — no side bands
+        }
+        float[] c = topLeftBackgroundColor();
+        if (c == null) {
+            return;
+        }
+        int vw = viewportWidth();
+        int rightStart = ox + MAP_WIDTH * 8;
+        // Left band and right band, full viewport height, behind everything.
+        gm.registerCommand(new GLCommand(GLCommand.CommandType.RECTI, -1,
+                c[0], c[1], c[2], 0, 0, ox, SCREEN_HEIGHT));
+        gm.registerCommand(new GLCommand(GLCommand.CommandType.RECTI, -1,
+                c[0], c[1], c[2], rightStart, 0, vw, SCREEN_HEIGHT));
+    }
+
+    /**
+     * Resolves the flat side-band colour from the background picture's top-left
+     * tile (its corner pixel through the frame-D palette).
+     *
+     * @return {0..1, 0..1, 0..1} float RGB, or null if the tile is transparent
+     *         or unavailable (bands left to the clear colour)
+     */
+    private float[] topLeftBackgroundColor() {
+        int[] bgMap = dataLoader.getBackgroundMapping();
+        byte[] palD = dataLoader.getFrameDPaletteData();
+        Pattern[] pats = dataLoader.getFrameDPatterns();
+        if (bgMap == null || bgMap.length == 0 || palD == null || pats == null) {
+            return null;
+        }
+        int word = bgMap[0]; // top-left tile
+        if (word == 0) {
+            return null; // transparent corner
+        }
+        int tileIndex = word & 0x7FF;
+        if (tileIndex >= pats.length || pats[tileIndex] == null) {
+            return null;
+        }
+        int palLine = (word >> 13) & 0x3;
+        int colorIndex = pats[tileIndex].getPixel(0, 0) & 0x0F;
+        int off = palLine * Palette.PALETTE_SIZE_IN_ROM + colorIndex * 2;
+        if (off < 0 || off + 1 >= palD.length) {
+            return null;
+        }
+        // Mega Drive 0BGR (3 bits each): R=bits1-3 of byte1, G=bits5-7 of byte1, B=bits1-3 of byte0.
+        int b0 = palD[off] & 0xFF;
+        int b1 = palD[off + 1] & 0xFF;
+        float r = ((b1 >> 1) & 0x07) / 7.0f;
+        float g = ((b1 >> 5) & 0x07) / 7.0f;
+        float b = ((b0 >> 1) & 0x07) / 7.0f;
+        return new float[] {r, g, b};
     }
 
     /**
@@ -1279,6 +1397,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
 
         int animPatternBase = dataLoader.getAnimPatternBase();
+        // Center the foreground plane on the viewport.
+        // xOffset() is 0 at native 320 — byte-identical at native width.
+        int ox = xOffset();
 
         gm.beginPatternBatch();
         for (int row = 0; row < MAP_HEIGHT; row++) {
@@ -1294,7 +1415,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
                 }
                 int tileIndex = word & 0x7FF;
                 reusableDesc.set(word);
-                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, col * 8, drawY);
+                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, ox + col * 8, drawY);
             }
         }
         gm.flushPatternBatch();

@@ -1,5 +1,6 @@
 package com.openggf.level.render;
 
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.HScrollBuffer;
@@ -94,7 +95,8 @@ public class BackgroundRenderer {
         hScrollBuffer.init();
         vScrollBuffer = new VScrollBuffer();
         vScrollBuffer.init();
-        vScrollColumnBuffer = new VScrollBuffer(20);
+        vScrollColumnBuffer = new VScrollBuffer(columnCount(
+                GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS)));
         vScrollColumnBuffer.init();
 
         // Load parallax shader
@@ -102,7 +104,12 @@ public class BackgroundRenderer {
         parallaxShader.cacheUniformLocations();
         quadRenderer.init();
 
-        // Create FBO for background tile rendering
+        // Create FBO for background tile rendering.
+        // Size the initial allocation to the configured viewport width so that at
+        // native (320) the FBO starts at 320px and at widescreen presets it starts
+        // at the wider configured width. ensureCapacity() (called every frame) will
+        // grow the FBO further if a zone's BG period exceeds this initial size.
+        fboAllocWidth = GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
         createFBO(fboAllocWidth, fboAllocHeight);
 
         initialized = true;
@@ -290,6 +297,8 @@ public class BackgroundRenderer {
         // Set dimensions and scroll
         // BGTextureWidth = renderWidth (wrap period), FBOAllocationWidth = fboAllocWidth (UV mapping)
         parallaxShader.setScreenDimensions(realWidth, realHeight);
+        parallaxShader.setActiveDisplayWidth((float) GameServices.configuration()
+                .getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
         parallaxShader.setBGTextureDimensions(renderWidth, renderHeight);
         parallaxShader.setFBOAllocationWidth(fboAllocWidth);
 
@@ -322,6 +331,10 @@ public class BackgroundRenderer {
             vScrollColumnBuffer.unbind(3);
         }
         glActiveTexture(GL_TEXTURE0);
+    }
+
+    private static int columnCount(int width) {
+        return (width + 15) / 16;
     }
 
     /**

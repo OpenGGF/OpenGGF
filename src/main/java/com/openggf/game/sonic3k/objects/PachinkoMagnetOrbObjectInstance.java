@@ -8,12 +8,17 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 
@@ -23,7 +28,7 @@ import java.util.List;
  * <p>ROM reference: {@code Obj_PachinkoMagnetOrb}. The orb tracks capture/orbit state
  * per player slot rather than sharing one global state across the object.
  */
-public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance {
+public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int CATCH_RANGE = 0x38;
     private static final int RELEASE_COOLDOWN = 30;
@@ -43,13 +48,25 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance {
     }
 
     @Override
+    public PachinkoMagnetOrbObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new PachinkoMagnetOrbObjectInstance(ctx.spawn());
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (playerEntity instanceof AbstractPlayableSprite player) {
-            updatePlayer(player, frameCounter);
+        AbstractPlayableSprite updatePlayer = playerEntity instanceof AbstractPlayableSprite player ? player : null;
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            participants = withUpdatePlayer;
         }
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                updatePlayer(sidekick, frameCounter);
+
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite playable) {
+                updatePlayer(playable, frameCounter);
             }
         }
     }
@@ -154,8 +171,8 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance {
         player.setGSpeed((short) 0x0800);
         player.setControlLocked(true);
         // Engine movement skips only when objectControlled is true, so mirror the
-        // ROM's captured-player ownership with the engine's full-control flag.
-        player.setObjectControlled(true);
+        // ROM's captured-player ownership with the engine's full-control policy.
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setAir(true);
         player.setOnObject(false);
         player.setJumping(false);

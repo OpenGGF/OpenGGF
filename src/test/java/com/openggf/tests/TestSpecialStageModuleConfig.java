@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -25,15 +24,15 @@ public class TestSpecialStageModuleConfig {
     @AfterEach
     public void tearDown() {
         GameModuleRegistry.reset();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
     }
 
     private GameStateManager recreateGameState(com.openggf.game.GameModule module) {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.setCurrent(module);
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         return GameServices.gameState();
     }
 
@@ -78,9 +77,9 @@ public class TestSpecialStageModuleConfig {
         assertTrue(gameState.hasAllEmeralds());
 
         GameModuleRegistry.reset();
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        RuntimeManager.createGameplay();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
         gameState = GameServices.gameState();
 
         assertEquals(7, gameState.getSpecialStageCount());

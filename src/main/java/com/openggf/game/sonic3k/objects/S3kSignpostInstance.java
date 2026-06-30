@@ -3,16 +3,23 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
-import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.camera.Camera;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -25,15 +32,8 @@ import java.util.logging.Logger;
  *
  * <p>State machine: INIT -> FALLING -> LANDED -> RESULTS -> AFTER
  */
-public class S3kSignpostInstance extends AbstractObjectInstance {
+public class S3kSignpostInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(S3kSignpostInstance.class.getName());
-
-    // ---- Static reference for hidden monitors ----
-    private static S3kSignpostInstance activeSignpost;
-
-    public static S3kSignpostInstance getActiveSignpost() {
-        return activeSignpost;
-    }
 
     // ---- State machine ----
     private enum State { INIT, FALLING, LANDED, RESULTS, AFTER }
@@ -95,11 +95,18 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
 
     // Landing Y threshold relative to camera
     private static final int LAND_Y_THRESHOLD = 0x50;
+    private static final int AFTER_X_RANGE = 0x280;
+    private static final int AFTER_Y_BIAS = 0x80;
+    private static final int AFTER_Y_RANGE = 0x200;
 
     private int[] animSequence;
 
-    /** ROM's Apparent_act — display-only act number, not affected by seamless reloads. */
-    private final int apparentAct;
+    /**
+     * ROM's Apparent_act — display-only act number, not affected by seamless reloads.
+     * Non-final so the generic field capturer reapplies it after a rewind recreate
+     * (the signpost's spawn is null, so the recreate hook uses a placeholder).
+     */
+    private int apparentAct;
 
     /**
      * Creates the signpost at the given X position.
@@ -113,6 +120,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         this.worldX = spawnX;
         this.worldY = 0; // Set properly in INIT
         this.apparentAct = apparentAct;
+    }
+
+    private S3kSignpostInstance() {
+        this(0, 0);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        int spawnX = ctx.spawn() != null ? ctx.spawn().x() : 0;
+        return new S3kSignpostInstance(spawnX, 0);
     }
 
     @Override
@@ -138,9 +155,32 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         return true;
     }
 
+    public static S3kSignpostInstance activeSignpost(ObjectManager objectManager) {
+        if (objectManager == null) {
+            return null;
+        }
+        return objectManager.activeObjectsOfType(S3kSignpostInstance.class).stream()
+                .filter(signpost -> !signpost.isDestroyed())
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * ROM: Offset_ObjectsDuringTransition shifts Obj_EndSign's position by the
+     * same delta as the players/camera during a seamless act reload (e.g. CNZ
+     * (-$3000, +$200)), so the signpost stays on screen and in Obj_EndSignAfter
+     * after the Act 1 -> Act 2 transition instead of being stranded at its old
+     * Act 1 world position (docs/skdisasm/sonic3k.asm:176262-176279, CNZ1BGE_DoTransition).
+     */
+    @Override
+    public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
+        worldX += offsetX;
+        worldY += offsetY;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        AbstractPlayableSprite player = resolveUpdatePlayer(playerEntity);
         if (isDestroyed()) {
             return;
         }
@@ -159,8 +199,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
     // =========================================================================
 
     private void updateInit(AbstractPlayableSprite player) {
-        activeSignpost = this;
-
         var camera = services().camera();
         worldY = camera.getY() - 0x20;
 
@@ -252,34 +290,27 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
 
     /**
      * ROM: Signpost bump-from-below mechanic.
-     * Player must be jumping (in air + rolling jump) and moving upward,
-     * and within the bump detection box.
+     * Player must be in animation #2 and moving upward, and within the bump
+     * detection box.
      */
     private void checkBumpFromBelow(AbstractPlayableSprite player) {
         if (player == null || bumpCooldown > 0) {
             return;
         }
 
-        // Player must be in air and jumping (animation ID 2 = rolling/jumping)
-        if (!player.getAir()) {
-            return;
+        // ROM EndSign_CheckPlayerHit checks the range once, then calls sub_83A70
+        // for Sonic and Tails in that order. The delay byte is written inside
+        // sub_83A70, so a same-frame Tails hit can overwrite Sonic's x velocity
+        // (docs/skdisasm/sonic3k.asm:176342-176365, 176372-176387).
+        for (PlayableEntity candidate : playerQuery(player).playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate instanceof AbstractPlayableSprite sprite && isRomBumpCandidate(worldX, worldY, sprite)) {
+                applyRomBumpFromBelow(sprite);
+            }
         }
-        if (player.getYSpeed() >= 0) {
-            return;
-        }
+    }
 
-        // Range check
-        int dx = player.getCentreX() - worldX;
-        int dy = player.getCentreY() - worldY;
-        if (dx < BUMP_LEFT || dx >= BUMP_RIGHT || dy < BUMP_TOP || dy >= BUMP_BOTTOM) {
-            return;
-        }
-
-        // Bump!
-        int kickX = (worldX - player.getCentreX()) * 16;
-        if (kickX == 0) {
-            kickX = 8;
-        }
+    private void applyRomBumpFromBelow(AbstractPlayableSprite player) {
+        int kickX = romBumpXVelocity(worldX, player.getCentreX());
         // xVel/yVel are 8.8 fixed-point
         xVel = kickX;
         yVel = -0x200;
@@ -293,6 +324,28 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         services().gameState().addScore(100);
         bumpCooldown = BUMP_COOLDOWN;
         LOG.fine("S3K Signpost bumped! xVel=" + xVel);
+    }
+
+    static boolean isRomBumpCandidate(int signpostX, int signpostY, AbstractPlayableSprite player) {
+        if (!hasRomBumpPose(player)) {
+            return false;
+        }
+        int dx = player.getCentreX() - signpostX;
+        int dy = player.getCentreY() - signpostY;
+        return dx >= BUMP_LEFT && dx < BUMP_RIGHT && dy >= BUMP_TOP && dy < BUMP_BOTTOM;
+    }
+
+    static int romBumpXVelocity(int signpostX, int playerX) {
+        int kickX = (signpostX - playerX) * 16;
+        return kickX == 0 ? 8 : kickX;
+    }
+
+    static boolean hasRomBumpPose(AbstractPlayableSprite player) {
+        // ROM sub_83A70 only accepts anim(a1)==#2 and upward y_vel(a1);
+        // it does not test Status_InAir (docs/skdisasm/sonic3k.asm:176372-176387).
+        return player != null
+                && player.getAnimationId() == Sonic3kAnimationIds.ROLL.id()
+                && player.getYSpeed() < 0;
     }
 
     // =========================================================================
@@ -313,7 +366,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         advanceAnimation();
 
         postLandTimer--;
-        if (postLandTimer <= 0) {
+        if (romPostLandTimerExpired(postLandTimer)) {
             // Show final face frame
             PlayerCharacter pc = getPlayerCharacter();
             animFrame = FACE_FRAMES[pc.ordinal()];
@@ -322,6 +375,12 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
             state = State.RESULTS;
             LOG.fine("S3K Signpost LANDED -> RESULTS");
         }
+    }
+
+    static boolean romPostLandTimerExpired(int timerAfterDecrement) {
+        // Obj_EndSignLanded uses subq.w #1,$2E(a0); bmi.s, so $0000 is still
+        // a waiting frame and only $FFFF advances (docs/skdisasm/sonic3k.asm:176198-176208).
+        return (short) timerAfterDecrement < 0;
     }
 
     // =========================================================================
@@ -338,35 +397,71 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
             return;
         }
 
-        // ROM: Set_PlayerEndingPose (sonic3k.asm lines 181977-181988)
-        // object_control = $81: bit 7 = under object control (freeze physics),
-        //                       bit 0 = don't update routine
-        player.setObjectControlled(true);
-        player.setControlLocked(true);
-        player.setXSpeed((short) 0);
-        player.setYSpeed((short) 0);
-        player.setGSpeed((short) 0);
-        player.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        applyMainPlayerEndingPose(player);
 
         // ROM line 176215: st (Ctrl_2_locked).w — lock sidekick input
         // Also apply Set_PlayerEndingPose equivalent so Tails does a victory pose
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            AbstractPlayableSprite sidekick = (AbstractPlayableSprite) sidekickEntity;
-            sidekick.setObjectControlled(true);
-            sidekick.setControlLocked(true);
-            sidekick.setXSpeed((short) 0);
-            sidekick.setYSpeed((short) 0);
-            sidekick.setGSpeed((short) 0);
-            sidekick.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        for (PlayableEntity candidate : playerQuery(player)
+                .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            if (candidate instanceof AbstractPlayableSprite sprite) {
+                if (sprite == player) {
+                    continue;
+                }
+                applyEndingPose(sprite);
+            }
         }
 
         // Spawn the results screen — pass apparentAct (ROM's Apparent_act), not
         // LevelManager.getCurrentAct(). AIZ reloads act 2 resources mid-level which
         // changes LevelManager.currentAct to 1, but Apparent_act stays 0 until results exit.
-        spawnChild(() -> new S3kResultsScreenObjectInstance(
+        if (services().gameState() != null) {
+            services().gameState().setEndOfLevelActive(true);
+        }
+        spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
                 getPlayerCharacter(), apparentAct));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
+    }
+
+    private void applyEndingPose(AbstractPlayableSprite sprite) {
+        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+        sprite.setControlLocked(true);
+        sprite.setXSpeed((short) 0);
+        sprite.setYSpeed((short) 0);
+        sprite.setGSpeed((short) 0);
+        sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
+    }
+
+    static void applyMainPlayerEndingPose(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return;
+        }
+        // Set_PlayerEndingPose writes object_control=$81, victory animation,
+        // and zero velocities, but does not set Ctrl_1_locked
+        // (docs/skdisasm/sonic3k.asm:181977-181988). Obj_EndSignLanded only
+        // locks Ctrl_2 (docs/skdisasm/sonic3k.asm:176198-176218), so Sonic
+        // keeps copying raw Ctrl_1 into Ctrl_1_logical while object_control
+        // freezes movement; Sonic_RecordPos then stores that live input for
+        // Tails' delayed follow history (docs/skdisasm/sonic3k.asm:21541-21545,
+        // 22119-22136).
+        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+        sprite.setXSpeed((short) 0);
+        sprite.setYSpeed((short) 0);
+        sprite.setGSpeed((short) 0);
+        sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
+    }
+
+    private ObjectPlayerQuery playerQuery(PlayableEntity updatePlayer) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> updatePlayer, query::sidekicks);
+    }
+
+    private AbstractPlayableSprite resolveUpdatePlayer(PlayableEntity playerEntity) {
+        if (playerEntity instanceof AbstractPlayableSprite sprite) {
+            return sprite;
+        }
+        PlayableEntity queriedPlayer = services().playerQuery().mainPlayerOrNull();
+        return queriedPlayer instanceof AbstractPlayableSprite sprite ? sprite : null;
     }
 
     // =========================================================================
@@ -374,11 +469,28 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
     // =========================================================================
 
     private void updateAfter() {
-        if (!isOnScreen(64)) {
+        if (isResultsScreenActive()) {
+            return;
+        }
+
+        Camera camera = services().camera();
+        if (camera != null && !isWithinRomAfterRange(worldX, worldY, camera.getX(), camera.getY())) {
             setDestroyed(true);
-            activeSignpost = null;
             LOG.fine("S3K Signpost destroyed (off-screen)");
         }
+    }
+
+    private boolean isResultsScreenActive() {
+        return services().gameState() != null && services().gameState().isEndOfLevelActive();
+    }
+
+    static boolean isWithinRomAfterRange(int signpostX, int signpostY, int cameraX, int cameraY) {
+        int dx = ((signpostX & 0xFF80) - ((cameraX - 0x80) & 0xFF80)) & 0xFFFF;
+        if (dx > AFTER_X_RANGE) {
+            return false;
+        }
+        int dy = (signpostY - cameraY + AFTER_Y_BIAS) & 0xFFFF;
+        return dy <= AFTER_Y_RANGE;
     }
 
     // =========================================================================
@@ -437,11 +549,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
     // =========================================================================
 
     private PlayerCharacter getPlayerCharacter() {
-        try {
-            return ((Sonic3kLevelEventManager) services().levelEventProvider()).getPlayerCharacter();
-        } catch (Exception e) {
-            return PlayerCharacter.SONIC_AND_TAILS;
-        }
+        return S3kRuntimeStates.resolvePlayerCharacter(
+                services().zoneRuntimeRegistry(),
+                services().configuration());
     }
 
     public int getWorldX() {
@@ -450,5 +560,22 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
 
     public int getWorldY() {
         return worldY;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format(
+                "state=%s x=%04X y=%04X sub=%02X,%02X vel=%04X,%04X landed=%b timer=%04X anim=%02X/%02X",
+                state,
+                worldX & 0xFFFF,
+                worldY & 0xFFFF,
+                subX & 0xFF,
+                subY & 0xFF,
+                xVel & 0xFFFF,
+                yVel & 0xFFFF,
+                landed,
+                postLandTimer & 0xFFFF,
+                animFrame & 0xFF,
+                animIndex & 0xFF);
     }
 }

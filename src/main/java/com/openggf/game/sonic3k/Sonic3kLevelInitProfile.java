@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k;
 import com.openggf.game.AbstractLevelInitProfile;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelLoadContext;
+import com.openggf.game.SidekickSpawnOffset;
 import com.openggf.game.StaticFixup;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 
@@ -18,7 +19,6 @@ import com.openggf.game.GameServices;
  * S3K-specific post-load characteristics:
  * <ul>
  *   <li>Sidekick X offset: -32px (ROM: {@code $20}), not S2's -40px</li>
- *   <li>Title card skipped on checkpoint resume (ROM: {@code tst.b (Last_star_post_hit)})</li>
  * </ul>
  */
 public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
@@ -40,7 +40,9 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
             steps.add(initLevelEventsStep());
             steps.add(spawnSidekickStep());
             steps.add(initZonePlayerStateStep());
-            steps.add(requestTitleCardStep(ctx));
+            if (!isPreviewCapture(ctx)) {
+                steps.add(requestTitleCardStep(ctx));
+            }
         }
         return List.copyOf(steps);
     }
@@ -59,22 +61,26 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
 
     /** S3K sidekick: -32px X, +4px Y (ROM: {@code player_pos - $20}, {@code player_pos + 4}). */
     @Override
+    public SidekickSpawnOffset sidekickSpawnOffset() {
+        return new SidekickSpawnOffset(-32, 4);
+    }
+
+    @Override
     protected InitStep spawnSidekickStep() {
         return new InitStep("SpawnSidekick",
             "S3K: SpawnLevelMainSprites_SpawnPlayers — Tails at player_pos - $20, +4 Y",
-            () -> GameServices.level().spawnSidekicks(-32, 4));
+            () -> {
+                SidekickSpawnOffset offset = sidekickSpawnOffset();
+                GameServices.level().spawnSidekicks(offset.xOffset(), offset.yOffset());
+            });
     }
 
-    /** S3K: skip title card on checkpoint resume (ROM: {@code tst.b (Last_star_post_hit)}). */
+    /** S3K: title card request follows the normal post-load path. */
     @Override
     protected InitStep requestTitleCardStep(LevelLoadContext ctx) {
         return new InitStep("RequestTitleCard",
-            "S3K: Obj_TitleCard — skipped on checkpoint resume",
-            () -> {
-                if (!ctx.hasCheckpoint()) {
-                    GameServices.level().requestTitleCardIfNeeded(ctx);
-                }
-            });
+            "S3K: Obj_TitleCard",
+            () -> GameServices.level().requestTitleCardIfNeeded(ctx));
     }
 
     @Override
@@ -86,17 +92,17 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
 
     @Override
     protected InitStep perTestLeadStep() {
-        return new InitStep("ResetAizSidekickSuppression",
-                "Resets all AizPlaneIntroInstance static phase state (scroll, terrain swap, decompression, sidekick suppression)",
+        return new InitStep("ResetAizIntroPhaseState",
+                "Resets all AizPlaneIntroInstance static phase state (scroll, terrain swap, decompression)",
                 AizPlaneIntroInstance::resetIntroPhaseState);
     }
 
     @Override
     protected List<StaticFixup> gameSpecificFixups() {
         return List.of(
-                new StaticFixup("ResetAizSidekickSuppression",
-                        "AIZ intro sets sidekick suppression flag that persists across level loads",
-                        () -> AizPlaneIntroInstance.setSidekickSuppressed(false))
+                new StaticFixup("ResetAizIntroPhaseState",
+                        "AIZ intro phase state persists across level loads",
+                        AizPlaneIntroInstance::resetIntroPhaseState)
         );
     }
 }

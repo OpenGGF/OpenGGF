@@ -63,6 +63,14 @@ public interface GameAudioProfile {
     }
 
     /**
+     * Returns true if SFX should remain blocked while the previous music fades
+     * back in after a blocking override ends.
+     */
+    default boolean blocksSfxDuringMusicRestoreFadeIn() {
+        return true;
+    }
+
+    /**
      * Returns the priority for a given sound ID. Higher values = higher priority.
      * Used for SFX channel arbitration.
      */
@@ -94,6 +102,14 @@ public interface GameAudioProfile {
     }
 
     /**
+     * Allows a game profile to normalize high-level SFX pitch requests before
+     * they are routed to SMPS or fallback playback.
+     */
+    default float adjustSfxPitch(GameSound sound, float requestedPitch) {
+        return requestedPitch;
+    }
+
+    /**
      * Handle a game-specific system command (e.g., fade out, stop all).
      * Called early in {@code AudioManager.playMusic()} dispatch.
      *
@@ -122,4 +138,12 @@ public interface GameAudioProfile {
      * @return unmodifiable map of GameSound enum values to native SFX IDs
      */
     Map<GameSound, Integer> getSoundMap();
+
+    /**
+     * Returns the GameMusic to game-specific music ID mapping.
+     * Used for shared gameplay cues that are music/jingles rather than SFX.
+     */
+    default Map<GameMusic, Integer> getMusicMap() {
+        return Map.of();
+    }
 }

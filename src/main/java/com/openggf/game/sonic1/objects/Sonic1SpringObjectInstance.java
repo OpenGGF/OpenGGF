@@ -14,6 +14,8 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SpringBounceHelper;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -37,7 +39,7 @@ import java.util.List;
  * No flip/twirl subtype bit (S2-only feature).
  */
 public class Sonic1SpringObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     private static final int TYPE_UP = 0;
     private static final int TYPE_HORIZONTAL = 1;
@@ -56,11 +58,19 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
     private static final int ANIM_IDLE = 0;
     private static final int ANIM_TRIGGERED = 1;
 
-    private final int springType;
-    private final boolean yellow;
-    private final int strength;
+    // S1 Obj41 calls SolidObject only in active routines. After a trigger,
+    // animation/reset routines run without SolidObject before returning active:
+    // docs/s1disasm/s1disasm/_incObj/41 Springs.asm:77-110,115-167,172-218
+    // docs/s1disasm/s1disasm/_anim/Springs.asm:8-15
+    private static final int POST_TRIGGER_INACTIVE_FRAMES = 11;
+
+    private int springType;
+    private boolean yellow;
+    private int strength;
     private ObjectAnimationState animationState;
     private int mappingFrame;
+    private int postTriggerInactiveFrames;
+    private boolean contactEnabledThisFrame = true;
 
     public Sonic1SpringObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Spring");
@@ -98,7 +108,10 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        contactEnabledThisFrame = postTriggerInactiveFrames == 0;
+        if (postTriggerInactiveFrames > 0) {
+            postTriggerInactiveFrames--;
+        }
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
     }
@@ -107,6 +120,9 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (player == null) {
+            return;
+        }
+        if (!contactEnabledThisFrame) {
             return;
         }
 
@@ -152,6 +168,10 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         player.setY((short) (player.getY() + 8));
         player.setYSpeed((short) strength);
         player.setAir(true);
+        // ROM Spring_BounceUp (s1disasm/_incObj/41 Springs.asm:88-89): bset Status_InAir,
+        // bclr Status_OnObj. Solid_ResetFloor just landed Sonic on the spring (set
+        // OnObj=1); the trigger immediately clears it as Sonic launches off.
+        player.setOnObject(false);
         // ROM does NOT zero g_speed — it stays at x_speed from Solid_ResetFloor
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
 
@@ -177,6 +197,9 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         // ROM negates strength for down springs: positive = downward
         player.setYSpeed((short) -strength);
         player.setAir(true);
+        // ROM Spring_BounceDwn (s1disasm/_incObj/41 Springs.asm:183-184) mirrors Spring_BounceUp:
+        // bset Status_InAir / bclr Status_OnObj after the trigger.
+        player.setOnObject(false);
         // ROM does NOT zero g_speed
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
 
@@ -223,7 +246,23 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         // ROM: bchg #0,obStatus(a1) — toggle facing direction
         player.setDirection(xVel > 0 ? Direction.RIGHT : Direction.LEFT);
 
-        // ROM: move.w #$F,objoff_3E(a1) — 15 frame control lock
+        // ROM: move.w #$F,objoff_3E(a1) — 15 frame control lock (Spring_BounceLR,
+        // docs/s1disasm/_incObj/41 Springs.asm:145). objoff_3E is the player's
+        // locktime field — the same RAM word S2 writes as move_lock from the
+        // horizontal spring (docs/s2disasm/s2.asm:34031, loc_18B1C). The ROM only
+        // decrements locktime on grounded frames via Sonic_SlopeRepel
+        // (docs/s1disasm/_incObj/01 Sonic.asm:1383,1410); it is FROZEN while
+        // airborne. The engine models locktime as moveLockTimer, which is
+        // likewise only decremented in doSlopeRepel() on grounded modes. The
+        // springing flag alone is decremented unconditionally every frame in
+        // tickStatus(), so when the LR spring launches Sonic airborne (he flies
+        // off a ledge) the bespoke spring lock expires several frames early and
+        // the engine starts applying D-pad deceleration before the ROM does
+        // (S1 SLZ2 trace f1714 / spring at f06A2: 6 airborne frames must freeze
+        // the lock). Drive the control lock through moveLockTimer so the
+        // grounded-only decrement matches ROM. Keep springing for the carry /
+        // air-spring animation marker consumed elsewhere.
+        player.setMoveLockTimer(SpringBounceHelper.CONTROL_LOCK_FRAMES);
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
 
         // ROM: btst #2,obStatus(a1) / bne.s loc_DC56 — skip Walk anim if rolling
@@ -238,7 +277,11 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
     }
 
     private void triggerSpring() {
-        animationState.setAnimId(ANIM_TRIGGERED);
+        postTriggerInactiveFrames = POST_TRIGGER_INACTIVE_FRAMES;
+        contactEnabledThisFrame = false;
+        if (animationState != null) {
+            animationState.setAnimId(ANIM_TRIGGERED);
+        }
 
         try {
             services().playSfx(Sonic1Sfx.SPRING.id);
@@ -249,9 +292,7 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Springs are always solid — collision resolution prevents re-triggering
-        return true;
+        return contactEnabledThisFrame;
     }
 
     @Override
@@ -262,6 +303,23 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         }
         // Spring_Up / Spring_Dwn: d1=$1B (27), d2=8, d3=$10 (16)
         return new SolidObjectParams(27, 8, 16);
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        // ROM Spring routines call SolidObject, whose x-range check
+        // (Solid_ChkCollision, docs/s1disasm/_incObj/sub SolidObject.asm:160-166)
+        // rejects only when `d0 > 2*halfWidth` (`cmp.w d3,d0; bhi.w
+        // Solid_NoCollision`), so the RIGHT edge (d0 == 2*halfWidth, i.e. Sonic's
+        // solid edge exactly flush against the object's right face) STILL collides.
+        // With the default exclusive right edge, a Sonic falling flush against the
+        // right side of an LR spring (S1 SYZ1 f502: spring @0218 right solid edge =
+        // 0218+19 = 022B, Sonic centre 022B) was rejected as out-of-range, so the
+        // spring's side contact never fired and Spring_LR could not set the pushing
+        // bit / bounce — Sonic fell to the terrain instead of launching at 0x1000.
+        // inclusiveRightEdge=true matches the ROM bhi boundary (same as Girder/
+        // Junction/PushBlock/InvisibleBarrier full-solid objects).
+        return SolidRoutineProfile.fullSolid(usesStickyContactBuffer(), true, false);
     }
 
     @Override

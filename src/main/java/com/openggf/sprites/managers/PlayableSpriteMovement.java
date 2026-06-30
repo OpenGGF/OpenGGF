@@ -7,11 +7,14 @@ import com.openggf.game.PhysicsFeatureSet;
 
 import com.openggf.camera.Camera;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
+import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.Sensor;
 import com.openggf.physics.SensorResult;
@@ -20,11 +23,15 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.game.PhysicsProfile;
 import com.openggf.game.ShieldType;
 import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.game.GroundMode;
+
+import java.util.function.Consumer;
 
 /**
  * ROM-accurate movement handler for playable sprites.
@@ -57,6 +64,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private static final int SKID_SPEED_THRESHOLD = 0x400;
 	private static final short YSPEED_LANDING_CAP = (short) 0xFC0;
 	private static final int UPWARD_VELOCITY_CAP = -0xFC0;
+	private static final short HYPER_DASH_SPEED = (short) 0x800;
 
 	// Movement constants
 	private static final int MOVE_LOCK_FRAMES = 0x1E;
@@ -71,6 +79,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// Cached speed constants (don't change with speed shoes)
 	private final short slopeRunning;
 	private final short minStartRollSpeed;
+	private final short minRollSpeed;
 	private final short maxRoll;
 	private final short slopeRollingUp;
 	private final short slopeRollingDown;
@@ -86,7 +95,24 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean inputUp, inputDown, inputLeft, inputRight;
 	private boolean inputJump, inputJumpPress;
 	private boolean inputRawLeft, inputRawRight;
+	private boolean slopeResistAppliedThisFrame;
+	private boolean facingFlipForcesPushClearAfterGroundWall;
 	private boolean wasCrouching;
+	// ROM Sonic_Move/Tails_Move decide the standing-still duck/look-up/balance
+	// animation from inertia BEFORE ground friction runs: the `tst.w inertia`
+	// gate (S1 _incObj/01 Sonic.asm:373, S2 s2.asm:36568 Sonic / 39689 Tails,
+	// S3K shares the convention) sits ahead of Obj01_UpdateSpeedOnGround's
+	// friction (s2.asm:36768-36786). The engine applies friction inside
+	// doGroundMove and then runs updateCrouchState, so the crouch decision must
+	// observe this pre-friction inertia snapshot rather than the post-friction
+	// g_speed. NO_PRE_FRICTION_SNAPSHOT marks "doGroundMove did not run this
+	// frame" so updateCrouchState falls back to the live g_speed.
+	private static final int NO_PRE_FRICTION_SNAPSHOT = Integer.MIN_VALUE;
+	private int preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
+	private int staleHorizontalInputRideSlotIndex;
+	private int staleHorizontalInputSuppressFrames;
+	private int staleHorizontalInputRideFrames;
+	private boolean staleHorizontalInputPreviousHorizontal;
 
 	public PlayableSpriteMovement(AbstractPlayableSprite sprite,
 			CollisionSystem collisionSystem,
@@ -97,6 +123,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		this.bootstrapGameState = gameState;
 		slopeRunning = sprite.getSlopeRunning();
 		minStartRollSpeed = sprite.getMinStartRollSpeed();
+		minRollSpeed = sprite.getMinRollSpeed();
 		maxRoll = sprite.getMaxRoll();
 		slopeRollingUp = sprite.getSlopeRollingUp();
 		slopeRollingDown = sprite.getSlopeRollingDown();
@@ -107,8 +134,123 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		this(sprite, sprite.currentCollisionSystemOrNull(), sprite.currentGameStateOrNull());
 	}
 
+	@Override
+	public void resetTransientState() {
+		jumpPressed = false;
+		jumpPrevious = false;
+		jumpReleasedSinceJump = false;
+		testKeyPressed = false;
+		inputUp = false;
+		inputDown = false;
+		inputLeft = false;
+		inputRight = false;
+		inputJump = false;
+		inputJumpPress = false;
+		inputRawLeft = false;
+		inputRawRight = false;
+		slopeResistAppliedThisFrame = false;
+		facingFlipForcesPushClearAfterGroundWall = false;
+		wasCrouching = false;
+		staleHorizontalInputRideSlotIndex = -1;
+		staleHorizontalInputSuppressFrames = 0;
+		staleHorizontalInputRideFrames = 0;
+		staleHorizontalInputPreviousHorizontal = false;
+	}
+
+	public RewindState captureRewindState() {
+		return new RewindState(
+				jumpPressed,
+				jumpPrevious,
+				jumpReleasedSinceJump,
+				testKeyPressed,
+				inputUp,
+				inputDown,
+				inputLeft,
+				inputRight,
+				inputJump,
+				inputJumpPress,
+				inputRawLeft,
+				inputRawRight,
+				facingFlipForcesPushClearAfterGroundWall,
+				wasCrouching,
+				staleHorizontalInputRideSlotIndex,
+				staleHorizontalInputSuppressFrames,
+				staleHorizontalInputRideFrames,
+				staleHorizontalInputPreviousHorizontal);
+	}
+
+	public void restoreRewindState(RewindState state) {
+		if (state == null) {
+			resetTransientState();
+			return;
+		}
+		jumpPressed = state.jumpPressed();
+		jumpPrevious = state.jumpPrevious();
+		jumpReleasedSinceJump = state.jumpReleasedSinceJump();
+		testKeyPressed = state.testKeyPressed();
+		inputUp = state.inputUp();
+		inputDown = state.inputDown();
+		inputLeft = state.inputLeft();
+		inputRight = state.inputRight();
+		inputJump = state.inputJump();
+		inputJumpPress = state.inputJumpPress();
+		inputRawLeft = state.inputRawLeft();
+		inputRawRight = state.inputRawRight();
+		facingFlipForcesPushClearAfterGroundWall = state.facingFlipForcesPushClearAfterGroundWall();
+		wasCrouching = state.wasCrouching();
+		staleHorizontalInputRideSlotIndex = state.staleHorizontalInputRideSlotIndex();
+		staleHorizontalInputSuppressFrames = state.staleHorizontalInputSuppressFrames();
+		staleHorizontalInputRideFrames = state.staleHorizontalInputRideFrames();
+		staleHorizontalInputPreviousHorizontal = state.staleHorizontalInputPreviousHorizontal();
+	}
+
+	public record RewindState(
+			boolean jumpPressed,
+			boolean jumpPrevious,
+			boolean jumpReleasedSinceJump,
+			boolean testKeyPressed,
+			boolean inputUp,
+			boolean inputDown,
+			boolean inputLeft,
+			boolean inputRight,
+			boolean inputJump,
+			boolean inputJumpPress,
+			boolean inputRawLeft,
+			boolean inputRawRight,
+			boolean facingFlipForcesPushClearAfterGroundWall,
+			boolean wasCrouching,
+			int staleHorizontalInputRideSlotIndex,
+			int staleHorizontalInputSuppressFrames,
+			int staleHorizontalInputRideFrames,
+			boolean staleHorizontalInputPreviousHorizontal
+	) {}
+
+	public void clearJumpHeightLatch() {
+		jumpPressed = false;
+		jumpReleasedSinceJump = false;
+	}
+
+	public void setJumpHeightLatch() {
+		jumpPressed = true;
+		jumpReleasedSinceJump = false;
+	}
+
 	private Camera camera() {
-		return sprite.currentCamera();
+		try {
+			return sprite.currentCamera();
+		} catch (IllegalStateException e) {
+			return null;
+		}
+	}
+
+	private Camera playerCameraBiasController() {
+		Camera camera = camera();
+		// CPU sidekicks must not mutate the global vertical look bias. S3K
+		// Sonic's Obj01_LookUpDown mutates (a5), the camera Y bias
+		// (docs/skdisasm/sonic3k.asm:22615-22673), while CPU Tails'
+		// ground/air routines do not run that reset/pan path
+		// (docs/skdisasm/sonic3k.asm:25741-25746,25897-25937).
+		return camera != null && !sprite.isCpuControlled() ? camera : null;
 	}
 
 	private LevelManager levelManager() {
@@ -123,6 +265,56 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private GameStateManager gameState() {
 		GameStateManager current = sprite.currentGameStateOrNull();
 		return current != null ? current : bootstrapGameState;
+	}
+
+	private boolean applyStaleRidingLogicalHorizontalInput(boolean left, boolean right) {
+		boolean horizontal = left || right;
+		ObjectInstance ridingObject = currentRidingSolidForStaleHorizontalInput();
+		if (ridingObject == null || !(ridingObject instanceof SolidObjectProvider provider)) {
+			staleHorizontalInputRideSlotIndex = -1;
+			staleHorizontalInputSuppressFrames = 0;
+			staleHorizontalInputRideFrames = 0;
+			staleHorizontalInputPreviousHorizontal = horizontal;
+			return false;
+		}
+		int ridingSlotIndex = slotIndexForStaleHorizontalInput(ridingObject);
+		if (ridingSlotIndex < 0 || ridingSlotIndex != staleHorizontalInputRideSlotIndex) {
+			staleHorizontalInputRideSlotIndex = ridingSlotIndex;
+			staleHorizontalInputSuppressFrames = 0;
+			staleHorizontalInputRideFrames = 0;
+			staleHorizontalInputPreviousHorizontal = false;
+		}
+
+		staleHorizontalInputRideFrames++;
+		if (right
+				&& !left
+				&& !staleHorizontalInputPreviousHorizontal) {
+			staleHorizontalInputSuppressFrames =
+					provider.staleHorizontalLogicalInputFramesWhileRiding(sprite, staleHorizontalInputRideFrames);
+		}
+		staleHorizontalInputPreviousHorizontal = horizontal;
+
+		if (!horizontal || staleHorizontalInputSuppressFrames <= 0) {
+			return false;
+		}
+		staleHorizontalInputSuppressFrames--;
+		return true;
+	}
+
+	private static int slotIndexForStaleHorizontalInput(ObjectInstance object) {
+		return object instanceof AbstractObjectInstance aoi ? aoi.getSlotIndex() : -1;
+	}
+
+	private ObjectInstance currentRidingSolidForStaleHorizontalInput() {
+		LevelManager manager = levelManager();
+		var objectManager = manager != null ? manager.getObjectManager() : null;
+		if (objectManager == null
+				|| !objectManager.isRidingObject(sprite)
+				|| sprite.getAir()
+				|| sprite.getGSpeed() != 0) {
+			return null;
+		}
+		return objectManager.getRidingObject(sprite);
 	}
 
 	/**
@@ -150,12 +342,36 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// so objects can query button state even when control is locked (ROM: obj_control).
 		// The parameters here are already filtered by control lock state.
 
+		// Reset per-tick slope-repel slip flag at the very start. Set by
+		// doSlopeRepel when it slips the player into air this frame; consumed
+		// by per-object hooks (e.g. CnzWireCageObjectInstance) that need to
+		// distinguish "fresh slip honour the air state" from "stale move_lock
+		// from an earlier slip".
+		sprite.setSlopeRepelJustSlipped(false);
+
+		// Invalidate the pre-friction inertia snapshot at frame start; doGroundMove
+		// repopulates it before updateCrouchState consumes it (see field comment).
+		preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
+		slopeResistAppliedThisFrame = false;
+		sprite.clearDeferredGroundWallVelocityResponse();
+
+		// Snapshot pre-physics state for per-object hooks running AFTER
+		// physics in the engine's frame order. ROM order runs cage/object
+		// updates AFTER player physics in slot order, but the cage's
+		// capture decision (sonic3k.asm:69905-69921 loc_33922 → loc_3394C)
+		// is based on the air/angle state ROM saw at the start of that
+		// frame. Engine cage code reads these snapshots to mirror ROM's
+		// branch selection.
+		sprite.capturePrePhysicsSnapshot();
+
 		if (sprite.isDebugMode()) {
 			handleDebugMovement(up, down, left, right, speedUp, slowDown);
+			applyScreenYWrapValueAfterControl();
 			return;
 		}
 
-		if (sprite.isObjectControlled()) {
+		if (sprite.isObjectControlSuppressesMovement()) {
+			applyScreenYWrapValueAfterControl();
 			return;
 		}
 
@@ -177,7 +393,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// obj_control bit 0 - when an object (flipper, etc.) has partial control
 		// This blocks ALL input including jumping
-		boolean objControlLocked = sprite.isControlLocked();
+		// ROM: Ctrl_2_locked only suppresses copying raw P2 input into Ctrl_2_logical
+		// (sonic3k.asm:25692-25695). Tails CPU later writes Ctrl_2_logical itself
+		// (sonic3k.asm:26775-26785), and Tails_InputAcceleration_Freespace consumes
+		// those bits before MoveSprite_TestGravity (sonic3k.asm:27556-27559,
+		// 28330-28401). Do not clear CPU-generated sidekick input here.
+		boolean objControlLocked = sprite.isControlLocked() && !sprite.isCpuControlled();
 
 		inputRawLeft = left;
 		inputRawRight = right;
@@ -187,7 +408,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// - obj_control and hurt block input in ALL states
 		boolean groundedControlLock = !sprite.getAir() && (moveLocked || sprite.getSpringing());
 		if (groundedControlLock || objControlLocked || sprite.isHurt()) {
-			left = false;
+			if (!sprite.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT)) {
+				left = false;
+			}
 			if (!sprite.isForceInputRight()) {
 				right = false;
 			}
@@ -199,10 +422,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Block jumping ONLY when obj_control is set (not move_lock)
 		// ROM: obj_control bit 0 skips the entire movement routine including Sonic_Jump
 		// ROM: move_lock only blocks Sonic_Move/Sonic_RollSpeed, NOT Sonic_Jump
-		if (objControlLocked) {
+		if (objControlLocked && !sprite.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP)) {
 			jump = false;
 		}
 
+		if (applyStaleRidingLogicalHorizontalInput(left, right)) {
+			left = false;
+			right = false;
+		}
+
+		facingFlipForcesPushClearAfterGroundWall = false;
 		updatePushingOnDirectionChange(left, right);
 
 		short originalX = sprite.getX();
@@ -218,13 +447,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
 			sprite.updateSensors(originalX, originalY);
+			applyScreenYWrapValueAfterControl();
 			return;
 		}
 
 		if (sprite.getDead()) {
-			applyDeathMovement();
-			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+			SidekickCpuController cpu = sprite.getCpuController();
+			if (cpu != null && cpu.applyDeferredGenericDeadDespawnIfCrossed()) {
+				sprite.updateSensors(originalX, originalY);
+				applyScreenYWrapValueAfterControl();
+				return;
+			}
+			short oldYSpeed = applyDeathMovement();
+			sprite.move(sprite.getXSpeed(), oldYSpeed);
 			sprite.updateSensors(originalX, originalY);
+			applyScreenYWrapValueAfterControl();
 			return;
 		}
 
@@ -237,6 +474,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// This is the input state AFTER control lock/move lock filtering, used to determine
 		// walk vs idle animation (ROM: Sonic_MoveLeft/MoveRight set walk anim when called).
 		sprite.setMovementInputActive(inputLeft || inputRight);
+		sprite.getAnimationManager().clearGroundMovementAnimSpeed();
+
+		clearStaleCpuPushVelocityBeforeGroundMove();
 
 		if (sprite.getSpringing()) {
 			jumpPressed = false;
@@ -245,15 +485,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			jumpPressed = false;
 		}
 
-		// Recover transient desync where object contact exists but air flag is stale.
-		// This can happen around moving/sloped solids and causes jump presses to be
-		// evaluated in airborne mode for one frame.
+		// Recover transient desync where a concrete standing/riding solid contact
+		// exists but air flag is stale. Do not treat a latched Status_OnObj owner
+		// alone as grounding support: S3K Tails_Control dispatches from status
+		// bits after only the object_control bit-0 gate (docs/skdisasm/sonic3k.asm:
+		// 26210-26229), so CNZ cylinder release frames with both Status_InAir and
+		// Status_OnObj set still run airborne movement before Obj_CNZCylinder's
+		// Player_2 sub_324C0 pass (docs/skdisasm/sonic3k.asm:67656-67667).
+		// Grounding those latch-only frames skips the ROM's air acceleration and
+		// misses the x_sub boundary crossing seen at CNZ1 F4508.
 		// S1 (UNIFIED): skip this recovery. The pre-movement solid pass is skipped for
 		// S1, so riding state from the previous frame hasn't been cleaned up yet.
-		// hasObjectSupport() would return true from stale riding data, incorrectly
+		// hasGroundingObjectSupport() would return true from stale riding data, incorrectly
 		// forcing Sonic to ground mode. The post-movement solid pass (step 4) handles
 		// the cleanup correctly for S1.
-		if (!isUnifiedCollision() && sprite.getAir() && hasObjectSupport() && sprite.getYSpeed() >= 0) {
+		if (!isUnifiedCollision() && sprite.getAir() && hasGroundingObjectSupport() && sprite.getYSpeed() >= 0) {
 			sprite.setAir(false);
 			sprite.setOnObject(true);
 		}
@@ -265,11 +511,28 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			updateKnucklesGlide();
 			// Direction is managed by glide code, not updateFacingDirection
 			sprite.updateSensors(originalX, originalY);
+			applyScreenYWrapValueAfterControl();
 			return;
 		}
 
 		// Mode dispatch (ROM: Obj01_MdNormal_Checks)
-		if (sprite.getAir()) {
+		if (sprite.isHurt() && !sprite.getAir()) {
+			// Obj01_Hurt_Normal performs ObjectMove before Sonic_HurtStop
+			// clears routine 4 and zeroes velocities, even when an object
+			// solid cleared Status_InAir on the prior frame (S2: s2.asm:
+			// 37820-37834, 37848-37861). Do that final recoil move here,
+			// then complete the hurt-stop recovery without entering normal
+			// ground control this frame.
+			doObjectMoveAndFall();
+			if (sprite.isInWater()) {
+				var modifiers = sprite.getPhysicsModifiers();
+				short reduction = modifiers != null
+						? modifiers.waterHurtGravityReduction()
+						: 0x20;
+				sprite.setYSpeed((short) (sprite.getYSpeed() - reduction));
+			}
+			sprite.completeHurtLandingRecovery();
+		} else if (sprite.getAir()) {
 			modeAirborne();
 		} else if (sprite.getRolling()) {
 			modeRoll();
@@ -277,12 +540,28 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			modeNormal();
 		}
 
-		// ROM: Knuckles_Glide manages direction itself via setGlideAnimation();
-		// don't let the normal facing direction logic override it.
-		if (!isInGlideDirectionControl()) {
-			updateFacingDirection();
-		}
+		// ROM facing changes happen inside the movement branches themselves:
+		// doChgJumpDir() for air, Sonic_Move/Tails_Move for normal ground,
+		// and Sonic_RollLeft/Right for rolling. A generic post-pass flips
+		// low-speed turn states too early and breaks Tails follow parity.
+		applyScreenYWrapValueAfterControl();
 		sprite.updateSensors(originalX, originalY);
+	}
+
+	private void applyScreenYWrapValueAfterControl() {
+		SidekickCpuController cpu = sprite.getCpuController();
+		if (sprite.isCpuControlled()
+				&& sprite.getDead()
+				&& cpu != null
+				&& cpu.deadFallBypassesScreenYWrapValue()) {
+			// S2 Obj02_Dead and the S3K Tails dead path run dead-fall movement directly,
+			// without the normal Screen_Y_wrap_value mask used by control/hurt paths.
+			return;
+		}
+		Camera camera = camera();
+		if (camera != null) {
+			camera.applyScreenYWrapValue(sprite);
+		}
 	}
 
 	/** Returns true when the glide state machine owns direction control. */
@@ -318,7 +597,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doCheckStartRoll();
 		doLevelBoundary();
 		sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
+		applyMissedDetachSlopeResist();
 		doSlopeRepel();
 		updateCrouchState();
 	}
@@ -340,6 +621,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doRollSpeed();
 		doLevelBoundary();
 		sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		doSlopeRepel();
 	}
@@ -365,6 +647,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// Continue with normal airborne physics for this frame
 			} else {
 				doLevelBoundary();
+				if (isCpuLevelBoundaryKillActive()) {
+					return;
+				}
 				sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
 				// ROM: Knux_DoLevelCollision_CheckRet — custom collision for glide
 				doGlideCollision();
@@ -372,13 +657,80 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 		}
 
-		// ROM hurt routine (routine 4) skips both Sonic_JumpHeight and
-		// Sonic_ChgJumpDir — only applies gravity + collision.
-		if (!sprite.isHurt()) {
+		// ROM hurt routine (routine 4) has a DIFFERENT call order than
+		// the normal airborne (Obj01_MdAir / Tails_Stand_Freespace) path:
+		//   - Normal airborne: BOUNDARY check → MoveSprite → DoLevelCollision.
+		//   - Hurt airborne:   MoveSprite → DoLevelCollision (HurtStop) → BOUNDARY.
+		//
+		// ROM cites:
+		//   S3K Sonic loc_122D8 hurt routine (sonic3k.asm:24449-24467):
+		//     jsr (MoveSprite_TestGravity2).l → addi.w #$30,y_vel → underwater
+		//     subi.w #$20,y_vel → sub_12318 (HurtStop) → Player_LevelBound.
+		//   S3K Tails loc_156D6 hurt routine (sonic3k.asm:29194-29209):
+		//     jsr (MoveSprite_TestGravity2).l → addi.w #$30,y_vel → underwater
+		//     subi.w #$20,y_vel → sub_15716 → Tails_Check_Screen_Boundaries.
+		//   S2 Obj01_Hurt_Normal (s2.asm:37820-37834): jsr (ObjectMove).l →
+		//     addi.w #$30,y_vel → underwater subi.w #$20,y_vel →
+		//     Sonic_HurtStop → Sonic_LevelBound.
+		//   S1 Sonic_Hurt (s1disasm/_incObj/01 Sonic.asm:1791-1804): jsr
+		//     (SpeedToPos).l → addi.w #$30,obVelY → underwater subi.w #$20 →
+		//     Sonic_HurtStop → Sonic_LevelBound.
+		//
+		// All three games agree on MOVE-then-BOUNDARY for hurt; the engine's
+		// pre-existing BOUNDARY-then-MOVE order matched the normal airborne
+		// path but produced an off-by-one frame on the right-edge clamp when
+		// hurt knockback drives the sidekick into Camera_max_X_pos+$128
+		// (AIZ Mini-boss F7552: ROM x=0x1208 vs engine x=0x1207).
+		boolean hurt = sprite.isHurt();
+		if (!hurt) {
 			doJumpHeight();
 			doChgJumpDir();
+			doLevelBoundary();
 		}
-		doLevelBoundary();
+		if (!hurt && isCpuLevelBoundaryKillActive()) {
+			// ROM Tails_Check_Screen_Boundaries reaches Kill_Character via
+			// `jmp` (sonic3k.asm:28442-28443 loc_14F56). Kill_Character ends
+			// with `rts` (sonic3k.asm:21158-21159), which unwinds to the
+			// caller of Tails_Check_Screen_Boundaries — for the airborne
+			// path that's `Tails_Stand_Freespace` (sonic3k.asm:27553), where
+			// control resumes at `jsr (MoveSprite_TestGravity).l`
+			// (sonic3k.asm:27559). MoveSprite_TestGravity falls through to
+			// MoveSprite (sonic3k.asm:36032-36042) which applies gravity and
+			// shifts y_pos by the freshly-written Kill_Character `y_vel = -$700`
+			// (sonic3k.asm:21149). Tails_DoLevelCollision (sonic3k.asm:28871)
+			// then runs and is the post-kill landing pass that produces the
+			// trace's end-of-frame `(y, vels=0)` sample.
+			//
+			// AIZ F4679 (cp aiz1_intro_refresh_begin) trace: pre-kill
+			// `(0x2D40, 0x0402, vels=(0x00F7, 0x0198))`, post-kill ROM
+			// `(0x2D95, 0x040F, vels=0)`. Skipping doObjectMoveAndFall() and
+			// going straight to collision left Tails 32 px below ROM because
+			// the missing MoveSprite step prevents the y_vel=-$700 from
+			// shifting Tails up before the collision sensors snap him to
+			// ground.
+			//
+			// S2 deferred-despawn divergence: ROM Obj02_Dead
+			// (s2.asm:40736-40742) runs ObjectMoveAndFall but NOT
+			// Tails_DoLevelCollision on deferred-fall continuation frames
+			// (kill frame N+1..N+threshold). The kill FRAME itself runs
+			// through ROM Obj02_MdAir (s2.asm:39259-39274) which DOES end
+			// in Tails_DoLevelCollision, so the collision pass remains
+			// active there. SidekickCpuController flags continuation frames
+			// via isDeferredDespawnDeadFallContinuingThisFrame(): when set,
+			// the engine mirrors ROM by running only ObjectMoveAndFall.
+			// MCZ trace F443 confirms: without this gate, the engine landed
+			// dead Tails on the CollapsingPlatform below (y_speed snapped to
+			// 0, position frozen), but ROM kept Tails falling through it.
+			doObjectMoveAndFall();
+			SidekickCpuController kc = sprite.getCpuController();
+			boolean deferredContinuation =
+					kc != null && kc.isDeferredDespawnDeadFallContinuingThisFrame();
+			if (!deferredContinuation) {
+				sprite.updateSensors(originalX, originalY);
+				doLevelCollision(sprite.isForceFloorCheck());
+			}
+			return;
+		}
 
 		doObjectMoveAndFall();
 
@@ -409,12 +761,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		sprite.updateSensors(originalX, originalY);
 		boolean wasAirBeforeCollision = sprite.getAir();
-		// When an object or the HCZ wind tunnel is controlling position
-		// directly, suppress air collision — it detects pipe/tube geometry
-		// and snaps Sonic back, fighting the position controller.
-		if (!sprite.isObjectControlled()
-				&& !com.openggf.game.sonic3k.features.HCZWaterTunnelHandler.isPlayerInTunnel(0)) {
-			doLevelCollision();
+		if (!sprite.isObjectControlSuppressesMovement() && !sprite.isSuppressAirCollision()) {
+			doLevelCollision(sprite.isForceFloorCheck());
+		}
+
+		// Hurt airborne path runs the boundary check AFTER MoveSprite +
+		// HurtStop (DoLevelCollision) — see ROM cites at the top of this
+		// branch (Obj01_Hurt / loc_122D8 / loc_156D6 / Sonic_Hurt).
+		// Predicted-x for the boundary clamp must include the post-move
+		// position; doing the clamp pre-move loses one frame of lateral
+		// motion against Camera_max_X_pos+$128, which manifested as a
+		// 1-pixel right-edge gap during AIZ Mini-boss hurt knockback
+		// (F7552: ROM x=0x1208 vs engine x=0x1207).
+		if (hurt) {
+			doLevelBoundary();
+			if (isCpuLevelBoundaryKillActive()) {
+				return;
+			}
 		}
 
 		// ROM: Knuckles_Fall_From_Glide landing (sonic3k.asm:30913-30940).
@@ -471,9 +834,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean doUpdateSpindash() {
 		if (!inputDown) {
 			doReleaseSpindash();
-			// Return true to skip the rest of modeNormal().
-			// The release routine handles movement and collision for this frame,
-			// and next frame will properly dispatch to modeRoll().
+			// ROM Obj01_Spindash_ResetScr exits Obj01_MdNormal after LevelBound +
+			// AnglePos only. The actual rolling move starts next frame in Obj01_MdRoll.
 			return true;
 		}
 
@@ -508,10 +870,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int speedIndex = Math.min((sprite.getSpindashCounter() >> 8) & 0xFF, table.length - 1);
 		short spindashGSpeed = table[speedIndex];
 
-		// ROM: Reset_Player_Position_Array before setting scroll delay
-		sprite.resetPositionHistory();
 		Camera camera = camera();
 		if (camera != null && camera.getFocusedSprite() == sprite) {
+			// ROM spindash release writes H_scroll_frame_offset only; it does
+			// not call Reset_Player_Position_Array. S2's own ScrollHoriz
+			// comments describe the resulting old-position camera jerk
+			// (docs/s2disasm/s2.asm:18044-18052), and S3K mirrors the same
+			// release path (docs/skdisasm/sonic3k.asm:23715-23730).
 			camera.setHorizScrollDelay(32 - ((spindashGSpeed - 0x800) >> 7));
 		}
 
@@ -520,10 +885,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		sprite.setGSpeed(spindashGSpeed);
 
-		// Calculate X/Y velocity from gSpeed immediately.
-		// This is critical for the ground attachment threshold in doAnglePos() -
-		// without this, xSpeed would be 0 giving a threshold of only 4 pixels,
-		// causing false airborne detection on release (ROM: s2.asm:42727).
+		short preReleaseXSpeed = sprite.getXSpeed();
+		short preReleaseYSpeed = sprite.getYSpeed();
+
+		// Keep a temporary derived release velocity for the AnglePos threshold
+		// check that still runs on the release frame.
 		int hexAngle = sprite.getAngle() & 0xFF;
 		sprite.setXSpeed((short) ((spindashGSpeed * TrigLookupTable.cosHex(hexAngle)) >> 8));
 		sprite.setYSpeed((short) ((spindashGSpeed * TrigLookupTable.sinHex(hexAngle)) >> 8));
@@ -531,41 +897,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setRolling(true);
 
 		audioManager.playSfx(GameSound.SPINDASH_RELEASE);
-		doSpindashReleaseCollision();
-	}
-
-	/**
-	 * Handle collision and movement for the spindash release frame.
-	 * ROM processes this as part of the normal rolling mode flow, but since we're
-	 * transitioning mid-frame, we need to apply rolling physics here.
-	 * Mirrors modeRoll() order of operations (ROM: Obj01_MdRoll s2.asm:36180).
-	 */
-	private void doSpindashReleaseCollision() {
-		short originalX = sprite.getX();
-		short originalY = sprite.getY();
-
-		// Apply rolling slope physics (ROM: Sonic_RollRepel)
-		doRollRepel();
-
-		// Recalculate X/Y velocity from gSpeed after slope physics
-		// (doRollRepel may have modified gSpeed on slopes)
-		short gSpeed = sprite.getGSpeed();
-		int hexAngle = sprite.getAngle() & 0xFF;
-		sprite.setXSpeed((short) ((gSpeed * TrigLookupTable.cosHex(hexAngle)) >> 8));
-		sprite.setYSpeed((short) ((gSpeed * TrigLookupTable.sinHex(hexAngle)) >> 8));
-
-		// Level boundary check
-		doLevelBoundary();
-
-		// Move sprite based on velocity
-		sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
-
-		// Update sensors and ground position
-		sprite.updateSensors(originalX, originalY);
-		doAnglePos();
-
-		// Slope slip/fall check (ROM: Sonic_SlopeRepel)
-		doSlopeRepel();
+		doLevelBoundaryAndAnglePos();
+		if (!sprite.getAir()) {
+			sprite.setXSpeed(preReleaseXSpeed);
+			sprite.setYSpeed(preReleaseYSpeed);
+		}
 	}
 
 	// ========================================
@@ -580,9 +916,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return false;
 		}
 
-		// ROM: bclr #sta_onObj,obStatus(a0) — clear riding/on-object state before jump
-		collisionSystem().clearRidingObject(sprite);
-		sprite.setOnObject(false);
+		// ROM jump routines set Status_InAir and clear Status_Push, but leave
+		// Status_OnObj and the object's standing bit for the next SolidObject pass
+		// to resolve (S1 _incObj/01 Sonic.asm:1148-1150; S2 s2.asm:37056-37058,
+		// 40031-40033; S3K sonic3k.asm:23328-23330, 28554-28556). Keeping the
+		// riding record here lets S3K SolidObjectFull's offscreen Player_2 gate run
+		// before the airborne riding unseat branch (sonic3k.asm:41006-41010).
 		boolean wasRolling = sprite.getRolling();
 
 		// Apply jump velocity based on terrain angle.
@@ -605,9 +944,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		audioManager.playSfx(GameSound.JUMP);
 
 		if (!wasRolling) {
+			int preRollCentreY = sprite.getCentreY();
 			sprite.applyRollingRadii(true);
 			sprite.setRolling(true);
-			sprite.setY((short) (sprite.getY() + sprite.getRollHeightAdjustment()));
+			// ROM Sonic_Jump/Tails_Jump adjusts centre y_pos by
+			// default_y_radius - roll_y_radius (sonic3k.asm:28561-28577).
+			// Use centre coordinates directly so preserved roll-sized dimensions
+			// from marker/despawn paths do not double-count the height change.
+			sprite.setCentreYPreserveSubpixel(
+					(short) (preRollCentreY + sprite.getStandYRadius() - sprite.getRollYRadius()));
 		} else {
 			sprite.setRollingJump(true);
 		}
@@ -617,7 +962,26 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Sonic_JumpHeight: Jump release velocity cap (s2.asm:37076) */
 	private void doJumpHeight() {
-		if (jumpPressed) {
+		// ROM gates the variable jump-height cap on the sprite's actual
+		// jumping(a0) status byte, NOT on the held jump button:
+		//   tst.b jumping(a0) / beq Sonic_UpVelCap
+		// (docs/s2disasm/s2.asm:37411-37412 Sonic_JumpHeight;
+		//  docs/s2disasm/s2.asm:40428-40429 Tails_JumpHeight;
+		//  docs/s1disasm/_incObj/01 Sonic.asm:1197-1198;
+		//  docs/skdisasm/sonic3k.asm:23366-23367 -- identical gate in all
+		//  three games, so this is a universal correction, no feature flag).
+		// Previously this branched on the `jumpPressed` controller-loop latch.
+		// That latch is set whenever a jump button is held (including the
+		// A/B/C bits TailsCPU_Normal_FilterAction synthesizes into Ctrl_2
+		// every ~64 frames, docs/s2disasm/s2.asm:39342-39370). A sidekick
+		// launched upward by a CNZ flipper (Obj86 loc_2B290 sets in_air,
+		// clears on_object, routine=2, obj_control=0, but never sets
+		// jumping, docs/s2disasm/s2.asm:58366-58407) was therefore wrongly
+		// receiving the -0x400 variable-height cap. ROM with jumping==0
+		// takes Sonic_UpVelCap/Tails_UpVelCap instead (pinball bypass +
+		// -0xFC0 cap, docs/s2disasm/s2.asm:37431-37436 / 40446-40451), so a
+		// slower-than-0xFC0 flipper launch only receives gravity.
+		if (sprite.isJumping()) {
 			short ySpeedCap = sprite.isInWater() ? (short) 0x200 : (short) 0x400;
 			if (sprite.getYSpeed() < -ySpeedCap && !inputJump) {
 				sprite.setYSpeed((short) -ySpeedCap);
@@ -626,8 +990,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			if (!inputJump) {
 				jumpReleasedSinceJump = true;
 			}
-			// Shield ability: re-press jump after release while airborne (s3.asm:21059)
+			// Shield ability: re-press jump after release while airborne (docs/skdisasm/sonic3k.asm:23397).
 			if (jumpReleasedSinceJump && inputJumpPress && sprite.getDoubleJumpFlag() == 0) {
+				PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+				if (fs != null && fs.jumpRepressClearsRollJumpBeforeAbility()
+						&& sprite.getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD) {
+					// ROM: S3K Sonic_ShieldMoves clears Status_RollJump before
+					// testing Super, invincibility, elemental shields, or insta-shield
+					// (docs/skdisasm/sonic3k.asm:23401-23413). S1/S2 Sonic_JumpHeight
+					// has no equivalent branch (docs/s1disasm/_incObj/01 Sonic.asm:
+					// 999-1025; docs/s2disasm/s2.asm:37067-37097).
+					sprite.setRollingJump(false);
+				}
 				if (tryShieldAbility()) {
 					jumpReleasedSinceJump = false;
 					return;
@@ -657,8 +1031,26 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return false;
 		}
 
-		// ROM (sonic3k.asm:23404-23408): Super Sonic suppresses all abilities
+		// ROM Sonic_ShieldMoves clears Status_RollJump before the shield,
+		// super, and invincibility branches (sonic3k.asm:23402). That lets
+		// the following Sonic_ChgJumpDir call apply same-frame air steering
+		// after Bubble Shield sets x_vel to zero (AIZ trace F9661).
+		sprite.setRollingJump(false);
+
+		ShieldType shield = sprite.getShieldType();
+		if (sprite.getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD
+				&& shield == null
+				&& sprite.getSuperStateController() != null
+				&& sprite.getSuperStateController().activateFromAirAbility()) {
+			return true;
+		}
+
+		// ROM (sonic3k.asm:23404-23408): Super Sonic suppresses all abilities.
+		// With all Super Emeralds this path becomes Sonic_HyperDash instead.
 		if (sprite.isSuperSonic()) {
+			if (isHyperSonic()) {
+				hyperDash();
+			}
 			sprite.setDoubleJumpFlag(1);
 			return true;
 		}
@@ -671,7 +1063,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// ROM: Sonic_ShieldMoves is only reached by Sonic (character_id == 0).
 		// Tails uses Tails_JumpHeight → flight. Knuckles uses Knux_JumpHeight → glide.
 		// Neither Tails nor Knuckles ever reaches the shield ability code.
-		ShieldType shield = sprite.getShieldType();
 		if (sprite.getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD) {
 			// Sonic: elemental shield abilities OR insta-shield
 			if (hasElemental && shield != null) {
@@ -710,13 +1101,60 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		audioManager.playSfx(GameSound.INSTA_SHIELD);
 	}
 
+	private boolean isHyperSonic() {
+		GameStateManager state = sprite.currentGameStateOrNull();
+		return state != null && state.hasAllSuperEmeralds();
+	}
+
+	/** ROM: Sonic_HyperDash (sonic3k.asm:23482-23523) */
+	private void hyperDash() {
+		int horizontal = 0;
+		if (inputLeft && !inputRight) {
+			horizontal = -1;
+		} else if (inputRight && !inputLeft) {
+			horizontal = 1;
+		}
+
+		int vertical = 0;
+		if (inputUp && !inputDown) {
+			vertical = -1;
+		} else if (inputDown && !inputUp) {
+			vertical = 1;
+		}
+
+		if (horizontal == 0 && vertical == 0) {
+			horizontal = sprite.getDirection() == Direction.RIGHT ? 1 : -1;
+		}
+
+		short xVel = (short) (horizontal * HYPER_DASH_SPEED);
+		short yVel = (short) (vertical * HYPER_DASH_SPEED);
+		sprite.setXSpeed(xVel);
+		sprite.setYSpeed(yVel);
+		sprite.setGSpeed(xVel);
+		sprite.resetPositionAndStatTableHistory();
+		Camera camera = camera();
+		if (camera != null && camera.getFocusedSprite() == sprite) {
+			camera.setHorizScrollDelay(32);
+		}
+		audioManager.playSfx(GameSound.SPINDASH_RELEASE);
+	}
+
 	/** Fire dash: horizontal burst in facing direction (sonic3k.asm:23411-23430) */
 	private void fireShieldDash() {
 		int dir = sprite.getDirection() == Direction.RIGHT ? 1 : -1;
-		sprite.setXSpeed((short) (0x800 * dir));
+		short dashSpeed = (short) (0x800 * dir);
+		sprite.setXSpeed(dashSpeed);
+		// ROM (sonic3k.asm:23424-23426): the dash sets ground_vel alongside
+		// x_vel so that ground_vel survives the next landing's `ground_vel =
+		// x_vel` reseed and matches ROM diagnostics during the airborne dash
+		// frame. Omitting this leaves the previous frame's ground_vel intact
+		// (e.g. AIZ trace F7235 expected 0x0800, observed stale 0x0768).
+		sprite.setGSpeed(dashSpeed);
 		sprite.setYSpeed((short) 0);
-		// ROM: Reset_Player_Position_Array then set H_scroll_frame_offset = $2000
-		sprite.resetPositionHistory();
+		// ROM: Reset_Player_Position_Array (sonic3k.asm:23428) clears Pos_table
+		// AND Stat_table - required for Tails_CPU_Control's delayed Stat_table
+		// read at sonic3k.asm:26698-26700, then set H_scroll_frame_offset = $2000.
+		sprite.resetPositionAndStatTableHistory();
 		Camera camera = camera();
 		if (camera != null && camera.getFocusedSprite() == sprite) {
 			camera.setHorizScrollDelay(32);
@@ -729,6 +1167,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	/** Lightning double jump: upward velocity boost (s3.asm:21094-21102) */
 	private void lightningShieldJump() {
 		sprite.setYSpeed((short) -0x580);
+		// ROM Sonic_LightningShield clears jumping(a0) after writing y_vel
+		// (docs/skdisasm/sonic3k.asm:23433-23440).  Without clearing the
+		// engine latch, the next jump-button release re-applies the normal
+		// jump-height cap and overwrites the double-jump velocity.
+		sprite.setJumping(false);
+		jumpPressed = false;
+		jumpReleasedSinceJump = false;
 		audioManager.playSfx(GameSound.LIGHTNING_ATTACK);
 		var shield = sprite.getShieldObject();
 		if (shield != null) shield.onAbilityActivated(1);
@@ -1362,15 +1807,80 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Sonic_SlopeResist: Apply slope factor when walking (s2.asm:37360) */
 	private void doSlopeResist() {
-		int hexAngle = sprite.getAngle() & 0xFF;
+		applySlopeResistForAngle(sprite.getAngle() & 0xFF, false);
+	}
+
+	private boolean applySlopeResistForAngle(int hexAngle, boolean moveByVelocityDelta) {
 		short gSpeed = sprite.getGSpeed();
 
-		if (isOnSteepSurface(hexAngle) || gSpeed == 0) {
-			return;
+		if (isOnSteepSurface(hexAngle)) {
+			return false;
 		}
 
 		int slopeEffect = (slopeRunning * TrigLookupTable.sinHex(hexAngle)) >> 8;
-		sprite.setGSpeed((short) (gSpeed + slopeEffect));
+		if (gSpeed == 0) {
+			// S1/S2 ROM Sonic_SlopeResist (s1disasm/_incObj/01 Sonic.asm:1243-1244,
+			// s2.asm:37394-37395) returns unconditionally on
+			// `tst.w inertia(a0) / beq.s return_1ADCA` when stationary.
+			// S3K Player_SlopeResist (sonic3k.asm:23830-23856) instead branches
+			// to loc_11DDC on inertia=0 and applies the force when |force| >= $D,
+			// kicking the stationary player into motion on a steep enough slope.
+			PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+			boolean s3kKickAtRest = fs != null && fs.slopeResistAppliesAtZeroInertia();
+			if (!s3kKickAtRest || Math.abs(slopeEffect) < 0x0D) {
+				return false;
+			}
+		}
+		short adjustedGSpeed = (short) (gSpeed + slopeEffect);
+		if (moveByVelocityDelta) {
+			short oldXSpeed = (short) ((gSpeed * TrigLookupTable.cosHex(hexAngle)) >> 8);
+			short oldYSpeed = (short) ((gSpeed * TrigLookupTable.sinHex(hexAngle)) >> 8);
+			short newXSpeed = (short) ((adjustedGSpeed * TrigLookupTable.cosHex(hexAngle)) >> 8);
+			short newYSpeed = (short) ((adjustedGSpeed * TrigLookupTable.sinHex(hexAngle)) >> 8);
+			sprite.move((short) (newXSpeed - oldXSpeed), (short) (newYSpeed - oldYSpeed));
+			sprite.setXSpeed(newXSpeed);
+			sprite.setYSpeed(newYSpeed);
+		}
+		sprite.setGSpeed(adjustedGSpeed);
+		slopeResistAppliedThisFrame = true;
+		return true;
+	}
+
+	private void applyMissedDetachSlopeResist() {
+		if (!sprite.getAir()
+				|| slopeResistAppliedThisFrame
+				|| sprite.wasPrePhysicsAir()) {
+			return;
+		}
+		int prePhysicsAngle = sprite.getPrePhysicsAngle() & 0xFF;
+		if (prePhysicsAngle == (sprite.getAngle() & 0xFF)) {
+			return;
+		}
+		// ROM's walking slope-resist routine runs BEFORE Sonic_Move with the
+		// FRAME-START inertia, and `tst.w inertia / beq return` skips the
+		// resist entirely when the player was stationary at frame start
+		// (S1 Sonic_SlopeResistWalk 01 Sonic.asm:1308-1309; S2 Sonic_SlopeResist
+		// s2.asm:37718-37719 / Tails_SlopeResist s2.asm:40620-40621; S3K
+		// Player_SlopeResist sonic3k.asm:23830-23831). This replay must observe
+		// that same frame-start inertia — using the post-Move inertia here would
+		// inject a slope resist ROM never applied (SYZ1 f4431: ROM lands with
+		// inertia 0, holds Right, Sonic_Move sets inertia +$C and AngleSpeed
+		// yields y_vel=-$A; SlopeRepel then detaches without touching velocity,
+		// so the ROM-recorded y_vel stays -$A). The S3K at-rest slope kick
+		// (|force| >= $D at inertia 0, sonic3k.asm:23847-23856) is owned by
+		// doSlopeResist, which sets slopeResistAppliedThisFrame and short-circuits
+		// this path, so the zero-inertia skip below is safe for all three games.
+		if (sprite.getPrePhysicsGSpeed() == 0) {
+			return;
+		}
+		// S1/S2/S3K run walking slope resist before SpeedToPos/MoveSprite2 and
+		// before AnglePos can detach the player (S1 01 Sonic.asm:283-291,
+		// 1246-1263; S2 s2.asm:36464-36477,37703-37723; S3K
+		// sonic3k.asm:21620-21630,23821-23856). If engine ground attachment
+		// has already switched to air on this final grounded frame, replay the
+		// missing pre-move slope step using the frame-start angle and add only
+		// the velocity delta that ROM would have moved with this frame.
+		applySlopeResistForAngle(prePhysicsAngle, true);
 	}
 
 	/** Sonic_Move: Ground input handling, accel/decel, wall collision (s2.asm:36220) */
@@ -1384,7 +1894,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.isSliding()) {
 			sprite.setGSpeed(gSpeed);
 			calculateXYFromGSpeed();
-			collisionSystem().resolveGroundWallCollision(sprite);
+			collisionSystem().resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), sprite);
 			return;
 		}
 
@@ -1392,7 +1902,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		short runDecel = sprite.getRunDecel();
 		short friction = sprite.getFriction();
 		short max = sprite.getMax();
-		Camera camera = camera();
+		Camera camera = playerCameraBiasController();
 
 		// Move lock - skip input processing but still apply friction
 		// ROM: When move_lock is active, branches to Obj01_ResetScr which continues
@@ -1408,11 +1918,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				if (gSpeed > 0) {
 					gSpeed -= runDecel;
 					if (gSpeed < 0) gSpeed = (short) -128;
-					if (isOnFlatGround() && gSpeed > SKID_SPEED_THRESHOLD) {
+					if (shouldTriggerGroundSkid(gSpeed, false)) {
+						sprite.setDirection(Direction.RIGHT);
 						handleSkid();
+					} else if (sprite.getSkidding()) {
+						advanceSkidDustTimer();
 					}
 				} else {
 					sprite.setSkidding(false);
+					sprite.setDirection(Direction.LEFT);
 					gSpeed = accelerateLeft(gSpeed, runAccel, max);
 				}
 			}
@@ -1427,11 +1941,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					// or positive. BCC (branch if carry clear) is NOT taken, so
 					// the reset to 0x80 executes for both gSpeed==0 and gSpeed>0.
 					if (gSpeed >= 0) gSpeed = (short) 128;
-					if (isOnFlatGround() && gSpeed < -SKID_SPEED_THRESHOLD) {
+					if (shouldTriggerGroundSkid(gSpeed, true)) {
+						sprite.setDirection(Direction.LEFT);
 						handleSkid();
+					} else if (sprite.getSkidding()) {
+						advanceSkidDustTimer();
 					}
 				} else {
 					sprite.setSkidding(false);
+					sprite.setDirection(Direction.RIGHT);
 					gSpeed = accelerateRight(gSpeed, runAccel, max);
 				}
 			}
@@ -1443,7 +1961,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// Standing still handling (ROM: Sonic_Lookup, Sonic_Duck, Obj01_ResetScr)
 			// S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp/Sonic_Duck)
 			// S2/S3K: 120-frame (2 second) delay before panning (s2.asm:36402-36405)
-			if (isOnFlatGround() && gSpeed == 0) {
+			//
+			// Edge-balancing suppresses looking up/down. ROM Sonic_Move runs
+			// Sonic_Balance BEFORE Sonic_LookUp/Sonic_Duck, and when the player is
+			// balancing on a floor or object edge it branches to Sonic_ResetScr
+			// ("prevent looking up/down", docs/s1disasm/_incObj/01 Sonic.asm:435-460;
+			// the standing-on-object path lines 409-431 reaches .balance -> ResetScr),
+			// easing v_lookshift back to $60 instead of running Look/Duck. The engine
+			// computes the balance state in updateCrouchState(), which runs AFTER this
+			// doGroundMove() look code, so on the FIRST balancing frame (e.g. the frame
+			// a hurt-knockback recovery lands the player edge-balancing) the look code
+			// read a stale not-balancing state and ducked once (SLZ3 f1167). Compute
+			// the current-frame balance predicate HERE, with no lasting side effects:
+			// the actual balance state + facing are restored and recomputed at their
+			// normal time by updateCrouchState(), so other traces are unaffected.
+			boolean lookGateActive = isOnFlatGround() && gSpeed == 0;
+			boolean balancingNow = lookGateActive && computeCurrentFrameBalancing();
+			if (lookGateActive && !balancingNow) {
 				sprite.setPushing(false);
 				short lookDelay = sprite.getLookDelayCounter();
 				PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
@@ -1496,6 +2030,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 		}
 
+		// Snapshot inertia at the ROM `tst.w inertia` point — i.e. before the
+		// ground friction below. ROM Sonic_Move/Tails_Move pick the standing-still
+		// duck/look-up animation from this pre-friction inertia (S1 _incObj/01
+		// Sonic.asm:373, S2 s2.asm:36568/39689) and only afterwards run
+		// Obj01_UpdateSpeedOnGround friction (s2.asm:36768-36786). updateCrouchState
+		// consumes this so a sidekick whose inertia decays to 0 this frame does not
+		// duck a frame early (S2 MCZ1 Tails spindash/jump divergence at f2362).
+		preFrictionGroundSpeed = gSpeed;
+		sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) gSpeed);
+
 		// Friction
 		// ROM ref: s2.asm:36443-36446 — Super Sonic uses normal friction (0x0C) not his profile friction (0x30)
 		if (!inputRawLeft && !inputRawRight) {
@@ -1505,7 +2049,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		sprite.setGSpeed(gSpeed);
 		calculateXYFromGSpeed();
-		collisionSystem().resolveGroundWallCollision(sprite);
+		collisionSystem().resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), sprite);
+		clearFacingFlipPushAfterGroundWallCollision();
 	}
 
 	/** Sonic_Roll / SonicKnux_Roll: Check if should start rolling.
@@ -1513,17 +2058,44 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void doCheckStartRoll() {
 		short gSpeed = sprite.getGSpeed();
 
+		// ROM S3K: sub_108E6 returns immediately when status_secondary bit 7
+		// is set, so slide terrain cannot enter the manual down-roll path.
+		if (sprite.isSliding()) return;
+
 		// S3K uses movingCrouchThreshold ($100) as the roll speed threshold;
 		// below that speed, down enters crouch (handled in updateCrouchState).
 		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
 		int rollThreshold = (fs != null && fs.movingCrouchThreshold() > 0)
 				? fs.movingCrouchThreshold() : minStartRollSpeed;
 		if (Math.abs(gSpeed) < rollThreshold) return;
-		if (inputLeft || inputRight) return;
+		// ROM roll-entry tests the held controller bits directly, not the
+		// move_lock-filtered left/right movement inputs. In S3K, move_lock only
+		// gates Tails_InputAcceleration_Path (sonic3k.asm:27796-27797);
+		// Tails_Roll still runs afterward and tests Ctrl_2_held_logical directly
+		// for left/right/down (sonic3k.asm:27523-27524,28461-28472). S1/S2 use the same
+		// held-left/right roll gate (docs/s1disasm/_incObj/01 Sonic.asm:
+		// 899-902; docs/s2disasm/s2.asm:36960-36963,39939-39942).
+		if (inputLeft || inputRight || inputRawLeft || inputRawRight) return;
 		if (!inputDown) return;
 		if (sprite.getAir() || sprite.getRolling()) return;
 
+		short preRollCentreX = sprite.getCentreX();
 		sprite.setRolling(true);
+		if (fs != null && fs.animationChangeClearsPush()) {
+			// Tails_Roll/SonicKnux_Roll write anim=#2 on roll entry
+			// (sonic3k.asm:23259-23264,28494-28500). Animate_Tails/
+			// Animate_Sonic later clears Status_Push when anim != prev_anim
+			// (sonic3k.asm:29359-29364,29681-29686); the engine writes the
+			// roll animation inside setRolling(), so clear the same status bit
+			// at the movement transition.
+			sprite.setPushing(false);
+		}
+		// ROM roll entry writes y_radius/x_radius and y_pos only; x_pos is not
+		// modified in S1/S2/S3K (S1 01 Sonic.asm:1095-1099;
+		// S2 s2.asm:37003-37008; S3K SonicKnux_Roll sonic3k.asm:23259-23264,
+		// Tails_Roll sonic3k.asm:28494-28500). Preserve ROM centre X when the
+		// engine's top-left sprite box changes width on wall modes.
+		sprite.setCentreXPreserveSubpixel(preRollCentreX);
 		sprite.setY((short) (sprite.getY() + sprite.getRollHeightAdjustment()));
 		audioManager.playSfx(GameSound.ROLLING);
 
@@ -1550,35 +2122,80 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	/** Sonic_RollSpeed: Roll deceleration and velocity conversion (s2.asm:36666) */
 	private void doRollSpeed() {
 		short gSpeed = sprite.getGSpeed();
-		camera().easeYBiasToDefault();
+		Camera camera = playerCameraBiasController();
+		if (camera != null) {
+			camera.easeYBiasToDefault();
+		}
+
+		// ROM: tst.b spin_dash_flag(a0) / bmi.w loc_115C6 (sonic3k.asm:22935-22936)
+		// When pinballSpeedLock is set (spin_dash_flag bit 7 = 0x81), skip input,
+		// friction, and deceleration — go straight to velocity conversion.
+		// Speed is only modified by slope gravity (Player_RollRepel, called before this).
+		if (sprite.getPinballSpeedLock()) {
+			convertRollVelocity(gSpeed);
+			return;
+		}
 
 		// ROM: tst.b (f_slidemode).w / bne.w loc_131CC (s1.asm:602-603)
 		// When sliding, skip input and friction — go straight to velocity conversion.
 		if (sprite.isSliding()) {
-			sprite.setGSpeed(gSpeed);
-			// Convert to X/Y with cap (same as below)
-			int hexAngle = sprite.getAngle() & 0xFF;
-			short xVel = (short) ((gSpeed * TrigLookupTable.cosHex(hexAngle)) >> 8);
-			short yVel = (short) ((gSpeed * TrigLookupTable.sinHex(hexAngle)) >> 8);
-			xVel = (short) Math.max(-0x1000, Math.min(0x1000, xVel));
-			sprite.setXSpeed(xVel);
-			sprite.setYSpeed(yVel);
-			collisionSystem().resolveGroundWallCollision(sprite);
+			convertRollVelocity(gSpeed);
 			return;
 		}
 
-		boolean inputAllowed = sprite.getMoveLockTimer() == 0;
-
-		// Controlled roll deceleration: hardcoded $20 regardless of water state
-		// ROM ref: s2.asm:36671 — move.w #$20,d4
-		short rollDecel = (short) 0x20;
-		if (inputAllowed && inputLeft && gSpeed > 0) {
-			gSpeed -= rollDecel;
-			if (gSpeed < 0) gSpeed = (short) -128;
+		boolean objectPreservedRollStop = sprite.shouldPreserveRollingOnNextRollStop();
+		boolean skipControlledRollInput = sprite.consumeObjectPreservedRollBoostFollowup();
+		boolean skipObjectPreservedRollInput = sprite.consumeObjectPreservedRollWallProbe();
+		boolean objectPreservedVelocityCarry = sprite.shouldApplyObjectPreservedRollVelocityCarry();
+		boolean inputAllowed = sprite.getMoveLockTimer() == 0
+				&& !skipControlledRollInput
+				&& !skipObjectPreservedRollInput;
+		if (objectPreservedVelocityCarry
+				&& objectPreservedRollStop
+				&& sprite.getRolling()
+				&& !sprite.getAir()
+				&& gSpeed == 0
+				&& sprite.getXSpeed() != 0) {
+			int carriedXSpeed = Math.max(-0x1000, Math.min(0x1000, sprite.getXSpeed()));
+			sprite.setXSpeed((short) carriedXSpeed);
+			sprite.setYSpeed((short) 0);
+			return;
 		}
-		if (inputAllowed && inputRight && gSpeed < 0) {
-			gSpeed += rollDecel;
-			if (gSpeed > 0) gSpeed = (short) 128;
+		if (objectPreservedVelocityCarry) {
+			sprite.clearObjectPreservedRollVelocityCarry();
+		}
+
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		short rollDecel = (short) 0x20;
+		if (featureSet != null && featureSet.rollControlledDecelUsesEffectiveDecelQuarter()) {
+			// S1 Sonic_RollSpeed derives d4 from v_sonspeeddec >> 2, so the
+			// underwater value is $40 >> 2 = $10. S2/S3K hardcode $20.
+			rollDecel = (short) (sprite.getRunDecel() >> 2);
+		}
+		if (inputAllowed && inputLeft) {
+			if (gSpeed > 0) {
+				// ROM Sonic_RollLeft.changeddirection: sub.w d4,d0 / bcc / move.w #-$80.
+				// The subtraction borrows (carry set) only when the result is strictly
+				// negative, so a result of exactly 0 stays 0 (s1:01 Sonic.asm:871-878;
+				// s2.asm:37119-37124; sonic3k.asm sub_11608 loc_1161E).
+				gSpeed -= rollDecel;
+				if (gSpeed < 0) gSpeed = (short) -128;
+			} else {
+				sprite.setDirection(Direction.LEFT);
+			}
+		}
+		if (inputAllowed && inputRight) {
+			if (gSpeed < 0) {
+				// ROM Sonic_RollRight.changedirection: add.w d4,d0 / bcc / move.w #$80.
+				// The addition carries (carry set) when the result is >= 0, so a result
+				// of exactly 0 clamps to +$80 -- unlike the leftward sub-borrow case
+				// above (s1:01 Sonic.asm:895-899; s2.asm:37141-37146;
+				// sonic3k.asm sub_1162C loc_11640).
+				gSpeed += rollDecel;
+				if (gSpeed >= 0) gSpeed = (short) 128;
+			} else {
+				sprite.setDirection(Direction.RIGHT);
+			}
 		}
 
 		// Natural deceleration
@@ -1587,27 +2204,74 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			gSpeed = applyFriction(gSpeed, naturalDecel);
 		}
 
-		// Stop rolling check
-		if (gSpeed == 0) {
+		// Stop rolling check. S1/S2 wait for inertia to reach zero; S3K compares
+		// abs(ground_vel) against min_roll_speed ($80) and unrolls below it.
+		// Refs: s1disasm/_incObj/01 Sonic.asm:760-768; s2.asm:37046-37055,
+		// 40072-40081; sonic3k.asm:22971-22986,28216-28231.
+		boolean stopRolling = featureSet != null && featureSet.rollStopsBelowMinimumSpeed()
+				? Math.abs(gSpeed) < minRollSpeed
+				: gSpeed == 0;
+		if (stopRolling) {
 			if (sprite.getPinballMode()) {
 				gSpeed = (short) (sprite.getDirection() == Direction.LEFT ? -0x400 : 0x400);
+			} else if (objectPreservedRollStop) {
+				// Object-scoped ROM handoff: S2 Obj85 leaves Tails curled in
+				// the CNZ stopper chamber. The following zero-inertia roll-stop
+				// decision must not apply the generic unroll/Y-radius change;
+				// when the later positive handoff appears, the next frame's wall
+				// probe can turn it into the chamber push (s2.asm:39716-39745,
+				// 39481-39507).
+				if (inputRight) {
+					gSpeed = 0x400;
+					sprite.markObjectPreservedRollBoostFollowup();
+				}
 			} else {
 				sprite.setRolling(false);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
+				applyRollStopAnimationChange();
 			}
 		}
 
 		sprite.setGSpeed(gSpeed);
+		convertRollVelocity(gSpeed);
+		if (skipControlledRollInput) {
+			sprite.markObjectPreservedRollWallProbe();
+		}
+	}
 
-		// Convert to X/Y with cap
+	private void applyRollStopAnimationChange() {
+		SpriteAnimationProfile profile = sprite.getAnimationProfile();
+		if (!(profile instanceof ScriptedVelocityAnimationProfile velocityProfile)) {
+			return;
+		}
+		int idleAnimId = velocityProfile.getIdleAnimId();
+		if (sprite.getAnimationId() == idleAnimId) {
+			return;
+		}
+		sprite.setAnimationId(idleAnimId);
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (featureSet != null && featureSet.animationChangeClearsPush()) {
+			// ROM Tails_RollSpeed/Sonic_RollSpeed writes anim=$05 on roll stop
+			// (sonic3k.asm:28198-28210) and the S2/S3K animation driver clears
+			// Status_Push when anim != prev_anim (sonic3k.asm:29359-29364,
+			// 29681-29686; s2.asm:38033-38038,40879-40884).
+			sprite.setPushing(false);
+		}
+	}
+
+	/**
+	 * Converts ground_vel to x_vel/y_vel using angle, caps x_vel to ±0x1000,
+	 * then resolves ground wall collision.
+	 * ROM: loc_115C6 (sonic3k.asm lines 23013-23031).
+	 */
+	private void convertRollVelocity(short gSpeed) {
 		int hexAngle = sprite.getAngle() & 0xFF;
 		short xVel = (short) ((gSpeed * TrigLookupTable.cosHex(hexAngle)) >> 8);
 		short yVel = (short) ((gSpeed * TrigLookupTable.sinHex(hexAngle)) >> 8);
 		xVel = (short) Math.max(-0x1000, Math.min(0x1000, xVel));
-
 		sprite.setXSpeed(xVel);
 		sprite.setYSpeed(yVel);
-		collisionSystem().resolveGroundWallCollision(sprite);
+		collisionSystem().resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), sprite);
 	}
 
 	// ========================================
@@ -1654,7 +2318,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 		}
 
-		camera().easeYBiasToDefault();
+		Camera camera = playerCameraBiasController();
+		if (camera != null) {
+			camera.easeYBiasToDefault();
+		}
 
 		// Air drag near apex (-1024 <= ySpeed < 0)
 		// ROM: asr.w #5,d1 — arithmetic shift right rounds toward -∞.
@@ -1683,9 +2350,95 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 *   add.l   d0,d3                  ; Position uses OLD y_vel (d0, before gravity)
 	 */
 	private void doObjectMoveAndFall() {
+		int suppressedAxes = sprite.consumeSuppressedObjectMoveAndFallAxes();
+		if (suppressedAxes == 0x3) {
+			return;
+		}
+		SidekickCpuController cpu = sprite.getCpuController();
+		if (cpu != null && cpu.usesFlyingCarryMovement()) {
+			// Tails_FlyingSwimming applies Tails_Move_FlySwim before
+			// MoveSprite_TestGravity2, so the carry controller owns the
+			// carrier's per-frame vertical flight velocity here.
+			cpu.applyFlyingCarryVerticalVelocity();
+			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+			return;
+		}
+		if (isTailsFlightPhysicsActive(sprite)) {
+			// Tails_FlyingSwimming (sonic3k.asm:27570) applies Tails_Move_FlySwim
+			// before MoveSprite_TestGravity2. MoveSprite_TestGravity2 does not
+			// apply +$38 air gravity (that's MoveSprite_TestGravity's job), and
+			// since Tails_Move_FlySwim already advanced y_vel by +0x08, the
+			// movement step uses the post-gravity y_vel.
+			applyGravity();
+			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+			return;
+		}
 		short oldYSpeed = sprite.getYSpeed();  // Save old y_vel before gravity
-		sprite.setYSpeed((short) (oldYSpeed + sprite.getGravity()));  // Apply gravity first
-		sprite.move(sprite.getXSpeed(), oldYSpeed);  // Move using OLD y_vel
+		applyGravity();                         // Gated on isObjectControlled()
+		short xMoveSpeed = (suppressedAxes & 0x1) != 0 ? 0 : sprite.getXSpeed();
+		short yMoveSpeed = (suppressedAxes & 0x2) != 0 ? 0 : oldYSpeed;
+		sprite.move(xMoveSpeed, yMoveSpeed);  // Move using OLD y_vel
+	}
+
+	/**
+	 * Apply the sprite's per-frame gravity to y_vel.
+	 *
+	 * <p>Skipped when {@link AbstractPlayableSprite#isObjectControlSuppressesMovement()} is true
+	 * (ROM: Obj01_Control skips movement routines entirely). This gate is what
+	 * lets the S3K Tails-carry driver ({@code SidekickCpuController} CARRYING
+	 * state) keep a stable velocity latch on the carried Sonic; without it,
+	 * gravity accumulates between the driver's latch-update and latch-compare
+	 * and spuriously triggers release path C (external-vel mismatch).
+	 *
+	 * <p>Mirrors the ROM behaviour where {@code object_control != 0} short-circuits
+	 * the entire movement dispatch in {@code Obj01_Control}.
+	 *
+	 * <p>While a sidekick is carrying its leader in flight, the ROM applies
+	 * Tails's flight gravity (+0x08/frame, Tails_Move_FlySwim loc_1488C at
+	 * sonic3k.asm:27633) instead of the standard +0x38 air gravity. The
+	 * carrier sprite is not {@code object_controlled} (that flag is on the
+	 * carried leader), so the regular gate doesn't cover this case.
+	 */
+	private void applyGravity() {
+		if (sprite.isObjectControlSuppressesMovement()) {
+			return;
+		}
+		if (sprite.consumeSuppressNextGravityStep()) {
+			return;
+		}
+		SidekickCpuController cpu = sprite.getCpuController();
+		if (cpu != null && cpu.usesFlyingCarryMovement()) {
+			cpu.applyFlyingCarryVerticalVelocity();
+			return;
+		}
+		if (isTailsFlightPhysicsActive(sprite)) {
+			sprite.setYSpeed((short) (sprite.getYSpeed() + 0x08));
+			return;
+		}
+		sprite.setYSpeed((short) (sprite.getYSpeed() + sprite.getGravity()));
+	}
+
+	/**
+	 * ROM: Tails_Stand_Freespace (sonic3k.asm:27553-27555) branches to
+	 * Tails_FlyingSwimming whenever {@code double_jump_flag(a0) != 0},
+	 * which swaps +$38 air gravity for +$08 flight gravity (Tails_Move_FlySwim
+	 * loc_1488C at sonic3k.asm:27633).
+	 *
+	 * <p>The flag is set by {@code loc_13FC2} when Tails picks up Sonic for the
+	 * CNZ1 carry intro, and — crucially — {@code loc_14016}'s landing release
+	 * does NOT clear it. Tails therefore continues flying on the frame that
+	 * Sonic lands, producing the trace's observed {@code y_vel = 0x0008}
+	 * (0 reset + +0x08 flight gravity) instead of {@code 0x0388}
+	 * (0x0350 carry momentum + +0x38 normal gravity).
+	 *
+	 * <p>Gated on {@link SecondaryAbility#FLY} so Sonic's insta-shield and
+	 * Knuckles's glide (which both also use {@code double_jump_flag}) keep
+	 * their normal air gravity; only Tails's code path in the ROM has the
+	 * Tails_Stand_Freespace -&gt; Tails_FlyingSwimming branch.
+	 */
+	private static boolean isTailsFlightPhysicsActive(AbstractPlayableSprite sprite) {
+		return sprite.getSecondaryAbility() == SecondaryAbility.FLY
+				&& sprite.getDoubleJumpFlag() != 0;
 	}
 
 	// ========================================
@@ -1696,19 +2449,26 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void doLevelBoundary() {
 		// ROM: When object_control is set, level boundary checks are skipped
 		// (Obj01_Control skips movement routines entirely).
-		if (sprite.isObjectControlled()) {
+		if (sprite.isObjectControlSuppressesMovement()) {
 			return;
 		}
 		Camera camera = camera();
 		if (camera == null) return;
 
 		// ROM uses center coordinates for x_pos, so boundary offsets are calibrated for center
-		final int SCREEN_WIDTH = 320, SONIC_WIDTH = 24, LEFT_OFFSET = 16, RIGHT_EXTRA = 64;
+		final int SONIC_WIDTH = 24, LEFT_OFFSET = 16, RIGHT_EXTRA = 64;
+		// The right level boundary is the level's design edge — Camera_Max_X_pos +
+		// the NATIVE screen width (320) — NOT the render viewport. camera.getMaxX()
+		// is the native ROM scroll limit (level_edge - 320), so widening this by a
+		// wider viewport would let the player walk past the level's right wall into
+		// the void beyond a camera lock and fall to their death where no level
+		// exists. Must stay native regardless of DISPLAY_ASPECT.
+		final int LEVEL_DESIGN_WIDTH = 320;
 
 		// ROM: move.l obX(a0),d1 / ext.l d0 / asl.l #8,d0 / add.l d0,d1 / swap d1
 		// Uses 32-bit position (pixel:16 | subpixel:16) + velocity << 8.
 		// The subpixel byte is in bits 8-15 of xSubpixel (high byte of low word).
-		int xTotal = (sprite.getCentreX() * 256) + ((sprite.getXSubpixel() >> 8) & 0xFF) + sprite.getXSpeed();
+		int xTotal = (sprite.getCentreX() * 256) + ((sprite.getXSubpixelRaw() >> 8) & 0xFF) + sprite.getXSpeed();
 		int predictedX = xTotal >> 8;
 
 		int minX = camera.getMinX();
@@ -1721,17 +2481,33 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		int leftBoundary = minX + LEFT_OFFSET;
-		int rightBoundary = maxX + SCREEN_WIDTH - SONIC_WIDTH;
-		if (!gameState().isBossFightActive()) {
-			rightBoundary += RIGHT_EXTRA;
-		}
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		// S3K Player_Boundary_Sides/Tails_Check_Screen_Boundaries use
+		// Camera_max_X_pos+$128 directly, with no normal-play +$40 extension
+		// (sonic3k.asm:23183-23186, 28418-28421). This reproduces +$128 / +$128+$40
+		// exactly: $128 = 320 - 24 = LEVEL_DESIGN_WIDTH - SONIC_WIDTH. The boundary
+		// is viewport-independent — it tracks the level's right wall, not the screen.
+		// The +64 right-boundary extension is removed during a boss/screen lock.
+		// ROM gates that on different flags per game: S1 uses the persistent
+		// f_lockscreen (set at boss spawn, cleared only by Egg Prison / LZ boss,
+		// so it survives boss defeat in the Final Zone — s1disasm/_incObj/01
+		// Sonic.asm:1047-1049); S2 uses Current_Boss_ID, i.e. boss-alive
+		// (s2.asm:37247-37250). PhysicsFeatureSet.levelBoundaryLockUsesScreenLockFlag
+		// selects which. S3K never adds the +64 (levelBoundaryRightStrict).
+		boolean lockActive = (featureSet != null && featureSet.levelBoundaryLockUsesScreenLockFlag())
+				? gameState().isScreenLocked()
+				: gameState().isBossFightActive();
+		boolean strict = (featureSet != null && featureSet.levelBoundaryRightStrict())
+				|| lockActive || gameState().isEndOfLevelActive();
+		int rightBoundary = RightBoundary.compute(maxX, LEVEL_DESIGN_WIDTH, SONIC_WIDTH, RIGHT_EXTRA, strict);
 
-		// ROM comparison: bhi.s for left (<), bls.s for right (>=)
+		// ROM comparison: left is always bhi.s (<). S1/S2 right uses bls.s
+		// (>=), while S3K uses blo.s (>), gated by PhysicsFeatureSet.
 		if (predictedX < leftBoundary) {
 			sprite.setCentreX((short) leftBoundary);
 			sprite.setXSpeed((short) 0);
 			sprite.setGSpeed((short) 0);
-		} else if (predictedX >= rightBoundary) {
+		} else if (isPastRightLevelBoundary(predictedX, rightBoundary)) {
 			sprite.setCentreX((short) rightBoundary);
 			sprite.setXSpeed((short) 0);
 			sprite.setGSpeed((short) 0);
@@ -1745,14 +2521,53 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// (camera boundaries may not reflect actual level extents during intro).
 		if (camera.isLevelStarted()) {
 			short effectiveMaxY = (short) maxY;
-			if (sprite.getY() > effectiveMaxY + 224) {
-				if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
-					sprite.getCpuController().despawn();
+			// ROM compares the player's y_pos(a0) word, which is centre-Y, not top-left:
+			//   S1 Sonic_LevelBound .bottom: cmp.w obY(a0),d0 / blt.s .bottom
+			//     (s1disasm/_incObj/01 Sonic.asm:1014).
+			//   S2 Sonic_LevelBound Sonic_Boundary_CheckBottom: cmp.w y_pos(a0),d0
+			//     / blt.s Sonic_Boundary_Bottom (s2.asm:36950).
+			//   S2 Tails_LevelBound Tails_Boundary_CheckBottom: cmp.w y_pos(a0),d0
+			//     / blt.s Tails_Boundary_Bottom (s2.asm:39929).
+			//   S3K Player_LevelBound Player_Boundary_CheckBottom: cmp.w y_pos(a0),d0
+			//     / blt.s Player_Boundary_Bottom (sonic3k.asm:23195).
+			//   S3K Tails_Check_Screen_Boundaries loc_14F30: cmp.w y_pos(a0),d0
+			//     / blt.s loc_14F56 (sonic3k.asm:28430-28431).
+			// PhysicsFeatureSet.levelBoundaryUsesCentreY gates centre-Y semantics
+			// for each game. S1/S2/S3K all enable it because their ROM routines
+			// compare y_pos(a0)/obY(a0), which maps to engine centre-Y.
+			//
+			// CPU sidekicks always use centre-Y to match ROM Tails_LevelBound
+			// behavior regardless of game: MCZ1 F398 (S2 level-select trace, recorded
+			// at lua_script_version 9.2-s2) records Tails crossing the kill plane at
+			// centre-Y=0x0807 with maxY+screen_height=0x0800, triggering
+			// JmpTo2_KillCharacter (s2.asm:39929-39939). Using top-left (Y=0x07F9) misses
+			// the kill by 8 pixels and Tails keeps falling instead of dying.
+			boolean useCentreY = (featureSet != null && featureSet.levelBoundaryUsesCentreY())
+					|| (sprite.isCpuControlled() && sprite.getCpuController() != null);
+			int playerY = useCentreY ? sprite.getCentreY() : sprite.getY();
+			if (playerY > effectiveMaxY + 224) {
+				GameModule module = sprite.currentGameModule();
+				LevelEventProvider levelEvents = module != null ? module.getLevelEventProvider() : null;
+				SidekickCpuController cpuController = sprite.getCpuController();
+				if (sprite.isCpuControlled() && cpuController != null) {
+					// MGZ2 boss transition starts Tails's scripted carry below
+					// the normal camera bottom. ROM runs Tails_Check_Screen_Boundaries
+					// in that path without returning to the generic CPU respawn state.
+					if (!cpuController.usesFlyingCarryMovement()
+							&& (levelEvents == null || !levelEvents.interceptPitDeath(sprite))) {
+						// ROM Player_LevelBound (sonic3k.asm:23172) jumps to
+						// Kill_Character (sonic3k.asm:21136) for both player and
+						// sidekick when the bottom kill plane is crossed. The
+						// LEVEL_BOUNDARY cause selects the engine's
+						// Kill_Character-equivalent path (zero velocities + one-
+						// frame DEAD_FALLING state) so the trace's end-of-frame
+						// (vels=0, routine=6) sample matches at AIZ F4679.
+						cpuController.despawn(
+							com.openggf.sprites.playable.SidekickCpuController.DespawnCause.LEVEL_BOUNDARY);
+					}
 				} else {
 					// ROM: Sonic_LevelBound checks for zone-specific intercepts
 					// (e.g. SBZ2 fall -> SBZ3 transition) before applying death.
-					GameModule module = sprite.currentGameModule();
-					LevelEventProvider levelEvents = module != null ? module.getLevelEventProvider() : null;
 					if (levelEvents == null || !levelEvents.interceptPitDeath(sprite)) {
 						sprite.applyPitDeath();
 					}
@@ -1761,27 +2576,72 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 	}
 
+	private boolean isPastRightLevelBoundary(int predictedX, int rightBoundary) {
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		return featureSet != null && featureSet.levelBoundaryRightStrict()
+				? predictedX > rightBoundary
+				: predictedX >= rightBoundary;
+	}
+
+	private boolean isCpuLevelBoundaryKillActive() {
+		SidekickCpuController controller = sprite.getCpuController();
+		return sprite.isCpuControlled()
+				&& controller != null
+				&& controller.getState() == SidekickCpuController.State.DEAD_FALLING;
+	}
+
 	/** AnglePos: Ground terrain collision (s2.asm:42534) */
 	private void doAnglePos() {
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		int positiveThreshold = (featureSet != null && featureSet.fixedAnglePosThreshold())
 				? 14
 				: Math.min(getSpeedForThreshold() + 4, 14);
-		collisionSystem().resolveGroundAttachment(sprite, positiveThreshold, this::hasObjectSupport);
+		// resolveGroundAttachment handles the ROM Status_OnObj early return only
+		// when a live object support path still owns the player. Stale latches must
+		// fall through to terrain walk-off so the player cannot stand in mid-air.
+		collisionSystem().resolveGroundAttachment(
+				FrameCollisionPlan.terrainOnly(), sprite, positiveThreshold, this::hasObjectSupport);
 	}
 
 	/** Sonic_SlopeRepel: Slip/fall check (s2.asm:37432) */
 	private void doSlopeRepel() {
 		if (sprite.isStickToConvex()) return;
-		// S2/S3K: btst #sta_onObj,status(a0) / bne.s return — skip when on object.
-		// S1: NO isOnObject check — slope repel applies even on object surfaces.
+		int activeMoveLock = sprite.getMoveLockTimer();
+		if (activeMoveLock > 0) {
+			// ROM checks/decrements move_lock before evaluating the angle slip
+			// branch (S2 Sonic_SlopeRepel s2.asm:37458-37479; S2
+			// Tails_SlopeRepel s2.asm:40313-40334; S3K Player_SlopeRepel
+			// sonic3k.asm:23909-23948). AnglePos may have returned early
+			// because Status_OnObj was set, but SlopeRepel is still called by
+			// the ground/roll dispatcher, so a prior terrain-slip lock burns
+			// down while the player rides an object.
+			sprite.setMoveLockTimer(activeMoveLock - 1);
+			return;
+		}
+		// Engine object-support aggregation can leave a non-flat terrain angle while
+		// an object owns ground contact. Preserve the existing guard against arming
+		// a fresh slope slip from that stale terrain angle; the ROM move_lock
+		// countdown has already run above.
 		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
 		boolean checksOnObject = (fs == null || fs.slopeRepelChecksOnObject());
 		if (checksOnObject && (sprite.isOnObject() || collisionSystem().hasObjectSupport(sprite))) return;
 
-		int moveLock = sprite.getMoveLockTimer();
-		if (moveLock > 0) {
-			sprite.setMoveLockTimer(moveLock - 1);
+		int angle = sprite.getAngle() & 0xFF;
+		boolean s3kSlipKick = fs != null && fs.slopeRepelUsesS3kSlipKick();
+		if (s3kSlipKick) {
+			if (((angle + 0x18) & 0xFF) < 0x30) return;
+			if (Math.abs(sprite.getGSpeed()) >= SLOPE_REPEL_MIN_SPEED) return;
+
+			sprite.setMoveLockTimer(MOVE_LOCK_FRAMES);
+			int slipAngle = (angle + 0x30) & 0xFF;
+			if (slipAngle >= 0x60) {
+				sprite.setAir(true);
+				sprite.setSlopeRepelJustSlipped(true);
+			} else if (slipAngle >= 0x30) {
+				sprite.setGSpeed((short) (sprite.getGSpeed() + 0x80));
+			} else {
+				sprite.setGSpeed((short) (sprite.getGSpeed() - 0x80));
+			}
 			return;
 		}
 
@@ -1790,18 +2650,26 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		sprite.setGSpeed((short) 0);
 		sprite.setAir(true);
+		sprite.setSlopeRepelJustSlipped(true);
 		sprite.setMoveLockTimer(MOVE_LOCK_FRAMES);
 	}
 
 	/** Sonic_DoLevelCollision: Full airborne collision (s2.asm:37540) */
-	private void doLevelCollision() {
-		collisionSystem().resolveAirCollision(sprite, this::calculateLanding);
+	private void doLevelCollision(boolean forceFloorCheck) {
+		int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
+		Consumer<AbstractPlayableSprite> landingHandler =
+				usesDirectHitFloorLanding(quadrant) ? this::calculateDirectFloorLanding : this::calculateLanding;
+		collisionSystem().resolveAirCollision(FrameCollisionPlan.terrainOnly(), sprite, landingHandler, forceFloorCheck);
+	}
+
+	private static boolean usesDirectHitFloorLanding(int quadrant) {
+		return quadrant == 0x40 || quadrant == 0xC0;
 	}
 
 	/** Obj01_CheckWallsOnGround: Ground wall collision (s2.asm:36486) */
 	private void doWallCollisionGround() {
 		if (collisionSystem() != null) {
-			collisionSystem().resolveGroundWallCollision(sprite);
+			collisionSystem().resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), sprite);
 			return;
 		}
 		// S1 roll tunnels: suppress push sensor wall check to prevent false
@@ -1815,7 +2683,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// check must be suppressed to prevent push sensors from detecting the disc's
 		// curved terrain as walls — which zeros gSpeed and disrupts traversal.
 		// In S2/S3K, objects that set stick_to_convex also set tunnelMode (caught above).
-		if (sprite.isStickToConvex()) {
+		if (sprite.isStickToConvex() || sprite.isSuppressGroundWallCollision()) {
 			return;
 		}
 		Sensor[] pushSensors = sprite.getPushSensors();
@@ -1917,7 +2785,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setXSpeed((short) (sprite.getXSpeed() - velocityAdjustment));
 				// ROM s2.asm:36522-36524 - bset pushing / move.w #0,inertia
 				sprite.setGSpeed((short) 0);
-				sprite.setPushing(true);
+				if (shouldSetGroundWallPush(mode)) {
+					sprite.setPushing(true);
+				}
 				break;
 
 			case 0x80:  // Ceiling mode: adjust Y velocity only
@@ -1931,9 +2801,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setXSpeed((short) (sprite.getXSpeed() + velocityAdjustment));
 				// ROM s2.asm:36512-36513 - bset pushing / move.w #0,inertia
 				sprite.setGSpeed((short) 0);
-				sprite.setPushing(true);
+				if (shouldSetGroundWallPush(mode)) {
+					sprite.setPushing(true);
+				}
 				break;
 		}
+	}
+
+	private boolean shouldSetGroundWallPush(int mode) {
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (featureSet == null || !featureSet.groundWallPushRequiresFacingIntoWall()) {
+			return true;
+		}
+		boolean facingLeft = sprite.getDirection() == Direction.LEFT;
+		return mode == 0x40 ? facingLeft : !facingLeft;
 	}
 
 	// ========================================
@@ -1944,15 +2825,56 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void resetOnFloor() {
 		// Don't reset states if player is controlled by an object (e.g., LauncherSpring).
 		// The controlling object manages these states directly.
-		if (sprite.isObjectControlled()) {
+		if (sprite.isObjectControlSuppressesMovement()) {
 			return;
 		}
 
-		if (sprite.getRolling() && !sprite.getPinballMode()) {
-			sprite.setRolling(false);
-			sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		boolean preservePinballRoll = featureSet != null && featureSet.pinballLandingPreservesRoll();
+		boolean preservePinballMode = featureSet != null && featureSet.pinballLandingPreservesPinballMode();
+		boolean preserveObjectLandingRoll = sprite.consumePreserveRollingOnNextLanding();
+		boolean skipLandingRollClear = sprite.getRolling()
+				&& ((sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
+		if (sprite.getRolling() && !skipLandingRollClear) {
+			if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
+				int oldCentreY = sprite.getCentreY();
+				int oldYRadius = sprite.getYRadius();
+				sprite.setRolling(false);
+				int radiusDelta = oldYRadius - sprite.getStandYRadius();
+				if (((sprite.getAngle() + ANGLE_WALL_OFFSET) & ANGLE_WALL_MASK) != 0) {
+					radiusDelta = -radiusDelta;
+				}
+				sprite.setCentreYPreserveSubpixel((short) (oldCentreY + radiusDelta));
+			} else {
+				sprite.setRolling(false);
+				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
+			}
+		} else if (featureSet != null
+				&& featureSet.landingRollClearUsesCurrentYRadiusDelta()
+				&& !skipLandingRollClear
+				&& (sprite.getYRadius() != sprite.getStandYRadius()
+				|| sprite.getXRadius() != sprite.getStandXRadius())) {
+			// ROM Player_TouchFloor (sonic3k.asm:24341-24343 Sonic, 29134-29136 Tails)
+			// unconditionally resets y_radius/x_radius to defaults on landing,
+			// before the Status_Roll check. The roll branch only adjusts y_pos.
+			// S3K Player_TouchFloor_Check_Spindash branches directly to loc_121D8
+			// when spin_dash_flag is set (sonic3k.asm:24325-24327), skipping that
+			// entire radius-reset body; preserve both rolling status and rolling radii.
+			//
+			// Engine's setRolling(false) above covers the rolling case via
+			// applyStandingRadii. For non-rolling sprites whose radii were set
+			// to non-default values by an object hook (e.g. CnzWireCage's
+			// release path writes y_radius=$13/x_radius=9 unconditionally per
+			// sonic3k.asm:69986-69987 / 70095-70096), engine landing must
+			// likewise restore standing defaults so subsequent ground physics
+			// uses Tails's own radii (CNZ1 trace post-F1815: ROM resets Tails
+			// y_radius from $13 to $F at landing, leaving y_pos unchanged;
+			// without this engine accumulates a 4-pixel y_pos drift).
+			sprite.applyStandingRadii(false);
 		}
-		sprite.setPinballMode(false);
+		if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {
+			sprite.setPinballMode(false);
+		}
 		sprite.setAir(false);
 		sprite.setPushing(false);
 		sprite.setRollingJump(false);
@@ -2007,6 +2929,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setYSpeed(gSpeed);
 			}
 			if ((angle & 0x80) != 0) gSpeed = (short) -gSpeed;
+			// S3K's steep air-floor path calls Player_TouchFloor_Check_Spindash
+			// before copying y_vel to ground_vel at loc_11FC2 (sonic3k.asm:
+			// 24112-24117). BubbleShield_Bounce can rewrite y_vel there, so
+			// inertia must observe the post-bounce velocity.
+			applyPostLandingAbilities(sprite, savedDoubleJumpFlag);
+			gSpeed = sprite.getYSpeed();
+			if ((angle & 0x80) != 0) gSpeed = (short) -gSpeed;
 			sprite.setGSpeed(gSpeed);
 			// ROM does NOT zero y_vel for steep landings (s2.asm:37612-37615 just returns)
 		} else {
@@ -2020,14 +2949,50 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// ROM (s2.asm:37592): asr y_vel(a0) - arithmetic shift right preserves sign
 				// Then (s2.asm:37609-37612): gSpeed = y_vel, negate if angle >= 0x80
 				short halfYSpeed = (short) (ySpeed >> 1);
+				sprite.setYSpeed(halfYSpeed);
 				short gSpeed = halfYSpeed;
+				if ((angle & 0x80) != 0) gSpeed = (short) -gSpeed;
+				// S3K loc_11FC2 writes ground_vel after
+				// Player_TouchFloor_Check_Spindash, so bubble bounce y_vel
+				// changes feed inertia on moderate slopes too.
+				applyPostLandingAbilities(sprite, savedDoubleJumpFlag);
+				gSpeed = sprite.getYSpeed();
 				if ((angle & 0x80) != 0) gSpeed = (short) -gSpeed;
 				sprite.setGSpeed(gSpeed);
 				// ROM does NOT zero y_vel for moderate angles - it leaves the halved value
-				sprite.setYSpeed(halfYSpeed);
 			}
 		}
+		if (isFlatAngle(angle)) {
+			applyPostLandingAbilities(sprite, savedDoubleJumpFlag);
+		}
+	}
 
+	/**
+	 * ROM direct HitFloor landing for movement quadrants 0x40/0xC0.
+	 * <p>
+	 * S1/S2 write {@code y_vel = 0} and {@code inertia = x_vel} after ResetOnFloor;
+	 * S3K's direct floor path does the same before falling through its TouchFloor tail.
+	 */
+    private void calculateDirectFloorLanding(AbstractPlayableSprite sprite) {
+        boolean wasHurt = sprite.isHurt();
+        int savedDoubleJumpFlag = sprite.getDoubleJumpFlag();
+        resetOnFloor();
+        if (wasHurt) {
+            // ROM Sonic_HurtStop / Tails hurt-stop zeroes all velocity when the
+            // hurt routine touches floor before returning to normal control
+            // (sonic3k.asm:24449-24467, 29194-29209). The direct floor path
+            // must not rederive inertia from the hurt knockback x_vel.
+            sprite.setGSpeed((short) 0);
+            sprite.setXSpeed((short) 0);
+            sprite.setYSpeed((short) 0);
+            return;
+        }
+        sprite.setYSpeed((short) 0);
+        sprite.setGSpeed(sprite.getXSpeed());
+        applyPostLandingAbilities(sprite, savedDoubleJumpFlag);
+    }
+
+	private void applyPostLandingAbilities(AbstractPlayableSprite sprite, int savedDoubleJumpFlag) {
 		// Bubble shield bounce check (s3.asm:21849-21859 Player_TouchFloor tail)
 		// ROM: Only Sonic (character_id 0) can trigger this — Knuckles/Tails have
 		// separate jump code that never sets doubleJumpFlag via bubbleShieldBounce.
@@ -2039,6 +3004,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 			// Flag already cleared by resetOnFloor→setAir(false), no extra clear needed
 		}
+	}
+
+	public void applyPostObjectLandingAbilities(AbstractPlayableSprite sprite, int savedDoubleJumpFlag) {
+		applyPostLandingAbilities(sprite, savedDoubleJumpFlag);
 	}
 
 	/**
@@ -2094,9 +3063,47 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return ((angle + ANGLE_SLOPE_OFFSET) & ANGLE_SLOPE_MASK) == 0;
 	}
 
+	private boolean shouldTriggerGroundSkid(short adjustedGSpeed, boolean turningRight) {
+		int angleCheck = ((sprite.getAngle() & 0xFF) + ANGLE_SLOPE_OFFSET) & ANGLE_SLOPE_MASK;
+		if (angleCheck != 0) {
+			return false;
+		}
+
+		// Retail S1/S2/S3K use the non-FixBugs path here: after storing the
+		// adjusted ground speed, the angle test writes only d0's low byte before
+		// the skid threshold cmp.w. Preserve that high-byte/zero-low-byte compare
+		// so marginal counter-direction movement flips facing on the same frame
+		// as the ROM.
+		short compareSpeed = (short) (adjustedGSpeed & 0xFF00);
+		return turningRight
+				? compareSpeed <= -SKID_SPEED_THRESHOLD
+				: compareSpeed >= SKID_SPEED_THRESHOLD;
+	}
+
 	// ========================================
 	// UTILITY HELPERS
 	// ========================================
+
+	/**
+	 * Bootstrap-only seed for the jump-press edge tracker. Trace replay's
+	 * title-card prelude does not invoke this manager (sidekick-only warmup),
+	 * so {@code jumpPrevious} stays {@code false}. If the BK2 movie was
+	 * already holding A/B/C across the title-card boundary, the first
+	 * {@link #storeInputState} call on the first compared frame would
+	 * compute {@code inputJumpPress = (jump && !false) = true} and fire
+	 * {@code doJump} one frame before the ROM (s2.asm:36253-36260
+	 * Obj01_Control reads {@code Ctrl_1_Press}; V-int's edge detector
+	 * already cleared the bit because the button was held throughout
+	 * title-card frames).
+	 *
+	 * <p>Call once during {@code TraceReplaySessionBootstrap.applyBootstrap}
+	 * with the last title-card-frame BK2 jump state to mirror the ROM
+	 * post-title-card edge state. Comparison-only — no trace data is read
+	 * or written by this hook.
+	 */
+	public void primeJumpPreviousForBootstrap(boolean jumpHeldAtPriorBk2Frame) {
+		this.jumpPrevious = jumpHeldAtPriorBk2Frame;
+	}
 
 	private void storeInputState(boolean up, boolean down, boolean left, boolean right, boolean jump) {
 		inputUp = up;
@@ -2105,7 +3112,24 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRight = right;
 		inputJump = sprite.isHurt() ? false : jump;
 		boolean suppressJumpPress = sprite.consumeSuppressNextJumpPress();
-		inputJumpPress = ((jump && !jumpPrevious) && !suppressJumpPress) || sprite.isForcedJumpPress();
+		if (sprite.isCpuControlled()) {
+			// ROM Tails CPU writes the whole delayed Ctrl_1_Logical word into
+			// Ctrl_2_Logical (s2.asm:38939-38946, 39025-39027), so the held bits
+			// and the press low-byte both come from the leader's delayed sample.
+			// In the engine, the press edge is conveyed via forcedJumpPress
+			// (set by SpriteManager when SidekickCpuController.getInputJumpPress()
+			// is true). Computing a fresh (jump && !jumpPrevious) edge against
+			// Tails' own jumpPrevious would manufacture a spurious press whenever
+			// the leader's delayed held bit transitions from clear to set without
+			// a corresponding press edge — the bootstrap held-jump case is the
+			// canonical example (CNZ2 trace frame 16: leader's BK2 prelude held
+			// jump, Tails reads the held bit but recorded_press=false). The CPU
+			// controller is the authoritative source for Tails' Ctrl_2_Press low
+			// byte, so consume the forced press signal directly.
+			inputJumpPress = sprite.isForcedJumpPress() && !suppressJumpPress;
+		} else {
+			inputJumpPress = ((jump && !jumpPrevious) && !suppressJumpPress) || sprite.isForcedJumpPress();
+		}
 		sprite.setForcedJumpPress(false); // consume one-shot signal
 		jumpPrevious = jump;
 	}
@@ -2141,31 +3165,131 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void updatePushingOnDirectionChange(boolean left, boolean right) {
-		if (left && !right && sprite.getDirection() == Direction.RIGHT) {
+		short gSpeed = sprite.getGSpeed();
+		// S2/S3K MoveLeft/MoveRight clear Status_Push only after the
+		// opposite-direction deceleration path is skipped. With positive
+		// ground_vel, MoveLeft decelerates and returns before bset Status_Facing /
+		// bclr Status_Push; with negative ground_vel, MoveRight does the same.
+		// See S3K Tails MoveLeft/MoveRight at sonic3k.asm:27797-27815 and
+		// 28094-28109. Do not pre-clear push while the player is still braking
+		// from the opposite direction.
+		//
+		// On the facing flip these routines also set prev_anim=Run/1
+		// (sonic3k.asm:28041 sub_14C20, 28109 sub_14CAC; s2 equivalents), which
+		// makes the SAME frame's Animate_Sonic/Animate_Tails clear Status_Push
+		// when anim != prev_anim (sonic3k.asm:29359-29364,29681-29686). That
+		// frame-end animation clear is independent of whether the character was
+		// already pushing when the flip happened: it removes any Status_Push the
+		// ground-wall collision sets later in the same frame. Arm the post-ground-
+		// wall clear on any grounded, non-rolling facing flip, not only when push
+		// was already set before the wall pass. (AIZ2 underwater CPU-Tails wall
+		// bounce: the flip frame's wall hit re-sets push, but ROM's prev_anim
+		// sentinel still clears it that frame, so push is gone entering the next
+		// no-hit frame.)
+		if (left && !right && sprite.getDirection() == Direction.RIGHT && gSpeed <= 0) {
 			sprite.setPushing(false);
-		} else if (right && !left && sprite.getDirection() == Direction.LEFT) {
+			forceGroundFacingFlipAnimationRestart();
+			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
+		} else if (right && !left && sprite.getDirection() == Direction.LEFT && gSpeed >= 0) {
 			sprite.setPushing(false);
+			forceGroundFacingFlipAnimationRestart();
+			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
 		}
+	}
+
+	private void forceGroundFacingFlipAnimationRestart() {
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (featureSet == null || !featureSet.animationChangeClearsPush()) {
+			return;
+		}
+		sprite.forceAnimationRestart();
+	}
+
+	private void clearFacingFlipPushAfterGroundWallCollision() {
+		if (!facingFlipForcesPushClearAfterGroundWall) {
+			return;
+		}
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (featureSet == null || !featureSet.animationChangeClearsPush()) {
+			return;
+		}
+		// S2/S3K MoveLeft/MoveRight clear pushing and force prev_anim=Run when
+		// facing flips (s2.asm:36569-36570,36632-36633,39541-39542,39604-39605;
+		// sonic3k.asm:27814-27815,28108-28109). Their animation routines then
+		// clear pushing when anim differs from prev_anim (s2.asm:38033-38038,
+		// 40879-40884; sonic3k.asm:29359-29364,29681-29686), after ground-wall
+		// collision can set Status_Push. S1 leaves the animation clear behind a
+		// FixBugs guard, so PhysicsFeatureSet.animationChangeClearsPush() gates it.
+		sprite.setPushing(false);
+	}
+
+	private void clearStaleCpuPushVelocityBeforeGroundMove() {
+		if (!sprite.isCpuControlled()
+				|| sprite.getAir()
+				|| !sprite.getPushing()
+				|| sprite.getGSpeed() == 0
+				|| inputLeft
+				|| inputRight) {
+			return;
+		}
+		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+		if (fs == null || !fs.sidekickClearsStalePushVelocityBeforeGroundMove()) {
+			return;
+		}
+		SidekickCpuController cpu = sprite.getCpuController();
+		if (cpu == null || !cpu.usedObjectOrderGracePushBypassThisFrame()) {
+			return;
+		}
+		// S3K loc_13DD0's live Status_Push bypass preserves the already-loaded
+		// Ctrl_2 sample, and Tails_InputAcceleration_Path then decelerates and
+		// projects ground_vel before any push-collision clear
+		// (sonic3k.asm:26702-26705,26775-26785,27947-28017). Do not pre-clear
+		// that ROM-visible current-push path or the same MGZ grace continuation:
+		// MGZ1 F1466-F1470 needs no-input deceleration from $00E4 through $00A4
+		// instead of an immediate zero. This clear is only for provider-approved
+		// object-order bridges after the live push bit has locally dropped, where
+		// there is no direct ROM branch and stale inertia would otherwise advance
+		// before the blocking pass catches up.
+		sprite.setXSpeed((short) 0);
+		sprite.setGSpeed((short) 0);
 	}
 
 	private void handleSkid() {
 		if (!sprite.getSkidding()) sprite.setSkidding(true);
 		audioManager.playSfx(GameSound.SKID);
+		advanceSkidDustTimer();
+	}
 
+	void advanceFixedSkidDustWhileStopAnimPersists() {
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (featureSet == null || !featureSet.waterSplashUsesFixedDustObject()) {
+			return;
+		}
+		if (!(sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile profile)) {
+			return;
+		}
+		if (sprite.isHurt() || sprite.getDead()) {
+			return;
+		}
+		int skidAnimId = profile.getSkidAnimId();
+		if (skidAnimId < 0 || sprite.getAnimationId() != skidAnimId) {
+			return;
+		}
+		advanceSkidDustTimer();
+	}
+
+	private void advanceSkidDustTimer() {
+		// ROM Obj08_CheckSkid keeps ticking the fixed Sonic_Dust/Tails_Dust
+		// object while the parent remains in the Stop animation; entering
+		// Sonic_TurnLeft/Right only switches the dust object into that routine
+		// and seeds mapping_frame=$15 (docs/s2disasm/s2.asm:36927-36929,
+		// 36988-36990, 42759-42797).
 		int dustTimer = sprite.getSkidDustTimer() - 1;
 		if (dustTimer < 0) {
 			dustTimer = 3;
 			SkidDustObjectInstance.spawn(sprite);
 		}
 		sprite.setSkidDustTimer(dustTimer);
-	}
-
-	private void updateFacingDirection() {
-		if (inputLeft && !inputRight) {
-			sprite.setDirection(!sprite.getAir() && sprite.getGSpeed() > 0 ? Direction.RIGHT : Direction.LEFT);
-		} else if (inputRight && !inputLeft) {
-			sprite.setDirection(!sprite.getAir() && sprite.getGSpeed() < 0 ? Direction.LEFT : Direction.RIGHT);
-		}
 	}
 
 	private void updateCrouchState() {
@@ -2184,8 +3308,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		// ROM s2.asm:36237-36245: Balance/crouch/lookup checks happen when standing still
-		// on flat ground (angle + 0x20 & 0xC0 == 0) and not moving (inertia == 0)
-		boolean standingStill = sprite.getGSpeed() == 0 && isOnFlatGround()
+		// on flat ground (angle + 0x20 & 0xC0 == 0) and not moving (inertia == 0).
+		// ROM tests inertia BEFORE ground friction (S1 _incObj/01 Sonic.asm:373,
+		// S2 s2.asm:36568 Sonic / 39689 Tails, friction at s2.asm:36768-36786), so use
+		// the pre-friction snapshot captured in doGroundMove. Without it, a player
+		// whose inertia decays to 0 this frame ducks one frame early; for S2 CPU Tails
+		// that early duck flips Tails_CheckSpindash ahead of Tails_Jump (s2.asm:
+		// 39594-39596) so Tails spindashes instead of jumping (MCZ1 f2362).
+		short standingInertia = preFrictionGroundSpeed != NO_PRE_FRICTION_SNAPSHOT
+				? (short) preFrictionGroundSpeed
+				: sprite.getGSpeed();
+		boolean standingStill = standingInertia == 0 && isOnFlatGround()
 				&& !sprite.getAir() && !sprite.getRolling() && !sprite.getSpindash();
 
 		// Update balance state (checks for ledge edges)
@@ -2211,8 +3344,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
         }
     }
 
-	private void applyDeathMovement() {
-		sprite.setYSpeed((short) (sprite.getYSpeed() + sprite.getGravity()));
+	private short applyDeathMovement() {
+		short oldYSpeed = sprite.getYSpeed();
+		applyGravity();  // Gated on isObjectControlled(); a controlled sprite never enters the death routine anyway but keep gates consistent
 		sprite.setGSpeed((short) 0);
 		sprite.setXSpeed((short) 0);
 
@@ -2231,6 +3365,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				levelManager().requestRespawn();
 			}
 		}
+		return oldYSpeed;
 	}
 
 	/**
@@ -2397,6 +3532,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return collisionSystem().hasObjectSupport(sprite);
 	}
 
+	private boolean hasGroundingObjectSupport() {
+		return collisionSystem().hasGroundingObjectSupport(sprite);
+	}
+
 	private void clearRidingObject() {
 		collisionSystem().clearRidingObject(sprite);
 	}
@@ -2460,6 +3599,35 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * 1. Standing on object edge (status.player.on_object set)
 	 * 2. Standing on terrain edge (ChkFloorEdge distance >= 12)
 	 */
+	/**
+	 * Returns whether the player would be edge-balancing THIS frame, with no
+	 * lasting side effects. ROM Sonic_Balance runs before Sonic_LookUp/Sonic_Duck
+	 * and balancing diverts to Sonic_ResetScr (no look-up/down). The engine
+	 * normally computes balance in updateCrouchState() AFTER the doGroundMove()
+	 * look code, so the look code needs a current-frame read here. updateBalanceState()
+	 * sets the balance level and (on an edge) the facing direction; we snapshot and
+	 * restore both so the authoritative balance/facing is still produced at the
+	 * normal time by updateCrouchState() -- this predicate is purely a read.
+	 *
+	 * <p>Returns false when left/right is held (ROM reaches the look/duck/balance
+	 * block only when not steering, s1.asm Sonic_CheckDpadLetGo). Callers gate on
+	 * the standing-still-on-flat-ground precondition before invoking.
+	 */
+	private boolean computeCurrentFrameBalancing() {
+		if (inputLeft || inputRight) {
+			return false;
+		}
+		Direction savedDirection = sprite.getDirection();
+		int savedBalanceState = sprite.getBalanceState();
+		updateBalanceState();
+		boolean balancing = sprite.isBalancing();
+		// Restore: the real balance state + facing are recomputed at their normal
+		// time by updateCrouchState(); this call must leave no trace.
+		sprite.setBalanceState(savedBalanceState);
+		sprite.setDirection(savedDirection);
+		return balancing;
+	}
+
 	private void updateBalanceState() {
 		// Reset balance state first
 		sprite.setBalanceState(0);
@@ -2518,9 +3686,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int objectX;
 		SolidObjectParams params;
 		int ridingPieceIndex = objectManager.getRidingPieceIndex(sprite);
+		boolean useMultiPieceWidth = false;
 		if (ridingPieceIndex >= 0 && ridingObject instanceof MultiPieceSolidProvider multiPiece) {
 			objectX = multiPiece.getPieceX(ridingPieceIndex);
 			params = multiPiece.getPieceParams(ridingPieceIndex);
+			useMultiPieceWidth = true;
 		} else {
 			objectX = ridingObject.getX();
 			params = provider.getSolidParams();
@@ -2531,18 +3701,58 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		boolean extended = featureSet != null && featureSet.extendedEdgeBalance();
+		boolean singleFacingBalanceSet = usesSingleFacingBalance(featureSet);
 
-		int objectWidth = params.halfWidth(); // Half-width (radius)
+		// ROM Sonic_Move (s2.asm:36285) / Tails_Move (s2.asm:39359) read
+		// `width_pixels(a1)` from the object's SST for the balance computation,
+		// NOT the SolidObject-extended X-check width (which may be
+		// `width_pixels + N` for some objects, e.g. SmashableGround uses
+		// `width_pixels=$10` for balance but `width_pixels+$B=$1B` for
+		// SolidObject's d1 in s2.asm:48703-48705). The engine's
+		// `SolidObjectParams.halfWidth()` bakes in any per-object collision
+		// extension, so using it here makes Tails report d1 outside the
+		// (4, 2*width-4) Balance window on objects like SmashableGround and
+		// the Tails_Lookup branch falls through to Tails_Duck, which sets
+		// anim=Duck and spuriously triggers Tails_CheckSpindash the next
+		// frame when the delayed Ctrl_2 jump-press latches.
+		// ROM Sonic_Move / Tails_Move balance reads `width_pixels(a1)` — the
+		// object's own SST width byte (s2.asm:36586/39707, sonic3k.asm:22455) —
+		// which is neither the rendered on-screen footprint nor the (possibly
+		// extended) SolidObject X-check width. AbstractObjectInstance exposes it
+		// via getBalanceWidthPixels(); it defaults to getOnScreenHalfWidth()
+		// (16 px, correct for SmashableGround and most sprites) and is overridden
+		// where the balance width_pixels differs (e.g. the CPZ/WFZ moving
+		// platform Obj19, whose subtype width_pixels is $20/$18/$40). Using 16
+		// for the platform shifted the d1 edge test by up to 8 px, making the
+		// player balance/flip facing on the wrong (left) object edge — observed
+		// as a sidekick (Tails CPU) facing latch in CPZ2.
+		int objectWidth;
+		if (useMultiPieceWidth) {
+			objectWidth = params.halfWidth();
+		} else if (ridingObject instanceof com.openggf.level.objects.AbstractObjectInstance objectInstance) {
+			objectWidth = objectInstance.getBalanceWidthPixels();
+		} else {
+			objectWidth = params.halfWidth();
+		}
 		int playerX = sprite.getCentreX();
 
 		// ROM formula: d1 = player_x + width - object_x
 		// This gives player position relative to left edge of object
 		int d1 = playerX + objectWidth - objectX;
 
-		// S1: d2 = (width * 2) - 4, left threshold 4 (s1.asm:344,347)
-		// S2: d2 = (width * 2) - 2, left threshold 2 (s2.asm:36268)
-		int leftThreshold = extended ? 2 : 4;
-		int d2 = (objectWidth * 2) - (extended ? 2 : 4);
+		// S1 (non-extended) hard-codes #4 (s1disasm/_incObj/01 Sonic.asm:392).
+		// Extended (S2/S3K) reads a per-character shift from PhysicsProfile:
+		// Sonic=2 (s2.asm:36287, sonic3k.asm:22465), Tails=4 (s2.asm:39361,
+		// sonic3k.asm:27825), Knuckles=2 (sonic3k.asm:31810).
+		int balanceShift;
+		if (!extended) {
+			balanceShift = 4;
+		} else {
+			PhysicsProfile profile = sprite.getPhysicsProfile();
+			balanceShift = profile != null ? profile.onObjectBalanceShift() : 2;
+		}
+		int leftThreshold = balanceShift;
+		int d2 = (objectWidth * 2) - balanceShift;
 
 		boolean facingRight = sprite.getDirection() == Direction.RIGHT;
 
@@ -2552,9 +3762,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// S2/S3K: 4-state balance with precarious check
 				boolean precarious = d1 < -4;
 				boolean facingTowardEdge = !facingRight;
-				int balanceState = facingTowardEdge ? (precarious ? 2 : 1) : (precarious ? 4 : 3);
-				if (balanceState == 4) {
+				int balanceState;
+				if (singleFacingBalanceSet) {
 					sprite.setDirection(Direction.LEFT);
+					balanceState = singleFacingBalanceState(precarious);
+				} else {
+					balanceState = facingTowardEdge ? (precarious ? 2 : 1) : (precarious ? 4 : 3);
+					if (balanceState == 4) {
+						sprite.setDirection(Direction.LEFT);
+					}
 				}
 				sprite.setBalanceState(balanceState);
 			} else {
@@ -2569,9 +3785,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// S2/S3K: 4-state balance with precarious check
 				boolean precarious = d1 >= d2 + 6;
 				boolean facingTowardEdge = facingRight;
-				int balanceState = facingTowardEdge ? (precarious ? 2 : 1) : (precarious ? 4 : 3);
-				if (balanceState == 4) {
+				int balanceState;
+				if (singleFacingBalanceSet) {
 					sprite.setDirection(Direction.RIGHT);
+					balanceState = singleFacingBalanceState(precarious);
+				} else {
+					balanceState = facingTowardEdge ? (precarious ? 2 : 1) : (precarious ? 4 : 3);
+					if (balanceState == 4) {
+						sprite.setDirection(Direction.RIGHT);
+					}
 				}
 				sprite.setBalanceState(balanceState);
 			} else {
@@ -2581,6 +3803,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setDirection(Direction.RIGHT);
 			}
 		}
+	}
+
+	private boolean usesSingleFacingBalance(PhysicsFeatureSet featureSet) {
+		return (featureSet != null && featureSet.singleFacingBalanceAnimationSet())
+				|| profileUsesSingleFacingBalance();
+	}
+
+	private boolean profileUsesSingleFacingBalance() {
+		PhysicsProfile profile = sprite.getPhysicsProfile();
+		return profile != null && profile.singleFacingBalance();
+	}
+
+	private int singleFacingBalanceState(boolean precarious) {
+		return profileUsesSingleFacingBalance() ? 1 : (precarious ? 2 : 1);
 	}
 
 	/**
@@ -2651,9 +3887,24 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		// S2/S3K: Edge detection uses ±9 side sensors as the primary gate
-		// (ChkFloorEdge probes at center X, but the distance threshold effectively
-		// aligns with the side sensor approach for S2/S3K terrain geometry).
+		// S2/S3K: ROM Sonic_Balance (s2.asm:36657-36660, sonic3k.asm:22531-22535)
+		// first probes ChkFloorEdge at the player's CENTER X (`x_pos(a0)`, a single
+		// probe — ChkFloorEdge sets d3=x_pos at s2.asm:44092-44093) and requires the
+		// center floor distance >= $C before any balance; otherwise it falls through
+		// to Sonic_Lookup/Sonic_Duck (`cmpi.w #$C,d1; blt Sonic_Lookup`). Only once
+		// the CENTER is over a >=12px gap does it choose the left/right edge branch.
+		// Without this center gate the engine balanced whenever one ±9 side sensor
+		// ran off a solid edge while the center still had ground — e.g. CNZ2 Sonic
+		// standing on the left lip of a wide invisible solid block (Obj74). That
+		// spurious balance suppressed the Duck crouch (updateCrouchState requires
+		// !isBalancing), so a held Down+B fired a normal jump instead of charging a
+		// spin-dash (s2.asm:37549-37571 Sonic_CheckSpindash requires anim==Duck).
+		// The S1 (!extended) branch above already applies this center gate.
+		SensorResult centerResult = groundSensors[0].scan((short) 9, (short) 0);
+		int centerDist = (centerResult == null) ? 99 : centerResult.distance();
+		if (centerDist < EDGE_THRESHOLD) {
+			return; // Center still has ground — ROM branches to Lookup/Duck, no balance.
+		}
 
 		// Right edge: left sensor has ground, right sensor doesn't
 		if (leftDist < EDGE_THRESHOLD && rightDist >= EDGE_THRESHOLD) {
@@ -2726,6 +3977,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Determine if precarious (closer to falling)
 		boolean precarious = distanceFromPrecarious < 6;
+
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (usesSingleFacingBalance(featureSet)) {
+			sprite.setDirection(isLeftEdge ? Direction.LEFT : Direction.RIGHT);
+			sprite.setBalanceState(singleFacingBalanceState(precarious));
+			return;
+		}
 
 		int balanceState;
 		if (facingTowardEdge) {

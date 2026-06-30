@@ -1,8 +1,11 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.EngineContext;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic1.Sonic1ConveyorState;
 import com.openggf.game.sonic1.Sonic1LevelInitProfile;
 import com.openggf.game.sonic1.Sonic1SwitchManager;
@@ -11,6 +14,7 @@ import com.openggf.game.sonic2.Sonic2LevelEventManager;
 import com.openggf.game.sonic2.Sonic2LevelInitProfile;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kLevelInitProfile;
+import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,13 +34,14 @@ public class TestPostLoadAssemblyBehavior {
 
     @BeforeEach
     public void resetCamera() {
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     // ========== Checkpoint Resume: Context Snapshot Round-Trip ==========
@@ -175,10 +180,28 @@ public class TestPostLoadAssemblyBehavior {
         assertEquals(600, ctx.getCheckpointY());
     }
 
-    // ========== S3K Title Card Suppression on Checkpoint Resume ==========
+    @Test
+    public void checkpointRestoreUsesRomCentreCoordinates() {
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x0100);
+        camera.setY((short) 0x0020);
+
+        CheckpointState state = new CheckpointState();
+        state.saveCheckpoint(1, 0x1234, 0x0456, false);
+
+        Sonic player = new Sonic("sonic", (short) 0, (short) 0);
+        state.restoreToPlayer(player, camera);
+
+        assertEquals(0x1234, player.getCentreX() & 0xFFFF,
+                "Checkpoint x_pos must restore to the playable centre coordinate");
+        assertEquals(0x0456, player.getCentreY() & 0xFFFF,
+                "Checkpoint y_pos must restore to the playable centre coordinate");
+    }
+
+    // ========== S3K Title Card Behavior on Checkpoint Resume ==========
 
     @Test
-    public void s3kTitleCardStepExecutesAsNoOpWhenCheckpointActive() {
+    public void s3kTitleCardStepStillExistsWhenCheckpointActive() {
         CheckpointState state = createCheckpoint(1, 100, 200);
 
         LevelLoadContext ctx = new LevelLoadContext();
@@ -189,23 +212,18 @@ public class TestPostLoadAssemblyBehavior {
         Sonic3kLevelInitProfile profile = newS3kProfile();
         InitStep titleCardStep = findStep(profile.levelLoadSteps(ctx), "RequestTitleCard");
         assertNotNull(titleCardStep, "S3K profile should include RequestTitleCard step");
-
-        // Execute the step. With checkpoint active, S3K's guard skips the
-        // LevelManager.requestTitleCardIfNeeded() call entirely, making this a
-        // no-op. If the guard were missing, this would NPE because LevelManager
-        // is not initialized.
-        titleCardStep.execute();
     }
 
     @Test
-    public void s3kTitleCardStepDocumentsCheckpointGuard() {
+    public void s3kTitleCardStepHasNoCheckpointGuard() {
         LevelLoadContext ctx = new LevelLoadContext();
         ctx.setIncludePostLoadAssembly(true);
 
         Sonic3kLevelInitProfile profile = newS3kProfile();
         InitStep step = findStep(profile.levelLoadSteps(ctx), "RequestTitleCard");
 
-        assertTrue(step.romRoutine().contains("skipped on checkpoint"), "S3K title card step should document checkpoint suppression");
+        assertFalse(step.romRoutine().contains("skipped on checkpoint"),
+                "S3K title card step should not suppress the title card just because a checkpoint is active");
     }
 
     @Test
@@ -251,8 +269,9 @@ public class TestPostLoadAssemblyBehavior {
         Sonic1LevelInitProfile profile = newS1Profile();
         List<InitStep> steps = profile.levelLoadSteps(ctx);
 
-        // 13 resource steps + 6 post-load steps (no SpawnSidekick) = 19
-        assertEquals(19, steps.size(), "S1 should have 19 steps (13 resource + 6 post-load)");
+        // 12 resource steps + 6 post-load steps (no SpawnSidekick) = 18
+        // (InitObjectManager + InitCameraBounds merged into InitObjectSystem)
+        assertEquals(18, steps.size(), "S1 should have 18 steps (12 resource + 6 post-load)");
     }
 
     @Test
@@ -321,5 +340,4 @@ public class TestPostLoadAssemblyBehavior {
                 .orElse(null);
     }
 }
-
 

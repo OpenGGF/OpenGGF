@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kPhysicsProvider;
 import com.openggf.game.session.SessionManager;
@@ -25,12 +26,12 @@ class TestS3kCharacterSpeeds {
     void setUp() {
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         SessionManager.clear();
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }
@@ -143,14 +144,43 @@ class TestS3kCharacterSpeeds {
         assertEquals(0x80, sprite.getRunDecel(), "After shoes expire: canonical decel");
     }
 
+    @Test
+    void speedShoesTimerExpiresBeforeNextMovementFrameAfterRomWindow() {
+        TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
+        var levelManager = sprite.currentLevelManagerIfAvailable();
+        assertNotNull(levelManager, "test gameplay mode must provide a level manager");
+        sprite.giveSpeedShoes();
+
+        // S3K speed shoes are a byte timer (150) decremented only on every 8th
+        // level frame (Sonic_ChkShoes, sonic3k.asm:22072-22078). Advance the
+        // level frame counter alongside each timer tick, as the live frame step
+        // does, so the every-8th-frame gate fires. The shoes then expire across
+        // the ~1200-frame ROM window via 150 decrements.
+        int ticks = 0;
+        while (sprite.hasSpeedShoes() && ticks < 2000) {
+            levelManager.setFrameCounter(ticks);
+            GameServices.timers().update();
+            ticks++;
+        }
+
+        assertFalse(sprite.hasSpeedShoes(),
+                "S3K Sonic_Display clears speed shoes and restores movement constants "
+                        + "(docs/skdisasm/sonic3k.asm:21540-21561,22067-22081).");
+        assertEquals(0x0C, sprite.getRunAccel(), "After shoes expire: canonical accel");
+        assertEquals(0x600, sprite.getMax(), "After shoes expire: canonical max");
+        assertTrue(ticks >= 1190 && ticks <= 1201,
+                "S3K speed shoes last ~1200 wall-clock frames via 150 every-8th-frame "
+                        + "decrements (sonic3k.asm:40818 (20*60)/8); was " + ticks);
+    }
+
     // --- S2 Comparison ---
 
     @Test
     void s2_sonic_matchesS3kSonic() {
         GameModuleRegistry.setCurrent(new com.openggf.game.sonic2.Sonic2GameModule());
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        RuntimeManager.createGameplay();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
         assertEquals(0x0C, sprite.getRunAccel(), "S2 Sonic: same accel as S3K");
         assertEquals(0x80, sprite.getRunDecel(), "S2 Sonic: same decel as S3K");

@@ -1,7 +1,8 @@
 package com.openggf.tests;
 
-import com.openggf.game.EngineServices;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.EngineContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,15 +23,15 @@ public class TestOilSurfaceManager {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.configureEngineServices(EngineServices.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
         manager = new OilSurfaceManager();
         sprite = new TestOilSprite("test", (short) 0, (short) 0);
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -82,7 +83,8 @@ public class TestOilSurfaceManager {
 
         assertTrue(sprite.getDead(), "Should die when submersion reaches zero on standing frame");
         assertFalse(manager.isStandingOnOil());
-        assertFalse(sprite.isOnObject());
+        assertTrue(sprite.isOnObject(),
+                "OOZ suffocation jumps to KillCharacter, which preserves Status_OnObj while setting Status_InAir");
     }
 
     private void landOnOilSurface() {

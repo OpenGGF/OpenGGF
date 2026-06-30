@@ -8,16 +8,48 @@ OpenGGF is an open-source, Java-based game engine for research and preservation 
 
 **Critical requirement:** The engine must replicate original physics pixel-for-pixel. Accuracy is paramount. Always verify against the disassembly.
 
+## Current Work Priorities
+
+The current delivery priority is **S3K playable vertical-slice parity and release readiness**, not broad architecture migration for its own sake. AIZ -> HCZ remains the primary release slice, but CNZ/MGZ/ICZ/MHZ/LBZ are now active route-stabilization areas with complete-run trace frontiers. Prefer work that closes an actual route through Sonic 3 & Knuckles: traversal objects, badniks, bosses, event/camera flow, scroll/parallax, animated tiles, palette/PLC state, sidekick behavior, trace blockers, rewind-relevant state, and visual validation.
+
+Use the runtime-owned framework stack when the slice touches those systems: `ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`, `ZoneLayoutMutationPipeline`, `ScrollEffectComposer`, `SpecialRenderEffectRegistry`, and `AdvancedRenderModeController`. Uplift S1/S2 or older S3K code opportunistically when it removes active duplication or risk, but do not let broad cleanup displace playable S3K progress.
+
+Default order of work:
+1. Keep AIZ -> HCZ stable as the primary release slice.
+2. Work CNZ, MGZ, ICZ, MHZ, and LBZ by current route blockers and complete-run trace frontiers.
+3. Implement S3K objects by route impact: traversal blockers, terrain modifiers, hazards, bosses/miniboss support, sidekick/object-lifetime mismatches, then high-usage badniks.
+4. Treat data select, special stages, and broad S1/S2 framework uplift as follow-up polish unless they directly block the active slice or release gate.
+
 ## Build & Run Commands
 
 ```bash
 mvn package                          # Build (creates executable JAR with dependencies)
 mvn test                             # Run tests
-mvn test -Dtest=TestCollisionLogic   # Run a single test class
-java -jar target/sonic-engine-0.4.prerelease-jar-with-dependencies.jar  # Run (requires ROM)
+mvn "-Dtest=TestCollisionLogic" test # Run a single test class in PowerShell
+java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar  # Run (requires ROM)
 ```
 
 Maven Silent Extension (MSE) is configured in this repo via `.mvn/extensions.xml`, and `.mvn/maven.config` enables `-Dmse=relaxed` by default for repo-local Maven commands. Use `-Dmse=off` when full Maven logs are needed.
+In PowerShell, quote Maven `-D...` properties, especially focused test selectors such as `"-Dtest=com.openggf.package.TestClassName"`, so the shell does not reinterpret dots or punctuation.
+
+Tests in this repository must use JUnit 5 / Jupiter only. Do not add JUnit 4 tests, rules, runners, or `org.junit.*` imports.
+
+Trace replay frontier work must keep `docs/TRACE_FRONTIER_LOG.md` current.
+Update it when a trace frontier moves, a trace fix is committed, a previously
+passing trace regresses, or a full `*TraceReplay` sweep is used to choose the
+next target. Record the command, commit/worktree context, pass/fail status,
+error count, and first-error frame/field.
+
+## Branch Documentation Policy
+
+Tracked Git hooks live in `.githooks/`. A Maven build (`mvn`, `mvn test`, etc.) auto-installs them during the `validate` phase by pointing `core.hooksPath` at `.githooks` (the `install-git-hooks` antrun execution in `pom.xml`); this is idempotent and a no-op outside a git checkout. If you commit without building first, run `git config core.hooksPath .githooks` once manually. CI mirrors the same rules on PRs into `develop`. The hook entrypoints dispatch through `.githooks/run-policy`: Windows uses `validate-policy.ps1`, while macOS/Linux use `validate-policy.sh`.
+
+- Every non-`master` branch non-merge commit must carry these commit-message trailers, each starting with `updated` or `n/a`: `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`.
+- Merge commits skip trailer validation; merges into `develop` are covered by the README update rule below.
+- `prepare-commit-msg` auto-appends the trailer block on non-merge commits. Fill it in rather than removing it. Each trailer maps to a file/dir (e.g. `Changelog` → `CHANGELOG.md`, `Agent-Docs` → both `AGENTS.md` and `CLAUDE.md`, `Skills` → staged files under both `.agents/skills/` and `.claude/skills/`). If the mapped files are staged, the trailer must not say `n/a`. See `.githooks/run-policy` for the authoritative mapping.
+- **Changelog justification on engine changes:** A `feat`/`fix`/`perf` commit that touches `src/main/` must set `Changelog: updated` (and stage `CHANGELOG.md`) or justify the skip with an explicit reason after `n/a`, e.g. `Changelog: n/a: <reason>`. A bare `Changelog: n/a` on such a commit is now rejected by the `commit-msg` hook and CI (`validate_changelog_justification` in `validate-policy.sh` / `.ps1`). The base trailer gate only checks staged↔trailer consistency, so this added check catches a wrong `n/a` on a changelog-worthy engine change. Commits with other subject prefixes, or that do not touch `src/main/`, are unaffected.
+- When merging a non-`master` branch into `develop`, stage a `README.md` update summarizing the branch change in the release/change log section.
+- The trailer block is the required attestation for the repo's "where relevant" documentation/discrepancy checks. Do not bypass it with `--no-verify`.
 
 ## ROM Requirement
 
@@ -39,31 +71,13 @@ These directories are untracked but available locally.
 
 ## ROM Offset Finder Tool
 
-Use **RomOffsetFinder** to search disassembly items and find ROM offsets. Supports S1, S2, S3K.
+Use **RomOffsetFinder** (`com.openggf.tools.disasm.RomOffsetFinder`) to search disassembly items and find ROM offsets across S1, S2, S3K via `--game s1|s2|s3k` (auto-detects from disasm path otherwise). The `s3k-disasm-guide` / `s2disasm-guide` / `s1disasm-guide` skills cover the full command catalog (`search`, `verify`, `find`, `test`, `plc`, etc.).
 
-```bash
-# Base command pattern (add --game s1 or --game s3k before command for non-S2)
-mvn exec:java "-Dexec.mainClass=com.openggf.tools.disasm.RomOffsetFinder" "-Dexec.args=<command>" -q
+**S3K note:** Compression type is encoded in label suffix (e.g. `AIZ1_8x8_Primary_KosM`) — the tool auto-infers, no file extension needed.
 
-# Examples
-# search <pattern>     - Search for items by label/filename
-# verify <label>       - Verify calculated offset against ROM
-# list [type]          - List all includes (optionally by type: nem/kos/kosm/eni/sax/bin)
-# test <offset> <type> - Test decompression at offset
-# export <type> [prefix] - Export verified offsets as Java constants
-# verify-batch [type]  - Batch verify all/filtered items
-# find <label> [offset] - Find ROM offset by decompression search
-# search-rom <hex> [start] [end] - Search ROM for hex byte pattern (inline data, pointer tables, etc.)
-# plc <name>           - Show PLC definition contents and list art entries
-```
+## Agent Workflow Tooling
 
-Game selection: `--game s1`, `--game s2` (default), or `--game s3k`. Auto-detects from disasm path if not specified.
-
-**S3K note:** Compression type is encoded in label suffix (e.g., `AIZ1_8x8_Primary_KosM`) rather than file extension. The tool auto-infers from label.
-
-**PLC cross-referencing:** Search results for art labels automatically show which PLCs reference that art. Use `plc <name>` to display all art entries within a specific PLC definition.
-
-See `com.openggf.tools.disasm` package for programmatic API.
+Five `com.openggf.tools` CLIs reduce context loss when implementing objects/zones/trace fixes: `AgentWorkflowTool` (object-task preflight checklist), `RomArtIntakeTool` (S3K ROM-backed art/mapping/PLC intake), `ObjectScaffoldTool` (guard-friendly object/badnik + test skeleton), `TraceTriageTool` (first-divergence brief from a trace report), and `ZoneSpecNormalizerTool` (normalizes a zone-analysis spec). See [docs/agent-workflow/README.md](docs/agent-workflow/README.md) for exact invocations, plus the per-task runbooks, CI guard-failure explainer, pitfall index, documentation-obligation checklist, and delegation prompt templates.
 
 ## Architecture
 
@@ -74,38 +88,46 @@ See `com.openggf.tools.disasm` package for programmatic API.
 
 The engine uses a **two-tier service model** that separates global access from per-object context:
 
-**Tier 1: `GameServices` (static facade)** — Global access for managers and non-object code:
-```java
-GameServices.camera()       // Camera
-GameServices.level()        // LevelManager
-GameServices.gameState()    // GameStateManager - score, lives, emeralds
-GameServices.audio()        // AudioManager - SMPS driver
-GameServices.timers()       // TimerManager - event timing
-GameServices.rom()          // RomManager - ROM data access
-GameServices.sprites()      // SpriteManager
-GameServices.fade()         // FadeManager - screen transitions
-GameServices.collision()    // CollisionSystem
-GameServices.parallax()     // ParallaxManager
-GameServices.water()        // WaterSystem
-GameServices.debugOverlay() // DebugOverlayManager
-```
+**Tier 1: `GameServices` (static facade)** — Global access for managers, event handlers, and other non-object code. Exposes gameplay-scoped accessors (`camera()`, `level()`, `parallax()`, `water()`, `gameState()`, `timers()`, `sprites()`, `fade()`, `collision()`, ...) which require an active `GameplayModeContext`, plus engine globals (`rom()`, `audio()`, `graphics()`, `configuration()`, `module()`, `debugOverlay()`, ...) resolved via `EngineServices`, plus `*OrNull()` variants. See `GameServices.java` for the full surface.
 
-**Tier 2: `ObjectServices` (injected per-object)** — Context-specific services for game objects:
-```java
-// Inside any AbstractObjectInstance subclass:
-services().objectManager()        // ObjectManager
-services().renderManager()        // ObjectRenderManager
-services().audioManager()         // AudioManager
-services().camera()               // Camera
-services().gameState()            // GameStateManager
-services().zoneFeatureProvider()  // ZoneFeatureProvider
-```
+**Tier 2: `ObjectServices` (injected per-object)** — Context-specific services for game objects. The interface lives at `com.openggf.level.objects.ObjectServices`; `DefaultObjectServices` is the production implementation, backed by `GameplayModeContext` and `EngineContext`. Inside an `AbstractObjectInstance` subclass, call `services()` to reach managers (`objectManager`, `renderManager`, `audioManager`, `camera`, `gameState`, `zoneFeatureProvider`, ...) plus audio shortcuts, level-transition requests, world session, RNG, ROM, config. See `ObjectServices.java` for the full surface.
 
-Objects receive `ObjectServices` via injection at construction time (ThreadLocal context set by `ObjectManager`). **Never call `getInstance()` from object code** — use `services()` instead. `GameServices` is for non-object code (managers, event handlers, controllers).
+Objects receive `ObjectServices` via injection at construction time (ThreadLocal context set by `ObjectManager`). **Never call `getInstance()` from object code** — use `services()` instead.
 
-### GameRuntime
+### Session Ownership (post runtime-ownership migration)
 
-`GameRuntime` (`com.openggf.game`) is the explicit runtime object that will own all mutable gameplay state. `RuntimeManager` manages its lifecycle. This is the foundation for safe editor mode enter/exit, level rebuilds, and undo/redo. Currently `GameRuntime` coordinates singleton `resetState()` calls; the long-term goal is for it to own the state directly.
+Gameplay state is split by lifetime across three layers in `com.openggf.game.session`:
+
+- **`WorldSession`** — durable across editor mode swaps. Owns the active `GameModule`, loaded `Level`, and zone/act metadata.
+- **`GameplayModeContext`** — disposable, rebuilt on each gameplay session entry. Owns all gameplay-scoped managers (camera, timers, game state, fade, RNG, water, parallax, collision, sprites, level, ...) plus the runtime-shared registries below. Provides `initializeFreshGameplayState()` for editor-exit counter reset.
+- **`SessionManager`** — manages lifecycle (`openGameplaySession`, `enterEditorMode`, `resumeGameplayFromEditor`).
+
+Editor entry/exit uses teardown+rebuild (no parking): the mode context is destroyed/recreated while `WorldSession` survives, then `LevelManager.restoreInheritedLevel()` reapplies any `MutableLevel` edits. The old `GameRuntime`/`RuntimeManager` façade is retired — prefer explicit dependencies from `GameplayModeContext`, `GameServices`, or `ObjectServices`. See `docs/superpowers/specs/2026-04-07-runtime-ownership-migration-design.md` for the full design.
+
+### Level Editor (`com.openggf.editor` + `GameMode.EDITOR`)
+
+The in-engine level editor MVP lives in the `com.openggf.editor` package: `LevelEditorController`, `EditorInputHandler`, `EditorMouseTransform`, `EditorHistory` (+ `commands.*` undoable strokes), `persistence.EditorSaveManager` / `EditorSaveEnvelope` / `EditorSavePayload`, and `render.EditorToolbarRenderer`. A `GameMode.EDITOR` is integrated into `Engine` and `SessionManager`. With `debug.flags.editor` enabled in `config.yaml`, toggle into edit mode mid-play, paint chunks with the mouse, undo/redo strokes via `Block.saveState()`/`restoreState()`, and persist edits through the editor save envelope. Editor enter/exit rides the teardown+rebuild session path above (`WorldSession` survives, `MutableLevel` edits re-applied on resume). The editor's in-mode key/mouse bindings are hardcoded in `EditorInputHandler` — see [CONFIGURATION.md](CONFIGURATION.md).
+
+### Runtime-Shared Framework Stack
+
+`GameplayModeContext` hosts the shared registries/controllers used to normalize zone-specific behavior across games (accessed through `GameServices` or directly via `gameplayMode.getX()`):
+
+- `RewindRegistry` / `RewindController` / `PlaybackController` - Gameplay-scoped keyframe capture, deterministic seek/replay, held-rewind trace debugging, and field-capture coverage audits. Automatic capture currently uses `GenericFieldCapturer`, `GenericRewindEligibility`, `@RewindTransient` / `@RewindDeferred`, stable identity ids in `com.openggf.game.rewind.identity`, and compact schema codecs/policies in `com.openggf.game.rewind.schema` (`CompactFieldCapturer`, `RewindCodecs`, `RewindPolicyRegistry`, `RewindSchemaRegistry`). The standalone `RewindFieldInventoryTool` lives at `com.openggf.tools.rewind`. Default non-badnik object subclasses use compact schema-backed sidecar state when all default scalar fields have codecs. Object coverage should prefer central eligibility, codecs, and policy-registry rules over repeated per-object annotations or rewind overrides unless bespoke state requires it. Phase-1 coverage audit: `RewindCoverageAnalyzer` + the report-only `TestRewindCoverageGuard` (vs `src/test/resources/rewind/coverage-baseline.txt`) flag any spawnable object lacking a recreate path, holding an uncaptured `final` scalar, or holding an object reference not captured as a rewind id; run `RewindFieldInventoryTool --coverage` for the report. A new gap fails the guard — fix coverage or (if intentional) add its gap key to the baseline.
+- `ZoneRuntimeRegistry` - Typed per-zone runtime state adapters over raw event/state bytes
+- `PaletteOwnershipRegistry` - Multi-writer palette arbitration, precedence, and underwater mirroring
+- `AnimatedTileChannelGraph` - Shared animated tile channels for script-driven and custom tile uploads
+- `ZoneLayoutMutationPipeline` - Deterministic queued/immediate live layout edits and redraw sequencing
+- `SpecialRenderEffectRegistry` - Staged additional render passes layered into the normal scene
+- `AdvancedRenderModeController` - Frame-level render-mode state such as per-line/per-cell scroll overrides
+
+Related scroll/deform reuse lives in `level.scroll.compose`, centered on `ScrollEffectComposer` and helper plans such as `DeformationPlan` and `WaterlineBlendComposer`.
+
+When adding or refactoring gameplay systems, prefer plugging into these runtime-owned frameworks rather than introducing new zone-local registries or one-off manager state.
+
+Two ROM-state-driven hooks worth knowing:
+
+- **Camera honors the ROM `Fast_V_scroll_flag`:** the vertical camera-tracking cap is raised when the player rides a platform that sets the ROM `Fast_V_scroll_flag` (e.g. the ICZ path-follow / ridden moving platforms). Model the flag, not the zone — this is not a zone carve-out.
+- **`ZoneRuntimeState.requiresFullWidthBgTilemap()`:** `LevelTilemapManager` consumes this generic `ZoneRuntimeState` default method to decide on a full-width background tilemap instead of probing `GameStateManager` directly (introduced when the HTZ earthquake overlay migrated into `SpecialRenderEffectRegistry`). Express new such needs as `ZoneRuntimeState` predicates rather than manager lookups.
 
 ### Core Managers
 - **LevelManager** - Thin coordinator after decomposition (see below)
@@ -129,26 +151,26 @@ Objects receive `ObjectServices` via injection at construction time (ThreadLocal
 
 ### MutableLevel
 
-`MutableLevel` (`com.openggf.level`) provides snapshot + mutation + dirty-region tracking for level tile data. Foundation for the planned level editor. Uses `Block.saveState()/restoreState()` for undo/redo. Dirty regions are processed per-frame via `LevelFrameStep.processDirtyRegions()`.
+`MutableLevel` (`com.openggf.level`) provides snapshot + mutation + dirty-region tracking for level tile data. Foundation for the planned level editor. Uses `Block.saveState()/restoreState()` for undo/redo. Dirty regions are processed per-frame via `LevelFrameStep.processDirtyRegions()` (`LevelFrameStep` is at the `com.openggf` package root, not under `com.openggf.level`).
+
+**Level-mutation routing rule:** Gameplay-path tile edits (code under `game/sonic1|2|3k`, `level/objects`) must route through `ZoneLayoutMutationPipeline` / a `LevelMutationSurface` — never a direct `getMap().setValue(...)`. The CI test `TestNoDirectMapMutationsInGameplay` enforces this; editor commands and initial layout decoders (e.g. `Sonic3kLevel`) are exempt.
+
+**Level snapshot copy-on-write epoch:** `AbstractLevel.snapshotEpoch` + `cowEnsureWritable` clone `Block.chunkDescs` / `Chunk.patternDescs` / `Map.data` on first write per epoch so rewind snapshots stay isolated from later live edits. Integrated through `DirectLevelMutationSurface.setBlockInMap`.
 
 ### Key Packages
-| Package | Purpose |
-|---------|---------|
-| `sprites.playable` | Sonic/Tails player logic, physics; `PlayableEntity` interface |
-| `physics` | Terrain collision, sensors |
-| `level` | Level structures, rendering, scrolling, `MutableLevel`, `AbstractLevel` |
-| `level.objects` | Game object management, `ObjectServices`, shared base classes, utility helpers |
-| `level.scroll` | `AbstractZoneScrollHandler` and per-zone scroll handlers |
-| `audio` | SMPS driver, YM2612/PSG chip emulation, `AbstractAudioProfile`, `AbstractSmpsLoader` |
-| `data` | ROM loading/reading (`Rom`, `RomManager`, `RomByteReader`), `Game`/`GameFactory`, art provider interfaces |
-| `game` | Core game-agnostic interfaces, providers, `GameServices`, `GameRuntime`, `PlayableEntity`, `DamageCause` |
-| `game.sonic2` | Sonic 2-specific implementations |
-| `game.sonic2.objects` | Object factories, instance classes, badnik AI |
-| `game.sonic2.constants` | ROM offsets, object IDs, audio constants |
-| `game.sonic1` | Sonic 1 game module, level loading, loop/switch managers, zone features |
-| `game.sonic3k` | Sonic 3&K game module, level loading, bootstrap |
-| `graphics` | OpenGL rendering, shaders, pattern atlas, tilemap GPU renderer, FBO management |
-| `tools` | Compression utilities (Kosinski, Nemesis, Saxman), `ObjectDiscoveryTool`, disassembly tools |
+Package names are generally self-describing; a few with non-obvious facts:
+
+| Package | Note |
+|---------|------|
+| `level.objects` | Hosts `ObjectServices` (object interface lives here, not under `game`) and shared base classes / utility helpers |
+| `level.scroll.compose` | Shared deform/parallax composition helpers built around `ScrollEffectComposer` |
+| `audio.*` | Split across `audio` (backend), `audio.synth` (chip emulation), `audio.smps` (sequencer/loader), `audio.driver`, `audio.runtime`, `audio.rewind`, `audio.debug` |
+| `game` | Core game-agnostic interfaces incl. `GameServices`, `PlayableEntity`, `DamageCause`. `DataSelectProvider` itself lives here even though the framework is under `game.dataselect` |
+| `game.zone` / `palette` / `animation` / `mutation` / `render` | Runtime-owned shared frameworks (zone state, palette ownership, animated tiles, layout mutation, special render effects, advanced render modes) |
+| `game.sonicN.*` | Per-game modules, level loading, audio/data select implementations, constants |
+| `tools` | Compression utilities (Kosinski, Nemesis, Saxman) plus `ObjectDiscoveryTool` and disassembly tools (incl. `RomOffsetFinder`) |
+
+`LevelFrameStep` lives at the `com.openggf` package root, not under `level`.
 
 ### Consolidated Subsystems
 
@@ -156,7 +178,7 @@ Objects receive `ObjectServices` via injection at construction time (ThreadLocal
 
 **RingManager** inner classes: `RingPlacement` (collection state, sparkle, spawning), `RingRenderer` (cached pattern rendering), `LostRingPool` (lost ring physics).
 
-**PlayableSpriteController** coordinates: `PlayableSpriteMovement` (physics), `PlayableSpriteAnimation` (animation state), `SpindashDustController`, `DrowningController`.
+**PlayableSpriteController** (`sprites.playable`) coordinates `DrowningController` (`sprites.playable`) and three managers in the sibling `sprites.managers` package: `PlayableSpriteMovement` (physics), `PlayableSpriteAnimation` (animation state), `SpindashDustController` (spindash dust effects).
 
 **CollisionSystem** (`com.openggf.physics`) - Unified collision orchestration: terrain probes via `TerrainCollisionManager`, solid object resolution via `ObjectManager.SolidContacts`, post-resolution ground mode/headroom checks. Supports trace recording via `CollisionTrace`.
 
@@ -172,7 +194,13 @@ Objects receive `ObjectServices` via injection at construction time (ThreadLocal
 - **Block** = 128x128 pixel area (composed of Chunks)
 
 ### Configuration
-`SonicConfigurationService` loads from `config.json`: `DEBUG_VIEW_ENABLED`, `DEBUG_MODE_KEY` (68 = GLFW_KEY_D for free-fly debug mode), `AUDIO_ENABLED`, `SONIC_1_ROM`, `SONIC_2_ROM`, `SONIC_3K_ROM`, `DEFAULT_ROM`, `S3K_SKIP_INTROS`.
+`SonicConfigurationService` loads from `config.yaml` and migrates a legacy `config.json` to YAML on first run. Key bindings are stored as GLFW key-name strings (e.g. `"D"` / `"GLFW_KEY_D"`) and resolved to integer key codes at lookup. See [CONFIGURATION.md](CONFIGURATION.md) for the full key list. Two settings worth flagging:
+
+- `startup.legalDisclaimer` — boot through `GameMode.LEGAL_DISCLAIMER` first (default `true`). Set `false` in tests that boot the full `Engine`.
+- `debug.testMode.enabled` — replaces the master-title game-select with a trace picker (dev-only; requires `debug.testMode.catalogDir`).
+- `debug.testMode.catalogDir` — directory scanned by `TraceCatalog` (default `src/test/resources/traces`).
+
+**Startup order:** `Engine.init()` now boots through `GameMode.LEGAL_DISCLAIMER` first when `startup.legalDisclaimer=true` (the default). The disclaimer screen owns a `FadeManager` reveal, a 5-second readability gate, and a fade-to-black on dismiss; control then chains into the existing master-title or direct-gameplay path inside `Engine.exitLegalDisclaimer()`. Set the flag `false` in tests that boot the full `Engine`.
 
 ## Level Resource Overlay System
 
@@ -191,7 +219,7 @@ To add overlay support for other zones: add ROM offsets to `Sonic2Constants`, cr
 
 Game-specific behavior is isolated behind the `GameModule` interface. `GameModuleRegistry` holds the current module, `RomDetectionService` auto-detects ROM type.
 
-Key providers returned by `GameModule`: `ZoneRegistry`, `ObjectRegistry`, `GameAudioProfile`, `TouchResponseTable`, `PlaneSwitcherConfig`, `ScrollHandlerProvider`, `ZoneFeatureProvider`, `RomOffsetProvider`, `LevelEventProvider` (returns game-specific `AbstractLevelEventManager` subclass), `PhysicsProvider`, `SpecialStageProvider`, `BonusStageProvider`, `TitleCardProvider`, `TitleScreenProvider`, `LevelSelectProvider`, `DebugModeProvider`, `DebugOverlayProvider`, `ZoneArtProvider`, `ObjectArtProvider`, `RespawnState`, `LevelState`, `SuperStateController`.
+Each `GameModule` exposes per-game providers for zones, objects, audio, physics, level events, art, data select, save snapshots, etc. — see `GameModule.java` for the authoritative list.
 
 Each game has its own module (`Sonic1GameModule`, `Sonic2GameModule`, `Sonic3kGameModule`) and `RomDetector`.
 
@@ -202,7 +230,7 @@ Level events (boss arena setup, dynamic boundaries, zone transitions) are manage
 - **`AbstractLevelEventManager`** (`game/`) - Shared state machine mechanics: dual routine counters (`eventRoutineFg` and `eventRoutineBg`; S1/S2 only use Fg, S3K uses both), zone/act tracking, `initLevel()`/`update()` lifecycle, boss spawn coordination.
 - **`Sonic1LevelEventManager`** (`game/sonic1/events/`) - S1 zone event handlers. Per-zone handler classes.
 - **`Sonic2LevelEventManager`** (`game/sonic2/`) - S2 zone event handlers (HTZ earthquake, boss arenas, EHZ/CPZ/ARZ/CNZ events).
-- **`Sonic3kLevelEventManager`** (`game/sonic3k/`) - S3K zone event handlers (zone handlers pending implementation).
+- **`Sonic3kLevelEventManager`** (`game/sonic3k/`) - S3K zone event handlers. Per-zone handler classes (in `game/sonic3k/events/`): `Sonic3kAIZEvents`, `Sonic3kCNZEvents`, `Sonic3kHCZEvents`, `Sonic3kICZEvents`, `Sonic3kLBZEvents`, `Sonic3kMGZEvents`, `Sonic3kMHZEvents`. Other zones use default/no-op behavior until implemented.
 - **`PlayerCharacter`** enum (`game/`) - Character identity enum (`SONIC_AND_TAILS`, `SONIC_ALONE`, `TAILS_ALONE`, `KNUCKLES`) matching ROM's `Player_mode` variable for character-specific branching in event logic.
 
 Each `GameModule` returns its game-specific subclass via `LevelEventProvider`. Call sites use `AbstractLevelEventManager` for polymorphic access.
@@ -228,18 +256,9 @@ Physics differences across S1/S2/S3K are handled through a layered provider syst
 
 ### PhysicsFeatureSet Fields
 
-| Field | S1 | S2 | S3K | Purpose |
-|-------|----|----|-----|---------|
-| `spindashEnabled` | `false` | `true` | `true` | Gates spindash |
-| `spindashSpeedTable` | `null` | 9-entry | 9-entry | Release speeds |
-| `collisionModel` | `UNIFIED` | `DUAL_PATH` | `DUAL_PATH` | Collision path architecture |
-| `fixedAnglePosThreshold` | `true` | `false` | `false` | S1: fixed 14px; S2/S3K: speed-dependent |
-| `lookScrollDelay` | `0` (none) | `0x78` (120f) | `0x78` (120f) | Delay before camera pans on look up/down |
-| `waterShimmerEnabled` | `true` | `false` | `false` | S1 underwater palette shimmer effect |
-| `inputAlwaysCapsGroundSpeed` | `true` | `false` | `false` | S1: input always caps ground speed; S2/S3K: preserves high speed |
-| `elementalShieldsEnabled` | `false` | `false` | `true` | S3K fire/lightning/bubble shield mechanics |
-| `angleDiffCardinalSnap` | `false` | `true` | `true` | S2/S3K: snap to cardinal when sensor angle diff >= 0x20 |
-| `extendedEdgeBalance` | `false` | `true` | `true` | S2/S3K: 4 balance states, precarious check; S1: single state, force face edge |
+`collisionModel` selects `UNIFIED` (S1) vs `DUAL_PATH` (S2/S3K) and routes collision code paths — see the section below. All other per-game flags (spindash, angle thresholds, look-scroll delay, water shimmer, elemental shields, edge balance, sidekick rules, etc.) live on `PhysicsFeatureSet`. See `PhysicsFeatureSet.java` and its `SONIC_1` / `SONIC_2` / `SONIC_3K` factory constants for the authoritative list.
+
+For multi-sidekick daisy chains, `getEffectiveLeader()` uses a direct CPU leader immediately once that leader is in NORMAL. The 15-frame settled threshold is only for healing past broken or not-yet-normal links, not for skipping a direct NORMAL leader while its history warms.
 
 ### Collision Model: UNIFIED vs DUAL_PATH
 
@@ -256,7 +275,9 @@ The setters `setTopSolidBit()`/`setLrbSolidBit()` on `AbstractPlayableSprite` si
 3. Gate behavior at call site - S2 behavior is always the fallback when `physicsFeatureSet` is null
 4. Add tests following `TestSpindashGating`/`TestCollisionModel` pattern (TestableSprite inner class, no ROM/OpenGL required)
 
-**Rules:** Always verify against disassembly. Never use game-name `if/else` chains - always use feature flags.
+**Rules:** Always verify against disassembly. Never use game-name `if/else` chains - always use feature flags. Per-game behavioral differences must be gated by feature flags (usually on `PhysicsFeatureSet`), never by code like `if (module.getGameId() == GameId.S1)`. When a ROM-level divergence is discovered, add a flag to `PhysicsFeatureSet`, set the correct value on each game's `SONIC_1` / `SONIC_2` / `SONIC_3K` constant, and branch on the flag at the call site.
+
+Trace fixes must not add zone/route/frame carve-outs. If a trace diverges in AIZ, CNZ, MGZ, or any other zone, model the ROM state that actually drives the branch: object id/routine, status/control bits, frame-counter visibility, physics profile, event flag, or data-driven object/profile condition. Do not branch on zone id/name, trace route, frame number, or a "known failing trace" exception. "Use ROM-default behaviour except in AIZ" is still a zone-specific carve-out and is not acceptable. Zone/event/object providers may expose ROM state at the owning boundary, but shared physics/sidekick/object code must consume semantic predicates and must not branch solely because `zone == AIZ` or similar.
 
 ### Physics Tests
 
@@ -268,13 +289,17 @@ Objects use a factory pattern with game-specific registries. `ObjectRegistry` cr
 
 **Service injection:** All objects receive `ObjectServices` at construction via `ObjectManager`. Inside any object, call `services()` to access camera, audio, level, game state, and zone features. **Never use `getInstance()` in object code.**
 
-**Child spawning:** Use `spawnChild(() -> new ChildObject(spawn, params))` instead of manually calling `ObjectManager.addDynamicObject()`.
+**Child spawning:** Use `spawnChild(() -> new ChildObject(spawn, params))` instead of manually calling `ObjectManager.addDynamicObject()`. Direct manager insertion is reserved for manager/framework bridge code with focused tests.
 
 Badniks extend `AbstractBadnikInstance` (`com.openggf.level.objects` — game-agnostic) which provides touch response collision, destruction behavior via `DestructionEffects`, and movement/animation framework. Subclasses implement `updateMovement()` and `getCollisionSizeIndex()`.
 
+**Object behavior contracts:** New object/boss/badnik/trace work should prefer the shared contracts for object physics standardization: `ObjectControlState` (control bits + derived predicates), `ObjectPlayerQuery`/`ObjectPlayerParticipationPolicy` (which players a routine targets), `NativePositionOps` (playable-sprite `x_pos`/`y_pos` writes), `ObjectLifetimeOps` (destruction/offscreen/respawn/slot transfer). Canonical behavior profiles live under `com.openggf.game.profiles.*`. Raw setters and direct `setDestroyed(true)` calls are legacy compatibility — do not grow guard baselines for new implementations without documenting the exact reason.
+
+**ENEMY touch responses poll every frame:** `ObjectManager.TouchResponses` callbacks for ENEMY-category contacts fire continuously every frame while the overlap persists (matching the ROM `Touch_Loop`), not only on the first frame of overlap. SPECIAL/monitor contacts remain edge-triggered. New badnik / damaging-object code should not add consumed-once "already hit" latches for the enemy touch path — rely on the per-frame poll.
+
 ### Reusable Object Utilities
 
-**Before implementing any object, check these utilities. Do NOT reimplement existing functionality.** The implement-object skills (S1/S2/S3K) have full details in their section 2.4.
+**Before implementing any object, check these utilities — do NOT reimplement.** The implement-object skills (S1/S2/S3K) have full details.
 
 | Utility | Package | Purpose |
 |---------|---------|---------|
@@ -288,7 +313,7 @@ Badniks extend `AbstractBadnikInstance` (`com.openggf.level.objects` — game-ag
 | `PatternDecompressor` | `util` | Bytes→Pattern[] conversion |
 | `FboHelper` | `util` | FBO creation/destruction + viewport |
 
-**Base classes** (in `level.objects`): `AbstractBadnikInstance`, `AbstractProjectileInstance`, `AbstractSpikeObjectInstance`, `AbstractMonitorObjectInstance`, `AbstractPointsObjectInstance`, `GravityDebrisChild`.
+**Base classes** (in `level.objects`): `AbstractBadnikInstance`, `AbstractProjectileInstance`, `AbstractSpikeObjectInstance`, `AbstractMonitorObjectInstance`, `AbstractPointsObjectInstance`, `AbstractFallingFragment`, `GravityDebrisChild`. Other reusable helpers in the same package include `SpringHelper`, `WaypointPathFollower`, `ObjectControlledSolidContactController`, `SlopedSolidProvider`, and `MultiPieceSolidProvider`.
 
 **Inherited from `AbstractObjectInstance`**: `getRenderer(artKey)`, `buildSpawnAt(x, y)`, `isPlayerRiding()`, `isOnScreen(margin)`.
 
@@ -306,34 +331,29 @@ Pattern: add ROM address to `Sonic2Constants`, add key to `Sonic2ObjectArtKeys`,
 
 **S3K level-art objects:** Prefer `Sonic3kObjectArt.buildLevelArtSheetFromRom(mappingAddr, artTileBase, palette)` to parse S3K mappings from ROM at runtime. Add mapping ROM address to `Sonic3kConstants.java` (use RomOffsetFinder). Extract art_tile base and palette from the object code's `make_art_tile()` call. Only hardcode mapping pieces when the ROM table can't be used directly.
 
+**Hard rule: ROM-only runtime assets.** If the engine needs object art, mappings, DPLCs, animation scripts, PLC data, or any other gameplay/runtime asset bytes, they must come from the user-supplied ROM through the engine's ROM-loading pipeline. Do **not** read runtime asset bytes from checked-in disassembly/reference files under `docs/` as a fallback. The disassembly tree is for research, labels, and offset discovery only. If a ROM-backed source is missing, find or verify the ROM address/path instead of loading from `docs/`.
+
 ### Constants Files (`game.sonic2.constants`)
 
-`Sonic2Constants` (ROM offsets), `Sonic2ObjectIds` (object type IDs), `Sonic2ObjectConstants` (touch collision data), `Sonic2AnimationIds` (animation scripts), `Sonic2AudioConstants` (music/SFX IDs).
+`Sonic2Constants` (ROM offsets), `Sonic2ObjectIds` (object type IDs), `Sonic2ObjectConstants` (touch collision data), `Sonic2AnimationIds` (animation scripts), `Sonic2AudioConstants` (SFX IDs — music IDs live in `game.sonic2.audio.Sonic2Music`).
 
 ## Sonic 3&K Bring-up Notes
 
-Critical constraints for current S3K support:
+High-cost landmines (full S3K detail in [AGENTS_S3K.md](AGENTS_S3K.md) and the `s3k-*` skills):
 
-- **Dual object pointer tables (zone-set system):** S3K uses two object pointer tables that remap many IDs by zone. `S3kZoneSet` enum: `S3KL` (zones 0-6: AIZ-LBZ) and `SKL` (zones 7-13: MHZ-DDZ). `Sonic3kObjectRegistry.getPrimaryName(id, zoneSet)` resolves zone-set-aware names. `Sonic3kObjectProfile` uses per-level resolution for names, badnik IDs, and boss IDs via `GameObjectProfile` default methods. The `ObjectDiscoveryTool` uses composite keys (`"objectId:name"`) so same-ID-different-name objects get separate checklist entries.
-- **Layout decoding:** `Sonic3kLevel.loadMap()` parses FG/BG row pointers as interleaved pairs (`FG: header + row*4`, `BG: header + 2 + row*4`), NOT contiguous tables.
-- **AIZ1 intro skip:** `Sonic3k.loadLevel()` can bootstrap to post-intro gameplay. `getLevelBoundariesAddr()` must use `LEVEL_SIZES_AIZ1_INTRO_INDEX` (26) when active.
-- **Camera bounds timing:** Camera placement must be refreshed AFTER assigning level bounds (`camera.updatePosition(true)`).
-- **Collision decoding:** Keep `Sonic3k.decodeCollisionPointer()` marker logic and stride-2 reads in `Sonic3kLevel.readCollisionIndex()`.
-- **PLC system:** See `s3k-plc-system` skill for Pattern Load Cue system docs (runtime art loading, act transitions, boss art).
+- **Prefer S&K-side addresses — Sonic 3 standalone is a rare, verified fallback:** The locked-on ROM has two halves: S&K (`< 0x200000`) and S3 (`>= 0x200000`). Shared assets exist in both halves with identical bytes, and the engine's S3KL/SKL runtime references the S&K half for the overwhelming majority of assets. **Put S&K-side (`sonic3k.asm`) offsets in `Sonic3kConstants.java` by default.** Run `RomOffsetFinder` with `--game s3k`. When a label returns both `sonic3k.asm` and `s3.asm` hits, pick `sonic3k.asm`; if only `s3.asm` hits come back, re-search with label variants first. **But don't loop forever:** depending on who implemented an object and when, some S3K objects reference S3-half (`s3.asm`) assets directly — if there is genuinely no S&K equivalent, that `s3.asm` reference is the one the runtime uses, so use it after verifying the object's code points there. See `s3k-disasm-guide` for details.
+- **Dual object pointer tables (zone-set system):** S3K uses two object pointer tables that remap many IDs by zone. `S3kZoneSet`: `S3KL` (zones 0-6: AIZ-LBZ) and `SKL` (zones 7-13: MHZ-DDZ). Resolve names via `Sonic3kObjectRegistry.getPrimaryName(id, zoneSet)`; `ObjectDiscoveryTool` uses composite `"objectId:name"` keys so same-ID-different-name objects get separate entries.
 - **Known limitation:** Some S3K levels log `maxChunkPatternIndex > patternCount` (dynamic art/PLC parity incomplete).
-- **S3K-specific details:** See [AGENTS_S3K.md](AGENTS_S3K.md) for palette animation, zone intricacies, and implementation patterns.
 
-**Keep these S3K tests green:**
-- `com.openggf.tests.TestS3kAiz1SkipHeadless`
-- `com.openggf.tests.TestSonic3kLevelLoading`
-- `com.openggf.game.sonic3k.TestSonic3kBootstrapResolver`
-- `com.openggf.game.sonic3k.TestSonic3kDecodingUtils`
+**Keep these S3K tests green:** `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`.
 
 ## Audio Engine
 
 Emulates Mega Drive sound hardware: **YM2612** (FM synthesis, 6 channels), **PSG/SN76489** (square wave + noise, 4 channels), **SMPS Driver** (Sega's sound format).
 
-Reference implementations: `docs/SMPS-rips/SMPSPlay/libs/download/libvgm/emu/cores/`. Strive for hardware accuracy - reference libvgm cores rather than simplified versions.
+The audio package splits across `audio` (backend), `audio.synth` (chip emulation — note `PsgChipGPGX` is active, `PsgChip` deprecated), `audio.smps` (sequencer/loader with `OVERFLOW`/`OVERFLOW2`/`TIMEOUT` tempo modes), `audio.driver`, `audio.runtime` (deterministic FIFO/PCM ring buffers used by gameplay rewind), `audio.rewind`, `audio.debug`. Per-game audio data lives under `game.sonicX.audio`.
+
+Reference implementations live in `docs/SMPS-rips/SMPSPlay/` (SMPSPlay source) and the ripped audio data under `docs/SMPS-rips/`. Strive for hardware accuracy — reference SMPSPlay and the libvgm chip cores rather than simplified versions.
 
 ## Headless Testing
 
@@ -360,11 +380,19 @@ runner.stepIdleFrames(5);
 - `TestObjectServicesMigrationGuard` — Scanner-based guard preventing singleton regression in objects
 - `TestNoServicesInObjectConstructors` — Ensures objects don't call `services()` during construction
 
+## Trace Replay Tests
+
+When working on trace replay test bugs, use the **`trace-replay-bug-fixing`** skill. It covers the comparison-only invariant (trace data is read-only diagnostic input — engine state must never be hydrated/synced from the trace in committed test code), the recorder/parser/comparator pipeline, the regeneration workflow, and cross-game parity rules.
+
 ## Coordinate System & Rendering
 
 ### Player Sprite Coordinates
 
 **Critical:** The ROM uses **center coordinates** for player position. Always use `getCentreX()`/`getCentreY()` for object interactions, NOT `getX()`/`getY()` (which return top-left corner for rendering). Using top-left creates a ~19px vertical offset causing incorrect collision detection.
+
+For playable-sprite native `x_pos` / `y_pos` writes, prefer `NativePositionOps`. Use raw preserve-subpixel centre setters only in lower-level sprite internals or non-playable/object-local cases.
+
+**Debug overlay note:** The on-screen debug HUD `Pos:` field (rendered by `DebugRenderer`) intentionally shows `sprite.getX()` / `sprite.getY()` — the **top-left** corner, NOT the ROM-centre `x_pos`/`y_pos`. Do not treat the overlay's X/Y as ROM `x_pos`/`y_pos` when diagnosing parity issues or comparing against disassembly traces — add the sprite's half-width/half-height (or call `getCentreX()`/`getCentreY()` in code) to get the ROM-equivalent values. (Camera `Cam:` and sensor probe coordinates in the overlay are world-space and unaffected.)
 
 ### Y-Axis Convention
 Engine uses Mega Drive convention: **Y increases downward** (Y=0 at top). `BatchedPatternRenderer` flips to OpenGL convention automatically.
@@ -377,19 +405,9 @@ VDP hardware adds 128 to X/Y. Convert: `screen_position = vdp_value - 128`. Our 
 
 ## Virtual Pattern ID System
 
-The Mega Drive VDP uses 11-bit pattern indices (0x000–0x7FF, 2048 tiles). The engine extends this with a **virtual pattern ID** space so multiple subsystems can cache patterns without colliding. The `PatternAtlas` uses a tiered lookup: flat array (`fastEntries[8192]`) for dense low IDs (level tiles), `HashMap<Integer, Entry>` for sparse high IDs.
+The Mega Drive VDP uses 11-bit pattern indices (0x000–0x7FF, 2048 tiles). The engine extends this with a **virtual pattern ID** space so multiple subsystems can cache patterns without colliding. `PatternAtlas` uses a tiered lookup: flat array (`fastEntries[8192]`) for dense low IDs (level tiles), `HashMap<Integer, Entry>` for sparse high IDs.
 
-| Range | Category | Notes |
-|-------|----------|-------|
-| `0x00000` | Level tiles | Corresponds to VDP VRAM tile indices |
-| `0x01000` | Special Stage | Track, objects, HUD |
-| `0x10000` | Results Screen | End-of-act results |
-| `0x20000` | Objects | Monitors, badniks, zone objects (`OBJECT_PATTERN_BASE`) |
-| `0x28000` | HUD | Score, time, rings (`HUD_PATTERN_BASE`) |
-| `0x30000` | Water surface | Underwater palette transition |
-| `0x38000+` | Sidekick DPLC banks | Duplicate-character body sprites (`SIDEKICK_PATTERN_BASE`) |
-| `0x39000+` | Sidekick tail appendages | Duplicate Tails Obj05 sprites |
-| `0x40000` | Title Card | Zone/act title card |
+Each pattern category claims a non-overlapping base: level tiles at `0x00000`, special stages per-game in `0x01000`–`0x10000`, objects at `0x20000`, HUD at `0x28000`, water surface at `0x30000`, sidekicks at `0x38000+`, title cards at `0x40000`/`0x50000`, results/credits/special UI in the higher ranges. Owning manager classes hold the authoritative `*_PATTERN_BASE` constants; choose a non-overlapping base when adding new categories.
 
 **Key classes:**
 - `PatternAtlas` — stores all patterns keyed by virtual ID; tiered flat+sparse lookup
@@ -397,23 +415,19 @@ The Mega Drive VDP uses 11-bit pattern indices (0x000–0x7FF, 2048 tiles). The 
 - `PlayerSpriteRenderer` — renders player sprites using `renderPatternWithId()` to bypass the 11-bit VDP limit in `PatternDesc`
 - `GraphicsManager.renderPatternWithId(patternId, desc, x, y)` — explicit pattern ID for atlas lookup, used when IDs exceed 0x7FF
 
-When adding new pattern categories, choose a base that doesn't overlap existing ranges. See **[docs/KNOWN_DISCREPANCIES.md](docs/KNOWN_DISCREPANCIES.md)** for the full range table.
+See **[docs/KNOWN_DISCREPANCIES.md](docs/KNOWN_DISCREPANCIES.md)** for additional notes on the range table.
+
+## Data Select & Save System
+
+Full data select (save/load) screen with cross-game donation. `DataSelectProvider` (`com.openggf.game`) holds the lifecycle states; `DataSelectSessionController` is the presentation-independent state machine; each game implements `DataSelectHostProfile` (team configs, slot counts, zone labels, restart destinations). S3K renders with `S3kDataSelectManager`; S1/S2 fall back to `SimpleDataSelectManager` unless cross-game donation routes them through the S3K presentation. `SaveManager` (`game.save`) persists slots as JSON with SHA256 integrity and quarantines corrupt files. Title-screen `ONE_PLAYER` flows through `StartupRouteResolver` → `TitleActionRoute.DATA_SELECT` → controller → `DataSelectAction` → `Engine.launchGameplayFromDataSelect()`.
 
 ## Intentional Divergences
 
-Documented in **[docs/KNOWN_DISCREPANCIES.md](docs/KNOWN_DISCREPANCIES.md)**: Gloop sound toggle, spindash release transpose fix, pattern ID ranges, HTZ cloud scroll fix, MCZ child cleanup, multi-sidekick system.
+Documented in **[docs/KNOWN_DISCREPANCIES.md](docs/KNOWN_DISCREPANCIES.md)**: intentional cross-game and S1/S2 divergences including audio toggles, physics fixes, virtual pattern ID ranges, object lifecycle differences, multi-sidekick support, trace bootstrap contracts, and runtime data ratchets.
 
 ## Special Stage Implementation
 
-Key files in `com.openggf.game.sonic2.specialstage`: `Sonic2SpecialStageManager` (main coordinator), `Sonic2TrackAnimator` (segment sequencing), `Sonic2TrackFrameDecoder` (bitstream decoder), `Sonic2SpecialStageDataLoader`, `Sonic2SpecialStageConstants`.
-
-**Track frame format:** Each of 56 frames is a compressed bitstream: bitflags (1 bit/tile: 0=RLE fill, 1=UNC unique), UNC LUT, RLE LUT. Only UNC tiles get `flip_x` (0x0800) toggled on flip. VDP plane is 128 cells wide as 4x32 strips - flipping reverses within each strip.
-
-**Segment types:** 0=TURN_THEN_RISE, 1=TURN_THEN_DROP, 2=TURN_THEN_STRAIGHT, 3=STRAIGHT, 4=STRAIGHT_THEN_TURN.
-
-**Orientation system:** Persistent `SSTrack_Orientation` updates only at trigger frames (0x12, 0x0E, 0x1A). Between triggers, orientation persists from previous update.
-
-**Stage progression:** 4 checkpoints per stage (acts 0-3). Stage ends at checkpoint 3 with ring requirement check. Layout does NOT loop.
+S2 special stage code lives in `com.openggf.game.sonic2.specialstage` (`Sonic2SpecialStageManager` + track animator/decoder/loader/constants). The track frame format, segment types, orientation triggers, and progression rules are documented in those classes' Javadoc.
 
 ## Code Style
 

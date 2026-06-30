@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -15,7 +16,8 @@ import java.util.List;
  *
  * <p>ROM reference: CutsceneKnux_AIZ2.
  */
-public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance {
+public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
 
     private static final int OBJECT_ID = 0x82;
     private static final int INIT_X = 0x4B8E;

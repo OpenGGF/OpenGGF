@@ -413,7 +413,7 @@ public class Sonic3kSpecialStageDataLoader {
             for (int c = 0; c < 16; c++) {
                 int offset = (line * 32) + (c * 2);
                 if (offset + 1 < raw.length) {
-                    palettes[line].colors[c].fromSegaFormat(raw, offset);
+                    palettes[line].getColor(c).fromSegaFormat(raw, offset);
                 }
             }
         }

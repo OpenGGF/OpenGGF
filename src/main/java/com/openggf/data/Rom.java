@@ -99,10 +99,16 @@ public class Rom implements AutoCloseable {
             throw new IOException("ROM too large to buffer in memory: " + size + " bytes");
         }
         ByteBuffer buffer = ByteBuffer.allocate((int) size);
-        fileChannel.position(0);
-        int read = fileChannel.read(buffer);
-        if (read < size) {
-            throw new IOException("Unable to read entire ROM (read " + read + " of " + size + " bytes)");
+        long offset = 0;
+        while (buffer.hasRemaining()) {
+            int read = fileChannel.read(buffer, offset);
+            if (read < 0) {
+                break;
+            }
+            offset += read;
+        }
+        if (offset < size) {
+            throw new IOException("Unable to read entire ROM (read " + offset + " of " + size + " bytes)");
         }
         return buffer.array();
     }

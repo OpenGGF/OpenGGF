@@ -2,6 +2,7 @@ package com.openggf.tests;
 
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.CameraBounds;
 import com.openggf.level.objects.ObjectSpawn;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +33,18 @@ public class TestAbstractObjectInstanceRange {
         assertTrue(new RangeProbe(0x80E0).isInRangeForTest());
         assertTrue(new RangeProbe(0x81C0).isInRangeForTest());
         assertFalse(new RangeProbe(0x8280).isInRangeForTest());
+    }
+
+    @Test
+    public void renderSpriteBoundsUseExclusiveRightAndBottomEdges() {
+        CameraBounds bounds = new CameraBounds(0, 0, 320, 224);
+
+        assertTrue(bounds.containsRenderSpriteBounds(319, 223, 0, 0));
+        assertFalse(bounds.containsRenderSpriteBounds(320, 223, 0, 0));
+        assertFalse(bounds.containsRenderSpriteBounds(319, 224, 0, 0));
+        assertTrue(bounds.containsRenderSpriteBounds(320, 224, 1, 1));
+        assertFalse(bounds.containsRenderSpriteBounds(321, 224, 1, 1));
+        assertFalse(bounds.containsRenderSpriteBounds(320, 225, 1, 1));
     }
 
     private static final class RangeProbe extends AbstractObjectInstance {

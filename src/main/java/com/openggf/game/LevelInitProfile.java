@@ -18,6 +18,15 @@ import java.util.List;
  * no dependency resolution. The disassembly IS the dependency graph.
  */
 public interface LevelInitProfile {
+    /**
+     * Offset used to place already-registered sidekicks relative to the main
+     * player. Defaults to the S1/S2-style InitPlayers offset; S3K overrides
+     * with SpawnLevelMainSprites_SpawnPlayers parity.
+     */
+    default SidekickSpawnOffset sidekickSpawnOffset() {
+        return SidekickSpawnOffset.S2_STYLE;
+    }
+
 
     /**
      * Ordered steps for entering a level (title card through control unlock).

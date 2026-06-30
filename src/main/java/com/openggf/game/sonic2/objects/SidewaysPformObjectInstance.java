@@ -12,10 +12,13 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpritePieceRenderer;
@@ -40,7 +43,7 @@ import java.util.logging.Logger;
  * - Subtype 0x12: Single platform, offset right
  */
 public class SidewaysPformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(SidewaysPformObjectInstance.class.getName());
 
@@ -92,6 +95,11 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
         this.isChild = false;
     }
 
+    @Override
+    public SidewaysPformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new SidewaysPformObjectInstance(ctx.spawn(), getName());
+    }
+
     /**
      * Creates a child platform linked to a parent.
      *
@@ -125,6 +133,11 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         return true;  // PlatformObject - only solid from top
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
     }
 
     @Override
@@ -298,19 +311,7 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
                 spawn.rawYWord()
         );
 
-        // Create child platform and register it
-        setConstructionContext(services());
-        try {
-            SidewaysPformObjectInstance child = new SidewaysPformObjectInstance(
-                    childSpawn, name + "_child", this);
-
-            // Add child to object manager
-            if (services().objectManager() != null) {
-                services().objectManager().addDynamicObject(child);
-            }
-        } finally {
-            clearConstructionContext();
-        }
+        spawnFreeChild(() -> new SidewaysPformObjectInstance(childSpawn, name + "_child", this));
     }
 
     /**

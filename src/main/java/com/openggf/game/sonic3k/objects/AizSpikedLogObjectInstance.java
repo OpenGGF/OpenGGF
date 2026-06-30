@@ -7,7 +7,10 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -31,7 +34,7 @@ import java.util.List;
  * ROM references: Obj_AIZSpikedLog (sonic3k.asm:60038-60196).
  */
 public class AizSpikedLogObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // Collision params: d1 = width_pixels(0x18) + 0x0B = 0x23, d2 = 0x08, d3 = 0x09
     private static final int SOLID_HALF_WIDTH = 35;
@@ -60,7 +63,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         -12, -12, 0, 0, 0, 0, 0, 12, 12, 12, 0, 0, 0, 0, 0, -12
     };
 
-    private final int baseY;              // $30: initial Y position (swing center)
+    private int baseY;              // $30: initial Y position (swing center)
     private int swingAngle;               // $32: current swing angle (0 to 0x40)
     private int swingState;               // $34: state flag (signed byte semantics)
     private int savedAnimFrame;           // $35: saved idle animation frame index
@@ -77,6 +80,11 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         this.baseY = spawn.y();
         this.currentY = spawn.y();
         // ROM zero-initializes all fields; first idle animation tick sets mapping_frame
+    }
+
+    @Override
+    public AizSpikedLogObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizSpikedLogObjectInstance(ctx.spawn());
     }
 
     private void ensureInitialized() {
@@ -260,6 +268,16 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOnScreenHalfWidth() {
+        return 0x18;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 8;
+    }
+
+    @Override
     public void appendDebugRenderCommands(DebugRenderContext ctx) {
         // Solid collision box (green)
         ctx.drawRect(spawn.x(), currentY, SOLID_HALF_WIDTH, SOLID_AIR_HALF_HEIGHT,
@@ -280,8 +298,15 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean skipsCpuSidekickWhenRenderFlagOffScreen() {
+        // Obj_AIZSpikedLog calls SolidObjectFull (sonic3k.asm:60148-60153).
+        // That helper skips Player_2 when render_flags bit 7 is clear
+        // (sonic3k.asm:41003-41008), unlike SolidObjectFull2.
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
-        // Standing detection is handled via isPlayerRiding() in updateSwingState()
     }
 
     // ===== Child Access =====
@@ -302,12 +327,11 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
      * ROM references: loc_2B8EE (sonic3k.asm:60178-60196), byte_2B918 Y-offset table.
      */
     static class SpikedLogCollisionChild extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, RewindRecreatable {
 
         // collision_flags = 0x9C: HURT type (bit 7), size index 0x1C (sonic3k.asm:60051)
         private static final int COLLISION_FLAGS_ACTIVE = 0x9C;
-
-        private final AizSpikedLogObjectInstance parent;
+        private AizSpikedLogObjectInstance parent;
         private int currentX;
         private int currentY;
 
@@ -316,6 +340,34 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
             this.parent = parent;
             this.currentX = spawn.x();
             this.currentY = spawn.y();
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            AizSpikedLogObjectInstance parent = findNearestLiveParentForRewind(ctx);
+            return parent == null ? null : new SpikedLogCollisionChild(ctx.spawn(), parent);
+        }
+
+        private static AizSpikedLogObjectInstance findNearestLiveParentForRewind(
+                RewindRecreateContext ctx) {
+            if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
+                    || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            AizSpikedLogObjectInstance best = null;
+            long bestDistance = Long.MAX_VALUE;
+            int childX = ctx.spawn().x();
+            for (ObjectInstance inst : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (inst instanceof AizSpikedLogObjectInstance candidate && !candidate.isDestroyed()) {
+                    long dx = (long) candidate.getX() - childX;
+                    long distance = dx * dx;
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        best = candidate;
+                    }
+                }
+            }
+            return best;
         }
 
         @Override
@@ -333,6 +385,22 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
             if (yOffset != 0) {
                 currentY += yOffset;
             }
+        }
+
+        /**
+         * ROM parity: {@code loc_2B8EE} copies the parent position, applies the
+         * mapping-frame spike offset, and only THEN tail-calls
+         * {@code Add_SpriteToCollisionResponseList} (sonic3k.asm:60179-60190). The
+         * entry placed on {@code Collision_response_list} therefore carries this
+         * child's freshly-computed current x/y, not a frame-start snapshot. The
+         * inline player/sidekick touch path must read the live position for this
+         * object (mirroring Obj37 bouncing rings / lost rings) or the spike's
+         * dangerous-Y frame is consulted one frame late, missing the AIZ2
+         * underwater hurt the ROM applies on the contact frame.
+         */
+        @Override
+        public boolean usesCurrentTouchResponseState() {
+            return true;
         }
 
         @Override

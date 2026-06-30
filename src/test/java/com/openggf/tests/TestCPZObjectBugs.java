@@ -21,12 +21,13 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>These are bug reproduction tests that should <b>FAIL</b> initially (proving the
  * bugs exist), then <b>PASS</b> after the corresponding fixes are applied.
  *
- * <p><b>Test #1 - Spin Tube Forces Rolling:</b> CPZ spin tubes (object 0x1E) should
- * force Sonic into rolling/pinball state after exit. The bug is that rolling state
- * drops during or after tube transit. The spin tube entry sets
+ * <p><b>Test #1 - Spin Tube Forces Rolling:</b> CPZ spin tubes (object 0x1E) leave
+ * Sonic as an airborne ball on exit. The spin tube entry sets
  * {@code player.setObjectControlled(true)} and {@code player.setRolling(true)}. On
- * exit, {@code releaseFromObjectControl()} is called and {@code setPinballMode(true)}
- * (for non-upward exits).
+ * exit, {@code releaseFromObjectControl()} is called (ROM loc_227A6); the rolling
+ * bit persists while airborne and uncurls naturally on landing. The ROM does NOT
+ * set spindash_flag/pinball_mode on exit, so the player must not stay locked rolling
+ * after touching the floor.
  *
  * <p><b>Test #2 - Staircase No False Balance:</b>
  * {@code PlayableSpriteMovement.checkObjectEdgeBalance()} uses
@@ -79,12 +80,13 @@ public class TestCPZObjectBugs {
      *
      * <p>The spin tube entry sets {@code player.setObjectControlled(true)} and
      * {@code player.setRolling(true)}. On exit, {@code releaseFromObjectControl()}
-     * is called and {@code setPinballMode(true)} should keep Sonic rolling through
-     * the terrain after the tube.
+     * is called (ROM loc_227A6); the rolling bit persists while the player is still
+     * airborne, so this test samples the exit frame and confirms the ball state is
+     * present at release.
      *
      * <p>Test approach: Position Sonic near the CPZ1 start and run right for up to
      * 600 frames, looking for a spin tube interaction (detected via
-     * {@code isObjectControlled()}). After tube exit, verify rolling or pinball mode
+     * {@code isObjectControlled()}). On the exit frame, verify the rolling ball state
      * is active and Sonic has exit velocity.
      *
      * <p>If no spin tube is encountered within the traversal range, the test is

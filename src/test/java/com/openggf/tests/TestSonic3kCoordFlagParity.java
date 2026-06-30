@@ -5,7 +5,9 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsData;
+import com.openggf.game.sonic3k.audio.smps.Sonic3kSfxData;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -243,6 +245,213 @@ public class TestSonic3kCoordFlagParity {
     }
 
     @Test
+    public void spindashRevAddsPersistentRevCounterToTranspose() {
+        byte[] fmTrack = {
+                (byte) 0xFF, 0x07, // Reset shared spindash rev counter
+                (byte) 0xE9,       // key offset += 0, rev becomes 1
+                (byte) 0xE9,       // key offset += 1, rev becomes 2
+                (byte) 0xE9,       // key offset += 2
+                (byte) 0xF2
+        };
+        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
+        seq.read(new short[20000]);
+
+        SmpsSequencer.Track fm = findTrack(seq, SmpsSequencer.TrackType.FM);
+        assertEquals(3, fm.keyOffset, "E9 should add the persistent spindash rev value to track transpose");
+    }
+
+    @Test
+    public void normalSfxStartResetsPersistentS3kSpindashRevCounter() {
+        resetS3kSpindashRevCounterByNormalSfx();
+
+        SmpsSequencer firstSpindash = new SmpsSequencer(
+                createSfxData(Sonic3kSfx.SPINDASH.id, new byte[] {
+                        (byte) 0xE9,
+                        (byte) 0xE9,
+                        (byte) 0xF2
+                }),
+                EMPTY_DAC,
+                new CaptureSynth(),
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        firstSpindash.read(new short[20000]);
+        assertEquals(1, findTrack(firstSpindash, SmpsSequencer.TrackType.FM).keyOffset,
+                "Sanity check: second E9 should leave the persistent rev counter at 2");
+
+        SmpsSequencer normalSfx = new SmpsSequencer(
+                createSfxData(Sonic3kSfx.DASH.id, new byte[] { (byte) 0xF2 }),
+                EMPTY_DAC,
+                new CaptureSynth(),
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        normalSfx.read(new short[20000]);
+
+        SmpsSequencer nextSpindash = new SmpsSequencer(
+                createSfxData(Sonic3kSfx.SPINDASH.id, new byte[] {
+                        (byte) 0xE9,
+                        (byte) 0xF2
+                }),
+                EMPTY_DAC,
+                new CaptureSynth(),
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        nextSpindash.read(new short[20000]);
+
+        assertEquals(0, findTrack(nextSpindash, SmpsSequencer.TrackType.FM).keyOffset,
+                "A normal non-continuous SFX start should reset the shared S3K spindash rev counter");
+    }
+
+    @Test
+    public void continuousSfxStartDoesNotResetPersistentS3kSpindashRevCounter() {
+        resetS3kSpindashRevCounterByNormalSfx();
+
+        SmpsSequencer firstSpindash = new SmpsSequencer(
+                createSfxData(Sonic3kSfx.SPINDASH.id, new byte[] {
+                        (byte) 0xE9,
+                        (byte) 0xE9,
+                        (byte) 0xF2
+                }),
+                EMPTY_DAC,
+                new CaptureSynth(),
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        firstSpindash.read(new short[20000]);
+
+        SmpsSequencer continuousSfx = new SmpsSequencer(
+                createSfxData(Sonic3kSfx.SLIDE_SKID_LOUD.id, new byte[] { (byte) 0xF2 }),
+                EMPTY_DAC,
+                new CaptureSynth(),
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        continuousSfx.read(new short[20000]);
+
+        SmpsSequencer nextSpindash = new SmpsSequencer(
+                createSfxData(Sonic3kSfx.SPINDASH.id, new byte[] {
+                        (byte) 0xE9,
+                        (byte) 0xF2
+                }),
+                EMPTY_DAC,
+                new CaptureSynth(),
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        nextSpindash.read(new short[20000]);
+
+        assertEquals(2, findTrack(nextSpindash, SmpsSequencer.TrackType.FM).keyOffset,
+                "Continuous SFX starts should preserve the shared S3K spindash rev counter");
+    }
+
+    @Test
+    public void s3kTempoZeroStillReportsTickBoundariesForHybridDriver() {
+        byte[] fmTrack = {
+                (byte) 0xF0, 0x2A, 0x01, 0x29, 0x00,
+                (byte) 0xAD, 0x3C,
+                (byte) 0xF2
+        };
+        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null, null, 0);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
+        seq.read(new short[2]);
+
+        assertTrue(seq.getSamplesUntilNextTempoFrame() < Integer.MAX_VALUE,
+                "S3K tempo 0 still ticks every video frame and must not batch indefinitely");
+        assertTrue(seq.getSamplesUntilNextObservableEvent() < Integer.MAX_VALUE,
+                "Hybrid rendering must see pending per-frame modulation updates in tempo-0 songs");
+    }
+
+    @Test
+    public void tiedS3kModulationChangeDoesNotResetLiveAccumulator() {
+        byte[] fmTrack = {
+                (byte) 0xF0, 0x01, 0x01, 0x1A, 0x01,
+                (byte) 0xBD, 0x18, // nC5
+                (byte) 0xE7,       // smpsNoAttack
+                (byte) 0xF0, 0x00, 0x00, 0x00, 0x00,
+                0x02,              // tied duration continuation
+                (byte) 0xF2
+        };
+        CaptureSynth synth = new CaptureSynth();
+        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
+        seq.read(new short[40000]);
+
+        int baseC5A4 = (5 << 3) | ((644 >> 8) & 0x07);
+        int lastA4 = -1;
+        for (FmWrite write : synth.fmWrites) {
+            if (write.reg == 0xA4) {
+                lastA4 = write.val;
+            }
+        }
+
+        assertTrue(lastA4 > baseC5A4,
+                "F0 00 00 00 00 before a tied continuation must not drop the live S3K pitch ramp to base");
+    }
+
+    @Test
+    public void tiedS3kContinuationKeepsFrozenModulatedFrequency() {
+        byte[] fmTrack = {
+                (byte) 0xF0, 0x01, 0x01, 0x1A, 0x01,
+                (byte) 0xBD, 0x18, // nC5
+                (byte) 0xE7,       // smpsNoAttack
+                (byte) 0xF0, 0x00, 0x00, 0x00, 0x00,
+                0x02,              // tied duration continuation; freezes modulation source
+                (byte) 0xE7,
+                0x02,              // another tied continuation after the accumulator is frozen
+                (byte) 0xF2
+        };
+
+        int finalPacked = finalFmPackedFrequency(fmTrack);
+
+        assertTrue(finalPacked > 0x2A84,
+                "A tied continuation must rewrite the existing modulated frequency even when the accumulator is frozen");
+    }
+
+    @Test
+    public void tiedS3kModulationChangeUsesNewSourceForReloadsOnly() {
+        byte[] unchangedRamp = {
+                (byte) 0xF0, 0x01, 0x01, 0x1A, 0x01,
+                (byte) 0xBD, 0x18, // nC5
+                (byte) 0xE7,       // smpsNoAttack
+                0x10,              // tied duration continuation
+                (byte) 0xF2
+        };
+        byte[] deferredRampChange = {
+                (byte) 0xF0, 0x01, 0x01, 0x1A, 0x01,
+                (byte) 0xBD, 0x18, // nC5
+                (byte) 0xE7,       // smpsNoAttack
+                (byte) 0xF0, 0x00, 0x00, 0x00, 0x00,
+                0x10,              // tied duration continuation
+                (byte) 0xF2
+        };
+
+        int unchangedFinalPacked = finalFmPackedFrequency(unchangedRamp);
+        int deferredFinalPacked = finalFmPackedFrequency(deferredRampChange);
+
+        assertTrue(deferredFinalPacked < unchangedFinalPacked,
+                "S3K F0 before a tied continuation must update source bytes used by live modulation reloads");
+    }
+
+    @Test
+    public void z80ModulationStepCounterDecrementsOnSustainTicks() {
+        byte[] fmTrack = {
+                (byte) 0xF0, 0x01, 0x02, 0x10, 0x04,
+                (byte) 0xBD, 0x06, // nC5
+                (byte) 0xF2
+        };
+
+        int finalPacked = finalFmPackedFrequency(fmTrack);
+
+        assertEquals(0x2A74, finalPacked,
+                "S3K zDoModulation decrements ModulationSteps every sustain tick, not only when speed elapses");
+    }
+
+    @Test
+    public void z80ModulationWaitZeroAppliesOnSameTick() {
+        byte[] fmTrack = {
+                (byte) 0xF0, 0x01, 0x01, 0x29, 0x00,
+                (byte) 0xBD, 0x01, // nC5
+                (byte) 0xF2
+        };
+
+        int finalPacked = finalFmPackedFrequency(fmTrack);
+
+        assertEquals(0x2AAD, finalPacked,
+                "S3K zDoModulation applies the first delta on the tick that ModulationWait decrements to zero");
+    }
+
+    @Test
     public void globalVoicePointerUsesGlobalVoiceTableInZ80AddressedSongs() {
         byte[] songData = new byte[0x1900];
         setLe16(songData, 0x00, 0x17D8); // Global voice table pointer in S3K Z80 RAM
@@ -361,12 +570,17 @@ public class TestSonic3kCoordFlagParity {
 
     private static Sonic3kSmpsData createMusicData(int channels, int psgChannels, byte[] fmTrack, byte[] psgTrack,
             Map<Integer, byte[]> psgEnvelopes, Map<Integer, byte[]> modEnvelopes) {
+        return createMusicData(channels, psgChannels, fmTrack, psgTrack, psgEnvelopes, modEnvelopes, 0x80);
+    }
+
+    private static Sonic3kSmpsData createMusicData(int channels, int psgChannels, byte[] fmTrack, byte[] psgTrack,
+            Map<Integer, byte[]> psgEnvelopes, Map<Integer, byte[]> modEnvelopes, int tempo) {
         byte[] data = new byte[0x240];
         setLe16(data, 0x00, 0x100); // voice table pointer
         data[0x02] = (byte) channels;
         data[0x03] = (byte) psgChannels;
         data[0x04] = 0x01; // dividing timing
-        data[0x05] = (byte) 0x80; // tempo
+        data[0x05] = (byte) tempo;
 
         // FM/DAC entries (4 bytes each): ptr, transpose, volume
         for (int i = 0; i < channels; i++) {
@@ -415,6 +629,34 @@ public class TestSonic3kCoordFlagParity {
         return smps;
     }
 
+    private static void resetS3kSpindashRevCounterByNormalSfx() {
+        SmpsSequencer reset = new SmpsSequencer(
+                createSfxData(Sonic3kSfx.DASH.id, new byte[] { (byte) 0xF2 }),
+                EMPTY_DAC,
+                new CaptureSynth(),
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        reset.read(new short[20000]);
+    }
+
+    private static Sonic3kSfxData createSfxData(int id, byte[] fmTrack) {
+        byte[] data = new byte[0x200];
+        data[0x00] = 0x00; // global voice table
+        data[0x01] = 0x00;
+        data[0x02] = 0x01; // tick multiplier
+        data[0x03] = 0x01; // one track
+        data[0x04] = (byte) 0x80; // playback flags
+        data[0x05] = 0x02; // FM1
+        setLe16(data, 0x06, 0x40);
+        data[0x08] = 0x00; // transpose
+        data[0x09] = 0x00; // volume
+        System.arraycopy(fmTrack, 0, data, 0x40, fmTrack.length);
+
+        Sonic3kSfxData smps = new Sonic3kSfxData(data, 0, 0, 0);
+        smps.setId(id);
+        smps.setGlobalVoiceData(new byte[25]);
+        return smps;
+    }
+
     private static SmpsSequencer.Track findTrack(SmpsSequencer seq, SmpsSequencer.TrackType type) {
         for (SmpsSequencer.Track t : seq.getTracks()) {
             if (t.type == type) {
@@ -422,6 +664,27 @@ public class TestSonic3kCoordFlagParity {
             }
         }
         throw new AssertionError("Missing track type: " + type);
+    }
+
+    private static int finalFmPackedFrequency(byte[] fmTrack) {
+        CaptureSynth synth = new CaptureSynth();
+        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
+        seq.read(new short[60000]);
+
+        int high = -1;
+        int low = -1;
+        for (FmWrite write : synth.fmWrites) {
+            if (write.reg == 0xA4) {
+                high = write.val;
+            } else if (write.reg == 0xA0) {
+                low = write.val;
+            }
+        }
+        if (high < 0 || low < 0) {
+            throw new AssertionError("No final FM frequency write captured");
+        }
+        return (high << 8) | low;
     }
 
     private static void setLe16(byte[] data, int offset, int value) {

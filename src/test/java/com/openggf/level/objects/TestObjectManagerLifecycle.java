@@ -1,19 +1,20 @@
 package com.openggf.level.objects;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.GameServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.openggf.camera.Camera;
 import com.openggf.graphics.GLCommand;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
-
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -21,12 +22,12 @@ public class TestObjectManagerLifecycle {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -49,6 +50,77 @@ public class TestObjectManagerLifecycle {
         assertEquals(1, manager.getActiveObjects().size());
         assertTrue(manager.getActiveObjects().contains(registry.instances.get(persistentSpawn)));
         assertTrue(registry.unloadedInstances.contains(registry.instances.get(tempSpawn)));
+    }
+
+    @Test
+    public void postCameraPlacementCreatesNonCounterGapSpawnImmediatelyWithoutUpdatingIt() {
+        ObjectSpawn gapSpawn = new ObjectSpawn(0x02C0, 0, 0x03, 0, 0, false, 0);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = new ObjectManager(List.of(gapSpawn), registry, 0, null, null);
+
+        manager.reset(0);
+        assertEquals(0, registry.createCount,
+                "Gap spawn should start outside the initial [0x0000,0x0280) window");
+
+        manager.postCameraPlacementUpdate(0x0080);
+
+        assertEquals(1, registry.createCount,
+                "S2/S3K post-camera placement should materialize gap spawns in the current frame");
+        assertTrue(manager.getActiveObjects().contains(registry.instances.get(gapSpawn)),
+                "Gap spawn instance should exist immediately after post-camera placement");
+        assertEquals(0, registry.instances.get(gapSpawn).updateCount,
+                "Post-camera placement should not execute the newly created object until next frame");
+    }
+
+    @Test
+    public void execThenLoadPlacementMaterializesNewSpawnsAfterObjectExecution() {
+        ObjectSpawn streamedSpawn = new ObjectSpawn(0x02C0, 0, 0x03, 0, 0, false, 0);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = new ObjectManager(List.of(streamedSpawn), registry, 0, null, null);
+        manager.enableExecThenLoadPlacement();
+
+        manager.reset(0);
+        assertEquals(0, registry.createCount,
+                "Spawn should start outside the initial [0x0000,0x0280) window");
+
+        manager.update(0x0080, null, null, 1);
+
+        assertEquals(1, registry.createCount,
+                "ObjPosLoad should materialize the newly streamed spawn after ExecuteObjects");
+        assertEquals(0, registry.instances.get(streamedSpawn).updateCount,
+                "New ObjPosLoad instances should not execute until the following frame");
+
+        manager.update(0x0080, null, null, 2);
+
+        assertEquals(1, registry.instances.get(streamedSpawn).updateCount);
+    }
+
+    @Test
+    public void s2ExecThenLoadBypassesVerticalFilterWithoutPreExecLoad() {
+        Camera camera = GameServices.camera();
+        camera.setMinY((short) 0);
+        camera.setY((short) 0);
+
+        ObjectSpawn highYSpawn = new ObjectSpawn(0x0200, 0x0700, 0x03, 0, 0, false, 0x0700);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = new ObjectManager(List.of(highYSpawn), registry, 0, null, null);
+        manager.enableExecThenLoadPlacement();
+
+        manager.reset(0);
+        assertEquals(0, registry.createCount,
+                "Reset materialization must not pull high-Y S2 spawns ahead of the runtime ObjPosLoad pass");
+
+        manager.update(0, null, null, 1);
+
+        assertEquals(1, registry.createCount,
+                "S2 ChkLoadObj has no Camera_Y_pos filter during the single post-exec load");
+        assertEquals(0, registry.instances.get(highYSpawn).updateCount,
+                "S2's single post-exec load must not execute the newly loaded object until next frame");
+
+        manager.update(0, null, null, 2);
+
+        assertEquals(1, registry.instances.get(highYSpawn).updateCount,
+                "The high-Y spawn first executes on the frame after ObjPosLoad created it");
     }
 
     private static final class TestRegistry implements ObjectRegistry {
@@ -75,6 +147,33 @@ public class TestObjectManagerLifecycle {
         @Override
         public String getPrimaryName(int objectId) {
             return "Test";
+        }
+    }
+
+    private static final class TrackingRegistry implements ObjectRegistry {
+        private final Map<ObjectSpawn, TrackingObjectInstance> instances = new IdentityHashMap<>();
+        private int createCount;
+
+        @Override
+        public ObjectInstance create(ObjectSpawn spawn) {
+            createCount++;
+            TrackingObjectInstance instance = new TrackingObjectInstance(spawn);
+            instances.put(spawn, instance);
+            return instance;
+        }
+
+        @Override
+        public void reportCoverage(List<ObjectSpawn> spawns) {
+        }
+
+        @Override
+        public String getPrimaryName(int objectId) {
+            return "Tracking";
+        }
+
+        @Override
+        public ObjectSlotLayout objectSlotLayout() {
+            return ObjectSlotLayout.SONIC_2;
         }
     }
 
@@ -122,6 +221,22 @@ public class TestObjectManagerLifecycle {
             unloadedInstances.add(this);
         }
     }
-}
 
+    private static final class TrackingObjectInstance extends AbstractObjectInstance {
+        private int updateCount;
+
+        private TrackingObjectInstance(ObjectSpawn spawn) {
+            super(spawn, "TrackingObject");
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            updateCount++;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
+}
 

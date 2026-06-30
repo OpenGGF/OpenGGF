@@ -1,11 +1,13 @@
 package com.openggf.editor;
 
-import com.openggf.game.EngineServices;
-import com.openggf.game.RuntimeManager;
+import com.openggf.debug.DebugColor;
 import com.openggf.game.session.EditorCursorState;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.editor.render.EditorOverlayRenderer;
 import com.openggf.editor.render.EditorCommandStripRenderer;
 import com.openggf.editor.render.EditorLibraryPaneRenderer;
@@ -37,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestEditorRenderingSmoke {
@@ -44,7 +47,7 @@ class TestEditorRenderingSmoke {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineServices.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @AfterEach
@@ -55,8 +58,29 @@ class TestEditorRenderingSmoke {
 
     @Test
     void focusedPaneRenderer_buildsWithoutPermanentSidebarAssumptions() {
-        FocusedEditorPaneRenderer renderer = new FocusedEditorPaneRenderer(null, TEST_GRAPHICS);
+        InspectableFocusedEditorPaneRenderer renderer = new InspectableFocusedEditorPaneRenderer();
 
+        // With no controller attached the renderer must still emit a defined
+        // fallback: the static pane chrome plus a translucent backdrop, and no
+        // controller-driven preview placements.
+        List<GLCommand> blockChrome = renderer.buildBlockCommands();
+        List<GLCommand> chunkChrome = renderer.buildChunkCommands();
+        assertFalse(blockChrome.isEmpty(),
+                "block pane must emit fallback chrome commands with a null controller");
+        assertFalse(chunkChrome.isEmpty(),
+                "chunk pane must emit fallback chrome commands with a null controller");
+
+        assertEquals(1, renderer.buildBlockBackdropCommands().size(),
+                "block pane must emit exactly one fallback backdrop command");
+        assertEquals(1, renderer.buildChunkBackdropCommands().size(),
+                "chunk pane must emit exactly one fallback backdrop command");
+
+        assertTrue(renderer.buildBlockPreviewPlacements().isEmpty(),
+                "no preview placements without a controller");
+        assertTrue(renderer.buildChunkPreviewPlacements().isEmpty(),
+                "no preview placements without a controller");
+
+        // The full render path must also remain exception-free.
         assertDoesNotThrow(renderer::renderBlockEditorPane);
         assertDoesNotThrow(renderer::renderChunkEditorPane);
     }
@@ -220,7 +244,10 @@ class TestEditorRenderingSmoke {
         assertEquals(2, commands.size());
         assertEquals("One", commands.get(0).text());
         assertEquals("Two", commands.get(1).text());
-        assertTrue(commands.get(1).y() > commands.get(0).y());
+        assertEquals(10, commands.get(0).lineHeight());
+        assertEquals(12, commands.get(0).y());
+        assertEquals(32, commands.get(1).y());
+        assertEquals(commands.get(0).y() + commands.get(0).lineHeight() * 2, commands.get(1).y());
     }
 
     @Test
@@ -236,11 +263,31 @@ class TestEditorRenderingSmoke {
     }
 
     @Test
-    void textRenderer_convertsTopLeftYToGlyphViewportY() {
-        InspectableTextRenderer renderer = new InspectableTextRenderer();
+    void textRenderer_executesQueuedBatchThroughPixelFontBackend() throws Exception {
+        GraphicsManager.getInstance().resetState();
+        float[] projectionMatrix = {
+                1f, 2f, 3f, 4f,
+                5f, 6f, 7f, 8f,
+                9f, 10f, 11f, 12f,
+                13f, 14f, 15f, 16f
+        };
+        TEST_GRAPHICS.setProjectionMatrixBuffer(projectionMatrix);
+        RecordingPixelFontTextRenderer pixelFontTextRenderer = new RecordingPixelFontTextRenderer();
+        InspectableTextRenderer renderer = new InspectableTextRenderer(pixelFontTextRenderer);
 
-        assertEquals(204, renderer.convertTopLeftY(224, 10, 10));
-        assertEquals(0, renderer.convertTopLeftY(224, 214, 10));
+        renderer.renderLines(List.of("Queued"), 8, 12);
+
+        assertEquals(1, graphicsCommandQueueSize());
+        queuedGraphicsCommand().execute(0, 0, 320, 224);
+
+        assertEquals(1, pixelFontTextRenderer.projectionCalls);
+        assertSame(projectionMatrix, pixelFontTextRenderer.lastProjection);
+        assertEquals(1, pixelFontTextRenderer.calls.size());
+        DrawCall call = pixelFontTextRenderer.calls.get(0);
+        assertEquals("Queued", call.text());
+        assertEquals(8, call.x());
+        assertEquals(12, call.y());
+        assertEquals(DebugColor.WHITE, call.color());
     }
 
     @Test
@@ -528,14 +575,33 @@ class TestEditorRenderingSmoke {
             super(TEST_GRAPHICS);
         }
 
+        private InspectableTextRenderer(PixelFontTextRenderer textRenderer) {
+            super(TEST_GRAPHICS, textRenderer);
+        }
+
         private List<TextCommand> buildCommands(List<String> lines, int x, int y) {
             return buildTextCommands(lines, x, y);
         }
+    }
 
-        private int convertTopLeftY(int viewportHeight, int y, int lineHeight) {
-            return topLeftToGlyphY(viewportHeight, y, lineHeight);
+    private static final class RecordingPixelFontTextRenderer extends PixelFontTextRenderer {
+        private int projectionCalls;
+        private float[] lastProjection;
+        private final List<DrawCall> calls = new ArrayList<>();
+
+        @Override
+        public void setProjectionMatrix(float[] projectionMatrix) {
+            projectionCalls++;
+            lastProjection = projectionMatrix;
+        }
+
+        @Override
+        public void drawShadowedText(String text, int x, int y, DebugColor color) {
+            calls.add(new DrawCall(text, x, y, color));
         }
     }
+
+    private record DrawCall(String text, int x, int y, DebugColor color) {}
 
     private static final class InspectableFocusedEditorPaneRenderer extends FocusedEditorPaneRenderer {
         private InspectableFocusedEditorPaneRenderer() {
@@ -647,6 +713,13 @@ class TestEditorRenderingSmoke {
         Field commands = GraphicsManager.class.getDeclaredField("commands");
         commands.setAccessible(true);
         return ((List<GLCommandable>) commands.get(GraphicsManager.getInstance())).size();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static GLCommandable queuedGraphicsCommand() throws Exception {
+        Field commands = GraphicsManager.class.getDeclaredField("commands");
+        commands.setAccessible(true);
+        return ((List<GLCommandable>) commands.get(GraphicsManager.getInstance())).get(0);
     }
 
     private static void assertTextCommandsInsideChrome(List<EditorTextRenderer.TextCommand> commands,

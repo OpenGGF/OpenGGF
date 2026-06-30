@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
@@ -8,11 +9,11 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.debug.DebugOverlayManager;
+import com.openggf.game.BonusStageProvider;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.CrossGameFeatureProvider;
-import com.openggf.game.EngineServices;
+import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameRng;
-import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
@@ -21,15 +22,24 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.RespawnState;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.save.SaveReason;
 import com.openggf.game.session.WorldSession;
+import com.openggf.game.solid.ObjectSolidExecutionContext;
+import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
+import com.openggf.game.zone.ZoneRuntimeRegistry;
+import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.BigRingReturnState;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
+import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
+import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.managers.SpriteManager;
 import java.io.IOException;
 import java.util.List;
@@ -54,6 +64,16 @@ public interface ObjectServices {
     Level currentLevel();
     int romZoneId();
     int currentAct();
+
+    /**
+     * Returns ROM {@code Apparent_act}. During seamless S3K act reloads this
+     * can intentionally differ from {@link #currentAct()}.
+     */
+    default int apparentAct() {
+        LevelManager manager = levelManager();
+        return manager != null ? manager.getApparentAct() : currentAct();
+    }
+
     int featureZoneId();
     int featureActId();
     ZoneFeatureProvider zoneFeatureProvider();
@@ -62,15 +82,34 @@ public interface ObjectServices {
     void playSfx(int soundId);
     void playSfx(GameSound sound);
     void playMusic(int musicId);
+    default boolean playMusic(GameMusic music) {
+        return audioManager().playMusic(music);
+    }
     void fadeOutMusic();
     AudioManager audioManager();
 
     // Gameplay
     void spawnLostRings(PlayableEntity player, int frameCounter);
 
+    default void spawnLostRingsAfterCurrentFrame(PlayableEntity player, int frameCounter) {
+        spawnLostRings(player, frameCounter);
+    }
+
     /** Returns the runtime-owned ROM-accurate pseudo-random number generator. */
-    default GameRng rng() {
-        return GameServices.rng();
+    GameRng rng();
+
+    ZoneRuntimeRegistry zoneRuntimeRegistry();
+
+    ZoneRuntimeState zoneRuntimeState();
+
+    PaletteOwnershipRegistry paletteOwnershipRegistryOrNull();
+
+    ZoneLayoutMutationPipeline zoneLayoutMutationPipeline();
+
+    SolidExecutionRegistry solidExecutionRegistry();
+
+    default ObjectSolidExecutionContext solidExecution() {
+        return solidExecutionRegistry().currentObject();
     }
 
     // Context-specific managers
@@ -78,16 +117,15 @@ public interface ObjectServices {
      * Returns the camera for position queries and bounds checks.
      * <p>
      * <b>Governance:</b> Object instance code (subclasses of {@link AbstractObjectInstance})
-     * should use this method, not {@link com.openggf.game.GameServices#camera()}.
-     * {@code GameServices.camera()} is for non-object code (HUD, level loading, etc.).
+     * should use this injected method. The static game-service facade is for
+     * non-object code (HUD, level loading, etc.).
      */
     Camera camera();
 
     /**
      * Returns the game state manager for score, lives, and emerald tracking.
      * <p>
-     * <b>Governance:</b> Object instance code should use this method, not
-     * {@link com.openggf.game.GameServices#gameState()}.
+     * <b>Governance:</b> Object instance code should use this injected method.
      */
     GameStateManager gameState();
 
@@ -100,8 +138,24 @@ public interface ObjectServices {
     // Player/sidekick access
     List<PlayableEntity> sidekicks();
 
+    /**
+     * Returns the preferred object-facing player participation query API.
+     * <p>
+     * Raw {@link #sidekicks()} remains available while object code migrates to
+     * explicit participation policies through this query layer.
+     */
+    default ObjectPlayerQuery playerQuery() {
+        return ObjectPlayerQuery.from(this);
+    }
+
     /** Returns the sprite manager for player sprite access. */
     SpriteManager spriteManager();
+
+    /**
+     * Returns the active collision system for object-local ROM handoffs that
+     * must reuse terrain/wall probes.
+     */
+    CollisionSystem collisionSystem();
 
     // --- Rendering ---
 
@@ -112,7 +166,7 @@ public interface ObjectServices {
     FadeManager fadeManager();
 
     /** Returns the active engine-level service bundle backing process-wide services. */
-    EngineServices engineServices();
+    EngineContext engineServices();
 
     /** Returns the configuration service. */
     SonicConfigurationService configuration();
@@ -204,6 +258,16 @@ public interface ObjectServices {
     void requestBonusStageExit();
 
     /**
+     * Returns the active bonus-stage provider, or {@code null} when no bonus
+     * stage is active. Exposes the gameplay-scoped provider through the injected
+     * object-service handle so object/restore code can resolve bonus-stage state
+     * without a global {@code GameServices.bonusStageOrNull()} lookup.
+     */
+    default BonusStageProvider bonusStageProviderOrNull() {
+        return null;
+    }
+
+    /**
      * Adds rings to the bonus stage coordinator's saved ring count.
      * ROM equivalent: {@code add.w d0,(Saved_ring_count).w}.
      * No-op when not in a bonus stage.
@@ -238,6 +302,15 @@ public interface ObjectServices {
      */
     void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow);
 
+    /**
+     * Requests an in-place seamless transition. Use for ROM paths that reload
+     * or mutate the level without entering the fade transition loop.
+     *
+     * @param request transition request to enqueue
+     */
+    default void requestSeamlessTransition(SeamlessLevelTransitionRequest request) {
+    }
+
     // --- Level queries ---
 
     /**
@@ -262,6 +335,9 @@ public interface ObjectServices {
      * big ring special stage (ROM: Save_Level_Data2 -> Saved2_* variables).
      */
     void saveBigRingReturn(BigRingReturnState state);
+
+    /** Requests a save at an exact gameplay write point. */
+    void requestSessionSave(SaveReason reason);
 
     // --- Game-specific providers ---
 

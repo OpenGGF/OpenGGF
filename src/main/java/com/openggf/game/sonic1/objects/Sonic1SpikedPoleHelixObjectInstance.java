@@ -7,8 +7,16 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.LevelManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -29,7 +37,7 @@ import java.util.List;
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/17 Spiked Pole Helix.asm
  */
 public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnRewindRecreatable {
 
     // ---- Constants from disassembly ----
 
@@ -43,6 +51,11 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
     // HURT ($80) + size index 4
     private static final int COLLISION_TYPE_HARMFUL = 0x84;
 
+    private static final TouchResponseProfile MULTI_REGION_HURT_PROFILE = hurtProfile(
+            true, TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY);
+    private static final TouchResponseProfile SINGLE_REGION_HURT_PROFILE = hurtProfile(
+            false, TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+
     // v_ani0_frame timer period: v_ani0_time resets to $0B (12 frames per tick)
     private static final int ANIM_FRAME_DURATION = 12;
 
@@ -52,20 +65,52 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
     // ---- Spike data ----
 
     // Per-spike state: positions and phase offsets
-    private final int spikeCount;       // Total number of spikes (including parent at center)
+    private int spikeCount;       // Total number of spikes (including parent at center)
     private final int[] spikeX;         // X position of each spike
-    private final int spikeY;           // Y position (all share the same Y)
+    private int spikeY;           // Y position (all share the same Y)
     private final int[] spikePhase;     // hel_frame per spike (0-7)
     private final int[] spikeFrame;     // Current display frame per spike (computed each update)
     private final boolean[] spikeHarmful; // Whether each spike is harmful this frame
 
     // Parent spike index (the one at the original spawn X position)
-    private final int parentIndex;
+    private int parentIndex;
 
-    // v_ani0_frame: local counter replicating global sync animation counter 0
-    // Decrements every ANIM_FRAME_DURATION frames, wraps at FRAME_COUNT (AND #7)
-    private int animTimer = ANIM_FRAME_DURATION - 1;
+    // v_ani0_frame is ROM's GLOBAL sync counter 0, ticked by SynchroAnimate every 12 gfc ticks.
+    // It is NOT a per-object counter. ROM initialises v_ani0_time=0 and v_ani0_frame=0 at level
+    // start (clearRAM v_timingandscreenvariables, sonic.asm:2725).
+    //
+    // ROM Level_MainLoop order (sonic.asm:2980-3010):
+    //   addq.w #1,(v_framecount).w   ; gfc increments at top of loop (line 2984)
+    //   ExecuteObjects               ; objects run here; read v_ani0_frame (line 2988)
+    //   SynchroAnimate               ; updates v_ani0_frame AFTER objects (line 3010)
+    //
+    // So at loop iteration gfc=N, objects read v_ani0_frame = value after (N-1) SynchroAnimate
+    // calls. SynchroAnimate (sonic.asm:3115-3119): subq.b #1 → bpl to skip (fires when result
+    // goes negative, i.e., time=0→0xFF); reloads to 11; decrements v_ani0_frame mod 8.
+    // Fires at calls 1, 13, 25, ..., giving ceil((N-1)/12) = (N-1+11)/12 = (N+10)/12 ticks.
+    //   v_ani0_frame(N) = (-((N+10)/12)) & 7   (integer division)
+    //
+    // A per-object counter unseeded from the trace will diverge whenever the helix streams
+    // in mid-level (its animCounter starts at 0 regardless of the actual gfc). Fix: compute
+    // v_ani0_frame directly from levelManager.getFrameCounter()+1 (= current gfc) each frame,
+    // matching the Electrocuter fix pattern (SBZ1 f1925, commit in CHANGELOG.md).
+    //
+    // animCounter holds the per-frame derived value; no longer needs per-object timer state.
     private int animCounter = 0;
+
+    private static TouchResponseProfile hurtProfile(boolean multiRegionSource,
+            TouchOverlapStopPolicy stopPolicy) {
+        return new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                multiRegionSource,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                stopPolicy);
+    }
 
     public Sonic1SpikedPoleHelixObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SpikedPoleHelix");
@@ -137,13 +182,17 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Replicate v_ani0_frame timing: decrement counter every ANIM_FRAME_DURATION frames
-        // Disasm (SynchroAnimate): subq.b #1,(v_ani0_time).w / bpl.s .nochange
-        //   move.b #$0B,(v_ani0_time).w / subq.b #1,(v_ani0_frame).w
-        animTimer--;
-        if (animTimer < 0) {
-            animTimer = ANIM_FRAME_DURATION - 1;
-            animCounter = (animCounter - 1) & 0x07;
+        // Derive v_ani0_frame from the trace-seeded level frame counter (gfc).
+        // ROM ExecuteObjects runs before SynchroAnimate (sonic.asm:2988 vs 3010), so objects
+        // at loop iteration gfc=N read v_ani0_frame from after (N-1) SynchroAnimate calls:
+        //   animCounter = (-((gfc + ANIM_FRAME_DURATION - 2) / ANIM_FRAME_DURATION)) & 7
+        //               = (-((N+10) / 12)) & 7   (integer division)
+        //
+        // levelManager.getFrameCounter()+1 = current gfc (pre-increment, same as Electrocuter).
+        LevelManager levelManager = services().levelManager();
+        if (levelManager != null) {
+            int gfc = levelManager.getFrameCounter() + 1;
+            animCounter = (-(( gfc + ANIM_FRAME_DURATION - 2) / ANIM_FRAME_DURATION)) & 0x07;
         }
 
         updateSpikeFrames();
@@ -196,6 +245,16 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
     // we override getMultiTouchRegions() to report all harmful spike positions.
 
     @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(getMultiTouchRegions() != null);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return multiRegionSource ? MULTI_REGION_HURT_PROFILE : SINGLE_REGION_HURT_PROFILE;
+    }
+
+    @Override
     public int getCollisionFlags() {
         // The parent spike's collision state
         return spikeHarmful[parentIndex] ? COLLISION_TYPE_HARMFUL : 0;
@@ -222,7 +281,6 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
         if (harmfulCount == 0) {
             return null;
         }
-
         TouchRegion[] regions = new TouchRegion[harmfulCount];
         int idx = 0;
         for (int i = 0; i < spikeCount; i++) {
@@ -243,14 +301,7 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isBaseXOnScreen() {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = spawn.x() & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
+        return isInRangeAt(spawn.x());
     }
 
     // ---- Debug rendering ----

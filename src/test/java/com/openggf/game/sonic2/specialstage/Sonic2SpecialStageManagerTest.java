@@ -1,9 +1,11 @@
 package com.openggf.game.sonic2.specialstage;
 
+import com.openggf.game.session.EngineContext;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.*;
+import com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug;
 
 /**
  * Unit tests for Sonic2SpecialStageManager.
@@ -13,11 +15,23 @@ public class Sonic2SpecialStageManagerTest {
 
     @Test
     public void testManagerConstruction() {
-        Sonic2SpecialStageManager instance1 = new Sonic2SpecialStageManager();
-        Sonic2SpecialStageManager instance2 = new Sonic2SpecialStageManager();
+        Sonic2SpecialStageManager instance1 = assertDoesNotThrow(() -> new Sonic2SpecialStageManager(),
+                "Default construction should not require configured EngineContext");
+        Sonic2SpecialStageManager instance2 = assertDoesNotThrow(() -> new Sonic2SpecialStageManager(),
+                "Repeated default construction should stay bootstrap-safe");
 
         assertNotNull(instance1, "Manager instance should not be null");
         assertNotSame(instance1, instance2, "Separate constructions should yield separate instances");
+    }
+
+    @Test
+    public void testInjectedDebugConstructionDoesNotRequireConfiguredEngineServices() {
+        Sonic2SpecialStageSpriteDebug debug = new Sonic2SpecialStageSpriteDebug();
+
+        Sonic2SpecialStageManager manager = assertDoesNotThrow(() -> new Sonic2SpecialStageManager(debug),
+                "Injected debug construction should not require configured EngineContext");
+
+        assertNotNull(manager, "Manager instance should not be null");
     }
 
     @Test
@@ -25,6 +39,42 @@ public class Sonic2SpecialStageManagerTest {
         Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
         manager.reset();
         assertFalse(manager.isInitialized(), "Manager should not be initialized by default");
+    }
+
+    @Test
+    public void lagCompensationDisplayStartsOffAndToggles() {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+
+        assertFalse(manager.isLagCompensationDisplayEnabled(),
+                "Lag compensation debug display should be hidden until explicitly toggled");
+
+        manager.toggleLagCompensationDisplay();
+        assertTrue(manager.isLagCompensationDisplayEnabled(),
+                "First toggle should enable the lag compensation debug display");
+
+        manager.toggleLagCompensationDisplay();
+        assertFalse(manager.isLagCompensationDisplayEnabled(),
+                "Second toggle should hide the lag compensation debug display again");
+    }
+
+    @Test
+    public void lagCompensationAdjustmentsRequireDisplayEnabled() {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        double initial = manager.getLagCompensation();
+
+        assertFalse(manager.adjustLagCompensationIfDisplayEnabled(0.05),
+                "F6/F7-style adjustments should be ignored while the display is disabled");
+        assertEquals(initial, manager.getLagCompensation(), 0.0001);
+
+        manager.toggleLagCompensationDisplay();
+        assertTrue(manager.adjustLagCompensationIfDisplayEnabled(0.05),
+                "F6/F7-style adjustments should apply after F1 enables the display");
+        assertEquals(initial + 0.05, manager.getLagCompensation(), 0.0001);
+
+        manager.toggleLagCompensationDisplay();
+        assertFalse(manager.adjustLagCompensationIfDisplayEnabled(-0.05),
+                "F6/F7-style adjustments should stop applying after the display is toggled off");
+        assertEquals(initial + 0.05, manager.getLagCompensation(), 0.0001);
     }
 
     @Test

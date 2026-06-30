@@ -50,9 +50,10 @@ public class TestPhysicsProfile {
         assertEquals(sonic.runAccel(), tails.runAccel(), "accel same");
         assertEquals(sonic.max(), tails.max(), "max same");
         assertEquals(sonic.jump(), tails.jump(), "jump same");
+        // ROM Tails_Roll (s2.asm:39962) uses cmpi.w #$80,d0 — identical to Sonic_Roll (s2.asm:36983)
+        assertEquals(0x80, tails.minStartRollSpeed(), "minStartRollSpeed same as Sonic");
 
         // Tails-specific differences
-        assertEquals(264, tails.minStartRollSpeed(), "minStartRollSpeed");
         assertEquals(30, tails.runHeight(), "runHeight");
         assertEquals(15, tails.standYRadius(), "standYRadius");
     }
@@ -233,6 +234,53 @@ public class TestPhysicsProfile {
         assertEquals(9, fs.spindashSpeedTable().length, "S3K speed table length");
         assertEquals(CollisionModel.DUAL_PATH, fs.collisionModel(), "S3K dual path collision");
         assertTrue(fs.hasDualCollisionPaths(), "S3K has dual paths");
+    }
+
+    @Test
+    public void testPermanentRespawnTableLatch_PerGame() {
+        // S3K only: ROM Touch_EnemyNormal sets bit 7 of Object_respawn_table
+        // permanently after a player kill (sonic3k.asm:20953 bset #7,status(a1)).
+        // S1/S2 ObjectsManager_Main only latches remembered spawns.
+        assertFalse(PhysicsFeatureSet.SONIC_1.permanentRespawnTableLatch(),
+                "S1 does not permanently latch respawn-table bits");
+        assertFalse(PhysicsFeatureSet.SONIC_2.permanentRespawnTableLatch(),
+                "S2 does not permanently latch respawn-table bits");
+        assertTrue(PhysicsFeatureSet.SONIC_3K.permanentRespawnTableLatch(),
+                "S3K permanently latches respawn-table bits after player kill");
+    }
+
+
+    @Test
+    public void testObjectsExecuteAfterPlayerPhysics_PerGame() {
+        // All three games use post-physics object execution per the
+        // 2026-04-18-solid-ordering-rom-accuracy plan: S2/S3K via DUAL_PATH
+        // collision model, S1 via the bridged inline-order path.
+        assertTrue(PhysicsFeatureSet.SONIC_1.objectsExecuteAfterPlayerPhysics(),
+                "S1 uses post-physics object ordering");
+        assertTrue(PhysicsFeatureSet.SONIC_2.objectsExecuteAfterPlayerPhysics(),
+                "S2 uses post-physics object ordering");
+        assertTrue(PhysicsFeatureSet.SONIC_3K.objectsExecuteAfterPlayerPhysics(),
+                "S3K uses post-physics object ordering");
+    }
+
+    @Test
+    public void testSpeedShoesTimerPhaseCompensation_PerGame() {
+        assertEquals(0, PhysicsFeatureSet.SONIC_1.speedShoesTimerPrePhysicsExtraTicks(),
+                "S1 word timer clears on the display-time decrement that reaches zero");
+        assertEquals(1, PhysicsFeatureSet.SONIC_2.speedShoesTimerPrePhysicsExtraTicks(),
+                "S2 display-time decrement happens after movement, while the engine timer updates before movement");
+        assertEquals(0, PhysicsFeatureSet.SONIC_3K.speedShoesTimerPrePhysicsExtraTicks(),
+                "S3K clears speed shoes from Sonic_Display before the next movement frame consumes acceleration");
+    }
+
+    @Test
+    public void testSpeedShoesTimerDecimation_PerGame() {
+        // S1/S2 use a per-frame word timer; S3K a byte timer decremented every
+        // 8th level frame (sonic3k.asm:22072-22078).
+        assertEquals(1, PhysicsFeatureSet.SONIC_1.speedShoesTimerDecimation(), "S1 per-frame word timer");
+        assertEquals(1, PhysicsFeatureSet.SONIC_2.speedShoesTimerDecimation(), "S2 per-frame word timer");
+        assertEquals(8, PhysicsFeatureSet.SONIC_3K.speedShoesTimerDecimation(),
+                "S3K byte timer decremented every 8th level frame");
     }
 
     // ========================================

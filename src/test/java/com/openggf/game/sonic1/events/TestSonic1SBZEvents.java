@@ -2,7 +2,8 @@ package com.openggf.game.sonic1.events;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -35,7 +36,7 @@ public class TestSonic1SBZEvents {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
         cam = GameServices.camera();
         TestObjectServices testServices = new TestObjectServices();
@@ -49,7 +50,7 @@ public class TestSonic1SBZEvents {
     @AfterEach
     public void tearDown() {
         clearConstructionContext();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @SuppressWarnings("unchecked")

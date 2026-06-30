@@ -1,11 +1,11 @@
 package com.openggf.level.scroll;
-import com.openggf.game.RuntimeManager;
-import com.openggf.game.sonic2.scroll.SwScrlArz;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic2.scroll.SwScrlArz;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -20,7 +20,7 @@ public class SwScrlArzTest {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         // Create handler with null tables (uses hardcoded row heights)
         handler = new SwScrlArz(null);
         horizScrollBuf = new int[224];
@@ -28,7 +28,7 @@ public class SwScrlArzTest {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

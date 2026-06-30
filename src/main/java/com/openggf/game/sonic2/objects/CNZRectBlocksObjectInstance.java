@@ -30,7 +30,7 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm lines 58068-58201 (ObjD2)
  */
 public class CNZRectBlocksObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     /**
      * Animation frame data from byte_2B654.
@@ -59,12 +59,18 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
     private static final int FRAMES_PER_TICK = 16; // objoff_3A reset value + 1
 
     // Base position (stored during init, from spawn location)
-    private final int baseX;
-    private final int baseY;
+    private int baseX;
+    private int baseY;
 
     // Animation state
     private int mappingFrame = 0;
-    private int animTimer = FRAMES_PER_TICK - 1; // Counts down from 15 to 0
+    // ROM ObjD2_Init (s2.asm:58524-58538) never writes objoff_3A, so it is
+    // zero-initialized. The first ObjD2_Main tick (s2.asm:58547-58549) does
+    // subq.w #1,objoff_3A on 0 -> -1 -> bmi -> immediately advances mapping_frame
+    // and resets objoff_3A to $F. Thus mapping_frame 0 shows for only 1 tick.
+    // Mirror that by starting animTimer at 0 (not FRAMES_PER_TICK-1) so the engine
+    // and ROM caterpillar animation stay phase-aligned.
+    private int animTimer = 0; // objoff_3A, zero-initialized per ROM (s2.asm:58524-58538)
     private int invisibleTimer; // Counts down, object invisible when > 0
 
     // Current computed position
@@ -86,6 +92,11 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
 
         // Compute initial position
         updatePosition();
+    }
+
+    @Override
+    public CNZRectBlocksObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CNZRectBlocksObjectInstance(ctx.spawn(), getName());
     }
 
     /**

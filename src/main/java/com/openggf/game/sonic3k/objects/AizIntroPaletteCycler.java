@@ -1,9 +1,10 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.graphics.GraphicsManager;
 import java.util.logging.Logger;
 import com.openggf.level.Level;
-import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectServices;
 
 /**
@@ -82,18 +83,17 @@ public class AizIntroPaletteCycler {
         try {
             Level level = currentLevel();
             if (level == null) return;
-            Palette palette = level.getPalette(SONIC_PALETTE_INDEX);
-            if (palette == null) return;
-
-            for (int i = 0; i < COLORS_PER_STEP; i++) {
-                palette.getColor(FIRST_COLOR_INDEX + i)
-                        .fromSegaFormat(data, offset + i * 2);
-            }
-
-            GraphicsManager gfx = graphicsManager();
-            if (gfx.isGlInitialized()) {
-                gfx.cachePaletteTexture(palette, SONIC_PALETTE_INDEX);
-            }
+            byte[] patch = new byte[COLORS_PER_STEP * 2];
+            System.arraycopy(data, offset, patch, 0, patch.length);
+            S3kPaletteWriteSupport.applyContiguousPatch(
+                    services != null ? services.paletteOwnershipRegistryOrNull() : null,
+                    level,
+                    graphicsManager(),
+                    S3kPaletteOwners.AIZ_INTRO_SUPER_PALETTE,
+                    S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
+                    SONIC_PALETTE_INDEX,
+                    FIRST_COLOR_INDEX,
+                    patch);
         } catch (Exception e) {
             LOG.fine(() -> "AizIntroPaletteCycler.applyToGpu: " + e.getMessage());
         }

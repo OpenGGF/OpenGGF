@@ -1,8 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.level.BigRingReturnState;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -10,8 +11,11 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -37,7 +41,7 @@ import java.util.logging.Logger;
  *     <ul>
  *       <li>Chaos emeralds &lt; 7: enter Special Stage (full flash sequence)</li>
  *       <li>All emeralds collected: award 50 rings, ring vanishes immediately</li>
- *       <li>TODO: Hidden Palace route (subtype bit 7, or S3+7chaos+7super)</li>
+ *       <li>Hidden Palace routes are disabled until HPZ is registered as a loadable level</li>
  *     </ul>
  *   </li>
  *   <li>For Special Stage path: lock player (hidden + object controlled),
@@ -50,7 +54,7 @@ import java.util.logging.Logger;
  * <p>
  * Reference: docs/skdisasm/sonic3k.asm Obj_SSEntryRing (lines 128211-128530)
  */
-public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
+public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSSEntryRingObjectInstance.class.getName());
 
     // Collision extents from center (ROM: SSEntry_Range: dc.w -$18, $30, -$28, $50)
@@ -99,8 +103,9 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
         MARKED_DELETE
     }
 
-    /** Subtype is the bit index (0-31) into Collected_special_ring_array. */
-    private final int bitIndex;
+    /** Subtype low bits are the bit index (0-31) into Collected_special_ring_array. */
+    private int bitIndex;
+    private boolean hiddenPalaceRoute;
 
     private State state;
     private boolean initialized;
@@ -124,7 +129,8 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
 
     public Sonic3kSSEntryRingObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSEntryRing");
-        this.bitIndex = spawn.subtype();
+        this.bitIndex = spawn.subtype() & 0x1F;
+        this.hiddenPalaceRoute = (spawn.subtype() & 0x80) != 0;
 
         // Default to MAIN state; ensureInitialized will check collection status
         this.state = State.MAIN;
@@ -132,6 +138,11 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
         this.animTimer = 0;
         this.animIndex = 0;
         this.mappingFrame = FORMATION_FRAMES[0];
+    }
+
+    @Override
+    public Sonic3kSSEntryRingObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new Sonic3kSSEntryRingObjectInstance(ctx.spawn());
     }
 
     private void ensureInitialized() {
@@ -280,7 +291,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
      *   <li>SK_alone + 7 chaos → award 50 rings</li>
      *   <li>S3 level + 7 chaos → enter Special Stage (for super emeralds)</li>
      *   <li>SK level + 7 chaos + 7 super → award 50 rings</li>
-     *   <li>Subtype bit 7 set → Hidden Palace (TODO)</li>
+     *   <li>Subtype bit 7 set → Hidden Palace after the flash sequence, once HPZ is loadable</li>
      * </ul>
      */
     private void onTouched(AbstractPlayableSprite player) {
@@ -293,11 +304,15 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
         // Play sfx_BigRing ($B3) — always plays on touch
         services().playSfx(Sonic3kSfx.BIG_RING.id);
 
-        // TODO: Hidden Palace route — subtype bit 7, or S3 completed + 7 chaos + 7 super
-        // When implemented: check (bitIndex & 0x80) != 0 or SSEntry_CheckLevel + emerald state
-        // and route to HPZ (zone 0x17, act 0x01) instead of special stage.
+        if (shouldRouteToHiddenPalace(gameState) && hiddenPalaceRouteAvailable()) {
+            LOGGER.fine("SSEntryRing #" + bitIndex + " - routing to Hidden Palace");
+            gameState.markSpecialRingCollected(bitIndex);
+            setDestroyed(true);
+            services().requestZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1, true);
+            return;
+        }
 
-        if (gameState.hasAllEmeralds()) {
+        if (gameState.hasAllEmeralds() || shouldRouteToHiddenPalace(gameState)) {
             // Path B: All emeralds collected — award 50 rings, instant delete
             LOGGER.fine("SSEntryRing #" + bitIndex + " — all emeralds, awarding 50 rings");
             gameState.markSpecialRingCollected(bitIndex);
@@ -309,6 +324,17 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
             LOGGER.fine("SSEntryRing #" + bitIndex + " — entering Special Stage sequence");
             enterSpecialStageSequence(player);
         }
+    }
+
+    private boolean shouldRouteToHiddenPalace(com.openggf.game.GameStateManager gameState) {
+        return hiddenPalaceRoute || (gameState.hasAllEmeralds() && gameState.hasAllSuperEmeralds());
+    }
+
+    private boolean hiddenPalaceRouteAvailable() {
+        // ROM loc_618AC restarts into HPZ, but the engine's S3K zone registry
+        // currently indexes through zone 0x15. Requesting 0x16 would crash the
+        // fade callback before HPZ LevelData exists.
+        return false;
     }
 
     /**
@@ -326,25 +352,31 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
 
         // ROM: Save_Level_Data2 — save player position and ring count for return from SS.
         // This is separate from checkpoint state (ROM: Saved_ vs Saved2_).
-        // ROM line 52685-52701: saves position, rings, solid bits, camera, and
-        // Dynamic_resize_routine so the resize state machine resumes correctly.
+        // ROM line 52685-52701: saves position, rings, solid bits, camera,
+        // Dynamic_resize_routine, and Mean_water_level for the return.
         var camera = services().camera();
-        int resizeRoutine = 0;
-        var eventProvider = services().levelEventProvider();
-        if (eventProvider instanceof Sonic3kLevelEventManager s3kEvents) {
-            resizeRoutine = s3kEvents.getDynamicResizeRoutine();
+        var zoneRuntimeState = services().zoneRuntimeState();
+        int resizeRoutine = zoneRuntimeState instanceof S3kZoneRuntimeState s3kState
+                ? s3kState.getDynamicResizeRoutine()
+                : 0;
+        int meanWaterLevel = 0;
+        var waterSystem = services().waterSystem();
+        int featureZone = services().currentZone();
+        int featureAct = services().currentAct();
+        if (waterSystem != null && waterSystem.hasWater(featureZone, featureAct)) {
+            meanWaterLevel = waterSystem.getWaterLevelY(featureZone, featureAct);
         }
         services().saveBigRingReturn(new BigRingReturnState(
                 player.getCentreX(), player.getCentreY(),
                 camera.getX(), camera.getY(), player.getRingCount(),
                 player.getTopSolidBit(), player.getLrbSolidBit(),
-                camera.getMaxY(), resizeRoutine));
+                camera.getMaxY(), resizeRoutine, meanWaterLevel));
 
         // Lock player: hidden + object controlled
         // ROM: move.b #$53,object_control(a2) — disables input
         // ROM: move.b #-1,(Player_prev_frame).w — makes player invisible
         player.setHidden(true);
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
         // Freeze camera at player's last position
         camera.setFrozen(true);

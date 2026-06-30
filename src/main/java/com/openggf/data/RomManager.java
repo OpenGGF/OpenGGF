@@ -2,10 +2,11 @@ package com.openggf.data;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -26,6 +27,7 @@ import java.util.logging.Logger;
  */
 public class RomManager implements AutoCloseable {
     private static final Logger LOGGER = Logger.getLogger(RomManager.class.getName());
+    private static final String MISSING_ROM_PREFIX = "ROM file does not exist: ";
 
     private static RomManager instance;
 
@@ -124,19 +126,46 @@ public class RomManager implements AutoCloseable {
             throw new IOException("ROM filename not configured (DEFAULT_ROM not set or per-game ROM key empty)");
         }
 
+        Path romPath = resolveConfiguredRomPath(romFilename);
+        if (!Files.exists(romPath)) {
+            rom = null;
+            initialized = false;
+            throw new IOException(MISSING_ROM_PREFIX + romFilename);
+        }
+
         LOGGER.info("Opening ROM: " + romFilename);
 
         rom = new Rom();
         if (!rom.open(romFilename)) {
             rom = null;
+            initialized = false;
             throw new IOException("Failed to open ROM file: " + romFilename);
         }
 
         initialized = true;
-        LOGGER.info("ROM opened successfully: " + rom.readDomesticName());
+    }
 
-        // Auto-detect game type and set appropriate module
-        GameModuleRegistry.detectAndSetModule(rom);
+    private static Path resolveConfiguredRomPath(String romFilename) {
+        Path path = Path.of(romFilename);
+        if (!path.isAbsolute()) {
+            String userDir = System.getProperty("user.dir");
+            if (userDir != null) {
+                path = Path.of(userDir).resolve(path);
+            }
+        }
+        return path;
+    }
+
+    public static boolean isConfiguredRomMissing(Throwable failure) {
+        Throwable current = failure;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && message.startsWith(MISSING_ROM_PREFIX)) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     /**
@@ -161,7 +190,7 @@ public class RomManager implements AutoCloseable {
     @Override
     public synchronized void close() {
         if (rom != null) {
-            LOGGER.info("Closing ROM via RomManager");
+            LOGGER.fine("Closing ROM via RomManager");
             rom.close();
             rom = null;
         }
@@ -175,4 +204,3 @@ public class RomManager implements AutoCloseable {
     }
 
 }
-

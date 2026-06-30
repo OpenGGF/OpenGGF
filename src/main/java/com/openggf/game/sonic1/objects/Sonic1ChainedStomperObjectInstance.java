@@ -13,7 +13,14 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -57,7 +64,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/31 Chained Stompers.asm
  */
 public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider {
+        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider, SpawnRewindRecreatable {
 
     // ---- Sub-object configuration from CStom_Var ----
     // dc.b routine, y-offset, frame
@@ -141,8 +148,27 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     // Spike active width: move.b #$38,obActWid(a1)
     private static final int SPIKE_ACTIVE_WIDTH = 0x38;
 
+    private static final TouchResponseProfile MULTI_REGION_HURT_PROFILE = hurtProfile(
+            true, TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY);
+    private static final TouchResponseProfile SINGLE_REGION_HURT_PROFILE = hurtProfile(
+            false, TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+
     // Sound effect play interval: andi.b #$F,d0 / bne.s (skip sound)
     private static final int SOUND_INTERVAL_MASK = 0x0F;
+
+    private static TouchResponseProfile hurtProfile(boolean multiRegionSource,
+            TouchOverlapStopPolicy stopPolicy) {
+        return new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                multiRegionSource,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                stopPolicy);
+    }
 
     // ---- Instance state ----
 
@@ -151,13 +177,13 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     private int y;
 
     // Original Y position of main block (objoff_30 for sub-objects, spawn Y for main)
-    private final int origY;
+    private int origY;
 
     // Current Y offset from origY (objoff_32) - in subpixels for fall distance tracking
     private int yOffset;
 
     // Max fall distance for this instance (objoff_34)
-    private final int maxFallDistance;
+    private int maxFallDistance;
 
     // Y velocity (obVelY, 16-bit signed)
     private int yVelocity;
@@ -178,25 +204,42 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     private int waitTimer;
 
     // Block rendering: active width and mapping frame for the main block
-    private final int blockActiveWidth;
-    private final int blockFrame;
+    private int blockActiveWidth;
+    private int blockFrame;
 
     // Whether spikes have collision (only for wide/medium blocks, not when subtype $20)
-    private final boolean spikesHaveCollision;
+    private boolean spikesHaveCollision;
 
     // Spike sub-object Y position (follows block)
     private int spikeY;
 
     // Chain sub-object base Y and current Y (routine 8: dynamic chain frame)
-    private final int chainBaseY;
+    private int chainBaseY;
     private int chainY;
 
     // Ceiling sub-object Y (routine 6: static display)
-    private final int ceilingY;
+    private int ceilingY;
 
-    // ROM: CStom_MakeParts creates 3 additional sub-objects (spike, chain, ceiling)
-    // via FindNextFreeObj, each occupying one SST slot.
-    private static final int CHILD_SLOT_COUNT = 3;
+    // ROM: CStom_Main's CStom_Loop runs with d1=3 -> 4 iterations. The first
+    // iteration writes the main block into the object's own SST slot (a1=a0);
+    // the remaining iterations each call FindNextFreeObj to create one child
+    // sub-object (spike routine 4, chain routine 8, ceiling routine 6).
+    //
+    // So a placement normally allocates 3 CHILD slots. BUT when the spike piece
+    // (obFrame == 1) belongs to a stomper whose subtype upper nybble == $20,
+    // the ROM does `subq.w #1,d1` and then `beq.s CStom_MakeStomper`, re-running
+    // the body WITHOUT a fresh FindNextFreeObj — the spike reuses the previous
+    // sub-object's slot instead of consuming a new one. The net effect is only
+    // 2 child SST slots for $20-subtype stompers (no separate, collision-less
+    // spike object). 31 MZ Chained Stompers.asm: cmpi.b #1,obFrame(a1) /
+    // subq.w #1,d1 / cmpi.w #$20,d0 / beq.s CStom_MakeStomper.
+    //
+    // Derived from spikesHaveCollision (which encodes the same subtype==$20 test)
+    // instead of stored in a field, so the fix introduces no new rewind-captured
+    // scalar.
+    private int childSlotCount() {
+        return spikesHaveCollision ? 3 : 2;
+    }
 
     /** True once child slots have been allocated (second update, matching CStom_MakeParts). */
     private boolean childSlotsAllocated;
@@ -297,7 +340,7 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     }
     @Override
     public int getReservedChildSlotCount() {
-        return CHILD_SLOT_COUNT;
+        return childSlotCount();
     }
 
     @Override
@@ -313,7 +356,7 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
             childSlotsAllocated = true;
             var objectManager = services().objectManager();
             if (objectManager != null && getSlotIndex() >= 0) {
-                objectManager.allocateChildSlotsAfter(spawn, CHILD_SLOT_COUNT, getSlotIndex());
+                objectManager.allocateChildSlotsAfter(spawn, childSlotCount(), getSlotIndex());
             }
         }
 
@@ -631,6 +674,16 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     }
 
     // ---- Touch Response (spikes hurt the player) ----
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(getMultiTouchRegions() != null);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return multiRegionSource ? MULTI_REGION_HURT_PROFILE : SINGLE_REGION_HURT_PROFILE;
+    }
 
     @Override
     public int getCollisionFlags() {

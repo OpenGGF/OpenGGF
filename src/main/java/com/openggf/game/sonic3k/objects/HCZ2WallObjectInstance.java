@@ -6,6 +6,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.ZeroArgRewindRecreatable;
 
 import java.util.List;
 
@@ -25,7 +26,8 @@ import java.util.List;
  * <p>The object deletes itself when deactivated by the event handler
  * (Events_routine_bg != 4, i.e. wall-chase state ended).
  */
-public class HCZ2WallObjectInstance extends AbstractObjectInstance implements SolidObjectProvider {
+public class HCZ2WallObjectInstance extends AbstractObjectInstance
+        implements SolidObjectProvider, ZeroArgRewindRecreatable {
 
     /** ROM: d1 = $4B (75 pixels half-width for SolidObjectFull2). */
     private static final int HALF_WIDTH = 0x4B;

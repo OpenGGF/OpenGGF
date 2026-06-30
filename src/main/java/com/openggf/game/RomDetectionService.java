@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.architecture.CompositionRoot;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic1.Sonic1RomDetector;
 import com.openggf.game.sonic2.Sonic2RomDetector;
@@ -17,11 +18,12 @@ import java.util.logging.Logger;
  *
  * <p>Usage:
  * <pre>
- * RomDetectionService service = RuntimeManager.getEngineServices().romDetection();
+ * RomDetectionService service = EngineServices.current().romDetection();
  * boolean detected = service.detectAndSetModule(rom);
- * GameModule module = GameModuleRegistry.getCurrent();
+ * GameModule module = SessionManager.requireCurrentGameModule();
  * </pre>
  */
+@CompositionRoot
 public class RomDetectionService {
     private static final Logger LOGGER = Logger.getLogger(RomDetectionService.class.getName());
     private static RomDetectionService instance;

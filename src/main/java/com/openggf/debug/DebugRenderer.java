@@ -1,6 +1,9 @@
 package com.openggf.debug;
 
+import com.openggf.game.CollisionModel;
 import com.openggf.game.GameServices;
+import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.GameModule;
 
 import com.openggf.camera.Camera;
@@ -8,8 +11,10 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic2.slotmachine.CNZSlotMachineRenderer;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
@@ -22,13 +27,14 @@ import com.openggf.level.objects.TouchResponseDebugState;
 import com.openggf.physics.Direction;
 import com.openggf.physics.Sensor;
 import com.openggf.physics.SensorResult;
+import com.openggf.graphics.PixelFontTextRenderer;
+import com.openggf.graphics.PixelFontVariant;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.SensorConfiguration;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.debug.playback.PlaybackDebugManager;
 
-import java.awt.Font;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -39,6 +45,7 @@ public class DebugRenderer {
         private final DebugOverlayManager overlayManager;
         private final PlaybackDebugManager playbackDebugManager;
         private final PerformanceProfiler profiler;
+        private final PixelFontTextRenderer performanceTextRenderer;
         private GlyphBatchRenderer glyphBatch;
         private PerformancePanelRenderer performancePanelRenderer;
         private static final String[] SENSOR_LABELS = {"A", "B", "C", "D", "E", "F"};
@@ -74,6 +81,15 @@ public class DebugRenderer {
         private double scaleX = 1.0;
         private double scaleY = 1.0;
 
+        static record SensorLabelSpec(int orthogonalAxis, int sensorIndex, int labelWidth) {
+        }
+
+        static record SensorLabelPlacement(SensorLabelSpec spec, int drawX, int drawY) {
+        }
+
+        private record ActiveSensorLabel(SensorLabelSpec spec, String label, DebugColor color) {
+        }
+
         public DebugRenderer() {
                 this(GameServices.configuration(), GameServices.debugOverlay(),
                         GameServices.playbackDebug(), GameServices.profiler());
@@ -87,6 +103,7 @@ public class DebugRenderer {
                 this.overlayManager = Objects.requireNonNull(overlayManager, "overlayManager");
                 this.playbackDebugManager = Objects.requireNonNull(playbackDebugManager, "playbackDebugManager");
                 this.profiler = Objects.requireNonNull(profiler, "profiler");
+                this.performanceTextRenderer = new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
                 this.baseWidth = this.configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
                 this.baseHeight = this.configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
                 this.viewportWidth = baseWidth;
@@ -94,15 +111,14 @@ public class DebugRenderer {
         }
 
 	/**
-	 * Eagerly initializes the glyph batch renderer.
-	 * Call this BEFORE the main loop starts to avoid macOS freeze issues.
-	 * The GlyphAtlas uses Java2D which conflicts with GLFW's event loop.
+	 * Eagerly initializes debug text resources.
 	 */
 	public void eagerInit() {
 		if (glyphBatch == null) {
 			float scale = (float) Math.max(scaleX, scaleY);
-			glyphBatch = new GlyphBatchRenderer();
-			glyphBatch.init(new Font("SansSerif", Font.PLAIN, 11), scale);
+			glyphBatch = new GlyphBatchRenderer(
+                                new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW));
+			glyphBatch.init(null, scale);
 		}
 	}
 
@@ -110,14 +126,15 @@ public class DebugRenderer {
                 // Lazy initialization of glyph batch renderer
                 float scale = (float) Math.max(scaleX, scaleY);
                 if (glyphBatch == null) {
-                        glyphBatch = new GlyphBatchRenderer();
-                        glyphBatch.init(new Font("SansSerif", Font.PLAIN, 11), scale);
+                        glyphBatch = new GlyphBatchRenderer(
+                                new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW));
+                        glyphBatch.init(null, scale);
                 }
                 if (!glyphBatch.isInitialized()) {
                         return;
                 }
                 // Reinitialize if scale changed significantly (e.g., window resize)
-                glyphBatch.updateScale(new Font("SansSerif", Font.PLAIN, 11), scale);
+                glyphBatch.updateScale(null, scale);
                 glyphBatch.updateViewport(viewportWidth, viewportHeight);
 
                 glyphBatch.begin();
@@ -162,57 +179,7 @@ public class DebugRenderer {
                 }
                 // Render sensor labels
                 if (playable != null && overlayManager.isEnabled(DebugOverlayToggle.SENSOR_LABELS)) {
-                        Sensor[] sensors = playable.getAllSensors();
-                        for (int i = 0; i < sensors.length && i < SENSOR_LABELS.length; i++) {
-                                Sensor sensor = sensors[i];
-                                if (sensor == null) {
-                                        continue;
-                                }
-                                SensorResult result = sensor.getCurrentResult();
-                                if (sensor.isActive() && result != null) {
-                                        Camera camera = GameServices.camera();
-
-                                        SensorConfiguration sensorConfiguration = SpriteManager
-                                                        .getSensorConfigurationForGroundModeAndDirection(
-                                                                        playable.getGroundMode(),
-                                                                        sensor.getDirection());
-                                        Direction globalDirection = sensorConfiguration.direction();
-                                        sensor.computeRotatedOffset();
-
-                                        short worldX = (short) (playable.getCentreX() + sensor.getRotatedX());
-                                        short worldY = (short) (playable.getCentreY() + sensor.getRotatedY());
-                                        short xAdjusted = (short) (worldX - camera.getX());
-                                        short yAdjusted = (short) (worldY - camera.getY());
-
-                                        sensorLabelBuilder.setLength(0);
-                                        sensorLabelBuilder.append(SENSOR_LABELS[i]).append('(')
-                                                        .append(globalDirection.name().charAt(0))
-                                                        .append(") d:").append(result.distance())
-                                                        .append(" a:");
-                                        DebugRenderContext.appendHex2(sensorLabelBuilder, result.angle() & 0xFF);
-                                        String label = sensorLabelBuilder.toString();
-
-                                        DebugColor sensorColor = DebugOverlayPalette.sensorLabelColor(i, true);
-                                        int screenX = toScreenX(xAdjusted);
-                                        int screenY = toScreenYFromWorld(yAdjusted);
-                                        int offsetX = 0;
-                                        int offsetY = 0;
-                                        int stackOffset = (i % 2 == 0) ? 0 : uiY(6);
-                                        switch (globalDirection) {
-                                                case DOWN -> offsetY = uiY(10) + stackOffset;
-                                                case UP -> offsetY = -uiY(10) - stackOffset;
-                                                case LEFT -> {
-                                                        offsetX = -uiX(32);
-                                                        offsetY = stackOffset;
-                                                }
-                                                case RIGHT -> {
-                                                        offsetX = uiX(6);
-                                                        offsetY = stackOffset;
-                                                }
-                                        }
-                                        glyphBatch.drawTextOutlined(label, screenX + offsetX, screenY + offsetY, sensorColor, SENSOR_FONT);
-                                }
-                        }
+                        renderSensorLabels(playable);
                 }
 
                 // Render object labels
@@ -265,7 +232,8 @@ public class DebugRenderer {
                                 continue;
                         }
 
-                        String name = registry.getPrimaryName(spawn.objectId());
+                        String name = resolveObjectNameForDebug(registry, spawn.objectId(),
+                                getLevelManager().getRomZoneId());
                         objectLabelBuilder.setLength(0);
                         DebugRenderContext.appendHex2(objectLabelBuilder, spawn.objectId());
                         objectLabelBuilder.append(':');
@@ -372,14 +340,23 @@ public class DebugRenderer {
                 }
                 Camera camera = GameServices.camera();
                 int screenX = playable.getCentreX() - camera.getX();
-                int screenY = playable.getY() - camera.getY();
+                int screenY = playable.getCentreY() - camera.getY();
                 if (screenX < -16 || screenX > baseWidth + 16) {
                         return;
                 }
                 if (screenY < -16 || screenY > baseHeight + 16) {
                         return;
                 }
-                String label = formatLayer(playable.getLayer()) + " " + formatPriority(playable.isHighPriority());
+                String label;
+                if (isUnifiedCollision(playable)) {
+                        // S1 (UNIFIED): layer derived from loop-low-plane; tunnel = 0/1
+                        char layerChar = playable.isLoopLowPlane() ? 'B' : 'A';
+                        char tunnelChar = playable.isTunnelMode() ? '1' : '0';
+                        label = layerChar + " " + tunnelChar;
+                } else {
+                        // S2/S3K (DUAL_PATH): collision path + VDP sprite priority
+                        label = formatLayer(playable.getLayer()) + " " + formatPriority(playable.isHighPriority());
+                }
                 glyphBatch.drawTextOutlined(label,
                                 toScreenX(screenX - 6),
                                 toScreenYFromWorld(screenY) + uiY(8),
@@ -414,6 +391,188 @@ public class DebugRenderer {
                 }
 
                 overlayManager.clearObjectDebugTextEntries();
+        }
+
+        private void renderSensorLabels(AbstractPlayableSprite playable) {
+                if (!glyphBatch.isBatchActive()) {
+                        return;
+                }
+                Camera camera = GameServices.camera();
+                Sensor[] sensors = playable.getAllSensors();
+                List<ActiveSensorLabel> upLabels = new ArrayList<>(2);
+                List<ActiveSensorLabel> downLabels = new ArrayList<>(2);
+                List<ActiveSensorLabel> leftLabels = new ArrayList<>(2);
+                List<ActiveSensorLabel> rightLabels = new ArrayList<>(2);
+
+                for (int i = 0; i < sensors.length && i < SENSOR_LABELS.length; i++) {
+                        Sensor sensor = sensors[i];
+                        if (sensor == null || !sensor.isActive()) {
+                                continue;
+                        }
+                        SensorResult result = sensor.getCurrentResult();
+                        if (result == null) {
+                                continue;
+                        }
+
+                        SensorConfiguration sensorConfiguration = SpriteManager
+                                        .getSensorConfigurationForGroundModeAndDirection(
+                                                        playable.getGroundMode(),
+                                                        sensor.getDirection());
+                        Direction globalDirection = sensorConfiguration.direction();
+                        sensor.computeRotatedOffset();
+
+                        short worldX = (short) (playable.getCentreX() + sensor.getRotatedX());
+                        short worldY = (short) (playable.getCentreY() + sensor.getRotatedY());
+                        short xAdjusted = (short) (worldX - camera.getX());
+                        short yAdjusted = (short) (worldY - camera.getY());
+
+                        sensorLabelBuilder.setLength(0);
+                        sensorLabelBuilder.append(SENSOR_LABELS[i]).append('(')
+                                        .append(globalDirection.name().charAt(0))
+                                        .append(") d:").append(result.distance())
+                                        .append(" a:");
+                        DebugRenderContext.appendHex2(sensorLabelBuilder, result.angle() & 0xFF);
+                        String label = sensorLabelBuilder.toString();
+                        int labelWidth = glyphBatch.measureTextWidth(label, SENSOR_FONT);
+                        int orthogonalAxis = switch (globalDirection) {
+                                case UP, DOWN -> toScreenX(xAdjusted);
+                                case LEFT, RIGHT -> toScreenYFromWorld(yAdjusted);
+                        };
+                        ActiveSensorLabel activeLabel = new ActiveSensorLabel(
+                                        new SensorLabelSpec(orthogonalAxis, i, labelWidth),
+                                        label,
+                                        DebugOverlayPalette.sensorLabelColor(i, true));
+                        switch (globalDirection) {
+                                case UP -> upLabels.add(activeLabel);
+                                case DOWN -> downLabels.add(activeLabel);
+                                case LEFT -> leftLabels.add(activeLabel);
+                                case RIGHT -> rightLabels.add(activeLabel);
+                        }
+                }
+
+                int centerX = toScreenX(playable.getCentreX() - camera.getX());
+                int centerY = toScreenYFromWorld(playable.getCentreY() - camera.getY());
+                int xRadius = Math.max(uiX(playable.getXRadius()), uiX(6));
+                int yRadius = Math.max(uiY(playable.getYRadius()), uiY(6));
+                int lineHeight = glyphBatch.getLineHeight(SENSOR_FONT);
+                int sideMarginX = uiX(8);
+                int sideMarginY = uiY(10);
+                int labelGap = Math.max(1, uiX(3));
+
+                drawSensorLabelGroup(Direction.UP, upLabels, centerX, centerY, xRadius, yRadius,
+                                lineHeight, sideMarginX, sideMarginY, labelGap);
+                drawSensorLabelGroup(Direction.DOWN, downLabels, centerX, centerY, xRadius, yRadius,
+                                lineHeight, sideMarginX, sideMarginY, labelGap);
+                drawSensorLabelGroup(Direction.LEFT, leftLabels, centerX, centerY, xRadius, yRadius,
+                                lineHeight, sideMarginX, sideMarginY, labelGap);
+                drawSensorLabelGroup(Direction.RIGHT, rightLabels, centerX, centerY, xRadius, yRadius,
+                                lineHeight, sideMarginX, sideMarginY, labelGap);
+        }
+
+        private void drawSensorLabelGroup(Direction direction,
+                                          List<ActiveSensorLabel> activeLabels,
+                                          int centerX,
+                                          int centerY,
+                                          int xRadius,
+                                          int yRadius,
+                                          int lineHeight,
+                                          int sideMarginX,
+                                          int sideMarginY,
+                                          int labelGap) {
+                if (activeLabels.isEmpty()) {
+                        return;
+                }
+                List<SensorLabelSpec> specs = new ArrayList<>(activeLabels.size());
+                for (ActiveSensorLabel activeLabel : activeLabels) {
+                        specs.add(activeLabel.spec());
+                }
+                List<SensorLabelPlacement> placements = layoutSensorLabelsForSide(
+                                direction,
+                                centerX,
+                                centerY,
+                                xRadius,
+                                yRadius,
+                                lineHeight,
+                                sideMarginX,
+                                sideMarginY,
+                                labelGap,
+                                specs);
+                for (SensorLabelPlacement placement : placements) {
+                        ActiveSensorLabel activeLabel = findSensorLabel(activeLabels, placement.spec().sensorIndex());
+                        if (activeLabel == null) {
+                                continue;
+                        }
+                        glyphBatch.drawTextOutlined(activeLabel.label(), placement.drawX(), placement.drawY(),
+                                        activeLabel.color(), SENSOR_FONT);
+                }
+        }
+
+        private ActiveSensorLabel findSensorLabel(List<ActiveSensorLabel> activeLabels, int sensorIndex) {
+                for (ActiveSensorLabel activeLabel : activeLabels) {
+                        if (activeLabel.spec().sensorIndex() == sensorIndex) {
+                                return activeLabel;
+                        }
+                }
+                return null;
+        }
+
+        static List<SensorLabelPlacement> layoutSensorLabelsForSide(Direction direction,
+                                                                    int centerX,
+                                                                    int centerY,
+                                                                    int xRadius,
+                                                                    int yRadius,
+                                                                    int lineHeight,
+                                                                    int sideMarginX,
+                                                                    int sideMarginY,
+                                                                    int labelGap,
+                                                                    List<SensorLabelSpec> labels) {
+                if (labels.isEmpty()) {
+                        return List.of();
+                }
+                List<SensorLabelSpec> orderedLabels = new ArrayList<>(labels);
+                orderedLabels.sort((left, right) -> {
+                        int axisCompare = Integer.compare(left.orthogonalAxis(), right.orthogonalAxis());
+                        if (axisCompare != 0) {
+                                return axisCompare;
+                        }
+                        return Integer.compare(left.sensorIndex(), right.sensorIndex());
+                });
+
+                List<SensorLabelPlacement> placements = new ArrayList<>(orderedLabels.size());
+                int stackStep = lineHeight + labelGap;
+                switch (direction) {
+                        case LEFT, RIGHT -> {
+                                int widestLabel = 0;
+                                for (SensorLabelSpec label : orderedLabels) {
+                                        widestLabel = Math.max(widestLabel, label.labelWidth());
+                                }
+                                int drawX = direction == Direction.LEFT
+                                                ? centerX - xRadius - sideMarginX - widestLabel
+                                                : centerX + xRadius + sideMarginX;
+                                int startY = centerY + (stackStep * (orderedLabels.size() - 1)) / 2;
+                                for (int i = 0; i < orderedLabels.size(); i++) {
+                                        placements.add(new SensorLabelPlacement(
+                                                        orderedLabels.get(i),
+                                                        drawX,
+                                                        startY - i * stackStep));
+                                }
+                        }
+                        case UP, DOWN -> {
+                                int totalWidth = labelGap * (orderedLabels.size() - 1);
+                                for (SensorLabelSpec label : orderedLabels) {
+                                        totalWidth += label.labelWidth();
+                                }
+                                int drawX = centerX - totalWidth / 2;
+                                int drawY = direction == Direction.UP
+                                                ? centerY + yRadius + sideMarginY + lineHeight
+                                                : centerY - yRadius - sideMarginY;
+                                for (SensorLabelSpec label : orderedLabels) {
+                                        placements.add(new SensorLabelPlacement(label, drawX, drawY));
+                                        drawX += label.labelWidth() + labelGap;
+                                }
+                        }
+                }
+                return placements;
         }
 
         private void renderPlayerStatusPanel(AbstractPlayableSprite sprite, int ringCount) {
@@ -463,16 +622,27 @@ public class DebugRenderer {
                 lines.add("State: " + formatStateFlags(sprite));
 
                 pb.setLength(0);
-                pb.append("Layer: ").append(formatLayer(sprite.getLayer()))
-                  .append("  Prio: ").append(formatPriority(sprite.isHighPriority()));
-                lines.add(pb.toString());
+                if (isUnifiedCollision(sprite)) {
+                        // S1 (UNIFIED): A/B from loop-low-plane; tunnel mode 0/1.
+                        // Dual-path Prio/Solidity bits are stuck at defaults in S1, so we
+                        // surface S1's actual per-frame routing state instead.
+                        char layerChar = sprite.isLoopLowPlane() ? 'B' : 'A';
+                        char tunnelChar = sprite.isTunnelMode() ? '1' : '0';
+                        pb.append("Layer: ").append(layerChar)
+                          .append("  Tunnel: ").append(tunnelChar);
+                        lines.add(pb.toString());
+                } else {
+                        pb.append("Layer: ").append(formatLayer(sprite.getLayer()))
+                          .append("  Prio: ").append(formatPriority(sprite.isHighPriority()));
+                        lines.add(pb.toString());
 
-                pb.setLength(0);
-                pb.append("Solidity: top ");
-                DebugRenderContext.appendHex2(pb, sprite.getTopSolidBit() & 0xFF);
-                pb.append(" lrb ");
-                DebugRenderContext.appendHex2(pb, sprite.getLrbSolidBit() & 0xFF);
-                lines.add(pb.toString());
+                        pb.setLength(0);
+                        pb.append("Solidity: top ");
+                        DebugRenderContext.appendHex2(pb, sprite.getTopSolidBit() & 0xFF);
+                        pb.append(" lrb ");
+                        DebugRenderContext.appendHex2(pb, sprite.getLrbSolidBit() & 0xFF);
+                        lines.add(pb.toString());
+                }
 
                 pb.setLength(0);
                 pb.append("Radii: x ").append(sprite.getXRadius())
@@ -523,6 +693,29 @@ public class DebugRenderer {
                 int y = startY;
                 for (String line : lines) {
                         glyphBatch.drawTextOutlined(line, startX, y, DebugColor.WHITE, PANEL_FONT);
+                        y -= lineHeight;
+                }
+
+                // Live dynamic-object slot usage vs the fixed ROM-sized pool.
+                // White normally; orange when nearing the limit (>= 90%); red when
+                // full (allocateSlot() failing -> new spawns are dropped).
+                ObjectManager objManager =
+                        getLevelManager() != null ? getLevelManager().getObjectManager() : null;
+                if (objManager != null) {
+                        int live = objManager.getActiveObjectSlotCount();
+                        int peak = objManager.getPeakObjectSlotCount();
+                        int cap = objManager.getObjectSlotCapacity();
+                        DebugColor objColor = DebugColor.WHITE;
+                        if (cap > 0) {
+                                if (live >= cap) {
+                                        objColor = DebugColor.RED;
+                                } else if (live >= (cap * 9) / 10) {
+                                        objColor = DebugColor.ORANGE;
+                                }
+                        }
+                        glyphBatch.drawTextOutlined(
+                                        "Objs: " + live + "/" + cap + " peak " + peak,
+                                        startX, y, objColor, PANEL_FONT);
                         y -= lineHeight;
                 }
         }
@@ -576,7 +769,8 @@ public class DebugRenderer {
                                 break;
                         }
                         ObjectSpawn spawn = hit.spawn();
-                        String name = registry.getPrimaryName(spawn.objectId());
+                        String name = resolveObjectNameForDebug(registry, spawn.objectId(),
+                                getLevelManager().getRomZoneId());
                         if (name.length() > 12) {
                                 name = name.substring(0, 12);
                         }
@@ -815,7 +1009,7 @@ public class DebugRenderer {
         private void renderPerformancePanel() {
                 if (performancePanelRenderer == null) {
                         performancePanelRenderer = new PerformancePanelRenderer(
-                                baseWidth, baseHeight, glyphBatch, GameServices.graphics(), profiler);
+                                baseWidth, baseHeight, performanceTextRenderer, GameServices.graphics(), profiler);
                 }
                 performancePanelRenderer.updateViewport(viewportWidth, viewportHeight);
 
@@ -862,6 +1056,11 @@ public class DebugRenderer {
                 return ObjectManager.formatPlaneSwitcherLayer(layer);
         }
 
+        private boolean isUnifiedCollision(AbstractPlayableSprite sprite) {
+                PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+                return fs != null && fs.collisionModel() == CollisionModel.UNIFIED;
+        }
+
         private char formatPriority(boolean highPriority) {
                 return ObjectManager.formatPlaneSwitcherPriority(highPriority);
         }
@@ -875,7 +1074,7 @@ public class DebugRenderer {
         }
 
         private String getMainCharacterCode() {
-                return configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
+                return ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
         }
 
         private String formatTouchCategory(TouchCategory category) {
@@ -925,5 +1124,12 @@ public class DebugRenderer {
 
         private int toScreenYFromWorld(int worldY) {
                 return viewportHeight - toScreenY(worldY);
+        }
+
+        static String resolveObjectNameForDebug(ObjectRegistry registry, int objectId, int zoneId) {
+                if (registry instanceof Sonic3kObjectRegistry sonic3kRegistry && zoneId >= 0) {
+                        return sonic3kRegistry.getPrimaryName(objectId, S3kZoneSet.forZone(zoneId));
+                }
+                return registry.getPrimaryName(objectId);
         }
 }

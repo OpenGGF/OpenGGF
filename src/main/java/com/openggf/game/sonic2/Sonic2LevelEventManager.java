@@ -1,11 +1,19 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.game.sonic2.events.*;
+import com.openggf.game.sonic2.runtime.CnzRuntimeState;
+import java.nio.ByteBuffer;
+import com.openggf.game.sonic2.runtime.CnzRuntimeStateView;
+import com.openggf.game.sonic2.runtime.HtzRuntimeState;
+import com.openggf.game.sonic2.runtime.HtzRuntimeStateView;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
-import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
+import com.openggf.game.zone.NoOpZoneRuntimeState;
+import com.openggf.game.zone.ZoneRuntimeRegistry;
+import com.openggf.game.zone.ZoneRuntimeState;
 
 import java.util.logging.Logger;
 
@@ -36,6 +44,12 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
     public static final int ZONE_DEZ = 10;
 
     private static final Logger LOGGER = Logger.getLogger(Sonic2LevelEventManager.class.getName());
+    private static final int HANDLER_BYTES = 11 * 8;
+    private static final int HTZ_EXTRA_BYTES = 22;
+    private static final int CPZ_EXTRA_BYTES = 1;
+    private static final int CNZ_EXTRA_BYTES = 16;
+    private static final int LEGACY_EXTRA_BYTES = HANDLER_BYTES + HTZ_EXTRA_BYTES + CPZ_EXTRA_BYTES + CNZ_EXTRA_BYTES;
+    private static final int EXTRA_BYTES = LEGACY_EXTRA_BYTES + Sonic2WFZEvents.SNAPSHOT_BYTES;
 
     /** Cached player character resolved from config (lazy init). */
     private PlayerCharacter resolvedPlayerCharacter;
@@ -90,25 +104,12 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
     @Override
     public PlayerCharacter getPlayerCharacter() {
         if (resolvedPlayerCharacter == null) {
-            resolvedPlayerCharacter = resolvePlayerCharacterFromConfig();
+            SonicConfigurationService config = GameServices.configuration();
+            resolvedPlayerCharacter = config != null
+                    ? ActiveGameplayTeamResolver.resolvePlayerCharacter(config)
+                    : PlayerCharacter.SONIC_AND_TAILS;
         }
         return resolvedPlayerCharacter;
-    }
-
-    private static PlayerCharacter resolvePlayerCharacterFromConfig() {
-        SonicConfigurationService config = GameServices.configuration();
-        if (config == null) {
-            return PlayerCharacter.SONIC_AND_TAILS;
-        }
-        String mainCode = config.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        if ("tails".equalsIgnoreCase(mainCode)) {
-            return PlayerCharacter.TAILS_ALONE;
-        }
-        String sidekickCode = config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-        if (sidekickCode == null || sidekickCode.isEmpty()) {
-            return PlayerCharacter.SONIC_ALONE;
-        }
-        return PlayerCharacter.SONIC_AND_TAILS;
     }
 
     @Override
@@ -117,6 +118,30 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         if (handler != null) {
             handler.init(act);
         }
+        if (!GameServices.hasRuntime()) {
+            return;
+        }
+        ZoneRuntimeRegistry registry = GameServices.zoneRuntimeRegistry();
+        if (zone == ZONE_HTZ) {
+            installOwnedRuntimeState(registry, new HtzRuntimeStateView(zone, act, htzEvents));
+        } else if (registry.currentAs(HtzRuntimeState.class).isPresent()) {
+            registry.clear();
+        }
+        if (zone == ZONE_CNZ) {
+            installOwnedRuntimeState(registry, new CnzRuntimeStateView(zone, act, cnzEvents));
+        } else if (registry.currentAs(CnzRuntimeState.class).isPresent()) {
+            registry.clear();
+        }
+    }
+
+    private static void installOwnedRuntimeState(ZoneRuntimeRegistry registry, ZoneRuntimeState state) {
+        if (registry.current() == NoOpZoneRuntimeState.INSTANCE || isOwnedSonic2RuntimeState(registry.current())) {
+            registry.install(state);
+        }
+    }
+
+    private static boolean isOwnedSonic2RuntimeState(ZoneRuntimeState state) {
+        return state instanceof HtzRuntimeState || state instanceof CnzRuntimeState;
     }
 
     @Override
@@ -125,6 +150,18 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         Sonic2ZoneEvents handler = getActiveHandler();
         if (handler != null) {
             handler.update(currentAct, frameCounter);
+        }
+    }
+
+    @Override
+    protected void onUpdatePrePhysics() {
+        // ROM WaterEffects runs before RunObjects (docs/s2disasm/s2.asm:5094-5095);
+        // OOZ OilSlides lives in that pre-object slot. Dispatch the pre-physics
+        // portion of the active zone handler. frameCounter is advanced by the
+        // post-physics onUpdate() later this frame, so use frameCounter here.
+        Sonic2ZoneEvents handler = getActiveHandler();
+        if (handler != null) {
+            handler.updatePrePhysics(currentAct, frameCounter);
         }
     }
 
@@ -172,34 +209,120 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         }
     }
 
-    // =========================================================================
-    // Public API - HTZ earthquake delegation
-    // =========================================================================
-
     /**
-     * Gets the current Camera_BG_Y_offset for HTZ rising lava.
-     * Used by RisingLavaObjectInstance to calculate Y position.
-     *
-     * @return current BG Y offset (0 when not in earthquake, 224-320 during earthquake)
+     * Returns the HTZ event handler (test/diagnostic access).
+     * The handler owns the canonical {@code earthquakeActive} flag previously
+     * stored on {@code GameStateManager}.
      */
-    public int getCameraBgYOffset() {
-        return htzEvents.getCameraBgYOffset();
+    public Sonic2HTZEvents getHtzEvents() {
+        return htzEvents;
     }
 
-    /**
-     * Gets the current Camera_BG_X_offset used by HTZ earthquake BG scrolling.
-     * Top route / Act 1 use 0; Act 2 bottom route uses -$680.
-     */
-    public int getHtzBgXOffset() {
-        return htzEvents.getHtzBgXOffset();
+    /** Returns the EHZ event handler (test/diagnostic access). */
+    public Sonic2EHZEvents getEhzEventsForTest() {
+        return ehzEvents;
     }
 
-    /**
-     * Returns the relative BG vertical shift for HTZ earthquake.
-     * 0 = normal/risen position, positive = BG scrolled up (more lava visible).
-     * This is used by SwScrlHtz to offset vscrollFactorBG without modifying bgCamera.bgYPos.
-     */
-    public int getHtzBgVerticalShift() {
-        return htzEvents.getHtzBgVerticalShift();
+    /** Returns the CPZ event handler (test/diagnostic access). */
+    public Sonic2CPZEvents getCpzEventsForTest() {
+        return cpzEvents;
+    }
+
+    /** Returns the CNZ event handler (test/diagnostic access). */
+    public Sonic2CNZEvents getCnzEventsForTest() {
+        return cnzEvents;
+    }
+
+    public Sonic2WFZEvents getWfzEvents() {
+        return wfzEvents;
+    }
+
+    // =========================================================================
+    // RewindSnapshottable extra-state hooks (C.3)
+    // =========================================================================
+
+    /** Helper: write eventRoutine + bossSpawnDelay for one zone handler. */
+    private static void writeHandler(ByteBuffer buf, Sonic2ZoneEvents h) {
+        buf.putInt(h.getEventRoutine());
+        buf.putInt(h.getBossSpawnDelay());
+    }
+
+    /** Helper: restore eventRoutine + bossSpawnDelay for one zone handler. */
+    private static void readHandler(ByteBuffer buf, Sonic2ZoneEvents h) {
+        h.setEventRoutine(buf.getInt());
+        h.setBossSpawnDelay(buf.getInt());
+    }
+
+    @Override
+    protected byte[] captureExtra() {
+        // 11 handlers × 8 bytes + HTZ (22) + CPZ (1) + CNZ (16) + WFZ (32)
+        ByteBuffer buf = ByteBuffer.allocate(EXTRA_BYTES);
+        writeHandler(buf, ehzEvents);
+        writeHandler(buf, cpzEvents);
+        writeHandler(buf, htzEvents);
+        writeHandler(buf, mczEvents);
+        writeHandler(buf, arzEvents);
+        writeHandler(buf, cnzEvents);
+        writeHandler(buf, oozEvents);
+        writeHandler(buf, mtzEvents);
+        writeHandler(buf, wfzEvents);
+        writeHandler(buf, dezEvents);
+        writeHandler(buf, sczEvents);
+        // HTZ extra state
+        buf.putInt(htzEvents.getCameraBgYOffsetRaw());
+        buf.put((byte) (htzEvents.isHtzTerrainSinking() ? 1 : 0));
+        buf.putInt(htzEvents.getHtzTerrainDelay());
+        buf.put((byte) (htzEvents.isEarthquakeActiveRaw() ? 1 : 0));
+        buf.putInt(htzEvents.getHtzCurrentRisenLimit());
+        buf.putInt(htzEvents.getHtzCurrentSunkenLimit());
+        buf.putInt(htzEvents.getHtzCurrentBgXOffset());
+        // CPZ extra
+        buf.put((byte) (cpzEvents.isCpzWaterTriggered() ? 1 : 0));
+        // CNZ extra
+        buf.putInt(cnzEvents.getCnzLeftWallX());
+        buf.putInt(cnzEvents.getCnzLeftWallY());
+        buf.putInt(cnzEvents.getCnzRightWallX());
+        buf.putInt(cnzEvents.getCnzRightWallY());
+        // WFZ extra
+        wfzEvents.captureSnapshot(buf);
+        return buf.array();
+    }
+
+    @Override
+    protected void restoreExtra(byte[] extra) {
+        if (extra == null || extra.length < LEGACY_EXTRA_BYTES) {
+            return;
+        }
+        ByteBuffer buf = ByteBuffer.wrap(extra);
+        readHandler(buf, ehzEvents);
+        readHandler(buf, cpzEvents);
+        readHandler(buf, htzEvents);
+        readHandler(buf, mczEvents);
+        readHandler(buf, arzEvents);
+        readHandler(buf, cnzEvents);
+        readHandler(buf, oozEvents);
+        readHandler(buf, mtzEvents);
+        readHandler(buf, wfzEvents);
+        readHandler(buf, dezEvents);
+        readHandler(buf, sczEvents);
+        // HTZ extra
+        htzEvents.setCameraBgYOffset(buf.getInt());
+        htzEvents.setHtzTerrainSinking(buf.get() != 0);
+        htzEvents.setHtzTerrainDelay(buf.getInt());
+        htzEvents.setEarthquakeActiveRaw(buf.get() != 0);
+        htzEvents.setHtzCurrentRisenLimit(buf.getInt());
+        htzEvents.setHtzCurrentSunkenLimit(buf.getInt());
+        htzEvents.setHtzCurrentBgXOffset(buf.getInt());
+        // CPZ extra
+        cpzEvents.setCpzWaterTriggered(buf.get() != 0);
+        // CNZ extra
+        cnzEvents.setCnzLeftWallX(buf.getInt());
+        cnzEvents.setCnzLeftWallY(buf.getInt());
+        cnzEvents.setCnzRightWallX(buf.getInt());
+        cnzEvents.setCnzRightWallY(buf.getInt());
+        // WFZ extra was added after the original S2 event snapshot schema.
+        if (buf.remaining() >= Sonic2WFZEvents.SNAPSHOT_BYTES) {
+            wfzEvents.restoreSnapshot(buf);
+        }
     }
 }

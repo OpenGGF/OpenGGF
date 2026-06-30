@@ -1,13 +1,18 @@
 package com.openggf.tests;
 
-import com.openggf.game.EngineServices;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.physics.Direction;
+import com.openggf.physics.SensorResult;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,12 +26,13 @@ public class TestSonic3kZoneFeatureProvider {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.configureEngineServices(EngineServices.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -68,6 +74,48 @@ public class TestSonic3kZoneFeatureProvider {
     }
 
     @Test
+    public void aizEndSignSequenceKeepsBossArenaPriorityAfterBossFlagClears() {
+        TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        FakeAizEvents aizEvents = new FakeAizEvents();
+        provider.setAizEvents(aizEvents);
+
+        aizEvents.setBossFlag(true);
+        provider.update(player, 0x10E0, Sonic3kZoneIds.ZONE_AIZ);
+        assertTrue(player.isHighPriority(), "AIZ boss arena should force Sonic in front of foreground masks");
+
+        aizEvents.setBossFlag(false);
+        GameServices.gameState().setEndOfLevelActive(true);
+        provider.update(player, 0x10E0, Sonic3kZoneIds.ZONE_AIZ);
+
+        assertTrue(player.isHighPriority(),
+                "Obj_EndSignControl clears Boss_flag before the falling signpost/results flow finishes; "
+                        + "Sonic's art_tile priority bit must survive that handoff");
+        assertEquals(RenderPriority.MIN, player.getPriorityBucket(),
+                "The AIZ end-sign flow should keep Sonic in the front display bucket while results are active");
+    }
+
+    @Test
+    public void forestFrontPhaseAlsoForcesCpuSidekickInFrontOfForestMask() {
+        TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        sidekick.setCpuControlled(true);
+        GameServices.sprites().addSprite(sidekick, "tails");
+
+        FakeAizEvents aizEvents = new FakeAizEvents();
+        aizEvents.setForestFrontPhaseActive(true);
+        provider.setAizEvents(aizEvents);
+
+        provider.update(player, 0x44D0, Sonic3kZoneIds.ZONE_AIZ);
+
+        assertTrue(sidekick.isHighPriority(),
+                "AIZ forest handoff should force CPU Tails in front of the forest mask");
+        assertEquals(RenderPriority.MIN, sidekick.getPriorityBucket(),
+                "AIZ forest handoff should also move CPU Tails into the front display bucket");
+    }
+
+    @Test
     public void forestFrontOverrideOnlyAppliesInAct2() {
         TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
@@ -85,7 +133,6 @@ public class TestSonic3kZoneFeatureProvider {
 
     @Test
     public void slotDisplayOriginUsesForegroundPlaneSpaceForSlotsPanel() throws Exception {
-        RuntimeManager.createGameplay();
         TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
 
         GameServices.camera().setX((short) 0x3C0);
@@ -100,21 +147,72 @@ public class TestSonic3kZoneFeatureProvider {
         assertEquals(0x3E0, provider.slotDisplayOriginY());
     }
 
+    @Test
+    public void aiz1AllowsZeroDistanceAirLandingOnlyForRollingFlatFloorContact() {
+        TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
+        provider.setFeatureZoneId(Sonic3kZoneIds.ZONE_AIZ);
+        provider.setFeatureActId(0);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setAir(true);
+        player.setRolling(true);
+        player.setYSpeed((short) 0x0568);
+
+        assertTrue(provider.shouldTreatZeroDistanceAirLandingAsGround(
+                player, new SensorResult((byte) 0xFF, (byte) 0, 0x95, Direction.DOWN)));
+
+        player.setRolling(false);
+        assertFalse(provider.shouldTreatZeroDistanceAirLandingAsGround(
+                player, new SensorResult((byte) 0xFF, (byte) 0, 0x95, Direction.DOWN)));
+
+        provider.setFeatureZoneId(Sonic3kZoneIds.ZONE_HCZ);
+        player.setRolling(true);
+        assertFalse(provider.shouldTreatZeroDistanceAirLandingAsGround(
+                player, new SensorResult((byte) 0xFF, (byte) 0, 0x95, Direction.DOWN)));
+    }
+
+    @Test
+    public void s3kWaterlineSplitUsesRomWaterLevelDirectly() {
+        Sonic3kZoneFeatureProvider provider = new Sonic3kZoneFeatureProvider();
+
+        assertEquals(0.0f, provider.getWaterlineOffset(Sonic3kZoneIds.ZONE_AIZ, 1),
+                "S3K Handle_Onscreen_Water_Height uses Water_level directly");
+        assertEquals(0.0f, provider.getWaterlineOffset(Sonic3kZoneIds.ZONE_HCZ, 0),
+                "S3K Handle_Onscreen_Water_Height uses Water_level directly");
+        assertEquals(0.0f, provider.getWaterlineOffset(Sonic3kZoneIds.ZONE_CNZ, 1),
+                "S3K Handle_Onscreen_Water_Height uses Water_level directly");
+        assertEquals(0.0f, provider.getWaterlineOffset(Sonic3kZoneIds.ZONE_ICZ, 1),
+                "S3K Handle_Onscreen_Water_Height uses Water_level directly");
+        assertEquals(0.0f, provider.getWaterlineOffset(Sonic3kZoneIds.ZONE_LBZ, 1),
+                "S3K Handle_Onscreen_Water_Height uses Water_level directly");
+    }
+
     private static final class TestZoneFeatureProvider extends Sonic3kZoneFeatureProvider {
-        private Sonic3kAIZEvents aizEvents;
+        private AizZoneRuntimeState aizState;
+        private int featureZoneId = Sonic3kZoneIds.ZONE_AIZ;
         private int featureActId = 1;
 
         void setAizEvents(Sonic3kAIZEvents aizEvents) {
-            this.aizEvents = aizEvents;
+            this.aizState = aizEvents != null
+                    ? new AizZoneRuntimeState(1, PlayerCharacter.SONIC_AND_TAILS, aizEvents)
+                    : null;
         }
 
         void setFeatureActId(int featureActId) {
             this.featureActId = featureActId;
         }
 
+        void setFeatureZoneId(int featureZoneId) {
+            this.featureZoneId = featureZoneId;
+        }
+
         @Override
-        protected Sonic3kAIZEvents getAizEvents() {
-            return aizEvents;
+        protected AizZoneRuntimeState getAizState() {
+            return aizState;
+        }
+
+        @Override
+        protected int getFeatureZoneId() {
+            return featureZoneId;
         }
 
         @Override
@@ -148,5 +246,3 @@ public class TestSonic3kZoneFeatureProvider {
         }
     }
 }
-
-

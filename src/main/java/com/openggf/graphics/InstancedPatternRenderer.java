@@ -32,12 +32,16 @@ public class InstancedPatternRenderer {
 
     private static final int MAX_PATTERNS_PER_BATCH = 4096;
     private static final int FLOATS_PER_INSTANCE = 10; // x,y,w,h,u0,v0,u1,v1,palette,highPriority
+    // Flushes per frame roughly track render-priority boundaries, so 8 pooled
+    // commands cover typical frames; pooled commands hold native FloatBuffers,
+    // hence the hard cap rather than an unbounded pool.
     private static final int COMMAND_POOL_LIMIT = 8;
     private static final String PRIORITY_FRAGMENT_SHADER_PATH = "shaders/shader_instanced_priority.glsl";
 
     private final GraphicsManager graphicsManager;
     private final int screenHeight;
     private final float[] instanceData;
+    private final boolean drainGlErrors;
 
     private int instanceCount;
     private boolean batchActive;
@@ -87,14 +91,22 @@ public class InstancedPatternRenderer {
         Objects.requireNonNull(configService, "configService");
         this.screenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
         this.instanceData = new float[MAX_PATTERNS_PER_BATCH * FLOATS_PER_INSTANCE];
+        this.drainGlErrors = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
     }
 
+    // Display height resolved once per batch in beginBatch() and reused by every
+    // addPattern/addStripPattern call (thousands per frame). Safe because FBO
+    // projection state never changes between beginBatch() and endBatch(): call
+    // sites (e.g. special-stage background renderers) set up FBO projection
+    // BEFORE creating the batch and restore it after the batch is flushed.
+    private int batchDisplayHeight;
+
     /**
-     * Gets the current display height for Y coordinate calculations.
+     * Resolves the current display height for Y coordinate calculations.
      * When rendering to an FBO, this returns the FBO height.
      * Otherwise returns the normal screen height.
      */
-    private int getCurrentDisplayHeight() {
+    private int resolveDisplayHeight() {
         Engine engine = graphicsManager.getEngine();
         if (engine != null && engine.isFBOProjectionActive()) {
             return engine.getCurrentDisplayHeight();
@@ -149,6 +161,7 @@ public class InstancedPatternRenderer {
         cachedWaterEnabledLoc = glGetUniformLocation(priorityProgramId, "WaterEnabled");
 
         initBuffers();
+        configureVertexArray();
         initialized = true;
         LOGGER.info("Instanced pattern renderer initialized.");
     }
@@ -167,6 +180,7 @@ public class InstancedPatternRenderer {
 
     public void beginBatch() {
         instanceCount = 0;
+        batchDisplayHeight = resolveDisplayHeight();
         batchActive = true;
     }
 
@@ -178,9 +192,8 @@ public class InstancedPatternRenderer {
         if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH) {
             return false;
         }
-        // Use dynamic display height for FBO rendering support
-        int currentHeight = getCurrentDisplayHeight();
-        int screenY = currentHeight - y - 8;
+        // Display height resolved once per batch in beginBatch() (FBO-aware)
+        int screenY = batchDisplayHeight - y - 8;
         float u0 = entry.u0();
         float u1 = entry.u1();
         float v0 = entry.v0();
@@ -222,9 +235,8 @@ public class InstancedPatternRenderer {
         if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH) {
             return false;
         }
-        // Use dynamic display height for FBO rendering support
-        int currentHeight = getCurrentDisplayHeight();
-        int screenY = currentHeight - y - 2;
+        // Display height resolved once per batch in beginBatch() (FBO-aware)
+        int screenY = batchDisplayHeight - y - 2;
 
         int rowTop = stripIndex * 2;
         int rowBottom = stripIndex * 2 + 1;
@@ -287,9 +299,11 @@ public class InstancedPatternRenderer {
         }
         GraphicsManager gm = graphicsManager;
         boolean usePriority = gm.isUseSpritePriorityShader() && instancedPriorityShader != null;
+        boolean ghostEffectActive = gm.isGhostRenderEffectActive();
+        float ghostAlpha = gm.getGhostRenderAlpha();
 
         InstancedBatchCommand command = obtainCommand();
-        command.load(instanceData, instanceCount, usePriority);
+        command.load(instanceData, instanceCount, usePriority, ghostEffectActive, ghostAlpha);
         instanceCount = 0;
         batchActive = false;
         return command;
@@ -325,7 +339,7 @@ public class InstancedPatternRenderer {
         priorityAttribs = null;
         initialized = false;
         supported = false;
-        commandPool.clear();
+        drainCommandPool();
     }
 
     /**
@@ -344,7 +358,15 @@ public class InstancedPatternRenderer {
         priorityAttribs = null;
         initialized = false;
         supported = false;
-        commandPool.clear();
+        drainCommandPool();
+    }
+
+    /** Frees each pooled command's native instance buffer before discarding it. */
+    private void drainCommandPool() {
+        InstancedBatchCommand command;
+        while ((command = commandPool.pollFirst()) != null) {
+            command.release();
+        }
     }
 
     private void initBuffers() {
@@ -368,6 +390,58 @@ public class InstancedPatternRenderer {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         MemoryUtil.memFree(quadBuffer);
+    }
+
+    private void configureVertexArray() {
+        if (vaoId == 0 || quadVboId == 0 || instanceVboId == 0) {
+            return;
+        }
+
+        glBindVertexArray(vaoId);
+
+        glBindBuffer(GL_ARRAY_BUFFER, quadVboId);
+        configureVertexAttributes(defaultAttribs);
+        configureVertexAttributes(waterAttribs);
+        configureVertexAttributes(priorityAttribs);
+
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVboId);
+        configureInstanceAttributes(defaultAttribs);
+        configureInstanceAttributes(waterAttribs);
+        configureInstanceAttributes(priorityAttribs);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
+
+    private void configureVertexAttributes(AttribLocations attribs) {
+        if (attribs == null || attribs.vertexPos < 0) {
+            return;
+        }
+        glEnableVertexAttribArray(attribs.vertexPos);
+        glVertexAttribPointer(attribs.vertexPos, 2, GL_FLOAT, false, 0, 0L);
+        glVertexAttribDivisor(attribs.vertexPos, 0);
+    }
+
+    private void configureInstanceAttributes(AttribLocations attribs) {
+        if (attribs == null) {
+            return;
+        }
+        int stride = FLOATS_PER_INSTANCE * Float.BYTES;
+        enableInstanceAttrib(attribs.instancePos, 2, stride, 0L);
+        enableInstanceAttrib(attribs.instanceSize, 2, stride, 2L * Float.BYTES);
+        enableInstanceAttrib(attribs.instanceUv0, 2, stride, 4L * Float.BYTES);
+        enableInstanceAttrib(attribs.instanceUv1, 2, stride, 6L * Float.BYTES);
+        enableInstanceAttrib(attribs.instancePalette, 1, stride, 8L * Float.BYTES);
+        enableInstanceAttrib(attribs.instanceHighPriority, 1, stride, 9L * Float.BYTES);
+    }
+
+    private void enableInstanceAttrib(int location, int size, int stride, long offset) {
+        if (location < 0) {
+            return;
+        }
+        glEnableVertexAttribArray(location);
+        glVertexAttribPointer(location, size, GL_FLOAT, false, stride, offset);
+        glVertexAttribDivisor(location, 1);
     }
 
     private boolean isInstancingSupported() {
@@ -444,14 +518,28 @@ public class InstancedPatternRenderer {
         private int instanceCount;
         private int floatCount;
         private boolean usePriorityShader;
-        private void load(float[] data, int instanceCount, boolean usePriorityShader) {
+        private boolean capturedGhostEffectActive;
+        private float capturedGhostAlpha;
+
+        private void load(float[] data, int instanceCount, boolean usePriorityShader,
+                          boolean ghostEffectActive, float ghostAlpha) {
             this.instanceCount = instanceCount;
             this.floatCount = instanceCount * FLOATS_PER_INSTANCE;
             this.usePriorityShader = usePriorityShader;
+            this.capturedGhostEffectActive = ghostEffectActive;
+            this.capturedGhostAlpha = ghostAlpha;
             instanceBuffer = ensureBuffer(instanceBuffer, floatCount);
             instanceBuffer.clear();
             instanceBuffer.put(data, 0, floatCount);
             instanceBuffer.flip();
+        }
+
+        /** Frees the native instance buffer. Call only when discarding the command. */
+        private void release() {
+            if (instanceBuffer != null) {
+                MemoryUtil.memFree(instanceBuffer);
+                instanceBuffer = null;
+            }
         }
 
         @Override
@@ -460,8 +548,10 @@ public class InstancedPatternRenderer {
                 return;
             }
 
-            // Clear any accumulated GL errors from previous operations
-            while (glGetError() != GL_NO_ERROR) { /* drain errors */ }
+            // Only drain accumulated GL errors in debug view builds.
+            if (drainGlErrors) {
+                while (glGetError() != GL_NO_ERROR) { /* drain errors */ }
+            }
             GraphicsManager gm = graphicsManager;
             boolean useWaterShader = gm.getShaderProgram() instanceof WaterShaderProgram;
             // Use captured priority shader state from batch creation time
@@ -486,6 +576,7 @@ public class InstancedPatternRenderer {
             glUniform1i(shader.getIndexedColorTextureLocation(), 1);
             shader.setPaletteLine(-1.0f);
             shader.setTotalPaletteLines((float) RenderContext.getTotalPaletteLines());
+            shader.setGhostEffect(capturedGhostEffectActive, capturedGhostAlpha);
 
             // Set priority uniforms if using the priority shader
             // Priority is now per-instance via InstanceHighPriority attribute,
@@ -622,47 +713,12 @@ public class InstancedPatternRenderer {
                 glUniform2f(cameraOffsetLoc, -cameraX, cameraY);
             }
 
-            int stride = FLOATS_PER_INSTANCE * Float.BYTES;
-
-            glBindBuffer(GL_ARRAY_BUFFER, quadVboId);
-            enableAttrib(attribs.vertexPos, 2, GL_FLOAT, 0, 0L);
-            glVertexAttribDivisor(attribs.vertexPos, 0);
-
             glBindBuffer(GL_ARRAY_BUFFER, instanceVboId);
             instanceBuffer.rewind();
             instanceBuffer.limit(floatCount);
             glBufferData(GL_ARRAY_BUFFER, instanceBuffer, GL_DYNAMIC_DRAW);
 
-            enableAttrib(attribs.instancePos, 2, GL_FLOAT, stride, 0L);
-            enableAttrib(attribs.instanceSize, 2, GL_FLOAT, stride, 2L * Float.BYTES);
-            enableAttrib(attribs.instanceUv0, 2, GL_FLOAT, stride, 4L * Float.BYTES);
-            enableAttrib(attribs.instanceUv1, 2, GL_FLOAT, stride, 6L * Float.BYTES);
-            enableAttrib(attribs.instancePalette, 1, GL_FLOAT, stride, 8L * Float.BYTES);
-            enableAttrib(attribs.instanceHighPriority, 1, GL_FLOAT, stride, 9L * Float.BYTES);
-
-            setDivisor(attribs.instancePos, 1);
-            setDivisor(attribs.instanceSize, 1);
-            setDivisor(attribs.instanceUv0, 1);
-            setDivisor(attribs.instanceUv1, 1);
-            setDivisor(attribs.instancePalette, 1);
-            setDivisor(attribs.instanceHighPriority, 1);
-
             glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, instanceCount);
-
-            setDivisor(attribs.instancePos, 0);
-            setDivisor(attribs.instanceSize, 0);
-            setDivisor(attribs.instanceUv0, 0);
-            setDivisor(attribs.instanceUv1, 0);
-            setDivisor(attribs.instancePalette, 0);
-            setDivisor(attribs.instanceHighPriority, 0);
-
-            disableAttrib(attribs.instanceHighPriority);
-            disableAttrib(attribs.instancePalette);
-            disableAttrib(attribs.instanceUv1);
-            disableAttrib(attribs.instanceUv0);
-            disableAttrib(attribs.instanceSize);
-            disableAttrib(attribs.instancePos);
-            disableAttrib(attribs.vertexPos);
 
             glBindBuffer(GL_ARRAY_BUFFER, 0);
             glBindVertexArray(0);
@@ -696,20 +752,6 @@ public class InstancedPatternRenderer {
             }
             glEnableVertexAttribArray(location);
             glVertexAttribPointer(location, size, type, false, stride, offset);
-        }
-
-        private void disableAttrib(int location) {
-            if (location < 0) {
-                return;
-            }
-            glDisableVertexAttribArray(location);
-        }
-
-        private void setDivisor(int location, int divisor) {
-            if (location < 0) {
-                return;
-            }
-            glVertexAttribDivisor(location, divisor);
         }
     }
 }

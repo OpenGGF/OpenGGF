@@ -1,15 +1,16 @@
 package com.openggf.graphics;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameServices;
+import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
-import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.Direction;
 import com.openggf.physics.Sensor;
@@ -29,18 +30,17 @@ public class TestSpriteManagerRender {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.destroyCurrent();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        AizPlaneIntroInstance.resetIntroPhaseState();
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     public void tearDown() {
-        AizPlaneIntroInstance.resetIntroPhaseState();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }
@@ -112,6 +112,39 @@ public class TestSpriteManagerRender {
     }
 
     @Test
+    public void testMultipleSidekicksKeepChainRenderOrderBeforeMainPlayer() {
+        List<String> drawOrder = new ArrayList<>();
+        SpriteManager spriteManager = GameServices.sprites();
+
+        TestPlayableSprite main = new TestPlayableSprite("main", drawOrder);
+        main.setPriorityBucket(2);
+        main.setHighPriority(false);
+
+        TestPlayableSprite firstSidekick = new TestPlayableSprite("sidekick0", drawOrder);
+        firstSidekick.setCpuControlled(true);
+        firstSidekick.setPriorityBucket(2);
+        firstSidekick.setHighPriority(false);
+
+        TestPlayableSprite secondSidekick = new TestPlayableSprite("sidekick1", drawOrder);
+        secondSidekick.setCpuControlled(true);
+        secondSidekick.setPriorityBucket(2);
+        secondSidekick.setHighPriority(false);
+
+        spriteManager.addSprite(main);
+        spriteManager.addSprite(firstSidekick);
+        spriteManager.addSprite(secondSidekick);
+
+        try {
+            spriteManager.drawLowPriority();
+            assertEquals(List.of("sidekick0", "sidekick1", "main"), drawOrder);
+        } finally {
+            spriteManager.removeSprite(main.getCode());
+            spriteManager.removeSprite(firstSidekick.getCode());
+            spriteManager.removeSprite(secondSidekick.getCode());
+        }
+    }
+
+    @Test
     public void testSonic2SidekickSuppressionZones() throws Exception {
         List<String> drawOrder = new ArrayList<>();
         SpriteManager spriteManager = GameServices.sprites();
@@ -138,35 +171,6 @@ public class TestSpriteManagerRender {
         } finally {
             drawOrder.clear();
             setCurrentZone(levelManager, originalZone);
-            spriteManager.removeSprite(main.getCode());
-            spriteManager.removeSprite(sidekick.getCode());
-        }
-    }
-
-    @Test
-    public void testNonS3kRuntimeIgnoresStaleAizIntroSidekickSuppression() {
-        List<String> drawOrder = new ArrayList<>();
-        SpriteManager spriteManager = GameServices.sprites();
-
-        TestPlayableSprite main = new TestPlayableSprite("main", drawOrder);
-        main.setPriorityBucket(2);
-        main.setHighPriority(false);
-
-        TestPlayableSprite sidekick = new TestPlayableSprite("sidekick", drawOrder);
-        sidekick.setCpuControlled(true);
-        sidekick.setPriorityBucket(2);
-        sidekick.setHighPriority(false);
-
-        spriteManager.addSprite(main);
-        spriteManager.addSprite(sidekick);
-        AizPlaneIntroInstance.setSidekickSuppressed(true);
-
-        try {
-            assertEquals(List.of(sidekick), spriteManager.getSidekicks());
-            spriteManager.drawLowPriority();
-            assertEquals(List.of("sidekick", "main"), drawOrder);
-        } finally {
-            AizPlaneIntroInstance.resetIntroPhaseState();
             spriteManager.removeSprite(main.getCode());
             spriteManager.removeSprite(sidekick.getCode());
         }
@@ -347,5 +351,3 @@ public class TestSpriteManagerRender {
         }
     }
 }
-
-

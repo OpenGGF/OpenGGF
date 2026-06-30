@@ -6,9 +6,11 @@ import com.openggf.game.GameServices;
 import com.openggf.audio.GameSound;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 
@@ -17,7 +19,6 @@ import com.openggf.debug.FontSize;
 
 import com.openggf.graphics.GLCommand;
 
-import java.awt.Font;
 import com.openggf.debug.DebugColor;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -52,8 +53,8 @@ public class Sonic2SpecialStageManager {
         FAILED
     }
 
-    private final SonicConfigurationService configService = GameServices.configuration();
-    private final GraphicsManager graphicsManager = GameServices.graphics();
+    private final SonicConfigurationService configService;
+    private final GraphicsManager graphicsManager;
     private final Sonic2SpecialStageSpriteDebug debugSprites;
 
     private Sonic2SpecialStageDataLoader dataLoader;
@@ -78,7 +79,7 @@ public class Sonic2SpecialStageManager {
     private byte[] skydomeScrollTable;
     private Palette[] palettes;
 
-    private static final int SS_PATTERN_BASE = 0x1000;
+    private static final int SS_PATTERN_BASE = PatternAtlasRange.LEVEL_TILES.base() + 0x1000;
     private int backgroundPatternBase;
     private int trackPatternBase;
     private int playerPatternBase;
@@ -219,6 +220,7 @@ public class Sonic2SpecialStageManager {
      */
     private double lagCompensation = 0.35;
     private double lagAccumulator = 0.0;
+    private boolean lagCompensationDisplayEnabled = false;
 
     // Skydome scroll state (accumulated horizontal scroll for background)
     private int skydomeScrollX = 0;
@@ -307,11 +309,38 @@ public class Sonic2SpecialStageManager {
     };
 
     public Sonic2SpecialStageManager() {
-        this(new Sonic2SpecialStageSpriteDebug());
+        this(new Sonic2SpecialStageSpriteDebug(), null, null);
     }
 
     public Sonic2SpecialStageManager(Sonic2SpecialStageSpriteDebug debugSprites) {
+        this(debugSprites, null, null);
+    }
+
+    Sonic2SpecialStageManager(Sonic2SpecialStageSpriteDebug debugSprites,
+                              SonicConfigurationService configService,
+                              GraphicsManager graphicsManager) {
         this.debugSprites = debugSprites;
+        this.configService = configService;
+        this.graphicsManager = graphicsManager;
+    }
+
+    private SonicConfigurationService configuration() {
+        return configService != null ? configService : GameServices.configuration();
+    }
+
+    private GraphicsManager graphicsManager() {
+        return graphicsManager != null ? graphicsManager : GameServices.graphics();
+    }
+
+    private GraphicsManager graphicsManagerOrNull() {
+        if (graphicsManager != null) {
+            return graphicsManager;
+        }
+        try {
+            return GameServices.graphics();
+        } catch (IllegalStateException ignored) {
+            return null;
+        }
     }
 
     /**
@@ -388,6 +417,8 @@ public class Sonic2SpecialStageManager {
      * Sets up the object system (rings, bombs, perspective data).
      */
     private void setupObjectSystem() throws IOException {
+        GraphicsManager graphicsManager = graphicsManager();
+
         // Load perspective data
         perspectiveData = new Sonic2PerspectiveData();
         perspectiveData.load(dataLoader);
@@ -598,6 +629,7 @@ public class Sonic2SpecialStageManager {
      * from SS Emerald.bin per-stage when the emerald spawns.
      */
     private void applyEmeraldPalette() {
+        GraphicsManager graphicsManager = graphicsManagerOrNull();
         if (palettes == null || graphicsManager == null) {
             return;
         }
@@ -661,6 +693,7 @@ public class Sonic2SpecialStageManager {
     }
 
     private void applyCheckpointRainbowPalette(boolean bright) {
+        GraphicsManager graphicsManager = graphicsManagerOrNull();
         if (palettes == null || graphicsManager == null) {
             return;
         }
@@ -694,6 +727,7 @@ public class Sonic2SpecialStageManager {
      * while the checkpoint rainbow animation is active.
      */
     private void updateRainbowPaletteCycle() {
+        GraphicsManager graphicsManager = graphicsManagerOrNull();
         if (!checkpointRainbowPaletteActive || palettes == null || graphicsManager == null) {
             return;
         }
@@ -782,6 +816,7 @@ public class Sonic2SpecialStageManager {
     }
 
     private void setupPalettes() {
+        GraphicsManager graphicsManager = graphicsManager();
         palettes = Sonic2SpecialStagePalette.createPalettes(currentStage);
 
         for (int i = 0; i < palettes.length; i++) {
@@ -792,6 +827,7 @@ public class Sonic2SpecialStageManager {
     }
 
     private void setupPatterns() throws IOException {
+        GraphicsManager graphicsManager = graphicsManager();
         backgroundPatternBase = SS_PATTERN_BASE;
         trackPatternBase = SS_PATTERN_BASE + 256;
         playerPatternBase = trackPatternBase + 512;
@@ -857,6 +893,7 @@ public class Sonic2SpecialStageManager {
     }
 
     private void setupRenderer() throws IOException {
+        GraphicsManager graphicsManager = graphicsManager();
         renderer = new Sonic2SpecialStageRenderer(graphicsManager);
         // Pattern bases are set in setupPatterns() after they have valid values
 
@@ -885,7 +922,7 @@ public class Sonic2SpecialStageManager {
         sonicPlayer = null;
         tailsPlayer = null;
 
-        String characterCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
+        String characterCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(configuration());
         if (characterCode == null) {
             characterCode = "sonic";
         }
@@ -1614,6 +1651,8 @@ public class Sonic2SpecialStageManager {
             return;
         }
 
+        GraphicsManager graphicsManager = graphicsManager();
+
         if (alignmentTestMode) {
             drawAlignmentTest();
             return;
@@ -1621,6 +1660,7 @@ public class Sonic2SpecialStageManager {
 
         boolean renderPlaneB = planeDebugMode.renderPlaneB();
         boolean renderPlaneA = planeDebugMode.renderPlaneA();
+        renderer.setFrameCounter(frameCounter);
 
         if (renderPlaneB) {
             // Use shader-based background rendering if available
@@ -1700,6 +1740,7 @@ public class Sonic2SpecialStageManager {
     }
 
     private void drawAlignmentTest() {
+        GraphicsManager graphicsManager = graphicsManager();
         boolean renderPlaneB = planeDebugMode.renderPlaneB();
         boolean renderPlaneA = planeDebugMode.renderPlaneA();
 
@@ -1751,7 +1792,7 @@ public class Sonic2SpecialStageManager {
 
         if (alignmentTextRenderer == null) {
             alignmentTextRenderer = new GlyphBatchRenderer();
-            alignmentTextRenderer.init(new Font("SansSerif", Font.PLAIN, 12));
+            alignmentTextRenderer.init(null);
         }
 
         alignmentTextRenderer.updateViewport(viewportWidth, viewportHeight);
@@ -1796,13 +1837,13 @@ public class Sonic2SpecialStageManager {
      * Displayed when not in alignment test mode.
      */
     public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) {
-        if (alignmentTestMode) {
+        if (alignmentTestMode || !lagCompensationDisplayEnabled) {
             return;
         }
 
         if (lagCompensationTextRenderer == null) {
             lagCompensationTextRenderer = new GlyphBatchRenderer();
-            lagCompensationTextRenderer.init(new Font("SansSerif", Font.PLAIN, 12));
+            lagCompensationTextRenderer.init(null);
         }
 
         lagCompensationTextRenderer.updateViewport(viewportWidth, viewportHeight);
@@ -1856,6 +1897,24 @@ public class Sonic2SpecialStageManager {
         return lagCompensation;
     }
 
+    public boolean isLagCompensationDisplayEnabled() {
+        return lagCompensationDisplayEnabled;
+    }
+
+    public void toggleLagCompensationDisplay() {
+        lagCompensationDisplayEnabled = !lagCompensationDisplayEnabled;
+        LOGGER.info("Lag compensation display: " + (lagCompensationDisplayEnabled ? "ON" : "OFF"));
+    }
+
+    public boolean adjustLagCompensationIfDisplayEnabled(double delta) {
+        if (!lagCompensationDisplayEnabled) {
+            return false;
+        }
+
+        setLagCompensation(lagCompensation + delta);
+        return true;
+    }
+
     /**
      * Sets the lag compensation factor.
      * Value of 0.35 means ~35% of frames are "lag frames" (entire update skipped).
@@ -1890,11 +1949,16 @@ public class Sonic2SpecialStageManager {
      */
     public void reset() {
         // Stop any playing music when resetting
-        GameServices.audio().stopMusic();
+        try {
+            GameServices.audio().stopMusic();
+        } catch (IllegalStateException ignored) {
+            // Plain construction/reset tests run without configured engine services.
+        }
 
         initialized = false;
         currentStage = 0;
         lagAccumulator = 0.0;
+        lagCompensationDisplayEnabled = false;
 
         trackAnimator = null;
         decodedTrackFrame = null;

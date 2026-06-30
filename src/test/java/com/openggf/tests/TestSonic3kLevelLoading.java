@@ -7,7 +7,11 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Game;
 import com.openggf.data.Rom;
 import com.openggf.game.DynamicStartPositionProvider;
+import com.openggf.game.save.SaveSessionContext;
+import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3k;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.Level;
@@ -18,7 +22,10 @@ import com.openggf.tests.rules.SonicGame;
 
 import org.junit.jupiter.api.AfterEach;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,6 +46,7 @@ public class TestSonic3kLevelLoading {
 
     @AfterEach
     public void tearDown() {
+        SessionManager.clear();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, oldSkipIntros != null ? oldSkipIntros : false);
     }
 
@@ -61,6 +69,32 @@ public class TestSonic3kLevelLoading {
     }
 
     @Test
+    public void aiz1UsesKnucklesStartPositionWhenSessionSelectedTeamIsKnuckles() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
+        try {
+            assertTrue(game instanceof DynamicStartPositionProvider);
+            DynamicStartPositionProvider provider = (DynamicStartPositionProvider) game;
+
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+            int[] expectedKnuckles = provider.getStartPosition(0, 0);
+
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+            SessionManager.openGameplaySession(new Sonic3kGameModule(),
+                    SaveSessionContext.noSave("s3k", new SelectedTeam("knuckles", List.of()), 0, 0));
+            int[] sessionKnuckles = provider.getStartPosition(0, 0);
+
+            assertNotNull(expectedKnuckles);
+            assertNotNull(sessionKnuckles);
+            assertArrayEquals(expectedKnuckles, sessionKnuckles);
+            assertNotEquals(0x40, sessionKnuckles[0]);
+            assertNotEquals(0x420, sessionKnuckles[1]);
+        } finally {
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, oldMain);
+        }
+    }
+
+    @Test
     public void aiz1LoadsWithValidResourceReferences() throws Exception {
         Level level = game.loadLevel(LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex());
         // ROM: AIZ1 LevelSizes entry 0 has maxY=$390; resize routine adjusts dynamically.
@@ -72,6 +106,41 @@ public class TestSonic3kLevelLoading {
     public void fbz1LoadsWithValidResourceReferences() throws Exception {
         Level level = game.loadLevel(LevelData.S3K_FLYING_BATTERY_1.getLevelIndex());
         assertLevelResourceIntegrity(level, 4, 0);
+    }
+
+    @Test
+    public void mgz1Has32RowMapWithCorrectBlocks() throws Exception {
+        Level level = game.loadLevel(LevelData.S3K_MARBLE_GARDEN_1.getLevelIndex());
+        assertNotNull(level);
+        Map map = level.getMap();
+        assertNotNull(map);
+
+        // MGZ1 layout header: FG 96x32
+        assertEquals(96, level.getLayerWidthBlocks(0), "FG width should be 96 blocks");
+        assertEquals(32, level.getLayerHeightBlocks(0), "FG height should be 32 blocks");
+        assertEquals(96, map.getWidth());
+        assertEquals(32, map.getHeight());
+
+        // MGZ1 boundaries from LevelSizes: minY=-$100, maxY=$1000
+        assertEquals(-0x100, level.getMinY(), "MGZ1 minY should be -$100");
+        assertEquals(0x1000, level.getMaxY(), "MGZ1 maxY should be $1000");
+
+        // Verify block values at spawn area (row 30):
+        // Columns 0-3 should be empty (block 0x00), columns 4+ should be solid (block 0x10)
+        assertEquals(0x00, Byte.toUnsignedInt(map.getValue(0, 1, 30)),
+                "Block at (1,30) should be empty");
+        assertEquals(0x10, Byte.toUnsignedInt(map.getValue(0, 4, 30)),
+                "Block at (4,30) should be solid");
+
+        // Row 14 (what 0x800 wrapping would show at row 30) should be all solid
+        assertEquals(0x10, Byte.toUnsignedInt(map.getValue(0, 1, 14)),
+                "Block at (1,14) should be solid");
+
+        // Row 28 should be solid at columns 0-3 (ledge above the shaft)
+        assertEquals(0x10, Byte.toUnsignedInt(map.getValue(0, 1, 28)),
+                "Block at (1,28) should be solid");
+
+        assertLevelResourceIntegrity(level, 2, 0);
     }
 
     private void assertLevelResourceIntegrity(Level level, int zone, int act) throws Exception {

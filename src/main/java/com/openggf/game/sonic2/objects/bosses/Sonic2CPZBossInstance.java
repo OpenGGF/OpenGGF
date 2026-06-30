@@ -11,6 +11,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -40,7 +41,8 @@ import java.util.List;
  * - STOP_EXPLODING: Post-explosion bounce
  * - RETREAT: Flee off-screen
  */
-public class Sonic2CPZBossInstance extends AbstractBossInstance {
+public class Sonic2CPZBossInstance extends AbstractBossInstance
+        implements SpawnConstructionContextRewindRecreatable {
 
     // Boss routine states
     private static final int MAIN_DESCEND = 0x00;
@@ -347,8 +349,7 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance {
             return;
         }
         ObjectSpawn robotnikSpawn = new ObjectSpawn(state.x, state.y, Sonic2ObjectIds.CPZ_BOSS, 0, state.renderFlags, false, 0);
-        robotnik = new CPZBossRobotnik(robotnikSpawn, this);
-        services().objectManager().addDynamicObject(robotnik);
+        robotnik = spawnChild(() -> new CPZBossRobotnik(robotnikSpawn, this));
     }
 
     private void spawnFlame() {
@@ -359,8 +360,7 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance {
             return;
         }
         ObjectSpawn flameSpawn = new ObjectSpawn(state.x, state.y, Sonic2ObjectIds.CPZ_BOSS, 0, state.renderFlags, false, 0);
-        flame = new CPZBossFlame(flameSpawn, this);
-        services().objectManager().addDynamicObject(flame);
+        flame = spawnChild(() -> new CPZBossFlame(flameSpawn, this));
     }
 
     private void spawnPump() {
@@ -368,8 +368,7 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance {
             return;
         }
         ObjectSpawn pumpSpawn = new ObjectSpawn(state.x, state.y, Sonic2ObjectIds.CPZ_BOSS, 0, state.renderFlags, false, 0);
-        pump = new CPZBossPump(pumpSpawn, this);
-        services().objectManager().addDynamicObject(pump);
+        pump = spawnChild(() -> new CPZBossPump(pumpSpawn, this));
     }
 
     private void spawnContainer() {
@@ -377,8 +376,7 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance {
             return;
         }
         ObjectSpawn containerSpawn = new ObjectSpawn(state.x, state.y, Sonic2ObjectIds.CPZ_BOSS, 0, state.renderFlags, false, 0);
-        container = new CPZBossContainer(containerSpawn, this);
-        services().objectManager().addDynamicObject(container);
+        container = spawnChild(() -> new CPZBossContainer(containerSpawn, this));
     }
 
     private void spawnPipe() {
@@ -386,8 +384,7 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance {
             return;
         }
         ObjectSpawn pipeSpawn = new ObjectSpawn(state.x, state.y, Sonic2ObjectIds.CPZ_BOSS, 0, state.renderFlags, false, 0);
-        currentPipe = new CPZBossPipe(pipeSpawn, this);
-        services().objectManager().addDynamicObject(currentPipe);
+        currentPipe = spawnChild(() -> new CPZBossPipe(pipeSpawn, this));
     }
 
     // ========================================================================

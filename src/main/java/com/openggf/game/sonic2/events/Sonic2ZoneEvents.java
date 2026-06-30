@@ -3,8 +3,12 @@ package com.openggf.game.sonic2.events;
 import com.openggf.camera.Camera;
 import com.openggf.audio.AudioManager;
 import com.openggf.data.Rom;
+import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
+import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
@@ -65,6 +69,10 @@ public abstract class Sonic2ZoneEvents {
         return GameServices.sprites();
     }
 
+    protected ZoneLayoutMutationPipeline mutationPipeline() {
+        return GameServices.zoneLayoutMutationPipeline();
+    }
+
     protected Rom rom() throws IOException {
         return GameServices.rom().getRom();
     }
@@ -78,12 +86,30 @@ public abstract class Sonic2ZoneEvents {
     /** Run per-frame event logic for the given act. */
     public abstract void update(int act, int frameCounter);
 
+    /**
+     * Run pre-physics event logic for the given act, BEFORE the player object
+     * physics step. Mirrors the ROM routines that {@code WaterEffects} executes
+     * just before {@code RunObjects} (docs/s2disasm/s2.asm:5094-5095). Default
+     * is a no-op; only OOZ (OilSlides) currently overrides this.
+     */
+    public void updatePrePhysics(int act, int frameCounter) {
+        // Default no-op
+    }
+
     public int getEventRoutine() {
         return eventRoutine;
     }
 
     public void setEventRoutine(int routine) {
         this.eventRoutine = routine;
+    }
+
+    public int getBossSpawnDelay() {
+        return bossSpawnDelay;
+    }
+
+    public void setBossSpawnDelay(int delay) {
+        this.bossSpawnDelay = delay;
     }
 
     /** Spawn a dynamic object into the level. */
@@ -113,15 +139,24 @@ public abstract class Sonic2ZoneEvents {
             byte[] paletteData = rom.readBytes(romAddr, PALETTE_LINE_SIZE);
             levelManager.updatePalette(paletteLine, paletteData);
         } catch (Exception e) {
-            LOGGER.warning("Failed to load boss palette from ROM offset 0x" +
-                    Integer.toHexString(romAddr) + ": " + e.getMessage());
+            if (RomManager.isConfiguredRomMissing(e)) {
+                LOGGER.fine(() -> "Skipped boss palette load from ROM offset 0x"
+                        + Integer.toHexString(romAddr) + ": " + e.getMessage());
+            } else {
+                LOGGER.warning("Failed to load boss palette from ROM offset 0x" +
+                        Integer.toHexString(romAddr) + ": " + e.getMessage());
+            }
         }
     }
 
     protected void setSidekickBounds(Integer minX, Integer maxX, Integer maxY) {
+        setSidekickBounds(minX, maxX, null, maxY);
+    }
+
+    protected void setSidekickBounds(Integer minX, Integer maxX, Integer minY, Integer maxY) {
         for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
             if (sidekick.getCpuController() != null) {
-                sidekick.getCpuController().setLevelBounds(minX, maxX, maxY);
+                sidekick.getCpuController().setLevelBounds(minX, maxX, minY, maxY);
             }
         }
     }
@@ -130,5 +165,23 @@ public abstract class Sonic2ZoneEvents {
         Camera cam = camera();
         setSidekickBounds((int) cam.getMinX(), (int) cam.getMaxX(),
                 (int) Math.max(cam.getMaxY(), cam.getMaxYTarget()));
+    }
+
+    protected void requestSonic2Plc(int plcId) {
+        try {
+            if (!GameServices.hasRuntime()) {
+                return;
+            }
+            LevelManager levelManager = GameServices.levelOrNull();
+            if (levelManager == null || levelManager.getCurrentLevel() == null) {
+                return;
+            }
+            ObjectArtProvider provider = GameServices.module().getObjectArtProvider();
+            if (provider instanceof Sonic2ObjectArtProvider sonic2Provider) {
+                sonic2Provider.requestPlc(plcId);
+            }
+        } catch (RuntimeException | IOException e) {
+            LOGGER.fine(() -> "S2 PLC request " + plcId + " deferred: " + e.getMessage());
+        }
     }
 }

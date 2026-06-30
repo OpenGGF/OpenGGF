@@ -3,9 +3,16 @@ package com.openggf.game.session;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.save.SaveSessionContext;
+import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.camera.Camera;
+import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.tests.TestEnvironment;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,9 +20,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestSessionManager {
 
+    @BeforeEach
+    void configureServices() {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+    }
+
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }
@@ -102,55 +114,55 @@ class TestSessionManager {
     }
 
     @Test
-    void runtimeManager_returnsCurrentGameplayContextFacade() {
+    void activeGameplayModeReturnsCurrentGameplayContext() {
         SessionManager.openGameplaySession(new Sonic2GameModule());
+        GameplayModeContext gameplay = TestEnvironment.activeGameplayMode();
 
-        assertNotNull(com.openggf.game.RuntimeManager.getCurrent());
-        assertNotNull(com.openggf.game.RuntimeManager.getCurrent().getWorldSession());
+        assertNotNull(gameplay);
+        assertNotNull(gameplay.getWorldSession());
         assertSame(SessionManager.getCurrentWorldSession(),
-                com.openggf.game.RuntimeManager.getCurrent().getWorldSession());
+                gameplay.getWorldSession());
     }
 
     @Test
-    void runtimeManager_returnsNullAfterSessionClear() {
+    void gameplayModeReturnsNullAfterSessionClear() {
         SessionManager.openGameplaySession(new Sonic2GameModule());
-        assertNotNull(RuntimeManager.getCurrent());
+        assertNotNull(TestEnvironment.activeGameplayMode());
 
         SessionManager.clear();
 
-        assertNull(RuntimeManager.getCurrent());
+        assertNull(SessionManager.getCurrentGameplayMode());
     }
 
     @Test
-    void runtimeManager_returnsNullAfterEnteringEditorMode() {
+    void gameplayModeReturnsNullAfterEnteringEditorMode() {
         SessionManager.openGameplaySession(new Sonic2GameModule());
-        assertNotNull(RuntimeManager.getCurrent());
+        assertNotNull(TestEnvironment.activeGameplayMode());
 
         SessionManager.enterEditorMode(new EditorCursorState(128, 256));
 
-        assertNull(RuntimeManager.getCurrent());
+        assertNull(SessionManager.getCurrentGameplayMode());
     }
 
     @Test
-    void runtimeManager_createGameplayWithoutArgs_preservesBootstrapModule() {
+    void activeGameplayModePreservesBootstrapModule() {
         Sonic1GameModule module = new Sonic1GameModule();
         GameModuleRegistry.setCurrent(module);
 
-        com.openggf.game.GameRuntime runtime = RuntimeManager.createGameplay();
+        GameplayModeContext gameplay = TestEnvironment.activeGameplayMode();
 
-        assertNotNull(runtime);
-        assertSame(module, runtime.getWorldSession().getGameModule());
+        assertNotNull(gameplay);
+        assertSame(module, gameplay.getWorldSession().getGameModule());
         assertSame(module, SessionManager.requireCurrentGameModule());
     }
 
     @Test
-    void gameModuleRegistry_setCurrentDoesNotMaterializeRuntimeForActiveSession() {
+    void gameModuleRegistry_setCurrentDoesNotReplaceActiveSessionModule() {
         GameModule sessionModule = new Sonic2GameModule();
         SessionManager.openGameplaySession(sessionModule);
 
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
 
-        assertNull(RuntimeManager.getActiveRuntime());
         assertSame(sessionModule, GameModuleRegistry.getCurrent());
     }
 
@@ -164,6 +176,31 @@ class TestSessionManager {
         SessionManager.openGameplaySession(new Sonic2GameModule());
 
         assertThrows(NullPointerException.class, () -> SessionManager.enterEditorMode(null));
+    }
+
+    @Test
+    void gameplaySession_preservesSaveSessionContext() {
+        GameModule module = new Sonic2GameModule();
+        SaveSessionContext ctx = SaveSessionContext.forSlot("s3k", 1,
+                new SelectedTeam("sonic", java.util.List.of("tails")), 0, 0);
+        GameplayModeContext gameplay = SessionManager.openGameplaySession(module, ctx);
+        assertEquals(1, gameplay.getWorldSession().getSaveSessionContext().activeSlot().orElseThrow());
+    }
+
+    @Test
+    void closeGameplaySessionClearsWorldAndRuntimeGraphicsReferences() {
+        SessionManager.openGameplaySession(new Sonic2GameModule());
+        GraphicsManager graphics = EngineServices.current().graphics();
+        FadeManager bootstrapFade = graphics.getFadeManager();
+        FadeManager runtimeFade = new FadeManager();
+        graphics.bindRuntimeManagedReferences(new Camera(EngineServices.current().configuration()), runtimeFade);
+
+        SessionManager.closeGameplaySession();
+
+        assertNull(SessionManager.getCurrentGameplayMode());
+        assertNull(SessionManager.getCurrentEditorMode());
+        assertNull(SessionManager.getCurrentWorldSession());
+        assertSame(bootstrapFade, graphics.getFadeManager());
     }
 }
 

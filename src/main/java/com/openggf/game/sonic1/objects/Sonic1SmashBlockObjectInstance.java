@@ -10,10 +10,14 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -21,6 +25,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import com.openggf.debug.DebugColor;
@@ -52,7 +57,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/51 Smashable Green Block.asm
  */
 public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
     // From disassembly: move.w #$1B,d1
     private static final int SOLID_HALF_WIDTH = 0x1B;
@@ -104,7 +109,7 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
     // In our engine this is checked via cached pre-collision animation, with
     // player.getRolling() as a fallback.
 
-    private final int frameIndex;
+    private int frameIndex;
     private boolean broken;
     private boolean initialized;
 
@@ -204,9 +209,7 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
 
         // Mark as remembered (RememberState) so it stays broken on revisit
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
         // Restore cached item bonus before incrementing
         // From disassembly: move.w .count(a0),(v_itembonus).w
@@ -218,7 +221,23 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
         //   move.b #$E,obHeight(a1)  ; rolling height
         //   move.b #7,obWidth(a1)    ; rolling width
         //   move.b #id_Roll,obAnim(a1) ; make Sonic roll
+        // ROM .smash sets obHeight=sonic_roll_height directly (bset #2,obStatus;
+        // move.b #sonic_roll_height,obHeight) WITHOUT adjusting obY -- ROM obY is
+        // the center, so shrinking the height leaves the center (and thus the
+        // recorded y_pos) unchanged (docs/s1disasm/_incObj/51 MZ Smashable Green
+        // Block.asm:60-66). The engine stores y_pos as the TOP-left and derives the
+        // centre as top + height/2, so setRolling()'s height shrink (38->28px when
+        // the lander un-rolled to standing during Solid_ResetFloor and is now
+        // re-rolled) moves the derived CENTRE up by (sonic_height-sonic_roll_height)
+        // = 5px. Preserve the centre across the rolling transition so the rebound
+        // launches from ROM's obY (MZ3 f7982: ENTER centre 0x6CC matched ROM, but
+        // setRolling shifted it to 0x6C7 -- 5px high).
+        int centreYBeforeRoll = player.getCentreY();
+        boolean wasRolling = player.getRolling();
         player.setRolling(true);
+        if (!wasRolling) {
+            NativePositionOps.writeYPosPreserveSubpixel(player, centreYBeforeRoll);
+        }
 
         // From disassembly: move.w #-$300,obVelY(a1) - rebound upward
         player.setYSpeed((short) PLAYER_REBOUND_VEL_Y);
@@ -273,17 +292,18 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
         }
 
         List<SpriteMappingPiece> pieces = fragFrame.pieces();
-        int blockX = spawn.x();
-        int blockY = spawn.y();
+        final int blockX = spawn.x();
+        final int blockY = spawn.y();
+        final PatternSpriteRenderer fRenderer = renderer;
 
         for (int i = 0; i < FRAGMENT_COUNT; i++) {
-            SpriteMappingPiece piece = pieces.get(i);
-            int velX = FRAGMENT_SPEEDS[i][0];
-            int velY = FRAGMENT_SPEEDS[i][1];
+            final SpriteMappingPiece piece = pieces.get(i);
+            final int velX = FRAGMENT_SPEEDS[i][0];
+            final int velY = FRAGMENT_SPEEDS[i][1];
 
-            SmashBlockFragmentInstance fragment = new SmashBlockFragmentInstance(
-                    blockX, blockY, velX, velY, piece, renderer);
-            objectManager.addDynamicObject(fragment);
+            final int fragmentIndex = i;
+            spawnFreeChild(() -> new SmashBlockFragmentInstance(
+                    blockX, blockY, velX, velY, fragmentIndex, piece, fRenderer));
         }
 
         // From disassembly SmashObject .playsnd:
@@ -350,12 +370,16 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
 
         // Spawn points popup object
         if (objectManager != null) {
-            Sonic1PointsObjectInstance pointsObj = new Sonic1PointsObjectInstance(
-                    new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
-                    services(), points);
-            // ROM writes obFrame directly from d2>>1 for this path.
-            pointsObj.setScoreFrameIndex(pointsFrameIndex);
-            objectManager.addDynamicObject(pointsObj);
+            final int fPoints = points;
+            final int fPointsFrameIndex = pointsFrameIndex;
+            spawnFreeChild(() -> {
+                Sonic1PointsObjectInstance pointsObj = new Sonic1PointsObjectInstance(
+                        new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
+                        services(), fPoints);
+                // ROM writes obFrame directly from d2>>1 for this path.
+                pointsObj.setScoreFrameIndex(fPointsFrameIndex);
+                return pointsObj;
+            });
         }
     }
 
@@ -407,7 +431,7 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
      *     bpl.w   DeleteObject
      * </pre>
      */
-    static class SmashBlockFragmentInstance extends AbstractObjectInstance {
+    static class SmashBlockFragmentInstance extends AbstractObjectInstance implements RewindRecreatable {
 
         private int posX, posY;
         private int subX, subY;  // 8.8 fixed-point sub-pixel
@@ -415,9 +439,19 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
         private final SpriteMappingPiece piece;
         private final PatternSpriteRenderer renderer;
 
+        SmashBlockFragmentInstance(int x, int y, int velX, int velY) {
+            this(x, y, velX, velY, 0, null, null);
+        }
+
         SmashBlockFragmentInstance(int x, int y, int velX, int velY,
                                    SpriteMappingPiece piece, PatternSpriteRenderer renderer) {
-            super(new ObjectSpawn(x, y, 0x51, 0, 0, false, 0), "SmashBlockFragment");
+            this(x, y, velX, velY, 0, piece, renderer);
+        }
+
+        SmashBlockFragmentInstance(int x, int y, int velX, int velY,
+                                   int fragmentIndex,
+                                   SpriteMappingPiece piece, PatternSpriteRenderer renderer) {
+            super(new ObjectSpawn(x, y, 0x51, fragmentIndex & 0xFF, 0, false, 0), "SmashBlockFragment");
             this.posX = x;
             this.posY = y;
             this.subX = x << 8;
@@ -426,6 +460,20 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
             this.velY = velY;
             this.piece = piece;
             this.renderer = renderer;
+        }
+
+        @Override
+        public SmashBlockFragmentInstance recreateForRewind(RewindRecreateContext ctx) {
+            ObjectSpawn spawn = ctx.spawn();
+            int fragmentIndex = spawn.subtype() & 0xFF;
+            ObjectRenderManager renderManager = ctx.objectServices() == null ? null : ctx.objectServices().renderManager();
+            PatternSpriteRenderer restoredRenderer = renderManager == null
+                    ? null
+                    : renderManager.getRenderer(ObjectArtKeys.MZ_SMASH_BLOCK);
+            SpriteMappingPiece restoredPiece = fragmentPiece(
+                    renderManager, ObjectArtKeys.MZ_SMASH_BLOCK, fragmentIndex);
+            return new SmashBlockFragmentInstance(
+                    spawn.x(), spawn.y(), 0, 0, fragmentIndex, restoredPiece, restoredRenderer);
         }
 
         @Override
@@ -466,6 +514,25 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
         @Override
         public int getPriorityBucket() {
             return RenderPriority.clamp(PRIORITY);
+        }
+
+        private static SpriteMappingPiece fragmentPiece(
+                ObjectRenderManager renderManager,
+                String artKey,
+                int fragmentIndex) {
+            if (renderManager == null) {
+                return null;
+            }
+            ObjectSpriteSheet sheet = renderManager.getSheet(artKey);
+            if (sheet == null || FRAME_FRAGMENTS >= sheet.getFrameCount()) {
+                return null;
+            }
+            SpriteMappingFrame frame = sheet.getFrame(FRAME_FRAGMENTS);
+            if (frame == null || frame.pieces() == null
+                    || fragmentIndex < 0 || fragmentIndex >= frame.pieces().size()) {
+                return null;
+            }
+            return frame.pieces().get(fragmentIndex);
         }
     }
 }

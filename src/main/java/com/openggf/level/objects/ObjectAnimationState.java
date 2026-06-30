@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
+import java.util.Objects;
 
 /**
  * Lightweight animation runner for object mappings (AnimateSprite-style).
@@ -30,6 +31,26 @@ public class ObjectAnimationState {
 
     public int getMappingFrame() {
         return mappingFrame;
+    }
+
+    /**
+     * Number of displayed frames in the given animation script, or 0 if absent.
+     * Read-only helper; does not affect animation playback.
+     */
+    public int frameCount(int queryAnimId) {
+        if (animationSet == null) {
+            return 0;
+        }
+        SpriteAnimationScript script = animationSet.getScript(queryAnimId);
+        return script == null ? 0 : script.frames().size();
+    }
+
+    public ObjectAnimationState copyForRewind() {
+        ObjectAnimationState copy = new ObjectAnimationState(animationSet, animId, mappingFrame);
+        copy.lastAnimId = lastAnimId;
+        copy.frameIndex = frameIndex;
+        copy.frameTick = frameTick;
+        return copy;
     }
 
     /**
@@ -108,5 +129,20 @@ public class ObjectAnimationState {
             return 0;
         }
         return target;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof ObjectAnimationState state
+                && animId == state.animId
+                && lastAnimId == state.lastAnimId
+                && frameIndex == state.frameIndex
+                && frameTick == state.frameTick
+                && mappingFrame == state.mappingFrame;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(animId, lastAnimId, frameIndex, frameTick, mappingFrame);
     }
 }

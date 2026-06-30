@@ -114,7 +114,7 @@ public class TestS3kAiz2BigRingCollision {
                 fail("Sonic entered the special stage at frame " + frame
                         + " pos=(" + sprite.getX() + "," + sprite.getY() + ")"
                         + " centre=(" + sprite.getCentreX() + "," + sprite.getCentreY() + ")"
-                        + " â€” collision box is too large");
+                        + " -- collision box is too large");
             }
 
             if (sprite.getDead()) {
@@ -138,11 +138,11 @@ public class TestS3kAiz2BigRingCollision {
         }
 
         assertTrue(stoppedAtFrame >= 0, "Sonic should advance past X=" + MIN_PROGRESS_X
-                        + " and stop â€” maxX=" + maxX
+                        + " and stop -- maxX=" + maxX
                         + " actual pos=(" + sprite.getX() + "," + sprite.getY() + ")"
                         + " gspeed=" + sprite.getGSpeed());
 
-        // Phase 2: Idle at the stop position for 120 frames â€” should NOT trigger big ring
+        // Phase 2: Idle at the stop position for 120 frames -- should NOT trigger big ring
         for (int frame = 0; frame < IDLE_FRAMES_AT_STOP; frame++) {
             fixture.stepIdleFrames(1);
 
@@ -151,7 +151,7 @@ public class TestS3kAiz2BigRingCollision {
                         + (stoppedAtFrame + frame)
                         + " pos=(" + sprite.getX() + "," + sprite.getY() + ")"
                         + " centre=(" + sprite.getCentreX() + "," + sprite.getCentreY() + ")"
-                        + " â€” collision box is too large");
+                        + " -- collision box is too large");
             }
         }
 

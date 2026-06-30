@@ -1,10 +1,12 @@
 package com.openggf.game;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.TestEnvironment;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,13 +19,14 @@ public class TestHybridPhysicsFeatureSet {
 
     @BeforeEach
     public void setUp() {
-        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
         CrossGameFeatureProvider.getInstance().resetState();
     }
 
     @AfterEach
     public void tearDown() {
         CrossGameFeatureProvider.getInstance().resetState();
+        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
@@ -31,30 +34,11 @@ public class TestHybridPhysicsFeatureSet {
     public void testExpectedHybridFeatureSetValues() {
         // Validates the expected contract of the hybrid feature set:
         // spindash enabled (from donor), all other flags stay S1.
-        // Without a ROM, we construct the expected values directly.
-        PhysicsFeatureSet expected = new PhysicsFeatureSet(
-                true,  // spindashEnabled - from donor
-                new short[]{0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00},
-                CollisionModel.UNIFIED,  // S1
-                true,   // fixedAnglePosThreshold - S1
-                PhysicsFeatureSet.LOOK_SCROLL_DELAY_NONE,  // S1
-                true,   // waterShimmerEnabled - S1
-                true,   // inputAlwaysCapsGroundSpeed - S1
-                false,  // elementalShieldsEnabled - S1
-                false,  // instaShieldEnabled - S1 (test uses S1 base, no donor context)
-                false,  // angleDiffCardinalSnap - S1
-                false,  // extendedEdgeBalance - S1
-                PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S1,  // ringFloorCheckMask - S1
-                PhysicsFeatureSet.RING_COLLISION_SIZE_S1,  // ringCollisionWidth - S1
-                PhysicsFeatureSet.RING_COLLISION_SIZE_S1,  // ringCollisionHeight - S1
-                false,  // lightningShieldEnabled - S1 (no elemental shields)
-                null,  // superSpindashSpeedTable - not donated
-                (short) 0,  // movingCrouchThreshold - not donated
-                false,  // groundWallCollisionEnabled - S1
-                false,  // airSuperspeedPreserved - S1
-                false,  // slopeRepelChecksOnObject - S1
-                PhysicsFeatureSet.FAST_SCROLL_CAP_S2  // fastScrollCap - S1 (same as S2)
-        );
+        PhysicsFeatureSet expected = PhysicsFeatureSet.builderFrom(PhysicsFeatureSet.SONIC_1)
+                .spindashEnabled(true)
+                .spindashSpeedTable(
+                        new short[]{0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00})
+                .build();
 
         // Verify spindash is enabled (donor contribution)
         assertTrue(expected.spindashEnabled(), "Hybrid should enable spindash");
@@ -71,6 +55,14 @@ public class TestHybridPhysicsFeatureSet {
         assertFalse(expected.elementalShieldsEnabled(), "elementalShieldsEnabled should be false (S1)");
         assertFalse(expected.angleDiffCardinalSnap(), "angleDiffCardinalSnap should be false (S1)");
         assertFalse(expected.extendedEdgeBalance(), "extendedEdgeBalance should be false (S1)");
+        assertFalse(expected.airBottomSolidHitClearsGroundSpeed(),
+                "airBottomSolidHitClearsGroundSpeed should be false (S1)");
+        assertFalse(expected.airRightWallHitContinuesIntoCeilingSeparation(),
+                "airRightWallHitContinuesIntoCeilingSeparation should be false (S1)");
+        assertFalse(expected.airLeftWallHitContinuesIntoCeilingSeparation(),
+                "airLeftWallHitContinuesIntoCeilingSeparation should be false (S1)");
+        assertTrue(expected.fullSolidBottomOverlapUsesCurrentYRadiusOnly(),
+                "fullSolidBottomOverlapUsesCurrentYRadiusOnly should be true (S1)");
     }
 
     @Test
@@ -117,7 +109,6 @@ public class TestHybridPhysicsFeatureSet {
     @Test
     public void testS1SpriteGetsS1PhysicsWithoutCrossGame() {
         // Without cross-game features, S1 sprite should have S1 physics
-        GameModuleRegistry.setCurrent(new Sonic1GameModule());
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
 
         PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
@@ -126,5 +117,3 @@ public class TestHybridPhysicsFeatureSet {
         assertEquals(CollisionModel.UNIFIED, fs.collisionModel(), "S1 collision model");
     }
 }
-
-

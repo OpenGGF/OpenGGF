@@ -2,9 +2,10 @@ package com.openggf;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
-import com.openggf.game.GameServices;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.level.LevelManager;
+import com.openggf.sprites.managers.SpriteManager;
 
 /**
  * Canonical level-mode frame update sequence.
@@ -13,10 +14,11 @@ import com.openggf.level.LevelManager;
  * Both {@link GameLoop} and the headless test runner ({@code HeadlessTestRunner})
  * MUST delegate to this class rather than duplicating the step sequence.
  * <p>
- * Order mirrors the Mega Drive ROM, but differs by collision model:
- * S1 runs ExecuteObjects before PlayerPhysics in this engine's unified path,
- * while S2/S3K run PlayerPhysics first, then ExecuteObjects with inline solid
- * resolution. Both flows converge before level events, camera, and scroll.
+ * Order mirrors the Mega Drive ROM.
+ * Inline solid-resolution modules run player physics first, then ExecuteObjects
+ * with per-object solid checkpoints so object code sees the post-physics player
+ * state during its own update. Legacy compatibility modules keep the older
+ * objects-before-physics ordering.
  * <p>
  * ROM reference (sonic.asm:3042-3044): {@code LZWaterFeatures} runs before
  * {@code ExecuteObjects} so that wind tunnel / water slide state is visible
@@ -36,6 +38,12 @@ public final class LevelFrameStep {
 
     private static final StepWrapper DIRECT = (name, step) -> step.run();
 
+    /**
+     * Public no-op step wrapper for callers (e.g. the headless test runner) that
+     * route through {@link #executeWithPause} but do not need profiling.
+     */
+    public static final StepWrapper DIRECT_WRAPPER = DIRECT;
+
     private LevelFrameStep() {
         // Utility class
     }
@@ -49,9 +57,42 @@ public final class LevelFrameStep {
      * @param spriteUpdate callback that runs the sprite/player physics update
      *                     (e.g. {@code SpriteManager.update()} or headless equivalent)
      */
-    public static void execute(LevelManager levelManager, Camera camera,
+    public static void execute(LevelFrameContext context, LevelManager levelManager, Camera camera,
                                Runnable spriteUpdate) {
-        execute(levelManager, camera, spriteUpdate, DIRECT);
+        execute(context, levelManager, camera, spriteUpdate, DIRECT);
+    }
+
+    /**
+     * Executes one frame of level-mode updates, applying ROM in-game pause first.
+     * <p>
+     * This is the gameplay-loop entry point that honours {@code Game_paused}. The
+     * Start-press edge is supplied by the caller from the live/replay input stream
+     * (never from trace data) and toggles {@link GameStateManager#applyPauseToggle}.
+     * When the game is paused after the toggle, the entire level update body is
+     * skipped for this frame — exactly as ROM {@code Pause_Loop} runs only the
+     * V-int (the caller still advances its frame counter and consumes the input
+     * row), so a paused window stays frame-aligned.
+     *
+     * @param startEdgePressed true only on the leading edge of a Start press
+     * @return true if the level update ran, false if it was skipped due to pause
+     */
+    public static boolean executeWithPause(LevelFrameContext context, LevelManager levelManager,
+                                           Camera camera, Runnable spriteUpdate,
+                                           boolean startEdgePressed, StepWrapper wrapper) {
+        GameStateManager gameState = context.gameStateManager();
+        if (gameState != null && gameState.applyPauseToggle(startEdgePressed)) {
+            // Paused: ROM Pause_Loop runs only the V-int. Skip the level update
+            // entirely (objects, physics, camera, scroll). The caller's frame
+            // counter / input cursor still advanced before this call, so the
+            // paused window stays frame-aligned with the recorded ROM run.
+            return false;
+        }
+        execute(context, levelManager, camera, spriteUpdate, wrapper);
+        return true;
+    }
+
+    public static void updateTimers(LevelFrameContext context) {
+        context.timerManager().update();
     }
 
     /**
@@ -65,8 +106,11 @@ public final class LevelFrameStep {
      * @param spriteUpdate callback that runs the sprite/player physics update
      * @param wrapper      wraps individual steps (e.g. for profiling)
      */
-    public static void execute(LevelManager levelManager, Camera camera,
+    public static void execute(LevelFrameContext context, LevelManager levelManager, Camera camera,
                                Runnable spriteUpdate, StepWrapper wrapper) {
+        if (context == null) {
+            throw new NullPointerException("context");
+        }
         // 0. Process dirty regions from MutableLevel (editor mutations).
         //    No-op when the level is not a MutableLevel — zero impact on gameplay.
         levelManager.processDirtyRegions();
@@ -76,46 +120,123 @@ public final class LevelFrameStep {
         //    ROM: LZWaterFeatures runs before ExecuteObjects (sonic.asm:3042).
         levelManager.updateZoneFeaturesPrePhysics();
 
-        boolean inlineSolidResolution = levelManager.usesInlineObjectSolidResolution();
+        // 1b. Pre-physics level-event routines that the ROM runs in WaterEffects
+        //     immediately before RunObjects (docs/s2disasm/s2.asm:5094-5095).
+        //     OOZ OilSlides reads the previous-frame player position and sets the
+        //     sliding status bit before the player's friction/move code runs the
+        //     same frame; running it post-physics applied oil friction one frame
+        //     early (OOZ1 trace f563). Default no-op for other games/zones.
+        LevelEventProvider prePhysicsEvents = context.levelEventProvider();
+        if (prePhysicsEvents != null) {
+            prePhysicsEvents.updatePrePhysics();
+        }
+
+        // 1c. Dynamic water level move — ROM S1/S2 advance the water level
+        //     (LZWaterFeatures / WaterEffects) BEFORE ExecuteObjects/RunObjects,
+        //     so the player's same-frame Sonic_Water underwater check reads the
+        //     just-moved level. S3K runs Handle_Onscreen_Water_Height AFTER the
+        //     object loop, so it keeps the move in step 6 (LevelManager.update).
+        //     Gated by PhysicsFeatureSet.advanceWaterLevelBeforePlayerPhysics().
+        if (levelManager.advanceWaterLevelBeforePlayerPhysics()) {
+            wrapper.wrap("water-move", levelManager::advanceDynamicWaterLevel);
+        }
+
+        boolean inlineSolidResolution = levelManager.objectsExecuteAfterPlayerPhysics();
         if (inlineSolidResolution) {
-            // 2. S2/S3K player physics first. Touch responses run per-player inside
-            //    tickPlayablePhysics after movement, matching Sonic's slot ordering.
+            // 2. Inline-order modules need a frame-start snapshot of object touch
+            //    state because player-slot ReactToItem runs before ExecuteObjects.
+            levelManager.prepareTouchResponseSnapshots();
+
+            // 2. Inline solid-resolution path: player physics first. Touch responses
+            //    run per-player inside tickPlayablePhysics after movement, matching
+            //    the player-slot-first ROM ordering.
             wrapper.wrap("physics", spriteUpdate);
 
-            // 3. S2/S3K object execution after player physics, with inline solid
-            //    resolution so later objects see earlier contact adjustments.
+            LevelEventProvider fixedSlotEvents = context.levelEventProvider();
+            if (fixedSlotEvents != null) {
+                wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
+            }
+
+            // 3. Object execution after player physics, with inline solid checkpoints
+            //    so later objects see earlier contact adjustments.
             wrapper.wrap("objects", levelManager::updateObjectPositionsPostPhysicsWithoutTouches);
         } else {
-            // 2. S1 unified path keeps objects before physics. Touch responses are
-            //    still deferred to tickPlayablePhysics after movement.
+            LevelEventProvider fixedSlotEvents = context.levelEventProvider();
+            if (fixedSlotEvents != null) {
+                wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
+            }
+
+            // 2. Legacy compatibility path keeps objects before physics. Touch
+            //    responses are still deferred to tickPlayablePhysics after movement.
             wrapper.wrap("objects", levelManager::updateObjectPositionsWithoutTouches);
 
             // 3. Sprite / player physics update (caller-provided).
             wrapper.wrap("physics", spriteUpdate);
+
+            // 3b. Some later SST-slot scripts read Sonic after his movement has
+            //     completed and only write globals for the next frame. Legacy
+            //     object-order modules need an explicit post-player hook for
+            //     those cases because regular object updates already ran.
+            wrapper.wrap("post-player-hooks", levelManager::updateObjectPostPlayerHooks);
         }
 
-        // 4. Dynamic level events — boss arenas, boundary changes, zone transitions.
-        LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
-        if (levelEvents != null) {
-            levelEvents.update();
-        }
+        // 4. Camera scroll + dynamic level events, in ROM order.
+        //
+        //    ROM DeformLayers (s1disasm DeformLayers (REV01).asm:16-18) runs
+        //    ScrollHoriz + ScrollVertical (camera move + clamp to the bottom
+        //    boundary left by the PREVIOUS frame's DynamicLevelEvents) BEFORE
+        //    DynamicLevelEvents. DynamicLevelEvents (DynamicLevelEvents.asm:5-49)
+        //    then runs the zone-specific handler (DLE_Index) FIRST and only after
+        //    that eases the bottom boundary, reading the POST-scroll camera
+        //    (v_screenposy) and the player's airborne bit to choose the +2 vs +8
+        //    step, and writing v_limitbtm2 / f_bgscrollvert for the NEXT frame.
+        //
+        //    So per frame: (4a) camera move/clamp, (4b) zone event handler reading
+        //    the post-scroll camera, (4c) flush layout mutations queued by those
+        //    events, (4d) boundary easing. This keeps gameplay mutations visible
+        //    before post-camera placement/level scroll without moving event writes
+        //    ahead of the ROM camera scroll.
+        LevelEventProvider levelEvents = context.levelEventProvider();
+        boolean cameraDrivenScroll = levelManager.advanceCameraDrivenScrollForFrame();
 
-        BonusStageProvider bonusStageProvider = GameServices.bonusStage();
+        BonusStageProvider bonusStageProvider = context.bonusStageProvider();
         boolean integratedBonusStageUpdate = bonusStageProvider != null
                 && bonusStageProvider.updateDuringLevelFrame();
         boolean suppressDefaultCamera = bonusStageProvider != null
                 && bonusStageProvider.suppressesDefaultCameraStep();
 
-        if (integratedBonusStageUpdate) {
-            bonusStageProvider.onFrameUpdate();
+        // 4a. Camera scroll (ROM ScrollHoriz + ScrollVertical): move + clamp to the
+        //     prior-frame bottom boundary, BEFORE the zone event handler runs.
+        if (!suppressDefaultCamera && !cameraDrivenScroll) {
+            wrapper.wrap("camera-scroll", camera::updatePosition);
         }
 
-        // 5. Camera — ease boundaries toward targets, then reposition.
-        if (!suppressDefaultCamera) {
-            wrapper.wrap("camera", () -> {
-                camera.updateBoundaryEasing();
-                camera.updatePosition();
-            });
+        // 4b. Dynamic level events — boss arenas, boundary changes, zone
+        //     transitions. ROM runs the zone handler (DLE_Index) here, after the
+        //     scroll, so camera-X gates and the left-boundary lock see the
+        //     post-scroll camera. fixed-in-level objects run alongside.
+        if (levelEvents != null) {
+            wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
+            levelEvents.update();
+        }
+
+        // 4c. Flush gameplay layout mutations queued by zone events before
+        //     boundary easing and post-camera systems observe the changed level.
+        levelManager.flushQueuedLayoutMutations();
+
+        // 4d. Boundary easing (ROM DynamicLevelEvents boundary tail): ease the
+        //     bottom boundary toward target reading the post-scroll camera, and
+        //     record the boundary state for the NEXT frame's scroll clamp.
+        if (!suppressDefaultCamera && !cameraDrivenScroll) {
+            wrapper.wrap("camera-boundary", camera::updateBoundaryEasing);
+        }
+
+        if (levelManager.isLevelInactiveForTransition()) {
+            return;
+        }
+
+        if (integratedBonusStageUpdate) {
+            bonusStageProvider.onFrameUpdate();
         }
 
         // 5b. Post-camera placement catch-up — extend the spawn window with the
@@ -128,5 +249,13 @@ public final class LevelFrameStep {
 
         // 6. Level scroll / parallax / animation update.
         wrapper.wrap("level", levelManager::update);
+
+        // 7. Cache BuildSprites on-screen results for next frame's logic.
+        levelManager.refreshObjectPostCameraRenderState();
+        SpriteManager spriteManager = context.spriteManager();
+        if (spriteManager != null) {
+            spriteManager.refreshPlayableRenderFlags(camera);
+        }
+        levelManager.clearSidekickRomVisibleReloadFrameCounterBridge();
     }
 }

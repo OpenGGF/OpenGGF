@@ -4,6 +4,7 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic3k.Sonic3kObjectPlacement;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.LevelData;
 import com.openggf.level.objects.ObjectSpawn;
@@ -51,8 +52,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_DOOMSDAY, "DDZ", "The Doomsday Zone", 1)
     );
 
-    // Shared objects implemented for both zone sets
-    private static final Set<Integer> SHARED_IMPLEMENTED_IDS = Set.of(
+    // Shared objects implemented for both zone sets.
+    // Public so tests (e.g. TestCnzMinibossRegistered) can assert that
+    // zone-set-specific ids (where the same numeric id maps to different
+    // objects in S3KL vs SKL) stay out of the cross-zoneset allowlist.
+    public static final Set<Integer> SHARED_IMPLEMENTED_IDS = Set.of(
             0x01, // Monitor
             0x02, // PathSwap
             0x04, // CollapsingPlatform
@@ -70,6 +74,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x33, // Button
             0x34, // StarPost
             0x3C, // Door
+            0x4F, // SinkingMud
             0x51, // FloatingPlatform
             0x6C, // TensionBridge
             0x6A, // InvisibleHurtBlockH
@@ -80,6 +85,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
 
     // S3KL-only implementations (zones 0-6: AIZ through LBZ)
     private static final Set<Integer> S3KL_IMPLEMENTED_IDS;
+    // LBZ-only implementations from S3KL ids that map to different zone objects elsewhere.
+    private static final Set<Integer> LBZ_IMPLEMENTED_IDS;
     // SKL-only implementations (zones 7-13: MHZ through DDZ)
     private static final Set<Integer> SKL_IMPLEMENTED_IDS;
 
@@ -91,6 +98,14 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0x09, // AIZ1Tree
                 0x0A, // AIZ1ZiplinePeg
                 0x0C, // AIZGiantRideVine
+                0x10, // LBZTubeElevator
+                0x11, // LBZMovingPlatform
+                0x13, // LBZExplodingTrigger
+                0x14, // LBZTriggerBridge
+                0x16, // LBZFlameThrower
+                0x17, // LBZRideGrapple
+                0x18, // LBZCupElevator
+                0x19, // LBZCupElevatorPole
                 0x29, // AIZDisappearingFloor
                 0x2B, // AIZFlippingBridge
                 0x2C, // AIZCollapsingLogBridge
@@ -102,25 +117,100 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0x38, // HCZCGZFan
                 0x3A, // HCZHandLauncher
                 0x3B, // HCZWaterWall
+                0x20, // MGZLBZSmashingPillar (alt slot)
+                0x22, // LBZAlarm
+                0x52, // MGZLBZSmashingPillar
+                0x53, // MGZSwingingPlatform
+                0x55, // MGZHeadTrigger
+                0x56, // MGZMovingSpikePlatform
+                0x57, // MGZTriggerPlatform
+                0x58, // MGZSwingingSpikeBall
+                0x59, // MGZDashTrigger
+                0x5B, // MGZTopPlatform
                 0x3E, // HCZConveyorBelt
                 0x3F, // HCZConveyorSpike
+                0x41, // CNZBalloon
+                0x42, // CNZCannon
+                0x43, // CNZRisingPlatform
+                0x44, // CNZTrapDoor
+                0x45, // CNZLightBulb
+                0x46, // CNZHoverFan
+                0x47, // CNZCylinder
+                0x48, // CNZVacuumTube
+                0x49, // CNZGiantWheel
+                0x4A, // CNZBumper
+                0x4B, // CNZTriangleBumpers
+                0x4C, // CNZSpiralTube
+                0x4D, // CNZBarberPoleSprite
+                0x4E, // CNZWireCage
                 0x67, // HCZSnakeBlocks
                 0x68, // HCZSpinningColumn
                 0x69, // HCZTwistingLoop
+                0x6D, // HCZWaterSplash
+                0x6E, // HCZWaterDrop
                 0x8C, // Bloominator
                 0x8D, // Rhinobot
                 0x8E, // MonkeyDude
                 0x8F, // CaterKillerJr
+                0x82, // CutsceneKnuckles (CNZ2 variants included)
+                0x83, // CutsceneButton
+                0x88, // CNZWaterLevelCorkFloor
+                0x89, // CNZWaterLevelButton
+                0xA3, // Clamer
+                0xA4, // Sparkle
+                0xA5, // Batbot
                 0x93, // Jawz
                 0x94, // Blastoid
                 0x95, // Buggernaut
                 0x98, // Poindexter
+                0x9B, // BubblesBadnik
+                0x9C, // Spiker
+                0x9E, // Tunnelbot
                 0x90, // AIZMinibossCutscene
                 0x91, // AIZMiniboss
                 0x92, // AIZEndBoss
-                0x99  // HCZMiniboss
+                0x99, // HCZMiniboss
+                0x9A, // HCZEndBoss
+                0xA6, // CNZMiniboss (S3KL only — same id maps to DEZMiniboss in SKL)
+                0xA7, // CNZEndBoss (S3KL only — same id maps to DEZEndBoss in SKL)
+                0xAD, // Penguinator
+                0xAE, // StarPointer
+                0xAF, // ICZCrushingColumn
+                0xB0, // ICZPathFollowPlatform
+                0xB1, // ICZBreakableWall
+                0xB2, // ICZFreezer
+                0xB3, // ICZSegmentColumn
+                0xB4, // ICZSwingingPlatform
+                0xB5, // ICZStalagtite
+                0xB6, // ICZIceCube
+                0xB7, // ICZIceSpikes
+                0xB8, // ICZHarmfulIce
+                0xB9, // ICZSnowPile
+                0xBA, // ICZTensionPlatform
+                0xBB, // ICZIceBlock
+                0xBC, // ICZMiniboss
+                0xBD, // ICZEndBoss
+                0xBE, // SnaleBlaster
+                0xBF, // Ribot
+                0xC0, // Orbinaut
+                0xC1, // Corkey
+                0xC2, // Flybot767
+                0xC3, // LBZ1Robotnik
+                0xC4, // LBZMinibossBox
+                0xC5, // LBZMinibossBoxKnux
+                0xC6, // LBZ2RobotnikShip
+                0xC8, // LBZKnuxPillar
+                0xC9, // LBZMiniboss
+                0xCA, // LBZFinalBoss1
+                0xCB  // LBZEndBoss
         ));
         S3KL_IMPLEMENTED_IDS = Set.copyOf(s3kl);
+        var lbz = new HashSet<>(S3KL_IMPLEMENTED_IDS);
+        lbz.add(0x1B); // LBZPipePlug
+        lbz.add(0x1E); // LBZSpinLauncher
+        lbz.add(0x1F); // LBZLoweringGrapple
+        lbz.add(0x21); // LBZGateLaser
+        LBZ_IMPLEMENTED_IDS = Set.copyOf(lbz);
 
         // No SKL-specific objects implemented yet
         SKL_IMPLEMENTED_IDS = Set.copyOf(SHARED_IMPLEMENTED_IDS);
@@ -298,7 +388,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     @Override public List<ObjectDiscoveryTool.LevelConfig> getLevels() { return LEVELS; }
     @Override public Set<Integer> getImplementedIds() { return S3KL_IMPLEMENTED_IDS; }
     @Override public Set<Integer> getImplementedIds(ObjectDiscoveryTool.LevelConfig level) {
-        return zoneSetForLevel(level) == S3kZoneSet.SKL ? SKL_IMPLEMENTED_IDS : S3KL_IMPLEMENTED_IDS;
+        int[] za = LEVEL_ZONE_ACT.get(level.levelData());
+        if (zoneSetForLevel(level) == S3kZoneSet.SKL) {
+            return SKL_IMPLEMENTED_IDS;
+        }
+        return za[0] == Sonic3kZoneIds.ZONE_LBZ ? LBZ_IMPLEMENTED_IDS : S3KL_IMPLEMENTED_IDS;
     }
     @Override public Map<String, List<ObjectDiscoveryTool.DynamicBoss>> getDynamicBosses() { return DYNAMIC_BOSSES; }
 

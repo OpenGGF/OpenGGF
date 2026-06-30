@@ -3,9 +3,13 @@ package com.openggf.game.sonic1.objects.bosses;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -34,7 +38,7 @@ import java.util.List;
  * The ball (last link) has collision type 0x81 (enemy, size index 1).
  */
 public class GHZBossWreckingBall extends AbstractBossChild
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     // Chain link Y-offset data (GBall_PosData)
     private static final int[] CHAIN_OFFSETS = {0x00, 0x10, 0x20, 0x30, 0x40, 0x60};
@@ -99,6 +103,29 @@ public class GHZBossWreckingBall extends AbstractBossChild
     }
 
     @Override
+    public GHZBossWreckingBall recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
+        ObjectServices objectServices = ctx.objectServices();
+        if (objectServices == null) {
+            return null;
+        }
+        ObjectManager objectManager = objectServices.objectManager();
+        if (objectManager == null) {
+            return null;
+        }
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof Sonic1GHZBossInstance boss && !boss.isDestroyed()) {
+                GHZBossWreckingBall restored = new GHZBossWreckingBall(boss);
+                boss.adoptWreckingBallForRewind(restored);
+                return restored;
+            }
+        }
+        return null;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!shouldUpdate(frameCounter)) {
@@ -159,8 +186,15 @@ public class GHZBossWreckingBall extends AbstractBossChild
             }
         }
 
-        // Check if fully extended AND parent is in combat state (ob2ndRout >= 6)
-        if (allReached && parent.getState().routineSecondary >= 4) {
+        // Check if fully extended AND parent has reached the combat-reverse state.
+        // ROM GBall_Base only advances to GBall_Base2 (swing start) when the chain
+        // has fully extended AND the parent ship's ob2ndRout == 6
+        // (docs/s1disasm/_incObj/3D, 48 Boss - GHZ Main and Wrecking Ball.asm:506-511:
+        //  cmp.b BGHZ_BossGenericTimer / bne / cmpi.b #6,ob2ndRout(a1) / bne / addq.b #2,obRoutine).
+        // STATE_COMBAT_REVERSE = 6; the comment previously said ">= 6" but the gate
+        // used >= 4, starting the swing one boss-state early and shifting the ball's
+        // swing phase ahead of ROM.
+        if (allReached && parent.getState().routineSecondary >= 6) {
             chainFullyExtended = true;
         }
     }

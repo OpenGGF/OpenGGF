@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -19,7 +21,7 @@ import java.util.List;
  * ROM Reference: s2.asm Obj5D (ROUTINE_PUMP = 0x12)
  * Follows boss position, splits into falling parts on defeat.
  */
-public class CPZBossPump extends AbstractObjectInstance {
+public class CPZBossPump extends AbstractObjectInstance implements RewindRecreatable {
     private final Sonic2CPZBossInstance mainBoss;
 
     private int x;
@@ -39,6 +41,12 @@ public class CPZBossPump extends AbstractObjectInstance {
         this.anim = 0;
         this.mappingFrame = 0;
         this.animationState = new ObjectAnimationState(CPZBossAnimations.getDripperAnimations(), anim, mappingFrame);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2CPZBossInstance boss = CpzBossRewindLinks.nearestBoss(ctx);
+        return boss == null ? null : new CPZBossPump(ctx.spawn(), boss);
     }
 
     @Override
@@ -74,8 +82,8 @@ public class CPZBossPump extends AbstractObjectInstance {
         for (int i = 0; i < 3; i++) {
             var motion = randomPipeMotion();
             ObjectSpawn pieceSpawn = new ObjectSpawn(x, y, Sonic2ObjectIds.CPZ_BOSS, 0, renderFlags, false, 0);
-            CPZBossFallingPart piece = new CPZBossFallingPart(pieceSpawn, 0x22 + i, motion.xVel(), motion.timer());
-            services().objectManager().addDynamicObject(piece);
+            int mappingFrame = 0x22 + i;
+            spawnChild(() -> new CPZBossFallingPart(pieceSpawn, mappingFrame, motion.xVel(), motion.timer()));
         }
 
         setDestroyed(true);

@@ -1,13 +1,10 @@
 package com.openggf.graphics;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import com.openggf.graphics.color.DisplayColorProfile;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 
@@ -143,6 +140,16 @@ public class TestGraphicsManagerHeadless {
         assertNull(graphicsManager.getCombinedPaletteTextureId(), "Combined palette texture should be null in headless mode");
     }
 
+    @Test
+    public void testPaletteUploadBytesUseSelectedDisplayProfile() {
+        graphicsManager.setDisplayColorProfile(DisplayColorProfile.MD_ANALOG);
+
+        assertArrayEquals(new int[] {238, 238, 238, 255},
+                graphicsManager.paletteUploadRgbaForTest(255, 255, 255, 1));
+        assertArrayEquals(new int[] {238, 238, 238, 0},
+                graphicsManager.paletteUploadRgbaForTest(255, 255, 255, 0));
+    }
+
     // ==================== Flush Tests ====================
 
     @Test
@@ -163,14 +170,27 @@ public class TestGraphicsManagerHeadless {
     public void testFlushClearsCommandsInHeadlessMode() {
         graphicsManager.initHeadless();
 
-        // Register a command
-        graphicsManager.registerCommand((cX, cY, cW, cH) -> {});
+        // Register a command that records whether it was ever executed.
+        boolean[] executed = {false};
+        graphicsManager.registerCommand((cX, cY, cW, cH) -> executed[0] = true);
 
-        // Flush should clear
-        graphicsManager.flush();
+        // The queue should now hold exactly the registered command.
+        assertEquals(1, graphicsManager.commands.size(),
+                "registerCommand should enqueue exactly one pending command");
 
-        // Flush again - should not throw (commands already cleared)
+        // Flush should clear the queue without executing the command in headless mode.
         graphicsManager.flush();
+        assertTrue(graphicsManager.commands.isEmpty(),
+                "flush should clear the command queue in headless mode");
+        assertFalse(executed[0],
+                "headless flush must not execute queued GL commands");
+
+        // Second flush proves the queue was actually cleared: nothing left to run.
+        graphicsManager.flush();
+        assertFalse(executed[0],
+                "a previously cleared command must not re-execute on a second flush");
+        assertTrue(graphicsManager.commands.isEmpty(),
+                "command queue should remain empty after a second flush");
     }
 
     // ==================== Batching Tests ====================
@@ -179,27 +199,38 @@ public class TestGraphicsManagerHeadless {
     public void testBeginPatternBatchInHeadlessModeDoesNotThrow() {
         graphicsManager.initHeadless();
 
-        // Should not throw or crash
-        graphicsManager.beginPatternBatch();
+        assertDoesNotThrow(graphicsManager::beginPatternBatch,
+                "beginPatternBatch must be a safe no-op in headless mode");
+        // Beginning a batch must not enqueue any GL command in headless mode.
+        assertTrue(graphicsManager.commands.isEmpty(),
+                "beginPatternBatch must not queue GL commands in headless mode");
     }
 
     @Test
     public void testFlushPatternBatchInHeadlessModeDoesNotThrow() {
         graphicsManager.initHeadless();
 
-        // Should not throw or crash
-        graphicsManager.flushPatternBatch();
+        assertDoesNotThrow(graphicsManager::flushPatternBatch,
+                "flushPatternBatch must be a safe no-op in headless mode");
+        // Flushing an (empty, never-begun) batch must not enqueue any GL command.
+        assertTrue(graphicsManager.commands.isEmpty(),
+                "flushPatternBatch must not queue GL commands in headless mode");
     }
 
     @Test
     public void testBatchingOperationsInHeadlessMode() {
         graphicsManager.initHeadless();
 
-        // Full batching cycle should work
-        graphicsManager.beginPatternBatch();
-        graphicsManager.flushPatternBatch();
-        graphicsManager.beginPatternBatch();
-        graphicsManager.flushPatternBatch();
+        // A full begin/flush cycle (repeated) must stay a no-op in headless mode:
+        // never throw and never produce queued GL commands to run later.
+        assertDoesNotThrow(() -> {
+            graphicsManager.beginPatternBatch();
+            graphicsManager.flushPatternBatch();
+            graphicsManager.beginPatternBatch();
+            graphicsManager.flushPatternBatch();
+        }, "repeated headless batch cycles must not throw");
+        assertTrue(graphicsManager.commands.isEmpty(),
+                "headless batch cycles must leave the command queue empty");
     }
 
     // ==================== Cleanup Tests ====================
@@ -230,6 +261,52 @@ public class TestGraphicsManagerHeadless {
 
         GraphicsManager second = GraphicsManager.getInstance();
         assertFalse(second.isHeadlessMode(), "New instance should have default headless mode");
+    }
+
+    // ==================== Safe-Area Projection Tests ====================
+
+    @Test
+    public void testBeginSafeAreaProjectionNativeWidthIsNoOp() {
+        // At native width (320) safe-area ortho == scene ortho: left=0, right=320.
+        // Matrix: ortho2D(0, 320, 0, 224) — identical to the default scene projection.
+        graphicsManager.initHeadless();
+        graphicsManager.beginSafeAreaProjection(320, 224);
+        float[] buf = graphicsManager.getProjectionMatrixBuffer();
+        assertNotNull(buf, "beginSafeAreaProjection should set projection buffer");
+        assertEquals(16, buf.length, "projection buffer should be 16 floats");
+        // For ortho2D(left=0, right=320, bottom=0, top=224):
+        // m[0] (col 0, row 0) = 2/(right-left) = 2/320 = 0.00625
+        assertEquals(2f / 320f, buf[0], 1e-6f, "m[0] should be 2/320 at native width");
+        // m[5] (col 1, row 1) = 2/(top-bottom) = 2/224
+        assertEquals(2f / 224f, buf[5], 1e-6f, "m[5] should be 2/224");
+        // m[12] (col 3, row 0) = -(right+left)/(right-left) = -1.0
+        assertEquals(-1f, buf[12], 1e-6f, "m[12] translation should be -1 at native width");
+    }
+
+    @Test
+    public void testBeginSafeAreaProjectionWiderViewportCenters() {
+        // At 400 px wide: pad = (400-320)/2 = 40, left = -40, right = 360.
+        graphicsManager.initHeadless();
+        graphicsManager.beginSafeAreaProjection(400, 224);
+        float[] buf = graphicsManager.getProjectionMatrixBuffer();
+        assertNotNull(buf, "beginSafeAreaProjection should set projection buffer");
+        // m[0] = 2/(360-(-40)) = 2/400 = 0.005
+        assertEquals(2f / 400f, buf[0], 1e-6f, "m[0] should be 2/(right-left) = 2/400 at 400px width");
+        // m[12] = -(right+left)/(right-left) = -(360 + (-40))/400 = -320/400 = -0.8
+        float expectedTranslation = -(360f + (-40f)) / 400f;
+        assertEquals(expectedTranslation, buf[12], 1e-6f, "m[12] translation should center the 320-wide safe area in 400px");
+    }
+
+    @Test
+    public void testEndSafeAreaProjectionClearsOverride() {
+        graphicsManager.initHeadless();
+        graphicsManager.beginSafeAreaProjection(400, 224);
+        assertNotNull(graphicsManager.getProjectionMatrixBuffer(), "buffer should be set after begin");
+        graphicsManager.endSafeAreaProjection();
+        // After end, local override is null; getProjectionMatrixBuffer falls back to Engine
+        // (null here because no engine set in headless) — so result is null.
+        assertNull(graphicsManager.getProjectionMatrixBuffer(),
+                "endSafeAreaProjection should clear the local override");
     }
 
     // ==================== Batching Enable/Disable Tests ====================

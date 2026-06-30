@@ -2,6 +2,9 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
@@ -82,6 +85,47 @@ public class TestS3kCnzPaletteCycling {
         cycler.update();
         Palette.Color after = level.getPalette(2).getColor(9);
         assertFalse(colorsEqual(before, after), "palette[2] color 9 should change on the very first frame (ch2 always runs)");
+    }
+
+    /**
+     * Verifies CNZ palette cycling routes writes through the palette ownership
+     * registry and uses the ROM's dedicated water palette tables when an
+     * underwater surface is supplied.
+     */
+    @Test
+    public void cnzPaletteCycleUsesCnzWaterTablesForUnderwaterSurface() throws IOException {
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        Palette[] underwaterPalettes = blankPalettes();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+        cycler = new Sonic3kPaletteCycler(
+                reader,
+                level,
+                3,
+                0,
+                registry,
+                underwaterPalettes);
+
+        cycler.update();
+
+        assertColorEquals(segaColor(reader, Sonic3kConstants.ANPAL_CNZ_2_ADDR),
+                underwaterPalettes[3].getColor(9),
+                "CNZ bumper cycle should use AnPal_PalCNZ_2 for underwater palette[3] color 9");
+        assertColorEquals(segaColor(reader, Sonic3kConstants.ANPAL_CNZ_4_ADDR + 2),
+                underwaterPalettes[2].getColor(10),
+                "CNZ background cycle should use AnPal_PalCNZ_4 for underwater palette[2] color 10");
+        assertTrue(colorsEqual(level.getPalette(2).getColor(7), underwaterPalettes[2].getColor(7)),
+                "CNZ tertiary cycle should match normal palette[2] color 7 because the ROM reuses AnPal_PalCNZ_5");
+        assertFalse(colorsEqual(level.getPalette(3).getColor(9), underwaterPalettes[3].getColor(9)),
+                "CNZ underwater bumper color should not be a mirror of the normal surface");
+        assertEquals(S3kPaletteOwners.CNZ_ANPAL,
+                registry.ownerAt(PaletteSurface.NORMAL, 3, 9),
+                "CNZ bumper cycle should claim palette[3] color 9 through the ownership registry");
+        assertEquals(S3kPaletteOwners.CNZ_ANPAL,
+                registry.ownerAt(PaletteSurface.NORMAL, 2, 9),
+                "CNZ background cycle should claim palette[2] color 9 through the ownership registry");
+        assertEquals(S3kPaletteOwners.CNZ_ANPAL,
+                registry.ownerAt(PaletteSurface.UNDERWATER, 2, 7),
+                "CNZ tertiary cycle should mirror its ownership claim into the underwater surface");
     }
 
     // ========== Specific color value assertions ==========
@@ -203,8 +247,28 @@ public class TestS3kCnzPaletteCycling {
 
     // ===== helpers =====
 
+    private static Palette[] blankPalettes() {
+        Palette[] palettes = new Palette[4];
+        for (int i = 0; i < palettes.length; i++) {
+            palettes[i] = new Palette();
+        }
+        return palettes;
+    }
+
     private static Palette.Color snapshot(Palette.Color c) {
         return new Palette.Color(c.r, c.g, c.b);
+    }
+
+    private static Palette.Color segaColor(RomByteReader reader, int addr) {
+        Palette.Color color = new Palette.Color();
+        color.fromSegaFormat(reader.slice(addr, 2), 0);
+        return color;
+    }
+
+    private static void assertColorEquals(Palette.Color expected, Palette.Color actual, String message) {
+        assertEquals(expected.r, actual.r, message);
+        assertEquals(expected.g, actual.g, message);
+        assertEquals(expected.b, actual.b, message);
     }
 
     private static boolean colorsEqual(Palette.Color a, Palette.Color b) {

@@ -2,7 +2,8 @@ package com.openggf.game.sonic1.specialstage;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,7 @@ public class Sonic1SpecialStageResultsScreenTest {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         gameState = GameServices.gameState();
         gameState.configureSpecialStageProgress(6, 6);
         gameState.resetSession();
@@ -25,7 +26,7 @@ public class Sonic1SpecialStageResultsScreenTest {
     @AfterEach
     public void tearDown() {
         gameState.resetSession();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

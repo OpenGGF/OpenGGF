@@ -1,6 +1,6 @@
 # Game Status
 
-Last updated: 2026-03-25 (post-v0.4.20260304)
+Last updated: 2026-06-12 (v0.6.prerelease development)
 
 This page describes the current state of each supported game. It is intended to set
 expectations honestly -- what works well, what is incomplete, and what you might encounter.
@@ -50,7 +50,7 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - All zones playable: EHZ, CPZ, ARZ, CNZ, HTZ, MCZ, OOZ, MTZ (3 acts), SCZ, WFZ, DEZ.
 - 9 boss fights: EHZ, CPZ, ARZ, CNZ, HTZ, MCZ, WFZ, and both DEZ bosses (Mecha Sonic
   and Death Egg Robot) plus the Robotnik escape sequence.
-- 97.5% of objects implemented (117 of 120 unique object types).
+- 99.2% of objects implemented (119 of 120 unique object types).
 - Special stages functional with emerald collection.
 - Tails CPU AI follower with flight and input replay.
 - Super Sonic with per-game physics.
@@ -64,7 +64,7 @@ expectations honestly -- what works well, what is incomplete, and what you might
 
 ### Known gaps
 
-- 3 unimplemented objects (see OBJECT_CHECKLIST.md for details).
+- 1 unimplemented object (see OBJECT_CHECKLIST.md for details).
 - MTZ boss is implemented but may have minor accuracy issues.
 - Some visual effects (screen distortion, specific palette transitions) may differ
   slightly from the original.
@@ -80,36 +80,74 @@ expectations honestly -- what works well, what is incomplete, and what you might
 
 ## Sonic 3 & Knuckles (S3K)
 
-**Status: Early. Angel Island Zone with intro cutscene and first-act gameplay.**
+**Status: Near-complete vertical-slice coverage, and the current development focus.**
+
+S3K is no longer just early-game bring-up. AIZ, HCZ, CNZ, MGZ, ICZ, MHZ, and parts
+of LBZ now have substantial route coverage, focused tests, and complete-run trace
+frontiers. It is still not a fully polished full-game path, but most remaining work
+is parity closure, route stabilization, and late-zone content rather than proving
+that the module can work.
 
 ### What works
 
-- Angel Island Zone Act 1 playable with gameplay objects.
-- AIZ intro cutscene (biplane sequence).
-- AIZ miniboss encounter.
-- Hollow tree traversal and vine mechanics.
-- Water system with underwater palettes.
-- AIZ fire transition (Act 1 to Act 2 seamless zone change).
-- Shield system (fire, electric, water) with PLC integration.
-- Initial badnik implementations for AIZ.
+- Angel Island Zone intro cutscene, Act 1 gameplay, miniboss defeat flow, signpost, results,
+  fire transition, Flying Battery bombing sequence, AIZ2 end boss, post-boss capsule flow,
+  and AIZ-to-HCZ transition.
+- Hydrocity route coverage including water rush, conveyor, fan, block, door, water skim,
+  miniboss, HCZ1-to-HCZ2 transition, HCZ2 moving-wall chase, end-boss/capsule work, and
+  complete-run trace diagnostics.
+- Carnival Night, Marble Garden, Ice Cap, Mushroom Hill, and Launch Base have substantial
+  object/event/scroll/palette work, with route-critical pieces covered by focused tests and
+  complete-run trace frontiers.
+- Title screen, level select screen, and data select screen with 8 save slots and team selection.
+- Knuckles as a playable character, including glide/climb support.
+- Blue Ball special stages and active bonus-stage work across Gumball, Glowing Sphere/Pachinko,
+  and Slots.
+- Shield system, water system, palette cycling, runtime-owned zone state, and broad badnik/object
+  coverage.
+- Water state now restores correctly after returning from side stages.
 - SMPS audio with S3K-specific driver configuration (Z80 bank-switching, DPCM).
 
 ### Known gaps
 
-- Only Angel Island Zone has meaningful gameplay support. Other zones may load but are
-  not playable.
-- Many S3K objects, badniks, and bosses are not yet implemented.
-- S3K's more complex PLC/art loading system has partial parity.
-- No Knuckles character support.
-- No save/load system.
-- No special stages.
-- Zone transitions beyond AIZ Act 1 -> Act 2 are not implemented.
+- S3K is not yet a polished start-to-finish full-game path.
+- FBZ and later zones remain the largest content/frontier gap compared with the opened AIZ-LBZ
+  route slices.
+- Some route slices still have complete-run trace divergences, especially around sidekick CPU
+  handoff, object lifetime/order, ring/hurt interactions, and boss/event state.
+- Some S3K objects, badniks, and bosses are still missing or implemented only to the extent needed
+  by current route slices.
+- Bonus stages are still in active parity work rather than final polish.
+- S3K's more complex PLC/art loading system still has partial parity.
+- Data select visual parity is still in progress (native selector art, emerald display).
 
 ### Notable quirks
 
 - S3K uses KosinskiM (Kosinski Moduled) compression, combined 1P+2P mapping tables,
   and a more complex Z80 sound driver than S1/S2.
-- S3K is the current development focus for v0.5 (see ROADMAP.md).
+- S3K work is prioritized as playable vertical slices rather than isolated checklist completion.
+  A useful slice has traversal objects, event/camera behavior, scroll/parallax, animated tiles,
+  palette/PLC state, bosses or transitions, trace coverage for known blockers, and visual
+  validation where practical. AIZ through HCZ remains the primary release slice, but CNZ, MGZ,
+  ICZ, MHZ, and LBZ now have enough coverage that new work should follow current trace/frontier
+  evidence rather than first-pass bring-up order.
+
+---
+
+## Experimental Tooling
+
+### Level Editor Overlay
+
+An experimental editor overlay is now available behind `debug.flags.editor` in `config.yaml`.
+When enabled, use `Shift+Tab` during gameplay to park the current playtest and enter the editor
+overlay, then use the same shortcut to resume. The current snapshot supports:
+
+- World cursor and grid navigation.
+- Focused block and chunk previews.
+- Tile placement, undo/redo, persistence, and early derive/edit flows for live level data.
+- Resume and restart handling around editor playtests.
+
+This is still a development tool rather than a polished end-user level editor.
 
 ---
 
@@ -123,6 +161,12 @@ sprites, spindash mechanics, and sound effects while you play a different base g
 | S2 sprites in S1 | Working |
 | S2 spindash in S1 | Working |
 | Super Sonic cross-delegation | Working |
+| S3K Data Select donated to S1/S2 | Working |
 | S3K sprites in S1/S2 | Experimental |
 
-Enable with `CROSS_GAME_FEATURES_ENABLED` and `CROSS_GAME_SOURCE` in config.json.
+Enable with `crossGame.enabled` and `crossGame.source` in `config.yaml`.
+
+When S3K donates the Data Select frontend, the save screen stays visually S3K-native,
+but save semantics remain host-owned. Slot routing, progression, clear-restart rules,
+and emerald identity come from the host game. Donated host emerald colors are adapted
+into the S3K save-card palette contract instead of assuming raw palette-slot parity.

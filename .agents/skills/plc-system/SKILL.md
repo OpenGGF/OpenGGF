@@ -1,11 +1,19 @@
 ---
-title: Cross-Game Pattern Load Cue (PLC) System
+name: plc-system
 description: Reference for the shared Sonic 1, Sonic 2, and Sonic 3K PLC format and the engine's cross-game PlcParser usage.
 ---
 
 # Cross-Game Pattern Load Cue (PLC) System
 
 Reference for the shared PLC binary format used across S1, S2, and S3K, and the `PlcParser` utility.
+
+## Agent Workflow Tooling
+
+For S3K PLC/art intake, use the dedicated tool and runbook (prefer the S&K half; the tool flags `s3.asm`-sourced labels — the S3L standalone half — as a caution, since an object with no S&K equivalent may legitimately use them):
+
+- **`RomArtIntakeTool`** — S3K ROM-backed art/mapping/PLC intake; wraps `RomOffsetFinder --game s3k`, recommends `StandaloneArtEntry` vs `LevelArtEntry`, and suggests `Sonic3kConstants` names + `Sonic3kPlcArtRegistry` hints. Accepts multiple labels:
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=ArtNem_AIZSwingVine Map_AIZSwingVine"`
+- **Doc:** `docs/agent-workflow/runbooks/runbook-rom-art-mappings-plc.md` — end-to-end ROM art/mappings/PLC intake runbook.
 
 ## Shared Binary Format
 

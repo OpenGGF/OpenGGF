@@ -14,6 +14,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -64,7 +65,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/56 Floating Blocks and Doors.asm
  */
 public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRomZoneRewindRecreatable {
 
     // ---- FBlock_Var table: {halfWidth, halfHeight} indexed by (subtype >> 4) & 7 ----
     // From disassembly: dc.b $10,$10 / $20,$20 / $10,$20 / $20,$1A / $10,$27 / $10,$10 / 8,$20 / $40,$10
@@ -137,13 +138,13 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     private int y;
 
     // Saved base positions (fb_origX = objoff_34, fb_origY = objoff_30)
-    private final int origX;
-    private final int origY;
+    private int origX;
+    private int origY;
 
     // Visual properties
-    private final int halfWidth;   // obActWid
-    private final int halfHeight;  // obHeight
-    private final int mappingFrame; // obFrame
+    private int halfWidth;   // obActWid
+    private int halfHeight;  // obHeight
+    private int mappingFrame; // obFrame
 
     // fb_height (objoff_3A): total movement distance remaining
     private int fbHeight;
@@ -161,13 +162,13 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     private int statusDirection;
 
     // Whether the object is in LZ (uses door art)
-    private final boolean isLZ;
+    private boolean isLZ;
 
     // Art key for rendering
     private final String artKey;
 
     // Zone index
-    private final int zoneIndex;
+    private int zoneIndex;
 
     public Sonic1FloatingBlockObjectInstance(ObjectSpawn spawn, int zoneIndex) {
         super(spawn, "FloatingBlock");
@@ -297,7 +298,7 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isPersistent() {
         // out_of_range.w DeleteObject,fb_origX(a0)
-        return !isDestroyed() && isInRange(origX);
+        return !isDestroyed() && isInRangeAt(origX);
     }
 
     @Override
@@ -665,17 +666,4 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
         };
     }
 
-    /**
-     * Check if the object is within out-of-range distance from camera.
-     */
-    private boolean isInRange(int objectX) {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
-    }
 }

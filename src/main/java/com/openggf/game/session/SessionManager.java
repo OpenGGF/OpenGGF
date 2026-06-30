@@ -1,21 +1,30 @@
 package com.openggf.game.session;
 
+import com.openggf.architecture.CompositionRoot;
 import com.openggf.game.GameModule;
+import com.openggf.game.save.SaveSessionContext;
 
 import java.util.Objects;
 
+@CompositionRoot
 public final class SessionManager {
-    private static WorldSession currentWorldSession;
-    private static GameplayModeContext currentGameplayMode;
-    private static EditorModeContext currentEditorMode;
+    private static volatile WorldSession currentWorldSession;
+    private static volatile GameplayModeContext currentGameplayMode;
+    private static volatile EditorModeContext currentEditorMode;
+    private static final EditorSessionFactory EDITOR_SESSION_FACTORY = new EditorSessionFactory();
 
     private SessionManager() {
     }
 
     public static synchronized GameplayModeContext openGameplaySession(GameModule module) {
+        return openGameplaySession(module, null);
+    }
+
+    public static synchronized GameplayModeContext openGameplaySession(GameModule module,
+                                                                       SaveSessionContext saveSessionContext) {
         Objects.requireNonNull(module, "module");
         destroyCurrentMode();
-        currentWorldSession = new WorldSession(module);
+        currentWorldSession = new WorldSession(module, saveSessionContext);
         currentGameplayMode = new GameplayModeContext(currentWorldSession);
         return currentGameplayMode;
     }
@@ -31,7 +40,8 @@ public final class SessionManager {
             throw new IllegalStateException("Cannot enter editor mode without an active world session.");
         }
         destroyCurrentMode();
-        currentEditorMode = new EditorModeContext(currentWorldSession, cursor, playtestStash);
+        currentEditorMode = EDITOR_SESSION_FACTORY.create(
+                currentWorldSession, EngineServices.current(), cursor, playtestStash);
         return currentEditorMode;
     }
 
@@ -66,6 +76,11 @@ public final class SessionManager {
         currentWorldSession = null;
     }
 
+    public static synchronized void closeGameplaySession() {
+        destroyCurrentMode();
+        currentWorldSession = null;
+    }
+
     public static synchronized GameModule requireCurrentGameModule() {
         if (currentWorldSession == null) {
             throw new IllegalStateException("No active WorldSession");
@@ -74,25 +89,32 @@ public final class SessionManager {
     }
 
     private static void destroyCurrentMode() {
+        boolean destroyedRuntimeMode = false;
         if (currentGameplayMode != null) {
             currentGameplayMode.destroy();
             currentGameplayMode = null;
+            destroyedRuntimeMode = true;
         }
         if (currentEditorMode != null) {
             currentEditorMode.destroy();
             currentEditorMode = null;
+            destroyedRuntimeMode = true;
+        }
+        if (destroyedRuntimeMode) {
+            EngineServices.current().graphics().clearRuntimeManagedReferences();
         }
     }
 
-    public static synchronized WorldSession getCurrentWorldSession() {
+    public static WorldSession getCurrentWorldSession() {
         return currentWorldSession;
     }
 
-    public static synchronized GameplayModeContext getCurrentGameplayMode() {
+    public static GameplayModeContext getCurrentGameplayMode() {
         return currentGameplayMode;
     }
 
-    public static synchronized EditorModeContext getCurrentEditorMode() {
+    public static EditorModeContext getCurrentEditorMode() {
         return currentEditorMode;
     }
+
 }

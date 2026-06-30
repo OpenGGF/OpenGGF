@@ -34,4 +34,16 @@ public interface ResultsScreen {
      * @param commands the list to append commands to
      */
     void appendRenderCommands(List<GLCommand> commands);
+
+    /**
+     * Sets the projection-space viewport width for widescreen centering.
+     *
+     * <p>The results content is always 320 px wide. At widths greater than 320
+     * the content is shifted right by {@code (viewportWidth - 320) / 2} so it
+     * remains visually centered. At native width 320 the offset is 0 —
+     * byte-identical output. Default implementation is a no-op (native behaviour).
+     */
+    default void setViewportWidth(int width) {
+        // default: no-op (native 320 — offset 0)
+    }
 }

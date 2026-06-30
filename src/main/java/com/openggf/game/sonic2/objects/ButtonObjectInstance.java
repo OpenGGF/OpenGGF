@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -42,7 +44,7 @@ import java.util.List;
  * </ul>
  */
 public class ButtonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     // ROM: move.w #$1B,d1 - solid object half-width
     private static final int HALF_WIDTH = 0x1B;
@@ -67,11 +69,11 @@ public class ButtonObjectInstance extends AbstractObjectInstance
     private static final int FRAME_PRESSED = 1;
 
     // Subtype-derived state
-    private final int switchId;    // subtype & 0x0F: index into ButtonVine_Trigger array
-    private final int triggerBit;  // 0 or 7: which bit to set/clear in the trigger byte
+    private int switchId;    // subtype & 0x0F: index into ButtonVine_Trigger array
+    private int triggerBit;  // 0 or 7: which bit to set/clear in the trigger byte
 
     // Adjusted Y position (after init offset)
-    private final int adjustedY;
+    private int adjustedY;
 
     // Standing detection via SolidObjectListener callback
     private boolean contactStanding;
@@ -97,8 +99,34 @@ public class ButtonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public ButtonObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new ButtonObjectInstance(ctx.spawn());
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+
+        // ROM Obj47_Main (s2.asm:50826-50827) gates the ENTIRE button routine
+        // behind the render_flags.on_screen bit:
+        //   _btst #render_flags.on_screen,render_flags(a0)
+        //   _beq.s BranchTo_JmpTo12_MarkObjGone   ; off-screen -> MarkObjGone, return
+        // When the button is off-screen the ROM runs NEITHER the SolidObject
+        // standing check NOR the bclr/bset on ButtonVine_Trigger -- it leaves the
+        // shared trigger byte untouched. This matters whenever two buttons share a
+        // switch id: a far off-screen unpressed button must NOT clear the trigger
+        // bit that an on-screen pressed button (or a latched consumer) is relying
+        // on. MTZ1 has Obj47 buttons at x=0x06CC (switch 0) and x=0x0858 (switch 0);
+        // without this gate the off-screen 0x0858 button's bclr clobbered switch 0
+        // every frame, so the MTZ_LONG_PLATFORM (subtype-7 button retract) never saw
+        // the press and stayed extended, dropping Sonic through the floor it should
+        // have landed on (mtz1 trace f863 air/rolling/y divergence).
+        // isWithinSolidContactBounds() mirrors the ROM Render_Sprites render_flags
+        // bit-7 bounding-box test for this object's width_pixels.
+        if (!isWithinSolidContactBounds()) {
+            return;
+        }
+
         // ROM: move.b #0,mapping_frame(a0) - reset to unpressed each frame
         mappingFrame = FRAME_UNPRESSED;
 

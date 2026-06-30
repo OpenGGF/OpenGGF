@@ -2,13 +2,19 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.audio.GameSound;
+import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,7 +39,7 @@ import java.util.logging.Logger;
  *   <li>6 - COOLDOWN: Brief cooldown before returning to detection</li>
  * </ul>
  */
-public class LauncherBallObjectInstance extends AbstractObjectInstance {
+public class LauncherBallObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(LauncherBallObjectInstance.class.getName());
 
     // Player states (matches ROM objoff_2C/objoff_36 values)
@@ -94,10 +100,10 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
     private final Map<AbstractPlayableSprite, Integer> playerCooldowns = new HashMap<>();
 
     // Object properties (computed from subtype at init)
-    private final boolean renderXFlip;
-    private final boolean renderYFlip;
-    private final boolean reverseAnim;    // objoff_3E: animation direction flag
-    private final int startFrame;         // objoff_3F: initial mapping frame
+    private boolean renderXFlip;
+    private boolean renderYFlip;
+    private boolean reverseAnim;    // objoff_3E: animation direction flag
+    private int startFrame;         // objoff_3F: initial mapping frame
 
     // Current animation state (shared between both characters, matches ROM behavior)
     private int mappingFrame;
@@ -124,18 +130,28 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
     }
 
     @Override
+    public LauncherBallObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new LauncherBallObjectInstance(ctx.spawn(), "LauncherBall");
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (player == null) {
             return;
         }
 
-        // Process main character
-        processPlayer(player, frameCounter);
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (!participants.contains(player)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(player);
+            withUpdatePlayer.addAll(participants);
+            participants = withUpdatePlayer;
+        }
 
-        // Process sidekick(s)
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            processPlayer((AbstractPlayableSprite) sidekick, frameCounter);
+        for (PlayableEntity participant : participants) {
+            processPlayer((AbstractPlayableSprite) participant, frameCounter);
         }
     }
 
@@ -164,6 +180,13 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
             return;
         }
 
+        // ROM skips CPU Tails while in the flying routine. The engine does not
+        // expose Tails_CPU_routine directly here, so use the same conservative
+        // physical guard as Obj3D for CPU airborne non-rolling flight.
+        if (player.isCpuControlled() && player.getAir() && !player.getRolling()) {
+            return;
+        }
+
         // Check 32x32 detection box centered on launcher
         // ROM: sub.w x_pos(a0),d0; addi.w #$10,d0; cmpi.w #$20,d0
         int dx = player.getCentreX() - spawn.x() + DETECTION_HALF_SIZE;
@@ -173,6 +196,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
         }
 
         // If player is currently held by another launcher, clear that launcher's state
+        OOZLauncherObjectInstance.clearActiveLauncherFor(player);
         LauncherBallObjectInstance previousLauncher = activeCaptures.get(player);
         if (previousLauncher != null && previousLauncher != this) {
             previousLauncher.playerStates.put(player, STATE_DETECTION);
@@ -192,11 +216,11 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
         playerStates.put(player, STATE_ANIMATION);
 
         // Snap player to launcher position
-        player.setCentreX((short) spawn.x());
-        player.setCentreY((short) spawn.y());
+        NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x());
+        NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y());
 
         // Setup character state (ROM: move.b #$81,obj_control(a1))
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         player.setAnimationId(Sonic2AnimationIds.ROLL);
         player.setGSpeed((short) 0x1000);
@@ -288,7 +312,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
         // Check if this is an exit launcher (subtype bit 7 set = negative byte)
         if ((subtype & 0x80) != 0) {
             // Final launcher: release player to normal physics
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setControlLocked(false);
             player.setAir(true);
             player.setOnObject(false);
@@ -355,10 +379,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
         // ROM: ext.l d0; asl.l #8,d0; add.l d0,x_pos(a1)
         // LAUNCH_VELOCITY = 0x1000, shifted right 8 = 0x10 = 16 pixels/frame
         int[] vel = playerVelocities.getOrDefault(player, new int[]{0, 0});
-        int moveX = vel[0] >> 8;
-        int moveY = vel[1] >> 8;
-        player.setCentreX((short) (player.getCentreX() + moveX));
-        player.setCentreY((short) (player.getCentreY() + moveY));
+        player.move((short) vel[0], (short) vel[1]);
     }
 
     /**
@@ -381,7 +402,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
      * Release player from this launcher (emergency release on death/debug/offscreen).
      */
     private void releasePlayer(AbstractPlayableSprite player) {
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
         player.setAir(true);
         player.setOnObject(false);
@@ -396,11 +417,8 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
      * ROM: btst #render_flags.on_screen,render_flags(a1)
      */
     private boolean isPlayerOnScreen(AbstractPlayableSprite player) {
-        int px = player.getCentreX();
-        int py = player.getCentreY();
-        // Use generous margin since player is moving fast (16px/frame)
-        return isOnScreen(128)
-                || (Math.abs(px - spawn.x()) < 400 && Math.abs(py - spawn.y()) < 400);
+        Camera camera = player.currentCamera();
+        return camera == null || camera.isOnScreen(player);
     }
 
     /**
@@ -446,5 +464,6 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
      */
     public static void clearActiveCaptures() {
         activeCaptures.clear();
+        OOZLauncherObjectInstance.clearActiveLaunchers();
     }
 }

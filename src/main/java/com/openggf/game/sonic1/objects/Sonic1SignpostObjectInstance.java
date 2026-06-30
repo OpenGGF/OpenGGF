@@ -1,15 +1,17 @@
 package com.openggf.game.sonic1.objects;
+import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
 
 import com.openggf.camera.Camera;
-import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -37,7 +39,8 @@ import java.util.logging.Logger;
  *   <li>Anim 3 (.sonic): frame 4 at delay $F (static Sonic)</li>
  * </ul>
  */
-public class Sonic1SignpostObjectInstance extends AbstractObjectInstance {
+public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1SignpostObjectInstance.class.getName());
 
     // Routine states matching disassembly Sign_Index offsets
@@ -132,9 +135,7 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance {
         int currentAct = services().currentAct();
         if (currentAct >= BOSS_ACT_INDEX) {
             ObjectManager objMgr = services().objectManager();
-            if (objMgr != null) {
-                objMgr.markRemembered(spawn);
-            }
+            ObjectLifetimeOps.markSpawnRemembered(objMgr, spawn);
             setDestroyed(true);
         }
     }
@@ -286,13 +287,11 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance {
             sparkleTimer = SPARKLE_SPAWN_DELAY;
 
             int[] offset = SPARKLE_POSITIONS[sparkleIndex];
-            int sparkleX = spawn.x() + offset[0];
-            int sparkleY = spawn.y() + offset[1];
+            final int sparkleX = spawn.x() + offset[0];
+            final int sparkleY = spawn.y() + offset[1];
 
-            SignpostSparkleObjectInstance sparkle = new SignpostSparkleObjectInstance(sparkleX, sparkleY);
-            ObjectManager objectManager = services().objectManager();
-            if (objectManager != null) {
-                objectManager.addDynamicObject(sparkle);
+            if (services().objectManager() != null) {
+                spawnFreeChild(() -> new SignpostSparkleObjectInstance(sparkleX, sparkleY));
             }
 
             // ROM: addq.b #2,sparkle_id(a0); andi.b #$E,sparkle_id(a0)
@@ -354,21 +353,19 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance {
 
         // ROM: move.w #bgm_GotThrough,d0; jsr (QueueSound2).l
         try {
-            services().playMusic(Sonic1Music.GOT_THROUGH.id);
+            services().playMusic(GameMusic.ACT_CLEAR);
         } catch (Exception e) {
             LOGGER.warning("Failed to play stage clear music: " + e.getMessage());
         }
 
         var levelGamestate = services().levelGamestate();
-        int elapsedSeconds = levelGamestate != null ? levelGamestate.getElapsedSeconds() : 0;
-        int ringCount = player.getRingCount();
-        int actNumber = services().currentAct() + 1; // 1-indexed for display
+        final int elapsedSeconds = levelGamestate != null ? levelGamestate.getElapsedSeconds() : 0;
+        final int ringCount = player.getRingCount();
+        final int actNumber = services().currentAct() + 1; // 1-indexed for display
 
-        Sonic1ResultsScreenObjectInstance resultsScreen = new Sonic1ResultsScreenObjectInstance(
-                elapsedSeconds, ringCount, actNumber);
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.addDynamicObject(resultsScreen);
+        if (services().objectManager() != null) {
+            spawnFreeChild(() -> new Sonic1ResultsScreenObjectInstance(
+                    elapsedSeconds, ringCount, actNumber));
             LOGGER.info("S1 Results screen spawned");
         }
     }

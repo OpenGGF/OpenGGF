@@ -59,14 +59,14 @@ public class TestSonic3kSSEntryRingFormation {
     private static final int FORMATION_TOTAL_FRAMES = FORMATION_ADVANCE_COUNT * FRAMES_PER_ANIM_STEP; // 40
 
     private GameStateManager gameState;
-    private ObjectServices services;
+    private CapturingObjectServices services;
 
     @BeforeEach
     public void setUp() {
         TestEnvironment.resetAll();
         gameState = new GameStateManager();
         gameState.resetSession();
-        services = new TestObjectServices().withGameState(gameState);
+        services = new CapturingObjectServices().withGameState(gameState);
 
         // Ensure camera bounds include the ring position (default is 0,0,320,224)
         AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
@@ -218,6 +218,36 @@ public class TestSonic3kSSEntryRingFormation {
     }
 
     @Test
+    public void subtypeBitSevenDoesNotRequestUnregisteredHiddenPalace() {
+        Sonic3kSSEntryRingObjectInstance ring = createRing(0x80 | 3);
+        AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
+
+        advanceToIdleAndTouch(ring, player);
+
+        assertTrue(ring.isDestroyed(), "HPZ-routed ring should be removed after touch");
+        assertEquals(-1, services.requestedZone, "HPZ is not registered as a loadable runtime zone yet");
+        assertEquals(-1, services.requestedAct);
+        assertFalse(services.deactivateLevelNow, "Unavailable HPZ route must not freeze level updates for a transition");
+        assertTrue(gameState.isSpecialRingCollected(3), "HPZ subtype flag must not pollute the collection bit index");
+        verify(player).addRings(50);
+    }
+
+    @Test
+    public void allChaosAndSuperEmeraldsAwardRingsUntilHiddenPalaceIsRegistered() {
+        collectAllChaosAndSuperEmeralds();
+        Sonic3kSSEntryRingObjectInstance ring = createRing(4);
+        AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
+
+        advanceToIdleAndTouch(ring, player);
+
+        assertTrue(ring.isDestroyed(), "Completed emerald state should remove the ring");
+        assertEquals(-1, services.requestedZone, "Completionist big-ring touch must not request unregistered HPZ");
+        assertEquals(-1, services.requestedAct);
+        assertFalse(services.deactivateLevelNow);
+        verify(player).addRings(50);
+    }
+
+    @Test
     public void collectedRingIsDestroyedImmediately() {
         // Mark bit 3 as collected
         gameState.markSpecialRingCollected(3);
@@ -293,6 +323,41 @@ public class TestSonic3kSSEntryRingFormation {
             return ring;
         } finally {
             clearConstructionContext();
+        }
+    }
+
+    private static void advanceToIdleAndTouch(Sonic3kSSEntryRingObjectInstance ring, AbstractPlayableSprite player) {
+        for (int frame = 1; frame <= FORMATION_TOTAL_FRAMES + 1; frame++) {
+            ring.update(frame, player);
+        }
+    }
+
+    private void collectAllChaosAndSuperEmeralds() {
+        gameState.configureSpecialStageProgress(7, 7);
+        for (int i = 0; i < 7; i++) {
+            gameState.markEmeraldCollected(i);
+            gameState.markSuperEmeraldCollected(i);
+        }
+        assertTrue(gameState.hasAllEmeralds(), "Precondition: all chaos emeralds collected");
+        assertTrue(gameState.hasAllSuperEmeralds(), "Precondition: all super emeralds collected");
+    }
+
+    private static class CapturingObjectServices extends TestObjectServices {
+        int requestedZone = -1;
+        int requestedAct = -1;
+        boolean deactivateLevelNow;
+
+        @Override
+        public CapturingObjectServices withGameState(GameStateManager gameState) {
+            super.withGameState(gameState);
+            return this;
+        }
+
+        @Override
+        public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow) {
+            this.requestedZone = zone;
+            this.requestedAct = act;
+            this.deactivateLevelNow = deactivateLevelNow;
         }
     }
 

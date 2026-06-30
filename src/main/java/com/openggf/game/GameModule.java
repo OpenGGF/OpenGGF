@@ -4,6 +4,9 @@ import com.openggf.audio.GameAudioProfile;
 import com.openggf.data.Game;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.dataselect.DataSelectHostProfile;
+import com.openggf.game.dataselect.DataSelectPresentationProvider;
+import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.PlaneSwitcherConfig;
@@ -11,6 +14,8 @@ import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
+
+import java.util.Optional;
 
 public interface GameModule {
     String getIdentifier();
@@ -213,6 +218,36 @@ public interface GameModule {
     }
 
     /**
+     * Returns the data select provider for this game.
+     * Provides the save file selection screen (S3K-style).
+     *
+     * @return the data select provider
+     */
+    default DataSelectProvider getDataSelectProvider() {
+        return getDataSelectPresentationProvider();
+    }
+
+    /** Returns the presentation provider used to render and update data select. */
+    default DataSelectPresentationProvider getDataSelectPresentationProvider() {
+        return new DataSelectPresentationProvider(ignored -> NoOpDataSelectProvider.INSTANCE, null);
+    }
+
+    /** Returns the host-owned data select profile for this game, if supported. */
+    default DataSelectHostProfile getDataSelectHostProfile() {
+        return null;
+    }
+
+    /**
+     * Returns the save snapshot provider for this game.
+     * Captures game-specific state into a map for save file serialization.
+     *
+     * @return the save snapshot provider
+     */
+    default com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider() {
+        return (reason, ctx) -> java.util.Map.of();
+    }
+
+    /**
      * Returns the level select provider for this game.
      * Provides the game-specific level select screen with ROM-accurate
      * menu layout, text, and navigation.
@@ -253,6 +288,26 @@ public interface GameModule {
      */
     default void onLevelLoad() {
         // Default no-op
+    }
+
+    /**
+     * Called before a gameplay session is fully torn down to clear
+     * module-scoped static caches or other process-wide helper state.
+     * Default implementation does nothing.
+     */
+    default void resetModuleScopedState() {
+        // Default no-op
+    }
+
+    /**
+     * Supplies the sidekick-carry trigger for this game module. Defaults to
+     * {@code null} (no carry mechanic). Only Sonic 3 &amp; Knuckles overrides
+     * this to port the Tails-carry-Sonic CNZ1 intro.
+     *
+     * @see com.openggf.sprites.playable.SidekickCarryTrigger
+     */
+    default com.openggf.sprites.playable.SidekickCarryTrigger getSidekickCarryTrigger() {
+        return null;
     }
 
     /**
@@ -356,6 +411,23 @@ public interface GameModule {
     }
 
     /**
+     * Returns a factory that constructs the invincibility-stars power-up object
+     * for the player. Games may override to return a game-specific subclass
+     * (e.g. S3K returns {@code Sonic3kInvincibilityStarsObjectInstance}).
+     *
+     * <p>The default returns the game-agnostic
+     * {@link com.openggf.level.objects.InvincibilityStarsObjectInstance} used
+     * by S1/S2.
+     *
+     * @return a factory creating an {@link com.openggf.level.objects.AbstractObjectInstance}
+     *         for the given player
+     */
+    default java.util.function.Function<PlayableEntity, com.openggf.level.objects.AbstractObjectInstance>
+            getInvincibilityStarsFactory() {
+        return com.openggf.level.objects.InvincibilityStarsObjectInstance::new;
+    }
+
+    /**
      * Returns whether this game natively supports a sidekick character (e.g., Tails).
      * Games without sidekick art/logic should return false.
      *
@@ -397,6 +469,20 @@ public interface GameModule {
     }
 
     /**
+     * Returns the provider used when this module acts as a cross-game donor.
+     *
+     * <p>The provider owns construction of game-specific donor art loaders,
+     * palettes, audio profiles, and super-state controllers so shared donation
+     * orchestration does not name concrete Sonic implementation classes.</p>
+     *
+     * @return a donor provider, or {@code null} if this module cannot donate
+     * cross-game features
+     */
+    default CrossGameDonorProvider getCrossGameDonorProvider() {
+        return null;
+    }
+
+    /**
      * Applies a seamless mutation to the given level manager using the provided key.
      * Called when a seamless zone transition requires applying level data mutations.
      *
@@ -421,8 +507,37 @@ public interface GameModule {
      */
     default <T> T getGameService(Class<T> type) { return null; }
 
+    /**
+     * Returns the donated S3K data-select preview image warmup, if this module
+     * renders S3K-style data select using host-owned generated preview images.
+     */
+    default Optional<DonatedDataSelectWarmupTask> getDonatedDataSelectWarmupTask() {
+        return Optional.empty();
+    }
+
     /** Returns the GameId for this module. */
     GameId getGameId();
+
+    /**
+     * Initial {@code anim_frame_duration} loaded by the badnik-death explosion
+     * (Obj27 / ExplosionItem) on its first/setup frame, expressed in the ROM's
+     * {@code subq.b #1 / bpl} predecrement convention (the explosion's frame 0
+     * is shown for {@code value + 1} game frames before the first advance).
+     *
+     * <p>This is per-game object animation data, not a behaviour branch: S1
+     * {@code ExItem_Main} loads {@code move.b #7,obTimeFrame}
+     * (docs/s1disasm/_incObj/24, 27 &amp; 3F Explosions.asm), whereas S2
+     * {@code Obj27_Init} loads {@code move.b #3,anim_frame_duration}
+     * (docs/s2disasm/s2.asm:46672) and S3K {@code loc_1E626} loads
+     * {@code move.b #3,anim_frame_timer} (docs/skdisasm/sonic3k.asm:42195).
+     * All three subsequently reload {@code 7} and delete at mapping_frame 5.
+     *
+     * <p>Default is the S2/S3K value ({@code 3}); {@code Sonic1GameModule}
+     * overrides it to {@code 7}.
+     */
+    default int explosionInitialAnimDuration() {
+        return 3;
+    }
 
     /**
      * Resolves a canonical animation to this game's native animation ID.

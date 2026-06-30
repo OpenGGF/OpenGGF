@@ -1,21 +1,19 @@
 package com.openggf.level.scroll;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import com.openggf.game.sonic2.scroll.ParallaxTables;
 import com.openggf.game.sonic2.scroll.SwScrlMcz;
 import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import com.openggf.game.sonic2.scroll.ParallaxTables;
 import com.openggf.game.sonic2.scroll.SwScrlMcz;
-
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.scroll.SwScrlMcz;
 import com.openggf.game.sonic2.scroll.ParallaxTables;
 import com.openggf.game.sonic2.scroll.SwScrlMcz;
-
 import static org.junit.jupiter.api.Assertions.*;
 import com.openggf.game.sonic2.scroll.ParallaxTables;
 import com.openggf.game.sonic2.scroll.SwScrlMcz;
@@ -43,7 +41,7 @@ public class SwScrlMczTest {
 
     @BeforeEach
     public void setUp() throws IOException {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         mockRom = new MockMczRom();
         ParallaxTables tables = new ParallaxTables(mockRom);
         handler = new SwScrlMcz(tables);
@@ -51,7 +49,7 @@ public class SwScrlMczTest {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     // ==================== Row Heights Table Tests ====================
@@ -185,14 +183,14 @@ public class SwScrlMczTest {
 
         handler.update(hScroll, cameraX, cameraY, 0, 0);
 
-        // At bgY=100, we need to find which segment we're in
+        // At bgY=100, we need to find which segment we're in.
         // Cumulative heights: 0-37(0), 37-60(1), 60-78(2), 78-85(3), 85-92(4),
         // 92-94(5), 94-96(6), 96-144(7)
-        // bgY=100 is in segment 7 (96-144), offset = 100 - 96 = 4 pixels into segment 7
-
-        // Verify the handler doesn't crash and produces reasonable output
-        assertNotNull(hScroll, "hScroll should not be null");
-        assertTrue(hScroll[0] != 0 || cameraX == 0, "hScroll[0] should be non-zero");
+        // bgY=100 is in segment 7 (96-144), offset = 100 - 96 = 4 pixels into segment 7.
+        // segScroll[7] = 25 at cameraX=256 (see testSegScrollAtCameraX256).
+        // BG = -cameraX + (cameraX - segScroll[7]) = -256 + (256 - 25) = -25.
+        short bg0 = unpackBG(hScroll[0]);
+        assertEquals((short) -25, bg0, "Line 0 BG at bgY=100 (segment 7)");
     }
 
     @Test

@@ -4,7 +4,10 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -23,7 +26,7 @@ import java.util.List;
  * The spike tracks a Y extension value (objoff_3C) that grows during the boss's
  * block drop sequence and retracts when ascending. Display offset = extension >> 2.
  */
-public class SYZBossSpike extends AbstractBossChild implements TouchResponseProvider {
+public class SYZBossSpike extends AbstractBossChild implements TouchResponseProvider, RewindRecreatable {
 
     // ROM: obColType = $84 when active (harmful, size category)
     private static final int SPIKE_COLLISION_TYPE = 0x84;
@@ -41,6 +44,16 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
         super(parent, "SYZSpike", 5, Sonic1ObjectIds.SYZ_BOSS);
         this.extensionDepth = 0;
         this.spikeActive = false;
+    }
+
+    @Override
+    public SYZBossSpike recreateForRewind(RewindRecreateContext ctx) {
+        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (object instanceof Sonic1SYZBossInstance boss && !boss.isDestroyed()) {
+                return new SYZBossSpike(boss);
+            }
+        }
+        throw new IllegalStateException("Missing restored SYZ boss for SYZBossSpike rewind recreate");
     }
 
     /**

@@ -5,8 +5,11 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -26,7 +29,7 @@ import java.util.List;
  * - LOWERING: Pillar sinks when boss defeated
  */
 public class ARZBossPillar extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final int PILLAR_SUB_RAISING = 0;
     private static final int PILLAR_SUB_IDLE = 2;
@@ -36,7 +39,7 @@ public class ARZBossPillar extends AbstractObjectInstance
     private static final int PILLAR_START_Y = 0x510;
 
     private static final SolidObjectParams PILLAR_SOLID_PARAMS = new SolidObjectParams(0x23, 0x44, 0x45, 0, 4);
-    private final Sonic2ARZBossInstance mainBoss;
+    private Sonic2ARZBossInstance mainBoss;
 
     private int x;
     private int y;
@@ -57,6 +60,35 @@ public class ARZBossPillar extends AbstractObjectInstance
         this.mappingFrame = 0;
         this.pillarShaking = false;
         this.pillarShakeTime = 0;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        Sonic2ARZBossInstance parent = findClosestLiveParent(ctx);
+        return parent == null ? null : new ARZBossPillar(ctx.spawn(), parent);
+    }
+
+    private static Sonic2ARZBossInstance findClosestLiveParent(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
+                || ctx.objectServices().objectManager() == null) {
+            return null;
+        }
+        Sonic2ARZBossInstance best = null;
+        long bestDistance = Long.MAX_VALUE;
+        int childX = ctx.spawn().x();
+        int childY = ctx.spawn().y();
+        for (ObjectInstance inst : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (inst instanceof Sonic2ARZBossInstance boss && !boss.isDestroyed()) {
+                long dx = (long) boss.getX() - childX;
+                long dy = (long) boss.getY() - childY;
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = boss;
+                }
+            }
+        }
+        return best;
     }
 
     @Override

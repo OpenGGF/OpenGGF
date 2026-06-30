@@ -6,9 +6,14 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -56,7 +61,7 @@ import java.util.List;
  * X offset/velocity negated when parent faces right. Alternates mapping frames
  * 2 and 3 every tick. Shield bounce deflectable (bit 3).
  */
-public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
+public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
     // --- Constants from ObjDat_Blastoid ---
 
@@ -103,7 +108,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
     private enum State { DETECT, ATTACK }
 
     private State state = State.DETECT;
-    private final int triggerIndex; // subtype & 0x0F
+    private int triggerIndex; // subtype & 0x0F
 
     // Animate_RawMultiDelay state — unsigned byte timer (0-255).
     // The $F4 command handler clears anim_frame_timer to 0 (ROM: clr.b anim_frame_timer),
@@ -121,8 +126,8 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (destroyed) return;
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        if (isDestroyed()) return;
 
         // Obj_WaitOffscreen parity: the ROM entry point begins with
         // jsr (Obj_WaitOffscreen).l which suppresses all logic every frame
@@ -236,16 +241,16 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
 
         // CreateChild5_ComplexAdjusted does NOT copy render_flags bit 0 to child;
         // SetUp_ObjAttributes only sets bit 2 (world coords). Projectile never H-flips.
-        BlastoidProjectile projectile = new BlastoidProjectile(
-                spawn,
-                currentX + xOff,
-                currentY + PROJECTILE_Y_OFFSET,
-                xVel,
-                PROJECTILE_Y_VEL);
-
+        int finalXOff = xOff;
+        int finalXVel = xVel;
         ObjectServices svc = tryServices();
         if (svc != null && svc.objectManager() != null) {
-            svc.objectManager().addDynamicObject(projectile);
+            spawnFreeChild(() -> new BlastoidProjectile(
+                    spawn,
+                    currentX + finalXOff,
+                    currentY + PROJECTILE_Y_OFFSET,
+                    finalXVel,
+                    PROJECTILE_Y_VEL));
         }
     }
 
@@ -257,16 +262,18 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
      * returns d2 = absolute X distance to the closer one.
      */
     private int findNearestPlayerXDistance(AbstractPlayableSprite mainPlayer) {
-        int nearest = mainPlayer != null && !mainPlayer.getDead()
-                ? Math.abs(currentX - mainPlayer.getCentreX()) : Integer.MAX_VALUE;
         ObjectServices svc = tryServices();
-        if (svc == null) return nearest;
-        for (PlayableEntity sidekick : svc.sidekicks()) {
-            if (!(sidekick instanceof AbstractPlayableSprite s) || s.getDead()) continue;
-            int dist = Math.abs(currentX - s.getCentreX());
-            if (dist < nearest) nearest = dist;
-        }
-        return nearest;
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> mainPlayer,
+                () -> svc != null ? svc.playerQuery().sidekicks() : List.of());
+        return query.nearestByRomX(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS,
+                currentX,
+                BlastoidBadnikInstance::isLivePlayable).distance();
+    }
+
+    private static boolean isLivePlayable(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite && !sprite.getDead();
     }
 
     // ── Defeat + trigger ─────────────────────────────────────────────────
@@ -306,11 +313,23 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
      * Shield reaction: bounce (bit 3) via {@code bset #3,shield_reaction(a0)}.
      */
     private static final class BlastoidProjectile extends AbstractObjectInstance
-            implements TouchResponseProvider {
+            implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {
 
         // loc_86D4A: bset #3,shield_reaction(a0)
         private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
         private static final int DEFLECT_SPEED = 0x800;
+        private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
+                new com.openggf.game.profiles.touchresponse.TouchResponseProfile(
+                        com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode.NORMAL,
+                        false,
+                        true,
+                        false,
+                        com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability.SHIELD_DEFLECT,
+                        SHIELD_REACTION_BOUNCE,
+                        com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                        com.openggf.game.profiles.touchresponse.TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                        com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy
+                                .STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS));
 
         // byte_87A1F: Animate_Raw speed 0, frames [2, 3], $FC loop
         private static final int FRAME_A = 2;
@@ -328,6 +347,10 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
         private int ySubpixel;
         private int animFrame;
         private boolean collisionEnabled = true;
+
+        private BlastoidProjectile() {
+            this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), 0, 0, 0, 0);
+        }
 
         BlastoidProjectile(ObjectSpawn ownerSpawn, int x, int y,
                            int xVel, int yVel) {
@@ -371,6 +394,16 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
         @Override
         public int getCollisionProperty() {
             return 0;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile() {
+            return TOUCH_RESPONSE_PROFILE;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+            return TOUCH_RESPONSE_PROFILE;
         }
 
         @Override

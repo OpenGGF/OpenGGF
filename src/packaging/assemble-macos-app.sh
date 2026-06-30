@@ -67,14 +67,14 @@ export DYLD_LIBRARY_PATH="${DIR}${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
 LAUNCHER
 chmod +x "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
 
-# Copy config.json next to the .app bundle so it can be edited without rebuilding
-CONFIG_SRC="$(cd "$(dirname "${BINARY}")" && pwd)/config.json"
-CONFIG_DST="$(cd "${OUTPUT_DIR}" && pwd)/config.json"
+# Copy config.yaml next to the .app bundle so it can be edited without rebuilding
+CONFIG_SRC="$(cd "$(dirname "${BINARY}")" && pwd)/config.yaml"
+CONFIG_DST="$(cd "${OUTPUT_DIR}" && pwd)/config.yaml"
 if [ -f "${CONFIG_SRC}" ] && [ "${CONFIG_SRC}" != "${CONFIG_DST}" ]; then
     cp "${CONFIG_SRC}" "${CONFIG_DST}"
-    echo "Exported config.json to ${OUTPUT_DIR}/"
+    echo "Exported config.yaml to ${OUTPUT_DIR}/"
 elif [ -f "${CONFIG_DST}" ]; then
-    echo "config.json already present in ${OUTPUT_DIR}/"
+    echo "config.yaml already present in ${OUTPUT_DIR}/"
 fi
 
 # Copy icon if available

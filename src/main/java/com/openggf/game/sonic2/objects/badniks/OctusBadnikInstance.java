@@ -8,10 +8,13 @@ import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -26,7 +29,7 @@ import java.util.List;
  * then descends back to its starting position.
  * Based on disassembly Obj4A (lines 59860-60026).
  */
-public class OctusBadnikInstance extends AbstractBadnikInstance {
+public class OctusBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
 
     private enum State {
         WAIT_FOR_PLAYER,    // routine_secondary 0: check player distance
@@ -36,7 +39,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
         MOVING_DOWN         // routine_secondary 8: descend back to start
     }
 
-    private static final int COLLISION_SIZE_INDEX = 0x0C; // From disassembly collision_flags $0C
+    private static final int COLLISION_SIZE_INDEX = 0x0A; // From disassembly collision_flags $A (s2.asm:59905)
     private static final int DETECT_RANGE = 0x80; // 128 pixels
     private static final int RISE_DELAY = 0x20; // 32 frames
     private static final int INITIAL_Y_VEL = -0x200; // Rise speed
@@ -44,11 +47,12 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
     private static final int HOVER_DURATION = 60; // 60 frames hovering
     private static final int BULLET_X_VEL = 0x200; // Bullet speed
     private static final int BULLET_DELAY = 0x0F; // 15 frames stationary before moving
+    private static final int INIT_FLOOR_Y_RADIUS = 0x0B;
 
     private static final SpriteAnimationSet ANIMATIONS = createAnimations();
 
-    private final int startY;
-    private final boolean xFlip;
+    private int startY;
+    private boolean xFlip;
     private State state;
     private int timer;
     private final SubpixelMotion.State motionState;
@@ -57,15 +61,34 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
 
     public OctusBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Octus", Sonic2BadnikConfig.DESTRUCTION);
-        this.startY = spawn.y();
         this.xFlip = (spawn.renderFlags() & 0x01) != 0;
         // Octus faces left by default; x_flip in spawn means face right
         this.facingLeft = !xFlip;
         this.state = State.WAIT_FOR_PLAYER;
         this.timer = 0;
-        this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+        int snappedY = snapToFloorLikeRom(spawn.x(), spawn.y());
+        this.currentY = snappedY;
+        this.startY = snappedY;
+        this.motionState = new SubpixelMotion.State(spawn.x(), snappedY, 0, 0, 0, 0);
         this.bulletFired = false;
         this.animationState = new ObjectAnimationState(ANIMATIONS, 0, 1);
+    }
+
+    private int snapToFloorLikeRom(int x, int y) {
+        try {
+            TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(x, y, INIT_FLOOR_Y_RADIUS);
+            if (floor.foundSurface() && floor.distance() < 0) {
+                return y + floor.distance();
+            }
+        } catch (RuntimeException ignored) {
+            // Tests without a level keep the placement coordinate.
+        }
+        return y;
+    }
+
+    @Override
+    public OctusBadnikInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new OctusBadnikInstance(ctx.spawn());
     }
 
     @Override
@@ -101,11 +124,25 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
     }
 
     private void updateDelayBeforeRise() {
+        // ROM Obj4A_DelayBeforeMoveUp (s2.asm:59958-59967):
+        //   subq.w #1, objoff_2C(a0)
+        //   bmi.s +                  ; branch when timer goes NEGATIVE (after the
+        //                              ; decrement), not when it hits zero
+        //   rts
+        // + addq.b #2, routine_secondary(a0)
+        //   move.b #4, anim(a0)
+        //   move.w #-$200, y_vel(a0)
+        //   jmpto JmpTo19_ObjectMove ; apply -$200 y_vel via ObjectMove this frame
         timer--;
-        if (timer <= 0) {
+        if (timer < 0) {
             state = State.MOVING_UP;
             yVelocity = INITIAL_Y_VEL;
             animationState.setAnimId(4); // Rising animation
+            // ROM falls through to ObjectMove on the transition frame, so apply
+            // the initial -$200 velocity here. Without this, the Octus starts
+            // 2 pixels lower than ROM throughout its rise, delaying badnik-bounce
+            // hits by ~1 frame in OOZ trace replay.
+            applyYMovement();
         }
     }
 
@@ -124,8 +161,15 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
     }
 
     private void updateHovering() {
+        // ROM Obj4A_Hover (s2.asm:59981-59988):
+        //   subq.w #1, objoff_2C(a0)
+        //   bmi.s +
+        //   rts
+        // + addq.b #2, routine_secondary(a0)
+        //   rts
+        // bmi triggers when timer goes negative, not when it reaches zero.
         timer--;
-        if (timer <= 0) {
+        if (timer < 0) {
             state = State.MOVING_DOWN;
             yVelocity = 0;
         }
@@ -161,16 +205,11 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
         }
         bulletFired = true;
 
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-
         // Bullet fires in the direction the octus is facing
         int bulletXVel = facingLeft ? -BULLET_X_VEL : BULLET_X_VEL;
         boolean bulletHFlip = !facingLeft;
 
-        BadnikProjectileInstance bullet = new BadnikProjectileInstance(
+        spawnFreeChild(() -> new BadnikProjectileInstance(
                 spawn,
                 BadnikProjectileInstance.ProjectileType.OCTUS_BULLET,
                 currentX,
@@ -179,8 +218,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
                 0,          // No vertical velocity
                 false,      // No gravity
                 bulletHFlip,
-                BULLET_DELAY);
-        objectManager.addDynamicObject(bullet);
+                BULLET_DELAY));
     }
 
     @Override

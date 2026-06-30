@@ -7,8 +7,12 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -18,12 +22,13 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * (loc_87F88..sub_881FE).
  */
 public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
-        implements TouchResponseListener {
+        implements TouchResponseListener, SpawnRewindRecreatable {
 
     private static final int COLLISION_SIZE_INDEX = 0x17;   // ObjDat_MegaChopper flags $D7
     // Engine-special category equivalent of the ROM's $D7 Touch_Special route.
     private static final int SPECIAL_COLLISION_FLAGS = 0x40 | COLLISION_SIZE_INDEX;
     private static final int PRIORITY_BUCKET = 5;           // ObjDat_MegaChopper priority $280
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = continuousStandardEnemyProfile();
 
     private static final int CHASE_SPEED = 0x200;
     private static final int CHASE_ACCEL = 0x08;
@@ -62,7 +67,6 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     private int pendingCollisionProperty;
     private AbstractPlayableSprite pendingMainPlayer;
     private AbstractPlayableSprite pendingSidekickPlayer;
-
     private AbstractPlayableSprite capturedPlayer;
     private int childDx;
     private int childDy;
@@ -72,6 +76,20 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     private int remainingShakeChanges;
     private int lastDirectionBits;
 
+    private static TouchResponseProfile continuousStandardEnemyProfile() {
+        TouchResponseProfile standard = TouchResponseProfile.standardEnemy();
+        return new TouchResponseProfile(
+                standard.categoryDecodeMode(),
+                true,
+                standard.requiresRenderFlagForTouch(),
+                standard.multiRegionSource(),
+                standard.shieldDeflectCapability(),
+                standard.shieldReactionFlags(),
+                standard.attackBouncePolicy(),
+                standard.actorContextPolicy(),
+                standard.stopAfterFirstOverlapPolicy());
+    }
+
     public MegaChopperBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "MegaChopper",
                 Sonic3kObjectArtKeys.HCZ_MEGA_CHOPPER, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
@@ -79,8 +97,8 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (destroyed) {
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        if (isDestroyed()) {
             return;
         }
 
@@ -96,20 +114,25 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     public int getCollisionFlags() {
-        if (destroyed) {
+        if (isDestroyed()) {
             return 0;
         }
         return SPECIAL_COLLISION_FLAGS;
     }
 
     @Override
-    public boolean requiresContinuousTouchCallbacks() {
-        return true;
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override
     public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
-        if (!(playerEntity instanceof AbstractPlayableSprite player) || destroyed) {
+        if (!(playerEntity instanceof AbstractPlayableSprite player) || isDestroyed()) {
             return;
         }
         if (isMainPlayer(player)) {
@@ -128,7 +151,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
 
     private void updateSwim(int frameCounter, AbstractPlayableSprite player) {
         processPendingCollisionProperty();
-        if (destroyed || state != State.SWIM) {
+        if (isDestroyed() || state != State.SWIM) {
             return;
         }
 
@@ -147,7 +170,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
 
     private void updateLeap(AbstractPlayableSprite player) {
         processPendingCollisionProperty();
-        if (destroyed || state != State.LEAP) {
+        if (isDestroyed() || state != State.LEAP) {
             return;
         }
 
@@ -372,8 +395,12 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
             return nearest;
         }
 
-        for (PlayableEntity sidekickEntity : svc.sidekicks()) {
-            if (!(sidekickEntity instanceof AbstractPlayableSprite sidekick) || sidekick.getDead()) {
+        ObjectPlayerQuery query = svc.playerQuery();
+        for (PlayableEntity candidateEntity :
+                query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (!(candidateEntity instanceof AbstractPlayableSprite sidekick)
+                    || sidekick == mainPlayer
+                    || sidekick.getDead()) {
                 continue;
             }
             int distance = Math.abs(currentX - sidekick.getCentreX());
@@ -394,11 +421,9 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
 
         AbstractPlayableSprite sidekick = pendingSidekickPlayer;
         if (sidekick == null && svc != null) {
-            for (PlayableEntity entity : svc.sidekicks()) {
-                if (entity instanceof AbstractPlayableSprite candidate) {
-                    sidekick = candidate;
-                    break;
-                }
+            PlayableEntity nativeP2 = svc.playerQuery().nativeP2OrNull();
+            if (nativeP2 instanceof AbstractPlayableSprite candidate) {
+                sidekick = candidate;
             }
         }
 

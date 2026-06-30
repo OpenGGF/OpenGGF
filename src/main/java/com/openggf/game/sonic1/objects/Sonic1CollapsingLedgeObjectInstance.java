@@ -8,8 +8,12 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractFallingFragment;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -47,7 +51,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/1A Collapsing Ledge (part 1).asm
  */
 public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable {
 
     // From disassembly: move.w #$30,d1 (half-width for platform collision)
     private static final int PLATFORM_HALF_WIDTH = 0x30;
@@ -96,10 +100,10 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     private int y;
 
     // Subtype determines facing: 0 = left, 1 = right
-    private final int subtype;
+    private int subtype;
 
     // Mapping frame index: 0=left, 1=right (from obSubtype -> obFrame in init)
-    private final int mappingFrame;
+    private int mappingFrame;
 
     // Collapse timer (ledge_timedelay = objoff_38)
     private int collapseDelay;
@@ -113,6 +117,10 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
 
     // Whether fragments have been spawned
     private boolean fragmented;
+
+    // ROM Ledge_OnPlatform branches directly to fragmentation when the timer is
+    // already zero, skipping Ledge_WalkOff/SlopeObject_AssumeStoodOn that frame.
+    private boolean transitionFrameSlopeSkip;
 
     public Sonic1CollapsingLedgeObjectInstance(ObjectSpawn spawn) {
         super(spawn, "CollapsingLedge");
@@ -139,6 +147,7 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     }
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        transitionFrameSlopeSkip = false;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
             case 2 -> updateTouch(player);
@@ -206,7 +215,19 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
                 } else if (collapseDelay <= 0) {
                     // Delay expired with player still standing:
                     // bclr #3,obStatus(a1) / bclr #5,obStatus(a1)
+                    // (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:104-105).
+                    // ROM clears Sonic's Status_OnObj (#3) and Status_Push (#5)
+                    // directly, so on the collapse-release frame the player is no
+                    // longer object-attached and Sonic_DoLevelCollision re-seats
+                    // him onto the terrain surface that frame. clearRidingObject only
+                    // drops the engine-side riding bookkeeping; it does NOT clear the
+                    // player's on-object/pushing status, so without these the player
+                    // stayed pinned at the ledge's last slope Y (GHZ3 f6464: engine
+                    // held centre 0x038E where ROM re-seats to the 2px-higher terrain
+                    // surface 0x038C).
                     objectManager.clearRidingObject(player);
+                    player.setOnObject(false);
+                    player.setPushing(false);
                     // loc_82FC: clear flag
                     collapseFlag = false;
                 }
@@ -236,9 +257,7 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     private void destroyWithWindowGatedRespawn() {
         if (!isDestroyed() ) {
             var objectManager = services().objectManager();
-            if (objectManager != null) {
-                objectManager.removeFromActiveSpawns(spawn);
-            }
+            ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
         }
         setDestroyed(true);
     }
@@ -279,6 +298,8 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
         fragmented = true;
         if (clearFlag) {
             collapseFlag = false;
+        } else {
+            transitionFrameSlopeSkip = true;
         }
 
         var objectManager = services().objectManager();
@@ -325,11 +346,11 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
         // Spawn remaining fragments as dynamic objects
         int maxFragments = Math.min(pieceCount, COLLAPSE_DELAYS.length);
         for (int i = 1; i < maxFragments; i++) {
-            int delay = COLLAPSE_DELAYS[i];
-            CollapsingLedgeFragmentInstance fragment = new CollapsingLedgeFragmentInstance(
-                    x, y, smashFrameIndex, i, delay,
-                    spawn.renderFlags());
-            objectManager.addDynamicObject(fragment);
+            final int idx = i;
+            final int delay = COLLAPSE_DELAYS[i];
+            spawnFreeChild(() -> new CollapsingLedgeFragmentInstance(
+                    x, y, smashFrameIndex, idx, delay,
+                    spawn.renderFlags()));
         }
 
         // Play collapse sound: move.w #sfx_Collapse,d0 / jmp (QueueSound2).l
@@ -369,6 +390,37 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isTopSolidOnly() {
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM PlatformObject/Plat_NoXCheck_AltY (docs/s1disasm/sonic.lst 0x7B00-0x7B0A):
+        //   sub.w d1,d0            ; d0 = platform_top - sonic_bottom_edge
+        //   bhi.w  Plat_Exit       ; exit if d0 > 0 (Sonic above platform)
+        //   cmpi.w #-16,d0
+        //   blo.w  Plat_Exit       ; UNSIGNED lower vs $FFF0 -> also exits when d0 = 0
+        // The blo (unsigned) comparison makes the exact-touch case d0 = 0 (engine
+        // distY == 0) a NON-landing: the landing band is d0 in [-16,-1] (strict
+        // penetration), not [-16,0]. Verified by BizHawk capture of the GHZ1
+        // collapsing-ledge landing (BK2 3361 d0=0 keeps falling; BK2 3362 d0=-9
+        // lands) — engine was landing one frame early at the touch frame.
+        return true;
+    }
+
+    @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // ROM Ledge_ChkTouch passes #96/2 (= 0x30) directly as SlopeObject's d1
+        // (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:31-33),
+        // and SlopeObject does the X-range check on that d1 with no narrowing
+        // (docs/s1disasm/_incObj/sub PlatformObject.asm:133-139). PLATFORM_HALF_WIDTH
+        // (0x30) is therefore already the standable top-landing width and must not
+        // receive the generic SolidObjectFull +$B narrowing (which would shrink it
+        // to 0x25). Without this, a player falling onto the ledge near its left/right
+        // edge lands several frames late: s1_ghz1 f2790 (Sonic at relX=2 within the
+        // ledge) was rejected as out-of-width until relX=12 at f2793, so the engine
+        // overshot the landing by 3 frames. Matches the sibling collapsing FLOOR
+        // (Sonic1CollapsingFloorObjectInstance) which opts in for the same reason.
         return true;
     }
 
@@ -416,6 +468,15 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
+        // docs/s1disasm/.../1A, 53 Collapsing Ledges and Floors.asm:67-82
+        // Ledge_OnPlatform jumps to Fragmentate_GHZLedge_NoReset when the
+        // timer is zero, so the transition frame does not run Ledge_WalkOff or
+        // SlopeObject_AssumeStoodOn even though Sonic remains attached.
+        return transitionFrameSlopeSkip;
+    }
+
+    @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY);
     }
@@ -426,14 +487,7 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isOnScreenX(int objectX, int range) {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
+        return isInRangeAt(objectX);
     }
 
     /**
@@ -448,20 +502,38 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
      * - ledge_timedelay = delay from CFlo_Data1
      * - Falls via ObjectFall when delay reaches 0
      */
-    public static class CollapsingLedgeFragmentInstance extends AbstractFallingFragment {
+    public static class CollapsingLedgeFragmentInstance extends AbstractFallingFragment
+            implements RewindRecreatable {
 
-        private final int smashFrameIndex;
-        private final int pieceIndex;
-        private final boolean hFlip;
+        private static final int PIECE_MASK = 0x1F;
+        private static final int FRAME_SHIFT = 5;
+        private static final int FRAME_MASK = 0x03;
+
+        private int smashFrameIndex;
+        private int pieceIndex;
+        private boolean hFlip;
+
+        CollapsingLedgeFragmentInstance(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(),
+                    smashFrameIndex(spawn),
+                    pieceIndex(spawn),
+                    spawn.rawYWord(),
+                    spawn.renderFlags());
+        }
 
         public CollapsingLedgeFragmentInstance(int parentX, int parentY,
                                                int smashFrameIndex, int pieceIndex,
                                                int delay, int renderFlags) {
-            super(new ObjectSpawn(parentX, parentY, Sonic1ObjectIds.COLLAPSING_LEDGE,
-                    0, renderFlags, false, 0), "LedgeFragment", delay, PRIORITY);
+            super(fragmentSpawn(parentX, parentY, smashFrameIndex, pieceIndex, delay, renderFlags),
+                    "LedgeFragment", delay, PRIORITY);
             this.smashFrameIndex = smashFrameIndex;
             this.pieceIndex = pieceIndex;
             this.hFlip = (renderFlags & 0x01) != 0;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new CollapsingLedgeFragmentInstance(ctx.spawn());
         }
 
         @Override
@@ -473,6 +545,33 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
 
             // Render just this piece from the smash frame (inheriting parent's X-flip)
             renderer.drawFramePieceByIndex(smashFrameIndex, pieceIndex, getX(), getY(), hFlip, false);
+        }
+
+        private static ObjectSpawn fragmentSpawn(
+                int x,
+                int y,
+                int smashFrameIndex,
+                int pieceIndex,
+                int delay,
+                int renderFlags) {
+            return new ObjectSpawn(x, y, Sonic1ObjectIds.COLLAPSING_LEDGE,
+                    fragmentSubtype(smashFrameIndex, pieceIndex),
+                    renderFlags,
+                    false,
+                    delay);
+        }
+
+        private static int fragmentSubtype(int smashFrameIndex, int pieceIndex) {
+            return ((smashFrameIndex & FRAME_MASK) << FRAME_SHIFT)
+                    | (pieceIndex & PIECE_MASK);
+        }
+
+        private static int smashFrameIndex(ObjectSpawn spawn) {
+            return (spawn.subtype() >> FRAME_SHIFT) & FRAME_MASK;
+        }
+
+        private static int pieceIndex(ObjectSpawn spawn) {
+            return spawn.subtype() & PIECE_MASK;
         }
     }
 }

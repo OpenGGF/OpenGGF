@@ -9,6 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -31,7 +32,7 @@ import java.util.List;
  * </ul>
  */
 public class SpikyBlockSpikeInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, SpawnRewindRecreatable {
 
     // From disassembly: Obj68_CollisionFlags (s2.asm line 53386-53390)
     // Direction 0=Up ($84), 1=Right ($A6), 2=Down ($84), 3=Left ($A6)
@@ -52,9 +53,11 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
     // From disassembly: move.b #4,priority(a1)
     private static final int PRIORITY = 4;
 
-    // Initial position (spikearoundblock_initial_x_pos / initial_y_pos)
-    private final int initialX;
-    private final int initialY;
+    // Initial position (spikearoundblock_initial_x_pos / initial_y_pos).
+    // Non-final for rewind: the dynamic spawn tracks currentX/currentY, so the
+    // original anchor must be restored from captured scalar state.
+    private int initialX;
+    private int initialY;
 
     // Current position
     private int currentX;
@@ -90,12 +93,23 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
         this.position = position;
     }
 
+    private SpikyBlockSpikeInstance(ObjectSpawn spawn) {
+        this(spawn, "SpikyBlock-Spike", 0, 0);
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         updateAction(frameCounter);
         updatePosition();
         updateDynamicSpawn(currentX, currentY);
+        // ROM Obj68_Spike (s2.asm:53302) ends with MarkObjGone2 keyed on
+        // spikearoundblock_initial_x_pos (the block's anchor X), not the spike's
+        // extended currentX — so the spike does not despawn early when it pokes
+        // off-screen. This object intentionally performs no self off-screen
+        // despawn: that culling is owned centrally by ObjectManager.Placement,
+        // and the spike's initialX anchor is preserved in this.initialX for the
+        // central check (currentX never replaces it).
     }
 
     /**

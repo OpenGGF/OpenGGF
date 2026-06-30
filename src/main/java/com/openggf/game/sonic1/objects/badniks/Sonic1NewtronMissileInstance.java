@@ -7,6 +7,7 @@ import com.openggf.level.objects.AbstractProjectileInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -31,7 +32,8 @@ import java.util.List;
  *   <li>Have no Y velocity (fly horizontally only)</li>
  * </ul>
  */
-public class Sonic1NewtronMissileInstance extends AbstractProjectileInstance {
+public class Sonic1NewtronMissileInstance extends AbstractProjectileInstance
+        implements SpawnCoordinateZeroScalarArgsRewindRecreatable {
 
     // Collision: obColType = $87 -> category HURT ($80), size index 7
     private static final int COLLISION_SIZE_INDEX = 0x07;
@@ -40,7 +42,7 @@ public class Sonic1NewtronMissileInstance extends AbstractProjectileInstance {
     // From Ani_Missile animation 1: dc.b 1, 2, 3, afEnd
     private static final int ACTIVE_ANIM_SPEED = 2;
 
-    private final boolean facingLeft;
+    private boolean facingLeft;
     private int animTimer;
     private int animFrame;
 

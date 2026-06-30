@@ -1,0 +1,272 @@
+package com.openggf.sprites.managers;
+
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.physics.Direction;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
+import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.SpriteAnimationSet;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
+import com.openggf.tests.TestablePlayableSprite;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import java.util.List;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
+public class TestPlayableSpriteAnimation {
+
+    @BeforeEach
+    public void setUp() {
+        TestEnvironment.activeGameplayMode();
+    }
+
+    @AfterEach
+    public void tearDown() {
+        SessionManager.clear();
+    }
+
+    @Test
+    public void s3kIdleToWalkAnimationChangeClearsGroundPush() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        sprite.setAnimationId(5);
+        sprite.setMovementInputActive(false);
+        sprite.getAnimationManager().update(0);
+
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(1);
+
+        assertFalse(sprite.getPushing(),
+                "S3K Animate_Tails2P clears Status_Push when MoveRight changes anim from idle to walk");
+        assertEquals(0, sprite.getAnimationId(),
+                "After the push clear, animation resolution should choose walk instead of push");
+    }
+
+    @Test
+    public void s2IdleToWalkAnimationChangeClearsGroundPush() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        sprite.setAnimationId(5);
+        sprite.setMovementInputActive(false);
+        sprite.getAnimationManager().update(0);
+
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(1);
+
+        assertFalse(sprite.getPushing(),
+                "S2 Animate_Sonic/Tails clears Status_Push when anim changes from idle to walk");
+        assertEquals(0, sprite.getAnimationId(),
+                "After the push clear, animation resolution should choose walk instead of push");
+    }
+
+    @Test
+    public void s2GroundPushSurvivesInitialRomAnimByteCapture() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(false);
+        sprite.setGSpeed((short) 0);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(759);
+
+        assertTrue(sprite.getPushing(),
+                "S2 does not clear Status_Push before prev_anim has a captured ROM anim byte");
+        assertEquals(4, sprite.getAnimationId(),
+                "The preserved push bit should render the push animation instead of resolving to idle");
+    }
+
+    @Test
+    public void s3kRunToWalkAnimationStepKeepsGroundPush() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        sprite.setAnimationId(1);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x0700);
+        sprite.getAnimationManager().update(0);
+
+        sprite.setPushing(true);
+        sprite.setGSpeed((short) 0x0200);
+
+        sprite.getAnimationManager().update(1);
+
+        assertTrue(sprite.getPushing(),
+                "S3K keeps Status_Push when only the engine's render-time Run id collapses to the ROM Walk anim byte");
+        assertEquals(4, sprite.getAnimationId(),
+                "The preserved push bit should continue selecting the push animation");
+    }
+
+    @Test
+    public void s3kAirborneRollAnimationChangeClearsPush() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        sprite.setAnimationId(5);
+        sprite.getAnimationManager().update(0);
+
+        sprite.setAir(true);
+        sprite.setRolling(true);
+        sprite.setJumping(true);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(1);
+
+        assertFalse(sprite.getPushing(),
+                "S3K Animate_Tails2P clears Status_Push on anim != prev_anim even while airborne/rolling");
+        assertEquals(2, sprite.getAnimationId(),
+                "Airborne rolling Tails should keep the roll animation after clearing push");
+    }
+
+    @Test
+    public void s2AirborneRollAnimationChangeClearsPush() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        sprite.setAnimationId(5);
+        sprite.getAnimationManager().update(0);
+
+        sprite.setAir(true);
+        sprite.setRolling(true);
+        sprite.setJumping(true);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(1);
+
+        assertFalse(sprite.getPushing(),
+                "S2 Animate_Tails clears Status_Push on anim != prev_anim even while airborne/rolling");
+        assertEquals(2, sprite.getAnimationId(),
+                "Airborne rolling Tails should keep the roll animation after clearing push");
+    }
+
+    @Test
+    public void s3kActivePushAnimationDoesNotClearEveryFrame() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        sprite.setAnimationId(4);
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+        sprite.setGSpeed((short) 0x0200);
+
+        sprite.getAnimationManager().update(0);
+
+        assertTrue(sprite.getPushing(),
+                "An already-displayed push animation with live push contact must remain stable");
+        assertEquals(4, sprite.getAnimationId(),
+                "Active wall-push contact should continue rendering push instead of flickering to walk");
+    }
+
+    @Test
+    public void s3kRunToPushDoesNotUseIdleToWalkClear() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        sprite.setAnimationId(1);
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+        sprite.setGSpeed((short) 0x0600);
+
+        sprite.getAnimationManager().update(0);
+
+        assertTrue(sprite.getPushing(),
+                "Ground push should remain when the previous animation was not idle");
+        assertEquals(4, sprite.getAnimationId(),
+                "The existing push script should still render for non-idle previous animations");
+    }
+
+    @Test
+    public void s1IdleToWalkDoesNotClearPush() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_1);
+        sprite.setAnimationId(5);
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(0);
+
+        assertTrue(sprite.getPushing(),
+                "S1 keeps the existing FixBugs-gated behavior for animation-change push clears");
+        assertEquals(4, sprite.getAnimationId(),
+                "S1 should still select the push animation when Status_Push is set");
+    }
+
+    @Test
+    public void scriptedSwitchDoesNotRunOnFirstDisplayedFrame() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0,
+                List.of(7), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(0x10, new SpriteAnimationScript(0x2F,
+                List.of(0x8E), SpriteAnimationEndAction.SWITCH, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setObjectControlled(true);
+        sprite.setAnimationId(0x10);
+        sprite.forceAnimationRestart();
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x10, sprite.getAnimationId(),
+                "A one-frame $FD script must hold its frame for its delay before switching.");
+        assertEquals(0x8E, sprite.getMappingFrame(),
+                "The first update should display the scripted frame, not immediately fall through.");
+    }
+
+    @Test
+    public void slowSteepSlopeTurnaroundRefreshesMappingFrameBeforeWalkTickExpires() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        SpriteAnimationScript walk = new SpriteAnimationScript(0xFF,
+                List.of(10, 11, 12, 13), SpriteAnimationEndAction.LOOP, 0);
+        animations.addScript(0, walk);
+        animations.addScript(1, walk);
+        sprite.setAnimationSet(animations);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x0100);
+        sprite.setAngle((byte) 0x60);
+        sprite.setDirection(Direction.LEFT);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(22, sprite.getMappingFrame(),
+                "Left-facing steep slope should display the matching high-angle walk set");
+        assertFalse(sprite.getRenderVFlip(),
+                "The first steep slope orientation should not be vertically flipped");
+
+        sprite.setDirection(Direction.RIGHT);
+        sprite.getAnimationManager().update(1);
+
+        assertEquals(14, sprite.getMappingFrame(),
+                "Changing facing on the same steep slope must refresh the slope frame set even while the walk delay is live");
+        assertTrue(sprite.getRenderVFlip(),
+                "The refreshed frame set is intentionally paired with the flipped render flags");
+    }
+
+    private static TestablePlayableSprite createSprite(PhysicsFeatureSet featureSet) {
+        TestablePlayableSprite sprite = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        sprite.setPhysicsFeatureSetForTest(featureSet);
+        sprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                .setIdleAnimId(5)
+                .setWalkAnimId(0)
+                .setRunAnimId(1)
+                .setRollAnimId(2)
+                .setPushAnimId(4)
+                .setAirAnimId(0)
+                .setRunSpeedThreshold(0x600));
+        sprite.setAnimationSet(createAnimationSet());
+        sprite.setAir(false);
+        sprite.setRolling(false);
+        sprite.setGSpeed((short) 0);
+        return sprite;
+    }
+
+    private static SpriteAnimationSet createAnimationSet() {
+        SpriteAnimationSet set = new SpriteAnimationSet();
+        SpriteAnimationScript script = new SpriteAnimationScript(0, List.of(0), SpriteAnimationEndAction.LOOP, 0);
+        set.addScript(0, script);
+        set.addScript(1, script);
+        set.addScript(2, script);
+        set.addScript(4, script);
+        set.addScript(5, script);
+        return set;
+    }
+}

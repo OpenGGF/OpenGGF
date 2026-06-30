@@ -1,14 +1,16 @@
 package com.openggf.game.sonic2;
 
-import com.openggf.game.GameServices;
+
+import com.openggf.audio.GameMusic;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
-import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
+import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.DefaultObjectServices;
 
@@ -41,13 +43,13 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
-    public int getStageMusicId() {
-        return Sonic2Music.SPECIAL_STAGE.id;
+    public GameMusic getStageMusic() {
+        return GameMusic.SPECIAL_STAGE;
     }
 
     @Override
-    public int getResultsMusicId() {
-        return Sonic2Music.ACT_CLEAR.id;
+    public GameMusic getResultsMusic() {
+        return GameMusic.ACT_CLEAR;
     }
 
     @Override
@@ -172,6 +174,21 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
+    public boolean isLagCompensationDisplayEnabled() {
+        return manager.isLagCompensationDisplayEnabled();
+    }
+
+    @Override
+    public void toggleLagCompensationDisplay() {
+        manager.toggleLagCompensationDisplay();
+    }
+
+    @Override
+    public boolean adjustLagCompensationIfDisplayEnabled(double delta) {
+        return manager.adjustLagCompensationIfDisplayEnabled(delta);
+    }
+
+    @Override
     public double getLagCompensation() {
         return manager.getLagCompensation();
     }
@@ -186,18 +203,14 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     @Override
     public ResultsScreen createResultsScreen(int ringsCollected, boolean gotEmerald,
                                              int stageIndex, int totalEmeraldCount) {
-        var runtime = GameServices.runtimeOrNull();
-        if (runtime == null) {
-            throw new IllegalStateException("Special-stage results screen requires an active GameRuntime");
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode == null) {
+            throw new IllegalStateException("Special-stage results screen requires an active GameplayModeContext");
         }
-        DefaultObjectServices services = new DefaultObjectServices(runtime);
-        ObjectConstructionContext.setConstructionContext(services);
-        try {
-            return new SpecialStageResultsScreenObjectInstance(
-                    ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, services);
-        } finally {
-            ObjectConstructionContext.clearConstructionContext();
-        }
+        DefaultObjectServices services = new DefaultObjectServices(
+                gameplayMode, EngineServices.current());
+        return ObjectConstructionContext.construct(services, () -> new SpecialStageResultsScreenObjectInstance(
+                ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, services));
     }
 
     // ==================== MiniGameProvider Methods ====================

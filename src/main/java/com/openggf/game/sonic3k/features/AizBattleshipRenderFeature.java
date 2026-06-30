@@ -4,6 +4,9 @@ import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.render.SpecialRenderEffect;
+import com.openggf.game.render.SpecialRenderEffectContext;
+import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.AizBattleshipInstance;
@@ -26,7 +29,7 @@ import java.util.logging.Logger;
  * foreground layout while propellers remain separate sprite art rendered on
  * top of the strip.
  */
-public final class AizBattleshipRenderFeature {
+public final class AizBattleshipRenderFeature implements SpecialRenderEffect {
     private static final Logger LOG =
             Logger.getLogger(AizBattleshipRenderFeature.class.getName());
 
@@ -72,6 +75,16 @@ public final class AizBattleshipRenderFeature {
         pendingStripHeight = 0;
     }
 
+    @Override
+    public SpecialRenderEffectStage stage() {
+        return SpecialRenderEffectStage.AFTER_SPRITES;
+    }
+
+    @Override
+    public void render(SpecialRenderEffectContext context) {
+        renderAfterBackground(context.camera(), context.frameCounter());
+    }
+
     public void renderAfterBackground(Camera camera, int frameCounter) {
         if (camera == null) {
             return;
@@ -97,8 +110,11 @@ public final class AizBattleshipRenderFeature {
 
         pendingStripHeight = Math.min(STRIP_HEIGHT_PX, screenHeight);
         GraphicsManager graphicsManager = GameServices.graphics();
-        graphicsManager.registerCommand(prepareOverlayCommand);
+        // Render attached bombs BEFORE the scissor so the full bomb sprite is
+        // visible as it emerges from the port.  The ship strip drawn afterwards
+        // (within scissor) covers the portion behind the hull via painter's algorithm.
         renderAttachedBombs(levelManager);
+        graphicsManager.registerCommand(prepareOverlayCommand);
         renderShipStrip(camera, battleship, screenWidth, pendingStripHeight);
         renderPropellers(camera, battleship, frameCounter, levelManager);
         graphicsManager.registerCommand(cleanupOverlayCommand);

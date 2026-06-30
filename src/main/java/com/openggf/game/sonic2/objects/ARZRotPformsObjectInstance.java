@@ -11,6 +11,8 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -58,7 +60,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class ARZRotPformsObjectInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider, SolidObjectListener {
+        implements MultiPieceSolidProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(ARZRotPformsObjectInstance.class.getName());
 
@@ -82,13 +84,13 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
     private static final LazyMappingHolder MAPPINGS = new LazyMappingHolder();
 
     // Position state
-    private final int initialX;
-    private final int initialY;
+    private int initialX;
+    private int initialY;
 
     // Angle is stored as 16-bit word, only high byte used for sine lookup (68000 big-endian behavior)
     // This allows fractional rotation where speed is effectively speed/256 per frame
     private int angleWord;
-    private final int speed;
+    private int speed;
 
     // Platform positions (world coordinates)
     private final int[] platformX = new int[NUM_PLATFORMS];
@@ -134,6 +136,11 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
 
         // Calculate initial positions
         updatePositions();
+    }
+
+    @Override
+    public ARZRotPformsObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new ARZRotPformsObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

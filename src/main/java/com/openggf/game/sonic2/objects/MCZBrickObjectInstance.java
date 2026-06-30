@@ -10,6 +10,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -50,7 +52,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class MCZBrickObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider {
+        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(MCZBrickObjectInstance.class.getName());
 
@@ -77,15 +79,15 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
 
     // Mode
     private enum Mode { BRICK, SPIKE_BALL }
-    private final Mode mode;
+    private Mode mode;
 
     // Position state
-    private final int initialX;
-    private final int initialY;
+    private int initialX;
+    private int initialY;
 
     // Spike ball state (only used in SPIKE_BALL mode)
-    private final int chainCount;
-    private final int speed;
+    private int chainCount;
+    private int speed;
     private int angleWord;
     private int[] chainX;
     private int[] chainY;
@@ -150,6 +152,11 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
         LOGGER.fine(() -> String.format(
                 "MCZBrick init: pos=(%d,%d), subtype=0x%02X, mode=%s, chainCount=%d, speed=%d",
                 initialX, initialY, subtype, mode, chainCount, speed));
+    }
+
+    @Override
+    public MCZBrickObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MCZBrickObjectInstance(ctx.spawn(), getName());
     }
 
     @Override

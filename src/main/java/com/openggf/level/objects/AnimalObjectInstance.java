@@ -9,7 +9,8 @@ import com.openggf.game.PlayableEntity;
 
 import java.util.List;
 
-public class AnimalObjectInstance extends AbstractObjectInstance {
+public class AnimalObjectInstance extends AbstractObjectInstance
+        implements SpawnServicesDefaultArgsRewindRecreatable {
     private static final int GRAVITY = 0x38;
     private static final int FLY_GRAVITY = 0x18;
     private static final int INITIAL_POP_VEL = -0x400;
@@ -38,6 +39,15 @@ public class AnimalObjectInstance extends AbstractObjectInstance {
     private AnimalType definition;
 
     public AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services) {
+        this(spawn, services, services.rng().nextBits(1));
+    }
+
+    /**
+     * Rewind recreate path uses {@link SpawnServicesDefaultArgsRewindRecreatable}
+     * to skip the {@code services.rng()} draw. The captured {@code artVariant}
+     * and all other scalars are reapplied by the generic scalar pass.
+     */
+    private AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services, int artVariant) {
         super(spawn, "Animal");
         ObjectRenderManager renderManager = services.renderManager();
         this.renderer = renderManager != null ? renderManager.getAnimalRenderer() : null;
@@ -54,7 +64,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance {
             typeB = renderManager.getAnimalTypeB();
         }
 
-        this.artVariant = services.rng().nextBits(1);
+        this.artVariant = artVariant;
         int animalIndex = artVariant == 0 ? typeA : typeB;
         this.definition = AnimalType.fromIndex(animalIndex);
         this.mappingSetIndex = definition.mappingSet().ordinal();
@@ -159,8 +169,8 @@ public class AnimalObjectInstance extends AbstractObjectInstance {
         Camera camera = services().camera();
         int cameraX = camera.getX();
         int cameraY = camera.getY();
-        int screenWidth = 320;
-        int screenHeight = 224;
+        int screenWidth = viewportWidth();
+        int screenHeight = viewportHeight();
         if (currentX < cameraX - margin || currentX > cameraX + screenWidth + margin)
             return false;
         if (currentY < cameraY - margin || currentY > cameraY + screenHeight + margin)

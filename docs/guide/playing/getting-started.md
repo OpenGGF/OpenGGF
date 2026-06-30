@@ -4,8 +4,10 @@ This page gets you from zero to playing in under five minutes.
 
 ## What You Need
 
-- **Java 21 or later.** Download from [Adoptium](https://adoptium.net/) or your preferred
-  distribution. Run `java -version` to check.
+- **For downloaded releases:** no separate Java install is required; release packages include a
+  native OpenGGF executable for your platform.
+- **For source builds:** Java 21 or later. Download from [Adoptium](https://adoptium.net/) or
+  your preferred distribution. Run `java -version` to check.
 - **A GPU that supports OpenGL 4.1.** Any discrete GPU from the last decade will work.
   Integrated graphics (Intel HD 4000+, Apple Silicon) are fine.
 - **ROM files** for the games you want to play. The engine does not include any game data.
@@ -22,28 +24,42 @@ incorrect results.
 | Sonic 2 | `Sonic The Hedgehog 2 (W) (REV01) [!].gen` | World, Revision 01 |
 | Sonic 3&K | `Sonic and Knuckles & Sonic 3 (W) [!].gen` | World (lock-on combined ROM) |
 
-ROM filenames can be changed in `config.json` if yours differ. See
+ROM filenames can be changed in `config.yaml` if yours differ. See
 [Configuration](configuration.md) for details.
 
 ## Install and Run
 
 ### Option A: Download a Release
 
-1. Download the latest release ZIP from the Releases page.
+1. Download the latest release package for your platform from the Releases page:
+   - Windows: `OpenGGF-windows.zip`
+   - macOS: `OpenGGF-macos.zip`
+   - Linux: `OpenGGF-linux.tar.gz`
 2. Extract it to a folder.
-3. Place your ROM files in the same folder as the JAR file.
-4. Double-click the JAR, or run from a terminal:
+3. Place your ROM files next to the editable `config.yaml` included in the package.
+4. Start OpenGGF:
+   - Windows: double-click `OpenGGF.exe`, or run it from a terminal.
+   - macOS: open `OpenGGF.app`.
+   - Linux: run `./OpenGGF` from the extracted `OpenGGF` directory.
+5. If your ROM filenames differ from the defaults, edit `config.yaml` in the extracted package.
+
+Windows terminal example:
    ```
-   java -jar openggf.jar
+   .\OpenGGF.exe
    ```
-   On Windows, you can also use the included `run.cmd`.
+
+Linux terminal example:
+   ```
+   cd OpenGGF
+   ./OpenGGF
+   ```
 
 ### Option B: Build from Source
 
 1. Clone the repository:
    ```
-   git clone https://github.com/jamesj999/sonic-engine.git
-   cd sonic-engine
+   git clone https://github.com/OpenGGF/OpenGGF.git
+   cd OpenGGF
    ```
 2. Build with Maven:
    ```
@@ -52,7 +68,7 @@ ROM filenames can be changed in `config.json` if yours differ. See
 3. Place your ROM files in the project root directory (next to `pom.xml`).
 4. Run:
    ```
-   java -jar target/sonic-engine-0.4.prerelease-jar-with-dependencies.jar
+   java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
    ```
 
 ## First Launch
@@ -69,16 +85,19 @@ If a ROM file is missing for the game you selected, the engine will show an erro
 
 ## Quick Configuration
 
-The engine reads settings from `config.json` in the working directory. If the file
+The engine reads settings from `config.yaml` in the working directory. If the file
 does not exist, defaults are used. A few settings you might want to change immediately:
 
 | Setting | What it does | Default |
 |---------|-------------|---------|
-| `DEFAULT_ROM` | Which game boots first (`"s1"`, `"s2"`, or `"s3k"`) | `"s1"` |
-| `MASTER_TITLE_SCREEN_ON_STARTUP` | Show game picker on launch | `true` |
-| `SCREEN_WIDTH` / `SCREEN_HEIGHT` | Window size in pixels | `640` x `448` |
-| `AUDIO_ENABLED` | Enable or disable sound | `true` |
-| `SIDEKICK_CHARACTER_CODE` | Add Tails as a CPU sidekick (`"tails"` or `""`) | `""` |
+| `roms.default` | Which game boots first (`"s1"`, `"s2"`, or `"s3k"`) | `"s3k"` |
+| `startup.masterTitleScreen` | Show game picker on launch | `true` |
+| `display.windowAutosize` | Derive the window size from the aspect preset | `true` |
+| `audio.enabled` | Enable or disable sound | `true` |
+| `characters.sidekick` | Add Tails as a CPU sidekick (`"tails"` or `""`) | `"tails"` |
+| `debug.flags.editor` | Allow `Shift+Tab` to open the experimental editor overlay | `false` |
+
+Key bindings can be written as names like `"SPACE"` and `"F9"` instead of raw numeric key codes.
 
 For the full list, see [Configuration](configuration.md) or the
 [Configuration Reference](../../../CONFIGURATION.md).

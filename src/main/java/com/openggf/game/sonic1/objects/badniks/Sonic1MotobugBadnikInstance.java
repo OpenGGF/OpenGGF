@@ -11,6 +11,8 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.PatrolMovementHelper;
+import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -37,7 +39,7 @@ import java.util.List;
  *   <li>6 (Moto_Delete): Cleanup</li>
  * </ul>
  */
-public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance {
+public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
 
     // From disassembly: obColType = $C (enemy, collision size index $C)
     private static final int COLLISION_SIZE_INDEX = 0x0C;
@@ -69,8 +71,8 @@ public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance {
     private int secondaryState;
     private int pauseTimer;        // .time (objoff_30)
     private int smokeDelay;        // .smokedelay (objoff_33)
-    private int xSubpixel;         // Fractional X position for SpeedToPos
-    private int ySubpixel;         // Fractional Y position for ObjectFall
+    /** Subpixel accumulators (xSub / ySub) for ROM-accurate 16:8 fixed-point integration. */
+    private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
     private int fallVelocity;      // obVelY during initialization
     private boolean initialized;
 
@@ -84,8 +86,6 @@ public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance {
         this.secondaryState = STATE_MOVE;
         this.pauseTimer = 0;
         this.smokeDelay = 0;
-        this.xSubpixel = 0;
-        this.ySubpixel = 0;
         this.fallVelocity = 0;
         this.initialized = false;
     }
@@ -110,11 +110,13 @@ public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance {
      */
     private void initialize() {
         // ObjectFall: apply velocity to position, then add gravity for next frame
-        int yPos24 = (currentY << 8) | (ySubpixel & 0xFF);
-        yPos24 += fallVelocity;
-        currentY = yPos24 >> 8;
-        ySubpixel = yPos24 & 0xFF;
-        fallVelocity += GRAVITY;
+        motion.x = currentX;
+        motion.y = currentY;
+        motion.xVel = 0;
+        motion.yVel = fallVelocity;
+        SubpixelMotion.moveSprite(motion, GRAVITY);
+        currentY = motion.y;
+        fallVelocity = motion.yVel;
 
         // ObjFloorDist: check floor from feet
         TerrainCheckResult floorResult = ObjectTerrainUtils.checkFloorDist(currentX, currentY, Y_RADIUS);
@@ -168,9 +170,9 @@ public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance {
     private void updateFindFloor() {
         // SpeedToPos + ObjFloorDist via PatrolMovementHelper
         var patrol = PatrolMovementHelper.updatePatrol(
-                currentX, xSubpixel, currentY, xVelocity, Y_RADIUS, FLOOR_MIN_DIST, FLOOR_MAX_DIST);
+                currentX, motion.xSub, currentY, xVelocity, Y_RADIUS, FLOOR_MIN_DIST, FLOOR_MAX_DIST);
         currentX = patrol.newX();
-        xSubpixel = patrol.newXSub();
+        motion.xSub = patrol.newXSub();
         currentY = patrol.newY();
 
         if (patrol.reversed()) {
@@ -195,9 +197,8 @@ public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance {
      * causing it to skip to Moto_Animate (animation-only routine).
      */
     private void spawnSmoke() {
-        Sonic1MotobugSmokeInstance smoke = new Sonic1MotobugSmokeInstance(
-                currentX, currentY, facingLeft);
-        services().objectManager().addDynamicObject(smoke);
+        spawnFreeChild(() -> new Sonic1MotobugSmokeInstance(
+                currentX, currentY, facingLeft));
     }
 
     /**

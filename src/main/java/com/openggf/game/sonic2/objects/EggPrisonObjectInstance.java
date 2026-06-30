@@ -1,19 +1,22 @@
 package com.openggf.game.sonic2.objects;
+import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ExplosionObjectInstance;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.Sonic2Rng;
-import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -55,7 +58,7 @@ import java.util.logging.Logger;
  * - When none remain, calls Load_EndOfAct
  */
 public class EggPrisonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider {
+        implements SolidObjectProvider, RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(EggPrisonObjectInstance.class.getName());
 
     // === ROM Constants ===
@@ -128,6 +131,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     // Button state (now managed by separate button object)
     private EggPrisonButtonObjectInstance buttonObject;
     private boolean buttonTriggered = false;  // objoff_32
+    private boolean buttonSpawned = false;
 
     // Lock state
     private int lockX;
@@ -156,10 +160,11 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         // Initialize lock position (24 pixels above main body)
         this.lockX = spawn.x();
         this.lockY = spawn.y() - LOCK_Y_OFFSET;
+    }
 
-        // Spawn button as a separate object with full solid collision
-        // This matches the ROM structure where button is a child object with routine 4
-        spawnButtonObject();
+    @Override
+    public EggPrisonObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new EggPrisonObjectInstance(ctx.spawn(), "EggPrison");
     }
 
     /**
@@ -167,13 +172,12 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
      * ROM: Button is child object 2 with routine 4 (loc_3F354).
      */
     private void spawnButtonObject() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
+        if (buttonSpawned || services().objectManager() == null) {
             return;
         }
 
-        buttonObject = new EggPrisonButtonObjectInstance(spawn, this);
-        objectManager.addDynamicObject(buttonObject);
+        buttonSpawned = true;
+        buttonObject = spawnChild(() -> new EggPrisonButtonObjectInstance(spawn, this));
     }
 
     /**
@@ -201,6 +205,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
 
         this.lastPlayer = player;
         this.globalFrameCounter = frameCounter;
+        spawnButtonObject();
 
         // Update each sub-object according to its routine
         updateBody(player);
@@ -234,9 +239,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
 
         // Mark as remembered so capsule never respawns (ROM: RememberState="true")
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
         // Spawn explosion at lock position (plays explosion SFX on init, matching ROM)
         spawnExplosion(lockX, lockY);
@@ -333,8 +336,8 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         // Check if lock is off screen
         Camera camera = services().camera();
         if (camera != null) {
-            int screenRight = camera.getX() + 320 + 64;
-            int screenBottom = camera.getY() + 224 + 64;
+            int screenRight = camera.getX() + viewportWidth() + 64;
+            int screenBottom = camera.getY() + viewportHeight() + 64;
             if (lockX > screenRight || lockY > screenBottom) {
                 lockVisible = false;
             }
@@ -413,24 +416,23 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
      * ROM: loc_3F2FC loop with d6=7, d5=$9A, d4=-$1C
      */
     private void spawnInitialAnimals() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-
         int baseX = spawn.x();
         int baseY = spawn.y();
         int xOffset = INITIAL_ANIMAL_X_OFFSET_START;
         int delay = INITIAL_ANIMAL_DELAY_BASE;
 
         for (int i = 0; i < INITIAL_ANIMAL_COUNT; i++) {
-            ObjectSpawn animalSpawn = new ObjectSpawn(
+            final ObjectSpawn animalSpawn = new ObjectSpawn(
                     baseX + xOffset, baseY,
                     0x28, 0, 0, false, 0
             );
-            EggPrisonAnimalInstance animal = new EggPrisonAnimalInstance(
-                    animalSpawn, delay, Sonic2Rng.nextAnimalArtVariant(services().rng()));
-            objectManager.addDynamicObject(animal);
+            final int animalDelay = delay;
+            final int artVariant = Sonic2Rng.nextAnimalArtVariant(services().rng());
+            // spawnFreeChild matches the previous addDynamicObject (FindFreeObj /
+            // lowest-slot) semantics, but also sets the construction context so the
+            // animal can resolve its sprite renderer in its constructor — without it
+            // the released animals are spawned but render invisibly.
+            spawnFreeChild(() -> new EggPrisonAnimalInstance(animalSpawn, animalDelay, artVariant));
 
             xOffset += INITIAL_ANIMAL_X_OFFSET_STEP;
             delay -= INITIAL_ANIMAL_DELAY_STEP;
@@ -442,24 +444,21 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
      * ROM: loc_3F3A8 random spawn logic
      */
     private void spawnRandomAnimal() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-
         int baseX = spawn.x();
         int baseY = spawn.y();
 
         // ROM: jsr RandomNumber / andi.w #$1F,d0 / subq.w #6,d0 / tst.w d1 / optional neg
         int randomOffset = Sonic2Rng.nextEggPrisonAnimalXOffset(services().rng());
 
-        ObjectSpawn animalSpawn = new ObjectSpawn(
+        final ObjectSpawn animalSpawn = new ObjectSpawn(
                 baseX + randomOffset, baseY,
                 0x28, 0, 0, false, 0
         );
-        EggPrisonAnimalInstance animal = new EggPrisonAnimalInstance(
-                animalSpawn, SPAWN_ANIMAL_DELAY, Sonic2Rng.nextAnimalArtVariant(services().rng()));
-        objectManager.addDynamicObject(animal);
+        final int artVariant = Sonic2Rng.nextAnimalArtVariant(services().rng());
+        // spawnFreeChild sets the construction context so the animal resolves its
+        // sprite renderer (see spawnInitialAnimals); a raw addDynamicObject leaves
+        // the renderer null and the animal invisible.
+        spawnFreeChild(() -> new EggPrisonAnimalInstance(animalSpawn, SPAWN_ANIMAL_DELAY, artVariant));
     }
 
     /**
@@ -472,8 +471,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        ExplosionObjectInstance explosion = new ExplosionObjectInstance(0x27, x, y, renderManager, Sonic2Sfx.EXPLOSION.id);
-        objectManager.addDynamicObject(explosion);
+        spawnFreeChild(() -> new ExplosionObjectInstance(0x27, x, y, renderManager, Sonic2Sfx.EXPLOSION.id));
     }
 
     /**
@@ -486,9 +484,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        DestroyedEggPrisonObjectInstance destroyedCapsule =
-                new DestroyedEggPrisonObjectInstance(spawn, spawn.x(), spawn.y());
-        objectManager.addDynamicObject(destroyedCapsule);
+        spawnFreeChild(() -> new DestroyedEggPrisonObjectInstance(spawn, spawn.x(), spawn.y()));
     }
 
     /**
@@ -524,7 +520,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
 
         // Play stage clear music
         try {
-            services().playMusic(Sonic2Music.ACT_CLEAR.id);
+            services().playMusic(GameMusic.ACT_CLEAR);
         } catch (Exception e) {
             LOGGER.warning("Failed to play stage clear music: " + e.getMessage());
         }
@@ -536,11 +532,10 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         int actNumber = services().currentAct() + 1;
         boolean allRingsCollected = services().areAllRingsCollected();
 
-        ResultsScreenObjectInstance resultsScreen = new ResultsScreenObjectInstance(
-                elapsedSeconds, ringCount, actNumber, allRingsCollected);
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
-            objectManager.addDynamicObject(resultsScreen);
+            spawnFreeChild(() -> new ResultsScreenObjectInstance(
+                    elapsedSeconds, ringCount, actNumber, allRingsCollected));
         }
 
         // Spawn static destroyed capsule visual before destroying main object

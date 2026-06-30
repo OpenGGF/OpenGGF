@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.level.objects.AbstractResultsScreen;
@@ -9,6 +10,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.ZeroScalarArgsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -26,7 +28,8 @@ import java.util.logging.Logger;
  * 3. WAIT: Brief pause after tally
  * 4. TRANSITION: Load next level
  */
-public class ResultsScreenObjectInstance extends AbstractResultsScreen {
+public class ResultsScreenObjectInstance extends AbstractResultsScreen
+        implements ZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(ResultsScreenObjectInstance.class.getName());
 
     // Time bonus table from s2.asm (TimeBonuses), indexed by (seconds / 15)
@@ -44,11 +47,13 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen {
     private boolean perfectBonus;
     private int perfectBonusRemaining;
 
-    // Input data
-    private final int elapsedTimeSeconds;
-    private final int ringCount;
-    private final int actNumber;
-    private final boolean allRingsCollected;
+    // Input data. Non-final so GenericFieldCapturer captures them and restoreObjectRewindState
+    // reapplies them after rewind recreate rebuilds this screen with placeholder ctor args
+    // (these gameplay-derived values are not encoded in the ObjectSpawn).
+    private int elapsedTimeSeconds;
+    private int ringCount;
+    private int actNumber;
+    private boolean allRingsCollected;
 
     // Screen-space positions for text elements (center of 320x224 screen)
     private static final int TEXT_Y_GOT_THROUGH = 56;
@@ -135,6 +140,9 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen {
     private void triggerFadeToBlack() {
         LOGGER.info("Results screen complete, starting fade to black");
 
+        // Persist progression before the level transition
+        services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
+
         // Start fade to black, then transition to next level when fade completes
         var fadeManager = services().fadeManager();
         fadeManager.startFadeToBlack(() -> {
@@ -170,8 +178,9 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen {
             return;
         }
 
-        // Screen-space rendering - convert screen coords to world coords
-        int worldBaseX = camera.getX();
+        // Screen-space rendering - convert screen coords to world coords.
+        // xOffset() is (viewportWidth - 320) / 2; 0 at native 320 (byte-identical).
+        int worldBaseX = camera.getX() + xOffset();
         int worldBaseY = camera.getY();
 
         // All elements use ROM-accurate 16 pixels/frame slide speed
@@ -329,7 +338,7 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen {
             return;
         }
 
-        int worldBaseX = camera.getX();
+        int worldBaseX = camera.getX() + xOffset();
         int worldBaseY = camera.getY();
 
         // All elements use ROM-accurate 16 pixels/frame slide, starting at frame 0

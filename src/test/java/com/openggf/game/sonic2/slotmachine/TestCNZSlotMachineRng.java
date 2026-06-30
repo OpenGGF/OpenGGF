@@ -15,6 +15,7 @@ class TestCNZSlotMachineRng {
     @Test
     void setupTargetsUsesVintCounterBytesForSpeedsAndTarget() throws Exception {
         CNZSlotMachineManager manager = new CNZSlotMachineManager();
+        setIntField(manager, "routine", 0x18);
         manager.activate();
 
         manager.update(0x1200);
@@ -37,6 +38,36 @@ class TestCNZSlotMachineRng {
         manager.update(0xABCD);
 
         assertEquals((0xCD & 0x0F) + 0x0C, intField(manager, "slotTimer"));
+    }
+
+    @Test
+    void packedTargetsMapToDisplayedReelOrder() throws Exception {
+        CNZSlotMachineManager manager = new CNZSlotMachineManager();
+        setIntField(manager, "slot1Target", CNZSlotMachineManager.FACE_EGGMAN);
+        setIntField(manager, "slot23Target",
+                (CNZSlotMachineManager.FACE_RING << 4) | CNZSlotMachineManager.FACE_BAR);
+
+        assertEquals(CNZSlotMachineManager.FACE_EGGMAN, invokeGetTargetForSlot(manager, 0));
+        assertEquals(CNZSlotMachineManager.FACE_RING, invokeGetTargetForSlot(manager, 1));
+        assertEquals(CNZSlotMachineManager.FACE_BAR, invokeGetTargetForSlot(manager, 2));
+    }
+
+    @Test
+    void changingStoppedFaceUpdatesMatchingRewardSlot() throws Exception {
+        CNZSlotMachineManager manager = new CNZSlotMachineManager();
+        setIntField(manager, "slot1Target", CNZSlotMachineManager.FACE_SONIC);
+        setIntField(manager, "slot23Target",
+                (CNZSlotMachineManager.FACE_TAILS << 4) | CNZSlotMachineManager.FACE_RING);
+
+        invokeSetTargetForSlot(manager, 0, CNZSlotMachineManager.FACE_EGGMAN);
+        assertEquals(CNZSlotMachineManager.FACE_EGGMAN, intField(manager, "slot1Target") & 0x07);
+        assertEquals((CNZSlotMachineManager.FACE_TAILS << 4) | CNZSlotMachineManager.FACE_RING,
+                intField(manager, "slot23Target"));
+
+        invokeSetTargetForSlot(manager, 2, CNZSlotMachineManager.FACE_BAR);
+        assertEquals(CNZSlotMachineManager.FACE_EGGMAN, intField(manager, "slot1Target") & 0x07);
+        assertEquals((CNZSlotMachineManager.FACE_TAILS << 4) | CNZSlotMachineManager.FACE_BAR,
+                intField(manager, "slot23Target"));
     }
 
     @Test
@@ -65,6 +96,20 @@ class TestCNZSlotMachineRng {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return (int[]) field.get(target);
+    }
+
+    private static int invokeGetTargetForSlot(CNZSlotMachineManager manager, int slot)
+            throws ReflectiveOperationException {
+        var method = CNZSlotMachineManager.class.getDeclaredMethod("getTargetForSlot", int.class);
+        method.setAccessible(true);
+        return (int) method.invoke(manager, slot);
+    }
+
+    private static void invokeSetTargetForSlot(CNZSlotMachineManager manager, int slot, int face)
+            throws ReflectiveOperationException {
+        var method = CNZSlotMachineManager.class.getDeclaredMethod("setTargetForSlot", int.class, int.class);
+        method.setAccessible(true);
+        method.invoke(manager, slot, face);
     }
 }
 

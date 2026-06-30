@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -46,14 +48,17 @@ import java.util.logging.Logger;
  *   <li>Rotation completes when angle reaches 0x00 or 0x80 (signed: 0 or -128)</li>
  * </ul>
  * <p>
- * <b>Collision:</b>
+ * <b>Collision (full LRB SolidObject, selected by angle in loc_2A18A,
+ * docs/s2disasm/s2.asm:56982-57000):</b>
  * <ul>
- *   <li>When up (vertical): width = 8 pixels</li>
- *   <li>When down (horizontal): width = 64 pixels</li>
+ *   <li>Raised (vertical wall, angle $40 / $C0..$FF): d1/d2/d3 = $13/$40/$41
+ *       => halfWidth 19, airHalfHeight 64, groundHalfHeight 65.</li>
+ *   <li>Lowered (flat platform, angle $00 / $80 / mid-rotation): d1/d2/d3 =
+ *       $4B/8/9 => halfWidth 75, airHalfHeight 8, groundHalfHeight 9.</li>
  * </ul>
  */
 public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(MCZDrawbridgeObjectInstance.class.getName());
 
@@ -66,13 +71,22 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
     private static final int ANGLE_COMPLETE_ZERO = 0x00;
     private static final int ANGLE_COMPLETE_180 = 0x80;  // -128 as signed byte
 
-    // Collision parameters
-    // When up (vertical): narrow collision (width_pixels=$08)
-    // ROM: move.b #8,width_pixels(a0) at init
-    private static final SolidObjectParams PARAMS_UP = new SolidObjectParams(8, 64, 65);
-    // When down (horizontal): wide collision (width_pixels=$40)
-    // ROM: move.b #$40,width_pixels(a0) when bridge is down
-    private static final SolidObjectParams PARAMS_DOWN = new SolidObjectParams(64, 8, 9);
+    // Collision parameters. Obj81 selects d1/d2/d3 (x_radius/halfWidth,
+    // y_radius/airHalfHeight, y_radius+1/groundHalfHeight) by ANGLE, not by a
+    // bridge-down boolean, in loc_2A18A (docs/s2disasm/s2.asm:56982-57000).
+    //
+    // RAISED / vertical wall (loc_2A18A defaults; reached when angle == $40 or
+    // angle in $C0..$FF): move.w #$13,d1 / move.w #$40,d2 / move.w #$41,d3
+    //   => halfWidth=$13=19, airHalfHeight=$40=64, groundHalfHeight=$41=65.
+    // This is the "long invisible vertical barrier" (ObjPtr_MCZDrawbridge
+    // comment, docs/s2disasm/s2.asm:30044). The object-header width_pixels=8
+    // (Obj81_Init, s2.asm:56892) is display-culling only and is NOT the solid
+    // d1 — using it as halfWidth let the player run straight through the wall.
+    private static final SolidObjectParams PARAMS_RAISED = new SolidObjectParams(0x13, 0x40, 0x41);
+    // LOWERED / flat platform (loc_2A1A8; reached when angle == 0 or $80 or any
+    // mid-rotation angle): move.w #$4B,d1 / move.w #8,d2 / move.w #9,d3
+    //   => halfWidth=$4B=75, airHalfHeight=8, groundHalfHeight=9.
+    private static final SolidObjectParams PARAMS_LOWERED = new SolidObjectParams(0x4B, 0x08, 0x09);
 
     // Initial Y offset when spawned (bridge starts offset from spawn position)
     // ROM: subi.w #$48,y_pos(a0) (line 56457)
@@ -83,12 +97,12 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
     private static final int DOWN_X_OFFSET = 0x48;
 
     // State variables
-    private final int switchId;           // ButtonVine trigger ID (0-15)
-    private final int originalX;          // Original spawn X position (objoff_30)
-    private final int originalY;          // Original spawn Y position (objoff_32)
-    private final int direction;          // Movement direction: -0x100 (left) or +0x100 (right) (objoff_34)
-    private final boolean xFlipped;       // X-flip status flag
-    private final boolean yFlipped;       // Y-flip status flag
+    private int switchId;                 // ButtonVine trigger ID (0-15)
+    private int originalX;                // Original spawn X position (objoff_30)
+    private int originalY;                // Original spawn Y position (objoff_32)
+    private int direction;                // Movement direction: -0x100 (left) or +0x100 (right) (objoff_34)
+    private boolean xFlipped;             // X-flip status flag
+    private boolean yFlipped;             // Y-flip status flag
 
     // Angle as 16-bit word (only high byte used for rotation)
     // ROM: angle(a0) is a word but rotation logic treats it as byte
@@ -151,6 +165,11 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
 
         // Calculate initial segment positions
         updateSegmentPositions();
+    }
+
+    @Override
+    public MCZDrawbridgeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MCZDrawbridgeObjectInstance(ctx.spawn(), getName());
     }
 
     @Override
@@ -281,19 +300,63 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        // Return different collision params based on bridge state
-        return bridgeDown ? PARAMS_DOWN : PARAMS_UP;
+        // ROM loc_2A18A (docs/s2disasm/s2.asm:56982-56996) selects the solid
+        // bounding box from the CURRENT angle byte, not a bridge-down flag:
+        //   d1/d2/d3 default to $13/$40/$41 (raised vertical wall);
+        //   move.b angle(a0),d0
+        //   beq.s   loc_2A1A8   ; angle == $00  -> wide flat (loc_2A1A8)
+        //   cmpi.b  #$40,d0
+        //   beq.s   loc_2A1B4   ; angle == $40  -> keep raised defaults
+        //   cmpi.b  #-$40,d0
+        //   bhs.s   loc_2A1B4   ; angle >= $C0  -> keep raised defaults
+        //   ; else (angle $01..$3F or $41..$BF, incl. $80) fall through to
+        //   ; loc_2A1A8 -> wide flat ($4B/8/9).
+        int a = angle & 0xFF;
+        boolean raised = (a == 0x40) || (a >= 0xC0);
+        return raised ? PARAMS_RAISED : PARAMS_LOWERED;
     }
 
     @Override
     public boolean isTopSolidOnly() {
-        return true;  // Bridge is only solid from top
+        // ROM Obj81 calls plain JmpTo22_SolidObject (docs/s2disasm/s2.asm:57000),
+        // i.e. a full LRB SolidObject. In its raised state it is a "long
+        // invisible vertical barrier" (ObjPtr_MCZDrawbridge comment,
+        // docs/s2disasm/s2.asm:30044) that stops the player horizontally via
+        // SolidObject_LeftRight -> SolidObject_StopCharacter (zeroes inertia +
+        // x_vel and pushes x_pos out, docs/s2disasm/s2.asm:35407-35444).
+        // It is NOT a top-solid-only platform.
+        return false;
     }
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
+    }
+
+    /**
+     * ROM: Obj81 calls plain JmpTo22_SolidObject (docs/s2disasm/s2.asm:57000).
+     * A top-landing reaches SolidObject_Landed via SolidObject_TopBottom, whose
+     * "cmpi.w #$10,d3 / blo.s SolidObject_Landed" (unsigned lower-than $10,
+     * docs/s2disasm/s2.asm:35488-35494) covers d3 (relY) == 0. So distY==0 is an
+     * accepted landing. Allow zero-distance landings here to match ROM.
+     */
+    @Override
+    public boolean allowsZeroDistanceTopSolidLanding(PlayableEntity player) {
+        return true;
+    }
+
+    /**
+     * ROM: Obj81 uses the full SolidObject routine (JmpTo22_SolidObject,
+     * docs/s2disasm/s2.asm:57000), not PlatformObject_ChkYRange
+     * (s2.asm:35696-35712). A top landing is resolved by SolidObject_Landed,
+     * whose formula (playerY - relY + 3) is already implemented by
+     * resolveContactInternal; the PlatformObject absolute snap
+     * (anchorY - groundHalfHeight - yRadius - 1) must not be applied.
+     */
+    @Override
+    public boolean usesPlatformObjectLandingSnap() {
+        return false;
     }
 
     // SolidObjectListener implementation

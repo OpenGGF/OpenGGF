@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -9,11 +10,18 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -50,7 +58,7 @@ import java.util.logging.Logger;
  * ROM collision size: 0xD7 &amp; 0x3F = 0x17 (size index 23).
  */
 public class GumballItemObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(GumballItemObjectInstance.class.getName());
 
@@ -81,6 +89,17 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     // ROM: sub_61176 push force — muls.w #-$700,d1 / asr.l #8,d1
     private static final int PUSH_FORCE = 0x700;
 
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            false,
+            true,
+            false,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+
     private static final int[] PACHINKO_RING_TABLE = {
             0x50, 0x32, 0x28, 0x23, 0x23, 0x1E, 0x1E, 0x14,
             0x14, 0x0A, 0x0A, 0x0A, 0x0A, 0x05, 0x05, 0x05
@@ -101,16 +120,16 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     private final SubpixelMotion.State motionState;
 
     /** Motion profile: static, gumball-ejected gravity, or pachinko float-up. */
-    private final MotionMode motionMode;
+    private MotionMode motionMode;
 
     /** Reward dispatch mode: direct gumball subtype table vs pachinko translated subtype table. */
-    private final RewardMode rewardMode;
+    private RewardMode rewardMode;
 
     /** Subtype determining reward behavior. */
-    private final int subtype;
+    private int subtype;
 
     /** Mapping frame for rendering. */
-    private final int mappingFrame;
+    private int mappingFrame;
 
 
     /** Set true when player touches this item; triggers deletion next frame. */
@@ -235,9 +254,13 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean requiresContinuousTouchCallbacks() {
-        // Edge-triggered is fine; item deletes on first touch
-        return false;
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     // --- TouchResponseListener ---
@@ -314,7 +337,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
             // safe fallback for test env
         }
         try {
-            services().playMusic(com.openggf.game.sonic3k.audio.Sonic3kMusic.EXTRA_LIFE.id);
+            services().playMusic(GameMusic.EXTRA_LIFE);
         } catch (Exception e) {
             // safe fallback
         }
@@ -326,7 +349,8 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
      * In the engine, this respawns the dispenser + springs via the machine.
      */
     private void onCollectRepairDispenser(PlayableEntity player) {
-        GumballMachineObjectInstance current = GumballMachineObjectInstance.current();
+        GumballMachineObjectInstance current =
+                GumballMachineObjectInstance.current(services().objectManager());
         if (current != null) {
             LOGGER.info("REP gumball collected — calling respawnSprings()");
             current.respawnSprings();

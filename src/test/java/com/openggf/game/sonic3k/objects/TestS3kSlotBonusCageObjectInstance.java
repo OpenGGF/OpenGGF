@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageController;
+import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.Sonic;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -39,6 +41,9 @@ class TestS3kSlotBonusCageObjectInstance {
         assertEquals(0, player.getYSpeed());
         assertEquals(0, player.getGSpeed());
         assertTrue(player.isObjectControlled());
+        assertFalse(player.isObjectControlAllowsCpu());
+        assertTrue(player.isObjectControlSuppressesMovement());
+        assertTrue(player.isTouchResponseSuppressedByObjectControl());
         assertTrue(player.isControlLocked());
         assertTrue(player.getAir());
         assertFalse(player.isOnObject());
@@ -149,7 +154,35 @@ class TestS3kSlotBonusCageObjectInstance {
         cage.update(0, player);
         cage.update(1, player);
 
-        cage.appendRenderCommands(new ArrayList<>());
+        List<GLCommand> cmds = new ArrayList<>();
+        cage.appendRenderCommands(cmds);
+        assertTrue(cmds.isEmpty(), "unused cage visual must emit no render commands");
+    }
+
+    @Test
+    void releaseClearsObjectControlProfileAfterPayoutCompletes() throws Exception {
+        ObjectSpawn spawn = new ObjectSpawn(0x460, 0x430, 0x00, 0x00, 0x00, false, 0);
+        S3kSlotStageController controller = new S3kSlotStageController();
+        controller.bootstrap();
+        controller.latchResolvedPrizeForCapture(0);
+        forceOptionCycleState(controller, 0x0C);
+
+        S3kSlotBonusCageObjectInstance cage = new S3kSlotBonusCageObjectInstance(spawn, controller);
+        cage.setServices(new TestObjectServices());
+
+        Sonic player = new Sonic("sonic", (short) 0x460, (short) 0x430);
+        cage.update(0, player);
+        forceOptionCycleState(controller, 0x18);
+        cage.update(2, player);
+        forceControllerAngle(controller, 0);
+        cage.update(4, player);
+
+        assertFalse(player.isObjectControlled());
+        assertFalse(player.isObjectControlAllowsCpu());
+        assertFalse(player.isObjectControlSuppressesMovement());
+        assertFalse(player.isTouchResponseSuppressedByObjectControl());
+        assertFalse(player.isControlLocked());
+        assertTrue(player.getAir());
     }
 
     private void forceOptionCycleState(S3kSlotStageController controller, int stateValue) throws Exception {
@@ -159,6 +192,15 @@ class TestS3kSlotBonusCageObjectInstance {
         Field optionCycleStateField = stageState.getClass().getDeclaredField("optionCycleState");
         optionCycleStateField.setAccessible(true);
         optionCycleStateField.setInt(stageState, stateValue);
+    }
+
+    private void forceControllerAngle(S3kSlotStageController controller, int angle) throws Exception {
+        Field stageStateField = S3kSlotStageController.class.getDeclaredField("stageState");
+        stageStateField.setAccessible(true);
+        Object stageState = stageStateField.get(controller);
+        Field statTableField = stageState.getClass().getDeclaredField("statTable");
+        statTableField.setAccessible(true);
+        statTableField.setInt(stageState, (angle & 0xFF) << 8);
     }
 }
 

@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.scroll;
 
 import com.openggf.data.Rom;
+import com.openggf.level.scroll.compose.ScrollValueTable;
+import com.openggf.level.scroll.compose.WaterlineBlendComposer;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import org.junit.jupiter.api.Test;
 
@@ -234,6 +236,51 @@ public class SwScrlHczTest {
     }
 
     @Test
+    public void hcz1WithoutWaterlineLookupKeepsFallbackGapAtVisibleWaterline() {
+        SwScrlHcz handler = new SwScrlHcz();
+        int[] buf = new int[VISIBLE_LINES];
+
+        // cameraY = $611 -> delta = 1, quarterDelta = 0, d2 = -1.
+        // bgY = $190 (400), so band 12 consumes lines 0-15 and per-line word 108
+        // lands on visible line 111. Without lookup data, HCZ1 leaves that slot
+        // on the fallback path rather than remapping it.
+        handler.update(buf, 0x400, 0x611, 0, 0);
+
+        assertEquals((short) 0, unpackBG(buf[111]), "Visible fallback gap should remain unblended");
+        assertEquals(negWord((short) 0x0040), unpackBG(buf[112]), "Next scanline should come from the slow-water band");
+    }
+
+    @Test
+    public void hcz1WithWaterlineLookupShowsVisibleWaterlineBlend() {
+        SwScrlHcz handler = new SwScrlHcz(buildWaterlineLookup((byte) 0));
+        int[] buf = new int[VISIBLE_LINES];
+
+        // Same d2 = -1 case as the fallback test, but the lookup remaps word 108
+        // from word 109 before the post-fill runs.
+        handler.update(buf, 0x400, 0x611, 0, 0);
+
+        assertEquals(negWord((short) 0x0108), unpackBG(buf[111]), "Lookup-backed waterline should become visible");
+        assertEquals(negWord((short) 0x0040), unpackBG(buf[112]), "Slow-water band remains intact below the waterline");
+    }
+
+    @Test
+    public void waterlineBlendComposerAppliesLookupAndFallbackAroundMidpoint() {
+        ScrollValueTable table = ScrollValueTable.ofLength(206);
+        table.set(109, (short) 0x0108);
+        WaterlineBlendComposer composer = new WaterlineBlendComposer(13, 109, 205, 96);
+
+        composer.apply(table, (short) -1, (short) 0x0400, (short) 0x0200, buildWaterlineLookup((byte) 0));
+        assertEquals((short) 0x0108, table.get(108), "Lookup should backfill the scanline above the midpoint");
+        assertEquals((short) 0x0200, table.get(109), "Below-water fill should still own the midpoint and lower band");
+
+        ScrollValueTable fallback = ScrollValueTable.ofLength(206);
+        fallback.set(109, (short) 0x0108);
+        composer.apply(fallback, (short) -1, (short) 0x0400, (short) 0x0200, null);
+        assertEquals((short) 0, fallback.get(108), "Fallback path should leave the lookup-only slot untouched");
+        assertEquals((short) 0x0200, fallback.get(109), "Fallback still applies the below-water fill");
+    }
+
+    @Test
     public void hcz1AllLinesHaveValidFgScroll() {
         SwScrlHcz handler = new SwScrlHcz();
         int[] buf = new int[VISIBLE_LINES];
@@ -462,6 +509,20 @@ public class SwScrlHczTest {
         assertNotEquals(bg1, bg2, "Different wall offsets produce different BG scroll");
     }
 
+    @Test
+    public void hcz2WallChaseExposesBgCameraForCollisionParity() {
+        SwScrlHcz handler = new SwScrlHcz();
+
+        handler.setHcz2BgPhase(SwScrlHcz.Hcz2BgPhase.WALL_CHASE);
+        handler.setWallChaseOffsetX(-0x120);
+        handler.primeBgCollisionState(0x840, 0x690);
+
+        assertEquals(0x840 - 0x200 - 0x120, handler.getBgCameraX(),
+                "HCZ2 wall-chase BG collisions must use Camera_X_pos_BG_copy");
+        assertEquals((short) (0x690 - 0x500), handler.getVscrollFactorBG(),
+                "HCZ2 wall-chase BG collisions must use Camera_Y_pos_BG_copy");
+    }
+
     // ==== Provider routing test ====
 
     @Test
@@ -510,6 +571,13 @@ public class SwScrlHczTest {
         }
         return values.size();
     }
-}
 
+    private static byte[] buildWaterlineLookup(byte value) {
+        byte[] data = new byte[97 * 96];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = value;
+        }
+        return data;
+    }
+}
 
