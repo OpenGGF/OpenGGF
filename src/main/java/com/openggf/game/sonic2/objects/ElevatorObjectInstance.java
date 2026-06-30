@@ -155,6 +155,15 @@ public class ElevatorObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean preservesStaleHorizontalInputEdgeWhileMoving(PlayableEntity player) {
+        // ObjD5's PlatformObjectD5 ride helper keeps the same held Ctrl_1_Logical
+        // input path while the elevator can zero Sonic's inertia mid-ride; do
+        // not re-arm the initial stale-input window after that reset
+        // (docs/s2disasm/s2.asm:35860-35874, 58905-58915).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM (s2.asm lines 58412-58417): Platform collision only runs in states 0, 2, 4.
