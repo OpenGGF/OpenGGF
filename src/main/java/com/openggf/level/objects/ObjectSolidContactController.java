@@ -3922,20 +3922,19 @@ final class ObjectSolidContactController {
                     // SolidObject_cont. Suppress only that piece-specific branch:
                     // Obj70 sibling slots with clear d6 still run SolidObject_cont
                     // in ROM slot order (s2.asm:35028-35047, 55137-55191).
-                    || (isJumpOffStaleSideGeometry(player) && player.getXSpeed() < 0)
-                    || (preContactXSpeed <= -0x100 && player.getXSpeed() < 0);
+                    || (player.getAir() && !isHurtRoutineSideStopCandidate(player) && player.getXSpeed() < 0)
+                    || (!player.getAir() && preContactXSpeed <= -0x100 && player.getXSpeed() < 0);
         }
         return true;
     }
 
-    private boolean isJumpOffStaleSideGeometry(PlayableEntity player) {
-        if (player.getAir()) {
-            return true;
-        }
-        if (preContactRolling) {
-            return true;
-        }
-        return player instanceof AbstractPlayableSprite sprite && sprite.isJumping();
+    private boolean isHurtRoutineSideStopCandidate(PlayableEntity player) {
+        // S2 Obj02_Hurt runs ObjectMove/gravity, then Tails_DoLevelCollision,
+        // and only clears x_vel after landing (s2.asm:41063-41110). If hurt
+        // Tails is still airborne, Obj70's clear-d6 standing branch is not the
+        // source of the stop; a clear-bit side overlap must reach
+        // SolidObject_StopCharacter instead (s2.asm:35413-35436, 55189).
+        return player instanceof AbstractPlayableSprite sprite && sprite.isHurt();
     }
 
     private boolean isWithinTopLandingWidth(ObjectInstance instance, PlayableEntity player, int relX,

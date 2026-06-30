@@ -6,6 +6,62 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 MTZ2 Obj70 hurt-sidekick side stop (f6650 -> f8587)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz2-frontier-r3` /
+  `bugfix/ai-s2-mtz2-frontier-r3`, based on integration branch
+  `bugfix/ai-s2-trace-develop` at `e56b4bc3b`.
+- Baseline reproduction:
+  `mvn "-Dtest=TestS2Mtz2LevelSelectTraceReplay" test`.
+  Result before the fix: MTZ2 f6650 / 949 (`tails_x_speed` expected
+  `0x0000`, actual `-0200`).
+- Triage/evidence: f6650 has ROM Tails in Obj02_Hurt (`routine=04`,
+  `status=02`) with a nearby Obj70 cog tooth at `$16C6,$0797`; the engine
+  had the same folded cog tooth geometry and no per-piece standing latch, but
+  the Obj70 stale-rider side-contact guard still returned no contact for any
+  airborne leftward CPU sidekick. Removing the broad airborne guard moved the
+  trace backward to f1217, where normal-routine Tails (`routine=02`,
+  `status=17`) must keep the ROM high-speed stale release. The accepted fix is
+  therefore keyed on the actual Obj02 hurt state, not on the MTZ2 route/frame.
+- Disassembly cited: Obj70 creates per-tooth slots and each slot runs
+  `SolidObject` from `Obj70_Main`
+  (`docs/s2disasm/s2.asm:55084-55191`). `SolidObject` returns before
+  `SolidObject_cont` only when the current slot's standing bit is set and the
+  player is airborne (`docs/s2disasm/s2.asm:35028-35046`); otherwise side
+  overlaps can reach `SolidObject_StopCharacter`, which clears inertia and
+  `x_vel` (`docs/s2disasm/s2.asm:35413-35436`). Obj02_Hurt runs
+  ObjectMove/gravity and Tails level collision, and only clears `x_vel` after
+  landing (`docs/s2disasm/s2.asm:41063-41110`).
+- Fix: `ObjectSolidContactController` keeps Obj70's folded-piece no-contact
+  path for real standing-bit latches and normal airborne stale-rider releases,
+  but allows an airborne hurt-routine sidekick with no current tooth latch to
+  run the ordinary `SolidObject_StopCharacter` side path. This is ROM
+  object/player state; no trace hydration, tolerance, route, frame, or zone
+  carve-out is used.
+- Focused regression check:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mtzCogGroundedCpuSideContactWithoutStandingBitReachesRomStopCharacterPath+mtzCogLeftwardGroundedCpuSideContactWithoutStandingBitStillPushes+mtzCogHighSpeedLeftwardReleaseStillSkipsFoldedSiblingSideStop+mtzCogAirborneHurtCpuSideContactWithoutStandingBitReachesRomStopCharacterPath,TestS2Mtz2LevelSelectTraceReplay" test`.
+  Result: expected nonzero from the target trace only; Obj70 focused tests
+  passed 4/4 and MTZ2 advanced to f8587 / 705.
+- Focused trace:
+  `mvn "-Dtest=TestS2Mtz2LevelSelectTraceReplay" test`.
+  Result: expected nonzero; MTZ2 advances to f8587 / 705 (`x_speed`
+  expected `0x0000`, actual `-000C`), a separate later Sonic movement
+  frontier.
+- Current S2 green guard:
+  `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result on integration: passed 10/10.
+- Red preservation set on current integration:
+  `mvn "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero and preserved ARZ2 f1028 / 2686,
+  CNZ2 f6809 / 1059, CPZ2 f5221 / 377, HTZ2 f4012 / 1031,
+  MTZ1 f5713 / 560, MTZ3 f4575 / 932, OOZ1 f1790 / 888,
+  and OOZ2 f3919 / 1117.
+- Full current S2 sweep:
+  `mvn "-Dtest=TestS2*TraceReplay" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 as expected with 19 run, 10 green, and 9 expected red. MTZ2 is now
+  f8587 / 705; all other first-error frontiers match the preservation set
+  above.
+
 ## 2026-06-30 - S2 CNZ2 map-bumper visible window (f6561 -> f6809)
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-frontier-r3` /
