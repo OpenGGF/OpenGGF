@@ -6,6 +6,39 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-06-30 - S2 ARZ2 Obj24 RNG/render cadence (f1028 -> f1178)
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round2` /
+  `bugfix/ai-s2-arz2-round2`, merged onto `bugfix/ai-s2-trace-next`.
+- Baseline reproduction: `TestS2Arz2LevelSelectTraceReplay` failed at
+  f1028 / 2686 with `obj_extra_s16_x` expected absent, actual `0x0B7B`.
+- Triage/evidence: a corrected BizHawk RNG hook on ROM `RNG_seed=$FFFFF636`
+  showed the f1028 movie-frame window consuming fixed Obj0A RNG at returns
+  `01D640` / `01D742`, then Obj2C leaves at `026210`, then Obj24 generator
+  draws at `01FA30` / `01FA50` / `01FAB2`, with Obj24 child init
+  `01F920` on the next movie frame. The engine instead consumed the child
+  bubble angle inside the Obj24 generator, stealing one RNG draw before the
+  fixed-air sidecar and shifting the first Obj2C leaf from ROM `$0B74,$0537`
+  to engine `$0B7B,$0537`.
+- Earlier-window guard: the same hook around movie frames 8340-8610 proved the
+  burst-completion ordering is also `01FAB2` long-delay RNG before child
+  `01F920`, but ROM did not start the next ready-state Obj24 burst while the
+  generator's previous `render_flags.on_screen` bit was clear. That exposed the
+  second engine bug: `BubbleGeneratorObjectInstance` used a broad
+  `isOnScreen(640)` check instead of Obj24's prior render-flag gate plus
+  chunk-aligned `out_of_range` / `DisplaySprite` tail.
+- Fix: Obj24 spawned bubbles now take their random wobble angle in the child
+  `BubbleObjectInstance` first object pass, while the generator refreshes and
+  observes its ROM render flag before ready-state timer countdowns. The
+  generator also uses the standard chunk-aligned range delete before refreshing
+  that flag. This models ROM object state and slot/order timing; it does not
+  edit trace data, hydrate engine state from traces, weaken comparison, or
+  branch on zone id/name, route, frame, or fixture.
+- Focused ARZ2 target:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`.
+  Result: expected nonzero; ARZ2 advances to f1178 / 2412
+  (`obj_extra_s35_x` expected absent, actual `0x0D60`).
+
 ## 2026-06-30 - S2 OOZ2 Aquis Obj50 render-flag gate (f5737 -> f5762)
 
 - Worktree/branch: `.worktrees/ai-s2-ooz2-round2` /
