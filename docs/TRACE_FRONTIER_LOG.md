@@ -6,7 +6,7 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2/CNZ2/OOZ2 round 24: the S2 sweep is 15
+Current branch-local S2 state after ARZ2/CNZ2/OOZ2 round 25: the S2 sweep is 15
 green / 4 expected-red. ARZ2 advances to f2565 / 713 (`obj_s15_slot` expected
 `0x15`, actual `0x11`) after CPU Tails Obj37 collection was routed through the
 ROM main-invulnerability gate; CNZ2 advances to f9733 / 301
@@ -14,9 +14,52 @@ ROM main-invulnerability gate; CNZ2 advances to f9733 / 301
 trigger compare uses
 the ROM displayed-X phase on leftward passes; MTZ3 remains parked at f13336 /
 352 (`x_speed` expected `0x0200`, actual `-0200`); OOZ1 is green; and OOZ2
-advances to f9465 / 457 (`tails_y` expected `0x0299`, actual `0x0298`) after
-Obj55 exposes the ROM-visible boss-touch snapshot and Obj07 stops re-seating
-newly hurt airborne players.
+advances to f10129 / 388 (`tails_x_speed` expected `0x0000`, actual `0x0200`)
+after Obj07 skips CPU Tails' dead-fall routine instead of re-seating stale
+support on the boss-lowered oil plane.
+
+## 2026-07-01 - S2 OOZ2 Obj07 dead-fall support advances f9465 to f10129
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round25-next` /
+  `bugfix/ai-s2-ooz2-round25-next`, based on campaign commit `81bd9e912`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" test`
+  reproduced OOZ2 f9465 / 457 errors (`tails_y` expected `0x0299`, actual
+  `0x0298`).
+- Evidence: frame f9465 had ROM CPU Tails in object routine `$06`
+  (Obj02_Dead), `status=$02`, `obj_control=$00`, stale `interact=$0E`, and
+  `y_speed=$0620`; the engine had already re-seated Tails on manager-hosted
+  Obj07 oil support, zeroing vertical speed and snapping one pixel high. A
+  BizHawk probe using `tools\bizhawk\run_bizhawk_lua.bat` with a
+  `diag_template_fast.lua`-derived script over BK2 frames 23425-23445 confirmed
+  ROM Tails continues falling through Obj07 at `$294C,$02D8` until the later
+  despawn write.
+- ROM refs: Obj07 calls `PlatformObject_SingleCharacter` for both players after
+  publishing its `x_pos` to the player (`docs/s2disasm/s2.asm:50157-50189`).
+  `PlatformObject_ChkYRange` returns when `obj_control` is negative or when the
+  player routine is `>= 6` (`docs/s2disasm/s2.asm:35978-35981`). Obj02_Dead is
+  the falling/death path (`docs/s2disasm/s2.asm:41131-41137`).
+- Fix: `OilSurfaceManager` now maps CPU sidekick `DEAD_FALLING` to the ROM
+  routine-6 PlatformObject rejection for Obj07's manager-hosted oil support,
+  clearing stale support and leaving the sidekick airborne instead of running
+  `RideObject_SetRide`.
+- Result:
+  `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f10129 / 388 errors. The new first mismatch is
+  `tails_x_speed` expected `0x0000`, actual `0x0200`, during the next CPU Tails
+  oil/boss contact cluster.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.TestOilSurfaceManager" test` exited 0.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" test`
+    produced the expected-red f10129 / 388 report.
+  - S2 ARZ2/CNZ2/MTZ3/OOZ2 preservation subset was run with
+    `maven.test.failure.ignore=true`; ARZ2, CNZ2, and MTZ3 preserved their
+    expected-red frontiers while OOZ2 held f10129 / 388.
+  - `mvn "-Dtest=com.openggf.tests.TestTraceReplayInvariantGuard,com.openggf.tests.trace.TestTraceHydrateSwitchDefault" test`
+    ran after the fix. `TestTraceHydrateSwitchDefault` passed, while
+    `TestTraceReplayInvariantGuard` failed on existing `TestRespawnStrategies`
+    fixture calls to `hydrateRecordedHistory`; this branch did not touch those
+    files or add trace-state hydration.
 
 ## 2026-07-01 - S2 ARZ2 sidekick Obj37 collection advances f2142 to f2565
 
