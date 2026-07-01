@@ -5,6 +5,9 @@ import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rules.CollisionRules;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
@@ -270,8 +273,8 @@ final class ObjectSolidContactController {
     }
 
     private static boolean keepsOnObjWhenJumpedOffSameFrame(PlayableEntity player) {
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame();
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules != null && rules.solidObjectKeepsOnObjWhenJumpedOffSameFrame();
     }
 
     private static boolean keepsOnObjWhenAirborneAfterSameFrameStandingContact(
@@ -4086,16 +4089,16 @@ final class ObjectSolidContactController {
         if (player == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.collisionModel() == CollisionModel.UNIFIED;
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules != null && rules.collisionModel() == CollisionModel.UNIFIED;
     }
 
     private boolean allowsZeroDistTopSolidLanding(PlayableEntity player) {
         if (player == null) {
             return true;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet == null || featureSet.topSolidLandingAllowsZeroDist();
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules == null || rules.topSolidLandingAllowsZeroDist();
     }
 
     private boolean rejectsZeroDistanceTopSolidLanding(ObjectInstance instance) {
@@ -4153,26 +4156,26 @@ final class ObjectSolidContactController {
         if (player == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        CollisionRules rules = collisionRulesOrNull(player);
         return player.getAir()
-                && featureSet != null
-                && featureSet.airBottomSolidHitClearsGroundSpeed();
+                && rules != null
+                && rules.airBottomSolidHitClearsGroundSpeed();
     }
 
     private boolean usesCurrentYRadiusOnlyForFullSolidBottomOverlap(PlayableEntity player) {
         if (player == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.fullSolidBottomOverlapUsesCurrentYRadiusOnly();
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules != null && rules.fullSolidBottomOverlapUsesCurrentYRadiusOnly();
     }
 
     private boolean isSolidObjectOffscreenGateEnabled(PlayableEntity player) {
         if (player == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.solidObjectOffscreenGate();
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules != null && rules.solidObjectOffscreenGate();
     }
 
     private boolean shouldSkipOffscreenSidekickFullSolid(PlayableEntity player,
@@ -4181,8 +4184,8 @@ final class ObjectSolidContactController {
         if (!(player instanceof AbstractPlayableSprite sidekick) || !sidekick.isCpuControlled()) {
             return false;
         }
-        PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
-        if (featureSet == null || !featureSet.solidObjectRequiresSidekickOnScreen()) {
+        CollisionRules rules = collisionRulesOrNull(sidekick);
+        if (rules == null || !rules.solidObjectRequiresSidekickOnScreen()) {
             return false;
         }
         if (solidProfile.bypassesOffscreenSolidGate()
@@ -4230,8 +4233,8 @@ final class ObjectSolidContactController {
         if (player == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity();
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules != null && rules.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity();
     }
 
     /**
@@ -4249,8 +4252,8 @@ final class ObjectSolidContactController {
         if (player == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.solidObjectBarelyPokingResolvesAsSide();
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules != null && rules.solidObjectBarelyPokingResolvesAsSide();
     }
 
     private boolean preservesEdgeSubpixelMotion(ObjectInstance instance) {
@@ -4353,8 +4356,32 @@ final class ObjectSolidContactController {
     }
 
     private boolean usesCurrentYRadiusDeltaOnLanding(AbstractPlayableSprite sprite) {
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta();
+        PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
+        return rules != null && rules.landingRollClearUsesCurrentYRadiusDelta();
+    }
+
+    private static CollisionRules collisionRulesOrNull(PlayableEntity player) {
+        if (player == null) {
+            return null;
+        }
+        GameRules rules = player.getGameRules();
+        if (rules != null && rules.collision() != null) {
+            return rules.collision();
+        }
+        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        return featureSet != null ? GameRules.fromLegacy(featureSet).collision() : null;
+    }
+
+    private static PlayerMovementRules playerMovementRulesOrNull(PlayableEntity player) {
+        if (player == null) {
+            return null;
+        }
+        GameRules rules = player.getGameRules();
+        if (rules != null && rules.playerMovement() != null) {
+            return rules.playerMovement();
+        }
+        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        return featureSet != null ? GameRules.fromLegacy(featureSet).playerMovement() : null;
     }
 
     private void applyObjectLandingState(PlayableEntity player) {

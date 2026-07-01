@@ -3,6 +3,7 @@ package com.openggf.tests.physics;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.rules.GameRules;
 import com.openggf.level.LevelManager;
 import com.openggf.game.GroundMode;
 import com.openggf.game.PlayableEntity;
@@ -18,6 +19,7 @@ import org.mockito.Mockito;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -721,6 +723,48 @@ public class CollisionSystemTest {
                 "Odd floor angles use the ROM cardinal fallback; the farther alternate slope must not be borrowed");
     }
 
+    @Test
+    public void typedCollisionRulePreservesRightWallDeepProbeWhenLegacyFeatureDiffers() throws Exception {
+        FeatureSetCollisionTestSprite player = newCollisionTestSprite();
+        player.setFeatureSet(PhysicsFeatureSet.SONIC_1);
+        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_1);
+        setGameRulesForTest(player, new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                GameRules.fromLegacy(PhysicsFeatureSet.SONIC_3K).collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble()));
+
+        assertTrue(invokePreservesRightWallPenetrationOnDeepProbe(player),
+                "CollisionSystem should prefer typed CollisionRules over legacy PhysicsFeatureSet reads");
+    }
+
+    @Test
+    public void collisionRuleFallsBackToLegacyWhenTypedCollisionGroupMissing() throws Exception {
+        FeatureSetCollisionTestSprite player = newCollisionTestSprite();
+        player.setFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_3K);
+        setGameRulesForTest(player, new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                null,
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble()));
+
+        assertTrue(invokePreservesRightWallPenetrationOnDeepProbe(player),
+                "A null typed CollisionRules group should fall back to legacy-derived collision rules");
+    }
+
     private static Object describeCalcRoomInFrontProbe(int angle, short gSpeed) {
         try {
             Method method = CollisionSystem.class.getDeclaredMethod(
@@ -743,6 +787,23 @@ public class CollisionSystemTest {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed to invoke selectSensorWithAngle", e);
         }
+    }
+
+    private boolean invokePreservesRightWallPenetrationOnDeepProbe(AbstractPlayableSprite player) {
+        try {
+            Method method = CollisionSystem.class.getDeclaredMethod(
+                    "preservesRightWallPenetrationOnDeepProbe", AbstractPlayableSprite.class);
+            method.setAccessible(true);
+            return (Boolean) method.invoke(collisionSystem, player);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to invoke preservesRightWallPenetrationOnDeepProbe", e);
+        }
+    }
+
+    private static void setGameRulesForTest(AbstractPlayableSprite player, GameRules rules) throws Exception {
+        Field field = AbstractPlayableSprite.class.getDeclaredField("gameRules");
+        field.setAccessible(true);
+        field.set(player, rules);
     }
 
     private static FeatureSetCollisionTestSprite newCollisionTestSprite() {

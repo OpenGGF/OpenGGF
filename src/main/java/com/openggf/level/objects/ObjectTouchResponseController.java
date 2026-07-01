@@ -6,6 +6,9 @@ import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
+import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
@@ -263,8 +266,8 @@ final class ObjectTouchResponseController {
         instaShieldActive = false;
         currentPlayer = player;
         int playerWidth = 0x10; // Normal width
-        PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
-        if (fs != null && fs.instaShieldEnabled()
+        PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull(player);
+        if (capabilityRules != null && capabilityRules.instaShieldEnabled()
                 && player.getDoubleJumpFlag() == 1
                 && player.getShieldType() == null
                 && player.getInvincibleFrames() == 0) {
@@ -981,8 +984,8 @@ final class ObjectTouchResponseController {
             return true;
         }
 
-        PhysicsFeatureSet features = player.getPhysicsFeatureSet();
-        if (features != null && features.elementalShieldsEnabled()) {
+        PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull(player);
+        if (capabilityRules != null && capabilityRules.elementalShieldsEnabled()) {
             return isS3kAbilityAttack(player, target);
         }
 
@@ -1068,17 +1071,41 @@ final class ObjectTouchResponseController {
     private void applyBossBounce(PlayableEntity player) {
         int negX = -player.getXSpeed();
         int negY = -player.getYSpeed();
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        if (featureSet != null && featureSet.bossHitHalvesBounceVelocity()) {
+        ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
+        if (rules != null && rules.bossHitHalvesBounceVelocity()) {
             // ROM asr.w: arithmetic (sign-preserving) shift right by 1.
             negX >>= 1;
             negY >>= 1;
         }
         player.setXSpeed((short) negX);
         player.setYSpeed((short) negY);
-        if (featureSet != null && featureSet.bossHitNegatesGroundSpeed()) {
+        if (rules != null && rules.bossHitNegatesGroundSpeed()) {
             player.setGSpeed((short) -player.getGSpeed());
         }
+    }
+
+    private PlayerCapabilityRules playerCapabilityRulesOrNull(PlayableEntity player) {
+        if (player == null) {
+            return null;
+        }
+        GameRules rules = player.getGameRules();
+        if (rules != null && rules.playerCapability() != null) {
+            return rules.playerCapability();
+        }
+        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        return featureSet != null ? GameRules.fromLegacy(featureSet).playerCapability() : null;
+    }
+
+    private ObjectInteractionRules objectInteractionRulesOrNull(PlayableEntity player) {
+        if (player == null) {
+            return null;
+        }
+        GameRules rules = player.getGameRules();
+        if (rules != null && rules.objectInteraction() != null) {
+            return rules.objectInteraction();
+        }
+        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        return featureSet != null ? GameRules.fromLegacy(featureSet).objectInteraction() : null;
     }
 
     private void applyHurt(PlayableEntity player, ObjectInstance instance, TouchResponseResult result) {
