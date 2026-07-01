@@ -117,8 +117,12 @@ Integrated on `bugfix/ai-s2-trace-next`:
   `Touch_Hurt`/`HurtCharacter` on Obj53 `col=$87` at BK2 f39500/vfc33C6
   before the next `Obj53_OrbitBoss` call; D2-residue, local touch decode, and
   current-touch-state experiments did not advance f13336.
-- CNZ2 remains in round-33 investigation at this snapshot. Its last accepted
-  frontier is f9946 / 300 (`x_speed` expected `0x0200`, actual `0x08A8`).
+- CNZ2 round-33 made no commit. Diagnostics pinned the initial Obj51 slot drift
+  to frame 7995: ROM loads Obj51 into slot 25 while the engine still has Tails
+  skid-dust Obj08 in slots 25-27 and loads Obj51 into slot 28. Rejected
+  candidates: Obj51 floor split `< 0` kept f9946 but raised errors to 329; CPU
+  sidekick fixed-dust suppression regressed to f9199 / 437. The accepted CNZ2
+  frontier remains f9946 / 300 (`x_speed` expected `0x0200`, actual `0x08A8`).
 - No S2 trace greened in round 33, so no round-33 change was banked into
   `next`.
 
