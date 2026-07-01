@@ -29528,3 +29528,29 @@ Round-1 worker branches were created from integration branch
   frontiers.
 - `bugfix/ai-s2-event-physics-round1` for CPZ2 camera/event and OOZ2
   player/touch physics frontiers.
+
+### 2026-07-01 -- S2 MTZ3 round 17 Obj54/Obj53 shield break-away
+
+Baseline on `bugfix/ai-s2-mtz3-round17-next` from banked `next`
+`180bdcc85`: `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace` failed at
+f12608 / 490 errors, first field `tails_y` (`0x045D` vs `0x045C`). The first
+divergence was caused by the engine's MTZ boss shield orbit staying too low and
+hurting Tails; the report showed the ROM Obj54/Obj53 cluster already moving
+upward while the engine had skipped back into Obj54 Sub0 descent.
+
+Fix:
+- Obj54 SubA now treats a pending Obj53 break flag as an effective active
+  broken-orb count for the engine's parent-before-child update pass. This
+  models the ROM path where Obj54 sets `objoff_38` in `Obj54_AnimateFace`, Obj53
+  consumes it later in the same object pass, and the following SubA frame sees
+  `objoff_2C != 0` (`docs/s2disasm/s2.asm:67605-67625,67832-67862`).
+- Obj53 break-away movement now preserves `x_sub`/`y_sub` through
+  `ObjectMoveAndFall`, so `$80` horizontal velocity advances by subpixel carry
+  instead of truncating to zero (`docs/s2disasm/s2.asm:30164-30179,67968-67985`).
+
+Result:
+- `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace`: f12608 / 490 errors
+  (`tails_y` expected `0x045D`, actual `0x045C`) -> f12897 / 490 errors
+  (`x_speed` expected `-0037`, actual `-0200`).
+- New owner is the later Sonic rebound/contact timing near the broken Obj53
+  shield orb after the boss-orb break-away now reaches the ROM-side window.
