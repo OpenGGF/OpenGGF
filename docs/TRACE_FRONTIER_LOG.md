@@ -92,6 +92,44 @@ branch-local measurements.
   - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.TestS2ObjectOccupancyOracle#ooz1LauncherBallChainKeepsSourceBeforeTargetAtRomFrame5957" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" test`
     exited 1 with OOZ2 holding its accepted red f9307 / 444 frontier and the
     OOZ1 slot-occupancy oracle passing.
+## 2026-07-01 - S2 MTZ3 Obj54/Obj53 boss shield touch (f12592 -> f12608)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz3-round15-next` /
+  `bugfix/ai-s2-mtz3-round15-next`, based on `bugfix/ai-s2-trace-next`.
+- Baseline reproduction:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red MTZ3 f12592 / 497
+  (`y_speed` expected `-0290`, actual `0x0290`).
+- Triage/evidence: the f12592 context showed the engine rebounding Sonic from
+  Obj54 while the ROM still had a one-pixel vertical gap. Direct diagnostics
+  found the engine using Obj54 pre-update `y_pos=$043B` while the ROM Obj54 was
+  `$0439`; S2 `Obj54_MainSub0` writes `(Boss_Y_pos)` directly and does not call
+  `Obj54_Float` until `Obj54_MoveAndShow` in later substates
+  (`docs/s2disasm/s2.asm:67271-67298,67322-67333`). After that alignment, the
+  next ROM event was Sonic entering hurt from the intact Obj53 shield; S2
+  `TouchResponse` decodes `$87 & $C0 = $80` as `Touch_ChkHurt`, not
+  `Touch_Special` (`docs/s2disasm/s2.asm:67806,85252-85264`). The orb orbit
+  also needed the ROM boss-state gate: `Obj53_OrbitBoss` tests
+  `objoff_3A(a1)` where `a1` is the boss, so the per-orb `objoff_3A` byte from
+  `Obj53_Init` must not freeze the normal vertical sine path
+  (`docs/s2disasm/s2.asm:67896-67938`).
+- Fix: Obj54 Sub0 now uses raw `Boss_Y_pos` without advancing the float sine;
+  intact Obj53 orbs expose raw collision `$87`; and Obj53 orbit flattening /
+  vertical-angle advancement is gated by the boss break-state instead of the
+  per-orb tilt byte.
+- Result:
+  `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace`: f12592 / 497 errors
+  (`y_speed` expected `-0290`, actual `0x0290`) -> f12608 / 490 errors
+  (`tails_y` expected `0x045D`, actual `0x045C`). The new owner is Tails'
+  one-pixel post-hurt position after the boss shield interaction.
+- Verification:
+  - `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtrace.context.diagnosticChars=full" "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at the advanced MTZ3 frontier f12608 / 490.
+  - `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#mtz3RotatingPlatformLoadKeepsRomSlot22Identity+mtz3MovingPlatformUnloadReleasesRomSlot17+mtz3TwinStomperNoContactClearsTailsPushAtRomFrame1743+mtz3CogAirborneStaleStandingBitKeepsTailsXSpeedAtRomFrame9555+mtz3DeadTailsObj6eStaleStandingBitClearsAtRomFrame3618" "-DfailIfNoTests=false" test`
+    passed 5 / 5 MTZ-focused guards.
+  - `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed the S2 sweep with the same non-target expected-red owners as the
+    campaign baseline and MTZ3 advanced to f12608 / 490.
 
 ## 2026-07-01 - S2 campaign integrated sweep after round 14 ARZ2/HTZ2/MTZ3/OOZ1 merges
 
