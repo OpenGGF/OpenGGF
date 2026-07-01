@@ -14,10 +14,9 @@ allocation frame until routine 6 publishes the orbit position; OOZ2 is f12107 / 
 support began ticking `oil_char2submersion` before the airborne support-release
 branch. CNZ2 remains f9946 / 300 (`x_speed` expected `0x0200`, actual
 `0x08A8`) and MTZ3 remains f13336 / 352 (`x_speed` expected `0x0200`, actual
-`-0200`). ARZ1 and OOZ1 pass in the round 34 preservation subset; CNZ2, MTZ3,
-and OOZ2 remain the expected-red frontiers above. Full S2 was last measured at
-15 green / 4 expected-red on the round 33 campaign baseline, full S1 remains
-green, and the S3K AIZ guard is unchanged. No S2 trace greened in round 34 yet.
+`-0200`). Full S2 is 15 green / 4 expected-red, full S1 remains green, and the
+S3K AIZ guard is unchanged. CNZ2 round 34 made no commit; MTZ3 and OOZ2 round
+34 are still running. No S2 trace greened in round 34 yet.
 
 ## 2026-07-01 - S2 ARZ2 Obj79 checkpoint dongle advances f4548 to f4617
 
@@ -56,6 +55,38 @@ green, and the S3K AIZ guard is unchanged. No S2 trace greened in round 34 yet.
   `interact=$19`, while the engine has Tails at `$2A50` with no matched ridden
   object. Nearby ROM objects are Obj04 moving platforms, pointing at sidekick
   Obj04 ride-state preservation rather than checkpoint allocation.
+
+## 2026-07-01 - S2 round 34 partial integrated campaign baseline
+
+Integrated on `bugfix/ai-s2-trace-next`:
+- `7395c16cd` (`fix(s2): delay checkpoint dongle native position until routine`)
+  advances ARZ2 f4548 / 1058 (`obj_extra_s11_x` expected absent, actual
+  `0x2800`) -> f4617 / 1053 (`tails_x` expected `0x2820`, actual `0x2A50`).
+- CNZ2 round-34 made no commit. Diagnostics confirmed Obj08 still allocates
+  slot 25 from f7984 and keeps Obj51 displaced to slot 28; two narrow Obj86
+  skid-handoff candidates did not change the symptom and were removed.
+- MTZ3 and OOZ2 round-34 workers were still running when this partial baseline
+  was recorded.
+- No S2 trace greened in the accepted round-34 work, so no round-34 change was
+  banked into `next`.
+
+Integrated verification on `bugfix/ai-s2-trace-next`:
+- Focused and preservation subset:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.game.sonic2.objects.TestCheckpointDongleInstance,com.openggf.tests.TestOilSurfaceManager,com.openggf.tests.trace.TestS2ObjectOccupancyOracle,com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  ran 66 checks: checkpoint dongle, oil manager, and occupancy oracles passed;
+  ARZ1 and OOZ1 passed; ARZ2 f4617 / 1053, CNZ2 f9946 / 300, MTZ3 f13336 /
+  352, and OOZ2 f12107 / 99 remained expected-red.
+- Full S2 sweep:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 19 tests with 15 green / 4 expected-red at the same frontiers.
+- Full S1 sweep:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 29 tests with 0 failures and only the existing S1 mapping warnings.
+- S3K guard:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+  ran 68 checks with the two known S3K AIZ expected-reds only: complete-run
+  f1095 / 4319 (`x_speed` expected `0x0000`, actual `0x000C`) and level-select
+  f8941 / 1160 (`camera_y` expected `0x02C1`, actual `0x02B9`).
 
 ## 2026-07-01 - S2 OOZ2 Obj07 submersion tick advances f11038 to f12107
 
