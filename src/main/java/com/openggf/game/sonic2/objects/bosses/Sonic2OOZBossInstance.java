@@ -63,6 +63,10 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     private static final int MAX_CHILD_SPRITES = 8;
     private static final int MAIN_VEHICLE_CHILD_FRAME = 1;
     private static final int CHAIN_CHILD_FRAME = 7;
+    private static final int[] WAVE_ANIMATION_FRAMES = {
+            0x0D, 0x11, 0x0E, 0x12, 0x0F, 0x13, 0x10, 0x14,
+            0x14, 0x10, 0x13, 0x0F, 0x12, 0x0E, 0x11, 0x0D
+    };
 
     private int bossSubtype;
     private int bossCountdown;
@@ -78,11 +82,13 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     private int animFrameDuration;
     private int waveDelay;
     private int waveCount;
+    private int waveAnimFrameIndex;
     private int touchCollisionX;
     private int touchCollisionY;
     private boolean touchCollisionSnapshotReady;
     private boolean flipped;
     private boolean bossDefeatedFlagSet;
+    private Sonic2OOZBossInstance laserParent;
 
     public Sonic2OOZBossInstance(ObjectSpawn spawn) {
         super(spawn, "OOZ Boss");
@@ -92,7 +98,11 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     protected void initializeBossState() {
         int subtype = spawn.subtype();
         if (subtype == SUB_LASER) {
-            initializeLaserFromSpawn();
+            if (spawn.rawYWord() == WAVE_MAIN) {
+                initializeWaveFromSpawn();
+            } else {
+                initializePendingLaserFromSpawn();
+            }
             return;
         }
         // ROM Obj55_Init sets boss_subtype=2 and returns; Obj55_Main_Init runs on
@@ -390,7 +400,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
 
     private void updateLaserOrWave() {
         if (state.routineSecondary == MAIN_INIT) {
-            initializeLaserFromSpawn();
+            initializeLaserFromParent();
             return;
         }
         if (state.routineSecondary == WAVE_MAIN) {
@@ -400,9 +410,55 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         }
     }
 
-    private void initializeLaserFromSpawn() {
+    @Override
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        return bossSubtype == SUB_LASER && state.routineSecondary == MAIN_INIT;
+    }
+
+    private void initializePendingLaserFromSpawn() {
         bossSubtype = SUB_LASER;
-        state.routineSecondary = spawn.rawYWord() == WAVE_MAIN ? WAVE_MAIN : LASER_MAIN;
+        state.routineSecondary = MAIN_INIT;
+        state.x = spawn.x();
+        state.y = spawn.y();
+        state.xFixed = state.x << 16;
+        state.yFixed = state.y << 16;
+        state.xVel = 0;
+        state.yVel = 0;
+        mainFrame = 0x0C;
+        childSpriteCount = 0;
+        collisionFlags = 0;
+        waveAnimFrameIndex = 0;
+        touchCollisionX = state.x;
+        touchCollisionY = state.y;
+        touchCollisionSnapshotReady = false;
+    }
+
+    private void initializeLaserFromParent() {
+        bossSubtype = SUB_LASER;
+        state.routineSecondary = LASER_MAIN;
+        Sonic2OOZBossInstance parent = laserParent;
+        int parentX = parent != null ? parent.state.x : spawn.x();
+        int parentY = parent != null ? parent.state.y : spawn.y();
+        boolean parentFlipped = parent != null ? parent.flipped : (spawn.renderFlags() & 0x01) != 0;
+        state.x = parentX + (parentFlipped ? 0x20 : -0x20);
+        state.y = parentY;
+        state.xFixed = state.x << 16;
+        state.yFixed = state.y << 16;
+        state.xVel = parentFlipped ? 0x400 : -0x400;
+        state.yVel = 0;
+        flipped = parentFlipped;
+        mainFrame = 0x0C;
+        childSpriteCount = 0;
+        collisionFlags = 0xAF;
+        touchCollisionX = state.x;
+        touchCollisionY = state.y;
+        touchCollisionSnapshotReady = false;
+        laserParent = null;
+    }
+
+    private void initializeWaveFromSpawn() {
+        bossSubtype = SUB_LASER;
+        state.routineSecondary = WAVE_MAIN;
         state.x = spawn.x();
         state.y = spawn.y();
         state.xFixed = state.x << 16;
@@ -410,9 +466,11 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         state.xVel = (spawn.renderFlags() & 0x01) != 0 ? 0x400 : -0x400;
         state.yVel = 0;
         flipped = (spawn.renderFlags() & 0x01) != 0;
-        mainFrame = state.routineSecondary == WAVE_MAIN ? 0x0D : 0x0C;
+        mainFrame = 0x0D;
         childSpriteCount = 0;
-        collisionFlags = state.routineSecondary == WAVE_MAIN ? 0x8B : 0xAF;
+        collisionFlags = 0x8B;
+        animFrameDuration = 0;
+        waveAnimFrameIndex = 0;
         touchCollisionX = state.x;
         touchCollisionY = state.y;
         touchCollisionSnapshotReady = false;
@@ -437,6 +495,22 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
                 spawnWaveSegment();
             }
         }
+        animateWave();
+    }
+
+    private void animateWave() {
+        animFrameDuration--;
+        if (animFrameDuration >= 0) {
+            return;
+        }
+        animFrameDuration = 1;
+        if (waveAnimFrameIndex >= WAVE_ANIMATION_FRAMES.length) {
+            state.routineSecondary = 0x06;
+            collisionFlags = 0;
+            ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
+        mainFrame = WAVE_ANIMATION_FRAMES[waveAnimFrameIndex++];
     }
 
     @Override
@@ -607,11 +681,13 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     }
 
     private void spawnLaser() {
-        int offset = flipped ? 0x20 : -0x20;
-        int renderFlags = flipped ? 1 : 0;
         ObjectSpawn laserSpawn = new ObjectSpawn(
-                state.x + offset, state.y, Sonic2ObjectIds.OOZ_BOSS, SUB_LASER, renderFlags, false, 0);
-        spawnFreeChild(() -> new Sonic2OOZBossInstance(laserSpawn));
+                state.x, state.y, Sonic2ObjectIds.OOZ_BOSS, SUB_LASER, flipped ? 1 : 0, false, 0);
+        spawnFreeChild(() -> {
+            Sonic2OOZBossInstance laser = new Sonic2OOZBossInstance(laserSpawn);
+            laser.laserParent = this;
+            return laser;
+        });
         ObjectServices services = tryServices();
         if (services != null) {
             services.playSfx(Sonic2Sfx.LASER_BURST.id);

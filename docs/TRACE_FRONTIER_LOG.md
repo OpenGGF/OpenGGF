@@ -6,16 +6,56 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2 round 26: the S2 sweep is 15 green /
-4 expected-red. ARZ2 advances to f3171 / 703 (`obj_s27_slot` expected `0x27`,
-actual `0x23`) after Obj91 patrol-bubble reset timing was aligned to the ROM
-byte timer; CNZ2 advances to f9946 / 300 (`x_speed`
+Current branch-local S2 state after integrating ARZ2 and OOZ2 round 26: the S2
+sweep is 15 green / 4 expected-red. ARZ2 advances to f3171 / 703
+(`obj_s27_slot` expected `0x27`, actual `0x23`) after Obj91 patrol-bubble reset
+timing was aligned to the ROM byte timer; CNZ2 remains at f9946 / 300 (`x_speed`
 expected `0x0200`, actual `0x08A8`) after the shared hurt reset path clears
 roll-jump before setting airborne recoil; MTZ3 remains parked at f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`); OOZ1 is green; and OOZ2 advances
-to f10129 / 388 (`tails_x_speed` expected `0x0000`, actual `0x0200`) after
-Obj07 skips CPU Tails' dead-fall routine instead of re-seating stale support on
-the boss-lowered oil plane.
+to f10340 / 353 (`tails_x_speed` expected `0x0000`, actual `0x0200`) after Obj55
+laser children defer collision until their ROM init pass and floor waves delete
+through the finite `Ani_obj55` script.
+
+## 2026-07-01 - S2 OOZ2 Obj55 laser/wave lifecycle advances f10129 to f10340
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round26-next` /
+  `bugfix/ai-s2-ooz2-round26-next`, based on campaign commit `68855fa02`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced OOZ2 f10129 / 388 errors (`tails_x_speed` expected `0x0000`,
+  actual `0x0200`).
+- Evidence: the f10129/f10130 window showed the engine letting an Obj55 floor-wave
+  child hurt CPU Tails one frame before the ROM. The next frontier then exposed
+  the same missing Obj55 wave lifetime: the engine still had the full wave chain
+  collidable through Sonic's f10175 overlap while the ROM had already advanced old
+  segments through their animation tail.
+- ROM refs: Obj55 laser fire allocates a child and writes only Obj55 id,
+  `boss_subtype=8`, and the parent pointer before returning
+  (`docs/s2disasm/s2.asm:68588-68602`). Obj55 laser init later copies the parent
+  position, applies the x-flip offset, sets velocity/collision, and returns
+  before the moving laser routine can run (`docs/s2disasm/s2.asm:68818-68854`).
+  Obj55 wave creation/spread uses `routine_secondary=4`, collision `$8B`, delay
+  5, count 7, and `AllocateObjectAfterCurrent` copies before offsetting each next
+  segment (`docs/s2disasm/s2.asm:68902-68964`). The wave's `Ani_obj55` script ends
+  with `$FA`, and S2 `AnimateSprite` maps `$FA` to `routine_secondary += 2`,
+  selecting Obj55's delete entry (`docs/s2disasm/s2.asm:68959-68992,30422-30503`).
+- Fix: `Sonic2OOZBossInstance` now models pending Obj55 lasers separately from
+  initialized laser projectiles, defers their same-frame update path, initializes
+  them from the live shooter state, and runs the finite wave animation before
+  deleting wave children.
+- Result:
+  `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red but
+  advances to f10340 / 353 errors. The new first mismatch is a later CPU Tails
+  laser-contact timing cluster (`tails_x_speed` expected `0x0000`, actual
+  `0x0200`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at OOZ2 f10340 / 353.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 0 with `maven.test.failure.ignore=true`: OOZ1 green; ARZ2 unchanged
+    at f2565 / 713; CNZ2 unchanged at f9946 / 300; MTZ3 unchanged at f13336 /
+    352; OOZ2 advanced to f10340 / 353.
 
 ## 2026-07-01 - S2 ARZ2 Obj91 byte-timer reset advances f2565 to f3171
 
