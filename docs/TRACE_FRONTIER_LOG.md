@@ -13,8 +13,9 @@ matching the `Obj89_Init` sidekick bypass. OOZ2 is f12107 / 99
 (`tails_g_speed` expected `0x00A4`, actual `0x0000`). CNZ2 remains f9946 / 300
 (`x_speed` expected `0x0200`, actual `0x08A8`) and MTZ3 remains f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`). Full S2 is 15 green / 4
-expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. CNZ2,
-MTZ3, and OOZ2 round 35 made no commits. No S2 trace greened in round 36.
+expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. CNZ2
+and MTZ3 round 36 made no commits; the replacement OOZ2 round 36 worker is
+still running. No S2 trace greened in round 36.
 
 ## 2026-07-01 - S2 ARZ2 Obj89 init sidekick flight bypass advances f4692 to f4707
 
@@ -56,6 +57,45 @@ MTZ3, and OOZ2 round 35 made no commits. No S2 trace greened in round 36.
 - Object/rewind guards:
   `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.tests.TestNoServicesInObjectConstructors,com.openggf.level.objects.TestObjectServicesMigrationGuard" "-DfailIfNoTests=false" test`
   passed 20/20.
+
+## 2026-07-01 - S2 round 36 partial integrated campaign baseline
+
+Integrated on `bugfix/ai-s2-trace-next`:
+- `d5cd44e0d` (`fix(s2): honor ARZ boss Tails flight gate`) advances ARZ2
+  f4692 / 1052 (`obj_s12_type` expected `0x89`, actual missing) -> f4707 /
+  1945 (`x` expected `0x2B4D`, actual `0x2B4F`).
+- CNZ2 round-36 made no commit. BizHawk probing confirmed ROM writes Tails
+  Stop and then the Tails Stop script frame `$67` is involved; a solid
+  push-clear candidate did not advance CNZ2, so it was rejected. CNZ2 remains
+  f9946 / 300 (`x_speed` expected `0x0200`, actual `0x08A8`).
+- MTZ3 round-36 made no commit. PC probing captured ROM `Touch_ChkValue` ->
+  `Touch_Hurt` -> `HurtCharacter` on Obj53 slot `$24` before the next
+  `Obj53_OrbitBoss` call, with `Hurt_Reverse` using Obj53 position
+  `$2B55,$0493` to flip `x_speed` to `+0200`; the tested owner-local
+  candidates did not advance MTZ3. MTZ3 remains f13336 / 352 (`x_speed`
+  expected `0x0200`, actual `-0200`).
+- The replacement OOZ2 round-36 worker is still running at this snapshot.
+- No S2 trace greened in the accepted round-36 work so far, so no round-36
+  change has been banked into `next`.
+
+Integrated verification on `bugfix/ai-s2-trace-next`:
+- Focused S2 and preservation subset:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle,com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.TestRewindCoverageGuard,com.openggf.tests.TestNoServicesInObjectConstructors,com.openggf.tests.TestObjectServicesMigrationGuard" "-DfailIfNoTests=false" test`
+  passed the object occupancy oracle and the requested green S2 traces (ARZ1
+  and OOZ1); the expected-red traces held at ARZ2 f4707 / 1945, CNZ2 f9946 /
+  300, MTZ3 f13336 / 352, and OOZ2 f12107 / 99.
+- Full S2 sweep:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 19 tests with 15 green / 4 expected-red at: ARZ2 f4707 / 1945, CNZ2
+  f9946 / 300, MTZ3 f13336 / 352, OOZ2 f12107 / 99.
+- Full S1 sweep:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 29 tests with 0 failures and only the existing S1 mapping warnings.
+- S3K guard:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+  ran 68 checks with the two known S3K AIZ expected-reds only: complete-run
+  f1095 / 4319 (`x_speed` expected `0x0000`, actual `0x000C`) and level-select
+  f8941 / 1160 (`camera_y` expected `0x02C1`, actual `0x02B9`).
 
 ## 2026-07-01 - S2 ARZ2 Obj02_Dead continuation advances f4617 to f4692
 
