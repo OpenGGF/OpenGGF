@@ -66,6 +66,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
     private static final int DEBRIS_PIECE_MASK = 0x0F;
     private static final int DEBRIS_FRAME_SHIFT = 4;
     private static final int DEBRIS_FRAME_MASK = 0x0F;
+    private static final int APPROX_RENDER_Y_MARGIN = 32;
 
     // Debris fragment velocities from word_25BBE and delays from byte_25BB0
     // Format: x velocity, y velocity, delay
@@ -103,6 +104,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
     private int velY;
     private int debrisDelay;       // objoff_3F in ROM - delay before debris starts moving
     private SpriteMappingPiece debrisPiece;  // single piece for debris mode
+    private boolean romRenderOnScreen;
     public RisingPillarObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         this.x = spawn.x();
@@ -118,6 +120,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
         this.velY = 0;
         this.debrisDelay = 0;
         this.debrisPiece = null;
+        this.romRenderOnScreen = true;
 
         updateDynamicSpawn(x, y);
     }
@@ -215,23 +218,21 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
         // Check delay (objoff_3F)
         if (debrisDelay > 0) {
             debrisDelay--;
-            return;
+        } else {
+            // ROM loc_25B9A does ObjectMove first, then adds gravity to y_vel.
+            // Doing gravity first applies one frame's acceleration to the
+            // current frame's motion and accumulates y-position drift.
+            subX += velX;
+            subY += velY;
+            x = subX >> 8;
+            y = subY >> 8;
+            velY += GRAVITY;
         }
 
-        // ROM loc_25B9A (s2.asm:51466-51468) does: ObjectMove first, THEN add
-        // gravity to y_vel. Doing gravity first applies one frame's worth of
-        // acceleration to the current frame's motion and accumulates a
-        // y-position drift of N*gravity sub-units over N frames.
-        subX += velX;
-        subY += velY;
-        x = subX >> 8;
-        y = subY >> 8;
-        velY += GRAVITY;
-
         // ROM loc_25BA4 tests render_flags.on_screen and jumps to DeleteObject
-        // when BuildSprites cleared the render-bounds bit
+        // when the previous BuildSprites pass cleared the render-bounds bit
         // (docs/s2disasm/s2.asm:51885-51888).
-        if (!isWithinSolidContactBounds()) {
+        if (!romRenderOnScreen) {
             setDestroyed(true);
         }
     }
@@ -324,6 +325,13 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
             }
         }
 
+        // ROM Obj2B breaks from Obj2B_Main through loc_25ACE, spawns the debris
+        // in loc_25BF6, then immediately branches to loc_25B8E for the parent
+        // object, so piece 0 moves on the same frame as the standing contact
+        // (docs/s2disasm/s2.asm:51840-51855,51875-51888,51909-51949).
+        updateDebris();
+        updateDynamicSpawn(x, y);
+
         LOGGER.fine(() -> String.format("Rising pillar at (%d,%d) broke into debris", spawn.x(), spawn.y()));
     }
 
@@ -380,6 +388,22 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
 
         GraphicsManager graphicsManager = services().graphicsManager();
         renderPieceWithArtTile(graphicsManager, debrisPiece, x, y, false, false);
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (routine == 4) {
+            romRenderOnScreen = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
+        }
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // Obj2B sets render_flags.level_fg and width_pixels but does not set
+        // render_flags.explicit_height, so S2 BuildSprites uses its approximate
+        // +/-32px Y band before setting render_flags.on_screen.
+        // docs/s2disasm/s2.asm:30569-30588
+        return APPROX_RENDER_Y_MARGIN;
     }
 
     /**
@@ -486,6 +510,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
         private int delay;
         private int mappingFrame;
         private int pieceIndex;
+        private boolean romRenderOnScreen;
         private final SpriteMappingPiece piece;
 
         public RisingPillarDebrisInstance(int x, int y, int velX, int velY, SpriteMappingPiece piece, int delay) {
@@ -516,6 +541,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
             this.delay = delay;
             this.mappingFrame = mappingFrame;
             this.pieceIndex = pieceIndex;
+            this.romRenderOnScreen = true;
         }
 
         @Override
@@ -571,21 +597,31 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
             // Handle spawn delay (objoff_3F)
             if (delay > 0) {
                 delay--;
-                return;
+            } else {
+                subX += velX;
+                subY += velY;
+                currentX = subX >> 8;
+                currentY = subY >> 8;
+                velY += GRAVITY;
             }
 
-            // Apply gravity and move
-            velY += GRAVITY;
-            subX += velX;
-            subY += velY;
-            currentX = subX >> 8;
-            currentY = subY >> 8;
-
-            // ROM loc_25BA4 tests render_flags.on_screen, not a broad persistence
-            // margin (docs/s2disasm/s2.asm:51885-51888).
-            if (!isWithinSolidContactBounds()) {
+            // ROM loc_25BA4 tests the previous BuildSprites on-screen bit.
+            // BuildSprites uses a 32px approximate Y band for Obj2B debris
+            // because Obj2B does not set render_flags.explicit_height.
+            // docs/s2disasm/s2.asm:30569-30588,51885-51888
+            if (!romRenderOnScreen) {
                 setDestroyed(true);
             }
+        }
+
+        @Override
+        public void refreshPostCameraRenderState() {
+            romRenderOnScreen = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
+        }
+
+        @Override
+        public int getOnScreenHalfHeight() {
+            return APPROX_RENDER_Y_MARGIN;
         }
 
         @Override

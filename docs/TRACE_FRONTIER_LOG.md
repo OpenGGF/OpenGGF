@@ -6,16 +6,17 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 33 OOZ2 work: ARZ2 is f4046 / 1509
-(`obj_extra_s33_x` expected absent, actual `0x1EE1`) after Obj83 parent and
-child platform slots started using the ROM `PlatformObject` ground half-height;
-OOZ2 is f12107 / 99 (`tails_g_speed` expected `0x00A4`, actual `0x0000`) after
-Obj07 standing oil support began ticking `oil_char2submersion` before the
-airborne support-release branch. CNZ2 remains f9946 / 300 (`x_speed` expected
-`0x0200`, actual `0x08A8`) and MTZ3 remains f13336 / 352 (`x_speed` expected
-`0x0200`, actual `-0200`). Full S2 is 15 green / 4 expected-red, full S1
-remains green, and the S3K AIZ guard is unchanged. No S2 trace greened in round
-33, so no round-33 change has been banked into `next`.
+Current branch-local S2 state after round 33 integration: ARZ2 is f4548 / 1058
+(`obj_extra_s11_x` expected absent, actual `0x2800`) after Obj2B rising-pillar
+debris moved/deleted from the ROM debris/render-flag path and Obj8C Whisp chase
+orientation targeted the closest ROM player; OOZ2 is f12107 / 99
+(`tails_g_speed` expected `0x00A4`, actual `0x0000`) after Obj07 standing oil
+support began ticking `oil_char2submersion` before the airborne support-release
+branch. CNZ2 remains f9946 / 300 (`x_speed` expected `0x0200`, actual
+`0x08A8`) and MTZ3 remains f13336 / 352 (`x_speed` expected `0x0200`, actual
+`-0200`). Full S2 is 15 green / 4 expected-red, full S1 remains green, and the
+S3K AIZ guard is unchanged. No S2 trace greened in round 33, so no round-33
+change has been banked into `next`.
 
 ## 2026-07-01 - S2 OOZ2 Obj07 submersion tick advances f11038 to f12107
 
@@ -56,6 +57,52 @@ remains green, and the S3K AIZ guard is unchanged. No S2 trace greened in round
   `$2940,$028E` while the ROM keeps Tails riding Obj07 with Obj55 visible near
   `$2940,$0299`; this points at OOZ boss touch/snapshot timing, not the Obj07
   submersion counter.
+
+## 2026-07-01 - S2 ARZ2 Obj2B debris and Obj8C targeting advances f4046 to f4548
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round33-next` /
+  `bugfix/ai-s2-arz2-round33-next`, based on campaign commit `037f7545b`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+  reproduced ARZ2 f4046 / 1509 errors (`obj_extra_s33_x` expected absent,
+  actual `0x1EE1`).
+- Evidence: the first f4046 mismatch was Obj2B parent debris slot `$19`.
+  ROM had already branched from `loc_25ACE` into `loc_25B8E` for the parent
+  piece and moved it to `$1EDF,$0340`, while the engine transformed the parent
+  into debris but left it at `$1EE1,$0342` until the next update. After that
+  fix, ARZ2 advanced to f4120, where first-pillar debris was being deleted from
+  a fresh update-time bounds check and freeing slots before the second Obj2B
+  cluster allocated; ROM kept those debris SST entries live until the previous
+  `BuildSprites` on-screen bit cleared. The final f4284 mismatch was Obj8C
+  Whisp slot `$1D`, one pixel ahead because Whisp chase orientation was using
+  only the update player instead of `Obj_GetOrientationToPlayer`'s closer of
+  Sonic/Tails by horizontal distance.
+- ROM refs: Obj2B break calls `loc_25BF6`, releases standing players, then
+  branches directly to `loc_25B8E`; `loc_25B8E` decrements the debris delay or
+  runs `ObjectMove`, then adds `$18` to `y_vel`, and deletes only when
+  `render_flags.on_screen` from the previous display pass is clear. S2
+  `BuildSprites` clears/sets that bit with `width_pixels` and, for Obj2B
+  without `render_flags.explicit_height`, the approximate +/-32px Y band.
+  Obj8C's chase routine calls `Obj_GetOrientationToPlayer`, which compares
+  Sonic and Tails horizontal distance, keeps Sonic on ties, then uses the same
+  selected character for vertical orientation before applying
+  `Obj8C_MovementDeltas` (`docs/s2disasm/s2.asm:30569-30588,51840-51855,
+  51875-51888,51909-51949,72812-72834,73231-73249`).
+- Fix: `RisingPillarObjectInstance` now runs the parent debris pass on the
+  break frame, uses ObjectMove-before-gravity ordering for parent and child
+  debris, and caches the previous post-camera render flag with the S2
+  approximate Y band for debris deletion. `WhispBadnikInstance` now targets the
+  closest ROM player for chase orientation. Focused comparison-only oracles
+  cover f4046 parent debris movement, f4120 Obj2B high-slot preservation, and
+  f4284 Whisp closest-player targeting.
+- Result:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+  now reaches ARZ2 f4548 / 1058 errors (`obj_extra_s11_x` expected absent,
+  actual `0x2800`).
+- Same-game preservation subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+  ran the requested guards: ARZ1 and OOZ1 passed; CNZ2 preserved f9946 / 300,
+  MTZ3 preserved f13336 / 352, and OOZ2 preserved f11038 / 117.
 
 ## 2026-07-01 - S2 ARZ2 Obj83 PlatformObject ground half-height advances f3707 to f4046
 
