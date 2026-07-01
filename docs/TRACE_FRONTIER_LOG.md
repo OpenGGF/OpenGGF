@@ -6,6 +6,46 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 OOZ1 Aquis shot cadence and x-flip (f7467 -> f7584)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-round15-next` /
+  `bugfix/ai-s2-ooz1-round15-next`, based on `bugfix/ai-s2-trace-next` at
+  `6c1eb60bd`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtrace.context.diagnosticChars=full" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" test`
+  exited 1 with OOZ1 f7467 / 556 errors (`x_speed` expected `-0200`,
+  actual `0x036C`).
+- Triage/evidence: f7467 showed ROM Sonic entering hurt routine 4 from Aquis
+  bullet slot 21 (`0x50 @27A7,0307 rtn=06`) while the engine had the parent
+  Aquis near the ROM parent but no bullet near Sonic. Earlier Aquis shots also
+  depend on the layout x-flip state before a chase frame refreshes facing.
+  S2 Obj50 runs `Obj50_WaitForNextShot` before `Obj50_ChkIfShoot`, clears
+  `Obj50_shooting_flag` on the expiry frame, and still falls through to the
+  shot check in the same object pass. The shot counter branches to escape only
+  when the decremented byte is negative. Obj50 then uses the stored
+  `status.npc.x_flip` bit to choose the bullet's horizontal offset and velocity;
+  clear status is the left-facing/left-firing state for Aquis
+  (`docs/s2disasm/s2.constants.asm:224`;
+  `docs/s2disasm/s2.asm:60679-60721,60726-60743,60757-60769`).
+- Fix: `AquisBadnikInstance` now initializes clear render x-flip as
+  `facingLeft`, preserves the shooting flag when entering the wait state,
+  runs the wait/expiry path before the shot check, allows the zero shot count
+  to take the ROM's final cycle, and fires bullets from the stored Obj50 facing
+  state.
+- Result:
+  `TestS2OozLevelSelectTraceReplay#replayMatchesTrace`: f7467 / 556 errors
+  (`x_speed` expected `-0200`, actual `0x036C`) -> f7584 / 384 errors
+  (`y_speed` expected `-0370`, actual `0x0370`). The new owner is the later
+  vertical bounce/hurt mismatch after the Aquis bullet contacts now align.
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.sonic2.objects.badniks.TestS2OozBadnikParity" "-DfailIfNoTests=false" test`
+    exited 0; 7 / 7 focused OOZ badnik tests passed.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtrace.context.diagnosticChars=full" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" test`
+    exited 1 with the improved f7584 / 384 OOZ1 frontier above.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.TestS2ObjectOccupancyOracle#ooz1LauncherBallChainKeepsSourceBeforeTargetAtRomFrame5957" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" test`
+    exited 1 with OOZ2 holding its accepted red f9307 / 444 frontier and the
+    OOZ1 slot-occupancy oracle passing.
+
 ## 2026-07-01 - S2 campaign integrated sweep after round 14 ARZ2/HTZ2/MTZ3/OOZ1 merges
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /
