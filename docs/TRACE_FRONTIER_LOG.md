@@ -6,7 +6,7 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after OOZ1 round 22 integration: the S2 sweep is
+Current branch-local S2 state after OOZ2 round 22 integration: the S2 sweep is
 15 green / 4 expected-red. ARZ2 remains parked at
 f2016 / 753 (`obj_extra_s21_x` expected absent, actual `0x1433`) after
 backward post-camera placement includes the object group exactly on the
@@ -18,6 +18,32 @@ after the MTZ Obj54 event spawn reserves its ROM SST slot before spawning the
 Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9342 / 505
 (`tails_x_sub` expected `0x4700`, actual `0xC700`) after trace capture keeps
 the ROM Obj02 hurt routine visible for object-solid landing samples.
+
+## 2026-07-01 - S2 round 22 integrated verification after OOZ2 advance
+
+- Campaign branch/worktree: `bugfix/ai-s2-trace-next` /
+  `.worktrees/ai-s2-trace-next`, after merging
+  `bugfix/ai-s2-ooz2-round22-next` at `e188e0688`.
+- Focused OOZ2/unit verification:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.sprites.playable.TestAbstractPlayableSpriteRewindCapture,com.openggf.sprites.playable.TestTraceCharacterState" "-DfailIfNoTests=false" test`
+  completed with the two unit classes green and OOZ2 expected-red at f9342 /
+  505 (`tails_x_sub` expected `0x4700`, actual `0xC700`).
+- S2 sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  completed 19 tests: 15 green / 4 expected-red. ARZ2 held f2016 / 753,
+  CNZ2 held f9487 / 288, MTZ3 held f13336 / 352, OOZ1 stayed green, and OOZ2
+  held the new f9342 / 505 frontier.
+- S1 preservation:
+  `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  completed 29 / 29 green with only the known S1 mapping warnings.
+- S3K guard:
+  `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+  completed 68 checks: 66 green plus the two known AIZ expected-reds
+  (`TestS3kAizCompleteRunTraceReplay` f1095 / 4319 and
+  `TestS3kAizTraceReplay` f8941 / 1160). A broader WIP S3K trace sweep was
+  also tried with a larger heap and reproduced existing non-guard S3K red
+  traces; those are not part of the conductor S3K guard used for this S2
+  campaign.
 
 ## 2026-07-01 - S2 OOZ2 object-solid hurt routine capture advances f9341 to f9342
 
