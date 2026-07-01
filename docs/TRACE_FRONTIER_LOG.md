@@ -17,6 +17,39 @@ to f10340 / 353 (`tails_x_speed` expected `0x0000`, actual `0x0200`) after Obj55
 laser children defer collision until their ROM init pass and floor waves delete
 through the finite `Ani_obj55` script.
 
+## 2026-07-01 - S2 round 26 integrated baseline
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next`, campaign head `0ba2024f9` after integrating the
+  ARZ2 and OOZ2 round-26 advances. CNZ2 made no commit; MTZ3 rejected a
+  regressing Obj54 hit-reaction experiment and made no commit.
+- Integrated changes:
+  - ARZ2: Obj91 post-bubble reset now models the ROM word-write/byte-decrement
+    timer quirk, advancing ARZ2 from f2565 / 713 to f3171 / 703.
+  - OOZ2: Obj55 pending laser and wave lifecycle now follows the ROM child init
+    and finite animation/delete path, advancing OOZ2 from f10129 / 388 to f10340
+    / 353.
+- Focused combined validation:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 0 with `maven.test.failure.ignore=true`: OOZ1 green; ARZ2 f3171 /
+  703; CNZ2 f9946 / 300; MTZ3 f13336 / 352; OOZ2 f10340 / 353.
+- S2 sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  exited 0 with `maven.test.failure.ignore=true`: 19 tests, 15 green / 4
+  expected-red. Remaining red frontiers are ARZ2 f3171 / 703
+  (`obj_s27_slot` expected `0x27`, actual `0x23`), CNZ2 f9946 / 300
+  (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 f13336 / 352
+  (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 f10340 / 353
+  (`tails_x_speed` expected `0x0000`, actual `0x0200`).
+- S1 preservation:
+  `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  exited 0 with 29 tests, 0 failures, and the existing S1 mapping warnings.
+- S3K preservation:
+  the AIZ trace/complete-run guard plus S3K loading/bootstrap/decoding tests
+  exited 0 with `maven.test.failure.ignore=true`: 68 checks, 66 green and the
+  same two known expected-red AIZ frontiers (`TestS3kAizCompleteRunTraceReplay`
+  f1095 / 4319 `x_speed`; `TestS3kAizTraceReplay` f8941 / 1160 `camera_y`).
+
 ## 2026-07-01 - S2 OOZ2 Obj55 laser/wave lifecycle advances f10129 to f10340
 
 - Worktree/branch: `.worktrees/ai-s2-ooz2-round26-next` /
