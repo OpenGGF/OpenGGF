@@ -15,7 +15,7 @@ Obj02_Dead continuation frames stopped running the live airborne
 (`x_speed` expected `0x0200`, actual `0x08A8`) and MTZ3 remains f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`). Full S2 is 15 green / 4
 expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. CNZ2,
-MTZ3, and OOZ2 round 34 made no commits. No S2 trace greened in round 35.
+MTZ3, and OOZ2 round 35 made no commits. No S2 trace greened in round 35.
 
 ## 2026-07-01 - S2 ARZ2 Obj02_Dead continuation advances f4617 to f4692
 
@@ -57,6 +57,37 @@ MTZ3, and OOZ2 round 34 made no commits. No S2 trace greened in round 35.
   warnings.
   `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
   ran 68 checks with only the existing S3K AIZ expected-reds: complete-run
+  f1095 / 4319 (`x_speed` expected `0x0000`, actual `0x000C`) and level-select
+  f8941 / 1160 (`camera_y` expected `0x02C1`, actual `0x02B9`).
+
+## 2026-07-01 - S2 round 35 integrated campaign baseline
+
+Integrated on `bugfix/ai-s2-trace-next`:
+- `ac454f6b9` (`fix(s2): skip boundary clamp in Tails dead fall`) advances
+  ARZ2 f4617 / 1053 (`tails_x` expected `0x2820`, actual `0x2A50`) -> f4692 /
+  1052 (`obj_s12_type` expected `0x89`, actual missing).
+- CNZ2 round-35 made no commit. Diagnostic-only probing again showed
+  engine-only Tails Obj08 skid dust allocating slot 25 at f7984 and displacing
+  ROM Obj51 from slot 25 to slot 28 by f7995.
+- MTZ3 round-35 made no commit. Its BizHawk probe over BK2 frames 39494-39504
+  completed without Obj53 hook/sample evidence, so no genuine advancing fix was
+  established.
+- OOZ2 round-35 made no commit. Obj55/Touch_Boss disassembly was inspected, but
+  the prepared comparison-only BizHawk probe produced an empty output file.
+- No S2 trace greened in round 35, so no round-35 change was banked into
+  `next`.
+
+Integrated verification on `bugfix/ai-s2-trace-next`:
+- Full S2 sweep:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 19 tests with 15 green / 4 expected-red at: ARZ2 f4692 / 1052, CNZ2
+  f9946 / 300, MTZ3 f13336 / 352, OOZ2 f12107 / 99.
+- Full S1 sweep:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 29 tests with 0 failures and only the existing S1 mapping warnings.
+- S3K guard:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+  ran 68 checks with the two known S3K AIZ expected-reds only: complete-run
   f1095 / 4319 (`x_speed` expected `0x0000`, actual `0x000C`) and level-select
   f8941 / 1160 (`camera_y` expected `0x02C1`, actual `0x02B9`).
 
