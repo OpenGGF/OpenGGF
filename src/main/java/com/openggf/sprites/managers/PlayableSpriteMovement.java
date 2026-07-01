@@ -667,6 +667,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 
+		SidekickCpuController sidekickCpu = sprite.getCpuController();
+		if (sidekickCpu != null && sidekickCpu.isDeferredDespawnDeadFallContinuingThisFrame()) {
+			// S2 Obj02_Dead (s2.asm:41131-41137) does not call Tails_LevelBound;
+			// it only runs ObjectMoveAndFall before recording/displaying Tails.
+			// Running the live airborne boundary path here clamps x_pos to
+			// Tails_Min_X_pos+$10 when the falling corpse re-enters from the left.
+			doObjectMoveAndFall();
+			return;
+		}
+
 		// Knuckles glide states 1-2 use custom physics
 		int glideState = sprite.getDoubleJumpFlag();
 		boolean inGlide = (glideState == 1 || glideState == 2)
@@ -756,7 +766,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// dead Tails on the CollapsingPlatform below (y_speed snapped to
 			// 0, position frozen), but ROM kept Tails falling through it.
 			doObjectMoveAndFall();
-			SidekickCpuController kc = sprite.getCpuController();
+			SidekickCpuController kc = sidekickCpu;
 			boolean deferredContinuation =
 					kc != null && kc.isDeferredDespawnDeadFallContinuingThisFrame();
 			if (!deferredContinuation) {

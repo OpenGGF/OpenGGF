@@ -6,17 +6,59 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 34 ARZ2 checkpoint work: ARZ2 is
-f4617 / 1053 (`tails_x` expected `0x2820`, actual `0x2A50`) after Obj79
-checkpoint dongle native `x_pos/y_pos` now remain at RAM default zero on the
-allocation frame until routine 6 publishes the orbit position; OOZ2 is f12107 / 99
-(`tails_g_speed` expected `0x00A4`, actual `0x0000`) after Obj07 standing oil
-support began ticking `oil_char2submersion` before the airborne support-release
-branch. CNZ2 remains f9946 / 300 (`x_speed` expected `0x0200`, actual
-`0x08A8`) and MTZ3 remains f13336 / 352 (`x_speed` expected `0x0200`, actual
-`-0200`). Full S2 is 15 green / 4 expected-red, full S1 remains green, and the
-S3K AIZ guard is unchanged. CNZ2, MTZ3, and OOZ2 round 34 made no commits. No
-S2 trace greened in round 34.
+Current branch-local S2 state after round 35 ARZ2 death-fall work: ARZ2 is
+f4692 / 1052 (`obj_s12_type` expected `0x89`, actual missing) after S2
+Obj02_Dead continuation frames stopped running the live airborne
+`Tails_LevelBound` clamp that had snapped Tails from `$2820` to
+`Tails_Min_X_pos+$10 = $2A50` at f4617. OOZ2 is f12107 / 99
+(`tails_g_speed` expected `0x00A4`, actual `0x0000`). CNZ2 remains f9946 / 300
+(`x_speed` expected `0x0200`, actual `0x08A8`) and MTZ3 remains f13336 / 352
+(`x_speed` expected `0x0200`, actual `-0200`). Full S2 is 15 green / 4
+expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. CNZ2,
+MTZ3, and OOZ2 round 34 made no commits. No S2 trace greened in round 35.
+
+## 2026-07-01 - S2 ARZ2 Obj02_Dead continuation advances f4617 to f4692
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round35-next` /
+  `bugfix/ai-s2-arz2-round35-next`, based on campaign commit `cfdf07a97`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced ARZ2 f4617 / 1053 errors (`tails_x` expected `0x2820`, actual
+  `0x2A50`).
+- Evidence: expanded trace context showed Tails matching ROM through f4616 and
+  only `tails_x` snapping at f4617, while routine, status, y position, and
+  speeds stayed aligned. The actual `0x2A50` value is `Tails_Min_X_pos+$10`,
+  the left-boundary clamp from `Tails_LevelBound`, not an Obj04 ride state.
+  Nearby Obj04 entries are ARZ water-surface display objects, not solid
+  moving platforms.
+- ROM refs: S2 `Tails_LevelBound` predicts X and clamps to
+  `Tails_Min_X_pos+$10` / right boundary before the bottom-kill check, while
+  `Obj02_Dead` only calls `Obj02_CheckGameOver`, `ObjectMoveAndFall`,
+  `Tails_RecordPos`, animation, DPLC, and display; it does not call
+  `Tails_LevelBound` on the routine-6 corpse-fall frames
+  (`docs/s2disasm/s2.asm:40259-40316,41131-41154`).
+- Fix: `PlayableSpriteMovement.modeAirborne` now detects the existing S2
+  deferred dead-fall continuation flag before the live airborne boundary path
+  and runs only `ObjectMoveAndFall`, matching `Obj02_Dead` and preserving the
+  ROM X while Tails falls back through the visible window.
+- Result:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  now reaches ARZ2 f4692 / 1052 errors (`obj_s12_type` expected `0x89`,
+  actual missing).
+- Same-game preservation subset:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  ran 6 requested checks: ARZ1 and OOZ1 passed; ARZ2 advanced to f4692 / 1052;
+  CNZ2 held f9946 / 300, MTZ3 held f13336 / 352, and OOZ2 held f12107 / 99.
+- Shared-code guards:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.tests.TestNoServicesInObjectConstructors,com.openggf.level.objects.TestObjectServicesMigrationGuard" "-DfailIfNoTests=false" test`
+  passed 20/20.
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  passed the full S1 trace sweep, 29/29, with only the existing S1 mapping
+  warnings.
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+  ran 68 checks with only the existing S3K AIZ expected-reds: complete-run
+  f1095 / 4319 (`x_speed` expected `0x0000`, actual `0x000C`) and level-select
+  f8941 / 1160 (`camera_y` expected `0x02C1`, actual `0x02B9`).
 
 ## 2026-07-01 - S2 ARZ2 Obj79 checkpoint dongle advances f4548 to f4617
 
