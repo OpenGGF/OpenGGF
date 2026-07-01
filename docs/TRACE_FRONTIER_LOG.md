@@ -6,6 +6,49 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 OOZ1 Obj50 wing slot order (f5958 -> f6639)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-round13-next` /
+  `bugfix/ai-s2-ooz1-round13-next`, based on campaign head
+  `bugfix/ai-s2-trace-next`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH='s2.gen'; $env:SONIC2_ROM_PATH='s2.gen'; mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" test`.
+  Result before the fix: expected-red OOZ1 f5958 / 665 (`x` expected
+  `0x2440`, actual `0x2430`; engine target Obj48 had run before the source
+  Obj48 moved Sonic into it).
+- Triage/evidence: OOZ1 aux slot events show the ROM source/target launcher
+  balls in slots 17/18 before f5958, while the engine had an Obj50 Aquis wing
+  occupying slot 17, pushing the source LauncherBall to slot 19. The ROM route
+  keeps the relevant Obj50 parent/wing later in the SST around this cluster:
+  parent at slot 28 and wing at slot 34 around f5345/f5346, leaving slots 17/18
+  for Obj48 source/target by f5957. Obj48 detection and same-pass movement are
+  in `docs/s2disasm/s2.asm:51224-51357`; Obj50 parent/wing creation and wing
+  parent validation are in `docs/s2disasm/s2.asm:60567-60616,60637-60652`.
+- Fix: `AquisBadnikInstance` keeps its wing child parent-relative instead of
+  lowest-free relative to unrelated lower slots, and expires the wing when the
+  parent unloads. The focused occupancy oracle now asserts that OOZ1 f5957 has
+  the source LauncherBall in slot 17 and target LauncherBall in slot 18.
+- Result:
+  `TestS2OozLevelSelectTraceReplay#replayMatchesTrace`: f5958 / 665 errors
+  (`x` expected `0x2440`, actual `0x2430`) -> f6639 / 557 errors
+  (`y_speed` expected `-0100`, actual `0x0000`).
+- Verification so far:
+  - `$env:SONIC_2_ROM_PATH='s2.gen'; $env:SONIC2_ROM_PATH='s2.gen'; mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#ooz1LauncherBallChainKeepsSourceBeforeTargetAtRomFrame5957" test`
+    passed the focused slot-order guard.
+  - `$env:SONIC_2_ROM_PATH='s2.gen'; $env:SONIC2_ROM_PATH='s2.gen'; mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" test`
+    exited 1 at the advanced expected-red frontier f6639 / 557.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces. The 13 green traces stayed green; the six
+    expected-red frontiers are ARZ2 f1698 / 1966, CNZ2 f9487 / 288, HTZ2
+    f8530 / 218, MTZ3 f12146 / 650, OOZ1 f6639 / 557, and OOZ2 f9307 / 444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests. The repeated S1 mapping warning at
+    `0xe8df` remains pre-existing.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    completed 68 S3K tests. Bootstrap, decoding, level-loading, and AIZ skip
+    headless checks passed; the two AIZ trace replays stayed at the existing
+    expected-red frontiers: complete-run f1095 / 4319 and AIZ f8941 / 1160.
+
 ## 2026-07-01 - S2 campaign integrated sweep after OOZ1 round 12 merge
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /

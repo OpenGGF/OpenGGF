@@ -11,6 +11,7 @@ import com.openggf.level.objects.BreathingBubbleInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSlotLayout;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
@@ -277,6 +278,34 @@ public class TestS2ObjectOccupancyOracle {
                 "MTZ3 slot 22 must remain the ROM Obj6E platform slot because "
                         + "TailsCPU_UpdateObjInteract dereferences interact(a0)=0x16 live; actual slots "
                         + slotCheck.summary());
+    }
+
+    @Test
+    public void ooz1LauncherBallChainKeepsSourceBeforeTargetAtRomFrame5957() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("ooz", Sonic2ZoneConstants.ZONE_OOZ, 0,
+                (trace, om, frame) -> {
+                    if (frame != 5957) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x48, expected.get(17),
+                            "OOZ1 ROM fixture should keep the source LauncherBall in slot 17 at f5957");
+                    Assertions.assertEquals(0x48, expected.get(18),
+                            "OOZ1 ROM fixture should keep the target LauncherBall in slot 18 at f5957");
+                    Assertions.assertEquals(0x48, actual.get(17),
+                            "OOZ1 source LauncherBall must execute before the target ball at f5958; actual "
+                                    + describeSlots(actual, 16, 22) + " live "
+                                    + describeLiveSlots(om, 16, 35));
+                    Assertions.assertEquals(0x48, actual.get(18),
+                            "OOZ1 target LauncherBall must stay after the source ball at f5958; actual "
+                                    + describeSlots(actual, 16, 22) + " live "
+                                    + describeLiveSlots(om, 16, 35));
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 22)
+                            + " live " + describeLiveSlots(om, 16, 22));
+                });
+        Assertions.assertNotNull(slotCheck);
     }
 
     @Test
@@ -1141,6 +1170,32 @@ public class TestS2ObjectOccupancyOracle {
             }
             sb.append(slot).append(':').append(String.format("%02X", id & 0xFF));
         }
+        return sb.toString();
+    }
+
+    private static String describeLiveSlots(ObjectManager objectManager, int firstSlot, int lastSlot) {
+        StringBuilder sb = new StringBuilder();
+        objectManager.getActiveObjects().stream()
+                .filter(AbstractObjectInstance.class::isInstance)
+                .map(AbstractObjectInstance.class::cast)
+                .filter(instance -> instance.getSlotIndex() >= firstSlot
+                        && instance.getSlotIndex() <= lastSlot)
+                .sorted(java.util.Comparator.comparingInt(AbstractObjectInstance::getSlotIndex))
+                .forEach(instance -> {
+                    if (!sb.isEmpty()) {
+                        sb.append(' ');
+                    }
+                    ObjectSpawn spawn = instance.getSpawn();
+                    int id = spawn == null ? -1 : spawn.objectId();
+                    int x = spawn == null ? -1 : spawn.x();
+                    int y = spawn == null ? -1 : spawn.y();
+                    sb.append(String.format("s%d:%02X@%04X,%04X/%s",
+                            instance.getSlotIndex(),
+                            id & 0xFF,
+                            x & 0xFFFF,
+                            y & 0xFFFF,
+                            instance.getName()));
+                });
         return sb.toString();
     }
 

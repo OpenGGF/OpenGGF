@@ -234,7 +234,9 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
         }
         int wingX = currentX + WING_X_OFFSET;
         int wingY = currentY + WING_Y_OFFSET;
-        wingChild = spawnFreeChild(() -> new AquisWingChild(
+        // ROM OOZ1 route keeps the Obj50 wing after its parent in the SST
+        // during the launcher-ball cluster, preserving Obj48 source/target order.
+        wingChild = spawnChild(() -> new AquisWingChild(
                 new ObjectSpawn(wingX, wingY, spawn.objectId(), 0, spawn.renderFlags(), false, spawn.rawYWord()),
                 this));
         syncWingChild();
@@ -356,6 +358,11 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         expireWingChild();
         super.destroyBadnik(player);
+    }
+
+    @Override
+    public void onUnload() {
+        expireWingChild();
     }
 
     private static final class AquisWingChild extends AbstractObjectInstance implements RewindRecreatable {
