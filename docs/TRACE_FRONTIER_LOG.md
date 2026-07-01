@@ -30376,3 +30376,38 @@ Result:
   (`x_speed` expected `-0037`, actual `-0200`).
 - New owner is the later Sonic rebound/contact timing near the broken Obj53
   shield orb after the boss-orb break-away now reaches the ROM-side window.
+
+### 2026-07-01 -- S2 OOZ2 round 23 Obj07 hurt oil landing handoff
+
+Baseline on `bugfix/ai-s2-ooz2-round23-next` from banked `next`
+`3affd82b4`: `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` failed at
+f9342 / 505 errors, first field `tails_x_sub` (`0x4700` vs `0xC700`). The
+divergence happens while CPU Tails is hurt and being supported by Obj07 oil in
+the boss arena. The ROM has Obj07 clear `Status_InAir`, then the next
+`Obj02_Hurt` tick runs `Tails_HurtStop` and zeroes `y_vel`, `x_vel`, and
+`inertia` before returning to routine 2; the engine was clearing the hurt flag
+immediately from `setAir(false)`, so the hurt-stop velocity zeroing never ran.
+
+Fix:
+- `OilSurfaceManager` now clears air for hurt Obj07 support through
+  `setAirAfterObjectHurtLanding()`, preserving the routine-4 hurt handoff until
+  the next playable update while keeping the landing-frame `RideObject_SetRide`
+  inertia copy. This matches `Obj02_Hurt` / `Tails_HurtStop`
+  (`docs/s2disasm/s2.asm:41063-41118`) and the Obj07 support path
+  (`docs/s2disasm/s2.asm:49659-49749`).
+- Added a focused `TestOilSurfaceManager` regression for hurt landing on oil:
+  the landing frame clears air, stays on object, keeps hurt/routine-4 ownership,
+  and copies `x_vel` to inertia before the later hurt-stop zeroing.
+
+Result:
+- `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace`: f9342 / 505 errors
+  (`tails_x_sub` expected `0x4700`, actual `0xC700`) -> f9392 / 476 errors
+  (`x_speed` expected `0x0200`, actual `-0024`).
+- New owner is the later post-hurt/boss-arena horizontal-speed mismatch after
+  the Obj07 hurt-stop handoff now reaches the ROM-side recovery window.
+
+Verification:
+- Red/green regression: `mvn "-Dtest=com.openggf.tests.TestOilSurfaceManager#hurtLandingOnOilKeepsRoutineFourUntilHurtStop" test` failed before the fix because the oil landing cleared `hurt`, then exited 0 after the fix.
+- Focused target: `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test` exited 1 with the improved expected-red frontier above.
+- OOZ1 preservation: `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test` exited 0.
+- S2 oil preservation: `mvn "-Dtest=com.openggf.tests.TestOilSurfaceManager" test` exited 0.
