@@ -142,6 +142,7 @@ public final class LevelFrameStep {
         }
 
         boolean inlineSolidResolution = levelManager.objectsExecuteAfterPlayerPhysics();
+        SpriteManager spriteManager = context.spriteManager();
         if (inlineSolidResolution) {
             // 2. Inline-order modules need a frame-start snapshot of object touch
             //    state because player-slot ReactToItem runs before ExecuteObjects.
@@ -159,7 +160,12 @@ public final class LevelFrameStep {
 
             // 3. Object execution after player physics, with inline solid checkpoints
             //    so later objects see earlier contact adjustments.
-            wrapper.wrap("objects", levelManager::updateObjectPositionsPostPhysicsWithoutTouches);
+            Runnable afterExecBeforePlacement = spriteManager != null
+                    ? spriteManager::advanceFixedSkidDustAfterObjectExecution
+                    : null;
+            wrapper.wrap("objects",
+                    () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
+                            afterExecBeforePlacement));
         } else {
             LevelEventProvider fixedSlotEvents = context.levelEventProvider();
             if (fixedSlotEvents != null) {
@@ -215,11 +221,10 @@ public final class LevelFrameStep {
         //     transitions. ROM runs the zone handler (DLE_Index) here, after the
         //     scroll, so camera-X gates and the left-boundary lock see the
         //     post-scroll camera. fixed-in-level objects run alongside.
-        SpriteManager spriteManager = context.spriteManager();
         if (levelEvents != null) {
             wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
         }
-        if (spriteManager != null) {
+        if (spriteManager != null && !inlineSolidResolution) {
             wrapper.wrap("fixed-dust", spriteManager::advanceFixedSkidDustAfterObjectExecution);
         }
         if (levelEvents != null) {
