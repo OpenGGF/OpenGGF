@@ -15,9 +15,12 @@ REM     s2.gen
 REM
 REM BizHawk path can be overridden with BIZHAWK_EXE. The launcher writes a
 REM temporary no-audio diagnostic config by default; set BIZHAWK_USE_DIAG_CONFIG=0
-REM to use BizHawk's remembered config instead. Additional EmuHawk flags can be
-REM supplied with BIZHAWK_EXTRA_ARGS. The launcher intentionally keeps EmuHawk
-REM path/movie/lua/ROM quoting simple so positional ROM loading stays reliable.
+REM to use BizHawk's remembered config instead. It also verifies that the Lua
+REM contains the fast-headless template calls; set BIZHAWK_ALLOW_SLOW_LUA=1 only
+REM when deliberately running a visible/interactive diagnostic. Additional
+REM EmuHawk flags can be supplied with BIZHAWK_EXTRA_ARGS. The launcher
+REM intentionally keeps EmuHawk path/movie/lua/ROM quoting simple so positional
+REM ROM loading stays reliable.
 
 setlocal
 
@@ -77,6 +80,13 @@ if not exist "%ROM_PATH%" (
     exit /b 1
 )
 
+if not "%BIZHAWK_ALLOW_SLOW_LUA%"=="1" (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$lua=Get-Content -Raw -LiteralPath $env:LUA_SCRIPT; $missing=@(); if($lua -notmatch 'limitframerate\s*\(\s*false\s*\)'){$missing+='emu.limitframerate(false)'}; if($lua -notmatch 'speedmode\s*\(\s*6400\s*\)'){$missing+='client.speedmode(6400)'}; if($lua -notmatch 'invisibleemulation\s*\(\s*true\s*\)'){$missing+='client.invisibleemulation(true)'}; if($lua -notmatch 'SetSoundOn'){$missing+='client.SetSoundOn(false)'}; if($missing.Count){Write-Host ('ERROR: Lua diagnostic is missing fast-headless template call(s): ' + ($missing -join ', ')); Write-Host 'Copy tools\bizhawk\diag_template_fast.lua or set BIZHAWK_ALLOW_SLOW_LUA=1 for deliberate visible debugging.'; exit 1}"
+    if errorlevel 1 (
+        exit /b 1
+    )
+)
+
 echo === BizHawk Lua Launcher ===
 echo EmuHawk: %BIZHAWK_EXE%
 echo Lua:     %LUA_SCRIPT%
@@ -110,4 +120,5 @@ echo Set BIZHAWK_EXE to override EmuHawk.exe. Diagnostic scripts may also read
 echo OGGF_START, OGGF_STOP, OGGF_OUT, and other script-specific env vars.
 echo Set BIZHAWK_EXTRA_ARGS for rare additional EmuHawk flags.
 echo Set BIZHAWK_USE_DIAG_CONFIG=0 to skip the generated no-audio config.
+echo Set BIZHAWK_ALLOW_SLOW_LUA=1 to skip the fast-headless Lua guard.
 exit /b 1
