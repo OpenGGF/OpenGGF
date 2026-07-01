@@ -9,6 +9,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
@@ -120,6 +121,29 @@ class TestLostRingObjectInstance {
 
         assertEquals(0, ring.floorProbeCount,
                 "cadence-hit Obj37 must still skip terrain while render_flags bit 7 is clear");
+    }
+
+    @Test
+    void s2LostRingFloorProbeUsesLatchedPriorBuildSpritesRenderFlag() {
+        // S2 Obj37_Main reads render_flags bit 7 before RingCheckFloorDist (s2.asm:25215-25217).
+        // BuildSprites clears and refreshes that bit after DisplaySprite using width_pixels=8 and
+        // the assumed 32 px Y band (s2.asm:30560-30588), so the floor probe must observe the
+        // previously latched bit, not a same-step visibility recomputation after movement.
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        LatchedRenderProbeRing ring = new LatchedRenderProbeRing(
+                0x100, 0x00FF, 0, 0x0200);
+
+        ring.update(0, null);
+
+        assertEquals(1, ring.floorProbeCount,
+                "Obj37_Init starts render_flags at $84, so the first cadence hit may probe");
+        assertFalse(ring.renderFlagForTest(),
+                "post-step BuildSprites should clear bit 7 once y_pos reaches the assumed-height band edge");
+
+        ring.update(1, null);
+
+        assertEquals(1, ring.floorProbeCount,
+                "the next object step must consume the latched clear bit and skip terrain");
     }
 
     @Test
@@ -241,6 +265,35 @@ class TestLostRingObjectInstance {
         @Override
         protected int ringCheckCeilingDist(int x, int y) {
             ceilingProbeCount++;
+            return 0;
+        }
+    }
+
+    private static final class LatchedRenderProbeRing extends LostRingObjectInstance {
+        int floorProbeCount;
+
+        private LatchedRenderProbeRing(int xPixel, int yPixel, int xVel, int yVel) {
+            super(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF, 0x37, 0, 0, false, 0));
+            initFixedPointForTest(xPixel, yPixel, xVel, yVel, 0, 0xFF);
+        }
+
+        boolean renderFlagForTest() {
+            return hasRomRenderFlagForFloorProbe();
+        }
+
+        @Override
+        protected int resolveFloorCheckMask() {
+            return com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2;
+        }
+
+        @Override
+        protected int resolveVblaCounter() {
+            return 0;
+        }
+
+        @Override
+        protected int ringCheckFloorDist(int x, int y) {
+            floorProbeCount++;
             return 0;
         }
     }

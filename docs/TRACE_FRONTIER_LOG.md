@@ -6,11 +6,60 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after OOZ1 round 18 integration: the S2 sweep
-remains 14 green / 5 expected-red. ARZ2 is at f1820 / 912
-(`obj_extra_s47_x` expected absent, actual `0x1442`), OOZ1 advances to
-f7731 / 490 (`y` expected `0x0374`, actual `0x036E`), CNZ2 remains parked at
-f9487 / 288, MTZ3 remains f12897 / 490, and OOZ2 remains f9307 / 430.
+Current branch-local S2 state after ARZ2 round 19 integration: the S2 sweep
+remains 14 green / 5 expected-red. ARZ2 advances to f1993 / 842
+(`obj_s12_slot` expected `0x12`, actual `0x34`) after Obj37 lost rings consume
+the ROM-latched render flag before floor probes; OOZ1 is at f7731 / 490 (`y`
+expected `0x0374`, actual `0x036E`); CNZ2 remains parked at f9487 / 288; MTZ3
+remains f12897 / 490; and OOZ2 remains f9307 / 430.
+
+## 2026-07-01 - S2 ARZ2 Obj37 render-flag latch advances f1820 to f1993
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round19-next` /
+  `bugfix/ai-s2-arz2-round19-next`, based on
+  `bugfix/ai-s2-trace-next` at `761da9dfc`.
+- Baseline reproduction:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace"" test"`
+  reproduced ARZ2 f1820 / 912 errors (`obj_extra_s47_x` expected absent,
+  actual `0x1442`).
+- Triage/evidence: BizHawk diagnostics through
+  `tools\bizhawk\run_bizhawk_lua.bat` showed ROM slot `0x47` Obj37 kept
+  `render_flags=$04` across the would-be engine bounce sample, so
+  `Obj37_Main` skipped `RingCheckFloorDist` while the engine recomputed
+  visibility live and bounced early. The relevant ROM ordering is
+  `Obj37_Init` seeding `render_flags=$84`, `Obj37_Main` testing the existing
+  `render_flags.on_screen` bit before `RingCheckFloorDist`, and the later
+  `BuildSprites` pass clearing/setting bit 7 from `width_pixels=8` plus the
+  approximate 32px Y band (`docs/s2disasm/s2.asm:25125-25155,25209-25233,
+  30560-30627`).
+- Fix: `LostRingObjectInstance` now stores the ROM render bit used by the
+  floor-probe gate as Obj37 state, consumes the latched value during physics,
+  and refreshes it after the object update with the S2 BuildSprites bounds.
+  S1 keeps its feature-flagged no-render-gate path.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f1993 / 842 errors. The new first mismatch is
+  `obj_s12_slot` expected `0x12`, actual `0x34`, shifting ownership away from
+  the lost-ring bounce and into the later ARZ leaf/skid-dust slot neighborhood.
+- Verification:
+  - `cmd /c "mvn.cmd -q -Dmse=relaxed -Dtest=TestLostRingObjectInstance test"`
+    completed the focused lost-ring unit class; MSE also reported the stale
+    pre-existing ARZ2 expected-red report from a previous run, so the focused
+    test result was cross-checked in `target/surefire-reports`.
+  - `cmd /c "mvn.cmd -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace"" test"`
+    exited 1 as expected-red at ARZ2 f1993 / 842.
+  - `cmd /c "mvn.cmd -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false -Dmaven.test.failure.ignore=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay"" ""-DfailIfNoTests=false"" test"`
+    completed 19 S2 traces: 14 green, 5 expected-red. Red frontiers are ARZ2
+    f1993 / 842, CNZ2 f9487 / 288, MTZ3 f12897 / 490, OOZ1 f7671 / 395, and
+    OOZ2 f9307 / 430, with no non-target regression.
+  - `cmd /c "mvn.cmd -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false ""-Dtest=com.openggf.tests.TestTraceReplayInvariantGuard,com.openggf.game.rewind.coverage.TestRewindCoverageGuard"" ""-DfailIfNoTests=false"" test"`
+    ran `TestRewindCoverageGuard` green (1 / 1) and hit the pre-existing
+    `TestTraceReplayInvariantGuard` failure on unrelated
+    `TestRespawnStrategies` `hydrateRecordedHistory(...)` fixture calls.
+  - `cmd /c "mvn.cmd -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false ""-Dsonic1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen"" ""-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace"" ""-DfailIfNoTests=false"" test"`
+    passed 1 / 1.
+  - `cmd /c "mvn.cmd -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false ""-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen"" ""-Dsonic3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen"" ""-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils"" ""-DfailIfNoTests=false"" test"`
+    passed 21 / 21.
 
 ## 2026-07-01 - S2 round 18 integrated verification after ARZ2 advance
 
