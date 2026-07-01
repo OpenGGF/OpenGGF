@@ -3229,16 +3229,25 @@ and Obj52 at its pre-flee y position.
    zone/route/frame exception.
 4. Clear engine-only active-boss bookkeeping when the boss object actually
    deletes if later engine systems still need a no-active-boss state.
+5. If the defeated/flee routine keeps widening `Camera_Max_X_pos` or otherwise
+   mutating global arena state before its own delete branch, keep the boss on a
+   persistent/custom lifecycle path. Do not let the generic dynamic-object
+   out-of-range culler stand in for `MarkObjGone` unless the ROM routine really
+   tails into that helper.
 
 **ROM citation.** HTZ2 routine 9 tests `Boss_defeated_flag` before changing
 camera bounds (`docs/s2disasm/s2.asm:21293-21308`). Obj52 defeat seeds
 `Boss_Countdown=$B3` and selects `boss_routine=8`, and
 `Obj52_Mobile_Flee` latches `Boss_defeated_flag`, moves `y_pos`, and extends
 `Camera_Max_X_pos` at the `$-3C` countdown threshold
-(`docs/s2disasm/s2.asm:64553-64605`).
+(`docs/s2disasm/s2.asm:64553-64605`). The same flee routine continues
+extending `Camera_Max_X_pos` until `$3160` and deletes from its own branch
+instead of tail-calling `MarkObjGone` (`docs/s2disasm/s2.asm:64592-64628`).
 
 **Originating commit.** `<pending>` S2 HTZ2 Obj52 defeated-flag handoff:
 `TestS2Htz2LevelSelectTraceReplay` advances f9150 -> f9361.
+Follow-up `<pending>`: keeping Obj52 persistent through its ROM flee/delete
+branch advances f9361 -> f9405.
 
 ---
 
