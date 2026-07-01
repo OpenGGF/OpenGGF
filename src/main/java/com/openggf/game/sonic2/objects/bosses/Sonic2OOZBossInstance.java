@@ -439,8 +439,8 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         bossSubtype = SUB_LASER;
         state.routineSecondary = LASER_MAIN;
         Sonic2OOZBossInstance parent = laserParent;
-        int parentX = parent != null ? parent.state.x : spawn.x();
-        int parentY = parent != null ? parent.state.y : spawn.y();
+        int parentX = parent != null ? parent.getPreUpdateX() : spawn.x();
+        int parentY = parent != null ? parent.getPreUpdateY() : spawn.y();
         boolean parentFlipped = parent != null ? parent.flipped : (spawn.renderFlags() & 0x01) != 0;
         state.x = parentX + (parentFlipped ? 0x20 : -0x20);
         state.y = parentY;

@@ -31050,3 +31050,55 @@ Verification:
   ran 5 requested checks: ARZ1 and OOZ1 passed; CNZ2, MTZ3, and OOZ2 preserved
   the current expected-red frontiers f9946 / 300, f13336 / 352, and f10340 /
   353 respectively.
+
+### 2026-07-01 -- S2 OOZ2 round 30 Obj55 delayed laser init handoff
+
+Baseline on `bugfix/ai-s2-ooz2-round30-next` from campaign head `361744b97`:
+`TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` failed at f10340 / 353
+errors, first field `tails_x_speed` (`0x0000` vs `0x0200`). The f10340 context
+showed the engine hurting CPU Tails one frame before ROM because the Obj55 laser
+touch sample was at y `$023E`, while a BizHawk PC/RAM probe showed ROM Obj55
+slot `$21` at y `$023D`.
+
+Probe:
+- A fast `diag_template_fast.lua` copy run through
+  `tools\bizhawk\run_bizhawk_lua.bat` captured OOZ2 movie frames 24276-24312.
+  ROM fired the laser at movie frame 24277 from shooter slot `$20`, ran
+  `Obj55_LaserShooter_End` / `Obj55_LaserShooter_Wind`, then initialized the
+  newly allocated slot `$21` in the same object pass. The first live sample was
+  slot `$21` at x `$296A`, y `$023D`, x_vel `$0400`.
+- At movie frame 24307 (trace f10339), ROM checked slot `$21` at x `$29DE`,
+  y `$023D`; `Touch_Boss_CheckHeight` did not reach `Touch_ChkValue`. At movie
+  frame 24308 (trace f10340), the same y `$023D` and x `$29E2` did reach
+  `Touch_ChkValue`, matching the round-29 PC-probe clue.
+- The relevant ROM paths are Obj55 fire/init/wind
+  (`docs/s2disasm/s2.asm:68588-68602,68620-68632,68669-68698,68832-68854`) and
+  `Touch_Boss` geometry (`docs/s2disasm/s2.asm:85164-85252`).
+
+Rejected candidate:
+- Letting pending Obj55 lasers run through the generic same-frame child path
+  matched the immediate ROM order but regressed the target to f10130 / 411
+  errors. That candidate was reverted.
+
+Fix:
+- Keep the existing pending-laser delay, but when the laser initializes from its
+  parent, copy the parent's frame-start object position instead of the parent's
+  already-updated live position. Because the engine delays this child by one
+  pass, the parent's frame-start position is the ROM fire-frame post-wind
+  position the same-frame `Obj55_Laser_Init` copied from `y_pos(a1)`.
+
+Result:
+- `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace`: f10340 / 353 errors
+  (`tails_x_speed` expected `0x0000`, actual `0x0200`) -> f10831 / 164 errors
+  (`tails_cpu_ctrl2_pressed` expected `0x0010`, actual `0x0000`).
+- New owner is a later CPU Tails input/control mismatch after the Obj55 laser
+  hurt boundary now lines up with ROM.
+
+Verification:
+- Focused target:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 with the improved expected-red frontier above.
+- Same-game guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 as expected: OOZ1 and ARZ1 passed; ARZ2 held f3592 / 1626, CNZ2 held
+  f9946 / 300, MTZ3 held f13336 / 352.
