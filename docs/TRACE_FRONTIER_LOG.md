@@ -6,6 +6,53 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 HTZ2 Spiker drill render-flag deletion (f7351 -> f8530)
+
+- Worktree/branch: `.worktrees/ai-s2-htz2-round12-next` /
+  `bugfix/ai-s2-htz2-round12-next`, based on campaign branch
+  `bugfix/ai-s2-trace-next` at `9d00ec9c7`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red HTZ2 f7351 / 687 (`x_speed`
+  expected `0x0000`, actual `0x0200`).
+- Triage/evidence: the f7351 context showed Sonic entering hurt state from an
+  engine-only Obj93 Spiker drill at `$28C8,$06E8`; ROM aux had spawned the
+  same descending drill at `$28C8,$0618` but removed it at frame 7274 after the
+  camera Y rose enough for `BuildSprites_ApproxYCheck` to clear the on-screen
+  render flag. Obj93 initializes `render_flags.on_screen`, tests that bit at
+  the start of each main routine, then moves and runs `MarkObjGone`; the
+  one-screen sprite producer clears/sets the bit using `width_pixels(a0)` and
+  the 32px approximate-Y band (`docs/s2disasm/s2.asm:73929-73952,
+  30560-30627`).
+- Fix: `SpikerDrillObjectInstance` now keeps an object-local
+  previous-frame render flag initialized like Obj93 init, deletes before
+  movement when it is clear, and refreshes it from the ROM render bounds after
+  movement. The drill also exposes Obj93's `$10` `width_pixels` via
+  `getOnScreenHalfWidth()`. This is an Obj93-local lifecycle fix; no trace data
+  is hydrated and no zone/route/frame carve-out is used.
+- Result:
+  `TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace`: f7351 / 687 errors
+  (`x_speed` expected `0x0000`, actual `0x0200`) -> f8530 / 218 errors
+  (`g_speed` expected `0x01D2`, actual `0x0000`). The new owner is the later
+  HTZ boss/Obj52 lava-ball phase exposed after the false Spiker drill hurt is
+  gone.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.badniks.TestSonic2SpikerBadnikInstance#drillDeletesOnFrameAfterRenderFlagClears" "-DfailIfNoTests=false" test`
+    passed 1 / 1 focused Obj93 deletion regression.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at f8530 / 218.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces, 13 green and 6 expected-red. The expected reds
+    were ARZ2 f1648 / 2236, CNZ2 f9487 / 288, HTZ2 f8530 / 218, MTZ3 f9555 /
+    907, OOZ1 f4637 / 815, and OOZ2 f9307 / 444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests.
+  - `$env:S3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:SONIC_3K_ROM_PATH=$env:S3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Ds3k.rom.path=$env:S3K_ROM_PATH" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    completed 68 S3K smoke tests. Bootstrap, decoding, level-loading, and AIZ
+    skip headless checks passed; the two AIZ trace replays stayed at the
+    existing expected-red frontiers: complete-run f1095 / 4319 and AIZ f8941 /
+    1160.
+
 ## 2026-07-01 - S2 MTZ3 Obj65 main-player logical-input delay (f9134 -> f9555)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz3-round11-next` /
