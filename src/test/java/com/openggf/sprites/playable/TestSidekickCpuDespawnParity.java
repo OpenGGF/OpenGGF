@@ -5,6 +5,8 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
@@ -1078,6 +1080,52 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void objectIdMismatchDespawnPrefersTypedObjectInteractionRules() throws Exception {
+        installEmptyObjectManager();
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2);
+        ObjectInteractionRules objectRules = base.objectInteraction();
+        setGameRulesForTest(tails, withObjectInteractionRules(base, new ObjectInteractionRules(
+                objectRules.bossHitNegatesGroundSpeed(),
+                objectRules.bossHitHalvesBounceVelocity(),
+                false,
+                objectRules.sidekickNormalDespawnDelaysFreshRenderEntry(),
+                objectRules.sidekickDespawnUsesRidingInstanceLoss(),
+                objectRules.sidekickNormalCpuSkipsHurtRoutine(),
+                objectRules.permanentRespawnTableLatch(),
+                objectRules.objectsExecuteAfterPlayerPhysics(),
+                objectRules.touchResponseUsesRenderFlagYGate(),
+                objectRules.touchResponseUsesPreviousCollisionResponseList(),
+                objectRules.animalObjectPreservesObjectMoveXSubpixel(),
+                objectRules.animalObjectUsesRenderFlagDeleteBounds())));
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x02BC);
+        tails.setCentreY((short) 0x0250);
+        tails.setOnObject(true);
+        tails.setAir(false);
+        tails.setInteractSlotIndex(0x13);
+        tails.setRenderFlagOnScreen(false);
+
+        UnloadedRideObject steamSpring = new UnloadedRideObject(0x42);
+        GameServices.level().getObjectManager().addDynamicObjectAtSlot(steamSpring, 0x13);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x01, true, 0, 0);
+        tails.setInteractSlotIndex(0x13);
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(false);
+
+        controller.update(375);
+
+        assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
+                "Typed ObjectInteractionRules should override the legacy S2 object-id mismatch despawn gate");
+        assertEquals((short) 0x02BC, tails.getCentreX());
+        assertEquals((short) 0x0250, tails.getCentreY());
+    }
+
+    @Test
     void renderFlagBottomMarginKeepsDespawnTimerReset() {
         TestableSprite sonic = new TestableSprite("sonic");
         sonic.setCentreX((short) 0x0610);
@@ -1640,5 +1688,25 @@ class TestSidekickCpuDespawnParity {
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT,
                 controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_RIGHT,
                 "S2 Obj02_Dead bypasses TailsCPU_Control, so Ctrl_2_Logical must keep its previous word.");
+    }
+
+    private static void setGameRulesForTest(TestableSprite sprite, GameRules rules) throws Exception {
+        var field = AbstractPlayableSprite.class.getDeclaredField("gameRules");
+        field.setAccessible(true);
+        field.set(sprite, rules);
+    }
+
+    private static GameRules withObjectInteractionRules(GameRules base, ObjectInteractionRules objectInteractionRules) {
+        return new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                base.collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                objectInteractionRules,
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble());
     }
 }

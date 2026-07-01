@@ -11,6 +11,9 @@ import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
+import com.openggf.game.rules.SidekickCpuRules;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
@@ -340,8 +343,25 @@ public class SidekickCpuController {
     }
 
     private boolean usesS3kCatchUpMarker() {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        return respawnStrategy.usesS3kCatchUpMarker(fs);
+        return respawnStrategy.usesS3kCatchUpMarker(sidekick);
+    }
+
+    private SidekickCpuRules sidekickCpuRulesOrNull() {
+        GameRules rules = sidekick.getGameRules();
+        if (rules != null && rules.sidekickCpu() != null) {
+            return rules.sidekickCpu();
+        }
+        PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
+        return featureSet != null ? GameRules.fromLegacy(featureSet).sidekickCpu() : null;
+    }
+
+    private ObjectInteractionRules objectInteractionRulesOrNull() {
+        GameRules rules = sidekick.getGameRules();
+        if (rules != null && rules.objectInteraction() != null) {
+            return rules.objectInteraction();
+        }
+        PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
+        return featureSet != null ? GameRules.fromLegacy(featureSet).objectInteraction() : null;
     }
 
     public void update(int frameCount) {
@@ -407,8 +427,8 @@ public class SidekickCpuController {
             return override;
         }
         LevelManager levelManager = sidekick.currentLevelManager();
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        if (fs != null && fs.sidekickCpuUsesLevelFrameCounter() && fallbackFrameCount > 0) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        if (rules != null && rules.sidekickCpuUsesLevelFrameCounter() && fallbackFrameCount > 0) {
             // ROM increments Level_frame_counter before object/player CPU slots
             // (s2.asm:5092, sonic3k.asm:7889). SpriteManager passes that
             // already-incremented cadence into the normal sprite CPU path; the
@@ -417,7 +437,7 @@ public class SidekickCpuController {
             cpuFrameCounterFromStoredLevelFrame = false;
             return fallbackFrameCount;
         }
-        if (fs != null && fs.sidekickCpuUsesLevelFrameCounter()
+        if (rules != null && rules.sidekickCpuUsesLevelFrameCounter()
                 && levelManager != null && levelManager.getFrameCounter() > 0) {
             // S3K Tails CPU reads (Level_frame_counter).w inside sprite CPU
             // handlers such as Tails_Catch_Up_Flying (sonic3k.asm:26474-26531).
@@ -574,22 +594,10 @@ public class SidekickCpuController {
     }
 
     private boolean usesS3kPointerInteract() {
-        PhysicsFeatureSet fs = resolvedPhysicsFeatureSet();
-        return fs != null
-                && fs.sidekickDespawnUsesRidingInstanceLoss()
-                && !fs.sidekickDespawnUsesObjectIdMismatch();
-    }
-
-    private PhysicsFeatureSet resolvedPhysicsFeatureSet() {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        if (fs != null) {
-            return fs;
-        }
-        GameModule module = sidekick.currentGameModule();
-        if (module != null && module.getPhysicsProvider() != null) {
-            return module.getPhysicsProvider().getFeatureSet();
-        }
-        return null;
+        ObjectInteractionRules rules = objectInteractionRulesOrNull();
+        return rules != null
+                && rules.sidekickDespawnUsesRidingInstanceLoss()
+                && !rules.sidekickDespawnUsesObjectIdMismatch();
     }
 
     private Integer currentS3kInteractWord() {
@@ -1090,8 +1098,8 @@ public class SidekickCpuController {
     }
 
     private boolean freshS3kSpawnUsesInitOnlyFrame() {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        return fs != null && fs.sidekickRespawnEntersCatchUpFlight();
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        return rules != null && rules.sidekickRespawnEntersCatchUpFlight();
     }
 
     private void initializeLevelStartSidekickPlacement() {
@@ -1262,8 +1270,8 @@ public class SidekickCpuController {
         if (!enteredFromSeedCompareFrame0 || levelStartLeaderCentreX == Integer.MIN_VALUE) {
             return false;
         }
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        if (fs == null || !fs.sidekickRespawnEntersCatchUpFlight()) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        if (rules == null || !rules.sidekickRespawnEntersCatchUpFlight()) {
             return false;
         }
         return sidekick.getCentreX() == resolveDespawnX();
@@ -1360,8 +1368,8 @@ public class SidekickCpuController {
     }
 
     private boolean shouldEnterLevelEventDormantMarker() {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        if (fs == null || !fs.sidekickRespawnEntersCatchUpFlight()) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        if (rules == null || !rules.sidekickRespawnEntersCatchUpFlight()) {
             return false;
         }
         // ROM loc_13A10 (sonic3k.asm:26389-26397): when Tails_CPU_Control runs
@@ -1440,8 +1448,8 @@ public class SidekickCpuController {
     }
 
     public boolean deadFallBypassesScreenYWrapValue() {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        return fs != null && fs.sidekickDeathUsesDeferredDespawn();
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        return rules != null && rules.sidekickDeathUsesDeferredDespawn();
     }
 
     /**
@@ -1454,8 +1462,8 @@ public class SidekickCpuController {
      * {@code ObjectMoveAndFall} (s2.asm:40736-40759, 39043-39052).
      */
     public boolean applyDeferredGenericDeadDespawnIfCrossed() {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        if (fs == null || !fs.sidekickDeathUsesDeferredDespawn() || !sidekick.getDead()) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        if (rules == null || !rules.sidekickDeathUsesDeferredDespawn() || !sidekick.getDead()) {
             return false;
         }
         int killPlane = getMaxYBound(Integer.MIN_VALUE);
@@ -1471,8 +1479,8 @@ public class SidekickCpuController {
     }
 
     private void clearStaleDeadOnObjectAfterVisibleWindow() {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        if (fs == null || !fs.sidekickDeathUsesDeferredDespawn() || !sidekick.isOnObject()) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        if (rules == null || !rules.sidekickDeathUsesDeferredDespawn() || !sidekick.isOnObject()) {
             deadOnObjectReenteredVisibleWindow = false;
             return;
         }
@@ -1515,11 +1523,11 @@ public class SidekickCpuController {
      * without a game module, and those tests assert the existing S2 threshold.
      */
     private int resolveFollowSnapThreshold() {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        if (fs == null) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        if (rules == null) {
             return DEFAULT_HORIZONTAL_SNAP_THRESHOLD;
         }
-        return fs.sidekickFollowSnapThreshold();
+        return rules.sidekickFollowSnapThreshold();
     }
 
     /**
@@ -1532,11 +1540,11 @@ public class SidekickCpuController {
      * assert the existing S2 placeholder value.
      */
     private short resolveDespawnX() {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        if (fs == null) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        if (rules == null) {
             return (short) DEFAULT_DESPAWN_X;
         }
-        return (short) fs.sidekickDespawnX();
+        return (short) rules.sidekickDespawnX();
     }
 
     /**
@@ -1551,11 +1559,11 @@ public class SidekickCpuController {
      * the immediate-warp baseline.
      */
     private boolean resolveSidekickDeathUsesDeferredDespawn() {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        if (fs == null) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        if (rules == null) {
             return false;
         }
-        return fs.sidekickDeathUsesDeferredDespawn();
+        return rules.sidekickDeathUsesDeferredDespawn();
     }
 
     private PlayerCharacter resolvePlayerCharacter() {
@@ -1602,8 +1610,8 @@ public class SidekickCpuController {
         // and leader.Status_Super. Without gating, CNZ's catch-up handover
         // never fires because Sonic stays airborne after the carry release
         // and the engine's SPAWNING state would block forever.
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        boolean strictGate = fs == null || fs.sidekickSpawningRequiresGroundedLeader();
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        boolean strictGate = rules == null || rules.sidekickSpawningRequiresGroundedLeader();
         if (target.isObjectControlled() || (strictGate && target.isObjectControlSuppressesMovement())) {
             return;
         }
@@ -1810,7 +1818,7 @@ public class SidekickCpuController {
         NormalStepDiagnostics diagnostics = beginNormalStepDiagnostics("entry");
 
         if (leader.getDead()) {
-            PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
+            SidekickCpuRules sidekickRules = sidekickCpuRulesOrNull();
             // ROM loc_13D4A (sonic3k.asm:26656-26665):
             //   cmpi.b #6, (Player_1+routine).w
             //   blo.s  loc_13D78               ; continue NORMAL if routine < 6
@@ -1829,7 +1837,7 @@ public class SidekickCpuController {
             normalPushingGraceFrames = 0;
             suppressNextAirbornePushFollowSteering = false;
             if (respawnStrategy instanceof TailsRespawnStrategy tailsStrategy
-                    && (featureSet == null || !featureSet.sidekickRespawnEntersCatchUpFlight())) {
+                    && (sidekickRules == null || !sidekickRules.sidekickRespawnEntersCatchUpFlight())) {
                 tailsStrategy.beginDeadLeaderFlight(sidekick, leader);
                 state = State.APPROACHING;
                 controlCounter = 0;
@@ -1865,10 +1873,10 @@ public class SidekickCpuController {
             return;
         }
         deadOnObjectReenteredVisibleWindow = false;
-        PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
+        ObjectInteractionRules objectRules = objectInteractionRulesOrNull();
         if (sidekick.isHurt()
-                && featureSet != null
-                && featureSet.sidekickNormalCpuSkipsHurtRoutine()) {
+                && objectRules != null
+                && objectRules.sidekickNormalCpuSkipsHurtRoutine()) {
             // The off-screen respawn/despawn timer is owned by the CPU control
             // path (TailsCPU_CheckDespawn). Both games dispatch a hurt sidekick
             // to a routine that does NOT call that path, so the timer freezes
@@ -1990,8 +1998,9 @@ public class SidekickCpuController {
         // Resolving that requires aligning the engine's OnObj clear timing
         // with ROM's solid-object-processing-driven clear; until then this
         // gate keeps the existing live read plus {@code !getAir()} heuristic.
-        int leadOffset = sidekick.getPhysicsFeatureSet() != null
-                ? sidekick.getPhysicsFeatureSet().sidekickFollowLeadOffset()
+        SidekickCpuRules sidekickRules = sidekickCpuRulesOrNull();
+        int leadOffset = sidekickRules != null
+                ? sidekickRules.sidekickFollowLeadOffset()
                 : 0;
         // ROM loc_13DA6 (sonic3k.asm:26690-26691, s2.asm:38933+) reads
         // Status_OnObj on the leader BEFORE solid-object processing has run for
@@ -2247,8 +2256,8 @@ public class SidekickCpuController {
                 || (recordedStatus & AbstractPlayableSprite.STATUS_ON_OBJECT) != 0);
         objectOrderGracePushBypassThisFrame = objectOrderGrace;
         boolean followNudgeBlockedByObjectControlBit0 =
-                fs != null
-                        && fs.sidekickFollowNudgeBlockedByObjectControlBit0()
+                sidekickRules != null
+                        && sidekickRules.sidekickFollowNudgeBlockedByObjectControlBit0()
                         && sidekick.isObjectControlSuppressesMovement();
         boolean skipFollowSteering = currentPushBypass
                 || localBelowTargetGrace
@@ -2438,7 +2447,7 @@ public class SidekickCpuController {
                     && (recordedStatus & AbstractPlayableSprite.STATUS_IN_AIR) != 0
                     && (recordedStatus & AbstractPlayableSprite.STATUS_ROLLING) != 0
                     && (recordedStatus & AbstractPlayableSprite.STATUS_ON_OBJECT) == 0
-                    && (fs == null || !fs.sidekickDelayedJumpPressUsesHistoryEdge());
+                    && (sidekickRules == null || !sidekickRules.sidekickDelayedJumpPressUsesHistoryEdge());
             if (sidekick.getAir()
                     && delayedJumpOnly
                     && normalPushingGraceFrames <= 2
@@ -2617,8 +2626,8 @@ public class SidekickCpuController {
                 || !effectiveLeader.getJumpPressHistory(delayFrames)) {
             return false;
         }
-        PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
-        if (featureSet != null && featureSet.sidekickDelayedJumpPressUsesHistoryEdge()) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        if (rules != null && rules.sidekickDelayedJumpPressUsesHistoryEdge()) {
             return !effectiveLeader.getJumpPressHistory(delayFrames + 1);
         }
         return true;
@@ -2626,9 +2635,10 @@ public class SidekickCpuController {
 
     private int resolveFollowSteeringDx(int dx, AbstractPlayableSprite effectiveLeader, int leadOffset,
             boolean leaderStatusOnObject, int snapThreshold) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
         if (dx >= 0
-                || sidekick.getPhysicsFeatureSet() == null
-                || sidekick.getPhysicsFeatureSet().sidekickFollowLeadOffset() <= 0
+                || rules == null
+                || rules.sidekickFollowLeadOffset() <= 0
                 || !sidekick.getAir()
                 || !sidekick.getRolling()
                 || effectiveLeader.getOnObjectAtFrameStart()
@@ -2665,9 +2675,10 @@ public class SidekickCpuController {
     }
 
     private int resolveFollowNudgeDx(int dx, AbstractPlayableSprite effectiveLeader) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
         if (dx <= 0
-                && sidekick.getPhysicsFeatureSet() != null
-                && sidekick.getPhysicsFeatureSet().sidekickFollowLeadOffset() > 0
+                && rules != null
+                && rules.sidekickFollowLeadOffset() > 0
                 // ROM loc_13DA6 branches at Status_OnObj before applying the
                 // S3K follow bias (sonic3k.asm:26690-26694). While that bit is
                 // set, keep the same delayed position sample for the +/-1 nudge
@@ -2703,8 +2714,9 @@ public class SidekickCpuController {
 
     private int resolveObjectOrderNudgeDx(AbstractPlayableSprite effectiveLeader, int delayFrames, int sidekickX) {
         int targetX = effectiveLeader.getCentreX(delayFrames);
-        int leadOffset = sidekick.getPhysicsFeatureSet() != null
-                ? sidekick.getPhysicsFeatureSet().sidekickFollowLeadOffset()
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        int leadOffset = rules != null
+                ? rules.sidekickFollowLeadOffset()
                 : 0;
         // ROM loc_13DA6 (sonic3k.asm:26690-26691, s2.asm:38933+) reads
         // Status_OnObj on the leader BEFORE solid-object processing has run for
@@ -3017,11 +3029,12 @@ public class SidekickCpuController {
     }
 
     private void updatePanic() {
-        PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
+        ObjectInteractionRules objectRules = objectInteractionRulesOrNull();
+        SidekickCpuRules sidekickRules = sidekickCpuRulesOrNull();
         if (sidekick.getDead()
                 || (sidekick.isHurt()
-                && featureSet != null
-                && featureSet.sidekickNormalCpuSkipsHurtRoutine())) {
+                && objectRules != null
+                && objectRules.sidekickNormalCpuSkipsHurtRoutine())) {
             // S2/S3K hurt/dead sidekick object routines bypass the CPU control
             // dispatcher entirely, so PANIC must freeze the same respawn timer
             // and Ctrl_2 logical latch as NORMAL instead of running
@@ -3047,7 +3060,7 @@ public class SidekickCpuController {
         // while the engine stores the AutoSpin state in pinballMode; S2's
         // separate pinball_mode byte must not take this branch (s2.asm:39458,
         // sonic3k.asm:26858).
-        boolean panicSpinDashFlagSet = panicSpinDashFlagSet(featureSet);
+        boolean panicSpinDashFlagSet = panicSpinDashFlagSet(sidekickRules);
         if (!panicSpinDashFlagSet) {
             if (sidekick.getGSpeed() != 0) {
                 return;
@@ -3095,8 +3108,8 @@ public class SidekickCpuController {
             return;
         }
         int input = 0;
-        PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
-        if (!panicSpinDashFlagSet(featureSet)) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        if (!panicSpinDashFlagSet(rules)) {
             if (sidekick.getGSpeed() == 0) {
                 input = AbstractPlayableSprite.INPUT_DOWN;
                 if (sidekick.getAnimationId() == duckAnimId) {
@@ -3113,10 +3126,10 @@ public class SidekickCpuController {
         setPanicDiagnosticInput(input);
     }
 
-    private boolean panicSpinDashFlagSet(PhysicsFeatureSet featureSet) {
+    private boolean panicSpinDashFlagSet(SidekickCpuRules rules) {
         return sidekick.getSpindash()
-                || (featureSet != null
-                && featureSet.sidekickPanicTreatsPinballModeAsSpindashFlag()
+                || (rules != null
+                && rules.sidekickPanicTreatsPinballModeAsSpindashFlag()
                 && sidekick.getPinballMode());
     }
 
@@ -3580,9 +3593,9 @@ public class SidekickCpuController {
         catchUpTargetX = targetX;
         catchUpTargetY = targetY;
         sidekick.setCentreXPreserveSubpixel((short) targetX);
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        int catchUpYOffset = fs != null
-                ? fs.sidekickCatchUpYOffset()
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        int catchUpYOffset = rules != null
+                ? rules.sidekickCatchUpYOffset()
                 : PhysicsFeatureSet.SIDEKICK_CATCH_UP_Y_OFFSET_S3K;
         sidekick.setCentreYPreserveSubpixel((short) (targetY - catchUpYOffset));
         sidekick.setXSpeed((short) 0);
@@ -3627,21 +3640,21 @@ public class SidekickCpuController {
      */
     private void updateFlightAutoRecovery() {
         // ROM Tails_FlySwim_Unknown (sonic3k.asm:26534-26653).
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        final int AUTO_LAND_FRAMES = fs != null
-                ? fs.sidekickFlightAutoLandFrames()
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        final int AUTO_LAND_FRAMES = rules != null
+                ? rules.sidekickFlightAutoLandFrames()
                 : PhysicsFeatureSet.SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K;
-        final int MAX_X_STEP = fs != null
-                ? fs.sidekickFlightMaxXStep()
+        final int MAX_X_STEP = rules != null
+                ? rules.sidekickFlightMaxXStep()
                 : PhysicsFeatureSet.SIDEKICK_FLIGHT_MAX_X_STEP_S3K;
-        final int Y_STEP = fs != null
-                ? fs.sidekickFlightYStep()
+        final int Y_STEP = rules != null
+                ? rules.sidekickFlightYStep()
                 : PhysicsFeatureSet.SIDEKICK_FLIGHT_Y_STEP_S3K;
-        final int LEAD_SUPPRESS = fs != null
-                ? fs.sidekickFlightLeadSuppressGSpeed()
+        final int LEAD_SUPPRESS = rules != null
+                ? rules.sidekickFlightLeadSuppressGSpeed()
                 : PhysicsFeatureSet.SIDEKICK_FLIGHT_LEAD_SUPPRESS_GSPEED_S3K;
-        final int LEAD_OFFSET = fs != null
-                ? fs.sidekickFlightLeadXOffset()
+        final int LEAD_OFFSET = rules != null
+                ? rules.sidekickFlightLeadXOffset()
                 : PhysicsFeatureSet.SIDEKICK_FLIGHT_LEAD_X_OFFSET_S3K;
         final int FLIGHT_FUEL = (8 * 60) / 2;   // ROM loc_13C3A:26552 double_jump_property reload
 
@@ -3745,12 +3758,12 @@ public class SidekickCpuController {
         //    object_control is still nonzero.
         boolean closeEnough = residualX == 0 && residualY == 0;
         byte delayedStatus = leader.getStatusHistory(ROM_FOLLOW_DELAY_FRAMES);
-        int statusBlockerMask = fs != null
-                ? fs.sidekickFlyLandStatusBlockerMask()
+        int statusBlockerMask = rules != null
+                ? rules.sidekickFlyLandStatusBlockerMask()
                 : PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_S2;
         boolean delayedStatusAllowsLand = (delayedStatus & statusBlockerMask) == 0;
-        boolean leaderRoutineAllowsLand = fs == null
-                || !fs.sidekickFlyLandRequiresLeaderAlive()
+        boolean leaderRoutineAllowsLand = rules == null
+                || !rules.sidekickFlyLandRequiresLeaderAlive()
                 || !leader.getDead();
 
         if (closeEnough && delayedStatusAllowsLand && leaderRoutineAllowsLand) {
@@ -4118,10 +4131,10 @@ public class SidekickCpuController {
                 ? sidekick.isRenderFlagOnScreen()
                 : isCurrentlyVisible();
         boolean delayingFreshRenderEntry = false;
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        ObjectInteractionRules rules = objectInteractionRulesOrNull();
         if (onScreen
-                && fs != null
-                && fs.sidekickNormalDespawnDelaysFreshRenderEntry()
+                && rules != null
+                && rules.sidekickNormalDespawnDelaysFreshRenderEntry()
                 && normalDespawnLastRenderFlagOffscreen
                 && !normalDespawnFreshRenderEntryDelayConsumed
                 && sidekick.getAir()
@@ -4158,10 +4171,10 @@ public class SidekickCpuController {
             return false;
         }
 
-        boolean useRidingInstanceLossDespawn = fs != null
-                && fs.sidekickDespawnUsesRidingInstanceLoss();
-        boolean useSlotIdMismatchDespawn = fs == null
-                || fs.sidekickDespawnUsesObjectIdMismatch();
+        boolean useRidingInstanceLossDespawn = rules != null
+                && rules.sidekickDespawnUsesRidingInstanceLoss();
+        boolean useSlotIdMismatchDespawn = rules == null
+                || rules.sidekickDespawnUsesObjectIdMismatch();
         normalDespawnLastRenderFlagOffscreen = true;
         if (!delayingFreshRenderEntry) {
             normalDespawnFreshRenderEntryDelayConsumed = false;
@@ -5085,8 +5098,8 @@ public class SidekickCpuController {
     }
 
     private int romCpuRoutineForState(State state) {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        boolean usesS3kCatchUpRoutines = fs != null && fs.sidekickRespawnEntersCatchUpFlight();
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        boolean usesS3kCatchUpRoutines = rules != null && rules.sidekickRespawnEntersCatchUpFlight();
         return switch (state) {
             case INIT -> 0x00;
             case SPAWNING -> usesS3kCatchUpRoutines ? -1 : 0x02;

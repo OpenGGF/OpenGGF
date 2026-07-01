@@ -9,6 +9,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.SidekickCpuRules;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.objects.RisingLavaObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
@@ -320,6 +322,115 @@ class TestSidekickCpuFollowParity {
             "ROM only overrides left/right input at |dx| >= 16");
         assertFalse(controller.getInputRight(),
             "ROM only overrides left/right input at |dx| >= 16");
+    }
+
+    @Test
+    void followSnapThresholdPrefersTypedSidekickCpuRules() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        setGameRulesForTest(tails, withSidekickCpuRules(
+                GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2),
+                new SidekickCpuRules(
+                        0x30,
+                        PhysicsFeatureSet.SIDEKICK_DESPAWN_X_S2,
+                        0,
+                        false,
+                        false,
+                        true,
+                        true,
+                        PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_S2,
+                        false,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        false,
+                        false,
+                        false)));
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0140);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+        tails.setCentreX((short) 0x0118);
+        tails.setCentreY((short) 0);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(1);
+
+        assertFalse(controller.getInputRight(),
+                "Typed SidekickCpuRules should override the legacy S2 follow snap threshold");
+    }
+
+    @Test
+    void followSnapThresholdFallsBackToLegacyWhenTypedSidekickCpuGroupMissing() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2);
+        setGameRulesForTest(tails, new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                base.collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                null,
+                base.powerUp(),
+                base.drowningBubble()));
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0140);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+        tails.setCentreX((short) 0x0118);
+        tails.setCentreY((short) 0);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(1);
+
+        assertTrue(controller.getInputRight(),
+                "A null typed SidekickCpuRules group should fall back to legacy-derived S2 rules");
+    }
+
+    @Test
+    void followSnapThresholdFallsBackToLegacyWhenGameRulesMissing() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        setGameRulesForTest(tails, null);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0140);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+        tails.setCentreX((short) 0x0118);
+        tails.setCentreY((short) 0);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(1);
+
+        assertTrue(controller.getInputRight(),
+                "Missing GameRules should fall back to legacy-derived S2 sidekick CPU rules");
     }
 
     @Test
@@ -3866,6 +3977,26 @@ class TestSidekickCpuFollowParity {
         field.setAccessible(true);
         byte[] history = (byte[]) field.get(sprite);
         history[slot] = (byte) (value ? 1 : 0);
+    }
+
+    private static void setGameRulesForTest(TestableSprite sprite, GameRules rules) throws Exception {
+        Field field = AbstractPlayableSprite.class.getDeclaredField("gameRules");
+        field.setAccessible(true);
+        field.set(sprite, rules);
+    }
+
+    private static GameRules withSidekickCpuRules(GameRules base, SidekickCpuRules sidekickCpuRules) {
+        return new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                base.collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                sidekickCpuRules,
+                base.powerUp(),
+                base.drowningBubble());
     }
 
 }

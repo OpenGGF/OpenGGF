@@ -1,7 +1,5 @@
 package com.openggf.sprites.playable;
 
-import com.openggf.game.PhysicsFeatureSet;
-
 /**
  * Strategy for per-character respawn behavior during the APPROACHING state.
  * Implementations define how a sidekick visually re-enters the game after despawning.
@@ -41,7 +39,7 @@ public interface SidekickRespawnStrategy {
      * Whether this strategy should use S3K's Tails catch-up marker routine
      * after despawn instead of re-entering through SPAWNING.
      */
-    default boolean usesS3kCatchUpMarker(PhysicsFeatureSet featureSet) {
+    default boolean usesS3kCatchUpMarker(AbstractPlayableSprite sidekick) {
         return false;
     }
 
