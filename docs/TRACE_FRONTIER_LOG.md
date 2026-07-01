@@ -6,18 +6,56 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2/OOZ1/OOZ2/MTZ3 round 21
-integration: the S2 sweep remains 14 green / 5 expected-red. ARZ2 advances to
+Current branch-local S2 state after OOZ1 round 22 integration: the S2 sweep is
+15 green / 4 expected-red. ARZ2 remains parked at
 f2016 / 753 (`obj_extra_s21_x` expected absent, actual `0x1433`) after
 backward post-camera placement includes the object group exactly on the
-previous left window edge; OOZ1 advances to f9342 / 353 (`y` expected
-`0x04CA`, actual `0x04C0`) after Obj4A keeps its ROM init-facing direction for
-the f9164 Octus bullet/Tails hurt touch; CNZ2 remains parked at f9487 / 288;
+previous left window edge; OOZ1 is now green after Obj48 defers a same-pass
+Obj3D outside-to-inside capture crossing by one object pass; CNZ2 remains
+parked at f9487 / 288;
 MTZ3 advances to f13336 / 352 (`x_speed` expected `0x0200`, actual `-0200`)
 after the MTZ Obj54 event spawn reserves its ROM SST slot before spawning the
 Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9341 / 506
 (`tails_routine` expected `0x0004`, actual `0x0002`) after Obj55 preserves the
 ROM top-level init return before entering its main-surface movement.
+
+## 2026-07-01 - S2 OOZ1 Obj3D to Obj48 same-pass crossing greens the trace
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-round22-next` /
+  `bugfix/ai-s2-ooz1-round22-next`, based on campaign branch
+  `bugfix/ai-s2-trace-next` at integration head `84bade27d`.
+- Baseline reproduction:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced OOZ1 f9342 / 353 errors (`y` expected `0x04CA`, actual
+  `0x04C0`).
+- Triage/evidence: frame 9342 ROM still has Sonic owned by Obj3D in slot 30
+  with `stand_on_obj=$1E`, `y=$04CA`, `y_vel=$F800`, and `g_speed=$0800`.
+  The engine had already let Obj48 capture and snap Sonic to `y=$04C0` with
+  zero `y_vel` and `g_speed=$1000`. The next ROM frame, 9343, performs that
+  Obj48 capture. That points to object-slot pass ordering, not a trace seed or
+  route carve-out.
+- ROM refs: Obj3D `Obj3D_MoveCharacter` moves the controlled player from the
+  current `x_vel` / `y_vel` (`docs/s2disasm/s2.asm:51176-51188`). Obj48
+  detection checks a 32px box around the ball, then snaps the player and writes
+  the launcher speeds on capture (`docs/s2disasm/s2.asm:51306-51315,
+  51341-51352`). In the ROM route, Obj48's current slot pass reads the
+  pre-Obj3D-move position and the later Obj3D pass moves Sonic into the box;
+  Obj48 sees that crossed position on its next pass.
+- Fix: Obj3D records the player's pre-`Obj3D_MoveCharacter` centre position for
+  the current frame. Obj48 defers capture for one pass only when that Obj3D move
+  crossed the same player from outside to inside Obj48's 32px capture box in
+  the current frame. Existing captures where the pre-pass position is already
+  inside still happen immediately.
+- Result:
+  `TestS2OozLevelSelectTraceReplay#replayMatchesTrace` advances from f9342 /
+  353 errors to green.
+- Verification:
+  - `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#oozLauncherBallDefersCaptureWhenObj3DJustMovedPlayerIntoRange" "-DfailIfNoTests=false" test`
+    passed the focused Obj3D/Obj48 ordering regression.
+  - `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 0 with `maven.test.failure.ignore=true`: OOZ1 passed; ARZ2 held
+    f2016 / 753, CNZ2 held f9487 / 288, MTZ3 held f13336 / 352, and OOZ2 held
+    f9341 / 506.
 
 ## 2026-07-01 - S2 MTZ3 Obj54 slot reservation advances f13054 to f13336
 
