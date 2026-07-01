@@ -6,6 +6,40 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 round 16 integrated sweep after OOZ2 improvement and HTZ2 green
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next` at `50067ca74`, after merging
+  `bugfix/ai-s2-ooz2-round16-next` and
+  `bugfix/ai-s2-htz2-round16-next`.
+- Integrated changes:
+  - OOZ2 Obj55 boss Y clamps preserve ROM high-word threshold timing and the
+    low subpixel word, reducing OOZ2 f9307 from 444 to 430 errors.
+  - HTZ2 Obj3E Egg Prison exact-edge CPU-sidekick push behavior greens the
+    HTZ2 level-select trace.
+  - CNZ2 round-15 and round-16 workers produced no commit; both confirmed the
+    Obj51 stale-`x_pos` / `Boss_MoveObject` gate evidence but did not find a
+    disassembly-backed advancing change.
+- Focused verification:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.level.objects.TestSolidObjectManager#eggPrisonBodyExactLeftEdgeSetsGroundPushWithoutStoppingSpeed,com.openggf.game.sonic2.objects.bosses.TestSonic2OOZBossPath,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  passed the Egg Prison exact-edge test, 6 OOZ boss-path tests, HTZ1, and HTZ2.
+  OOZ1 and OOZ2 remained expected-red at OOZ1 f7584 / 384 and OOZ2 f9307 /
+  430.
+- S2 sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  completed 19 traces: 14 green, 5 expected-red. Green includes HTZ2. Red
+  frontiers held at ARZ2 f1717 / 980 (`obj_extra_s30_x`), CNZ2 f9487 / 288
+  (`g_speed`), MTZ3 f12608 / 490 (`tails_y`), OOZ1 f7584 / 384 (`y_speed`),
+  and OOZ2 f9307 / 430 (`y_speed`).
+- S1 guard:
+  `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  completed 29 S1 traces, all 0 failures.
+- S3K guard:
+  `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+  completed 68 S3K smoke/AIZ checks. Bootstrap, decoding, level loading, and
+  AIZ skip headless checks passed; AIZ traces stayed at existing expected-red
+  frontiers: complete-run f1095 / 4319 and AIZ f8941 / 1160.
+
 ## 2026-07-01 - S2 OOZ2 Obj55 boss Y clamp timing reduces f9307 errors (444 -> 430)
 
 - Worktree/branch: `.worktrees/ai-s2-ooz2-round16-next` /
