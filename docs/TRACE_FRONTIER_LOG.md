@@ -6,6 +6,47 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 OOZ2 Obj55 boss Y clamp timing reduces f9307 errors (444 -> 430)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round16-next` /
+  `bugfix/ai-s2-ooz2-round16-next`, based on `bugfix/ai-s2-trace-next` at
+  `17f00f06e`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 with OOZ2 f9307 / 444 errors (`x_speed` expected `0x0150`,
+  actual `-0150`).
+- Triage/evidence: f9307 touched Obj55 slot 18 while the ROM near-object sample
+  had the OOZ boss at `@2940,0292`. A BizHawk fast-template diagnostic for
+  Obj55 slot 20 and the global boss fields showed the ROM main vehicle moving
+  through `Obj55_Main_Surface` / `Obj55_Main_Dive` with `Boss_Y_pos` high-word
+  thresholds: `cmpi.w #$290,(Boss_Y_pos).w; bhs` for surface, `cmpi.w #$28C`;
+  `bhs` for the pre-dive rise, and the same strict-below pattern for
+  `Obj55_LaserShooter_Rise`. The clamp instructions are word stores to the
+  high word of the 32-bit boss position (`move.w #imm,(Boss_Y_pos).w`), so the
+  low 16-bit subpixel fraction survives (`docs/s2disasm/s2.asm:68287-68345,
+  68524-68532,68610-68617`).
+- Fix: `Sonic2OOZBossInstance` now uses strict high-word checks for those Obj55
+  thresholds and preserves the low word when clamping `state.yFixed`, instead
+  of entering the next routine as soon as the integer high word equaled the
+  target and zeroing the subpixel fraction.
+- Result:
+  `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red at
+  f9307, but errors drop from 444 to 430. The original `x_speed` first root is
+  displaced by the remaining boss-hit rebound timing root (`y_speed` expected
+  `-0418`, actual `0x0418`), so the next worker should continue from the
+  same frame and inspect why the engine still applies the Obj55 hit one frame
+  before ROM.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.bosses.TestSonic2OOZBossPath" "-DfailIfNoTests=false" test`
+    passed 6 tests.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at OOZ2 f9307 / 430.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces: 13 green, 6 expected-red, no non-target
+    regression. Red frontiers held at ARZ2 f1717 / 980, CNZ2 f9487 / 288,
+    HTZ2 f9405 / 58, MTZ3 f12608 / 490, OOZ1 f7584 / 384, and OOZ2 f9307 /
+    430.
+
 ## 2026-07-01 - S2 HTZ2 Obj52 defeated flee owns camera-release deletion (f9361 -> f9405)
 
 - Worktree/branch: `.worktrees/ai-s2-htz2-round15-next` /
