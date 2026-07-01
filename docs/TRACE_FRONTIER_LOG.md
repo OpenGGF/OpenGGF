@@ -6,15 +6,61 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 30 integration: ARZ2 is f3597 / 1622
+Current branch-local S2 state after OOZ2 round 31: ARZ2 is f3597 / 1622
 (`obj_extra_s1C_x` expected absent, actual `0x1BAE`) after Obj83 parent slots
-started exporting the ROM platform position; OOZ2 is f10831 / 164
-(`tails_cpu_ctrl2_pressed` expected `0x0010`, actual `0x0000`) after Obj55
-pending lasers copied the ROM-visible shooter position. CNZ2 remains f9946 /
-300 (`x_speed` expected `0x0200`, actual `0x08A8`) and MTZ3 remains f13336 /
-352 (`x_speed` expected `0x0200`, actual `-0200`). Full S2 is 15 green / 4
-expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. No S2
-trace greened in round 30, so these advances have not been banked into `next`.
+started exporting the ROM platform position; OOZ2 is f10973 / 163
+(`tails_g_speed` expected `0x0018`, actual `0x0000`) after the delayed
+leader low-byte jump press survived the S2 sidekick auto-jump carry path. CNZ2
+remains f9946 / 300 (`x_speed` expected `0x0200`, actual `0x08A8`) and MTZ3
+remains f13336 / 352 (`x_speed` expected `0x0200`, actual `-0200`). Full S2 is
+15 green / 4 expected-red, full S1 remains green, and the S3K AIZ guard is
+unchanged. No S2 trace greened in round 31, so these advances have not been
+banked into `next`.
+
+## 2026-07-01 - S2 OOZ2 delayed sidekick jump press advances f10831 to f10973
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round31-next` /
+  `bugfix/ai-s2-ooz2-round31-next`, based on campaign commit `8d847be55`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced OOZ2 f10831 / 164 errors (`tails_cpu_ctrl2_pressed` expected
+  `0x0010`, actual `0x0000`).
+- Evidence: the OOZ2 f10831 report showed the Obj55 laser boundary already
+  aligned, with the next non-cascading owner in CPU Tails input. A temporary
+  engine-side diagnostic confirmed Sonic history slot 25 contained
+  `input=0010`, `jumpPress=true`, `status=0E`; the following sidekick CPU read
+  loaded that same delayed slot, but the engine's `Tails_CPU_jumping` carry
+  filter cleared the low-byte press because the delayed status still had
+  `Status_OnObj`.
+- ROM refs: S2 `Obj01_Control` copies raw controller input into
+  `Ctrl_1_Logical` when unlocked, `Sonic_RecordPos` stores that logical word
+  into the delayed stat table, and `TailsCPU_Normal` later loads that word into
+  `d1`. When `Tails_CPU_jumping` is set, `TailsCPU_Normal_FilterAction` ORs
+  only high-byte A/B/C held bits into `d1` and then `TailsCPU_Normal_SendAction`
+  writes the whole word to `Ctrl_2_Logical`; it does not clear an existing
+  low-byte press (`docs/s2disasm/s2.asm:36233-36236,36342-36353,39285-39295,
+  39349-39355,39380-39381`).
+- Fix: `SidekickCpuController` now suppresses the manufactured low-byte jump
+  press only when there is no real delayed jump press in the leader history.
+  Real delayed presses survive the CPU jumping carry path regardless of the
+  delayed status byte's `Status_OnObj` bit.
+- Result:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  now reaches OOZ2 f10973 / 163 errors (`tails_g_speed` expected `0x0018`,
+  actual `0x0000`).
+- Same-game preservation subset:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 0 with `maven.test.failure.ignore=true`: OOZ1 and ARZ1 green; ARZ2
+  f3597 / 1622; CNZ2 f9946 / 300; MTZ3 f13336 / 352; OOZ2 f10973 / 163.
+- S1 preservation:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  exited 0 with 29 tests, 0 failures, and the existing S1 mapping warnings.
+- S3K preservation:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+  exited 0 with `maven.test.failure.ignore=true`: loading/bootstrap/decoding
+  and AIZ skip checks passed; the same known expected-red AIZ trace frontiers
+  remain (`TestS3kAizCompleteRunTraceReplay` f1095 / 4319 `x_speed`,
+  `TestS3kAizTraceReplay` f8941 / 1160 `camera_y`).
 
 ## 2026-07-01 - S2 ARZ2 water-exit boost advances f3214 to f3592
 
