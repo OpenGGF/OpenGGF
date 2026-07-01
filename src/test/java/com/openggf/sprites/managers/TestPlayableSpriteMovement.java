@@ -6,6 +6,7 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.ShieldType;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
@@ -110,6 +111,13 @@ public class TestPlayableSpriteMovement {
                 Field field = AbstractPlayableSprite.class.getDeclaredField("physicsFeatureSet");
                 field.setAccessible(true);
                 field.set(sprite, featureSet);
+                setGameRulesForTest(sprite, featureSet != null ? GameRules.fromLegacy(featureSet) : null);
+        }
+
+        private void setGameRulesForTest(AbstractPlayableSprite sprite, GameRules rules) throws Exception {
+                Field field = AbstractPlayableSprite.class.getDeclaredField("gameRules");
+                field.setAccessible(true);
+                field.set(sprite, rules);
         }
 
         private boolean invokeTryShieldAbility() throws Exception {
@@ -138,6 +146,72 @@ public class TestPlayableSpriteMovement {
                 Field field = PlayableSpriteMovement.class.getDeclaredField(name);
                 field.setAccessible(true);
                 field.set(manager, value);
+        }
+
+        @Test
+        public void typedPlayerMovementRuleCapsGroundSpeedWhenLegacyFeatureSetIsMissing() throws Exception {
+                GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2);
+                GameRules typedRules = new GameRules(
+                                GameRules.fromLegacy(PhysicsFeatureSet.SONIC_1).playerMovement(),
+                                base.playerCapability(),
+                                base.collision(),
+                                base.playerAnimation(),
+                                base.camera(),
+                                base.ring(),
+                                base.objectInteraction(),
+                                base.sidekickCpu(),
+                                base.powerUp(),
+                                base.drowningBubble());
+                setPhysicsFeatureSetForTest(null);
+                setGameRulesForTest(mockSprite, typedRules);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("accelerateRight",
+                                short.class, short.class, short.class);
+                method.setAccessible(true);
+                short speed = (Short) method.invoke(manager, (short) 0x0700, (short) 0x000C, (short) 0x0600);
+
+                assertEquals((short) 0x0600, speed,
+                                "Typed PlayerMovementRules.inputAlwaysCapsGroundSpeed should drive capping without legacy features");
+        }
+
+        @Test
+        public void playerMovementRuleFallsBackToLegacyFeatureSetWhenTypedRulesMissing() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_1);
+                setGameRulesForTest(mockSprite, null);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("accelerateRight",
+                                short.class, short.class, short.class);
+                method.setAccessible(true);
+                short speed = (Short) method.invoke(manager, (short) 0x0700, (short) 0x000C, (short) 0x0600);
+
+                assertEquals((short) 0x0600, speed,
+                                "Legacy PhysicsFeatureSet should still be converted to PlayerMovementRules when typed rules are absent");
+        }
+
+        @Test
+        public void playerMovementRuleFallsBackToLegacyFeatureSetWhenTypedGroupMissing() throws Exception {
+                GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2);
+                GameRules rulesWithoutMovementGroup = new GameRules(
+                                null,
+                                base.playerCapability(),
+                                base.collision(),
+                                base.playerAnimation(),
+                                base.camera(),
+                                base.ring(),
+                                base.objectInteraction(),
+                                base.sidekickCpu(),
+                                base.powerUp(),
+                                base.drowningBubble());
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_1);
+                setGameRulesForTest(mockSprite, rulesWithoutMovementGroup);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("accelerateRight",
+                                short.class, short.class, short.class);
+                method.setAccessible(true);
+                short speed = (Short) method.invoke(manager, (short) 0x0700, (short) 0x000C, (short) 0x0600);
+
+                assertEquals((short) 0x0600, speed,
+                                "A null typed PlayerMovementRules group should fall back to legacy-derived rules");
         }
 
         @Test

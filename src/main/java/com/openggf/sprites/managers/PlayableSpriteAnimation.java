@@ -1,5 +1,8 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
@@ -32,6 +35,15 @@ public class PlayableSpriteAnimation {
 
     public PlayableSpriteAnimation(AbstractPlayableSprite sprite) {
         this.sprite = sprite;
+    }
+
+    private PlayerAnimationRules playerAnimationRulesOrNull() {
+        GameRules rules = sprite.getGameRules();
+        if (rules != null && rules.playerAnimation() != null) {
+            return rules.playerAnimation();
+        }
+        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+        return featureSet != null ? GameRules.fromLegacy(featureSet).playerAnimation() : null;
     }
 
     /**
@@ -531,8 +543,8 @@ public class PlayableSpriteAnimation {
         if (!sprite.getPushing()) {
             return;
         }
-        if (sprite.getPhysicsFeatureSet() == null
-                || !sprite.getPhysicsFeatureSet().animationChangeClearsPush()) {
+        PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+        if (animationRules == null || !animationRules.animationChangeClearsPush()) {
             return;
         }
         if (prevAnimByteId < 0 || animByteId == prevAnimByteId) {

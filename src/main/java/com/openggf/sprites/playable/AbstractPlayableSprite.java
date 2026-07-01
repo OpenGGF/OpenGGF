@@ -20,6 +20,8 @@ import com.openggf.game.DamageCause;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PlayerCapabilityRules;
+import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.timer.TimerManager;
 
@@ -1295,8 +1297,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private boolean hasPersistentInstaShieldAbility() {
-                return physicsFeatureSet != null
-                                && physicsFeatureSet.instaShieldEnabled()
+                PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
+                return capabilityRules != null
+                                && capabilityRules.instaShieldEnabled()
                                 && getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD;
         }
 
@@ -2503,9 +2506,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
 
                 // Fire shield blocks fire damage (s3.asm shield_reaction bit 4)
-                PhysicsFeatureSet fs = getPhysicsFeatureSet();
+                PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
                 if (cause == DamageCause.FIRE && shield && shieldType == ShieldType.FIRE
-                                && fs != null && fs.elementalShieldsEnabled()) {
+                                && capabilityRules != null && capabilityRules.elementalShieldsEnabled()) {
                         return false;
                 }
 
@@ -3309,15 +3312,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         boolean jumpPress) {
                 // Latch logical input during ROM control locks unless an explicit forced
                 // write is active; forced writes intentionally replace the latched word.
+                PlayerMovementRules movementRules = playerMovementRulesOrNull();
                 if (isControlLocked()
                                 && getForcedInputMask() == 0
-                                && physicsFeatureSet != null
-                                && physicsFeatureSet.controlLockLatchesLogicalInput()) {
+                                && movementRules != null
+                                && movementRules.controlLockLatchesLogicalInput()) {
                         return;
                 }
                 if (hurt
-                                && physicsFeatureSet != null
-                                && physicsFeatureSet.hurtRoutineLatchesLogicalInput()) {
+                                && movementRules != null
+                                && movementRules.hurtRoutineLatchesLogicalInput()) {
                         return;
                 }
                 short input = 0;
@@ -3616,10 +3620,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // ROM: SpawnLevelMainSprites_SpawnPlayers creates the persistent Sonic-only
                 // insta-shield object after player setup. In the engine, powerUpSpawner can
                 // arrive later than physics resolution, so re-check when either dependency changes.
-                if (instaShieldObject != null || powerUpSpawner == null || physicsFeatureSet == null) {
+                if (instaShieldObject != null || powerUpSpawner == null) {
                         return;
                 }
-                if (!physicsFeatureSet.instaShieldEnabled()
+                PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
+                if (capabilityRules == null
+                        || !capabilityRules.instaShieldEnabled()
                         || getSecondaryAbility() != SecondaryAbility.INSTA_SHIELD) {
                         return;
                 }
@@ -3724,6 +3730,24 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         @Override
         public GameRules getGameRules() {
                 return gameRules;
+        }
+
+        private PlayerMovementRules playerMovementRulesOrNull() {
+                GameRules rules = getGameRules();
+                if (rules != null && rules.playerMovement() != null) {
+                        return rules.playerMovement();
+                }
+                PhysicsFeatureSet featureSet = getPhysicsFeatureSet();
+                return featureSet != null ? GameRules.fromLegacy(featureSet).playerMovement() : null;
+        }
+
+        private PlayerCapabilityRules playerCapabilityRulesOrNull() {
+                GameRules rules = getGameRules();
+                if (rules != null && rules.playerCapability() != null) {
+                        return rules.playerCapability();
+                }
+                PhysicsFeatureSet featureSet = getPhysicsFeatureSet();
+                return featureSet != null ? GameRules.fromLegacy(featureSet).playerCapability() : null;
         }
 
         /** Package-private for testing. */
@@ -4785,8 +4809,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Skip during drowning pre-death phase to prevent re-triggering
                 if (inWater && !dead && !isDrowningPreDeath() && controller.getDrowning() != null) {
                         // Bubble shield prevents drowning (s3.asm: Player_ResetAirTimer)
-                        PhysicsFeatureSet wfs = getPhysicsFeatureSet();
-                        if (wfs != null && wfs.elementalShieldsEnabled()
+                        PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
+                        if (capabilityRules != null && capabilityRules.elementalShieldsEnabled()
                                         && shield && shieldType == ShieldType.BUBBLE) {
                                 controller.getDrowning().replenishAir();
                         } else if (fixedLevelObjectOwnsDrowningBubbleCadence()) {
@@ -4861,8 +4885,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 waterPhysicsActive = true;
 
                 // Fire and Lightning shields dissipate on water entry (s3.asm:34693, 34780)
-                PhysicsFeatureSet fs = getPhysicsFeatureSet();
-                if (shield && shieldType != null && fs != null && fs.elementalShieldsEnabled()) {
+                PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
+                if (shield && shieldType != null
+                                && capabilityRules != null && capabilityRules.elementalShieldsEnabled()) {
                         if (shieldType == ShieldType.FIRE || shieldType == ShieldType.LIGHTNING) {
                                 shield = false;
                                 shieldType = null;
@@ -4921,9 +4946,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // ROM: cmpi.b #4,routine(a0) - skip y_vel doubling if hurt.
                 // S2/S3K additionally skip asl y_vel when already moving upward
                 // faster than -$400 (s2.asm:36120-36124, sonic3k.asm:22267-22270).
-                PhysicsFeatureSet fs = getPhysicsFeatureSet();
+                PlayerMovementRules movementRules = playerMovementRulesOrNull();
                 boolean shouldDoubleYSpeed = !isHurt();
-                if (shouldDoubleYSpeed && fs != null && fs.waterExitBoostSkipsFastUpwardVelocity()
+                if (shouldDoubleYSpeed && movementRules != null && movementRules.waterExitBoostSkipsFastUpwardVelocity()
                                 && ySpeed < -0x400) {
                         shouldDoubleYSpeed = false;
                 }

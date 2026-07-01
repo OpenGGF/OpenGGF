@@ -1,6 +1,7 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.tests.TestEnvironment;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.physics.Direction;
@@ -8,6 +9,7 @@ import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestablePlayableSprite;
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import java.lang.reflect.Field;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -191,6 +194,81 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void typedPlayerAnimationRuleClearsPushWhenLegacyFeatureSetIsMissing() throws Exception {
+        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_1);
+        GameRules typedRules = new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                base.collision(),
+                GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2).playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble());
+        TestablePlayableSprite sprite = createSprite(null);
+        setGameRulesForTest(sprite, typedRules);
+        sprite.setAnimationId(5);
+        sprite.setMovementInputActive(false);
+        sprite.getAnimationManager().update(0);
+
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(1);
+
+        assertFalse(sprite.getPushing(),
+                "Typed PlayerAnimationRules.animationChangeClearsPush should clear push without legacy features");
+    }
+
+    @Test
+    public void playerAnimationRuleFallsBackToLegacyFeatureSetWhenTypedRulesMissing() throws Exception {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        setGameRulesForTest(sprite, null);
+        sprite.setAnimationId(5);
+        sprite.setMovementInputActive(false);
+        sprite.getAnimationManager().update(0);
+
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(1);
+
+        assertFalse(sprite.getPushing(),
+                "Legacy PhysicsFeatureSet should still be converted to PlayerAnimationRules when typed rules are absent");
+    }
+
+    @Test
+    public void playerAnimationRuleFallsBackToLegacyFeatureSetWhenTypedGroupMissing() throws Exception {
+        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_1);
+        GameRules rulesWithoutAnimationGroup = new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                base.collision(),
+                null,
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble());
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        setGameRulesForTest(sprite, rulesWithoutAnimationGroup);
+        sprite.setAnimationId(5);
+        sprite.setMovementInputActive(false);
+        sprite.getAnimationManager().update(0);
+
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(1);
+
+        assertFalse(sprite.getPushing(),
+                "A null typed PlayerAnimationRules group should fall back to legacy-derived rules");
+    }
+
+    @Test
     public void scriptedSwitchDoesNotRunOnFirstDisplayedFrame() {
         TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
         SpriteAnimationSet animations = new SpriteAnimationSet();
@@ -257,6 +335,12 @@ public class TestPlayableSpriteAnimation {
         sprite.setRolling(false);
         sprite.setGSpeed((short) 0);
         return sprite;
+    }
+
+    private static void setGameRulesForTest(TestablePlayableSprite sprite, GameRules rules) throws Exception {
+        Field field = AbstractPlayableSprite.class.getDeclaredField("gameRules");
+        field.setAccessible(true);
+        field.set(sprite, rules);
     }
 
     private static SpriteAnimationSet createAnimationSet() {
