@@ -44,7 +44,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     private static final int RISE_DELAY = 0x20; // 32 frames
     private static final int INITIAL_Y_VEL = -0x200; // Rise speed
     private static final int Y_ACCEL = 0x10; // Deceleration/acceleration per frame
-    private static final int HOVER_DURATION = 60; // 60 frames hovering
+    private static final int HOVER_DURATION = 59; // Obj4A_Hover seeds #60 before a pre-decrement/bmi countdown
     private static final int BULLET_X_VEL = 0x200; // Bullet speed
     private static final int BULLET_DELAY = 0x0F; // 15 frames stationary before moving
     private static final int INIT_FLOOR_Y_RADIUS = 0x0B;

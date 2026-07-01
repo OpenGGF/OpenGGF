@@ -123,6 +123,46 @@ branch-local measurements.
     completed 19 S2 traces: 13 green, 6 expected-red, no non-target
     regression. Red frontiers: ARZ2 f1717 / 1420, CNZ2 f9487 / 288, HTZ2
     f9150 / 121, MTZ3 f12146 / 650, OOZ1 f6639 / 557, OOZ2 f9307 / 444.
+
+## 2026-07-01 - S2 OOZ1 Octus hover countdown (f6639 -> f7467)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-round14-next` /
+  `bugfix/ai-s2-ooz1-round14-next`, based on `bugfix/ai-s2-trace-next` at
+  `b19712464`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red OOZ1 f6639 / 557
+  (`y_speed` expected `-0100`, actual `0x0000`).
+- Triage/evidence: trace context showed ROM Sonic already bouncing from an
+  Octus kill at f6639 while the engine's touch scan still saw the live Octus
+  at its pre-update Y position one pixel above the overlap. Temporary local
+  diagnostics on `OctusBadnikInstance` showed the Java object entered
+  `MOVING_DOWN` one object pass late: engine pre-touch Octus Y was `$009D` and
+  post-update Y was `$009E` on f6639, while the ROM slot had already reached the
+  kill path. S2 Obj4A writes `objoff_2C=#60`, then `Obj4A_Hover` uses
+  `subq.w #1,objoff_2C(a0)` / `bmi.s` before falling into
+  `Obj4A_MoveDown`, where descent begins with `addi.w #$10,y_vel(a0)` before
+  `ObjectMove` (`docs/s2disasm/s2.asm:60456-60480`). S2 `TouchResponse` then
+  reads object `collision_flags`, `x_pos`, and `y_pos` from the live dynamic
+  slot before `Touch_KillEnemy` rewrites the badnik to Obj27 and applies the
+  bounce (`docs/s2disasm/s2.asm:85036-85096,85353-85389`).
+- Fix: `OctusBadnikInstance` seeds the Java hover countdown with 59 frames to
+  model the ROM's entry-frame plus pre-decrement transition cadence for the
+  `#60` literal. The change is object-local and does not read or hydrate from
+  trace data.
+- Result:
+  `TestS2OozLevelSelectTraceReplay#replayMatchesTrace`: f6639 / 557 errors
+  (`y_speed` expected `-0100`, actual `0x0000`) -> f7467 / 556 errors
+  (`x_speed` expected `-0200`, actual `0x036C`). The new owner is the next OOZ1
+  player-speed divergence after the Octus bounce.
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at OOZ1 f7467 / 556.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces: 13 green, 6 expected-red, no non-target
+    regression. Red frontiers held at ARZ2 f1712 / 1514, CNZ2 f9487 / 288,
+    HTZ2 f9150 / 121, MTZ3 f12146 / 650, OOZ1 f7467 / 556, and OOZ2 f9307 /
+    444.
   - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
     passed 29 / 29 S1 trace tests. The repeated S1 mapping warning at
     `0xe8df` remains known and pre-existing.
