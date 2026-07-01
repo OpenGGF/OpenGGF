@@ -166,7 +166,6 @@ public class OilSurfaceManager {
 
     private void updateOilSurface(AbstractPlayableSprite player) {
         PlayerOilState state = stateFor(player);
-
         if (player.getDead() || player.isDebugMode()) {
             clearOilTrackingOnly(state);
             return;
@@ -181,6 +180,12 @@ public class OilSurfaceManager {
         }
 
         if (state.standingOnOil) {
+            if (player.isHurt() && player.getAir()) {
+                // Hurt recoil owns the airborne state after the boss touch; Obj07 must not re-seat it.
+                clearOilSupport(player, state);
+                return;
+            }
+
             // Movement runs before this manager and can temporarily set air=true.
             // Only release support when the player is actually moving upward.
             if (shouldExitOilSupport(player)) {
