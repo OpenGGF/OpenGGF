@@ -271,6 +271,21 @@ public class WaterPhysicsTest {
     }
 
     @Test
+    public void hurtResetClearsRollJumpAndJumpingBeforeAirborneRecoil() {
+        sprite.setAir(true);
+        sprite.setRollingJump(true);
+        sprite.setJumping(true);
+        sprite.setPushing(true);
+
+        sprite.applyHurt(0);
+
+        assertTrue(sprite.getAir(), "HurtCharacter sets Status_InAir after reset-on-floor cleanup");
+        assertFalse(sprite.getRollingJump(), "Reset-on-floor tail clears Status_RollJump before hurt recoil");
+        assertFalse(sprite.isJumping(), "Reset-on-floor tail clears the jumping latch before hurt recoil");
+        assertFalse(sprite.getPushing(), "Reset-on-floor tail clears Status_Push before hurt recoil");
+    }
+
+    @Test
     public void testHurtKnockback_UnderwaterHalvedVelocities() {
         // Player is underwater (ROM s2.asm lines 84936-84941)
         sprite.setInWater(true);
@@ -299,5 +314,4 @@ public class WaterPhysicsTest {
     }
 
 }
-
 

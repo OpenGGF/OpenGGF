@@ -6,17 +6,59 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2/CNZ2/OOZ2 round 24: the S2 sweep is 15
+Current branch-local S2 state after CNZ2 round 25: the S2 sweep is 15
 green / 4 expected-red. ARZ2 advances to f2565 / 713 (`obj_s15_slot` expected
 `0x15`, actual `0x11`) after CPU Tails Obj37 collection was routed through the
-ROM main-invulnerability gate; CNZ2 advances to f9733 / 301
-(`tails_status_byte` expected `0x0002`, actual `0x0012`) after Obj51's ball
-trigger compare uses
-the ROM displayed-X phase on leftward passes; MTZ3 remains parked at f13336 /
-352 (`x_speed` expected `0x0200`, actual `-0200`); OOZ1 is green; and OOZ2
-advances to f9465 / 457 (`tails_y` expected `0x0299`, actual `0x0298`) after
-Obj55 exposes the ROM-visible boss-touch snapshot and Obj07 stops re-seating
-newly hurt airborne players.
+ROM main-invulnerability gate; CNZ2 advances to f9946 / 300 (`x_speed`
+expected `0x0200`, actual `0x08A8`) after the shared hurt reset path clears
+roll-jump before setting airborne recoil; MTZ3 remains parked at f13336 / 352
+(`x_speed` expected `0x0200`, actual `-0200`); OOZ1 is green; and OOZ2 advances
+to f9465 / 457 (`tails_y` expected `0x0299`, actual `0x0298`) after Obj55
+exposes the ROM-visible boss-touch snapshot and Obj07 stops re-seating newly
+hurt airborne players.
+
+## 2026-07-01 - S2 CNZ2 hurt reset clears roll-jump and advances f9733 to f9946
+
+- Worktree/branch: `.worktrees/ai-s2-cnz2-round25-next` /
+  `bugfix/ai-s2-cnz2-round25-next`, based on campaign head `81bd9e912`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced CNZ2 f9733 / 301 errors (`tails_status_byte` expected `0x0002`,
+  actual `0x0012`).
+- Evidence: at frame 9733 ROM Tails is already in Obj02 hurt routine 4 with
+  `Status_InAir` only (`0x02`), while the engine had identical position,
+  subpixels, and hurt velocity but still carried `Status_RollJump` (`0x12`).
+  S2 `HurtCharacter` writes routine 4, calls the reset-on-floor tail, and only
+  then sets `Status_InAir`; for Tails this tail clears `Status_InAir`,
+  `Status_Push`, `Status_RollJump`, and `jumping` before the recoil write.
+  The same reset-before-airborne pattern exists in S1 and S3K hurt paths.
+- ROM refs: S1 `HurtSonic` calls `Sonic_ResetOnFloor` before `bset #1`
+  (`docs/s1disasm/_incObj/Sonic ReactToItem.asm:390-392`), S2
+  `HurtCharacter` calls `Sonic_ResetOnFloor_Part2` before setting
+  `Status_InAir` and `Tails_ResetOnFloor_Part3` clears roll-jump/jumping
+  (`docs/s2disasm/s2.asm:85468-85471,41033-41037`), and S3K
+  `HurtCharacter` calls `Player_TouchFloor` before setting `Status_InAir`
+  (`docs/skdisasm/sonic3k.asm:21090-21093,24365-24369`).
+- Fix: `AbstractPlayableSprite.applyHurt` now clears roll-jump and jumping
+  alongside the existing pushing clear before setting airborne hurt recoil.
+- Result:
+  `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f9946 / 300 errors. The new first mismatch is `x_speed`
+  expected `0x0200`, actual `0x08A8`, where ROM has Sonic hurt by the next Obj51
+  ball window and the engine is still rolling.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.WaterPhysicsTest" "-DfailIfNoTests=false" test`
+    exited 0 after clearing stale surefire reports: 18 passed, 0 failed.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at CNZ2 f9946 / 300.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 0 with expected-red preservation frontiers unchanged except the
+    target advance: ARZ2 f2565 / 713, CNZ2 f9946 / 300, MTZ3 f13336 / 352,
+    OOZ2 f9465 / 457.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:S3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:SONIC_3K_ROM_PATH=$env:S3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Ds3k.rom.path=$env:S3K_ROM_PATH" "-Dsonic3k.rom.path=$env:S3K_ROM_PATH" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s1.TestS1Mz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    exited 0 with S1 GHZ1/MZ1 green, S3K unit/load guards green, and the known
+    S3K AIZ expected-red frontiers unchanged: complete-run f1095 / 4319 and
+    AIZ trace f8941 / 1160.
 
 ## 2026-07-01 - S2 ARZ2 sidekick Obj37 collection advances f2142 to f2565
 
