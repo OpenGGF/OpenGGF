@@ -3054,6 +3054,50 @@ only on the not-MTZ3 branch (`docs/s2disasm/s2.asm:53159-53177`).
 
 ---
 
+## P75 -- Render-flag delete gates consume the previous BuildSprites result
+
+**Pattern.** Some S2 object routines test `render_flags.on_screen` inside their
+routine before the current frame's DisplaySprite/BuildSprites path refreshes
+the bit. Init routines may also seed `render_flags.on_screen` and return before
+the first routine that tests it.
+
+**Engine symptom.** Dynamic SST slot order drifts because children or animals
+delete one frame early or late even though their positions and broad culling
+bounds look correct. In ARZ2, Obj0A bubbles spawned into lower already-passed
+slots were deleted before their first ROM Obj0A_ChkWater pass, Obj28 animals
+used a fresh post-move bounds check instead of the previous render flag, and
+Grounder Obj8F/Obj90 children stayed alive after ROM had already deleted them
+from the prior render bit. The stale Obj90 rocks occupied slots that the f1648
+placement cluster needed, moving ARZ2 from a slot mismatch to the next Obj08
+skid-dust frontier once fixed.
+
+**What to check / fix.**
+1. When a routine executes `btst #render_flags.on_screen,render_flags(a0)` or
+   `tst.b render_flags(a0)` before its display tail, cache and consume the
+   previous BuildSprites result rather than recomputing bounds immediately.
+2. If routine 0 seeds `render_flags.on_screen` and then the first real routine
+   tests the bit, preserve that init-set value through the object's first pass,
+   including for children allocated into slots already passed by ExecuteObjects.
+3. Keep MarkObjGone / RememberState tails separate from the early render-bit
+   gate. If ROM deletes before `ObjectMoveAndFall` and then tails to MarkObjGone
+   after movement, model both checks in that order.
+4. Keep the fix object-local and routine-driven. Do not branch on zone, route,
+   trace frame, or a known failing trace.
+
+**ROM citation.** Obj0A init seeds `render_flags.on_screen|level_fg`, and
+Obj0A_ChkWater later tests the render flag (`docs/s2disasm/s2.asm:41888,41951`).
+Obj28 Walk/Fly flow reaches `Obj28_ChkDel` after movement
+(`docs/s2disasm/s2.asm:24670-24688,24715-24727`). Obj8F/Obj90 Move tests the
+previous render bit before `ObjectMoveAndFall`, then jumps to MarkObjGone after
+movement; Grounder spawns the Obj8F/Obj90 children through that path
+(`docs/s2disasm/s2.asm:73490-73494,73510-73516`).
+
+**Originating commit.** `910c7e6c6` S2 ARZ2 Obj0A/Obj28/Obj8F/Obj90 prior
+render-flag cleanup: `TestS2Arz2LevelSelectTraceReplay` advances f1648 ->
+f1698.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
