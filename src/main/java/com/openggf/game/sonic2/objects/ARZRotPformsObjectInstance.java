@@ -17,6 +17,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.SpriteMappingFrame;
@@ -218,11 +219,13 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     private int getChainSlotX() {
-        return chainX[Math.min(CHAINS_PER_ARM - 1, chainX.length - 1)];
+        // ROM Obj83 writes the first chain-link coordinate to the child object;
+        // the remaining links are subsprites on that child (s2.asm:57515-57522).
+        return chainX[0];
     }
 
     private int getChainSlotY() {
-        return chainY[Math.min(CHAINS_PER_ARM - 1, chainY.length - 1)];
+        return chainY[0];
     }
 
     private void attachSlotChildForRewind(Obj83SlotChild child) {
@@ -336,7 +339,10 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getPieceCount() {
-        return NUM_PLATFORMS;
+        // The parent Obj83 calls PlatformObject only for platform 1; platforms
+        // 2 and 3 are separate routine-4 child objects (s2.asm:57570-57576,
+        // 57612-57619).
+        return 1;
     }
 
     @Override
@@ -486,7 +492,8 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
         PLATFORM_3
     }
 
-    private static final class Obj83SlotChild extends AbstractObjectInstance implements RewindRecreatable {
+    private static final class Obj83SlotChild extends AbstractObjectInstance
+            implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
         private final ARZRotPformsObjectInstance parent;
         @RewindTransient(reason = "Obj83 child role is constructor metadata preserved by recreateForRewind")
         private final ChildKind kind;
@@ -531,6 +538,26 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
             if (parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
             }
+        }
+
+        @Override
+        public SolidObjectParams getSolidParams() {
+            return PLATFORM_PARAMS;
+        }
+
+        @Override
+        public boolean isTopSolidOnly() {
+            return true;
+        }
+
+        @Override
+        public boolean isSolidFor(PlayableEntity playerEntity) {
+            return kind != ChildKind.CHAIN && !parent.isDestroyed();
+        }
+
+        @Override
+        public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
+            // ROM routine-4 Obj83 children only run PlatformObject and update last_x_pos.
         }
 
         @Override

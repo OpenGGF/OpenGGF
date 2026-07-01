@@ -31051,6 +31051,46 @@ Verification:
   the current expected-red frontiers f9946 / 300, f13336 / 352, and f10340 /
   353 respectively.
 
+### 2026-07-01 -- S2 ARZ2 round 31 Obj83 child coordinate and solid ownership
+
+Baseline on `bugfix/ai-s2-arz2-round31-next` from campaign head `8d847be55`:
+`TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` failed at f3597 / 1622
+errors, first field `obj_extra_s1C_x` (`expected absent`, actual `0x1BAE`).
+The context showed ROM Obj83 parent slot `$18` live at `$1BBE,$02BE`, while
+the engine exposed an extra Obj83 child near Sonic at `$1BAE,$02BA`.
+
+Root fixed:
+- Obj83's chain multisprite child stores the first chain-link coordinate in
+  the child object's native `x_pos/y_pos`; the remaining two links for that
+  arm are subsprites. The engine had exported the third link coordinate for
+  the child slot, causing the near-object comparator to see the child too early
+  and too far right. ROM writes the first-link mainsprite at
+  `docs/s2disasm/s2.asm:57515-57522`.
+- Obj83's parent runs `PlatformObject` only for platform 1. Platforms 2 and 3
+  are separate routine-4 child objects that run their own `PlatformObject`
+  checks. The engine now keeps parent collision scoped to platform 1 and makes
+  the platform child slots top-solid while leaving the chain child non-solid,
+  matching `docs/s2disasm/s2.asm:57570-57576,57612-57619`.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f3597 / 1622 errors
+  (`obj_extra_s1C_x` expected absent, actual `0x1BAE`) -> f3707 / 1620 errors
+  (`y_speed` expected `0x0000`, actual `0x0379`).
+- The new owner is the remaining Obj83 platform landing timing at f3707: ROM
+  lands Sonic on Obj83 platform child slot `$20` on that frame; the engine
+  reaches the same object neighborhood but still clears the vertical velocity
+  one frame late.
+
+Verification:
+- Focused target:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 with the improved expected-red f3707 / 1620 frontier above.
+- S2 green/red preservation subset:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  ran 6 requested checks: ARZ1 and OOZ1 passed; ARZ2 advanced to f3707 / 1620;
+  CNZ2, MTZ3, and OOZ2 preserved the current expected-red frontiers f9946 /
+  300, f13336 / 352, and f10831 / 164 respectively.
+
 ### 2026-07-01 -- S2 OOZ2 round 30 Obj55 delayed laser init handoff
 
 Baseline on `bugfix/ai-s2-ooz2-round30-next` from campaign head `361744b97`:
