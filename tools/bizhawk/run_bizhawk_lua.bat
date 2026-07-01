@@ -17,12 +17,12 @@ REM BizHawk path can be overridden with BIZHAWK_EXE. The launcher writes a
 REM temporary no-audio diagnostic config by default; set BIZHAWK_USE_DIAG_CONFIG=0
 REM to use BizHawk's remembered config instead. It also wraps the Lua with the
 REM fast-headless template calls and verifies that the diagnostic itself still
-REM contains executable fast-headless calls. Deliberately visible/interactive
-REM diagnostics must set both BIZHAWK_ALLOW_SLOW_LUA=1 and
-REM BIZHAWK_CONFIRM_VISIBLE_DEBUG=1 so stale shells do not silently bypass the
-REM no-audio/no-render path. Additional EmuHawk flags can be supplied with
-REM BIZHAWK_EXTRA_ARGS. The launcher intentionally keeps EmuHawk
-REM path/movie/lua/ROM quoting simple so positional ROM loading stays reliable.
+REM contains executable fast-headless calls. The default fast path starts
+REM EmuHawk with a hidden window and the Lua wrapper disables rendering.
+REM Deliberately visible/interactive diagnostics must set both
+REM BIZHAWK_ALLOW_SLOW_LUA=1 and BIZHAWK_CONFIRM_VISIBLE_DEBUG=1 so stale shells
+REM do not silently bypass the no-audio/no-render path. Additional EmuHawk flags
+REM can be supplied with BIZHAWK_EXTRA_ARGS.
 
 setlocal
 
@@ -114,10 +114,18 @@ if not "%OGGF_OUT%"=="" echo OGGF_OUT=%OGGF_OUT%
 echo.
 
 pushd "%~dp0" >nul
-if "%BIZHAWK_HAS_DIAG_CONFIG%"=="1" (
-    "%BIZHAWK_EXE%" --audiosync false --config "%BIZHAWK_DIAG_CONFIG%" --chromeless --lua "%BIZHAWK_EFFECTIVE_LUA%" --movie "%BK2_PATH%" "%ROM_PATH%" %BIZHAWK_EXTRA_ARGS%
+if "%BIZHAWK_ALLOW_SLOW_LUA%"=="1" (
+    if "%BIZHAWK_HAS_DIAG_CONFIG%"=="1" (
+        "%BIZHAWK_EXE%" --audiosync false --config "%BIZHAWK_DIAG_CONFIG%" --chromeless --lua "%BIZHAWK_EFFECTIVE_LUA%" --movie "%BK2_PATH%" "%ROM_PATH%" %BIZHAWK_EXTRA_ARGS%
+    ) else (
+        "%BIZHAWK_EXE%" --audiosync false --chromeless --lua "%BIZHAWK_EFFECTIVE_LUA%" --movie "%BK2_PATH%" "%ROM_PATH%" %BIZHAWK_EXTRA_ARGS%
+    )
 ) else (
-    "%BIZHAWK_EXE%" --audiosync false --chromeless --lua "%BIZHAWK_EFFECTIVE_LUA%" --movie "%BK2_PATH%" "%ROM_PATH%" %BIZHAWK_EXTRA_ARGS%
+    if "%BIZHAWK_HAS_DIAG_CONFIG%"=="1" (
+        powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0run_bizhawk_hidden.ps1" -EmuHawkExe "%BIZHAWK_EXE%" -LuaScript "%BIZHAWK_EFFECTIVE_LUA%" -MoviePath "%BK2_PATH%" -RomPath "%ROM_PATH%" -ConfigPath "%BIZHAWK_DIAG_CONFIG%" -ExtraArgs "%BIZHAWK_EXTRA_ARGS%"
+    ) else (
+        powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0run_bizhawk_hidden.ps1" -EmuHawkExe "%BIZHAWK_EXE%" -LuaScript "%BIZHAWK_EFFECTIVE_LUA%" -MoviePath "%BK2_PATH%" -RomPath "%ROM_PATH%" -ExtraArgs "%BIZHAWK_EXTRA_ARGS%"
+    )
 )
 set "EXIT_CODE=%ERRORLEVEL%"
 popd >nul
