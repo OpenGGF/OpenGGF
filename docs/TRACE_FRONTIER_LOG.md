@@ -6,6 +6,61 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 ARZ2 stale Stop/skid latch release (f1698 -> f1712)
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round13-next` /
+  `bugfix/ai-s2-arz2-round13-next`, based on `bugfix/ai-s2-trace-next`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.context.diagnosticChars=full" "-Dtrace.context.rows=all" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red ARZ2 f1698 / 1966
+  (`obj_extra_s14_x` expected absent, actual `0x1371`).
+- Triage/evidence: the f1698 slot divergence was an extra dynamic Obj08 skid
+  puff in slot 20. A targeted occupancy oracle proved the trace expected no
+  slot-20 occupant at f1698, while the engine still had Obj08. A fast/invisible
+  BizHawk probe launched through `tools/bizhawk/run_bizhawk_lua.bat` showed
+  ROM Sonic on Stop animation `$0D` through trace f1694, then Walk animation
+  `$00` at f1695, with fixed `Sonic_Dust` leaving routine 6 for routine 2 at
+  the same point. S2 turn handling only writes Stop/skid animation when the
+  threshold branch fires, `SonAni_Stop` ends with `$FD,0`, and
+  `Obj08_CheckSkid` resets the fixed dust when the parent is no longer on Stop
+  (`docs/s2disasm/s2.asm:36927-36935,36988-36996,38730,42813-42822`). S1 and
+  S3K use the same threshold-triggered Stop/skid pattern
+  (`docs/s1disasm/_incObj/01 Sonic.asm:666,726`;
+  `docs/s1disasm/_anim/Sonic.asm:224`;
+  `docs/skdisasm/sonic3k.asm:22841-22852,22907-22918,28086-28097,28152-28163,32114-32125,32180-32191`;
+  `docs/skdisasm/General/Sprites/Sonic/Anim - Sonic.asm:57`;
+  `docs/skdisasm/General/Sprites/Tails/Anim - Tails.asm:60`;
+  `docs/skdisasm/General/Sprites/Knuckles/Anim - Knuckles.asm:57`).
+- Fix: `PlayableSpriteMovement` records whether the skid threshold refreshed
+  Stop/skid animation in the current movement pass. `PlayableSpriteAnimation`
+  clears the stale skidding latch when a scripted velocity Stop/skid animation
+  reaches its `$FD` switch without that same-frame refresh, allowing the profile
+  to resolve back to Walk instead of holding Stop for extra Obj08 dust ticks.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f1698 / 1966 errors
+  (`obj_extra_s14_x` expected absent, actual `0x1371`) -> f1712 / 1514 errors
+  (`obj_extra_s26_x` expected absent, actual `0x13E1`). The new owner is the
+  next ARZ2 dynamic-slot divergence.
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2SkidDustDoesNotAllocateExtraSlot20AfterRomFixedDustDeletes,com.openggf.sprites.managers.TestPlayableSpriteMovement#s2*Skid*" "-DfailIfNoTests=false" test`
+    passed 5 / 5 focused occupancy and existing S2 skid tests.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.context.diagnosticChars=full" "-Dtrace.context.rows=all" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at ARZ2 f1712 / 1514.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces: 13 green, 6 expected-red, no non-target
+    regression. Red frontiers held at ARZ2 f1712 / 1514, CNZ2 f9487 / 288,
+    HTZ2 f8530 / 218, MTZ3 f12146 / 650, OOZ1 f5958 / 665, and OOZ2 f9307 /
+    444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests. The repeated S1 mapping warning at
+    `0xe8df` remains known and pre-existing.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3k*TraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    passed the S3K must-keep smoke tests and preserved the known AIZ
+    expected-red trace frontiers before the harness OOMed on
+    `TestS3kCnzCompleteRunTraceReplay`. Retrying CNZ complete-run alone with
+    `-DargLine=-Xmx4096m` hit the same JVM heap reallocation failure before
+    producing a trace result.
+
 ## 2026-07-01 - S2 campaign integrated sweep after OOZ1 round 12 merge
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /
