@@ -3606,7 +3606,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Cross-game donation: override only the feature set with hybrid (donor spindash + base physics)
                 if (CrossGameFeatureProvider.isActive()) {
                         this.physicsFeatureSet = currentCrossGameFeatures().getHybridFeatureSet();
-                        this.gameRules = GameRules.fromLegacy(this.physicsFeatureSet);
+                        this.gameRules = currentCrossGameFeatures().getHybridRules();
                 }
                 ensurePersistentInstaShieldObject();
                 bubbleAnimId = module != null ? module.resolveAnimationId(CanonicalAnimation.BUBBLE) : -1;

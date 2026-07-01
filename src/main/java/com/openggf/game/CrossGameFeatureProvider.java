@@ -15,6 +15,8 @@ import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.data.SpindashDustArtProvider;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
+import com.openggf.game.rules.CrossGameRuleComposer;
+import com.openggf.game.rules.GameRules;
 import com.openggf.graphics.RenderContext;
 import com.openggf.level.Palette;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
@@ -50,6 +52,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     private SmpsLoader donorSmpsLoader;
     private DacData donorDacData;
     private PhysicsFeatureSet hybridFeatureSet;
+    private GameRules hybridRules;
     private RenderContext donorRenderContext;
     private PlayerSpriteRenderer instaShieldRenderer;
     private SpriteArtSet instaShieldArtSet;
@@ -123,6 +126,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         this.donorDustArtProvider = donorProvider.createSpindashDustArtProvider(donorReader);
 
         hybridFeatureSet = buildHybridFeatureSet();
+        hybridRules = buildHybridRules();
 
         // Create donor render context for palette isolation
         donorRenderContext = RenderContext.getOrCreateDonor(donorGameId);
@@ -186,6 +190,14 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
      */
     public PhysicsFeatureSet getHybridFeatureSet() {
         return hybridFeatureSet;
+    }
+
+    /**
+     * Returns typed hybrid game rules: host runtime behavior with explicitly
+     * donated player capabilities.
+     */
+    public GameRules getHybridRules() {
+        return hybridRules;
     }
 
     /**
@@ -354,6 +366,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         donorSmpsLoader = null;
         donorDacData = null;
         hybridFeatureSet = null;
+        hybridRules = null;
         donorRenderContext = null;
         instaShieldRenderer = null;
         instaShieldArtSet = null;
@@ -423,6 +436,13 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
                 .instaShieldEnabled(donorCapabilities.hasInstaShield())
                 .lightningShieldEnabled(donorCapabilities.hasElementalShields())
                 .build();
+    }
+
+    private GameRules buildHybridRules() {
+        GameRules baseRules = GameServices.module().getRules();
+        GameRules donorRules = GameRules.fromLegacy(resolveDonorFeatureSet());
+
+        return CrossGameRuleComposer.compose(baseRules, donorRules, donorCapabilities);
     }
 
     private PhysicsFeatureSet resolveDonorFeatureSet() {
