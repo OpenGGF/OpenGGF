@@ -330,15 +330,16 @@ BizHawk frame for trace frame `F` = `bk2_frame_offset` (from `metadata.json`) + 
 
 **ROM arg: use the simple-named copy, NOT the full filename.** The full ROM name (e.g. `Sonic The Hedgehog (W) (REV01) [!].gen`) has spaces, parens, and `[!]` (a shell glob char) that don't pass through to EmuHawk — it launches, loads **no ROM**, and hangs (~316 MB resident, never writes output, `emu.framecount()` stays 0). The repo root has byte-identical simple-named copies — `s1.gen` / `s2.gen` / `s3k.gen` (md5-verified == the REV01 ROMs) — pass one of those (absolute path) as the EmuHawk ROM arg. This failure looks like the timeout case below but is distinct: here EmuHawk runs yet never advances a frame (no ROM); there it advances but is killed mid-seek. (The trace-replay mvn tests are unaffected — this only bites the EmuHawk invocation.)
 
-**1. Fast headless is THREE lua calls, not the `--chromeless` flag.** At the top, before the loop:
+**1. Fast headless is the reusable launcher plus Lua toggles, not the `--chromeless` flag.** Run `tools/bizhawk/run_bizhawk_lua.bat` so EmuHawk starts with the generated no-audio diagnostic config, then keep the Lua toggles at the top, before the loop:
 
 ```lua
 emu.limitframerate(false)        -- remove the 60fps cap
 client.speedmode(6400)           -- 6400% speed
 client.invisibleemulation(true)  -- SKIP rendering: ~100x faster AND bounds memory
+if client.SetSoundOn then pcall(client.SetSoundOn, false) end
 ```
 
-`--chromeless` only hides window chrome. Without these calls a long seek (e.g. to BizHawk frame ~190000) runs at real-time (~50 min) while EmuHawk renders, piling up to multiple GB. `invisibleemulation(true)` is the memory fix (captures drop from ~3.4 GB to ~475 MB).
+`--chromeless` only hides window chrome. Without these calls a long seek (e.g. to BizHawk frame ~190000) runs at real-time (~50 min) while EmuHawk renders, piling up to multiple GB. `invisibleemulation(true)` is the memory fix (captures drop from ~3.4 GB to ~475 MB). The generated config and `SetSoundOn(false)` keep probes silent even when BizHawk's remembered config has audio enabled.
 
 **2. The script MUST self-exit, or EmuHawk lingers as a multi-GB zombie.** End the capture window with `client.exit()` (flush/close the outfile first). Both of these LEAK the process: a `while true do emu.frameadvance() end` loop with no exit, and a `...; client.pause()` tail. The robust pattern (what the production recorder uses) is: detect `movie.mode() == "FINISHED"` (or `emu.framecount() > STOP`) → flush → `client.exit()`. Always check `tasklist | grep -i emuhawk` is empty before each run and kill any stray instance after — `client.exit()` is not 100% reliable in every BizHawk build.
 
