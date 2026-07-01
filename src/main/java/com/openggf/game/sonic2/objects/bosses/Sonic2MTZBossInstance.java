@@ -1127,6 +1127,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         private int xSub;             // low word of x_pos during ObjectMoveAndFall
         private int ySub;             // low word of y_pos during ObjectMoveAndFall
         private boolean flipX2;       // render_flags.x_flip for break/bounce/face
+        private boolean burstCollisionProperty; // ROM collision_property <= -2 latch
 
         // Display
         private int mappingFrame = 5; // ROM: move.b #5,mapping_frame (s2.asm:67307)
@@ -1167,7 +1168,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 case RT_MAIN -> updateMain(boss, player);
                 case RT_BREAK_AWAY -> updateBreakAway(player);
                 case RT_BOUNCE_AROUND -> updateBounceAround(player);
-                case RT_BURST -> { /* burst handled on touch (Obj53_Burst) */ }
+                case RT_BURST -> finishBurst();
                 default -> { }
             }
 
@@ -1354,6 +1355,14 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 routine = RT_BOUNCE_AROUND;     // addq.b #2,routine
                 faceLeader(player);             // bsr Obj53_FaceLeader
             }
+
+            // ROM Obj53_Animate checks collision_property after BreakAway motion.
+            // A hit while in routine 4 only advances to routine 6; Obj53_Burst
+            // is not reached until the later routine-8 dispatch.
+            if (burstCollisionProperty) {
+                mappingFrame = FRAME_BURST;
+                routine = RT_BOUNCE_AROUND;
+            }
         }
 
         /**
@@ -1367,10 +1376,12 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 breakTimer--;
             }
 
-            // ROM: bsr Obj53_CheckPlayerHit (the per-frame poll happens via touch).
-            // If the burst frame got latched by a hit, fall through to burst handling.
-            if (mappingFrame == 0x0B) {
-                // ROM bug-path guard: not reachable in our impl (we never set $B); keep alive.
+            // ROM: bsr Obj53_CheckPlayerHit, then Obj53_Animate's local hit check
+            // can advance routine 6 -> routine 8. The actual parent count
+            // decrement happens only when routine 8 dispatches Obj53_Burst.
+            if (burstCollisionProperty) {
+                mappingFrame = FRAME_BURST;
+                routine = RT_BURST;
                 return;
             }
 
@@ -1414,12 +1425,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
          * ROM: Obj53_Burst (s2.asm:67593-67598).
          * PlaySound boss-explosion; decrement boss objoff_2C; DeleteObject.
          */
-        private void burst() {
-            if (routine == RT_BURST) {
-                return; // already bursting
-            }
-            routine = RT_BURST;
-            mappingFrame = FRAME_BURST;
+        private void finishBurst() {
             Sonic2MTZBossInstance boss = (Sonic2MTZBossInstance) parent;
             boss.services().playSfx(Sonic2Sfx.BOSS_EXPLOSION.id);
             boss.decrementOrbBreakCount(); // ROM: subi_.b #1,objoff_2C(boss)
@@ -1468,10 +1474,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         @Override
         public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
             // ROM: a rolling player hitting the $DA (BOSS-category) orb drives
-            // collision_property <= -2 -> Obj53_Burst. Only the break/bounce orb is
-            // burstable; the intact $87 orb (SPECIAL) is not attackable.
+            // collision_property <= -2. Obj53's own update later advances through
+            // Obj53_Animate/Obj53_Burst; Touch_Boss does not decrement the parent
+            // broken-orb count directly.
             if (routine == RT_BREAK_AWAY || routine == RT_BOUNCE_AROUND) {
-                burst();
+                burstCollisionProperty = true;
             }
         }
 

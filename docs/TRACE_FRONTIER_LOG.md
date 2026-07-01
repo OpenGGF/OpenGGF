@@ -6,12 +6,49 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2 round 19 integration: the S2 sweep
-remains 14 green / 5 expected-red. ARZ2 advances to f1993 / 842
+Current branch-local S2 state after MTZ3 round 20 advancement: the S2 sweep
+remains 14 green / 5 expected-red. ARZ2 is at f1993 / 842
 (`obj_s12_slot` expected `0x12`, actual `0x34`) after Obj37 lost rings consume
 the ROM-latched render flag before floor probes; OOZ1 is at f7731 / 490 (`y`
 expected `0x0374`, actual `0x036E`); CNZ2 remains parked at f9487 / 288; MTZ3
-remains f12897 / 490; and OOZ2 remains f9307 / 430.
+advances to f13054 / 367 (`x_speed` expected `0x0091`, actual `-0091`) after
+Obj53 broken-orb burst defers the parent count decrement through the ROM object
+routine; and OOZ2 remains f9307 / 430.
+
+## 2026-07-01 - S2 MTZ3 Obj53 deferred burst advances f12897 to f13054
+
+- Worktree/branch: `.worktrees/ai-s2-mtz3-round20-next` /
+  `bugfix/ai-s2-mtz3-round20-next`, based on
+  `bugfix/ai-s2-trace-next` at `a1606ea9f`.
+- Baseline reproduction:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round20-next\s2.gen"" ""-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace"" test"`
+  reproduced MTZ3 f12897 / 490 errors (`x_speed` expected `-0037`, actual
+  `-0200`).
+- Triage/evidence: the committed BizHawk launcher printed
+  `Mode:    no-audio config + fast no-render Lua wrapper` and read-only Lua
+  probes showed ROM f12897 samples before the later same-frame/next-frame hurt
+  publication, with BossY `$0421` and the broken-orb parent count still delaying
+  Obj54's SubC restart. Engine-side diagnostics aligned the same player samples
+  to a two-frame-early SubA -> SubC transition, caused by Obj53 decrementing the
+  parent broken-orb count directly from the touch callback. The ROM instead
+  latches the hit through `collision_property <= -2`, lets Obj53 BreakAway /
+  BounceAround advance the routine, and only `Obj53_Burst` decrements parent
+  `objoff_2C` (`docs/s2disasm/s2.asm:67968-68004,68014-68028,68068-68089`).
+- Fix: `Sonic2MTZBossInstance.MTZBossOrb` now latches the burst collision
+  property on rolling hits and defers the parent `objoff_2C` decrement until the
+  orb's routine-8 burst dispatch. Shared touch response behavior is unchanged.
+- Result:
+  `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f13054 / 367 errors. The new first mismatch is `x_speed`
+  expected `0x0091`, actual `-0091`, at a later Obj53 rebound-direction
+  alignment issue.
+- Verification:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Dtrace.context.diagnosticChars=full"" ""-Dtrace.context.radius=8"" ""-Dtrace.context.rows=all"" ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round20-next\s2.gen"" ""-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace"" test"`
+  completed expected-red at f13054 / 367.
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round20-next\s2.gen"" ""-Dtest=com.openggf.game.sonic2.objects.bosses.TestS2MTZBossGraphRewind,com.openggf.game.sonic2.TestSonic2MtzObjectProfile,com.openggf.game.sonic2.TestTodo10_MTZEventSpecs,com.openggf.game.rewind.coverage.TestRewindCoverageGuard"" ""-DfailIfNoTests=false"" test"`
+  passed 19 / 19 focused MTZ boss/object/event/rewind checks.
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round20-next\s2.gen"" ""-Dtest=TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay"" test"`
+  passed the adjacent MTZ1 and MTZ2 level-select traces.
 
 ## 2026-07-01 - S2 round 19 integrated verification after ARZ2 advance
 
