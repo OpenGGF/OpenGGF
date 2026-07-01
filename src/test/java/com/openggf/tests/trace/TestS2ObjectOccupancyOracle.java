@@ -1748,6 +1748,46 @@ public class TestS2ObjectOccupancyOracle {
                         + slotCheck.summary());
     }
 
+    @Test
+    public void arz2BossPillarsUseLowestFreeSlotsAtFrame4692() throws Exception {
+        PlatformPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 4692) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedPillar = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 0x12)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x89)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedPillar,
+                            "ARZ2 ROM fixture should report the right Obj89 pillar in slot 0x12 at f4692");
+                    AbstractObjectInstance actualPillar = om.getActiveObjects().stream()
+                            .filter(AbstractObjectInstance.class::isInstance)
+                            .map(AbstractObjectInstance.class::cast)
+                            .filter(instance -> instance.getSlotIndex() == 0x12)
+                            .findFirst()
+                            .orElse(null);
+                    return new PlatformPositionCheck(
+                            expectedPillar.x() & 0xFFFF,
+                            expectedPillar.y() & 0xFFFF,
+                            actualPillar == null ? -1 : actualPillar.getX(),
+                            actualPillar == null ? -1 : actualPillar.getY(),
+                            "live " + describeLiveSlots(om, 0x10, 0x12));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "Obj89_Init allocates ARZ boss pillars with AllocateObject/AllocateObjectAfterCurrent; "
+                        + "the slot 0x12 pillar must exist immediately at the ROM X "
+                        + "(docs/s2disasm/s2.asm:64836-64861); " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "A higher-slot Obj89 pillar is processed later in the same ExecuteObjects pass, "
+                        + "so Obj89_Pillar_Sub0 has already raised it one pixel at f4692 "
+                        + "(docs/s2disasm/s2.asm:64836-64861,65330-65341); " + check.summary());
+    }
+
     /**
      * Drives the named S2 level-select trace through the engine (mirroring the
      * S2 branch of {@code AbstractTraceReplayTest.replayMatchesTrace}) and

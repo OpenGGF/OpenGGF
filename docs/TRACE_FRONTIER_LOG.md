@@ -6,16 +6,56 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 35 ARZ2 death-fall work: ARZ2 is
-f4692 / 1052 (`obj_s12_type` expected `0x89`, actual missing) after S2
-Obj02_Dead continuation frames stopped running the live airborne
-`Tails_LevelBound` clamp that had snapped Tails from `$2820` to
-`Tails_Min_X_pos+$10 = $2A50` at f4617. OOZ2 is f12107 / 99
+Current branch-local S2 state after round 36 ARZ2 Obj89 init work: ARZ2 is
+f4707 / 1945 (`x` expected `0x2B4D`, actual `0x2B4F`) after Obj89 now raises
+its pillar children when Tails is in ROM `$81` object-control flight state,
+matching the `Obj89_Init` sidekick bypass. OOZ2 is f12107 / 99
 (`tails_g_speed` expected `0x00A4`, actual `0x0000`). CNZ2 remains f9946 / 300
 (`x_speed` expected `0x0200`, actual `0x08A8`) and MTZ3 remains f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`). Full S2 is 15 green / 4
 expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. CNZ2,
-MTZ3, and OOZ2 round 35 made no commits. No S2 trace greened in round 35.
+MTZ3, and OOZ2 round 35 made no commits. No S2 trace greened in round 36.
+
+## 2026-07-01 - S2 ARZ2 Obj89 init sidekick flight bypass advances f4692 to f4707
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round36-next` /
+  `bugfix/ai-s2-arz2-round36-next`, based on campaign commit `02a2b466d`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced ARZ2 f4692 / 1052 errors (`obj_s12_type` expected `0x89`, actual
+  missing).
+- Evidence: the ROM trace showed Obj89 appearing in slots `$11/$12` at f4692,
+  with the right pillar already processed to `y=$050F` later in the same
+  object pass. The engine had only the parent Obj89 in slot `$10`, because its
+  init gate required every participating sidekick to be inside the X trigger
+  window even while Tails was in the CPU flight/offscreen object-control state.
+- ROM refs: S2 `Obj89_Init` checks Sonic X, then compares
+  `Sidekick+obj_control` against `$81` and branches directly to
+  `Obj89_Init_RaisePillars` before the Tails X-window checks. That raise path
+  initializes the parent and allocates the pillar children with
+  `AllocateObject` / `AllocateObjectAfterCurrent`; each pillar then runs
+  `Obj89_Pillar_Sub0` and raises one pixel in the same pass
+  (`docs/s2disasm/s2.asm:64778-64800,64836-64861,65330-65339`).
+- Fix: `Sonic2ARZBossInstance.checkInitConditions` now treats the main player
+  and sidekicks in the ROM order, reconstructing the sidekick `object_control`
+  byte from the engine object-control flags and skipping the sidekick X check
+  when it equals `$81`.
+- Focused oracle:
+  `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossPillarsUseLowestFreeSlotsAtFrame4692" "-DfailIfNoTests=false" test`
+  passed the new f4692 slot/position assertion. MSE also printed the expected
+  ARZ2 target expected-red at the improved f4707 frontier.
+- Result:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+  now reaches ARZ2 f4707 / 1945 errors (`x` expected `0x2B4D`, actual
+  `0x2B4F`). The new context shows Sonic lacks the ROM pushing bit near the
+  right Obj89 pillar, a separate solid/contact frontier.
+- Same-game preservation subset:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  ran 6 requested checks: ARZ1 and OOZ1 passed; ARZ2 advanced to f4707 / 1945;
+  CNZ2 held f9946 / 300, MTZ3 held f13336 / 352, and OOZ2 held f12107 / 99.
+- Object/rewind guards:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.tests.TestNoServicesInObjectConstructors,com.openggf.level.objects.TestObjectServicesMigrationGuard" "-DfailIfNoTests=false" test`
+  passed 20/20.
 
 ## 2026-07-01 - S2 ARZ2 Obj02_Dead continuation advances f4617 to f4692
 
