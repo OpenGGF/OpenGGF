@@ -6,14 +6,55 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2/OOZ1 round 20 integration: the S2
-sweep remains 14 green / 5 expected-red. ARZ2 advances to f1998 / 817
-(`obj_s17_slot` expected `0x17`, actual `0x35`) after S2 object unloads consume
-the previous `ObjectsManager` coarse-camera latch and fixed Obj08 skid dust runs
-between dynamic-object frees and placement loading; OOZ1 advances to f9164 /
-355 (`tails_x_speed` expected `0x0200`, actual `-0600`) after Obj26 rejects the
-expired Obj3D launcher residue roll contact; CNZ2 remains parked at f9487 /
-288; MTZ3 remains f12897 / 490; and OOZ2 remains f9307 / 430.
+Current branch-local S2 state after ARZ2 round 21 on top of the ARZ2/OOZ1
+round 20 integration: the S2 sweep remains 14 green / 5 expected-red. ARZ2
+advances to f2016 / 753 (`obj_extra_s21_x` expected absent, actual `0x1433`)
+after backward post-camera placement includes the object group exactly on the
+previous left window edge; OOZ1 remains f9164 / 355 (`tails_x_speed` expected
+`0x0200`, actual `-0600`) after Obj26 rejects the expired Obj3D launcher
+residue roll contact; CNZ2 remains parked at f9487 / 288; MTZ3 remains f12897 /
+490; and OOZ2 remains f9307 / 430.
+
+## 2026-07-01 - S2 ARZ2 backward post-camera placement includes prior left edge
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round21-next` /
+  `bugfix/ai-s2-arz2-round21-next`, based on campaign `next` head `80bff7c7f`
+  with ARZ2 f1998 and OOZ1 f9164 already integrated.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=s2.gen" test`
+  reproduced ARZ2 f1998 / 817 errors (`obj_s17_slot` expected `0x17`,
+  actual `0x35`).
+- Triage/evidence: frame-window occupancy showed the ROM loading the backward
+  streamed `$1400` Obj2C/layer-switcher/monitor cluster into slots 44-46 at
+  f1992, while the engine deferred that exact-left-edge group until f1993 after
+  Obj8E freed slot 23. That let the leaf generator occupy slot 23 before the
+  later fixed Obj08 skid-dust allocation. S2 `ObjectsManager_GoingBackward`
+  scans previous object records and stops only when the previous record is not
+  greater than the new left edge (`docs/s2disasm/s2.asm:33050-33067`), so a
+  post-camera catch-up from the prior left edge to the new left edge must include
+  objects equal to the prior edge.
+- Fix: `ObjectPlacementController.extendForPostCamera` now includes
+  `x_pos == oldWindowStart` in the backward catch-up gap. No trace data is
+  written into engine state, and the rule is a placement-window boundary rule,
+  not an ARZ/route/frame carve-out.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f2016 / 753 errors. The new first mismatch is
+  `obj_extra_s21_x` expected absent, actual `0x1433`.
+- Verification:
+  - Focused oracle:
+    `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BackwardPostCameraCatchupIncludesOldLeftEdgeClusterAtFrame1992" "-Ds2.rom.path=s2.gen" test`
+    passed.
+  - Target trace:
+    `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=s2.gen" test`
+    exited 1 as expected-red at ARZ2 f2016 / 753.
+  - Same-game S2 guards: EHZ1 and WFZ passed in the bundled guard run; SCZ
+    initially hit a local `lwjgl.dll` native-loading setup error before replay
+    execution, then passed when rerun alone.
+  - Shared-code preservation: S1 GHZ1 trace passed. S3K AIZ trace remains
+    pre-existing red at f8941 / 1160 (`camera_y` expected `0x02C1`, actual
+    `0x02B9`), outside placement; the S3K AIZ skip, bootstrap resolver, level
+    loading, and decoding utility guard set passed.
 
 ## 2026-07-01 - S2 ARZ2 Obj82 coarse-camera and Obj08 dust order advances f1993 to f1998
 

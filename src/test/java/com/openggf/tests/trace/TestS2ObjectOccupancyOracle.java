@@ -1317,6 +1317,35 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void arz2BackwardPostCameraCatchupIncludesOldLeftEdgeClusterAtFrame1992() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1992) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    return new SlotWindowCheck(actual,
+                            "expected " + describeSlots(expected, 16, 60)
+                                    + " actual " + describeSlots(actual, 16, 60)
+                                    + " live " + describeLiveSlots(om, 16, 60));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x2C, slotCheck.idAt(44),
+                "S2 ObjectsManager_GoingBackward loads streamed objects whose x_pos is greater "
+                        + "than the new left edge, including entries equal to the prior left edge; "
+                        + "Obj2C at x=$1400 must take slot 44 before later frees move allocation "
+                        + "to slot 23 (docs/s2disasm/s2.asm:33050-33067); " + slotCheck.summary());
+        Assertions.assertEquals(0x03, slotCheck.idAt(45),
+                "The x=$1400 layer switcher belongs to the same backward streamed cluster; "
+                        + slotCheck.summary());
+        Assertions.assertEquals(0x26, slotCheck.idAt(46),
+                "The x=$1400 monitor belongs to the same backward streamed cluster; "
+                        + slotCheck.summary());
+    }
+
+    @Test
     public void arz2GrounderRocksFreeSlotsBeforeFrame1648PlacementCluster() throws Exception {
         SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {
