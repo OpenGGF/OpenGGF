@@ -149,7 +149,12 @@ public class MhzPollenSpawnerInstance extends AbstractObjectInstance implements 
             int xVelocity = ((raw & 0x01FF) - 0x0100) + baseVelocity[0];
             int yVelocity = -((((raw >>> 16) & 0x00FF) + 0x0100) - baseVelocity[1]);
             int gravityStep = (xVelocity & 3) + 2;
-            int angle = raw & 0xFF;
+            // ROM loc_3DAD6 writes the full word `move.w d0,angle(a1)` before
+            // masking d0 for x_vel/y_vel; the object's byte-sized angle field
+            // is the first (high) byte of that big-endian word write, so the
+            // seed angle is the high byte of the low word, not the low byte
+            // (docs/skdisasm/sonic3k.asm ~81706).
+            int angle = (raw >>> 8) & 0xFF;
             spawnChild(() -> new MhzPollenParticleInstance(
                     player.getCentreX() & 0xFFFF,
                     (player.getCentreY() + 0x18) & 0xFFFF,
