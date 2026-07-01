@@ -3279,7 +3279,7 @@ with `movea.l a0,a1` for ring 0 and then calls plain `AllocateObject` in the
 loop (`docs/s2disasm/s2.asm:25125-25146`). S3K analog:
 `docs/skdisasm/sonic3k.asm:21065-21088,35549-35591`.
 
-**Originating commit.** `<pending>` S2 ARZ2 Obj37 allocation split:
+**Originating commit.** `d27307e27` S2 ARZ2 Obj37 allocation split:
 `TestS2Arz2LevelSelectTraceReplay` stays at f1717 but improves 1420 -> 980
 errors.
 

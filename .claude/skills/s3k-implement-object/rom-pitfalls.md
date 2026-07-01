@@ -953,7 +953,7 @@ collection windows, or same-frame object execution.
 (`docs/skdisasm/sonic3k.asm:35549-35591`). S2 analog:
 `docs/s2disasm/s2.asm:85444-85461,25125-25146`.
 
-**Originating commit (S2 origin).** `<pending>` S2 ARZ2 Obj37 allocation split:
+**Originating commit (S2 origin).** `d27307e27` S2 ARZ2 Obj37 allocation split:
 see `s2-implement-object/rom-pitfalls.md` P79.
 
 ---
