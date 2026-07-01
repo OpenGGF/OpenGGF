@@ -3098,6 +3098,43 @@ f1698.
 
 ---
 
+## P76 -- Parent-created projectile pairs may initialize through the first child slot
+
+**Pattern.** Some S2 parent routines allocate only one child object and leave a
+routine-0 child initializer to reuse that first child's SST slot, fill its
+movement/collision fields, and then allocate the paired child. The first child
+returns from init without running movement, while the second child may already
+be initialized and execute movement later in the same object pass.
+
+**Engine symptom.** A harmful projectile pair is visually plausible but one
+member reaches the player one movement tick early. In HTZ2, Obj52 lava ball
+slot 20 had already advanced into Sonic's touch box at f8530, so the engine
+entered hurt one frame before ROM. ROM slot 20 was still lower/outside the
+touch box because its spawn-frame routine only ran the pair initializer.
+
+**What to check / fix.**
+1. When a parent routine creates a projectile or hazard pair, verify whether the
+   parent allocates both children or only seeds one subtype child.
+2. If the first child routine initializes both slots and returns, model that
+   as a placeholder child with collision disabled until its routine-0 update.
+3. Let the paired child start initialized if the ROM writes all of its fields
+   before the allocator loop returns, and allow same-pass execution only when
+   the allocated slot is still ahead in object order.
+4. Keep the fix keyed to the object routine/slot cadence. Do not compensate by
+   tuning velocity constants or branching on zone, route, or trace frame.
+
+**ROM citation.** Obj52 parent `Obj52_CreateLavaBall` allocates one subtype-6
+child (`docs/s2disasm/s2.asm:64306-64323`). The child initializer at
+`loc_2FF78` reuses the current slot for ball 0, writes `collision_flags=$8B`,
+velocity, radius, and animation fields, then calls `AllocateObject` for ball 1
+before returning (`docs/s2disasm/s2.asm:64429-64469`). Movement is separate in
+`Obj52_LavaBall_Move` (`docs/s2disasm/s2.asm:64504-64524`).
+
+**Originating commit.** `<pending>` S2 HTZ2 Obj52 lava-ball pair init cadence:
+`TestS2Htz2LevelSelectTraceReplay` advances f8530 -> f9150.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
