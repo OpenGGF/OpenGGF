@@ -219,6 +219,17 @@ final class ObjectSolidContactController {
         return key != null && set.contains(key);
     }
 
+    private boolean hasAnyMultiPieceStandingBitOrSnapshot(
+            PlayableEntity player, ObjectInstance instance, MultiPieceSolidProvider multiPiece) {
+        for (int i = 0; i < multiPiece.getPieceCount(); i++) {
+            if (hasObjectStandingBit(player, instance, i)
+                    || wasObjectStandingBitSetThisFrame(player, instance, i)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     boolean hasStandingLatch(PlayableEntity player, ObjectInstance instance) {
         return hasObjectStandingBit(player, instance);
     }
@@ -3977,13 +3988,18 @@ final class ObjectSolidContactController {
                 && multiPiece.usesPieceScopedStandingBits()) {
             return hasObjectStandingBit(player, instance, pieceIndex)
                     || wasObjectStandingBitSetThisFrame(player, instance, pieceIndex)
-                    // Folded ROM-slot solids such as S2 Obj70 can classify a
-                    // stale airborne leftward rider as a fresh side hit on the
-                    // SAME tooth whose d6 bit returned d4=0 before
-                    // SolidObject_cont. Suppress only that piece-specific branch:
-                    // Obj70 sibling slots with clear d6 still run SolidObject_cont
-                    // in ROM slot order (s2.asm:35028-35047, 55137-55191).
-                    || (player.getAir() && !isHurtRoutineSideStopCandidate(player) && player.getXSpeed() < 0)
+                    // Preserve ROM airborne inward-side no-contact when a real
+                    // leftward speed was already present at contact entry
+                    // (SolidObject_InsideLeft -> AtEdge -> SideAir), and add
+                    // only the folded Obj70 zero-speed stale-latch case. ROM
+                    // Obj70 keeps each tooth in a real SST slot, so a tooth's
+                    // standing-bit air-unseat can return before a folded sibling
+                    // can run SolidObject_StopCharacter (docs/s2disasm/s2.asm:
+                    // 35413-35436,55084-55191,35021-35040).
+                    || (player.getAir() && !isHurtRoutineSideStopCandidate(player)
+                            && ((preContactXSpeed <= -0x100 && player.getXSpeed() < 0)
+                                    || (player.getXSpeed() <= 0
+                                            && hasAnyMultiPieceStandingBitOrSnapshot(player, instance, multiPiece))))
                     || (!player.getAir() && preContactXSpeed <= -0x100 && player.getXSpeed() < 0);
         }
         return true;
