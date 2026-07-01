@@ -1278,7 +1278,10 @@ f5336 / 219 errors to f5399 / 215 errors).
 on a moving/scripted solid, even though the trace CSV/BK2 input column already
 shows the direction and the ROM `state_snapshot` sees no `move_lock` or
 control lock. In CNZ, Sonic's right input appeared at frame 5997 while riding
-ObjD5, but ROM inertia stayed zero until frame 6000.
+ObjD5, but ROM inertia stayed zero until frame 6000. In MTZ3, Sonic's RIGHT
+input was already visible at f12146 while riding Obj65 subtype 5 near platform
+X `$28AE`, but ROM kept inertia zero for the first three input frames and then
+consumed the later right edge near X `$28FC` immediately.
 
 **Root cause.** Some solid-helper/object phase combinations expose BK2-aligned
 input before the player movement routine consumes the corresponding logical
@@ -1294,19 +1297,24 @@ riding object/helper, not to all S2 movement.
 2. Prefer the `SolidObjectProvider.staleHorizontalLogicalInputFramesWhileRiding`
    hook with a default of zero. Override it only on the object whose helper
    proves the stale window.
-3. Keep existing object-specific windows on the owning object. SCZ Tornado and
-   CNZ ObjD5 use the hook; shared movement should not branch on game id or
-   object id directly.
+3. Keep existing object-specific windows on the owning object. SCZ Tornado,
+   CNZ ObjD5, and MTZ Obj65 use the hook; shared movement should not branch on
+   game id or object id directly.
 
 **ROM citation.** `docs/s2disasm/s2.asm:58435-58443` (ObjD5 calls
 `PlatformObjectD5` after its state routine), `docs/s2disasm/s2.asm:35617-35657`
 (`PlatformObjectD5` continued-riding/skip-existing-platform helper), and
 `docs/s2disasm/s2.asm:35402-35420` (`MvSonicOnPtfm` writes rider position).
+For MTZ Obj65, see `docs/s2disasm/s2.asm:53159-53220` (subtype 5 conveyor and
+MTZ3 stop checks) plus `docs/s2disasm/s2.asm:36552-36567`
+(`Sonic_Move` logical horizontal consumption).
 
 **Originating commit.** `<pending>` (S2 CNZ frame 5997 Sonic accelerated three
 frames before ROM while riding ObjD5. Moving stale horizontal suppression to a
 per-solid hook and opting in ObjD5 advanced the CNZ frontier from f5997 / 197
-errors to f6018 / 289 errors while S1 GHZ and S2 EHZ stayed green).
+errors to f6018 / 289 errors while S1 GHZ and S2 EHZ stayed green). `<pending>`
+S2 MTZ3 Obj65 second-stop stale logical window advances the MTZ3 frontier from
+f12146 / 650 to f12592 / 497.
 
 ---
 

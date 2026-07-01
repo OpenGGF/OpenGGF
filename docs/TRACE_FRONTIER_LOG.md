@@ -6,6 +6,51 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 MTZ3 Obj65 second-stop stale input (f12146 -> f12592)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz3-round14-next` /
+  `bugfix/ai-s2-mtz3-round14-next`, based on `bugfix/ai-s2-trace-next` at
+  integrated head `b19712464`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red MTZ3 f12146 / 650
+  (`x_speed` expected `0x0000`, actual `0x000C`).
+- Triage/evidence: the f12146 context showed Sonic riding Obj65 slot `$20`
+  (decimal 32) at platform position `$28AE,$04CC`. The trace input row had
+  RIGHT pressed, but ROM kept `sonic_x_speed` / `sonic_g_speed` at zero while
+  Obj65 carried Sonic two pixels per frame. S2 Obj65 subtype 5 moves by
+  `addq.w #2,x_pos(a0)`, then, only in `metropolis_zone_2`, checks the two MTZ3
+  stop points `$1CC0` and `$2940` before falling through the shared solid path;
+  Sonic movement later consumes `Ctrl_1_Held_Logical`
+  (`docs/s2disasm/s2.asm:53159-53220,36552-36567`). A wider second-stop window
+  reproduced the first mismatch but over-suppressed the later right edge at
+  platform X `$28FC`, proving the ROM delay is the early approach window rather
+  than a whole-stop or zone-wide input offset.
+- Fix: `MTZLongPlatformObjectInstance` keeps the stale logical-horizontal input
+  hook object-local for subtype 5 in MTZ3 and now recognizes both the first stop
+  approach (`$1C80 <= x < $1CC0`) and the early second stop approach
+  (`$28A0 <= x < $28C0`). The hook still excludes CPU sidekicks because S2
+  `TailsCPU_Normal` writes `Ctrl_2_Logical` before `Tails_Move`.
+- Result:
+  `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace`: f12146 / 650 errors
+  (`x_speed` expected `0x0000`, actual `0x000C`) -> f12592 / 497 errors
+  (`y_speed` expected `-0290`, actual `0x0290`). The new owner is the later
+  vertical-speed mismatch after the Obj65 second-stop input edge.
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mtzLongPlatformSubtype5StalesLogicalHorizontalInputWhileRiding" "-DfailIfNoTests=false" test`
+    passed the focused Obj65 stale-window regression.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at the advanced MTZ3 frontier f12592 / 497.
+  - `mvn "-Dtest=TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed the S2 sweep with the same six expected-red owners and no
+    non-target regressions: ARZ2 f1712 / 1514, CNZ2 f9487 / 288, HTZ2 f9150 /
+    121, MTZ3 f12592 / 497, OOZ1 f6639 / 557, and OOZ2 f9307 / 444.
+  - `mvn "-Dtest=TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests.
+  - `mvn "-Dtest=TestS3kAizTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    passed the S3K smoke/AIZ guard classes except the known expected-red AIZ
+    trace replay, which stayed at f8941 / 1160.
+
 ## 2026-07-01 - S2 campaign integrated sweep after round 13 ARZ2/HTZ2/OOZ1 merges
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /
@@ -23,7 +68,8 @@ branch-local measurements.
   - ARZ2: f1712 / 1514 (`obj_extra_s26_x` expected absent, actual `0x13E1`).
   - CNZ2: f9487 / 288 (`g_speed` expected `0x0000`, actual `0x0100`).
   - HTZ2: f9150 / 121 (`camera_x` expected `0x2F5E`, actual `0x2F60`).
-  - MTZ3: f12146 / 650 (`x_speed` expected `0x0000`, actual `0x000C`).
+  - MTZ3: f12592 / 497 (`y_speed` expected `-0290`, actual `0x0290`) after
+    round 14 Obj65 second-stop input.
   - OOZ1: f6639 / 557 (`y_speed` expected `-0100`, actual `0x0000`).
   - OOZ2: f9307 / 444 (`x_speed` expected `0x0150`, actual `-0150`).
 - Cross-game guard:
