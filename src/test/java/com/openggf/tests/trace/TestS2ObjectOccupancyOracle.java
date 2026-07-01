@@ -579,6 +579,18 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void arz2ChopChopAnimalKeepsPriorRenderFlagUntilRomDeleteFrame() throws Exception {
+        AnimalPositionCheck check = animalPositionAtArz2Frame(617);
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj28_Walk must not delete from a fresh post-move bounds check before ROM "
+                        + "render_flags.on_screen clears; slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj28_Walk uses the prior DisplaySprite render flag for deletion "
+                        + "(docs/s2disasm/s2.asm:24670-24688); slots " + check.summary());
+    }
+
+    @Test
     public void arz2ChopChopAnimalFreesSlotWhenRenderFlagClears() throws Exception {
         SlotCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {
@@ -875,6 +887,41 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void arz2ChopChopBubbleSurvivesFirstObj0aInitPassAtFrame599() throws Exception {
+        SlotBubbleCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 599) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x0A, expected.get(19),
+                            "ROM fixture should still hold the f598 Obj91 patrol bubble in slot 0x13 "
+                                    + "after its first Obj0A pass at f599");
+                    BreathingBubbleInstance actualBubble = om.activeObjectsOfType(BreathingBubbleInstance.class)
+                            .stream()
+                            .filter(bubble -> bubble.getSlotIndex() == 19)
+                            .findFirst()
+                            .orElse(null);
+                    return new SlotBubbleCheck(actual.get(19),
+                            actualBubble == null ? -1 : actualBubble.getX(),
+                            actualBubble == null ? -1 : actualBubble.getY(),
+                            -1,
+                            -1,
+                            describeSlots(expected, 16, 26),
+                            describeSlots(actual, 16, 26));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x0A, slotCheck.actualId(),
+                "Obj0A_Init sets render_flags on_screen|level_fg before Obj0A_ChkWater tests "
+                        + "render_flags.on_screen, so a lower-slot child not executed on its spawn frame "
+                        + "must not observe a cleared render bit on its first pass "
+                        + "(docs/s2disasm/s2.asm:41888,41951). Expected slots "
+                        + slotCheck.expectedSummary() + " actual slots " + slotCheck.actualSummary());
+    }
+
+    @Test
     public void arz2WhispSlot13MatchesRomSubpixelCarryAtFrame1225() throws Exception {
         AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {
@@ -1098,6 +1145,35 @@ public class TestS2ObjectOccupancyOracle {
         return driveTrace(route, zone, act,
                 (trace, om, frame) -> ObjectOccupancyOracle.firstDivergence(
                         trace, om, frame, FIRST_DYNAMIC_SLOT));
+    }
+
+    @Test
+    public void arz2GrounderRocksFreeSlotsBeforeFrame1648PlacementCluster() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1648) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    ObjectOccupancyOracle.Divergence divergence =
+                            ObjectOccupancyOracle.firstDivergence(trace, om, frame, FIRST_DYNAMIC_SLOT);
+                    Assertions.assertNull(divergence,
+                            "ARZ2 dynamic slots should still match at f1648 after Obj90 rocks "
+                                    + "delete through the prior render_flags.on_screen gate "
+                                    + "(docs/s2disasm/s2.asm:73490-73494); expected "
+                                    + describeSlots(expected, 16, 40) + " actual "
+                                    + describeSlots(actual, 16, 40));
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 40));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x1F, slotCheck.idAt(18),
+                "Obj90 rocks must not occupy slot 0x12 when the f1648 placement cluster "
+                        + "streams in; actual slots " + slotCheck.summary());
+        Assertions.assertEquals(0x03, slotCheck.idAt(32),
+                "The second stale Obj90 rock must be gone before slot 0x20 is reused by "
+                        + "the ROM layer switcher; actual slots " + slotCheck.summary());
     }
 
     /**

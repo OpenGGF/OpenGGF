@@ -81,6 +81,8 @@ public class GrounderWallInstance extends AbstractObjectInstance implements Grou
     private int xSubpixel;
     private int ySubpixel;
     private boolean activated;
+    private boolean initialized;
+    private boolean romRenderOnScreen;
     private final GrounderBadnikInstance parent;
 
     /**
@@ -97,6 +99,8 @@ public class GrounderWallInstance extends AbstractObjectInstance implements Grou
         this.currentY = y;
         this.parent = parent;
         this.activated = false;
+        this.initialized = false;
+        this.romRenderOnScreen = true;
         this.xSubpixel = 0;
         this.ySubpixel = 0;
 
@@ -124,6 +128,11 @@ public class GrounderWallInstance extends AbstractObjectInstance implements Grou
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (!initialized) {
+            initialized = true;
+            return;
+        }
+
         // Wait for parent's activation flag
         if (!activated) {
             if (parent == null || parent.isActivated()) {
@@ -131,6 +140,14 @@ public class GrounderWallInstance extends AbstractObjectInstance implements Grou
             } else {
                 return;
             }
+        }
+
+        // Obj8F_Move shares Obj90_Move's render-flag delete gate: it tests the
+        // previous BuildSprites on-screen bit before ObjectMoveAndFall
+        // (s2.asm:73490-73494).
+        if (!romRenderOnScreen) {
+            setDestroyed(true);
+            return;
         }
 
         // Apply gravity to Y velocity
@@ -146,10 +163,13 @@ public class GrounderWallInstance extends AbstractObjectInstance implements Grou
         currentY += (ySubpixel >> 8);
         ySubpixel &= 0xFF;
 
-        // Off-screen cleanup
-        if (!isOnScreen(64)) {
-            setDestroyed(true);
-        }
+        // The shared ObjectManager MarkObjGone tail handles X-range cleanup
+        // after movement, matching the ROM jump at the end of Obj8F_Move.
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        romRenderOnScreen = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
     }
 
     @Override

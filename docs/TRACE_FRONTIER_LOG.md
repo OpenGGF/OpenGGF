@@ -6,6 +6,54 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 ARZ2 render-flag child cleanup (f1648 -> f1698)
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round12-next` /
+  `bugfix/ai-s2-arz2-round12-next`, based on `bugfix/ai-s2-trace-next`
+  campaign head `9d00ec9c7`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red ARZ2 f1648 / 2236
+  (`obj_s17_slot` expected `0x17`, actual `0x21`).
+- Triage/evidence: the first occupancy oracle showed the f1648 placement
+  cluster permuted because stale Grounder Obj90 children still occupied dynamic
+  slots that ROM had freed. Earlier probes in the same slot-cadence chain showed
+  the f598 Obj91-spawned Obj0A bubble must survive its first lower-slot pass at
+  f599, because Obj0A Init sets `render_flags.on_screen|level_fg` before
+  Obj0A_ChkWater tests the bit (`docs/s2disasm/s2.asm:41888,41951`).
+  Obj28 Walk/Fly deletes through `Obj28_ChkDel`, so its delete gate observes the
+  previous BuildSprites render flag rather than a fresh post-move bounds check
+  (`docs/s2disasm/s2.asm:24670-24688,24715-24727`). Obj8F/Obj90 Move tests
+  the previous `render_flags.on_screen` bit before `ObjectMoveAndFall`, then
+  tails to MarkObjGone for X-range cleanup; Grounder spawns its child walls/rocks
+  through that shared path (`docs/s2disasm/s2.asm:73490-73494,73510-73516`).
+- Fix: Obj0A bubbles now preserve their init-set render flag through the first
+  pass, S2 animal delete checks read the cached prior render flag, and Grounder
+  Obj8F/Obj90 children initialize for one pass, delete from the cached prior
+  render flag before gravity/movement, and leave post-move X cleanup to the
+  shared MarkObjGone tail.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f1648 / 2236 errors
+  (`obj_s17_slot` expected `0x17`, actual `0x21`) -> f1698 / 1966 errors
+  (`obj_extra_s14_x` expected absent, actual `0x1371`). The new first owner is
+  an extra Obj08 skid-dust child in dynamic slot `$14`.
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; ARZ2 advanced to f1698 / 1966.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2ChopChopBubbleSurvivesFirstObj0aInitPassAtFrame599+arz2ChopChopAnimalKeepsPriorRenderFlagUntilRomDeleteFrame+arz2GrounderRocksFreeSlotsBeforeFrame1648PlacementCluster" "-DfailIfNoTests=false" test`
+    passed 3 / 3 focused occupancy tests.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces, 13 green and 6 expected-red. The unchanged reds
+    stayed CNZ2 f9487 / 288, HTZ2 f7351 / 687, MTZ3 f9555 / 907, OOZ1
+    f4637 / 815, and OOZ2 f9307 / 444; ARZ2 moved to f1698 / 1966.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests.
+  - `$env:S3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:SONIC_3K_ROM_PATH=$env:S3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Ds3k.rom.path=$env:S3K_ROM_PATH" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    completed 68 S3K smoke tests. Bootstrap, decoding, level-loading, and
+    AIZ skip headless checks passed; the two AIZ trace replays remained at the
+    existing expected-red frontiers: complete-run f1095 / 4319 and AIZ f8941 /
+    1160.
+
 ## 2026-07-01 - S2 MTZ3 Obj65 main-player logical-input delay (f9134 -> f9555)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz3-round11-next` /

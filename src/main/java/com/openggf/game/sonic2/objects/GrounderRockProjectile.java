@@ -57,6 +57,8 @@ public class GrounderRockProjectile extends AbstractObjectInstance implements Gr
     private int ySubpixel;
     private int mappingFrame;
     private boolean activated;
+    private boolean initialized;
+    private boolean romRenderOnScreen;
     private final GrounderBadnikInstance parent;
     private int rockIndex;
 
@@ -75,6 +77,8 @@ public class GrounderRockProjectile extends AbstractObjectInstance implements Gr
         this.rockIndex = Math.min(rockIndex, ROCK_VELOCITIES.length - 1);
         this.parent = parent;
         this.activated = false;
+        this.initialized = false;
+        this.romRenderOnScreen = true;
         this.xSubpixel = 0;
         this.ySubpixel = 0;
 
@@ -102,6 +106,11 @@ public class GrounderRockProjectile extends AbstractObjectInstance implements Gr
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (!initialized) {
+            initialized = true;
+            return;
+        }
+
         // Wait for parent's activation flag
         if (!activated) {
             if (parent == null || parent.isActivated()) {
@@ -109,6 +118,14 @@ public class GrounderRockProjectile extends AbstractObjectInstance implements Gr
             } else {
                 return;
             }
+        }
+
+        // Obj90_Move tests the previous BuildSprites render_flags.on_screen bit
+        // before ObjectMoveAndFall; a cleared render bit deletes the rock without
+        // a final movement step (s2.asm:73490-73494).
+        if (!romRenderOnScreen) {
+            setDestroyed(true);
+            return;
         }
 
         // Apply gravity to Y velocity
@@ -124,10 +141,18 @@ public class GrounderRockProjectile extends AbstractObjectInstance implements Gr
         currentY += (ySubpixel >> 8);
         ySubpixel &= 0xFF;
 
-        // Off-screen cleanup
-        if (!isOnScreen(64)) {
-            setDestroyed(true);
-        }
+        // The shared ObjectManager MarkObjGone tail handles X-range cleanup
+        // after movement, matching the ROM jump at the end of Obj90_Move.
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        romRenderOnScreen = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return 8;
     }
 
     @Override
