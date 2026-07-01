@@ -15,8 +15,8 @@ support began ticking `oil_char2submersion` before the airborne support-release
 branch. CNZ2 remains f9946 / 300 (`x_speed` expected `0x0200`, actual
 `0x08A8`) and MTZ3 remains f13336 / 352 (`x_speed` expected `0x0200`, actual
 `-0200`). Full S2 is 15 green / 4 expected-red, full S1 remains green, and the
-S3K AIZ guard is unchanged. CNZ2 round 34 made no commit; MTZ3 and OOZ2 round
-34 are still running. No S2 trace greened in round 34 yet.
+S3K AIZ guard is unchanged. CNZ2, MTZ3, and OOZ2 round 34 made no commits. No
+S2 trace greened in round 34.
 
 ## 2026-07-01 - S2 ARZ2 Obj79 checkpoint dongle advances f4548 to f4617
 
@@ -56,7 +56,7 @@ S3K AIZ guard is unchanged. CNZ2 round 34 made no commit; MTZ3 and OOZ2 round
   object. Nearby ROM objects are Obj04 moving platforms, pointing at sidekick
   Obj04 ride-state preservation rather than checkpoint allocation.
 
-## 2026-07-01 - S2 round 34 partial integrated campaign baseline
+## 2026-07-01 - S2 round 34 integrated campaign baseline
 
 Integrated on `bugfix/ai-s2-trace-next`:
 - `7395c16cd` (`fix(s2): delay checkpoint dongle native position until routine`)
@@ -65,8 +65,14 @@ Integrated on `bugfix/ai-s2-trace-next`:
 - CNZ2 round-34 made no commit. Diagnostics confirmed Obj08 still allocates
   slot 25 from f7984 and keeps Obj51 displaced to slot 28; two narrow Obj86
   skid-handoff candidates did not change the symptom and were removed.
-- MTZ3 and OOZ2 round-34 workers were still running when this partial baseline
-  was recorded.
+- MTZ3 round-34 made no commit. BizHawk PC probes confirmed Obj53 orbit D2
+  residue is real ROM state: the first live orb is seeded by prior ROM code D2
+  lower-word high byte (`0x3C00` then `0x7800` across the target frames), while
+  later orbs inherit prior orbit results such as `0x0427`; no genuine
+  owner-local model was identified.
+- OOZ2 round-34 made no commit. BizHawk sampling showed ROM Obj55
+  `collision_flags=00` near `v_frame=$2F4B`, but the narrow collision-byte
+  candidate regressed OOZ2 to f9302 / 400, so it was rejected.
 - No S2 trace greened in the accepted round-34 work, so no round-34 change was
   banked into `next`.
 
