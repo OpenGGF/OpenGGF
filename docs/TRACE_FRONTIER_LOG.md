@@ -6,6 +6,54 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 round 17 integrated sweep after OOZ1/ARZ2/MTZ3 advances
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next` at `f054a375e`, after merging
+  `bugfix/ai-s2-ooz1-round17-next`,
+  `bugfix/ai-s2-arz2-round17-next`, and
+  `bugfix/ai-s2-mtz3-round17-next`. Tooling commit `30411e54c` also forces the
+  BizHawk diagnostic launcher through a generated fast-headless wrapper before
+  loading the requested Lua script.
+- Integrated changes:
+  - OOZ1 Obj50 equal-Y orientation and 16.16 chase movement advances OOZ1 from
+    f7584 / 384 to f7671 / 395.
+  - ARZ2 lost-ring owner-slot timing ignores same-pass frees and advances ARZ2
+    from f1717 / 980 to f1760 / 916.
+  - MTZ3 Obj54/Obj53 shield break-away wait/subpixel drift advances MTZ3 from
+    f12608 / 490 to f12897 / 490.
+- BizHawk launcher verification:
+  `OGGF_START=0`, `OGGF_STOP=2`, and `OGGF_OUT=target\bizhawk-launch-smoke-fast-wrapper.txt`
+  with `tools\bizhawk\run_bizhawk_lua.bat tools\bizhawk\diag_template_fast.lua src\test\resources\traces\s2\ehz1_fullrun\s2-ehz1.bk2 s2.gen`
+  exited 0. The launcher printed the generated wrapper path, BizHawk loaded the
+  wrapper as `--lua`, wrote `DIAG DONE`, and no `EmuHawk` process remained.
+  A comment-only Lua containing the template calls only in comments was rejected
+  by `prepare_bizhawk_fast_lua.ps1`.
+- Focused MTZ verification:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.TestS2ObjectOccupancyOracle#mtz3RotatingPlatformLoadKeepsRomSlot22Identity+mtz3MovingPlatformUnloadReleasesRomSlot17+mtz3TwinStomperNoContactClearsTailsPushAtRomFrame1743+mtz3CogAirborneStaleStandingBitKeepsTailsXSpeedAtRomFrame9555+mtz3DeadTailsObj6eStaleStandingBitClearsAtRomFrame3618" "-DfailIfNoTests=false" test`
+  completed with the five occupancy oracle checks passing and MTZ3 expected-red
+  at f12897 / 490 (`x_speed` expected `-0037`, actual `-0200`).
+- S2 sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  completed 19 traces: 14 green, 5 expected-red. Red frontiers are ARZ2 f1760 /
+  916 (`obj_s28_type` expected `0x8F`, actual missing), CNZ2 f9487 / 288
+  (`g_speed` expected `0x0000`, actual `0x0100`), MTZ3 f12897 / 490
+  (`x_speed` expected `-0037`, actual `-0200`), OOZ1 f7671 / 395 (`y`
+  expected `0x036E`, actual `0x0370`), and OOZ2 f9307 / 430 (`y_speed`
+  expected `-0418`, actual `0x0418`).
+- S1 guard:
+  `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  passed 29 / 29 S1 traces.
+- S3K guard:
+  `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+  completed 68 S3K checks. Bootstrap, decoding, level loading, and AIZ skip
+  headless checks passed; AIZ traces stayed at their existing expected-red
+  frontiers, complete-run f1095 / 4319 and AIZ f8941 / 1160.
+- Next targets:
+  ARZ2 f1760, MTZ3 f12897, OOZ1 f7671, and OOZ2 f9307 are active. CNZ2 remains
+  parked at f9487 after repeated no-change workers confirmed the Obj51 stale
+  `x_pos` / `Boss_MoveObject` evidence without a safe advancing fix.
+
 ## 2026-07-01 - S2 OOZ1 Obj50 equal-Y orientation advances f7584 to f7671
 
 - Worktree/branch: `.worktrees/ai-s2-ooz1-round17-next` /
