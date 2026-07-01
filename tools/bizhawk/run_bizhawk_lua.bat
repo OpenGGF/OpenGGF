@@ -97,6 +97,7 @@ echo Lua:     %LUA_SCRIPT%
 if not "%BIZHAWK_EFFECTIVE_LUA%"=="%LUA_SCRIPT%" echo Wrapper: %BIZHAWK_EFFECTIVE_LUA%
 echo Movie:   %BK2_PATH%
 echo ROM:     %ROM_PATH%
+if "%BIZHAWK_ALLOW_SLOW_LUA%"=="1" (echo Mode:    visible/slow Lua allowed) else (echo Mode:    no-audio config + fast no-render Lua wrapper)
 if not "%BIZHAWK_EXTRA_ARGS%"=="" echo Extra:   %BIZHAWK_EXTRA_ARGS%
 if "%BIZHAWK_HAS_DIAG_CONFIG%"=="1" echo Config:  %BIZHAWK_DIAG_CONFIG%
 if not "%OGGF_START%"=="" echo OGGF_START=%OGGF_START%

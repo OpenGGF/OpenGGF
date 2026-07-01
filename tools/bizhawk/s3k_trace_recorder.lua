@@ -4885,6 +4885,9 @@ HEADLESS_VISIBLE = false
 if HEADLESS then
     emu.limitframerate(false)
     client.speedmode(6400)
+    if client.SetSoundOn then
+        pcall(client.SetSoundOn, false)
+    end
     if not HEADLESS_VISIBLE then
         client.invisibleemulation(true)
     end

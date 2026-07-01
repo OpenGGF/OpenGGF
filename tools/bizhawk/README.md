@@ -8,13 +8,13 @@ Use this folder for the recorder scripts and local BizHawk assets:
 
 - `run_bizhawk_lua.bat` launches any Lua/BK2/ROM combination safely for
   diagnostics and one-off probes
-- `record_trace.bat` launches headless recording
+- `record_trace.bat` launches S1 recording through the reusable no-audio/no-render launcher
 - `s1_trace_recorder.lua` captures the ROM-side trace data using schema v3
-- `record_s2_trace.bat` launches the Sonic 2 headless recorder
+- `record_s2_trace.bat` launches the Sonic 2 recorder through the reusable no-audio/no-render launcher
 - `record_s2_level_select_traces.ps1` records the Sonic 2 level-select BK2 set into test resources
 - `s2_trace_recorder.lua` captures Sonic 2 ROM-side trace data using schema v8, including
   first-sidekick state for Sonic/Tails parity debugging
-- `record_s3k_trace.bat` launches the Sonic 3&K headless recorder
+- `record_s3k_trace.bat` launches the Sonic 3&K recorder through the reusable no-audio/no-render launcher
 - `s3k_trace_recorder.lua` captures Sonic 3&K ROM-side trace data using schema v3, including
   `zone_act_state` diagnostics and the `aiz_end_to_end` checkpoint stream
 - `record_s1_credits_traces.bat` launches forced Sonic 1 credits-demo capture
@@ -60,6 +60,11 @@ zone/act in aux diagnostics.
 
 If you update the trace workflow, update the guide page above first so the contributor docs stay in
 sync with the tools.
+
+For trace recording, use the `record_*_trace.bat` wrappers. They route through
+`run_bizhawk_lua.bat`, which means recorder regeneration gets the same generated
+no-audio config, fast Lua wrapper, and invisible-emulation mode as one-off
+diagnostics.
 
 For one-off diagnostics, copy `diag_template_fast.lua`, set the capture window
 environment variables, and run the reusable launcher instead of constructing a
