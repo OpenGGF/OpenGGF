@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
@@ -599,8 +600,12 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             state.yVel = 0;
         }
 
-        // Check orb break count: if orbs still breaking away, stay in SubA
-        if (orbBreakCount != 0) {
+        // ROM Obj54_MainSubA waits while objoff_2C (active broken-orb count)
+        // is nonzero. The engine's base touch pass can set Obj54's break flag
+        // before this parent update, while Obj53 consumes it in the later child
+        // update. Treat that pending flag as a same-frame effective count so
+        // SubA cannot skip directly to SubC before the orb has detached.
+        if (orbBreakCount != 0 || pendingOrbBreak) {
             // Still waiting for orbs
         } else {
             // All orbs done: signal and advance
@@ -1119,6 +1124,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         private int bounceBaseY;      // objoff_2E: ground baseline for bounce
         private int xVel;             // x_vel (8.8)
         private int yVel;             // y_vel (8.8)
+        private int xSub;             // low word of x_pos during ObjectMoveAndFall
+        private int ySub;             // low word of y_pos during ObjectMoveAndFall
         private boolean flipX2;       // render_flags.x_flip for break/bounce/face
 
         // Display
@@ -1204,6 +1211,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 // ROM: bclr x_flip; if d1 >= 0 bset x_flip.
                 flipX2 = d1 >= 0;
                 xVel = d1;
+                xSub = 0;
+                ySub = 0;
                 return;
             }
 
@@ -1322,11 +1331,16 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 // when it goes negative this frame, switch to the hit collision flags
             }
 
-            // ROM: ObjectMoveAndFall (move + add gravity $38), then subi.w #$20,y_vel.
-            currentX += (xVel >> 8); // 16.8 fixed move (x)
-            currentY += (yVel >> 8); // 16.8 fixed move (y)
-            yVel += ORB_GRAVITY;     // +$38
-            yVel -= 0x20;            // subi.w #$20,y_vel => net +$18
+            // ROM: ObjectMoveAndFall moves x_pos/y_pos as longwords, then Obj53
+            // subtracts $20 from y_vel. Preserve x_sub/y_sub so ±$80 horizontal
+            // velocity advances one pixel every other frame.
+            SubpixelMotion.State motion = new SubpixelMotion.State(currentX, currentY, xSub, ySub, xVel, yVel);
+            SubpixelMotion.objectFallXY(motion, ORB_GRAVITY);
+            currentX = motion.x;
+            currentY = motion.y;
+            xSub = motion.xSub;
+            ySub = motion.ySub;
+            yVel = motion.yVel - 0x20; // subi.w #$20,y_vel => net +$18
             // ROM: cmpi.w #$180,y_vel / blt + / move.w #$180,y_vel
             if (yVel >= 0x180) {
                 yVel = 0x180;
