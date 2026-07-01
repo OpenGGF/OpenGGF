@@ -1,11 +1,14 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.GroundMode;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.TestablePlayableSprite;
@@ -43,6 +46,36 @@ class TestForcedSpinObjectInstance {
         assertTrue(player.getPinballMode());
         assertTrue(player.getSpindash(),
                 "S2 Obj84 writes pinball_mode, which aliases the spindash flag byte");
+    }
+
+    @Test
+    void forcedSpinEntryKeepsRollAnimationWhenPinballModeSharesSpindashByte() {
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        ScriptedVelocityAnimationProfile profile = s2AnimationProfile();
+        player.setAnimationProfile(profile);
+        player.setAnimationId(Sonic2AnimationIds.WAIT.id());
+        player.setCentreX((short) 0x0100);
+        player.setCentreY((short) 0x0120);
+
+        ForcedSpinObjectInstance trigger = new ForcedSpinObjectInstance(
+                new ObjectSpawn(0x0100, 0x0120, Sonic2ObjectIds.FORCED_SPIN, 0, 0, false, 0x0120),
+                "ForcedSpin");
+        trigger.setServices(new QueryOnlyPlayerServices(player, List.of()));
+
+        trigger.update(0, player);
+
+        assertTrue(player.getPinballMode(), "Obj84 should enable pinball mode for forced tunnel rolling");
+        assertTrue(player.getRolling(), "Obj84 should put the player into rolling state");
+        assertEquals(Sonic2AnimationIds.ROLL.id(), player.getAnimationId(),
+                "HTZ/CNZ forced-spin tunnels use normal rolling animation, not spindash");
+        assertTrue(player.getSpindash(),
+                "S2 Obj84 still mirrors pinball_mode into the ROM spindash byte for movement/sidekick logic");
+
+        Integer resolvedAnimation = profile.resolveAnimationId(player, 1, 32);
+
+        assertEquals(Sonic2AnimationIds.ROLL.id(), resolvedAnimation,
+                "Obj84's mirrored spindash byte must not make the animation resolver choose AniIDSonAni_Spindash");
     }
 
     @Test
@@ -112,6 +145,35 @@ class TestForcedSpinObjectInstance {
         assertTrue(sidekick.getPinballMode(),
                 "Once Tails leaves routine $04, Obj84 should consume the still-pending crossing");
         assertTrue(sidekick.getRolling());
+    }
+
+    private static ScriptedVelocityAnimationProfile s2AnimationProfile() {
+        return new ScriptedVelocityAnimationProfile()
+                .setIdleAnimId(Sonic2AnimationIds.WAIT)
+                .setWalkAnimId(Sonic2AnimationIds.WALK)
+                .setRunAnimId(Sonic2AnimationIds.RUN)
+                .setRollAnimId(Sonic2AnimationIds.ROLL)
+                .setRoll2AnimId(Sonic2AnimationIds.ROLL2)
+                .setPushAnimId(Sonic2AnimationIds.PUSH)
+                .setDuckAnimId(Sonic2AnimationIds.DUCK)
+                .setLookUpAnimId(Sonic2AnimationIds.LOOK_UP)
+                .setSpindashAnimId(Sonic2AnimationIds.SPINDASH)
+                .setSpringAnimId(Sonic2AnimationIds.SPRING)
+                .setDeathAnimId(Sonic2AnimationIds.DEATH)
+                .setDrownAnimId(Sonic2AnimationIds.DROWN)
+                .setHurtAnimId(Sonic2AnimationIds.HURT)
+                .setSkidAnimId(Sonic2AnimationIds.SKID)
+                .setSlideAnimId(Sonic2AnimationIds.SLIDE)
+                .setAirAnimId(Sonic2AnimationIds.WALK)
+                .setBalanceAnimId(Sonic2AnimationIds.BALANCE)
+                .setBalance2AnimId(Sonic2AnimationIds.BALANCE2)
+                .setBalance3AnimId(Sonic2AnimationIds.BALANCE3)
+                .setBalance4AnimId(Sonic2AnimationIds.BALANCE4)
+                .setWalkSpeedThreshold(0x40)
+                .setRunSpeedThreshold(0x600)
+                .setFallbackFrame(0)
+                .setAnglePreAdjust(true)
+                .setCompactSuperRunSlope(true);
     }
 
     private static final class QueryOnlyPlayerServices extends TestObjectServices {
