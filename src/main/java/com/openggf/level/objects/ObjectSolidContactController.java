@@ -896,6 +896,13 @@ final class ObjectSolidContactController {
         }
         if (candidate instanceof SolidObjectProvider provider
                 && provider.getSolidRoutineProfile().allowsObjectControlledSolidContacts()) {
+            // ROM SolidObject_ChkBounds uses a signed obj_control test before
+            // side/top classification (S2 s2.asm:35376-35377). Objects that
+            // deliberately allow positive obj_control states, such as Obj33's
+            // lift lock, may still reject bit-7 states via an object-local hook.
+            if (isSignedObjectControlNewSolidContactRejected(player, candidate)) {
+                return true;
+            }
             return false;
         }
         // Most object-controlled states skip SolidObject entirely. MGZ top-platform

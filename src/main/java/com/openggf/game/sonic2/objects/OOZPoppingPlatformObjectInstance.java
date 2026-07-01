@@ -433,6 +433,16 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
+        // Obj33_Main still calls SolidObject after moving the lid
+        // (s2.asm:49727-49740), but only positive object_control=1 riders pass
+        // through SolidObject_ChkBounds. Signed bit-7 states such as Tails's
+        // off-screen/flying obj_control=$81 branch to SolidObject_TestClearPush
+        // before side/top classification (s2.asm:35344-35489).
+        return player instanceof AbstractPlayableSprite;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Solid collision handled by ObjectManager

@@ -6,6 +6,56 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 OOZ1 Obj33 signed object-control gate (f4637 -> f5958)
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-round12-next` /
+  `bugfix/ai-s2-ooz1-round12-next`, based on
+  `bugfix/ai-s2-trace-next` at `9d00ec9c7`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.context.diagnosticChars=full" "-Dtrace.context.rows=all" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red OOZ1 f4637 / 815
+  (`tails_y` expected `0x021D`, actual `0x0220`).
+- Triage/evidence: the f4637 context showed ROM Tails still airborne at
+  `$1EBB,$021D`, `y_vel=$04D8`, `status=$02`, while the engine re-seated
+  Tails on Obj33 slot 34 at `$1EC0,$0238`, zeroed `y_vel`, and set
+  `Status_OnObj`. A fast/invisible BizHawk diagnostic launched via
+  `tools/bizhawk/run_bizhawk_lua.bat` with absolute Lua/movie/ROM/output paths
+  showed the matching ROM slot 34 entering `SolidObject_cont`, then
+  `SolidObject_ChkBounds`, then `SolidObject_TestClearPush` / no-collision at
+  the same frame. Correcting the diagnostic to read S2 `obj_control` at SST
+  offset `$2A` showed Tails had `obj_control=$81`, so ROM rejected the fresh
+  landing through `tst.b obj_control(a1) / bmi.w` before side/top
+  classification. Obj33 still needs positive `obj_control=1` support while it
+  locks riders to the rising lid, so the fix is an object-local bit-7 rejection
+  hook rather than disabling object-controlled contacts outright
+  (`docs/s2disasm/s2.asm:49727-49740,49809,49837,49843,35344-35489`).
+- Fix: `OOZPoppingPlatformObjectInstance` opts into
+  `rejectsBit7ObjectControlNewSolidContact`, while the shared solid-contact
+  object-control gate now lets providers that allow positive object-controlled
+  support still reject signed bit-7 states before new `SolidObject_cont`
+  resolution.
+- Result:
+  `TestS2OozLevelSelectTraceReplay#replayMatchesTrace`: f4637 / 815 errors
+  (`tails_y` expected `0x021D`, actual `0x0220`) -> f5958 / 665 errors
+  (`x` expected `0x2440`, actual `0x2430`). The new owner is the later OOZ1
+  Obj48 launcher-ball interaction.
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#oozPoppingPlatformRejectsBit7ObjectControlFreshLanding+oozPoppingPlatformApexLaunchesStandingSidekickWithoutJavaLockLatch+oozPoppingPlatformLockUsesRomObjControlBitOneState,com.openggf.game.sonic2.objects.TestOOZPlacedObjectGaps#oozPoppingPlatformKeepsRomSolidLatchAndObjectControlledSupport,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.context.diagnosticChars=full" "-Dtrace.context.rows=all" "-DfailIfNoTests=false" test`
+    passed 4 / 4 focused Obj33 tests and exited 1 as expected-red at OOZ1
+    f5958 / 665.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces. The 13 green traces stayed green; the six
+    expected-red frontiers are ARZ2 f1648 / 2236, CNZ2 f9487 / 288, HTZ2
+    f7351 / 687, MTZ3 f9555 / 907, OOZ1 f5958 / 665, and OOZ2 f9307 / 444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    exited 1 at the existing S3K AIZ trace expected-red frontier f8941 /
+    1160 (`camera_y` expected `0x02C1`, actual `0x02B9`); AIZ headless,
+    bootstrap, decoding, and level-loading smoke tests in that command passed.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    passed 21 / 21 S3K must-keep smoke tests.
+
 ## 2026-07-01 - S2 MTZ3 Obj70 folded stale-tooth side contact (f9555 -> f12146)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz3-round12-next` /
