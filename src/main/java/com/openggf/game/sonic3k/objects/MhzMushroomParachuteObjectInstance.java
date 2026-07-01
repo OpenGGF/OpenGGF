@@ -267,7 +267,9 @@ public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInst
     private void resolveWallCollision() {
         TerrainCheckResult leftWall = ObjectTerrainUtils.checkLeftWallDist(motion.x - WALL_SENSOR_X_RADIUS, motion.y);
         if (leftWall.foundSurface() && leftWall.distance() < 0) {
-            motion.x += leftWall.distance();
+            // ROM: sub.w d1,x_pos(a0) — a negative left-wall distance pushes x_pos away from
+            // the wall (increases it), unlike the right-wall branch below.
+            motion.x -= leftWall.distance();
         }
         TerrainCheckResult rightWall = ObjectTerrainUtils.checkRightWallDist(motion.x + WALL_SENSOR_X_RADIUS, motion.y);
         if (rightWall.foundSurface() && rightWall.distance() < 0) {

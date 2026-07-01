@@ -96,6 +96,30 @@ class TestMhzMushroomParachuteSteering {
                         + "pull it back to $14FD");
     }
 
+    @Test
+    void wallCollisionPushesParachuteOutOfLeftWallAfterMove() {
+        MhzMushroomParachuteObjectInstance parachute = new MhzMushroomParachuteObjectInstance(
+                new ObjectSpawn(0x1500, 0x0500, MHZ_MUSHROOM_PARACHUTE, 0, 0, false, 0));
+        TestablePlayableSprite player = playerAtGrabWindow(0x1500, 0x0525);
+        parachute.setServices(new TestObjectServices());
+        parachute.update(0, player);
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(-5, (byte) 0, 0));
+            terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+
+            parachute.update(1, player);
+        }
+
+        assertEquals(0x1507, parachute.getX(),
+                "ROM sub_3F7AE's left-wall sensor (sub_FD32) applies `sub.w d1,x_pos` when d1<0, so a "
+                        + "negative (penetrating) left-wall distance must push x_pos AWAY from the wall "
+                        + "(increase it), not deeper into it: angle $00 moves x_pos to $1502, then the -5 "
+                        + "left-wall penetration should push it out to $1507");
+    }
+
     private static TestablePlayableSprite playerAtGrabWindow(int x, int y) {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) x, (short) y);
         player.setYSpeed((short) 0x200);
