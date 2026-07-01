@@ -24,6 +24,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 11. [LBZ2 End Boss Smoke Puffs: Immortal-Object Quirk Not Replicated](#lbz2-end-boss-smoke-puffs-immortal-object-quirk-not-replicated)
 12. [LBZ2 Finale Player Scripts: Engine Animation IDs Instead of Raw Mapping Frames](#lbz2-finale-player-scripts-engine-animation-ids-instead-of-raw-mapping-frames)
 13. [AIZ2 Boss Rewind: Transient Combat/Cosmetic Children Restored](#aiz2-boss-rewind-transient-combatcosmetic-children-restored)
+14. [MHZ StickyVine Pull: Heuristic Replaced with ROM `sub_3EC66` Vector Math](#mhz-stickyvine-pull-heuristic-replaced-with-rom-sub_3ec66-vector-math)
 
 ---
 
@@ -596,3 +597,51 @@ The other batch-4 HCZ end-boss scene objects (`HczEndBossInstance`,
 (`AizEndBossInstance`, `Aiz2EndEggCapsuleInstance`, `AizIntroPlaneChild`,
 `AizIntroWaveChild`) now have rewind codecs in `Sonic3kObjectRegistry` and are restored on
 a backward seek.
+
+---
+
+## MHZ StickyVine Pull: Heuristic Replaced with ROM `sub_3EC66` Vector Math
+
+**Location:** `MhzStickyVineObjectInstance.applyStickyPull`
+**ROM Reference:** `sub_3EC66` (`sonic3k.asm` ~83210-83258), called from `loc_3EB26` after `sub_3EC2A`
+
+### Original Implementation (engine, pre-fix)
+
+`applyStickyPull` used a `sign(d)*clamp(|d|/2,1,4)` heuristic: it pulled the player 1-4
+whole pixels per frame directly toward the anchor along each axis independently, and
+derived the ground `ground_vel`-halving threshold from `abs(dx)<<6` rather than the ROM's
+actual pull magnitude. This reproduced the ROM's air/ground branch *structure* (position
+pull, air `x_vel` halving, ground `ground_vel` halving) but not its displacement magnitude
+or true diagonal direction.
+
+### Fixed Implementation
+
+`applyStickyPull` now ports `sub_3EC66` directly: it computes the full 32-bit
+(pixel:subpixel) delta between the player and the vine anchor in the same Q16.16
+representation as the ROM's `x_pos`/`y_pos` longword (the engine's `xPixel`/`xSubpixel`
+split already mirrors this exactly), takes the integer pixel component (`swap d1`/`swap
+d2`) as the `GetArcTan(dxPixel, dyPixel)` input, derives magnitude `d3 =
+(|dxPixel|+|dyPixel|)*2`, and looks up `(sin, cos) = GetSineCosine(angle)` via the
+engine's shared `TrigLookupTable.calcAngle`/`sinHex`/`cosHex` (the same tables other S3K
+objects such as `MGZDashTriggerObjectInstance` and `GumballItemObjectInstance` already use
+for `GetArcTan`/`GetSineCosine` parity). The pull is a full 32-bit sub-pixel position
+subtract (`x_pos -= cos(angle)*d3*4`; `y_pos -= sin(angle)*d3*2` while airborne only), and
+the ground `ground_vel`-halving gate now compares against the ROM's actual `(cos(angle)*d3*4)
+>> 8` pull magnitude instead of the heuristic's `abs(dx)<<6` proxy.
+
+### Rationale
+
+This was a parity bug, not an intentional divergence: the heuristic's per-frame pull was an
+order of magnitude too large (whole pixels vs. the ROM's sub-pixel drift) and ignored pull
+direction on the non-dominant axis, so the vine's "sticky" feel diverged visibly from the
+ROM. It is recorded here per this document's fixed-bug precedent (see "HCZ Object Mappings"
+above) so the before/after behavior change is traceable.
+
+### Verification
+
+`TestMhzStickyVineObjectInstance#activeAirPullMatchesRomArcTanSineCosineVector` asserts the
+per-frame position delta for a known `(dx, dy)` matches `GetArcTan`/`GetSineCosine` computed
+from the same production `TrigLookupTable`.
+`TestMhzStickyVineObjectInstance#groundedStickyPullHalvesGroundSpeedWhenRomThresholdIsExceeded`
+exercises the corrected ground `ground_vel`-halving gate with a drift large enough to clear
+the ROM `$200`/`$10` threshold. The full `TestMhzStickyVineObjectInstance` suite passes.
