@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S2 OOZ boss multi-sprite art now renders:** Obj55 now draws its ROM child sprite slots for the submarine body, laser-shooter chain, and spike-chain attack instead of rendering only `mainspr_mapframe`, restoring the missing craft and spike-chain pieces from `ArtNem_OOZBoss`.
 - **S2 HTZ2 post-boss camera expansion now reaches the capsule:** Obj52 now stays active through its defeated flee routine so its ROM-owned `Camera_Max_X_pos` expansion completes at `$3160` before deletion, matching `docs/s2disasm/s2.asm:64084-64112` and allowing the Act 2 capsule/results camera to settle on the correct position.
 - **IDE launches now resolve prerelease build titles:** `AppVersion` now treats unresolved Maven placeholders as missing build metadata and falls back to the local Git commit/dirty state for prerelease IntelliJ `Engine.main` runs, preventing window titles such as `OpenGGF 0.6.prerelease-${openggf.git.commit}`.
 - **S2 forced-roll tunnels no longer show spindash visuals:** Hill Top / Casino Night Obj84 tunnel rolling now treats the ROM pinball/spindash byte alias as forced rolling for both player animation and the fixed dust object, preserving the normal roll animation without the white spindash charge wave while leaving real grounded spindash charge dust intact.

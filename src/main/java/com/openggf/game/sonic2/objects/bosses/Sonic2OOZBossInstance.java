@@ -60,12 +60,18 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     private static final int LASER_RIGHT_DELETE_X = 0x2A10;
     private static final int LASER_GROUND_Y = 0x0250;
     private static final int[] LASER_TARGETS = {0x238, 0x230, 0x240, 0x25F};
+    private static final int MAX_CHILD_SPRITES = 8;
+    private static final int MAIN_VEHICLE_CHILD_FRAME = 1;
+    private static final int CHAIN_CHILD_FRAME = 7;
 
     private int bossSubtype;
     private int bossCountdown;
     private int status;
     private int mainFrame;
     private int childSpriteCount;
+    private int[] childFrames;
+    private int[] childXs;
+    private int[] childYs;
     private int collisionFlags;
     private int laserPosMask;
     private int shotCount;
@@ -105,6 +111,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         status = 0;
         mainFrame = 8;
         childSpriteCount = 1;
+        setChildSprite(0, MAIN_VEHICLE_CHILD_FRAME, state.x, state.y);
         collisionFlags = 0x0F;
         laserPosMask = 0;
         shotCount = 0;
@@ -150,6 +157,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         state.x = MAIN_X;
         state.xFixed = state.x << 16;
         applyHoverPosition();
+        alignMainVehicleChild();
         if ((state.yFixed >> 16) <= MAIN_SURFACE_Y) {
             state.yFixed = MAIN_SURFACE_Y << 16;
             state.routineSecondary = MAIN_WAIT;
@@ -160,6 +168,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     private void updateMainWait() {
         if ((status & STATUS_HIT) == 0) {
             applyHoverPosition();
+            alignMainVehicleChild();
             bossCountdown--;
             if (bossCountdown >= 0) {
                 return;
@@ -174,6 +183,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         state.y = state.yFixed >> 16;
         state.x = MAIN_X;
         state.xFixed = state.x << 16;
+        alignMainVehicleChild();
         if ((status & STATUS_RISING_DONE) == 0) {
             if (state.y > MAIN_DIVE_PEAK_Y) {
                 return;
@@ -220,6 +230,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         if (state.y < MAIN_START_Y) {
             state.y++;
             state.yFixed = state.y << 16;
+            alignMainVehicleChild();
         } else if (services != null && services.camera() != null && services.camera().getMaxX() >= 0x2A20) {
             ObjectLifetimeOps.deleteNoRespawn(this);
         }
@@ -254,6 +265,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         flipped = faceRight;
         mainFrame = 5;
         childSpriteCount = 8;
+        initializeChainChildFrames();
         collisionFlags = 0x8A;
         laserPosMask = 0;
         animFrameDuration = 0;
@@ -350,6 +362,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         flipped = rightSide;
         mainFrame = 2;
         childSpriteCount = 8;
+        initializeChainChildFrames();
         collisionFlags = 0x8A;
     }
 
@@ -430,21 +443,72 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         int windY = (TrigLookupTable.sinHex(angle) >> 6);
         state.x = MAIN_X + windX;
         state.y = (state.yFixed >> 16) + windY;
+        for (int i = 0; i < childSpriteCount && i < MAX_CHILD_SPRITES; i++) {
+            int childAngle = (angle - (0x10 * (i + 1))) & 0xFF;
+            int childBaseY = (state.yFixed >> 16) + (0x0F * (i + 1));
+            ensureChildSpriteStorage();
+            childXs[i] = MAIN_X + (TrigLookupTable.cosHex(childAngle) >> 4);
+            childYs[i] = childBaseY + (TrigLookupTable.sinHex(childAngle) >> 6);
+            childFrames[i] = CHAIN_CHILD_FRAME;
+        }
         state.sineCounter = (state.sineCounter + 2) & 0xFF;
     }
 
     private void updateSpikeChainMove() {
         int angle = (state.sineCounter + 0x40) & 0xFF;
+        int baseX = flipped ? SPIKE_RIGHT_X : SPIKE_LEFT_X;
         int xOffset = (TrigLookupTable.cosHex(angle) * 0x68) >> 8;
         if (!flipped) {
             xOffset = -xOffset;
         }
         int yOffset = (TrigLookupTable.sinHex(angle) * 0x68) >> 8;
-        state.x = (flipped ? SPIKE_RIGHT_X : SPIKE_LEFT_X) + xOffset;
+        state.x = baseX + xOffset;
         state.y = SPIKE_Y + yOffset;
         state.xFixed = state.x << 16;
         state.yFixed = state.y << 16;
+        for (int i = 0; i < childSpriteCount && i < MAX_CHILD_SPRITES; i++) {
+            int childAngle = (angle - (0x06 * (i + 1))) & 0xFF;
+            int childXOffset = (TrigLookupTable.cosHex(childAngle) * 0x68) >> 8;
+            if (!flipped) {
+                childXOffset = -childXOffset;
+            }
+            int childYOffset = (TrigLookupTable.sinHex(childAngle) * 0x68) >> 8;
+            ensureChildSpriteStorage();
+            childXs[i] = baseX + childXOffset;
+            childYs[i] = SPIKE_Y + childYOffset;
+            childFrames[i] = CHAIN_CHILD_FRAME;
+        }
         state.sineCounter = (state.sineCounter + 1) & 0xFF;
+    }
+
+    private void alignMainVehicleChild() {
+        if (childSpriteCount > 0) {
+            setChildSprite(0, MAIN_VEHICLE_CHILD_FRAME, state.x, state.y);
+        }
+    }
+
+    private void initializeChainChildFrames() {
+        for (int i = 0; i < MAX_CHILD_SPRITES; i++) {
+            setChildSprite(i, CHAIN_CHILD_FRAME, state.x, state.y);
+        }
+    }
+
+    private void setChildSprite(int index, int frame, int x, int y) {
+        if (index < 0 || index >= MAX_CHILD_SPRITES) {
+            return;
+        }
+        ensureChildSpriteStorage();
+        childFrames[index] = frame;
+        childXs[index] = x;
+        childYs[index] = y;
+    }
+
+    private void ensureChildSpriteStorage() {
+        if (childFrames == null) {
+            childFrames = new int[MAX_CHILD_SPRITES];
+            childXs = new int[MAX_CHILD_SPRITES];
+            childYs = new int[MAX_CHILD_SPRITES];
+        }
     }
 
     private void updateSpikeFrame() {
@@ -584,6 +648,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         bossCountdown = DEFEAT_TIMER_START;
         mainFrame = 8;
         childSpriteCount = 1;
+        alignMainVehicleChild();
         collisionFlags = 0;
     }
 
@@ -602,6 +667,11 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.OOZ_BOSS);
         if (renderer == null) {
             return;
+        }
+        ensureChildSpriteStorage();
+        int count = Math.min(childSpriteCount, MAX_CHILD_SPRITES);
+        for (int i = count - 1; i >= 0; i--) {
+            renderer.drawFrameIndex(childFrames[i], childXs[i], childYs[i], flipped, false);
         }
         renderer.drawFrameIndex(mainFrame, state.x, state.y, flipped, false);
     }
