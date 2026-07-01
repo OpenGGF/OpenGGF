@@ -6,16 +6,53 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 31 integration: ARZ2 is f3707 / 1620
-(`y_speed` expected `0x0000`, actual `0x0379`) after Obj83 child slots started
-exporting ROM-owned coordinates and platform solids; OOZ2 is f10973 / 163
+Current branch-local S2 state after ARZ2 round 32 work: ARZ2 is f4046 / 1509
+(`obj_extra_s33_x` expected absent, actual `0x1EE1`) after Obj83 parent and
+child platform slots started using the ROM `PlatformObject` ground half-height;
+OOZ2 is f10973 / 163
 (`tails_g_speed` expected `0x0018`, actual `0x0000`) after the delayed
 leader low-byte jump press survived the S2 sidekick auto-jump carry path. CNZ2
 remains f9946 / 300 (`x_speed` expected `0x0200`, actual `0x08A8`) and MTZ3
 remains f13336 / 352 (`x_speed` expected `0x0200`, actual `-0200`). Full S2 is
 15 green / 4 expected-red, full S1 remains green, and the S3K AIZ guard is
-unchanged. No S2 trace greened in round 31, so these advances have not been
-banked into `next`.
+unchanged. ARZ2 did not green in round 32, so this branch-local advance has not
+been banked into `next`.
+
+## 2026-07-01 - S2 ARZ2 Obj83 PlatformObject ground half-height advances f3707 to f4046
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round32-next` /
+  `bugfix/ai-s2-arz2-round32-next`, based on campaign commit `5ac682d32`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced ARZ2 f3707 / 1620 errors (`y_speed` expected `0x0000`, actual
+  `0x0379`).
+- Evidence: the trace context showed ROM landing Sonic on Obj83 child slot
+  `$20` while the engine reached the same Obj83 neighborhood but still treated
+  Sonic as airborne. A comparison-only BizHawk probe using
+  `tools\bizhawk\run_bizhawk_lua.bat` and
+  `tools\bizhawk\diag_template_fast.lua` over BK2 frames 11703-11708 confirmed
+  the Sonic landing reaches the Obj83 child platform after player movement with
+  the `PlatformObject_ChkYRange` top below Sonic's feet. A second probe over
+  frames 11723-11727 showed the later Tails row reaches the exact zero boundary
+  one sampled row before ROM reports the landing, so the fix must not broaden
+  the shared zero-distance override.
+- ROM refs: Obj83 parent platform 1 passes `d1=width+$B`, `d2=8`, and `d3=9`
+  into `PlatformObject`; routine-4 platform children do the same before saving
+  `Obj83_last_x_pos`. `PlatformObject_ChkYRange` subtracts `d3` from object
+  `y_pos` before comparing the player bottom plus 4 px window
+  (`docs/s2disasm/s2.asm:57573-57576,57613-57620,35965-35977`).
+- Fix: `ARZRotPformsObjectInstance` and its routine-4 slot children now opt
+  into `usesGroundHalfHeightForTopSolidContact()`, so the shared top-solid
+  resolver uses Obj83's ROM `d3=9` value instead of the air half-height for
+  first landings.
+- Result:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  now reaches ARZ2 f4046 / 1509 errors (`obj_extra_s33_x` expected absent,
+  actual `0x1EE1`).
+- Same-game preservation subset:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  ran the requested guards: ARZ1 and OOZ1 green; CNZ2 f9946 / 300, MTZ3
+  f13336 / 352, and OOZ2 f10973 / 163 preserved.
 
 ## 2026-07-01 - S2 round 31 integrated campaign baseline
 

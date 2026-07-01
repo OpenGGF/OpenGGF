@@ -383,6 +383,12 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesGroundHalfHeightForTopSolidContact() {
+        // Obj83 passes d3=9 to PlatformObject (docs/s2disasm/s2.asm:57573-57576).
+        return true;
+    }
+
+    @Override
     public void onPieceContact(int pieceIndex, PlayableEntity playerEntity,
                                SolidContact contact, int frameCounter) {
         // No special handling needed for piece contact
@@ -553,6 +559,13 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
         @Override
         public boolean isSolidFor(PlayableEntity playerEntity) {
             return kind != ChildKind.CHAIN && !parent.isDestroyed();
+        }
+
+        @Override
+        public boolean usesGroundHalfHeightForTopSolidContact() {
+            // Routine-4 platform children pass d3=9 to PlatformObject
+            // (docs/s2disasm/s2.asm:57613-57619).
+            return true;
         }
 
         @Override
