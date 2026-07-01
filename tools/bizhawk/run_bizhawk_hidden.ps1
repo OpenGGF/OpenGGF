@@ -18,6 +18,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+public static class OpenggfWindowTools {
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+}
+"@
+
 function Quote-WindowsArgument([string]$Arg) {
     if ($null -eq $Arg) {
         return '""'
@@ -75,9 +85,15 @@ if ($ExtraArgs) {
 $psi = [System.Diagnostics.ProcessStartInfo]::new()
 $psi.FileName = (Resolve-Path -LiteralPath $EmuHawkExe).Path
 $psi.Arguments = $argumentLine
-$psi.UseShellExecute = $true
+$psi.UseShellExecute = $false
 $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
 
 $process = [System.Diagnostics.Process]::Start($psi)
-$process.WaitForExit()
+while (-not $process.WaitForExit(100)) {
+    $process.Refresh()
+    $handle = $process.MainWindowHandle
+    if ($null -ne $handle -and [IntPtr]$handle -ne [IntPtr]::Zero) {
+        [void][OpenggfWindowTools]::ShowWindowAsync([IntPtr]$handle, 0)
+    }
+}
 exit $process.ExitCode
