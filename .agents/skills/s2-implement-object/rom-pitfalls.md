@@ -3166,7 +3166,7 @@ velocity, radius, and animation fields, then calls `AllocateObject` for ball 1
 before returning (`docs/s2disasm/s2.asm:64429-64469`). Movement is separate in
 `Obj52_LavaBall_Move` (`docs/s2disasm/s2.asm:64504-64524`).
 
-**Originating commit.** `<pending>` S2 HTZ2 Obj52 lava-ball pair init cadence:
+**Originating commit.** `a751be064` S2 HTZ2 Obj52 lava-ball pair init cadence:
 `TestS2Htz2LevelSelectTraceReplay` advances f8530 -> f9150.
 
 ---
@@ -3200,7 +3200,7 @@ with `addi.w #$10,y_vel` before `ObjectMove`
 `x_pos`, `y_pos`, and `collision_flags` in the player slot
 (`docs/s2disasm/s2.asm:85036-85096`).
 
-**Originating commit.** `<pending>` S2 OOZ1 Octus hover countdown:
+**Originating commit.** `cf2608003` S2 OOZ1 Octus hover countdown:
 `TestS2OozLevelSelectTraceReplay` advances f6639 -> f7467.
 
 ---
@@ -3244,9 +3244,9 @@ camera bounds (`docs/s2disasm/s2.asm:21293-21308`). Obj52 defeat seeds
 extending `Camera_Max_X_pos` until `$3160` and deletes from its own branch
 instead of tail-calling `MarkObjGone` (`docs/s2disasm/s2.asm:64592-64628`).
 
-**Originating commit.** `<pending>` S2 HTZ2 Obj52 defeated-flag handoff:
+**Originating commit.** `5e81c96a9` S2 HTZ2 Obj52 defeated-flag handoff:
 `TestS2Htz2LevelSelectTraceReplay` advances f9150 -> f9361.
-Follow-up `<pending>`: keeping Obj52 persistent through its ROM flee/delete
+Follow-up `455acd880`: keeping Obj52 persistent through its ROM flee/delete
 branch advances f9361 -> f9405.
 
 ---
