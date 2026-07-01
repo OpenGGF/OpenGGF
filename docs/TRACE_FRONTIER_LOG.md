@@ -13,9 +13,8 @@ matching the `Obj89_Init` sidekick bypass. OOZ2 is f12107 / 99
 (`tails_g_speed` expected `0x00A4`, actual `0x0000`). CNZ2 remains f9946 / 300
 (`x_speed` expected `0x0200`, actual `0x08A8`) and MTZ3 remains f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`). Full S2 is 15 green / 4
-expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. CNZ2
-and MTZ3 round 36 made no commits; the replacement OOZ2 round 36 worker is
-still running. No S2 trace greened in round 36.
+expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. CNZ2,
+MTZ3, and OOZ2 round 36 made no commits. No S2 trace greened in round 36.
 
 ## 2026-07-01 - S2 ARZ2 Obj89 init sidekick flight bypass advances f4692 to f4707
 
@@ -58,7 +57,7 @@ still running. No S2 trace greened in round 36.
   `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.tests.TestNoServicesInObjectConstructors,com.openggf.level.objects.TestObjectServicesMigrationGuard" "-DfailIfNoTests=false" test`
   passed 20/20.
 
-## 2026-07-01 - S2 round 36 partial integrated campaign baseline
+## 2026-07-01 - S2 round 36 integrated campaign baseline
 
 Integrated on `bugfix/ai-s2-trace-next`:
 - `d5cd44e0d` (`fix(s2): honor ARZ boss Tails flight gate`) advances ARZ2
@@ -74,9 +73,14 @@ Integrated on `bugfix/ai-s2-trace-next`:
   `$2B55,$0493` to flip `x_speed` to `+0200`; the tested owner-local
   candidates did not advance MTZ3. MTZ3 remains f13336 / 352 (`x_speed`
   expected `0x0200`, actual `-0200`).
-- The replacement OOZ2 round-36 worker is still running at this snapshot.
-- No S2 trace greened in the accepted round-36 work so far, so no round-36
-  change has been banked into `next`.
+- OOZ2 round-36 made no commit. BizHawk probes showed ROM Sonic hits Obj55 at
+  `v_frame=$2F2C`, clearing `collision_flags` from `$0F` to `$00`; ROM still
+  has Obj55 collision disabled near `$2F4F` when Tails passes. A partial
+  engine-side candidate could clear collision on the Sonic hit but restored it
+  too early, so no genuine verified advance was accepted. OOZ2 remains f12107 /
+  99 (`tails_g_speed` expected `0x00A4`, actual `0x0000`).
+- No S2 trace greened in round 36, so no round-36 change has been banked into
+  `next`.
 
 Integrated verification on `bugfix/ai-s2-trace-next`:
 - Focused S2 and preservation subset:
