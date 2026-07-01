@@ -326,6 +326,78 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void mtz3CogAirborneStaleStandingBitKeepsTailsXSpeedAtRomFrame9555() throws Exception {
+        SpeedCheck speedCheck = driveTrace("mtz3", Sonic2ZoneConstants.ZONE_MTZ, 2,
+                (trace, om, frame) -> {
+                    TraceFrame expected = trace.getFrame(frame);
+                    if (expected.frame() != 9555) {
+                        return null;
+                    }
+                    Assertions.assertNotNull(expected.sidekick(),
+                            "MTZ3 trace row f9555 (CSV $2553) must include Tails state");
+                    Assertions.assertEquals(0x07, expected.sidekick().statusByte(),
+                            "ROM fixture should have Tails airborne/rolling after Obj70 stale-standing cleanup");
+                    Assertions.assertEquals(0x2B, expected.sidekick().standOnObj(),
+                            "ROM fixture should retain the Obj70 tooth slot latch at MTZ3 f9555");
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have a CPU Tails sidekick at MTZ3 f9555");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    return new SpeedCheck(
+                            expected.sidekick().xSpeed(),
+                            tails.getXSpeed(),
+                            tails.getCentreX(),
+                            tails.getCentreY(),
+                            tails.getAir(),
+                            tails.getRolling(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 27, 44));
+                });
+        Assertions.assertNotNull(speedCheck);
+        Assertions.assertEquals(speedCheck.expectedXSpeed(), speedCheck.actualXSpeed(),
+                "S2 Obj70 folds eight ROM SolidObject slots into one engine parent. "
+                        + "At MTZ3 f9555 (CSV $2553) the ROM's slot-local standing-bit branch "
+                        + "(docs/s2disasm/s2.asm:55084-55191, 35021-35040) returns d4=0 "
+                        + "before a folded sibling side contact can stop Tails; "
+                        + "tails=" + speedCheck.summary());
+    }
+
+    @Test
+    public void mtz2CogAirborneLaunchKeepsTailsLeftwardSpeedAtRomFrame1217() throws Exception {
+        CogLaunchCheck launchCheck = driveTrace("mtz2", Sonic2ZoneConstants.ZONE_MTZ, 1,
+                (trace, om, frame) -> {
+                    TraceFrame expected = trace.getFrame(frame);
+                    if (expected.frame() != 1217) {
+                        return null;
+                    }
+                    Assertions.assertNotNull(expected.sidekick(),
+                            "MTZ2 trace row f1217 (CSV $04C1) must include Tails state");
+                    Assertions.assertEquals(0x17, expected.sidekick().statusByte(),
+                            "ROM fixture should have Tails airborne/rolling left after Obj70 contact");
+                    Assertions.assertEquals(0x38, expected.sidekick().standOnObj(),
+                            "ROM fixture should retain the MTZ2 Obj70 tooth slot latch at f1217");
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have a CPU Tails sidekick at MTZ2 f1217");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    return new CogLaunchCheck(
+                            expected.sidekick().x(),
+                            tails.getCentreX(),
+                            expected.sidekick().xSpeed(),
+                            tails.getXSpeed(),
+                            expected.sidekick().gSpeed(),
+                            tails.getGSpeed(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 36, 56));
+                });
+        Assertions.assertNotNull(launchCheck);
+        Assertions.assertEquals(launchCheck.expectedXSpeed(), launchCheck.actualXSpeed(),
+                "S2 Obj70 folded-tooth stale-latch suppression must not erase an already-applied "
+                        + "leftward airborne launch. At MTZ2 f1217 the ROM keeps x_vel/g_inertia "
+                        + "from the Obj70 contact instead of zeroing Tails; "
+                        + "tails=" + launchCheck.summary());
+        Assertions.assertEquals(launchCheck.expectedGSpeed(), launchCheck.actualGSpeed(),
+                "S2 Obj70 must preserve Tails' ROM ground inertia on the MTZ2 f1217 launch; "
+                        + "tails=" + launchCheck.summary());
+    }
+
+    @Test
     public void mcz2Obj75SpikeBallParentAndDisplayChildSurviveUntilTailsHit() throws Exception {
         SlotCheck slotCheck = driveTrace("mcz2", Sonic2ZoneConstants.ZONE_MCZ, 1,
                 (trace, om, frame) -> {
@@ -413,6 +485,46 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     private record PushCheck(boolean pushing, int tailsX, int tailsY, String summary) {
+    }
+
+    private record SpeedCheck(
+            short expectedXSpeed,
+            short actualXSpeed,
+            int tailsX,
+            int tailsY,
+            boolean air,
+            boolean rolling,
+            String slots) {
+        String summary() {
+            return String.format("x=%04X y=%04X xs(exp=%04X act=%04X) air=%s rolling=%s slots %s",
+                    tailsX & 0xFFFF,
+                    tailsY & 0xFFFF,
+                    expectedXSpeed & 0xFFFF,
+                    actualXSpeed & 0xFFFF,
+                    air,
+                    rolling,
+                    slots);
+        }
+    }
+
+    private record CogLaunchCheck(
+            int expectedX,
+            int actualX,
+            short expectedXSpeed,
+            short actualXSpeed,
+            short expectedGSpeed,
+            short actualGSpeed,
+            String slots) {
+        String summary() {
+            return String.format("x(exp=%04X act=%04X) xs(exp=%04X act=%04X) gs(exp=%04X act=%04X) slots %s",
+                    expectedX & 0xFFFF,
+                    actualX & 0xFFFF,
+                    expectedXSpeed & 0xFFFF,
+                    actualXSpeed & 0xFFFF,
+                    expectedGSpeed & 0xFFFF,
+                    actualGSpeed & 0xFFFF,
+                    slots);
+        }
     }
 
     private record StatusCheck(

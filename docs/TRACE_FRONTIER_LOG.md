@@ -6,6 +6,54 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 MTZ3 Obj70 folded stale-tooth side contact (f9555 -> f12146)
+
+- Worktree/branch: `.worktrees/ai-s2-mtz3-round12-next` /
+  `bugfix/ai-s2-mtz3-round12-next`, based on campaign head `9d00ec9c7`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red MTZ3 f9555 / 907
+  (`tails_x_speed` expected `0x0000`, actual `-0018`).
+- Triage/evidence: the f9555 context showed ROM Tails airborne/rolling
+  (`status=$07`) with `stand_on_obj=$2B`, an Obj70 tooth slot, while the
+  engine had already collapsed support to the folded Obj70 parent and allowed
+  a sibling side contact to run `SolidObject_StopCharacter` one frame early.
+  S2 Obj70 creates one SST object per tooth and each tooth calls the shared
+  `SolidObject`; when that tooth's standing bit is set and the player is
+  airborne, the helper clears `Status_OnObj` / d6 and returns `d4=0` before
+  `SolidObject_cont`, so a folded sibling must not stop Tails unless the
+  folded parent owns the stale standing latch (`docs/s2disasm/s2.asm:55084-55191,
+  35021-35040`).
+- Fix: `ObjectSolidContactController` now checks all piece-scoped standing
+  bits and same-frame snapshots for the folded Obj70 parent before applying the
+  new zero-speed Obj70 CPU-sidekick no-contact side path. The existing airborne
+  inward-side no-contact path remains available when a real leftward speed was
+  already present at contact entry, matching `SolidObject_InsideLeft` falling
+  through `SolidObject_AtEdge` / `SolidObject_SideAir` instead of
+  `SolidObject_StopCharacter` (`docs/s2disasm/s2.asm:35413-35436`). This keeps
+  the f9555 Obj70-stale-latch branch ROM-accurate while restoring the reviewed
+  MTZ2 f1217 launch regression from the rejected `482a2cb87` candidate.
+- Result:
+  `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace`: f9555 / 907 errors
+  (`tails_x_speed` expected `0x0000`, actual `-0018`) -> f12146 / 650 errors
+  (`x_speed` expected `0x0000`, actual `0x000C`). The new owner is the later
+  Obj65 platform/cog stack around Sonic.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#mtz2CogAirborneLaunchKeepsTailsLeftwardSpeedAtRomFrame1217+mtz3CogAirborneStaleStandingBitKeepsTailsXSpeedAtRomFrame9555" "-DfailIfNoTests=false" test`
+    exited 0; the focused MTZ2 regression oracle and MTZ3 Obj70 oracle passed.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+    ran 2 tests: MTZ2 passed, and MTZ3 exited 1 as expected-red at f12146 /
+    650.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red; 19 S2 trace tests ran, 13 passed and 6 remained
+    expected-red: ARZ2 f1648 / 2236, CNZ2 f9487 / 288, HTZ2 f7351 / 687,
+    MTZ3 f12146 / 650, OOZ1 f4637 / 815, and OOZ2 f9307 / 444. MTZ2 was green.
+  - `mvn "-Dtest=com.openggf.tests.trace.s1.*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 0; 29 / 29 S1 trace replay classes passed.
+  - `mvn "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    exited 0; the selected S3K AIZ/must-keep smoke set passed 51 tests with 0
+    failures and 0 errors.
+
 ## 2026-07-01 - S2 MTZ3 Obj65 main-player logical-input delay (f9134 -> f9555)
 
 - Worktree/branch: `.worktrees/ai-s2-mtz3-round11-next` /
