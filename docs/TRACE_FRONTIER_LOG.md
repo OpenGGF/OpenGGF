@@ -42,6 +42,50 @@ branch-local measurements.
     `TestS3kCnzCompleteRunTraceReplay` hit JVM heap-space failures even with
     larger heap and `-XX:-DoEscapeAnalysis`.
 
+## 2026-07-01 - S2 ARZ2 Grounder debris activation/ObjectMoveAndFall cadence (f1712 -> f1717)
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round14-next` /
+  `bugfix/ai-s2-arz2-round14-next`, based on `bugfix/ai-s2-trace-next` at
+  `b19712464`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red ARZ2 f1712 / 1514
+  (`obj_extra_s26_x` expected absent, actual `0x13E1`).
+- Triage/evidence: frame 1712 showed ROM Grounder Obj8D in slot 35 and Obj8F
+  wall children in slots 38-41 still at their spawn positions while the engine
+  had already moved the walls one ObjectMoveAndFall tick. S2 Obj8F
+  `loc_36BA6` only observes parent `objoff_2B`, advances routine 2 -> 4, and
+  latches velocity; the shared Obj8F/Obj90 Move routine runs later and calls
+  `ObjectMoveAndFall` (`docs/s2disasm/s2.asm:73424-73437,73490-73494`).
+  S2 `ObjectMoveAndFall` reads old `y_vel`, adds it to the 32-bit position,
+  then applies `+$38` gravity for the next frame
+  (`docs/s2disasm/s2.asm:30163-30177`).
+- Fix: `GrounderWallInstance` now returns on the activation frame after
+  entering the moving state, and both `GrounderWallInstance` and
+  `GrounderRockProjectile` move with the current velocity before applying
+  gravity.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f1712 / 1514 errors
+  (`obj_extra_s26_x` expected absent, actual `0x13E1`) -> f1717 / 1420 errors
+  (`obj_extra_s39_x` expected absent, actual `0x13D2`). The new owner is a
+  separate lost-ring slot allocation mismatch when Sonic enters hurt.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2GrounderWallWaitsOneFrameAfterActivationBeforeMoving,com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2GrounderRockUsesObjectMoveAndFallOldVelocityOrder,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    ran 3 tests: the two focused Grounder regressions passed; ARZ2 remained
+    expected-red at f1717 / 1420.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces: 13 green, 6 expected-red, no non-target
+    regression. Red frontiers: ARZ2 f1717 / 1420, CNZ2 f9487 / 288, HTZ2
+    f9150 / 121, MTZ3 f12146 / 650, OOZ1 f6639 / 557, OOZ2 f9307 / 444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests. The repeated S1 mapping warning at
+    `0xe8df` remains known and pre-existing.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    completed 68 S3K smoke/AIZ checks. Bootstrap, decoding, level-loading, and
+    AIZ skip headless checks passed; the two AIZ trace replays stayed at the
+    existing expected-red frontiers: complete-run f1095 / 4319 and AIZ f8941 /
+    1160.
+
 ## 2026-07-01 - S2 ARZ2 stale Stop/skid latch release (f1698 -> f1712)
 
 - Worktree/branch: `.worktrees/ai-s2-arz2-round13-next` /
