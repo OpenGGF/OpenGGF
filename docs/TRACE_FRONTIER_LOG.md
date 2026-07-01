@@ -6,7 +6,7 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2/CNZ2 round 24: the S2 sweep is 15
+Current branch-local S2 state after ARZ2/CNZ2/OOZ2 round 24: the S2 sweep is 15
 green / 4 expected-red. ARZ2 advances to f2565 / 713 (`obj_s15_slot` expected
 `0x15`, actual `0x11`) after CPU Tails Obj37 collection was routed through the
 ROM main-invulnerability gate; CNZ2 advances to f9733 / 301
@@ -14,7 +14,9 @@ ROM main-invulnerability gate; CNZ2 advances to f9733 / 301
 trigger compare uses
 the ROM displayed-X phase on leftward passes; MTZ3 remains parked at f13336 /
 352 (`x_speed` expected `0x0200`, actual `-0200`); OOZ1 is green; and OOZ2
-remains parked at f9392 / 476 (`x_speed` expected `0x0200`, actual `-0024`).
+advances to f9465 / 457 (`tails_y` expected `0x0299`, actual `0x0298`) after
+Obj55 exposes the ROM-visible boss-touch snapshot and Obj07 stops re-seating
+newly hurt airborne players.
 
 ## 2026-07-01 - S2 ARZ2 sidekick Obj37 collection advances f2142 to f2565
 
@@ -30495,7 +30497,7 @@ Result:
 Verification:
 - Focused target: `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
   exited 1 with the improved expected-red f9465 / 457 frontier above.
-- S2 preservation subset:
+- Worker S2 preservation subset before ARZ2/CNZ2 round-24 integration:
   `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
   exited 1 with expected-red frontiers: ARZ2 f2142 / 717, CNZ2 f9487 / 288,
   MTZ3 f13336 / 352, and OOZ2 f9465 / 457.
@@ -30506,6 +30508,21 @@ Verification:
   exited 0.
 - Oil unit guard: `mvn "-Dtest=com.openggf.tests.TestOilSurfaceManager" "-DfailIfNoTests=false" test`
   exited 0.
+- Campaign integration after merging ARZ2/CNZ2/OOZ2 round 24:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  exited 0 with 19 tests: 15 green / 4 expected-red. Current expected-red
+  frontiers are ARZ2 f2565 / 713, CNZ2 f9733 / 301, MTZ3 f13336 / 352, and
+  OOZ2 f9465 / 457.
+- Campaign S1 preservation:
+  `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  exited 0 with 29 / 29 green and only the known S1 mapping warnings.
+- Campaign S3K guard:
+  `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+  exited 0 with 68 checks: 66 green plus the two known S3K AIZ expected-reds,
+  `TestS3kAizCompleteRunTraceReplay` f1095 / 4319 and
+  `TestS3kAizTraceReplay` f8941 / 1160. A first parallel run overlapped Maven
+  compilation with the S1 sweep and failed during `testCompile`; the serial rerun
+  produced the expected guard result above.
 
 ### 2026-07-01 -- S2 OOZ2 round 23 Obj07 hurt oil landing handoff
 
