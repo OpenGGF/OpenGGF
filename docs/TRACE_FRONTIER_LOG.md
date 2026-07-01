@@ -6,13 +6,46 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 37 no-change fleet is unchanged:
+Current branch-local S2 state after the round 38 no-change fleet is unchanged:
 ARZ2 is f4707 / 1945 (`x` expected `0x2B4D`, actual `0x2B4F`), CNZ2 is f9946 /
 300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 is f12107 / 99
 (`tails_g_speed` expected `0x00A4`, actual `0x0000`). Full S2 is 15 green / 4
 expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. No S2
-trace greened in round 37.
+trace greened in round 38.
+
+## 2026-07-01 - S2 round 38 no-change fleet
+
+Round 38 started from `716554006` on `bugfix/ai-s2-trace-next`. All workers
+left their worktrees clean; no source changes were integrated and no S2 trace
+greened.
+
+- ARZ2 round-38 worktree `.worktrees/ai-s2-arz2-round38-next` /
+  `bugfix/ai-s2-arz2-round38-next`: reproduced f4707 / 1945. ROM aux shows
+  the right Obj89 pillar status becomes `$20` at f4707, matching the
+  `SolidObject_LeftRight` push-bit path, while the engine remains
+  `ride=0` / `standsnap=0` and stays two pixels right. No genuine fix was
+  isolated. ARZ2 remains f4707 / 1945.
+- CNZ2 round-38 worktree `.worktrees/ai-s2-cnz2-round38-next` /
+  `bugfix/ai-s2-cnz2-round38-next`: reproduced f9946 / 300. Expanded context
+  shows ROM slot `$25` Obj51 boss and slot `$26` Obj51 falling ball hurt Sonic,
+  while the engine has the boss displaced to slot `$28` and the ball in slot
+  `$25`, matching the prior upstream engine-only Tails Obj08 skid-dust slot
+  pressure at f7984/f7995. No new genuine disassembly-backed candidate was
+  found. CNZ2 remains f9946 / 300.
+- MTZ3 round-38 worktree `.worktrees/ai-s2-mtz3-round38-next` /
+  `bugfix/ai-s2-mtz3-round38-next`: reproduced f13336 / 352. ROM `Touch_Boss`
+  scans SST order and the first overlapping Obj53 is slot `$24` at
+  `$2B56,$0497`, producing rightward hurt; the engine scans slot `$22` Obj53
+  first at pre-update `$2B56,$0489`, producing leftward hurt. No validated
+  genuine fix was applied. MTZ3 remains f13336 / 352.
+- OOZ2 round-38 worktree `.worktrees/ai-s2-ooz2-round38-next` /
+  `bugfix/ai-s2-ooz2-round38-next`: reproduced f12107 / 99. Context shows the
+  engine has Tails hurt by Obj55 `collision_flags=$CF`, while ROM Tails remains
+  on object slot `$0E` with `status=$08`. No new re-enable-timing candidate was
+  found beyond the rejected collision-byte/delay ideas. OOZ2 remains f12107 /
+  99.
+- No round-38 change was banked into `next`.
 
 ## 2026-07-01 - S2 round 37 no-change fleet
 
