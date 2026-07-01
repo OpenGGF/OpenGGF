@@ -6,6 +6,33 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 campaign integrated sweep after HTZ2 round 12 merge
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next` at `8869f0e19` (after merging HTZ2 round 12 and
+  committing the reusable silent BizHawk diagnostic launcher fix).
+- Command:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+- Result: expected build failure with 19 S2 traces run, 13 green and 6
+  expected-red. No additional S2 regression appeared after the HTZ2 merge or
+  the tooling-only BizHawk launcher commit.
+- Current S2 red frontiers:
+  - ARZ2: f1648 / 2236 (`obj_s17_slot` expected `0x17`, actual `0x21`).
+  - CNZ2: f9487 / 288 (`g_speed` expected `0x0000`, actual `0x0100`).
+  - HTZ2: f8530 / 218 (`g_speed` expected `0x01D2`, actual `0x0000`).
+  - MTZ3: f9555 / 907 (`tails_x_speed` expected `0x0000`, actual `-0018`).
+  - OOZ1: f4637 / 815 (`tails_y` expected `0x021D`, actual `0x0220`).
+  - OOZ2: f9307 / 444 (`x_speed` expected `0x0150`, actual `-0150`).
+- Cross-game guard:
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests. The repeated S1 mapping warning at
+    `0xe8df` is the known pre-existing warning.
+  - `$env:S3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:SONIC_3K_ROM_PATH=$env:S3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Ds3k.rom.path=$env:S3K_ROM_PATH" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    completed 68 S3K smoke tests. Bootstrap, decoding, level-loading, and AIZ
+    skip headless checks passed; the two AIZ trace replays stayed at the
+    existing expected-red frontiers: complete-run f1095 / 4319 and AIZ f8941 /
+    1160.
+
 ## 2026-07-01 - S2 HTZ2 Spiker drill render-flag deletion (f7351 -> f8530)
 
 - Worktree/branch: `.worktrees/ai-s2-htz2-round12-next` /
