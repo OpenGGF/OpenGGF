@@ -1,12 +1,17 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 /**
  * Regression guard for the water-entry/exit splash.
@@ -18,6 +23,36 @@ import static org.mockito.Mockito.mock;
  * controller plays and then ends the splash animation.
  */
 class TestSpindashDustControllerSplash {
+
+    @Test
+    void groundedSpindashChargeDrawsDashDust() {
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0200);
+        sonic.setSpindash(true);
+        sonic.setAir(false);
+        PlayerSpriteRenderer renderer = mock(PlayerSpriteRenderer.class);
+        SpindashDustController controller = new SpindashDustController(sonic, renderer);
+
+        controller.update();
+        controller.draw();
+
+        verify(renderer).drawFrame(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
+    }
+
+    @Test
+    void forcedTunnelRollDoesNotDrawDashDustFromPinballSpindashAlias() {
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0200);
+        sonic.setSpindash(true);
+        sonic.setPinballMode(true);
+        sonic.setRolling(true);
+        sonic.setAir(false);
+        PlayerSpriteRenderer renderer = mock(PlayerSpriteRenderer.class);
+        SpindashDustController controller = new SpindashDustController(sonic, renderer);
+
+        controller.update();
+        controller.draw();
+
+        verify(renderer, never()).drawFrame(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
+    }
 
     @Test
     void splashTriggersAndAnimatesToCompletion() {

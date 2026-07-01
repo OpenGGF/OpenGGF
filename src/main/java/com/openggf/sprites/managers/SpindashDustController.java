@@ -220,7 +220,10 @@ public class SpindashDustController {
     }
 
     private boolean isActive() {
-        return sprite != null && sprite.getSpindash() && !sprite.getAir();
+        return sprite != null
+                && sprite.getSpindash()
+                && !sprite.getAir()
+                && !(sprite.getPinballMode() && sprite.getRolling());
     }
 
     private void reset() {
