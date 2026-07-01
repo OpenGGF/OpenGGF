@@ -6,6 +6,44 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 OOZ1 Obj50 equal-Y orientation advances f7584 to f7671
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-round17-next` /
+  `bugfix/ai-s2-ooz1-round17-next`, based on
+  `bugfix/ai-s2-trace-next` at `180bdcc85`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 with OOZ1 f7584 / 384 errors (`y_speed` expected `-0370`,
+  actual `0x0370`).
+- Triage/evidence: the f7584 context showed Sonic's player state still matched
+  the trace, but the engine Aquis survived at `@2795,031C` while the ROM had
+  already killed Obj50 and spawned Obj28/Obj27 at `@2795,031A`. The aux stream
+  showed ROM slot 31 Obj50 parked at `@2795,031A` from f7567 through f7583.
+  A temporary engine trace showed the Java Aquis parking two pixels lower until
+  the chase orientation equality was fixed. S2 `Obj_GetOrientationToPlayer`
+  subtracts player Y from object Y and branches on `bhs`, so equal Y uses the
+  upward/level orientation entry; Obj50 then applies `JmpTo20_ObjectMove` for
+  chase movement (`docs/s2disasm/s2.asm:60736-60743,72812-72839`).
+- Fix: `AquisBadnikInstance` now treats `playerY <= objectY` as the upward
+  chase branch, matching the ROM equal-Y `bhs` case, and uses the ROM
+  `ObjectMove` / `SpeedToPos` 16.16 subpixel path for Obj50 chase/escape
+  movement instead of the 8-bit `MoveSprite2` helper.
+- Result:
+  `TestS2OozLevelSelectTraceReplay#replayMatchesTrace` advances from f7584 /
+  384 errors (`y_speed` expected `-0370`, actual `0x0370`) to f7671 / 395
+  errors (`y` expected `0x036E`, actual `0x0370`). The new frontier is a later
+  post-bounce movement/root cause.
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at OOZ1 f7671 / 395.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at OOZ2 f9307 / 430, unchanged from the current
+    banked baseline.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces: 14 green, 5 expected-red, no non-target
+    regression. Red frontiers are ARZ2 f1717 / 980, CNZ2 f9487 / 288, MTZ3
+    f12608 / 490, OOZ1 f7671 / 395, and OOZ2 f9307 / 430.
+
 ## 2026-07-01 - S2 round 16 integrated sweep after OOZ2 improvement and HTZ2 green
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /

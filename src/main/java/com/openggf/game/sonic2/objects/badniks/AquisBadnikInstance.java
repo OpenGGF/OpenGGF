@@ -172,7 +172,7 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
                 facingLeft = false;
             }
 
-            if (player.getCentreY() < currentY) {
+            if (player.getCentreY() <= currentY) {
                 yVelocity -= CHASE_ACCEL;
             } else {
                 yVelocity += CHASE_ACCEL;
@@ -327,7 +327,9 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
         motionState.y = currentY;
         motionState.xVel = xVelocity;
         motionState.yVel = yVelocity;
-        SubpixelMotion.moveSprite2(motionState);
+        // ROM Obj50 uses ObjectMove/SpeedToPos (s2.asm:60736-60743),
+        // which preserves the full 16-bit x_sub/y_sub words.
+        SubpixelMotion.speedToPos(motionState);
         currentX = motionState.x;
         currentY = motionState.y;
     }
