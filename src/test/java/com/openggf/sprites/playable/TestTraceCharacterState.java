@@ -45,4 +45,34 @@ class TestTraceCharacterState {
 
         assertEquals(0x04, state.routine());
     }
+
+    @Test
+    void hurtLandingFrameKeepsRoutineFourForTraceCapture() {
+        Tails tails = new Tails("tails_p2", (short) 0x2990, (short) 0x0298);
+        tails.setHurt(true);
+        tails.captureOnObjectAtFrameStart();
+
+        tails.setHurt(false);
+        tails.setOnObject(true);
+
+        TraceCharacterState state = TraceCharacterState.fromSprite(tails);
+
+        assertEquals(0x04, state.routine(),
+                "S2 Obj02_Hurt owns the landing frame and only writes routine 2 from Tails_HurtStop");
+    }
+
+    @Test
+    void completedHurtStopFrameCapturesRoutineTwo() {
+        Tails tails = new Tails("tails_p2", (short) 0x0C0E, (short) 0x066E);
+        tails.setHurt(true);
+        tails.captureOnObjectAtFrameStart();
+
+        tails.setOnObject(true);
+        tails.completeHurtLandingRecovery();
+
+        TraceCharacterState state = TraceCharacterState.fromSprite(tails);
+
+        assertEquals(0x02, state.routine(),
+                "Tails_HurtStop writes routine 2 in the sampled frame once recovery completes");
+    }
 }
