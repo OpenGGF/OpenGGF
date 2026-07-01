@@ -6,17 +6,16 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2 round 32 work: ARZ2 is f4046 / 1509
+Current branch-local S2 state after round 32 integration: ARZ2 is f4046 / 1509
 (`obj_extra_s33_x` expected absent, actual `0x1EE1`) after Obj83 parent and
 child platform slots started using the ROM `PlatformObject` ground half-height;
-OOZ2 is f10973 / 163
-(`tails_g_speed` expected `0x0018`, actual `0x0000`) after the delayed
-leader low-byte jump press survived the S2 sidekick auto-jump carry path. CNZ2
-remains f9946 / 300 (`x_speed` expected `0x0200`, actual `0x08A8`) and MTZ3
-remains f13336 / 352 (`x_speed` expected `0x0200`, actual `-0200`). Full S2 is
-15 green / 4 expected-red, full S1 remains green, and the S3K AIZ guard is
-unchanged. ARZ2 did not green in round 32, so this branch-local advance has not
-been banked into `next`.
+OOZ2 is f11038 / 117 (`tails_y` expected `0x029F`, actual `0x029E`) after
+synthetic Obj07 oil support remained visible to AnglePos and preserved the
+sidekick push-bypass frame. CNZ2 remains f9946 / 300 (`x_speed` expected
+`0x0200`, actual `0x08A8`) and MTZ3 remains f13336 / 352 (`x_speed` expected
+`0x0200`, actual `-0200`). Full S2 is 15 green / 4 expected-red, full S1
+remains green, and the S3K AIZ guard is unchanged. No S2 trace greened in round
+32, so no round-32 change has been banked into `next`.
 
 ## 2026-07-01 - S2 ARZ2 Obj83 PlatformObject ground half-height advances f3707 to f4046
 
@@ -53,7 +52,50 @@ been banked into `next`.
   `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
   ran the requested guards: ARZ1 and OOZ1 green; CNZ2 f9946 / 300, MTZ3
   f13336 / 352, and OOZ2 f10973 / 163 preserved.
+## 2026-07-01 - S2 OOZ2 synthetic Obj07 support advances f10973 to f11038
 
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round32-next` /
+  `bugfix/ai-s2-ooz2-round32-next`, based on campaign commit `5ac682d32`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced OOZ2 f10973 / 163 errors (`tails_g_speed` expected `0x0018`,
+  actual `0x0000`).
+- Evidence: the OOZ2 f10973 report showed the sidekick CPU step producing
+  `postCpu` x/g speed `0x000C`, but the engine then applied a one-pixel follow
+  nudge, repeated the ground-wall velocity response, and zeroed `g_speed`.
+  A BizHawk probe over BK2 frames 24935-24945 showed no `Touch_ChkHurt` /
+  `Hurt_Sidekick` execution in this window. ROM Obj07 had Tails latched to slot
+  `$0E`, `Status_OnObj` persisted, the ground-wall response set
+  `Status_Push`, and the next Tails CPU sample advanced through `g=0x000C` to
+  `g=0x0018` without the extra follow nudge.
+- ROM refs: Obj07's sidekick path calls `PlatformObject_SingleCharacter`; its
+  `RideObject_SetRide` tail writes `interact(a1)`, clears `y_vel`, copies
+  `x_vel` to `inertia`, and sets `Status_OnObj`; `Tails_Move` sets
+  `Status_Push` and clears `inertia` on the wall-response path; `AnglePos`
+  returns immediately when `Status_OnObj` is set; and `TailsCPU_Normal` takes
+  the push-bypass branch when current Tails status is pushing and the delayed
+  leader was not pushing (`docs/s2disasm/s2.asm:50188-50195,35987-36015,
+  39863-39873,43013-43018,39297-39300`).
+- Fix: `CollisionSystem.hasActiveLatchedObjectSupport` now treats a synthetic
+  manager-hosted latch as active support while `Status_OnObj` is still set,
+  instead of requiring a live Java `ObjectInstance`. Obj07 remains cleared by
+  `OilSurfaceManager` when the ROM support condition ends.
+- Result:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  now reaches OOZ2 f11038 / 117 errors (`tails_y` expected `0x029F`, actual
+  `0x029E`).
+- Same-game preservation:
+  OOZ1 and ARZ1 passed. ARZ2 preserved f3707 / 1620, CNZ2 preserved f9946 /
+  300, and MTZ3 preserved f13336 / 352.
+- Shared-code preservation:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 29 S1 trace tests with 0 failures and only the existing S1 mapping
+  warnings.
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+  preserved the known S3K AIZ expected-reds: complete-run f1095 / 4319
+  (`x_speed` expected `0x0000`, actual `0x000C`) and level-select f8941 /
+  1160 (`camera_y` expected `0x02C1`, actual `0x02B9`); the loading,
+  bootstrap, decoding, and AIZ skip checks passed.
 ## 2026-07-01 - S2 round 31 integrated campaign baseline
 
 Integrated on `bugfix/ai-s2-trace-next`:

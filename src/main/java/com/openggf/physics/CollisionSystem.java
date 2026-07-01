@@ -244,6 +244,13 @@ public class CollisionSystem {
             return false;
         }
         ObjectInstance latchedInstance = player.getLatchedSolidObjectInstance();
+        if (latchedInstance == null
+                && player.getInteractSlotIndex() == AbstractPlayableSprite.SYNTHETIC_INTERACT_SLOT) {
+            // Manager-hosted ROM supports, such as S2 Obj07 oil, still own
+            // Status_OnObj until their manager clears it. ROM AnglePos gates on
+            // that status bit, not on whether the support has an object instance.
+            return true;
+        }
         if (!objectManager.isActiveObjectInstance(latchedInstance)) {
             return false;
         }
