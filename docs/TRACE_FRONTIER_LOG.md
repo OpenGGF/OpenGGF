@@ -6,13 +6,34 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 38 no-change fleet is unchanged:
+Current branch-local S2 state after the round 39 targeted no-change pass is
+unchanged:
 ARZ2 is f4707 / 1945 (`x` expected `0x2B4D`, actual `0x2B4F`), CNZ2 is f9946 /
 300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 is f12107 / 99
 (`tails_g_speed` expected `0x00A4`, actual `0x0000`). Full S2 is 15 green / 4
 expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. No S2
-trace greened in round 38.
+trace greened in round 39.
+
+## 2026-07-01 - S2 round 39 targeted no-change pass
+
+Round 39 started from `4538aaa5e` on `bugfix/ai-s2-trace-next` and targeted the
+two most concrete round-38 leads. Both candidates were rejected and reverted by
+their owning workers; no source changes were integrated and no S2 trace greened.
+
+- ARZ2 solid-contact worktree `.worktrees/ai-s2-arz2-solid-round39-next` /
+  `bugfix/ai-s2-arz2-solid-round39-next`: reproduced f4707 / 1945. An
+  Obj89-local render-bound candidate based on S2 `BuildSprites` approximate
+  32px Y gating reduced total errors to 1938 and improved f4708/f4709 by one
+  pixel, but the first divergence remained f4707 (`x` expected `0x2B4D`, actual
+  `0x2B4F`) with no engine touch, so the candidate was rejected and reverted.
+  ARZ2 remains f4707 / 1945.
+- MTZ3 touch-order worktree `.worktrees/ai-s2-mtz3-touch-round39-next` /
+  `bugfix/ai-s2-mtz3-touch-round39-next`: reproduced f13336 / 352. Full context
+  shows the engine is missing ROM on-object slot `$20` and then scans lower-slot
+  Obj53 pre-update positions, but there was not enough isolated evidence for a
+  genuine Obj53-local touch-order/state fix. MTZ3 remains f13336 / 352.
+- No round-39 change was banked into `next`.
 
 ## 2026-07-01 - S2 round 38 no-change fleet
 
