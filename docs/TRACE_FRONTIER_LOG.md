@@ -47,6 +47,14 @@ ARZ2 f1820, MTZ3 f12897, OOZ1 f7671, and OOZ2 f9307.
   visibility to the routine tail did not move the frontier and was reverted.
   Relevant ROM paths: `docs/s2disasm/s2.asm:68208-68380,61242-61294,
   85164-85290`.
+- MTZ3 round 18 no-change:
+  `.worktrees/ai-s2-mtz3-round18-next` reproduced f12897 / 490 and made no
+  commit. A read-only BizHawk PC probe confirmed the fast wrapper launcher path
+  and showed ROM `Boss_Y_pos=$0422` at f12897 while the engine is effectively
+  two pixels lower at the Obj53 touch check. A two-pass Obj54 startup-delay
+  candidate fixed f12897 but regressed the accepted frontier to f12589, so it
+  was reverted. Relevant ROM paths: `docs/s2disasm/s2.asm:67220-67242,
+  67304-67344,67486-67490,67880-67938`.
 - CNZ2 parked diagnostic:
   A temporary fast BizHawk PC-execute probe using `run_bizhawk_lua.bat` over
   BK2 frames 21968..21972 showed the ROM f9487 hurt comes from normal
