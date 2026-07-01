@@ -24,6 +24,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 11. [LBZ2 End Boss Smoke Puffs: Immortal-Object Quirk Not Replicated](#lbz2-end-boss-smoke-puffs-immortal-object-quirk-not-replicated)
 12. [LBZ2 Finale Player Scripts: Engine Animation IDs Instead of Raw Mapping Frames](#lbz2-finale-player-scripts-engine-animation-ids-instead-of-raw-mapping-frames)
 13. [AIZ2 Boss Rewind: Transient Combat/Cosmetic Children Restored](#aiz2-boss-rewind-transient-combatcosmetic-children-restored)
+14. [Madmole Cap/Body: Single Merged Object Instead of Parent+Child Split](#madmole-capbody-single-merged-object-instead-of-parentchild-split)
 
 ---
 
@@ -596,3 +597,56 @@ The other batch-4 HCZ end-boss scene objects (`HczEndBossInstance`,
 (`AizEndBossInstance`, `Aiz2EndEggCapsuleInstance`, `AizIntroPlaneChild`,
 `AizIntroWaveChild`) now have rewind codecs in `Sonic3kObjectRegistry` and are restored on
 a backward seek.
+
+## Madmole Cap/Body: Single Merged Object Instead of Parent+Child Split
+
+**Location:** `MadmoleBadnikInstance.java` (MHZ, S3K SKL slot `$8C`)
+**ROM Reference:** `Obj_Madmole`, `sonic3k.asm:193075-193526`
+
+### Original Implementation
+
+The ROM models Madmole as two separate objects sharing one placement-table
+spawn: the **parent** (the visible ground cap) keeps its own SST slot and
+calls `sub_8D876` (`SolidObjectFull`, `d1=$1F,d2=4,d3=5`) unconditionally
+every frame — this call never depends on the body's state. The parent spawns
+a **child** body object via `CreateChild1_Normal` (`ChildObjDat_8D9C0`) when a
+player enters `$A0` range; the child runs its own rise/pause/drill/sink
+routine on its own slot and has `collision_flags $0B` (a normal ENEMY hitbox)
+while active. The parent sets `$38(a0)` bit 1 when it spawns the child and
+waits (`loc_8D5D4`) for that bit to clear before re-arming. The **only** place
+that clears it is the child's own normal sink-completion path
+(`loc_8D6D6: bclr #1,$38(a1) / jmp Go_Delete_Sprite`). If the player instead
+kills the child via the generic enemy-touch/`EnemyDefeated`-style path, the
+child's own code never reaches `loc_8D6D6`, so the parent's bit 1 never
+clears — the parent parks at `loc_8D5D4` forever, `sub_8D876` keeps running
+every frame regardless, and the cap becomes a permanent solid stump that
+never spawns a new child.
+
+### Our Implementation
+
+`MadmoleBadnikInstance` models the cap and body as **one merged engine
+object** (single SST slot, single `AbstractBadnikInstance`) rather than a
+ROM-faithful parent+child pair — the body's rise/pause/drill/sink cycle is a
+`state` field on the same instance, and `getCollisionFlags()`/
+`getSolidParams()` switch between the cap's zero-collision solid shape and
+the body's `$0B` enemy shape based on that state. To reproduce the ROM
+outcome above without a second SST slot, `destroyBadnik(PlayableEntity)` is
+overridden: on defeat it snaps the state back to `BURIED` (cap-only,
+`offsetY=0`, matching `sub_8D876` always being called against the parent's
+unmoved position), sets a `bodyDefeated` latch that permanently short-circuits
+`updateBuried()`'s range check (the engine equivalent of `$38(a0)` bit 1 never
+clearing), and spawns the explosion/animal/points sequence at the body's
+last position with a **freshly allocated slot** (`badnikSlot=-1`, `spawn=null`)
+instead of transferring the parent's own slot — the merged object is never
+marked `isDestroyed()`, so it keeps its own slot and keeps reporting solid
+contact every frame, exactly like the ROM parent.
+
+### Why This Is Acceptable
+
+Runtime gameplay behavior is preserved: the cap remains a solid stump after
+the body is defeated, and it never re-emerges — matching the ROM outcome
+described above. Only the *object model* differs (one merged instance with an
+internal latch vs. two SST-slot objects linked by a busy bit); this keeps the
+existing single-object rewind/render/collision wiring for Madmole intact
+rather than requiring a parent+dynamically-spawned-child split purely to
+mirror ROM's slot layout.

@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.DestructionEffects;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.SolidObjectParams;
@@ -85,6 +86,14 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     private boolean sideDrillActive;
     private boolean waitingForOnscreen = true;
     private boolean initialized;
+    // ROM parity: models the parent's $38(a0) bit 1 "child alive" latch never
+    // clearing once EnemyDefeated destroys the body child off the normal
+    // sink-delete path (loc_8D6D6 is the only place that bclr's it). Once set,
+    // Obj_Madmole's routine 2 wait-for-child-done parks forever and the parent
+    // cap -- which runs sub_8D876 (SolidObjectFull) unconditionally every frame
+    // on its own SST slot -- becomes a permanent solid stump that never spawns
+    // a new body child.
+    private boolean bodyDefeated;
 
     public MadmoleBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Madmole", Sonic3kObjectArtKeys.MADMOLE,
@@ -172,6 +181,12 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         mappingFrame = CAP_MAPPING_FRAME;
         yVelocity = 0;
         currentY = homeY;
+        if (bodyDefeated) {
+            // The body child was destroyed by EnemyDefeated; the parent's
+            // child-alive latch never clears, so it never re-checks range or
+            // spawns a new body -- only the solid cap stump remains.
+            return;
+        }
         PlayableEntity target = closestNativePlayerByHorizontalDistance(playerEntity);
         if (target == null) {
             return;
@@ -283,6 +298,32 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
 
         state = State.BURIED;
         timer = 0;
+    }
+
+    @Override
+    protected void destroyBadnik(PlayableEntity player) {
+        if (bodyDefeated || !isBodyChildActive()) {
+            // The buried cap has zero collision size and cannot be attacked;
+            // guard a stray/duplicate call against re-running the sequence.
+            return;
+        }
+        bodyDefeated = true;
+        int bodyX = currentX;
+        int bodyY = currentY;
+        state = State.BURIED;
+        timer = 0;
+        sideDrillActive = false;
+        mappingFrame = CAP_MAPPING_FRAME;
+        currentY = homeY;
+        ySubpixel = 0;
+        yVelocity = 0;
+        // ROM parity: EnemyDefeated only replaces the body child's own SST
+        // slot with an explosion (spawn=null: the body child has no static
+        // placement-table spawn of its own, so there is nothing to latch
+        // respawn tracking against, and badnikSlot=-1 allocates a fresh slot
+        // rather than transferring the parent cap's slot -- the cap keeps its
+        // own slot and keeps running SolidObjectFull every frame).
+        DestructionEffects.destroyBadnik(bodyX, bodyY, null, player, services(), getDestructionConfig());
     }
 
     private boolean isBodyChildActive() {
