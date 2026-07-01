@@ -6,6 +6,53 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 HTZ2 Obj52 defeated flee owns camera-release deletion (f9361 -> f9405)
+
+- Worktree/branch: `.worktrees/ai-s2-htz2-round15-next` /
+  `bugfix/ai-s2-htz2-round15-next`, based on `bugfix/ai-s2-trace-next` at
+  integrated head `165781650`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red HTZ2 f9361 / 59
+  (`camera_x` expected `0x3104`, actual `0x3102`).
+- Triage/evidence: the f9361 context still had player position/subpixel aligned
+  while the camera was clamped two pixels early, and diagnostics showed the
+  engine `Camera_Max_X_pos` had stopped at `$3102`. The ROM Obj52 flee routine
+  does not tail-call `MarkObjGone` after the defeated-flag handoff: it keeps
+  adding two pixels to `Camera_Max_X_pos` until `$3160`, then writes `$3160`
+  and deletes only from its own off-screen/low-enough branch
+  (`docs/s2disasm/s2.asm:64592-64628`). A trial that moved the first flee tick
+  into the flag-latch update regressed the previous f9150 handoff row, confirming
+  the existing one-frame staging still belongs there and the new owner was the
+  later generic out-of-range removal.
+- Fix: `Sonic2HTZBossInstance` is now persistent, matching other event-spawned
+  S2 bosses whose ROM routines own their escape/delete branch. This prevents the
+  shared dynamic-object out-of-range culler from removing Obj52 before its flee
+  routine finishes releasing `Camera_Max_X_pos` to `$3160`.
+- Result:
+  `TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace`: f9361 / 59 errors
+  (`camera_x` expected `0x3104`, actual `0x3102`) -> f9405 / 58 errors
+  (`tails_x_speed` expected `0x000C`, actual `0x0000`). The new owner is the
+  post-capsule sidekick movement handoff after the Obj52 camera release.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at HTZ2 f9405 / 58.
+  - `mvn "-Dtest=com.openggf.tests.TestHTZBossTouchResponse,com.openggf.tests.TestHTZBossEventRoutine9,com.openggf.tests.TestHTZBossChildObjects,com.openggf.game.rewind.TestS2HtzBossGraphRewind" "-DfailIfNoTests=false" test`
+    produced fresh focused reports for 20 tests, all 0 failures.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces: 13 green, 6 expected-red, no non-target
+    regression. Red frontiers held at ARZ2 f1717 / 1420, CNZ2 f9487 / 288,
+    HTZ2 f9405 / 58, MTZ3 f12592 / 497, OOZ1 f7467 / 556, and OOZ2 f9307 /
+    444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    generated 29 fresh S1 trace reports, all 0 failures; MSE also listed stale
+    S2 expected-red summaries from the prior sweep.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    completed 68 S3K smoke/AIZ checks. Bootstrap, decoding, level-loading, and
+    AIZ skip headless checks passed; the two AIZ trace replays stayed at the
+    existing expected-red frontiers: complete-run f1095 / 4319 and AIZ f8941 /
+    1160.
+
 ## 2026-07-01 - S2 campaign integrated sweep after round 14 ARZ2/HTZ2/MTZ3/OOZ1 merges
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /

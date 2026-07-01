@@ -577,6 +577,15 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     @Override
+    public boolean isPersistent() {
+        // Obj52_Mobile_Flee keeps running after it sets Boss_defeated_flag:
+        // it widens Camera_Max_X_pos until $3160, then deletes from its own
+        // off-screen/low-enough branch instead of tail-calling MarkObjGone.
+        // ROM: docs/s2disasm/s2.asm:64592-64628.
+        return true;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(
                 Sonic2ObjectArtKeys.HTZ_BOSS);
