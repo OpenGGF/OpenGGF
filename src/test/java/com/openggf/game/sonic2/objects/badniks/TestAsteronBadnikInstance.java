@@ -5,13 +5,17 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.Direction;
+import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -112,5 +116,94 @@ class TestAsteronBadnikInstance {
                 "The original Asteron must detach its slot so the Obj27 replacement keeps it");
         verify(objectManager).removeFromActiveSpawns(spawn);
         verify(objectManager, times(5)).addDynamicObjectAfterCurrent(any(BadnikProjectileInstance.class));
+    }
+
+    @Test
+    void activationUsesMainCharacterCoordinatesWhenCurrentPlayableIsRidingCarrier() throws Exception {
+        ObjectSpawn spawn = new ObjectSpawn(0x0710, 0x01A0, Sonic2ObjectIds.ASTERON, 0x00, 0, false, 0);
+        AsteronBadnikInstance asteron = new AsteronBadnikInstance(spawn);
+        Sonic sonic = sonicAtRomPos(0x06C0, 0x0180);
+        Sonic activeCarrierRider = sonicAtRomPos(0x0400, 0x0100);
+        asteron.setServices(new StubObjectServices()
+                .withPlayerQuery(new ObjectPlayerQuery(() -> sonic, List::of)));
+
+        asteron.update(1, activeCarrierRider);
+
+        assertEquals("ARMED", asteronStateName(asteron),
+                "ObjA4 calls Obj_GetOrientationToPlayer, so carrier/riding update context must not replace Sonic");
+    }
+
+    @Test
+    void activationUsesHorizontallyClosestNativePlayerLikeObjGetOrientationToPlayer() throws Exception {
+        ObjectSpawn spawn = new ObjectSpawn(0x0710, 0x01A0, Sonic2ObjectIds.ASTERON, 0x00, 0, false, 0);
+        AsteronBadnikInstance asteron = new AsteronBadnikInstance(spawn);
+        Sonic sonic = sonicAtRomPos(0x0600, 0x01A0);
+        Sonic tails = sonicAtRomPos(0x06C0, 0x0180);
+        Sonic activeCarrierRider = sonicAtRomPos(0x0400, 0x0100);
+        asteron.setServices(new StubObjectServices()
+                .withPlayerQuery(new ObjectPlayerQuery(() -> sonic, () -> List.of(tails))));
+
+        asteron.update(1, activeCarrierRider);
+
+        assertEquals("ARMED", asteronStateName(asteron),
+                "Obj_GetOrientationToPlayer compares MainCharacter and Sidekick by horizontal distance");
+    }
+
+    @Test
+    void activationDoesNotDependOnPlayerFacingDirection() throws Exception {
+        for (Direction direction : List.of(Direction.LEFT, Direction.RIGHT)) {
+            ObjectSpawn spawn = new ObjectSpawn(0x1120, 0x0710, Sonic2ObjectIds.ASTERON, 0x2E, 0, false, 0);
+            AsteronBadnikInstance asteron = new AsteronBadnikInstance(spawn);
+            Sonic sonicOnNut = sonicAtRomPos(0x10C1, 0x072D);
+            sonicOnNut.setDirection(direction);
+            asteron.setServices(new StubObjectServices()
+                    .withPlayerQuery(new ObjectPlayerQuery(() -> sonicOnNut, List::of)));
+
+            asteron.update(1, sonicOnNut);
+
+            assertEquals("ARMED", asteronStateName(asteron),
+                    "Obj_GetOrientationToPlayer reads position only; facing must not affect Asteron activation");
+        }
+    }
+
+    @Test
+    void idleRangeExcludesPositiveSixtyPixelBoundaryLikeRomBhs() throws Exception {
+        ObjectSpawn spawn = new ObjectSpawn(0x1120, 0x0710, Sonic2ObjectIds.ASTERON, 0x2E, 0, false, 0);
+        AsteronBadnikInstance asteron = new AsteronBadnikInstance(spawn);
+        Sonic sonicOnNut = sonicAtRomPos(0x10C0, 0x072D);
+        asteron.setServices(new StubObjectServices()
+                .withPlayerQuery(new ObjectPlayerQuery(() -> sonicOnNut, List::of)));
+
+        asteron.update(1, sonicOnNut);
+
+        assertEquals("IDLE", asteronStateName(asteron),
+                "ROM loc_389B6 adds $60 then bhs-outs at $C0, so +$60 is outside");
+    }
+
+    @Test
+    void idleRangeIncludesNegativeSixtyPixelBoundaryLikeRomUnsignedWindow() throws Exception {
+        ObjectSpawn spawn = new ObjectSpawn(0x1060, 0x0710, Sonic2ObjectIds.ASTERON, 0x2E, 0, false, 0);
+        AsteronBadnikInstance asteron = new AsteronBadnikInstance(spawn);
+        Sonic sonicOnNut = sonicAtRomPos(0x10C0, 0x072D);
+        asteron.setServices(new StubObjectServices()
+                .withPlayerQuery(new ObjectPlayerQuery(() -> sonicOnNut, List::of)));
+
+        asteron.update(1, sonicOnNut);
+
+        assertEquals("ARMED", asteronStateName(asteron),
+                "ROM loc_389B6 accepts -$60 because adding $60 yields zero");
+    }
+
+    private static String asteronStateName(AsteronBadnikInstance asteron) throws Exception {
+        Field state = AsteronBadnikInstance.class.getDeclaredField("state");
+        state.setAccessible(true);
+        return ((Enum<?>) state.get(asteron)).name();
+    }
+
+    private static Sonic sonicAtRomPos(int x, int y) {
+        Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+        sonic.setCentreX((short) x);
+        sonic.setCentreY((short) y);
+        return sonic;
     }
 }
