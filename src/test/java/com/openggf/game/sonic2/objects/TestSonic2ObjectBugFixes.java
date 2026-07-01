@@ -28,6 +28,7 @@ import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -109,6 +110,70 @@ class TestSonic2ObjectBugFixes {
         assertEquals(0, player.getInputHistory(0),
                 "With Control_Locked untouched, raw neutral input refreshes Ctrl_1_Logical while Obj3D owns "
                         + "movement through obj_control.");
+    }
+
+    @Test
+    void oozLauncherBallDefersCaptureWhenObj3DJustMovedPlayerIntoRange() throws Exception {
+        TestEnvironment.resetAll();
+        OOZLauncherObjectInstance.clearActiveLaunchers();
+        LauncherBallObjectInstance.clearActiveCaptures();
+        ObjectSpawn launcherSpawn = new ObjectSpawn(0x0100, 0x0130,
+                Sonic2ObjectIds.OOZ_LAUNCHER, 0x01, 0, false, 0);
+        ObjectSpawn ballSpawn = new ObjectSpawn(0x0100, 0x0080,
+                Sonic2ObjectIds.LAUNCHER_BALL, 0x00, 0, false, 0);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic",
+                (short) launcherSpawn.x(), (short) (launcherSpawn.y() - 0x10));
+        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setAnimationId(Sonic2AnimationIds.ROLL.id());
+        player.setGSpeed((short) 0x0800);
+        player.setYSpeed((short) -0x0800);
+        player.setAir(true);
+        player.setOnObject(true);
+
+        OOZLauncherObjectInstance launcher = new OOZLauncherObjectInstance(launcherSpawn, "OOZLauncher");
+        LauncherBallObjectInstance ball = new LauncherBallObjectInstance(ballSpawn, "LauncherBall");
+        StubObjectServices services = new StubObjectServices()
+                .withPlayerQuery(new ObjectPlayerQuery(() -> player, () -> List.of()));
+        launcher.setServices(services);
+        ball.setServices(services);
+
+        Method proximity = OOZLauncherObjectInstance.class.getDeclaredMethod(
+                "processProximityDetection", AbstractPlayableSprite.class);
+        proximity.setAccessible(true);
+        assertEquals(2, proximity.invoke(launcher, player));
+        Method stateFor = OOZLauncherObjectInstance.class.getDeclaredMethod(
+                "stateFor", AbstractPlayableSprite.class);
+        stateFor.setAccessible(true);
+        Object launcherState = stateFor.invoke(launcher, player);
+        Field launcherStateField = launcherState.getClass().getDeclaredField("launcherState");
+        launcherStateField.setAccessible(true);
+        launcherStateField.setInt(launcherState, 2);
+        player.setCentreY((short) 0x0092);
+        player.setYSpeed((short) -0x0800);
+
+        Method updateInvisibleLauncher = OOZLauncherObjectInstance.class.getDeclaredMethod(
+                "updateInvisibleLauncher", int.class, AbstractPlayableSprite.class);
+        updateInvisibleLauncher.setAccessible(true);
+        updateInvisibleLauncher.invoke(launcher, 9342, player);
+        assertEquals(0x008A, player.getCentreY() & 0xFFFF,
+                "Obj3D_MoveCharacter moves with the old y_vel before Obj48's next successful capture "
+                        + "(docs/s2disasm/s2.asm:51176-51188).");
+
+        ball.update(9342, player);
+
+        assertEquals(0x008A, player.getCentreY() & 0xFFFF,
+                "Obj48 loc_252F0 reads the position at its own slot pass; if Obj3D just crossed "
+                        + "from outside to inside the 32px box later in the frame, capture waits "
+                        + "until the next pass (docs/s2disasm/s2.asm:51306-51315).");
+        assertEquals(0xF800, player.getYSpeed() & 0xFFFF);
+        assertEquals(0x0800, player.getGSpeed() & 0xFFFF);
+
+        ball.update(9343, player);
+
+        assertEquals(ballSpawn.y(), player.getCentreY() & 0xFFFF,
+                "The next Obj48 detection pass captures once the pre-pass position is already inside.");
+        assertEquals(0, player.getYSpeed());
+        assertEquals(0x1000, player.getGSpeed() & 0xFFFF);
     }
 
     @Test

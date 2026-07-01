@@ -194,6 +194,10 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         if (dx < 0 || dx >= DETECTION_FULL_SIZE || dy < 0 || dy >= DETECTION_FULL_SIZE) {
             return;
         }
+        if (OOZLauncherObjectInstance.crossedIntoLauncherBallThisFrame(
+                player, frameCounter, spawn.x(), spawn.y())) {
+            return;
+        }
 
         // If player is currently held by another launcher, clear that launcher's state
         OOZLauncherObjectInstance.clearActiveLauncherFor(player);
