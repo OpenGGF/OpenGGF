@@ -8,6 +8,7 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -178,6 +179,16 @@ public class OilSurfaceManager {
             clearOilTrackingOnly(state);
             return;
         }
+        if (isDeadFallingCpuSidekick(player)) {
+            // ROM PlatformObject_ChkYRange aborts when routine(a1) >= 6
+            // (docs/s2disasm/s2.asm:35978-35981). S2's deferred dead-fall
+            // sidekick path represents Obj02_Dead via DEAD_FALLING before
+            // obj_control bit 7 is set, so Obj07 must not re-seat Tails on
+            // the boss-lowered oil support during that window.
+            clearOilSupport(player, state);
+            player.setAir(true);
+            return;
+        }
 
         if (state.standingOnOil) {
             if (player.isHurt() && player.getAir()) {
@@ -309,6 +320,14 @@ public class OilSurfaceManager {
             return false;  // ROM blo -- d0 < -16
         }
         return true;
+    }
+
+    private boolean isDeadFallingCpuSidekick(AbstractPlayableSprite player) {
+        if (!player.isCpuControlled()) {
+            return false;
+        }
+        SidekickCpuController cpu = player.getCpuController();
+        return cpu != null && cpu.getState() == SidekickCpuController.State.DEAD_FALLING;
     }
 
     private void clearAirForOilSupport(AbstractPlayableSprite player) {

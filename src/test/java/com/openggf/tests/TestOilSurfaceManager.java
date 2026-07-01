@@ -10,7 +10,9 @@ import com.openggf.game.sonic2.OilSurfaceManager;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -150,6 +152,46 @@ public class TestOilSurfaceManager {
         assertEquals(0, sprite.getYSpeed());
     }
 
+    @Test
+    public void deadFallingSidekickReleasesExistingOilSupport() throws Exception {
+        landOnOilSurface();
+        assertTrue(manager.isStandingOnOil(sprite));
+
+        makeDeadFallingCpuSidekick(sprite);
+        sprite.setAir(true);
+        sprite.setOnObject(true);
+        sprite.setYSpeed((short) 0x0620);
+
+        manager.updateSurface(sprite);
+
+        assertFalse(manager.isStandingOnOil(sprite));
+        assertTrue(sprite.getAir(),
+                "S2 Obj07 PlatformObject aborts for Obj02_Dead (routine >= 6), leaving Tails airborne");
+        assertFalse(sprite.isOnObject(),
+                "DEAD_FALLING mirrors ROM routine 6, so stale Obj07 support must be cleared");
+        assertEquals(0x0620, sprite.getYSpeed() & 0xFFFF,
+                "Obj07 must not run RideObject_SetRide for dead-falling Tails");
+    }
+
+    @Test
+    public void deadFallingSidekickDoesNotLandOnBossLoweredOilSurface() throws Exception {
+        makeDeadFallingCpuSidekick(sprite);
+        manager.setOilSurfaceY(0x02D8);
+        sprite.setCentreY((short) 0x0299);
+        sprite.setAir(true);
+        sprite.setOnObject(false);
+        sprite.setYSpeed((short) 0x0620);
+
+        manager.updateSurface(sprite);
+
+        assertFalse(manager.isStandingOnOil(sprite));
+        assertTrue(sprite.getAir());
+        assertFalse(sprite.isOnObject());
+        assertEquals(0x0299, sprite.getCentreY() & 0xFFFF,
+                "PlatformObject_ChkYRange skips routine >= 6 before snapping y_pos");
+        assertEquals(0x0620, sprite.getYSpeed() & 0xFFFF);
+    }
+
     private void landOnOilSurface() {
         int centreY = OIL_SURFACE_Y + 1 - sprite.getYRadius();
         sprite.setCentreY((short) centreY);
@@ -158,6 +200,15 @@ public class TestOilSurfaceManager {
         sprite.setJumping(false);
         sprite.setYSpeed((short) 0x200);
         manager.update(sprite);
+    }
+
+    private static void makeDeadFallingCpuSidekick(TestOilSprite sidekick) throws Exception {
+        TestOilSprite leader = new TestOilSprite("leader", (short) 0, (short) 0);
+        sidekick.setCpuControlled(true);
+        SidekickCpuController controller = new SidekickCpuController(sidekick, leader);
+        Field stateField = SidekickCpuController.class.getDeclaredField("state");
+        stateField.setAccessible(true);
+        stateField.set(controller, SidekickCpuController.State.DEAD_FALLING);
     }
 
     private void invokeFrictionSlide() throws Exception {
