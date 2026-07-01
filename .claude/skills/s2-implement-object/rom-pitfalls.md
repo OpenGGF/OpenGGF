@@ -3163,6 +3163,40 @@ before returning (`docs/s2disasm/s2.asm:64429-64469`). Movement is separate in
 
 ---
 
+## P77 -- Pre-decrement countdown seeds may need Java off-by-one adjustment
+
+**Pattern.** Some S2 object states write a timer literal, then a later routine
+uses `subq.w #1,timer` / `bmi.s` to transition. The literal includes the state
+entry frame and the pre-decrement sample, not just the number of later Java
+updates that should remain in the state.
+
+**Engine symptom.** Moving object position is correct in broad terms but
+reaches a pixel or touch overlap one object pass late. In OOZ1, Obj4A Octus
+descended one frame late, so Sonic's rolling hit at f6639 missed the enemy and
+the bounce arrived after the ROM frame.
+
+**What to check / fix.**
+1. Count the state-entry frame and first decrement frame before copying a ROM
+   timer literal into a Java state constant.
+2. If the Java state machine stores the literal after the entry frame has
+   already returned and decrements only on later updates, seed `literal - 1` or
+   otherwise model the ROM pre-decrement transition so movement starts on the
+   same object pass.
+3. Keep the fix object-local and routine-driven. Do not compensate with a
+   trace frame, route, or zone exception.
+
+**ROM citation.** Obj4A writes `#60` to `objoff_2C`, `Obj4A_Hover`
+pre-decrements and branches on negative, then `Obj4A_MoveDown` starts descent
+with `addi.w #$10,y_vel` before `ObjectMove`
+(`docs/s2disasm/s2.asm:60456-60480`). `TouchResponse` then reads object
+`x_pos`, `y_pos`, and `collision_flags` in the player slot
+(`docs/s2disasm/s2.asm:85036-85096`).
+
+**Originating commit.** `<pending>` S2 OOZ1 Octus hover countdown:
+`TestS2OozLevelSelectTraceReplay` advances f6639 -> f7467.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
