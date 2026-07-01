@@ -6,13 +6,15 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2 round 24: the S2 sweep is 15 green / 4
-expected-red. ARZ2 advances to f2565 / 713 (`obj_s15_slot` expected `0x15`,
-actual `0x11`) after CPU Tails Obj37 collection was routed through the ROM
-main-invulnerability gate; CNZ2 remains parked at f9487 / 288; MTZ3 remains
-parked at f13336 / 352 (`x_speed` expected `0x0200`, actual `-0200`); OOZ1 is
-green; and OOZ2 remains parked at f9392 / 476 (`x_speed` expected `0x0200`,
-actual `-0024`).
+Current branch-local S2 state after ARZ2/CNZ2 round 24: the S2 sweep is 15
+green / 4 expected-red. ARZ2 advances to f2565 / 713 (`obj_s15_slot` expected
+`0x15`, actual `0x11`) after CPU Tails Obj37 collection was routed through the
+ROM main-invulnerability gate; CNZ2 advances to f9733 / 301
+(`tails_status_byte` expected `0x0002`, actual `0x0012`) after Obj51's ball
+trigger compare uses
+the ROM displayed-X phase on leftward passes; MTZ3 remains parked at f13336 /
+352 (`x_speed` expected `0x0200`, actual `-0200`); OOZ1 is green; and OOZ2
+remains parked at f9392 / 476 (`x_speed` expected `0x0200`, actual `-0024`).
 
 ## 2026-07-01 - S2 ARZ2 sidekick Obj37 collection advances f2142 to f2565
 
@@ -57,6 +59,40 @@ actual `-0024`).
     exited 0 with S1 and S3K unit/load guards green plus the two known S3K AIZ
     expected-red trace frontiers: `TestS3kAizCompleteRunTraceReplay` f1095 /
     4319 and `TestS3kAizTraceReplay` f8941 / 1160.
+## 2026-07-01 - S2 CNZ2 Obj51 displayed-X trigger advances f9487 to f9733
+
+- Worktree/branch: `.worktrees/ai-s2-cnz2-round24-next` /
+  `bugfix/ai-s2-cnz2-round24-next`, based on campaign head `17f4008cd`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced CNZ2 f9487 / 288 errors (`g_speed` expected `0x0000`, actual
+  `0x0100`).
+- Evidence: the old frontier had ROM Sonic hurt by Obj51's ball at
+  `@29A1,067F`, while the engine waited until a later leftward trigger and kept
+  the ball around `@298A,0678`. A focused BizHawk probe using
+  `tools\bizhawk\run_bizhawk_lua.bat` on `diag_template_fast.lua`-derived Lua
+  showed `loc_31BF2` executing at BK2 frame 21917 with Obj51 displayed
+  `x_pos=$29A2`, `Boss_X_pos=$29A1`, Sonic `x=$29B1`, and `objoff_3F=0`.
+  That makes the ROM proximity compare `dx=$1F` and spawns the ball; the engine
+  had compared against its current leftward phase and saw `dx=$20`, missing the
+  branch until Sonic had already passed the hurt window.
+- ROM refs: Obj51's trigger path reads `MainCharacter+x_pos`, subtracts
+  `x_pos(a0)`, adds `$10`, and branches away on `d0 >= $20`; the ball child is
+  allocated by `loc_31BF2` (`docs/s2disasm/s2.asm:66577-66594,66658-66664`).
+- Fix: `Sonic2CNZBossInstance` now compares against Obj51's displayed-X phase
+  for leftward ball-trigger checks, preserving the ROM trigger window without
+  hydrating trace state or adding route/frame carve-outs.
+- Result:
+  `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f9733 / 301 errors. The new first mismatch is
+  `tails_status_byte` expected `0x0002`, actual `0x0012`, with Tails hurt by a
+  split Obj51 ball.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    produced the expected-red f9733 / 301 report in the integrated campaign
+    tree.
+  - `mvn "-Dtest=TestSonic2CNZBossCollision,TestCNZBossArtAndAnimation,TestCNZBossRomArtMappings" "-DfailIfNoTests=false" test`
+    completed the focused Obj51 collision/art coverage successfully.
 
 ## 2026-07-01 - S2 round 22 integrated verification after OOZ2 advance
 

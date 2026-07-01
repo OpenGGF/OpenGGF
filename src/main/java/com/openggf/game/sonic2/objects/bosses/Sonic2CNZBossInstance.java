@@ -354,7 +354,13 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
         }
 
         // ROM: loc_31AB6 - Player proximity check
-        int dx = player.getCentreX() - state.x + 0x10;
+        // The compare reads x_pos(a0), not the freshly-moved Boss_X_pos long
+        // (docs/s2disasm/s2.asm:66577-66594). In the leftward pass this displayed
+        // Obj51 x is one pixel to the right of the engine's current state.x at the
+        // same post-player-slot phase; BizHawk probe at BK2 f21917: x_pos=$29A2,
+        // Boss_X_pos=$29A1, Sonic x=$29B1, so dx=$1F and loc_31BF2 runs.
+        int triggerX = state.x + (state.xVel < 0 ? 1 : 0);
+        int dx = player.getCentreX() - triggerX + 0x10;
         if (dx >= 0 && dx < 0x20) {
             int playerY = player.getCentreY();
 
