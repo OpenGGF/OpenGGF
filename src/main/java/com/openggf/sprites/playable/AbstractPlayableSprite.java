@@ -2548,9 +2548,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
 
                 setCrouching(false);
-                // S2 Hurt_Sidekick calls ResetOnFloor_Part2 before setting InAir;
-                // that reset clears Status_Push while leaving Status_OnObj to solids.
+                // HurtCharacter calls the reset-on-floor tail before setting InAir;
+                // that reset clears Status_Push, Status_RollJump, and jumping
+                // while leaving Status_OnObj to solids (S1 Sonic ReactToItem.asm:390-392;
+                // S2 s2.asm:85468-85471, 41033-41037; S3K sonic3k.asm:21090-21093,
+                // 24365-24369).
                 setPushing(false);
+                setRollingJump(false);
+                setJumping(false);
                 setAir(true);
                 setGSpeed((short) 0);
                 int dir = (getCentreX() >= sourceX) ? 1 : -1;
