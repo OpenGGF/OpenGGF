@@ -42,9 +42,9 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
     /**
      * Zone-specific configuration for collapsing platforms.
      * <p>
-     * Note: Fragment visual offsets are stored in the sprite mapping data,
-     * not here. Each fragment spawns at the parent's exact x/y position,
-     * and the sprite piece's offsets provide the visual displacement.
+     * Fragment visual offsets are stored in the sprite mapping data. Each
+     * fragment spawns at the parent's exact x/y position, and the sprite
+     * piece's offsets provide the visual displacement.
      */
     private record ZoneConfig(
             int halfWidth,
@@ -52,8 +52,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             int[] delayData,
             String artKey,
             int palette,
-            boolean usesLevelArt,
-            int[][] pieceOffsets  // For debug rendering only - actual offsets come from mappings
+            boolean usesLevelArt
     ) {}
 
     // OOZ: 7 fragments from obj1F_b.asm
@@ -65,16 +64,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             new int[]{0x1A, 0x12, 0x0A, 0x02, 0x16, 0x0E, 0x06},
             Sonic2ObjectArtKeys.OOZ_COLLAPSING_PLATFORM,
             3,
-            false,
-            new int[][]{  // Piece offsets from obj1F_b.asm for debug rendering
-                    {-0x40, -0x10},  // Piece 0
-                    {-0x20, -0x10},  // Piece 1
-                    {0x00, -0x10},   // Piece 2
-                    {0x20, -0x10},   // Piece 3
-                    {-0x40, 0x10},   // Piece 4
-                    {-0x20, 0x10},   // Piece 5
-                    {0x00, 0x10}     // Piece 6
-            }
+            false
     );
 
     // MCZ: 6 fragments from obj1F_c.asm
@@ -85,15 +75,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             new int[]{0x1A, 0x16, 0x12, 0x0E, 0x0A, 0x02},
             Sonic2ObjectArtKeys.MCZ_COLLAPSING_PLATFORM,
             3,
-            false,
-            new int[][]{  // Piece offsets from obj1F_c.asm frame 1 for debug rendering
-                    {-0x20, -0x10},  // Piece 0
-                    {-0x10, -0x10},  // Piece 1
-                    {0x00, -0x10},   // Piece 2
-                    {0x10, -0x10},   // Piece 3
-                    {-0x10, 0x00},   // Piece 4
-                    {0x08, 0x00}     // Piece 5
-            }
+            false
     );
 
     // ARZ: 8 fragments from obj1F_d.asm
@@ -104,17 +86,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             new int[]{0x16, 0x1A, 0x18, 0x12, 0x06, 0x0E, 0x0A, 0x02},
             null,  // Uses level art
             2,
-            true,
-            new int[][]{  // Piece offsets from obj1F_d.asm frame 1 for debug rendering
-                    {-0x20, -0x10},  // Piece 0
-                    {-0x10, -0x10},  // Piece 1
-                    {0x00, -0x10},   // Piece 2
-                    {0x10, -0x10},   // Piece 3
-                    {-0x20, 0x00},   // Piece 4
-                    {-0x10, 0x00},   // Piece 5
-                    {0x00, 0x00},    // Piece 6
-                    {0x10, 0x00}     // Piece 7
-            }
+            true
     );
 
     // Default config for unknown zones (uses OOZ config)
@@ -219,9 +191,13 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         // deletes when render_flags.on_screen is clear
         // (docs/s2disasm/s2.asm:23860-23864).
         if (collapsed) {
+            // ROM ObjectMoveAndFall reads the old y_vel for this frame's
+            // position update, then adds gravity for the next frame
+            // (docs/s2disasm/s2.asm:29945-29960).
+            int oldVelY = (int) (short) parentVelY;
             parentVelY += GRAVITY;
             int y32 = (parentY << 16) | (parentYFrac & 0xFFFF);
-            y32 += ((int) (short) parentVelY) << 8;
+            y32 += oldVelY << 8;
             parentY = y32 >> 16;
             parentYFrac = y32 & 0xFFFF;
             if (isWithinRenderSpriteBounds(config.halfWidth(), APPROX_RENDER_Y_MARGIN)) {
@@ -251,6 +227,8 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
                 if (fragmentPhaseDelay <= 0) {
                     collapsed = true;
                     parentY = spawn.y();
+                    parentYFrac = 0;
+                    parentVelY = 0;
                     verticalOnlyOffscreenTicks = 0;
                     detachFragmentRiders(batch);
                 }
@@ -279,12 +257,17 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (isDestroyed() || collapsed) {
-            return; // ROM: parent is invisible during fragment-fall; fragments handle rendering
+        if (isDestroyed()) {
+            return;
         }
 
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager == null || config == null) {
+            return;
+        }
+
+        if (inFragmentPhase || collapsed) {
+            renderParentFragment(renderManager);
             return;
         }
 
@@ -299,6 +282,20 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             }
             renderer.drawFrameIndex(mappingFrame, spawn.x(), spawn.y(), hFlip, vFlip);
         }
+    }
+
+    private void renderParentFragment(ObjectRenderManager renderManager) {
+        if (config.usesLevelArt()) {
+            renderArzPieces(List.of(ARZ_FRAME_COLLAPSED.pieces().get(0)), spawn.x(), getY(), false);
+            return;
+        }
+
+        PatternSpriteRenderer renderer = renderManager.getRenderer(config.artKey());
+        if (renderer == null || !renderer.isReady()) {
+            return;
+        }
+
+        renderer.drawFramePieceByIndex(mappingFrame, 0, spawn.x(), getY(), hFlip, vFlip);
     }
 
     @Override
@@ -333,9 +330,10 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public boolean shouldStayActiveWhenRemembered() {
         // Platform must remain in the active set during the fragment phase so
-        // SolidContacts can continue repositioning the player on the invisible
-        // parent. Matches S1 pattern where markRemembered is deferred to destroy.
-        return !collapsed;
+        // SolidContacts can continue repositioning the player on fragment 0,
+        // then render/update the parent fragment fall until offscreen deletion.
+        // Matches S1 pattern where markRemembered is deferred to destroy.
+        return true;
     }
 
     @Override
@@ -444,16 +442,20 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         // ARZ uses level art tiles at specific indices from obj1F_d.asm
         // basePatternIndex = 0 because level patterns start at index 0
         SpriteMappingFrame frame = (mappingFrame == 0) ? ARZ_FRAME_INTACT : ARZ_FRAME_COLLAPSED;
-        GraphicsManager graphicsManager = services().graphicsManager();
-        List<SpriteMappingPiece> pieces = frame.pieces();
+        renderArzPieces(frame.pieces(), spawn.x(), spawn.y(), true);
+    }
 
+    private void renderArzPieces(List<SpriteMappingPiece> pieces, int originX, int originY, boolean reverse) {
+        GraphicsManager graphicsManager = services().graphicsManager();
         // Draw in reverse order (Painter's Algorithm) - first piece in list appears on top
-        for (int i = pieces.size() - 1; i >= 0; i--) {
-            SpriteMappingPiece piece = pieces.get(i);
+        int start = reverse ? pieces.size() - 1 : 0;
+        int endExclusive = reverse ? -1 : pieces.size();
+        int step = reverse ? -1 : 1;
+        for (int i = start; i != endExclusive; i += step) {
             SpritePieceRenderer.renderPieces(
-                    List.of(piece),
-                    spawn.x(),
-                    spawn.y(),
+                    List.of(pieces.get(i)),
+                    originX,
+                    originY,
                     0,  // Level patterns start at index 0
                     ARZ_PALETTE,
                     hFlip,  // Frame H-flip from spawn render_flags
@@ -528,10 +530,6 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         private boolean hFlip;
         private boolean vFlip;
 
-        // Piece offset from parent (for rendering positioning)
-        private int pieceOffsetX;
-        private int pieceOffsetY;
-
         public CollapsingPlatformFragmentInstance(int parentX, int parentY, int delay, int fragmentIndex,
                                                    ZoneConfig config, ObjectRenderManager renderManager,
                                                    boolean hFlip, boolean vFlip) {
@@ -549,8 +547,6 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
                                                    boolean hFlip, boolean vFlip) {
             super(spawn, "CollapsingPlatformFragment", delay, 4);
 
-            this.pieceOffsetX = computeOffsetX(config, fragmentIndex, hFlip);
-            this.pieceOffsetY = computeOffsetY(config, fragmentIndex, vFlip);
             this.fragmentIndex = fragmentIndex;
             this.config = config;
             this.renderManager = renderManager;
@@ -602,24 +598,6 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             return CONFIG_OOZ;
         }
 
-        private static int computeOffsetX(ZoneConfig config, int fragmentIndex, boolean hFlip) {
-            int offsetX = 0;
-            if (config != null && config.pieceOffsets() != null &&
-                    fragmentIndex < config.pieceOffsets().length) {
-                offsetX = config.pieceOffsets()[fragmentIndex][0];
-            }
-            return hFlip ? -offsetX : offsetX;
-        }
-
-        private static int computeOffsetY(ZoneConfig config, int fragmentIndex, boolean vFlip) {
-            int offsetY = 0;
-            if (config != null && config.pieceOffsets() != null &&
-                    fragmentIndex < config.pieceOffsets().length) {
-                offsetY = config.pieceOffsets()[fragmentIndex][1];
-            }
-            return vFlip ? -offsetY : offsetY;
-        }
-
         @Override
         protected boolean shouldDeleteAfterFall() {
             // ROM Obj1F_CreateFragments copies the parent's x_pos/y_pos into
@@ -654,23 +632,18 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
                 return;
             }
 
-            // Fragment frame index depends on zone - frame 1 is the collapsed/fragment frame
-            // Each fragment draws only its corresponding piece from that frame
+            // Obj1F_CreateFragments increments mapping_frame, then gives each
+            // fragment a static mapping pointer to one piece from that frame.
             int frameIndex = 1;
 
-            // Render at parent position (getX()/getY() minus offset) because
-            // the piece renderer will add the piece offset
-            int renderX = getX() - pieceOffsetX;
-            int renderY = getY() - pieceOffsetY;
-
-            renderer.drawFramePieceByIndex(frameIndex, fragmentIndex, renderX, renderY, hFlip, vFlip);
+            renderer.drawFramePieceByIndex(frameIndex, fragmentIndex, getX(), getY(), hFlip, vFlip);
         }
 
         /**
          * Render an ARZ fragment using level patterns.
          * Each fragment renders its corresponding piece from ARZ_FRAME_COLLAPSED.
-         * Since getX()/getY() already include the piece offset, we need to
-         * subtract it before passing to the renderer (which will add it back).
+         * ROM keeps every fragment slot at the parent's x_pos/y_pos and lets the
+         * static one-piece mapping supply the visual offset.
          */
         private void renderArzFragment() {
             if (fragmentIndex < 0 || fragmentIndex >= ARZ_FRAME_COLLAPSED.pieces().size()) {
@@ -680,15 +653,10 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             SpriteMappingPiece piece = ARZ_FRAME_COLLAPSED.pieces().get(fragmentIndex);
             GraphicsManager graphicsManager = services().graphicsManager();
 
-            // Render at parent position (getX()/getY() minus offset) because
-            // SpritePieceRenderer will add the piece offset
-            int renderX = getX() - pieceOffsetX;
-            int renderY = getY() - pieceOffsetY;
-
             SpritePieceRenderer.renderPieces(
                     List.of(piece),
-                    renderX,
-                    renderY,
+                    getX(),
+                    getY(),
                     0,  // Level patterns start at index 0
                     ARZ_PALETTE,
                     hFlip,  // Frame H-flip inherited from parent
