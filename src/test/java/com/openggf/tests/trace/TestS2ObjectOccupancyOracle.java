@@ -1489,6 +1489,27 @@ public class TestS2ObjectOccupancyOracle {
                         + "(docs/s2disasm/s2.asm:30163-30177); slots " + check.summary());
     }
 
+    @Test
+    public void arz2SkidDustReusesFreedSlot18AtRomFrame1993() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1993) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x08, expected.get(18),
+                            "ROM fixture should reuse slot 0x12 for Obj08 skid dust at ARZ2 f1993");
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 56));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x08, slotCheck.idAt(18),
+                "S2 Obj08 skid dust must use the lowest free ROM slot after Obj82 unloads at f1993; "
+                        + "actual slots "
+                        + slotCheck.summary());
+    }
+
     /**
      * Drives the named S2 level-select trace through the engine (mirroring the
      * S2 branch of {@code AbstractTraceReplayTest.replayMatchesTrace}) and

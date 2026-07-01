@@ -6,12 +6,54 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2 round 19 integration: the S2 sweep
-remains 14 green / 5 expected-red. ARZ2 advances to f1993 / 842
-(`obj_s12_slot` expected `0x12`, actual `0x34`) after Obj37 lost rings consume
-the ROM-latched render flag before floor probes; OOZ1 is at f7731 / 490 (`y`
-expected `0x0374`, actual `0x036E`); CNZ2 remains parked at f9487 / 288; MTZ3
-remains f12897 / 490; and OOZ2 remains f9307 / 430.
+Current branch-local S2 state after ARZ2 round 20: the S2 sweep remains
+14 green / 5 expected-red. ARZ2 advances to f1998 / 817 (`obj_s17_slot`
+expected `0x17`, actual `0x35`) after S2 object unloads consume the
+previous `ObjectsManager` coarse-camera latch and fixed Obj08 skid dust runs
+between dynamic-object frees and placement loading; OOZ1 is at f7731 / 490
+(`y` expected `0x0374`, actual `0x036E`); CNZ2 remains parked at f9487 / 288;
+MTZ3 remains f12897 / 490; and OOZ2 remains f9307 / 430.
+
+## 2026-07-01 - S2 ARZ2 Obj82 coarse-camera and Obj08 dust order advances f1993 to f1998
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round20-next` /
+  `bugfix/ai-s2-arz2-round20-next`, based on
+  `bugfix/ai-s2-trace-next` at `a1606ea9f`.
+- Baseline reproduction:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round20-next\s2.gen"" ""-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace"" test"`
+  reproduced ARZ2 f1993 / 842 errors (`obj_s12_slot` expected `0x12`,
+  actual `0x34`).
+- Triage/evidence: ROM Obj82 saves `x_pos(a0)` to `objoff_34(a0)` during init
+  and passes that saved word to `MarkObjGone2` at the end of `Obj82_Main`
+  (`docs/s2disasm/s2.asm:57180-57222`). `MarkObjGone2` compares against
+  `Camera_X_pos_coarse` (`docs/s2disasm/s2.asm:30237-30250`), and
+  `ObjectsManager_Main` is the routine that latches that coarse camera after
+  `BuildSprites` (`docs/s2disasm/s2.asm:5111-5112,33033-33036`). The ROM
+  fixed Obj08 skid sidecar allocates visible skid dust through plain
+  `AllocateObject` while the parent remains on Stop animation
+  (`docs/s2disasm/s2.asm:42813-42850`), so the freed Obj82 slot must be
+  visible to Obj08 before streamed placement objects claim it.
+- Fix: S2 `ObjectManager` now uses a latched post-`ObjectsManager` camera value
+  for object-side unload checks, leaving S1 and S3K on their existing paths.
+  The inline object-order path also runs the existing fixed Obj08 skid-dust tick
+  between dynamic `RunObjects` execution and S2 placement loading, avoiding a
+  late placement object stealing the just-freed slot.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f1998 / 817 errors. The new first mismatch is
+  `obj_s17_slot` expected `0x17`, actual `0x35`, still in the later ARZ
+  leaf/skid-dust slot neighborhood.
+- Verification:
+  - `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round20-next\s2.gen"" ""-Dtest=com.openggf.tests.objects.TestS2ObjectWindowing,com.openggf.tests.objects.TestS2MarkObjGoneUnloadDecision,com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2SkidDustReusesFreedSlot18AtRomFrame1993"" test"`
+    exited 0 for the focused checks.
+  - `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round20-next\s2.gen"" ""-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace"" test"`
+    exited 1 as expected-red at ARZ2 f1998 / 817.
+  - `cmd /c "mvn.cmd -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false -Dmaven.test.failure.ignore=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round20-next\s2.gen"" ""-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay"" ""-DfailIfNoTests=false"" test"`
+    completed 19 S2 traces: 14 green, 5 expected-red. Red frontiers are ARZ2
+    f1998 / 817, CNZ2 f9487 / 288, MTZ3 f12897 / 490, OOZ1 f7731 / 490, and
+    OOZ2 f9307 / 430.
+  - `tools\bizhawk\run_bizhawk_lua.bat` was checked with the fast template over
+    the ARZ2 BK2 and printed `Mode:    no-audio config + fast no-render Lua wrapper`.
 
 ## 2026-07-01 - S2 round 19 integrated verification after ARZ2 advance
 
