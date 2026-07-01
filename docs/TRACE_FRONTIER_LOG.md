@@ -6,16 +6,55 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after integrating ARZ2 and OOZ2 round 26: the S2
-sweep is 15 green / 4 expected-red. ARZ2 advances to f3171 / 703
-(`obj_s27_slot` expected `0x27`, actual `0x23`) after Obj91 patrol-bubble reset
-timing was aligned to the ROM byte timer; CNZ2 remains at f9946 / 300 (`x_speed`
-expected `0x0200`, actual `0x08A8`) after the shared hurt reset path clears
-roll-jump before setting airborne recoil; MTZ3 remains parked at f13336 / 352
-(`x_speed` expected `0x0200`, actual `-0200`); OOZ1 is green; and OOZ2 advances
-to f10340 / 353 (`tails_x_speed` expected `0x0000`, actual `0x0200`) after Obj55
-laser children defer collision until their ROM init pass and floor waves delete
-through the finite `Ani_obj55` script.
+Current branch-local S2 state after integrating ARZ2 and OOZ2 round 26, merging
+`origin/develop`, and preserving S1/S3K guards: the S2 sweep is 15 green / 4
+expected-red. ARZ2 remains at f3171 / 703 (`obj_s27_slot` expected `0x27`,
+actual `0x23`) after Obj91 patrol-bubble reset timing was aligned to the ROM
+byte timer; CNZ2 remains at f9946 / 300 (`x_speed` expected `0x0200`, actual
+`0x08A8`) after the shared hurt reset path clears roll-jump before setting
+airborne recoil; MTZ3 remains parked at f13336 / 352 (`x_speed` expected
+`0x0200`, actual `-0200`); OOZ1 is green; and OOZ2 remains at f10340 / 353
+(`tails_x_speed` expected `0x0000`, actual `0x0200`) after Obj55 laser children
+defer collision until their ROM init pass and floor waves delete through the
+finite `Ani_obj55` script.
+
+## 2026-07-01 - S2 round 26 post-develop sync baseline
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next`, campaign head `273676b30` after merging
+  `origin/develop` commits `0a986fcc7`, `0c13f0a92`, and `4f673dfdf`, plus a
+  local follow-up to keep S1 counter-based `ObjPosLoad` from being reset a
+  second time after the level-start camera snap.
+- Regression caught and fixed during preservation: the incoming generic
+  post-snap object-manager reset made `TestS1Sbz3CompleteRunTraceReplay` fail at
+  f173 (`y` expected `0x0088`, actual `0x0085`) because S1 SBZ3 no longer had
+  the ROM floating block in slot `$27`. The correction skips that resync when
+  the object manager is in S1 counter-based placement mode, preserving S1
+  `OPL_Main`/`v_objstate` cursor initialization while keeping the snapped-camera
+  resync for S2/S3K placement (`docs/s1disasm/_inc/ObjPosLoad.asm:21-115`,
+  `docs/s2disasm/s2.asm:32935-33027`).
+- Focused regression checks:
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 0 with `TestS1Sbz3CompleteRunTraceReplay` green.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 0 with SCZ and WFZ green, preserving the incoming develop fix's
+    intended S2 snapped-camera resync path.
+- S2 sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  exited 0 with `maven.test.failure.ignore=true`: 19 tests, 15 green / 4
+  expected-red. Remaining red frontiers are unchanged: ARZ2 f3171 / 703
+  (`obj_s27_slot` expected `0x27`, actual `0x23`), CNZ2 f9946 / 300
+  (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 f13336 / 352
+  (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 f10340 / 353
+  (`tails_x_speed` expected `0x0000`, actual `0x0200`).
+- S1 preservation:
+  `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  exited 0 with 29 tests, 0 failures, and the existing S1 mapping warnings.
+- S3K preservation:
+  the AIZ trace/complete-run guard plus S3K loading/bootstrap/decoding tests
+  exited 0 with `maven.test.failure.ignore=true`: 68 checks, 66 green and the
+  same two known expected-red AIZ frontiers (`TestS3kAizCompleteRunTraceReplay`
+  f1095 / 4319 `x_speed`; `TestS3kAizTraceReplay` f8941 / 1160 `camera_y`).
 
 ## 2026-07-01 - S2 round 26 integrated baseline
 

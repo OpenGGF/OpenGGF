@@ -332,6 +332,10 @@ public class ObjectManager {
         return slotLayout.twoAxisCursorPlacement();
     }
 
+    public boolean usesCounterBasedRespawn() {
+        return placement.isCounterBasedRespawn();
+    }
+
     /**
      * Instantiates all spawns currently in the ObjectPlacementController window. Intended for
      * trace replay and editor state restoration that need engine object
