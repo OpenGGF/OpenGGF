@@ -6,15 +6,15 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2 round 28: ARZ2 advances to f3592 /
-1626 (`obj_s12_type` expected `0x83`, actual missing) after S2 water exits were
-changed to always double non-hurt vertical speed before the `-$1000` cap. The
-same-game preservation subset keeps ARZ1 and OOZ1 green, CNZ2 at f9946 / 300
-(`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 at f13336 / 352
-(`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 at f10340 / 353
-(`tails_x_speed` expected `0x0000`, actual `0x0200`). Full S1 remains green,
-the S3K AIZ guard is unchanged, and the rewind coverage guard is green after
-marking the pending OOZ boss laser-parent link as transient.
+Current branch-local S2 state after round 30 integration: ARZ2 is f3597 / 1622
+(`obj_extra_s1C_x` expected absent, actual `0x1BAE`) after Obj83 parent slots
+started exporting the ROM platform position; OOZ2 is f10831 / 164
+(`tails_cpu_ctrl2_pressed` expected `0x0010`, actual `0x0000`) after Obj55
+pending lasers copied the ROM-visible shooter position. CNZ2 remains f9946 /
+300 (`x_speed` expected `0x0200`, actual `0x08A8`) and MTZ3 remains f13336 /
+352 (`x_speed` expected `0x0200`, actual `-0200`). Full S2 is 15 green / 4
+expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. No S2
+trace greened in round 30, so these advances have not been banked into `next`.
 
 ## 2026-07-01 - S2 ARZ2 water-exit boost advances f3214 to f3592
 
@@ -31102,3 +31102,41 @@ Verification:
   `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
   exited 1 as expected: OOZ1 and ARZ1 passed; ARZ2 held f3592 / 1626, CNZ2 held
   f9946 / 300, MTZ3 held f13336 / 352.
+
+### 2026-07-01 -- S2 round 30 integrated campaign baseline
+
+Integrated on `bugfix/ai-s2-trace-next`:
+- `776cd6a97` (`fix: align S2 ARZ2 Obj83 parent slot position`) advances ARZ2
+  f3592 / 1626 (`obj_s12_type` expected `0x83`, actual missing) -> f3597 /
+  1622 (`obj_extra_s1C_x` expected absent, actual `0x1BAE`).
+- `ffae8eadc` (`fix: align OOZ2 laser delayed parent handoff`) advances OOZ2
+  f10340 / 353 (`tails_x_speed` expected `0x0000`, actual `0x0200`) -> f10831
+  / 164 (`tails_cpu_ctrl2_pressed` expected `0x0010`, actual `0x0000`).
+- CNZ2 round-30 worker made no commit. Useful probe: ROM Tails_Dust saw parent
+  anim `00` at BK2 f20468 and cleared without allocating Obj08; an engine
+  skid-latch candidate reduced total errors to 264 but did not advance the
+  f9946 first-error frame, so it was rejected.
+- MTZ3 round-30 worker made no commit. Useful probe: ROM reaches
+  `Touch_ChkValue` -> `Touch_ChkHurt` -> `Hurt_Sidekick` from Obj53 slot `$24`
+  with `collision_flags=$87`; the engine's matching Obj53 vertical phase/position
+  lags, and a tested `$10` phase seed regressed to f12594 / 411.
+
+Integrated verification on `bugfix/ai-s2-trace-next`:
+- Composed S2 preservation subset:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  ran 6 requested checks: ARZ1 and OOZ1 passed; ARZ2 f3597 / 1622, CNZ2 f9946
+  / 300, MTZ3 f13336 / 352, and OOZ2 f10831 / 164 remained expected-red.
+- Full S2 sweep:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 19 tests with 15 green / 4 expected-red at the same frontiers: ARZ2
+  f3597 / 1622, CNZ2 f9946 / 300, MTZ3 f13336 / 352, OOZ2 f10831 / 164.
+- Full S1 sweep:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 29 tests, 0 failures, with only the existing S1 mapping warnings.
+- S3K guard subset:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+  ran 68 checks with 66 green plus the known AIZ expected-reds:
+  complete-run f1095 / 4319 and level-select f8941 / 1160.
+
+No S2 trace turned green in round 30, so these campaign advances were not
+banked into `next` under the green-bank rule.
