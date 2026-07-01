@@ -6,15 +6,40 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 36 ARZ2 Obj89 init work: ARZ2 is
-f4707 / 1945 (`x` expected `0x2B4D`, actual `0x2B4F`) after Obj89 now raises
-its pillar children when Tails is in ROM `$81` object-control flight state,
-matching the `Obj89_Init` sidekick bypass. OOZ2 is f12107 / 99
-(`tails_g_speed` expected `0x00A4`, actual `0x0000`). CNZ2 remains f9946 / 300
-(`x_speed` expected `0x0200`, actual `0x08A8`) and MTZ3 remains f13336 / 352
-(`x_speed` expected `0x0200`, actual `-0200`). Full S2 is 15 green / 4
-expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. CNZ2,
-MTZ3, and OOZ2 round 36 made no commits. No S2 trace greened in round 36.
+Current branch-local S2 state after the round 37 no-change fleet is unchanged:
+ARZ2 is f4707 / 1945 (`x` expected `0x2B4D`, actual `0x2B4F`), CNZ2 is f9946 /
+300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
+(`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 is f12107 / 99
+(`tails_g_speed` expected `0x00A4`, actual `0x0000`). Full S2 is 15 green / 4
+expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. No S2
+trace greened in round 37.
+
+## 2026-07-01 - S2 round 37 no-change fleet
+
+Round 37 started from `55e1b161e` on `bugfix/ai-s2-trace-next`. All candidates
+were rejected and reverted by their owning workers; no source changes were
+integrated and no S2 trace greened.
+
+- ARZ2 round-37 worktree `.worktrees/ai-s2-arz2-round37-next` /
+  `bugfix/ai-s2-arz2-round37-next`: reproduced f4707 / 1945. An Obj89 manual
+  solid-checkpoint candidate reduced total errors to 1919 but did not advance
+  the first divergence, so it was rejected and reverted. ARZ2 remains f4707 /
+  1945.
+- CNZ2 round-37 worktree `.worktrees/ai-s2-cnz2-round37-next` /
+  `bugfix/ai-s2-cnz2-round37-next`: reproduced f9946 / 300. Routing S2 Obj08
+  skid dust out of dynamic slots moved the first error backward to f9199 / 437,
+  so it was rejected and reverted. CNZ2 remains f9946 / 300.
+- MTZ3 round-37 worktree `.worktrees/ai-s2-mtz3-round37-next` /
+  `bugfix/ai-s2-mtz3-round37-next`: reproduced f13336 / 352. BizHawk probing
+  again captured ROM f39500 `Touch_ChkValue` from Obj53 slot `$24` at
+  `$2B55,$0493`, `collision_flags=$87`, before the next `Obj53_OrbitBoss`; no
+  genuine advancing fix was identified. MTZ3 remains f13336 / 352.
+- OOZ2 round-37 worktree `.worktrees/ai-s2-ooz2-round37-next` /
+  `bugfix/ai-s2-ooz2-round37-next`: reproduced f12107 / 99. Obj55 live
+  collision-byte and delayed-restore candidates were tested; the first did not
+  advance f12107 and the second regressed to f9302 / 400, so both were rejected
+  and reverted. OOZ2 remains f12107 / 99.
+- No round-37 change was banked into `next`.
 
 ## 2026-07-01 - S2 ARZ2 Obj89 init sidekick flight bypass advances f4692 to f4707
 
