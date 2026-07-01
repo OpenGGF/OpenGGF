@@ -15,9 +15,49 @@ previous left window edge; OOZ1 advances to f9342 / 353 (`y` expected
 the f9164 Octus bullet/Tails hurt touch; CNZ2 remains parked at f9487 / 288;
 MTZ3 advances to f13336 / 352 (`x_speed` expected `0x0200`, actual `-0200`)
 after the MTZ Obj54 event spawn reserves its ROM SST slot before spawning the
-Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9341 / 506
-(`tails_routine` expected `0x0004`, actual `0x0002`) after Obj55 preserves the
-ROM top-level init return before entering its main-surface movement.
+Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9342 / 505
+(`tails_x_sub` expected `0x4700`, actual `0xC700`) after trace capture keeps
+the ROM Obj02 hurt routine visible for object-solid landing samples.
+
+## 2026-07-01 - S2 OOZ2 object-solid hurt routine capture advances f9341 to f9342
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round22-next` /
+  `bugfix/ai-s2-ooz2-round22-next`, based on campaign next head `84bade27d`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced OOZ2 f9341 / 506 errors (`tails_routine` expected `0x0004`,
+  actual `0x0002`).
+- Evidence: frame 9341 has ROM and engine position/subpixel/velocity matching
+  for Tails, but the trace routine projection reported engine routine 2 after
+  the landing tick cleared the live `hurt` boolean. ROM still samples Tails in
+  Obj02 routine 4 with `Status_OnObj` set on that object-solid landing frame,
+  and only frame 9342 switches to routine 2. S2 `Obj02_Control` runs the CPU
+  path before movement/control dispatch (`docs/s2disasm/s2.asm:38952-38981`);
+  `Obj02_Hurt` owns the hurt frame and `Tails_HurtStop` writes routine 2 only
+  when its level-collision path runs (`docs/s2disasm/s2.asm:41063-41112`).
+  A broad frame-start hurt latch was tested and rejected because OOZ1/MTZ3
+  same-frame `Tails_HurtStop` recoveries correctly write routine 2 while still
+  retaining `Status_OnObj` in the sampled status byte.
+- Fix: `AbstractPlayableSprite` now captures `hurtAtFrameStart` with the
+  existing playable frame-start status snapshots, rewind stores/restores that
+  field plus the same-frame hurt-recovery completion marker, and
+  `TraceCharacterState` reports routine 4 only when that frame-start hurt state
+  combines with the sampled on-object status and recovery has not completed.
+  `Tails_HurtStop` samples still report routine 2 immediately.
+- Result:
+  `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f9342 / 505 errors. The new first mismatch is `tails_x_sub`
+  expected `0x4700`, actual `0xC700`.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestTraceCharacterState,com.openggf.sprites.playable.TestAbstractPlayableSpriteRewindCapture" "-DfailIfNoTests=false" test`
+    exited 0 (10 tests).
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 0 with the expected-red OOZ2 f9342 / 505 report.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 0 with the expected-red preservation set unchanged: ARZ2 f2016 / 753,
+    CNZ2 f9487 / 288, MTZ3 f13336 / 352, OOZ1 f9342 / 353, OOZ2 f9342 / 505.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:S3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:SONIC_3K_ROM_PATH=$env:S3K_ROM_PATH; mvn "-Dmse=off" "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    exited 0 (53 tests).
 
 ## 2026-07-01 - S2 MTZ3 Obj54 slot reservation advances f13054 to f13336
 
