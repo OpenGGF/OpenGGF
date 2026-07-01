@@ -1625,6 +1625,22 @@ public class ObjectManager {
 
     public <T extends ObjectInstance> T createDynamicObject(Supplier<T> factory) {
         return ObjectConstructionContext.construct(objectServices, () -> {
+            T object = factory.get();
+            addDynamicObject(object);
+            return object;
+        });
+    }
+
+    /**
+     * Constructs a dynamic object after reserving its SST slot.
+     * <p>
+     * Use only for ROM paths where the parent object already occupies {@code a0}
+     * before constructor-time side effects spawn children. Ordinary event and
+     * helper spawns should use {@link #createDynamicObject(Supplier)} so existing
+     * constructor-time child allocation remains unchanged.
+     */
+    public <T extends ObjectInstance> T createDynamicObjectWithReservedSlot(Supplier<T> factory) {
+        return ObjectConstructionContext.construct(objectServices, () -> {
             int reservedSlot = allocateSlot();
             if (reservedSlot < 0) {
                 return null;

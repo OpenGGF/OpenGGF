@@ -14,7 +14,7 @@ between dynamic-object frees and placement loading; OOZ1 advances to f9164 /
 355 (`tails_x_speed` expected `0x0200`, actual `-0600`) after Obj26 rejects the
 expired Obj3D launcher residue roll contact; CNZ2 remains parked at f9487 /
 288; MTZ3 advances to f13336 / 352 (`x_speed` expected `0x0200`, actual
-`-0200`) after dynamic Obj54 construction reserves its ROM SST slot before
+`-0200`) after the MTZ Obj54 event spawn reserves its ROM SST slot before
 spawning the Obj54 laser shooter and Obj53 shield orbs; and OOZ2 remains f9307 /
 430.
 
@@ -27,7 +27,14 @@ spawning the Obj54 laser shooter and Obj53 shield orbs; and OOZ2 remains f9307 /
   `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
   reproduced MTZ3 f13054 / 367 errors (`x_speed` expected `0x0091`, actual
   `-0091`).
-- Triage/evidence: the engine had Obj53/Obj54 children in lower slots and the
+- Triage/evidence: the initial broad fix made every `createDynamicObject`
+  reserve a slot before construction. That preserved MTZ3, but it shifted CPZ2:
+  a transient Obj0A breathing bubble occupied slot 24, so the generic
+  pre-reservation put CPZ Obj5D in slot 25 while the ROM trace has Obj5D in
+  slot 24. Obj5D's own constructor-time children are `AllocateObjectAfterCurrent`
+  children (`docs/s2disasm/s2.asm:61506-61590`), so broad pre-reservation was
+  the wrong scope.
+- MTZ evidence: the engine had Obj53/Obj54 children in lower slots and the
   Obj54 boss body at slot 26, causing the shared touch loop to see a later boss
   source than the ROM. A read-only BizHawk PC probe launched only through
   `tools\bizhawk\run_bizhawk_lua.bat` printed
@@ -40,12 +47,12 @@ spawning the Obj54 laser shooter and Obj53 shield orbs; and OOZ2 remains f9307 /
   allocating the remaining children (`docs/s2disasm/s2.asm:67224-67240,
   67782-67808`). S2 `Touch_Loop` / `Touch_Boss_Loop` scans SST order and exits
   on the first collision (`docs/s2disasm/s2.asm:85048-85058,85191-85201`).
-- Fix: `ObjectManager.createDynamicObject` now reserves the dynamic object slot
-  before invoking the factory and assigns that reserved slot to a newly
-  constructed `AbstractObjectInstance`, releasing the slot on null/failure or
-  when the object already owns a slot. This gives parent constructors the same
-  slot-before-child allocation order as the ROM without trace hydration or a
-  zone/frame carve-out.
+- Fix: `ObjectManager.createDynamicObject` keeps the original generic
+  construction semantics. A new `createDynamicObjectWithReservedSlot` helper is
+  used only by the MTZ Obj54 event spawn, where the ROM has already allocated
+  the parent object in `a0` before Obj54 constructor-time child spawns. This
+  gives MTZ the needed parent-before-child allocation order without shifting CPZ
+  Obj5D or other event spawns.
 - Result:
   `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
   but advances to f13336 / 352 errors. The new first mismatch is `x_speed`
@@ -53,15 +60,23 @@ spawning the Obj54 laser shooter and Obj53 shield orbs; and OOZ2 remains f9307 /
 - Verification:
   - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
     exited 1 as expected-red at MTZ3 f13336 / 352.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+    exited 0 after narrowing the reserved-slot helper, restoring the CPZ2 green
+    that the broad generic version regressed at f10600 / 116.
   - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
     exited 0 for MTZ1 and MTZ2 preservation (2 tests, 0 failures/errors).
   - `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestObjectPlacementManager,com.openggf.level.objects.TestObjectManagerCounterBasedDynamicUnload,com.openggf.level.objects.TestTouchResponseManager" "-DfailIfNoTests=false" test`
     exited 0 (71 tests, 0 failures/errors).
   - `mvn "-Dmse=off" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" test`
     exited 0 (1 test, 0 failures/errors).
-  - A wider S2/S1/S3K trace guard attempt was blocked locally before useful
-    cross-game signal by LWJGL native loading (`Failed to locate library:
-    lwjgl.dll`) in the GL-backed trace setup.
+  - `mvn "-Dmse=off" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces with the branch's existing 5 expected-red results:
+    ARZ2 f1998 / 817, CNZ2 f9487 / 288, MTZ3 f13336 / 352, OOZ1 f9164 /
+    355, and OOZ2 f9307 / 430. CPZ2 passed in the sweep.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" "-DfailIfNoTests=false" test`
+    passed rewind coverage and S1 GHZ1; S3K AIZ remains red in this branch at
+    f8941 / 1160 (`camera_y` expected `0x02C1`, actual `0x02B9`). The scoped
+    helper is only invoked from S2 MTZ events and is unused by S3K.
 
 ## 2026-07-01 - S2 ARZ2 Obj82 coarse-camera and Obj08 dust order advances f1993 to f1998
 
