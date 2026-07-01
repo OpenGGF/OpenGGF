@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
@@ -88,6 +89,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     private boolean touchCollisionSnapshotReady;
     private boolean flipped;
     private boolean bossDefeatedFlagSet;
+    @RewindTransient(reason = "pending Obj55 laser init can reconstruct parent position/flip from its spawn fallback")
     private Sonic2OOZBossInstance laserParent;
 
     public Sonic2OOZBossInstance(ObjectSpawn spawn) {

@@ -12,9 +12,9 @@ assemblies were changed to consume their three ROM child SST slots. The
 same-game preservation subset keeps ARZ1 and OOZ1 green, CNZ2 at f9946 / 300
 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 at f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 at f10340 / 353
-(`tails_x_speed` expected `0x0000`, actual `0x0200`). The rewind coverage guard
-has no Obj83 gaps after structural child-link annotations; it still reports the
-campaign-head OOZ boss `laserParent` gap unrelated to this ARZ2 change.
+(`tails_x_speed` expected `0x0000`, actual `0x0200`). Full S1 remains green,
+the S3K AIZ guard is unchanged, and the rewind coverage guard is green after
+marking the pending OOZ boss laser-parent link as transient.
 
 ## 2026-07-01 - S2 ARZ2 Obj83 child SST slots advance f3171 to f3214
 
@@ -54,8 +54,31 @@ campaign-head OOZ boss `laserParent` gap unrelated to this ARZ2 change.
   f3214 / 699; CNZ2 f9946 / 300; MTZ3 f13336 / 352; OOZ2 f10340 / 353.
 - Rewind coverage:
   `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" test`
-  no longer reports Obj83 gaps, but still exits 1 on the unrelated
-  `Sonic2OOZBossInstance#objectRef#laserParent` campaign-head gap.
+  initially no longer reported Obj83 gaps, but exposed the pre-existing
+  campaign-head `Sonic2OOZBossInstance#objectRef#laserParent` gap. The campaign
+  follow-up marks that pending-laser parent link rewind-transient; rerunning the
+  same command exits 0 with the guard green.
+- Campaign validation after cherry-pick:
+  - Focused ARZ2 + occupancy oracle:
+    `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2RotatingPlatformAssemblyConsumesRomChildSlotsAtFrame2855,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 0 with `maven.test.failure.ignore=true`: the occupancy oracle passed
+    and ARZ2 advanced to f3214 / 699.
+  - Full S2 sweep:
+    `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 0 with `maven.test.failure.ignore=true`: 19 tests, 15 green / 4
+    expected-red. ARZ2 is f3214 / 699; CNZ2, MTZ3, and OOZ2 are unchanged.
+  - Full S1 sweep:
+    `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 0 with 29 tests, 0 failures, and the existing S1 mapping warnings.
+  - S3K preservation:
+    the AIZ trace/complete-run guard plus S3K loading/bootstrap/decoding tests
+    exited 0 with `maven.test.failure.ignore=true`: 68 checks, 66 green and the
+    same two known expected-red AIZ frontiers (`TestS3kAizCompleteRunTraceReplay`
+    f1095 / 4319 `x_speed`; `TestS3kAizTraceReplay` f8941 / 1160 `camera_y`).
+  - OOZ2 metadata preservation:
+    `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 0 with `maven.test.failure.ignore=true`, preserving OOZ2 at f10340 /
+    353 after the rewind-transient parent-link annotation.
 
 ## 2026-07-01 - S2 round 26 post-develop sync baseline
 
