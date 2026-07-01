@@ -6,18 +6,57 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after OOZ2 round 22 integration: the S2 sweep is
-15 green / 4 expected-red. ARZ2 remains parked at
-f2016 / 753 (`obj_extra_s21_x` expected absent, actual `0x1433`) after
-backward post-camera placement includes the object group exactly on the
-previous left window edge; OOZ1 is now green after Obj48 defers a same-pass
-Obj3D outside-to-inside capture crossing by one object pass; CNZ2 remains
-parked at f9487 / 288;
-MTZ3 advances to f13336 / 352 (`x_speed` expected `0x0200`, actual `-0200`)
-after the MTZ Obj54 event spawn reserves its ROM SST slot before spawning the
-Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9342 / 505
-(`tails_x_sub` expected `0x4700`, actual `0xC700`) after trace capture keeps
-the ROM Obj02 hurt routine visible for object-solid landing samples.
+Current branch-local S2 state after ARZ2 round 24: the S2 sweep is 15 green / 4
+expected-red. ARZ2 advances to f2565 / 713 (`obj_s15_slot` expected `0x15`,
+actual `0x11`) after CPU Tails Obj37 collection was routed through the ROM
+main-invulnerability gate; CNZ2 remains parked at f9487 / 288; MTZ3 remains
+parked at f13336 / 352 (`x_speed` expected `0x0200`, actual `-0200`); OOZ1 is
+green; and OOZ2 remains parked at f9392 / 476 (`x_speed` expected `0x0200`,
+actual `-0024`).
+
+## 2026-07-01 - S2 ARZ2 sidekick Obj37 collection advances f2142 to f2565
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round24-next` /
+  `bugfix/ai-s2-arz2-round24-next`, based on campaign head `17f4008cd` after
+  the `origin/develop` merge.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced ARZ2 f2142 / 717 errors (`obj_extra_s29_x` expected absent,
+  actual `0x1490`).
+- Evidence: ARZ2 frame 2142 has ROM Tails overlapping Obj37 near
+  `$148F,$0514` while Sonic's `invulnerable_time` is already below `$5A`.
+  A BizHawk probe with `tools\bizhawk\run_bizhawk_lua.bat` over
+  `s2-lvl-select-ARZ.bk2` confirmed the Obj37 slot switches to routine 6 and
+  `Ring_count` increments on the Tails touch window. MTZ2 f644 provided the
+  counterexample: Sonic's hurt invulnerability is still high, so ROM leaves
+  Tails-overlapped Obj37 rings uncollected and they keep blocking the later
+  hurt object.
+- ROM refs: `Touch_ChkValue` tests `MainCharacter+invulnerable_time` before
+  setting `routine(a1)=4` and `parent(a1)=a0`
+  (`docs/s2disasm/s2.asm:85201-85219`). `Obj37_Collect` calls `CollectRing`,
+  and `CollectRing` branches through `CollectRing_Tails` when `parent+1(a0)`
+  is nonzero before falling through to the 1P counter/sound path outside
+  two-player mode (`docs/s2disasm/s2.asm:25023-25078,25253-25270`).
+- Fix: the lost-ring touch branch now allows CPU sidekick Obj37 collection, but
+  when the toucher is a sidekick it reads the active main playable's
+  invulnerability timer for the `$5A` threshold. If no main playable is
+  available, tests retain the old toucher-local fallback.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f2565 / 713 errors. The new first mismatch is `obj_s15_slot`
+  expected `0x15`, actual `0x11`.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestLostRingTouchOrdering,com.openggf.level.rings.TestLostRingObjectInstance" "-DfailIfNoTests=false" test`
+    exited 0 (32 tests).
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 0 with ARZ2 expected-red at f2565 / 713 and MTZ2 green.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    exited 0 with 19 tests: 15 green / 4 expected-red. The preservation set is
+    ARZ2 f2565 / 713, CNZ2 f9487 / 288, MTZ3 f13336 / 352, OOZ2 f9392 / 476.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:S3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:SONIC_3K_ROM_PATH=$env:S3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Ds3k.rom.path=$env:S3K_ROM_PATH" "-Dsonic3k.rom.path=$env:S3K_ROM_PATH" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s1.TestS1Mz1TraceReplay,com.openggf.tests.trace.s1.TestS1Mz1LostRingCollectionOrderRegression,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+    exited 0 with S1 and S3K unit/load guards green plus the two known S3K AIZ
+    expected-red trace frontiers: `TestS3kAizCompleteRunTraceReplay` f1095 /
+    4319 and `TestS3kAizTraceReplay` f8941 / 1160.
 
 ## 2026-07-01 - S2 round 22 integrated verification after OOZ2 advance
 
