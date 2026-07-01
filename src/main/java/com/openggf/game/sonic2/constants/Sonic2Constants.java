@@ -326,6 +326,7 @@ public class Sonic2Constants {
     // Title Screen Art (Nemesis compressed)
     public static final int ART_NEM_TITLE_ADDR = 0x74F6C;          // Background patterns
     public static final int ART_NEM_TITLE_SPRITES_ADDR = 0x7667A;  // ArtNem_TitleSprites (Sonic/Tails/stars, verified)
+    public static final int ART_NEM_SEGA_LOGO_ADDR = 0x74876;      // ArtNem_SEGA (verified via RomOffsetFinder)
     public static final int ART_NEM_MENU_JUNK_ADDR = 0x78CBC;     // ArtNem_MenuJunk (extra sprite tiles at VRAM 0x03F2)
 
     // Credit Text Art (Nemesis compressed, 64 patterns)
@@ -437,11 +438,18 @@ public class Sonic2Constants {
     public static final int MAP_ENI_TITLE_SCREEN_ADDR = 0x74DC6;   // Plane B background (40x28)
     public static final int MAP_ENI_TITLE_BACK_ADDR = 0x74E3A;     // Plane B water/horizon (24x28, col 40+)
     public static final int MAP_ENI_TITLE_LOGO_ADDR = 0x74E86;     // Plane A logo/emblem (40x28)
+    public static final int MAP_ENI_SEGA_LOGO_ADDR = 0x74D0E;      // MapEng_SEGA (40x28, verified)
+    public static final int MAP_UNC_SEGA_GIANT_SONIC_ADDR = 0x3A5A6; // ObjB1_MapUnc_3A5A6
 
     // Title Screen Palettes (uncompressed, 32 bytes each)
     // Pal_Title loaded at palette line 1 via PalLoad_ForFade (palptr Pal_Title, 1)
     public static final int PAL_TITLE_ADDR = 0x2942;
     public static final int PAL_TITLE_SIZE = 32;
+    public static final int PAL_SEGA_SCREEN_ADDR = 0x28C2;         // Pal_SEGA (128 bytes, verified)
+    public static final int PAL_SEGA_SCREEN_SIZE = 128;
+    public static final int PAL_SEGA_SCREEN_WIPE_BG_ADDR = 0x3A4A4; // Sega Screen 2.bin, 7 frames x 8 colors
+    public static final int PAL_SEGA_SCREEN_WIPE_FG_ADDR = 0x3A51A; // Sega Screen 3.bin, 7 frames x 8 colors
+    public static final int PAL_SEGA_SCREEN_WIPE_SIZE = 112;
     // Pal_1340C loaded at palette line 2 (Normal_palette_line3) by Obj0E intro animation
     // Used by Plane B background (make_art_tile palette 2)
     public static final int PAL_TITLE_BACKGROUND_ADDR = 0x1340C;

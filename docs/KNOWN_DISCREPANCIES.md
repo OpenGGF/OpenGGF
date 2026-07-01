@@ -172,6 +172,7 @@ We use **extended pattern ID ranges** with fixed bases that don't overlap:
 | `0x80000` | S2 title-screen credit text | Separate title-screen text allocation |
 | `0xE0000` | S2 credits / S3K title animation | Shared base in mutually-exclusive contexts; registered as `PatternAtlasRange.S3K_TITLE_SCREEN_ANIMATION` |
 | `0xE8000` | S3K title sprites | Registered as `PatternAtlasRange.S3K_TITLE_SCREEN_SPRITES` |
+| `0x100000` | SEGA boot logos | S1/S2 SEGA logo tiles and S2 giant-Sonic boot-screen art; registered as `PatternAtlasRange.SEGA_BOOT_LOGOS` |
 
 **Shared-base contexts** (`0x40000`):
 - S2 Title Card (`TitleCardManager.PATTERN_BASE`) — gameplay scope, not active during cutscenes

@@ -32,7 +32,8 @@ public enum PatternAtlasRange {
     SONIC2_ENDING_CLOUDS(0xF4000, 0x01000, "Sonic 2 ending clouds"),
     SONIC2_ENDING_ANIMAL(0xF5000, 0x01000, "Sonic 2 ending animal"),
     SONIC2_CREDITS_LOGO(0xF6000, 0x02000, "Sonic 2 credits logo"),
-    SONIC2_ENDING_VRAM(0xF8000, 0x08000, "Sonic 2 ending VRAM-relative art");
+    SONIC2_ENDING_VRAM(0xF8000, 0x08000, "Sonic 2 ending VRAM-relative art"),
+    SEGA_BOOT_LOGOS(0x100000, 0x08000, "SEGA boot logos");
 
     private final int base;
     private final int size;

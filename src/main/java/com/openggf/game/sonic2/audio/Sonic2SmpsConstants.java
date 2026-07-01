@@ -31,6 +31,18 @@ public final class Sonic2SmpsConstants {
     public static final int PCM_SAMPLE_COUNT = 7;
     public static final int PCM_MAPPING_COUNT = 17;
 
+    /** Sonic 2 SEGA screen command (SndID_SegaSound / CmdPtr_SegaSound). */
+    public static final int CMD_SEGA = 0xFA;
+
+    /** Raw SEGA PCM sample aligned to the end of the 0x0E0000 PCM bank. */
+    public static final int SEGA_SOUND_ADDR = 0x0F1E8C;
+
+    /** Size_of_SEGA_sound from {@code docs/s2disasm/s2.constants.asm}. */
+    public static final int SEGA_SOUND_SIZE = 0x6174;
+
+    /** Source sample rate used by the generated Sonic 2 SEGA PCM include. */
+    public static final int SEGA_SOUND_SAMPLE_RATE = 16_500;
+
     /**
      * SFX priority table from Sonic 2 Z80 driver (zSFXPriority).
      * Index = SFX ID - Sonic2Sfx.ID_BASE (0xA0).

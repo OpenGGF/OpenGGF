@@ -808,6 +808,7 @@ public class Engine {
 		crossGameFeatureProvider.resetState();
 		debugOverlayManager.resetState();
 		RenderContext.reset();
+		graphicsManager.clearPaletteTextures();
 		gameLoop.resetModuleScopedProviders();
 	}
 
