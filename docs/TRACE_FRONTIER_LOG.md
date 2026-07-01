@@ -30451,3 +30451,48 @@ Verification:
   exited 0; MSE also printed the expected-red ARZ2 target report at f2142.
 - `mvn "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
   exited 0; MSE also printed the expected-red ARZ2 target report at f2142.
+
+### 2026-07-01 -- S2 round 23 integrated campaign baseline
+
+Integrated on `bugfix/ai-s2-trace-next` after merging:
+- `14f240775` (`fix: hide BizHawk fast diagnostic launches`) keeps the
+  reusable `tools\bizhawk\run_bizhawk_lua.bat` fast path no-audio/no-render by
+  launching EmuHawk hidden while preserving the generated diagnostic config and
+  Lua wrapper. Smoke runs over `diag_template_fast.lua` wrote `DIAG DONE` and
+  left no EmuHawk process in both the campaign worktree and local `next`.
+- `b8bd715d` / merge `7f5e7c6e`: OOZ2 Obj07 hurt oil support advance,
+  f9342 / 505 (`tails_x_sub`) -> f9392 / 476 (`x_speed`).
+- `ea29d2ab` / merge `de8a9792`: ARZ2 Obj37 owner allocation advance,
+  f2016 / 753 (`obj_extra_s21_x`) -> f2142 / 717 (`obj_extra_s29_x`).
+- CNZ2 round-23 worker made no commit; final frontier remains f9487 / 288
+  (`g_speed` expected `0x0000`, actual `0x0100`).
+- MTZ3 round-23 worker made no commit; final frontier remains f13336 / 352
+  (`x_speed` expected `0x0200`, actual `-0200`). Diagnosis narrowed the owner
+  to Obj53 vertical orbit/touch timing; a candidate removing SubA pending-orb
+  wait regressed to f12608 and was reverted by the worker.
+
+Integrated verification on `bugfix/ai-s2-trace-next`:
+- Focused OOZ2 + oil unit gate:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.TestOilSurfaceManager" "-DfailIfNoTests=false" test`
+  ran 8 tests; oil unit tests passed and OOZ2 failed at the improved expected-red
+  f9392 / 476 frontier.
+- Focused ARZ2 + occupancy oracle gate:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.TestS2ObjectOccupancyOracle" "-DfailIfNoTests=false" test`
+  ran 45 tests; occupancy oracle passed and ARZ2 failed at the improved
+  expected-red f2142 / 717 frontier.
+- Full S2 sweep:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 19 tests with 15 green / 4 expected-red:
+  ARZ2 f2142 / 717, CNZ2 f9487 / 288, MTZ3 f13336 / 352, OOZ2 f9392 / 476.
+- Full S1 sweep:
+  `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 29 tests, 0 failures (only the known S1 mapping warnings).
+- S3K guard subset:
+  `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+  ran 68 checks with 66 green plus the known AIZ expected-reds:
+  complete-run f1095 / 4319 and level-select f8941 / 1160.
+
+No S2 trace turned green in this integrated round, so these campaign advances
+were not banked into `next` under the green-bank rule. Local `next` only received
+the reusable BizHawk hidden-launch tooling merge so future workers inherit the
+correct no-audio/no-render runner.
