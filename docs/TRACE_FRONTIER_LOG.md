@@ -6,16 +6,75 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2/OOZ1/MTZ3 round 20 integration: the S2
-sweep remains 14 green / 5 expected-red. ARZ2 advances to f1998 / 817
+Current branch-local S2 state after OOZ1 round 21 and MTZ3 round 20
+integration: the S2 sweep remains 14 green / 5 expected-red. ARZ2 advances to
+f1998 / 817
 (`obj_s17_slot` expected `0x17`, actual `0x35`) after S2 object unloads consume
 the previous `ObjectsManager` coarse-camera latch and fixed Obj08 skid dust runs
-between dynamic-object frees and placement loading; OOZ1 advances to f9164 /
-355 (`tails_x_speed` expected `0x0200`, actual `-0600`) after Obj26 rejects the
-expired Obj3D launcher residue roll contact; CNZ2 remains parked at f9487 /
-288; MTZ3 advances to f13054 / 367 (`x_speed` expected `0x0091`, actual
-`-0091`) after Obj53 defers broken-orb parent-count decrement through the ROM
-burst routine; and OOZ2 remains f9307 / 430.
+between dynamic-object frees and placement loading; OOZ1 advances to f9342 /
+353 (`y` expected `0x04CA`, actual `0x04C0`) after Obj4A keeps its ROM
+init-facing direction for the f9164 Octus bullet/Tails hurt touch; CNZ2 remains
+parked at f9487 / 288; MTZ3 advances to f13054 / 367 (`x_speed` expected
+`0x0091`, actual `-0091`) after Obj53 defers broken-orb parent-count decrement
+through the ROM burst routine; and OOZ2 remains f9307 / 430.
+
+## 2026-07-01 - S2 OOZ1 Octus init-facing bullet advances f9164 to f9342
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-round21-next` /
+  `bugfix/ai-s2-ooz1-round21-next`, based on campaign `next` head
+  `80bff7c7f` after the OOZ1 f9164 and ARZ2 f1998 integrations.
+- Baseline reproduction:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced OOZ1 f9164 / 355 errors (`tails_x_speed` expected `0x0200`,
+  actual `-0600`).
+- Triage/evidence: raw aux CPU state showed ROM Tails entering routine 4 hurt
+  at f9164 with `x_vel=0x0200`, `y_vel=-0x0400`, and nearby Obj4A bullets in
+  routine 6 moving left across Tails. The engine's matching bullet had fired
+  rightward, so Tails missed the hurt contact and kept the prior CPU movement.
+  ROM `Obj4A_Init` copies layout orientation and toggles `status.x_flip` once
+  when MainCharacter is to the right (`docs/s2disasm/s2.asm:60391-60395`).
+  `Obj4A_WaitForCharacter` only advances the secondary routine, animation, and
+  timer (`docs/s2disasm/s2.asm:60419-60430`); it does not re-face the object.
+  `Obj4A_FireBullet` copies the stored render/status x-flip to the child and
+  negates the default `x_vel=-$200` only when that x-flip bit is set
+  (`docs/s2disasm/s2.asm:60481-60505`). `Hurt_Sidekick` then sets routine 4,
+  `y_vel=-$400`, and reverses the initial `x_vel=-$200` when the sidekick is to
+  the right of the source (`docs/s2disasm/s2.asm:85468-85484`).
+- Fix: `OctusBadnikInstance` now resolves Obj4A's one-time init-facing toggle
+  against MainCharacter position before its first update and preserves that
+  direction through the wait trigger, so fired bullets use the ROM's stored
+  direction instead of the player's later trigger-side position.
+- Result:
+  `TestS2OozLevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f9342 / 353 errors. The new first mismatch is `y` expected
+  `0x04CA`, actual `0x04C0`.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at OOZ1 f9342 / 353.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 at the preserved OOZ2 f9307 / 430 (`y_speed` expected `-0418`,
+    actual `0x0418`).
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" test`
+    exited 0.
+  - Conductor focused merge guard:
+    `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" test`
+    completed with OOZ1 expected-red at f9342 / 353, OOZ2 preserved at
+    f9307 / 430, and rewind coverage green.
+  - Conductor S2 sweep:
+    `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces: 14 green, 5 expected-red. Red frontiers are ARZ2
+    f1998 / 817, CNZ2 f9487 / 288, MTZ3 f13054 / 367, OOZ1 f9342 / 353, and
+    OOZ2 f9307 / 430.
+  - Conductor S1 guard:
+    `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 29/29 S1 trace replays green, with only the known S1 mapping
+    warnings.
+  - Conductor S3K guard:
+    `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    completed 68 checks: 66 green plus the two known AIZ expected-reds,
+    complete-run f1095 / 4319 and AIZ f8941 / 1160. Broader S3K complete-run
+    sweeps remain blocked by the existing Surefire fork heap failure on
+    `TestS3kCnzCompleteRunTraceReplay` before test results are recorded.
 
 ## 2026-07-01 - S2 ARZ2 Obj82 coarse-camera and Obj08 dust order advances f1993 to f1998
 
