@@ -6,16 +6,56 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 32 integration: ARZ2 is f4046 / 1509
+Current branch-local S2 state after round 33 OOZ2 work: ARZ2 is f4046 / 1509
 (`obj_extra_s33_x` expected absent, actual `0x1EE1`) after Obj83 parent and
 child platform slots started using the ROM `PlatformObject` ground half-height;
-OOZ2 is f11038 / 117 (`tails_y` expected `0x029F`, actual `0x029E`) after
-synthetic Obj07 oil support remained visible to AnglePos and preserved the
-sidekick push-bypass frame. CNZ2 remains f9946 / 300 (`x_speed` expected
+OOZ2 is f12107 / 99 (`tails_g_speed` expected `0x00A4`, actual `0x0000`) after
+Obj07 standing oil support began ticking `oil_char2submersion` before the
+airborne support-release branch. CNZ2 remains f9946 / 300 (`x_speed` expected
 `0x0200`, actual `0x08A8`) and MTZ3 remains f13336 / 352 (`x_speed` expected
 `0x0200`, actual `-0200`). Full S2 is 15 green / 4 expected-red, full S1
 remains green, and the S3K AIZ guard is unchanged. No S2 trace greened in round
-32, so no round-32 change has been banked into `next`.
+33, so no round-33 change has been banked into `next`.
+
+## 2026-07-01 - S2 OOZ2 Obj07 submersion tick advances f11038 to f12107
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round33-next` /
+  `bugfix/ai-s2-ooz2-round33-next`, based on campaign commit `037f7545b`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced OOZ2 f11038 / 117 errors (`tails_y` expected `0x029F`, actual
+  `0x029E`).
+- Evidence: the f11038 context showed ROM Tails standing on Obj07 slot `$0E`
+  with `tails_y=$029F`, `tails_y_sub=$E300`, `Status_OnObj` set, and Obj07 at
+  `$2979,$02D8`. A comparison-only engine probe around the landing showed the
+  engine incrementing the rider submersion to `$2A` before landing, then losing
+  one pixel when Tails' rolling reset-on-floor path ran; the ROM-visible final
+  Y requires the standing branch to have decremented to `$29` before
+  `PlatformObject` cleared/reseated support.
+- ROM refs: Obj07's sidekick path decrements `oil_char2submersion` before
+  calling `PlatformObject_SingleCharacter`; `PlatformObject_ChkYRange` can
+  still abort on `obj_control` bit 7 or player routine `>= 6`, and its
+  standing branch clears support when the rider is airborne/out of range.
+  Tails' reset-on-floor part 2 subtracts one from `y_pos` after restoring the
+  standing radius (`docs/s2disasm/s2.asm:50182-50195,35978-35981,35737-35755,
+  41024-41031`).
+- Fix: `OilSurfaceManager` now ticks a standing oil rider's submersion counter
+  before evaluating the support-release branches, while non-standing players
+  still use the existing increment-before-landing path. A unit regression covers
+  the airborne jump-release case.
+- Result:
+  `mvn "-Dtest=com.openggf.tests.TestOilSurfaceManager,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  now reaches OOZ2 f12107 / 99 errors (`tails_g_speed` expected `0x00A4`,
+  actual `0x0000`).
+- Same-game preservation subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  ran the requested guards: OOZ1 and ARZ1 passed; ARZ2 preserved f4046 /
+  1509, CNZ2 preserved f9946 / 300, MTZ3 preserved f13336 / 352, and OOZ2
+  remained at the new f12107 / 99 frontier.
+- New frontier: f12107 shows the engine hurting Tails on Obj55 at
+  `$2940,$028E` while the ROM keeps Tails riding Obj07 with Obj55 visible near
+  `$2940,$0299`; this points at OOZ boss touch/snapshot timing, not the Obj07
+  submersion counter.
 
 ## 2026-07-01 - S2 ARZ2 Obj83 PlatformObject ground half-height advances f3707 to f4046
 

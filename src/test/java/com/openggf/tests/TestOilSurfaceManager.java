@@ -74,6 +74,24 @@ public class TestOilSurfaceManager {
     }
 
     @Test
+    public void jumpReleaseTicksSubmersionBeforeClearingSupport() {
+        landOnOilSurface();
+        assertTrue(manager.isStandingOnOil());
+        int before = manager.getSubmersion(sprite);
+
+        sprite.setAir(true);
+        sprite.setJumping(true);
+        sprite.setYSpeed((short) -0x200);
+
+        manager.updateSurface(sprite);
+
+        assertEquals(before - 1, manager.getSubmersion(sprite),
+                "Obj07 decrements oil_charNsubmersion before PlatformObject clears an airborne rider");
+        assertFalse(manager.isStandingOnOil(sprite));
+        assertFalse(sprite.isOnObject());
+    }
+
+    @Test
     public void suffocatesAfterSubmersionCountdownExpires() {
         landOnOilSurface();
         assertTrue(manager.isStandingOnOil());

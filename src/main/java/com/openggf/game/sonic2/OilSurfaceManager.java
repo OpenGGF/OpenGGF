@@ -171,26 +171,34 @@ public class OilSurfaceManager {
             clearOilTrackingOnly(state);
             return;
         }
-        if (player.isObjectControlSuppressesMovement()) {
-            // PlatformObject_ChkYRange returns before support when
-            // obj_control bit 7 is set (s2.asm:35978-35981). This matters
-            // after TailsCPU_Despawn writes $81: Obj07 runs later in the same
-            // object phase and must not re-seat Tails on the oil surface.
-            clearOilTrackingOnly(state);
-            return;
-        }
-        if (isDeadFallingCpuSidekick(player)) {
-            // ROM PlatformObject_ChkYRange aborts when routine(a1) >= 6
-            // (docs/s2disasm/s2.asm:35978-35981). S2's deferred dead-fall
-            // sidekick path represents Obj02_Dead via DEAD_FALLING before
-            // obj_control bit 7 is set, so Obj07 must not re-seat Tails on
-            // the boss-lowered oil support during that window.
-            clearOilSupport(player, state);
-            player.setAir(true);
-            return;
-        }
 
         if (state.standingOnOil) {
+            // ROM: Obj07_CheckKillChar1 (s2.asm:49695-49698)
+            if (state.submersion <= 0) {
+                // Suffocate - instant death (ROM: JmpTo3_KillCharacter)
+                clearOilTrackingOnly(state);
+                player.applyOilSuffocateDeath();
+                return;
+            }
+
+            // Sink 1 pixel per frame (ROM: subq.b #1, oil_char1submersion)
+            state.submersion--;
+
+            if (player.isObjectControlSuppressesMovement()) {
+                // Obj07 updates the submersion counter before the PlatformObject
+                // call, then PlatformObject_ChkYRange returns when obj_control
+                // bit 7 is set (s2.asm:50182-50195,35978-35981).
+                clearOilTrackingOnly(state);
+                return;
+            }
+            if (isDeadFallingCpuSidekick(player)) {
+                // ROM PlatformObject_ChkYRange aborts when routine(a1) >= 6
+                // after Obj07 has already ticked the standing counter
+                // (docs/s2disasm/s2.asm:50182-50195,35978-35981).
+                clearOilSupport(player, state);
+                player.setAir(true);
+                return;
+            }
             if (player.isHurt() && player.getAir()) {
                 // Hurt recoil owns the airborne state after the boss touch; Obj07 must not re-seat it.
                 clearOilSupport(player, state);
@@ -203,17 +211,6 @@ public class OilSurfaceManager {
                 clearOilSupport(player, state);
                 return;
             }
-
-            // ROM: Obj07_CheckKillChar1 (s2.asm:49695-49698)
-            if (state.submersion <= 0) {
-                // Suffocate - instant death (ROM: JmpTo3_KillCharacter)
-                clearOilTrackingOnly(state);
-                player.applyOilSuffocateDeath();
-                return;
-            }
-
-            // Sink 1 pixel per frame (ROM: subq.b #1, oil_char1submersion)
-            state.submersion--;
 
             // ROM: when already standing (status bit set), the standing branch of
             // PlatformObject_SingleCharacter calls MvSonicOnPtfm (s2.asm:35402-35421),
@@ -235,6 +232,22 @@ public class OilSurfaceManager {
             //   cmpi.b #$30, oil_char1submersion ; beq + ; addq.b #1, oil_char1submersion
             if (state.submersion < submersionMax) {
                 state.submersion++;
+            }
+
+            if (player.isObjectControlSuppressesMovement()) {
+                // PlatformObject_ChkYRange returns before support when
+                // obj_control bit 7 is set (s2.asm:35978-35981). This matters
+                // after TailsCPU_Despawn writes $81: Obj07 runs later in the same
+                // object phase and must not re-seat Tails on the oil surface.
+                clearOilTrackingOnly(state);
+                return;
+            }
+            if (isDeadFallingCpuSidekick(player)) {
+                // S2's deferred dead-fall sidekick path represents Obj02_Dead
+                // via DEAD_FALLING before obj_control bit 7 is set.
+                clearOilSupport(player, state);
+                player.setAir(true);
+                return;
             }
 
             // Check if player should land on oil surface
