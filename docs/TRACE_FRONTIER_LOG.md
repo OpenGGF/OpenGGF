@@ -6,14 +6,50 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2/OOZ1 round 20 integration: the S2
+Current branch-local S2 state after ARZ2/OOZ1 round 20 and OOZ2 round 21
+integration: the S2
 sweep remains 14 green / 5 expected-red. ARZ2 advances to f1998 / 817
 (`obj_s17_slot` expected `0x17`, actual `0x35`) after S2 object unloads consume
 the previous `ObjectsManager` coarse-camera latch and fixed Obj08 skid dust runs
 between dynamic-object frees and placement loading; OOZ1 advances to f9164 /
 355 (`tails_x_speed` expected `0x0200`, actual `-0600`) after Obj26 rejects the
 expired Obj3D launcher residue roll contact; CNZ2 remains parked at f9487 /
-288; MTZ3 remains f12897 / 490; and OOZ2 remains f9307 / 430.
+288; MTZ3 remains f12897 / 490; and OOZ2 advances to f9341 / 506
+(`tails_routine` expected `0x0004`, actual `0x0002`) after Obj55 preserves the
+ROM top-level init return before entering its main-surface movement.
+
+## 2026-07-01 - S2 OOZ2 Obj55 init return advances f9307 to f9341
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round21-next` /
+  `bugfix/ai-s2-ooz2-round21-next`, based on campaign `next` head
+  `80bff7c7f`.
+- Baseline reproduction:
+  `mvn "-Dmse=off" "-Dtest=TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced OOZ2 f9307 / 430 errors (`y_speed` expected `-0418`, actual
+  `0x0418`).
+- Triage/evidence: the ROM object-near trace keeps Obj55 slot 20 at
+  `@2940,0292` on f9306 and f9307, then reaches `@2940,0293` on f9308. The
+  engine had already moved the boss body to `@2940,0293` before the f9307 touch
+  scan. OpenGGF construction was collapsing ROM `Obj55_Init` and
+  `Obj55_Main_Init`; the ROM `Obj55_Init` sets `boss_subtype=2` and returns, so
+  `Obj55_Main_Init` and later `Obj55_Main_Surface` movement start on following
+  object passes (`docs/s2disasm/s2.asm:68225-68238,68258-68276,68287-68301`).
+  Hits are then handled in `Obj55_Main_End` after the movement/hover pass and
+  before sprite alignment (`docs/s2disasm/s2.asm:68355-68359`).
+- Fix: `Sonic2OOZBossInstance` now initializes the main Obj55 object to the
+  top-level init state, preserving collision byte `$0F`, hit count, frame 8,
+  and `MAIN_INIT` as the next routine without running the main-vehicle
+  movement setup during construction.
+- Result:
+  `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f9341 / 506 errors. The new first mismatch is
+  `tails_routine` expected `0x0004`, actual `0x0002`; this frame was already a
+  later cascading mismatch in the f9307 baseline report.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at OOZ2 f9341 / 506.
+  - `mvn "-Dmse=off" "-Dtest=TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red and preserved OOZ1 f9164 / 355.
 
 ## 2026-07-01 - S2 ARZ2 Obj82 coarse-camera and Obj08 dust order advances f1993 to f1998
 

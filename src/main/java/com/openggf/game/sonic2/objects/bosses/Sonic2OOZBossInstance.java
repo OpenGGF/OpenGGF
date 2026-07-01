@@ -86,8 +86,19 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
             initializeLaserFromSpawn();
             return;
         }
+        // ROM Obj55_Init sets boss_subtype=2 and returns; Obj55_Main_Init runs on
+        // the next object pass (docs/s2disasm/s2.asm:68225-68238,68258-68276).
         bossSubtype = SUB_MAIN;
-        initializeMainVehicle(false);
+        state.x = spawn.x();
+        state.y = spawn.y();
+        state.xFixed = state.x << 16;
+        state.yFixed = state.y << 16;
+        state.routineSecondary = MAIN_INIT;
+        state.hitCount = getInitialHitCount();
+        mainFrame = 8;
+        childSpriteCount = 0;
+        collisionFlags = 0x0F;
+        bossDefeatedFlagSet = false;
     }
 
     private void initializeMainVehicle(boolean faceLeft) {
