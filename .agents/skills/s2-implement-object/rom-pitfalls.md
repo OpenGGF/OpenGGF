@@ -2309,6 +2309,15 @@ bounds) and P17 (child uses own X vs parent anchor).
 `docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm:218-219` +
 `docs/s1disasm/_inc/BuildSprites.asm:47-58`.
 
+**Follow-up example.** S2 Grounder Obj8F wall debris and Obj90 rock projectiles
+delete from the previous `render_flags.on_screen` bit, but their sub-object data
+does not set `render_flags.explicit_height`. That means the render bit comes
+from `BuildSprites_ApproxYCheck`'s fixed +/-32px Y band, not an object's default
+16px half-height. Using the narrower engine default cleared the ARZ2 Obj8F wall
+slot `0x28` before ROM and caused f1760 / 916 (`obj_s28_type` missing); matching
+the approximate BuildSprites band advances the trace to f1820 / 912
+(`docs/s2disasm/s2.asm:30569-30588,73489-73494`).
+
 **Originating commit (S1 origin).** `0a15683b9` (S1 Walking Bomb shrapnel deletes
 via ROM obRender render bound, not raw isOnScreenX — lingered 24 vs ROM 16
 frames). See `s1-implement-object/rom-pitfalls.md` P10.

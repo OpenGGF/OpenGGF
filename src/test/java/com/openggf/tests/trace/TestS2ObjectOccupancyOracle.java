@@ -1414,6 +1414,45 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void arz2GrounderWallUsesApproximateBuildSpritesYBandBeforeDelete() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1760) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedWall = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 0x28)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x8F)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedWall,
+                            "ARZ2 ROM fixture should still report Obj8F wall slot 0x28 at frame 1760");
+                    GrounderWallInstance actualWall = om.activeObjectsOfType(GrounderWallInstance.class)
+                            .stream()
+                            .filter(wall -> wall.getSlotIndex() == 0x28)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(
+                            expectedWall.x() & 0xFFFF,
+                            expectedWall.y() & 0xFFFF,
+                            actualWall == null ? -1 : actualWall.getX(),
+                            actualWall == null ? -1 : actualWall.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 0x26, 0x29));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj8F should survive through ARZ2 f1760 before Obj8F_Move observes "
+                        + "the previous BuildSprites on-screen bit; slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 BuildSprites approximate Y check keeps non-explicit-height sprites "
+                        + "visible with a 32px band before Obj8F_Move's next-frame delete "
+                        + "(docs/s2disasm/s2.asm:30569-30588,73489-73494); slots "
+                        + check.summary());
+    }
+
+    @Test
     public void arz2GrounderRockUsesObjectMoveAndFallOldVelocityOrder() throws Exception {
         AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {

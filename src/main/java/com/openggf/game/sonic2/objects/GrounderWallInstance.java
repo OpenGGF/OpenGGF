@@ -51,6 +51,7 @@ public class GrounderWallInstance extends AbstractObjectInstance implements Grou
 
     private static final int GRAVITY = 0x38; // 0.21875 pixels/frame (from ObjectMoveAndFall)
     private static final int PALETTE_INDEX = 1;  // Level art palette (matches FallingPillar)
+    private static final int APPROX_RENDER_Y_MARGIN = 32; // BuildSprites_ApproxYCheck assumed radius
 
     // Wall mapping from word_36D9A - 32x16 using level tiles
     private static final List<SpriteMappingPiece> WALL_PIECES = List.of(
@@ -173,6 +174,14 @@ public class GrounderWallInstance extends AbstractObjectInstance implements Grou
     @Override
     public void refreshPostCameraRenderState() {
         romRenderOnScreen = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // Obj8F_SubObjData does not set render_flags.explicit_height, so S2
+        // BuildSprites uses its approximate +/-32px Y band before setting
+        // render_flags.on_screen (docs/s2disasm/s2.asm:30569-30588).
+        return APPROX_RENDER_Y_MARGIN;
     }
 
     @Override

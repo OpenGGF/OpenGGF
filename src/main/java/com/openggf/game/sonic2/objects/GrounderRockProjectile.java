@@ -36,6 +36,7 @@ import java.util.List;
 public class GrounderRockProjectile extends AbstractObjectInstance implements GrounderZeroIndexChildRewindRecreatable {
 
     private static final int GRAVITY = 0x38; // 0.21875 pixels/frame (from ObjectMoveAndFall)
+    private static final int APPROX_RENDER_Y_MARGIN = 32; // BuildSprites_ApproxYCheck assumed radius
 
     // Rock velocity table from Obj90_Directions (X, Y in 8.8 fixed point)
     private static final int[][] ROCK_VELOCITIES = {
@@ -152,6 +153,14 @@ public class GrounderRockProjectile extends AbstractObjectInstance implements Gr
     @Override
     public int getOnScreenHalfWidth() {
         return 8;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // Obj90_SubObjData2 does not set render_flags.explicit_height, so S2
+        // BuildSprites uses its approximate +/-32px Y band before setting
+        // render_flags.on_screen (docs/s2disasm/s2.asm:30569-30588).
+        return APPROX_RENDER_Y_MARGIN;
     }
 
     @Override
