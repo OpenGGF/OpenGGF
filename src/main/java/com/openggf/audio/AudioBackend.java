@@ -60,6 +60,18 @@ public interface AudioBackend {
     void playSfx(String sfxName, float pitch);
 
     /**
+     * Plays a raw unsigned 8-bit mono PCM sample from ROM.
+     */
+    default void playPcmSample(byte[] pcm, int sourceSampleRate) {
+    }
+
+    /**
+     * Stops a raw PCM sample that was started through {@link #playPcmSample(byte[], int)}.
+     */
+    default void stopPcmSample() {
+    }
+
+    /**
      * Stops any active music/streaming playback.
      */
     void stopPlayback();

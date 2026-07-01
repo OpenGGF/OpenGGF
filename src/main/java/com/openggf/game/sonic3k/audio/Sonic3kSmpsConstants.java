@@ -58,6 +58,12 @@ public final class Sonic3kSmpsConstants {
     /** SEGA PCM sound ROM address. */
     public static final int SEGA_SOUND_ADDR = 0x0F8000;
 
+    /** Size of the S3K SEGA PCM sample. */
+    public static final int SEGA_SOUND_SIZE = 0x5E2F;
+
+    /** Source sample rate of the S3K SEGA PCM sample. */
+    public static final int SEGA_SOUND_SAMPLE_RATE = 0x3862;
+
     /** SFX bank base ROM address (SFX pointer list points here). */
     public static final int SFX_BANK_BASE = 0x0F8000;
 
@@ -138,9 +144,6 @@ public final class Sonic3kSmpsConstants {
     /** Fade out current music. */
     public static final int CMD_FADE_OUT = 0xE0;
 
-    /** Play "SEGA" PCM sample. */
-    public static final int CMD_SEGA = 0xE1;
-
     /** Speed up current music (speed shoes on). */
     public static final int CMD_SPEED_UP = 0xE2;
 
@@ -149,6 +152,12 @@ public final class Sonic3kSmpsConstants {
 
     /** Stop all sound and music. */
     public static final int CMD_STOP_ALL = 0xE4;
+
+    /** Stop the active SEGA PCM sample. */
+    public static final int CMD_STOP_SEGA = 0xFE;
+
+    /** Play "SEGA" PCM sample. */
+    public static final int CMD_SEGA = 0xFF;
 
     private Sonic3kSmpsConstants() {
     }

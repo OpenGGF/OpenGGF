@@ -25,6 +25,8 @@ public interface TitleScreenProvider {
         INTRO_TEXT_HOLD,
         /** Intro text fading out to black */
         INTRO_TEXT_FADE_OUT,
+        /** Pre-title SEGA boot logo screen */
+        SEGA_LOGO,
         /** Fading in from black */
         FADE_IN,
         /** Main interactive state */

@@ -4,6 +4,7 @@ import com.openggf.audio.AbstractAudioProfile;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
+import com.openggf.audio.SegaPcmSpec;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.data.Rom;
@@ -132,6 +133,19 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     @Override
     protected int getSegaCommandId() {
         return Sonic3kSmpsConstants.CMD_SEGA;
+    }
+
+    @Override
+    protected int getStopSegaCommandId() {
+        return Sonic3kSmpsConstants.CMD_STOP_SEGA;
+    }
+
+    @Override
+    public SegaPcmSpec getSegaPcmSpec() {
+        return new SegaPcmSpec(
+                Sonic3kSmpsConstants.SEGA_SOUND_ADDR,
+                Sonic3kSmpsConstants.SEGA_SOUND_SIZE,
+                Sonic3kSmpsConstants.SEGA_SOUND_SAMPLE_RATE);
     }
 
     /** S3K fade-out uses delay 6 instead of the S1/S2 default delay 3. */
