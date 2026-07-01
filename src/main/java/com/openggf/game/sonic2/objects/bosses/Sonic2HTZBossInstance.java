@@ -578,10 +578,11 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     public boolean isPersistent() {
-        // Obj52_Mobile_Flee keeps running after it sets Boss_defeated_flag:
-        // it widens Camera_Max_X_pos until $3160, then deletes from its own
-        // off-screen/low-enough branch instead of tail-calling MarkObjGone.
-        // ROM: docs/s2disasm/s2.asm:64592-64628.
+        // Obj52's defeated flee routine is the owner of the post-boss camera
+        // expansion: it increments Camera_Max_X_pos until $3160, then deletes
+        // itself (docs/s2disasm/s2.asm:64084-64112). The generic object-side
+        // out-of-range unload must not retire the event-spawned boss before that
+        // loop completes.
         return true;
     }
 

@@ -2,13 +2,18 @@ package com.openggf.sprites.managers;
 
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.level.objects.ObjectSlotLayout;
+import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 /**
  * Regression guard for the water-entry/exit splash.
@@ -39,6 +44,36 @@ class TestSpindashDustControllerSplash {
                 "S2 Sonic_Dust sits two slots before Sonic_Shield");
         assertEquals(133, PhysicsFeatureSet.SONIC_2.fixedDustSlotIndex(true),
                 "S2 Tails_Dust sits one slot before Sonic_Shield");
+    }
+
+    @Test
+    void groundedSpindashChargeDrawsDashDust() {
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0200);
+        sonic.setSpindash(true);
+        sonic.setAir(false);
+        PlayerSpriteRenderer renderer = mock(PlayerSpriteRenderer.class);
+        SpindashDustController controller = new SpindashDustController(sonic, renderer);
+
+        controller.update();
+        controller.draw();
+
+        verify(renderer).drawFrame(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
+    }
+
+    @Test
+    void forcedTunnelRollDoesNotDrawDashDustFromPinballSpindashAlias() {
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0200);
+        sonic.setSpindash(true);
+        sonic.setPinballMode(true);
+        sonic.setRolling(true);
+        sonic.setAir(false);
+        PlayerSpriteRenderer renderer = mock(PlayerSpriteRenderer.class);
+        SpindashDustController controller = new SpindashDustController(sonic, renderer);
+
+        controller.update();
+        controller.draw();
+
+        verify(renderer, never()).drawFrame(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
     }
 
     @Test
