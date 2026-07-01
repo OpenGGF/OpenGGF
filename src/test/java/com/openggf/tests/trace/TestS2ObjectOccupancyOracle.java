@@ -1288,6 +1288,36 @@ public class TestS2ObjectOccupancyOracle {
                         + "the ROM layer switcher; actual slots " + slotCheck.summary());
     }
 
+    @Test
+    public void arz2SkidDustDoesNotAllocateExtraSlot20AfterRomFixedDustDeletes() throws Exception {
+        ObjectOccupancyOracle.Divergence divergence =
+                driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                        (trace, om, frame) -> {
+                            if (frame != 1698) {
+                                return null;
+                            }
+                            Map<Integer, Integer> expected =
+                                    ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                            Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                            ObjectOccupancyOracle.Divergence first =
+                                    ObjectOccupancyOracle.firstDivergence(trace, om, frame, FIRST_DYNAMIC_SLOT);
+                            Assertions.assertFalse(expected.containsKey(20),
+                                    "ROM Obj08 fixed dust slot 20 should have deleted by ARZ2 f1698 "
+                                            + "(docs/s2disasm/s2.asm:42759-42797)");
+                            if (first != null) {
+                                Assertions.fail("ARZ2 dynamic slots should still match at f1698 after "
+                                        + "ROM Obj08_CheckSkid stops ticking when Stop animation ends "
+                                        + "(docs/s2disasm/s2.asm:42759-42797); first divergence "
+                                        + String.format("slot=%d expected=0x%02X actual=0x%02X",
+                                        first.slot(), first.expectedId() & 0xFF, first.actualId() & 0xFF)
+                                        + " expected " + describeSlots(expected, 16, 40)
+                                        + " actual " + describeSlots(actual, 16, 40));
+                            }
+                            return null;
+                        });
+        Assertions.assertNull(divergence);
+    }
+
     /**
      * Drives the named S2 level-select trace through the engine (mirroring the
      * S2 branch of {@code AbstractTraceReplayTest.replayMatchesTrace}) and
