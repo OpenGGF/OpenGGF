@@ -25,8 +25,37 @@ using System.Runtime.InteropServices;
 public static class OpenggfWindowTools {
     [DllImport("user32.dll")]
     public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 }
 "@
+
+function Hide-ProcessWindows([System.Diagnostics.Process]$Process) {
+    $targetPid = [uint32]$Process.Id
+    $callback = [OpenggfWindowTools+EnumWindowsProc]{
+        param([IntPtr]$hWnd, [IntPtr]$lParam)
+
+        $windowPid = [uint32]0
+        [void][OpenggfWindowTools]::GetWindowThreadProcessId($hWnd, [ref]$windowPid)
+        if ($windowPid -eq $targetPid) {
+            [void][OpenggfWindowTools]::ShowWindowAsync($hWnd, 0)
+        }
+        return $true
+    }
+
+    [void][OpenggfWindowTools]::EnumWindows($callback, [IntPtr]::Zero)
+    $Process.Refresh()
+    $handle = $Process.MainWindowHandle
+    if ($null -ne $handle -and [IntPtr]$handle -ne [IntPtr]::Zero) {
+        [void][OpenggfWindowTools]::ShowWindowAsync([IntPtr]$handle, 0)
+    }
+}
 
 function Quote-WindowsArgument([string]$Arg) {
     if ($null -eq $Arg) {
@@ -89,11 +118,14 @@ $psi.UseShellExecute = $false
 $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
 
 $process = [System.Diagnostics.Process]::Start($psi)
-while (-not $process.WaitForExit(100)) {
-    $process.Refresh()
-    $handle = $process.MainWindowHandle
-    if ($null -ne $handle -and [IntPtr]$handle -ne [IntPtr]::Zero) {
-        [void][OpenggfWindowTools]::ShowWindowAsync([IntPtr]$handle, 0)
+Hide-ProcessWindows $process
+
+$fastHideDeadline = [DateTime]::UtcNow.AddSeconds(5)
+while (-not $process.HasExited) {
+    Hide-ProcessWindows $process
+    $pollMs = if ([DateTime]::UtcNow -lt $fastHideDeadline) { 10 } else { 100 }
+    if ($process.WaitForExit($pollMs)) {
+        break
     }
 }
 exit $process.ExitCode
