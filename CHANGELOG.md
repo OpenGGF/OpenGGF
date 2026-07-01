@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S2 MTZ Asteron activation now uses ROM player targeting:** ObjA4 now resolves `Obj_GetOrientationToPlayer` from native Sonic/Tails positions instead of the current object-riding update context, preserving the disassembly's horizontal-nearest player choice, facing-independent activation, and `+$60` boundary exclusion (`docs/s2disasm/s2.asm:72295-72321,75762-75777`).
 - **S2 OOZ boss multi-sprite art now renders:** Obj55 now draws its ROM child sprite slots for the submarine body, laser-shooter chain, and spike-chain attack instead of rendering only `mainspr_mapframe`, restoring the missing craft and spike-chain pieces from `ArtNem_OOZBoss`.
 - **S2 HTZ2 post-boss camera expansion now reaches the capsule:** Obj52 now stays active through its defeated flee routine so its ROM-owned `Camera_Max_X_pos` expansion completes at `$3160` before deletion, matching `docs/s2disasm/s2.asm:64084-64112` and allowing the Act 2 capsule/results camera to settle on the correct position.
 - **IDE launches now resolve prerelease build titles:** `AppVersion` now treats unresolved Maven placeholders as missing build metadata and falls back to the local Git commit/dirty state for prerelease IntelliJ `Engine.main` runs, preventing window titles such as `OpenGGF 0.6.prerelease-${openggf.git.commit}`.

@@ -16,6 +16,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -47,10 +49,10 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance implements Rew
     private static final int PROJECTILE_SUBTYPE = 0x30;
 
     // Detection ranges from routine 2 (loc_389B6)
-    // d2 + $60 compared to $C0 → player within -$60..$60 horizontally
+    // d2 + $60 compared to $C0 with bhs outside → player within -$60..+$5F horizontally
     private static final int DETECT_X_OFFSET = 0x60;
     private static final int DETECT_X_RANGE = 0xC0;
-    // d3 + $40 compared to $80 → player within -$40..$40 vertically
+    // d3 + $40 compared to $80 with bhs outside → player within -$40..+$3F vertically
     private static final int DETECT_Y_OFFSET = 0x40;
     private static final int DETECT_Y_RANGE = 0x80;
 
@@ -97,12 +99,31 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance implements Rew
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        AbstractPlayableSprite player = resolveRomOrientationTarget(playerEntity);
         switch (state) {
             case IDLE -> updateIdle(player);
             case ARMED -> updateArmed(player);
             case MOVING -> updateMoving();
         }
+    }
+
+    private AbstractPlayableSprite resolveRomOrientationTarget(PlayableEntity fallback) {
+        ObjectServices svc = tryServices();
+        if (svc != null) {
+            // Obj_GetOrientationToPlayer chooses the closest native player by horizontal distance.
+            try {
+                var nearest = svc.playerQuery().nearestByRomX(
+                        ObjectPlayerParticipationPolicy.NATIVE_P1_P2,
+                        currentX,
+                        candidate -> candidate instanceof AbstractPlayableSprite);
+                if (nearest.player() instanceof AbstractPlayableSprite playable) {
+                    return playable;
+                }
+            } catch (RuntimeException ex) {
+                // Query layer unavailable in some direct unit fixtures; fall back below.
+            }
+        }
+        return fallback instanceof AbstractPlayableSprite playable ? playable : null;
     }
 
     /**
@@ -178,7 +199,7 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance implements Rew
      * When timer reaches 0: convert to explosion + spawn 5 projectiles.
      */
     private void updateMoving() {
-        // ROM loc_38A2C (s2.asm:75838-75844): subq.w #1,objoff_2A(a0) / bmi.s →
+        // ROM loc_38A2C (s2.asm:75838-75844): subq.b #1,objoff_2A(a0) / bmi.s →
         // explode. The counter is decremented first; only when it BECOMES negative
         // (i.e. underflows past 0) does the Asteron explode. The frame where the
         // counter reaches 0 still runs ObjectMove + AnimateSprite.
