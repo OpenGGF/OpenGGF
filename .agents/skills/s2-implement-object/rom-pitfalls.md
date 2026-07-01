@@ -107,6 +107,33 @@ validates its parent slot before display/delete
 
 ---
 
+## P0C — Invisible or consolidated ROM child SST entries still consume slots
+
+**Symptom.** A compound object looks and collides correctly, but later object
+allocation drifts. Slot diagnostics show the ROM has additional same-id child
+entries for a multi-sprite chain or secondary platform while the engine keeps
+only one consolidated Java parent object.
+
+**Root cause.** The port collapsed a ROM object assembly into one renderer or
+solid provider and skipped child SST entries that have little or no independent
+visual code. Even if the parent can draw/collide the assembly, later
+`FindFreeObj` / `AllocateObject` scans still observe the occupied ROM slots.
+
+**What to check.** For rotating platforms, chains, multi-part platforms,
+bosses, and decorative assemblies, trace every `AllocateObjectAfterCurrent`,
+`LoadChildObject`, or helper that writes the same object id into a child SST
+entry. Preserve those child slots even when rendering or collision remains
+centralized in the parent, and add occupancy coverage around dense object
+windows.
+
+**ROM citation.** ARZ Obj83 allocates a chain multisprite child and two
+platform subobjects after the parent before later object allocation scans run
+(`docs/s2disasm/s2.asm:57437-57466,57472-57484,57612-57622`).
+
+**Originating commit.** `fix(s2): advance ARZ2 Obj83 slot pressure`.
+
+---
+
 ## P1 — Touch-response directional/state guards diverge from ROM
 
 **Symptom.** Object rejects a rolling / spindash / invincible touch under a

@@ -1605,6 +1605,34 @@ public class TestS2ObjectOccupancyOracle {
         Assertions.assertNotNull(check);
     }
 
+    @Test
+    public void arz2RotatingPlatformAssemblyConsumesRomChildSlotsAtFrame2855() throws Exception {
+        SlotWindowCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 2855) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    ObjectOccupancyOracle.Divergence first =
+                            ObjectOccupancyOracle.firstDivergence(trace, om, frame, FIRST_DYNAMIC_SLOT);
+                    Assertions.assertNull(first,
+                            "ARZ2 Obj83 must allocate its chain object plus platform 2/3 children "
+                                    + "with AllocateObjectAfterCurrent before later FindFreeObj calls "
+                                    + "observe the SST landscape (docs/s2disasm/s2.asm:57437-57466); "
+                                    + "expected " + describeSlots(expected, 16, 60)
+                                    + " actual " + describeSlots(actual, 16, 60)
+                                    + " live " + describeLiveSlots(om, 16, 60));
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 60));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(0x83, check.idAt(17), "Obj83 parent should occupy slot 0x11; " + check.summary());
+        Assertions.assertEquals(0x83, check.idAt(26), "Obj83 chain child should occupy slot 0x1A; " + check.summary());
+        Assertions.assertEquals(0x83, check.idAt(30), "Obj83 platform-2 child should occupy slot 0x1E; " + check.summary());
+        Assertions.assertEquals(0x83, check.idAt(35), "Obj83 platform-3 child should occupy slot 0x23; " + check.summary());
+    }
+
     /**
      * Drives the named S2 level-select trace through the engine (mirroring the
      * S2 branch of {@code AbstractTraceReplayTest.replayMatchesTrace}) and

@@ -6,17 +6,56 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after integrating ARZ2 and OOZ2 round 26, merging
-`origin/develop`, and preserving S1/S3K guards: the S2 sweep is 15 green / 4
-expected-red. ARZ2 remains at f3171 / 703 (`obj_s27_slot` expected `0x27`,
-actual `0x23`) after Obj91 patrol-bubble reset timing was aligned to the ROM
-byte timer; CNZ2 remains at f9946 / 300 (`x_speed` expected `0x0200`, actual
-`0x08A8`) after the shared hurt reset path clears roll-jump before setting
-airborne recoil; MTZ3 remains parked at f13336 / 352 (`x_speed` expected
-`0x0200`, actual `-0200`); OOZ1 is green; and OOZ2 remains at f10340 / 353
-(`tails_x_speed` expected `0x0000`, actual `0x0200`) after Obj55 laser children
-defer collision until their ROM init pass and floor waves delete through the
-finite `Ani_obj55` script.
+Current branch-local S2 state after ARZ2 round 27: ARZ2 advances to f3214 / 699
+(`y_speed` expected `-1000`, actual `-0980`) after Obj83 rotating-platform
+assemblies were changed to consume their three ROM child SST slots. The
+same-game preservation subset keeps ARZ1 and OOZ1 green, CNZ2 at f9946 / 300
+(`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 at f13336 / 352
+(`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 at f10340 / 353
+(`tails_x_speed` expected `0x0000`, actual `0x0200`). The rewind coverage guard
+has no Obj83 gaps after structural child-link annotations; it still reports the
+campaign-head OOZ boss `laserParent` gap unrelated to this ARZ2 change.
+
+## 2026-07-01 - S2 ARZ2 Obj83 child SST slots advance f3171 to f3214
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round27-next` /
+  `bugfix/ai-s2-arz2-round27-next`, based on campaign commit
+  `f34caa16c`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced ARZ2 f3171 / 703 errors (`obj_s27_slot` expected `0x27`,
+  actual `0x23`).
+- Evidence: full OST occupancy comparison showed the first post-f2348 slot
+  divergence at f2855. The ROM had Obj83 in slots `$11`, `$1A`, `$1E`, and
+  `$23`; the engine only had the parent in slot `$11`. The missing three child
+  entries were the chain multisprite child plus platform 2 and platform 3,
+  which later changed the free-slot landscape around the f3171 slot `$27`
+  frontier.
+- ROM refs: Obj83 init first allocates a chain multisprite child with
+  `AllocateObjectAfterCurrent`, then calls `Obj83_LoadSubObject` twice for the
+  platform-2 and platform-3 child SST entries. The children copy Obj83 id,
+  mappings/art/render flags, priority, width, and position state before their
+  own `Obj83_PlatformSubObject` update path calls `PlatformObject`
+  (`docs/s2disasm/s2.asm:57437-57466,57472-57484,57612-57622`).
+- Fix: `ARZRotPformsObjectInstance` now spawns the three after-current Obj83
+  child entries while retaining the existing consolidated parent renderer and
+  collision provider. The structural child links are marked rewind-transient and
+  child recreation reattaches to the nearest live Obj83 parent.
+- Focused regression:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2RotatingPlatformAssemblyConsumesRomChildSlotsAtFrame2855" "-DfailIfNoTests=false" test`
+  exited 0.
+- Result:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  now reaches ARZ2 f3214 / 699 errors (`y_speed` expected `-1000`, actual
+  `-0980`).
+- Same-game preservation subset:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 0 with `maven.test.failure.ignore=true`: ARZ1 and OOZ1 green; ARZ2
+  f3214 / 699; CNZ2 f9946 / 300; MTZ3 f13336 / 352; OOZ2 f10340 / 353.
+- Rewind coverage:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" test`
+  no longer reports Obj83 gaps, but still exits 1 on the unrelated
+  `Sonic2OOZBossInstance#objectRef#laserParent` campaign-head gap.
 
 ## 2026-07-01 - S2 round 26 post-develop sync baseline
 
