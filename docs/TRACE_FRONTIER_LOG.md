@@ -6,6 +6,43 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 OOZ1 Obj26 post-move monitor landing advances f7671 to f7731
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-round18-next` /
+  `bugfix/ai-s2-ooz1-round18-next`, based on
+  `bugfix/ai-s2-trace-next` at `78de35fef`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtrace.context.diagnosticChars=full" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 with OOZ1 f7671 / 395 errors (`y` expected `0x036E`,
+  actual `0x0370`).
+- Triage/evidence: BizHawk sampling through
+  `tools\bizhawk\run_bizhawk_lua.bat` showed ROM f7671 already at
+  `y=$036E`, `y_vel=$0000`, grounded on Obj26, while the engine was still
+  airborne at `y=$0370` with stale Obj3D Roll animation. ROM Obj26 calls
+  `SolidObject_Monitor_Sonic` after Obj01 has applied airborne movement, then
+  branches to `SolidObject_cont`; Obj3D's off-screen release clears
+  `obj_control`/`on_object` without writing a fresh anim byte
+  (`docs/s2disasm/s2.asm:25579-25623,35344-35625,51159-51170`).
+- Fix: Obj26 monitor solidity now projects the pending airborne Y step for
+  pre-movement top crossings, and treats only a nearby active Obj3D residue as
+  the non-roll anim byte ROM Obj26 samples. Ordinary rolling monitor contacts
+  without the Obj3D source remain rejected.
+- Result:
+  `TestS2OozLevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances from f7671 / 395 to f7731 / 490 (`y` expected `0x0374`,
+  actual `0x036E`). The new frontier is Sonic staying on the monitor after the
+  landing where ROM has returned airborne/rolling.
+- Verification:
+  - Focused Obj26/Obj3D object oracles passed:
+    `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#monitorTopLandingUsesPostMoveCrossingWhenFallingFast+monitorTopLandingTreatsNearbyOozLauncherRollResidueAsRomWalkAnim+monitorTopLandingStillRejectsOrdinaryRollingAirContactWithoutOozLauncherRelease" test`.
+  - Focused OOZ1 trace exited 1 as expected-red at OOZ1 f7731 / 490.
+  - Focused OOZ2 preservation trace exited 1 as expected-red at OOZ2 f9307 /
+    430, unchanged from the current campaign baseline.
+  - S2 sweep with `-Dmaven.test.failure.ignore=true` completed 19 traces: 14
+    green, 5 expected-red, no non-target regression. Red frontiers are ARZ2
+    f1760 / 916, CNZ2 f9487 / 288, MTZ3 f12897 / 490, OOZ1 f7731 / 490, and
+    OOZ2 f9307 / 430.
+
 ## 2026-07-01 - S2 round 17 integrated sweep after OOZ1/ARZ2/MTZ3 advances
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /

@@ -642,6 +642,20 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object should sample one pending airborne Y step for a
+     * pre-movement {@code SolidObject_cont} top-landing check.
+     * <p>
+     * Use only for object routines that the ROM executes after the player slot
+     * has already applied airborne movement, while the engine's object pass still
+     * sees the pre-move centre. The resolver limits this hook to falling,
+     * airborne players that cross into the normal {@code SolidObject_Landed}
+     * top band; side and bottom contacts are unchanged.
+     */
+    default boolean projectsPreMovementAirYForSolidContact(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether continued-riding flat-top re-seat should use the object's
      * pre-update Y for this frame.
      * <p>
