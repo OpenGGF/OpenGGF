@@ -243,20 +243,20 @@ Physics differences across S1/S2/S3K are handled through a layered provider syst
 |-------|---------|
 | `PhysicsProfile` | Immutable per-character movement constants (18 fields, values in subpixels where 256=1px) |
 | `PhysicsModifiers` | Water/speed shoes multiplier rules (shared `STANDARD` across all games) |
-| `PhysicsFeatureSet` | Feature flags gating mechanics per game (primary extension point) |
+| `PhysicsFeatureSet` | Current bridge for game-wide shared runtime gates until typed `GameRules` lands in this refactor |
 | `CollisionModel` | Enum: `UNIFIED` (S1) vs `DUAL_PATH` (S2/S3K) |
 | `PhysicsProvider` | Interface tying above together, per game module |
 
 ### Resolution Flow
 1. `AbstractPlayableSprite` constructor calls `defineSpeeds()` (S2 fallback values)
 2. Then `resolvePhysicsProfile()` queries `GameModuleRegistry.getCurrent().getPhysicsProvider()`
-3. Profile values overwrite fallbacks; modifiers and feature set are cached
+3. Profile values overwrite fallbacks; modifiers and the current feature-set bridge are cached
 4. Getters apply modifiers dynamically (water/speed shoes)
-5. Feature set gates checked at call sites
+5. Shared runtime gates should use the current `PhysicsFeatureSet` bridge until the narrow typed `GameRules` records land
 
-### PhysicsFeatureSet Fields
+### Rule Placement
 
-`collisionModel` selects `UNIFIED` (S1) vs `DUAL_PATH` (S2/S3K) and routes collision code paths — see the section below. All other per-game flags (spindash, angle thresholds, look-scroll delay, water shimmer, elemental shields, edge balance, sidekick rules, etc.) live on `PhysicsFeatureSet`. See `PhysicsFeatureSet.java` and its `SONIC_1` / `SONIC_2` / `SONIC_3K` factory constants for the authoritative list.
+Per-game behavioral differences must use the smallest accurate owner: the current `PhysicsFeatureSet` bridge for game-wide shared runtime gates until typed `GameRules` lands in this refactor, or an existing provider/profile/registry for data, art, zone-local, or object-family behavior. Raw game-name branches in shared runtime code are prohibited, and new broad `PhysicsFeatureSet` runtime users should be avoided. See `docs/architecture/per-game-rule-placement.md` before adding a new per-game gate.
 
 For multi-sidekick daisy chains, `getEffectiveLeader()` uses a direct CPU leader immediately once that leader is in NORMAL. The 15-frame settled threshold is only for healing past broken or not-yet-normal links, not for skipping a direct NORMAL leader while its history warms.
 
@@ -271,11 +271,11 @@ The setters `setTopSolidBit()`/`setLrbSolidBit()` on `AbstractPlayableSprite` si
 ### Adding Per-Game Physics Differences
 
 1. Identify difference in disassembly with exact ROM references
-2. Add field to `PhysicsFeatureSet` (behavioral toggle), `PhysicsProfile` (per-character constant), or `PhysicsModifiers` (multiplier rule)
-3. Gate behavior at call site - S2 behavior is always the fallback when `physicsFeatureSet` is null
-4. Add tests following `TestSpindashGating`/`TestCollisionModel` pattern (TestableSprite inner class, no ROM/OpenGL required)
+2. Choose the smallest accurate owner using `docs/architecture/per-game-rule-placement.md`: the current `PhysicsFeatureSet` bridge for game-wide shared runtime gates until the typed `GameRules` records land, a provider/profile/registry, an object-local hook, or `PhysicsProfile`/`PhysicsModifiers` for character constants and multiplier rules.
+3. Gate behavior at the owning call site with the typed rule/profile/provider value; preserve existing fallback behavior when the owner is unavailable in tests.
+4. Add focused tests or trace replay coverage for the chosen owner.
 
-**Rules:** Always verify against disassembly. Never use game-name `if/else` chains - always use feature flags. Per-game behavioral differences must be gated by feature flags (usually on `PhysicsFeatureSet`), never by code like `if (module.getGameId() == GameId.S1)`. When a ROM-level divergence is discovered, add a flag to `PhysicsFeatureSet`, set the correct value on each game's `SONIC_1` / `SONIC_2` / `SONIC_3K` constant, and branch on the flag at the call site.
+**Rules:** Always verify against disassembly. Never use game-name `if/else` chains in shared runtime code. Per-game behavioral differences must use the smallest accurate owner: the current `PhysicsFeatureSet` bridge for game-wide shared runtime gates until typed `GameRules` lands, or an existing provider/profile/registry for data, art, zone-local, or object-family behavior.
 
 Trace fixes must not add zone/route/frame carve-outs. If a trace diverges in AIZ, CNZ, MGZ, or any other zone, model the ROM state that actually drives the branch: object id/routine, status/control bits, frame-counter visibility, physics profile, event flag, or data-driven object/profile condition. Do not branch on zone id/name, trace route, frame number, or a "known failing trace" exception. "Use ROM-default behaviour except in AIZ" is still a zone-specific carve-out and is not acceptable. Zone/event/object providers may expose ROM state at the owning boundary, but shared physics/sidekick/object code must consume semantic predicates and must not branch solely because `zone == AIZ` or similar.
 

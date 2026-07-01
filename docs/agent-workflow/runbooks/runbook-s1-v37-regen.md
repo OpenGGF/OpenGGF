@@ -91,6 +91,7 @@ f6358 and SBZ2 f2323 are the two that may remain harness/raw-RAM-gated.
 Per the trace-replay loop: read the new first-error context (now with the aux
 fields visible), find the engine code path that should produce the ROM-correct
 value, fix it ROM-faithfully (disasm-cited, no zone/frame carve-outs, per-game
-divergences behind `PhysicsFeatureSet`), keep all greens green, and update
+divergences routed through the smallest accurate owner from
+`docs/architecture/per-game-rule-placement.md`), keep all greens green, and update
 `docs/TRACE_FRONTIER_LOG.md`. The agents resume against this ground truth the
 instant the regenerated traces are installed.

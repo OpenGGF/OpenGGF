@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Per-game rule placement guidance now documents the smallest-owner path for ROM divergences:** new architecture guidance directs agents to use typed `GameRules` records for shared runtime rules and existing providers, profiles, registries, or object hooks for narrower data, zone, and object-family behavior instead of adding new broad `PhysicsFeatureSet` gates.
 - **BizHawk diagnostics now hide every EmuHawk-owned startup window:** the hidden launcher now enumerates all top-level windows owned by the EmuHawk process and hides them immediately, then polls aggressively during the first startup seconds. This closes the gap where BizHawk could surface a non-main or not-yet-stabilized WinForms window before the fast no-render Lua wrapper took over.
 - **BizHawk diagnostics now keep EmuHawk hidden after startup:** the hidden launcher now starts EmuHawk without shell execution and continuously hides the main Win32 window while the fast Lua wrapper runs. This preserves the normal no-audio/no-render diagnostic mode even when BizHawk recreates or re-shows its WinForms main window after process launch.
 - **BizHawk diagnostics now start hidden on the fast launcher path:** `tools\bizhawk\run_bizhawk_lua.bat` now delegates normal no-audio/no-render launches through a hidden PowerShell process wrapper while preserving the generated diagnostic config, fast Lua wrapper, movie/ROM argument order, and the explicit visible-debug escape hatch.
