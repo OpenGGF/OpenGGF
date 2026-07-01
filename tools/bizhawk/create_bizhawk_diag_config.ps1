@@ -33,13 +33,19 @@ Set-JsonProperty $cfg "DisplayLagCounter" $false
 Set-JsonProperty $cfg "DisplayInput" $false
 Set-JsonProperty $cfg "DisplayRerecordCount" $false
 Set-JsonProperty $cfg "DisplayMessages" $false
+Set-JsonProperty $cfg "DisplayRamWatch" $false
+Set-JsonProperty $cfg "DisplaySubtitles" $false
 Set-JsonProperty $cfg "DispChromeStatusBarWindowed" $false
 Set-JsonProperty $cfg "DispChromeCaptionWindowed" $false
 Set-JsonProperty $cfg "DispChromeMenuWindowed" $false
+Set-JsonProperty $cfg "DispChromeFrameWindowed" 0
 Set-JsonProperty $cfg "MainWindowMaximized" $false
 Set-JsonProperty $cfg "SaveWindowPosition" $false
 Set-JsonProperty $cfg "MainWindowPosition" "-32000, -32000"
 Set-JsonProperty $cfg "MainWindowSize" "160, 120"
+Set-JsonProperty $cfg "PauseWhenMenuActivated" $false
+Set-JsonProperty $cfg "VideoWriterAudioSync" $false
+Set-JsonProperty $cfg "TargetDisplayFilter" 0
 
 $diagDir = Split-Path -Parent $DiagConfig
 if ($diagDir -and -not (Test-Path -LiteralPath $diagDir)) {

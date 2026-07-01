@@ -80,11 +80,12 @@ tools\bizhawk\run_bizhawk_lua.bat ^
   s2.gen
 ```
 
-The launcher resolves all three input paths to absolute paths, writes a temporary
-no-audio/offscreen diagnostic config, passes `--audiosync false`, wraps the Lua so
-the fast-headless calls run first and are re-applied on frame start, verifies that
-the diagnostic itself contains executable fast-headless template calls before its
-main loop, and invokes EmuHawk with normal Windows quoting. The Lua template mutes audio with
+The launcher resolves all three input paths to absolute paths, writes a per-launch
+temporary no-audio/offscreen diagnostic config, passes `--audiosync false`, wraps
+the Lua in a per-launch temporary script so the fast-headless calls run first and
+are re-applied on frame start, verifies that the diagnostic itself contains
+executable fast-headless template calls before its main loop, and invokes EmuHawk
+with normal Windows quoting. The Lua template mutes audio with
 `client.SetSoundOn(false)` and disables rendering with
 `client.invisibleemulation(true)`. Accidentally inherited
 `BIZHAWK_ALLOW_SLOW_LUA=1` now fails unless `BIZHAWK_CONFIRM_VISIBLE_DEBUG=1` is

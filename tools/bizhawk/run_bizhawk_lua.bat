@@ -43,7 +43,8 @@ for %%I in ("%~1") do set "LUA_SCRIPT=%%~fI"
 for %%I in ("%~2") do set "BK2_PATH=%%~fI"
 for %%I in ("%~3") do set "ROM_PATH=%%~fI"
 set "BIZHAWK_EFFECTIVE_LUA=%LUA_SCRIPT%"
-if "%BIZHAWK_FAST_WRAPPER%"=="" set "BIZHAWK_FAST_WRAPPER=%TEMP%\openggf-bizhawk-fast-wrapper.lua"
+set "BIZHAWK_LAUNCH_ID=%RANDOM%-%RANDOM%"
+if "%BIZHAWK_FAST_WRAPPER%"=="" set "BIZHAWK_FAST_WRAPPER=%TEMP%\openggf-bizhawk-fast-wrapper-%BIZHAWK_LAUNCH_ID%.lua"
 
 if "%BIZHAWK_ALLOW_SLOW_LUA%"=="1" if not "%BIZHAWK_CONFIRM_VISIBLE_DEBUG%"=="1" (
     echo ERROR: BIZHAWK_ALLOW_SLOW_LUA=1 disables the no-audio/no-render wrapper.
@@ -58,7 +59,7 @@ if not "%BIZHAWK_USE_DIAG_CONFIG%"=="1" goto :after_diag_config
 set "BIZHAWK_SOURCE_CONFIG=%BIZHAWK_SOURCE_CONFIG%"
 if "%BIZHAWK_SOURCE_CONFIG%"=="" if exist "%~dp0..\..\docs\BizHawk-2.11-win-x64\config.ini" set "BIZHAWK_SOURCE_CONFIG=%~dp0..\..\docs\BizHawk-2.11-win-x64\config.ini"
 if "%BIZHAWK_SOURCE_CONFIG%"=="" if exist "C:\Users\farre\Downloads\_Sorted\Emulators\BizHawk-2.11-win-x64\config.ini" set "BIZHAWK_SOURCE_CONFIG=C:\Users\farre\Downloads\_Sorted\Emulators\BizHawk-2.11-win-x64\config.ini"
-if "%BIZHAWK_DIAG_CONFIG%"=="" set "BIZHAWK_DIAG_CONFIG=%TEMP%\openggf-bizhawk-diag-config.ini"
+if "%BIZHAWK_DIAG_CONFIG%"=="" set "BIZHAWK_DIAG_CONFIG=%TEMP%\openggf-bizhawk-diag-config-%BIZHAWK_LAUNCH_ID%.ini"
 if "%BIZHAWK_SOURCE_CONFIG%"=="" (
     echo WARNING: No BizHawk config.ini found; relying on Lua-side sound/render toggles only.
     goto :after_diag_config
