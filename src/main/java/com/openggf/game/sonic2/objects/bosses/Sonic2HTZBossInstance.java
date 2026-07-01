@@ -586,6 +586,16 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     @Override
+    public boolean isPersistent() {
+        // Obj52's defeated flee routine is the owner of the post-boss camera
+        // expansion: it increments Camera_Max_X_pos until $3160, then deletes
+        // itself (docs/s2disasm/s2.asm:64084-64112). The generic object-side
+        // out-of-range unload must not retire the event-spawned boss before that
+        // loop completes.
+        return true;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(
                 Sonic2ObjectArtKeys.HTZ_BOSS);
