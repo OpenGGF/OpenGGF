@@ -6,9 +6,9 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after OOZ2 round 31: ARZ2 is f3597 / 1622
-(`obj_extra_s1C_x` expected absent, actual `0x1BAE`) after Obj83 parent slots
-started exporting the ROM platform position; OOZ2 is f10973 / 163
+Current branch-local S2 state after round 31 integration: ARZ2 is f3707 / 1620
+(`y_speed` expected `0x0000`, actual `0x0379`) after Obj83 child slots started
+exporting ROM-owned coordinates and platform solids; OOZ2 is f10973 / 163
 (`tails_g_speed` expected `0x0018`, actual `0x0000`) after the delayed
 leader low-byte jump press survived the S2 sidekick auto-jump carry path. CNZ2
 remains f9946 / 300 (`x_speed` expected `0x0200`, actual `0x08A8`) and MTZ3
@@ -16,6 +16,42 @@ remains f13336 / 352 (`x_speed` expected `0x0200`, actual `-0200`). Full S2 is
 15 green / 4 expected-red, full S1 remains green, and the S3K AIZ guard is
 unchanged. No S2 trace greened in round 31, so these advances have not been
 banked into `next`.
+
+## 2026-07-01 - S2 round 31 integrated campaign baseline
+
+Integrated on `bugfix/ai-s2-trace-next`:
+- `00a2ad2e4` (`fix(s2): align ARZ2 Obj83 child slot semantics`) advances
+  ARZ2 f3597 / 1622 (`obj_extra_s1C_x` expected absent, actual `0x1BAE`) ->
+  f3707 / 1620 (`y_speed` expected `0x0000`, actual `0x0379`).
+- `c75353393` (`fix: preserve S2 sidekick delayed jump press`) advances OOZ2
+  f10831 / 164 (`tails_cpu_ctrl2_pressed` expected `0x0010`, actual `0x0000`)
+  -> f10973 / 163 (`tails_g_speed` expected `0x0018`, actual `0x0000`).
+- CNZ2 round-31 worker made no commit. BizHawk probes confirmed ROM clears
+  Tails_Dust/parent animation before CNZ2 boss load and leaves slot `$25` free
+  for Obj51; the skid-latch candidate again reduced total errors to 264 but did
+  not advance the f9946 first-error frame.
+- MTZ3 round-31 worker made no commit. The reused-slot/first-update hypothesis
+  regressed the trace to f12820 / 388 and was reverted.
+
+Integrated verification on `bugfix/ai-s2-trace-next`:
+- S2 preservation subset:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  ran 6 requested checks: ARZ1 and OOZ1 passed; ARZ2 f3707 / 1620, CNZ2 f9946
+  / 300, MTZ3 f13336 / 352, and OOZ2 f10973 / 163 remained expected-red.
+- Full S2 sweep:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 19 tests with 15 green / 4 expected-red at the same frontiers: ARZ2
+  f3707 / 1620, CNZ2 f9946 / 300, MTZ3 f13336 / 352, OOZ2 f10973 / 163.
+- Full S1 sweep:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 29 tests, 0 failures, with only the existing S1 mapping warnings.
+- S3K guard subset:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+  ran 68 checks with 66 green plus the known AIZ expected-reds:
+  complete-run f1095 / 4319 and level-select f8941 / 1160.
+
+No S2 trace turned green in round 31, so these campaign advances were not
+banked into `next` under the green-bank rule.
 
 ## 2026-07-01 - S2 OOZ2 delayed sidekick jump press advances f10831 to f10973
 
