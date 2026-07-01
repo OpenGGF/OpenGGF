@@ -6,6 +6,42 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 campaign integrated sweep after round 13 ARZ2/HTZ2/OOZ1 merges
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next` at `f3c4bfdeb`, after merging ARZ2 round 13
+  (`92e9c9f6a`), HTZ2 round 13 (`a751be064`), and OOZ1 round 13
+  (`ca939d50d`). CNZ2 and OOZ2 round 13 returned no committed change.
+- Focused merge verification:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2SkidDustDoesNotAllocateExtraSlot20AfterRomFixedDustDeletes+ooz1LauncherBallChainKeepsSourceBeforeTargetAtRomFrame5957,com.openggf.sprites.managers.TestPlayableSpriteMovement#s2*Skid*,com.openggf.tests.TestHTZBossChildObjects,com.openggf.game.rewind.TestS2HtzBossGraphRewind" "-DfailIfNoTests=false" test`
+  passed 17 / 17 focused tests.
+- Full S2 sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: 19 S2 trace tests ran; 13 green, 6 expected-red, no non-target
+  regressions after the combined merges.
+- Current S2 red frontiers:
+  - ARZ2: f1712 / 1514 (`obj_extra_s26_x` expected absent, actual `0x13E1`).
+  - CNZ2: f9487 / 288 (`g_speed` expected `0x0000`, actual `0x0100`).
+  - HTZ2: f9150 / 121 (`camera_x` expected `0x2F5E`, actual `0x2F60`).
+  - MTZ3: f12146 / 650 (`x_speed` expected `0x0000`, actual `0x000C`).
+  - OOZ1: f6639 / 557 (`y_speed` expected `-0100`, actual `0x0000`).
+  - OOZ2: f9307 / 444 (`x_speed` expected `0x0150`, actual `-0150`).
+- Cross-game guard:
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests. The repeated S1 mapping warning at
+    `0xe8df` remains known and pre-existing.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    completed 68 S3K smoke/AIZ checks. Bootstrap, decoding, level-loading, and
+    AIZ skip headless checks passed; the two AIZ trace replays stayed at the
+    existing expected-red frontiers: complete-run f1095 / 4319 and AIZ f8941 /
+    1160.
+  - Additional S3K trace attempts confirmed the broader S3K trace suite is not
+    a clean regression gate in this worktree: `TestS3kCnzTraceReplay` still has
+    its existing trace/oracle failures and input-alignment failure, while
+    `TestS3kHczCompleteRunTraceReplay`, `TestS3kMgzCompleteRunTraceReplay`, and
+    `TestS3kCnzCompleteRunTraceReplay` hit JVM heap-space failures even with
+    larger heap and `-XX:-DoEscapeAnalysis`.
+
 ## 2026-07-01 - S2 ARZ2 stale Stop/skid latch release (f1698 -> f1712)
 
 - Worktree/branch: `.worktrees/ai-s2-arz2-round13-next` /
