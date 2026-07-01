@@ -266,6 +266,10 @@ class TestSonic2ObjectBugFixes {
     void mtzLongPlatformSubtype5StalesLogicalHorizontalInputWhileRiding() {
         MTZLongPlatformObjectInstance conveyor = new MTZLongPlatformObjectInstance(
                 new ObjectSpawn(0x1C86, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x05, 0, false, 0));
+        MTZLongPlatformObjectInstance secondStopConveyor = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x28AE, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x05, 0, false, 0));
+        MTZLongPlatformObjectInstance lateSecondStopConveyor = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x28FC, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x05, 0, false, 0));
         MTZLongPlatformObjectInstance earlyConveyor = new MTZLongPlatformObjectInstance(
                 new ObjectSpawn(0x1A7E, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x05, 0, false, 0));
         MTZLongPlatformObjectInstance stationary = new MTZLongPlatformObjectInstance(
@@ -279,6 +283,11 @@ class TestSonic2ObjectBugFixes {
         assertEquals(3, conveyor.staleHorizontalLogicalInputFramesWhileRiding(facingRight, 1, false, true),
                 "Obj65 loc_26E4A changes x_pos before SolidObject, while Sonic_Move consumes "
                         + "Ctrl_1_Held_Logical (docs/s2disasm/s2.asm:53159-53220,36552-36567)");
+        assertEquals(3, secondStopConveyor.staleHorizontalLogicalInputFramesWhileRiding(facingRight, 1, false, true),
+                "MTZ3's second Obj65 stop at $2940 uses the same loc_26E4A/SolidObject timing "
+                        + "as the $1CC0 stop approach (docs/s2disasm/s2.asm:53159-53220)");
+        assertEquals(0, lateSecondStopConveyor.staleHorizontalLogicalInputFramesWhileRiding(facingRight, 1, false, true),
+                "The later MTZ3 right edge at platform X=$28FC is consumed immediately by Sonic_Move");
         assertEquals(0, conveyor.staleHorizontalLogicalInputFramesWhileRiding(facingLeft, 1, false, true),
                 "Sonic_MoveRight flips status.player.x_flip and accelerates immediately when Sonic starts facing left");
         assertEquals(0, conveyor.staleHorizontalLogicalInputFramesWhileRiding(cpuTails, 1, false, true),
