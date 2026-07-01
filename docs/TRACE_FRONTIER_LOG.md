@@ -43,6 +43,50 @@ branch-local measurements.
     completed 19 S2 traces: 14 green, 5 expected-red, no non-target
     regression. Red frontiers are ARZ2 f1717 / 980, CNZ2 f9487 / 288, MTZ3
     f12608 / 490, OOZ1 f7671 / 395, and OOZ2 f9307 / 430.
+## 2026-07-01 - S2 ARZ2 Obj37 owner slot timing advances f1717 -> f1760
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round17-next` /
+  `bugfix/ai-s2-arz2-round17-next`, based on `bugfix/ai-s2-trace-next` at
+  `180bdcc85`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 with ARZ2 f1717 / 980 errors (`obj_extra_s30_x` expected absent,
+  actual `0x13D2`).
+- Triage/evidence: the f1717 context was a Sonic hurt/lost-ring spill around
+  Grounder debris. A BizHawk fast-template PC-execute probe of S2 Obj37 showed
+  ROM `HurtCharacter` allocated the owner Obj37 in slot 56 before later lower
+  slots 48, 49, 54, and 55 freed in the same `ExecuteObjects` pass. `Obj37_Init`
+  then allocated child rings into those lower holes, but because the ROM loop
+  had already passed them, only the owner-or-later Obj37 slots ran `Obj37_Main`
+  in the spawn frame. This follows `HurtCharacter` and `Obj37_Init` in
+  `docs/s2disasm/s2.asm:85444-85461,25125-25245`.
+- Fix: deferred lost-ring materialization now asks `ObjectManager` for a
+  preallocated owner slot that ignores dynamic slots freed earlier in the
+  current object pass. The S2 lost-ring delayed-spawn compensation now applies
+  the initial Obj37 movement step only to the owner slot and later slots; lower
+  child slots allocated by `Obj37_Init` keep their init-frame position until
+  their next object pass. The rule is slot/order-driven, not ARZ2, route, or
+  frame-specific.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f1760 / 916 errors. The new first mismatch is `obj_s28_type`
+  expected `0x8F`, actual missing, with the context showing remaining Grounder
+  wall-piece/debris slot timing after the lost-ring owner allocation is aligned.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.rings.TestLostRingObjectInstance" test`
+    passed 22 tests.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at ARZ2 f1760 / 916.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces: 14 green, 5 expected-red. Red frontiers held at
+    CNZ2 f9487 / 288, MTZ3 f12608 / 490, OOZ1 f7584 / 384, and OOZ2 f9307 /
+    430, with only ARZ2 advanced to f1760 / 916.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 S1 traces.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    completed 68 S3K checks. Bootstrap, decoding, level loading, and AIZ skip
+    headless checks passed; AIZ traces stayed at their existing expected-red
+    frontiers, complete-run f1095 / 4319 and AIZ f8941 / 1160.
 
 ## 2026-07-01 - S2 round 16 integrated sweep after OOZ2 improvement and HTZ2 green
 

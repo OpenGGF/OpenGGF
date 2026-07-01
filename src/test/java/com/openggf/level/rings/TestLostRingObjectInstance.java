@@ -548,6 +548,60 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void delayedS2SpawnSkipsInitialObj37StepForAlreadyPassedChildSlots() throws Exception {
+        LevelManager baselineLevelManager = GameServices.level();
+        ObjectManager baselineObjectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_2), 0, null, null);
+        setField(baselineLevelManager, "objectManager", baselineObjectManager);
+        reserveS2Arz2LateFreedLostRingLayout(baselineObjectManager);
+
+        RingManager baselineRingManager = buildRingManagerWithLevelManager(baselineLevelManager);
+        setField(baselineLevelManager, "ringManager", baselineRingManager);
+
+        SpawnTestPlayableSprite baselinePlayer = new SpawnTestPlayableSprite((short) 0x13D2, (short) 0x043C);
+        baselineRingManager.spawnLostRings(
+                baselinePlayer, 6, 0, baselinePlayer.getCentreX(), baselinePlayer.getCentreY(), 56);
+        List<LostRingObjectInstance> baseline =
+                baselineObjectManager.activeObjectsOfType(LostRingObjectInstance.class);
+
+        LevelManager steppedLevelManager = GameServices.level();
+        ObjectManager steppedObjectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_2), 0, null, null);
+        setField(steppedLevelManager, "objectManager", steppedObjectManager);
+        reserveS2Arz2LateFreedLostRingLayout(steppedObjectManager);
+
+        RingManager steppedRingManager = buildRingManagerWithLevelManager(steppedLevelManager);
+        setField(steppedLevelManager, "ringManager", steppedRingManager);
+
+        SpawnTestPlayableSprite steppedPlayer = new SpawnTestPlayableSprite((short) 0x13D2, (short) 0x043C);
+        steppedRingManager.spawnLostRingsWithInitialObjectStep(
+                steppedPlayer, 6, 0, steppedPlayer.getCentreX(), steppedPlayer.getCentreY(), 56);
+        List<LostRingObjectInstance> stepped =
+                steppedObjectManager.activeObjectsOfType(LostRingObjectInstance.class);
+
+        assertEquals(6, baseline.size());
+        assertEquals(6, stepped.size());
+        for (int i = 0; i < stepped.size(); i++) {
+            LostRingObjectInstance baselineRing = baseline.get(i);
+            LostRingObjectInstance steppedRing = stepped.get(i);
+            assertEquals(baselineRing.getSlotIndex(), steppedRing.getSlotIndex());
+            if (steppedRing.getSlotIndex() < 56) {
+                assertEquals(baselineRing.getXSubpixelForTest(), steppedRing.getXSubpixelForTest(),
+                        "child Obj37 slots below the owner were already passed by ExecuteObjects");
+                assertEquals(baselineRing.getYSubpixelForTest(), steppedRing.getYSubpixelForTest());
+                assertEquals(baselineRing.getYVelForTest(), steppedRing.getYVelForTest());
+            } else {
+                assertEquals(baselineRing.getXSubpixelForTest() + baselineRing.getXVelForTest(),
+                        steppedRing.getXSubpixelForTest(),
+                        "owner-or-later Obj37 slots execute Obj37_Main in the spawn frame");
+                assertEquals(baselineRing.getYSubpixelForTest() + baselineRing.getYVelForTest(),
+                        steppedRing.getYSubpixelForTest());
+                assertEquals(baselineRing.getYVelForTest() + 0x18, steppedRing.getYVelForTest());
+            }
+        }
+    }
+
+    @Test
     void spawnStopsOnAllocationFailureAndCapsAt32() throws Exception {
         LevelManager levelManager = GameServices.level();
         ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
@@ -625,6 +679,15 @@ class TestLostRingObjectInstance {
             }
         });
         return ring;
+    }
+
+    private void reserveS2Arz2LateFreedLostRingLayout(ObjectManager objectManager) {
+        for (int slot = 16; slot <= 57; slot++) {
+            if (slot == 48 || slot == 49 || slot == 54 || slot == 55 || slot == 57) {
+                continue;
+            }
+            assertTrue(objectManager.reserveDynamicSlot(slot), "setup should reserve slot " + slot);
+        }
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {
