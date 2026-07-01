@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
@@ -1537,6 +1538,45 @@ public class TestS2ObjectOccupancyOracle {
                 "S2 Obj08 skid dust must use the lowest free ROM slot after Obj82 unloads at f1993; "
                         + "actual slots "
                         + slotCheck.summary());
+    }
+
+    @Test
+    public void arz2LostRingOwnerRunsObjectStepAtRomFrame2016() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 2016) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedRing = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 33)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x37)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedRing,
+                            "ARZ2 ROM fixture should report the first new Obj37 lost ring in slot 33 at f2016");
+                    LostRingObjectInstance actualRing = om.activeObjectsOfType(LostRingObjectInstance.class)
+                            .stream()
+                            .filter(ring -> ring.getSlotIndex() == 33)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(
+                            expectedRing.x() & 0xFFFF,
+                            expectedRing.y() & 0xFFFF,
+                            actualRing == null ? -1 : actualRing.getX(),
+                            actualRing == null ? -1 : actualRing.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 33, 43));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 HurtCharacter allocates Obj37 with AllocateObject, then Obj37_Init falls through "
+                        + "to Obj37_Main when ExecuteObjects reaches the new slot "
+                        + "(docs/s2disasm/s2.asm:85444-85461,25125-25209); slots "
+                        + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "The first new lost ring must receive its same-pass ObjectMove/gravity step at f2016; "
+                        + "slots " + check.summary());
     }
 
     /**
