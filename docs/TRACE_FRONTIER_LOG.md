@@ -6,7 +6,7 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2 and OOZ1 round 21 plus MTZ3 round 20
+Current branch-local S2 state after ARZ2/OOZ1/OOZ2 round 21 plus MTZ3 round 20
 integration: the S2 sweep remains 14 green / 5 expected-red. ARZ2 advances to
 f2016 / 753 (`obj_extra_s21_x` expected absent, actual `0x1433`) after
 backward post-camera placement includes the object group exactly on the
@@ -15,7 +15,59 @@ previous left window edge; OOZ1 advances to f9342 / 353 (`y` expected
 the f9164 Octus bullet/Tails hurt touch; CNZ2 remains parked at f9487 / 288;
 MTZ3 advances to f13054 / 367 (`x_speed` expected `0x0091`, actual `-0091`)
 after Obj53 defers broken-orb parent-count decrement through the ROM burst
-routine; and OOZ2 remains f9307 / 430.
+routine; and OOZ2 advances to f9341 / 506 (`tails_routine` expected `0x0004`,
+actual `0x0002`) after Obj55 preserves the ROM top-level init return before
+entering its main-surface movement.
+
+## 2026-07-01 - S2 OOZ2 Obj55 init return advances f9307 to f9341
+
+- Worktree/branch: `.worktrees/ai-s2-ooz2-round21-next` /
+  `bugfix/ai-s2-ooz2-round21-next`, based on campaign `next` head
+  `80bff7c7f`.
+- Baseline reproduction:
+  `mvn "-Dmse=off" "-Dtest=TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced OOZ2 f9307 / 430 errors (`y_speed` expected `-0418`, actual
+  `0x0418`).
+- Triage/evidence: the ROM object-near trace keeps Obj55 slot 20 at
+  `@2940,0292` on f9306 and f9307, then reaches `@2940,0293` on f9308. The
+  engine had already moved the boss body to `@2940,0293` before the f9307 touch
+  scan. OpenGGF construction was collapsing ROM `Obj55_Init` and
+  `Obj55_Main_Init`; the ROM `Obj55_Init` sets `boss_subtype=2` and returns, so
+  `Obj55_Main_Init` and later `Obj55_Main_Surface` movement start on following
+  object passes (`docs/s2disasm/s2.asm:68225-68238,68258-68276,68287-68301`).
+  Hits are then handled in `Obj55_Main_End` after the movement/hover pass and
+  before sprite alignment (`docs/s2disasm/s2.asm:68355-68359`).
+- Fix: `Sonic2OOZBossInstance` now initializes the main Obj55 object to the
+  top-level init state, preserving collision byte `$0F`, hit count, frame 8,
+  and `MAIN_INIT` as the next routine without running the main-vehicle
+  movement setup during construction.
+- Result:
+  `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f9341 / 506 errors. The new first mismatch is
+  `tails_routine` expected `0x0004`, actual `0x0002`; this frame was already a
+  later cascading mismatch in the f9307 baseline report.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at OOZ2 f9341 / 506.
+  - `mvn "-Dmse=off" "-Dtest=TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red and preserved OOZ1 f9164 / 355.
+  - Conductor focused merge guard:
+    `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" test`
+    completed with OOZ2 expected-red at f9341 / 506, OOZ1 preserved at
+    f9342 / 353, and rewind coverage green.
+  - Conductor S2 sweep:
+    `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces: 14 green, 5 expected-red. Red frontiers are ARZ2
+    f2016 / 753, CNZ2 f9487 / 288, MTZ3 f13054 / 367, OOZ1 f9342 / 353, and
+    OOZ2 f9341 / 506.
+  - Conductor S1 guard:
+    `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 29/29 S1 trace replays green, with only the known S1 mapping
+    warnings.
+  - Conductor S3K guard:
+    `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    completed 68 checks: 66 green plus the two known AIZ expected-reds,
+    complete-run f1095 / 4319 and AIZ f8941 / 1160.
 
 ## 2026-07-01 - S2 ARZ2 backward post-camera placement includes prior left edge
 
@@ -132,7 +184,6 @@ routine; and OOZ2 remains f9307 / 430.
     complete-run f1095 / 4319 and AIZ f8941 / 1160. Broader S3K complete-run
     sweeps remain blocked by the existing Surefire fork heap failure on
     `TestS3kCnzCompleteRunTraceReplay` before test results are recorded.
-
 ## 2026-07-01 - S2 ARZ2 Obj82 coarse-camera and Obj08 dust order advances f1993 to f1998
 
 - Worktree/branch: `.worktrees/ai-s2-arz2-round20-next` /
