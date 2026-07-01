@@ -68,7 +68,7 @@ branch-local measurements.
   Result: 19 S2 trace tests ran; 13 green, 6 expected-red, no non-target
   regressions after the composed round-14 merges.
 - Current S2 red frontiers:
-  - ARZ2: f1717 / 1420 (`obj_extra_s39_x` expected absent, actual `0x13D2`).
+  - ARZ2: f1717 / 980 (`obj_extra_s30_x` expected absent, actual `0x13D2`).
   - CNZ2: f9487 / 288 (`g_speed` expected `0x0000`, actual `0x0100`).
   - HTZ2: f9361 / 59 (`camera_x` expected `0x3104`, actual `0x3102`).
   - MTZ3: f12592 / 497 (`y_speed` expected `-0290`, actual `0x0290`).
@@ -84,6 +84,7 @@ branch-local measurements.
   - OOZ2: narrow Obj55 literal-collision and hit-status ordering experiments
     did not advance f9307. The previous broad attack-predicate experiment
     remains rejected because it regressed CNZ2.
+
 - Cross-game guard:
   - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
     passed 29 / 29 S1 trace tests. The repeated S1 mapping warning at
@@ -93,6 +94,34 @@ branch-local measurements.
     AIZ skip headless checks passed; the two AIZ trace replays stayed at the
     existing expected-red frontiers: complete-run f1095 / 4319 and AIZ f8941 /
     1160.
+
+## 2026-07-01 - S2 ARZ2 Obj37 lost-ring allocation split (1420 -> 980 errors)
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round15-next` /
+  `bugfix/ai-s2-arz2-round15-next`, based on `bugfix/ai-s2-trace-next`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red ARZ2 f1717 / 1420
+  (`obj_extra_s39_x` expected absent, actual `0x13D2`).
+- Triage/evidence: the f1717 context showed the ROM lost-ring spill occupying
+  the Grounder-debris-adjacent low holes after the Obj37 owner slot, while the
+  engine was allocating the post-owner spill with the S3K after-current chain.
+  S2 `HurtCharacter` preallocates the Obj37 owner with `AllocateObject`, then
+  `Obj37_Init` uses plain `AllocateObject` for subsequent rings. S3K keeps a
+  different Obj_Bouncing_Ring path that calls `AllocateObjectAfterCurrent` for
+  the remainder.
+- Fix: `ObjectSlotLayout` now records whether the post-owner Obj37 remainder
+  uses after-current allocation. S2 keeps the preallocated owner but allocates
+  the remaining rings with lowest-free `AllocateObject`; S3K keeps the
+  after-owner chain.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f1717 / 1420 errors
+  (`obj_extra_s39_x` expected absent, actual `0x13D2`) -> f1717 / 980 errors
+  (`obj_extra_s30_x` expected absent, actual `0x13D2`). The frame frontier does
+  not move; the remaining owner is lost-ring position/slot matching in the same
+  hurt window.
+- ROM citations: `docs/s2disasm/s2.asm:85444-85461,25125-25146`;
+  `docs/skdisasm/sonic3k.asm:21065-21088,35549-35591`.
 
 ## 2026-07-01 - S2 MTZ3 Obj65 second-stop stale input (f12146 -> f12592)
 

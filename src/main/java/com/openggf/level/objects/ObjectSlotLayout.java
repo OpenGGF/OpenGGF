@@ -11,11 +11,12 @@ public record ObjectSlotLayout(
         int dynamicSlotCount,
         int processSlotCount,
         boolean twoAxisCursorPlacement,
-        boolean preallocatesLostRingOwnerSlot) {
+        boolean preallocatesLostRingOwnerSlot,
+        boolean lostRingRemainderAllocatesAfterOwnerSlot) {
     public static final ObjectSlotLayout SONIC_1 = new ObjectSlotLayout(32, 96);
     // S2 HurtCharacter allocates the first Obj37 owner slot before Obj37_Init
-    // fills the spill with AllocateObject from that owner (docs/s2disasm/s2.asm:
-    // 85386-85404, 25123-25155).
+    // fills the spill with plain AllocateObject from that owner
+    // (docs/s2disasm/s2.asm:85444-85461, 25125-25146).
     public static final ObjectSlotLayout SONIC_2 = new ObjectSlotLayout(16, 112, false, true);
     // S3K Object_RAM has Player_1, Player_2, and Reserved_object_3 before
     // Dynamic_object_RAM, but AllocateObject pre-increments from
@@ -35,21 +36,21 @@ public record ObjectSlotLayout(
     // docs/skdisasm/sonic3k.asm:35965-35980). Most gameplay objects live in the
     // managed dynamic window above; call sites choose the ROM countdown that
     // matches the object path they are modeling.
-    public static final ObjectSlotLayout SONIC_3K = new ObjectSlotLayout(4, 89, 110, true, true);
+    public static final ObjectSlotLayout SONIC_3K = new ObjectSlotLayout(4, 89, 110, true, true, true);
 
     public ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount) {
-        this(firstDynamicSlot, dynamicSlotCount, firstDynamicSlot + dynamicSlotCount, false, false);
+        this(firstDynamicSlot, dynamicSlotCount, firstDynamicSlot + dynamicSlotCount, false, false, false);
     }
 
     public ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount, boolean twoAxisCursorPlacement) {
         this(firstDynamicSlot, dynamicSlotCount, firstDynamicSlot + dynamicSlotCount,
-                twoAxisCursorPlacement, false);
+                twoAxisCursorPlacement, false, false);
     }
 
     public ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount,
                             boolean twoAxisCursorPlacement, boolean preallocatesLostRingOwnerSlot) {
         this(firstDynamicSlot, dynamicSlotCount, firstDynamicSlot + dynamicSlotCount,
-                twoAxisCursorPlacement, preallocatesLostRingOwnerSlot);
+                twoAxisCursorPlacement, preallocatesLostRingOwnerSlot, false);
     }
 
     public ObjectSlotLayout {
@@ -61,6 +62,9 @@ public record ObjectSlotLayout(
         }
         if (processSlotCount < firstDynamicSlot + dynamicSlotCount) {
             throw new IllegalArgumentException("processSlotCount must cover the dynamic slot window");
+        }
+        if (lostRingRemainderAllocatesAfterOwnerSlot && !preallocatesLostRingOwnerSlot) {
+            throw new IllegalArgumentException("lost-ring after-owner allocation requires an owner slot");
         }
     }
 
