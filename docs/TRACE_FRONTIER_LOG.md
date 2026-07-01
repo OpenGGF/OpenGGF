@@ -17,6 +17,28 @@ to f10129 / 388 (`tails_x_speed` expected `0x0000`, actual `0x0200`) after
 Obj07 skips CPU Tails' dead-fall routine instead of re-seating stale support on
 the boss-lowered oil plane.
 
+## 2026-07-01 - S2 round 25 integrated baseline
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next`, campaign head `e21b89b9a` after merging the CNZ2
+  and OOZ2 round-25 advances. ARZ2 and MTZ3 round-25 workers made no commit.
+- S2 sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  exited 0 with `maven.test.failure.ignore=true`: 19 tests, 15 green / 4
+  expected-red. Remaining red frontiers are ARZ2 f2565 / 713
+  (`obj_s15_slot`), CNZ2 f9946 / 300 (`x_speed` expected `0x0200`, actual
+  `0x08A8`), MTZ3 f13336 / 352 (`x_speed` expected `0x0200`, actual
+  `-0200`), and OOZ2 f10129 / 388 (`tails_x_speed` expected `0x0000`, actual
+  `0x0200`).
+- S1 preservation:
+  `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  exited 0 with 29 tests, 0 failures, and the existing S1 mapping warnings.
+- S3K preservation:
+  the AIZ trace/complete-run guard plus S3K loading/bootstrap/decoding tests
+  exited 0 with `maven.test.failure.ignore=true`: 68 checks, 66 green and the
+  two known expected-red AIZ frontiers unchanged (`TestS3kAizCompleteRunTraceReplay`
+  f1095 / 4319 `x_speed`; `TestS3kAizTraceReplay` f8941 / 1160 `camera_y`).
+
 ## 2026-07-01 - S2 CNZ2 hurt reset clears roll-jump and advances f9733 to f9946
 
 - Worktree/branch: `.worktrees/ai-s2-cnz2-round25-next` /
