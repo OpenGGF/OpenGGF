@@ -79,6 +79,34 @@ frontier`.
 
 ---
 
+## P0B — Parent-owned cosmetic children can steal gameplay-critical lower slots
+
+**Symptom.** A later object interaction is one frame late even though both
+objects are position-correct. Slot diagnostics show a cosmetic or auxiliary
+child occupying a lower SST slot that the ROM uses for the gameplay object
+which must execute first.
+
+**Root cause.** The Java parent/child model can keep auxiliary children alive
+or allocate them into lower slots that are free only because earlier engine
+slot occupancy already drifted. For Obj50, a wing child below the parent stole
+OOZ1's source Obj48 slot, so the target Obj48 ran before the source ball moved
+the player into it.
+
+**What to check.** For parent-owned visual children and appendages, verify both
+allocation order and unload cleanup against the ROM slot events around dense
+object clusters. If a child is structurally tied to its parent, expire it from
+`onUnload()` as well as player destruction paths, and add a focused slot-order
+test for any downstream object handoff that depends on parent/child ordering.
+
+**ROM citation.** Obj48 captures/moves players in SST order
+(`docs/s2disasm/s2.asm:51224-51357`). Obj50 creates a wing child and the wing
+validates its parent slot before display/delete
+(`docs/s2disasm/s2.asm:60567-60616,60637-60652`).
+
+**Originating commit.** `fix(s2): advance OOZ1 launcher-ball slot order`.
+
+---
+
 ## P1 — Touch-response directional/state guards diverge from ROM
 
 **Symptom.** Object rejects a rolling / spindash / invincible touch under a
