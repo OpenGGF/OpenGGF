@@ -11,13 +11,48 @@ Current branch-local S2 state after OOZ2 round 22 integration: the S2 sweep is
 f2016 / 753 (`obj_extra_s21_x` expected absent, actual `0x1433`) after
 backward post-camera placement includes the object group exactly on the
 previous left window edge; OOZ1 is now green after Obj48 defers a same-pass
-Obj3D outside-to-inside capture crossing by one object pass; CNZ2 remains
-parked at f9487 / 288;
+Obj3D outside-to-inside capture crossing by one object pass; CNZ2 advances to
+f9733 / 265 (`tails_status_byte` expected `0x0002`, actual `0x0012`) after
+Obj51's ball trigger compare uses the ROM displayed-X phase on leftward passes;
 MTZ3 advances to f13336 / 352 (`x_speed` expected `0x0200`, actual `-0200`)
 after the MTZ Obj54 event spawn reserves its ROM SST slot before spawning the
 Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9342 / 505
 (`tails_x_sub` expected `0x4700`, actual `0xC700`) after trace capture keeps
 the ROM Obj02 hurt routine visible for object-solid landing samples.
+
+## 2026-07-01 - S2 CNZ2 Obj51 displayed-X trigger advances f9487 to f9733
+
+- Worktree/branch: `.worktrees/ai-s2-cnz2-round24-next` /
+  `bugfix/ai-s2-cnz2-round24-next`, based on campaign head `17f4008cd`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced CNZ2 f9487 / 288 errors (`g_speed` expected `0x0000`, actual
+  `0x0100`).
+- Evidence: the old frontier had ROM Sonic hurt by Obj51's ball at
+  `@29A1,067F`, while the engine waited until a later leftward trigger and kept
+  the ball around `@298A,0678`. A focused BizHawk probe using
+  `tools\bizhawk\run_bizhawk_lua.bat` on `diag_template_fast.lua`-derived Lua
+  showed `loc_31BF2` executing at BK2 frame 21917 with Obj51 displayed
+  `x_pos=$29A2`, `Boss_X_pos=$29A1`, Sonic `x=$29B1`, and `objoff_3F=0`.
+  That makes the ROM proximity compare `dx=$1F` and spawns the ball; the engine
+  had compared against its current leftward phase and saw `dx=$20`, missing the
+  branch until Sonic had already passed the hurt window.
+- ROM refs: Obj51's trigger path reads `MainCharacter+x_pos`, subtracts
+  `x_pos(a0)`, adds `$10`, and branches away on `d0 >= $20`; the ball child is
+  allocated by `loc_31BF2` (`docs/s2disasm/s2.asm:66577-66594,66658-66664`).
+- Fix: `Sonic2CNZBossInstance` now compares against Obj51's displayed-X phase
+  for leftward ball-trigger checks, preserving the ROM trigger window without
+  hydrating trace state or adding route/frame carve-outs.
+- Result:
+  `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f9733 / 265 errors. The new first mismatch is
+  `tails_status_byte` expected `0x0002`, actual `0x0012`, with Tails hurt by a
+  split Obj51 ball.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    produced the expected-red f9733 / 265 report.
+  - `mvn "-Dtest=TestSonic2CNZBossCollision,TestCNZBossArtAndAnimation,TestCNZBossRomArtMappings" "-DfailIfNoTests=false" test`
+    completed the focused Obj51 collision/art coverage successfully.
 
 ## 2026-07-01 - S2 round 22 integrated verification after OOZ2 advance
 
