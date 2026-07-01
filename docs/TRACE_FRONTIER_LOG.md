@@ -30411,3 +30411,43 @@ Verification:
 - Focused target: `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test` exited 1 with the improved expected-red frontier above.
 - OOZ1 preservation: `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test` exited 0.
 - S2 oil preservation: `mvn "-Dtest=com.openggf.tests.TestOilSurfaceManager" test` exited 0.
+
+### 2026-07-01 -- S2 ARZ2 round 23 Obj37 owner allocation
+
+Baseline on `bugfix/ai-s2-arz2-round23-next` from `next` at `3affd82b4`:
+`TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` failed at f2016 / 753
+errors, first field `obj_extra_s21_x` (`expected absent`, actual `0x1433`).
+The f2016 context showed ROM Obj37 in slot `$21` at `$1432,$0538`, while the
+engine treated slot `$21` as a below-owner child at the spawn point and treated
+slot `$29` as the owner with the same-frame `Obj37_Main` step.
+
+Root fixed: the deferred S2 lost-ring owner reservation skipped slots recorded
+in `slotsFreedDuringObjectPass`. That over-modeled the pending-spawn hazard:
+S2 `HurtCharacter` calls `AllocateObject` at the hurt instant, so slots already
+deleted earlier in the same `ExecuteObjects` pass are visible to the ROM's
+first-empty scan. Reserving the owner immediately already prevents later same-
+pass deletes from stealing the owner slot. The scan now uses the live allocator
+state directly, matching `AllocateObject` and the subsequent `Obj37_Init` owner
+fall-through/velocity alternation (`docs/s2disasm/s2.asm:33681-33695,
+85444-85461,25125-25209`).
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f2016 / 753 errors
+  (`obj_extra_s21_x` expected absent, actual `0x1433`) -> f2142 / 717 errors
+  (`obj_extra_s29_x` expected absent, actual `0x1490`).
+- New owner is a later Obj37 slot/collection mismatch near f2142; the f2016
+  owner slot now gets the ROM same-pass object movement step.
+
+Verification:
+- `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2LostRingOwnerRunsObjectStepAtRomFrame2016" "-DfailIfNoTests=false" test`
+  exited 0; the new one-frame oracle passes.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 with the improved f2142 / 717 frontier above.
+- `mvn "-Dtest=com.openggf.level.rings.TestLostRingObjectInstance,com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2LostRingOwnerRunsObjectStepAtRomFrame2016" "-DfailIfNoTests=false" test`
+  exited 0; MSE also printed the expected-red ARZ2 target report at f2142.
+- `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle" "-DfailIfNoTests=false" test`
+  exited 0; MSE also printed the expected-red ARZ2 target report at f2142.
+- `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 0; MSE also printed the expected-red ARZ2 target report at f2142.
+- `mvn "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+  exited 0; MSE also printed the expected-red ARZ2 target report at f2142.
