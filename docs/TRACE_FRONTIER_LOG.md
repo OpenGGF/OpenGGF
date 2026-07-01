@@ -6,17 +6,74 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after OOZ1 round 21 and MTZ3 round 20
+Current branch-local S2 state after ARZ2 and OOZ1 round 21 plus MTZ3 round 20
 integration: the S2 sweep remains 14 green / 5 expected-red. ARZ2 advances to
-f1998 / 817
-(`obj_s17_slot` expected `0x17`, actual `0x35`) after S2 object unloads consume
-the previous `ObjectsManager` coarse-camera latch and fixed Obj08 skid dust runs
-between dynamic-object frees and placement loading; OOZ1 advances to f9342 /
-353 (`y` expected `0x04CA`, actual `0x04C0`) after Obj4A keeps its ROM
-init-facing direction for the f9164 Octus bullet/Tails hurt touch; CNZ2 remains
-parked at f9487 / 288; MTZ3 advances to f13054 / 367 (`x_speed` expected
-`0x0091`, actual `-0091`) after Obj53 defers broken-orb parent-count decrement
-through the ROM burst routine; and OOZ2 remains f9307 / 430.
+f2016 / 753 (`obj_extra_s21_x` expected absent, actual `0x1433`) after
+backward post-camera placement includes the object group exactly on the
+previous left window edge; OOZ1 advances to f9342 / 353 (`y` expected
+`0x04CA`, actual `0x04C0`) after Obj4A keeps its ROM init-facing direction for
+the f9164 Octus bullet/Tails hurt touch; CNZ2 remains parked at f9487 / 288;
+MTZ3 advances to f13054 / 367 (`x_speed` expected `0x0091`, actual `-0091`)
+after Obj53 defers broken-orb parent-count decrement through the ROM burst
+routine; and OOZ2 remains f9307 / 430.
+
+## 2026-07-01 - S2 ARZ2 backward post-camera placement includes prior left edge
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round21-next` /
+  `bugfix/ai-s2-arz2-round21-next`, based on campaign `next` head `80bff7c7f`
+  with ARZ2 f1998 and OOZ1 f9164 already integrated.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=s2.gen" test`
+  reproduced ARZ2 f1998 / 817 errors (`obj_s17_slot` expected `0x17`,
+  actual `0x35`).
+- Triage/evidence: frame-window occupancy showed the ROM loading the backward
+  streamed `$1400` Obj2C/layer-switcher/monitor cluster into slots 44-46 at
+  f1992, while the engine deferred that exact-left-edge group until f1993 after
+  Obj8E freed slot 23. That let the leaf generator occupy slot 23 before the
+  later fixed Obj08 skid-dust allocation. S2 `ObjectsManager_GoingBackward`
+  scans previous object records and stops only when the previous record is not
+  greater than the new left edge (`docs/s2disasm/s2.asm:33050-33067`), so a
+  post-camera catch-up from the prior left edge to the new left edge must include
+  objects equal to the prior edge.
+- Fix: `ObjectPlacementController.extendForPostCamera` now includes
+  `x_pos == oldWindowStart` in the backward catch-up gap. No trace data is
+  written into engine state, and the rule is a placement-window boundary rule,
+  not an ARZ/route/frame carve-out.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f2016 / 753 errors. The new first mismatch is
+  `obj_extra_s21_x` expected absent, actual `0x1433`.
+- Verification:
+  - Focused oracle:
+    `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BackwardPostCameraCatchupIncludesOldLeftEdgeClusterAtFrame1992" "-Ds2.rom.path=s2.gen" test`
+    passed.
+  - Target trace:
+    `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=s2.gen" test`
+    exited 1 as expected-red at ARZ2 f2016 / 753.
+  - Same-game S2 guards: EHZ1 and WFZ passed in the bundled guard run; SCZ
+    initially hit a local `lwjgl.dll` native-loading setup error before replay
+    execution, then passed when rerun alone.
+  - Shared-code preservation: S1 GHZ1 trace passed. S3K AIZ trace remains
+    pre-existing red at f8941 / 1160 (`camera_y` expected `0x02C1`, actual
+    `0x02B9`), outside placement; the S3K AIZ skip, bootstrap resolver, level
+    loading, and decoding utility guard set passed.
+  - Conductor focused merge guard:
+    `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BackwardPostCameraCatchupIncludesOldLeftEdgeClusterAtFrame1992,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" test`
+    completed with the ARZ2 oracle green, rewind coverage green, and ARZ2
+    expected-red at f2016 / 753.
+  - Conductor S2 sweep:
+    `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces: 14 green, 5 expected-red. Red frontiers are ARZ2
+    f2016 / 753, CNZ2 f9487 / 288, MTZ3 f13054 / 367, OOZ1 f9342 / 353, and
+    OOZ2 f9307 / 430.
+  - Conductor S1 guard:
+    `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 29/29 S1 trace replays green, with only the known S1 mapping
+    warnings.
+  - Conductor S3K guard:
+    `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    completed 68 checks: 66 green plus the two known AIZ expected-reds,
+    complete-run f1095 / 4319 and AIZ f8941 / 1160.
 
 ## 2026-07-01 - S2 OOZ1 Octus init-facing bullet advances f9164 to f9342
 
