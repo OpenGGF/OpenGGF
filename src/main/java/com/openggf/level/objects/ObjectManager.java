@@ -1625,7 +1625,26 @@ public class ObjectManager {
 
     public <T extends ObjectInstance> T createDynamicObject(Supplier<T> factory) {
         return ObjectConstructionContext.construct(objectServices, () -> {
-            T object = factory.get();
+            int reservedSlot = allocateSlot();
+            if (reservedSlot < 0) {
+                return null;
+            }
+            T object;
+            try {
+                object = factory.get();
+            } catch (RuntimeException | Error ex) {
+                releaseSlot(reservedSlot);
+                throw ex;
+            }
+            if (object == null) {
+                releaseSlot(reservedSlot);
+                return null;
+            }
+            if (object instanceof AbstractObjectInstance aoi && aoi.getSlotIndex() < 0) {
+                aoi.setSlotIndex(reservedSlot);
+            } else {
+                releaseSlot(reservedSlot);
+            }
             addDynamicObject(object);
             return object;
         });

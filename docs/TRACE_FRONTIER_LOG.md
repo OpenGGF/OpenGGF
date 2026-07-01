@@ -6,16 +6,62 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2/OOZ1/MTZ3 round 20 integration: the S2
+Current branch-local S2 state after ARZ2/OOZ1/MTZ3 round 21 integration: the S2
 sweep remains 14 green / 5 expected-red. ARZ2 advances to f1998 / 817
 (`obj_s17_slot` expected `0x17`, actual `0x35`) after S2 object unloads consume
 the previous `ObjectsManager` coarse-camera latch and fixed Obj08 skid dust runs
 between dynamic-object frees and placement loading; OOZ1 advances to f9164 /
 355 (`tails_x_speed` expected `0x0200`, actual `-0600`) after Obj26 rejects the
 expired Obj3D launcher residue roll contact; CNZ2 remains parked at f9487 /
-288; MTZ3 advances to f13054 / 367 (`x_speed` expected `0x0091`, actual
-`-0091`) after Obj53 defers broken-orb parent-count decrement through the ROM
-burst routine; and OOZ2 remains f9307 / 430.
+288; MTZ3 advances to f13336 / 352 (`x_speed` expected `0x0200`, actual
+`-0200`) after dynamic Obj54 construction reserves its ROM SST slot before
+spawning the Obj54 laser shooter and Obj53 shield orbs; and OOZ2 remains f9307 /
+430.
+
+## 2026-07-01 - S2 MTZ3 Obj54 slot reservation advances f13054 to f13336
+
+- Worktree/branch: `.worktrees/ai-s2-mtz3-round21-next` /
+  `bugfix/ai-s2-mtz3-round21-next`, based on campaign `next` head
+  `5d0d9bc4d` after MTZ3 f13054 integration.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced MTZ3 f13054 / 367 errors (`x_speed` expected `0x0091`, actual
+  `-0091`).
+- Triage/evidence: the engine had Obj53/Obj54 children in lower slots and the
+  Obj54 boss body at slot 26, causing the shared touch loop to see a later boss
+  source than the ROM. A read-only BizHawk PC probe launched only through
+  `tools\bizhawk\run_bizhawk_lua.bat` printed
+  `Mode:    no-audio config + fast no-render Lua wrapper` and showed ROM
+  `Touch_ChkValue` at BK2 frame 39218 / VFC 12972 hitting slot 20 Obj54
+  (`routine=00`, `collision_flags=0F`, `x=2B32`, `y=04A2`) before later Obj53
+  slots, with the next Sonic sample at `x_vel=0091,y_vel=FB20`. ROM Obj54
+  already occupies `a0` when `Obj54_Init` calls `AllocateObject` for the laser
+  shooter and shield objects, and Obj53 then uses `a0` for its first orb before
+  allocating the remaining children (`docs/s2disasm/s2.asm:67224-67240,
+  67782-67808`). S2 `Touch_Loop` / `Touch_Boss_Loop` scans SST order and exits
+  on the first collision (`docs/s2disasm/s2.asm:85048-85058,85191-85201`).
+- Fix: `ObjectManager.createDynamicObject` now reserves the dynamic object slot
+  before invoking the factory and assigns that reserved slot to a newly
+  constructed `AbstractObjectInstance`, releasing the slot on null/failure or
+  when the object already owns a slot. This gives parent constructors the same
+  slot-before-child allocation order as the ROM without trace hydration or a
+  zone/frame carve-out.
+- Result:
+  `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f13336 / 352 errors. The new first mismatch is `x_speed`
+  expected `0x0200`, actual `-0200`.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+    exited 1 as expected-red at MTZ3 f13336 / 352.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+    exited 0 for MTZ1 and MTZ2 preservation (2 tests, 0 failures/errors).
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestObjectPlacementManager,com.openggf.level.objects.TestObjectManagerCounterBasedDynamicUnload,com.openggf.level.objects.TestTouchResponseManager" "-DfailIfNoTests=false" test`
+    exited 0 (71 tests, 0 failures/errors).
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" test`
+    exited 0 (1 test, 0 failures/errors).
+  - A wider S2/S1/S3K trace guard attempt was blocked locally before useful
+    cross-game signal by LWJGL native loading (`Failed to locate library:
+    lwjgl.dll`) in the GL-backed trace setup.
 
 ## 2026-07-01 - S2 ARZ2 Obj82 coarse-camera and Obj08 dust order advances f1993 to f1998
 
