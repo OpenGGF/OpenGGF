@@ -1814,11 +1814,11 @@ public class ObjectManager {
     /**
      * Registers a spilled lost-ring object (ROM Obj37) into the dynamic-object exec
      * loop on a slot that was <em>already reserved</em> by the caller via
-     * {@link #allocateSlotAfter(int)}.
+     * {@link #allocateDynamicSlot()} or {@link #allocateSlotAfter(int)}.
      * <p>
      * Unlike {@link #addDynamicObjectAtSlot}, this does NOT re-allocate or
      * mark-used the slot — {@code RingManager.LostRingPool} reserves the slot
-     * up-front through {@code allocateSlotAfter} so the legacy {@code LostRing[]}
+     * up-front so the legacy {@code LostRing[]}
      * twin and the object share the same slot during the parallel cutover stage
      * (total slot consumption unchanged from today).
      * <p>
@@ -1834,7 +1834,7 @@ public class ObjectManager {
             return;
         }
         ring.setServices(objectServices);
-        // Slot is already reserved via allocateSlotAfter — do NOT re-allocate.
+        // Slot is already reserved by RingManager — do NOT re-allocate.
         ring.setSlotIndex(reservedSlot);
         dynamicObjects.add(ring);
         if (updating && isManagedDynamicSlot(reservedSlot)) {
@@ -2186,6 +2186,10 @@ public class ObjectManager {
 
     public boolean preallocatesLostRingOwnerSlot() {
         return slotLayout.preallocatesLostRingOwnerSlot();
+    }
+
+    public boolean lostRingRemainderAllocatesAfterOwnerSlot() {
+        return slotLayout.lostRingRemainderAllocatesAfterOwnerSlot();
     }
 
     /**

@@ -3251,6 +3251,40 @@ branch advances f9361 -> f9405.
 
 ---
 
+## P79 -- Obj37 post-owner ring allocation is S2 plain AllocateObject, not S3K after-current
+
+**Pattern.** S2 lost-ring spills have a preallocated Obj37 owner slot, but only
+ring 0 uses that owner. Every remaining ring in `Obj37_Init` calls plain
+`AllocateObject` and takes the lowest free SST slot. Do not reuse S3K's
+`AllocateObjectAfterCurrent` chain for the S2 remainder.
+
+**Engine symptom.** The first hurt frame shows correct player hurt state and a
+reasonable lost-ring count, but the ring slots are shifted upward or collide
+with debris/child-object holes. In ARZ2 round 15, the engine put post-owner
+Obj37 rings after the owner/previous ring, while ROM filled lower holes around
+the Grounder Obj8F/Obj90 debris cluster.
+
+**What to check / fix.**
+1. Distinguish owner preallocation from the allocation routine used by the
+   remaining rings. S2 needs owner slot plus plain lowest-free allocation.
+2. Keep this keyed to the slot-layout/object-allocation model, not to a trace
+   route or zone name.
+3. Cross-check S3K separately: S3K `Obj_Bouncing_Ring` uses
+   `AllocateObjectAfterCurrent` for its post-owner remainder and must keep that
+   behavior.
+
+**ROM citation.** S2 `HurtCharacter` preallocates the first Obj37 owner with
+`AllocateObject` (`docs/s2disasm/s2.asm:85444-85461`). S2 `Obj37_Init` starts
+with `movea.l a0,a1` for ring 0 and then calls plain `AllocateObject` in the
+loop (`docs/s2disasm/s2.asm:25125-25146`). S3K analog:
+`docs/skdisasm/sonic3k.asm:21065-21088,35549-35591`.
+
+**Originating commit.** `<pending>` S2 ARZ2 Obj37 allocation split:
+`TestS2Arz2LevelSelectTraceReplay` stays at f1717 but improves 1420 -> 980
+errors.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
