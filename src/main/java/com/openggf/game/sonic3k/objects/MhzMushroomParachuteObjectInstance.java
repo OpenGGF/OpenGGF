@@ -13,6 +13,8 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -45,6 +47,7 @@ public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInst
     private static final int LONG_RELEASE_COOLDOWN = 0x3C;
     private static final int ROLL_X_RADIUS = 7;
     private static final int ROLL_Y_RADIUS = 0x0E;
+    private static final int WALL_SENSOR_X_RADIUS = 0x20;
     private static final int[] CARRIED_PLAYER_FRAMES = {
             0xE4, 0xE5, 0xE6, 0xE6, 0xE7, 0xE6, 0xE6, 0xE5,
             0xE4, 0xE5, 0xE6, 0xE6, 0xE7, 0xE6, 0xE6, 0xE5
@@ -252,6 +255,24 @@ public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInst
             motion.yVel += Y_VELOCITY_STEP;
         }
         SubpixelMotion.moveSprite2(motion);
+        resolveWallCollision();
+    }
+
+    /**
+     * Port of ROM {@code sub_3F7AE}: two horizontal terrain sensors at the parachute's
+     * left/right x_radius ($20) that push x_pos out of a wall. Runs after
+     * {@link SubpixelMotion#moveSprite2} applies the frame's velocity, per
+     * {@code loc_3F51C} (sub_3F7E2 -> MoveSprite2 -> sub_3F7AE -> sub_3F5AA).
+     */
+    private void resolveWallCollision() {
+        TerrainCheckResult leftWall = ObjectTerrainUtils.checkLeftWallDist(motion.x - WALL_SENSOR_X_RADIUS, motion.y);
+        if (leftWall.foundSurface() && leftWall.distance() < 0) {
+            motion.x += leftWall.distance();
+        }
+        TerrainCheckResult rightWall = ObjectTerrainUtils.checkRightWallDist(motion.x + WALL_SENSOR_X_RADIUS, motion.y);
+        if (rightWall.foundSurface() && rightWall.distance() < 0) {
+            motion.x += rightWall.distance();
+        }
     }
 
     private void storeCarriedVelocity() {
@@ -283,12 +304,14 @@ public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInst
     private void updateAngle() {
         int next = angle;
         if (grabbedPlayer != null && grabbedPlayer.isLeftPressed() && next != 0x80) {
-            if ((byte) next >= 0) {
+            // ROM sub_3F7E2 (loc_3F800): force the angle non-negative before +2.
+            if ((byte) next < 0) {
                 next = (-next) & 0xFF;
             }
             next = (next + 2) & 0xFF;
         } else if (grabbedPlayer != null && grabbedPlayer.isRightPressed() && next != 0) {
-            if ((byte) next < 0) {
+            // ROM sub_3F7E2 (loc_3F814): force the angle non-positive before +2.
+            if ((byte) next >= 0) {
                 next = (-next) & 0xFF;
             }
             next = (next + 2) & 0xFF;
@@ -299,6 +322,16 @@ public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInst
             }
         }
         angle = next;
+    }
+
+    /** Test seam: runs one steering tick without the full falling-frame update. */
+    void tickSteeringForTest() {
+        updateAngle();
+    }
+
+    /** Test seam: reads the current steering angle byte. */
+    int angleForTest() {
+        return angle;
     }
 
     private void snapGrabbedPlayersToParachute() {
