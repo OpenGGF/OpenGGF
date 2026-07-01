@@ -80,6 +80,38 @@ class TestBuildIdentity {
     }
 
     @Test
+    void unresolvedMavenPlaceholdersDoNotLeakIntoDisplayVersion() {
+        String properties = """
+                app.version=0.6.prerelease
+                app.baseVersion=0.6.prerelease
+                app.commit=${openggf.git.commit}
+                app.dirty=${openggf.git.dirty}
+                """;
+
+        BuildIdentity identity = AppVersion.loadIdentity(new ByteArrayInputStream(properties.getBytes(StandardCharsets.UTF_8)),
+                baseVersion -> new BuildIdentity(baseVersion, "", false));
+
+        assertEquals(new BuildIdentity("0.6.prerelease", "", false), identity);
+        assertEquals("0.6.prerelease-unknown", identity.displayVersion());
+    }
+
+    @Test
+    void unresolvedMavenCommitUsesRuntimeGitIdentityWhenAvailable() {
+        String properties = """
+                app.version=0.6.prerelease
+                app.baseVersion=0.6.prerelease
+                app.commit=${openggf.git.commit}
+                app.dirty=${openggf.git.dirty}
+                """;
+
+        BuildIdentity identity = AppVersion.loadIdentity(new ByteArrayInputStream(properties.getBytes(StandardCharsets.UTF_8)),
+                baseVersion -> new BuildIdentity(baseVersion, "abc123def", true));
+
+        assertEquals(new BuildIdentity("0.6.prerelease", "abc123def", true), identity);
+        assertEquals("0.6.prerelease-abc123def-dirty", identity.displayVersion());
+    }
+
+    @Test
     void appVersionGetReturnsLoadedIdentityDisplay() {
         assertEquals(AppVersion.identity().displayVersion(), AppVersion.get());
     }
