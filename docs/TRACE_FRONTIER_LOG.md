@@ -38,6 +38,11 @@ the boss-lowered oil plane.
   exited 0 with `maven.test.failure.ignore=true`: 68 checks, 66 green and the
   two known expected-red AIZ frontiers unchanged (`TestS3kAizCompleteRunTraceReplay`
   f1095 / 4319 `x_speed`; `TestS3kAizTraceReplay` f8941 / 1160 `camera_y`).
+- Post-`origin/develop` sync: campaign head `6ec344281` merged current
+  `origin/develop` (`e4f221c50`) and reran the same preservation gates. The S2
+  sweep stayed 15 green / 4 expected-red with identical ARZ2/CNZ2/MTZ3/OOZ2
+  frontiers; S1 stayed 29/29 green; S3K stayed 66 green plus the same two known
+  expected-red AIZ frontiers.
 
 ## 2026-07-01 - S2 CNZ2 hurt reset clears roll-jump and advances f9733 to f9946
 
