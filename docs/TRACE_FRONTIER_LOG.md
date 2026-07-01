@@ -12,6 +12,51 @@ f1760 / 916 to f1820 / 912 (`obj_extra_s47_x` expected absent, actual
 `0x1442`). CNZ2 remains parked at f9487 / 288; active non-CNZ targets are
 ARZ2 f1820, MTZ3 f12897, OOZ1 f7671, and OOZ2 f9307.
 
+## 2026-07-01 - S2 round 18 integrated verification after ARZ2 advance
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next` at `40599c292`, after merging
+  `bugfix/ai-s2-arz2-round18-next`.
+- Integrated change:
+  - ARZ2 Obj8F/Obj90 Grounder child render-flag caching now uses S2
+    `BuildSprites_ApproxYCheck`'s +/-32px Y band for sprites without explicit
+    render height (`docs/s2disasm/s2.asm:30569-30588,73489-73494`), advancing
+    ARZ2 from f1760 / 916 to f1820 / 912.
+- Focused integrated verification:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2GrounderWallUsesApproximateBuildSpritesYBandBeforeDelete" "-DfailIfNoTests=false" test`
+  completed with the oracle passing 1 / 1 and ARZ2 expected-red at f1820 /
+  912 (`obj_extra_s47_x` expected absent, actual `0x1442`).
+- Integrated S2 sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  completed 19 traces: 14 green, 5 expected-red. Red frontiers are ARZ2 f1820
+  / 912, CNZ2 f9487 / 288, MTZ3 f12897 / 490, OOZ1 f7671 / 395, and OOZ2
+  f9307 / 430. No previously green S2 trace regressed.
+- S1 guard:
+  `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  passed 29 / 29 S1 traces.
+- S3K guard:
+  `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+  completed 68 checks. Bootstrap, decoding, level loading, and AIZ skip
+  headless checks passed; expected-red AIZ traces remained unchanged at
+  complete-run f1095 / 4319 and AIZ f8941 / 1160.
+- OOZ2 round 18 no-change:
+  `.worktrees/ai-s2-ooz2-round18-next` reproduced f9307 / 430 and made no
+  commit. Temporary probes showed Sonic is attacking at the failing pass, but
+  Obj55's sampled Y is one pixel lower than the ROM-side touch edge, causing
+  the boss bounce to occur one frame late. A candidate delaying Obj55 hit-status
+  visibility to the routine tail did not move the frontier and was reverted.
+  Relevant ROM paths: `docs/s2disasm/s2.asm:68208-68380,61242-61294,
+  85164-85290`.
+- CNZ2 parked diagnostic:
+  A temporary fast BizHawk PC-execute probe using `run_bizhawk_lua.bat` over
+  BK2 frames 21968..21972 showed the ROM f9487 hurt comes from normal
+  `Touch_ChkHurt` against Obj51 slot 26 (`collision_flags=$98`) at
+  `x=$29A1,y=$067F`; `Boss_CollisionRoutine` is 0, so the special
+  `BossCollision_CNZ` electric helper is not the cause. The engine's matching
+  CNZ boss ball is at approximately `x=$298A,y=$0678`, so the current frontier
+  is an upstream Obj51 parent/ball position or phase drift, not a generic hurt
+  or collision-category issue.
+
 ## 2026-07-01 - S2 ARZ2 Grounder debris render Y band advances f1760 to f1820
 
 - Worktree/branch: `.worktrees/ai-s2-arz2-round18-next` /
