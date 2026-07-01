@@ -209,7 +209,7 @@ public class OilSurfaceManager {
             // sub-pixel fraction is preserved. Use the preserve-subpixel setter
             // so engine sub-pixel accumulators stay aligned with ROM.
             int targetY = oilY - state.submersion - player.getYRadius();
-            player.setAir(false);
+            clearAirForOilSupport(player);
             player.setOnObject(true);
             latchOilSupport(player);
             player.setCentreYPreserveSubpixel((short) targetY);
@@ -225,7 +225,7 @@ public class OilSurfaceManager {
             // ROM: PlatformObject_SingleCharacter does the landing check
             if (shouldLandOnOil(player, state)) {
                 state.standingOnOil = true;
-                player.setAir(false);
+                clearAirForOilSupport(player);
                 player.setOnObject(true);
                 latchOilSupport(player);
 
@@ -304,6 +304,19 @@ public class OilSurfaceManager {
             return false;  // ROM blo -- d0 < -16
         }
         return true;
+    }
+
+    private void clearAirForOilSupport(AbstractPlayableSprite player) {
+        if (player.isHurt()) {
+            // Obj07 support clears Status_InAir during object processing, but
+            // S2 Obj02_Hurt still owns the next tick's Tails_HurtStop recovery:
+            // after Tails_DoLevelCollision sees Status_InAir clear, it zeroes
+            // y_vel/x_vel/inertia and returns to routine 2
+            // (docs/s2disasm/s2.asm:41063-41118).
+            player.setAirAfterObjectHurtLanding();
+        } else {
+            player.setAir(false);
+        }
     }
 
     /**

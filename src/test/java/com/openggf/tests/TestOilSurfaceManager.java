@@ -126,6 +126,30 @@ public class TestOilSurfaceManager {
                 "Obj07 is manager-hosted, so its ROM interact target is represented by a synthetic slot");
     }
 
+    @Test
+    public void hurtLandingOnOilKeepsRoutineFourUntilHurtStop() {
+        int centreY = OIL_SURFACE_Y + 1 - sprite.getYRadius();
+        sprite.setCentreY((short) centreY);
+        sprite.setAir(true);
+        sprite.setOnObject(false);
+        sprite.setJumping(false);
+        sprite.setHurt(true);
+        sprite.setXSpeed((short) 0x0200);
+        sprite.setYSpeed((short) 0x0200);
+        sprite.setGSpeed((short) 0);
+
+        manager.update(sprite);
+
+        assertTrue(sprite.isHurt(),
+                "Obj07 landing clears Status_InAir, but S2 Tails_HurtStop owns routine-4 recovery next frame");
+        assertFalse(sprite.getAir());
+        assertTrue(sprite.isOnObject());
+        assertEquals(0x0200, sprite.getXSpeed() & 0xFFFF);
+        assertEquals(0x0200, sprite.getGSpeed() & 0xFFFF,
+                "RideObject_SetRide copies x_vel to inertia on the landing frame before HurtStop zeroes it");
+        assertEquals(0, sprite.getYSpeed());
+    }
+
     private void landOnOilSurface() {
         int centreY = OIL_SURFACE_Y + 1 - sprite.getYRadius();
         sprite.setCentreY((short) centreY);
