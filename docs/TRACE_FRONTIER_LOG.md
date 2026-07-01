@@ -6,6 +6,61 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 HTZ2 Obj52 lava-ball pair init cadence (f8530 -> f9150)
+
+- Worktree/branch: `.worktrees/ai-s2-htz2-round13-next` /
+  `bugfix/ai-s2-htz2-round13-next`, based on campaign head `f28b17057`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  Result before the fix: expected-red HTZ2 f8530 / 218
+  (`g_speed` expected `0x01D2`, actual `0x0000`).
+- Triage/evidence: the f8530 context showed Sonic still normal/rolling in ROM
+  with rings=97, while the engine had already entered hurt routine `$04`,
+  zeroed rings, and spawned lost rings. The nearby object diagnostics showed
+  ROM slot 20 lava ball at `$302C,$050E` on the still-normal row, while the
+  engine touch pass had advanced slot 20 to an overlapping lava-ball position
+  around `$3025,$0501` one player slot too soon. S2 `TouchResponse` reads
+  object `collision_flags`, `x_pos`, and `y_pos` directly from dynamic object
+  RAM (`docs/s2disasm/s2.asm:85036-85096`), so the false hurt was driven by the
+  Obj52 lava ball's object-state cadence rather than trace hydration or a route
+  carve-out.
+- Fix: `Sonic2HTZBossInstance` now mirrors `Obj52_CreateLavaBall` by allocating
+  one subtype-6 child; that child's routine-0 initializer reuses its own SST
+  slot for ball 0 and then allocates ball 1 from the same coordinates. Ball 0
+  therefore initializes collision/velocity but does not move on the spawn
+  frame, while ball 1 is initialized in time to move later in the same object
+  pass if its slot is still ahead. This matches `Obj52_CreateLavaBall`,
+  `loc_2FF78` / `loc_2FF94`, and `Obj52_LavaBall_Move`
+  (`docs/s2disasm/s2.asm:64306-64323,64429-64469,64504-64524`).
+- Result:
+  `TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace`: f8530 / 218 errors
+  (`g_speed` expected `0x01D2`, actual `0x0000`) -> f9150 / 121 errors
+  (`camera_x` expected `0x2F5E`, actual `0x2F60`). The new owner is a later
+  camera lock / boss-arena progression mismatch after the false lava-ball hurt
+  is removed.
+- Verification:
+  - `mvn clean "-Dtest=com.openggf.tests.TestHTZBossChildObjects" "-DfailIfNoTests=false" test`
+    passed 7 / 7 focused HTZ boss child tests, including the new lava-ball
+    routine-0 cadence regression.
+  - `mvn "-Dtest=com.openggf.game.rewind.TestS2HtzBossGraphRewind,com.openggf.tests.TestHTZBossChildObjects" "-DfailIfNoTests=false" test`
+    exited 0. The specific surefire XML reports show `TestS2HtzBossGraphRewind`
+    passed 4 / 4 and `TestHTZBossChildObjects` passed 7 / 7 after restoring the
+    rewind-captured `fromLeftSide` scalar field.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 at the advanced HTZ2 expected-red frontier f9150 / 121.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces. The 13 green traces stayed green; the six
+    expected-red frontiers are ARZ2 f1698 / 1966, CNZ2 f9487 / 288, HTZ2
+    f9150 / 121, MTZ3 f12146 / 650, OOZ1 f5958 / 665, and OOZ2 f9307 / 444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn -Ptrace-replay "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests. The repeated S1 mapping warning at
+    `0xe8df` remains the known pre-existing warning.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    completed 68 S3K smoke/AIZ checks. Bootstrap, decoding, level-loading, and
+    AIZ skip headless checks passed; the two AIZ trace replays stayed at the
+    existing expected-red frontiers: complete-run f1095 / 4319 and AIZ f8941 /
+    1160.
+
 ## 2026-07-01 - S2 campaign integrated sweep after OOZ1 round 12 merge
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /

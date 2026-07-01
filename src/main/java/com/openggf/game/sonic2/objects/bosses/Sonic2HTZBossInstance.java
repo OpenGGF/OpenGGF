@@ -500,27 +500,12 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
             return;
         }
 
-        boolean leftSide = (getCustomFlag(OBJOFF_SIDE_FLAG) == 0);
-
-        // Spawn left ball
-        HTZBossLavaBall leftBall = spawnChild(() -> new HTZBossLavaBall(
-                this,
-                state.x,
-                state.y,
-                true,  // Left ball
-                leftSide
-        ));
-        childComponents.add(leftBall);
-
-        // Spawn right ball
-        HTZBossLavaBall rightBall = spawnChild(() -> new HTZBossLavaBall(
-                this,
-                state.x,
-                state.y,
-                false, // Right ball
-                leftSide
-        ));
-        childComponents.add(rightBall);
+        // ROM Obj52_CreateLavaBall allocates one subtype-6 child. That child
+        // runs loc_2FF78 in its own slot, initializes itself as ball 0, then
+        // allocates ball 1 from the same starting coordinates.
+        HTZBossLavaBall firstBall = spawnFreeChild(() ->
+                HTZBossLavaBall.createInitialPairSpawner(this, state.x, state.y));
+        childComponents.add(firstBall);
     }
 
     /**
