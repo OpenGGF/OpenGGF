@@ -2,15 +2,15 @@
 
 Use this guide when adding or moving a Sonic 1, Sonic 2, or Sonic 3&K behavior divergence. The goal is to choose the smallest accurate owner instead of adding another broad feature flag.
 
-This guide describes the target ownership model for the per-game rule refactor. Until typed `GameRules` records land in `src/main`, the current bridge for game-wide shared runtime gates is still `PhysicsFeatureSet`; use it sparingly and avoid adding broad new runtime users. Provider, profile, registry, zone, and object-local ownership rules apply now.
+This guide describes the ownership model for per-game rule gates. Game-wide shared runtime gates should use the narrowest typed `GameRules` record. `PhysicsFeatureSet` remains as the legacy constant source and bridge fallback while older call sites are migrated; do not add new broad runtime users. Provider, profile, registry, zone, and object-local ownership rules apply now.
 
 ## Decision Tree
 
 1. If the behavior is data, art, mappings, DPLC, PLC, animation script, palette data, or ROM asset availability, use the existing data loader, art provider, donor capability, or ROM offset provider. Do not add a `GameRules` field.
 2. If the behavior is zone-local or event-local, use `ZoneFeatureProvider`, `ZoneRuntimeState`, zone event handlers, or an existing runtime registry. Do not add a game-wide rule unless the same ROM rule applies across the game.
 3. If the behavior belongs to one object family, use an object profile, object-local hook, or shared object execution profile. Do not add a game-wide rule for one object family.
-4. If the behavior is character ability availability or cross-game donation, use current `DonorCapabilities` plus the existing `PhysicsFeatureSet` bridge until `PlayerCapabilityRules` lands in this refactor. The target owner is `PlayerCapabilityRules` or `DonorCapabilities`, as appropriate. Cross-game donation may only donate explicitly listed capability fields.
-5. If the behavior is shared runtime logic that differs by game across broad systems, target the narrowest `GameRules` record consumed by that system. Until those records exist in this branch, use the existing `PhysicsFeatureSet` bridge only for the same game-wide shared-runtime cases:
+4. If the behavior is character ability availability or cross-game donation, use `PlayerCapabilityRules` or current `DonorCapabilities`, as appropriate. Cross-game donation may only donate explicitly listed capability fields.
+5. If the behavior is shared runtime logic that differs by game across broad systems, target the narrowest `GameRules` record consumed by that system:
    - `PlayerMovementRules`: movement, roll, slope, jump, control, and boundary movement rules.
    - `CollisionRules`: collision model, terrain probe, wall-push, platform contact, and collision ordering.
    - `PlayerAnimationRules`: animation-state divergences tied to shared player animation logic.

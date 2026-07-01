@@ -1,0 +1,27 @@
+# Remaining intentional bridge-era PhysicsFeatureSet users outside the canonical owner classes.
+# New shared runtime gates should use the narrowest GameRules record, provider, profile, or registry instead.
+src/main/java/com/openggf/LevelFrameContext.java
+src/main/java/com/openggf/camera/Camera.java
+src/main/java/com/openggf/debug/DebugRenderer.java
+src/main/java/com/openggf/game/CrossGameFeatureProvider.java
+src/main/java/com/openggf/game/sonic2/objects/SignpostObjectInstance.java
+src/main/java/com/openggf/level/LevelManager.java
+src/main/java/com/openggf/level/LevelRenderer.java
+src/main/java/com/openggf/level/objects/AbstractObjectInstance.java
+src/main/java/com/openggf/level/objects/AnimalObjectInstance.java
+src/main/java/com/openggf/level/objects/DefaultPowerUpSpawner.java
+src/main/java/com/openggf/level/objects/ObjectPlacementController.java
+src/main/java/com/openggf/level/objects/ObjectSolidContactController.java
+src/main/java/com/openggf/level/objects/ObjectTouchResponseController.java
+src/main/java/com/openggf/level/rings/LostRingObjectInstance.java
+src/main/java/com/openggf/level/rings/RingManager.java
+src/main/java/com/openggf/physics/CollisionSystem.java
+src/main/java/com/openggf/sprites/animation/ScriptedVelocityAnimationProfile.java
+src/main/java/com/openggf/sprites/managers/PlayableSpriteAnimation.java
+src/main/java/com/openggf/sprites/managers/PlayableSpriteMovement.java
+src/main/java/com/openggf/sprites/managers/SpriteManager.java
+src/main/java/com/openggf/sprites/playable/AbstractPlayableSprite.java
+src/main/java/com/openggf/sprites/playable/DrowningController.java
+src/main/java/com/openggf/sprites/playable/SidekickCpuController.java
+src/main/java/com/openggf/sprites/playable/TailsRespawnStrategy.java
+src/main/java/com/openggf/timer/timers/SpeedShoesTimer.java

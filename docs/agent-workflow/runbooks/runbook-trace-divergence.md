@@ -41,11 +41,11 @@ From the report, find the first divergent frame and field, then map to the likel
 
 | First divergent field | Likely owner | Files to inspect |
 |-----------------------|--------------|------------------|
-| Player position/speed/angle | Player physics | `com.openggf.sprites.playable.*`, `PhysicsProfile`, current `PhysicsFeatureSet` bridge / target typed `GameRules` |
+| Player position/speed/angle | Player physics | `com.openggf.sprites.playable.*`, `PhysicsProfile`, typed `GameRules` |
 | Position only while on a platform/solid | Object solid contact | `ObjectManager.SolidContacts`, the riding object instance |
 | Ring count / damage spike | Touch response | `ObjectManager.TouchResponses`, badnik instance |
 | Camera | Event / camera | `Sonic{1,2,3k}LevelEventManager`, `Camera` |
-| Sidekick fields | Sidekick rules | current `PhysicsFeatureSet` bridge / target `SidekickCpuRules`, sidekick controller |
+| Sidekick fields | Sidekick rules | `SidekickCpuRules`, sidekick controller |
 | Palette / tile | Palette / layout | `PaletteOwnershipRegistry`, `ZoneLayoutMutationPipeline` |
 | Diverges at frame 0 / before input | Test bootstrap | replay test setup |
 
