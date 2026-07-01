@@ -423,6 +423,9 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                 || !player.getAir()
                 || !player.getRolling()
                 || player.getRollingJump()
+                // Obj3D's release path leaves only the brief nonzero ground inertia visible before
+                // Obj26 samples Sonic's animation; once it is gone, Roll remains non-solid.
+                || player.getGSpeed() == 0
                 || player.getYSpeed() <= 0) {
             return false;
         }

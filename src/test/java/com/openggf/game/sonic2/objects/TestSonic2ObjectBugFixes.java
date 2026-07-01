@@ -1081,6 +1081,39 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void monitorTopLandingRejectsRollAgainAfterOozLauncherResidueEnds() {
+        OOZLauncherObjectInstance.clearActiveLaunchers();
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x28F0, 0x0391, Sonic2ObjectIds.MONITOR, 0x00, 0, false, 0),
+                "Monitor");
+        OOZLauncherObjectInstance launcher = new OOZLauncherObjectInstance(
+                new ObjectSpawn(0x28C0, 0x0370, Sonic2ObjectIds.OOZ_LAUNCHER, 0x00, 0, false, 0),
+                "OOZLauncher");
+        monitor.snapshotPreUpdatePosition();
+        launcher.snapshotPreUpdatePosition();
+        ObjectManager manager = buildObjectManager(monitor, launcher);
+
+        TestablePlayableSprite sonic = ooz1LauncherReleaseMonitorPlayer();
+        sonic.setCentreX((short) 0x28F0);
+        sonic.setCentreY((short) 0x036F);
+        sonic.setXSpeed((short) -0x00F0);
+        sonic.setYSpeed((short) 0x0568);
+        sonic.setGSpeed((short) 0);
+        sonic.endOfTick();
+        sonic.setCentreY((short) 0x0374);
+        sonic.setAnimationId(Sonic2AnimationIds.ROLL.id());
+
+        manager.updateSolidContacts(sonic);
+
+        assertTrue(sonic.getAir(),
+                "OOZ1 f7731: the ROM has returned Sonic's anim byte to Roll before Obj26 samples it, "
+                        + "so the nearby Obj3D fragment must not make SolidObject_Monitor_Sonic solid "
+                        + "(docs/s2disasm/s2.asm:25617-25623; BizHawk probe f7731 anim=02/status=07)");
+        assertEquals(0x0374, sonic.getCentreY() & 0xFFFF);
+        assertEquals(0x0568, sonic.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
     void mtzCogGroundedCpuSideContactWithoutStandingBitReachesRomStopCharacterPath() {
         LevelManager levelManager = mock(LevelManager.class);
         when(levelManager.getFrameCounter()).thenReturn(0x04E7);

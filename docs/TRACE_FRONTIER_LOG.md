@@ -6,12 +6,52 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2 round 19 integration: the S2 sweep
+Current branch-local S2 state after OOZ1 round 20 advancement: the S2 sweep
 remains 14 green / 5 expected-red. ARZ2 advances to f1993 / 842
 (`obj_s12_slot` expected `0x12`, actual `0x34`) after Obj37 lost rings consume
-the ROM-latched render flag before floor probes; OOZ1 is at f7731 / 490 (`y`
-expected `0x0374`, actual `0x036E`); CNZ2 remains parked at f9487 / 288; MTZ3
-remains f12897 / 490; and OOZ2 remains f9307 / 430.
+the ROM-latched render flag before floor probes; OOZ1 advances to f9164 / 355
+(`tails_x_speed` expected `0x0200`, actual `-0600`) after Obj26 rejects the
+expired Obj3D launcher residue roll contact; CNZ2 remains parked at f9487 /
+288; MTZ3 remains f12897 / 490; and OOZ2 remains f9307 / 430.
+
+## 2026-07-01 - S2 OOZ1 Obj26 launcher residue expires before Roll re-sample
+
+- Worktree/branch: `.worktrees/ai-s2-ooz1-round20-next` /
+  `bugfix/ai-s2-ooz1-round20-next`, based on
+  `bugfix/ai-s2-trace-next` at `a1606ea9f`.
+- Baseline reproduction:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace"" test"`
+  reproduced OOZ1 f7731 / 490 errors (`y` expected `0x0374`, actual
+  `0x036E`).
+- Triage/evidence: a read-only BizHawk PC probe launched through
+  `tools\bizhawk\run_bizhawk_lua.bat` confirmed the required wrapper banner
+  `Mode:    no-audio config + fast no-render Lua wrapper`. The ROM samples
+  Obj26 with Sonic `anim=00,status=07,ground_vel=0001` at f7671, but later at
+  f7731 samples `anim=02,status=07,ground_vel=0000`. This keeps the prior
+  active Obj3D launcher residue case while proving the later Roll sample is
+  no longer ROM-visible as Walk. Relevant ROM paths are Obj26
+  `SolidObject_Monitor_Sonic` rejecting Roll, Obj3D release/roll setup, and
+  monitor break requiring Roll (`docs/s2disasm/s2.asm:25617-25623,
+  50963-51021,51165-51170,85278-85302`).
+- Fix: `MonitorObjectInstance` now lets the OOZ launcher residue bridge apply
+  only while the released player still has nonzero ground inertia. When that
+  marker has expired, Roll remains non-solid for Obj26 and Sonic continues
+  airborne/rolling instead of re-landing on the monitor.
+- Result:
+  `TestS2OozLevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f9164 / 355 errors. The new first mismatch is
+  `tails_x_speed` expected `0x0200`, actual `-0600`.
+- Verification:
+  - `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#monitorTopLandingTreatsNearbyOozLauncherRollResidueAsRomWalkAnim+monitorTopLandingRejectsRollAgainAfterOozLauncherResidueEnds"" test"`
+    exited 0 with both selected monitor regression tests passing.
+  - `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes"" test"`
+    exited 0 for the full Sonic 2 object bug-fix class.
+  - Focused OOZ1 trace exited 1 as expected-red at f9164 / 355.
+  - Focused OOZ2 trace exited 1 at f9307 / 430 (`y_speed` expected `-0418`,
+    actual `0x0418`), matching the same command on the unmodified campaign base
+    worktree, so no OOZ2 regression was introduced.
+  - `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"" ""-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard"" test"`
+    exited 0.
 
 ## 2026-07-01 - S2 round 19 integrated verification after ARZ2 advance
 
