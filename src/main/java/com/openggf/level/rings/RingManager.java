@@ -1352,7 +1352,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                             x, y, xVel, yVel,
                             phase, LIFETIME_FRAMES, spillAnimation);
                     objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
-                    if (applyInitialObjectStep) {
+                    if (applyInitialObjectStep && appliesInitialObj37Step(slotIndex, firstReservedSlot)) {
                         ringObject.updateMovement();
                     }
                 }
@@ -1365,6 +1365,15 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
             player.setRingCount(0);
             audioManager.playSfx(GameSound.RING_SPILL);
+        }
+
+        private static boolean appliesInitialObj37Step(int slotIndex, int ownerSlot) {
+            // S2 ARZ2 PC probe: HurtCharacter reserves the owner Obj37 slot (56)
+            // before same-pass lower slots (48,49,54,55) free. Obj37_Init then
+            // allocates child rings into those lower slots, but ExecuteObjects has
+            // already passed them, so only owner-or-later slots run Obj37_Main in
+            // that frame (docs/s2disasm/s2.asm:85444-85461, 25125-25245).
+            return ownerSlot < 0 || slotIndex >= ownerSlot;
         }
 
         private static int phaseOffsetForSlot(ObjectManager objectManager, int slotIndex) {

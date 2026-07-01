@@ -469,6 +469,7 @@ final class ObjectSolidContactController {
             new IdentityHashMap<>(2);
 
     private record ProjectedPreMovementX(int centerX, int subpixel) {}
+    private record ProjectedPreMovementY(int centerY, int relY) {}
 
     ObjectSolidContactController(ObjectManager objectManager) {
         this.objectManager = objectManager;
@@ -2951,6 +2952,15 @@ final class ObjectSolidContactController {
 
         int minRelY = ridingThisPiece ? -16 : 0;
 
+        if (relY < minRelY) {
+            ProjectedPreMovementY projectedPreMovementY = projectedPreMovementYForSolidContact(
+                    player, instance, anchorY, maxTop, minRelY);
+            if (projectedPreMovementY != null) {
+                playerCenterY = projectedPreMovementY.centerY();
+                relY = projectedPreMovementY.relY();
+            }
+        }
+
         if (relY < minRelY || relY >= totalHeight) {
             return null;
         }
@@ -3097,6 +3107,28 @@ final class ObjectSolidContactController {
             return;
         }
         sprite.setSubpixelRaw(projectedPreMovementX.subpixel(), sprite.getYSubpixelRaw());
+    }
+
+    private ProjectedPreMovementY projectedPreMovementYForSolidContact(PlayableEntity player,
+            ObjectInstance instance, int anchorY, int maxTop, int minRelY) {
+        if (postMovement
+                || !(instance instanceof SolidObjectProvider provider)
+                || !provider.projectsPreMovementAirYForSolidContact(player)
+                || !(player instanceof AbstractPlayableSprite sprite)
+                || !player.getAir()
+                || player.getYSpeed() <= 0) {
+            return null;
+        }
+
+        int projectedFullY = ((int) sprite.getCentreY() << 16)
+                | (sprite.getYSubpixelRaw() & 0xFFFF);
+        projectedFullY += (int) player.getYSpeed() << 8;
+        int projectedCenterY = projectedFullY >> 16;
+        int projectedRelY = projectedCenterY - anchorY + 4 + maxTop;
+        if (projectedRelY < minRelY || projectedRelY >= 0x10) {
+            return null;
+        }
+        return new ProjectedPreMovementY(projectedCenterY, projectedRelY);
     }
 
     private int getSolidTopYRadius(PlayableEntity player) {

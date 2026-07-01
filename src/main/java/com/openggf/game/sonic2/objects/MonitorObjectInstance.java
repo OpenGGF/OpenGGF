@@ -8,6 +8,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -400,7 +401,52 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         if (currentlyRidingThisMonitor) {
             return true;
         }
+        if (player.getAnimationId() == Sonic2AnimationIds.ROLL.id()
+                && hasNearbyOozLauncherResidueSource(player)) {
+            // Obj3D's off-screen release clears obj_control/on_object but does
+            // not write anim (docs/s2disasm/s2.asm:51159-51170). In the OOZ1
+            // monitor route, the ROM anim byte has already returned to Walk
+            // before Obj26 samples it, while the engine can still carry Obj3D's
+            // object-written Roll for the same airborne release. Treat only that
+            // live Obj3D release residue as the non-roll anim byte Obj26 sees;
+            // ordinary rolling jumps and LauncherBall captures still use Roll.
+            player.setAnimationId(Sonic2AnimationIds.WALK);
+            return true;
+        }
         return player.getAnimationId() != Sonic2AnimationIds.ROLL.id();
+    }
+
+    private boolean hasNearbyOozLauncherResidueSource(AbstractPlayableSprite player) {
+        if (player == null
+                || player.isObjectControlled()
+                || player.isOnObject()
+                || !player.getAir()
+                || !player.getRolling()
+                || player.getRollingJump()
+                // Obj3D's release path leaves only the brief nonzero ground inertia visible before
+                // Obj26 samples Sonic's animation; once it is gone, Roll remains non-solid.
+                || player.getGSpeed() == 0
+                || player.getYSpeed() <= 0) {
+            return false;
+        }
+
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager == null) {
+            return false;
+        }
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (!(object instanceof OOZLauncherObjectInstance) || object == this) {
+                continue;
+            }
+            int objectDx = Math.abs((object.getX() & 0xFFFF) - (getX() & 0xFFFF));
+            int objectDy = Math.abs((object.getY() & 0xFFFF) - (getY() & 0xFFFF));
+            int playerDx = Math.abs((player.getCentreX() & 0xFFFF) - (getX() & 0xFFFF));
+            int playerDy = Math.abs((player.getCentreY() & 0xFFFF) - (getY() & 0xFFFF));
+            if (objectDx <= 0x80 && objectDy <= 0x80 && playerDx <= 0x80 && playerDy <= 0x80) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -445,6 +491,18 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         // into the monitor (docs/s2disasm/s2.asm:35424-35439). The engine's
         // object pass runs before grounded player movement, so project that
         // pending flat-ground X step only for Obj26's new side-entry check.
+        return true;
+    }
+
+    @Override
+    public boolean projectsPreMovementAirYForSolidContact(PlayableEntity player) {
+        // Same execution-order compensation as the X hook above, but only for
+        // airborne top crossings. ROM Obj26_Main reaches
+        // SolidObject_Monitor_Sonic after Obj01 has already applied y_vel to
+        // y_pos (docs/s2disasm/s2.asm:25579-25623), then SolidObject_cont
+        // accepts the crossed top band via SolidObject_Landed
+        // (docs/s2disasm/s2.asm:35344-35500). In the pre-movement engine pass
+        // the monitor would otherwise see the player still just above the box.
         return true;
     }
 

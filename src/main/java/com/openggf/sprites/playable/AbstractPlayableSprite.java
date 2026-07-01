@@ -311,6 +311,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         private boolean onObjectAtFrameStart = false;
         private boolean pushingAtFrameStart = false;
+        private boolean hurtAtFrameStart = false;
+        private boolean hurtRecoveryCompletedThisFrame = false;
 
         /**
          * ROM-style latched solid interaction object id.
@@ -919,7 +921,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
                         preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
                         objectPreservedRollWallProbe, objectPreservedRollVelocityCarry, tunnelMode,
-                        onObject, onObjectAtFrameStart, pushingAtFrameStart,
+                        onObject, onObjectAtFrameStart, pushingAtFrameStart, hurtAtFrameStart,
+                        hurtRecoveryCompletedThisFrame,
                         latchedSolidObjectId, interactSlotIndex, slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
                         skidding, skidDustTimer,
@@ -1051,6 +1054,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.onObject = extra.onObject();
                 this.onObjectAtFrameStart = extra.onObjectAtFrameStart();
                 this.pushingAtFrameStart = extra.pushingAtFrameStart();
+                this.hurtAtFrameStart = extra.hurtAtFrameStart();
+                this.hurtRecoveryCompletedThisFrame = extra.hurtRecoveryCompletedThisFrame();
                 this.latchedSolidObjectId = extra.latchedSolidObjectId();
                 this.interactSlotIndex = extra.interactSlotIndex();
                 this.slopeRepelJustSlipped = extra.slopeRepelJustSlipped();
@@ -1782,6 +1787,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void completeHurtLandingRecovery() {
                 hurt = false;
+                hurtRecoveryCompletedThisFrame = true;
                 setHighPriority(false);
                 invulnerableFrames = 0x78;
                 suppressNextInvulnerabilityDecrement = true;
@@ -1852,6 +1858,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void captureOnObjectAtFrameStart() {
                 this.onObjectAtFrameStart = this.onObject;
                 this.pushingAtFrameStart = this.pushing;
+                this.hurtAtFrameStart = this.hurt;
+                this.hurtRecoveryCompletedThisFrame = false;
         }
 
         /**
@@ -1868,6 +1876,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public boolean getPushingAtFrameStart() {
                 return pushingAtFrameStart;
+        }
+
+        public boolean getHurtAtFrameStart() {
+                return hurtAtFrameStart;
+        }
+
+        public boolean getHurtRecoveryCompletedThisFrame() {
+                return hurtRecoveryCompletedThisFrame;
         }
 
         public int getLatchedSolidObjectId() {

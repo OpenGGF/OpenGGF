@@ -9,6 +9,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
@@ -120,6 +121,29 @@ class TestLostRingObjectInstance {
 
         assertEquals(0, ring.floorProbeCount,
                 "cadence-hit Obj37 must still skip terrain while render_flags bit 7 is clear");
+    }
+
+    @Test
+    void s2LostRingFloorProbeUsesLatchedPriorBuildSpritesRenderFlag() {
+        // S2 Obj37_Main reads render_flags bit 7 before RingCheckFloorDist (s2.asm:25215-25217).
+        // BuildSprites clears and refreshes that bit after DisplaySprite using width_pixels=8 and
+        // the assumed 32 px Y band (s2.asm:30560-30588), so the floor probe must observe the
+        // previously latched bit, not a same-step visibility recomputation after movement.
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        LatchedRenderProbeRing ring = new LatchedRenderProbeRing(
+                0x100, 0x00FF, 0, 0x0200);
+
+        ring.update(0, null);
+
+        assertEquals(1, ring.floorProbeCount,
+                "Obj37_Init starts render_flags at $84, so the first cadence hit may probe");
+        assertFalse(ring.renderFlagForTest(),
+                "post-step BuildSprites should clear bit 7 once y_pos reaches the assumed-height band edge");
+
+        ring.update(1, null);
+
+        assertEquals(1, ring.floorProbeCount,
+                "the next object step must consume the latched clear bit and skip terrain");
     }
 
     @Test
@@ -241,6 +265,35 @@ class TestLostRingObjectInstance {
         @Override
         protected int ringCheckCeilingDist(int x, int y) {
             ceilingProbeCount++;
+            return 0;
+        }
+    }
+
+    private static final class LatchedRenderProbeRing extends LostRingObjectInstance {
+        int floorProbeCount;
+
+        private LatchedRenderProbeRing(int xPixel, int yPixel, int xVel, int yVel) {
+            super(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF, 0x37, 0, 0, false, 0));
+            initFixedPointForTest(xPixel, yPixel, xVel, yVel, 0, 0xFF);
+        }
+
+        boolean renderFlagForTest() {
+            return hasRomRenderFlagForFloorProbe();
+        }
+
+        @Override
+        protected int resolveFloorCheckMask() {
+            return com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2;
+        }
+
+        @Override
+        protected int resolveVblaCounter() {
+            return 0;
+        }
+
+        @Override
+        protected int ringCheckFloorDist(int x, int y) {
+            floorProbeCount++;
             return 0;
         }
     }
@@ -548,6 +601,60 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void delayedS2SpawnSkipsInitialObj37StepForAlreadyPassedChildSlots() throws Exception {
+        LevelManager baselineLevelManager = GameServices.level();
+        ObjectManager baselineObjectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_2), 0, null, null);
+        setField(baselineLevelManager, "objectManager", baselineObjectManager);
+        reserveS2Arz2LateFreedLostRingLayout(baselineObjectManager);
+
+        RingManager baselineRingManager = buildRingManagerWithLevelManager(baselineLevelManager);
+        setField(baselineLevelManager, "ringManager", baselineRingManager);
+
+        SpawnTestPlayableSprite baselinePlayer = new SpawnTestPlayableSprite((short) 0x13D2, (short) 0x043C);
+        baselineRingManager.spawnLostRings(
+                baselinePlayer, 6, 0, baselinePlayer.getCentreX(), baselinePlayer.getCentreY(), 56);
+        List<LostRingObjectInstance> baseline =
+                baselineObjectManager.activeObjectsOfType(LostRingObjectInstance.class);
+
+        LevelManager steppedLevelManager = GameServices.level();
+        ObjectManager steppedObjectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_2), 0, null, null);
+        setField(steppedLevelManager, "objectManager", steppedObjectManager);
+        reserveS2Arz2LateFreedLostRingLayout(steppedObjectManager);
+
+        RingManager steppedRingManager = buildRingManagerWithLevelManager(steppedLevelManager);
+        setField(steppedLevelManager, "ringManager", steppedRingManager);
+
+        SpawnTestPlayableSprite steppedPlayer = new SpawnTestPlayableSprite((short) 0x13D2, (short) 0x043C);
+        steppedRingManager.spawnLostRingsWithInitialObjectStep(
+                steppedPlayer, 6, 0, steppedPlayer.getCentreX(), steppedPlayer.getCentreY(), 56);
+        List<LostRingObjectInstance> stepped =
+                steppedObjectManager.activeObjectsOfType(LostRingObjectInstance.class);
+
+        assertEquals(6, baseline.size());
+        assertEquals(6, stepped.size());
+        for (int i = 0; i < stepped.size(); i++) {
+            LostRingObjectInstance baselineRing = baseline.get(i);
+            LostRingObjectInstance steppedRing = stepped.get(i);
+            assertEquals(baselineRing.getSlotIndex(), steppedRing.getSlotIndex());
+            if (steppedRing.getSlotIndex() < 56) {
+                assertEquals(baselineRing.getXSubpixelForTest(), steppedRing.getXSubpixelForTest(),
+                        "child Obj37 slots below the owner were already passed by ExecuteObjects");
+                assertEquals(baselineRing.getYSubpixelForTest(), steppedRing.getYSubpixelForTest());
+                assertEquals(baselineRing.getYVelForTest(), steppedRing.getYVelForTest());
+            } else {
+                assertEquals(baselineRing.getXSubpixelForTest() + baselineRing.getXVelForTest(),
+                        steppedRing.getXSubpixelForTest(),
+                        "owner-or-later Obj37 slots execute Obj37_Main in the spawn frame");
+                assertEquals(baselineRing.getYSubpixelForTest() + baselineRing.getYVelForTest(),
+                        steppedRing.getYSubpixelForTest());
+                assertEquals(baselineRing.getYVelForTest() + 0x18, steppedRing.getYVelForTest());
+            }
+        }
+    }
+
+    @Test
     void spawnStopsOnAllocationFailureAndCapsAt32() throws Exception {
         LevelManager levelManager = GameServices.level();
         ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
@@ -625,6 +732,15 @@ class TestLostRingObjectInstance {
             }
         });
         return ring;
+    }
+
+    private void reserveS2Arz2LateFreedLostRingLayout(ObjectManager objectManager) {
+        for (int slot = 16; slot <= 57; slot++) {
+            if (slot == 48 || slot == 49 || slot == 54 || slot == 55 || slot == 57) {
+                continue;
+            }
+            assertTrue(objectManager.reserveDynamicSlot(slot), "setup should reserve slot " + slot);
+        }
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {

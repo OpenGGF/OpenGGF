@@ -1317,6 +1317,35 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void arz2BackwardPostCameraCatchupIncludesOldLeftEdgeClusterAtFrame1992() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1992) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    return new SlotWindowCheck(actual,
+                            "expected " + describeSlots(expected, 16, 60)
+                                    + " actual " + describeSlots(actual, 16, 60)
+                                    + " live " + describeLiveSlots(om, 16, 60));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x2C, slotCheck.idAt(44),
+                "S2 ObjectsManager_GoingBackward loads streamed objects whose x_pos is greater "
+                        + "than the new left edge, including entries equal to the prior left edge; "
+                        + "Obj2C at x=$1400 must take slot 44 before later frees move allocation "
+                        + "to slot 23 (docs/s2disasm/s2.asm:33050-33067); " + slotCheck.summary());
+        Assertions.assertEquals(0x03, slotCheck.idAt(45),
+                "The x=$1400 layer switcher belongs to the same backward streamed cluster; "
+                        + slotCheck.summary());
+        Assertions.assertEquals(0x26, slotCheck.idAt(46),
+                "The x=$1400 monitor belongs to the same backward streamed cluster; "
+                        + slotCheck.summary());
+    }
+
+    @Test
     public void arz2GrounderRocksFreeSlotsBeforeFrame1648PlacementCluster() throws Exception {
         SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {
@@ -1414,6 +1443,45 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void arz2GrounderWallUsesApproximateBuildSpritesYBandBeforeDelete() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1760) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedWall = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 0x28)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x8F)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedWall,
+                            "ARZ2 ROM fixture should still report Obj8F wall slot 0x28 at frame 1760");
+                    GrounderWallInstance actualWall = om.activeObjectsOfType(GrounderWallInstance.class)
+                            .stream()
+                            .filter(wall -> wall.getSlotIndex() == 0x28)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(
+                            expectedWall.x() & 0xFFFF,
+                            expectedWall.y() & 0xFFFF,
+                            actualWall == null ? -1 : actualWall.getX(),
+                            actualWall == null ? -1 : actualWall.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 0x26, 0x29));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj8F should survive through ARZ2 f1760 before Obj8F_Move observes "
+                        + "the previous BuildSprites on-screen bit; slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 BuildSprites approximate Y check keeps non-explicit-height sprites "
+                        + "visible with a 32px band before Obj8F_Move's next-frame delete "
+                        + "(docs/s2disasm/s2.asm:30569-30588,73489-73494); slots "
+                        + check.summary());
+    }
+
+    @Test
     public void arz2GrounderRockUsesObjectMoveAndFallOldVelocityOrder() throws Exception {
         AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {
@@ -1448,6 +1516,27 @@ public class TestS2ObjectOccupancyOracle {
         Assertions.assertEquals(check.expectedY(), check.actualY(),
                 "S2 ObjectMoveAndFall reads old y_vel for movement, then adds gravity "
                         + "(docs/s2disasm/s2.asm:30163-30177); slots " + check.summary());
+    }
+
+    @Test
+    public void arz2SkidDustReusesFreedSlot18AtRomFrame1993() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1993) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x08, expected.get(18),
+                            "ROM fixture should reuse slot 0x12 for Obj08 skid dust at ARZ2 f1993");
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 56));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x08, slotCheck.idAt(18),
+                "S2 Obj08 skid dust must use the lowest free ROM slot after Obj82 unloads at f1993; "
+                        + "actual slots "
+                        + slotCheck.summary());
     }
 
     /**

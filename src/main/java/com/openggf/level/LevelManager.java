@@ -994,12 +994,16 @@ public class LevelManager {
      * then processes solid objects in slot order against the player's already-moved state.
      */
     public void updateObjectPositionsPostPhysicsWithoutTouches() {
+        updateObjectPositionsPostPhysicsWithoutTouches(null);
+    }
+
+    public void updateObjectPositionsPostPhysicsWithoutTouches(Runnable afterExecBeforePlacement) {
         if (objectManager != null) {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
             objectManager.update(camera.getX(), playable, sidekicks, frameCounter + 1,
-                    false, true, true);
+                    false, true, true, afterExecBeforePlacement);
         }
 
         // ROM parity: objects read the previous frame's oscillation values, then
@@ -2796,7 +2800,7 @@ public class LevelManager {
         }
         int preallocatedFirstSlot = -1;
         if (objectManager != null && objectManager.preallocatesLostRingOwnerSlot()) {
-            preallocatedFirstSlot = objectManager.allocateDynamicSlot();
+            preallocatedFirstSlot = objectManager.allocateDynamicSlotAvoidingCurrentPassFrees();
         }
         pendingLostRingSpawns.add(new PendingLostRingSpawn(
                 player, count, player.getCentreX(), player.getCentreY(), frameCounter,

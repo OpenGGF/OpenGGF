@@ -28,6 +28,7 @@ import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -109,6 +110,70 @@ class TestSonic2ObjectBugFixes {
         assertEquals(0, player.getInputHistory(0),
                 "With Control_Locked untouched, raw neutral input refreshes Ctrl_1_Logical while Obj3D owns "
                         + "movement through obj_control.");
+    }
+
+    @Test
+    void oozLauncherBallDefersCaptureWhenObj3DJustMovedPlayerIntoRange() throws Exception {
+        TestEnvironment.resetAll();
+        OOZLauncherObjectInstance.clearActiveLaunchers();
+        LauncherBallObjectInstance.clearActiveCaptures();
+        ObjectSpawn launcherSpawn = new ObjectSpawn(0x0100, 0x0130,
+                Sonic2ObjectIds.OOZ_LAUNCHER, 0x01, 0, false, 0);
+        ObjectSpawn ballSpawn = new ObjectSpawn(0x0100, 0x0080,
+                Sonic2ObjectIds.LAUNCHER_BALL, 0x00, 0, false, 0);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic",
+                (short) launcherSpawn.x(), (short) (launcherSpawn.y() - 0x10));
+        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setAnimationId(Sonic2AnimationIds.ROLL.id());
+        player.setGSpeed((short) 0x0800);
+        player.setYSpeed((short) -0x0800);
+        player.setAir(true);
+        player.setOnObject(true);
+
+        OOZLauncherObjectInstance launcher = new OOZLauncherObjectInstance(launcherSpawn, "OOZLauncher");
+        LauncherBallObjectInstance ball = new LauncherBallObjectInstance(ballSpawn, "LauncherBall");
+        StubObjectServices services = new StubObjectServices()
+                .withPlayerQuery(new ObjectPlayerQuery(() -> player, () -> List.of()));
+        launcher.setServices(services);
+        ball.setServices(services);
+
+        Method proximity = OOZLauncherObjectInstance.class.getDeclaredMethod(
+                "processProximityDetection", AbstractPlayableSprite.class);
+        proximity.setAccessible(true);
+        assertEquals(2, proximity.invoke(launcher, player));
+        Method stateFor = OOZLauncherObjectInstance.class.getDeclaredMethod(
+                "stateFor", AbstractPlayableSprite.class);
+        stateFor.setAccessible(true);
+        Object launcherState = stateFor.invoke(launcher, player);
+        Field launcherStateField = launcherState.getClass().getDeclaredField("launcherState");
+        launcherStateField.setAccessible(true);
+        launcherStateField.setInt(launcherState, 2);
+        player.setCentreY((short) 0x0092);
+        player.setYSpeed((short) -0x0800);
+
+        Method updateInvisibleLauncher = OOZLauncherObjectInstance.class.getDeclaredMethod(
+                "updateInvisibleLauncher", int.class, AbstractPlayableSprite.class);
+        updateInvisibleLauncher.setAccessible(true);
+        updateInvisibleLauncher.invoke(launcher, 9342, player);
+        assertEquals(0x008A, player.getCentreY() & 0xFFFF,
+                "Obj3D_MoveCharacter moves with the old y_vel before Obj48's next successful capture "
+                        + "(docs/s2disasm/s2.asm:51176-51188).");
+
+        ball.update(9342, player);
+
+        assertEquals(0x008A, player.getCentreY() & 0xFFFF,
+                "Obj48 loc_252F0 reads the position at its own slot pass; if Obj3D just crossed "
+                        + "from outside to inside the 32px box later in the frame, capture waits "
+                        + "until the next pass (docs/s2disasm/s2.asm:51306-51315).");
+        assertEquals(0xF800, player.getYSpeed() & 0xFFFF);
+        assertEquals(0x0800, player.getGSpeed() & 0xFFFF);
+
+        ball.update(9343, player);
+
+        assertEquals(ballSpawn.y(), player.getCentreY() & 0xFFFF,
+                "The next Obj48 detection pass captures once the pre-pass position is already inside.");
+        assertEquals(0, player.getYSpeed());
+        assertEquals(0x1000, player.getGSpeed() & 0xFFFF);
     }
 
     @Test
@@ -988,6 +1053,132 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void monitorTopLandingUsesPostMoveCrossingWhenFallingFast() {
+        OOZLauncherObjectInstance.clearActiveLaunchers();
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x28F0, 0x0391, Sonic2ObjectIds.MONITOR, 0x00, 0, false, 0),
+                "Monitor");
+        monitor.snapshotPreUpdatePosition();
+        ObjectManager manager = buildSingleObjectManager(monitor);
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0) {
+            @Override
+            public void setAir(boolean air) {
+                setAirForTest(air);
+            }
+        };
+        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonic.setWidth(18);
+        sonic.setHeight(28);
+        sonic.setAir(true);
+        sonic.setRolling(true);
+        sonic.setAnimationId(Sonic2AnimationIds.WALK.id());
+        sonic.setXSpeed((short) -0x0060);
+        sonic.setYSpeed((short) 0x0690);
+        sonic.setGSpeed((short) 0x0001);
+        sonic.setCentreX((short) 0x28F4);
+        sonic.setCentreY((short) 0x0363);
+        sonic.endOfTick();
+        sonic.setCentreY((short) 0x036A);
+
+        manager.updateSolidContacts(sonic);
+
+        assertFalse(sonic.getAir(),
+                "OOZ1 f7671: Obj26 runs after Sonic movement, so SolidObject_cont sees the top crossing "
+                        + "(docs/s2disasm/s2.asm:25617-25623,35344-35500)");
+        assertTrue(sonic.isOnObject());
+        assertFalse(sonic.getRolling(),
+                "SolidObject_Landed reaches Sonic_ResetOnFloor and restores standing radii "
+                        + "(docs/s2disasm/s2.asm:35588-35625)");
+        assertEquals(0x036E, sonic.getCentreY() & 0xFFFF);
+        assertEquals(0, sonic.getYSpeed());
+        assertEquals(0xFFA0, sonic.getGSpeed() & 0xFFFF);
+    }
+
+    @Test
+    void monitorTopLandingTreatsNearbyOozLauncherRollResidueAsRomWalkAnim() {
+        OOZLauncherObjectInstance.clearActiveLaunchers();
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x28F0, 0x0391, Sonic2ObjectIds.MONITOR, 0x00, 0, false, 0),
+                "Monitor");
+        OOZLauncherObjectInstance launcher = new OOZLauncherObjectInstance(
+                new ObjectSpawn(0x28C0, 0x0370, Sonic2ObjectIds.OOZ_LAUNCHER, 0x00, 0, false, 0),
+                "OOZLauncher");
+        monitor.snapshotPreUpdatePosition();
+        launcher.snapshotPreUpdatePosition();
+        ObjectManager manager = buildObjectManager(monitor, launcher);
+
+        TestablePlayableSprite sonic = ooz1LauncherReleaseMonitorPlayer();
+        sonic.setAnimationId(Sonic2AnimationIds.ROLL.id());
+
+        manager.updateSolidContacts(sonic);
+
+        assertFalse(sonic.getAir(),
+                "OOZ1 f7671: Obj3D has just cleared obj_control/on_object without writing anim; "
+                        + "Obj26 samples the ROM anim byte as Walk before the monitor landing "
+                        + "(docs/s2disasm/s2.asm:51159-51170,25617-25623)");
+        assertEquals(0x036E, sonic.getCentreY() & 0xFFFF);
+        assertEquals(Sonic2AnimationIds.WALK.id(), sonic.getAnimationId());
+    }
+
+    @Test
+    void monitorTopLandingStillRejectsOrdinaryRollingAirContactWithoutOozLauncherRelease() {
+        OOZLauncherObjectInstance.clearActiveLaunchers();
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x2590, 0x00F1, Sonic2ObjectIds.MONITOR, 0x00, 0, false, 0),
+                "Monitor");
+        monitor.snapshotPreUpdatePosition();
+        ObjectManager manager = buildSingleObjectManager(monitor);
+
+        TestablePlayableSprite sonic = ooz1LauncherReleaseMonitorPlayer();
+        sonic.setCentreX((short) 0x2594);
+        sonic.setCentreY((short) 0x00CA);
+        sonic.endOfTick();
+        sonic.setCentreY((short) 0x00D0);
+        sonic.setAnimationId(Sonic2AnimationIds.ROLL.id());
+
+        manager.updateSolidContacts(sonic);
+
+        assertTrue(sonic.getAir(),
+                "Without a live Obj3D off-screen release residue, Obj26's Sonic path must keep "
+                        + "rejecting Roll animation contacts (docs/s2disasm/s2.asm:25611-25616)");
+        assertEquals(0x00D0, sonic.getCentreY() & 0xFFFF);
+    }
+
+    @Test
+    void monitorTopLandingRejectsRollAgainAfterOozLauncherResidueEnds() {
+        OOZLauncherObjectInstance.clearActiveLaunchers();
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x28F0, 0x0391, Sonic2ObjectIds.MONITOR, 0x00, 0, false, 0),
+                "Monitor");
+        OOZLauncherObjectInstance launcher = new OOZLauncherObjectInstance(
+                new ObjectSpawn(0x28C0, 0x0370, Sonic2ObjectIds.OOZ_LAUNCHER, 0x00, 0, false, 0),
+                "OOZLauncher");
+        monitor.snapshotPreUpdatePosition();
+        launcher.snapshotPreUpdatePosition();
+        ObjectManager manager = buildObjectManager(monitor, launcher);
+
+        TestablePlayableSprite sonic = ooz1LauncherReleaseMonitorPlayer();
+        sonic.setCentreX((short) 0x28F0);
+        sonic.setCentreY((short) 0x036F);
+        sonic.setXSpeed((short) -0x00F0);
+        sonic.setYSpeed((short) 0x0568);
+        sonic.setGSpeed((short) 0);
+        sonic.endOfTick();
+        sonic.setCentreY((short) 0x0374);
+        sonic.setAnimationId(Sonic2AnimationIds.ROLL.id());
+
+        manager.updateSolidContacts(sonic);
+
+        assertTrue(sonic.getAir(),
+                "OOZ1 f7731: the ROM has returned Sonic's anim byte to Roll before Obj26 samples it, "
+                        + "so the nearby Obj3D fragment must not make SolidObject_Monitor_Sonic solid "
+                        + "(docs/s2disasm/s2.asm:25617-25623; BizHawk probe f7731 anim=02/status=07)");
+        assertEquals(0x0374, sonic.getCentreY() & 0xFFFF);
+        assertEquals(0x0568, sonic.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
     void mtzCogGroundedCpuSideContactWithoutStandingBitReachesRomStopCharacterPath() {
         LevelManager levelManager = mock(LevelManager.class);
         when(levelManager.getFrameCounter()).thenReturn(0x04E7);
@@ -1119,6 +1310,28 @@ class TestSonic2ObjectBugFixes {
                 "SolidObject_StopCharacter clears inertia/g_speed together with x_vel");
     }
 
+    private static TestablePlayableSprite ooz1LauncherReleaseMonitorPlayer() {
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0) {
+            @Override
+            public void setAir(boolean air) {
+                setAirForTest(air);
+            }
+        };
+        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonic.setWidth(18);
+        sonic.setHeight(28);
+        sonic.setAir(true);
+        sonic.setRolling(true);
+        sonic.setXSpeed((short) -0x0060);
+        sonic.setYSpeed((short) 0x0690);
+        sonic.setGSpeed((short) 0x0001);
+        sonic.setCentreX((short) 0x28F4);
+        sonic.setCentreY((short) 0x0363);
+        sonic.endOfTick();
+        sonic.setCentreY((short) 0x036A);
+        return sonic;
+    }
+
     private static int intField(Object target, String fieldName) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -1144,10 +1357,14 @@ class TestSonic2ObjectBugFixes {
     }
 
     private static ObjectManager buildSingleObjectManager(ObjectInstance instance) {
+        return buildObjectManager(instance);
+    }
+
+    private static ObjectManager buildObjectManager(ObjectInstance... instances) {
         ObjectRegistry registry = new ObjectRegistry() {
             @Override
             public ObjectInstance create(ObjectSpawn spawn) {
-                return instance;
+                return instances[0];
             }
 
             @Override
@@ -1161,10 +1378,20 @@ class TestSonic2ObjectBugFixes {
             }
         };
 
+        ObjectManager[] holder = new ObjectManager[1];
+        StubObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return holder[0];
+            }
+        };
         ObjectManager objectManager = new ObjectManager(List.of(), registry, 0, null, null,
-                null, null, new StubObjectServices());
+                null, null, services);
+        holder[0] = objectManager;
         objectManager.reset(0);
-        objectManager.addDynamicObject(instance);
+        for (ObjectInstance instance : instances) {
+            objectManager.addDynamicObject(instance);
+        }
         return objectManager;
     }
 

@@ -57,6 +57,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     private int timer;
     private final SubpixelMotion.State motionState;
     private boolean bulletFired;
+    private boolean initialFacingResolved;
     private final ObjectAnimationState animationState;
 
     public OctusBadnikInstance(ObjectSpawn spawn) {
@@ -71,6 +72,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
         this.startY = snappedY;
         this.motionState = new SubpixelMotion.State(spawn.x(), snappedY, 0, 0, 0, 0);
         this.bulletFired = false;
+        this.initialFacingResolved = false;
         this.animationState = new ObjectAnimationState(ANIMATIONS, 0, 1);
     }
 
@@ -94,12 +96,26 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        resolveInitialFacing(player);
         switch (state) {
             case WAIT_FOR_PLAYER -> updateWaitForPlayer(player);
             case DELAY_BEFORE_RISE -> updateDelayBeforeRise();
             case MOVING_UP -> updateMovingUp();
             case HOVERING -> updateHovering();
             case MOVING_DOWN -> updateMovingDown();
+        }
+    }
+
+    private void resolveInitialFacing(AbstractPlayableSprite player) {
+        if (initialFacingResolved || player == null || player.isDebugMode()) {
+            return;
+        }
+        initialFacingResolved = true;
+        // ROM Obj4A_Init copies the layout x-flip, then toggles status.x_flip
+        // once if MainCharacter is to the right (s2.asm:60391-60397).
+        if ((short) ((currentX - player.getCentreX()) & 0xFFFF) < 0) {
+            xFlip = !xFlip;
+            facingLeft = !xFlip;
         }
     }
 
@@ -115,8 +131,8 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
         }
         int dx = player.getCentreX() - currentX;
         if (Math.abs(dx) < DETECT_RANGE) {
-            // Determine facing based on player position
-            facingLeft = isPlayerLeft(player);
+            // ROM Obj4A_WaitForCharacter only advances the routine/timer here;
+            // the x-flip set during Obj4A_Init is reused when firing the bullet.
             state = State.DELAY_BEFORE_RISE;
             timer = RISE_DELAY;
             animationState.setAnimId(3); // Pre-rise (antenna visible)

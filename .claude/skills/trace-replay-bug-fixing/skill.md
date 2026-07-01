@@ -331,7 +331,7 @@ BizHawk frame for trace frame `F` = `bk2_frame_offset` (from `metadata.json`) + 
 
 **ROM arg: use the simple-named copy, NOT the full filename.** The full ROM name (e.g. `Sonic The Hedgehog (W) (REV01) [!].gen`) has spaces, parens, and `[!]` (a shell glob char) that don't pass through to EmuHawk — it launches, loads **no ROM**, and hangs (~316 MB resident, never writes output, `emu.framecount()` stays 0). The repo root has byte-identical simple-named copies — `s1.gen` / `s2.gen` / `s3k.gen` (md5-verified == the REV01 ROMs) — pass one of those (absolute path) as the EmuHawk ROM arg. This failure looks like the timeout case below but is distinct: here EmuHawk runs yet never advances a frame (no ROM); there it advances but is killed mid-seek. (The trace-replay mvn tests are unaffected — this only bites the EmuHawk invocation.)
 
-**1. Fast headless is the reusable launcher plus Lua toggles, not the `--chromeless` flag.** Run `tools/bizhawk/run_bizhawk_lua.bat` so EmuHawk starts with the generated no-audio diagnostic config and verifies the copied diagnostic still has the fast-headless calls. Keep these Lua toggles at the top, before the loop:
+**1. Fast headless is the reusable launcher plus Lua toggles, not the `--chromeless` flag.** Run `tools/bizhawk/run_bizhawk_lua.bat` so EmuHawk starts with the generated no-audio diagnostic config and a generated wrapper that runs the fast-headless calls before your diagnostic. The launcher also verifies the copied diagnostic still has executable fast-headless calls before its main loop, so commented-out template text does not pass the guard. Keep these Lua toggles at the top, before the loop:
 
 ```lua
 emu.limitframerate(false)        -- remove the 60fps cap

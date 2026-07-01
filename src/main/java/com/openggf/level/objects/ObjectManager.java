@@ -79,6 +79,7 @@ public class ObjectManager {
     // single reset point); never returned to callers that retain references.
     private final Set<ObjectInstance> processedInExecLoopScratch =
             Collections.newSetFromMap(new IdentityHashMap<>());
+    private final BitSet slotsFreedDuringObjectPass = new BitSet();
     private final List<PlayableEntity> activePlayersScratch = new ArrayList<>(4);
     private final List<ObjectSpawn> newSpawnsScratch = new ArrayList<>();
     private final List<ObjectInstance> postPlayerHooksScratch = new ArrayList<>();
@@ -135,6 +136,7 @@ public class ObjectManager {
     // Occupancy/allocation authority; ObjectManager retains execOrder + objectIdInSlot
     // as the slot->occupant identity authority.
     private final SlotAllocator slotAllocator;
+    private int s2LatchedObjectManagerCameraX = Integer.MIN_VALUE;
     private int twoAxisCameraYCoarse = Integer.MIN_VALUE;
 
     // ROM parity: Tracks child slots reserved by objects with getReservedChildSlotCount() > 0.
@@ -301,6 +303,7 @@ public class ObjectManager {
         frameCounter = 0;
         dynamicObjectIdCounter = 0;
         rewindObjectIds.clear();
+        s2LatchedObjectManagerCameraX = cameraX;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
         placement.reset(cameraX);
         if (registry != null) {
@@ -539,6 +542,14 @@ public class ObjectManager {
     public void update(int cameraX, PlayableEntity player, List<? extends PlayableEntity> sidekicks,
             int touchFrameCounter, boolean enableTouchResponses,
             boolean inlineSolidResolution, boolean solidPostMovement) {
+        update(cameraX, player, sidekicks, touchFrameCounter, enableTouchResponses,
+                inlineSolidResolution, solidPostMovement, null);
+    }
+
+    public void update(int cameraX, PlayableEntity player, List<? extends PlayableEntity> sidekicks,
+            int touchFrameCounter, boolean enableTouchResponses,
+            boolean inlineSolidResolution, boolean solidPostMovement,
+            Runnable afterExecBeforePlacement) {
         List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
         frameCounter++;
         vblaCounter++;
@@ -592,6 +603,7 @@ public class ObjectManager {
                 // applied the object-side MarkObjGone self-deletes.
                 cleanupDestroyedDynamicObjects();
                 runExecLoop(cameraX, player, activeSidekicks, inlineSolidResolution, solidPostMovement);
+                runAfterExecBeforePlacement(afterExecBeforePlacement);
             } else {
                 syncActiveSpawnsUnload();
                 cleanupDestroyedDynamicObjects();
@@ -627,6 +639,12 @@ public class ObjectManager {
             }
         }
         captureCollisionResponseListForNextFrame(cameraX);
+    }
+
+    private void runAfterExecBeforePlacement(Runnable afterExecBeforePlacement) {
+        if (afterExecBeforePlacement != null) {
+            afterExecBeforePlacement.run();
+        }
     }
 
     private List<PlayableEntity> collectActivePlayers(PlayableEntity player,
@@ -865,6 +883,7 @@ public class ObjectManager {
     private void runExecLoop(int cameraX, PlayableEntity player,
             List<? extends PlayableEntity> sidekicks,
             boolean inlineSolidResolution, boolean solidPostMovement) {
+        int unloadCameraX = objectUnloadCameraX(cameraX);
         // ROM parity: Snapshot all objects' positions BEFORE their updates run.
         for (ObjectInstance inst : activeObjects.values()) {
             inst.snapshotPreUpdatePosition();
@@ -874,6 +893,7 @@ public class ObjectManager {
         }
 
         // ROM parity: Build slot-ordered execution array.
+        slotsFreedDuringObjectPass.clear();
         Arrays.fill(execOrder, null);
         for (ObjectInstance inst : activeObjects.values()) {
             if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
@@ -913,7 +933,7 @@ public class ObjectManager {
                 if (!instance.isDestroyed()) {
                     ObjectSpawn oorSpawn = instanceToSpawn.get(instance);
                     if (unloadCounterBasedOutOfRange(instance, oorSpawn,
-                            slotIndexForExec(currentExecSlot), cameraX)) {
+                            slotIndexForExec(currentExecSlot), unloadCameraX)) {
                         execOrder[currentExecSlot] = null;
                         objectsRemoved = true;
                         continue;
@@ -956,7 +976,7 @@ public class ObjectManager {
                 executeObjectWithSolidContext(
                         inst, player, sidekicks, inlineSolidResolution, solidPostMovement);
                 if (!inst.isDestroyed()
-                        && unloadCounterBasedOutOfRange(inst, null, -1, cameraX)) {
+                        && unloadCounterBasedOutOfRange(inst, null, -1, unloadCameraX)) {
                     objectsRemoved = true;
                     continue;
                 }
@@ -990,7 +1010,7 @@ public class ObjectManager {
                 executeObjectWithSolidContext(
                         inst, player, sidekicks, inlineSolidResolution, solidPostMovement);
                 if (!inst.isDestroyed()
-                        && unloadCounterBasedOutOfRange(inst, spawn, -1, cameraX)) {
+                        && unloadCounterBasedOutOfRange(inst, spawn, -1, unloadCameraX)) {
                     objectsRemoved = true;
                     continue;
                 }
@@ -1013,6 +1033,21 @@ public class ObjectManager {
                 activeObjectsCacheDirty = true;
             }
         }
+    }
+
+    private int objectUnloadCameraX(int cameraX) {
+        if (slotLayout != ObjectSlotLayout.SONIC_2) {
+            return cameraX;
+        }
+        // S2 RunObjects consumes Camera_X_pos_coarse from the previous
+        // ObjectsManager pass. ObjectsManager_Main rewrites that coarse value
+        // after BuildSprites (docs/s2disasm/s2.asm:5111-5112, 33033-33036),
+        // so object-side MarkObjGone/MarkObjGone2 checks in the next
+        // RunObjects pass must use the latched post-camera value rather than
+        // recomputing from the live pre-camera value.
+        return s2LatchedObjectManagerCameraX != Integer.MIN_VALUE
+                ? s2LatchedObjectManagerCameraX
+                : cameraX;
     }
 
     /**
@@ -1041,6 +1076,9 @@ public class ObjectManager {
      * @param postCameraX camera X position after the camera update step
      */
     public void postCameraPlacementUpdate(int postCameraX) {
+        if (slotLayout == ObjectSlotLayout.SONIC_2) {
+            s2LatchedObjectManagerCameraX = postCameraX;
+        }
         if (slotLayout.twoAxisCursorPlacement()) {
             // S3K Load_Sprites runs at the start of LevelLoop before
             // Process_Sprites/DeformBgLayer, so post-camera ObjectPlacementController catch-up
@@ -1593,6 +1631,41 @@ public class ObjectManager {
         });
     }
 
+    /**
+     * Constructs a dynamic object after reserving its SST slot.
+     * <p>
+     * Use only for ROM paths where the parent object already occupies {@code a0}
+     * before constructor-time side effects spawn children. Ordinary event and
+     * helper spawns should use {@link #createDynamicObject(Supplier)} so existing
+     * constructor-time child allocation remains unchanged.
+     */
+    public <T extends ObjectInstance> T createDynamicObjectWithReservedSlot(Supplier<T> factory) {
+        return ObjectConstructionContext.construct(objectServices, () -> {
+            int reservedSlot = allocateSlot();
+            if (reservedSlot < 0) {
+                return null;
+            }
+            T object;
+            try {
+                object = factory.get();
+            } catch (RuntimeException | Error ex) {
+                releaseSlot(reservedSlot);
+                throw ex;
+            }
+            if (object == null) {
+                releaseSlot(reservedSlot);
+                return null;
+            }
+            if (object instanceof AbstractObjectInstance aoi && aoi.getSlotIndex() < 0) {
+                aoi.setSlotIndex(reservedSlot);
+            } else {
+                releaseSlot(reservedSlot);
+            }
+            addDynamicObject(object);
+            return object;
+        });
+    }
+
     public void removeDynamicObject(ObjectInstance object) {
         if (object == null) {
             return;
@@ -1804,6 +1877,27 @@ public class ObjectManager {
     }
 
     /**
+     * Reserves the next free dynamic slot while ignoring holes opened earlier in
+     * the same object pass. S2 {@code HurtCharacter} calls {@code AllocateObject}
+     * before later dynamic slots finish and delete themselves; when the engine
+     * defers Obj37 materialization until after the pass, those newly-freed lower
+     * slots must not become the Obj37 owner. The owner should use the first slot
+     * that was free at the ROM hurt instant; {@code Obj37_Init} can then use the
+     * lower holes for child rings via ordinary {@code AllocateObject}
+     * (docs/s2disasm/s2.asm:85444-85461, 25125-25146).
+     */
+    public int allocateDynamicSlotAvoidingCurrentPassFrees() {
+        int first = slotLayout.firstDynamicSlot();
+        int last = slotLayout.lastDynamicSlotExclusive();
+        for (int slot = first; slot < last; slot++) {
+            if (!slotsFreedDuringObjectPass.get(slot) && slotAllocator.isEmpty(slot)) {
+                return slotAllocator.reserve(slot) ? slot : -1;
+            }
+        }
+        return allocateDynamicSlot();
+    }
+
+    /**
      * Re-reserves a specific dynamic slot while restoring a subsystem-owned SST
      * occupant from a rewind snapshot.
      */
@@ -1907,6 +2001,9 @@ public class ObjectManager {
      * Releases a previously allocated dynamic slot index.
      */
     private void releaseSlot(int slotIndex) {
+        if (updating && isManagedDynamicSlot(slotIndex)) {
+            slotsFreedDuringObjectPass.set(slotIndex);
+        }
         slotAllocator.release(slotIndex);
     }
 
