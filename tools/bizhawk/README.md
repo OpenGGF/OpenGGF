@@ -86,8 +86,9 @@ the Lua in a per-launch temporary script so the fast-headless calls run first an
 are re-applied on frame start, verifies that the diagnostic itself contains
 executable fast-headless template calls before its main loop, and invokes EmuHawk
 with normal Windows quoting. On the default path it also runs EmuHawk through a
-hidden process wrapper that keeps hiding the main window if BizHawk re-shows it
-after WinForms startup. The Lua template mutes audio with
+hidden process wrapper that hides every top-level window owned by the EmuHawk
+process immediately and keeps hiding them if BizHawk re-shows UI after WinForms
+startup. The Lua template mutes audio with
 `client.SetSoundOn(false)` and disables rendering with
 `client.invisibleemulation(true)`. Accidentally inherited
 `BIZHAWK_ALLOW_SLOW_LUA=1` now fails unless `BIZHAWK_CONFIRM_VISIBLE_DEBUG=1` is
