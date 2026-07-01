@@ -81,10 +81,13 @@ tools\bizhawk\run_bizhawk_lua.bat ^
 ```
 
 The launcher resolves all three input paths to absolute paths, writes a temporary
-no-audio diagnostic config, wraps the Lua so the fast-headless calls run first,
-verifies that the diagnostic itself contains executable fast-headless template
-calls before its main loop, and invokes EmuHawk with normal Windows quoting. The
-Lua template mutes audio with `client.SetSoundOn(false)` and disables rendering
-with `client.invisibleemulation(true)`. This avoids BizHawk 2.11 failures such as
+no-audio diagnostic config, passes `--audiosync false`, wraps the Lua so the
+fast-headless calls run first, verifies that the diagnostic itself contains
+executable fast-headless template calls before its main loop, and invokes EmuHawk
+with normal Windows quoting. The Lua template mutes audio with
+`client.SetSoundOn(false)` and disables rendering with
+`client.invisibleemulation(true)`. Accidentally inherited
+`BIZHAWK_ALLOW_SLOW_LUA=1` now fails unless `BIZHAWK_CONFIRM_VISIBLE_DEBUG=1` is
+also set. This avoids BizHawk 2.11 failures such as
 `Unrecognized command or argument '<path>\s2.gen'` and
 `System.ArgumentException: The path is not of a legal form`.

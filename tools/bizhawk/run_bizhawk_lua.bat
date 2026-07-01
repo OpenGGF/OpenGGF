@@ -17,11 +17,12 @@ REM BizHawk path can be overridden with BIZHAWK_EXE. The launcher writes a
 REM temporary no-audio diagnostic config by default; set BIZHAWK_USE_DIAG_CONFIG=0
 REM to use BizHawk's remembered config instead. It also wraps the Lua with the
 REM fast-headless template calls and verifies that the diagnostic itself still
-REM contains executable fast-headless calls; set BIZHAWK_ALLOW_SLOW_LUA=1 only
-REM when deliberately running a visible/interactive diagnostic. Additional
-REM EmuHawk flags can be supplied with BIZHAWK_EXTRA_ARGS. The launcher
-REM intentionally keeps EmuHawk path/movie/lua/ROM quoting simple so positional
-REM ROM loading stays reliable.
+REM contains executable fast-headless calls. Deliberately visible/interactive
+REM diagnostics must set both BIZHAWK_ALLOW_SLOW_LUA=1 and
+REM BIZHAWK_CONFIRM_VISIBLE_DEBUG=1 so stale shells do not silently bypass the
+REM no-audio/no-render path. Additional EmuHawk flags can be supplied with
+REM BIZHAWK_EXTRA_ARGS. The launcher intentionally keeps EmuHawk
+REM path/movie/lua/ROM quoting simple so positional ROM loading stays reliable.
 
 setlocal
 
@@ -43,6 +44,12 @@ for %%I in ("%~2") do set "BK2_PATH=%%~fI"
 for %%I in ("%~3") do set "ROM_PATH=%%~fI"
 set "BIZHAWK_EFFECTIVE_LUA=%LUA_SCRIPT%"
 if "%BIZHAWK_FAST_WRAPPER%"=="" set "BIZHAWK_FAST_WRAPPER=%TEMP%\openggf-bizhawk-fast-wrapper.lua"
+
+if "%BIZHAWK_ALLOW_SLOW_LUA%"=="1" if not "%BIZHAWK_CONFIRM_VISIBLE_DEBUG%"=="1" (
+    echo ERROR: BIZHAWK_ALLOW_SLOW_LUA=1 disables the no-audio/no-render wrapper.
+    echo Set BIZHAWK_CONFIRM_VISIBLE_DEBUG=1 as well only for deliberate visible debugging.
+    exit /b 1
+)
 
 if "%BIZHAWK_USE_DIAG_CONFIG%"=="" set "BIZHAWK_USE_DIAG_CONFIG=1"
 set "BIZHAWK_HAS_DIAG_CONFIG=0"
@@ -97,7 +104,7 @@ echo Lua:     %LUA_SCRIPT%
 if not "%BIZHAWK_EFFECTIVE_LUA%"=="%LUA_SCRIPT%" echo Wrapper: %BIZHAWK_EFFECTIVE_LUA%
 echo Movie:   %BK2_PATH%
 echo ROM:     %ROM_PATH%
-if "%BIZHAWK_ALLOW_SLOW_LUA%"=="1" (echo Mode:    visible/slow Lua allowed) else (echo Mode:    no-audio config + fast no-render Lua wrapper)
+if "%BIZHAWK_ALLOW_SLOW_LUA%"=="1" (echo Mode:    visible/slow Lua allowed ^(explicitly confirmed^)) else (echo Mode:    no-audio config + fast no-render Lua wrapper)
 if not "%BIZHAWK_EXTRA_ARGS%"=="" echo Extra:   %BIZHAWK_EXTRA_ARGS%
 if "%BIZHAWK_HAS_DIAG_CONFIG%"=="1" echo Config:  %BIZHAWK_DIAG_CONFIG%
 if not "%OGGF_START%"=="" echo OGGF_START=%OGGF_START%
@@ -107,9 +114,9 @@ echo.
 
 pushd "%~dp0" >nul
 if "%BIZHAWK_HAS_DIAG_CONFIG%"=="1" (
-    "%BIZHAWK_EXE%" --config "%BIZHAWK_DIAG_CONFIG%" --chromeless --lua "%BIZHAWK_EFFECTIVE_LUA%" --movie "%BK2_PATH%" "%ROM_PATH%" %BIZHAWK_EXTRA_ARGS%
+    "%BIZHAWK_EXE%" --audiosync false --config "%BIZHAWK_DIAG_CONFIG%" --chromeless --lua "%BIZHAWK_EFFECTIVE_LUA%" --movie "%BK2_PATH%" "%ROM_PATH%" %BIZHAWK_EXTRA_ARGS%
 ) else (
-    "%BIZHAWK_EXE%" --chromeless --lua "%BIZHAWK_EFFECTIVE_LUA%" --movie "%BK2_PATH%" "%ROM_PATH%" %BIZHAWK_EXTRA_ARGS%
+    "%BIZHAWK_EXE%" --audiosync false --chromeless --lua "%BIZHAWK_EFFECTIVE_LUA%" --movie "%BK2_PATH%" "%ROM_PATH%" %BIZHAWK_EXTRA_ARGS%
 )
 set "EXIT_CODE=%ERRORLEVEL%"
 popd >nul
@@ -126,5 +133,5 @@ echo Set BIZHAWK_EXE to override EmuHawk.exe. Diagnostic scripts may also read
 echo OGGF_START, OGGF_STOP, OGGF_OUT, and other script-specific env vars.
 echo Set BIZHAWK_EXTRA_ARGS for rare additional EmuHawk flags.
 echo Set BIZHAWK_USE_DIAG_CONFIG=0 to skip the generated no-audio config.
-echo Set BIZHAWK_ALLOW_SLOW_LUA=1 to skip the fast-headless Lua guard.
+echo Set BIZHAWK_ALLOW_SLOW_LUA=1 and BIZHAWK_CONFIRM_VISIBLE_DEBUG=1 to skip the fast-headless Lua guard.
 exit /b 1
