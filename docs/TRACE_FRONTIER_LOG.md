@@ -6,6 +6,53 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+Current branch-local S2 state after ARZ2 round 18: the S2 sweep remains
+14 green / 5 expected-red, and the focused ARZ2 trace now advances from
+f1760 / 916 to f1820 / 912 (`obj_extra_s47_x` expected absent, actual
+`0x1442`). CNZ2 remains parked at f9487 / 288; active non-CNZ targets are
+ARZ2 f1820, MTZ3 f12897, OOZ1 f7671, and OOZ2 f9307.
+
+## 2026-07-01 - S2 ARZ2 Grounder debris render Y band advances f1760 to f1820
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round18-next` /
+  `bugfix/ai-s2-arz2-round18-next`, based on
+  `bugfix/ai-s2-trace-next` at `78de35fef`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 with ARZ2 f1760 / 916 errors (`obj_s28_type` expected `0x8F`,
+  actual missing).
+- Triage/evidence: `obj_s28` is ROM SST slot `0x28`. The full diagnostic
+  stream showed ROM Obj8F Grounder wall debris still present in slot `0x28` at
+  f1760 (`@13B2,04CD`) while the engine had already deleted the matching wall
+  child. S2 `Obj8F_Move` tests the previous `render_flags.on_screen`, runs
+  `ObjectMoveAndFall`, then tail-calls `MarkObjGone`; its sub-object data does
+  not set `render_flags.explicit_height`, so the previous render bit must come
+  from `BuildSprites_ApproxYCheck`'s fixed +/-32px Y band rather than the
+  engine's default 16px object half-height (`docs/s2disasm/s2.asm:30569-30588,
+  73489-73494`).
+- Fix: `GrounderWallInstance` and `GrounderRockProjectile` now expose a 32px
+  on-screen half-height for render-flag caching, matching the non-explicit
+  S2 BuildSprites path used by Obj8F/Obj90 before their previous-frame render
+  delete gate.
+- Focused oracle:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2GrounderWallUsesApproximateBuildSpritesYBandBeforeDelete" "-DfailIfNoTests=false" test`
+  passed 1 / 1, confirming the engine keeps Obj8F slot `0x28` at the ROM
+  f1760 position.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f1820 / 912 errors. The new first mismatch is
+  `obj_extra_s47_x` expected absent, actual `0x1442`, shifting ownership away
+  from Grounder wall deletion and back into later lost-ring slot semantics.
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at ARZ2 f1820 / 912.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces: 14 green, 5 expected-red. Red frontiers are ARZ2
+    f1820 / 912, CNZ2 f9487 / 288, MTZ3 f12897 / 490, OOZ1 f7671 / 395, and
+    OOZ2 f9307 / 430, with no non-target regression.
+  - `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" test`
+    passed 1 / 1.
+
 ## 2026-07-01 - S2 round 17 integrated sweep after OOZ1/ARZ2/MTZ3 advances
 
 - Worktree/branch: `.worktrees/ai-s2-trace-next` /
