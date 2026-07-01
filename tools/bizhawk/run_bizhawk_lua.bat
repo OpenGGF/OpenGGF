@@ -15,8 +15,9 @@ REM     s2.gen
 REM
 REM BizHawk path can be overridden with BIZHAWK_EXE. The launcher writes a
 REM temporary no-audio diagnostic config by default; set BIZHAWK_USE_DIAG_CONFIG=0
-REM to use BizHawk's remembered config instead. It also verifies that the Lua
-REM contains the fast-headless template calls; set BIZHAWK_ALLOW_SLOW_LUA=1 only
+REM to use BizHawk's remembered config instead. It also wraps the Lua with the
+REM fast-headless template calls and verifies that the diagnostic itself still
+REM contains executable fast-headless calls; set BIZHAWK_ALLOW_SLOW_LUA=1 only
 REM when deliberately running a visible/interactive diagnostic. Additional
 REM EmuHawk flags can be supplied with BIZHAWK_EXTRA_ARGS. The launcher
 REM intentionally keeps EmuHawk path/movie/lua/ROM quoting simple so positional
@@ -40,6 +41,8 @@ for %%I in ("%BIZHAWK_EXE%") do set "BIZHAWK_EXE=%%~fI"
 for %%I in ("%~1") do set "LUA_SCRIPT=%%~fI"
 for %%I in ("%~2") do set "BK2_PATH=%%~fI"
 for %%I in ("%~3") do set "ROM_PATH=%%~fI"
+set "BIZHAWK_EFFECTIVE_LUA=%LUA_SCRIPT%"
+if "%BIZHAWK_FAST_WRAPPER%"=="" set "BIZHAWK_FAST_WRAPPER=%TEMP%\openggf-bizhawk-fast-wrapper.lua"
 
 if "%BIZHAWK_USE_DIAG_CONFIG%"=="" set "BIZHAWK_USE_DIAG_CONFIG=1"
 set "BIZHAWK_HAS_DIAG_CONFIG=0"
@@ -81,15 +84,17 @@ if not exist "%ROM_PATH%" (
 )
 
 if not "%BIZHAWK_ALLOW_SLOW_LUA%"=="1" (
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "$lua=Get-Content -Raw -LiteralPath $env:LUA_SCRIPT; $missing=@(); if($lua -notmatch 'limitframerate\s*\(\s*false\s*\)'){$missing+='emu.limitframerate(false)'}; if($lua -notmatch 'speedmode\s*\(\s*6400\s*\)'){$missing+='client.speedmode(6400)'}; if($lua -notmatch 'invisibleemulation\s*\(\s*true\s*\)'){$missing+='client.invisibleemulation(true)'}; if($lua -notmatch 'SetSoundOn'){$missing+='client.SetSoundOn(false)'}; if($missing.Count){Write-Host ('ERROR: Lua diagnostic is missing fast-headless template call(s): ' + ($missing -join ', ')); Write-Host 'Copy tools\bizhawk\diag_template_fast.lua or set BIZHAWK_ALLOW_SLOW_LUA=1 for deliberate visible debugging.'; exit 1}"
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0prepare_bizhawk_fast_lua.ps1" -LuaScript "%LUA_SCRIPT%" -WrapperPath "%BIZHAWK_FAST_WRAPPER%"
     if errorlevel 1 (
         exit /b 1
     )
+    for %%I in ("%BIZHAWK_FAST_WRAPPER%") do set "BIZHAWK_EFFECTIVE_LUA=%%~fI"
 )
 
 echo === BizHawk Lua Launcher ===
 echo EmuHawk: %BIZHAWK_EXE%
 echo Lua:     %LUA_SCRIPT%
+if not "%BIZHAWK_EFFECTIVE_LUA%"=="%LUA_SCRIPT%" echo Wrapper: %BIZHAWK_EFFECTIVE_LUA%
 echo Movie:   %BK2_PATH%
 echo ROM:     %ROM_PATH%
 if not "%BIZHAWK_EXTRA_ARGS%"=="" echo Extra:   %BIZHAWK_EXTRA_ARGS%
@@ -101,9 +106,9 @@ echo.
 
 pushd "%~dp0" >nul
 if "%BIZHAWK_HAS_DIAG_CONFIG%"=="1" (
-    "%BIZHAWK_EXE%" --config "%BIZHAWK_DIAG_CONFIG%" --chromeless --lua "%LUA_SCRIPT%" --movie "%BK2_PATH%" "%ROM_PATH%" %BIZHAWK_EXTRA_ARGS%
+    "%BIZHAWK_EXE%" --config "%BIZHAWK_DIAG_CONFIG%" --chromeless --lua "%BIZHAWK_EFFECTIVE_LUA%" --movie "%BK2_PATH%" "%ROM_PATH%" %BIZHAWK_EXTRA_ARGS%
 ) else (
-    "%BIZHAWK_EXE%" --chromeless --lua "%LUA_SCRIPT%" --movie "%BK2_PATH%" "%ROM_PATH%" %BIZHAWK_EXTRA_ARGS%
+    "%BIZHAWK_EXE%" --chromeless --lua "%BIZHAWK_EFFECTIVE_LUA%" --movie "%BK2_PATH%" "%ROM_PATH%" %BIZHAWK_EXTRA_ARGS%
 )
 set "EXIT_CODE=%ERRORLEVEL%"
 popd >nul
