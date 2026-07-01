@@ -111,6 +111,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private int preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 	private boolean fixedSkidDustTickPending;
 	private boolean processingFixedSkidDustTick;
+	private boolean skidAnimationRefreshedThisFrame;
 	private int staleHorizontalInputRideSlotIndex;
 	private int staleHorizontalInputSuppressFrames;
 	private int staleHorizontalInputRideFrames;
@@ -367,6 +368,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// repopulates it before updateCrouchState consumes it (see field comment).
 		preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 		slopeResistAppliedThisFrame = false;
+		skidAnimationRefreshedThisFrame = false;
 		sprite.clearDeferredGroundWallVelocityResponse();
 
 		// Snapshot pre-physics state for per-object hooks running AFTER
@@ -3333,9 +3335,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void handleSkid() {
+		skidAnimationRefreshedThisFrame = true;
 		if (!sprite.getSkidding()) sprite.setSkidding(true);
 		audioManager.playSfx(GameSound.SKID);
 		advanceSkidDustTimer();
+	}
+
+	boolean isSkidAnimationRefreshedThisFrame() {
+		return skidAnimationRefreshedThisFrame;
 	}
 
 	void advanceFixedSkidDustWhileStopAnimPersists() {

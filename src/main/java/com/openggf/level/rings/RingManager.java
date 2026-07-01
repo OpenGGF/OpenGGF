@@ -1286,18 +1286,21 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             spillAnimation.reset();
             ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
 
-            // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25137-25138:
+            // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25143-25144:
             // `bsr.w AllocateObject; bne.w +++` — a failed AllocateObject branches PAST the
-            // spill loop, truncating the spill). S1/S2 allocate every Obj37 from the loop. S3K
-            // HurtCharacter first allocates the Obj37 owner slot, then Obj37_Init uses that slot
-            // for ring 0 and AllocateObjectAfterCurrent for the rest (sonic3k.asm:21065-21088,
-            // 35490-35528).
+            // spill loop, truncating the spill). S1 allocates every Obj37 from the loop. S2
+            // HurtCharacter preallocates ring 0 with AllocateObject, then Obj37_Init uses
+            // plain AllocateObject for the remainder (s2.asm:85444-85461,25125-25146). S3K
+            // uses the owner slot and AllocateObjectAfterCurrent for the rest
+            // (sonic3k.asm:21065-21088,35549-35591).
             boolean preallocateOwnerSlot = objectManager != null && objectManager.preallocatesLostRingOwnerSlot();
+            boolean allocateRemainderAfterOwner = objectManager != null
+                    && objectManager.lostRingRemainderAllocatesAfterOwnerSlot();
             int firstReservedSlot = preallocatedFirstSlot;
             if (preallocateOwnerSlot && firstReservedSlot < 0) {
                 firstReservedSlot = objectManager.allocateDynamicSlot();
             }
-            int previousSlot = preallocateOwnerSlot ? firstReservedSlot : 31;
+            int previousSlot = firstReservedSlot;
             int spawned = 0;
             for (int i = 0; i < toSpawn; i++) {
                 if (angle >= 0) {
@@ -1320,11 +1323,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     }
                 }
 
-                int slotIndex = i == 0 && preallocateOwnerSlot
-                        ? firstReservedSlot
-                        : objectManager != null
-                                ? objectManager.allocateSlotAfter(previousSlot)
-                                : -1;
+                int slotIndex = -1;
+                if (i == 0 && preallocateOwnerSlot) {
+                    slotIndex = firstReservedSlot;
+                } else if (objectManager != null) {
+                    slotIndex = allocateRemainderAfterOwner
+                            ? objectManager.allocateSlotAfter(previousSlot)
+                            : objectManager.allocateDynamicSlot();
+                }
                 if (slotIndex < 0) {
                     // ROM: no free slot → stop spilling (truncate the remainder).
                     int truncated = toSpawn - spawned;

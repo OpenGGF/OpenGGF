@@ -371,6 +371,13 @@ public class PlayableSpriteAnimation {
                 // then immediately switching back with a reset.
                 SpriteAnimationProfile profile = sprite.getAnimationProfile();
                 if (profile != null) {
+                    boolean currentSkidAnimation = profile instanceof ScriptedVelocityAnimationProfile velocityProfile
+                            && velocityProfile.getSkidAnimId() == sprite.getAnimationId();
+                    boolean skidRefreshed = sprite.getMovementManager() instanceof PlayableSpriteMovement movement
+                            && movement.isSkidAnimationRefreshedThisFrame();
+                    if (currentSkidAnimation && !skidRefreshed) {
+                        sprite.setSkidding(false);
+                    }
                     Integer desired = profile.resolveAnimationId(sprite, 0,
                             sprite.getAnimationSet() != null ? sprite.getAnimationSet().getScriptCount() : 0);
                     if (desired != null && desired == sprite.getAnimationId()) {

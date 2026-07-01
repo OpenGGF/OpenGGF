@@ -150,8 +150,8 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         state.x = MAIN_X;
         state.xFixed = state.x << 16;
         applyHoverPosition();
-        if ((state.yFixed >> 16) <= MAIN_SURFACE_Y) {
-            state.yFixed = MAIN_SURFACE_Y << 16;
+        if ((state.yFixed >> 16) < MAIN_SURFACE_Y) {
+            setBossYHighWord(MAIN_SURFACE_Y);
             state.routineSecondary = MAIN_WAIT;
             bossCountdown = MAIN_WAIT_TIME;
         }
@@ -175,11 +175,10 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         state.x = MAIN_X;
         state.xFixed = state.x << 16;
         if ((status & STATUS_RISING_DONE) == 0) {
-            if (state.y > MAIN_DIVE_PEAK_Y) {
+            if (state.y >= MAIN_DIVE_PEAK_Y) {
                 return;
             }
-            state.y = MAIN_DIVE_PEAK_Y;
-            state.yFixed = state.y << 16;
+            setBossYHighWord(MAIN_DIVE_PEAK_Y);
             state.yVel = 0x80;
             status |= STATUS_RISING_DONE;
             return;
@@ -187,8 +186,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         if (state.y < MAIN_START_Y) {
             return;
         }
-        state.y = MAIN_START_Y;
-        state.yFixed = state.y << 16;
+        setBossYHighWord(MAIN_START_Y);
         state.routineSecondary = MAIN_INIT;
         bossSubtype = (status & STATUS_HIT) != 0 ? SUB_SPIKE_CHAIN : SUB_LASER_SHOOTER;
     }
@@ -262,11 +260,10 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
 
     private void updateShooterRise() {
         moveBossObject();
-        if (state.y > SHOOTER_TOP_Y) {
+        if (state.y >= SHOOTER_TOP_Y) {
             return;
         }
-        state.y = SHOOTER_TOP_Y;
-        state.yFixed = state.y << 16;
+        setBossYHighWord(SHOOTER_TOP_Y);
         state.yVel = 0;
         state.routineSecondary = SHOOTER_CHOOSE_TARGET;
         bossCountdown = 0x80;
@@ -316,8 +313,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         if (state.y < SHOOTER_START_Y) {
             return;
         }
-        state.y = SHOOTER_START_Y;
-        state.yFixed = state.y << 16;
+        setBossYHighWord(SHOOTER_START_Y);
         state.yVel = 0;
         state.routineSecondary = MAIN_INIT;
         bossSubtype = SUB_MAIN;
@@ -416,6 +412,10 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
 
     private void moveBossObject() {
         state.applyVelocity();
+    }
+
+    private void setBossYHighWord(int y) {
+        state.yFixed = (y << 16) | (state.yFixed & 0xFFFF);
     }
 
     private void applyHoverPosition() {

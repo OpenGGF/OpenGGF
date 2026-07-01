@@ -75,7 +75,10 @@ tools\bizhawk\run_bizhawk_lua.bat ^
   s2.gen
 ```
 
-The launcher resolves all three input paths to absolute paths and invokes
-EmuHawk with normal Windows quoting. This avoids BizHawk 2.11 failures such as
+The launcher resolves all three input paths to absolute paths, writes a temporary
+no-audio diagnostic config, verifies that the Lua contains the fast-headless
+template calls, and invokes EmuHawk with normal Windows quoting. The Lua template
+mutes audio with `client.SetSoundOn(false)` and disables rendering with
+`client.invisibleemulation(true)`. This avoids BizHawk 2.11 failures such as
 `Unrecognized command or argument '<path>\s2.gen'` and
 `System.ArgumentException: The path is not of a legal form`.

@@ -79,6 +79,34 @@ frontier`.
 
 ---
 
+## P0B — Parent-owned cosmetic children can steal gameplay-critical lower slots
+
+**Symptom.** A later object interaction is one frame late even though both
+objects are position-correct. Slot diagnostics show a cosmetic or auxiliary
+child occupying a lower SST slot that the ROM uses for the gameplay object
+which must execute first.
+
+**Root cause.** The Java parent/child model can keep auxiliary children alive
+or allocate them into lower slots that are free only because earlier engine
+slot occupancy already drifted. For Obj50, a wing child below the parent stole
+OOZ1's source Obj48 slot, so the target Obj48 ran before the source ball moved
+the player into it.
+
+**What to check.** For parent-owned visual children and appendages, verify both
+allocation order and unload cleanup against the ROM slot events around dense
+object clusters. If a child is structurally tied to its parent, expire it from
+`onUnload()` as well as player destruction paths, and add a focused slot-order
+test for any downstream object handoff that depends on parent/child ordering.
+
+**ROM citation.** Obj48 captures/moves players in SST order
+(`docs/s2disasm/s2.asm:51224-51357`). Obj50 creates a wing child and the wing
+validates its parent slot before display/delete
+(`docs/s2disasm/s2.asm:60567-60616,60637-60652`).
+
+**Originating commit.** `fix(s2): advance OOZ1 launcher-ball slot order`.
+
+---
+
 ## P1 — Touch-response directional/state guards diverge from ROM
 
 **Symptom.** Object rejects a rolling / spindash / invincible touch under a
@@ -1250,7 +1278,10 @@ f5336 / 219 errors to f5399 / 215 errors).
 on a moving/scripted solid, even though the trace CSV/BK2 input column already
 shows the direction and the ROM `state_snapshot` sees no `move_lock` or
 control lock. In CNZ, Sonic's right input appeared at frame 5997 while riding
-ObjD5, but ROM inertia stayed zero until frame 6000.
+ObjD5, but ROM inertia stayed zero until frame 6000. In MTZ3, Sonic's RIGHT
+input was already visible at f12146 while riding Obj65 subtype 5 near platform
+X `$28AE`, but ROM kept inertia zero for the first three input frames and then
+consumed the later right edge near X `$28FC` immediately.
 
 **Root cause.** Some solid-helper/object phase combinations expose BK2-aligned
 input before the player movement routine consumes the corresponding logical
@@ -1266,19 +1297,24 @@ riding object/helper, not to all S2 movement.
 2. Prefer the `SolidObjectProvider.staleHorizontalLogicalInputFramesWhileRiding`
    hook with a default of zero. Override it only on the object whose helper
    proves the stale window.
-3. Keep existing object-specific windows on the owning object. SCZ Tornado and
-   CNZ ObjD5 use the hook; shared movement should not branch on game id or
-   object id directly.
+3. Keep existing object-specific windows on the owning object. SCZ Tornado,
+   CNZ ObjD5, and MTZ Obj65 use the hook; shared movement should not branch on
+   game id or object id directly.
 
 **ROM citation.** `docs/s2disasm/s2.asm:58435-58443` (ObjD5 calls
 `PlatformObjectD5` after its state routine), `docs/s2disasm/s2.asm:35617-35657`
 (`PlatformObjectD5` continued-riding/skip-existing-platform helper), and
 `docs/s2disasm/s2.asm:35402-35420` (`MvSonicOnPtfm` writes rider position).
+For MTZ Obj65, see `docs/s2disasm/s2.asm:53159-53220` (subtype 5 conveyor and
+MTZ3 stop checks) plus `docs/s2disasm/s2.asm:36552-36567`
+(`Sonic_Move` logical horizontal consumption).
 
 **Originating commit.** `<pending>` (S2 CNZ frame 5997 Sonic accelerated three
 frames before ROM while riding ObjD5. Moving stale horizontal suppression to a
 per-solid hook and opting in ObjD5 advanced the CNZ frontier from f5997 / 197
-errors to f6018 / 289 errors while S1 GHZ and S2 EHZ stayed green).
+errors to f6018 / 289 errors while S1 GHZ and S2 EHZ stayed green). `<pending>`
+S2 MTZ3 Obj65 second-stop stale logical window advances the MTZ3 frontier from
+f12146 / 650 to f12592 / 497.
 
 ---
 
@@ -3051,6 +3087,201 @@ only on the not-MTZ3 branch (`docs/s2disasm/s2.asm:53159-53177`).
 
 **Originating commit.** `<pending>` S2 MTZ3 Obj65 MTZ3 ROM-zone conveyor branch:
 `TestS2Mtz3LevelSelectTraceReplay` advances f9035 -> f9134.
+
+---
+
+## P75 -- Render-flag delete gates consume the previous BuildSprites result
+
+**Pattern.** Some S2 object routines test `render_flags.on_screen` inside their
+routine before the current frame's DisplaySprite/BuildSprites path refreshes
+the bit. Init routines may also seed `render_flags.on_screen` and return before
+the first routine that tests it.
+
+**Engine symptom.** Dynamic SST slot order drifts because children or animals
+delete one frame early or late even though their positions and broad culling
+bounds look correct. In ARZ2, Obj0A bubbles spawned into lower already-passed
+slots were deleted before their first ROM Obj0A_ChkWater pass, Obj28 animals
+used a fresh post-move bounds check instead of the previous render flag, and
+Grounder Obj8F/Obj90 children stayed alive after ROM had already deleted them
+from the prior render bit. The stale Obj90 rocks occupied slots that the f1648
+placement cluster needed, moving ARZ2 from a slot mismatch to the next Obj08
+skid-dust frontier once fixed.
+
+**What to check / fix.**
+1. When a routine executes `btst #render_flags.on_screen,render_flags(a0)` or
+   `tst.b render_flags(a0)` before its display tail, cache and consume the
+   previous BuildSprites result rather than recomputing bounds immediately.
+2. If routine 0 seeds `render_flags.on_screen` and then the first real routine
+   tests the bit, preserve that init-set value through the object's first pass,
+   including for children allocated into slots already passed by ExecuteObjects.
+3. Keep MarkObjGone / RememberState tails separate from the early render-bit
+   gate. If ROM deletes before `ObjectMoveAndFall` and then tails to MarkObjGone
+   after movement, model both checks in that order.
+4. Keep the fix object-local and routine-driven. Do not branch on zone, route,
+   trace frame, or a known failing trace.
+
+**ROM citation.** Obj0A init seeds `render_flags.on_screen|level_fg`, and
+Obj0A_ChkWater later tests the render flag (`docs/s2disasm/s2.asm:41888,41951`).
+Obj28 Walk/Fly flow reaches `Obj28_ChkDel` after movement
+(`docs/s2disasm/s2.asm:24670-24688,24715-24727`). Obj8F/Obj90 Move tests the
+previous render bit before `ObjectMoveAndFall`, then jumps to MarkObjGone after
+movement; Grounder spawns the Obj8F/Obj90 children through that path
+(`docs/s2disasm/s2.asm:73490-73494,73510-73516`).
+
+**Originating commit.** `910c7e6c6` S2 ARZ2 Obj0A/Obj28/Obj8F/Obj90 prior
+render-flag cleanup: `TestS2Arz2LevelSelectTraceReplay` advances f1648 ->
+f1698.
+
+---
+
+## P76 -- Parent-created projectile pairs may initialize through the first child slot
+
+**Pattern.** Some S2 parent routines allocate only one child object and leave a
+routine-0 child initializer to reuse that first child's SST slot, fill its
+movement/collision fields, and then allocate the paired child. The first child
+returns from init without running movement, while the second child may already
+be initialized and execute movement later in the same object pass.
+
+**Engine symptom.** A harmful projectile pair is visually plausible but one
+member reaches the player one movement tick early. In HTZ2, Obj52 lava ball
+slot 20 had already advanced into Sonic's touch box at f8530, so the engine
+entered hurt one frame before ROM. ROM slot 20 was still lower/outside the
+touch box because its spawn-frame routine only ran the pair initializer.
+
+**What to check / fix.**
+1. When a parent routine creates a projectile or hazard pair, verify whether the
+   parent allocates both children or only seeds one subtype child.
+2. If the first child routine initializes both slots and returns, model that
+   as a placeholder child with collision disabled until its routine-0 update.
+3. Let the paired child start initialized if the ROM writes all of its fields
+   before the allocator loop returns, and allow same-pass execution only when
+   the allocated slot is still ahead in object order.
+4. Keep the fix keyed to the object routine/slot cadence. Do not compensate by
+   tuning velocity constants or branching on zone, route, or trace frame.
+
+**ROM citation.** Obj52 parent `Obj52_CreateLavaBall` allocates one subtype-6
+child (`docs/s2disasm/s2.asm:64306-64323`). The child initializer at
+`loc_2FF78` reuses the current slot for ball 0, writes `collision_flags=$8B`,
+velocity, radius, and animation fields, then calls `AllocateObject` for ball 1
+before returning (`docs/s2disasm/s2.asm:64429-64469`). Movement is separate in
+`Obj52_LavaBall_Move` (`docs/s2disasm/s2.asm:64504-64524`).
+
+**Originating commit.** `a751be064` S2 HTZ2 Obj52 lava-ball pair init cadence:
+`TestS2Htz2LevelSelectTraceReplay` advances f8530 -> f9150.
+
+---
+
+## P77 -- Pre-decrement countdown seeds may need Java off-by-one adjustment
+
+**Pattern.** Some S2 object states write a timer literal, then a later routine
+uses `subq.w #1,timer` / `bmi.s` to transition. The literal includes the state
+entry frame and the pre-decrement sample, not just the number of later Java
+updates that should remain in the state.
+
+**Engine symptom.** Moving object position is correct in broad terms but
+reaches a pixel or touch overlap one object pass late. In OOZ1, Obj4A Octus
+descended one frame late, so Sonic's rolling hit at f6639 missed the enemy and
+the bounce arrived after the ROM frame.
+
+**What to check / fix.**
+1. Count the state-entry frame and first decrement frame before copying a ROM
+   timer literal into a Java state constant.
+2. If the Java state machine stores the literal after the entry frame has
+   already returned and decrements only on later updates, seed `literal - 1` or
+   otherwise model the ROM pre-decrement transition so movement starts on the
+   same object pass.
+3. Keep the fix object-local and routine-driven. Do not compensate with a
+   trace frame, route, or zone exception.
+
+**ROM citation.** Obj4A writes `#60` to `objoff_2C`, `Obj4A_Hover`
+pre-decrements and branches on negative, then `Obj4A_MoveDown` starts descent
+with `addi.w #$10,y_vel` before `ObjectMove`
+(`docs/s2disasm/s2.asm:60456-60480`). `TouchResponse` then reads object
+`x_pos`, `y_pos`, and `collision_flags` in the player slot
+(`docs/s2disasm/s2.asm:85036-85096`).
+
+**Originating commit.** `cf2608003` S2 OOZ1 Octus hover countdown:
+`TestS2OozLevelSelectTraceReplay` advances f6639 -> f7467.
+
+---
+
+## P78 -- Boss defeated flags are not always the same as active boss ids
+
+**Pattern.** S2 boss/event handoffs may use a global `Boss_defeated_flag`
+while leaving `Current_Boss_ID` nonzero for separate boundary or boss-active
+logic. Event routines that test the defeated flag must not infer it from the
+engine's active-boss id.
+
+**Engine symptom.** A boss defeat sequence looks broadly correct, but the
+camera release starts one object/frame boundary early or late. In HTZ2, Obj52
+reached the flee threshold and the engine released `Camera_Max_X_pos` on the
+same handoff row where the ROM trace still showed Camera_X clamped at `$2F5E`
+and Obj52 at its pre-flee y position.
+
+**What to check / fix.**
+1. Confirm whether the level event reads `Boss_defeated_flag`, `Current_Boss_ID`,
+   object-local `boss_defeated`, or another state byte. Model that exact byte.
+2. Keep `Boss_defeated_flag` separate from active-boss bookkeeping when the
+   disassembly does not clear `Current_Boss_ID` at the same handoff.
+3. For defeated routines that latch the flag and then perform visible movement
+   or boundary writes, compare the handoff row against the trace before moving
+   all effects into one Java update. Stage only the routine-driven writes, not a
+   zone/route/frame exception.
+4. Clear engine-only active-boss bookkeeping when the boss object actually
+   deletes if later engine systems still need a no-active-boss state.
+5. If the defeated/flee routine keeps widening `Camera_Max_X_pos` or otherwise
+   mutating global arena state before its own delete branch, keep the boss on a
+   persistent/custom lifecycle path. Do not let the generic dynamic-object
+   out-of-range culler stand in for `MarkObjGone` unless the ROM routine really
+   tails into that helper.
+
+**ROM citation.** HTZ2 routine 9 tests `Boss_defeated_flag` before changing
+camera bounds (`docs/s2disasm/s2.asm:21293-21308`). Obj52 defeat seeds
+`Boss_Countdown=$B3` and selects `boss_routine=8`, and
+`Obj52_Mobile_Flee` latches `Boss_defeated_flag`, moves `y_pos`, and extends
+`Camera_Max_X_pos` at the `$-3C` countdown threshold
+(`docs/s2disasm/s2.asm:64553-64605`). The same flee routine continues
+extending `Camera_Max_X_pos` until `$3160` and deletes from its own branch
+instead of tail-calling `MarkObjGone` (`docs/s2disasm/s2.asm:64592-64628`).
+
+**Originating commit.** `5e81c96a9` S2 HTZ2 Obj52 defeated-flag handoff:
+`TestS2Htz2LevelSelectTraceReplay` advances f9150 -> f9361.
+Follow-up `455acd880`: keeping Obj52 persistent through its ROM flee/delete
+branch advances f9361 -> f9405.
+
+---
+
+## P79 -- Obj37 post-owner ring allocation is S2 plain AllocateObject, not S3K after-current
+
+**Pattern.** S2 lost-ring spills have a preallocated Obj37 owner slot, but only
+ring 0 uses that owner. Every remaining ring in `Obj37_Init` calls plain
+`AllocateObject` and takes the lowest free SST slot. Do not reuse S3K's
+`AllocateObjectAfterCurrent` chain for the S2 remainder.
+
+**Engine symptom.** The first hurt frame shows correct player hurt state and a
+reasonable lost-ring count, but the ring slots are shifted upward or collide
+with debris/child-object holes. In ARZ2 round 15, the engine put post-owner
+Obj37 rings after the owner/previous ring, while ROM filled lower holes around
+the Grounder Obj8F/Obj90 debris cluster.
+
+**What to check / fix.**
+1. Distinguish owner preallocation from the allocation routine used by the
+   remaining rings. S2 needs owner slot plus plain lowest-free allocation.
+2. Keep this keyed to the slot-layout/object-allocation model, not to a trace
+   route or zone name.
+3. Cross-check S3K separately: S3K `Obj_Bouncing_Ring` uses
+   `AllocateObjectAfterCurrent` for its post-owner remainder and must keep that
+   behavior.
+
+**ROM citation.** S2 `HurtCharacter` preallocates the first Obj37 owner with
+`AllocateObject` (`docs/s2disasm/s2.asm:85444-85461`). S2 `Obj37_Init` starts
+with `movea.l a0,a1` for ring 0 and then calls plain `AllocateObject` in the
+loop (`docs/s2disasm/s2.asm:25125-25146`). S3K analog:
+`docs/skdisasm/sonic3k.asm:21065-21088,35549-35591`.
+
+**Originating commit.** `d27307e27` S2 ARZ2 Obj37 allocation split:
+`TestS2Arz2LevelSelectTraceReplay` stays at f1717 but improves 1420 -> 980
+errors.
 
 ---
 

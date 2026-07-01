@@ -444,8 +444,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             }
         }
 
+        // ROM Obj54_MainSub0 writes Boss_Y_pos directly and does not call
+        // Obj54_Float until Obj54_MoveAndShow in later substates
+        // (docs/s2disasm/s2.asm:67271-67298, 67322-67333).
         state.x = getBossX();
-        state.y = getBossY() + applyFloat();
+        state.y = getBossY();
     }
 
     // =========================================================================
@@ -1076,16 +1079,13 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         private static final int RT_BURST = 8;
 
         /**
-         * ROM intact-orb collision_flags = $87 (s2.asm:67312). In the ROM, $87 with
-         * collision_property=2 reaches Touch_ChkValue, where property 2 routes to
-         * Touch_Special (s2.asm:84707-84729) — which is INERT for this property value
-         * and does NOT hurt the player. The engine's category decoder is driven by the
-         * top two flag bits ($87 & $C0 = $80 = HURT), so emitting the raw $87 would
-         * wrongly hurt the player. We therefore expose the intact orb with a SPECIAL
-         * category ($40 | size) so the dispatcher treats it as listener-only/inert,
-         * matching the ROM's Touch_Special outcome. Size index = $87 & $3F = 7.
+         * ROM intact-orb collision_flags = $87 (s2.asm:67806). S2 TouchResponse
+         * decodes the top two bits directly: $87 & $C0 = $80, which branches to
+         * Touch_ChkHurt rather than Touch_Special (s2.asm:85252-85264). The
+         * MTZ3 trace confirms this path when Sonic touches the intact shield at
+         * f12594 and enters hurt routine before the boss body can rebound him.
          */
-        private static final int ORB_COLLISION = 0x40 | (0x87 & 0x3F);
+        private static final int ORB_COLLISION = 0x87;
         /**
          * ROM break/bounce-orb collision_flags = $DA (s2.asm:67481/67527), set once the
          * objoff_32 timer expires. $DA & $C0 = $C0 = BOSS category, so a rolling/attacking
@@ -1230,9 +1230,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             int d0 = (short) d3 * outerR; // muls.w: operands are 16-bit signed
             int d5 = d0;
             int d4 = d0;
-            // d2 = objoff_39(boss); if objoff_3A(orb) != 0 -> d2 = $10
+            // d2 = objoff_39(boss); if objoff_3A(boss) != 0 -> d2 = $10
+            // (docs/s2disasm/s2.asm:67896-67901). The per-orb objoff_3A tilt
+            // byte from Obj53_Init is not the gate for this flattening branch.
             int d2 = boss.getInnerOrbParam() & 0xFF;
-            if (tiltFlag != 0) {
+            if (breakState != 0) {
                 d2 = 0x10;
             }
             // muls.w d3,d2 (16-bit signed operands)
@@ -1249,8 +1251,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             depth = (short) d4; // move.w d4,objoff_30
             // d6 = objoff_2A(orb) = bossY - 4
             d6 = bossY;
-            // d0 = CalcSine(objoff_3B); if objoff_3A(orb) != 0 -> CalcSine(objoff_3C)
-            int vertAngle = (tiltFlag != 0) ? (flattenAngle & 0xFF) : (verticalAngle & 0xFF);
+            // d0 = CalcSine(objoff_3B); if objoff_3A(boss) != 0 -> CalcSine(objoff_3C)
+            int vertAngle = (breakState != 0) ? (flattenAngle & 0xFF) : (verticalAngle & 0xFF);
             d0 = TrigLookupTable.sinHex(vertAngle);
             // muls.w d0,d2; swap d2 (>>16); add.w d6,d2
             d2 = ((short) d0 * (short) d2) >> 16;
@@ -1260,8 +1262,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             // ROM: addq.b #4,objoff_28
             orbitAngle = (orbitAngle + 4) & 0xFF;
 
-            if (tiltFlag == 0) {
-                // ROM: addq.b #8,objoff_3B; rts
+            if (breakState == 0) {
+                // ROM: tst.b objoff_3A(boss); bne.s +; addq.b #8,objoff_3B; rts
                 verticalAngle = (verticalAngle + 8) & 0xFF;
                 return;
             }

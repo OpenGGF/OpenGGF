@@ -81,6 +81,8 @@ public class GrounderWallInstance extends AbstractObjectInstance implements Grou
     private int xSubpixel;
     private int ySubpixel;
     private boolean activated;
+    private boolean initialized;
+    private boolean romRenderOnScreen;
     private final GrounderBadnikInstance parent;
 
     /**
@@ -97,6 +99,8 @@ public class GrounderWallInstance extends AbstractObjectInstance implements Grou
         this.currentY = y;
         this.parent = parent;
         this.activated = false;
+        this.initialized = false;
+        this.romRenderOnScreen = true;
         this.xSubpixel = 0;
         this.ySubpixel = 0;
 
@@ -124,32 +128,51 @@ public class GrounderWallInstance extends AbstractObjectInstance implements Grou
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (!initialized) {
+            initialized = true;
+            return;
+        }
+
         // Wait for parent's activation flag
         if (!activated) {
             if (parent == null || parent.isActivated()) {
                 activated = true;
+                // ROM Obj8F loc_36BA6 only advances routine 2->4 and latches
+                // velocities when objoff_2B is set; Obj8F_Move runs next frame.
+                // docs/s2disasm/s2.asm:73424-73437
+                return;
             } else {
                 return;
             }
         }
 
-        // Apply gravity to Y velocity
-        yVelocity += GRAVITY;
+        // Obj8F_Move shares Obj90_Move's render-flag delete gate: it tests the
+        // previous BuildSprites on-screen bit before ObjectMoveAndFall
+        // (s2.asm:73490-73494).
+        if (!romRenderOnScreen) {
+            setDestroyed(true);
+            return;
+        }
 
         // Update X position with fixed-point math
         xSubpixel += xVelocity;
         currentX += (xSubpixel >> 8);
         xSubpixel &= 0xFF;
 
-        // Update Y position with fixed-point math
+        // ObjectMoveAndFall moves with the old y_vel, then applies gravity.
+        // docs/s2disasm/s2.asm:30163-30177
         ySubpixel += yVelocity;
         currentY += (ySubpixel >> 8);
         ySubpixel &= 0xFF;
+        yVelocity += GRAVITY;
 
-        // Off-screen cleanup
-        if (!isOnScreen(64)) {
-            setDestroyed(true);
-        }
+        // The shared ObjectManager MarkObjGone tail handles X-range cleanup
+        // after movement, matching the ROM jump at the end of Obj8F_Move.
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        romRenderOnScreen = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
     }
 
     @Override

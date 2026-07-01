@@ -5,6 +5,9 @@ local OUT   = os.getenv("OGGF_OUT") or "tools/bizhawk/trace_output/s2_mtz2_hurt_
 emu.limitframerate(false)
 client.speedmode(6400)
 client.invisibleemulation(true)
+if client.SetSoundOn then
+    pcall(client.SetSoundOn, false)
+end
 
 local outfile = io.open(OUT, "w")
 local function log(s)

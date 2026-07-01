@@ -424,7 +424,35 @@ class TestLostRingObjectInstance {
         assertEquals(23, rings.get(0).getSlotIndex(),
                 "S2 HurtCharacter preallocates the first Obj37 owner slot before Obj37_Init");
         assertTrue(rings.get(1).getSlotIndex() > rings.get(0).getSlotIndex(),
-                "subsequent S2 lost rings allocate after the owner slot");
+                "with no lower holes, subsequent S2 lost rings occupy later slots");
+    }
+
+    @Test
+    void s2LostRingRemainderUsesPlainAllocateObject() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_2), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        for (int slot = 16; slot <= 22; slot++) {
+            assertTrue(objectManager.reserveDynamicSlot(slot), "setup should reserve slot " + slot);
+        }
+        assertTrue(objectManager.reserveDynamicSlot(30), "setup should reserve the owner slot");
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+
+        ringManager.spawnLostRings(player, 3, 0, player.getCentreX(), player.getCentreY(), 30);
+
+        List<LostRing> rings = ringManager.getActiveLostRings();
+        assertEquals(3, rings.size());
+        assertEquals(30, rings.get(0).getSlotIndex(),
+                "S2 ring 0 uses the HurtCharacter-preallocated Obj37 owner slot");
+        assertEquals(23, rings.get(1).getSlotIndex(),
+                "S2 Obj37_Init calls plain AllocateObject for ring 1, not AllocateObjectAfterCurrent");
+        assertEquals(24, rings.get(2).getSlotIndex(),
+                "S2 plain AllocateObject continues from the lowest free dynamic slot");
     }
 
     @Test
@@ -451,6 +479,34 @@ class TestLostRingObjectInstance {
                 "S3K HurtCharacter preallocates the first Obj37 owner slot before Obj37_Init");
         assertTrue(rings.get(1).getSlotIndex() > rings.get(0).getSlotIndex(),
                 "subsequent S3K lost rings allocate after the owner slot");
+    }
+
+    @Test
+    void s3kLostRingRemainderUsesAllocateObjectAfterCurrent() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        for (int slot = 4; slot <= 8; slot++) {
+            assertTrue(objectManager.reserveDynamicSlot(slot), "setup should reserve slot " + slot);
+        }
+        assertTrue(objectManager.reserveDynamicSlot(30), "setup should reserve the owner slot");
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+
+        ringManager.spawnLostRings(player, 3, 0, player.getCentreX(), player.getCentreY(), 30);
+
+        List<LostRing> rings = ringManager.getActiveLostRings();
+        assertEquals(3, rings.size());
+        assertEquals(30, rings.get(0).getSlotIndex(),
+                "S3K ring 0 uses the HurtCharacter-preallocated owner slot");
+        assertEquals(31, rings.get(1).getSlotIndex(),
+                "S3K Obj_Bouncing_Ring allocates ring 1 after the owner slot");
+        assertEquals(32, rings.get(2).getSlotIndex(),
+                "S3K Obj_Bouncing_Ring continues after the previous ring slot");
     }
 
     @Test

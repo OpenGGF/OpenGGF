@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -102,6 +103,39 @@ public class TestHTZBossTouchResponse {
     }
 
     @Test
+    public void defeatRoutineCountdownStartsOnFrameAfterFinalHit() throws Exception {
+        boss.getState().hitCount = 1;
+        objectManager.addDynamicObject(boss);
+
+        objectManager.update(GameServices.camera().getX(), player, List.of(), 1);
+
+        assertTrue(boss.getState().defeated);
+        assertEquals(0xB3, readPrivateInt(boss, "defeatTimer"));
+    }
+
+    @Test
+    public void firstFleeFrameStagesCameraReleaseForNextFrame() throws Exception {
+        boss.getState().defeated = true;
+        boss.getState().routineSecondary = 8;
+        writePrivateInt(boss, "defeatTimer", -0x3B);
+        writePrivateBoolean(boss, "defeatFleeStarted", false);
+        GameServices.camera().setMaxX((short) 0x2F5E);
+        int initialY = boss.getState().y;
+
+        objectManager.addDynamicObject(boss);
+        objectManager.update(GameServices.camera().getX(), player, List.of(), 1);
+
+        assertTrue(GameServices.gameState().isBossDefeatedFlag());
+        assertEquals(initialY, boss.getState().y);
+        assertEquals((short) 0x2F5E, GameServices.camera().getMaxX());
+
+        objectManager.update(GameServices.camera().getX(), player, List.of(), 2);
+
+        assertEquals(initialY + 2, boss.getState().y);
+        assertEquals((short) 0x2F60, GameServices.camera().getMaxX());
+    }
+
+    @Test
     public void bossCanBeDamagedAfterOverlapStartsWhenAttackBeginsLater() {
         AtomicBoolean rolling = new AtomicBoolean(false);
         AbstractPlayableSprite dynamicPlayer = mock(AbstractPlayableSprite.class);
@@ -165,6 +199,22 @@ public class TestHTZBossTouchResponse {
             return "Test";
         }
     }
+
+    private static int readPrivateInt(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(target);
+    }
+
+    private static void writePrivateInt(Object target, String fieldName, int value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(target, value);
+    }
+
+    private static void writePrivateBoolean(Object target, String fieldName, boolean value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setBoolean(target, value);
+    }
 }
-
-

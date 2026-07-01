@@ -465,6 +465,32 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether an interact-slot object keeps current {@code Status_Push} visible
+     * to {@code TailsCPU_Normal} even after the local push-grace counter has
+     * decayed and the sidekick is not stationary relative to the leader.
+     * <p>
+     * This is narrower than {@link #preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity)}.
+     * Use only for object-local ROM evidence where the sidekick's persistent
+     * {@code interact(a0)} slot still dereferences this object's live
+     * {@code SolidObject} status byte at the CPU read.
+     */
+    default boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether a CPU sidekick's persistent {@code interact(a0)} slot should keep
+     * the delayed leader status sample in the push-visible branch after the live
+     * push-grace window has expired.
+     * <p>
+     * This affects {@code TailsCPU_Normal}'s delayed d4 {@code Status_Push}
+     * fall-through decision, not the current sidekick push-bypass branch.
+     */
+    default boolean preservesSidekickDelayedLeaderPushFromInteractSlot(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Minimum remaining push-grace frames for the released-interact CPU bridge.
      */
     default int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {

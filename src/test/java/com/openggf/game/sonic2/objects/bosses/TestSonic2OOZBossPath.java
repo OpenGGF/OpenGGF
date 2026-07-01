@@ -56,4 +56,93 @@ class TestSonic2OOZBossPath {
         assertEquals(0, boss.getStatusForTesting());
         assertEquals(0xCF, boss.getCollisionFlags());
     }
+
+    @Test
+    void mainSurfaceWaitsUntilBossYHighWordDropsBelowSurfaceTarget() {
+        Sonic2OOZBossInstance boss = new Sonic2OOZBossInstance(new ObjectSpawn(
+                0, 0, Sonic2ObjectIds.OOZ_BOSS, 0, 0, false, 0));
+        boss.setServices(new TestObjectServices());
+
+        boss.getState().yFixed = 0x0291_0000;
+        boss.getState().y = 0x0291;
+        boss.getState().yVel = -0x80;
+
+        boss.update(1, null);
+
+        assertEquals(0x02, boss.getState().routineSecondary);
+        assertEquals(0x0290_8000, boss.getState().yFixed);
+
+        boss.update(2, null);
+        assertEquals(0x02, boss.getState().routineSecondary);
+        assertEquals(0x0290_0000, boss.getState().yFixed);
+
+        boss.update(3, null);
+        assertEquals(0x04, boss.getState().routineSecondary);
+        assertEquals(0x0290_8000, boss.getState().yFixed);
+    }
+
+    @Test
+    void mainDiveWaitsUntilBossYHighWordDropsBelowPeakTargetBeforeFalling() {
+        Sonic2OOZBossInstance boss = new Sonic2OOZBossInstance(new ObjectSpawn(
+                0, 0, Sonic2ObjectIds.OOZ_BOSS, 0, 0, false, 0));
+        boss.setServices(new TestObjectServices());
+
+        boss.getState().routineSecondary = 0x06;
+        boss.getState().yFixed = 0x028C_4000;
+        boss.getState().y = 0x028C;
+        boss.getState().yVel = -0x40;
+
+        boss.update(1, null);
+
+        assertEquals(0x06, boss.getState().routineSecondary);
+        assertEquals(-0x40, boss.getState().yVel);
+        assertEquals(0, boss.getStatusForTesting());
+        assertEquals(0x028C_0000, boss.getState().yFixed);
+
+        boss.update(2, null);
+
+        assertEquals(0x06, boss.getState().routineSecondary);
+        assertEquals(0x80, boss.getState().yVel);
+        assertEquals(0x40, boss.getStatusForTesting());
+        assertEquals(0x028C_C000, boss.getState().yFixed);
+    }
+
+    @Test
+    void laserShooterRiseWaitsUntilBossYHighWordDropsBelowTopTarget() {
+        Sonic2OOZBossInstance boss = new Sonic2OOZBossInstance(new ObjectSpawn(
+                0, 0, Sonic2ObjectIds.OOZ_BOSS, 0, 0, false, 0));
+        boss.setServices(new TestObjectServices());
+
+        setIntField(boss, "bossSubtype", 0x04);
+        boss.getState().routineSecondary = 0x00;
+        boss.update(1, null);
+        assertEquals(0x04, boss.getBossSubtypeForTesting());
+        assertEquals(0x02, boss.getState().routineSecondary);
+
+        boss.getState().yFixed = 0x0240_8000;
+        boss.getState().y = 0x0240;
+        boss.getState().yVel = -0x80;
+
+        boss.update(2, null);
+
+        assertEquals(0x02, boss.getState().routineSecondary);
+        assertEquals(0x0240_0000, boss.getState().yFixed);
+        assertEquals(-0x80, boss.getState().yVel);
+
+        boss.update(3, null);
+
+        assertEquals(0x04, boss.getState().routineSecondary);
+        assertEquals(0x0240_8000, boss.getState().yFixed);
+        assertEquals(0, boss.getState().yVel);
+    }
+
+    private static void setIntField(Object target, String fieldName, int value) {
+        try {
+            var field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.setInt(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to set field " + fieldName, e);
+        }
+    }
 }

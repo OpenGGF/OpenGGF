@@ -30,6 +30,9 @@ local OUT   = os.getenv("OGGF_OUT") or "tools/bizhawk/trace_output/diag.txt"
 emu.limitframerate(false)        -- remove the 60fps cap
 client.speedmode(6400)           -- run at 6400%
 client.invisibleemulation(true)  -- SKIP rendering: big speedup + low memory
+if client.SetSoundOn then        -- keep diagnostics silent even if config differs
+    pcall(client.SetSoundOn, false)
+end
 
 local outfile = io.open(OUT, "w")
 local function log(s)
