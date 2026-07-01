@@ -770,9 +770,13 @@ public record PhysicsFeatureSet(
         /** Whether Sonic_Water skips the water-exit y_vel doubling when upward
          *  velocity is already faster than -$400.
          *
-         *  <p>S2/S3K: true. {@code cmpi.w #-$400,d0 / blt.s} skips
+         *  <p>S3K: true. {@code cmpi.w #-$400,d0 / blt.s} skips
          *  {@code asl y_vel(a0)} on fast upward exits
-         *  (s2.asm:36120-36124, sonic3k.asm:22267-22270).
+         *  (sonic3k.asm:22267-22270).
+         *
+         *  <p>S2: false. Sonic and Tails exit water with only the hurt-routine
+         *  gate before {@code asl y_vel(a0)} (s2.asm:36417-36423,
+         *  39576-39579).
          *
          *  <p>S1: false. S1's {@code Sonic_Water} applies
          *  {@code asl.w obVelY(a0)} on exit without this velocity gate
@@ -1488,7 +1492,7 @@ public record PhysicsFeatureSet(
             true /* sidekickNormalCpuSkipsHurtRoutine: S2 Obj02_Index routes routine 4 to Obj02_Hurt (s2.asm:38883-38891), which never reaches Obj02_Control->TailsCPU_Control->TailsCPU_CheckDespawn (s2.asm:41057-41073), so Tails_respawn_counter freezes during the hurt routine. Verified on the MCZ1 level-select trace: Tails hurt off-screen ~45 frames, counter frozen at 0xBA, so it is only 0xFF (<$12C) when the engine spuriously despawned. */,
             true /* controlLockLatchesLogicalInput: S2 Obj01_Control skips Ctrl_1->Ctrl_1_Logical while Control_Locked (s2.asm:36227-36229), and Sonic_RecordPos stores that latched word for TailsCPU_Normal's delayed Stat_Record read (s2.asm:36344-36346,38939-38946). Forced-input writers bypass the latch so signpost/auto-walk scripts still publish their ROM logical input. */,
             true /* hurtRoutineLatchesLogicalInput: S2 Obj01_Hurt calls Sonic_RecordPos without refreshing Ctrl_1_logical through Obj01_Control (s2.asm:37810-37835) */,
-            true /* waterExitBoostSkipsFastUpwardVelocity: S2 Sonic_Water skips asl y_vel when y_vel < -$400 (s2.asm:36120-36124) */,
+            false /* waterExitBoostSkipsFastUpwardVelocity: S2 Sonic_Water/Tails_Water only skip asl y_vel for routine 4 hurt (s2.asm:36417-36423,39576-39579) */,
             false /* slopeResistAppliesAtZeroInertia: S2 Sonic_SlopeResist/Tails_SlopeResist (s2.asm:37394-37395, 40249-40250) return unconditionally on tst.w inertia(a0)/beq when stationary. Required for EHZ trace F3644 Tails-on-loop divergence. */,
             false /* permanentRespawnTableLatch: S2 ObjectsManager_Main only latches remembered spawns (s2.asm:33402 tst.b 2(a0); bpl.s +); non-remembered spawns re-trigger when cursor passes */,
             true /* objectsExecuteAfterPlayerPhysics: S2 DUAL_PATH uses post-physics object ordering with inline solid checkpoints */,

@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.game.PhysicsProfile;
+import com.openggf.game.PhysicsFeatureSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -99,6 +100,34 @@ public class WaterPhysicsTest {
         assertFalse(sprite.isInWater(), "Player should be out of water");
         // Upward velocity should be doubled (-300 * 2 = -600)
         assertEquals(-600, sprite.getYSpeed(), "YSpeed should be doubled when exiting upward");
+    }
+
+    @Test
+    public void s2WaterExitBoostsFastUpwardVelocityAndCaps() {
+        sprite.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sprite.setInWater(true);
+        sprite.setYSpeed((short) -0x990);
+
+        sprite.setTestY((short) 300);
+        sprite.updateWaterState(400);
+
+        assertFalse(sprite.isInWater(), "Player should be out of water");
+        assertEquals(-0x1000, sprite.getYSpeed(),
+                "S2 Sonic_Water doubles fast upward exits before applying the -$1000 cap");
+    }
+
+    @Test
+    public void s3kWaterExitSkipsFastUpwardBoost() {
+        sprite.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        sprite.setInWater(true);
+        sprite.setYSpeed((short) -0x990);
+
+        sprite.setTestY((short) 300);
+        sprite.updateWaterState(400);
+
+        assertFalse(sprite.isInWater(), "Player should be out of water");
+        assertEquals(-0x990, sprite.getYSpeed(),
+                "S3K Sonic_Water skips the exit boost when upward speed is already below -$400");
     }
 
     @Test
@@ -314,4 +343,3 @@ public class WaterPhysicsTest {
     }
 
 }
-

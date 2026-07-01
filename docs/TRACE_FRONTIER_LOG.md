@@ -6,15 +6,61 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after ARZ2 round 27: ARZ2 advances to f3214 / 699
-(`y_speed` expected `-1000`, actual `-0980`) after Obj83 rotating-platform
-assemblies were changed to consume their three ROM child SST slots. The
+Current branch-local S2 state after ARZ2 round 28: ARZ2 advances to f3592 /
+1626 (`obj_s12_type` expected `0x83`, actual missing) after S2 water exits were
+changed to always double non-hurt vertical speed before the `-$1000` cap. The
 same-game preservation subset keeps ARZ1 and OOZ1 green, CNZ2 at f9946 / 300
 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 at f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 at f10340 / 353
 (`tails_x_speed` expected `0x0000`, actual `0x0200`). Full S1 remains green,
 the S3K AIZ guard is unchanged, and the rewind coverage guard is green after
 marking the pending OOZ boss laser-parent link as transient.
+
+## 2026-07-01 - S2 ARZ2 water-exit boost advances f3214 to f3592
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round28-next` /
+  `bugfix/ai-s2-arz2-round28-next`, based on campaign commit
+  `b9eddee35bba66b38133df8e3918eea61c2a8cf8`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced ARZ2 f3214 / 699 errors (`y_speed` expected `-1000`, actual
+  `-0980`).
+- Evidence: trace rows show Sonic launches from the ARZ spring at f3206 with
+  `y_speed=F600` and remains underwater through f3213 at `F670`; f3214 clears
+  the underwater status bit and ROM reports `F000`. The engine had already
+  cleared underwater but kept the S3K-style fast-upward skip, so gravity moved
+  the unboosted `F670` to `F680` instead of doubling and capping it.
+- ROM refs: S2 `Sonic_Water` and `Tails_Water` clear the underwater bit, skip
+  `asl y_vel(a0)` only for routine 4 hurt, then cap upward exit speed at
+  `-$1000` (`docs/s2disasm/s2.asm:36417-36429,39576-39586`). S3K keeps the
+  separate fast-upward gate (`docs/skdisasm/sonic3k.asm:22263-22270,
+  27496-27503`), so the feature flag remains true only for S3K.
+- Fix: `PhysicsFeatureSet.SONIC_2` now disables
+  `waterExitBoostSkipsFastUpwardVelocity`; `WaterPhysicsTest` covers the S2
+  fast-upward double-and-cap case and the S3K skip case.
+- Focused regression:
+  `mvn clean "-Dtest=WaterPhysicsTest" "-DfailIfNoTests=false" test`
+  exited 0 with 20 tests, 0 failures.
+- Occupancy regression:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2RotatingPlatformAssemblyConsumesRomChildSlotsAtFrame2855" "-DfailIfNoTests=false" test`
+  exited 0.
+- Result:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  now reaches ARZ2 f3592 / 1626 errors (`obj_s12_type` expected `0x83`,
+  actual missing).
+- Same-game preservation subset:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 0 with `maven.test.failure.ignore=true`: ARZ1 and OOZ1 green; ARZ2
+  f3592 / 1626; CNZ2 f9946 / 300; MTZ3 f13336 / 352; OOZ2 f10340 / 353.
+- S1 preservation:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  exited 0 with 29 tests, 0 failures, and the existing S1 mapping warnings.
+- S3K preservation:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+  exited 0 with `maven.test.failure.ignore=true`: loading/bootstrap/decoding
+  and AIZ skip checks passed; the same known expected-red AIZ trace frontiers
+  remain (`TestS3kAizCompleteRunTraceReplay` f1095 / 4319 `x_speed`,
+  `TestS3kAizTraceReplay` f8941 / 1160 `camera_y`).
 
 ## 2026-07-01 - S2 ARZ2 Obj83 child SST slots advance f3171 to f3214
 
