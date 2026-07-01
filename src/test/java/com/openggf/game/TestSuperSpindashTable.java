@@ -6,8 +6,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests Super spindash speed table feature flag.
- * <p>S3K Super/Hyper forms use a higher speed table (sonic3k.asm:23743 word_11D04).
- * S1/S2 have no Super-specific spindash table.
+ * <p>S2 Super Sonic uses SpindashSpeedsSuper (s2.asm:37305). S3K Super/Hyper
+ * forms use the same higher speed table (sonic3k.asm:23743 word_11D04).
+ * S1 has no Super-specific spindash table.
  */
 class TestSuperSpindashTable {
 
@@ -35,9 +36,18 @@ class TestSuperSpindashTable {
     }
 
     @Test
-    void s2_noSuperSpindashTable() {
+    void s2_hasSuperSpindashTable() {
         PhysicsFeatureSet fs = PhysicsFeatureSet.SONIC_2;
-        assertNull(fs.superSpindashSpeedTable(), "S2 should have no Super spindash table");
+        assertNotNull(fs.superSpindashSpeedTable(), "S2 should have Super Sonic spindash table");
+        assertEquals(9, fs.superSpindashSpeedTable().length, "Table should have 9 entries");
+    }
+
+    @Test
+    void s2_superTableValues_matchRom() {
+        // s2.asm:37305 SpindashSpeedsSuper
+        short[] expected = {0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00};
+        short[] actual = PhysicsFeatureSet.SONIC_2.superSpindashSpeedTable();
+        assertArrayEquals(expected, actual, "S2 Super Sonic spindash table values");
     }
 
     @Test
@@ -62,5 +72,4 @@ class TestSuperSpindashTable {
                 "Super table last entry ($F00) should be higher than normal ($C00)");
     }
 }
-
 

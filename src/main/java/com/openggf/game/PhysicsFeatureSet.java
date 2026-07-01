@@ -52,7 +52,8 @@ public record PhysicsFeatureSet(
          *  S3K: true. S1/S2: false (no elemental shields). */
         boolean lightningShieldEnabled,
         /** Spindash speed table used when in Super/Hyper form.
-         *  S3K: word_11D04 (sonic3k.asm:23743), higher speeds ($B00-$F00). S1/S2: null (use normal table). */
+         *  S2 Sonic: SpindashSpeedsSuper (s2.asm:37305), higher speeds ($B00-$F00);
+         *  S3K: word_11D04 (sonic3k.asm:23743), same higher speeds. S1: null. */
         short[] superSpindashSpeedTable,
         /** Speed threshold below which pressing down enters crouch instead of roll.
          *  S3K: 0x100 (sonic3k.asm:23236). S1/S2: 0 (disabled — crouch only when standing still).
@@ -1423,7 +1424,8 @@ public record PhysicsFeatureSet(
             false /* animalObjectPreservesObjectMoveXSubpixel: S1 uses Sonic1AnimalsObjectInstance */,
             false /* animalObjectUsesRenderFlagDeleteBounds: S1 uses Sonic1AnimalsObjectInstance */);
 
-    /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
+    /** Sonic 2: spindash with standard speed table (s2.asm:37294), Super Sonic table
+     *  (SpindashSpeedsSuper, s2.asm:37305), dual collision paths, delayed look scroll,
      *  preserves high ground speed on input (s2.asm:36610-36616),
      *  angle diff cardinal snap (s2.asm Sonic_Angle:42658-42664),
      *  extended edge balance: 4 states with precarious/facing-away checks (s2.asm:36246-36373). */
@@ -1431,7 +1433,9 @@ public record PhysicsFeatureSet(
             0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00
     }, CollisionModel.DUAL_PATH, false, LOOK_SCROLL_DELAY_S2, false, false, false, false, false, true, true, false,
             RING_FLOOR_CHECK_MASK_S2, true, RING_COLLISION_SIZE_S2, RING_COLLISION_SIZE_S2, false,
-            null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S2 Sonic/Tails set push unconditionally in wall response (s2.asm:36536-36547,39506-39519) */,
+            new short[]{
+            0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00
+    }, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S2 Sonic/Tails set push unconditionally in wall response (s2.asm:36536-36547,39506-39519) */,
             true /* repeatedObjectRideGroundWallResponseDeferred: sustained object-riding pushes preserve a post-ObjectMove stored velocity correction (s2.asm:39603-39608,35070-35095) */,
             true /* animationChangeClearsPush: S2 Sonic/Tails animation clears pushing on anim change (s2.asm:38033-38038,40879-40884) */, false,
             false /* slopeResistStartsFromRest: S2 Sonic/Tails_SlopeResist returns on zero inertia (s2.asm:37369-37370,40224-40225) */,

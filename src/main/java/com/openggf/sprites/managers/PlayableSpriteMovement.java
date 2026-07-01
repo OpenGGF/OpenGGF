@@ -333,7 +333,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Returns the spindash speed table from the physics feature set,
 	 * falling back to the static SPINDASH_SPEEDS constant.
 	 * S3K Super/Hyper forms use a higher speed table (sonic3k.asm:23743 word_11D04).
-	 * S2 Super Sonic uses the normal table (no separate Super table in S2).
+	 * S2 Super Sonic uses SpindashSpeedsSuper (s2.asm:37305).
 	 */
 	private short[] getSpindashSpeedTable() {
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
