@@ -45,7 +45,8 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
         short fgScroll = negWord(cameraX);
         MhzZoneRuntimeState state = currentRuntimeState();
         DeformOutputs outputs = computeMhzDeform(adjustBgDuringLoop(cameraX), cameraY,
-                state == null ? 0 : state.screenShakeOffset());
+                state == null ? 0 : state.screenShakeOffset(),
+                state != null && state.isBossAreaBackgroundDeformActive());
         bgCameraX = outputs.bgCameraX();
         band1CameraX = outputs.band1CameraX();
         band2CameraX = outputs.band2CameraX();
@@ -105,8 +106,11 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
         return loopAdjustedCameraX;
     }
 
-    private static DeformOutputs computeMhzDeform(int cameraX, int cameraY, int screenShakeOffset) {
-        short bgY = computeBgY(cameraY, 0, 0x76);
+    private static DeformOutputs computeMhzDeform(int cameraX, int cameraY, int screenShakeOffset,
+                                                   boolean bossAreaDeformActive) {
+        short bgY = bossAreaDeformActive
+                ? computeBgY(cameraY, 0x280, 0x180)
+                : computeBgY(cameraY, 0, 0x76);
         int adjustedCameraX = cameraX - screenShakeOffset;
         int d0 = ((short) adjustedCameraX) << 16;
         d0 >>= 1;

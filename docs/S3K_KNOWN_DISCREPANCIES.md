@@ -596,3 +596,42 @@ The other batch-4 HCZ end-boss scene objects (`HczEndBossInstance`,
 (`AizEndBossInstance`, `Aiz2EndEggCapsuleInstance`, `AizIntroPlaneChild`,
 `AizIntroWaveChild`) now have rewind codecs in `Sonic3kObjectRegistry` and are restored on
 a backward seek.
+
+---
+
+## MHZ2 End-Boss Background Vertical Deform (`sub_554B8`)
+
+**Location:** `SwScrlMhz.java` (`computeMhzDeform`, `computeBgY`), `Sonic3kMHZEvents.java`
+(`isBossAreaBackgroundDeformActive`), `MhzZoneRuntimeState.java`
+**ROM Reference:** `sub_554B8` (asm ~113118-113151), dispatched from `MHZ2_BackgroundEvent_Index`
+once `Events_routine_bg` reaches the boss-area range (asm 112829-113113)
+
+### Original Implementation (engine, pre-fix)
+
+`SwScrlMhz.computeMhzDeform` unconditionally computed the BG vertical scroll factor with
+the standard `MHZ_Deform` formula, `Camera_Y_pos_copy * 5/32 + $76`, for every frame of
+act 2. During the end-boss arena the ROM instead routes through `sub_554B8`, which uses
+`(Camera_Y_pos_copy - $280) * 5/32 + $180` — a different offset and base. The engine never
+modeled this branch, so the boss-arena background scrolled at the wrong vertical rate/bias
+the whole encounter.
+
+### Fixed Implementation
+
+`Sonic3kMHZEvents.isBossAreaBackgroundDeformActive()` exposes `Events_routine_bg >= $8`
+(`ACT2_BG_CUSTOM_LAYOUT_ROUTINE`, the point where `MHZ2_BackgroundEvent`'s dispatch table
+starts routing through `sub_554B8`) through `MhzZoneRuntimeState`. `SwScrlMhz.computeMhzDeform`
+now branches on that ROM-state predicate (not zone name) and calls the existing generalized
+`computeBgY(cameraY, yOffset, baseY)` helper with `(0x280, 0x180)` during the boss-area range
+instead of the standard `(0, 0x76)`.
+
+### Rationale
+
+This is a parity fix, not an intentional deviation — recorded here per the MHZ parity-fix
+plan's per-commit documentation rule so the resolved defect is traceable. Horizontal shake
+handling (`Screen_shake_offset`) was already correct and untouched.
+
+### Verification
+
+`SwScrlMhzTest.endBossVerticalDeformUsesSub554B8BaseWhenRoutineBgIsInBossAreaRange` drives
+`Events_routine_bg` into the boss-area range via `Sonic3kMHZEvents.setAct2BackgroundRoutineForTest(8)`
+and asserts `getVscrollFactorBG()` equals the ROM `sub_554B8` formula.

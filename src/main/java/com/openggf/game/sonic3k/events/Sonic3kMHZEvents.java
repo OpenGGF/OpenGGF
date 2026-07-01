@@ -1356,6 +1356,17 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         return act2BackgroundRoutine;
     }
 
+    /**
+     * True once {@code Events_routine_bg} has reached the boss-area range
+     * ({@code >= $8}, {@code ACT2_BG_CUSTOM_LAYOUT_ROUTINE}). From this point
+     * {@code MHZ2_BackgroundEvent}'s dispatch table routes vertical BG deform
+     * through {@code sub_554B8} instead of the shared {@code MHZ_Deform}
+     * routine (sonic3k.asm:112922-112993, 113118).
+     */
+    public boolean isBossAreaBackgroundDeformActive() {
+        return act2BackgroundRoutine >= ACT2_BG_CUSTOM_LAYOUT_ROUTINE;
+    }
+
     public boolean isEndBossCustomLayoutQueued() {
         return endBossCustomLayoutQueued;
     }
