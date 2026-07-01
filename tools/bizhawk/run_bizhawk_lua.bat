@@ -64,7 +64,7 @@ if "%BIZHAWK_SOURCE_CONFIG%"=="" (
     goto :after_diag_config
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$src=$env:BIZHAWK_SOURCE_CONFIG; $dst=$env:BIZHAWK_DIAG_CONFIG; $cfg=Get-Content -Raw -LiteralPath $src | ConvertFrom-Json; $cfg.SoundEnabled=$false; $cfg.SoundEnabledNormal=$false; $cfg.SoundEnabledRWFF=$false; $cfg.SoundVolume=0; $cfg.SoundVolumeRWFF=0; $cfg.SoundThrottle=$false; $cfg.RunLuaDuringTurbo=$true; $cfg.StartPaused=$false; $cfg | ConvertTo-Json -Depth 100 | Set-Content -NoNewline -LiteralPath $dst"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0create_bizhawk_diag_config.ps1" -SourceConfig "%BIZHAWK_SOURCE_CONFIG%" -DiagConfig "%BIZHAWK_DIAG_CONFIG%"
 if errorlevel 1 (
     echo ERROR: Failed to create BizHawk diagnostic config from %BIZHAWK_SOURCE_CONFIG%
     exit /b 1
