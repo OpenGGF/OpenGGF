@@ -2979,6 +2979,7 @@ public class LevelManager {
         if (!(player instanceof AbstractPlayableSprite playable)) {
             return;
         }
+        int preSnapCameraX = camera.getX();
         camera.setFrozen(false);
         camera.setFocusedSprite(playable);
         camera.updatePosition(true);
@@ -3005,11 +3006,14 @@ public class LevelManager {
             }
             verticalWrapEnabled = camera.isVerticalWrapEnabled();
             camera.updatePosition(true);
-            if (objectManager != null && objectManager.usesTwoAxisCursorPlacement()) {
-                // S3K Load_Sprites has a separate Y-camera pass. The object
-                // manager is constructed before the level-start camera snap, so
-                // rebuild its initial cursor state once Camera_Y_pos matches
-                // the actual start band.
+            if (objectManager != null
+                    && (objectManager.usesTwoAxisCursorPlacement() || camera.getX() != preSnapCameraX)) {
+                // The object manager is constructed before the level-start
+                // camera snap. Rebuild its initial window once Camera_X_pos
+                // matches the new start, otherwise cross-zone loads can seed
+                // objects from the previous level's camera band (e.g. SCZ ->
+                // WFZ missing ObjB2 at x=$0060). S3K also needs this for its
+                // separate Y-camera placement pass.
                 objectManager.reset(camera.getX());
             }
             // ROM parity: only when Get_LevelSizeStart had to clamp the camera
