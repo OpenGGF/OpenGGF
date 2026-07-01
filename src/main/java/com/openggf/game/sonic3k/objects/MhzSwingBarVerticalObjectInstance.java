@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -56,8 +57,9 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (playerEntity instanceof AbstractPlayableSprite player) {
-            updatePlayer(player);
+        AbstractPlayableSprite player1 = playerEntity instanceof AbstractPlayableSprite player ? player : null;
+        if (player1 != null) {
+            updatePlayer(player1);
         }
         ObjectServices services = tryServices();
         if (services == null) {
@@ -68,6 +70,30 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
             if (participant != playerEntity && participant instanceof AbstractPlayableSprite sprite) {
                 updatePlayer(sprite);
             }
+        }
+        requestForcedScrollWhilePrimaryHanging(services, player1);
+    }
+
+    /**
+     * ROM {@code loc_3F0CC} (sonic3k.asm:83575-83577): after both players are
+     * processed, if Player 1 is hanging ({@code $30(a0)}) the bar writes
+     * {@code Scroll_force_positions} plus the bar's own {@code x_pos} into
+     * {@code Scroll_forced_X_pos} and {@code Player_1+y_pos} into
+     * {@code Scroll_forced_Y_pos}. Note the forced Y is Player 1's Y, not the
+     * bar's, so the camera tracks the climbing player vertically while pinning to
+     * the bar horizontally.
+     */
+    private void requestForcedScrollWhilePrimaryHanging(ObjectServices services, AbstractPlayableSprite player1) {
+        if (player1 == null) {
+            return;
+        }
+        BarState state = playerStates.get(player1);
+        if (state == null || !state.hanging) {
+            return;
+        }
+        Camera camera = services.camera();
+        if (camera != null) {
+            camera.requestForcedScroll(spawn.x(), player1.getCentreY());
         }
     }
 

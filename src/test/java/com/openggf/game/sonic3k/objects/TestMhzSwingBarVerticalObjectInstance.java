@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.LevelManager;
@@ -17,7 +18,10 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -246,6 +250,45 @@ class TestMhzSwingBarVerticalObjectInstance {
                 "loc_3F0F0 masks only the low Ctrl_logical A/B/C press bits; held-only jump stays attached");
         assertEquals(0x2212, player.getCentreX(),
                 "Held jump without a fresh press continues through the vertical-bar hanging path");
+    }
+
+    @Test
+    void hangingPrimaryPlayerForcesCameraScrollToBarXAndPlayerY() {
+        Camera camera = mock(Camera.class);
+        MhzSwingBarVerticalObjectInstance bar = new MhzSwingBarVerticalObjectInstance(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_VERTICAL, 0, 0, false, 0));
+        bar.setServices(new TestObjectServices().withCamera(camera));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2214, (short) 0x0700);
+        player.setXSpeed((short) 0x0400);
+        player.setGSpeed((short) 0x0400);
+        player.setAir(false);
+
+        bar.update(0, player); // grab -> loc_3F0CC forces scroll to bar X + Player_1 Y
+
+        // Forced X is the bar's x_pos; forced Y is Player_1's y_pos (unchanged by the grab), NOT the bar's.
+        verify(camera).requestForcedScroll(0x2200, 0x0700);
+    }
+
+    @Test
+    void releasedVerticalBarStopsForcingCameraScroll() {
+        Camera camera = mock(Camera.class);
+        MhzSwingBarVerticalObjectInstance bar = new MhzSwingBarVerticalObjectInstance(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_VERTICAL, 0, 0, false, 0));
+        bar.setServices(new TestObjectServices().withCamera(camera));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2214, (short) 0x0700);
+        player.setXSpeed((short) 0x0400);
+        player.setGSpeed((short) 0x0400);
+        player.setAir(false);
+
+        bar.update(0, player); // grab
+        player.setJumpInputPressed(true);
+        bar.update(1, player); // jump release clears the hang
+        clearInvocations(camera);
+
+        bar.update(2, player);
+        bar.update(3, player);
+
+        verify(camera, never()).requestForcedScroll(anyInt(), anyInt());
     }
 
     @Test

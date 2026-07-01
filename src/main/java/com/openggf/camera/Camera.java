@@ -124,6 +124,15 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// fast cap even if the player's own ground speed is low.
 	private boolean fastVerticalScrollRequested = false;
 
+	// ROM: Scroll_force_positions + Scroll_forced_X_pos/Scroll_forced_Y_pos.
+	// Traversal objects (MHZ swing vine, vertical swing bar; AIZ ride vine) set
+	// these so the camera position math tracks the supplied forced coordinates
+	// instead of Player_1 for that frame, and the horizontal scroll frame offset
+	// (H_scroll_frame_offset) is zeroed. Frame-scoped; cleared each update.
+	private boolean forcedScrollRequested = false;
+	private int forcedScrollX = 0;
+	private int forcedScrollY = 0;
+
 	public Camera() {
 		this(GameServices.configuration());
 	}
@@ -159,6 +168,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			x = clampAxisWithWrap(x, minX, maxX);
 			y = clampAxisWithWrap(y, minY, maxY);
 			fastVerticalScrollRequested = false;
+			forcedScrollRequested = false;
 			applyDeferredMaxYWrite();
 			return;
 		}
@@ -166,8 +176,17 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// Full camera freeze (death, cutscenes) - don't update X or Y at all
 		if (frozen) {
 			fastVerticalScrollRequested = false;
+			forcedScrollRequested = false;
 			applyDeferredMaxYWrite();
 			return;
+		}
+
+		// ROM loc_1BFB8: a forced-scroll frame zeroes H_scroll_frame_offset before
+		// the camera-position math runs (move.w #0,(H_scroll_frame_offset).w). The
+		// forced coordinates then feed MoveCameraX/MoveCameraY below in place of the
+		// focused sprite's position (see currentFocusCentreX/Y).
+		if (forcedScrollRequested) {
+			horizScrollDelayFrames = 0;
 		}
 
 		// ROM behavior: Horiz_scroll_delay_val only affects horizontal scrolling.
@@ -185,15 +204,16 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// cases where Sonic and camera are in different wrap periods (e.g. Sonic's Y was
 		// updated by ground collision across the wrap boundary between frames).
 		short focusedSpriteRealY;
+		int focusCentreY = currentFocusCentreY();
 		if (verticalWrapEnabled) {
-			int diff = (int) focusedSprite.getCentreY() - (int) y;
+			int diff = focusCentreY - (int) y;
 			diff = ((diff % verticalWrapRange) + verticalWrapRange) % verticalWrapRange;
 			if (diff > verticalWrapRange / 2) {
 				diff -= verticalWrapRange;
 			}
 			focusedSpriteRealY = (short) diff;
 		} else {
-			focusedSpriteRealY = (short) (focusedSprite.getCentreY() - y);
+			focusedSpriteRealY = (short) (focusCentreY - y);
 		}
 
 		short yBeforeVerticalScroll = y;
@@ -366,7 +386,26 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			// else: ROM SV_NoUpdate - no scroll, no boundary clamp.
 		}
 		fastVerticalScrollRequested = false;
+		forcedScrollRequested = false;
 		applyDeferredMaxYWrite();
+	}
+
+	/**
+	 * Returns the X the camera should track this frame: the forced X when a
+	 * forced-scroll request is active (ROM Scroll_forced_X_pos), else the focused
+	 * sprite's centre X.
+	 */
+	private int currentFocusCentreX() {
+		return forcedScrollRequested ? forcedScrollX : focusedSprite.getCentreX();
+	}
+
+	/**
+	 * Returns the Y the camera should track this frame: the forced Y when a
+	 * forced-scroll request is active (ROM Scroll_forced_Y_pos), else the focused
+	 * sprite's centre Y.
+	 */
+	private int currentFocusCentreY() {
+		return forcedScrollRequested ? forcedScrollY : focusedSprite.getCentreY();
 	}
 
 	private void applyDeferredMaxYWrite() {
@@ -414,7 +453,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				horizScrollDelayFrames--;
 			}
 		} else {
-			focusedSpriteRealX = (short) (focusedSprite.getCentreX() - nextX);
+			focusedSpriteRealX = (short) (currentFocusCentreX() - nextX);
 		}
 
 		short cameraStepCap = fastScrollCap;
@@ -1201,6 +1240,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		yPosBias = DEFAULT_Y_BIAS;
 		fastScrollCap = DEFAULT_FAST_SCROLL_CAP;
 		fastVerticalScrollRequested = false;
+		forcedScrollRequested = false;
+		forcedScrollX = 0;
+		forcedScrollY = 0;
 		verticalWrapEnabled = false;
 		verticalWrapRange = VERTICAL_WRAP_RANGE;
 		verticalWrapMask = VERTICAL_WRAP_RANGE - 1;
@@ -1240,6 +1282,25 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public void requestFastVerticalScroll() {
 		fastVerticalScrollRequested = true;
+	}
+
+	/**
+	 * Requests ROM {@code Scroll_force_positions} behavior for the next camera
+	 * update. Instead of tracking the focused sprite, the camera-position math
+	 * (both horizontal and vertical) tracks the supplied forced coordinates, and
+	 * the horizontal scroll frame offset ({@code H_scroll_frame_offset}) is
+	 * zeroed. The request is frame-scoped and is cleared by
+	 * {@link #updatePosition()}. Traversal objects (e.g. MHZ swing vine / vertical
+	 * swing bar) call this every frame a player is grabbed.
+	 * (sonic3k.asm {@code loc_1BFB8}:38296-38300, setter {@code loc_226F2}:47072-47074.)
+	 *
+	 * @param forcedXPos world X the camera should track this frame (ROM Scroll_forced_X_pos)
+	 * @param forcedYPos world Y the camera should track this frame (ROM Scroll_forced_Y_pos)
+	 */
+	public void requestForcedScroll(int forcedXPos, int forcedYPos) {
+		forcedScrollRequested = true;
+		forcedScrollX = forcedXPos;
+		forcedScrollY = forcedYPos;
 	}
 
 	@Override
