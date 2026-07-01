@@ -363,11 +363,16 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
         // Check if time to flee
         // ROM: cmpi.w #-$3C,(Boss_Countdown).w
         if (defeatTimer <= DEFEAT_FLEE_TIME) {
-            // ROM: Boss_defeated_flag is set once when flee starts.
+            // ROM trace parity: Obj52_Mobile_Flee sets Boss_defeated_flag before
+            // the visible flee movement, but the handoff row still has Camera_X
+            // clamped at $2F5E and Obj52 at its pre-flee y_pos. Stage the y_pos /
+            // Camera_Max_X_pos writes until the following object update.
+            // Disasm: docs/s2disasm/s2.asm:64593-64605.
             if (!defeatFleeStarted) {
                 defeatFleeStarted = true;
-                services().gameState().setCurrentBossId(0);
+                services().gameState().setBossDefeatedFlag(true);
                 services().playMusic(Sonic2Music.HILL_TOP.id);
+                return;
             }
 
             // Flee - sink into lava
@@ -389,6 +394,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
             }
 
             camera.setMaxX((short) 0x3160);
+            services().gameState().setCurrentBossId(0);
             setDestroyed(true);
         }
     }

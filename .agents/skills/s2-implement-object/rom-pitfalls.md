@@ -3205,6 +3205,43 @@ with `addi.w #$10,y_vel` before `ObjectMove`
 
 ---
 
+## P78 -- Boss defeated flags are not always the same as active boss ids
+
+**Pattern.** S2 boss/event handoffs may use a global `Boss_defeated_flag`
+while leaving `Current_Boss_ID` nonzero for separate boundary or boss-active
+logic. Event routines that test the defeated flag must not infer it from the
+engine's active-boss id.
+
+**Engine symptom.** A boss defeat sequence looks broadly correct, but the
+camera release starts one object/frame boundary early or late. In HTZ2, Obj52
+reached the flee threshold and the engine released `Camera_Max_X_pos` on the
+same handoff row where the ROM trace still showed Camera_X clamped at `$2F5E`
+and Obj52 at its pre-flee y position.
+
+**What to check / fix.**
+1. Confirm whether the level event reads `Boss_defeated_flag`, `Current_Boss_ID`,
+   object-local `boss_defeated`, or another state byte. Model that exact byte.
+2. Keep `Boss_defeated_flag` separate from active-boss bookkeeping when the
+   disassembly does not clear `Current_Boss_ID` at the same handoff.
+3. For defeated routines that latch the flag and then perform visible movement
+   or boundary writes, compare the handoff row against the trace before moving
+   all effects into one Java update. Stage only the routine-driven writes, not a
+   zone/route/frame exception.
+4. Clear engine-only active-boss bookkeeping when the boss object actually
+   deletes if later engine systems still need a no-active-boss state.
+
+**ROM citation.** HTZ2 routine 9 tests `Boss_defeated_flag` before changing
+camera bounds (`docs/s2disasm/s2.asm:21293-21308`). Obj52 defeat seeds
+`Boss_Countdown=$B3` and selects `boss_routine=8`, and
+`Obj52_Mobile_Flee` latches `Boss_defeated_flag`, moves `y_pos`, and extends
+`Camera_Max_X_pos` at the `$-3C` countdown threshold
+(`docs/s2disasm/s2.asm:64553-64605`).
+
+**Originating commit.** `<pending>` S2 HTZ2 Obj52 defeated-flag handoff:
+`TestS2Htz2LevelSelectTraceReplay` advances f9150 -> f9361.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

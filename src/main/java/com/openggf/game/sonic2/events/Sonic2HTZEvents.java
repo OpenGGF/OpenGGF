@@ -475,8 +475,8 @@ public class Sonic2HTZEvents extends Sonic2ZoneEvents {
                 // Routine 9: Boss end / camera extend (LevEvents_HTZ2_Routine9)
                 // ROM: s2.asm:21261-21277
                 syncSidekickBoundsToCamera();
-                if (gameState().getCurrentBossId() != 0) {
-                    // ROM: does nothing until Boss_defeated_flag is set.
+                if (!gameState().isBossDefeatedFlag()) {
+                    // ROM: tst.b (Boss_defeated_flag).w / beq.s ++ (s2.asm:21293-21295).
                     return;
                 }
 
