@@ -6,6 +6,37 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-01 - S2 campaign integrated sweep after OOZ1 round 12 merge
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next` at `47e80e8a5`, after merging OOZ1 round 12.
+- Focused merge verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#oozPoppingPlatformRejectsBit7ObjectControlFreshLanding+oozPoppingPlatformApexLaunchesStandingSidekickWithoutJavaLockLatch+oozPoppingPlatformLockUsesRomObjControlBitOneState,com.openggf.game.sonic2.objects.TestOOZPlacedObjectGaps#oozPoppingPlatformKeepsRomSolidLatchAndObjectControlledSupport,com.openggf.tests.trace.TestS2ObjectOccupancyOracle#mtz2CogAirborneLaunchKeepsTailsLeftwardSpeedAtRomFrame1217+mtz3CogAirborneStaleStandingBitKeepsTailsXSpeedAtRomFrame9555+arz2ChopChopBubbleSurvivesFirstObj0aInitPassAtFrame599+arz2ChopChopAnimalKeepsPriorRenderFlagUntilRomDeleteFrame+arz2GrounderRocksFreeSlotsBeforeFrame1648PlacementCluster" "-DfailIfNoTests=false" test`
+    passed 9 / 9 focused object and occupancy regression tests.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.context.diagnosticChars=full" "-DfailIfNoTests=false" test`
+    ran the impacted trace set: MTZ2 passed, and ARZ2 / MTZ3 / OOZ1 stayed at
+    the intended expected-red frontiers below.
+- Full S2 sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`.
+  Result: 19 S2 trace tests ran; 13 green, 6 expected-red, no additional
+  regression after the OOZ1 merge.
+- Current S2 red frontiers:
+  - ARZ2: f1698 / 1966 (`obj_extra_s14_x` expected absent, actual `0x1371`).
+  - CNZ2: f9487 / 288 (`g_speed` expected `0x0000`, actual `0x0100`).
+  - HTZ2: f8530 / 218 (`g_speed` expected `0x01D2`, actual `0x0000`).
+  - MTZ3: f12146 / 650 (`x_speed` expected `0x0000`, actual `0x000C`).
+  - OOZ1: f5958 / 665 (`x` expected `0x2440`, actual `0x2430`).
+  - OOZ2: f9307 / 444 (`x_speed` expected `0x0150`, actual `-0150`).
+- Cross-game guard:
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    passed 29 / 29 S1 trace tests. The repeated S1 mapping warning at
+    `0xe8df` remains the known pre-existing warning.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    completed 68 S3K smoke tests. Bootstrap, decoding, level-loading, and AIZ
+    skip headless checks passed; the two AIZ trace replays stayed at the
+    existing expected-red frontiers: complete-run f1095 / 4319 and AIZ f8941 /
+    1160.
+
 ## 2026-07-01 - S2 OOZ1 Obj33 signed object-control gate (f4637 -> f5958)
 
 - Worktree/branch: `.worktrees/ai-s2-ooz1-round12-next` /
