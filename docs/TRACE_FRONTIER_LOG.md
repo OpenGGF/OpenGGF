@@ -52,6 +52,7 @@ remains green, and the S3K AIZ guard is unchanged. No S2 trace greened in round
   `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
   ran the requested guards: ARZ1 and OOZ1 green; CNZ2 f9946 / 300, MTZ3
   f13336 / 352, and OOZ2 f10973 / 163 preserved.
+
 ## 2026-07-01 - S2 OOZ2 synthetic Obj07 support advances f10973 to f11038
 
 - Worktree/branch: `.worktrees/ai-s2-ooz2-round32-next` /
@@ -96,6 +97,39 @@ remains green, and the S3K AIZ guard is unchanged. No S2 trace greened in round
   (`x_speed` expected `0x0000`, actual `0x000C`) and level-select f8941 /
   1160 (`camera_y` expected `0x02C1`, actual `0x02B9`); the loading,
   bootstrap, decoding, and AIZ skip checks passed.
+
+## 2026-07-01 - S2 round 32 integrated campaign baseline
+
+Integrated on `bugfix/ai-s2-trace-next`:
+- `ba39ed0ad` (`fix(s2): align ARZ2 Obj83 platform landing height`) advances
+  ARZ2 f3707 / 1620 (`y_speed` expected `0x0000`, actual `0x0379`) -> f4046 /
+  1509 (`obj_extra_s33_x` expected absent, actual `0x1EE1`).
+- `1f1dc5843` (`fix(s2): preserve synthetic oil support for Tails push`)
+  advances OOZ2 f10973 / 163 (`tails_g_speed` expected `0x0018`, actual
+  `0x0000`) -> f11038 / 117 (`tails_y` expected `0x029F`, actual `0x029E`).
+- CNZ2 remains f9946 / 300 (`x_speed` expected `0x0200`, actual `0x08A8`);
+  MTZ3 remains f13336 / 352 (`x_speed` expected `0x0200`, actual `-0200`).
+- No S2 trace greened in round 32, so no round-32 change was banked into
+  `next`.
+
+Integrated verification on `bugfix/ai-s2-trace-next`:
+- S2 preservation subset:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  ran 6 requested checks: ARZ1 and OOZ1 passed; ARZ2 f4046 / 1509, CNZ2 f9946
+  / 300, MTZ3 f13336 / 352, and OOZ2 f11038 / 117 remained expected-red.
+- Full S2 sweep:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 19 tests with 15 green / 4 expected-red at the same frontiers: ARZ2
+  f4046 / 1509, CNZ2 f9946 / 300, MTZ3 f13336 / 352, OOZ2 f11038 / 117.
+- Full S1 sweep:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  ran 29 tests with 0 failures and only the existing S1 mapping warnings.
+- S3K guard:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+  ran 68 checks with the two known S3K AIZ expected-reds only: complete-run
+  f1095 / 4319 (`x_speed` expected `0x0000`, actual `0x000C`) and level-select
+  f8941 / 1160 (`camera_y` expected `0x02C1`, actual `0x02B9`).
+
 ## 2026-07-01 - S2 round 31 integrated campaign baseline
 
 Integrated on `bugfix/ai-s2-trace-next`:
