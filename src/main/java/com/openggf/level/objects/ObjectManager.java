@@ -79,6 +79,7 @@ public class ObjectManager {
     // single reset point); never returned to callers that retain references.
     private final Set<ObjectInstance> processedInExecLoopScratch =
             Collections.newSetFromMap(new IdentityHashMap<>());
+    private final BitSet slotsFreedDuringObjectPass = new BitSet();
     private final List<PlayableEntity> activePlayersScratch = new ArrayList<>(4);
     private final List<ObjectSpawn> newSpawnsScratch = new ArrayList<>();
     private final List<ObjectInstance> postPlayerHooksScratch = new ArrayList<>();
@@ -874,6 +875,7 @@ public class ObjectManager {
         }
 
         // ROM parity: Build slot-ordered execution array.
+        slotsFreedDuringObjectPass.clear();
         Arrays.fill(execOrder, null);
         for (ObjectInstance inst : activeObjects.values()) {
             if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
@@ -1804,6 +1806,27 @@ public class ObjectManager {
     }
 
     /**
+     * Reserves the next free dynamic slot while ignoring holes opened earlier in
+     * the same object pass. S2 {@code HurtCharacter} calls {@code AllocateObject}
+     * before later dynamic slots finish and delete themselves; when the engine
+     * defers Obj37 materialization until after the pass, those newly-freed lower
+     * slots must not become the Obj37 owner. The owner should use the first slot
+     * that was free at the ROM hurt instant; {@code Obj37_Init} can then use the
+     * lower holes for child rings via ordinary {@code AllocateObject}
+     * (docs/s2disasm/s2.asm:85444-85461, 25125-25146).
+     */
+    public int allocateDynamicSlotAvoidingCurrentPassFrees() {
+        int first = slotLayout.firstDynamicSlot();
+        int last = slotLayout.lastDynamicSlotExclusive();
+        for (int slot = first; slot < last; slot++) {
+            if (!slotsFreedDuringObjectPass.get(slot) && slotAllocator.isEmpty(slot)) {
+                return slotAllocator.reserve(slot) ? slot : -1;
+            }
+        }
+        return allocateDynamicSlot();
+    }
+
+    /**
      * Re-reserves a specific dynamic slot while restoring a subsystem-owned SST
      * occupant from a rewind snapshot.
      */
@@ -1907,6 +1930,9 @@ public class ObjectManager {
      * Releases a previously allocated dynamic slot index.
      */
     private void releaseSlot(int slotIndex) {
+        if (updating && isManagedDynamicSlot(slotIndex)) {
+            slotsFreedDuringObjectPass.set(slotIndex);
+        }
         slotAllocator.release(slotIndex);
     }
 

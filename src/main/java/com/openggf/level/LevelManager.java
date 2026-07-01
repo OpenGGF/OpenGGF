@@ -2796,7 +2796,7 @@ public class LevelManager {
         }
         int preallocatedFirstSlot = -1;
         if (objectManager != null && objectManager.preallocatesLostRingOwnerSlot()) {
-            preallocatedFirstSlot = objectManager.allocateDynamicSlot();
+            preallocatedFirstSlot = objectManager.allocateDynamicSlotAvoidingCurrentPassFrees();
         }
         pendingLostRingSpawns.add(new PendingLostRingSpawn(
                 player, count, player.getCentreX(), player.getCentreY(), frameCounter,
