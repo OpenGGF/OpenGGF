@@ -13,6 +13,62 @@ the ROM-latched render flag before floor probes; OOZ1 is at f7731 / 490 (`y`
 expected `0x0374`, actual `0x036E`); CNZ2 remains parked at f9487 / 288; MTZ3
 remains f12897 / 490; and OOZ2 remains f9307 / 430.
 
+## 2026-07-01 - S2 round 19 integrated verification after ARZ2 advance
+
+- Worktree/branch: `.worktrees/ai-s2-trace-next` /
+  `bugfix/ai-s2-trace-next` at `0f891e9d9`, after merging
+  `bugfix/ai-s2-arz2-round19-next`.
+- Integrated change:
+  - ARZ2 Obj37 lost rings now consume the ROM-latched `render_flags.on_screen`
+    bit before running the floor probe and refresh the bit after the object
+    step from the S2 BuildSprites bounds (`docs/s2disasm/s2.asm:25125-25155,
+    25209-25233,30560-30627`), advancing ARZ2 from f1820 / 912 to f1993 /
+    842.
+- Focused integrated verification:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.level.rings.TestLostRingObjectInstance" "-DfailIfNoTests=false" test`
+  completed with `TestLostRingObjectInstance` passing 23 / 23 and ARZ2
+  expected-red at f1993 / 842 (`obj_s12_slot` expected `0x12`, actual
+  `0x34`).
+- Integrated S2 sweep:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+  completed 19 traces: 14 green, 5 expected-red. Red frontiers are ARZ2 f1993
+  / 842, CNZ2 f9487 / 288, MTZ3 f12897 / 490, OOZ1 f7731 / 490, and OOZ2
+  f9307 / 430. No previously green S2 trace regressed.
+- S1 guard:
+  `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+  passed 29 / 29 S1 traces. The Maven hook printed a transient git config
+  lock warning while parallel guard jobs were starting, but the build and
+  trace suite completed successfully.
+- S3K guard:
+  `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; $env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; $env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+  completed 68 checks. Bootstrap, decoding, level loading, and AIZ skip
+  headless checks passed; expected-red AIZ traces remained unchanged at
+  complete-run f1095 / 4319 and AIZ f8941 / 1160.
+- Rewind guard:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" test`
+  passed 1 / 1.
+- CNZ2 round 19 no-change:
+  `.worktrees/ai-s2-cnz2-round19-next` reproduced f9487 / 288 and made no
+  trace-fix commit. It tested two Obj51 position/trigger candidates and one
+  roll-attack predicate candidate, but each moved the first error earlier, so
+  all were reverted. Relevant ROM paths: `docs/s2disasm/s2.asm:85013-85443,
+  85793-85815,66428-67115`.
+- OOZ2 round 19 no-change:
+  `.worktrees/ai-s2-ooz2-round19-next` reproduced f9307 / 430. A fast-wrapper
+  ROM probe confirmed the ROM bounces at Obj55 `y=$0292` while the engine
+  samples `y=$0293`; a raw Obj55 `collision_flags=$0F` candidate regressed to
+  f9286 / 420 and was rejected. The only commit on that worker branch was the
+  required BizHawk launcher cherry-pick, not a trace fix. Relevant ROM paths:
+  `docs/s2disasm/s2.asm:68287-68327,61242-61294,85164-85336,85622-85872`.
+- MTZ3 round 19 no-change:
+  `.worktrees/ai-s2-mtz3-round19-next` reproduced f12897 / 490 and made no
+  commit. A ROM-backed Obj54 pause-path correction did not advance the trace
+  and was reverted. Read-only BizHawk probing showed the ROM trace sample at
+  f12897 is taken before a late same-frame Obj53 `Touch_Hurt` against slot 28,
+  while the engine has already published the hurt for that compared frame.
+  Relevant ROM paths: `docs/s2disasm/s2.asm:67486-67490,67832-67875,
+  67880-67938,85252-85264,85418-85484`.
+
 ## 2026-07-01 - S2 ARZ2 Obj37 render-flag latch advances f1820 to f1993
 
 - Worktree/branch: `.worktrees/ai-s2-arz2-round19-next` /
