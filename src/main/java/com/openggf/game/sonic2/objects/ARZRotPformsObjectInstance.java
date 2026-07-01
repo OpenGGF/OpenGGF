@@ -36,7 +36,7 @@ import java.util.logging.Logger;
  * connected by chain links. The platforms provide top-solid collision surfaces
  * that the player can stand on and ride.
  * <p>
- * <b>Disassembly Reference:</b> s2.asm lines 56894-57127 (Obj83 code)
+ * <b>Disassembly Reference:</b> s2.asm lines 57379-57625 (Obj83 code)
  * <p>
  * <b>Subtype encoding:</b>
  * <ul>
@@ -156,12 +156,17 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getX() {
-        return initialX;
+        return platformX[0];
     }
 
     @Override
     public int getY() {
-        return initialY;
+        return platformY[0];
+    }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        return initialX;
     }
 
     @Override

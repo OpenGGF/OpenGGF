@@ -31016,3 +31016,37 @@ No S2 trace turned green in this integrated round, so these campaign advances
 were not banked into `next` under the green-bank rule. Local `next` only received
 the reusable BizHawk hidden-launch tooling merge so future workers inherit the
 correct no-audio/no-render runner.
+
+### 2026-07-01 -- S2 ARZ2 round 30 Obj83 parent platform position
+
+Baseline on `bugfix/ai-s2-arz2-round30-next` from campaign head `361744b97`:
+`TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` failed at f3592 / 1626
+errors, first field `obj_s12_type` (`expected 0x83`, actual missing). The ROM
+slot dump still had Obj83 live near `$1BBF,$02BA`; the engine had the parent
+Obj83 slot live but semantically unmatched because it exposed the original
+spawn centre `$1B80,$02B0` instead of the ROM-updated parent `x_pos/y_pos`.
+
+Root fixed: `Obj83_Main` writes the first rotating platform position back into
+the parent slot after updating the first row of chain sprites, so the parent
+SST's native `x_pos/y_pos` is no longer the initial anchor. The offscreen range
+check still reads `Obj83_initial_x_pos`, so the engine now reports the live
+platform position through `getX()/getY()` while keeping the original anchor for
+out-of-range expiry. This matches `Obj83_Main` parent write-back and the
+separate initial-X cull path (`docs/s2disasm/s2.asm:57490-57527,57582-57588`).
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f3592 / 1626 errors
+  (`obj_s12_type` expected `0x83`, actual missing) -> f3597 / 1622 errors
+  (`obj_extra_s1C_x` expected absent, actual `0x1BAE`).
+- New owner is the Obj83 child slot coordinate/export cadence around slot `$1C`;
+  the parent Obj83 semantic match now reaches the ROM-side window.
+
+Verification:
+- Focused target:
+  `mvn clean "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 with the improved expected-red f3597 / 1622 frontier above.
+- S2 green/red preservation subset:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  ran 5 requested checks: ARZ1 and OOZ1 passed; CNZ2, MTZ3, and OOZ2 preserved
+  the current expected-red frontiers f9946 / 300, f13336 / 352, and f10340 /
+  353 respectively.
