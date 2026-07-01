@@ -33,9 +33,8 @@ import static org.mockito.Mockito.when;
 class TestS2OozBadnikParity {
 
     @Test
-    void aquisDefaultProjectileSpawnsLeftAndMovesLeft() throws Exception {
+    void aquisClearRenderFlagProjectileSpawnsLeftAndMovesLeft() throws Exception {
         AquisBadnikInstance aquis = new AquisBadnikInstance(spawn(Sonic2ObjectIds.AQUIS, 0x300, 0x180));
-        setField(aquis, "facingLeft", false);
 
         BadnikProjectileInstance projectile = fireSingleAquisProjectile(aquis);
 
@@ -47,9 +46,8 @@ class TestS2OozBadnikParity {
     }
 
     @Test
-    void aquisFlippedProjectileSpawnsRightAndMovesRight() throws Exception {
-        AquisBadnikInstance aquis = new AquisBadnikInstance(spawn(Sonic2ObjectIds.AQUIS, 0x300, 0x180));
-        setField(aquis, "facingLeft", true);
+    void aquisSetRenderFlagProjectileSpawnsRightAndMovesRight() throws Exception {
+        AquisBadnikInstance aquis = new AquisBadnikInstance(spawn(Sonic2ObjectIds.AQUIS, 0x300, 0x180, 1));
 
         BadnikProjectileInstance projectile = fireSingleAquisProjectile(aquis);
 
@@ -76,6 +74,36 @@ class TestS2OozBadnikParity {
 
         invoke(aquis, "updateShooting", new Class<?>[] { AbstractPlayableSprite.class }, player);
         verify(objectManager, never()).addDynamicObject(any(ObjectInstance.class));
+    }
+
+    @Test
+    void aquisTimerExpiryClearsFlagAndShootsBeforeNextChase() throws Exception {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+
+        AquisBadnikInstance aquis = new AquisBadnikInstance(spawn(Sonic2ObjectIds.AQUIS, 0x300, 0x180));
+        aquis.setServices(servicesWithObjectManager(objectManager));
+        setField(aquis, "timer", 0);
+        setField(aquis, "shotsRemaining", 1);
+        setField(aquis, "shootingFlag", true);
+
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.isDebugMode()).thenReturn(false);
+        when(player.getCentreY()).thenReturn((short) 0x190);
+
+        invoke(aquis, "updateShooting", new Class<?>[] { AbstractPlayableSprite.class }, player);
+
+        assertEquals(1, spawned.size(),
+                "Obj50_WaitForNextShot clears the flag, then Obj50_Shooting still calls Obj50_ChkIfShoot");
+        assertEquals(0, getInt(aquis, "shotsRemaining"),
+                "Obj50_WaitForNextShot branches to escape only when the decremented byte is negative");
+        assertEquals(0x80, getInt(aquis, "timer"));
+        assertEquals(-0x100, getInt(aquis, "yVelocity"));
+        assertTrue(getBoolean(aquis, "shootingFlag"));
     }
 
     @Test
@@ -166,7 +194,11 @@ class TestS2OozBadnikParity {
     }
 
     private static ObjectSpawn spawn(int objectId, int x, int y) {
-        return new ObjectSpawn(x, y, objectId, 0, 0, false, y);
+        return spawn(objectId, x, y, 0);
+    }
+
+    private static ObjectSpawn spawn(int objectId, int x, int y, int renderFlags) {
+        return new ObjectSpawn(x, y, objectId, 0, renderFlags, false, y);
     }
 
     private static void updateProjectile(BadnikProjectileInstance projectile, int frames) {
