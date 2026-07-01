@@ -8,6 +8,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.scroll.SwScrlGhz;
+import com.openggf.game.titlescreen.SegaPaletteFade;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
@@ -61,10 +62,28 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     private int introTextTimer = 0;
     private static final int INTRO_TEXT_FADE_DURATION = 22;
     private static final int INTRO_TEXT_HOLD_DURATION = 96;
+    private int segaLogoTimer = 0;
+    private boolean segaPcmStarted = false;
+    private SegaLogoFadePhase segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+    private int segaLogoFadeTimer = 0;
+    private final Sonic1TitleScreenDataLoader.SegaLogoPaletteCycleState segaLogoPaletteCycle =
+            new Sonic1TitleScreenDataLoader.SegaLogoPaletteCycleState();
+    private static final int SEGA_LOGO_FADE_FRAMES = 22;
+    private static final int SEGA_LOGO_PALETTE_FRAMES = 76;
+    private static final int SEGA_LOGO_PCM_FRAMES = 98;
+    private static final int SEGA_LOGO_POST_CHANT_FRAMES = 30;
+
+    private enum SegaLogoFadePhase {
+        FADING_IN,
+        ACTIVE,
+        FADING_OUT
+    }
 
     // Screen dimensions
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
+    static final int SEGA_LOGO_SCAN_X = 8 * 8;
+    static final int SEGA_LOGO_SCAN_Y = 10 * 8;
 
     // Widescreen helpers ---------------------------------------------------
 
@@ -197,6 +216,11 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         frameCounter = 0;
         fadeTimer = 0;
         introTextTimer = 0;
+        segaLogoTimer = 0;
+        segaPcmStarted = false;
+        segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+        segaLogoFadeTimer = 0;
+        segaLogoPaletteCycle.reset();
         creditTextCached = false;
         spritesInitialized = false;
         bgCameraX = 0;
@@ -217,9 +241,9 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
         // Reset data loader cache so patterns get re-uploaded
         dataLoader.resetCache();
+        dataLoader.resetSegaLogoPaletteCycle();
 
-        // Start with intro text phase
-        state = State.INTRO_TEXT_FADE_IN;
+        state = State.SEGA_LOGO;
 
         // Apply title palette
         applyTitlePalette();
@@ -238,6 +262,10 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         int startKey = configuration().getInt(SonicConfiguration.JUMP);
 
         switch (state) {
+            case SEGA_LOGO:
+                updateSegaLogo(input, startKey);
+                break;
+
             case INTRO_TEXT_FADE_IN:
                 introTextTimer++;
                 if (introTextTimer >= INTRO_TEXT_FADE_DURATION) {
@@ -298,6 +326,70 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
     private void skipToMainScreen() {
         transitionToMainScreen();
+    }
+
+    private void updateSegaLogo(InputHandler input, int startKey) {
+        if (updateSegaLogoFadeIn()) {
+            return;
+        }
+        if (updateSegaLogoFadeOut()) {
+            return;
+        }
+
+        segaLogoTimer++;
+        if (segaLogoTimer <= SEGA_LOGO_PALETTE_FRAMES) {
+            dataLoader.advanceSegaLogoPaletteCycle(segaLogoPaletteCycle);
+        }
+        int chantStart = SEGA_LOGO_PALETTE_FRAMES;
+        int skipWindowStart = chantStart + SEGA_LOGO_PCM_FRAMES;
+        int autoEnd = skipWindowStart + SEGA_LOGO_POST_CHANT_FRAMES;
+
+        if (!segaPcmStarted && segaLogoTimer >= chantStart) {
+            segaPcmStarted = true;
+            GameServices.audio().playMusic(com.openggf.game.sonic1.audio.Sonic1SmpsConstants.CMD_SEGA);
+        }
+        if (segaLogoTimer >= autoEnd || (segaLogoTimer >= skipWindowStart && input.isKeyPressed(startKey))) {
+            beginSegaLogoFadeOut();
+        }
+    }
+
+    private boolean updateSegaLogoFadeIn() {
+        if (segaLogoFadePhase != SegaLogoFadePhase.FADING_IN) {
+            return false;
+        }
+        segaLogoFadeTimer++;
+        if (segaLogoFadeTimer < SEGA_LOGO_FADE_FRAMES) {
+            return true;
+        }
+        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
+        segaLogoFadeTimer = 0;
+        return false;
+    }
+
+    private boolean updateSegaLogoFadeOut() {
+        if (segaLogoFadePhase != SegaLogoFadePhase.FADING_OUT) {
+            return false;
+        }
+        segaLogoFadeTimer++;
+        if (segaLogoFadeTimer < SEGA_LOGO_FADE_FRAMES) {
+            return true;
+        }
+        state = State.INTRO_TEXT_FADE_IN;
+        introTextTimer = 0;
+        segaLogoTimer = 0;
+        segaPcmStarted = false;
+        segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+        segaLogoFadeTimer = 0;
+        return true;
+    }
+
+    private void beginSegaLogoFadeOut() {
+        if (segaLogoFadePhase == SegaLogoFadePhase.FADING_OUT) {
+            return;
+        }
+        segaLogoFadePhase = SegaLogoFadePhase.FADING_OUT;
+        segaLogoFadeTimer = 0;
+        GameServices.audio().stopSegaPcm();
     }
 
     private void transitionToMainScreen() {
@@ -528,6 +620,11 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
         GraphicsManager gm = GameServices.graphics();
 
+        if (state == State.SEGA_LOGO) {
+            drawSegaLogo(gm);
+            return;
+        }
+
         // Ensure palettes are uploaded to GPU (required for all pattern rendering)
         dataLoader.cachePalettesToGpu(gm);
 
@@ -611,6 +708,71 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
                 ));
             }
         }
+    }
+
+    private void drawSegaLogo(GraphicsManager gm) {
+        dataLoader.cacheSegaLogoToGpu(gm, segaLogoFadeMode(), segaLogoFadeTimer);
+        drawSegaLogoScan(gm);
+        int[] map = dataLoader.getSegaLogoMap();
+        if (map == null || map.length == 0) {
+            return;
+        }
+        gm.beginPatternBatch();
+        int width = dataLoader.getSegaLogoWidth();
+        int height = dataLoader.getSegaLogoHeight();
+        for (int ty = 0; ty < height; ty++) {
+            for (int tx = 0; tx < width; tx++) {
+                int word = map[ty * width + tx];
+                if (word == 0) {
+                    continue;
+                }
+                reusableDesc.set(word);
+                int tileIndex = reusableDesc.getPatternIndex();
+                gm.renderPatternWithId(
+                        Sonic1TitleScreenDataLoader.SEGA_LOGO_PATTERN_BASE + tileIndex,
+                        reusableDesc,
+                        xOffset() + tx * 8,
+                        ty * 8);
+            }
+        }
+        gm.flushPatternBatch();
+    }
+
+    private SegaPaletteFade.Mode segaLogoFadeMode() {
+        if (segaLogoFadePhase == SegaLogoFadePhase.FADING_IN) {
+            return SegaPaletteFade.Mode.FROM_BLACK;
+        }
+        if (segaLogoFadePhase == SegaLogoFadePhase.FADING_OUT) {
+            return SegaPaletteFade.Mode.TO_BLACK;
+        }
+        return SegaPaletteFade.Mode.NONE;
+    }
+
+    private void drawSegaLogoScan(GraphicsManager gm) {
+        int[] map = dataLoader.getSegaLogoScanMap();
+        if (map == null || map.length == 0) {
+            return;
+        }
+        gm.beginPatternBatch();
+        int width = dataLoader.getSegaLogoScanWidth();
+        int height = dataLoader.getSegaLogoScanHeight();
+        for (int ty = 0; ty < height; ty++) {
+            for (int tx = 0; tx < width; tx++) {
+                int word = map[ty * width + tx];
+                if (word == 0) {
+                    continue;
+                }
+                reusableDesc.set(word);
+                int tileIndex = reusableDesc.getPatternIndex();
+                gm.renderPatternWithId(
+                        Sonic1TitleScreenDataLoader.SEGA_LOGO_PATTERN_BASE + tileIndex,
+                        reusableDesc,
+                        xOffset() + SEGA_LOGO_SCAN_X + tx * 8,
+                        SEGA_LOGO_SCAN_Y + ty * 8);
+            }
+        }
+        gm.flushPatternBatch();
+        gm.flushScreenSpace();
     }
 
     /**
@@ -838,7 +1000,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     public void setClearColor() {
         // During intro text, background is black
         if (state == State.INTRO_TEXT_FADE_IN || state == State.INTRO_TEXT_HOLD ||
-                state == State.INTRO_TEXT_FADE_OUT) {
+                state == State.INTRO_TEXT_FADE_OUT || state == State.SEGA_LOGO) {
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             return;
         }
@@ -854,10 +1016,16 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void reset() {
+        GameServices.audio().stopSegaPcm();
         state = State.INACTIVE;
         frameCounter = 0;
         fadeTimer = 0;
         introTextTimer = 0;
+        segaLogoTimer = 0;
+        segaPcmStarted = false;
+        segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+        segaLogoFadeTimer = 0;
+        segaLogoPaletteCycle.reset();
         creditTextCached = false;
         spritesInitialized = false;
         sonicRoutine = 0;

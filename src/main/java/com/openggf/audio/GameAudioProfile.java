@@ -121,6 +121,14 @@ public interface GameAudioProfile {
         return false;
     }
 
+    /**
+     * Returns ROM metadata for the boot SEGA PCM chant, or {@code null} when the
+     * game has no command-driven SEGA PCM path.
+     */
+    default SegaPcmSpec getSegaPcmSpec() {
+        return null;
+    }
+
     /** How speed shoes affect music playback. Default: TEMPO_SWAP (S1/S2). */
     default SpeedMode getSpeedMode() {
         return SpeedMode.TEMPO_SWAP;

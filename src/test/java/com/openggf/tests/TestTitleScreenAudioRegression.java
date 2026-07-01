@@ -38,6 +38,7 @@ public class TestTitleScreenAudioRegression {
     private static final class CountingBackend implements AudioBackend {
         int musicPlayCalls = 0;
         int sparkleSfxCalls = 0;
+        int stopPcmCalls = 0;
 
         @Override
         public void init() {
@@ -79,6 +80,11 @@ public class TestTitleScreenAudioRegression {
 
         @Override
         public void stopPlayback() {
+        }
+
+        @Override
+        public void stopPcmSample() {
+            stopPcmCalls++;
         }
 
         @Override
@@ -137,6 +143,18 @@ public class TestTitleScreenAudioRegression {
     }
 
     @Test
+    void titleScreenResetStopsActiveSegaPcm() {
+        AudioManager audioManager = AudioManager.getInstance();
+        CountingBackend backend = new CountingBackend();
+        audioManager.setBackend(backend);
+
+        TitleScreenManager.getInstance().reset();
+
+        assertEquals(1, backend.stopPcmCalls,
+                "Reset must stop any active SEGA PCM before returning to another title/game");
+    }
+
+    @Test
     void testTitleMusicLoadsFromRom() throws Exception {
         Rom rom = GameServices.rom().getRom();
 
@@ -180,7 +198,7 @@ public class TestTitleScreenAudioRegression {
         title.initialize();
 
         InputHandler input = new InputHandler();
-        for (int i = 0; i < 600; i++) {
+        for (int i = 0; i < 900; i++) {
             title.update(input);
             input.update();
         }
@@ -190,5 +208,3 @@ public class TestTitleScreenAudioRegression {
                 "Title sparkle SFX should trigger exactly 10 times (init + 9 positions)");
     }
 }
-
-

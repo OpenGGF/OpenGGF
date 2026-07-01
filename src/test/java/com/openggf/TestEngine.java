@@ -377,6 +377,7 @@ class TestEngine {
             assertDoesNotThrow(() -> harness.engine.exitMasterTitleScreen("s2"));
 
             verify(masterTitleScreen).cleanup();
+            verify(harness.graphics).clearPaletteTextures();
             assertEquals("s2", SonicConfigurationService.getInstance()
                     .getConfigValue(SonicConfiguration.DEFAULT_ROM));
         }

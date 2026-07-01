@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.audio;
 import com.openggf.audio.AbstractAudioProfile;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
+import com.openggf.audio.SegaPcmSpec;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.data.Rom;
@@ -100,6 +101,19 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
     @Override
     public int getSuperSonicMusicId() {
         return Sonic2Music.SUPER_SONIC.id;
+    }
+
+    @Override
+    protected int getSegaCommandId() {
+        return Sonic2SmpsConstants.CMD_SEGA;
+    }
+
+    @Override
+    public SegaPcmSpec getSegaPcmSpec() {
+        return new SegaPcmSpec(
+                Sonic2SmpsConstants.SEGA_SOUND_ADDR,
+                Sonic2SmpsConstants.SEGA_SOUND_SIZE,
+                Sonic2SmpsConstants.SEGA_SOUND_SAMPLE_RATE);
     }
 
     @Override

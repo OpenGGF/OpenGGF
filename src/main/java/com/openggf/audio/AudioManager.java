@@ -45,6 +45,7 @@ public class AudioManager {
     private AudioBackend backend;
     private SmpsLoader smpsLoader;
     private DacData dacData;
+    private Rom rom;
     private Map<GameSound, Integer> soundMap;
     private GameAudioProfile audioProfile;
     private boolean ringLeft = true;
@@ -250,6 +251,7 @@ public class AudioManager {
     }
 
     public void setRom(Rom rom) {
+        this.rom = rom;
         clearRestoreSmpsResolveCache();
         if (audioProfile == null) {
             this.smpsLoader = null;
@@ -357,6 +359,33 @@ public class AudioManager {
                     snapshot.backend(),
                     createSmpsDependencyResolver(),
                     reverseAudioPresentationActive);
+        }
+    }
+
+    public void playSegaPcm() {
+        if (suppressingRewindReplay() || audioProfile == null || rom == null) {
+            return;
+        }
+        SegaPcmSpec spec = audioProfile.getSegaPcmSpec();
+        if (spec == null) {
+            return;
+        }
+        try {
+            byte[] pcm = rom.readBytes(spec.address(), spec.length());
+            if (sendLiveBackendCommands()) {
+                backend.playPcmSample(pcm, spec.sampleRate());
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to play SEGA PCM sample", e);
+        }
+    }
+
+    public void stopSegaPcm() {
+        if (suppressingRewindReplay()) {
+            return;
+        }
+        if (sendLiveBackendCommands()) {
+            backend.stopPcmSample();
         }
     }
 
@@ -1214,6 +1243,7 @@ public class AudioManager {
         }
         this.smpsLoader = null;
         this.dacData = null;
+        this.rom = null;
         this.soundMap = null;
         this.audioProfile = null;
         this.ringLeft = true;

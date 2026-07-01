@@ -459,6 +459,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void reset() {
+        GameServices.audio().stopSegaPcm();
         state = State.INACTIVE;
         phase = Phase.SEGA_FADE_IN;
         phaseTimer = 0;
@@ -506,10 +507,6 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     private void updateSegaFadeIn(InputHandler input) {
         phaseTimer++;
 
-        if (checkSkipToInteractive(input)) {
-            return;
-        }
-
         if (phaseTimer >= SEGA_FADE_DURATION) {
             phase = Phase.SEGA_HOLD;
             phaseTimer = 0;
@@ -531,7 +528,12 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
             GameServices.audio().playMusic(Sonic3kSmpsConstants.CMD_SEGA);
         }
 
+        if (checkSkipToInteractive(input)) {
+            return;
+        }
+
         if (phaseTimer >= SEGA_HOLD_DURATION) {
+            GameServices.audio().playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
             phase = Phase.PAL_TRANSITION;
             phaseTimer = 0;
             state = State.INTRO_TEXT_FADE_OUT;
@@ -763,6 +765,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     }
 
     private void transitionToWhiteFlash() {
+        if (segaSoundPlayed) {
+            GameServices.audio().playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
+        }
         phase = Phase.WHITE_FLASH;
         phaseTimer = 0;
         state = State.FADE_IN;

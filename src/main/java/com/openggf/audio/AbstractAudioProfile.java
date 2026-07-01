@@ -58,6 +58,14 @@ public abstract class AbstractAudioProfile implements GameAudioProfile {
     }
 
     /**
+     * Returns the sound ID that stops the SEGA PCM jingle without stopping music
+     * or normal SFX, or {@code -1} if not applicable.
+     */
+    protected int getStopSegaCommandId() {
+        return -1;
+    }
+
+    /**
      * Executes the fade-out action. Override to supply game-specific
      * step/delay parameters (e.g. S3K uses 0x28 steps, delay 6).
      * The default calls {@link AudioManager#fadeOutMusic()} which uses
@@ -85,7 +93,10 @@ public abstract class AbstractAudioProfile implements GameAudioProfile {
             manager.stopMusic();
             return true;
         } else if (soundId == getSegaCommandId() && getSegaCommandId() != -1) {
-            // SEGA PCM sample - only used on title screen, not yet implemented
+            manager.playSegaPcm();
+            return true;
+        } else if (soundId == getStopSegaCommandId() && getStopSegaCommandId() != -1) {
+            manager.stopSegaPcm();
             return true;
         }
         return false;

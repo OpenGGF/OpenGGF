@@ -8,6 +8,9 @@ import com.openggf.graphics.color.DisplayColorProfile;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 
+import java.lang.reflect.Field;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -138,6 +141,26 @@ public class TestGraphicsManagerHeadless {
         // Combined palette texture ID should be null in headless mode
         // (we use dummy tracking via paletteTextureMap)
         assertNull(graphicsManager.getCombinedPaletteTextureId(), "Combined palette texture should be null in headless mode");
+    }
+
+    @Test
+    public void testClearPaletteTexturesClearsHeadlessTrackingAndUnderwaterSelection() throws Exception {
+        graphicsManager.initHeadless();
+        graphicsManager.cachePaletteTexture(createTestPalette(), 2);
+        graphicsManager.setUseUnderwaterPaletteForBackground(true);
+
+        Map<?, ?> paletteTextureMap = paletteTextureMap(graphicsManager);
+        assertFalse(paletteTextureMap.isEmpty(), "precondition: headless palette cache should be tracked");
+        assertTrue(graphicsManager.isUseUnderwaterPaletteForBackground(),
+                "precondition: underwater palette selection should be enabled");
+
+        graphicsManager.clearPaletteTextures();
+
+        assertTrue(paletteTextureMap.isEmpty(), "palette reset should clear headless palette tracking");
+        assertNull(graphicsManager.getCombinedPaletteTextureId(), "combined palette texture should be cleared");
+        assertNull(graphicsManager.getUnderwaterPaletteTextureId(), "underwater palette texture should be cleared");
+        assertFalse(graphicsManager.isUseUnderwaterPaletteForBackground(),
+                "palette reset should clear the underwater palette selector");
     }
 
     @Test
@@ -336,6 +359,12 @@ public class TestGraphicsManagerHeadless {
         // Create a simple 16-color palette for testing using default constructor
         return new Palette();
     }
-}
 
+    @SuppressWarnings("unchecked")
+    private static Map<?, ?> paletteTextureMap(GraphicsManager graphicsManager) throws Exception {
+        Field field = GraphicsManager.class.getDeclaredField("paletteTextureMap");
+        field.setAccessible(true);
+        return (Map<?, ?>) field.get(graphicsManager);
+    }
+}
 

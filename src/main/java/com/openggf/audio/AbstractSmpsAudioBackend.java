@@ -554,6 +554,32 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         hookRestartStreamIfDry();
     }
 
+    @Override
+    public void playPcmSample(byte[] pcm, int sourceSampleRate) {
+        if (pcm == null || pcm.length == 0 || sfxBlocked) {
+            return;
+        }
+        synchronized (streamLock) {
+            sfxStream = new PcmSampleStream(pcm, sourceSampleRate, outputSampleRate());
+            if (runtimeProvidesPresentationPcm()) {
+                deterministicAudioRuntime.setSfxStream(sfxStream);
+            }
+        }
+        hookRestartStreamIfDry();
+    }
+
+    @Override
+    public void stopPcmSample() {
+        synchronized (streamLock) {
+            if (sfxStream instanceof PcmSampleStream) {
+                sfxStream = null;
+                if (runtimeProvidesPresentationPcm()) {
+                    deterministicAudioRuntime.clearSfxStream();
+                }
+            }
+        }
+    }
+
     protected void startStream() {
         hookStartStream();
     }

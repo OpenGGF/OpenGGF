@@ -4,6 +4,7 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.titlescreen.SegaPaletteFade;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Block;
@@ -61,6 +62,9 @@ public class Sonic1TitleScreenDataLoader {
     /** Pattern base ID for GHZ background patterns. */
     static final int GHZ_PATTERN_BASE = PatternAtlasRange.SONIC1_TITLE_GHZ_BACKGROUND.base();
 
+    /** Pattern base ID for the boot SEGA logo. */
+    static final int SEGA_LOGO_PATTERN_BASE = PatternAtlasRange.SEGA_BOOT_LOGOS.base();
+
     // Plane A dimensions from PlaneEd: x-Size=0x22 (34), y-Size=0x16 (22)
     private static final int PLANE_A_WIDTH = 34;
     private static final int PLANE_A_HEIGHT = 22;
@@ -75,6 +79,7 @@ public class Sonic1TitleScreenDataLoader {
     private Pattern[] sonicPatterns;     // Sonic sprite
     private Pattern[] tmPatterns;        // TM symbol
     private Pattern[] creditTextPatterns; // Credit text font
+    private Pattern[] segaLogoPatterns;   // Boot SEGA logo
 
     // GHZ background data
     private Pattern[] ghzPatterns;       // GHZ 8x8 patterns
@@ -91,9 +96,15 @@ public class Sonic1TitleScreenDataLoader {
 
     // Plane A nametable (Enigma-decoded)
     private int[] planeAMap;
+    private int[] segaLogoMap;
+    private int[] segaLogoScanMap;
 
     // Palettes (4 lines from Pal_Title, 32 bytes each)
     private Palette[] titlePaletteLines;
+    private Palette[] segaLogoPalettes;
+    private byte[] segaLogoBasePaletteData;
+    private byte[] segaLogoScanPaletteData;
+    private byte[] segaLogoFadePaletteData;
     private byte[] paletteCycleData;     // Raw Pal_TitleCyc data (32 bytes)
 
     private boolean dataLoaded = false;
@@ -103,6 +114,8 @@ public class Sonic1TitleScreenDataLoader {
     private boolean tmCached = false;
     private boolean ghzCached = false;
     private boolean palettesCached = false;
+    private boolean segaLogoCached = false;
+    private boolean segaLogoPaletteDirty = false;
 
     /**
      * Loads all title screen data from ROM.
@@ -147,6 +160,7 @@ public class Sonic1TitleScreenDataLoader {
 
             // Load Enigma-compressed title foreground nametable
             loadPlaneAMap(rom);
+            loadSegaLogoData(rom);
 
             // Load GHZ background data
             loadGhzPatterns(rom);
@@ -262,6 +276,32 @@ public class Sonic1TitleScreenDataLoader {
         LOGGER.info("Cached " + ghzPatterns.length + " S1 GHZ patterns to GPU");
     }
 
+    public void cacheSegaLogoToGpu(GraphicsManager gm, SegaPaletteFade.Mode fadeMode, int fadeSteps) {
+        if (segaLogoPatterns == null) {
+            return;
+        }
+        boolean fadeActive = fadeMode != null && fadeMode != SegaPaletteFade.Mode.NONE;
+        if (segaLogoPalettes != null && (!segaLogoCached || segaLogoPaletteDirty || fadeActive)) {
+            for (int line = 0; line < segaLogoPalettes.length; line++) {
+                gm.cachePaletteTexture(resolveSegaLogoPaletteLine(line, fadeMode, fadeSteps), line);
+            }
+            segaLogoPaletteDirty = false;
+        }
+        if (!segaLogoCached) {
+            for (int i = 0; i < segaLogoPatterns.length; i++) {
+                gm.cachePatternTexture(segaLogoPatterns[i], SEGA_LOGO_PATTERN_BASE + i);
+            }
+            segaLogoCached = true;
+        }
+    }
+
+    Palette resolveSegaLogoPaletteLine(int line, SegaPaletteFade.Mode fadeMode, int fadeSteps) {
+        if (segaLogoPalettes == null || line < 0 || line >= segaLogoPalettes.length) {
+            return null;
+        }
+        return SegaPaletteFade.apply(segaLogoPalettes[line], fadeMode, fadeSteps);
+    }
+
     /**
      * Re-uploads a single palette line to the GPU.
      * Used for palette cycling (water animation).
@@ -302,6 +342,149 @@ public class Sonic1TitleScreenDataLoader {
         } catch (IOException e) {
             LOGGER.warning("Failed to load Eni_Title: " + e.getMessage());
             planeAMap = new int[0];
+        }
+    }
+
+    private void loadSegaLogoData(Rom rom) throws IOException {
+        segaLogoPatterns = PatternDecompressor.nemesis(
+                rom, Sonic1Constants.ART_NEM_SEGA_LOGO_ADDR, 8192, "S1SegaLogo");
+
+        byte[] compressed = rom.readBytes(Sonic1Constants.MAP_ENI_SEGA_LOGO_ADDR, 1024);
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
+             ReadableByteChannel channel = Channels.newChannel(bais)) {
+            byte[] decoded = EnigmaReader.decompress(channel, 0);
+            int wordCount = decoded.length / 2;
+            int[] words = new int[wordCount];
+            for (int i = 0; i < wordCount; i++) {
+                words[i] = ((decoded[i * 2] & 0xFF) << 8) | (decoded[i * 2 + 1] & 0xFF);
+            }
+            segaLogoScanMap = new int[24 * 8];
+            System.arraycopy(words, 0, segaLogoScanMap, 0, Math.min(segaLogoScanMap.length, words.length));
+            segaLogoMap = new int[40 * 28];
+            int foregroundOffset = 24 * 8;
+            for (int i = 0; i < segaLogoMap.length && foregroundOffset + i < words.length; i++) {
+                segaLogoMap[i] = words[foregroundOffset + i];
+            }
+        }
+
+        segaLogoBasePaletteData = rom.readBytes(Sonic1Constants.PAL_SEGA_BG_ADDR, 128);
+        segaLogoScanPaletteData = rom.readBytes(Sonic1Constants.PAL_SEGA_SCAN_ADDR, 12);
+        segaLogoFadePaletteData = rom.readBytes(Sonic1Constants.PAL_SEGA_FADE_ADDR, 48);
+        segaLogoPalettes = new Palette[4];
+        for (int line = 0; line < segaLogoPalettes.length; line++) {
+            segaLogoPalettes[line] = new Palette();
+        }
+        resetSegaLogoPaletteCycle();
+        LOGGER.info("Loaded S1 SEGA boot logo art/map/palette");
+    }
+
+    public void resetSegaLogoPaletteCycle() {
+        if (segaLogoPalettes == null || segaLogoBasePaletteData == null) {
+            return;
+        }
+        for (int line = 0; line < segaLogoPalettes.length; line++) {
+            byte[] lineData = Arrays.copyOfRange(
+                    segaLogoBasePaletteData,
+                    line * Palette.PALETTE_SIZE_IN_ROM,
+                    (line + 1) * Palette.PALETTE_SIZE_IN_ROM);
+            segaLogoPalettes[line].fromSegaFormat(lineData);
+        }
+        segaLogoPaletteDirty = true;
+    }
+
+    public boolean advanceSegaLogoPaletteCycle(SegaLogoPaletteCycleState state) {
+        if (segaLogoPalettes == null || segaLogoScanPaletteData == null || segaLogoFadePaletteData == null) {
+            return false;
+        }
+        if (!state.scanComplete) {
+            advanceSegaLogoLightScan(state);
+            segaLogoPaletteDirty = true;
+            return true;
+        }
+        state.fadeDelay--;
+        if (state.fadeDelay >= 0) {
+            return true;
+        }
+        state.fadeDelay = 4;
+        int fadeOffset = state.position + 12;
+        if (fadeOffset >= 48) {
+            return false;
+        }
+        state.position = fadeOffset;
+        writeFadeInPaletteStep(fadeOffset);
+        segaLogoPaletteDirty = true;
+        return true;
+    }
+
+    private void advanceSegaLogoLightScan(SegaLogoPaletteCycleState state) {
+        int dataOffset = 0;
+        int colorsLeft = 5;
+        int targetOffset = state.position;
+        while (targetOffset < 0 && colorsLeft >= 0) {
+            dataOffset += 2;
+            colorsLeft--;
+            targetOffset += 2;
+        }
+        while (colorsLeft >= 0) {
+            if ((targetOffset & 0x1E) == 0) {
+                targetOffset += 2;
+            }
+            if (targetOffset < 0x60 && dataOffset + 1 < segaLogoScanPaletteData.length) {
+                setSegaLogoColorByByteOffset(0x20 + targetOffset, segaLogoScanPaletteData, dataOffset);
+            }
+            targetOffset += 2;
+            dataOffset += 2;
+            colorsLeft--;
+        }
+
+        int nextPosition = state.position + 2;
+        if ((nextPosition & 0x1E) == 0) {
+            nextPosition += 2;
+        }
+        if (nextPosition >= 0x64) {
+            state.scanComplete = true;
+            state.fadeDelay = 4;
+            nextPosition = -12;
+        }
+        state.position = nextPosition;
+    }
+
+    private void writeFadeInPaletteStep(int fadeOffset) {
+        for (int i = 0; i < 5; i++) {
+            setSegaLogoColorByByteOffset(0x04 + i * 2, segaLogoFadePaletteData, fadeOffset + i * 2);
+        }
+        int fillOffset = fadeOffset + 10;
+        for (int line = 1; line <= 3; line++) {
+            for (int color = 1; color < Palette.PALETTE_SIZE; color++) {
+                setSegaLogoColor(line, color, segaLogoFadePaletteData, fillOffset);
+            }
+        }
+    }
+
+    private void setSegaLogoColorByByteOffset(int paletteByteOffset, byte[] source, int sourceOffset) {
+        int line = paletteByteOffset / Palette.PALETTE_SIZE_IN_ROM;
+        int color = (paletteByteOffset % Palette.PALETTE_SIZE_IN_ROM) / Palette.BYTES_PER_COLOR;
+        setSegaLogoColor(line, color, source, sourceOffset);
+    }
+
+    private void setSegaLogoColor(int line, int color, byte[] source, int sourceOffset) {
+        if (line < 0 || line >= segaLogoPalettes.length
+                || color < 0 || color >= Palette.PALETTE_SIZE
+                || sourceOffset < 0 || sourceOffset + 1 >= source.length) {
+            return;
+        }
+        segaLogoPalettes[line].getColor(color).fromSegaFormat(source, sourceOffset);
+    }
+
+    static final class SegaLogoPaletteCycleState {
+        private int position = -10;
+        private int fadeDelay = 0;
+        private boolean scanComplete = false;
+
+        void reset() {
+            position = -10;
+            fadeDelay = 0;
+            scanComplete = false;
         }
     }
 
@@ -600,6 +783,30 @@ public class Sonic1TitleScreenDataLoader {
         return creditTextPatterns;
     }
 
+    public int[] getSegaLogoMap() {
+        return segaLogoMap;
+    }
+
+    public int[] getSegaLogoScanMap() {
+        return segaLogoScanMap;
+    }
+
+    public int getSegaLogoScanWidth() {
+        return 24;
+    }
+
+    public int getSegaLogoScanHeight() {
+        return 8;
+    }
+
+    public int getSegaLogoWidth() {
+        return 40;
+    }
+
+    public int getSegaLogoHeight() {
+        return 28;
+    }
+
     public boolean isDataLoaded() {
         return dataLoaded;
     }
@@ -614,5 +821,6 @@ public class Sonic1TitleScreenDataLoader {
         tmCached = false;
         ghzCached = false;
         palettesCached = false;
+        segaLogoCached = false;
     }
 }

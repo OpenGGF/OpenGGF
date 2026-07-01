@@ -1098,6 +1098,35 @@ public class GraphicsManager {
 		return underwaterPaletteTextureId;
 	}
 
+	/**
+	 * Drops all cached palette texture state while leaving pattern/shader state intact.
+	 * Use this when changing games through non-pattern-rendered screens so the next
+	 * game cannot render a frame with another game's stale palette rows.
+	 */
+	public void clearPaletteTextures() {
+		paletteTextureMap.clear();
+		if (!headlessMode && glInitialized) {
+			if (combinedPaletteTextureId != null) {
+				glDeleteTextures(combinedPaletteTextureId);
+			}
+			if (underwaterPaletteTextureId != null) {
+				glDeleteTextures(underwaterPaletteTextureId);
+			}
+		}
+		combinedPaletteTextureId = null;
+		currentPaletteTextureHeight = 0;
+		underwaterPaletteTextureId = null;
+		useUnderwaterPaletteForBackground = false;
+		if (paletteUploadBuffer != null) {
+			MemoryUtil.memFree(paletteUploadBuffer);
+			paletteUploadBuffer = null;
+		}
+		if (underwaterPaletteUploadBuffer != null) {
+			MemoryUtil.memFree(underwaterPaletteUploadBuffer);
+			underwaterPaletteUploadBuffer = null;
+		}
+	}
+
 	public void cacheUnderwaterPaletteTexture(Palette[] palettes, Palette normalLine0) {
 		if (headlessMode)
 			return;
@@ -1183,27 +1212,11 @@ public class GraphicsManager {
 			if (instancedPatternRenderer != null) {
 				instancedPatternRenderer.cleanup();
 			}
-			if (combinedPaletteTextureId != null) {
-				glDeleteTextures(combinedPaletteTextureId);
-			}
-			if (underwaterPaletteTextureId != null) {
-				glDeleteTextures(underwaterPaletteTextureId);
-			}
 		}
 		backgroundRenderer = null;
 		tilemapGpuRenderer = null;
 		instancedPatternRenderer = null;
-		combinedPaletteTextureId = null;
-		currentPaletteTextureHeight = 0;
-		underwaterPaletteTextureId = null;
-		if (paletteUploadBuffer != null) {
-			MemoryUtil.memFree(paletteUploadBuffer);
-			paletteUploadBuffer = null;
-		}
-		if (underwaterPaletteUploadBuffer != null) {
-			MemoryUtil.memFree(underwaterPaletteUploadBuffer);
-			underwaterPaletteUploadBuffer = null;
-		}
+		clearPaletteTextures();
 	}
 
 	/**
@@ -1220,13 +1233,8 @@ public class GraphicsManager {
 			patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
 			patternAtlas.init();
 		}
-		// Reset combined palette texture so it's rebuilt from scratch
-		if (combinedPaletteTextureId != null) {
-			glDeleteTextures(combinedPaletteTextureId);
-			combinedPaletteTextureId = null;
-			currentPaletteTextureHeight = 0;
-		}
-		paletteTextureMap.clear();
+		// Reset palette textures so they're rebuilt from scratch
+		clearPaletteTextures();
 		commands.clear();
 	}
 
