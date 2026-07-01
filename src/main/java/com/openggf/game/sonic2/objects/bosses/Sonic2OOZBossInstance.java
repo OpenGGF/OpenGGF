@@ -72,6 +72,9 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     private int animFrameDuration;
     private int waveDelay;
     private int waveCount;
+    private int touchCollisionX;
+    private int touchCollisionY;
+    private boolean touchCollisionSnapshotReady;
     private boolean flipped;
     private boolean bossDefeatedFlagSet;
 
@@ -98,6 +101,9 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         mainFrame = 8;
         childSpriteCount = 0;
         collisionFlags = 0x0F;
+        touchCollisionX = state.x;
+        touchCollisionY = state.y;
+        touchCollisionSnapshotReady = false;
         bossDefeatedFlagSet = false;
     }
 
@@ -117,6 +123,9 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         mainFrame = 8;
         childSpriteCount = 1;
         collisionFlags = 0x0F;
+        touchCollisionX = state.x;
+        touchCollisionY = state.y;
+        touchCollisionSnapshotReady = false;
         laserPosMask = 0;
         shotCount = 0;
         animFrameDuration = 0;
@@ -264,6 +273,9 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         mainFrame = 5;
         childSpriteCount = 8;
         collisionFlags = 0x8A;
+        touchCollisionX = state.x;
+        touchCollisionY = state.y;
+        touchCollisionSnapshotReady = false;
         laserPosMask = 0;
         animFrameDuration = 0;
         shotCount = 0;
@@ -358,6 +370,9 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         mainFrame = 2;
         childSpriteCount = 8;
         collisionFlags = 0x8A;
+        touchCollisionX = state.x;
+        touchCollisionY = state.y;
+        touchCollisionSnapshotReady = false;
     }
 
     private void updateLaserOrWave() {
@@ -385,6 +400,9 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         mainFrame = state.routineSecondary == WAVE_MAIN ? 0x0D : 0x0C;
         childSpriteCount = 0;
         collisionFlags = state.routineSecondary == WAVE_MAIN ? 0x8B : 0xAF;
+        touchCollisionX = state.x;
+        touchCollisionY = state.y;
+        touchCollisionSnapshotReady = false;
         waveDelay = 5;
         waveCount = 7;
     }
@@ -406,6 +424,30 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
                 spawnWaveSegment();
             }
         }
+    }
+
+    @Override
+    public void snapshotTouchResponseState() {
+        // Touch_Boss reads Obj55's object RAM before Obj55's next movement/write-back pass.
+        if (touchCollisionSnapshotReady) {
+            touchCollisionX = super.getPreUpdateX();
+            touchCollisionY = super.getPreUpdateY();
+        } else {
+            touchCollisionX = state.x;
+            touchCollisionY = state.y;
+            touchCollisionSnapshotReady = true;
+        }
+        super.snapshotTouchResponseState();
+    }
+
+    @Override
+    public int getPreUpdateX() {
+        return touchCollisionX;
+    }
+
+    @Override
+    public int getPreUpdateY() {
+        return touchCollisionY;
     }
 
     private void checkLaserGroundWave() {

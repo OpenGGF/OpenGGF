@@ -30452,6 +30452,61 @@ Result:
 - New owner is the later Sonic rebound/contact timing near the broken Obj53
   shield orb after the boss-orb break-away now reaches the ROM-side window.
 
+### 2026-07-01 -- S2 OOZ2 round 24 Obj55 boss touch snapshot
+
+Baseline on `bugfix/ai-s2-trace-next` at `17f4008cd`:
+`TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` failed at f9392 / 476
+errors, first field `x_speed` (`0x0200` vs `-0024`). The previous round's
+Obj07 hurt-oil handoff now put Sonic on the boss-arena oil at the ROM contact
+window, but the engine missed the same-frame boss hurt overlap and kept Sonic's
+ground speed.
+
+BizHawk probe:
+- `tools\bizhawk\run_bizhawk_lua.bat` with a temporary fast Lua hook over
+  `s2-lvl-select-OOZ.bk2` showed `TouchResponse` at ROM vframe 9393 branching
+  through `Touch_Boss` with `Current_Boss_ID=$08`.
+- At `Touch_Boss_CheckCollision`, ROM read Obj55 slot 20 as
+  `collision_flags=$0F`, `x_pos=$2940`, `y_pos=$02BC`, while Sonic was at
+  `x_pos=$2944.7D00`, `y_pos=$0294.EC00`, `x_vel=$FFDC`.
+- The same frame then reached `Touch_Hurt` / `HurtCharacter`, which changed
+  Sonic to routine 4 with `x_vel=$0200`, `y_vel=$FC00`, and `inertia=0`.
+
+Fix:
+- Obj55 now snapshots a one-frame-lagged touch position for player-slot touch
+  checks. The ROM player slot reads object RAM before Obj55's next
+  `Obj55_Main_Dive` movement/write-back, so the f9393 hurt check still sees
+  `y_pos=$02BC`; the engine was using the already-advanced `$02BD` sample and
+  missing by one pixel. This matches `Touch_Boss`/`Touch_Boss_CheckCollision`
+  (`docs/s2disasm/s2.asm:85164-85255`), `Boss_MoveObject`
+  (`docs/s2disasm/s2.asm:61282-61295`), and Obj55 dive/end ordering
+  (`docs/s2disasm/s2.asm:68330-68359`).
+- `OilSurfaceManager` now drops the synthetic Obj07 support latch once a newly
+  hurt player is airborne, preserving the prior hurt-landing behavior while
+  preventing the manager-hosted oil surface from re-seating Sonic after the boss
+  hurt response has taken ownership.
+
+Result:
+- `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace`: f9392 / 476 errors
+  (`x_speed` expected `0x0200`, actual `-0024`) -> f9465 / 457 errors
+  (`tails_y` expected `0x0299`, actual `0x0298`).
+- New owner is the later CPU Tails oil/boss-arena vertical-position one-pixel
+  mismatch at f9465; the Sonic boss hurt horizontal-speed handoff now matches.
+
+Verification:
+- Focused target: `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 with the improved expected-red f9465 / 457 frontier above.
+- S2 preservation subset:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 with expected-red frontiers: ARZ2 f2142 / 717, CNZ2 f9487 / 288,
+  MTZ3 f13336 / 352, and OOZ2 f9465 / 457.
+- S1 guard: `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 0.
+- S3K guard subset:
+  `mvn "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" test`
+  exited 0.
+- Oil unit guard: `mvn "-Dtest=com.openggf.tests.TestOilSurfaceManager" "-DfailIfNoTests=false" test`
+  exited 0.
+
 ### 2026-07-01 -- S2 OOZ2 round 23 Obj07 hurt oil landing handoff
 
 Baseline on `bugfix/ai-s2-ooz2-round23-next` from banked `next`
