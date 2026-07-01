@@ -1,6 +1,7 @@
 package com.openggf.tests.game;
 
 import com.openggf.game.CollisionModel;
+import com.openggf.game.GameModule;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.rules.CameraRules;
 import com.openggf.game.rules.CollisionRules;
@@ -13,6 +14,10 @@ import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rules.PowerUpRules;
 import com.openggf.game.rules.RingRules;
 import com.openggf.game.rules.SidekickCpuRules;
+import com.openggf.game.sonic1.Sonic1GameModule;
+import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
@@ -29,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -208,6 +214,34 @@ class TestGameRulesFromPhysicsFeatureSet {
     }
 
     @Test
+    void sonic1ModuleExposesRulesFromPhysicsProviderFeatureSet() {
+        assertModuleRulesMatchProviderFeatureSet(new Sonic1GameModule());
+    }
+
+    @Test
+    void sonic2ModuleExposesRulesFromPhysicsProviderFeatureSet() {
+        assertModuleRulesMatchProviderFeatureSet(new Sonic2GameModule());
+    }
+
+    @Test
+    void sonic3kModuleExposesRulesFromPhysicsProviderFeatureSet() {
+        assertModuleRulesMatchProviderFeatureSet(new Sonic3kGameModule());
+    }
+
+    @Test
+    void testHelperPhysicsFeatureSetKeepsGameRulesSynchronized() {
+        TestablePlayableSprite sprite = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+
+        sprite.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+
+        assertEquals(GameRules.fromLegacy(PhysicsFeatureSet.SONIC_3K), sprite.getGameRules());
+
+        sprite.setPhysicsFeatureSetForTest(null);
+
+        assertNull(sprite.getGameRules());
+    }
+
+    @Test
     void rejectsNullLegacyFeatureSet() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> GameRules.fromLegacy(null));
@@ -328,6 +362,13 @@ class TestGameRulesFromPhysicsFeatureSet {
                 assertEquals(expected, actual, componentName);
             }
         }
+    }
+
+    private static void assertModuleRulesMatchProviderFeatureSet(GameModule module) {
+        PhysicsFeatureSet featureSet = module.getPhysicsProvider().getFeatureSet();
+
+        assertEquals(GameRules.fromLegacy(featureSet), module.getPhysicsProvider().getRules());
+        assertEquals(GameRules.fromLegacy(featureSet), module.getRules());
     }
 
     private static Map<String, Object> ruleInstancesByRuleName(GameRules rules) throws Exception {

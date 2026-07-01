@@ -136,4 +136,5 @@ public interface PlayableEntity {
 
     // ── Feature set ─────────────────────────────────────────────────
     PhysicsFeatureSet getPhysicsFeatureSet();
+    com.openggf.game.rules.GameRules getGameRules();
 }

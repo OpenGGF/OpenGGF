@@ -46,4 +46,8 @@ public interface PhysicsProvider {
      * @return the physics feature set
      */
     PhysicsFeatureSet getFeatureSet();
+
+    default com.openggf.game.rules.GameRules getRules() {
+        return com.openggf.game.rules.GameRules.fromLegacy(getFeatureSet());
+    }
 }

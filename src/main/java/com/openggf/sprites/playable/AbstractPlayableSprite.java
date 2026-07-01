@@ -19,6 +19,7 @@ import com.openggf.game.ShieldType;
 import com.openggf.game.DamageCause;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.timer.TimerManager;
 
@@ -531,6 +532,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         private GameModule runtimeBoundStateModule;
         private PhysicsModifiers physicsModifiers;
         private PhysicsFeatureSet physicsFeatureSet;
+        private GameRules gameRules;
 
         /**
          * Canonical "reset" profile — the base used for water/shoes modifier math.
@@ -3570,6 +3572,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         }
                         this.physicsModifiers = provider.getModifiers();
                         this.physicsFeatureSet = provider.getFeatureSet();
+                        this.gameRules = provider.getRules();
 
                         // S1 (UNIFIED collision) uses d5=$D for ALL terrain probes.
                         // After Sonic1Level.convertS1BlockData() maps S1→S2 chunk format,
@@ -3603,6 +3606,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Cross-game donation: override only the feature set with hybrid (donor spindash + base physics)
                 if (CrossGameFeatureProvider.isActive()) {
                         this.physicsFeatureSet = currentCrossGameFeatures().getHybridFeatureSet();
+                        this.gameRules = GameRules.fromLegacy(this.physicsFeatureSet);
                 }
                 ensurePersistentInstaShieldObject();
                 bubbleAnimId = module != null ? module.resolveAnimationId(CanonicalAnimation.BUBBLE) : -1;
@@ -3717,9 +3721,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return physicsFeatureSet;
         }
 
+        @Override
+        public GameRules getGameRules() {
+                return gameRules;
+        }
+
         /** Package-private for testing. */
         protected void setPhysicsFeatureSet(PhysicsFeatureSet fs) {
                 this.physicsFeatureSet = fs;
+                this.gameRules = fs != null ? GameRules.fromLegacy(fs) : null;
         }
 
         /** Sets shield state directly without spawning a shield object. For testing only. */

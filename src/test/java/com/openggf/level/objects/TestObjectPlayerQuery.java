@@ -293,5 +293,6 @@ class TestObjectPlayerQuery {
         @Override public boolean applyCrushDeath() { return false; }
         @Override public int incrementBadnikChain() { return 0; }
         @Override public PhysicsFeatureSet getPhysicsFeatureSet() { return null; }
+        @Override public com.openggf.game.rules.GameRules getGameRules() { return null; }
     }
 }

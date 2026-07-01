@@ -267,6 +267,14 @@ public interface GameModule {
      */
     PhysicsProvider getPhysicsProvider();
 
+    default com.openggf.game.rules.GameRules getRules() {
+        PhysicsProvider provider = getPhysicsProvider();
+        if (provider == null) {
+            throw new IllegalStateException("No PhysicsProvider for " + getIdentifier());
+        }
+        return provider.getRules();
+    }
+
     /**
      * Creates a Super Sonic state controller for the given player sprite.
      * Returns null if this game does not support Super Sonic.
