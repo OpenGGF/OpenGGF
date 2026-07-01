@@ -375,8 +375,9 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
             int angle = angleByte(rootAngle);
             int sin = TrigLookupTable.sinHex(angle);
             int cos = TrigLookupTable.cosHex(angle);
-            player.setXSpeed((short) (cos << 3));
-            player.setYSpeed((short) (sin << 3));
+            // ROM loc_229B6: asl#2; move; asl#1; add = *$C
+            player.setXSpeed((short) (cos * 0xC));
+            player.setYSpeed((short) (sin * 0xC));
         } else {
             player.setXSpeed((short) ((handleX - prevHandleX) << 7));
             player.setYSpeed((short) (((handleY - prevHandleY) << 7) - 0x380));

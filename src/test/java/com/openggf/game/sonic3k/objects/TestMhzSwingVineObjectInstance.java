@@ -122,10 +122,12 @@ class TestMhzSwingVineObjectInstance {
         vine.update(1, player);
         ((PostPlayerUpdateHook) vine).updatePostPlayer(1, player);
 
-        assertEquals((short) 0x0800, player.getXSpeed(),
-                "Fast grab byte $81 triggers loc_22690; loc_2215C writes x_vel from cos(angle)<<3");
+        assertEquals((short) 0x0C00, player.getXSpeed(),
+                "Fast grab byte $81 triggers loc_22690; loc_229B6 writes x_vel from cos(angle)*$C "
+                        + "(asl#2; move; asl#1; add), not cos(angle)<<3");
         assertEquals((short) 0, player.getYSpeed(),
-                "Fast grab byte $81 triggers loc_22690; loc_2215C writes y_vel from sin(angle)<<3");
+                "Fast grab byte $81 triggers loc_22690; loc_229B6 writes y_vel from sin(angle)*$C "
+                        + "(asl#2; move; asl#1; add), not sin(angle)<<3");
     }
 
     @Test
