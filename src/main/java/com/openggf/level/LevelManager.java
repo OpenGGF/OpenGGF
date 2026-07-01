@@ -30,6 +30,9 @@ import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.game.rewind.RewindBoundary;
+import com.openggf.game.rules.CameraRules;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PowerUpRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
@@ -1574,17 +1577,16 @@ public class LevelManager {
             return -1;
         }
         GameModule module = activeGameModule();
-        PhysicsProvider physics = module != null ? module.getPhysicsProvider() : null;
-        PhysicsFeatureSet features = physics != null ? physics.getFeatureSet() : null;
-        if (features == null || !features.waterSplashUsesFixedDustObject()) {
+        PowerUpRules rules = powerUpRulesFor(module);
+        if (rules == null || !rules.waterSplashUsesFixedDustObject()) {
             return -1;
         }
         if (!playable.isCpuControlled()) {
-            return features.fixedDustSlotIndex(false);
+            return rules.fixedDustSlotIndex(false);
         }
         List<AbstractPlayableSprite> sidekicks = spriteManager != null ? spriteManager.getSidekicks() : List.of();
         return !sidekicks.isEmpty() && sidekicks.get(0) == playable
-                ? features.fixedDustSlotIndex(true)
+                ? rules.fixedDustSlotIndex(true)
                 : -1;
     }
 
@@ -3052,16 +3054,41 @@ public class LevelManager {
             // exactly without arming the flag.)
         }
 
-        // Apply per-game fast vertical scroll cap from PhysicsFeatureSet.
+        // Apply per-game fast vertical scroll cap from typed camera rules.
         // S1/S2: 16px/frame (s2.asm:18190), S3K: 24px/frame (sonic3k.asm:loc_1C1B0).
-        PhysicsProvider physics = activeGameModule().getPhysicsProvider();
-        if (physics != null && physics.getFeatureSet() != null) {
-            camera.setFastScrollCap(physics.getFeatureSet().fastScrollCap());
+        CameraRules cameraRules = cameraRulesFor(activeGameModule());
+        if (cameraRules != null) {
+            camera.setFastScrollCap(cameraRules.fastScrollCap());
             // ROM S1 leaves the leftward horizontal camera move uncapped (FixBugs=0);
             // S2/S3K cap both directions.
-            camera.setUncappedLeftwardScroll(
-                    physics.getFeatureSet().uncappedLeftwardHorizontalScroll());
+            camera.setUncappedLeftwardScroll(cameraRules.uncappedLeftwardHorizontalScroll());
         }
+    }
+
+    private PowerUpRules powerUpRulesFor(GameModule module) {
+        GameRules rules = gameRulesFor(module);
+        return rules != null ? rules.powerUp() : null;
+    }
+
+    private CameraRules cameraRulesFor(GameModule module) {
+        GameRules rules = gameRulesFor(module);
+        return rules != null ? rules.camera() : null;
+    }
+
+    private GameRules gameRulesFor(GameModule module) {
+        if (module == null) {
+            return null;
+        }
+        try {
+            GameRules rules = module.getRules();
+            if (rules != null) {
+                return rules;
+            }
+        } catch (IllegalArgumentException | IllegalStateException ignored) {
+        }
+        PhysicsProvider provider = module.getPhysicsProvider();
+        PhysicsFeatureSet featureSet = provider != null ? provider.getFeatureSet() : null;
+        return featureSet != null ? GameRules.fromLegacy(featureSet) : null;
     }
 
     /**

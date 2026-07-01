@@ -3,10 +3,13 @@ package com.openggf.level.objects;
 import com.openggf.game.GameModule;
 import com.openggf.game.InstaShieldHandle;
 import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.PhysicsProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.PowerUpSpawner;
 import com.openggf.game.ShieldType;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PowerUpRules;
 import com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance;
 import com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance;
 import com.openggf.game.sonic3k.objects.FireShieldObjectInstance;
@@ -32,7 +35,7 @@ import java.util.logging.Logger;
  * relying on game-id checks, and game-specific divergences (invincibility
  * stars subclass, S1's fixed shield slot) are gated through
  * {@link com.openggf.game.GameModule} factories or
- * {@link PhysicsFeatureSet} flags.
+ * {@link PowerUpRules} flags.
  */
 public class DefaultPowerUpSpawner implements PowerUpSpawner {
 
@@ -125,8 +128,8 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
 
         // S2/S3K: use dust/splash renderer from SpindashDustController
         if (player instanceof AbstractPlayableSprite aps) {
-            var featureSet = aps.getPhysicsFeatureSet();
-            if (featureSet != null && featureSet.waterSplashUsesFixedDustObject()) {
+            PowerUpRules rules = powerUpRulesFor(aps);
+            if (rules != null && rules.waterSplashUsesFixedDustObject()) {
                 // S2/S3K write the water splash animation into the existing
                 // Sonic_Dust/Dust object, not a FindFreeObj slot. Consuming a
                 // normal ObjectManager slot here changes S3K CNZ Load_Sprites
@@ -155,6 +158,18 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         var s1Splash = new Sonic1SplashObjectInstance(
                 player.getCentreX(), waterY);
         objectManager.addDynamicObject(s1Splash);
+    }
+
+    private PowerUpRules powerUpRulesFor(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return null;
+        }
+        GameRules rules = sprite.getGameRules();
+        if (rules != null && rules.powerUp() != null) {
+            return rules.powerUp();
+        }
+        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+        return featureSet != null ? GameRules.fromLegacy(featureSet).powerUp() : null;
     }
 
     private ObjectServices objectServices() {
@@ -227,20 +242,20 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
     }
 
     private int fixedPowerUpSlotIndex(ObjectInstance object) {
-        PhysicsFeatureSet featureSet = fixedSlotFeatureSet();
-        if (featureSet == null) {
+        PowerUpRules rules = fixedSlotRules();
+        if (rules == null) {
             return -1;
         }
         if (object instanceof ShieldObjectInstance) {
-            return featureSet.shieldObjectFixedSlotIndex();
+            return rules.shieldObjectFixedSlotIndex();
         }
         if (object instanceof PowerUpObject powerUp && powerUp.isInvincibilityStars()) {
-            return featureSet.invincibilityStarsFixedSlotIndex();
+            return rules.invincibilityStarsFixedSlotIndex();
         }
         return -1;
     }
 
-    private PhysicsFeatureSet fixedSlotFeatureSet() {
+    private PowerUpRules fixedSlotRules() {
         ObjectServices services = objectServices();
         if (services == null) {
             return null;
@@ -249,8 +264,20 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         if (module == null) {
             return null;
         }
-        return module.getPhysicsProvider() != null
-                ? module.getPhysicsProvider().getFeatureSet()
-                : null;
+        GameRules rules = gameRulesFor(module);
+        return rules != null ? rules.powerUp() : null;
+    }
+
+    private GameRules gameRulesFor(GameModule module) {
+        try {
+            GameRules rules = module.getRules();
+            if (rules != null) {
+                return rules;
+            }
+        } catch (IllegalArgumentException | IllegalStateException ignored) {
+        }
+        PhysicsProvider provider = module.getPhysicsProvider();
+        PhysicsFeatureSet featureSet = provider != null ? provider.getFeatureSet() : null;
+        return featureSet != null ? GameRules.fromLegacy(featureSet) : null;
     }
 }

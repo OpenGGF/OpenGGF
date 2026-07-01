@@ -5,6 +5,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.CameraRules;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
 import com.openggf.sprites.Sprite;
@@ -116,7 +118,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// to .moveLeft and adds the full (possibly >16px) offset
 	// (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:59-99). S2 (s2.asm:18102-
 	// 18105) and S3K (sonic3k.asm:38403-38406) cap BOTH directions, so this stays
-	// false for them. Set per-game from PhysicsFeatureSet.uncappedLeftwardHorizontalScroll.
+	// false for them. Set per-game from CameraRules.uncappedLeftwardHorizontalScroll.
 	private boolean uncappedLeftwardHorizontalScroll = false;
 
 	// ROM: Fast_V_scroll_flag. Moving solids request this for the current frame
@@ -715,7 +717,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * symmetrically, NOT 32.
 	 * <p>S1/S2 don't have a {@code Screen_Y_wrap_value} mechanism and the ROM
 	 * routines use slightly different margins. Gate the S3K-specific 24-margin
-	 * via {@link com.openggf.game.PhysicsFeatureSet#useScreenYWrapValueForVisibility()}
+	 * via {@link CameraRules#useScreenYWrapValueForVisibility()}
 	 * so existing S1/S2 traces keep their 32-margin behaviour.
 	 *
 	 * <p><b>Vertical-wrap windowing (the off-screen-flag Y boundary):</b> the ROM
@@ -751,8 +753,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			return false;
 		}
 		int relY = sprite.getRenderCentreY() - cameraYCopy;
-		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		boolean useS3kMargin = fs != null && fs.useScreenYWrapValueForVisibility();
+		CameraRules rules = cameraRulesFor(sprite);
+		boolean useS3kMargin = rules != null && rules.useScreenYWrapValueForVisibility();
 		int yMargin = useS3kMargin ? widthPixels : 32;
 		if (verticalWrapEnabled) {
 			// ROM-accurate wrap window: bias by the low margin BEFORE masking, then
@@ -922,8 +924,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// This is separate from the render visibility wrap margin: S2 control
 		// paths apply the $7FF y_pos mask, while S1 LZ3/SBZ2 only masks Sonic on
 		// the camera wrap-crossing frame mirrored by updatePosition().
-		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		if (fs == null || !fs.playerControlAppliesVerticalWrapMask()) {
+		CameraRules rules = cameraRulesFor(sprite);
+		if (rules == null || !rules.playerControlAppliesVerticalWrapMask()) {
 			return false;
 		}
 		short before = sprite.getCentreY();
@@ -933,6 +935,18 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		}
 		sprite.setCentreYPreserveSubpixel(after);
 		return true;
+	}
+
+	private static CameraRules cameraRulesFor(AbstractPlayableSprite sprite) {
+		if (sprite == null) {
+			return null;
+		}
+		GameRules rules = sprite.getGameRules();
+		if (rules != null && rules.camera() != null) {
+			return rules.camera();
+		}
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		return featureSet != null ? GameRules.fromLegacy(featureSet).camera() : null;
 	}
 
 	/**
@@ -1225,7 +1239,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Sets whether leftward horizontal camera scrolling is uncapped (ROM S1
 	 * FixBugs=0 behavior). When true, the per-frame cap applies only to rightward
 	 * scrolling. Set per-game from
-	 * {@link PhysicsFeatureSet#uncappedLeftwardHorizontalScroll()}.
+	 * {@link CameraRules#uncappedLeftwardHorizontalScroll()}.
 	 */
 	public void setUncappedLeftwardScroll(boolean uncapped) {
 		this.uncappedLeftwardHorizontalScroll = uncapped;

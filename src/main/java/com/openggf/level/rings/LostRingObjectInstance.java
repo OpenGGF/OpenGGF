@@ -3,8 +3,10 @@ package com.openggf.level.rings;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
 import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.PlayableEntity;
 import com.openggf.game.PhysicsProvider;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.RingRules;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.ChunkDesc;
@@ -161,7 +163,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * {@code RingManager.LostRingPool.updatePhysics} per-game branches (RingManager.java:1242-1306,
      * s2.asm Obj37 RLoss_Move / sonic3k.asm Obj_Bouncing_Ring_Reverse_Gravity).
      * <p>
-     * The per-game floor-check cadence is read from {@link PhysicsFeatureSet#ringFloorCheckMask()}
+     * The per-game floor-check cadence is read from {@link RingRules#ringFloorCheckMask()}
      * (S1 every 4 frames {@code andi.b #3}; S2/S3K every 8 {@code andi.b #7}); reverse gravity is the
      * ROM {@code Reverse_gravity_flag} runtime state, NOT a zone/game carve-out. {@code floorCheck}
      * skips the world probe entirely (unit-testable pure-integrate path with no loaded level).
@@ -307,13 +309,13 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     // ── Per-game / runtime-state seams (overridable for unit tests) ────────────
 
     /**
-     * Per-game floor-check cadence mask from {@link PhysicsFeatureSet#ringFloorCheckMask()}
+     * Per-game floor-check cadence mask from {@link RingRules#ringFloorCheckMask()}
      * (S1 {@code #3}, S2/S3K {@code #7}); S2 default when no feature set is resolvable.
      */
     protected int resolveFloorCheckMask() {
-        PhysicsFeatureSet featureSet = resolveFeatureSet();
-        return featureSet != null
-                ? featureSet.ringFloorCheckMask()
+        RingRules rules = resolveRingRules();
+        return rules != null
+                ? rules.ringFloorCheckMask()
                 : PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2;
     }
 
@@ -344,8 +346,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     }
 
     protected boolean ringFloorProbeRequiresRenderFlag() {
-        PhysicsFeatureSet featureSet = resolveFeatureSet();
-        return featureSet == null || featureSet.ringFloorProbeRequiresRenderFlag();
+        RingRules rules = resolveRingRules();
+        return rules == null || rules.ringFloorProbeRequiresRenderFlag();
     }
 
     /**
@@ -369,11 +371,22 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         return objectManager != null ? objectManager.getFrameCounter() : fallback;
     }
 
-    private PhysicsFeatureSet resolveFeatureSet() {
+    private RingRules resolveRingRules() {
         ObjectServices services = servicesOrNull();
         GameModule module = services != null ? services.gameModule() : null;
-        PhysicsProvider provider = module != null ? module.getPhysicsProvider() : null;
-        return provider != null ? provider.getFeatureSet() : null;
+        if (module == null) {
+            return null;
+        }
+        try {
+            GameRules rules = module.getRules();
+            if (rules != null) {
+                return rules.ring();
+            }
+        } catch (IllegalArgumentException | IllegalStateException ignored) {
+        }
+        PhysicsProvider provider = module.getPhysicsProvider();
+        PhysicsFeatureSet featureSet = provider != null ? provider.getFeatureSet() : null;
+        return featureSet != null ? GameRules.fromLegacy(featureSet).ring() : null;
     }
 
     private ObjectServices servicesOrNull() {

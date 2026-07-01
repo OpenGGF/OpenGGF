@@ -18,6 +18,9 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PhysicsProvider;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PlayerCapabilityRules;
+import com.openggf.game.rules.RingRules;
 import com.openggf.physics.TrigLookupTable;
 
 import com.openggf.game.rewind.RewindSnapshottable;
@@ -64,14 +67,13 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     public RingManager(List<RingSpawn> spawns, RingSpriteSheet spriteSheet,
                        LevelManager levelManager, TouchResponseTable touchResponseTable,
                        AudioManager audioManager) {
-        // Feature-flag: ROM parity sources this from the current game's physics feature set.
+        // Feature-flag: ROM parity sources this from the current game's ring rules.
         // S1 routes stage rings through Obj25's touch-response pipeline (Touch_Rings);
         // S2/S3K collect them via the bounding-box sweep (Touch_Rings_Test).
         GameModule module = GameServices.currentOrBootstrapGameModule();
-        PhysicsProvider physProvider = module != null ? module.getPhysicsProvider() : null;
-        PhysicsFeatureSet featureSet = physProvider != null ? physProvider.getFeatureSet() : null;
+        RingRules ringRules = moduleRingRules(module);
         this.placement = new RingPlacement(spawns,
-                featureSet != null && featureSet.stageRingSweepUsesRawCameraWindow());
+                ringRules != null && ringRules.stageRingSweepUsesRawCameraWindow());
         this.renderer = (spriteSheet != null && spriteSheet.getFrameCount() > 0)
                 ? new RingRenderer(spriteSheet)
                 : null;
@@ -79,7 +81,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         this.audioManager = audioManager;
         this.lostRings = new LostRingPool(levelManager, this.renderer, touchResponseTable, audioManager);
         this.stageRingsUseObjectTouchCollection =
-                featureSet != null && featureSet.stageRingsUseObjectTouchCollection();
+                ringRules != null && ringRules.stageRingsUseObjectTouchCollection();
         this.attractedRings = new AttractedRing[MAX_ATTRACTED_RINGS];
         for (int i = 0; i < MAX_ATTRACTED_RINGS; i++) {
             attractedRings[i] = new AttractedRing();
@@ -126,15 +128,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         // Lightning shield ring attraction — S3K only
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        if (featureSet == null) {
-            GameModule module = GameServices.currentOrBootstrapGameModule();
-            PhysicsProvider physProvider = module != null ? module.getPhysicsProvider() : null;
-            if (physProvider != null) {
-                featureSet = physProvider.getFeatureSet();
-            }
-        }
-        boolean lightningAttractionActive = featureSet != null && featureSet.lightningShieldEnabled()
+        RingRules ringRules = playerRingRules(player);
+        boolean lightningAttractionActive = lightningShieldEnabled(player)
                 && player.getShieldType() == ShieldType.LIGHTNING;
         if (lightningAttractionActive) {
             int pcx = player.getCentreX();
@@ -149,7 +144,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 int dx = pcx - ring.x();
                 int dy = pcy - ring.y();
                 // ROM: box check — ±$40 from player centre, extended by ring half-width
-                int ringHalf = featureSet.ringCollisionWidth();
+                int ringHalf = ringRules != null ? ringRules.ringCollisionWidth() : RING_COLLISION_HALF;
                 int effectiveHalf = ATTRACT_BOX_HALF + ringHalf;
                 if (Math.abs(dx) <= effectiveHalf && Math.abs(dy) <= effectiveHalf) {
                     if (addAttractedRing(index, ring.x(), ring.y())) {
@@ -186,7 +181,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             return;
         }
 
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        RingRules ringRules = playerRingRules(player);
         int playerLeft = player.getCentreX() - 8;
         // ROM ReactToItem/Test_Ring_Collisions uses obHeight-3 for Sonic's
         // touch box before the ducking special-case; this is not limited to
@@ -199,8 +194,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             playerTop += 12;
             playerHeight = 20;
         }
-        int ringWidth = featureSet != null ? featureSet.ringCollisionWidth() : RING_COLLISION_HALF;
-        int ringHeight = featureSet != null ? featureSet.ringCollisionHeight() : RING_COLLISION_HALF;
+        int ringWidth = ringRules != null ? ringRules.ringCollisionWidth() : RING_COLLISION_HALF;
+        int ringHeight = ringRules != null ? ringRules.ringCollisionHeight() : RING_COLLISION_HALF;
 
         for (int i = 0; i < activeCount; i++) {
             int index = placement.activeIndexAt(i);
@@ -220,6 +215,67 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
     public boolean usesObjectTouchCollection() {
         return stageRingsUseObjectTouchCollection;
+    }
+
+    private static RingRules moduleRingRules(GameModule module) {
+        GameRules rules = moduleGameRules(module);
+        return rules != null ? rules.ring() : null;
+    }
+
+    private static PlayerCapabilityRules modulePlayerCapabilityRules(GameModule module) {
+        GameRules rules = moduleGameRules(module);
+        return rules != null ? rules.playerCapability() : null;
+    }
+
+    private static GameRules moduleGameRules(GameModule module) {
+        if (module == null) {
+            return null;
+        }
+        try {
+            GameRules rules = module.getRules();
+            if (rules != null) {
+                return rules;
+            }
+        } catch (IllegalArgumentException | IllegalStateException ignored) {
+        }
+        PhysicsProvider provider = module.getPhysicsProvider();
+        PhysicsFeatureSet featureSet = provider != null ? provider.getFeatureSet() : null;
+        return featureSet != null ? GameRules.fromLegacy(featureSet) : null;
+    }
+
+    private static RingRules playerRingRules(AbstractPlayableSprite player) {
+        if (player == null) {
+            return moduleRingRules(GameServices.currentOrBootstrapGameModule());
+        }
+        GameRules rules = player.getGameRules();
+        if (rules != null && rules.ring() != null) {
+            return rules.ring();
+        }
+        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        if (featureSet != null) {
+            return GameRules.fromLegacy(featureSet).ring();
+        }
+        return moduleRingRules(GameServices.currentOrBootstrapGameModule());
+    }
+
+    private static boolean lightningShieldEnabled(AbstractPlayableSprite player) {
+        PlayerCapabilityRules rules = playerCapabilityRules(player);
+        return rules != null && rules.lightningShieldEnabled();
+    }
+
+    private static PlayerCapabilityRules playerCapabilityRules(AbstractPlayableSprite player) {
+        if (player == null) {
+            return modulePlayerCapabilityRules(GameServices.currentOrBootstrapGameModule());
+        }
+        GameRules rules = player.getGameRules();
+        if (rules != null && rules.playerCapability() != null) {
+            return rules.playerCapability();
+        }
+        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        if (featureSet != null) {
+            return GameRules.fromLegacy(featureSet).playerCapability();
+        }
+        return modulePlayerCapabilityRules(GameServices.currentOrBootstrapGameModule());
     }
 
     public boolean collectPlacedRing(RingSpawn ring, AbstractPlayableSprite player, int frameCounter) {
