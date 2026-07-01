@@ -2125,20 +2125,25 @@ public class SidekickCpuController {
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
                 && preservesSidekickCpuPushGraceWhileRiding(ridingObject);
+        boolean standardInteractPushGrace =
+                normalPushingGraceFrames >= sidekickCpuPushGraceMinimumFramesFromInteractSlot()
+                        && normalPushingGraceFrames <= sidekickCpuPushGraceMaximumFramesFromInteractSlot()
+                        // Once the ordinary push-grace counter has decayed, only the
+                        // stationary local Obj30 release case still matches ROM's
+                        // status-byte read. Moving follow samples must fall through
+                        // to normal steering (HTZ2 f3384).
+                        && (normalPushingGraceFrames > 0 || dx == 0)
+                        && preservesSidekickCpuPushGraceFromInteractSlot();
+        boolean movingZeroGraceInteractPush =
+                normalPushingGraceFrames == 0
+                        && preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot();
         boolean interactObjectPushGrace = !sidekick.getAir()
                 && !sidekick.isOnObject()
                 && !sidekick.getRolling()
-                && normalPushingGraceFrames >= sidekickCpuPushGraceMinimumFramesFromInteractSlot()
-                && normalPushingGraceFrames <= sidekickCpuPushGraceMaximumFramesFromInteractSlot()
-                // Once the ordinary push-grace counter has decayed, only the
-                // stationary local Obj30 release case still matches ROM's
-                // status-byte read. Moving follow samples must fall through
-                // to normal steering (HTZ2 f3384).
-                && (normalPushingGraceFrames > 0 || dx == 0)
+                && (standardInteractPushGrace || movingZeroGraceInteractPush)
                 && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
-                && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
-                && preservesSidekickCpuPushGraceFromInteractSlot();
+                && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
         int followSnapThreshold = resolveFollowSnapThreshold();
         boolean localBelowTargetFacingIntoFollowSide =
                 (dx > 0 && sidekick.getDirection() == Direction.RIGHT)
@@ -2874,6 +2879,17 @@ public class SidekickCpuController {
         }
         if (interactObject instanceof SolidObjectProvider provider) {
             return provider.preservesSidekickDelayedLeaderPushFromInteractSlot(sidekick);
+        }
+        return false;
+    }
+
+    private boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot() {
+        ObjectInstance interactObject = currentInteractSlotObject();
+        if (interactObject == null || interactObject.isDestroyed()) {
+            return false;
+        }
+        if (interactObject instanceof SolidObjectProvider provider) {
+            return provider.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sidekick);
         }
         return false;
     }

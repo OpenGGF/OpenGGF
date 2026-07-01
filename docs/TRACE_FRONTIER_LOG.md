@@ -46,6 +46,46 @@ branch-local measurements.
     regression. Red frontiers held at ARZ2 f1717 / 980, CNZ2 f9487 / 288,
     HTZ2 f9405 / 58, MTZ3 f12608 / 490, OOZ1 f7584 / 384, and OOZ2 f9307 /
     430.
+## 2026-07-01 - S2 HTZ2 Egg Prison exact-edge sidekick push (f9405 -> green)
+
+- Worktree/branch: `.worktrees/ai-s2-htz2-round16-next` /
+  `bugfix/ai-s2-htz2-round16-next`, based on `bugfix/ai-s2-trace-next` at
+  `17f00f06e`.
+- Baseline reproduction:
+  `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  exited 1 with HTZ2 f9405 / 58 errors (`tails_x_speed` expected `0x000C`,
+  actual `0x0000`).
+- Triage/evidence: the f9405 context had ROM Tails grounded with
+  `Status_Push` and `tails_interact=0x15` at the Egg Prison edge, so
+  `TailsCPU_Normal` fell through with no held P2 direction and decelerated
+  from `$18` to `$0C`. The engine kept stale LEFT, moved one pixel farther into
+  the capsule, and then stopped on side collision. S2 Obj3E body and button
+  both call `SolidObject` (`docs/s2disasm/s2.asm:84790-84842`), and
+  `SolidObject_AtEdge` sets object/player pushing while preserving exact-edge
+  velocity (`docs/s2disasm/s2.asm:35438-35450`). `TailsCPU_Normal` tests the
+  current `Status_Push` before `FollowLeft` / `FollowRight`
+  (`docs/s2disasm/s2.asm:39297-39300`).
+- Fix: Obj3E body/button now opt into exact-edge subpixel preservation, and
+  the sidekick CPU has an object-gated moving zero-grace `interact(a0)` bridge.
+  The bridge only applies when the CPU sidekick is grounded on Obj3E's exact
+  capsule-body side edge, so ordinary moving released-interact samples still
+  fall through follow steering.
+- Result:
+  `TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace`: f9405 / 58 errors
+  (`tails_x_speed` expected `0x000C`, actual `0x0000`) -> green.
+- Verification:
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.level.objects.TestSolidObjectManager#eggPrisonBodyExactLeftEdgeSetsGroundPushWithoutStoppingSpeed,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 0; focused Egg Prison exact-edge coverage, HTZ1, and HTZ2 passed.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dmaven.test.failure.ignore=true" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 19 S2 traces: HTZ2 green, 14 total green, and the remaining 5
+    expected-red frontiers held at ARZ2 f1717 / 980, CNZ2 f9487 / 288, MTZ3
+    f12608 / 490, OOZ1 f7584 / 384, and OOZ2 f9307 / 444.
+  - `$env:SONIC_1_ROM_PATH=(Resolve-Path 's1.gen').Path; $env:SONIC1_ROM_PATH=$env:SONIC_1_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" test`
+    completed 29 S1 traces, all 0 failures.
+  - `$env:SONIC_3K_ROM_PATH=(Resolve-Path 's3k.gen').Path; $env:S3K_ROM_PATH=$env:SONIC_3K_ROM_PATH; mvn "-Dmse=off" "-Dmaven.test.failure.ignore=true" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=$env:SONIC_3K_ROM_PATH" "-Dsonic3k.rom.path=$env:SONIC_3K_ROM_PATH" "-DfailIfNoTests=false" test`
+    completed 68 S3K smoke/AIZ checks. Bootstrap, decoding, level loading, and
+    AIZ skip headless checks passed; AIZ traces stayed at existing expected-red
+    frontiers: complete-run f1095 / 4319 and AIZ f8941 / 1160.
 
 ## 2026-07-01 - S2 HTZ2 Obj52 defeated flee owns camera-release deletion (f9361 -> f9405)
 

@@ -9,6 +9,7 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.sonic1.Sonic1GameModule;
+import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
@@ -720,6 +721,36 @@ public class TestSolidObjectManager {
                 "Inclusive exact-edge contact has d0 == 0 in SolidObject_cont and must not shove X by 1px");
         assertEquals(0, player.getXSpeed());
         assertEquals(0, player.getGSpeed());
+    }
+
+    @Test
+    public void eggPrisonBodyExactLeftEdgeSetsGroundPushWithoutStoppingSpeed() {
+        EggPrisonObjectInstance eggPrison = new EggPrisonObjectInstance(
+                new ObjectSpawn(0x3202, 0x04C2, 0x3E, 0, 0, false, 0),
+                "EggPrison");
+        ObjectManager manager = buildManager(eggPrison);
+        AbstractObjectInstance.updateCameraBounds(0x315C, 0x0427, 0x315C + 320, 0x0427 + 224, 0);
+        eggPrison.snapshotPreUpdatePosition();
+
+        TestPlayableSprite tails = new TestPlayableSprite((short) 0, (short) 0);
+        tails.useFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setWidth(20);
+        tails.setHeight(38);
+        tails.setAir(false);
+        tails.setXSpeed((short) 0x0018);
+        tails.setGSpeed((short) 0x0018);
+        tails.setCentreX((short) 0x31D7);
+        tails.setCentreY((short) 0x04D4);
+
+        manager.updateSolidContacts(tails);
+
+        assertTrue(tails.getPushing(),
+                "S2 SolidObject_AtEdge sets Status_Push for grounded exact-edge capsule body contact");
+        assertEquals(0x0018, tails.getXSpeed() & 0xFFFF,
+                "AtEdge uses d0 == 0, so SolidObject must not stop Tails's x_vel");
+        assertEquals(0x0018, tails.getGSpeed() & 0xFFFF,
+                "AtEdge uses d0 == 0, so SolidObject must not stop Tails's ground_vel");
     }
 
     @Test
