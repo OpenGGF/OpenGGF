@@ -3,6 +3,8 @@ package com.openggf.tests.trace;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.objects.ARZPlatformObjectInstance;
 import com.openggf.game.sonic2.objects.ArrowProjectileInstance;
+import com.openggf.game.sonic2.objects.GrounderRockProjectile;
+import com.openggf.game.sonic2.objects.GrounderWallInstance;
 import com.openggf.game.sonic2.objects.badniks.WhispBadnikInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.objects.AnimalObjectInstance;
@@ -1371,6 +1373,81 @@ public class TestS2ObjectOccupancyOracle {
                             return null;
                         });
         Assertions.assertNull(divergence);
+    }
+
+    @Test
+    public void arz2GrounderWallWaitsOneFrameAfterActivationBeforeMoving() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1712) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedWall = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 38)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x8F)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedWall,
+                            "ARZ2 ROM fixture should report Obj8F wall slot 0x26 at activation frame 1712");
+                    GrounderWallInstance actualWall = om.activeObjectsOfType(GrounderWallInstance.class)
+                            .stream()
+                            .filter(wall -> wall.getSlotIndex() == 38)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(
+                            expectedWall.x() & 0xFFFF,
+                            expectedWall.y() & 0xFFFF,
+                            actualWall == null ? -1 : actualWall.getX(),
+                            actualWall == null ? -1 : actualWall.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 35, 41));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj8F loc_36BA6 only latches velocity when parent objoff_2B becomes nonzero; "
+                        + "Obj8F_Move does not run until the next frame "
+                        + "(docs/s2disasm/s2.asm:73424-73437); slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj8F activation frame should keep the original wall Y until routine 4 runs "
+                        + "(docs/s2disasm/s2.asm:73424-73437); slots " + check.summary());
+    }
+
+    @Test
+    public void arz2GrounderRockUsesObjectMoveAndFallOldVelocityOrder() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1716) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedRock = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 20)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x90)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedRock,
+                            "ARZ2 ROM fixture should report Obj90 rock slot 0x14 at frame 1716");
+                    GrounderRockProjectile actualRock = om.activeObjectsOfType(GrounderRockProjectile.class)
+                            .stream()
+                            .filter(rock -> rock.getSlotIndex() == 20)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(
+                            expectedRock.x() & 0xFFFF,
+                            expectedRock.y() & 0xFFFF,
+                            actualRock == null ? -1 : actualRock.getX(),
+                            actualRock == null ? -1 : actualRock.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 20, 30));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj90 rock X should follow ObjectMoveAndFall at ARZ2 f1716; slots "
+                        + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 ObjectMoveAndFall reads old y_vel for movement, then adds gravity "
+                        + "(docs/s2disasm/s2.asm:30163-30177); slots " + check.summary());
     }
 
     /**

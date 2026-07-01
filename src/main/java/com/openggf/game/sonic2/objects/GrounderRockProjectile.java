@@ -128,18 +128,17 @@ public class GrounderRockProjectile extends AbstractObjectInstance implements Gr
             return;
         }
 
-        // Apply gravity to Y velocity
-        yVelocity += GRAVITY;
-
         // Update X position with fixed-point math
         xSubpixel += xVelocity;
         currentX += (xSubpixel >> 8);
         xSubpixel &= 0xFF;
 
-        // Update Y position with fixed-point math
+        // ObjectMoveAndFall moves with the old y_vel, then applies gravity.
+        // docs/s2disasm/s2.asm:30163-30177
         ySubpixel += yVelocity;
         currentY += (ySubpixel >> 8);
         ySubpixel &= 0xFF;
+        yVelocity += GRAVITY;
 
         // The shared ObjectManager MarkObjGone tail handles X-range cleanup
         // after movement, matching the ROM jump at the end of Obj90_Move.

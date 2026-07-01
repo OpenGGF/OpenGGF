@@ -137,6 +137,10 @@ public class GrounderWallInstance extends AbstractObjectInstance implements Grou
         if (!activated) {
             if (parent == null || parent.isActivated()) {
                 activated = true;
+                // ROM Obj8F loc_36BA6 only advances routine 2->4 and latches
+                // velocities when objoff_2B is set; Obj8F_Move runs next frame.
+                // docs/s2disasm/s2.asm:73424-73437
+                return;
             } else {
                 return;
             }
@@ -150,18 +154,17 @@ public class GrounderWallInstance extends AbstractObjectInstance implements Grou
             return;
         }
 
-        // Apply gravity to Y velocity
-        yVelocity += GRAVITY;
-
         // Update X position with fixed-point math
         xSubpixel += xVelocity;
         currentX += (xSubpixel >> 8);
         xSubpixel &= 0xFF;
 
-        // Update Y position with fixed-point math
+        // ObjectMoveAndFall moves with the old y_vel, then applies gravity.
+        // docs/s2disasm/s2.asm:30163-30177
         ySubpixel += yVelocity;
         currentY += (ySubpixel >> 8);
         ySubpixel &= 0xFF;
+        yVelocity += GRAVITY;
 
         // The shared ObjectManager MarkObjGone tail handles X-range cleanup
         // after movement, matching the ROM jump at the end of Obj8F_Move.
