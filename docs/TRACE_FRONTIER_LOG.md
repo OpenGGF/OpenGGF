@@ -6,16 +6,58 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after CNZ2/OOZ2 round 25: the S2 sweep is 15
-green / 4 expected-red. ARZ2 advances to f2565 / 713 (`obj_s15_slot` expected
-`0x15`, actual `0x11`) after CPU Tails Obj37 collection was routed through the
-ROM main-invulnerability gate; CNZ2 advances to f9946 / 300 (`x_speed`
+Current branch-local S2 state after ARZ2 round 26: the S2 sweep is 15 green /
+4 expected-red. ARZ2 advances to f3171 / 703 (`obj_s27_slot` expected `0x27`,
+actual `0x23`) after Obj91 patrol-bubble reset timing was aligned to the ROM
+byte timer; CNZ2 advances to f9946 / 300 (`x_speed`
 expected `0x0200`, actual `0x08A8`) after the shared hurt reset path clears
 roll-jump before setting airborne recoil; MTZ3 remains parked at f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`); OOZ1 is green; and OOZ2 advances
 to f10129 / 388 (`tails_x_speed` expected `0x0000`, actual `0x0200`) after
 Obj07 skips CPU Tails' dead-fall routine instead of re-seating stale support on
 the boss-lowered oil plane.
+
+## 2026-07-01 - S2 ARZ2 Obj91 byte-timer reset advances f2565 to f3171
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round26-next` /
+  `bugfix/ai-s2-arz2-round26-next`, based on campaign commit `68855fa02`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced ARZ2 f2565 / 713 errors (`obj_s15_slot` expected `0x15`, actual
+  `0x11`).
+- Evidence: the first slot-pressure mismatch before the target frame was ARZ2
+  f2348, where the ROM slot dump left slot 17 empty but the engine had freshly
+  allocated an Obj0A patrol bubble from slot-21 Obj91 at `$1563,$06BE`.
+  A BizHawk PC-hook diagnostic launched through
+  `tools\bizhawk\run_bizhawk_lua.bat` over BK2 frames 10330-10355 showed ROM
+  slot 21 still in Obj91_Main at f2348 (`routine=$02`, `x=$154F`, `y=$06B8`,
+  `move=$0061`, `bubble=$6150`, `x_vel=-64`) with no `Obj91_MakeBubble` hook
+  firing before the object deleted at f2351. The engine, by contrast, reset its
+  Java byte timer to `0x50` after the previous bubble and spawned again at
+  f2348.
+- ROM refs: `Obj91_Init` and `Obj91_MakeBubble` both write `move.w #$50` to
+  `Obj91_bubble_timer`, while `Obj91_Main` runs `subq.b #1` on the byte at the
+  same address (`docs/s2disasm/s2.asm:73676-73688,73753-73754`). On 68K, that
+  byte is the high byte of the word, so after the word reset the byte countdown
+  starts from `0`, not `0x50`.
+- Fix: `ChopChopBadnikInstance` keeps the accepted first-bubble phase but resets
+  the modeled byte countdown to `0` after each patrol bubble. A focused f2348
+  occupancy regression asserts slot 17 stays empty until the ROM's later
+  streamed allocations.
+- Result:
+  `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` remains expected-red
+  but advances to f3171 / 703 errors. The new first mismatch is `obj_s27_slot`
+  expected `0x27`, actual `0x23`.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2ChopChopEmitsPatrolBubbleIntoRomSlot19AtFrame598+arz2ChopChopBubbleSurvivesFirstObj0aInitPassAtFrame599+arz2ChopChopSecondPatrolBubbleUsesRomByteTimerAtFrame2348" "-DfailIfNoTests=false" test`
+    exited 0 with 3 passed, preserving the accepted f598/f599 first-bubble
+    cadence and adding the f2348 no-extra-bubble guard.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 1 as expected-red at ARZ2 f3171 / 703.
+  - `$env:SONIC_2_ROM_PATH=(Resolve-Path 's2.gen').Path; $env:SONIC2_ROM_PATH=$env:SONIC_2_ROM_PATH; mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+    exited 0 with `maven.test.failure.ignore=true`: CPZ2, HTZ2, and OOZ1
+    green; CNZ2 f9946 / 300, MTZ3 f13336 / 352, and OOZ2 f10129 / 388
+    unchanged; ARZ2 at the new f3171 / 703 frontier.
 
 ## 2026-07-01 - S2 round 25 integrated baseline
 

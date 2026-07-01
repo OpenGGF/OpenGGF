@@ -1579,6 +1579,32 @@ public class TestS2ObjectOccupancyOracle {
                         + "slots " + check.summary());
     }
 
+    @Test
+    public void arz2ChopChopSecondPatrolBubbleUsesRomByteTimerAtFrame2348() throws Exception {
+        SlotWindowCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 2348) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    ObjectOccupancyOracle.Divergence divergence =
+                            ObjectOccupancyOracle.firstDivergence(trace, om, frame, FIRST_DYNAMIC_SLOT);
+                    Assertions.assertNull(divergence,
+                            "ARZ2 slot-21 Obj91 must not emit an extra second patrol bubble at f2348; "
+                                    + "Obj91_MakeBubble writes move.w #$50 to objoff_2C, but Obj91_Main "
+                                    + "decrements the byte at objoff_2C, so the reset byte observed by "
+                                    + "subq.b is 0 rather than 0x50 "
+                                    + "(docs/s2disasm/s2.asm:73676-73688,73753-73754). Expected slots "
+                                    + describeSlots(expected, 16, 41) + " actual "
+                                    + describeSlots(actual, 16, 41) + " live "
+                                    + describeLiveSlots(om, 16, 41));
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 41));
+                });
+        Assertions.assertNotNull(check);
+    }
+
     /**
      * Drives the named S2 level-select trace through the engine (mirroring the
      * S2 branch of {@code AbstractTraceReplayTest.replayMatchesTrace}) and
