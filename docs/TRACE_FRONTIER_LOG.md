@@ -6,17 +6,56 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 33 integration: ARZ2 is f4548 / 1058
-(`obj_extra_s11_x` expected absent, actual `0x2800`) after Obj2B rising-pillar
-debris moved/deleted from the ROM debris/render-flag path and Obj8C Whisp chase
-orientation targeted the closest ROM player; OOZ2 is f12107 / 99
+Current branch-local S2 state after round 34 ARZ2 checkpoint work: ARZ2 is
+f4617 / 1053 (`tails_x` expected `0x2820`, actual `0x2A50`) after Obj79
+checkpoint dongle native `x_pos/y_pos` now remain at RAM default zero on the
+allocation frame until routine 6 publishes the orbit position; OOZ2 is f12107 / 99
 (`tails_g_speed` expected `0x00A4`, actual `0x0000`) after Obj07 standing oil
 support began ticking `oil_char2submersion` before the airborne support-release
 branch. CNZ2 remains f9946 / 300 (`x_speed` expected `0x0200`, actual
 `0x08A8`) and MTZ3 remains f13336 / 352 (`x_speed` expected `0x0200`, actual
-`-0200`). Full S2 is 15 green / 4 expected-red, full S1 remains green, and the
-S3K AIZ guard is unchanged. No S2 trace greened in round 33, so no round-33
-change has been banked into `next`.
+`-0200`). ARZ1 and OOZ1 pass in the round 34 preservation subset; CNZ2, MTZ3,
+and OOZ2 remain the expected-red frontiers above. Full S2 was last measured at
+15 green / 4 expected-red on the round 33 campaign baseline, full S1 remains
+green, and the S3K AIZ guard is unchanged. No S2 trace greened in round 34 yet.
+
+## 2026-07-01 - S2 ARZ2 Obj79 checkpoint dongle advances f4548 to f4617
+
+- Worktree/branch: `.worktrees/ai-s2-arz2-round34-next` /
+  `bugfix/ai-s2-arz2-round34-next`, based on campaign commit `71c5c7a0b`.
+- Baseline reproduction:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  reproduced ARZ2 f4548 / 1058 errors (`obj_extra_s11_x` expected absent,
+  actual `0x2800`).
+- Evidence: the f4548 aux trace showed ROM allocating an Obj79 child into slot
+  `$10` with `x_pos/y_pos=$0000,$0000`, while the existing engine helper
+  reported the helper at the parent checkpoint coordinate `$2800,$0438` on the
+  allocation frame. At f4549 ROM routine 6 published the orbiting child at
+  `$2800,$0418`, matching the helper's first routine update once its allocation
+  frame no longer exposes the parent coordinate.
+- ROM refs: `Obj79_CheckActivation` allocates the child, writes id/routine,
+  mapping/art metadata, parent, lifetime, and the orbit anchor fields
+  `objoff_30/32`, but does not write child `x_pos/y_pos`; `Obj79_Dongle` then
+  decrements the lifetime and computes/writes the orbiting `x_pos/y_pos`
+  (`docs/s2disasm/s2.asm:44628-44663,44704-44731`).
+- Fix: `CheckpointDongleInstance` now keeps its native diagnostic/render
+  position at zero until the first routine pass updates `currentX/currentY`,
+  while preserving the parent-center spawn for rewind recreation. A focused
+  unit test covers the allocation-frame zero and first routine-6 position, and
+  the existing checkpoint rewind graph test still passes.
+- Result:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  now reaches ARZ2 f4617 / 1053 errors (`tails_x` expected `0x2820`, actual
+  `0x2A50`).
+- Same-game preservation subset:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  passed ARZ1 and OOZ1. The requested expected-red guards remain at their
+  campaign frontiers when run directly: CNZ2 f9946 / 300, MTZ3 f13336 / 352,
+  and OOZ2 f12107 / 99.
+- New frontier: f4617 shows ROM Tails at `$2820` with `Status_OnObj` and
+  `interact=$19`, while the engine has Tails at `$2A50` with no matched ridden
+  object. Nearby ROM objects are Obj04 moving platforms, pointing at sidekick
+  Obj04 ride-state preservation rather than checkpoint allocation.
 
 ## 2026-07-01 - S2 OOZ2 Obj07 submersion tick advances f11038 to f12107
 
