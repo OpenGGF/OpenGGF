@@ -81,7 +81,7 @@ import static org.lwjgl.opengl.GL11.glClearColor;
  */
 public class LevelManager {
     static final Logger LOGGER = Logger.getLogger(LevelManager.class.getName());
-    private static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
+    static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
     private static final int HUD_PATTERN_BASE = PatternAtlasRange.HUD.base();
     /** Base for extra sidekick-style DPLC banks — above water (0x30000) and below title cards (0x40000). */
     public static final int SIDEKICK_PATTERN_BASE = PatternAtlasRange.SIDEKICK_BANKS.base();
@@ -159,12 +159,12 @@ public class LevelManager {
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
 
-    private void writeCurrentZone(int zone) {
+    void writeCurrentZone(int zone) {
         this.currentZone = zone;
         worldSession.setCurrentZone(zone);
     }
 
-    private void writeCurrentAct(int act) {
+    void writeCurrentAct(int act) {
         this.currentAct = act;
         worldSession.setCurrentAct(act);
     }
@@ -216,7 +216,8 @@ public class LevelManager {
     private final LevelPlayableArtInitializer playableArtInitializer;
     private final LevelDirtyRegionDispatcher dirtyRegionDispatcher;
     final LevelWaterCoordinator waterCoordinator;
-    private final LevelCheckpointCoordinator checkpointCoordinator;
+    final LevelCheckpointCoordinator checkpointCoordinator;
+    private final LevelActTransitionExecutor actTransitionExecutor;
     private EngineContext engineServices; private EditorSaveManager editorSaveManager;
 
     @Deprecated(forRemoval = true)
@@ -252,6 +253,7 @@ public class LevelManager {
         this.dirtyRegionDispatcher = new LevelDirtyRegionDispatcher(this);
         this.waterCoordinator = new LevelWaterCoordinator(this);
         this.checkpointCoordinator = new LevelCheckpointCoordinator(this);
+        this.actTransitionExecutor = new LevelActTransitionExecutor(this);
         this.cachedScreenWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
         this.cachedScreenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
         // Inherit any zone/act metadata and loaded Level already on the
@@ -269,7 +271,7 @@ public class LevelManager {
      * Refreshes the zone list from the current GameModule's ZoneRegistry.
      * Called during level loading to ensure zones match the current game.
      */
-    private void refreshZoneList() {
+    void refreshZoneList() {
         levels.clear();
         levels.addAll(gameModule.getZoneRegistry().getAllZones());
     }
@@ -646,7 +648,7 @@ public class LevelManager {
         initializeZoneFeatureProvider(zoneFeatureProvider);
     }
 
-    private void reinitializeZoneFeaturesForActTransition() throws IOException {
+    void reinitializeZoneFeaturesForActTransition() throws IOException {
         if (zoneFeatureProvider == null) {
             zoneFeatureProvider = gameModule.getZoneFeatureProvider();
         }
@@ -747,7 +749,7 @@ public class LevelManager {
      *
      * @param seamlessTransition true when called during a seamless act transition
      */
-    private void initWater(boolean seamlessTransition) throws IOException {
+    void initWater(boolean seamlessTransition) throws IOException {
         waterCoordinator.initialize(seamlessTransition);
     }
 
@@ -2773,163 +2775,10 @@ public class LevelManager {
      * @throws IOException if level data loading fails
      */
     public void executeActTransition(SeamlessLevelTransitionRequest request) throws IOException {
-        if (request == null) {
-            return;
-        }
-
-        // Use fresh Camera reference (the cached field can go stale after
-        // Camera.resetState() in test teardown or level reload)
-        Camera cam = camera;
-
-        // Clear end-of-level flags from the previous act. The results screen
-        // sets endOfLevelFlag=true when its tally completes, and seamless
-        // transitions don't do a full game-state reset. Without this, stale
-        // flags persist into the new act — e.g. AIZ1 results set the flag,
-        // the fire transition reloads as AIZ2, and the AIZ2 egg capsule
-        // immediately detects the stale flag and triggers its post-boss
-        // cutscene during the AIZ2 results tally.
-        GameServices.gameState().resetForLevel();
-
-        // Suppress music reload if requested (ROM: music continues through transition)
-        if (request.preserveMusic()) {
-            setSuppressNextMusicChange(true);
-        }
-
-        // 1. Set zone/act (ROM: move.b d0, Current_zone_and_act)
-        writeCurrentZone(request.targetZone());
-        writeCurrentAct(request.targetAct());
-
-        // 2. Reload layout + collision only (ROM: Load_Level + LoadSolids)
-        if (levels.isEmpty()) {
-            gameModule = GameServices.module();
-            refreshZoneList();
-        }
-        LevelData levelData = levels.get(currentZone).get(currentAct);
-        loadLevelData(levelData.getLevelIndex());
-
-        // 3. Apply art mutations if requested (ROM: zone-specific art swaps)
-        if (request.mutationKey() != null && !request.mutationKey().isBlank()) {
-            applySeamlessMutation(request.mutationKey());
-        }
-
-        // 4. Reinitialize animated content for the newly loaded zone/act.
-        // The ROM dispatches animation logic off Current_zone_and_act every frame;
-        // our managers capture act-specific scripts at construction time.
-        initAnimatedContent();
-
-        // 4b. Reload standalone (ROM-compressed) object art for the new act.
-        // Act-specific badniks use different standalone art per act (e.g. HCZ Act 1
-        // has Blastoid, Act 2 has Jawz). Without this, act-specific objects spawned
-        // after the transition have no art registered and render invisibly.
-        ObjectArtProvider artProvider = gameModule != null ? gameModule.getObjectArtProvider() : null;
-        if (artProvider != null) {
-            artProvider.reloadStandaloneArtForActTransition(currentZone);
-
-            // 4c. Re-register level-art-based object sheets for the new act.
-            // Act-specific objects (e.g. cork floor, floating platform) use different art
-            // keys per act; without re-registration they resolve to stale keys and
-            // appear invisible after the transition.
-            artProvider.registerLevelTileArt(level, currentZone);
-            if (objectRenderManager != null) {
-                objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
-            }
-        }
-
-        // 4d. Reinitialize water for the new act.
-        // ROM: CheckLevelForWater (s3.asm:5811) runs during every level load,
-        // including act transitions. Sets Water_flag, Water_level, Mean_water_level,
-        // Target_water_level, Water_speed, and the zone-specific dynamic handler.
-        // Seamless=true: ROM's Apparent_zone_and_act still points to the previous act,
-        // which enables water for cases that a direct load would disable (AIZ2 Knuckles).
-        initWater(true);
-
-        // 5. Clear checkpoint state (ROM: clr.b (Respawn_table_keep).w)
-        // Without this, starposts from Act 1 would appear activated in Act 2.
-        checkpointCoordinator.clear();
-
-        // 5b. Reset level gamestate (timer + rings) for normal act transitions.
-        // AIZ1 fire transition is a mid-level continuity reload; its timer/rings
-        // carry into AIZ2 and feed the final results tally.
-        if (!request.preserveLevelGamestate()) {
-            levelGamestate = gameModule.createLevelState();
-        }
-
-        List<ObjectInstance> persistentDynamicObjects = objectManager != null
-                ? objectManager.snapshotPersistentDynamicObjectsForTransition()
-                : List.of();
-
-        // 6. Rebuild managers with new act's spawn data
-        // (ROM: Load_Level swaps obj/ring pointers, then clears Dynamic_object_RAM + Ring_status_table)
-        rebuildManagersForActTransition(cam, persistentDynamicObjects);
-
-        // 6. Apply coordinate offsets (ROM: Offset_ObjectsDuringTransition)
-        applySeamlessOffsets(request, cam);
-
-        // 6b. ROM Offset_ObjectsDuringTransition shifts every surviving object by
-        // the same delta as the players/camera. Carried persistent objects (e.g. the
-        // end signpost in CNZ/HCZ/MGZ) must move with the world or they are stranded
-        // at their Act 1 position and culled/destroyed off-screen.
-        offsetCarriedObjectsForTransition(persistentDynamicObjects, request);
-
-        // 7. Restore camera bounds from new level data
-        restoreCameraBoundsForCurrentLevel(cam);
-        applyPostTransitionCameraOverrides(request, cam);
-        if (!request.preserveOffsetCameraPosition()) {
-            cam.updatePosition(true);
-        }
-
-        // 7b. Refresh sidekick CPU level-bound overrides to match the new camera bounds.
-        //
-        // SidekickCpuController stores its own minXBound/maxXBound/maxYBound that
-        // override the live camera bounds in PlayableSpriteMovement.doLevelBoundary
-        // (the ROM camera-bound clamp at sonic3k.asm:36925/36945 etc.). These
-        // overrides are populated by per-zone event handlers (e.g. Sonic3kAIZEvents
-        // boss arena lock) and then refreshed each frame by
-        // Sonic3kLevelEventManager.syncSidekickBoundsToCamera() at the END of
-        // update(). Without this resync, the next frame's doLevelBoundary reads
-        // stale AIZ1-boss-arena bounds and clamps Tails to that arena's left edge,
-        // teleporting the sidekick across the AIZ2 reload offset (AIZ trace F5497
-        // tails_x mismatch: stale minXBound=0x2F10 yielded leftBoundary=0x2F20,
-        // teleporting Tails from the post-transition 0x00B1 to 0x2F20).
-        // Re-syncing here matches the ROM semantics: the act-transition reload
-        // resets Camera_min_X_pos / Camera_min_Y_pos (sonic3k.asm:104758-104762),
-        // and ROM Tails reads those same fields directly — there is no separate
-        // Tails-CPU bounds storage in the ROM, so the engine's mirror must be
-        // refreshed alongside the camera reset.
-        for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            SidekickCpuController cpu = sidekick.getCpuController();
-            if (cpu != null) {
-                cpu.setLevelBounds(
-                        (int) cam.getMinX(),
-                        (int) cam.getMaxX(),
-                        (int) Math.max(cam.getMaxY(), cam.getMaxYTarget()));
-            }
-        }
-
-        // 8. Reinitialize level events for new act
-        initLevelEventsForCurrentZoneAct();
-
-        // 9. Reinitialize zone features (water surface sprites, etc.) for the new act.
-        // Without this, the water surface manager retains Act 1's act ID and renders
-        // wave sprites at the wrong water level.
-        try {
-            reinitializeZoneFeaturesForActTransition();
-        } catch (IOException e) {
-            LOGGER.warning("Failed to reinitialize zone features: " + e.getMessage());
-        }
-
-        // 9. Music override if specified
-        if (request.musicOverrideId() >= 0) {
-            audioManager.playMusic(request.musicOverrideId());
-        }
-
-        // 10. In-level title card if requested
-        if (request.showInLevelTitleCard() && !graphicsManager.isHeadlessMode()) {
-            requestInLevelTitleCard(currentZone, currentAct);
-        }
+        actTransitionExecutor.execute(request);
     }
 
-    private void restoreCameraBoundsForCurrentLevel(Camera cam) {
+    void restoreCameraBoundsForCurrentLevel(Camera cam) {
         Level currentLevel = getCurrentLevel();
         if (currentLevel == null) {
             return;
@@ -2949,7 +2798,7 @@ public class LevelManager {
         verticalWrapEnabled = cam.isVerticalWrapEnabled();
     }
 
-    private void applyPostTransitionCameraOverrides(SeamlessLevelTransitionRequest request, Camera cam) {
+    void applyPostTransitionCameraOverrides(SeamlessLevelTransitionRequest request, Camera cam) {
         if (request == null) {
             return;
         }
@@ -2981,7 +2830,7 @@ public class LevelManager {
      * The delta matches the player offset (player/camera/object offsets are the
      * same world shift for every S3K seamless act transition).
      */
-    private void offsetCarriedObjectsForTransition(List<ObjectInstance> carried,
+    void offsetCarriedObjectsForTransition(List<ObjectInstance> carried,
                                                    SeamlessLevelTransitionRequest request) {
         if (request == null || carried == null || carried.isEmpty()) {
             return;
@@ -2998,7 +2847,7 @@ public class LevelManager {
         }
     }
 
-    private void applySeamlessOffsets(SeamlessLevelTransitionRequest request, Camera cam) {
+    void applySeamlessOffsets(SeamlessLevelTransitionRequest request, Camera cam) {
         if (request == null) {
             return;
         }
@@ -3056,7 +2905,7 @@ public class LevelManager {
      * reconstruct both managers so they reference {@code level.getObjects()}
      * and {@code level.getRings()} from the newly loaded act.
      */
-    private void rebuildManagersForActTransition(Camera cam, List<ObjectInstance> persistentDynamicObjects) {
+    void rebuildManagersForActTransition(Camera cam, List<ObjectInstance> persistentDynamicObjects) {
         int cameraX = cam.getX();
 
         // Rebuild ObjectManager with the new act's object spawns
@@ -3131,7 +2980,7 @@ public class LevelManager {
         }
     }
 
-    private void initLevelEventsForCurrentZoneAct() {
+    void initLevelEventsForCurrentZoneAct() {
         LevelEventProvider levelEvents = activeGameModule().getLevelEventProvider();
         if (levelEvents != null) {
             levelEvents.initLevel(currentZone, currentAct);
@@ -3507,7 +3356,7 @@ public class LevelManager {
         return spriteManager != null && spriteManager.getFrameCounter() == frameCounter + 1;
     }
 
-    private void applySeamlessMutation(String mutationKey) {
+    void applySeamlessMutation(String mutationKey) {
         gameModule.applySeamlessMutation(this, mutationKey);
     }
 

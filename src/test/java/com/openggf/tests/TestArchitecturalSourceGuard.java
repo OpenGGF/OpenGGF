@@ -684,6 +684,30 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void levelManagerDelegatesActTransitionExecutionToNamedCollaborator() throws IOException {
+        Path path = SRC_MAIN.resolve("com/openggf/level/LevelManager.java");
+        SourceFile sourceFile = SourceFile.read(path);
+        MethodSpan method = sourceFile.methodNamed("executeActTransition");
+        assertTrue(method != null, "LevelManager should retain the public executeActTransition facade");
+        assertTrue(method.lineCount() <= 4,
+                "LevelManager.executeActTransition should delegate to LevelActTransitionExecutor");
+
+        String source = stripCommentsAndStrings(String.join("\n",
+                sourceFile.lines().subList(method.startLine() - 1, method.endLine())));
+        List<String> forbiddenSignals = List.of(
+                "reloadStandaloneArtForActTransition(",
+                "snapshotPersistentDynamicObjectsForTransition(",
+                "preserveLevelGamestate()",
+                "showInLevelTitleCard()");
+        List<String> violations = forbiddenSignals.stream()
+                .filter(source::contains)
+                .toList();
+        assertTrue(violations.isEmpty(),
+                "LevelManager.executeActTransition should delegate act-transition reload choreography "
+                        + "to LevelActTransitionExecutor. Found: " + violations);
+    }
+
+    @Test
     void gameLoopRoutesMenuScreenUpdatesThroughModeControllers() throws IOException {
         String source = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve("com/openggf/GameLoop.java")));
         List<String> forbiddenDirectUpdates = List.of(
@@ -1722,7 +1746,9 @@ class TestArchitecturalSourceGuard {
 
     private record SourceFile(String text, List<String> lines) {
         private static final Pattern METHOD_START = Pattern.compile(
-                "^\\s*(?:public|private|protected)\\s+(?:static\\s+)?(?:synchronized\\s+)?[\\w<>\\[\\].?, ]+\\s+(\\w+)\\s*\\([^;]*\\)\\s*\\{\\s*$");
+                "^\\s*(?:public|private|protected)\\s+(?:static\\s+)?(?:synchronized\\s+)?"
+                        + "[\\w<>\\[\\].?, ]+\\s+(\\w+)\\s*\\([^;]*\\)"
+                        + "(?:\\s+throws\\s+[^\\{]+)?\\s*\\{\\s*$");
 
         static SourceFile read(Path path) throws IOException {
             return new SourceFile(Files.readString(path), Files.readAllLines(path));
