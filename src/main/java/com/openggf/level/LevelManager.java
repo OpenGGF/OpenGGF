@@ -138,7 +138,7 @@ public class LevelManager {
 
     GraphicsManager graphicsManager;
     AudioManager audioManager;
-    private SpriteManager spriteManager;
+    SpriteManager spriteManager;
     private CollisionSystem collisionSystem;
     WaterSystem waterSystem;
     private GameStateManager gameState;
@@ -187,7 +187,6 @@ public class LevelManager {
     HudRenderManager hudRenderManager;
     AnimatedPatternManager animatedPatternManager;
     AnimatedPaletteManager animatedPaletteManager;
-    private RespawnState checkpointState;
     LevelState levelGamestate;
 
     // GPU tilemap lifecycle delegate (build/cache/upload/invalidate)
@@ -216,6 +215,8 @@ public class LevelManager {
     final LevelFrameRuntimeUpdater frameRuntimeUpdater = new LevelFrameRuntimeUpdater(this);
     private final LevelPlayableArtInitializer playableArtInitializer;
     private final LevelDirtyRegionDispatcher dirtyRegionDispatcher;
+    final LevelWaterCoordinator waterCoordinator;
+    private final LevelCheckpointCoordinator checkpointCoordinator;
     private EngineContext engineServices; private EditorSaveManager editorSaveManager;
 
     @Deprecated(forRemoval = true)
@@ -249,6 +250,8 @@ public class LevelManager {
         this.playableArtInitializer = new LevelPlayableArtInitializer(
                 this, spriteManager, graphicsManager, configService, crossGameFeatures);
         this.dirtyRegionDispatcher = new LevelDirtyRegionDispatcher(this);
+        this.waterCoordinator = new LevelWaterCoordinator(this);
+        this.checkpointCoordinator = new LevelCheckpointCoordinator(this);
         this.cachedScreenWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
         this.cachedScreenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
         // Inherit any zone/act metadata and loaded Level already on the
@@ -562,7 +565,7 @@ public class LevelManager {
      * Injects a {@link DefaultPowerUpSpawner} backed by the current
      * {@link ObjectManager} into the main player and all sidekicks.
      */
-    private String resolveMainCharacterCode() {
+    String resolveMainCharacterCode() {
         return ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
     }
 
@@ -716,11 +719,7 @@ public class LevelManager {
      */
     public void initPlayerAndCheckpoint() {
         resetPlayerState();
-        // Initialize checkpoint state for new level
-        if (checkpointState == null) {
-            checkpointState = gameModule.createRespawnState();
-        }
-        checkpointState.clear();
+        checkpointCoordinator.prepareForLevelStart();
         levelGamestate = gameModule.createLevelState();
     }
 
@@ -737,7 +736,7 @@ public class LevelManager {
      * Phase B: Initialize the water system for the current level.
      */
     public void initWater() throws IOException {
-        initWater(false);
+        waterCoordinator.initialize();
     }
 
     /**
@@ -749,29 +748,7 @@ public class LevelManager {
      * @param seamlessTransition true when called during a seamless act transition
      */
     private void initWater(boolean seamlessTransition) throws IOException {
-        Rom rom = GameServices.rom().getRom();
-        WaterDataProvider waterProvider = gameModule != null ? gameModule.getWaterDataProvider() : null;
-        if (waterProvider != null) {
-            // Resolve the actual player character from the level event manager.
-            // ROM: CheckLevelForWater uses Player_mode to gate per-character water
-            // (e.g. AIZ2 Knuckles has no water when loaded directly from level select).
-            PlayerCharacter character = PlayerCharacter.SONIC_AND_TAILS;
-            LevelEventProvider lep = gameModule.getLevelEventProvider();
-            if (lep instanceof AbstractLevelEventManager alem) {
-                character = alem.getPlayerCharacter();
-            }
-            waterSystem.loadForLevelFromProvider(waterProvider, rom,
-                    getFeatureZoneId(), getFeatureActId(), character,
-                    seamlessTransition);
-        } else if (zoneFeatureProvider != null && zoneFeatureProvider.hasWater(getFeatureZoneId())) {
-            // Fallback for games without a WaterDataProvider (backward compatibility).
-            // All three game modules now supply providers, so this path should rarely execute.
-            @SuppressWarnings("deprecation")
-            Runnable fallback = () -> waterSystem.loadForLevel(rom, getFeatureZoneId(), getFeatureActId(), level.getObjects());
-            if (!waterSystem.hasWater(getFeatureZoneId(), getFeatureActId())) {
-                fallback.run();
-            }
-        }
+        waterCoordinator.initialize(seamlessTransition);
     }
 
     /**
@@ -873,12 +850,7 @@ public class LevelManager {
      * feature provider in {@link #update()}.
      */
     public void advanceDynamicWaterLevel() {
-        int featureZone = getFeatureZoneId();
-        int featureAct = getFeatureActId();
-        if (level != null && waterSystem != null && waterSystem.hasWater(featureZone, featureAct)) {
-            waterSystem.updateDynamic(featureZone, featureAct, camera.getX(), camera.getY());
-            waterSystem.update();
-        }
+        waterCoordinator.advanceDynamicWaterLevel();
     }
 
     /**
@@ -1078,21 +1050,7 @@ public class LevelManager {
         // DynWaterHeight (zone features set new target for next frame).
         // Use effective feature zone/act so S1 SBZ3 (loaded from LZ act 4 slot)
         // resolves to SBZ3 water behavior while retaining LZ tile/object resources.
-        int featureZone = getFeatureZoneId();
-        int featureAct = getFeatureActId();
-        // Water movement — ROM order: MoveWater (move toward target) before
-        // DynWaterHeight (zone features set new target). For S1/S2 the ROM moves
-        // the water level BEFORE the player's underwater check
-        // (LZWaterFeatures/WaterEffects run before ExecuteObjects/RunObjects), so
-        // the inline-order path runs advanceDynamicWaterLevel() in the pre-physics
-        // step and we must NOT move it again here. S3K moves water after the
-        // player loop (Process_Sprites before Handle_Onscreen_Water_Height), so it
-        // still moves here.
-        if (!advanceWaterLevelBeforePlayerPhysics()
-                && level != null && waterSystem.hasWater(featureZone, featureAct)) {
-            waterSystem.updateDynamic(featureZone, featureAct, camera.getX(), camera.getY());
-            waterSystem.update();
-        }
+        waterCoordinator.advanceDynamicWaterLevelAfterPlayerPhysicsIfNeeded();
 
         // Update zone-specific features (CNZ bumpers, S1 DynWaterHeight, etc.)
         if (zoneFeatureProvider != null && level != null) {
@@ -1131,12 +1089,7 @@ public class LevelManager {
         }
 
         // Water movement before zone features (ROM order: MoveWater before DynWaterHeight)
-        int featureZone = getFeatureZoneId();
-        int featureAct = getFeatureActId();
-        if (level != null && waterSystem.hasWater(featureZone, featureAct)) {
-            waterSystem.updateDynamic(featureZone, featureAct, camera.getX(), camera.getY());
-            waterSystem.update();
-        }
+        waterCoordinator.advanceDynamicWaterLevel();
 
         if (zoneFeatureProvider != null && level != null) {
             zoneFeatureProvider.update(playable, camera.getX(), getFeatureZoneId());
@@ -1146,79 +1099,15 @@ public class LevelManager {
     }
 
     public void updatePlayableWaterStatesForCurrentLevel() {
-        int featureZone = getFeatureZoneId();
-        int featureAct = getFeatureActId();
-        if (level == null || waterSystem == null || !waterSystem.hasWater(featureZone, featureAct)) {
-            return;
-        }
-        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
-        AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
-        if (playable == null) {
-            return;
-        }
-        int waterY = waterSystem.getGameplayWaterLevelY(featureZone, featureAct);
-        updatePlayableWaterStates(playable, waterY);
+        waterCoordinator.updatePlayableWaterStatesForCurrentLevel();
     }
 
     public void updatePlayableWaterStateForCurrentLevel(AbstractPlayableSprite playable) {
-        int featureZone = getFeatureZoneId();
-        int featureAct = getFeatureActId();
-        if (level == null || waterSystem == null || !waterSystem.hasWater(featureZone, featureAct)
-                || playable == null) {
-            return;
-        }
-        int waterY = waterSystem.getGameplayWaterLevelY(featureZone, featureAct);
-        updatePlayableWaterState(playable, waterY);
-    }
-
-    private void updatePlayableWaterStates(AbstractPlayableSprite mainPlayable, int waterY) {
-        updatePlayableWaterState(mainPlayable, waterY);
-        for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            if (sidekick != mainPlayable) {
-                updatePlayableWaterState(sidekick, waterY);
-            }
-        }
-    }
-
-    private void updatePlayableWaterState(AbstractPlayableSprite playable, int waterY) {
-        if (playable == null) {
-            return;
-        }
-        // Hurt/dead-fall movement runs its own path and does not reach the
-        // normal water-status routine, so preserve Status_Underwater there.
-        // S2 Tails: Obj02_Dead calls Obj02_CheckGameOver, ObjectMoveAndFall,
-        // Tails_RecordPos/Animate/LoadDPLC/Display and omits Tails_Water
-        // (docs/s2disasm/s2.asm:41131-41137); Obj02_Control is the path that
-        // calls Tails_Water (38972-38987). S3K hurt movement similarly runs
-        // loc_122D8 without reaching Sonic_Water.
-        if (playable.isHurt() || isDeferredSidekickDeadFallWaterBypass(playable)) {
-            return;
-        }
-        // S3K Tails object_control bit 0 skips Tails_Modes but still runs
-        // Tails_Water (sonic3k.asm:26220-26248). Tails_Water updates
-        // Status_Underwater and speed constants before the object_control
-        // early return that skips velocity quarter/double side effects
-        // (sonic3k.asm:27416-27470).
-        if (playable.isObjectControlSuppressesMovement()) {
-            playable.updateWaterStateObjectControlled(waterY);
-            return;
-        }
-        playable.updateWaterState(waterY);
-    }
-
-    private static boolean isDeferredSidekickDeadFallWaterBypass(AbstractPlayableSprite playable) {
-        if (!playable.isCpuControlled()) {
-            return false;
-        }
-        SidekickCpuController cpu = playable.getCpuController();
-        return cpu != null && cpu.isDeferredDespawnDeadFallContinuingThisFrame();
+        waterCoordinator.updatePlayableWaterStateForCurrentLevel(playable);
     }
 
     boolean shouldSuppressUnderwaterPalette(int zoneId, int actId) {
-        if (zoneFeatureProvider == null) {
-            return false;
-        }
-        return zoneFeatureProvider.shouldSuppressUnderwaterPalette(zoneId, actId);
+        return waterCoordinator.shouldSuppressUnderwaterPalette(zoneId, actId);
     }
 
     public void applyPlaneSwitchers(AbstractPlayableSprite player) {
@@ -2430,55 +2319,11 @@ public class LevelManager {
      * ROM: S1 Lamp_LoadInfo, S2 Obj79_LoadData, S3K Saved_zone_and_act restore.
      */
     public void restoreCheckpointState(LevelLoadContext ctx) {
-        if (!ctx.hasCheckpoint() || checkpointState == null) {
-            return;
-        }
-        checkpointState.restoreFromSaved(
-                ctx.getCheckpointX(), ctx.getCheckpointY(),
-                ctx.getCheckpointCameraX(), ctx.getCheckpointCameraY(),
-                ctx.getCheckpointIndex());
-        if (checkpointState instanceof CheckpointState cs) {
-            if (ctx.hasWaterState()) {
-                cs.saveWaterState(ctx.getCheckpointWaterLevel(), ctx.getCheckpointWaterRoutine());
-            }
-            if (ctx.hasCheckpointS3kRuntimeState()) {
-                cs.saveS3kRuntimeState(
-                        ctx.getCheckpointCameraMaxY(),
-                        ctx.getCheckpointDynamicResizeRoutine());
-            }
-            if (ctx.hasCheckpointSolidBits()) {
-                cs.saveSolidBits(ctx.getCheckpointTopSolidBit(), ctx.getCheckpointLrbSolidBit());
-            }
-        }
-
-        // ROM Lamp_LoadInfo: restore water level and routine after level reload.
-        if (ctx.hasWaterState()) {
-            int featureZone = getFeatureZoneId();
-            int featureAct = getFeatureActId();
-            if (waterSystem.hasWater(featureZone, featureAct)) {
-                waterSystem.setWaterLevelDirect(featureZone, featureAct, ctx.getCheckpointWaterLevel());
-                waterSystem.setWaterLevelTarget(featureZone, featureAct, ctx.getCheckpointWaterLevel());
-            }
-            if (zoneFeatureProvider != null) {
-                zoneFeatureProvider.setWaterRoutine(ctx.getCheckpointWaterRoutine());
-            }
-        }
+        checkpointCoordinator.restoreCheckpointState(ctx);
     }
 
     private void restoreCheckpointRuntimeState(LevelLoadContext ctx) {
-        if (!ctx.hasCheckpoint() || !ctx.hasCheckpointS3kRuntimeState()) {
-            return;
-        }
-
-        camera.setMaxY((short) ctx.getCheckpointCameraMaxY());
-        camera.setMaxYTarget((short) ctx.getCheckpointCameraMaxY());
-
-        LevelEventProvider levelEvents = activeGameModule().getLevelEventProvider();
-        if (levelEvents instanceof AbstractLevelEventManager eventManager) {
-            eventManager.restoreEventRoutineState(
-                    ctx.getCheckpointDynamicResizeRoutine(),
-                    eventManager.getEventRoutineBg());
-        }
+        checkpointCoordinator.restoreRuntimeState(ctx);
     }
 
     /**
@@ -2813,7 +2658,7 @@ public class LevelManager {
             ctx.setShowTitleCard(showTitleCard);
             ctx.setLevelData(levelData);
             ctx.setIncludePostLoadAssembly(true);
-            ctx.snapshotCheckpoint(checkpointState);
+            ctx.snapshotCheckpoint(checkpointCoordinator.state());
 
             loadLevel(levelData.getLevelIndex(), loadMode, ctx);
             if (loadMode != LevelLoadMode.PREVIEW_CAPTURE) {
@@ -2853,9 +2698,7 @@ public class LevelManager {
         }
         writeApparentAct(currentAct);
         // Clear checkpoint when manually changing level
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
         loadCurrentLevel();
     }
 
@@ -2878,9 +2721,7 @@ public class LevelManager {
         }
         writeApparentAct(currentAct);
         // Clear checkpoint when advancing
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
         loadCurrentLevel();
     }
 
@@ -2899,9 +2740,7 @@ public class LevelManager {
             }
         }
         writeApparentAct(currentAct);
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
         transitions.setSpecialStageReturnLevelReloadRequested(true);
     }
 
@@ -2914,9 +2753,7 @@ public class LevelManager {
         writeApparentAct(act);
         writeCurrentZone(zone);
         // Clear checkpoint when manually changing level
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
         loadCurrentLevel(loadMode != LevelLoadMode.PREVIEW_CAPTURE, loadMode);
     }
 
@@ -3008,9 +2845,7 @@ public class LevelManager {
 
         // 5. Clear checkpoint state (ROM: clr.b (Respawn_table_keep).w)
         // Without this, starposts from Act 1 would appear activated in Act 2.
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
 
         // 5b. Reset level gamestate (timer + rings) for normal act transitions.
         // AIZ1 fire transition is a mid-level continuity reload; its timer/rings
@@ -3311,9 +3146,7 @@ public class LevelManager {
         writeCurrentAct(0);
         writeApparentAct(0);
         // Clear checkpoint when manually changing level
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
         loadCurrentLevel();
     }
 
@@ -3322,30 +3155,23 @@ public class LevelManager {
         writeCurrentAct(0);
         writeApparentAct(0);
         // Clear checkpoint when manually changing level
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
         loadCurrentLevel();
     }
 
     public RespawnState getCheckpointState() {
-        return checkpointState;
+        return checkpointCoordinator.state();
     }
 
     public CheckpointState.RewindState captureCheckpointStateForRewind() {
-        return checkpointState instanceof CheckpointState cs ? cs.captureRewindState() : null;
+        return checkpointCoordinator.captureRewindState();
     }
 
     public void restoreCheckpointStateForRewind(CheckpointState.RewindState checkpointRewindState) {
         if (checkpointRewindState == null) {
             return;
         }
-        if (checkpointState == null && gameModule != null) {
-            checkpointState = gameModule.createRespawnState();
-        }
-        if (checkpointState instanceof CheckpointState cs) {
-            cs.restoreRewindState(checkpointRewindState);
-        }
+        checkpointCoordinator.restoreRewindState(checkpointRewindState);
     }
 
     // ==================== Transition Coordinator Delegation ====================
@@ -3452,7 +3278,7 @@ public class LevelManager {
         hudRenderManager = null;
         animatedPatternManager = null;
         animatedPaletteManager = null;
-        checkpointState = null;
+        checkpointCoordinator.resetState();
         levelGamestate = null;
         if (tilemapManager != null) {
             tilemapManager.resetState();

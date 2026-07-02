@@ -644,6 +644,46 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void levelManagerDelegatesWaterLifecycleToNamedCollaborator() throws IOException {
+        String source = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/level/LevelManager.java")));
+        List<String> forbiddenSignals = List.of(
+                "WaterDataProvider",
+                "loadForLevelFromProvider(",
+                "waterSystem.loadForLevel(",
+                "waterSystem.updateDynamic(",
+                "getGameplayWaterLevelY(",
+                "updateWaterStateObjectControlled(",
+                "zoneFeatureProvider.shouldSuppressUnderwaterPalette(");
+        List<String> violations = forbiddenSignals.stream()
+                .filter(source::contains)
+                .toList();
+        assertTrue(violations.isEmpty(),
+                "LevelManager should delegate water load, movement, and playable-water state "
+                        + "to LevelWaterCoordinator. Found: " + violations);
+    }
+
+    @Test
+    void levelManagerDelegatesCheckpointStateToNamedCollaborator() throws IOException {
+        String source = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/level/LevelManager.java")));
+        List<String> forbiddenSignals = List.of(
+                "checkpointState",
+                "createRespawnState(",
+                "restoreFromSaved(",
+                "saveWaterState(",
+                "saveS3kRuntimeState(",
+                "saveSolidBits(",
+                "restoreEventRoutineState(");
+        List<String> violations = forbiddenSignals.stream()
+                .filter(source::contains)
+                .toList();
+        assertTrue(violations.isEmpty(),
+                "LevelManager should delegate checkpoint storage and restore details "
+                        + "to LevelCheckpointCoordinator. Found: " + violations);
+    }
+
+    @Test
     void gameLoopRoutesMenuScreenUpdatesThroughModeControllers() throws IOException {
         String source = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve("com/openggf/GameLoop.java")));
         List<String> forbiddenDirectUpdates = List.of(
