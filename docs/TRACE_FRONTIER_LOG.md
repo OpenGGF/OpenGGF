@@ -6,21 +6,65 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 70 ARZ2 worker branch
-`bugfix/ai-s2-arz2-round70-next`, integrated into conductor branch
-`bugfix/ai-s2-trace-next` at `f04af74a0` and followed by local `develop`
-merge `71a646512`:
-ARZ2 is f7338 / 3 under `frontierOnly` (`obj_extra_s14_x` expected absent,
-actual `0x2C9C`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
+Current branch-local S2 state after round 71 ARZ2 worker branch
+`bugfix/ai-s2-arz2-round71-next`, based on conductor branch
+`bugfix/ai-s2-trace-next` at `86a4e0313`:
+ARZ2 is green under `frontierOnly`; CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
-is now ARZ2, CNZ2, and MTZ3.
+is now CNZ2 and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
-was banked into `next`; ARZ2 advanced again in round 70 but is not banked under
-the green-bank rule until it greens. Round 71 workers must include targeted
-BizHawk Lua evidence before any `no-change` / `rejected` bounce.
+was banked into `next`; ARZ2 greened in round 71 and is not banked until the
+worker branch is merged by the conductor.
+
+## 2026-07-02 - S2 round 71 ARZ2 Obj3E end-checker delete
+
+Round 71 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round71-next` /
+`bugfix/ai-s2-arz2-round71-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `86a4e0313`. The focused baseline reproduced
+ARZ2 f7338 / 3 under `frontierOnly`: `obj_extra_s14_x` expected absent but
+the engine still exposed Obj3E at `$2C9C,$04B1`.
+
+BizHawk diagnostic:
+- Probe script was launched through `tools/bizhawk/run_bizhawk_lua.bat` with
+  absolute Lua, movie, output, and ROM paths. Script:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round71-next\tools\bizhawk\diag_s2_arz2_round71_obj3e_lifetime.lua`.
+  Output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round71-next\tools\bizhawk\trace_output\diag_s2_arz2_round71_obj3e_lifetime.txt`.
+- Command summary:
+  `OGGF_START=15298 OGGF_STOP=15345 OGGF_TRACE_OFFSET=7998 OGGF_OUT=<output> run_bizhawk_lua.bat <lua> <s2-lvl-select-ARZ.bk2> <s2.gen>`.
+- Hooked Obj3E final scan `$03F406`, `Load_EndOfAct` `$008820`,
+  `DeleteObject` `$0164E4`, `DeleteObject2` `$0164E8`, `AllocateObject`
+  return `$017FF8`, and Obj28 Prison/Main/Walk/Fly `$011BF4/$011ADE/$011B38/$011B74`,
+  covering BizHawk frames 15298-15345 / trace frames 7300-7347.
+- Captured slot/timing values: ROM Obj3E routine `$0A` occupied slot `$14`
+  at `x=$2C9C,y=$04B1` from trace f7300 through f7338. The last captured Obj28
+  animal in slot `$21` deleted through `DeleteObject2` at f7337. At f7338,
+  Obj3E routine `$0A` ran its final scan, `AllocateObject` returned slot `$10`
+  for the results object path, and `DeleteObject2` cleared the Obj3E slot `$14`.
+  The f7339 sample showed slot `$14` empty.
+
+Root fixed:
+- `EggPrisonObjectInstance` no longer adds a second `$B4`-frame wait after the
+  random-release phase. S2 Obj3E routine `$08` decrements
+  `anim_frame_duration` and switches to routine `$0A`; routine `$0A`
+  immediately scans Dynamic Object RAM for Obj28 every frame and calls
+  `Load_EndOfAct` followed by `DeleteObject` when none remain
+  (`docs/s2disasm/s2.asm:84957-84979`). The engine now frees the routine-$A
+  slot-pressure child in the same object pass while leaving the routine-2 body
+  alive for the stage-clear ride path.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f7338 / 3 to green.
+
+Verification:
+- Focused ARZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  wrote an individual Surefire report with 1 run, 0 failures, and 0 errors.
 
 ## 2026-07-02 - S2 round 70 ARZ2 Obj28 render-flag slot reuse
 

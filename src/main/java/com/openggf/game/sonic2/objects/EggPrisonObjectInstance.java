@@ -93,7 +93,6 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     private static final int INITIAL_ANIMAL_X_OFFSET_STEP = 7;
     private static final int SPAWN_ANIMAL_DELAY = 0xC;  // 12 frames delay for random animals
     private static final int SPAWN_PHASE_DURATION = 0xB4;  // 180 frames of random spawning
-    private static final int FINAL_WAIT_DURATION = 0xB4;   // 180 frames wait before checking animals
 
     // Animation frames (from obj3E.asm mappings)
     private static final int FRAME_BODY_CLOSED = 0;
@@ -409,21 +408,16 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
             // Count down duration
             brokenAnimDuration--;
             if (brokenAnimDuration <= 0) {
-                // Advance to final state, wait $B4 frames
+                // ROM writes $B4 to anim_frame_duration when entering routine
+                // $0A, but loc_3F406 scans for Obj28 every frame and never
+                // decrements that field (docs/s2disasm/s2.asm:84957-84979).
                 brokenRoutineSecondary = BROKEN_STATE_FINAL;
-                brokenAnimDuration = FINAL_WAIT_DURATION;
             }
             return;
         }
 
         if (brokenRoutineSecondary == BROKEN_STATE_FINAL) {
-            // loc_3F406: Wait 180 frames, then check every frame
-            if (brokenAnimDuration > 0) {
-                brokenAnimDuration--;
-                return;  // Still waiting
-            }
-
-            // After wait, check if any animals remain
+            // loc_3F406: check if any animals remain
             if (!areAnimalsPresent()) {
                 triggerEndOfAct();
             }
@@ -625,6 +619,12 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         // the routine-2 body. The body keeps running loc_3F278 and therefore
         // keeps the player's continued SolidObject ride attached through the
         // results sequence.
+        ObjectManager objectManagerForDelete = services().objectManager();
+        if (objectManagerForDelete != null && brokenSlotChild != null) {
+            objectManagerForDelete.releaseSlot(brokenSlotChild);
+        }
+        expireSlotChild(brokenSlotChild);
+        brokenSlotChild = null;
     }
 
     @Override
