@@ -64,6 +64,37 @@ Verification:
   ran 19 traces with 16 green and the three expected-red frontiers: ARZ2
   f6923 / 3, CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
 
+Conductor integration:
+- Merged worker commit `015355d65` into conductor branch
+  `bugfix/ai-s2-trace-next` as merge commit `ba2d29776`.
+- Post-merge full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  confirmed 16 green and the three expected-red frontiers: ARZ2 f6923 / 3
+  (`obj_s12_type` expected `0x3E`, actual missing), CNZ2 f9977 / 10, and MTZ3
+  f13477 / 4.
+- Post-merge full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- Post-merge S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`).
+- Local `develop` (`7a2317a96`) and `origin/develop` (`d162131f1`) were both
+  already contained after the round.
+
+Other round 66 worker outcomes:
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round66-next` /
+  `bugfix/ai-s2-cnz2-round66-next` made no commit. It reproduced f9977 / 10,
+  found the split-ball path is born two pixels right because the attached ball
+  freezes at x=`0x290B` while ROM is x=`0x2909`, rejected a parent pre-update
+  attach experiment that did not move the frontier, rejected a moving-right Obj51
+  trigger experiment that regressed to f8614 / 5, and reverted cleanly.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round66-next` /
+  `bugfix/ai-s2-mtz3-round66-next` made no commit. It reproduced f13477 / 4,
+  rejected an Obj54 hit-reaction dispatch deferral that regressed to f12909 /
+  11, and reverted cleanly.
+
 ## 2026-07-02 - S2 round 65 conductor closure
 
 Integrated ARZ2 worker commit `ce95436a9` and conductor repair commit
