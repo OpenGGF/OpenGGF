@@ -6,17 +6,62 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 48 ARZ2 and MTZ3 targeted pass:
-ARZ2 is f5174 / 1 under `frontierOnly` (`y` expected `0x044B`, actual
-`0x044C`),
+Current branch-local S2 state after the round 49 ARZ2 targeted pass:
+ARZ2 is f5457 / 4 under `frontierOnly` (`tails_x_speed` expected `-0024`,
+actual `0x0000`),
 CNZ2 is f9946 / 8 under `frontierOnly` (`x_speed` expected `0x0200`, actual
 `0x08A8`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed` expected
 `-020C`, actual `0x020C`), and OOZ2 is f12107 / 13 under `frontierOnly`
 (`tails_y` expected `0x02A5`, actual `0x02A4`; focused full reports also show
-`tails_g_speed` expected `0x00A4`, actual `0x0000`). The round 48 integrated
-full S2 sweep is 15 green / 4 expected-red. The full S1 sweep remains 29/29
-green, and the S3K guard subset remains 66/68 with only the known AIZ
-expected-red frontiers. No S2 trace greened in round 48.
+`tails_g_speed` expected `0x00A4`, actual `0x0000`). The round 49 worker
+verification keeps the full S2 sweep at 15 green / 4 expected-red. The full S1
+sweep remains 29/29 green, and the S3K guard subset remains 66/68 with only the
+known AIZ expected-red frontiers. No S2 trace greened in round 49.
+
+## 2026-07-02 - S2 round 49 ARZ2 targeted advance
+
+Round 49 started from conductor HEAD `f27a6dc82` on
+`bugfix/ai-s2-trace-next`. Worker ARZ2 used
+`.worktrees/ai-s2-arz2-round49-next` /
+`bugfix/ai-s2-arz2-round49-next`, based from that conductor HEAD rather than
+`develop`. The focused baseline reproduced ARZ2 f5174 / 1 under
+`frontierOnly` (`y` expected `0x044B`, actual `0x044C`).
+
+Investigation stayed on the Obj89 arrow under Sonic at slot `$14`. The trace
+showed Sonic landing on the arrow at f5173 with ROM `y_pos=$044B`, then holding
+that Y at f5174 while the engine re-seated the continued ride one pixel lower
+to `$044C`. S2 `Obj89_Arrow_Platform` calls `PlatformObject` only when
+`obj89_arrow_timer` is zero; when the timer is nonzero it branches directly to
+`Obj89_Arrow_Platform_Decay`, so it skips both fresh platform contact and
+`MvSonicOnPtfm`-style continued support until `Obj89_Arrow_Sub6` explicitly
+drops riders. The ROM also writes `#$1F` to the timer and immediately falls
+through to the decay decrement in the same object call
+(`docs/s2disasm/s2.asm:65658-65702`).
+
+Candidate result:
+- Obj89 arrows now expose solid contact only while stuck with a zero timer,
+  suppress continued platform re-seat during timer-decay frames, and seed the
+  engine contact callback with the already-decremented `0x1E` timer value to
+  match the ROM's same-dispatch write/decrement ordering. The focused oracle
+  asserts Sonic remains at the ROM `y_pos` on f5174.
+- ARZ2 advances to f5457 / 4 under `frontierOnly` (`tails_x_speed` expected
+  `-0024`, actual `0x0000`). The next owner is a later Tails sidekick-motion
+  mismatch after Sonic and the Obj89 arrow timer/fall phase are aligned.
+
+Verification:
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.frontierOnly=true" "-DfailIfNoTests=false" test`
+  reports the expected-red frontier at f5457 / 4.
+- `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossArrowTimerDecayDoesNotReseatSonicAtFrame5174" "-DfailIfNoTests=false" test`
+  passes the focused oracle.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran the full S2 sweep: 19 tests, 15 green / 4 expected-red. Current S2 reds
+  are ARZ2 f5457 / 4, CNZ2 f9946 / 8, MTZ3 f13358 / 6, and OOZ2 f12107 / 13.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  ran the full S1 sweep: 29 tests, 29 green.
+- `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-Ds3k.rom.path=s3k.gen" "-Dsonic3k.rom.path=s3k.gen" "-DfailIfNoTests=false" test`
+  ran 68 checks: 66 green plus the two known S3K AIZ expected-reds
+  (`TestS3kAizCompleteRunTraceReplay` f1095 / 4319 and
+  `TestS3kAizTraceReplay` f8941 / 1160).
 
 ## 2026-07-02 - S2 round 48 ARZ2 targeted advance
 
