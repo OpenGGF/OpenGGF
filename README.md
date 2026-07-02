@@ -366,8 +366,11 @@ while HCZ now has a larger object/event pass and HCZ1-to-HCZ2 progression.
 - **Gameplay session ownership:** this release introduced the first explicit gameplay-state
   ownership layer, later superseded by `SessionManager`, `WorldSession`, and
   `GameplayModeContext`. Enables safe editor mode enter/exit and level rebuilds.
-- **LevelManager decomposition:** the engine's largest class broken into `LevelTilemapManager`,
-  `LevelTransitionCoordinator`, and `LevelDebugRenderer` with ~73 methods extracted.
+- **LevelManager decomposition:** the engine's largest class is now a thin compatibility coordinator
+  over focused collaborators including `LevelTilemapManager`, `LevelRenderer`,
+  `LevelPlayableArtInitializer`, `LevelDirtyRegionDispatcher`, `LevelWaterCoordinator`,
+  `LevelCheckpointCoordinator`, `LevelActTransitionExecutor`, `LevelTransitionCoordinator`,
+  and `LevelDebugRenderer`.
 - **MutableLevel:** snapshot, mutation, and dirty-region tracking for level tile data — the
   foundation for the upcoming level editor's undo/redo and real-time tile editing.
 - **Common code extraction (5 phases):** 15+ abstract base classes, 10+ shared utilities, and

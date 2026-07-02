@@ -144,10 +144,18 @@ Two ROM-state-driven hooks worth knowing:
 |-------|----------------|
 | `LevelManager` | Thin coordinator, level load orchestration |
 | `LevelTilemapManager` | Tilemap loading, chunk/block management, VRAM upload |
-| `LevelTransitionCoordinator` | Act transitions, seamless loading, warp sequences |
+| `LevelRenderer` | Normal level, sprite/object, ending-background render passes |
+| `LevelPlayableArtInitializer` | Player/sidekick renderer setup, DPLC bank reservation, dust/tail art |
+| `LevelDirtyRegionDispatcher` | MutableLevel dirty-set consumption and mutation-effect dispatch |
+| `LevelWaterCoordinator` | Water provider loading, dynamic water advancement, playable underwater state |
+| `LevelCheckpointCoordinator` | Checkpoint/respawn state, checkpoint restore, rewind checkpoint capture |
+| `LevelActTransitionExecutor` | ROM-aligned in-place act-transition reload choreography |
+| `LevelTransitionCoordinator` | Transition request/consume state for acts, warps, title cards, respawns |
 | `LevelDebugRenderer` | All debug overlay rendering (collision, chunks, paths) |
 | `LevelGeometry` *(record)* | Immutable level dimension/boundary data |
 | `LevelDebugContext` *(record)* | Snapshot of debug state for rendering |
+
+Keep new level-load, render, water, checkpoint, dirty-region, and act-transition behavior in the focused collaborator that owns it; `LevelManager` should remain the public compatibility facade.
 
 ### MutableLevel
 
