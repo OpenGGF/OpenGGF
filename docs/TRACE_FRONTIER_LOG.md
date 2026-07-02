@@ -6,6 +6,35 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-02 - S3K MHZ complete-run advances f72 -> f966 (replay-bootstrap prelude counter preservation)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6`.
+- Command (verified independently on this branch):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f72 / 3615 errors
+  (`y_speed`). After: f966 / 2967 errors (`y`, expected `0x0669`, actual
+  `0x0666`); cascading `camera_y` f970, `tails_x` f981 follow. Confirmed against
+  `target/trace-reports/s3k_mhz1_report.json`.
+- Root cause: the trace-replay bootstrap's animated-tile prelude
+  (`TraceReplaySessionBootstrap.advanceAnimatedTilePreludeForTraceReplay`) warms
+  the ROM's pre-frame-0 VRAM tile state, but each pass was advancing the MHZ
+  mushroom-cap position counter (`Anim_Counters+$F`, the only stateful
+  animated-tile channel; `AnimateTiles_MHZ`, `sonic3k.asm:54901-54908`). The
+  counter is already seeded to its ROM `LevelLoop` frame-0 value by the pre-loop
+  `Animate_Tiles` pass (`loc_6468`, `sonic3k.asm:7853-7855`), so the prelude's
+  extra advances double-counted, landing the cap-driven Y (`MHZMushroomCap_UpdatePosition`,
+  `sonic3k.asm:82199-82221`) two bob-steps (`+4`) ahead. Verified vs cap X window
+  f65-78: ROM counter = `(2N+2) mod $58`, engine read `(2N+6)`.
+- Fix: `Sonic3kPatternAnimator.updateForReplayBootstrapPrelude()` preserves the
+  mushroom-cap counter across the warmup; seed unchanged; replay-only path
+  (fresh gameplay `update()` untouched). Not trace-row hydration and not a
+  zone/frame/route carve-out — it removes a harness-induced perturbation so the
+  engine's own ROM-faithful counter survives to comparison start.
+- Guards green: `TestMhzMushroomCapObjectInstance`, `TestS3kMhzPatternAnimation`,
+  `TestSonic3kMHZEvents`, `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`.
+
 ## 2026-06-30 - S1 guard restored after S2 ARZ2 breathing-bubble regression
 
 - Worktree/branch: `.worktrees/ai-s2-trace-develop` /
