@@ -8,7 +8,9 @@ import com.openggf.debug.DebugColor;
 import com.openggf.editor.EditorInputHandler;
 import com.openggf.game.*;
 
+import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
+import com.openggf.control.PlayerInputState;
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -3697,13 +3699,6 @@ public class GameLoop {
         int rightKey = configService.getInt(SonicConfiguration.RIGHT);
         int upKey = configService.getInt(SonicConfiguration.UP);
         int downKey = configService.getInt(SonicConfiguration.DOWN);
-        int jumpKey = configService.getInt(SonicConfiguration.JUMP);
-        int p2UpKey = configService.getInt(SonicConfiguration.P2_UP);
-        int p2DownKey = configService.getInt(SonicConfiguration.P2_DOWN);
-        int p2LeftKey = configService.getInt(SonicConfiguration.P2_LEFT);
-        int p2RightKey = configService.getInt(SonicConfiguration.P2_RIGHT);
-        int p2JumpKey = configService.getInt(SonicConfiguration.P2_JUMP);
-        int p2StartKey = configService.getInt(SonicConfiguration.P2_START);
         int debugModeKey = configService.getInt(SonicConfiguration.DEBUG_MODE_KEY);
 
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
@@ -3752,50 +3747,49 @@ public class GameLoop {
         int p2HeldButtons = 0;
         int p2LogicalButtons = 0;
 
-        if (inputHandler.isKeyDown(leftKey)) {
-            heldButtons |= 0x04;
+        PlayerInputState p1 = inputHandler.logical().player1();
+        PlayerInputState p2 = inputHandler.logical().player2();
+
+        heldButtons |= directionBits(p1.heldMask());
+        pressedButtons |= directionBits(p1.pressedMask());
+        heldButtons |= InputActionMasks.toMegaDriveButtonBits(p1.actionHeldMask());
+        pressedButtons |= InputActionMasks.toMegaDriveButtonBits(p1.actionPressedMask());
+        if (p1.startHeld()) {
+            heldButtons |= 0x80;
         }
-        if (inputHandler.isKeyDown(rightKey)) {
-            heldButtons |= 0x08;
+        if (p1.startPressed()) {
+            pressedButtons |= 0x80;
         }
 
-        // Up/Down: always mapped (S3K Blue Ball needs UP for forward movement)
-        if (inputHandler.isKeyDown(upKey)) {
-            heldButtons |= 0x01;
-        }
-        if (inputHandler.isKeyDown(downKey)) {
-            heldButtons |= 0x02;
-        }
-        // Jump (A/B/C)
-        if (inputHandler.isKeyPressed(jumpKey)) {
-            pressedButtons |= 0x70;
-        }
-        if (inputHandler.isKeyDown(jumpKey)) {
-            heldButtons |= 0x70;
-        }
-
-        if (inputHandler.isKeyDown(p2LeftKey)) {
-            p2HeldButtons |= 0x04;
-        }
-        if (inputHandler.isKeyDown(p2RightKey)) {
-            p2HeldButtons |= 0x08;
-        }
-        if (inputHandler.isKeyDown(p2UpKey)) {
-            p2HeldButtons |= 0x01;
-        }
-        if (inputHandler.isKeyDown(p2DownKey)) {
-            p2HeldButtons |= 0x02;
-        }
-        if (inputHandler.isKeyDown(p2JumpKey)) {
-            p2HeldButtons |= 0x70;
-        }
+        p2HeldButtons |= directionBits(p2.heldMask());
         p2LogicalButtons = p2HeldButtons;
-        if (inputHandler.isKeyDown(p2StartKey)) {
+        int p2ActionHeld = InputActionMasks.toMegaDriveButtonBits(p2.actionHeldMask());
+        p2HeldButtons |= p2ActionHeld;
+        p2LogicalButtons |= p2ActionHeld;
+        if (p2.startHeld()) {
+            p2HeldButtons |= 0x80;
             p2LogicalButtons |= 0x80;
         }
 
         ssProvider.handleInput(heldButtons, pressedButtons);
         ssProvider.handlePlayer2Input(p2HeldButtons, p2LogicalButtons);
+    }
+
+    private static int directionBits(int logicalMask) {
+        int bits = 0;
+        if ((logicalMask & AbstractPlayableSprite.INPUT_UP) != 0) {
+            bits |= 0x01;
+        }
+        if ((logicalMask & AbstractPlayableSprite.INPUT_DOWN) != 0) {
+            bits |= 0x02;
+        }
+        if ((logicalMask & AbstractPlayableSprite.INPUT_LEFT) != 0) {
+            bits |= 0x04;
+        }
+        if ((logicalMask & AbstractPlayableSprite.INPUT_RIGHT) != 0) {
+            bits |= 0x08;
+        }
+        return bits;
     }
 
     /**

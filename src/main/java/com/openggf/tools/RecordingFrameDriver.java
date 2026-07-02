@@ -36,7 +36,7 @@ public final class RecordingFrameDriver {
 
     private final AbstractPlayableSprite sprite;
     private final LevelManager levelManager;
-    private final InputHandler inputHandler = new InputHandler();
+    private final InputHandler inputHandler = new InputHandler(GameServices.configuration());
 
     private final int upKey = GameServices.configuration().getInt(SonicConfiguration.UP);
     private final int downKey = GameServices.configuration().getInt(SonicConfiguration.DOWN);
@@ -111,6 +111,7 @@ public final class RecordingFrameDriver {
         setKeyState(p2JumpKey, (p2Mask & AbstractPlayableSprite.INPUT_JUMP) != 0);
         setKeyState(p2StartKey, p2Start);
 
+        inputHandler.refreshLogicalSnapshot();
         GameServices.sprites().publishHeldInputForLevelEvents(inputHandler);
         LevelFrameStep.executeWithPause(
                 context, levelManager, GameServices.camera(),
@@ -136,6 +137,7 @@ public final class RecordingFrameDriver {
         setKeyState(p2RightKey, (p2Mask & AbstractPlayableSprite.INPUT_RIGHT) != 0);
         setKeyState(p2JumpKey, (p2Mask & AbstractPlayableSprite.INPUT_JUMP) != 0);
         setKeyState(p2StartKey, frameInput.p2StartPressed());
+        inputHandler.refreshLogicalSnapshot();
         inputHandler.update();
     }
 
