@@ -28,6 +28,7 @@ public final class LiveRewindManager {
     private LiveRewindInputSource inputSource;
     private RewindController rewindController;
     private RewindSpeedController speedController = RewindSpeedController.disabled();
+    private InputHandler activeInputHandler;
     private boolean rewinding;
 
     public LiveRewindManager(SonicConfigurationService config) {
@@ -37,9 +38,11 @@ public final class LiveRewindManager {
 
     public boolean handleRealtimeRewindInput(GameMode mode, InputHandler input) {
         if (mode != GameMode.LEVEL || input == null || !enabled()) {
+            activeInputHandler = null;
             clear();
             return false;
         }
+        activeInputHandler = input;
         if (!ensureInstalled()) {
             return false;
         }
@@ -73,10 +76,13 @@ public final class LiveRewindManager {
     }
 
     public void recordExternalFrame(GameMode mode, InputHandler input) {
-        if (mode != GameMode.LEVEL || input == null || rewinding || !enabled()) {
-            if (mode != GameMode.LEVEL || input == null || !enabled()) {
-                clear();
-            }
+        if (mode != GameMode.LEVEL || input == null || !enabled()) {
+            activeInputHandler = null;
+            clear();
+            return;
+        }
+        activeInputHandler = input;
+        if (rewinding) {
             return;
         }
         if (!ensureInstalled()) {
@@ -134,7 +140,7 @@ public final class LiveRewindManager {
         inputSource = new LiveRewindInputSource();
         gameplayMode.installPlaybackController(
                 inputSource,
-                new LiveRewindStepper(inputSource, config, () -> LevelFrameContext.from(gameplayMode)),
+                new LiveRewindStepper(inputSource, () -> activeInputHandler, () -> LevelFrameContext.from(gameplayMode)),
                 KEYFRAME_INTERVAL);
         rewindController = gameplayMode.getRewindController();
         if (rewindController != null
@@ -244,6 +250,7 @@ public final class LiveRewindManager {
         installedGameplayMode = null;
         inputSource = null;
         rewindController = null;
+        activeInputHandler = null;
         speedController.reset();
         speedController = RewindSpeedController.disabled();
         rewinding = false;

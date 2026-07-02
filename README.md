@@ -43,20 +43,25 @@ integer codes or as human-readable names such as `SPACE`, `Q`, or `F9`. See
 
 ## Controls
 
-> Currently, only keyboard controls are supported.
+Keyboard and standard GLFW gamepads are supported for gameplay and the basic
+startup/title/data-select menus.
 
 ### Player Controls
 
 | Key | Action |
 |-----|--------|
 | Arrow Keys | Movement |
-| Space | Jump |
+| Space | Player 1 action A / jump |
+| Right Shift | Player 2 action A / jump |
 | Enter | Pause / unpause |
 
-The bundled `config.yaml` exposes these under `input.pause` and `input.player1`.
-Additional bindable controller inputs, including Player 1 Start, are documented in
-[`CONFIGURATION.md`](CONFIGURATION.md); keys omitted from the template still use the
-engine defaults until added explicitly.
+The bundled `config.yaml` exposes keyboard bindings under `input.pause`,
+`input.player1`, and `input.player2`. Keyboard B/C are unbound by default;
+gamepads map west/south/east face buttons to Mega Drive A/B/C. On Xbox-style
+pads that is X/A/B; on PlayStation-style pads that is Square/Cross/Circle.
+Additional bindable inputs, including Start and controller assignment, are
+documented in [`CONFIGURATION.md`](CONFIGURATION.md); keys omitted from the
+template still use the engine defaults until added explicitly.
 
 ### Debug Controls
 

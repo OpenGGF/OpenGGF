@@ -7,6 +7,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.dataselect.AbstractDataSelectProvider;
+import com.openggf.game.dataselect.DataSelectActionType;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.dataselect.DataSelectSessionController;
 import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
@@ -29,7 +30,11 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.dataselect.S3kDataSelectManager;
+import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PlayerInputState;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
@@ -427,6 +432,86 @@ class TestS3kDataSelectPresentation {
         presentation.draw();
         assertNotNull(renderer.lastObjectState.selectedSlotIcon(),
                 "highlighted slot image should appear once the selector settles on the new slot");
+    }
+
+    @Test
+    void update_logicalDirectionsMoveSelection() {
+        RecordingAssets assets = new RecordingAssets(0x2A);
+        RecordingRenderer renderer = new RecordingRenderer();
+        DataSelectSessionController controller = new DataSelectSessionController(new S3kDataSelectProfile());
+        S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
+                controller,
+                new SaveManager(root),
+                EngineServices.current().configuration(),
+                assets,
+                renderer,
+                ignored -> {
+                });
+        presentation.initialize();
+
+        InputHandler input = new InputHandler();
+        input.setLogicalOverride(logicalPress(AbstractPlayableSprite.INPUT_RIGHT, 0, false));
+        presentation.update(input);
+        assertEquals(1, controller.menuModel().getSelectedRow());
+
+        settleHorizontalMove(presentation);
+        input.setLogicalOverride(logicalPress(AbstractPlayableSprite.INPUT_LEFT, 0, false));
+        presentation.update(input);
+        assertEquals(0, controller.menuModel().getSelectedRow());
+    }
+
+    @Test
+    void update_logicalBackCancelsDeleteModeWithoutConfirming() {
+        RecordingAssets assets = new RecordingAssets(0x2A);
+        RecordingRenderer renderer = new RecordingRenderer();
+        DataSelectSessionController controller = new DataSelectSessionController(new S3kDataSelectProfile());
+        S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
+                controller,
+                new SaveManager(root),
+                EngineServices.current().configuration(),
+                assets,
+                renderer,
+                ignored -> {
+                });
+        presentation.initialize();
+        controller.menuModel().setSelectedRow(controller.deleteRowIndex());
+        controller.menuModel().setDeleteMode(true);
+
+        InputHandler input = new InputHandler();
+        input.setLogicalOverride(logicalPress(0, InputActionMasks.ACTION_C, false));
+        presentation.update(input);
+
+        assertFalse(controller.menuModel().isDeleteMode(),
+                "logical C/east should back out of delete mode");
+        assertEquals(controller.deleteRowIndex(), controller.menuModel().getSelectedRow(),
+                "logical C/east must not also confirm the delete row");
+    }
+
+    @Test
+    void update_logicalABOrStartConfirmSelection() {
+        assertLogicalConfirmStartsNoSave(InputActionMasks.ACTION_A, false);
+        assertLogicalConfirmStartsNoSave(InputActionMasks.ACTION_B, false);
+        assertLogicalConfirmStartsNoSave(0, true);
+    }
+
+    private void assertLogicalConfirmStartsNoSave(int actionMask, boolean startPressed) {
+        RecordingAssets assets = new RecordingAssets(0x2A);
+        RecordingRenderer renderer = new RecordingRenderer();
+        DataSelectSessionController controller = new DataSelectSessionController(new S3kDataSelectProfile());
+        S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
+                controller,
+                new SaveManager(root),
+                EngineServices.current().configuration(),
+                assets,
+                renderer,
+                ignored -> {
+                });
+        presentation.initialize();
+
+        InputHandler input = new InputHandler();
+        input.setLogicalOverride(logicalPress(0, actionMask, startPressed));
+        presentation.update(input);
+        assertEquals(DataSelectActionType.NO_SAVE_START, controller.consumePendingAction().type());
     }
 
     @Test
@@ -3908,6 +3993,12 @@ class TestS3kDataSelectPresentation {
         if (key == leftKey || key == rightKey) {
             settleHorizontalMove(presentation);
         }
+    }
+
+    private static LogicalInputSnapshot logicalPress(int directionMask, int actionMask, boolean startPressed) {
+        return LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(directionMask, directionMask, actionMask, actionMask, false, startPressed),
+                PlayerInputState.neutral());
     }
 
     private static S3kDataSelectAssetSource newLoaderBackedAssets(Rom frontendRom,

@@ -30,7 +30,17 @@ public class ConfigMigrationService {
         SonicConfiguration.DOWN,
         SonicConfiguration.LEFT,
         SonicConfiguration.RIGHT,
-        SonicConfiguration.JUMP,
+        SonicConfiguration.P1_A,
+        SonicConfiguration.P1_B,
+        SonicConfiguration.P1_C,
+        SonicConfiguration.P2_UP,
+        SonicConfiguration.P2_DOWN,
+        SonicConfiguration.P2_LEFT,
+        SonicConfiguration.P2_RIGHT,
+        SonicConfiguration.P2_A,
+        SonicConfiguration.P2_B,
+        SonicConfiguration.P2_C,
+        SonicConfiguration.P2_START,
         SonicConfiguration.TEST,
         SonicConfiguration.NEXT_ACT,
         SonicConfiguration.NEXT_ZONE,
@@ -93,6 +103,47 @@ public class ConfigMigrationService {
         }
 
         LOGGER.info("[ConfigMigration] Migrated " + migrated + " key bindings to GLFW codes");
+    }
+
+    /**
+     * Migrates deprecated flat JUMP/P2_JUMP bindings to the logical A button
+     * bindings. Existing P1_A/P2_A values are treated as user-authored and win.
+     *
+     * @param config The config map to migrate (modified in place)
+     * @return true if any binding was copied
+     */
+    public boolean migrateDeprecatedJumpBindings(Map<String, Object> config) {
+        if (config == null) {
+            return false;
+        }
+        boolean awtKeyCodes = detectAwtKeyCodes(config);
+        boolean changed = false;
+        changed |= migrateDeprecatedJumpBinding(config, SonicConfiguration.JUMP, SonicConfiguration.P1_A, awtKeyCodes);
+        changed |= migrateDeprecatedJumpBinding(config, SonicConfiguration.P2_JUMP, SonicConfiguration.P2_A, awtKeyCodes);
+        return changed;
+    }
+
+    private boolean migrateDeprecatedJumpBinding(
+            Map<String, Object> config,
+            SonicConfiguration oldKey,
+            SonicConfiguration newKey,
+            boolean awtKeyCodes) {
+        String oldName = oldKey.name();
+        String newName = newKey.name();
+        if (!config.containsKey(oldName) || config.containsKey(newName)) {
+            return false;
+        }
+        Object value = migratedDeprecatedJumpValue(config.get(oldName), awtKeyCodes);
+        config.put(newName, value);
+        LOGGER.info("[ConfigMigration] Migrated " + oldName + " -> " + newName + ": " + value);
+        return true;
+    }
+
+    private Object migratedDeprecatedJumpValue(Object value, boolean awtKeyCodes) {
+        if (awtKeyCodes && value instanceof Number number) {
+            return LegacyAwtKeyCodeMapper.toGlfw(number.intValue());
+        }
+        return value;
     }
 
     /**

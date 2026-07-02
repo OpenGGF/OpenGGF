@@ -1,5 +1,12 @@
 package com.openggf.control;
 
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Objects;
+
 import static org.lwjgl.glfw.GLFW.*;
 
 /**
@@ -14,6 +21,12 @@ public class InputHandler {
 	boolean[] previousKeys = new boolean[MAX_KEYS];
 	boolean[] mouseButtons = new boolean[MAX_MOUSE_BUTTONS];
 	boolean[] previousMouseButtons = new boolean[MAX_MOUSE_BUTTONS];
+	private final SonicConfigurationService configService;
+	private InputBindings inputBindings;
+	private final KeyboardInputMapper keyboardInputMapper;
+	private final GamepadInputManager gamepadInputManager;
+	private LogicalInputSnapshot logicalSnapshot = LogicalInputSnapshot.neutral();
+	private LogicalInputSnapshot logicalOverride;
 	private double mouseX;
 	private double mouseY;
 	private boolean mouseInputSeen;
@@ -23,6 +36,22 @@ public class InputHandler {
 	 * Key events should be delivered via handleKeyEvent() from GLFW callback.
 	 */
 	public InputHandler() {
+		this(createSyntheticConfig());
+	}
+
+	public InputHandler(SonicConfigurationService configService) {
+		this(configService, new GamepadInputManager(GamepadStateSource.noop()));
+	}
+
+	public static InputHandler live(SonicConfigurationService configService) {
+		return new InputHandler(configService, new GamepadInputManager(new GlfwGamepadStateSource()));
+	}
+
+	InputHandler(SonicConfigurationService configService, GamepadInputManager gamepadInputManager) {
+		this.configService = Objects.requireNonNull(configService, "configService");
+		this.gamepadInputManager = Objects.requireNonNull(gamepadInputManager, "gamepadInputManager");
+		this.inputBindings = InputBindings.fromConfig(configService);
+		this.keyboardInputMapper = new KeyboardInputMapper();
 	}
 
 	/**
@@ -78,6 +107,9 @@ public class InputHandler {
 	 * @return Whether the key was just pressed
 	 */
 	public boolean isKeyPressed(int keyCode) {
+		if (logicalOverride != null && keyCode == configService.getInt(SonicConfiguration.DEBUG_MODE_KEY)) {
+			return logicalOverride.debugModeTogglePressed();
+		}
 		if (keyCode >= 0 && keyCode < MAX_KEYS) {
 			return keys[keyCode] && !previousKeys[keyCode];
 		}
@@ -100,10 +132,16 @@ public class InputHandler {
 	}
 
 	public boolean isShiftDown() {
+		if (logicalOverride != null) {
+			return logicalOverride.debugShiftDown();
+		}
 		return isKeyDown(GLFW_KEY_LEFT_SHIFT) || isKeyDown(GLFW_KEY_RIGHT_SHIFT);
 	}
 
 	public boolean isControlDown() {
+		if (logicalOverride != null) {
+			return logicalOverride.debugControlDown();
+		}
 		return isKeyDown(GLFW_KEY_LEFT_CONTROL) || isKeyDown(GLFW_KEY_RIGHT_CONTROL);
 	}
 
@@ -145,11 +183,57 @@ public class InputHandler {
 		return mouseInputSeen;
 	}
 
+	public void setLogicalOverride(LogicalInputSnapshot override) {
+		logicalOverride = override != null ? override : LogicalInputSnapshot.neutral();
+		logicalSnapshot = logicalOverride;
+	}
+
+	public void clearLogicalOverride() {
+		logicalOverride = null;
+	}
+
+	public boolean hasLogicalOverride() {
+		return logicalOverride != null;
+	}
+
+	public void refreshLogicalSnapshot() {
+		inputBindings = InputBindings.fromConfig(configService);
+		if (logicalOverride != null) {
+			gamepadInputManager.poll(inputBindings);
+			logicalSnapshot = logicalOverride;
+			return;
+		}
+		PlayerInputState keyboardP1 = keyboardInputMapper.mapPlayer1(this, inputBindings);
+		PlayerInputState keyboardP2 = keyboardInputMapper.mapPlayer2(this, inputBindings);
+		LogicalInputSnapshot gamepadSnapshot = gamepadInputManager.poll(inputBindings);
+		PlayerInputState p1 = keyboardP1.merge(gamepadSnapshot.player1());
+		PlayerInputState p2 = keyboardP2.merge(gamepadSnapshot.player2());
+		logicalSnapshot = LogicalInputSnapshot.ofPlayers(p1, p2);
+	}
+
+	public LogicalInputSnapshot logical() {
+		return logicalSnapshot;
+	}
+
+	public boolean menuAcceptExcludingBackAction() {
+		PlayerInputState p1 = logical().player1();
+		return (p1.actionPressedMask() & (InputActionMasks.ACTION_A | InputActionMasks.ACTION_B)) != 0
+				|| p1.startPressed();
+	}
+
 	/**
 	 * Updates the input handler state. Should be called at the end of the game loop.
 	 */
 	public void update() {
 		System.arraycopy(keys, 0, previousKeys, 0, MAX_KEYS);
 		System.arraycopy(mouseButtons, 0, previousMouseButtons, 0, MAX_MOUSE_BUTTONS);
+	}
+
+	private static SonicConfigurationService createSyntheticConfig() {
+		try {
+			return SonicConfigurationService.createStandalone(Files.createTempDirectory("openggf-input-handler"));
+		} catch (IOException e) {
+			throw new IllegalStateException("Failed to create standalone input configuration", e);
+		}
 	}
 }
