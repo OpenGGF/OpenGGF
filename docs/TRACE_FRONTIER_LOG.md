@@ -14,8 +14,8 @@ expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now ARZ2, CNZ2, and MTZ3.
-The full S1 sweep remains 29/29 green, and the S3K guard subset used by round
-67 remains green by exact Surefire class reports. OOZ2 greened in round 54 and
+The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
+with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 advanced again in round 67 but is not banked under
 the green-bank rule until it greens.
 
@@ -82,6 +82,35 @@ Verification:
   `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" test`
   exact Surefire class reports were green: 8 + 30 + 5 + 5 + 3 checks, zero
   failures/errors. The MSE aggregate again included stale S2 expected-red XMLs.
+
+Conductor integration:
+- Merged worker commit `5de1782a` into conductor branch
+  `bugfix/ai-s2-trace-next` as merge commit `d22cad26b`.
+- Post-merge full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  confirmed 16 green and the three expected-red frontiers: ARZ2 f7064 / 4
+  (`obj_extra_s1C_x` expected absent, actual `0x2C92`), CNZ2 f9977 / 10, and
+  MTZ3 f13477 / 4.
+- Post-merge full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- Post-merge S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`).
+- Local `develop` (`7a2317a96`) and `origin/develop` (`d162131f1`) were both
+  already contained after the round.
+
+Other round 67 worker outcomes:
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round67-next` /
+  `bugfix/ai-s2-cnz2-round67-next` made no commit. It reproduced f9977 / 10,
+  reran with full diagnostic chars, confirmed the split-ball path is still
+  behind ROM at the contact window, and reverted temporary diagnostics cleanly.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round67-next` /
+  `bugfix/ai-s2-mtz3-round67-next` made no commit. It rejected an Obj53 seed
+  allocation candidate because it regressed to f12820 / 4, restored f13477 / 4,
+  and left the worktree clean.
 
 ## 2026-07-02 - S2 round 66 ARZ2 Obj89 camera-release lifetime
 
