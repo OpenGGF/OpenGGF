@@ -752,6 +752,14 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     @Override
+    public boolean isPersistent() {
+        // Obj89_Main_SubC owns the post-defeat camera release: it increments
+        // Camera_Max_X_pos to $2C00 before testing the on-screen bit and deleting.
+        // docs/s2disasm/s2.asm:65267-65278
+        return true;
+    }
+
+    @Override
     protected boolean isOnScreen() {
         Camera camera = services().camera();
         int screenX = state.x - camera.getX();
