@@ -51,10 +51,11 @@ Git hooks in `.githooks/` and CI enforce the branch policy below. A Maven build 
 *   **Important packages** under `src/main/java/com/openggf` (package names are mostly self-describing; non-obvious facts only):
     *   `game.zone` / `palette` / `animation` / `mutation` / `render` - runtime-owned shared framework layers
     *   `game.profiles.*` – canonical cross-game object behavior profiles. New solid, touch-response, and object-lifecycle vocabulary should live here and be adapted by `level.objects` execution code instead of creating game-local profile types.
-    *   `game.dataselect` – shared data select framework. The `DataSelectProvider` interface itself lives in `com.openggf.game`.
+    *   `game.dataselect` – shared data select framework. The `DataSelectProvider` interface itself lives in `com.openggf.game`. All three games use the S3K presentation: S1/S2 route through `CrossGameDataSelectPresentations.donated(...)` (there is no simplified fallback presentation).
     *   `game.rewind` – gameplay-scoped rewind framework: keyframes, deterministic seek/replay, generic field capture, rewind field annotations, identity ids, policy registry, compact schema capture.
     *   `level.objects` – unified `ObjectManager` (placement, collision, touch response), `ObjectServices` interface, shared base classes (`AbstractBadnikInstance`, `AbstractSpikeObjectInstance`, etc.), utility helpers (`SubpixelMotion`, `PatrolMovementHelper`, `PlatformBobHelper`, `DestructionEffects`, ...).
     *   `level.scroll.compose` – shared deform/parallax composition helpers built around `ScrollEffectComposer`.
+    *   `audio.synth` – chip emulation; `PsgChip` is the sole PSG core (Genesis Plus GX-derived, formerly `PsgChipGPGX`).
     *   `physics` – sensors, terrain collision, unified `CollisionSystem`.
     *   `configuration` – `SonicConfiguration` / `SonicConfigurationService`. Dev-only: `TEST_MODE_ENABLED` (replaces master-title game-select with a trace picker, needs `TRACE_CATALOG_DIR`), `TRACE_CATALOG_DIR` (default `src/test/resources/traces`).
     *   `LevelFrameStep` lives at the `com.openggf` package root, not under `level`.
@@ -149,7 +150,7 @@ The in-engine level editor MVP lives in `com.openggf.editor`: `LevelEditorContro
 
 Manager classes consolidated for reduced complexity:
 
-- **`LevelManager`** decomposed into `LevelTilemapManager` (chunks/blocks/VRAM), `LevelTransitionCoordinator` (act transitions, warps, seamless), `LevelDebugRenderer`, plus `LevelGeometry` / `LevelDebugContext` records. `MutableLevel` provides snapshot/mutation/dirty-region tracking processed per-frame via `LevelFrameStep.processDirtyRegions()`.
+- **`LevelManager`** is now a compatibility coordinator over focused collaborators: `LevelTilemapManager` (chunks/blocks/VRAM), `LevelRenderer`, `LevelDebugRenderer`, `LevelPlayableArtInitializer`, `LevelDirtyRegionDispatcher`, `LevelWaterCoordinator`, `LevelCheckpointCoordinator`, `LevelActTransitionExecutor`, `LevelTransitionCoordinator`, plus `LevelGeometry` / `LevelDebugContext` records. Keep new level-load, render, water, checkpoint, dirty-region, and act-transition logic in the relevant collaborator rather than growing `LevelManager` again. `MutableLevel` provides snapshot/mutation/dirty-region tracking processed per-frame via `LevelFrameStep.processDirtyRegions()`.
   - **Level-mutation routing rule:** Gameplay-path tile edits (code under `game/sonic1|2|3k`, `level/objects`) must route through `ZoneLayoutMutationPipeline` / a `LevelMutationSurface` — never direct `getMap().setValue(...)`. Enforced by the CI test `TestNoDirectMapMutationsInGameplay`. Editor commands and initial layout decoders (e.g. `Sonic3kLevel`) are exempt.
   - **Level snapshot copy-on-write epoch:** `AbstractLevel.snapshotEpoch` + `cowEnsureWritable` clone `Block.chunkDescs` / `Chunk.patternDescs` / `Map.data` on first write per epoch so rewind snapshots stay isolated from later live edits. Integrated through `DirectLevelMutationSurface.setBlockInMap`.
 - **`ObjectManager`** holds inner classes `Placement` (spawn windowing), `SolidContacts` (riding/landing/ceiling/side), `TouchResponses` (enemy bounce/hurt), `PlaneSwitchers`. Injects `ObjectServices` into all objects at construction.

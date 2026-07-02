@@ -257,6 +257,7 @@ Highlights:
 - User recording/playback now supports BK2 movie capture from fresh level starts, in-engine playback with target-frame pause and fast-forward, version mismatch warnings, and a compact desync-lite sidecar for nonblocking verification.
 - Runtime-owned frameworks continue replacing zone-local behavior where they reduce duplication or active risk: typed zone state, palette ownership, animated tile channels, live layout mutation, scroll composition, staged render effects, and render-mode overrides.
 - Release readiness work tightened policy hooks, trace/rewind invariants, object-service boundaries, ROM-only runtime asset rules, singleton lifecycle checks, architecture guards, and test quality gates.
+- Dead-code cleanup removed the audit-verified unreferenced deprecated surface — the legacy `PsgChip`, the unreachable `SimpleDataSelectManager`, and zero-caller deprecated members on `Camera`, `WaterSystem`, and `PatternRenderCommand` — and renamed `PsgChipGPGX` to `PsgChip` as the sole (Genesis Plus GX-derived) PSG core, with agent docs corrected to match the real S1/S2 data-select donation path.
 - IDE prerelease launches now resolve Git build metadata at runtime when Maven placeholders are unresolved, keeping local `Engine.main` window titles from exposing raw `${openggf.git.*}` tokens.
 - Full-suite maintenance restored the non-trace Maven suite to green by tightening rewind object-reference capture, preserving ROM-order level-frame camera/event sequencing while flushing queued layout mutations before boundary easing, and aligning multi-sidekick direct-leader behavior with tests/docs.
 - Player-facing work includes S3K data select/save support, cross-game donation paths, ROM-derived master-title previews, the legal-disclaimer startup flow, display shader support, pause/HUD fixes, multi-sidekick behavior, and level-editor plumbing.
@@ -366,8 +367,11 @@ while HCZ now has a larger object/event pass and HCZ1-to-HCZ2 progression.
 - **Gameplay session ownership:** this release introduced the first explicit gameplay-state
   ownership layer, later superseded by `SessionManager`, `WorldSession`, and
   `GameplayModeContext`. Enables safe editor mode enter/exit and level rebuilds.
-- **LevelManager decomposition:** the engine's largest class broken into `LevelTilemapManager`,
-  `LevelTransitionCoordinator`, and `LevelDebugRenderer` with ~73 methods extracted.
+- **LevelManager decomposition:** the engine's largest class is now a thin compatibility coordinator
+  over focused collaborators including `LevelTilemapManager`, `LevelRenderer`,
+  `LevelPlayableArtInitializer`, `LevelDirtyRegionDispatcher`, `LevelWaterCoordinator`,
+  `LevelCheckpointCoordinator`, `LevelActTransitionExecutor`, `LevelTransitionCoordinator`,
+  and `LevelDebugRenderer`.
 - **MutableLevel:** snapshot, mutation, and dirty-region tracking for level tile data — the
   foundation for the upcoming level editor's undo/redo and real-time tile editing.
 - **Common code extraction (5 phases):** 15+ abstract base classes, 10+ shared utilities, and

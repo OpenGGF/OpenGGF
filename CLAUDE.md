@@ -144,10 +144,18 @@ Two ROM-state-driven hooks worth knowing:
 |-------|----------------|
 | `LevelManager` | Thin coordinator, level load orchestration |
 | `LevelTilemapManager` | Tilemap loading, chunk/block management, VRAM upload |
-| `LevelTransitionCoordinator` | Act transitions, seamless loading, warp sequences |
+| `LevelRenderer` | Normal level, sprite/object, ending-background render passes |
+| `LevelPlayableArtInitializer` | Player/sidekick renderer setup, DPLC bank reservation, dust/tail art |
+| `LevelDirtyRegionDispatcher` | MutableLevel dirty-set consumption and mutation-effect dispatch |
+| `LevelWaterCoordinator` | Water provider loading, dynamic water advancement, playable underwater state |
+| `LevelCheckpointCoordinator` | Checkpoint/respawn state, checkpoint restore, rewind checkpoint capture |
+| `LevelActTransitionExecutor` | ROM-aligned in-place act-transition reload choreography |
+| `LevelTransitionCoordinator` | Transition request/consume state for acts, warps, title cards, respawns |
 | `LevelDebugRenderer` | All debug overlay rendering (collision, chunks, paths) |
 | `LevelGeometry` *(record)* | Immutable level dimension/boundary data |
 | `LevelDebugContext` *(record)* | Snapshot of debug state for rendering |
+
+Keep new level-load, render, water, checkpoint, dirty-region, and act-transition behavior in the focused collaborator that owns it; `LevelManager` should remain the public compatibility facade.
 
 ### MutableLevel
 
@@ -350,7 +358,7 @@ High-cost landmines (full S3K detail in [AGENTS_S3K.md](AGENTS_S3K.md) and the `
 
 Emulates Mega Drive sound hardware: **YM2612** (FM synthesis, 6 channels), **PSG/SN76489** (square wave + noise, 4 channels), **SMPS Driver** (Sega's sound format).
 
-The audio package splits across `audio` (backend), `audio.synth` (chip emulation — note `PsgChipGPGX` is active, `PsgChip` deprecated), `audio.smps` (sequencer/loader with `OVERFLOW`/`OVERFLOW2`/`TIMEOUT` tempo modes), `audio.driver`, `audio.runtime` (deterministic FIFO/PCM ring buffers used by gameplay rewind), `audio.rewind`, `audio.debug`. Per-game audio data lives under `game.sonicX.audio`.
+The audio package splits across `audio` (backend), `audio.synth` (chip emulation — `PsgChip` is the PSG implementation, a Genesis Plus GX-derived core), `audio.smps` (sequencer/loader with `OVERFLOW`/`OVERFLOW2`/`TIMEOUT` tempo modes), `audio.driver`, `audio.runtime` (deterministic FIFO/PCM ring buffers used by gameplay rewind), `audio.rewind`, `audio.debug`. Per-game audio data lives under `game.sonicX.audio`.
 
 Reference implementations live in `docs/SMPS-rips/SMPSPlay/` (SMPSPlay source) and the ripped audio data under `docs/SMPS-rips/`. Strive for hardware accuracy — reference SMPSPlay and the libvgm chip cores rather than simplified versions.
 
@@ -418,7 +426,7 @@ See **[docs/KNOWN_DISCREPANCIES.md](docs/KNOWN_DISCREPANCIES.md)** for additiona
 
 ## Data Select & Save System
 
-Full data select (save/load) screen with cross-game donation. `DataSelectProvider` (`com.openggf.game`) holds the lifecycle states; `DataSelectSessionController` is the presentation-independent state machine; each game implements `DataSelectHostProfile` (team configs, slot counts, zone labels, restart destinations). S3K renders with `S3kDataSelectManager`; S1/S2 fall back to `SimpleDataSelectManager` unless cross-game donation routes them through the S3K presentation. `SaveManager` (`game.save`) persists slots as JSON with SHA256 integrity and quarantines corrupt files. Title-screen `ONE_PLAYER` flows through `StartupRouteResolver` → `TitleActionRoute.DATA_SELECT` → controller → `DataSelectAction` → `Engine.launchGameplayFromDataSelect()`.
+Full data select (save/load) screen with cross-game donation. `DataSelectProvider` (`com.openggf.game`) holds the lifecycle states; `DataSelectSessionController` is the presentation-independent state machine; each game implements `DataSelectHostProfile` (team configs, slot counts, zone labels, restart destinations). S3K renders with `S3kDataSelectManager`; S1/S2 route through `CrossGameDataSelectPresentations.donated(...)` to the S3K presentation. `SaveManager` (`game.save`) persists slots as JSON with SHA256 integrity and quarantines corrupt files. Title-screen `ONE_PLAYER` flows through `StartupRouteResolver` → `TitleActionRoute.DATA_SELECT` → controller → `DataSelectAction` → `Engine.launchGameplayFromDataSelect()`.
 
 ## Intentional Divergences
 
