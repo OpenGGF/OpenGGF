@@ -263,7 +263,12 @@ class TestTraceReplayInvariantGuard {
     private static boolean isAllowedTraceSupportSource(Path source) {
         String normalized = normalize(source);
         return normalized.endsWith("src/main/java/com/openggf/sprites/ghost/GhostTraceRenderer.java")
-                || normalized.endsWith("src/test/java/com/openggf/tests/HeadlessTestFixture.java");
+                || normalized.endsWith("src/test/java/com/openggf/tests/HeadlessTestFixture.java")
+                // Unit test that builds SYNTHETIC leader position history for
+                // respawn fixtures; it only imports com.openggf.trace for
+                // TraceCharacterState.statusByteFromSprite and never hydrates
+                // engine state from recorded trace rows.
+                || normalized.endsWith("src/test/java/com/openggf/sprites/playable/TestRespawnStrategies.java");
     }
 
     /**

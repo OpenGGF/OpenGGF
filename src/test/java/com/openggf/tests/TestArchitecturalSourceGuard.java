@@ -25,10 +25,14 @@ class TestArchitecturalSourceGuard {
     private static final String ENGINE_PATH = "com/openggf/Engine.java";
     private static final String GAME_LOOP_PATH = "com/openggf/GameLoop.java";
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2747;
+    // 2026-07-02: re-ratcheted 2747 -> 2821 after the S2 trace-parity batch
+    // (8766a6889..0f7794de8) grew reserved-slot spawn and placement handling.
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2821;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
-            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3065,
+            // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule
+            // refactor (d9b727925) settled the sprite at 3115 effective lines.
+            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3115,
             "com/openggf/level/LevelManager.java", 2500,
             GAME_LOOP_PATH, 2888
     );

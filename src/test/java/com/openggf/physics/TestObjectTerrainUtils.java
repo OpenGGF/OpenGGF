@@ -9,6 +9,8 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -52,7 +54,7 @@ class TestObjectTerrainUtils {
         int y = 0x1234;
 
         when(level.getChunkDescAt((byte) 0, x, y - 16)).thenReturn(desc);
-        when(level.getSolidTileForChunkDesc(desc, 0x0C)).thenReturn(previousTile);
+        when(level.getSolidTileForChunkDesc(eq(desc), eq(0x0C), anyBoolean())).thenReturn(previousTile);
 
         TerrainCheckResult result = invokeFloorRegress(level, originalTile, originalDesc, x, y, false);
 
@@ -88,7 +90,7 @@ class TestObjectTerrainUtils {
         int y = 0x1234;
 
         when(level.getChunkDescAt((byte) 0, x, y - 16)).thenReturn(previousDesc);
-        when(level.getSolidTileForChunkDesc(previousDesc, 0x0C)).thenReturn(previousTile);
+        when(level.getSolidTileForChunkDesc(eq(previousDesc), eq(0x0C), anyBoolean())).thenReturn(previousTile);
 
         TerrainCheckResult result = invokeFloorEdge(level, originalTile, originalDesc, x, y, false);
 
@@ -107,7 +109,7 @@ class TestObjectTerrainUtils {
         int y = 0x1235;
 
         when(level.getChunkDescAt((byte) 0, x - 16, y)).thenReturn(previousDesc);
-        when(level.getSolidTileForChunkDesc(previousDesc, 0x0D)).thenReturn(previousTile);
+        when(level.getSolidTileForChunkDesc(eq(previousDesc), eq(0x0D), anyBoolean())).thenReturn(previousTile);
 
         TerrainCheckResult result = invokeWallEdge(level, originalTile, originalDesc, x, y, false, false);
 
@@ -143,7 +145,7 @@ class TestObjectTerrainUtils {
         int y = 0x1235;
 
         when(level.getChunkDescAt((byte) 0, x + 16, y)).thenReturn(previousDesc);
-        when(level.getSolidTileForChunkDesc(previousDesc, 0x0D)).thenReturn(previousTile);
+        when(level.getSolidTileForChunkDesc(eq(previousDesc), eq(0x0D), anyBoolean())).thenReturn(previousTile);
 
         TerrainCheckResult result = invokeWallEdge(level, originalTile, originalDesc, x, y, true, false);
 

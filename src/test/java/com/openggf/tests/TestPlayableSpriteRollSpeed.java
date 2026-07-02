@@ -181,7 +181,7 @@ class TestPlayableSpriteRollSpeed {
     }
 
     private static void setGameRulesForTest(AbstractPlayableSprite sprite, GameRules featureSet) throws Exception {
-        Field field = AbstractPlayableSprite.class.getDeclaredField("GameRules");
+        Field field = AbstractPlayableSprite.class.getDeclaredField("gameRules");
         field.setAccessible(true);
         field.set(sprite, featureSet);
     }

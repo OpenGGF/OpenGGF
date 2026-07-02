@@ -27,7 +27,9 @@ class TestTraceRecorderCounterAddresses {
         String script = Files.readString(TOOLS_DIR.resolve("s2_trace_recorder.lua"));
 
         assertTrue(script.contains("local ADDR_FRAMECOUNT      = 0xFE04"));
-        assertTrue(script.contains("local ADDR_VBLA_WORD       = 0xFE0C"));
+        // Vint_runcount is a LONGWORD at $FFFE0C (s2.constants.asm:1672); the
+        // recorder reads the low word at +2 so the CSV column actually changes.
+        assertTrue(script.contains("local ADDR_VBLA_WORD       = 0xFE0E"));
     }
 
     @Test

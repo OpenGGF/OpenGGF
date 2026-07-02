@@ -108,8 +108,9 @@ class TestCPZSpinTubeObjectInstance {
         assertEquals(Sonic2AnimationIds.ROLL.id(), player.getAnimationId(),
                 "Obj1E leaves anim(a1)=AniIDSonAni_Roll active after loc_227A6; CPZ1 BizHawk probe "
                         + "shows anim=02 while obj_control=00 at trace frames 3868-3874.");
-        assertTrue(player.getSpringing(),
-                "The engine keeps a CPZ release collision-immunity latch for tube geometry.");
+        assertFalse(player.getSpringing(),
+                "Obj1E loc_227A6 clears obj_control and masks y_pos only; it sets no springing "
+                        + "latch (the former non-ROM collision-immunity shim was removed).");
         assertFalse(player.getRolling(),
                 "Obj1E preserves the roll animation byte without setting status.player.rolling.");
 

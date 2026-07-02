@@ -1494,7 +1494,7 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<MutableFieldCoverageCandidate> S2_COLLAPSING_PLATFORM_FRAGMENT_RECREATE_MUTABLE_FIELDS =
             List.of(new MutableFieldCoverageCandidate(
                     "com.openggf.game.sonic2.objects.CollapsingPlatformObjectInstance$CollapsingPlatformFragmentInstance",
-                    "fragmentIndex", "hFlip", "vFlip", "pieceOffsetX", "pieceOffsetY", "priority", "x"));
+                    "fragmentIndex", "hFlip", "vFlip", "priority", "x"));
 
     private static final List<CodecDeletionCandidate> CPZ_GRAPH_BATCH_A_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(CPZBossContainer.class.getName(), GameId.S2),
@@ -2301,7 +2301,7 @@ public class TestScalarOnlyCodecDeletion {
                             "x", "y", "phaseMask"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance",
-                            "collisionHalfWidth", "collisionHalfHeight"),
+                            "collisionFlags", "collisionProperty", "touchPhaseFrame"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic2.objects.MCZBrickObjectInstance",
                             "mode", "initialX", "initialY", "chainCount", "speed"),
