@@ -26,6 +26,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 13. [AIZ2 Boss Rewind: Transient Combat/Cosmetic Children Restored](#aiz2-boss-rewind-transient-combatcosmetic-children-restored)
 14. [MHZ StickyVine Pull: Heuristic Replaced with ROM `sub_3EC66` Vector Math](#mhz-stickyvine-pull-heuristic-replaced-with-rom-sub_3ec66-vector-math)
 14. [Madmole Cap/Body: Single Merged Object Instead of Parent+Child Split](#madmole-capbody-single-merged-object-instead-of-parentchild-split)
+14. [MHZ Dragonfly Tail Ripple: Explicit One-Frame Gate Instead of Object-List Reordering](#mhz-dragonfly-tail-ripple-explicit-one-frame-gate-instead-of-object-list-reordering)
 
 ---
 
@@ -698,3 +699,53 @@ internal latch vs. two SST-slot objects linked by a busy bit); this keeps the
 existing single-object rewind/render/collision wiring for Madmole intact
 rather than requiring a parent+dynamically-spawned-child split purely to
 mirror ROM's slot layout.
+## MHZ Dragonfly Tail Ripple: Explicit One-Frame Gate Instead of Object-List Reordering
+
+**Location:** `DragonflyBadnikInstance.java` (`LinkedBodyChild.updateVerticalPhase`,
+`DragonflyHoverReturnGate`)
+
+**ROM Reference:** `sonic3k.asm` `loc_8DE8A`/`loc_8DEA8`/`loc_8DF24` (segment return-gate
+check/set/clear), `CreateChild4_LinkListRepeated`/`AllocateObjectAfterCurrent`
+(`sonic3k.asm:177038-177061,37917`)
+
+### Original Implementation
+
+Each Dragonfly linked-body tail segment gates its FOLLOW-to-RETURN transition on
+`btst #2,$38` of its `parent3` anchor (the previous segment, or the Dragonfly itself for
+segment 0). The observable one-frame ripple down the chain (segment *n* enters return
+exactly one frame after segment *n*-1) is not itself an explicit delay in `loc_8DE8A`; it
+falls out of `CreateChild4_LinkListRepeated` calling `AllocateObjectAfterCurrent` for every
+segment, which always inserts the new child immediately after the *Dragonfly's own* object-list
+slot. Because every segment is inserted at that same point, each later-created segment ends up
+processed **before** the earlier ones each frame -- segment *n*-1 always runs after segment *n*
+within a frame, so segment *n* only ever observes segment *n*-1's bit as it stood at the end of
+the *previous* frame. The Dragonfly-to-segment-0 hop has no such delay, since the Dragonfly
+itself always runs first.
+
+### Our Implementation
+
+The engine's object manager does not replicate ROM object-list slot insertion order, so
+`LinkedBodyChild` models the *resulting* one-frame ripple directly instead: each segment tracks
+its own `returnGateBit` (mirrors `$38` bit 2, set entering return, cleared completing the wait
+phase) and a `returnGateVisibleToFollower` value that is promoted from `returnGateBit` once at
+the start of the segment's own `update()`. A segment's FOLLOW-phase check reads its
+`followAnchor`'s gate via the shared `DragonflyHoverReturnGate` interface, which the Dragonfly
+implements directly (live/immediate, matching the same-frame Dragonfly-to-segment-0 visibility)
+and each `LinkedBodyChild` implements via its delayed `returnGateVisibleToFollower`. This
+reproduces the exact one-frame-per-link cascade regardless of the order the engine happens to
+call `update()` on the chain each frame.
+
+### Rationale
+
+Replicating the ROM's actual object-list slot-reversal quirk would require reworking how
+`ObjectManager` orders dynamic-object updates for an unrelated, incidental allocation-order
+side effect, at high regression risk to every other spawned-child object. Modeling the
+*observable* one-frame delay directly, keyed off each segment's own return-gate state rather
+than object-list position, produces byte-for-byte identical animation timing without that risk.
+
+### Verification
+
+`TestDragonflyBadnikInstance#sevenSegmentTailEntersReturnOneFrameApartDownTheChainNotAllAtOnce`
+spawns a real 7-segment tail and asserts each segment enters its return phase exactly one frame
+after the previous segment. `TestDragonflyBadnikInstance#linkedChildStartsVerticalReturnWhenParentEntersHoverWait`
+continues to cover the same-frame Dragonfly-to-segment-0 hop.
