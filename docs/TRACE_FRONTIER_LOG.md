@@ -6,8 +6,8 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 58 ARZ2 work on top of the develop
-GameRules refactor baseline:
+Current branch-local S2 state after round 58 ARZ2 work and the local
+`develop` merge through `d81dd2be1`:
 ARZ2 is f5968 / 8 under `frontierOnly` (`tails_air` expected `0`, actual `1`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
@@ -98,6 +98,29 @@ Round 58 merged ARZ2 worker commit `dd03abfa9` into the conductor as
   and ran 19 S2 trace tests: 16 green / 3 expected-red at ARZ2 f5968 / 8,
   CNZ2 f9977 / 10, and MTZ3 f13358 / 6. No S2 trace turned green this round,
   so no round-58 change was banked into `next`.
+
+## 2026-07-02 - S2 round 58 post-develop merge baseline
+
+After closing round 58, local `develop` advanced to `d81dd2be1`
+(`feature/ai-remove-legacy-objectservices-ctor`, containing `origin/develop`
+`4f673dfdf`). The conductor merged it as `02a47bba4`; `CHANGELOG.md` was the
+only conflict and was resolved additively.
+
+Post-merge verification on `bugfix/ai-s2-trace-next`:
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5968 / 8, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6.
+- Full S1 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  completed with 29/29 green by the fresh S1 Surefire reports. An earlier
+  parallel S1/S3K attempt failed before tests in `target/antrun`; that was a
+  Maven target-directory race, not a trace result.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks: 66 green plus the known AIZ expected-reds
+  (`TestS3kAizCompleteRunTraceReplay` f1095 / 3 and
+  `TestS3kAizTraceReplay` f8941 / 1).
 
 ## 2026-07-02 - S2 round 57 ARZ2 Obj89 arrow PlatformObject landing dimensions
 
