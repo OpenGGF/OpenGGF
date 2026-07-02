@@ -131,12 +131,12 @@ Common key codes:
 | A | 65 | Z | 90 |
 | S | 83 | X | 88 |
 
-Example: rebind jump to the A key:
+Example: rebind Player 1 action A (jump) to the A key:
 
 ```yaml
 input:
   player1:
-    jump: "A"
+    a: "A"
 ```
 
 See [Controls](controls.md) for the full list of bindable actions and

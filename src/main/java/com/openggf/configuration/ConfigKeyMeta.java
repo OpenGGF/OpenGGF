@@ -29,7 +29,7 @@ public record ConfigKeyMeta(
         return new ConfigKeyMeta(null, null, type, description, Set.of(), false);
     }
 
-    /** Full dotted path used as the flatten reverse-lookup key, e.g. {@code "input.player1.jump"}. */
+    /** Full dotted path used as the flatten reverse-lookup key, e.g. {@code "input.player1.a"}. */
     public String path() {
         if (section == null || leaf == null) {
             throw new IllegalStateException("derived key has no on-disk path");
