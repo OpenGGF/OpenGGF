@@ -618,6 +618,30 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         }
     }
 
+    /**
+     * Runs one animated-tile pass for the trace-replay bootstrap prelude, which
+     * warms the ROM's pre-first-frame VRAM tile state before the first compared
+     * row. All animated-tile channels except the MHZ mushroom-cap position
+     * counter recompute their transfer from current camera/frame state, so the
+     * warmup pass reproduces the ROM's DMA output. The mushroom-cap channel is
+     * the one stateful accumulator: it advances {@code Anim_Counters+$F}
+     * (AnimateTiles_MHZ, sonic3k.asm:54901-54908). That counter is already seeded
+     * to its ROM {@code LevelLoop} frame-0 value by the pre-loop
+     * {@code Animate_Tiles} pass (loc_6468, sonic3k.asm:7853-7855), which the
+     * prelude is not re-running here — the prelude only warms VRAM patterns.
+     * Advancing the accumulator during the warmup would double-count that setup
+     * pass and leave the caps two bob-steps ahead. Preserve the counter across
+     * the warmup so caps read {@code Anim_Counters+$F} at the ROM frame-0 phase.
+     */
+    public void updateForReplayBootstrapPrelude() {
+        MhzZoneRuntimeState mhz = currentMhzState();
+        int preservedMushroomCapCounter = mhz != null ? mhz.mushroomCapPositionCounter() : -1;
+        update();
+        if (mhz != null) {
+            mhz.publishMushroomCapPositionCounter(preservedMushroomCapCounter);
+        }
+    }
+
     private void updateAiz1() {
         if (isAizBossActive()) {
             return;

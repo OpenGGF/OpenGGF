@@ -128,7 +128,9 @@ class TestMadmoleBadnikInstance {
         madmole.appendRenderCommands(new ArrayList<>());
 
         InOrder inOrder = inOrder(renderer);
-        inOrder.verify(renderer).drawFrameIndex(0, 0x120, 0x10F, false, false);
+        // advanceToRising already ran the creation-frame rise step (y+$10 -> y+$F,
+        // loc_8D620->loc_8D636), and update(3) rises one more pixel to y+$E.
+        inOrder.verify(renderer).drawFrameIndex(0, 0x120, 0x10E, false, false);
         inOrder.verify(renderer).drawFrameIndex(0x0D, 0x120, 0x100, false, false);
     }
 
@@ -176,7 +178,9 @@ class TestMadmoleBadnikInstance {
         madmole.update(3, player);
 
         assertEquals("RISING", madmole.getStateName());
-        assertEquals(0x110, madmole.getY());
+        assertEquals(0x10F, madmole.getY(),
+                "loc_8D620 falls through to loc_8D636, so the body child does its first "
+                        + "MoveSprite2 rise step (parent y+$10 up one pixel) on the creation frame");
         assertEquals(-0x100, madmole.getYVelocity());
     }
 
@@ -217,7 +221,9 @@ class TestMadmoleBadnikInstance {
 
         assertEquals("RISING", madmole.getStateName());
         assertEquals(-0x100, madmole.getYVelocity());
-        assertEquals(0x1F, madmole.getTimer());
+        assertEquals(0x1E, madmole.getTimer(),
+                "loc_8D620 sets $2E=$1F then falls through to loc_8D636, whose subq.w #1 "
+                        + "leaves $2E=$1E on the same frame the body child is created");
     }
 
     @Test
@@ -256,39 +262,32 @@ class TestMadmoleBadnikInstance {
 
         advanceToRising(madmole, player);
 
-        for (int frame = 3; frame <= 0x22; frame++) {
-            madmole.update(frame, player);
-        }
+        // Frame values are irrelevant to the state machine (it uses internal
+        // timers), so drive until each ROM routine transition instead of using
+        // hard-coded frame windows.
+        int frame = 3;
+        frame = advanceWhileState(madmole, player, frame, "RISING");
         assertEquals("PAUSING", madmole.getStateName());
         assertEquals(0x0F0, madmole.getY());
-        assertEquals(0x1F, madmole.getTimer());
+        assertEquals(0x1F, madmole.getTimer(),
+                "loc_8D648 sets $2E=$1F when the body child finishes rising");
 
-        for (int frame = 0x23; frame <= 0x42; frame++) {
-            madmole.update(frame, player);
-        }
+        frame = advanceWhileState(madmole, player, frame, "PAUSING");
         assertEquals("DRILLING", madmole.getStateName());
 
-        for (int frame = 0x43; frame <= 0x5F; frame++) {
-            madmole.update(frame, player);
-        }
+        frame = advanceWhileState(madmole, player, frame, "DRILLING");
         assertEquals("SINKING", madmole.getStateName());
         assertEquals(0x100, madmole.getYVelocity());
 
-        for (int frame = 0x60; frame <= 0x7F; frame++) {
-            madmole.update(frame, player);
-        }
+        frame = advanceWhileState(madmole, player, frame, "SINKING");
         assertEquals("COOLDOWN", madmole.getStateName());
-        assertEquals(60, madmole.getTimer());
+        assertEquals(60, madmole.getTimer(),
+                "loc_8D5DE sets $2E=60 the frame after the body child finishes sinking "
+                        + "(parent routine 4 observes the cleared busy bit one frame late)");
 
-        for (int frame = 0x80; frame <= 0xBB; frame++) {
-            madmole.update(frame, player);
-        }
-        assertEquals("COOLDOWN", madmole.getStateName(),
-                "Obj_Wait decrements $2E and returns while the timer is still zero");
-        assertEquals(0, madmole.getTimer());
-
-        madmole.update(0xBC, player);
-        assertEquals("BURIED", madmole.getStateName());
+        frame = advanceWhileState(madmole, player, frame, "COOLDOWN");
+        assertEquals("BURIED", madmole.getStateName(),
+                "Obj_Wait jumps through $34 only once the word timer has underflowed negative");
         assertEquals(0x100, madmole.getY());
     }
 
@@ -343,26 +342,38 @@ class TestMadmoleBadnikInstance {
         TestablePlayableSprite player = player(0x100, 0x100);
         advanceToRising(madmole, player);
 
-        for (int frame = 3; frame <= 0x48; frame++) {
-            madmole.update(frame, player);
-        }
-        assertEquals(2, mappingFrameOf(madmole));
+        int frame = advanceWhileState(madmole, player, 3, "RISING");
+        frame = advanceWhileState(madmole, player, frame, "PAUSING");
+        assertEquals("DRILLING", madmole.getStateName());
 
-        madmole.update(0x49, player);
+        // byte_8D9D8 (attack-startup) animates frames 0,1,2 and holds mapping 2
+        // until its $F4 callback (loc_8D680) plays sfx_SpikeMove and spawns the
+        // side-drill child.
+        while (services.soundIds.isEmpty()) {
+            madmole.update(frame++, player);
+        }
         assertEquals(List.of(Sonic3kSfx.SPIKE_MOVE.id), services.soundIds,
                 "loc_8D680 plays sfx_SpikeMove when byte_8D9D8 reaches its $F4 callback");
         assertEquals(2, mappingFrameOf(madmole),
                 "the $F4 callback swaps to byte_8D9DD but does not animate the new script until the next frame");
 
-        madmole.update(0x4A, player);
-        assertEquals(3, mappingFrameOf(madmole));
-        madmole.update(0x4B, player);
-        assertEquals(3, mappingFrameOf(madmole));
-        madmole.update(0x52, player);
-        assertEquals(3, mappingFrameOf(madmole));
-        madmole.update(0x53, player);
+        // byte_8D9DD = {2,3,3,4,...}: like every Animate_Raw script the initial
+        // frame byte is only the setup mapping, so the first advance shows the
+        // second 3 and holds it for the delay-2 cadence before reaching 4.
+        madmole.update(frame++, player);
+        assertEquals(3, mappingFrameOf(madmole),
+                "byte_8D9DD's first animated frame after the $F4 swap is 3");
+        int threeHold = 1;
+        while (mappingFrameOf(madmole) == 3) {
+            madmole.update(frame++, player);
+            if (mappingFrameOf(madmole) == 3) {
+                threeHold++;
+            }
+        }
+        assertEquals(3, threeHold,
+                "byte_8D9DD uses Animate_Raw delay 2, so the displayed frame 3 is held three engine frames");
         assertEquals(4, mappingFrameOf(madmole),
-                "byte_8D9DD uses Animate_Raw delay 2, so frame 3 is held before advancing to frame 4");
+                "byte_8D9DD advances to frame 4 after frame 3 is exhausted");
     }
 
     @Test
@@ -456,7 +467,8 @@ class TestMadmoleBadnikInstance {
         assertEquals(0x120 - 0x0E - 4, child.getX());
         assertEquals(0x0F0 - 0x0C + 2, child.getY(),
                 "loc_8D778 uses MoveSprite_LightGravity, moving with old y_vel before gravity is applied");
-        assertEquals(0x200 + 0x38, sideChildIntField(child, "yVelocity"));
+        assertEquals(0x200 + 0x20, sideChildIntField(child, "yVelocity"),
+                "MoveSprite_LightGravity (sonic3k.asm:178357) applies moveq #$20 gravity, not the $38 object default");
     }
 
     @Test
@@ -516,7 +528,11 @@ class TestMadmoleBadnikInstance {
 
         TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child,
                 "loc_8D778 polls sub_8D94A for collision_property on the arcing branch");
+        // The player TouchResponse pass only records collision_property; sub_8D94A
+        // runs during the side drill's own update (loc_8D778), so the grab applies
+        // on the frame the arm executes, not inside the touch callback.
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+        child.update(0x49, player);
 
         assertEquals(List.of(Sonic3kSfx.FLIPPER.id), services.soundIds);
         assertEquals(true, player.getAir());
@@ -530,12 +546,47 @@ class TestMadmoleBadnikInstance {
         assertEquals(0, child.getPriorityBucket(),
                 "sub_8D94A writes priority(a0)=0 when the arcing side drill captures a player");
 
-        child.update(0x49, player);
+        // loc_8D778 (routine 4) still moves the arm on the grab frame without
+        // carrying; the carry (loc_8D7A8, routine 8) starts the next frame and pins
+        // the player to the arm's pre-move coordinates before MoveSprite runs.
+        int armXBeforeCarry = child.getX();
+        int armYBeforeCarry = child.getY();
+        child.update(0x4A, player);
 
-        assertEquals(child.getX() - 8, player.getCentreX(),
-                "loc_8D7A8 pins the captured player to x_pos(a0)-8 while x_vel is negative");
-        assertEquals(child.getY() + 8, player.getCentreY(),
-                "loc_8D7A8 pins the captured player to y_pos(a0)+8");
+        assertEquals(armXBeforeCarry - 8, player.getCentreX(),
+                "loc_8D7A8 pins the captured player to the pre-move x_pos(a0)-8 while x_vel is negative");
+        assertEquals(armYBeforeCarry + 8, player.getCentreY(),
+                "loc_8D7A8 pins the captured player to the pre-move y_pos(a0)+8");
+    }
+
+    @Test
+    void arcingSideDrillCarryPreservesCapturedPlayerSubpixels() {
+        GameRng rng = new GameRng(GameRng.Flavour.S3K, 4);
+        CapturingServices services = new CapturingServices(mock(ObjectManager.class));
+        services.withRng(rng);
+        MadmoleBadnikInstance.SideDrillChild child = spawnedSideDrillChild(services);
+        TestablePlayableSprite player = player(0x100, 0x100);
+        // Give the CPU the ROM's frozen carry subpixels (Player_2 x_sub/y_sub).
+        player.setSubpixelRaw(0xF600, 0x2E00);
+        child.update(0x48, player);
+
+        TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
+        listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+        child.update(0x49, player); // sub_8D94A captures (grab frame, no carry yet)
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+
+            child.update(0x4A, player); // loc_8D7A8 carry: move.w to x_pos/y_pos only
+        }
+
+        assertEquals(0xF600, player.getXSubpixelRaw(),
+                "loc_8D7D4 writes x_pos(a1) with move.w, leaving the captured player's x_sub untouched");
+        assertEquals(0x2E00, player.getYSubpixelRaw(),
+                "loc_8D7D4 writes y_pos(a1) with move.w, leaving the captured player's y_sub untouched");
     }
 
     @Test
@@ -551,7 +602,12 @@ class TestMadmoleBadnikInstance {
         TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child,
                 "loc_8D778 polls sub_8D94A only until it captures a player and switches to loc_8D7A8");
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+        child.update(0x49, player);
+        // Once captured, the player is object-controlled, so a later TouchResponse
+        // poll is ignored (sub_8D94A's tst.b object_control(a2) guard) and no second
+        // capture / flipper is queued.
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x4A);
+        child.update(0x4A, player);
 
         assertEquals(List.of(Sonic3kSfx.FLIPPER.id), services.soundIds,
                 "after sub_8D94A sets routine=8, the side drill carries the captured player instead of re-running capture");
@@ -567,6 +623,8 @@ class TestMadmoleBadnikInstance {
         child.update(0x48, player);
         TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+        child.update(0x49, player);
+        // Drop the capture flipper so the assertion below only sees the rebound one.
         services.soundIds.clear();
 
         try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
@@ -575,7 +633,8 @@ class TestMadmoleBadnikInstance {
             terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
 
-            for (int frame = 0x49; frame <= 0x5E; frame++) {
+            // Run the arc until byte_8D9E7 loops to its $FC callback (loc_8D846).
+            for (int frame = 0x4A; frame < 0x4A + 40 && services.soundIds.isEmpty(); frame++) {
                 child.update(frame, player);
             }
         }
@@ -658,13 +717,16 @@ class TestMadmoleBadnikInstance {
         child.update(0x48, player);
         TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+        child.update(0x49, player);
         services.soundIds.clear();
 
         try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
             terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
                     .thenReturn(new TerrainCheckResult(-2, (byte) 0, 0));
 
-            child.update(0x49, player);
+            // loc_8D7A8's ObjCheckWallDist runs during the carry routine, i.e. the
+            // frame after sub_8D94A captured the player.
+            child.update(0x4A, player);
             terrain.verify(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()));
         }
 
@@ -676,7 +738,8 @@ class TestMadmoleBadnikInstance {
         assertEquals(0x1C0, sideChildIntField(child, "xVelocity"),
                 "loc_8D820 halves the reversed velocity before switching the drill to routine 6");
 
-        listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x4A);
+        listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x4B);
+        child.update(0x4B, player);
         assertEquals(false, player.isObjectControlled(),
                 "after loc_8D834 switches to routine 6, continuous touch polling must not recapture Sonic");
     }
@@ -691,12 +754,13 @@ class TestMadmoleBadnikInstance {
         child.update(0x48, player);
         TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+        child.update(0x49, player);
         assertEquals(true, player.isObjectControlled());
 
         AbstractObjectInstance.updateCameraBounds(0, 0, 0x100, 0x100, 0);
         setSideChildIntField(child, "currentX", 0x0500);
         setSideChildIntField(child, "currentY", 0x0500);
-        child.update(0x49, player);
+        child.update(0x4A, player);
 
         assertEquals(true, child.isDestroyed(),
                 "loc_8D6E6 deletes the side drill when its custom camera window test fails");
@@ -773,6 +837,21 @@ class TestMadmoleBadnikInstance {
             TestablePlayableSprite player) {
         advancePastWaitOffscreenInit(madmole, player);
         madmole.update(2, player);
+    }
+
+    /**
+     * Advances the madmole one frame at a time while it remains in {@code state},
+     * returning the next unused frame index. Frame values are irrelevant to the
+     * state machine (it is driven by internal timers), so callers can chain calls
+     * to walk the ROM routine sequence without hard-coding frame windows.
+     */
+    private static int advanceWhileState(MadmoleBadnikInstance madmole,
+            TestablePlayableSprite player, int startFrame, String state) {
+        int frame = startFrame;
+        for (int guard = 0; guard < 1000 && madmole.getStateName().equals(state); guard++) {
+            madmole.update(frame++, player);
+        }
+        return frame;
     }
 
     private static void putMadmoleOnScreen() {

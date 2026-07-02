@@ -351,6 +351,92 @@ class TestMhzSwingBarVerticalObjectInstance {
     }
 
     @Test
+    void grabPreservesPlayerXSubpixelOnVerticalBar() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance bar = registry.create(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_VERTICAL, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2214, (short) 0x0700);
+        player.setXSpeed((short) 0x0400);
+        player.setGSpeed((short) 0x0400);
+        player.setAir(false);
+        player.setSubpixelRaw(0x9A00, 0);
+
+        bar.update(0, player);
+
+        assertEquals(0x2212, player.getCentreX(),
+                "Right-side grab still snaps x_pos to object x_pos+$12");
+        assertEquals(0x9A00, player.getXSubpixelRaw(),
+                "ROM loc_3F316 (sonic3k.asm:83757-83759) writes x_pos(a1) with move.w, which does not "
+                        + "touch x_sub; the grab must preserve the player's subpixel fraction");
+    }
+
+    @Test
+    void climbFramePreservesPlayerXSubpixelOnVerticalBar() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance bar = registry.create(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_VERTICAL, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2214, (short) 0x0700);
+        player.setXSpeed((short) 0x0400);
+        player.setGSpeed((short) 0x0400);
+        player.setAir(false);
+
+        bar.update(0, player);
+        player.setSubpixelRaw(0x3300, 0);
+        bar.update(1, player);
+
+        assertTrue(player.isObjectControlled(),
+                "The mid climb phase must not auto-release this early");
+        assertEquals(0x3300, player.getXSubpixelRaw(),
+                "ROM sub_3F11C (sonic3k.asm:83625-83626) writes x_pos(a1) with move.w each climb frame, "
+                        + "which does not touch x_sub");
+    }
+
+    @Test
+    void autoReleasePreservesPlayerXSubpixelOnVerticalBar() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance bar = registry.create(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_VERTICAL, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2214, (short) 0x0700);
+        player.setXSpeed((short) 0x0400);
+        player.setGSpeed((short) 0x0400);
+        player.setAir(false);
+
+        bar.update(0, player);
+        player.setSubpixelRaw(0x1100, 0);
+        for (int frame = 1; frame <= 31; frame++) {
+            bar.update(frame, player);
+        }
+
+        assertFalse(player.isObjectControlled(),
+                "This is still the auto-release frame reached by the existing release test");
+        assertEquals(0x2200, player.getCentreX());
+        assertEquals(0x1100, player.getXSubpixelRaw(),
+                "ROM loc_3F1C8 (sonic3k.asm:83669) writes x_pos(a1) with move.w on auto-release, which "
+                        + "does not touch x_sub");
+    }
+
+    @Test
+    void rollingGrabPreservesPlayerYSubpixelOnVerticalBar() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance bar = registry.create(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_VERTICAL, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2214, (short) 0x0700);
+        player.setXSpeed((short) 0x0400);
+        player.setGSpeed((short) 0x0400);
+        player.setAir(false);
+        player.setRolling(true);
+        player.setSubpixelRaw(0, 0x7700);
+        int expectedCentreY = player.getCentreY() + player.getYRadius() - player.getStandYRadius();
+
+        bar.update(0, player);
+
+        assertEquals(expectedCentreY, player.getCentreY());
+        assertEquals(0x7700, player.getYSubpixelRaw(),
+                "ROM loc_3F2BE (sonic3k.asm:83752-83754) applies add.w to y_pos(a1), which does not "
+                        + "touch y_sub; the roll-radius correction must preserve the subpixel fraction");
+    }
+
+    @Test
     void verticalSwingBarRendersRomFrameAtAnchor() {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         when(renderer.isReady()).thenReturn(true);

@@ -56,7 +56,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
      * {@code Animate_Palette}; the ROM setup pass calls only the tile animator.
      */
     public void updatePatternsOnlyForReplayBootstrap() {
-        patternAnimator.update();
+        patternAnimator.updateForReplayBootstrapPrelude();
     }
 
     @Override

@@ -19,6 +19,373 @@ Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9342 / 505
 (`tails_x_sub` expected `0x4700`, actual `0xC700`) after trace capture keeps
 the ROM Obj02 hurt routine visible for object-solid landing samples.
 
+## 2026-07-02 - S3K MHZ complete-run advances f2966 -> f2986 (Madmole arc-throw grab applies on the ROM frame)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  HEAD `c3f06d930` + this fix (2 source/test files + docs).
+- Command (verified independently via `mvn.cmd`, `-Dmse=off`):
+  `mvn.cmd "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before (2 files reverted to HEAD):
+  f2966 / **4454** errors (`tails_air`, expected `1`, actual `0`).
+  After: f2986 / **2413** errors (`tails_y`, expected `0x0779`, actual `0x076F`).
+- Root: the SKL Obj $8C Madmole arc-throw arm (`Obj_Madmole` /
+  `docs/skdisasm/sonic3k.asm:193075`) grabbed the carried player two frames
+  late. Seven ROM-cited changes in `MadmoleBadnikInstance`:
+  (1) the body child rises on its creation frame (`loc_8D620` falls straight
+  through to `loc_8D636`, `:193147-193158`);
+  (2) a one-frame parent-observe gap before the 60-frame cooldown (parent
+  `loc_8D5D4` tests the still-set `$38` bit and waits while the body clears it
+  at `loc_8D6D6`, so `loc_8D5DE` arms the cooldown the next frame,
+  `:193110-193120,193212-193215`);
+  (3) `usesCurrentTouchResponseState=true` — `loc_8D6E6` moves the arm, then
+  `Add_SpriteToCollisionResponseList`/`Draw_Sprite` (`:193264-193278,193233`),
+  matching the AizSpikedLog/Orbinaut post-move contract;
+  (4) light gravity `$20` via `MoveSprite_LightGravity` (`moveq #$20`,
+  `:178358`), not the `$38` object default;
+  (5) the carry defers to routine 8 — `sub_8D94A` sets routine 8 during the
+  arm's routine-4 `loc_8D778`, which still runs `MoveSprite_LightGravity` that
+  frame; `loc_8D7A8` carries the next frame (`:193271,193478,193291`);
+  (6) subpixel-preserving word-write carry — `loc_8D7D4` does `move.w` to
+  `x_pos(a1)`/`y_pos(a1)` (`:193307-193312`), leaving the carried CPU's
+  `x_sub`/`y_sub` untouched (F600/2E00);
+  (7) single-player grab via a pending `collision_property` candidate —
+  `sub_8D94A` grabs the one player indexed by `word_8D944` = `{Player_1,
+  Player_2, Player_2}` (`:193457-193460`); last overlap wins (Player_2 after
+  Player_1), lead player never modified.
+- -2041 error-delta adjudication (independent A/B, copy-aside; NO `git stash`):
+  BEFORE first error f2966 (`tails_air` — the grab-not-applying target);
+  AFTER first error f2986. The f2966 target is gone and the f2966-2985
+  grab/carry window (air, status, object_control, carried subpixels F600/2E00,
+  arm arc) is byte-clean; the AFTER first error frame (2986) is strictly deeper
+  than the fixed window, so every AFTER-only error key is at frame >= 2986 by
+  construction.
+- f2986 characterization (next roots, out of scope): `tails_y` flips (exp
+  `0x0779`, act `0x076F`) — the arm arc rebound animation callback fires ~3
+  frames early (`byte_8D9E7` `$FC` -> `loc_8D846`, `:193353`) and the mid-carry
+  `ObjHitFloor` on the moved arm (`loc_8D80A`, `:193325-193330`) is not yet
+  modeled. End-of-session frontier.
+- Guards green (`-Dmse=off`, ROM path): `TestMadmoleBadnikInstance` (31, incl.
+  the untouched Task-6 cap-stump/defeat suite), `TestSidekickCpuDespawnParity`
+  (55), `TestSidekickCpuFollowParity` (93), `TestSonic3kMHZEvents` (62),
+  `TestS3kAiz1SkipHeadless` (8), `TestSonic3kLevelLoading` (5 + 30),
+  `TestRewindCoverageGuard` (1, no baseline change; new `pendingCapturePlayer`
+  is `@RewindTransient` — nulled at update start, always null at snapshot),
+  `TestS1Ghz1TraceReplay` (1), `TestS2Ehz1TraceReplay` (1). Pre-existing
+  `TestS2Ehz1Headless` (1) confirmed failing identically on clean HEAD
+  (inherited from the develop merge), not introduced by this fix.
+
+## 2026-07-02 - S3K MHZ complete-run advances f2159 -> f2966 (TailsCPU sub_13EFC interact-code-word despawn watchdog)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  HEAD `d56f33a88` + this fix (6 source/test files + docs).
+- Command (verified independently via `mvn.cmd`, `-Dmse=off`):
+  `mvn.cmd "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before (6 files reverted to HEAD):
+  f2159 / **2323** errors (`tails_x`, expected `0x7F00`, actual `0x066D`).
+  After: f2966 / **4454** errors (`tails_air`, expected `1`, actual `0`).
+- Fix: model ROM `sub_13EFC`'s off-screen on-object branch
+  (`cmp.w (a3),d0 / bne -> sub_13ECA`, `docs/skdisasm/sonic3k.asm:26816-26843`).
+  New S3K-only `ObjectInteractionRules.sidekickDespawnUsesInteractCodeWordChange`
+  gates a word-change compare in `SidekickCpuController.checkDespawn()` (compare
+  before the fall-through latch refresh; armed only when the latch is non-zero).
+  Despawn reuses the existing `applyDespawnMarker` (`x_pos=0x7F00`, `y_pos=0`,
+  routine 2, `Status_InAir`, `object_control=0x81`, velocity preserved per
+  `sub_13ECA`, `:26800-26809`); no new rewind field (`diagnosticS3kInteractWord`
+  already captured). The stood-on object's ROM code word is exposed via a new
+  `RomObjectCodePointerProvider` on `Mhz1CutsceneButtonInstance` (word `0x0006`,
+  `MHZ1CutsceneButton_Main` @ ROM `0x00062F0A`) and `MhzCurledVineObjectInstance`
+  (word `0x0003`, `loc_3E8A2` @ ROM `0x0003E8A2`) — data-driven, not zone-gated.
+- +2131 error-delta adjudication (independent A/B, copy-aside; NO `git stash`):
+  BEFORE first error f2159 (`tails_x=0x7F00` sentinel — the fix target);
+  AFTER first error f2966. The f2159 target is gone and the f2159-2965 respawn
+  window is byte-clean; the AFTER report's first error frame (2966) is strictly
+  deeper than the entire fixed window, so every AFTER-only error key is at
+  frame >= 2966 by construction. The +2131 net is a wider per-frame signature:
+  the old divergence was a despawned sidekick parked at a sentinel `x`; the new
+  one desyncs a live, alive sidekick's air/status/position/subpixels plus
+  downstream object interactions across the remaining ~thousands of frames.
+- f2966 characterization (round-9 target): position and subpixels still match
+  at f2966 (`tails_x/y = 0x103E/0x0730`, subs match); the first fields to flip
+  are `tails_air` (exp `1`, act `0`) and `tails_status_byte` (exp `0x0003`, act
+  `0x0001`) — ROM Tails goes airborne while the engine keeps it grounded. The
+  tails-interact slot there is decimal 21 = object slot `0x15`, code pointer
+  `0x0001D566` (high word `0x0001`), routine `02`, @ `0x0F30,0870`; ROM sidekick
+  diag shows `onObj=15 status=03`. Round 9 = Tails carried airborne by moving
+  object slot `0x15`. Note the slot is NOT the vine's (slots recycle).
+- Sibling S3K complete-run frontier check (all frame-neutral vs documented; run
+  individually with `-Dsurefire.argLine=-Xshare:off -Xmx4g` because the longer
+  traces OOM under the default `-Xmx1g` fork): AIZ f1095 / 4319 (doc f1095),
+  CNZ f1846 / 7143 (doc f1846; count drift from develop merge, same frame),
+  HCZ f1489 / 3503 (doc f1489 `leader y`), ICZ f3139 / 3207 (doc f3139),
+  LBZ f2270 / 5881 (doc f2270/5881 exact), MGZ f866 / 10761 (doc f866; count
+  drift, same frame). No frontier regressed. The new despawn only fires when the
+  sidekick stands on a `RomObjectCodePointerProvider` (MHZ button/vine only), so
+  it is structurally inert in the sibling zones.
+- Guards green (`-Dmse=off`, respective ROM paths): `TestSidekickCpuDespawnParity`
+  (55/55, +6 new), `TestSidekickCpuFollowParity` (93), `TestOnObjectAtFrameStartSnapshot`
+  (4), `TestSidekickCpuControllerLevelStart` (16), `TestSidekickDespawnXRule` (4),
+  `TestTraceBinder` (62), `TestS3kAiz1SkipHeadless` (8), `TestSonic3kLevelLoading`
+  (5 + 30), `TestSonic3kBootstrapResolver` (5), `TestS2Ehz1TraceReplay` (1),
+  `TestS1Ghz1TraceReplay` (1). Pre-existing failures `TestRespawnStrategies` (5)
+  and `TestS2Ehz1Headless` (1) confirmed failing identically on clean HEAD
+  (inherited from the develop merge), not introduced by this fix.
+
+## 2026-07-02 - S3K MHZ complete-run advances f2158 -> f2159 (curled vine lands players on the contoured curl surface per loc_3EA1E)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `84103f0ab` + this fix).
+- Command (verified independently on this branch via `mvn.cmd`):
+  `mvn.cmd "-Ds3k.rom.path=...\Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f2158 / **4388** errors
+  (`tails_y_speed`, expected `0x0000`, actual `0x0428`). After: f2159 /
+  **2323** errors (`tails_x`, expected `0x7F00`, actual `0x066D`). The error
+  count falls by **-2065** (cascade collapse from resolving the f2158 root).
+- Root cause: `MhzCurledVineObjectInstance` used a flat top-solid at spawn.y
+  for new-landing detection; the generated curl segment contour
+  (`onSolidContact`, per `loc_3E9FA`) was only applied AFTER a player was
+  already riding, so a falling player could land on/pass through the wrong
+  Y. Fix implements `SlopedSolidProvider`: `getSlopeData()` samples
+  `vineY - (segmentY[segment] - 8)` per 2px `sampleX` (baseline 0), so the
+  shared resolver's `baseY = anchorY - slopeSample` reproduces ROM
+  `loc_3EA1E`'s (`sonic3k.asm:82980-82996`) `$1A(a2,d0*6) - 8` landing
+  surface; `isSlopeFlipped()` returns `false` because the segment generator
+  (`:82861-82893`) does no render-flag mirroring, and h-flip is folded into
+  the existing `segmentIndexForRomD0` index instead (now shared by both the
+  landing sampler and `onSolidContact`, refactored with no behavior change —
+  verified algebraically equivalent to the prior inline computation for both
+  `hFlip` cases). `onSolidContact` now also distinguishes the *establishing*
+  frame from *continued* rides via `standingSegmentIndices.containsKey`: the
+  ROM gates the surface Y write on the per-player standing bit
+  (`btst d6,status(a0)`, `:82943`) — clear on first contact (fall-through
+  into `loc_3EA1E` -> `loc_1E45A`, `:42004-42028`, which snaps
+  `y_pos = surface - y_radius - 1`), set on subsequent frames
+  (`loc_3E9FA`, `:82963-82977`, `y_pos = surface - y_radius`, no `-1`). The
+  engine previously applied the continued-ride `-y_radius` snap even on the
+  landing frame, off by 1px.
+- Error-delta adjudication (independent A/B on this branch, BEFORE = the 2
+  touched files reverted to HEAD `84103f0ab`, AFTER = fix in place, both
+  reruns performed by this verification pass, not reused from the fix
+  worker's numbers): BEFORE reproduces exactly f2158 / 4388 errors
+  (`tails_y_speed`) as claimed. AFTER has **zero** divergence records before
+  f2159 (min error `start_frame` across all 2323 entries is exactly 2159).
+  AFTER's error `field` set (37 distinct fields) is an exact subset match of
+  BEFORE's field set (37 distinct fields, identical) — no new divergence
+  category was introduced anywhere in the run; `total_frames` (27986) and
+  `warning_count`/`bootstrap_error_count` (0/0) are unchanged between BEFORE
+  and AFTER. This is a genuine cascade collapse, not a masked regression.
+- Next root (un-modeled, left for the next round): at f2159 Tails's
+  `tails_x`/subpixel fields diverge first, tracing to the S3K TailsCPU
+  watchdog respawn path (`sub_13EFC`/`sub_13ECA`, `sonic3k.asm:26816`/
+  `26800`) — shared sidekick-controller code, correctly left untouched by
+  this object-local vine fix.
+- Guards (all fresh-run this pass, 0 fail/err/skip): `TestMhzCurledVineObjectInstance`
+  (9, incl. 2 new tests: a fail-first sloped-landing discriminator and an
+  establishing-vs-continued-ride assertion), `TestMhzSwingBarHorizontalObjectInstance`
+  (16), `TestMhzSwingBarVerticalObjectInstance` (19), `TestSolidObjectManager`
+  (48), `TestSonic3kMHZEvents` (62), `TestS3kAiz1SkipHeadless` (8),
+  `TestSonic3kLevelLoading` (30 in `game.sonic3k` + 5 in `tests`, both
+  same-named classes in the requested guard list).
+
+## 2026-07-02 - S3K MHZ complete-run advances f1994 -> f2158 (swing bars preserve player subpixels per ROM word-only position writes)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `6a255aa3e` + this fix).
+- Command (verified independently on this branch via `mvn.cmd`):
+  `mvn.cmd "-Ds3k.rom.path=...\Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f1994 / **2621** errors
+  (`y_sub`, expected `0xA500`, actual `0x0000`). After: f2158 / **4388** errors
+  (`tails_y_speed`, expected `0x0000`, actual `0x0428`). The error count rises
+  by **+1767**; this is adjudicated below as masked-now-reachable, not a
+  regression.
+- Root cause: both MHZ swing bars snapped the captured player's ROM centre with
+  the subpixel-zeroing `setCentreX/Y`, but the ROM writes only the pixel word at
+  every position site — `move.w`/`add.w`/`subq.w`/`addq.w` on `x_pos`/`y_pos`,
+  never the long that would clear `x_sub`/`y_sub`. Fix swaps 8 sites to
+  `set...PreserveSubpixel`. ROM cites (all verified word-only writes in
+  `docs/skdisasm/sonic3k.asm`): horizontal grab `:83448-83450` (`move.w d0,y_pos`),
+  hang `:83533-83534` (`add.w y_pos(a0),d1 / move.w d1,y_pos`), input nudges
+  `:83326` (`subq.w #1,x_pos`) / `:83340` (`addq.w #1,x_pos`); vertical
+  roll-radius y add `:83752-83754` (`add.w d0,y_pos`), grab `:83757-83759`
+  (`move.w d0,x_pos`), climb `:83625-83626` (`add.w x_pos(a0),d1 / move.w d1,x_pos`),
+  auto-release `:83669` (`move.w x_pos(a0),x_pos`).
+- Error-delta adjudication (independent A/B on this branch, BEFORE = these 4
+  files reverted, AFTER = fix in place): the fix's own three targets are gone
+  in AFTER (`y_sub@f1994`, `tails_y_sub@f2011`, `x_sub@f2451` present in BEFORE,
+  absent in AFTER). AFTER has **zero** divergence records before f2158
+  (min error frame is exactly 2158); BEFORE had 51 error records in the
+  [1994,2157] window. Every one of the 3197 AFTER-only `(field,frame)` error
+  keys is at frame >= 2159 — no new pre-frontier divergence was introduced.
+  So AFTER is byte-exact through f2157 (strictly better than BEFORE) and the
+  +1767 is a previously-masked downstream Tails root now reachable once the
+  subpixel noise is removed.
+- f2158 characterization (next-round target): at f2158 the player subpixels are
+  byte-exact (`tails_x_sub`/`tails_y_sub` match), but the engine releases CPU
+  Tails into an **air + rolling** state (`tails_air` 0->1, `tails_rolling` 0->1,
+  `tails_y_speed` `0x0000`->`0x0428` falling, `tails_g_speed` `0x0370`->`0x00B8`,
+  `tails_status_byte` `0x08`->`0x06`) while the ROM keeps Tails riding object
+  slot 15 grounded (ROM `onObj=15`, `status=08`; engine `onObj=false`,
+  `ride=s-1`). `tails_cpu_interact` (exp `0x0006`, act `0x0003`) and
+  `tails_y` (exp `0x0598`, act `0x05A4`) flip first; position/subpixel fields
+  only cascade at f2159. Next root is Tails's swing-bar release/riding-state
+  timing (appears to jump/roll off one interaction-cycle early), not a subpixel
+  issue.
+- Guards: full module suite 296 tests, 295 pass / 1 fail (only
+  `TestS3kMhzCompleteRunTraceReplay`, still-red frontier). Named guards all
+  green (0 fail/err/skip): `TestMhzSwingBarHorizontalObjectInstance` (16),
+  `TestMhzSwingBarVerticalObjectInstance` (19), `TestMhz1CutsceneObjects` (82),
+  `TestSonic3kMHZEvents` (62), `TestS3kAiz1SkipHeadless` (8),
+  `TestSonic3kLevelLoading` (30). The 7 new subpixel-preserve unit tests are
+  fail-first (verified: reverting only the two main files while keeping the
+  tests fails all 7 with `expected: <nonzero> but was: <0>`).
+
+## 2026-07-02 - S3K MHZ complete-run advances f1162 -> f1994 (MHZ1 cutscene door trigger-frame movement)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `5a09a8006` + this fix).
+- Command (verified independently on this branch):
+  `mvn.cmd "-Ds3k.rom.path=...\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f1162 / 2855 errors
+  (`tails_y`, expected `0x064E`, actual `0x0653`). After: f1994 / 2621 errors
+  (`y_sub`, expected `0xA500`, actual `0x0000`). Confirmed against
+  `target/trace-reports/s3k_mhz1_report.json`: zero divergence records at or
+  before f1162, so all five prior fix signatures (f1 `camera_x`, f72
+  `y_speed`, f966 `y`, f1025 `status_byte`, f1162 `tails_y`) hold.
+- Root cause: `MHZ1CutsceneButton_Door_Move` (`sonic3k.asm:130237`) arms
+  `y_vel`/`$2E`/`$34` and falls straight through
+  `MHZ1CutsceneButton_Door_SetVelocity` (`:130246`) into
+  `MHZ1CutsceneButton_Door_Moving` (`:130251`, `jsr MoveSprite2`) with no
+  `rts` anywhere in that chain (confirmed against `sonic3k.lst:151974-151988`:
+  `63094` -> `630A6` is straight-line). Both trigger paths reach this
+  fall-through: the switch branch jumps directly to `Door_Move`
+  (`bne.s MHZ1CutsceneButton_Door_Move`, `:130217`), and the auto-raise
+  proximity branch falls through `MHZ1CutsceneButton_Door_ClearFlag`
+  (`:130234`) into the same `Door_Move`. So the door moves 1px on its
+  trigger frame; `Mhz1CutsceneDoorInstance.update()` previously `return`ed
+  after arming the slide on both trigger branches, deferring the first move
+  to the next frame and lagging the ROM door by 1px through the whole slide.
+  At f1162 that 1px let the engine door's underside clip the rising CPU
+  Tails jump apex instead of clearing it as the ROM door does.
+- Fix: both trigger branches (switch-driven and auto-raise) now fall through
+  into the movement step (`SubpixelMotion.moveSprite2` + wait-timer
+  decrement) on the trigger frame itself, instead of `return`ing. Four
+  `TestMhz1CutsceneObjects` assertions and two down-slide loop counts were
+  corrected to encode the trigger-frame move (arming frame's Y already
+  reflects one step; the 64px slide completes over `update(1)..update(64)`
+  rather than `update(1)..update(65)`).
+- Out-of-scope note (left untouched): an inverted auto-raise Y-proximity
+  check (engine `yDistance >= 0x60` vs ROM `d3 < 0x60`) was noticed but not
+  exercised by this trace and not touched here — flagged as a follow-up.
+- Guards green: `TestMhz1CutsceneObjects` (82/82), `TestSolidObjectManager`
+  (48/48), `TestSonic3kMHZEvents` (62/62), `TestS3kAiz1SkipHeadless` (8/8),
+  `TestSonic3kLevelLoading` (35/35 across both packages).
+
+## 2026-07-02 - S3K MHZ complete-run advances f1025 -> f1162 (MHZ1 cutscene door inclusive right edge)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `5c6e74a31` + this fix).
+- Command (verified independently on this branch):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds3k.rom.path=...\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f1025 / 2853 errors
+  (`status_byte`, expected `0x0021`, actual `0x0001`). After: f1162 / 2855
+  errors (`tails_y`, expected `0x064E`, actual `0x0653`). Confirmed against
+  `target/trace-reports/s3k_mhz1_report.json` via an independent A/B rerun
+  (copy-aside/`git checkout --`/restore, not `git stash`).
+- Root cause: `Mhz1CutsceneDoorInstance`'s side-contact solid box used the
+  engine's default exclusive right edge. `MHZ1CutsceneButton_Door_Wait`
+  (`sonic3k.asm:130214`) calls `sub_65E4C` (`sonic3k.asm:134149`), which loads
+  `d1=$1B,d2=$20,d3=$20` and jumps into `SolidObjectFull` -> `SolidObject_cont`
+  (`sonic3k.asm:41399`). That gate is `cmp.w d3,d0 / bhi.w loc_1E0A2`
+  (`sonic3k.asm:41405-41406`) -- `bhi`, not `bhs` -- so `relX == width*2` (a
+  player resting exactly at the door's right edge) is still a valid
+  zero-distance side contact that keeps `Status_Push` set. The sibling
+  `Obj_MHZ1CutsceneButton` already overrides the same way for the same gate
+  (`Mhz1CutsceneButtonInstance.usesInclusiveRightEdge()`); the door was missing
+  the equivalent override, so a player resting at its exact right edge lost
+  push/contact status one frame early.
+- Fix: `Mhz1CutsceneDoorInstance.usesInclusiveRightEdge()` now returns `true`.
+  Object-local property read from the door's own ROM call path
+  (`sub_65E4C` -> `SolidObjectFull` -> `SolidObject_cont`); no
+  zone/route/frame carve-out, no trace-row hydration.
+- Error-count delta adjudication (+2 net, 2853 -> 2855): the fix's own window
+  (f1025-f1100, the door/push/status region) goes from 2 errors (`status_byte`
+  at f1025/f1029) to 0 in the AFTER run -- confirmed no new errors appear
+  there. The region f1030-f1811 is byte-identical between BEFORE and AFTER
+  (131 errors each, same field/frame/expected/actual set) -- the pre-existing
+  f1162 `tails_y` frontier is unchanged by this fix. The entire +2 net comes
+  from downstream cascading redistribution starting at f1811 (76 BEFORE-only
+  error tuples replaced by 80 AFTER-only tuples, all in `tails_x` /
+  `tails_status_byte` / `tails_y_speed`, already-diverged state past the
+  pre-existing f1162 desync) -- benign redistribution, not a regression
+  introduced by this change.
+- Guards green: `TestMhz1CutsceneObjects` (82/82, +1 new discriminator test),
+  `TestSolidObjectManager` (47/47), `TestSonic3kMHZEvents` (62/62),
+  `TestS3kAiz1SkipHeadless` (8/8), `TestSonic3kLevelLoading` (35/35 across both
+  packages).
+
+## 2026-07-02 - S3K MHZ complete-run advances f966 -> f1025 (MHZ1 cutscene button top-landing width/anchor)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `02efe3a1c` + this fix).
+- Command (verified independently on this branch):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds3k.rom.path=...\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f966 / 2967 errors (`y`).
+  After: f1025 / 2853 errors (`status_byte`, expected `0x0021`, actual
+  `0x0001`). Confirmed against `target/trace-reports/s3k_mhz1_report.json`.
+- Root cause: `Obj_MHZ1CutsceneButton`'s solid box was mis-anchored and its
+  top-landing X gate too narrow. (1) The ROM object keeps its solid box on the
+  raw object `y_pos` (0x67C), but the engine stores `this.y = spawn.y() + 4`
+  for the sprite draw, so the solid box sat 4px low. (2) ROM `sub_65DEC`
+  (`sonic3k.asm:134105`) passes collision `d1 = $1B` into `SolidObjectFull`, but
+  `loc_1E154` (`sonic3k.asm:41611-41632`) re-reads `width_pixels(a0)` = `$80`
+  (`ObjDat_MHZ1CutsceneButton`, `sonic3k.asm:134853`) for the landing X gate, so
+  the landing window is the full `$80` half-width, far wider than the `$1B`
+  side box. The engine's default landing heuristic (`collision d1 - $B = $10`)
+  wrongly rejected a rising rolling-jump graze at the button's right edge.
+- Fix: `Mhz1CutsceneButtonInstance` sets `SolidObjectParams` `offsetY =
+  -INIT_Y_OFFSET` (seats the solid box on ROM `y_pos` without moving the render)
+  and overrides `getTopLandingHalfWidth` to `0x80` (its own ObjDat
+  `width_pixels`). `ObjectSolidContactController.isWithinTopLandingWidth` now
+  honors an explicitly-configured landing width that differs from the collision
+  half-width in EITHER direction (previously only narrower). Behavior-preserving:
+  all 14 existing `getTopLandingHalfWidth` overrides return narrower-or-equal, so
+  only the new button uses the wider path (S1 GHZ1 / S2 EHZ1 green traces + 47
+  `TestSolidObjectManager` cases hold). Object-local ROM-data-driven, no
+  zone/route/frame carve-out; the existing S3K velocity-lift gate
+  (`solidObjectTopBranchAlwaysLiftsOnUpwardVelocity`) is unchanged.
+- Guards green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+  `TestSonic3kMHZEvents`, `TestMhz1CutsceneObjects`, `TestSolidObjectManager`
+  (+2 new discriminator tests), `TestSolidObjectTopBranchUpwardLift`,
+  `TestS1Ghz1CompleteRunTraceReplay`, `TestS2Ehz1TraceReplay`.
+
+## 2026-07-02 - S3K MHZ complete-run advances f72 -> f966 (replay-bootstrap prelude counter preservation)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6`.
+- Command (verified independently on this branch):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f72 / 3615 errors
+  (`y_speed`). After: f966 / 2967 errors (`y`, expected `0x0669`, actual
+  `0x0666`); cascading `camera_y` f970, `tails_x` f981 follow. Confirmed against
+  `target/trace-reports/s3k_mhz1_report.json`.
+- Root cause: the trace-replay bootstrap's animated-tile prelude
+  (`TraceReplaySessionBootstrap.advanceAnimatedTilePreludeForTraceReplay`) warms
+  the ROM's pre-frame-0 VRAM tile state, but each pass was advancing the MHZ
+  mushroom-cap position counter (`Anim_Counters+$F`, the only stateful
+  animated-tile channel; `AnimateTiles_MHZ`, `sonic3k.asm:54901-54908`). The
+  counter is already seeded to its ROM `LevelLoop` frame-0 value by the pre-loop
+  `Animate_Tiles` pass (`loc_6468`, `sonic3k.asm:7853-7855`), so the prelude's
+  extra advances double-counted, landing the cap-driven Y (`MHZMushroomCap_UpdatePosition`,
+  `sonic3k.asm:82199-82221`) two bob-steps (`+4`) ahead. Verified vs cap X window
+  f65-78: ROM counter = `(2N+2) mod $58`, engine read `(2N+6)`.
+- Fix: `Sonic3kPatternAnimator.updateForReplayBootstrapPrelude()` preserves the
+  mushroom-cap counter across the warmup; seed unchanged; replay-only path
+  (fresh gameplay `update()` untouched). Not trace-row hydration and not a
+  zone/frame/route carve-out — it removes a harness-induced perturbation so the
+  engine's own ROM-faithful counter survives to comparison start.
+- Guards green: `TestMhzMushroomCapObjectInstance`, `TestS3kMhzPatternAnimation`,
+  `TestSonic3kMHZEvents`, `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`.
 
 S1 complete-run branch-local state (2026-07-02, `bugfix/ai-slot-cadence-regression`
 off develop `d81dd2be1`): 18 green / 1 red. `TestS1Sbz3CompleteRunTraceReplay`
@@ -30440,6 +30807,48 @@ nits, swing-bar hurt/dead guards, mushroom platform anim). Command:
   complete-run trace session, not folded into this validation pass).
 - No regression: MHZ parity-fix wave is confirmed net-neutral-to-positive on this
   trace (same first-error field/frame, fewer total errors).
+
+## 2026-07-02 -- MHZ complete-run frame-1 `camera_x` root fixed: Get_LevelSizeStart MHZ1 load-time override
+
+Worktree `.worktrees/trace-s3k-mhz`, branch `bugfix/ai-trace-s3k-mhz`. Command:
+`mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`
+
+- Root cause: the frame-1 `camera_x` divergence recorded in the 2026-07-02 Task V1
+  entry above was a missing ROM level-load special case. ROM `Get_LevelSizeStart`
+  `loc_1BF1E` (`docs/skdisasm/sonic3k.asm:38214-38225`) checks
+  `Current_zone_and_act == $700` (MHZ1) with `Player_mode < 3` (Sonic/Tails, not
+  Knuckles) and `SK_alone_flag == 0` (locked-on S&K, which the engine always
+  models): when true it overrides `Camera_min_X_pos`/`Camera_target_min_X_pos`/
+  `Camera_min_X_pos_P2` to `$C0` and feeds `d1=$160` into the shared tail
+  (`subi.w #$A0,d1` at `sonic3k.asm:38246`) that forces the initial
+  `Camera_X_pos`/`Camera_X_pos_P2`. MHZ1's `LevelSizes` entry
+  (`sonic3k.asm:38111`) has `xstart=0`, so without the override the engine loaded
+  a `0` min-X boundary and started the camera unclamped at `playerCentreX-$A0`
+  (`0x0039`) instead of ROM's `$C0`.
+- Fix: `Sonic3k.loadLevelData` (`src/main/java/com/openggf/game/sonic3k/Sonic3k.java`)
+  now sets `boundariesMinXOverride = 0xC0` for `zone == ZONE_MHZ && act == 0 &&
+  !knuckles`, mirroring the existing sibling AIZ-intro `boundariesMinXOverride`
+  pattern. The override both pins `Camera_min_X_pos` and, via the existing
+  level-load force-position clamp, snaps the initial camera X up to `$C0`. This is
+  a zone/act-indexed level-load boundary override (matching ROM
+  `Get_LevelSizeStart`'s own per-zone/act structure), not a zone check inside
+  shared camera/physics code.
+- New regression coverage in `TestSonic3kMHZEvents`:
+  `act1LevelLoadPinsCameraAndMinXToRomMhzStart` (Sonic/Tails gets the `$C0`
+  override) and `act1LevelLoadKeepsLevelSizesMinXForKnuckles` (Knuckles keeps the
+  ROM `LevelSizes` `xstart=0`, no override -- `Player_mode >= 3` skips
+  `loc_1BF1E`'s branch per `sonic3k.asm:38217-38218`).
+- Result: frame-1 `camera_x` divergence is gone. Trace replay now advances to the
+  frontier recorded in the 2026-06-21 "Grind cycle 2" entry: FAIL, 3615 errors, 0
+  warnings, first error frame 72 -- `y_speed` mismatch (expected `0x00E0`, actual
+  `0x0000`). This exactly matches that pre-existing historical frontier, confirming
+  the camera_x regression between 2026-06-21 and the Task V1 check was the sole
+  cause of the frame-1 divergence, and that frame 72 `y_speed` is a distinct,
+  still-open root (out of scope here).
+- Verified green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+  `TestSonic3kMHZEvents` (all pass, no regressions).
+
 ### 2026-06-30 -- S2 next-branch baseline round start
 
 Prerequisite: `next` was updated in `C:\Users\farre\IdeaProjects\sonic-engine-next`

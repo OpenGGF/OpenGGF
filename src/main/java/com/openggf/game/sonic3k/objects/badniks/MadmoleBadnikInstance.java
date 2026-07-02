@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -68,6 +69,10 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     private static final int SIDE_CHILD_ARC_RELEASE_PLAYER_Y_VELOCITY = -0x300;
     private static final int SIDE_CHILD_ARC_RELEASE_DRILL_Y_VELOCITY = -0x200;
     private static final int SIDE_CHILD_CAPTURE_WALL_SENSOR_OFFSET = 0x18;
+    // ROM MoveSprite_LightGravity (sonic3k.asm:178357) uses moveq #$20,d1 as its
+    // per-frame gravity, NOT the standard $38 object gravity. The arcing side
+    // drill (loc_8D768/loc_8D778/loc_8D7A8) moves via MoveSprite_LightGravity.
+    private static final int SIDE_CHILD_LIGHT_GRAVITY = 0x20;
 
     private enum State {
         BURIED,
@@ -84,6 +89,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     private int animFrame;
     private int animTimer;
     private boolean sideDrillActive;
+    private boolean awaitingParentObserve;
     private boolean waitingForOnscreen = true;
     private boolean initialized;
     // ROM parity: models the parent's $38(a0) bit 1 "child alive" latch never
@@ -203,6 +209,10 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         ySubpixel = 0;
         timer = RISE_SINK_FRAMES;
         yVelocity = RISE_Y_VELOCITY;
+        // ROM loc_8D620 (routine 0) sets up y_vel/$2E and falls straight through to
+        // loc_8D636 (routine 2), so the body child performs its first MoveSprite2
+        // rise step on the very frame it is created.
+        updateRising(playerEntity);
     }
 
     private void updateRising(PlayableEntity playerEntity) {
@@ -275,6 +285,18 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private void updateSinking() {
+        if (awaitingParentObserve) {
+            // ROM parent Obj_Madmole routine 4 (loc_8D5D4) runs before its body
+            // child each frame (lower SST slot). On the frame the body finishes
+            // sinking and clears the parent busy bit ($38 bit 1) via loc_8D6D6,
+            // the parent has already tested the still-set bit and waited, so it
+            // only begins its 60-frame Obj_Wait cooldown (loc_8D5DE) the following
+            // frame. Model that one-frame parent-observe gap here.
+            awaitingParentObserve = false;
+            state = State.COOLDOWN;
+            timer = COOLDOWN_FRAMES;
+            return;
+        }
         moveWithVelocity();
         timer--;
         if (timer >= 0) {
@@ -285,8 +307,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         ySubpixel = 0;
         yVelocity = 0;
         mappingFrame = CAP_MAPPING_FRAME;
-        state = State.COOLDOWN;
-        timer = COOLDOWN_FRAMES;
+        awaitingParentObserve = true;
     }
 
     private void updateCooldown() {
@@ -372,7 +393,22 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         private boolean arcing;
         private boolean postCaptureDrift;
         private boolean straightTouchConsumed;
+        // ROM sub_8D94A sets routine 8 during the arm's own routine-4 execution
+        // (loc_8D778), but loc_8D778 still runs MoveSprite_LightGravity to
+        // completion without carrying the player that frame. The carry routine
+        // (loc_8D7A8) only runs the following frame. This latch defers the first
+        // carry by one frame accordingly.
+        private boolean awaitingCarryRoutine;
         private AbstractPlayableSprite capturedPlayer;
+        // Player recorded by this frame's TouchResponse pass (the engine equivalent
+        // of collision_property). Applied during the arm's own update, so only the
+        // last player to overlap is grabbed and any earlier overlapping player
+        // (e.g. the human-controlled lead) is never modified. This is per-frame
+        // scratch state: it is cleared at the start of every update (before any
+        // rewind snapshot boundary), so it never needs to be captured for rewind.
+        @RewindTransient(reason = "Per-frame TouchResponse scratch; cleared at the start of "
+                + "every update before any rewind snapshot boundary, so it is always null when captured.")
+        private AbstractPlayableSprite pendingCapturePlayer;
         private int priorityBucket = PRIORITY_BUCKET;
         private int mappingFrame = SIDE_CHILD_FRAMES[0];
         private int animFrame;
@@ -413,8 +449,27 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
 
-            move();
-            carryCapturedPlayer();
+            // ROM loc_8D778 (routine 4) begins with bsr sub_8D94A, which reads the
+            // collision_property set during this frame's TouchResponse pass. Apply
+            // any pending arc capture here, before the arm moves.
+            applyPendingArcCapture();
+            if (capturedPlayer != null && !awaitingCarryRoutine) {
+                // ROM routine 8 (loc_8D7A8): pin the captured player to the arm's
+                // current (pre-move) x_pos/y_pos, THEN MoveSprite_LightGravity
+                // advances the arm, THEN the wall-impact check runs on the moved
+                // arm.
+                carryCapturedPlayer();
+                move();
+                if (capturedPlayer != null) {
+                    releaseCapturedPlayerOnWallImpact();
+                }
+            } else {
+                // ROM routine 4 (loc_8D768/loc_8D778) before capture, and the
+                // capture frame itself: MoveSprite advances the arm but the player
+                // is not carried until routine 8 runs next frame.
+                move();
+                awaitingCarryRoutine = false;
+            }
             animateRawLoop(frameCounter);
             updateDynamicSpawn(currentX, currentY);
             checkDeleteAndReleaseCapturedPlayer();
@@ -437,6 +492,18 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public boolean requiresContinuousTouchCallbacks() {
+            return true;
+        }
+
+        @Override
+        public boolean usesCurrentTouchResponseState() {
+            // ROM loc_8D6E6 runs the side-drill routine (loc_8D768/loc_8D778,
+            // which move the arm via MoveSprite2 / MoveSprite_LightGravity) and
+            // only THEN calls Add_SpriteToCollisionResponseList before Draw_Sprite
+            // (sonic3k.asm:193231-193243). The list therefore holds the arm's
+            // post-move coordinates, so the next frame's TouchResponse (which runs
+            // before this object updates again) must read the current x/y, not the
+            // two-frames-stale pre-update snapshot.
             return true;
         }
 
@@ -475,7 +542,13 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             }
 
             if (arcing) {
-                captureArcingPlayer(player);
+                // Record the overlapping player as the capture candidate; the last
+                // one to overlap this frame wins (ROM collision_property is
+                // overwritten by each player's TouchResponse, Player_2 running
+                // after Player_1). The grab itself is applied in update().
+                if (player instanceof AbstractPlayableSprite sprite) {
+                    pendingCapturePlayer = sprite;
+                }
                 return;
             }
 
@@ -498,12 +571,25 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             }
         }
 
+        private void applyPendingArcCapture() {
+            AbstractPlayableSprite candidate = pendingCapturePlayer;
+            pendingCapturePlayer = null;
+            if (candidate == null || capturedPlayer != null || postCaptureDrift) {
+                return;
+            }
+            captureArcingPlayer(candidate);
+        }
+
         private void captureArcingPlayer(PlayableEntity player) {
             if (!(player instanceof AbstractPlayableSprite sprite)) {
                 return;
             }
 
             capturedPlayer = sprite;
+            // ROM sub_8D94A sets routine 8, but loc_8D778 (routine 4) still runs
+            // to completion this frame without carrying; the carry (loc_8D7A8)
+            // starts next frame.
+            awaitingCarryRoutine = true;
             priorityBucket = 0;
             sprite.setAir(true);
             ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
@@ -544,7 +630,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             SubpixelMotion.State state = new SubpixelMotion.State(
                     currentX, currentY, xSubpixel, ySubpixel, xVelocity, yVelocity);
             if (arcing && !postCaptureDrift) {
-                SubpixelMotion.moveSprite(state, SubpixelMotion.S3K_GRAVITY);
+                SubpixelMotion.moveSprite(state, SIDE_CHILD_LIGHT_GRAVITY);
                 yVelocity = state.yVel;
             } else {
                 SubpixelMotion.moveSprite2(state);
@@ -565,9 +651,11 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             }
 
             int xOffset = xVelocity < 0 ? -8 : 8;
-            capturedPlayer.setCentreX((short) (currentX + xOffset));
-            capturedPlayer.setCentreY((short) (currentY + 8));
-            releaseCapturedPlayerOnWallImpact();
+            // ROM loc_8D7D4 does move.w to x_pos(a1)/y_pos(a1), which leaves the
+            // captured player's subpixel words untouched. Preserve them here so a
+            // carried CPU keeps its ROM x_sub/y_sub (e.g. F600/2E00).
+            capturedPlayer.setCentreXPreserveSubpixel((short) (currentX + xOffset));
+            capturedPlayer.setCentreYPreserveSubpixel((short) (currentY + 8));
         }
 
         private void releaseCapturedPlayerOnWallImpact() {
