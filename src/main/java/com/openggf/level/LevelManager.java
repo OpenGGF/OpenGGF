@@ -10,8 +10,6 @@ import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.data.Game;
 import com.openggf.data.AnimatedPaletteProvider;
 import com.openggf.data.AnimatedPatternProvider;
-import com.openggf.data.PlayerSpriteArtProvider;
-import com.openggf.data.SpindashDustArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
@@ -33,7 +31,6 @@ import com.openggf.game.rules.CameraRules;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
-import com.openggf.game.rules.PowerUpRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
@@ -48,7 +45,6 @@ import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.audio.AudioManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
-import com.openggf.graphics.RenderContext;
 import com.openggf.level.render.BackgroundRenderer;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectManager;
@@ -64,16 +60,11 @@ import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.Sprite;
-import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.game.PowerUpObject;
 import com.openggf.level.objects.DefaultPowerUpSpawner;
-import com.openggf.sprites.managers.SpindashDustController;
 import com.openggf.sprites.managers.SpriteManager;
-import com.openggf.sprites.managers.TailsTailsController;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
-import com.openggf.sprites.playable.Tails;
-import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -90,7 +81,7 @@ import static org.lwjgl.opengl.GL11.glClearColor;
  */
 public class LevelManager {
     static final Logger LOGGER = Logger.getLogger(LevelManager.class.getName());
-    private static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
+    static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
     private static final int HUD_PATTERN_BASE = PatternAtlasRange.HUD.base();
     /** Base for extra sidekick-style DPLC banks — above water (0x30000) and below title cards (0x40000). */
     public static final int SIDEKICK_PATTERN_BASE = PatternAtlasRange.SIDEKICK_BANKS.base();
@@ -112,7 +103,6 @@ public class LevelManager {
     private int cachedBgHeightPx;
     Game game;
     GameModule gameModule;
-    private int sidekickPatternBankCursor = 0;
 
     public Game getGame() {
         return game;
@@ -148,7 +138,7 @@ public class LevelManager {
 
     GraphicsManager graphicsManager;
     AudioManager audioManager;
-    private SpriteManager spriteManager;
+    SpriteManager spriteManager;
     private CollisionSystem collisionSystem;
     WaterSystem waterSystem;
     private GameStateManager gameState;
@@ -169,12 +159,12 @@ public class LevelManager {
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
 
-    private void writeCurrentZone(int zone) {
+    void writeCurrentZone(int zone) {
         this.currentZone = zone;
         worldSession.setCurrentZone(zone);
     }
 
-    private void writeCurrentAct(int act) {
+    void writeCurrentAct(int act) {
         this.currentAct = act;
         worldSession.setCurrentAct(act);
     }
@@ -197,7 +187,6 @@ public class LevelManager {
     HudRenderManager hudRenderManager;
     AnimatedPatternManager animatedPatternManager;
     AnimatedPaletteManager animatedPaletteManager;
-    private RespawnState checkpointState;
     LevelState levelGamestate;
 
     // GPU tilemap lifecycle delegate (build/cache/upload/invalidate)
@@ -224,6 +213,11 @@ public class LevelManager {
     // Rendering pipeline (extracted from LevelManager — see LevelRenderer).
     private final LevelRenderer levelRenderer = new LevelRenderer(this);
     final LevelFrameRuntimeUpdater frameRuntimeUpdater = new LevelFrameRuntimeUpdater(this);
+    private final LevelPlayableArtInitializer playableArtInitializer;
+    private final LevelDirtyRegionDispatcher dirtyRegionDispatcher;
+    final LevelWaterCoordinator waterCoordinator;
+    final LevelCheckpointCoordinator checkpointCoordinator;
+    private final LevelActTransitionExecutor actTransitionExecutor;
     private EngineContext engineServices; private EditorSaveManager editorSaveManager;
 
     @Deprecated(forRemoval = true)
@@ -254,6 +248,12 @@ public class LevelManager {
         this.profiler = engineServices.profiler();
         this.crossGameFeatures = engineServices.crossGameFeatures();
         this.engineServices = engineServices;
+        this.playableArtInitializer = new LevelPlayableArtInitializer(
+                this, spriteManager, graphicsManager, configService, crossGameFeatures);
+        this.dirtyRegionDispatcher = new LevelDirtyRegionDispatcher(this);
+        this.waterCoordinator = new LevelWaterCoordinator(this);
+        this.checkpointCoordinator = new LevelCheckpointCoordinator(this);
+        this.actTransitionExecutor = new LevelActTransitionExecutor(this);
         this.cachedScreenWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
         this.cachedScreenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
         // Inherit any zone/act metadata and loaded Level already on the
@@ -271,7 +271,7 @@ public class LevelManager {
      * Refreshes the zone list from the current GameModule's ZoneRegistry.
      * Called during level loading to ensure zones match the current game.
      */
-    private void refreshZoneList() {
+    void refreshZoneList() {
         levels.clear();
         levels.addAll(gameModule.getZoneRegistry().getAllZones());
     }
@@ -512,35 +512,7 @@ public class LevelManager {
      * Called from {@code LevelFrameStep} at the start of each frame.
      */
     public void processDirtyRegions() {
-        if (!(level instanceof MutableLevel ml)) return;
-
-        java.util.BitSet dirtyPatterns = ml.consumeDirtyPatterns();
-        if (!dirtyPatterns.isEmpty()) {
-            reuploadDirtyPatterns(dirtyPatterns);
-        }
-
-        java.util.BitSet dirtyBlocks = ml.consumeDirtyBlocks();
-        java.util.BitSet dirtyMapCells = ml.consumeDirtyMapCells();
-        if (!dirtyBlocks.isEmpty() || !dirtyMapCells.isEmpty()) {
-            if (tilemapManager != null) {
-                tilemapManager.rebuildDirtyRegions(dirtyBlocks, dirtyMapCells, ml);
-            }
-        }
-
-        java.util.BitSet dirtySolidTiles = ml.consumeDirtySolidTiles();
-        if (!dirtySolidTiles.isEmpty()) {
-            // Terrain sensors read SolidTile data directly from the current Level,
-            // so no cache rebuild is needed here. We still consume the dirty set
-            // to keep MutableLevel state in sync with the frame pipeline.
-        }
-
-        if (ml.consumeObjectsDirty()) {
-            resyncObjectSpawnListFromLevel();
-        }
-
-        if (ml.consumeRingsDirty()) {
-            resyncRingSpawnListFromLevel();
-        }
+        dirtyRegionDispatcher.processDirtyRegions();
     }
 
     /**
@@ -595,7 +567,7 @@ public class LevelManager {
      * Injects a {@link DefaultPowerUpSpawner} backed by the current
      * {@link ObjectManager} into the main player and all sidekicks.
      */
-    private String resolveMainCharacterCode() {
+    String resolveMainCharacterCode() {
         return ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
     }
 
@@ -676,7 +648,7 @@ public class LevelManager {
         initializeZoneFeatureProvider(zoneFeatureProvider);
     }
 
-    private void reinitializeZoneFeaturesForActTransition() throws IOException {
+    void reinitializeZoneFeaturesForActTransition() throws IOException {
         if (zoneFeatureProvider == null) {
             zoneFeatureProvider = gameModule.getZoneFeatureProvider();
         }
@@ -741,7 +713,7 @@ public class LevelManager {
      */
     public void initArt() {
         initObjectArt();
-        initPlayerSpriteArt();
+        playableArtInitializer.initialize();
     }
 
     /**
@@ -749,11 +721,7 @@ public class LevelManager {
      */
     public void initPlayerAndCheckpoint() {
         resetPlayerState();
-        // Initialize checkpoint state for new level
-        if (checkpointState == null) {
-            checkpointState = gameModule.createRespawnState();
-        }
-        checkpointState.clear();
+        checkpointCoordinator.prepareForLevelStart();
         levelGamestate = gameModule.createLevelState();
     }
 
@@ -770,7 +738,7 @@ public class LevelManager {
      * Phase B: Initialize the water system for the current level.
      */
     public void initWater() throws IOException {
-        initWater(false);
+        waterCoordinator.initialize();
     }
 
     /**
@@ -781,30 +749,8 @@ public class LevelManager {
      *
      * @param seamlessTransition true when called during a seamless act transition
      */
-    private void initWater(boolean seamlessTransition) throws IOException {
-        Rom rom = GameServices.rom().getRom();
-        WaterDataProvider waterProvider = gameModule != null ? gameModule.getWaterDataProvider() : null;
-        if (waterProvider != null) {
-            // Resolve the actual player character from the level event manager.
-            // ROM: CheckLevelForWater uses Player_mode to gate per-character water
-            // (e.g. AIZ2 Knuckles has no water when loaded directly from level select).
-            PlayerCharacter character = PlayerCharacter.SONIC_AND_TAILS;
-            LevelEventProvider lep = gameModule.getLevelEventProvider();
-            if (lep instanceof AbstractLevelEventManager alem) {
-                character = alem.getPlayerCharacter();
-            }
-            waterSystem.loadForLevelFromProvider(waterProvider, rom,
-                    getFeatureZoneId(), getFeatureActId(), character,
-                    seamlessTransition);
-        } else if (zoneFeatureProvider != null && zoneFeatureProvider.hasWater(getFeatureZoneId())) {
-            // Fallback for games without a WaterDataProvider (backward compatibility).
-            // All three game modules now supply providers, so this path should rarely execute.
-            @SuppressWarnings("deprecation")
-            Runnable fallback = () -> waterSystem.loadForLevel(rom, getFeatureZoneId(), getFeatureActId(), level.getObjects());
-            if (!waterSystem.hasWater(getFeatureZoneId(), getFeatureActId())) {
-                fallback.run();
-            }
-        }
+    void initWater(boolean seamlessTransition) throws IOException {
+        waterCoordinator.initialize(seamlessTransition);
     }
 
     /**
@@ -906,12 +852,7 @@ public class LevelManager {
      * feature provider in {@link #update()}.
      */
     public void advanceDynamicWaterLevel() {
-        int featureZone = getFeatureZoneId();
-        int featureAct = getFeatureActId();
-        if (level != null && waterSystem != null && waterSystem.hasWater(featureZone, featureAct)) {
-            waterSystem.updateDynamic(featureZone, featureAct, camera.getX(), camera.getY());
-            waterSystem.update();
-        }
+        waterCoordinator.advanceDynamicWaterLevel();
     }
 
     /**
@@ -1111,21 +1052,7 @@ public class LevelManager {
         // DynWaterHeight (zone features set new target for next frame).
         // Use effective feature zone/act so S1 SBZ3 (loaded from LZ act 4 slot)
         // resolves to SBZ3 water behavior while retaining LZ tile/object resources.
-        int featureZone = getFeatureZoneId();
-        int featureAct = getFeatureActId();
-        // Water movement — ROM order: MoveWater (move toward target) before
-        // DynWaterHeight (zone features set new target). For S1/S2 the ROM moves
-        // the water level BEFORE the player's underwater check
-        // (LZWaterFeatures/WaterEffects run before ExecuteObjects/RunObjects), so
-        // the inline-order path runs advanceDynamicWaterLevel() in the pre-physics
-        // step and we must NOT move it again here. S3K moves water after the
-        // player loop (Process_Sprites before Handle_Onscreen_Water_Height), so it
-        // still moves here.
-        if (!advanceWaterLevelBeforePlayerPhysics()
-                && level != null && waterSystem.hasWater(featureZone, featureAct)) {
-            waterSystem.updateDynamic(featureZone, featureAct, camera.getX(), camera.getY());
-            waterSystem.update();
-        }
+        waterCoordinator.advanceDynamicWaterLevelAfterPlayerPhysicsIfNeeded();
 
         // Update zone-specific features (CNZ bumpers, S1 DynWaterHeight, etc.)
         if (zoneFeatureProvider != null && level != null) {
@@ -1164,12 +1091,7 @@ public class LevelManager {
         }
 
         // Water movement before zone features (ROM order: MoveWater before DynWaterHeight)
-        int featureZone = getFeatureZoneId();
-        int featureAct = getFeatureActId();
-        if (level != null && waterSystem.hasWater(featureZone, featureAct)) {
-            waterSystem.updateDynamic(featureZone, featureAct, camera.getX(), camera.getY());
-            waterSystem.update();
-        }
+        waterCoordinator.advanceDynamicWaterLevel();
 
         if (zoneFeatureProvider != null && level != null) {
             zoneFeatureProvider.update(playable, camera.getX(), getFeatureZoneId());
@@ -1179,79 +1101,15 @@ public class LevelManager {
     }
 
     public void updatePlayableWaterStatesForCurrentLevel() {
-        int featureZone = getFeatureZoneId();
-        int featureAct = getFeatureActId();
-        if (level == null || waterSystem == null || !waterSystem.hasWater(featureZone, featureAct)) {
-            return;
-        }
-        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
-        AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
-        if (playable == null) {
-            return;
-        }
-        int waterY = waterSystem.getGameplayWaterLevelY(featureZone, featureAct);
-        updatePlayableWaterStates(playable, waterY);
+        waterCoordinator.updatePlayableWaterStatesForCurrentLevel();
     }
 
     public void updatePlayableWaterStateForCurrentLevel(AbstractPlayableSprite playable) {
-        int featureZone = getFeatureZoneId();
-        int featureAct = getFeatureActId();
-        if (level == null || waterSystem == null || !waterSystem.hasWater(featureZone, featureAct)
-                || playable == null) {
-            return;
-        }
-        int waterY = waterSystem.getGameplayWaterLevelY(featureZone, featureAct);
-        updatePlayableWaterState(playable, waterY);
-    }
-
-    private void updatePlayableWaterStates(AbstractPlayableSprite mainPlayable, int waterY) {
-        updatePlayableWaterState(mainPlayable, waterY);
-        for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            if (sidekick != mainPlayable) {
-                updatePlayableWaterState(sidekick, waterY);
-            }
-        }
-    }
-
-    private void updatePlayableWaterState(AbstractPlayableSprite playable, int waterY) {
-        if (playable == null) {
-            return;
-        }
-        // Hurt/dead-fall movement runs its own path and does not reach the
-        // normal water-status routine, so preserve Status_Underwater there.
-        // S2 Tails: Obj02_Dead calls Obj02_CheckGameOver, ObjectMoveAndFall,
-        // Tails_RecordPos/Animate/LoadDPLC/Display and omits Tails_Water
-        // (docs/s2disasm/s2.asm:41131-41137); Obj02_Control is the path that
-        // calls Tails_Water (38972-38987). S3K hurt movement similarly runs
-        // loc_122D8 without reaching Sonic_Water.
-        if (playable.isHurt() || isDeferredSidekickDeadFallWaterBypass(playable)) {
-            return;
-        }
-        // S3K Tails object_control bit 0 skips Tails_Modes but still runs
-        // Tails_Water (sonic3k.asm:26220-26248). Tails_Water updates
-        // Status_Underwater and speed constants before the object_control
-        // early return that skips velocity quarter/double side effects
-        // (sonic3k.asm:27416-27470).
-        if (playable.isObjectControlSuppressesMovement()) {
-            playable.updateWaterStateObjectControlled(waterY);
-            return;
-        }
-        playable.updateWaterState(waterY);
-    }
-
-    private static boolean isDeferredSidekickDeadFallWaterBypass(AbstractPlayableSprite playable) {
-        if (!playable.isCpuControlled()) {
-            return false;
-        }
-        SidekickCpuController cpu = playable.getCpuController();
-        return cpu != null && cpu.isDeferredDespawnDeadFallContinuingThisFrame();
+        waterCoordinator.updatePlayableWaterStateForCurrentLevel(playable);
     }
 
     boolean shouldSuppressUnderwaterPalette(int zoneId, int actId) {
-        if (zoneFeatureProvider == null) {
-            return false;
-        }
-        return zoneFeatureProvider.shouldSuppressUnderwaterPalette(zoneId, actId);
+        return waterCoordinator.shouldSuppressUnderwaterPalette(zoneId, actId);
     }
 
     public void applyPlaneSwitchers(AbstractPlayableSprite player) {
@@ -1282,161 +1140,12 @@ public class LevelManager {
         this.levelGamestate = newState;
     }
 
-    private void initPlayerSpriteArt() {
-        // Clear stale sidekick palette contexts from previous level loads
-        RenderContext.clearSidekickContexts();
-        dustBankCount = 0;
-        tailsTailBankCount = 0;
-        sidekickPatternBankCursor = 0;
-        CrossGameFeatureProvider crossGame = crossGameFeatures;
-        PlayerSpriteArtProvider artProvider;
-        if (CrossGameFeatureProvider.isActive()) {
-            artProvider = crossGame;
-        } else if (game instanceof PlayerSpriteArtProvider p) {
-            artProvider = p;
-        } else {
-            return;
-        }
-        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
-        if (!(player instanceof AbstractPlayableSprite playable)) {
-            return;
-        }
-        try {
-            SpriteArtSet artSet = artProvider.loadPlayerSpriteArt(playable.getCode());
-            if (artSet == null || artSet.bankSize() <= 0 || artSet.mappingFrames().isEmpty()
-                    || artSet.dplcFrames().isEmpty()) {
-                playable.setSpriteRenderer(null);
-                return;
-            }
-            PlayerSpriteRenderer renderer = new PlayerSpriteRenderer(artSet);
-            if (CrossGameFeatureProvider.isActive()) {
-                renderer.setRenderContext(crossGame.getDonorRenderContext());
-            }
-            renderer.ensureCached(graphicsManager);
-            playable.setSpriteRenderer(renderer);
-            playable.setMappingFrame(0);
-            playable.setAnimationFrameCount(artSet.mappingFrames().size());
-            playable.setAnimationProfile(artSet.animationProfile());
-            playable.setAnimationSet(artSet.animationSet());
-            playable.setAnimationId(0);
-            playable.setAnimationFrameIndex(0);
-            playable.setAnimationTick(0);
-            initSpindashDust(playable);
-            initTailsTails(playable, artSet);
-            initSuperState(playable);
-        } catch (IOException e) {
-            LOGGER.log(SEVERE, "Failed to load player sprite art.", e);
-        }
-
-        // Also initialize art for each sidekick (CPU-controlled Tails etc.)
-        // Every sidekick unconditionally gets its own isolated bank in the
-        // SIDEKICK_PATTERN_BASE range to avoid VRAM collisions even when
-        // characters share the same ART_TILE base (e.g. Knuckles and Sonic
-        // both use 0x0680 in S3K).
-        List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
-        String mainCharName = resolveMainCharacterCode();
-        List<String> sidekickCharNames = new ArrayList<>(sidekicks.size());
-        for (AbstractPlayableSprite sidekick : sidekicks) {
-            String name = spriteManager.getSidekickCharacterName(sidekick);
-            if (name == null) {
-                // Fallback: use the config's single sidekick code
-                name = configService.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-            }
-            sidekickCharNames.add(name);
-        }
-        // Cache loaded art per character type to avoid redundant ROM reads
-        java.util.Map<String, SpriteArtSet> artCache = new java.util.HashMap<>();
-        // First pass: load art for each sidekick (or null if unavailable) and collect bank sizes
-        List<SpriteArtSet> sidekickSourceArts = new ArrayList<>(sidekicks.size());
-        List<Integer> bankSizes = new ArrayList<>(sidekicks.size());
-        for (int i = 0; i < sidekicks.size(); i++) {
-            String sidekickCharName = sidekickCharNames.get(i);
-            SpriteArtSet sourceArt = artCache.computeIfAbsent(
-                    sidekickCharName.toLowerCase(),
-                    key -> {
-                        try {
-                            return artProvider.loadPlayerSpriteArt(key);
-                        } catch (IOException e) {
-                            LOGGER.log(SEVERE, "Failed to load art for sidekick character: " + key, e);
-                            return null;
-                        }
-                    });
-            boolean valid = sourceArt != null && sourceArt.bankSize() > 0
-                    && !sourceArt.mappingFrames().isEmpty()
-                    && !sourceArt.dplcFrames().isEmpty();
-            sidekickSourceArts.add(valid ? sourceArt : null);
-            if (valid) {
-                bankSizes.add(sourceArt.bankSize());
-            }
-        }
-        // Second pass: initialise each sidekick using the pre-computed offsets
-        int validIndex = 0;
-        for (int i = 0; i < sidekicks.size(); i++) {
-            AbstractPlayableSprite sidekick = sidekicks.get(i);
-            String sidekickCharName = sidekickCharNames.get(i);
-            SpriteArtSet sourceArt = sidekickSourceArts.get(i);
-            if (sourceArt == null) {
-                LOGGER.warning("Skipping art init for sidekick " + i
-                        + " (" + sidekickCharName + "): art unavailable or empty.");
-                continue;
-            }
-            try {
-                // Every sidekick gets its own isolated bank in SIDEKICK_PATTERN_BASE range.
-                // This avoids VRAM collisions even when characters share the same ART_TILE
-                // base (e.g., Knuckles and Sonic both use 0x0680 in S3K).
-                validIndex++;
-                int shiftedBase = reserveSidekickPatternBank(sourceArt.bankSize());
-                SpriteArtSet sidekickArt = new SpriteArtSet(
-                        sourceArt.artTiles(),
-                        sourceArt.mappingFrames(),
-                        sourceArt.dplcFrames(),
-                        sourceArt.paletteIndex(),
-                        shiftedBase,
-                        sourceArt.frameDelay(),
-                        sourceArt.bankSize(),
-                        sourceArt.animationProfile(),
-                        sourceArt.animationSet());
-                PlayerSpriteRenderer sidekickRenderer = new PlayerSpriteRenderer(sidekickArt);
-                // Palette isolation: if sidekick uses a different palette than main,
-                // create a dedicated RenderContext so it renders with correct colors.
-                RenderContext sidekickPaletteCtx = createSidekickPaletteContext(
-                        artProvider, sidekickCharName, mainCharName);
-                if (sidekickPaletteCtx != null) {
-                    sidekickRenderer.setRenderContext(sidekickPaletteCtx);
-                } else if (CrossGameFeatureProvider.isActive()) {
-                    sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());
-                }
-                sidekickRenderer.ensureCached(graphicsManager);
-                sidekick.setSpriteRenderer(sidekickRenderer);
-                sidekick.setMappingFrame(0);
-                sidekick.setAnimationFrameCount(sidekickArt.mappingFrames().size());
-                sidekick.setAnimationProfile(sidekickArt.animationProfile());
-                sidekick.setAnimationSet(sidekickArt.animationSet());
-                sidekick.setAnimationId(0);
-                sidekick.setAnimationFrameIndex(0);
-                sidekick.setAnimationTick(0);
-                initSpindashDust(sidekick);
-                initTailsTails(sidekick, sidekickArt);
-                // Propagate sidekick palette context to sub-renderers (dust, tail appendage)
-                if (sidekickPaletteCtx != null) {
-                    propagateSidekickPaletteContext(sidekick, sidekickPaletteCtx);
-                }
-                initSuperState(sidekick);
-            } catch (Exception e) {
-                LOGGER.log(SEVERE, "Failed to load sidekick sprite art for index " + i + ".", e);
-            }
-        }
-
-        // Upload donor and sidekick palettes to GPU
-        RenderContext.uploadDonorPalettes(graphicsManager);
-    }
-
     /**
      * Rebuilds playable sprite renderers after scripts add a sidekick during
      * gameplay, such as MGZ2's boss-transition Tails rescue object.
      */
     public void refreshPlayableSpriteArt() {
-        initPlayerSpriteArt();
+        playableArtInitializer.initialize();
     }
 
     /**
@@ -1448,13 +1157,7 @@ public class LevelManager {
      * @return list of offsets (one per sidekick) within SIDEKICK_PATTERN_BASE
      */
     public static List<Integer> computeSidekickBankOffsets(List<Integer> bankSizes) {
-        List<Integer> offsets = new ArrayList<>(bankSizes.size());
-        int running = 0;
-        for (int size : bankSizes) {
-            offsets.add(running);
-            running += size;
-        }
-        return offsets;
+        return LevelPlayableArtInitializer.computeSidekickBankOffsets(bankSizes);
     }
 
     /**
@@ -1463,49 +1166,7 @@ public class LevelManager {
      * trace ghosts use this to avoid corrupting real player/sidekick DPLC state.
      */
     public int reserveSidekickPatternBank(int bankSize) {
-        int safeSize = Math.max(0, bankSize);
-        int base = SIDEKICK_PATTERN_BASE + sidekickPatternBankCursor;
-        sidekickPatternBankCursor += safeSize;
-        return base;
-    }
-
-    private RenderContext createSidekickPaletteContext(
-            PlayerSpriteArtProvider artProvider,
-            String sidekickCharName, String mainCharName) {
-        if (sidekickCharName.equalsIgnoreCase(mainCharName)) {
-            return null;
-        }
-        Palette sidekickPalette = artProvider.loadCharacterPalette(sidekickCharName);
-        if (sidekickPalette == null) {
-            return null;
-        }
-        // Only create a separate context if the sidekick's palette actually
-        // differs from the main character's. Sonic and Tails share Pal_SonicTails
-        // in S3K — creating an unnecessary context would trigger a palette texture
-        // resize that wipes existing level palette data.
-        Palette mainPalette = artProvider.loadCharacterPalette(mainCharName);
-        if (mainPalette != null && sidekickPalette.dataEquals(mainPalette)) {
-            return null;
-        }
-        GameModule activeModule = gameModule;
-        if (activeModule == null && GameServices.hasRuntime()) {
-            activeModule = GameServices.module();
-        }
-        GameId gameId = activeModule != null ? activeModule.getGameId() : null;
-        RenderContext ctx = RenderContext.createSidekickContext(gameId);
-        ctx.setPalette(0, sidekickPalette);
-        return ctx;
-    }
-
-    private void propagateSidekickPaletteContext(AbstractPlayableSprite sidekick, RenderContext ctx) {
-        if (sidekick.getSpindashDustController() != null
-                && sidekick.getSpindashDustController().getRenderer() != null) {
-            sidekick.getSpindashDustController().getRenderer().setRenderContext(ctx);
-        }
-        if (sidekick.getTailsTailsController() != null
-                && sidekick.getTailsTailsController().getRenderer() != null) {
-            sidekick.getTailsTailsController().getRenderer().setRenderContext(ctx);
-        }
+        return playableArtInitializer.reserveSidekickPatternBank(bankSize);
     }
 
     private void resetPlayerState() {
@@ -1517,167 +1178,6 @@ public class LevelManager {
             sidekick.resetState();
             if (sidekick.getCpuController() != null) {
                 sidekick.getCpuController().reset();
-            }
-        }
-    }
-
-    private void initSpindashDust(AbstractPlayableSprite playable) {
-        CrossGameFeatureProvider crossGame = crossGameFeatures;
-        SpindashDustArtProvider dustProv;
-        if (CrossGameFeatureProvider.isActive()) {
-            dustProv = crossGame;
-        } else if (game instanceof SpindashDustArtProvider d) {
-            dustProv = d;
-        } else {
-            playable.setSpindashDustController(null);
-            return;
-        }
-        try {
-            String characterCode = playable.getCode().endsWith("_p2") ? playable.getCode().substring(0, playable.getCode().length() - 3) : playable.getCode();
-            SpriteArtSet dustArt = dustProv.loadSpindashDustArt(characterCode);
-            if (dustArt == null || dustArt.bankSize() <= 0 || dustArt.mappingFrames().isEmpty()
-                    || dustArt.dplcFrames().isEmpty()) {
-                playable.setSpindashDustController(null);
-                return;
-            }
-            // Multiple characters sharing the same dust base corrupt each other's
-            // DPLC banks.  Shift subsequent dust renderers into isolated banks,
-            // similar to how sidekick body sprites and Tails tail appendages are
-            // shifted (see initTailsTails).
-            if (dustBankCount > 0) {
-                int shiftedBase = reserveSidekickPatternBank(dustArt.bankSize());
-                dustArt = new SpriteArtSet(
-                        dustArt.artTiles(),
-                        dustArt.mappingFrames(),
-                        dustArt.dplcFrames(),
-                        dustArt.paletteIndex(),
-                        shiftedBase,
-                        dustArt.frameDelay(),
-                        dustArt.bankSize(),
-                        dustArt.animationProfile(),
-                        dustArt.animationSet());
-            }
-            dustBankCount++;
-            PlayerSpriteRenderer dustRenderer = new PlayerSpriteRenderer(dustArt);
-            if (CrossGameFeatureProvider.isActive()) {
-                dustRenderer.setRenderContext(crossGame.getDonorRenderContext());
-            }
-            dustRenderer.ensureCached(graphicsManager);
-            playable.setSpindashDustController(new SpindashDustController(
-                    playable, dustRenderer, fixedDustSlotFor(playable)));
-        } catch (IOException e) {
-            LOGGER.log(SEVERE, "Failed to load spindash dust art.", e);
-            playable.setSpindashDustController(null);
-        }
-    }
-
-    private int fixedDustSlotFor(AbstractPlayableSprite playable) {
-        if (playable == null) {
-            return -1;
-        }
-        GameModule module = activeGameModule();
-        PowerUpRules rules = powerUpRulesFor(module);
-        if (rules == null || !rules.waterSplashUsesFixedDustObject()) {
-            return -1;
-        }
-        if (!playable.isCpuControlled()) {
-            return rules.fixedDustSlotIndex(false);
-        }
-        List<AbstractPlayableSprite> sidekicks = spriteManager != null ? spriteManager.getSidekicks() : List.of();
-        return !sidekicks.isEmpty() && sidekicks.get(0) == playable
-                ? rules.fixedDustSlotIndex(true)
-                : -1;
-    }
-
-    /** Tracks how many dust DPLC banks have been allocated this level load. */
-    private int dustBankCount = 0;
-
-    /** Tracks how many tail appendage DPLC banks have been allocated this level load. */
-    private int tailsTailBankCount = 0;
-
-    private void initTailsTails(AbstractPlayableSprite playable, SpriteArtSet artSet) {
-        if (!(playable instanceof Tails)) {
-            playable.setTailsTailsController(null);
-            return;
-        }
-        CrossGameFeatureProvider crossGame = crossGameFeatures;
-        // Check donor game first (cross-game donation), then fall back to base game module
-        boolean isS3k = CrossGameFeatureProvider.isActive()
-                ? crossGame.hasSeparateTailsTailArt()
-                : gameModule.hasSeparateTailsTailArt();
-        SpriteArtSet tailsArt;
-        if (isS3k) {
-            // S3K: Obj05 uses a completely separate art/mapping/DPLC set
-            if (CrossGameFeatureProvider.isActive()) {
-                try {
-                    tailsArt = crossGame.loadTailsTailArt();
-                } catch (IOException e) {
-                    LOGGER.log(SEVERE, "Failed to load cross-game tails tail art.", e);
-                    tailsArt = null;
-                }
-            } else {
-                tailsArt = gameModule.loadTailsTailArt();
-            }
-            if (tailsArt == null || tailsArt.isEmpty()) {
-                playable.setTailsTailsController(null);
-                return;
-            }
-        } else {
-            // Non-S3K: Obj05 uses same mappings/DPLCs/art as Tails but at a different VRAM base.
-            // The base is provided by the game module (e.g. S2: 0x07B0).
-            tailsArt = new SpriteArtSet(
-                    artSet.artTiles(),
-                    artSet.mappingFrames(),
-                    artSet.dplcFrames(),
-                    artSet.paletteIndex(),
-                    gameModule.getTailsTailVramBase(),
-                    artSet.frameDelay(),
-                    artSet.bankSize(),
-                    null,
-                    null
-            );
-        }
-        // Multiple Tails sidekicks need separate DPLC banks for the tail appendage,
-        // just like the main sprite body. The first Tails uses the original base;
-        // subsequent ones get shifted into SIDEKICK_PATTERN_BASE range.
-        if (tailsTailBankCount > 0) {
-            int shiftedBase = reserveSidekickPatternBank(tailsArt.bankSize());
-            tailsArt = new SpriteArtSet(
-                    tailsArt.artTiles(),
-                    tailsArt.mappingFrames(),
-                    tailsArt.dplcFrames(),
-                    tailsArt.paletteIndex(),
-                    shiftedBase,
-                    tailsArt.frameDelay(),
-                    tailsArt.bankSize(),
-                    tailsArt.animationProfile(),
-                    tailsArt.animationSet()
-            );
-        }
-        tailsTailBankCount++;
-        PlayerSpriteRenderer tailsRenderer = new PlayerSpriteRenderer(tailsArt);
-        if (CrossGameFeatureProvider.isActive()) {
-            tailsRenderer.setRenderContext(crossGame.getDonorRenderContext());
-        }
-        tailsRenderer.ensureCached(graphicsManager);
-        playable.setTailsTailsController(new TailsTailsController(playable, tailsRenderer, isS3k));
-    }
-
-    private void initSuperState(AbstractPlayableSprite playable) {
-        if (gameModule == null) {
-            return;
-        }
-        var superCtrl = gameModule.createSuperStateController(playable);
-        playable.setSuperStateController(superCtrl);
-
-        // Load game-specific ROM data (palette cycling, etc.)
-        if (superCtrl != null && !superCtrl.isRomDataPreLoaded()) {
-            try {
-                Rom rom = GameServices.rom().getRom();
-                RomByteReader reader = RomByteReader.fromRom(rom);
-                superCtrl.loadRomData(reader);
-            } catch (Exception e) {
-                LOGGER.fine("Could not load Super Sonic ROM data: " + e.getMessage());
             }
         }
     }
@@ -2446,10 +1946,7 @@ public class LevelManager {
     }
 
     public void reuploadDirtyPatterns(java.util.BitSet dirtyPatterns) {
-        if (dirtyPatterns == null || dirtyPatterns.isEmpty() || level == null) {
-            return;
-        }
-        graphicsManager.reuploadDirtyPatterns(dirtyPatterns, level);
+        dirtyRegionDispatcher.reuploadDirtyPatterns(dirtyPatterns);
     }
 
     public void resyncObjectSpawnListFromLevel() {
@@ -2478,26 +1975,7 @@ public class LevelManager {
     }
 
     public void applyMutationEffects(MutationEffects effects) {
-        if (effects == null || effects.isEmpty()) {
-            return;
-        }
-        if (effects.hasDirtyPatterns()) {
-            reuploadDirtyPatterns(effects.dirtyPatterns());
-        }
-        if (effects.dirtyRegionProcessingRequired()) {
-            processDirtyRegions();
-        }
-        if (effects.allTilemapsRedrawRequired()) {
-            invalidateAllTilemaps();
-        } else if (effects.foregroundRedrawRequired()) {
-            invalidateForegroundTilemap();
-        }
-        if (effects.objectResyncRequired()) {
-            resyncObjectSpawnListFromLevel();
-        }
-        if (effects.ringResyncRequired()) {
-            resyncRingSpawnListFromLevel();
-        }
+        dirtyRegionDispatcher.applyMutationEffects(effects);
     }
 
     /**
@@ -2843,55 +2321,11 @@ public class LevelManager {
      * ROM: S1 Lamp_LoadInfo, S2 Obj79_LoadData, S3K Saved_zone_and_act restore.
      */
     public void restoreCheckpointState(LevelLoadContext ctx) {
-        if (!ctx.hasCheckpoint() || checkpointState == null) {
-            return;
-        }
-        checkpointState.restoreFromSaved(
-                ctx.getCheckpointX(), ctx.getCheckpointY(),
-                ctx.getCheckpointCameraX(), ctx.getCheckpointCameraY(),
-                ctx.getCheckpointIndex());
-        if (checkpointState instanceof CheckpointState cs) {
-            if (ctx.hasWaterState()) {
-                cs.saveWaterState(ctx.getCheckpointWaterLevel(), ctx.getCheckpointWaterRoutine());
-            }
-            if (ctx.hasCheckpointS3kRuntimeState()) {
-                cs.saveS3kRuntimeState(
-                        ctx.getCheckpointCameraMaxY(),
-                        ctx.getCheckpointDynamicResizeRoutine());
-            }
-            if (ctx.hasCheckpointSolidBits()) {
-                cs.saveSolidBits(ctx.getCheckpointTopSolidBit(), ctx.getCheckpointLrbSolidBit());
-            }
-        }
-
-        // ROM Lamp_LoadInfo: restore water level and routine after level reload.
-        if (ctx.hasWaterState()) {
-            int featureZone = getFeatureZoneId();
-            int featureAct = getFeatureActId();
-            if (waterSystem.hasWater(featureZone, featureAct)) {
-                waterSystem.setWaterLevelDirect(featureZone, featureAct, ctx.getCheckpointWaterLevel());
-                waterSystem.setWaterLevelTarget(featureZone, featureAct, ctx.getCheckpointWaterLevel());
-            }
-            if (zoneFeatureProvider != null) {
-                zoneFeatureProvider.setWaterRoutine(ctx.getCheckpointWaterRoutine());
-            }
-        }
+        checkpointCoordinator.restoreCheckpointState(ctx);
     }
 
     private void restoreCheckpointRuntimeState(LevelLoadContext ctx) {
-        if (!ctx.hasCheckpoint() || !ctx.hasCheckpointS3kRuntimeState()) {
-            return;
-        }
-
-        camera.setMaxY((short) ctx.getCheckpointCameraMaxY());
-        camera.setMaxYTarget((short) ctx.getCheckpointCameraMaxY());
-
-        LevelEventProvider levelEvents = activeGameModule().getLevelEventProvider();
-        if (levelEvents instanceof AbstractLevelEventManager eventManager) {
-            eventManager.restoreEventRoutineState(
-                    ctx.getCheckpointDynamicResizeRoutine(),
-                    eventManager.getEventRoutineBg());
-        }
+        checkpointCoordinator.restoreRuntimeState(ctx);
     }
 
     /**
@@ -3072,11 +2506,6 @@ public class LevelManager {
         }
     }
 
-    private PowerUpRules powerUpRulesFor(GameModule module) {
-        GameRules rules = gameRulesFor(module);
-        return rules != null ? rules.powerUp() : null;
-    }
-
     private CameraRules cameraRulesFor(GameModule module) {
         GameRules rules = gameRulesFor(module);
         return rules != null ? rules.camera() : null;
@@ -3235,7 +2664,7 @@ public class LevelManager {
             ctx.setShowTitleCard(showTitleCard);
             ctx.setLevelData(levelData);
             ctx.setIncludePostLoadAssembly(true);
-            ctx.snapshotCheckpoint(checkpointState);
+            ctx.snapshotCheckpoint(checkpointCoordinator.state());
 
             loadLevel(levelData.getLevelIndex(), loadMode, ctx);
             if (loadMode != LevelLoadMode.PREVIEW_CAPTURE) {
@@ -3275,9 +2704,7 @@ public class LevelManager {
         }
         writeApparentAct(currentAct);
         // Clear checkpoint when manually changing level
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
         loadCurrentLevel();
     }
 
@@ -3300,9 +2727,7 @@ public class LevelManager {
         }
         writeApparentAct(currentAct);
         // Clear checkpoint when advancing
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
         loadCurrentLevel();
     }
 
@@ -3321,9 +2746,7 @@ public class LevelManager {
             }
         }
         writeApparentAct(currentAct);
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
         transitions.setSpecialStageReturnLevelReloadRequested(true);
     }
 
@@ -3336,9 +2759,7 @@ public class LevelManager {
         writeApparentAct(act);
         writeCurrentZone(zone);
         // Clear checkpoint when manually changing level
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
         loadCurrentLevel(loadMode != LevelLoadMode.PREVIEW_CAPTURE, loadMode);
     }
 
@@ -3358,165 +2779,10 @@ public class LevelManager {
      * @throws IOException if level data loading fails
      */
     public void executeActTransition(SeamlessLevelTransitionRequest request) throws IOException {
-        if (request == null) {
-            return;
-        }
-
-        // Use fresh Camera reference (the cached field can go stale after
-        // Camera.resetState() in test teardown or level reload)
-        Camera cam = camera;
-
-        // Clear end-of-level flags from the previous act. The results screen
-        // sets endOfLevelFlag=true when its tally completes, and seamless
-        // transitions don't do a full game-state reset. Without this, stale
-        // flags persist into the new act — e.g. AIZ1 results set the flag,
-        // the fire transition reloads as AIZ2, and the AIZ2 egg capsule
-        // immediately detects the stale flag and triggers its post-boss
-        // cutscene during the AIZ2 results tally.
-        GameServices.gameState().resetForLevel();
-
-        // Suppress music reload if requested (ROM: music continues through transition)
-        if (request.preserveMusic()) {
-            setSuppressNextMusicChange(true);
-        }
-
-        // 1. Set zone/act (ROM: move.b d0, Current_zone_and_act)
-        writeCurrentZone(request.targetZone());
-        writeCurrentAct(request.targetAct());
-
-        // 2. Reload layout + collision only (ROM: Load_Level + LoadSolids)
-        if (levels.isEmpty()) {
-            gameModule = GameServices.module();
-            refreshZoneList();
-        }
-        LevelData levelData = levels.get(currentZone).get(currentAct);
-        loadLevelData(levelData.getLevelIndex());
-
-        // 3. Apply art mutations if requested (ROM: zone-specific art swaps)
-        if (request.mutationKey() != null && !request.mutationKey().isBlank()) {
-            applySeamlessMutation(request.mutationKey());
-        }
-
-        // 4. Reinitialize animated content for the newly loaded zone/act.
-        // The ROM dispatches animation logic off Current_zone_and_act every frame;
-        // our managers capture act-specific scripts at construction time.
-        initAnimatedContent();
-
-        // 4b. Reload standalone (ROM-compressed) object art for the new act.
-        // Act-specific badniks use different standalone art per act (e.g. HCZ Act 1
-        // has Blastoid, Act 2 has Jawz). Without this, act-specific objects spawned
-        // after the transition have no art registered and render invisibly.
-        ObjectArtProvider artProvider = gameModule != null ? gameModule.getObjectArtProvider() : null;
-        if (artProvider != null) {
-            artProvider.reloadStandaloneArtForActTransition(currentZone);
-
-            // 4c. Re-register level-art-based object sheets for the new act.
-            // Act-specific objects (e.g. cork floor, floating platform) use different art
-            // keys per act; without re-registration they resolve to stale keys and
-            // appear invisible after the transition.
-            artProvider.registerLevelTileArt(level, currentZone);
-            if (objectRenderManager != null) {
-                objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
-            }
-        }
-
-        // 4d. Reinitialize water for the new act.
-        // ROM: CheckLevelForWater (s3.asm:5811) runs during every level load,
-        // including act transitions. Sets Water_flag, Water_level, Mean_water_level,
-        // Target_water_level, Water_speed, and the zone-specific dynamic handler.
-        // Seamless=true: ROM's Apparent_zone_and_act still points to the previous act,
-        // which enables water for cases that a direct load would disable (AIZ2 Knuckles).
-        initWater(true);
-
-        // 5. Clear checkpoint state (ROM: clr.b (Respawn_table_keep).w)
-        // Without this, starposts from Act 1 would appear activated in Act 2.
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
-
-        // 5b. Reset level gamestate (timer + rings) for normal act transitions.
-        // AIZ1 fire transition is a mid-level continuity reload; its timer/rings
-        // carry into AIZ2 and feed the final results tally.
-        if (!request.preserveLevelGamestate()) {
-            levelGamestate = gameModule.createLevelState();
-        }
-
-        List<ObjectInstance> persistentDynamicObjects = objectManager != null
-                ? objectManager.snapshotPersistentDynamicObjectsForTransition()
-                : List.of();
-
-        // 6. Rebuild managers with new act's spawn data
-        // (ROM: Load_Level swaps obj/ring pointers, then clears Dynamic_object_RAM + Ring_status_table)
-        rebuildManagersForActTransition(cam, persistentDynamicObjects);
-
-        // 6. Apply coordinate offsets (ROM: Offset_ObjectsDuringTransition)
-        applySeamlessOffsets(request, cam);
-
-        // 6b. ROM Offset_ObjectsDuringTransition shifts every surviving object by
-        // the same delta as the players/camera. Carried persistent objects (e.g. the
-        // end signpost in CNZ/HCZ/MGZ) must move with the world or they are stranded
-        // at their Act 1 position and culled/destroyed off-screen.
-        offsetCarriedObjectsForTransition(persistentDynamicObjects, request);
-
-        // 7. Restore camera bounds from new level data
-        restoreCameraBoundsForCurrentLevel(cam);
-        applyPostTransitionCameraOverrides(request, cam);
-        if (!request.preserveOffsetCameraPosition()) {
-            cam.updatePosition(true);
-        }
-
-        // 7b. Refresh sidekick CPU level-bound overrides to match the new camera bounds.
-        //
-        // SidekickCpuController stores its own minXBound/maxXBound/maxYBound that
-        // override the live camera bounds in PlayableSpriteMovement.doLevelBoundary
-        // (the ROM camera-bound clamp at sonic3k.asm:36925/36945 etc.). These
-        // overrides are populated by per-zone event handlers (e.g. Sonic3kAIZEvents
-        // boss arena lock) and then refreshed each frame by
-        // Sonic3kLevelEventManager.syncSidekickBoundsToCamera() at the END of
-        // update(). Without this resync, the next frame's doLevelBoundary reads
-        // stale AIZ1-boss-arena bounds and clamps Tails to that arena's left edge,
-        // teleporting the sidekick across the AIZ2 reload offset (AIZ trace F5497
-        // tails_x mismatch: stale minXBound=0x2F10 yielded leftBoundary=0x2F20,
-        // teleporting Tails from the post-transition 0x00B1 to 0x2F20).
-        // Re-syncing here matches the ROM semantics: the act-transition reload
-        // resets Camera_min_X_pos / Camera_min_Y_pos (sonic3k.asm:104758-104762),
-        // and ROM Tails reads those same fields directly — there is no separate
-        // Tails-CPU bounds storage in the ROM, so the engine's mirror must be
-        // refreshed alongside the camera reset.
-        for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            SidekickCpuController cpu = sidekick.getCpuController();
-            if (cpu != null) {
-                cpu.setLevelBounds(
-                        (int) cam.getMinX(),
-                        (int) cam.getMaxX(),
-                        (int) Math.max(cam.getMaxY(), cam.getMaxYTarget()));
-            }
-        }
-
-        // 8. Reinitialize level events for new act
-        initLevelEventsForCurrentZoneAct();
-
-        // 9. Reinitialize zone features (water surface sprites, etc.) for the new act.
-        // Without this, the water surface manager retains Act 1's act ID and renders
-        // wave sprites at the wrong water level.
-        try {
-            reinitializeZoneFeaturesForActTransition();
-        } catch (IOException e) {
-            LOGGER.warning("Failed to reinitialize zone features: " + e.getMessage());
-        }
-
-        // 9. Music override if specified
-        if (request.musicOverrideId() >= 0) {
-            audioManager.playMusic(request.musicOverrideId());
-        }
-
-        // 10. In-level title card if requested
-        if (request.showInLevelTitleCard() && !graphicsManager.isHeadlessMode()) {
-            requestInLevelTitleCard(currentZone, currentAct);
-        }
+        actTransitionExecutor.execute(request);
     }
 
-    private void restoreCameraBoundsForCurrentLevel(Camera cam) {
+    void restoreCameraBoundsForCurrentLevel(Camera cam) {
         Level currentLevel = getCurrentLevel();
         if (currentLevel == null) {
             return;
@@ -3536,7 +2802,7 @@ public class LevelManager {
         verticalWrapEnabled = cam.isVerticalWrapEnabled();
     }
 
-    private void applyPostTransitionCameraOverrides(SeamlessLevelTransitionRequest request, Camera cam) {
+    void applyPostTransitionCameraOverrides(SeamlessLevelTransitionRequest request, Camera cam) {
         if (request == null) {
             return;
         }
@@ -3568,7 +2834,7 @@ public class LevelManager {
      * The delta matches the player offset (player/camera/object offsets are the
      * same world shift for every S3K seamless act transition).
      */
-    private void offsetCarriedObjectsForTransition(List<ObjectInstance> carried,
+    void offsetCarriedObjectsForTransition(List<ObjectInstance> carried,
                                                    SeamlessLevelTransitionRequest request) {
         if (request == null || carried == null || carried.isEmpty()) {
             return;
@@ -3585,7 +2851,7 @@ public class LevelManager {
         }
     }
 
-    private void applySeamlessOffsets(SeamlessLevelTransitionRequest request, Camera cam) {
+    void applySeamlessOffsets(SeamlessLevelTransitionRequest request, Camera cam) {
         if (request == null) {
             return;
         }
@@ -3643,7 +2909,7 @@ public class LevelManager {
      * reconstruct both managers so they reference {@code level.getObjects()}
      * and {@code level.getRings()} from the newly loaded act.
      */
-    private void rebuildManagersForActTransition(Camera cam, List<ObjectInstance> persistentDynamicObjects) {
+    void rebuildManagersForActTransition(Camera cam, List<ObjectInstance> persistentDynamicObjects) {
         int cameraX = cam.getX();
 
         // Rebuild ObjectManager with the new act's object spawns
@@ -3718,7 +2984,7 @@ public class LevelManager {
         }
     }
 
-    private void initLevelEventsForCurrentZoneAct() {
+    void initLevelEventsForCurrentZoneAct() {
         LevelEventProvider levelEvents = activeGameModule().getLevelEventProvider();
         if (levelEvents != null) {
             levelEvents.initLevel(currentZone, currentAct);
@@ -3733,9 +2999,7 @@ public class LevelManager {
         writeCurrentAct(0);
         writeApparentAct(0);
         // Clear checkpoint when manually changing level
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
         loadCurrentLevel();
     }
 
@@ -3744,30 +3008,23 @@ public class LevelManager {
         writeCurrentAct(0);
         writeApparentAct(0);
         // Clear checkpoint when manually changing level
-        if (checkpointState != null) {
-            checkpointState.clear();
-        }
+        checkpointCoordinator.clear();
         loadCurrentLevel();
     }
 
     public RespawnState getCheckpointState() {
-        return checkpointState;
+        return checkpointCoordinator.state();
     }
 
     public CheckpointState.RewindState captureCheckpointStateForRewind() {
-        return checkpointState instanceof CheckpointState cs ? cs.captureRewindState() : null;
+        return checkpointCoordinator.captureRewindState();
     }
 
     public void restoreCheckpointStateForRewind(CheckpointState.RewindState checkpointRewindState) {
         if (checkpointRewindState == null) {
             return;
         }
-        if (checkpointState == null && gameModule != null) {
-            checkpointState = gameModule.createRespawnState();
-        }
-        if (checkpointState instanceof CheckpointState cs) {
-            cs.restoreRewindState(checkpointRewindState);
-        }
+        checkpointCoordinator.restoreRewindState(checkpointRewindState);
     }
 
     // ==================== Transition Coordinator Delegation ====================
@@ -3874,7 +3131,7 @@ public class LevelManager {
         hudRenderManager = null;
         animatedPatternManager = null;
         animatedPaletteManager = null;
-        checkpointState = null;
+        checkpointCoordinator.resetState();
         levelGamestate = null;
         if (tilemapManager != null) {
             tilemapManager.resetState();
@@ -4103,7 +3360,7 @@ public class LevelManager {
         return spriteManager != null && spriteManager.getFrameCounter() == frameCounter + 1;
     }
 
-    private void applySeamlessMutation(String mutationKey) {
+    void applySeamlessMutation(String mutationKey) {
         gameModule.applySeamlessMutation(this, mutationKey);
     }
 

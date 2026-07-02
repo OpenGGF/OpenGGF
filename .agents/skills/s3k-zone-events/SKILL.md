@@ -96,9 +96,9 @@ These are inherited through Sonic3kLevelEventManager and available when the zone
 | `fadeMusic()` | `FadeOutMusic` | Fade current music |
 | `playSfx(id)` | `PlaySfx` | Play sound effect |
 | `startTimer(frames)` | Timer countdown | Start countdown, check `isTimerExpired()` |
-| `transitionToZone(zone, act)` | Level restart | Trigger zone/act transition |
+| `transitionToZone(zone, act)` | Level restart | Queue a zone/act transition request |
 
-**Note:** The zone event handler accesses these through the Sonic3kLevelEventManager instance or the `Sonic3kZoneEvents` helper methods. For camera boundaries, use the zone-events camera helper; for audio, ROM, level, palette, and runtime-state access, use the `GameServices`-backed helpers already exposed by `Sonic3kZoneEvents`. Do not add new singleton lookups.
+**Note:** The zone event handler accesses these through the Sonic3kLevelEventManager instance or the `Sonic3kZoneEvents` helper methods. For camera boundaries, use the zone-events camera helper; for audio, ROM, level, palette, and runtime-state access, use the `GameServices`-backed helpers already exposed by `Sonic3kZoneEvents`. Do not add new singleton lookups. In-place seamless reload execution is owned by `LevelActTransitionExecutor`; event handlers should request transitions through the existing event/transition APIs rather than editing `LevelManager` directly.
 
 ### Framework-First Routing
 

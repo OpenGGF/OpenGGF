@@ -1,7 +1,7 @@
 package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
-import com.openggf.audio.synth.PsgChipGPGX;
+import com.openggf.audio.synth.PsgChip;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -15,13 +15,13 @@ public class TestPsgChipGpgxParity {
 
     @Test
     public void defaultsToFastModeForCrisperGenesisParity() {
-        PsgChipGPGX chip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
+        PsgChip chip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
         assertFalse(chip.isHqMode(), "GPGX parity should default to fast PSG mode");
     }
 
     @Test
     public void renderKeepsClockCarryBoundedToPsgCycleRemainder() throws Exception {
-        PsgChipGPGX chip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
+        PsgChip chip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
 
         // Channel 0: audible tone so the chip has active transitions across renders.
         chip.write(0x80); // Tone 0 period low nibble = 0
@@ -40,7 +40,7 @@ public class TestPsgChipGpgxParity {
 
     @Test
     public void noiseLfsrClocksOnEveryToggle() throws Exception {
-        PsgChipGPGX chip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
+        PsgChip chip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
 
         int initialShift = readPrivateInt(chip, "noiseShiftValue");
         int shiftWidth = readPrivateInt(chip, "noiseShiftWidth");
@@ -60,7 +60,7 @@ public class TestPsgChipGpgxParity {
 
     @Test
     public void noiseLfsrCanBeConfiguredToPositiveEdgeOnly() throws Exception {
-        PsgChipGPGX chip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
+        PsgChip chip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
         chip.setNoiseShiftOnEveryToggle(false);
 
         int initialShift = readPrivateInt(chip, "noiseShiftValue");
@@ -80,7 +80,7 @@ public class TestPsgChipGpgxParity {
 
     @Test
     public void blipTimingDoesNotAccumulateLargeBacklogAt48khz() throws Exception {
-        PsgChipGPGX chip = new PsgChipGPGX(48000.0, PsgChipGPGX.ChipType.INTEGRATED);
+        PsgChip chip = new PsgChip(48000.0, PsgChip.ChipType.INTEGRATED);
 
         int[] left = new int[1];
         int[] right = new int[1];
@@ -100,7 +100,7 @@ public class TestPsgChipGpgxParity {
 
     @Test
     public void toneRenderOutputStaysExactInFastAndHqModes() {
-        PsgChipGPGX fastChip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
+        PsgChip fastChip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
         fastChip.write(0x80);
         fastChip.write(0x20);
         fastChip.write(0x90);
@@ -113,7 +113,7 @@ public class TestPsgChipGpgxParity {
                 fastLeft, "Fast mode tone output should remain bit-exact for this deterministic setup");
         assertArrayEquals(fastLeft, fastRight, "Stereo output should remain symmetric with default panning");
 
-        PsgChipGPGX hqChip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
+        PsgChip hqChip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
         hqChip.setHqMode(true);
         hqChip.write(0x80);
         hqChip.write(0x20);
@@ -130,7 +130,7 @@ public class TestPsgChipGpgxParity {
 
     @Test
     public void noiseRenderOutputStaysExactInFastAndHqModes() {
-        PsgChipGPGX fastChip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
+        PsgChip fastChip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
         fastChip.write(0xE3);
         fastChip.write(0xF0);
 
@@ -142,7 +142,7 @@ public class TestPsgChipGpgxParity {
                 fastLeft, "Fast mode noise output should remain bit-exact for this deterministic setup");
         assertArrayEquals(fastLeft, fastRight, "Stereo noise output should remain symmetric with default panning");
 
-        PsgChipGPGX hqChip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
+        PsgChip hqChip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
         hqChip.setHqMode(true);
         hqChip.write(0xE3);
         hqChip.write(0xF0);
