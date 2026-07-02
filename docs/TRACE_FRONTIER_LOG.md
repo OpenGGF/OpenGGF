@@ -9,10 +9,11 @@ branch-local measurements.
 Current branch-local S2 state after the round 47 ARZ2 targeted pass:
 ARZ2 is f4920 / 4 under `frontierOnly` (`obj_s14_type` expected `0x08`,
 actual missing),
-CNZ2 is f9946 / 300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
-(`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 is f12107 / 99
-(`tails_y` expected `0x02A5`, actual `0x02A4` in the refreshed S2 sweep; focused
-OOZ2 runs also report `tails_g_speed` expected `0x00A4`, actual `0x0000`). Full
+CNZ2 is f9946 / 8 under `frontierOnly` (`x_speed` expected `0x0200`, actual
+`0x08A8`), MTZ3 is f13336 / 6 under `frontierOnly` (`x_speed` expected
+`0x0200`, actual `-0200`), and OOZ2 is f12107 / 13 under `frontierOnly`
+(`tails_y` expected `0x02A5`, actual `0x02A4`; focused full reports also show
+`tails_g_speed` expected `0x00A4`, actual `0x0000`). Full
 S2 was last swept in round 45 at 15 green / 4 expected-red; full S1 remains
 green, and the S3K guard state is unchanged. No S2 trace greened in round 47.
 
@@ -67,6 +68,47 @@ Verification:
   ""-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen""
   ""-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils""
   test"` passed 51/51 after clearing stale Surefire reports.
+- Integrated conductor target:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen"
+  test` reports the expected-red frontier at f4920 / 4.
+- Integrated S2 subset:
+  `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen"
+  test` ran 5 requested checks: ARZ1 passed; ARZ2 f4920 / 4, CNZ2 f9946 / 8,
+  MTZ3 f13336 / 6, and OOZ2 f12107 / 13 remained expected-red.
+
+Other round-47 workers made no commits:
+- CNZ2 worktree `.worktrees/ai-s2-cnz2-round47-next` /
+  `bugfix/ai-s2-cnz2-round47-next`: reproduced f9946 / 8. Instrumentation
+  showed the engine Obj51 ball in slot `$25` runs before its parent boss in
+  slot `$28`, so it observes `Boss_Countdown` one object update later than the
+  ROM case where the parent slot runs before the ball slot. A targeted
+  lower-slot countdown visibility candidate advanced the release timing but
+  regressed to the known f9199 `tails_x_speed` failure from the split-ball pair,
+  so it was reverted. The next useful probe is a PC-execute BizHawk capture
+  around Obj51 `loc_31F96`, `loc_31FF8`, `loc_32030`, and
+  `Touch_ChkHurt` / `HurtCharacter` to separate pre-split falling-ball timing
+  from split-pair touch timing without changing slot pressure.
+- MTZ3 worktree `.worktrees/ai-s2-mtz3-round47-next` /
+  `bugfix/ai-s2-mtz3-round47-next`: reproduced f13336 / 6. VerticalAngle seed
+  `+0x10` regressed to f12594, and early contraction clear at `objoff_3C<=0x02`
+  regressed to f12897; both were reverted. Temporary diagnostics showed engine
+  live orb2 pre-contact has vertical angle `$24` where the round-46 BizHawk lead
+  reports ROM `$34`, but ROM/engine contraction positions around f13177-f13210
+  are effectively aligned. The remaining slip appears after the normal-cycle
+  restart, so no unsupported phase compensation was kept.
+- OOZ2 worktree `.worktrees/ai-s2-ooz2-round47-next` /
+  `bugfix/ai-s2-ooz2-round47-next`: reproduced f12107 / 13. Obj55
+  collision-routine generic suppression, pending-main-init `Boss_CollisionRoutine`
+  persistence, and OOZ live `collision_flags` after a main-character hit all
+  failed first at f12107 `tails_g_speed`, so they were reverted. Diagnostic
+  result: engine Tails was `anim=00`, `rolling=false`, and `air=false` when
+  resolving Obj55, so ROM avoidance is not explained by roll/spindash attack
+  state.
+- No S2 trace turned green in round 47, so the ARZ2 advance was merged into the
+  campaign branch only and was not banked into `next`.
 
 ## 2026-07-02 - S2 round 46 ARZ2 targeted advance
 
