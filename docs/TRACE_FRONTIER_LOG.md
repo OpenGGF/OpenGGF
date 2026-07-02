@@ -71,6 +71,34 @@ Verification:
   Obj89; no shared physics, collision, sidekick, or cross-game object
   infrastructure was touched.
 
+## 2026-07-02 - S2 round 58 closure
+
+Round 58 merged ARZ2 worker commit `dd03abfa9` into the conductor as
+`1d8b8c2aa`. CNZ2 and MTZ3 did not produce committed changes.
+
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round58-next` /
+  `bugfix/ai-s2-cnz2-round58-next` reproduced f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`). The latest useful
+  evidence is upstream phase drift in Obj51's split electric ball: BizHawk
+  showed the ROM falling/split ball around x `0x2909` with the split clone
+  already present when the boss x is `0x2921`; the engine's equivalent ball is
+  around x `0x290B` and splits around boss x `0x2923`. No disassembly-backed
+  candidate advanced the frontier.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round58-next` /
+  `bugfix/ai-s2-mtz3-round58-next` reproduced f13358 / 6
+  (`tails_x_speed` expected `-020C`, actual `0x020C`). BizHawk diagnostics
+  sampled BK2 frames 39518-39526 and confirmed ROM Obj54 remains at
+  `Boss_X=$2B31` through the f13358/f13359 contact window while the engine
+  snapshot is already `$2B32`. Rejected candidates included an Obj54 SubE
+  pause display-only correction, Obj54 current-touch-state adjustment, and
+  deferring only Obj54 `onHitTaken` to invulnerability `$3F` because that
+  regressed to f12909.
+- Conductor verification after the ARZ2 merge used:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  and ran 19 S2 trace tests: 16 green / 3 expected-red at ARZ2 f5968 / 8,
+  CNZ2 f9977 / 10, and MTZ3 f13358 / 6. No S2 trace turned green this round,
+  so no round-58 change was banked into `next`.
+
 ## 2026-07-02 - S2 round 57 ARZ2 Obj89 arrow PlatformObject landing dimensions
 
 Round 57 ARZ2 worker used
