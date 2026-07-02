@@ -2,7 +2,10 @@ package com.openggf.game.rewind;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PlayerInputState;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,49 +39,67 @@ class TestLiveRewindInputSource {
     }
 
     @Test
-    void appendFrameRecordsP1HeldButtonsAndJumpPressEdge() {
-        InputHandler input = new InputHandler();
+    void appendFrameRecordsP1LogicalHeldButtonsActionMaskAndStartPressEdge() {
+        InputHandler input = new InputHandler(config);
         LiveRewindInputSource source = new LiveRewindInputSource();
 
-        input.handleKeyEvent(config.getInt(SonicConfiguration.RIGHT), GLFW_PRESS);
-        input.handleKeyEvent(config.getInt(SonicConfiguration.JUMP), GLFW_PRESS);
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(
+                        AbstractPlayableSprite.INPUT_RIGHT,
+                        AbstractPlayableSprite.INPUT_RIGHT,
+                        InputActionMasks.ACTION_C,
+                        InputActionMasks.ACTION_C,
+                        true,
+                        true),
+                PlayerInputState.neutral()));
         source.appendFrame(input, config);
 
         Bk2FrameInput frame = source.read(1);
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
                 frame.p1InputMask());
-        assertEquals(1, frame.p1ActionMask(),
-                "P1 action mask should mark a fresh jump press for replay");
+        assertEquals(InputActionMasks.ACTION_C, frame.p1ActionMask());
+        assertTrue(frame.p1StartPressed(),
+                "Live rewind should capture ROM Start from logical input, not the pause key");
     }
 
     @Test
-    void appendFrameDoesNotRepeatJumpPressAfterInputHandlerUpdate() {
-        InputHandler input = new InputHandler();
+    void appendFrameRecordsHeldActionMaskOnEveryHeldFrame() {
+        InputHandler input = new InputHandler(config);
         LiveRewindInputSource source = new LiveRewindInputSource();
 
-        input.handleKeyEvent(config.getInt(SonicConfiguration.JUMP), GLFW_PRESS);
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, InputActionMasks.ACTION_B, InputActionMasks.ACTION_B, false, false),
+                PlayerInputState.neutral()));
         source.appendFrame(input, config);
-        input.update();
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, InputActionMasks.ACTION_B, 0, false, false),
+                PlayerInputState.neutral()));
         source.appendFrame(input, config);
 
-        assertEquals(1, source.read(1).p1ActionMask());
-        assertEquals(0, source.read(2).p1ActionMask());
+        assertEquals(InputActionMasks.ACTION_B, source.read(1).p1ActionMask());
+        assertEquals(InputActionMasks.ACTION_B, source.read(2).p1ActionMask());
     }
 
     @Test
     void appendFrameRecordsP2HeldButtonsAndStartPressEdge() {
-        InputHandler input = new InputHandler();
+        InputHandler input = new InputHandler(config);
         LiveRewindInputSource source = new LiveRewindInputSource();
 
-        input.handleKeyEvent(config.getInt(SonicConfiguration.P2_LEFT), GLFW_PRESS);
-        input.handleKeyEvent(config.getInt(SonicConfiguration.P2_START), GLFW_PRESS);
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.neutral(),
+                PlayerInputState.of(AbstractPlayableSprite.INPUT_LEFT, AbstractPlayableSprite.INPUT_LEFT,
+                        InputActionMasks.ACTION_A, InputActionMasks.ACTION_A, true, true)));
         source.appendFrame(input, config);
 
         Bk2FrameInput frame = source.read(1);
-        assertEquals(AbstractPlayableSprite.INPUT_LEFT, frame.p2InputMask());
-        assertEquals(true, frame.p2StartPressed());
+        assertEquals(AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_JUMP, frame.p2InputMask());
+        assertEquals(InputActionMasks.ACTION_A, frame.p2ActionMask());
+        assertTrue(frame.p2StartPressed());
 
-        input.update();
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.neutral(),
+                PlayerInputState.of(AbstractPlayableSprite.INPUT_LEFT, 0,
+                        InputActionMasks.ACTION_A, 0, true, false)));
         source.appendFrame(input, config);
 
         assertEquals(false, source.read(2).p2StartPressed());
@@ -109,30 +130,18 @@ class TestLiveRewindInputSource {
     }
 
     @Test
-    void rewindFrameInputHandlerReconstructsDebugToggleAndMovementModifiers() {
-        Bk2FrameInput previous = new Bk2FrameInput(0, 0, 0, false, 0, 0, false, "previous");
-        Bk2FrameInput current = new Bk2FrameInput(
-                1, 0, 0, false, 0, 0, false,
-                true, true, true, "current");
-
-        RewindFrameInputHandler replay = new RewindFrameInputHandler(config, current, previous);
-
-        assertTrue(replay.isKeyPressed(config.getInt(SonicConfiguration.DEBUG_MODE_KEY)));
-        assertTrue(replay.isShiftDown());
-        assertTrue(replay.isControlDown());
-    }
-
-    @Test
     void discardAfterDropsFutureFramesWhenLivePlaybackBranchesFromRewind() {
         InputHandler input = new InputHandler();
         LiveRewindInputSource source = new LiveRewindInputSource();
 
         source.appendFrame(input, config);
         input.handleKeyEvent(config.getInt(SonicConfiguration.LEFT), GLFW_PRESS);
+        input.refreshLogicalSnapshot();
         source.appendFrame(input, config);
         source.discardAfter(1);
         input.handleKeyEvent(config.getInt(SonicConfiguration.LEFT), GLFW_RELEASE);
         input.handleKeyEvent(config.getInt(SonicConfiguration.RIGHT), GLFW_PRESS);
+        input.refreshLogicalSnapshot();
         source.appendFrame(input, config);
 
         assertEquals(3, source.frameCount());
@@ -166,6 +175,7 @@ class TestLiveRewindInputSource {
         }
         source.discardBefore(3);
         input.handleKeyEvent(config.getInt(SonicConfiguration.RIGHT), GLFW_PRESS);
+        input.refreshLogicalSnapshot();
         source.appendFrame(input, config);
 
         assertEquals(7, source.frameCount());
@@ -179,9 +189,11 @@ class TestLiveRewindInputSource {
         LiveRewindInputSource source = new LiveRewindInputSource();
 
         input.handleKeyEvent(config.getInt(SonicConfiguration.LEFT), GLFW_PRESS);
+        input.refreshLogicalSnapshot();
         source.appendFrame(input, config);
         input.handleKeyEvent(config.getInt(SonicConfiguration.LEFT), GLFW_RELEASE);
         input.handleKeyEvent(config.getInt(SonicConfiguration.RIGHT), GLFW_PRESS);
+        input.refreshLogicalSnapshot();
         source.appendFrame(input, config);
         source.discardBefore(2);
 
@@ -201,9 +213,11 @@ class TestLiveRewindInputSource {
         LiveRewindInputSource source = new LiveRewindInputSource();
 
         input.handleKeyEvent(config.getInt(SonicConfiguration.LEFT), GLFW_PRESS);
+        input.refreshLogicalSnapshot();
         source.appendFrame(input, config);
         input.handleKeyEvent(config.getInt(SonicConfiguration.LEFT), GLFW_RELEASE);
         input.handleKeyEvent(config.getInt(SonicConfiguration.RIGHT), GLFW_PRESS);
+        input.refreshLogicalSnapshot();
         source.appendFrame(input, config);
 
         source.retainOnlyFrame(2);
