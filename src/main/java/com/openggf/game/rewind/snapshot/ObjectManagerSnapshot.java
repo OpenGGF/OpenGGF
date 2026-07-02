@@ -345,7 +345,18 @@ public record ObjectManagerSnapshot(
             long[] pendingCursorLoadBits,
             int[] pendingCursorLoadOrder,
             long[] deferredVerticalLoadBits,
-            int twoAxisCameraYCoarse
+            int twoAxisCameraYCoarse,
+            /**
+             * Captured value of {@code ObjectManager.s2LatchedObjectManagerCameraX}
+             * — the S2 post-camera coarse-X latch consumed by object-side
+             * MarkObjGone/MarkObjGone2 unload checks on the NEXT RunObjects pass
+             * (docs/s2disasm/s2.asm:5111-5112, 33033-33036). Leaving it at the
+             * later live frame after a seek makes the first replayed frames
+             * unload against a future camera edge, permuting slot allocation.
+             * {@code Integer.MIN_VALUE} for legacy snapshots (restore falls back
+             * to the live camera value, matching pre-latch behavior).
+             */
+            int s2LatchedCameraX
     ) {
         public PlacementSnapshot {
             activeSpawnIndices = activeSpawnIndices == null
@@ -410,6 +421,7 @@ public record ObjectManagerSnapshot(
                     new long[0],
                     new int[0],
                     new long[0],
+                    Integer.MIN_VALUE,
                     Integer.MIN_VALUE);
         }
     }

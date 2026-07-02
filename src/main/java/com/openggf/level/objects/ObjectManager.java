@@ -3494,7 +3494,8 @@ public class ObjectManager {
                         bucketsDirty,
                         childSpawns,
                         dynamicEntries,
-                        placement.captureRewindState(twoAxisCameraYCoarse),
+                        placement.captureRewindState(twoAxisCameraYCoarse,
+                                s2LatchedObjectManagerCameraX),
                         solidContactState.riding(),
                         solidContactState,
                         planeSwitchers != null
@@ -3714,6 +3715,11 @@ public class ObjectManager {
 
                 if (s.placement() != null) {
                     twoAxisCameraYCoarse = placement.restoreRewindState(s.placement());
+                    // The S2 post-camera coarse-X unload latch must rewind with the
+                    // placement cursors; a stale later-frame latch makes the first
+                    // replayed frames' MarkObjGone checks unload against a future
+                    // camera edge (legacy snapshots carry MIN_VALUE = live fallback).
+                    s2LatchedObjectManagerCameraX = s.placement().s2LatchedCameraX();
                 }
 
                 solidContacts.restoreRewindState(s.solidContactState());
