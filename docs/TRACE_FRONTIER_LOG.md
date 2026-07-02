@@ -6,11 +6,12 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 71 ARZ2 and CNZ2 worker branches,
+Current branch-local S2 state after round 71 ARZ2 and CNZ2 worker branches
+plus the round 73 CNZ2 Obj51 post-trigger body-touch advance,
 integrated into conductor branch `bugfix/ai-s2-trace-next`: ARZ2 is green
 under `frontierOnly` and was banked into `next` as `7ef0928da`; CNZ2 is
-f10661 / 4 under `frontierOnly` (`x_speed` expected `0x022E`, actual
-`-022E`); MTZ3 is f13477 / 4 under `frontierOnly`
+f11129 / 7 under `frontierOnly` (`x` expected `0x2B26`, actual
+`0x2B28`); MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now CNZ2 and MTZ3.
@@ -23,6 +24,74 @@ return must include targeted BizHawk Lua evidence in `luaProbes`, including
 script path, output path, frame window, hooked PCs, and the ROM values observed.
 For slot, touch, subpixel, counter, or "RAM-gated" conclusions, a PC-execute
 probe is required before the bounce is accepted.
+
+## 2026-07-02 - S2 round 73 CNZ2 Obj51 post-trigger body touch X
+
+Round 73 CNZ2 worker used
+`.worktrees/ai-s2-cnz2-round73-next` /
+`bugfix/ai-s2-cnz2-round73-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `265b3c8de`. The focused baseline reproduced
+CNZ2 f10661 / 4 under `frontierOnly`: `x_speed` expected `0x022E`,
+actual `-022E`.
+
+BizHawk diagnostic:
+- Probe script:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round73-next\tools\bizhawk\diag_s2_cnz2_obj51_order.lua`.
+  Output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round73-next\target\diag_s2_cnz2_obj51_order.txt`.
+- Command summary:
+  `OGGF_START=23090 OGGF_STOP=23148 OGGF_TRACE_OFFSET=12484 OGGF_OUT=<output> run_bizhawk_lua.bat <lua> <s2-lvl-select-CNZ.bk2> <s2.gen>`.
+- Hooked Obj51 patrol before `Boss_MoveObject` `$031AA4`, trigger entry
+  `$031AB6`, trigger compare `$031AC2`, ball spawn `loc_31BF2` `$031BF2`,
+  tail/copy path `$031C08/$031CDC`, and `BossCollision_CNZ` `$03FB8A`,
+  covering BizHawk frames 23090-23148 / trace frames f10606-f10664.
+- Captured ordering: at f10609, `Boss_MoveObject` moves `Boss_X_pos` from
+  `$2918.8000` to `$2917.0000` while Obj51 `x_pos(a0)` is still `$2918`.
+  The trigger compare uses `d0=$001C` from that stale `$2918`, then
+  `loc_31BF2` spawns the ball, clears `Boss_CollisionRoutine`, and
+  `loc_31CDC` copies `$2917` into Obj51 `x_pos(a0)`. From f10610 onward the
+  post-trigger path does not call `Boss_MoveObject`. At f10661,
+  `BossCollision_CNZ` sees Obj51 body `x=$2917,y=$0650,collision_flags=$0F`
+  while Sonic is at `x=$28F6.E200` with `x_vel=$022E`.
+
+Engine diagnostic:
+- Temporary engine probe output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round73-next\target\diag_s2_cnz2_engine_obj51_snapshot.txt`.
+- Key rows at the corresponding engine trigger show
+  `preState=2917`, `preBoss=2917`, `bossNow=2915`, `fixedNow=29158000`,
+  `triggerX=2918`, `dx=001C`, then the ball trigger. Before the fix, the
+  post-trigger touch source collapsed to `$2915`; the fix preserves the ROM
+  copied `$2917` body X while Obj51 remains in the post-trigger collision-off
+  state.
+
+Root fixed:
+- `Sonic2CNZBossInstance` now preserves a post-trigger body touch X when the
+  leftward ball-trigger path transitions from patrol into post-trigger.
+  The ROM compares against stale `x_pos(a0)`, then copies the freshly-moved
+  `Boss_X_pos` word into `x_pos(a0)` and continues exposing Obj51's body to
+  `Touch_Boss` even though `Boss_CollisionRoutine` is off
+  (`docs/s2disasm/s2.asm:61282-61295,66577-66595,66658-66664,66746-66753,85164-85252,85793-85811`).
+  The change models that copied body X for the touch region only; it does not
+  delay Obj51 startup, alter collision thresholds, or branch on zone, frame, or
+  trace route.
+
+Result:
+- `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f10661 / 4 to f11129 / 7. New first error:
+  `x` expected `0x2B26`, actual `0x2B28`, exposing a later post-boss/capsule
+  handoff frontier.
+
+Verification:
+- Focused CNZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  exited 0 via failure-ignore and wrote the improved expected-red f11129 / 7
+  frontier.
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests with 17 green and only the expected-red set:
+  CNZ2 f11129 / 7 and MTZ3 f13477 / 4. An initial wildcard attempt hit a
+  worktree-local LWJGL native extraction error; after clearing `.lwjgl` and
+  stale Surefire reports, the clean sweep above had zero errors.
 
 ## 2026-07-02 - S2 round 71 ARZ2 Obj3E end-checker delete
 
