@@ -65,6 +65,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -4884,6 +4885,58 @@ class TestMhzBossObjects {
                 "ObjDat3_76934 gives the active MHZ end boss core x/y radius $80,$80");
     }
 
+    @Test
+    void mhzMinibossFinalLaunchScriptSettlesOnRomFrameSixAfterJumpCommand() throws Exception {
+        MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
+                0x1800, 0x0400, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
+        int[] script = getPrivateStaticIntArray("FINAL_LAUNCH_SCRIPT");
+        Method animate = MhzMinibossInstance.class.getDeclaredMethod("animateRawMultiDelay", int[].class);
+        animate.setAccessible(true);
+
+        // Run past the leading $0A/$08/$06 frames and the $F8 jump so the script settles.
+        for (int i = 0; i < 400; i++) {
+            animate.invoke(miniboss, (Object) script);
+        }
+        assertEquals(6, getPrivateInt(miniboss, "mappingFrame"),
+                "loc_845E4's $F8 re-points the raw-animation script base by its signed relative "
+                        + "offset, and loc_845F2's fallthrough settles the launch animation on the "
+                        + "repeated frame $06 pair sitting at the new base");
+
+        // Without $F8 re-pointing scriptBase, the script would restart from index 0 and cycle
+        // back through $0A/$08 again; collecting every frame seen after settling proves the
+        // animation is genuinely pinned on $06 forever, not just coincidentally $06 at this tick.
+        java.util.Set<Integer> framesAfterSettling = new java.util.LinkedHashSet<>();
+        for (int i = 0; i < 600; i++) {
+            animate.invoke(miniboss, (Object) script);
+            framesAfterSettling.add(getPrivateInt(miniboss, "mappingFrame"));
+        }
+        assertEquals(java.util.Set.of(6), framesAfterSettling,
+                "the $F8 re-point base keeps re-emitting only frame $06 indefinitely through the "
+                        + "bare $FC command at the tail of FINAL_LAUNCH_SCRIPT, never cycling back "
+                        + "to $0A/$08");
+    }
+
+    @Test
+    void mhzMinibossFinalCameraRiseScriptLoopsBackToRomFrameZero() throws Exception {
+        MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
+                0x1800, 0x0400, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
+        int[] script = getPrivateStaticIntArray("FINAL_CAMERA_RISE_SCRIPT");
+        Method animate = MhzMinibossInstance.class.getDeclaredMethod("animateRawMultiDelay", int[].class);
+        animate.setAccessible(true);
+
+        int zeroHits = 0;
+        for (int i = 0; i < 400; i++) {
+            Object result = animate.invoke(miniboss, (Object) script);
+            if ((int) result == 1 && getPrivateInt(miniboss, "mappingFrame") == 0) {
+                zeroHits++;
+            }
+        }
+
+        assertTrue(zeroHits >= 2,
+                "loc_845F2's bare $FC command should re-emit FINAL_CAMERA_RISE_SCRIPT's frame-0 "
+                        + "entry every time the 1-2-3-2-1-0 cycle wraps, not just once");
+    }
+
     private static PatternSpriteRenderer readyRenderer() {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         when(renderer.isReady()).thenReturn(true);
@@ -4919,6 +4972,12 @@ class TestMhzBossObjects {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(target);
+    }
+
+    private static int[] getPrivateStaticIntArray(String fieldName) throws Exception {
+        Field field = MhzMinibossInstance.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return (int[]) field.get(null);
     }
 
     private static MhzMinibossInstance managedMinibossAtCamera(int cameraX, int cameraY) {
