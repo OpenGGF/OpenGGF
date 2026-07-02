@@ -29,7 +29,7 @@ class TestArchitecturalSourceGuard {
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3065,
-            "com/openggf/level/LevelManager.java", 2771,
+            "com/openggf/level/LevelManager.java", 2500,
             GAME_LOOP_PATH, 2888
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
@@ -597,6 +597,50 @@ class TestArchitecturalSourceGuard {
         assertTrue(!source.contains("new LevelRewindSnapshotAdapter("),
                 "Use LevelRewindSnapshotAdapter.create(...) so LevelManager owns construction policy only, "
                 + "not snapshot capture/restore implementation details");
+    }
+
+    @Test
+    void levelManagerDelegatesPlayableArtInitializationToNamedCollaborator() throws IOException {
+        String source = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/level/LevelManager.java")));
+        List<String> forbiddenSignals = List.of(
+                "PlayerSpriteRenderer",
+                "SpindashDustController",
+                "TailsTailsController",
+                "initPlayerSpriteArt(",
+                "initSpindashDust(",
+                "initTailsTails(",
+                "initSuperState(",
+                "createSidekickPaletteContext(",
+                "propagateSidekickPaletteContext(");
+        List<String> violations = forbiddenSignals.stream()
+                .filter(source::contains)
+                .toList();
+        assertTrue(violations.isEmpty(),
+                "LevelManager should coordinate playable art through LevelPlayableArtInitializer, "
+                        + "not own renderer/controller setup directly. Found: " + violations);
+    }
+
+    @Test
+    void levelManagerDelegatesDirtyRegionDispatchToNamedCollaborator() throws IOException {
+        String source = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/level/LevelManager.java")));
+        List<String> forbiddenSignals = List.of(
+                "consumeDirtyPatterns(",
+                "consumeDirtyBlocks(",
+                "consumeDirtyMapCells(",
+                "consumeDirtySolidTiles(",
+                "consumeObjectsDirty(",
+                "consumeRingsDirty(",
+                "effects.hasDirtyPatterns(",
+                "effects.objectResyncRequired(",
+                "effects.ringResyncRequired(");
+        List<String> violations = forbiddenSignals.stream()
+                .filter(source::contains)
+                .toList();
+        assertTrue(violations.isEmpty(),
+                "LevelManager should delegate dirty-region and mutation-effect dispatch "
+                        + "to LevelDirtyRegionDispatcher. Found: " + violations);
     }
 
     @Test

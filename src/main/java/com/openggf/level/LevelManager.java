@@ -10,8 +10,6 @@ import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.data.Game;
 import com.openggf.data.AnimatedPaletteProvider;
 import com.openggf.data.AnimatedPatternProvider;
-import com.openggf.data.PlayerSpriteArtProvider;
-import com.openggf.data.SpindashDustArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
@@ -33,7 +31,6 @@ import com.openggf.game.rules.CameraRules;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
-import com.openggf.game.rules.PowerUpRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
@@ -48,7 +45,6 @@ import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.audio.AudioManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
-import com.openggf.graphics.RenderContext;
 import com.openggf.level.render.BackgroundRenderer;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectManager;
@@ -64,16 +60,11 @@ import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.Sprite;
-import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.game.PowerUpObject;
 import com.openggf.level.objects.DefaultPowerUpSpawner;
-import com.openggf.sprites.managers.SpindashDustController;
 import com.openggf.sprites.managers.SpriteManager;
-import com.openggf.sprites.managers.TailsTailsController;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
-import com.openggf.sprites.playable.Tails;
-import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -112,7 +103,6 @@ public class LevelManager {
     private int cachedBgHeightPx;
     Game game;
     GameModule gameModule;
-    private int sidekickPatternBankCursor = 0;
 
     public Game getGame() {
         return game;
@@ -224,6 +214,8 @@ public class LevelManager {
     // Rendering pipeline (extracted from LevelManager — see LevelRenderer).
     private final LevelRenderer levelRenderer = new LevelRenderer(this);
     final LevelFrameRuntimeUpdater frameRuntimeUpdater = new LevelFrameRuntimeUpdater(this);
+    private final LevelPlayableArtInitializer playableArtInitializer;
+    private final LevelDirtyRegionDispatcher dirtyRegionDispatcher;
     private EngineContext engineServices; private EditorSaveManager editorSaveManager;
 
     @Deprecated(forRemoval = true)
@@ -254,6 +246,9 @@ public class LevelManager {
         this.profiler = engineServices.profiler();
         this.crossGameFeatures = engineServices.crossGameFeatures();
         this.engineServices = engineServices;
+        this.playableArtInitializer = new LevelPlayableArtInitializer(
+                this, spriteManager, graphicsManager, configService, crossGameFeatures);
+        this.dirtyRegionDispatcher = new LevelDirtyRegionDispatcher(this);
         this.cachedScreenWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
         this.cachedScreenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
         // Inherit any zone/act metadata and loaded Level already on the
@@ -512,35 +507,7 @@ public class LevelManager {
      * Called from {@code LevelFrameStep} at the start of each frame.
      */
     public void processDirtyRegions() {
-        if (!(level instanceof MutableLevel ml)) return;
-
-        java.util.BitSet dirtyPatterns = ml.consumeDirtyPatterns();
-        if (!dirtyPatterns.isEmpty()) {
-            reuploadDirtyPatterns(dirtyPatterns);
-        }
-
-        java.util.BitSet dirtyBlocks = ml.consumeDirtyBlocks();
-        java.util.BitSet dirtyMapCells = ml.consumeDirtyMapCells();
-        if (!dirtyBlocks.isEmpty() || !dirtyMapCells.isEmpty()) {
-            if (tilemapManager != null) {
-                tilemapManager.rebuildDirtyRegions(dirtyBlocks, dirtyMapCells, ml);
-            }
-        }
-
-        java.util.BitSet dirtySolidTiles = ml.consumeDirtySolidTiles();
-        if (!dirtySolidTiles.isEmpty()) {
-            // Terrain sensors read SolidTile data directly from the current Level,
-            // so no cache rebuild is needed here. We still consume the dirty set
-            // to keep MutableLevel state in sync with the frame pipeline.
-        }
-
-        if (ml.consumeObjectsDirty()) {
-            resyncObjectSpawnListFromLevel();
-        }
-
-        if (ml.consumeRingsDirty()) {
-            resyncRingSpawnListFromLevel();
-        }
+        dirtyRegionDispatcher.processDirtyRegions();
     }
 
     /**
@@ -741,7 +708,7 @@ public class LevelManager {
      */
     public void initArt() {
         initObjectArt();
-        initPlayerSpriteArt();
+        playableArtInitializer.initialize();
     }
 
     /**
@@ -1282,161 +1249,12 @@ public class LevelManager {
         this.levelGamestate = newState;
     }
 
-    private void initPlayerSpriteArt() {
-        // Clear stale sidekick palette contexts from previous level loads
-        RenderContext.clearSidekickContexts();
-        dustBankCount = 0;
-        tailsTailBankCount = 0;
-        sidekickPatternBankCursor = 0;
-        CrossGameFeatureProvider crossGame = crossGameFeatures;
-        PlayerSpriteArtProvider artProvider;
-        if (CrossGameFeatureProvider.isActive()) {
-            artProvider = crossGame;
-        } else if (game instanceof PlayerSpriteArtProvider p) {
-            artProvider = p;
-        } else {
-            return;
-        }
-        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
-        if (!(player instanceof AbstractPlayableSprite playable)) {
-            return;
-        }
-        try {
-            SpriteArtSet artSet = artProvider.loadPlayerSpriteArt(playable.getCode());
-            if (artSet == null || artSet.bankSize() <= 0 || artSet.mappingFrames().isEmpty()
-                    || artSet.dplcFrames().isEmpty()) {
-                playable.setSpriteRenderer(null);
-                return;
-            }
-            PlayerSpriteRenderer renderer = new PlayerSpriteRenderer(artSet);
-            if (CrossGameFeatureProvider.isActive()) {
-                renderer.setRenderContext(crossGame.getDonorRenderContext());
-            }
-            renderer.ensureCached(graphicsManager);
-            playable.setSpriteRenderer(renderer);
-            playable.setMappingFrame(0);
-            playable.setAnimationFrameCount(artSet.mappingFrames().size());
-            playable.setAnimationProfile(artSet.animationProfile());
-            playable.setAnimationSet(artSet.animationSet());
-            playable.setAnimationId(0);
-            playable.setAnimationFrameIndex(0);
-            playable.setAnimationTick(0);
-            initSpindashDust(playable);
-            initTailsTails(playable, artSet);
-            initSuperState(playable);
-        } catch (IOException e) {
-            LOGGER.log(SEVERE, "Failed to load player sprite art.", e);
-        }
-
-        // Also initialize art for each sidekick (CPU-controlled Tails etc.)
-        // Every sidekick unconditionally gets its own isolated bank in the
-        // SIDEKICK_PATTERN_BASE range to avoid VRAM collisions even when
-        // characters share the same ART_TILE base (e.g. Knuckles and Sonic
-        // both use 0x0680 in S3K).
-        List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
-        String mainCharName = resolveMainCharacterCode();
-        List<String> sidekickCharNames = new ArrayList<>(sidekicks.size());
-        for (AbstractPlayableSprite sidekick : sidekicks) {
-            String name = spriteManager.getSidekickCharacterName(sidekick);
-            if (name == null) {
-                // Fallback: use the config's single sidekick code
-                name = configService.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-            }
-            sidekickCharNames.add(name);
-        }
-        // Cache loaded art per character type to avoid redundant ROM reads
-        java.util.Map<String, SpriteArtSet> artCache = new java.util.HashMap<>();
-        // First pass: load art for each sidekick (or null if unavailable) and collect bank sizes
-        List<SpriteArtSet> sidekickSourceArts = new ArrayList<>(sidekicks.size());
-        List<Integer> bankSizes = new ArrayList<>(sidekicks.size());
-        for (int i = 0; i < sidekicks.size(); i++) {
-            String sidekickCharName = sidekickCharNames.get(i);
-            SpriteArtSet sourceArt = artCache.computeIfAbsent(
-                    sidekickCharName.toLowerCase(),
-                    key -> {
-                        try {
-                            return artProvider.loadPlayerSpriteArt(key);
-                        } catch (IOException e) {
-                            LOGGER.log(SEVERE, "Failed to load art for sidekick character: " + key, e);
-                            return null;
-                        }
-                    });
-            boolean valid = sourceArt != null && sourceArt.bankSize() > 0
-                    && !sourceArt.mappingFrames().isEmpty()
-                    && !sourceArt.dplcFrames().isEmpty();
-            sidekickSourceArts.add(valid ? sourceArt : null);
-            if (valid) {
-                bankSizes.add(sourceArt.bankSize());
-            }
-        }
-        // Second pass: initialise each sidekick using the pre-computed offsets
-        int validIndex = 0;
-        for (int i = 0; i < sidekicks.size(); i++) {
-            AbstractPlayableSprite sidekick = sidekicks.get(i);
-            String sidekickCharName = sidekickCharNames.get(i);
-            SpriteArtSet sourceArt = sidekickSourceArts.get(i);
-            if (sourceArt == null) {
-                LOGGER.warning("Skipping art init for sidekick " + i
-                        + " (" + sidekickCharName + "): art unavailable or empty.");
-                continue;
-            }
-            try {
-                // Every sidekick gets its own isolated bank in SIDEKICK_PATTERN_BASE range.
-                // This avoids VRAM collisions even when characters share the same ART_TILE
-                // base (e.g., Knuckles and Sonic both use 0x0680 in S3K).
-                validIndex++;
-                int shiftedBase = reserveSidekickPatternBank(sourceArt.bankSize());
-                SpriteArtSet sidekickArt = new SpriteArtSet(
-                        sourceArt.artTiles(),
-                        sourceArt.mappingFrames(),
-                        sourceArt.dplcFrames(),
-                        sourceArt.paletteIndex(),
-                        shiftedBase,
-                        sourceArt.frameDelay(),
-                        sourceArt.bankSize(),
-                        sourceArt.animationProfile(),
-                        sourceArt.animationSet());
-                PlayerSpriteRenderer sidekickRenderer = new PlayerSpriteRenderer(sidekickArt);
-                // Palette isolation: if sidekick uses a different palette than main,
-                // create a dedicated RenderContext so it renders with correct colors.
-                RenderContext sidekickPaletteCtx = createSidekickPaletteContext(
-                        artProvider, sidekickCharName, mainCharName);
-                if (sidekickPaletteCtx != null) {
-                    sidekickRenderer.setRenderContext(sidekickPaletteCtx);
-                } else if (CrossGameFeatureProvider.isActive()) {
-                    sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());
-                }
-                sidekickRenderer.ensureCached(graphicsManager);
-                sidekick.setSpriteRenderer(sidekickRenderer);
-                sidekick.setMappingFrame(0);
-                sidekick.setAnimationFrameCount(sidekickArt.mappingFrames().size());
-                sidekick.setAnimationProfile(sidekickArt.animationProfile());
-                sidekick.setAnimationSet(sidekickArt.animationSet());
-                sidekick.setAnimationId(0);
-                sidekick.setAnimationFrameIndex(0);
-                sidekick.setAnimationTick(0);
-                initSpindashDust(sidekick);
-                initTailsTails(sidekick, sidekickArt);
-                // Propagate sidekick palette context to sub-renderers (dust, tail appendage)
-                if (sidekickPaletteCtx != null) {
-                    propagateSidekickPaletteContext(sidekick, sidekickPaletteCtx);
-                }
-                initSuperState(sidekick);
-            } catch (Exception e) {
-                LOGGER.log(SEVERE, "Failed to load sidekick sprite art for index " + i + ".", e);
-            }
-        }
-
-        // Upload donor and sidekick palettes to GPU
-        RenderContext.uploadDonorPalettes(graphicsManager);
-    }
-
     /**
      * Rebuilds playable sprite renderers after scripts add a sidekick during
      * gameplay, such as MGZ2's boss-transition Tails rescue object.
      */
     public void refreshPlayableSpriteArt() {
-        initPlayerSpriteArt();
+        playableArtInitializer.initialize();
     }
 
     /**
@@ -1448,13 +1266,7 @@ public class LevelManager {
      * @return list of offsets (one per sidekick) within SIDEKICK_PATTERN_BASE
      */
     public static List<Integer> computeSidekickBankOffsets(List<Integer> bankSizes) {
-        List<Integer> offsets = new ArrayList<>(bankSizes.size());
-        int running = 0;
-        for (int size : bankSizes) {
-            offsets.add(running);
-            running += size;
-        }
-        return offsets;
+        return LevelPlayableArtInitializer.computeSidekickBankOffsets(bankSizes);
     }
 
     /**
@@ -1463,49 +1275,7 @@ public class LevelManager {
      * trace ghosts use this to avoid corrupting real player/sidekick DPLC state.
      */
     public int reserveSidekickPatternBank(int bankSize) {
-        int safeSize = Math.max(0, bankSize);
-        int base = SIDEKICK_PATTERN_BASE + sidekickPatternBankCursor;
-        sidekickPatternBankCursor += safeSize;
-        return base;
-    }
-
-    private RenderContext createSidekickPaletteContext(
-            PlayerSpriteArtProvider artProvider,
-            String sidekickCharName, String mainCharName) {
-        if (sidekickCharName.equalsIgnoreCase(mainCharName)) {
-            return null;
-        }
-        Palette sidekickPalette = artProvider.loadCharacterPalette(sidekickCharName);
-        if (sidekickPalette == null) {
-            return null;
-        }
-        // Only create a separate context if the sidekick's palette actually
-        // differs from the main character's. Sonic and Tails share Pal_SonicTails
-        // in S3K — creating an unnecessary context would trigger a palette texture
-        // resize that wipes existing level palette data.
-        Palette mainPalette = artProvider.loadCharacterPalette(mainCharName);
-        if (mainPalette != null && sidekickPalette.dataEquals(mainPalette)) {
-            return null;
-        }
-        GameModule activeModule = gameModule;
-        if (activeModule == null && GameServices.hasRuntime()) {
-            activeModule = GameServices.module();
-        }
-        GameId gameId = activeModule != null ? activeModule.getGameId() : null;
-        RenderContext ctx = RenderContext.createSidekickContext(gameId);
-        ctx.setPalette(0, sidekickPalette);
-        return ctx;
-    }
-
-    private void propagateSidekickPaletteContext(AbstractPlayableSprite sidekick, RenderContext ctx) {
-        if (sidekick.getSpindashDustController() != null
-                && sidekick.getSpindashDustController().getRenderer() != null) {
-            sidekick.getSpindashDustController().getRenderer().setRenderContext(ctx);
-        }
-        if (sidekick.getTailsTailsController() != null
-                && sidekick.getTailsTailsController().getRenderer() != null) {
-            sidekick.getTailsTailsController().getRenderer().setRenderContext(ctx);
-        }
+        return playableArtInitializer.reserveSidekickPatternBank(bankSize);
     }
 
     private void resetPlayerState() {
@@ -1517,167 +1287,6 @@ public class LevelManager {
             sidekick.resetState();
             if (sidekick.getCpuController() != null) {
                 sidekick.getCpuController().reset();
-            }
-        }
-    }
-
-    private void initSpindashDust(AbstractPlayableSprite playable) {
-        CrossGameFeatureProvider crossGame = crossGameFeatures;
-        SpindashDustArtProvider dustProv;
-        if (CrossGameFeatureProvider.isActive()) {
-            dustProv = crossGame;
-        } else if (game instanceof SpindashDustArtProvider d) {
-            dustProv = d;
-        } else {
-            playable.setSpindashDustController(null);
-            return;
-        }
-        try {
-            String characterCode = playable.getCode().endsWith("_p2") ? playable.getCode().substring(0, playable.getCode().length() - 3) : playable.getCode();
-            SpriteArtSet dustArt = dustProv.loadSpindashDustArt(characterCode);
-            if (dustArt == null || dustArt.bankSize() <= 0 || dustArt.mappingFrames().isEmpty()
-                    || dustArt.dplcFrames().isEmpty()) {
-                playable.setSpindashDustController(null);
-                return;
-            }
-            // Multiple characters sharing the same dust base corrupt each other's
-            // DPLC banks.  Shift subsequent dust renderers into isolated banks,
-            // similar to how sidekick body sprites and Tails tail appendages are
-            // shifted (see initTailsTails).
-            if (dustBankCount > 0) {
-                int shiftedBase = reserveSidekickPatternBank(dustArt.bankSize());
-                dustArt = new SpriteArtSet(
-                        dustArt.artTiles(),
-                        dustArt.mappingFrames(),
-                        dustArt.dplcFrames(),
-                        dustArt.paletteIndex(),
-                        shiftedBase,
-                        dustArt.frameDelay(),
-                        dustArt.bankSize(),
-                        dustArt.animationProfile(),
-                        dustArt.animationSet());
-            }
-            dustBankCount++;
-            PlayerSpriteRenderer dustRenderer = new PlayerSpriteRenderer(dustArt);
-            if (CrossGameFeatureProvider.isActive()) {
-                dustRenderer.setRenderContext(crossGame.getDonorRenderContext());
-            }
-            dustRenderer.ensureCached(graphicsManager);
-            playable.setSpindashDustController(new SpindashDustController(
-                    playable, dustRenderer, fixedDustSlotFor(playable)));
-        } catch (IOException e) {
-            LOGGER.log(SEVERE, "Failed to load spindash dust art.", e);
-            playable.setSpindashDustController(null);
-        }
-    }
-
-    private int fixedDustSlotFor(AbstractPlayableSprite playable) {
-        if (playable == null) {
-            return -1;
-        }
-        GameModule module = activeGameModule();
-        PowerUpRules rules = powerUpRulesFor(module);
-        if (rules == null || !rules.waterSplashUsesFixedDustObject()) {
-            return -1;
-        }
-        if (!playable.isCpuControlled()) {
-            return rules.fixedDustSlotIndex(false);
-        }
-        List<AbstractPlayableSprite> sidekicks = spriteManager != null ? spriteManager.getSidekicks() : List.of();
-        return !sidekicks.isEmpty() && sidekicks.get(0) == playable
-                ? rules.fixedDustSlotIndex(true)
-                : -1;
-    }
-
-    /** Tracks how many dust DPLC banks have been allocated this level load. */
-    private int dustBankCount = 0;
-
-    /** Tracks how many tail appendage DPLC banks have been allocated this level load. */
-    private int tailsTailBankCount = 0;
-
-    private void initTailsTails(AbstractPlayableSprite playable, SpriteArtSet artSet) {
-        if (!(playable instanceof Tails)) {
-            playable.setTailsTailsController(null);
-            return;
-        }
-        CrossGameFeatureProvider crossGame = crossGameFeatures;
-        // Check donor game first (cross-game donation), then fall back to base game module
-        boolean isS3k = CrossGameFeatureProvider.isActive()
-                ? crossGame.hasSeparateTailsTailArt()
-                : gameModule.hasSeparateTailsTailArt();
-        SpriteArtSet tailsArt;
-        if (isS3k) {
-            // S3K: Obj05 uses a completely separate art/mapping/DPLC set
-            if (CrossGameFeatureProvider.isActive()) {
-                try {
-                    tailsArt = crossGame.loadTailsTailArt();
-                } catch (IOException e) {
-                    LOGGER.log(SEVERE, "Failed to load cross-game tails tail art.", e);
-                    tailsArt = null;
-                }
-            } else {
-                tailsArt = gameModule.loadTailsTailArt();
-            }
-            if (tailsArt == null || tailsArt.isEmpty()) {
-                playable.setTailsTailsController(null);
-                return;
-            }
-        } else {
-            // Non-S3K: Obj05 uses same mappings/DPLCs/art as Tails but at a different VRAM base.
-            // The base is provided by the game module (e.g. S2: 0x07B0).
-            tailsArt = new SpriteArtSet(
-                    artSet.artTiles(),
-                    artSet.mappingFrames(),
-                    artSet.dplcFrames(),
-                    artSet.paletteIndex(),
-                    gameModule.getTailsTailVramBase(),
-                    artSet.frameDelay(),
-                    artSet.bankSize(),
-                    null,
-                    null
-            );
-        }
-        // Multiple Tails sidekicks need separate DPLC banks for the tail appendage,
-        // just like the main sprite body. The first Tails uses the original base;
-        // subsequent ones get shifted into SIDEKICK_PATTERN_BASE range.
-        if (tailsTailBankCount > 0) {
-            int shiftedBase = reserveSidekickPatternBank(tailsArt.bankSize());
-            tailsArt = new SpriteArtSet(
-                    tailsArt.artTiles(),
-                    tailsArt.mappingFrames(),
-                    tailsArt.dplcFrames(),
-                    tailsArt.paletteIndex(),
-                    shiftedBase,
-                    tailsArt.frameDelay(),
-                    tailsArt.bankSize(),
-                    tailsArt.animationProfile(),
-                    tailsArt.animationSet()
-            );
-        }
-        tailsTailBankCount++;
-        PlayerSpriteRenderer tailsRenderer = new PlayerSpriteRenderer(tailsArt);
-        if (CrossGameFeatureProvider.isActive()) {
-            tailsRenderer.setRenderContext(crossGame.getDonorRenderContext());
-        }
-        tailsRenderer.ensureCached(graphicsManager);
-        playable.setTailsTailsController(new TailsTailsController(playable, tailsRenderer, isS3k));
-    }
-
-    private void initSuperState(AbstractPlayableSprite playable) {
-        if (gameModule == null) {
-            return;
-        }
-        var superCtrl = gameModule.createSuperStateController(playable);
-        playable.setSuperStateController(superCtrl);
-
-        // Load game-specific ROM data (palette cycling, etc.)
-        if (superCtrl != null && !superCtrl.isRomDataPreLoaded()) {
-            try {
-                Rom rom = GameServices.rom().getRom();
-                RomByteReader reader = RomByteReader.fromRom(rom);
-                superCtrl.loadRomData(reader);
-            } catch (Exception e) {
-                LOGGER.fine("Could not load Super Sonic ROM data: " + e.getMessage());
             }
         }
     }
@@ -2446,10 +2055,7 @@ public class LevelManager {
     }
 
     public void reuploadDirtyPatterns(java.util.BitSet dirtyPatterns) {
-        if (dirtyPatterns == null || dirtyPatterns.isEmpty() || level == null) {
-            return;
-        }
-        graphicsManager.reuploadDirtyPatterns(dirtyPatterns, level);
+        dirtyRegionDispatcher.reuploadDirtyPatterns(dirtyPatterns);
     }
 
     public void resyncObjectSpawnListFromLevel() {
@@ -2478,26 +2084,7 @@ public class LevelManager {
     }
 
     public void applyMutationEffects(MutationEffects effects) {
-        if (effects == null || effects.isEmpty()) {
-            return;
-        }
-        if (effects.hasDirtyPatterns()) {
-            reuploadDirtyPatterns(effects.dirtyPatterns());
-        }
-        if (effects.dirtyRegionProcessingRequired()) {
-            processDirtyRegions();
-        }
-        if (effects.allTilemapsRedrawRequired()) {
-            invalidateAllTilemaps();
-        } else if (effects.foregroundRedrawRequired()) {
-            invalidateForegroundTilemap();
-        }
-        if (effects.objectResyncRequired()) {
-            resyncObjectSpawnListFromLevel();
-        }
-        if (effects.ringResyncRequired()) {
-            resyncRingSpawnListFromLevel();
-        }
+        dirtyRegionDispatcher.applyMutationEffects(effects);
     }
 
     /**
@@ -3066,11 +2653,6 @@ public class LevelManager {
             // S2/S3K cap both directions.
             camera.setUncappedLeftwardScroll(cameraRules.uncappedLeftwardHorizontalScroll());
         }
-    }
-
-    private PowerUpRules powerUpRulesFor(GameModule module) {
-        GameRules rules = gameRulesFor(module);
-        return rules != null ? rules.powerUp() : null;
     }
 
     private CameraRules cameraRulesFor(GameModule module) {
