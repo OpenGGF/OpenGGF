@@ -7,25 +7,92 @@ the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
 Current branch-local S2 state after round 71 ARZ2 and CNZ2 worker branches,
-the round 73 CNZ2 Obj51 post-trigger body-touch advance, and the round 75
-CNZ2 boss-lock boundary-source advance,
+the round 73 CNZ2 Obj51 post-trigger body-touch advance, the round 75
+CNZ2 boss-lock boundary-source advance, and the round 76 CNZ2 sidekick
+max-Y advance,
 integrated into conductor branch `bugfix/ai-s2-trace-next`: ARZ2 is green
 under `frontierOnly` and was banked into `next` as `7ef0928da`; CNZ2 is
-f11130 / 6 under `frontierOnly` (`tails_y_speed` expected `-0700`, actual
-`0x0000`); MTZ3 is f13477 / 4 under `frontierOnly`
+f11254 / 1 under `frontierOnly` (`camera_x` expected `0x2AFA`, actual
+`0x2AF8`); MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now CNZ2 and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
-Round 75 CNZ2 has advanced but not greened, and the MTZ3 round 76 worker is
+Round 76 CNZ2 has advanced but not greened, and the MTZ3 round 76 worker is
 still active.
 Worker bounce policy: any `no-change`, `rejected`, `blocked`, or "gated"
 return must include targeted BizHawk Lua evidence in `luaProbes`, including
 script path, output path, frame window, hooked PCs, and the ROM values observed.
 For slot, touch, subpixel, counter, or "RAM-gated" conclusions, a PC-execute
 probe is required before the bounce is accepted.
+
+## 2026-07-03 - S2 round 76 CNZ2 Tails max-Y boundary
+
+Round 76 CNZ2 worker used
+`.worktrees/ai-s2-cnz2-round76-next` /
+`bugfix/ai-s2-cnz2-round76-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `9b8744e8c`. The mandatory focused baseline
+reproduced CNZ2 f11130 / 6 under `frontierOnly`: `tails_y_speed` expected
+`-0700`, actual `0x0000`.
+
+BizHawk diagnostics:
+- Probe script:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round76-next\tools\bizhawk\diag_s2_cnz2_tails_kill_round76.lua`.
+  Output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round76-next\target\trace-reports\s2_cnz2_round76_lua_probe.txt`.
+- Command summary:
+  `OGGF_START=23609 OGGF_STOP=23620 OGGF_OUT=<output> run_bizhawk_lua.bat <lua> <s2-lvl-select-CNZ.bk2> <s2.gen>`.
+- Registered execute probes for `Tails_LevelBound`, `Tails_Boundary_CheckBottom`,
+  `Tails_Boundary_Bottom`, `KillCharacter`, `Obj02_Dead`,
+  `Obj02_CheckGameOver`, and `TailsCPU_Despawn`, plus sidekick slot write
+  hooks. In this BizHawk run the callbacks did not emit rows, but the per-frame
+  RAM samples captured the transition: `Tails_Max_Y_pos` was `$062E` through
+  bk2 f23613, changed to `$05D0` at f23614, and at f23615 Tails sampled as
+  `x=$2A10`, `y=$06F0`, `y_vel=$F900`, `routine=$06`, `status=$02`. The next
+  sample at f23616 had the S2 dead-fall despawn marker / movement continuation:
+  `x=$4000`, `y=$FFF9`, `y_vel=$F938`, `routine=$02`, `status=$02`.
+
+Engine diagnostics:
+- Temporary probe output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round76-next\target\trace-reports\s2_cnz2_round76_engine_probe.txt`.
+- Pre-fix replay context at f11130 showed the engine sidekick with
+  `cameraMaxY/current/target=062A/05D0` but `cpuMax=062C`, so
+  `playerY=$06F0` was not below the engine kill plane (`$062C+$E0`).
+- With the fix applied, the temporary probe's f11130-equivalent row showed
+  `x=2A10 y=06F0 playerY=06F0 effectiveMaxY=05D0 cameraMaxY=062C cameraMaxYTarget=05D0 cpuMaxY=05D0`,
+  matching the ROM `Tails_Max_Y_pos` sample and entering the existing S2
+  deferred dead-fall path.
+
+Root fixed:
+- `Sonic2ZoneEvents.syncSidekickBoundsToCamera()` now mirrors the ROM
+  dynamic-resize event writes by copying `Camera_Max_Y_pos_target` to the
+  sidekick CPU max-Y bound. S2's player `Sonic_LevelBound` still uses the
+  existing max-current/target comparison for its own bottom kill-plane rule.
+- This models the CNZ2 event path where `LevEvents_CNZ2_Routine1` writes
+  `Camera_Max_Y_pos_target` and `Tails_Max_Y_pos` to `$062E`, and
+  `LevEvents_CNZ2_Routine4` later writes both to `$05D0`
+  (`docs/s2disasm/s2.asm:21532-21540,21593-21597`).
+
+Result:
+- `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f11130 / 6 to f11254 / 1. New first error: `camera_x`
+  expected `0x2AFA`, actual `0x2AF8`.
+
+Verification:
+- Focused CNZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed as the improved expected-red f11254 / 1 frontier.
+- Unit regression:
+  `mvn "-Dtest=com.openggf.game.sonic2.events.TestSonic2ZoneEvents" test`
+  passed its new helper test. The Maven run also executed the expected-red
+  CNZ2 trace via the local test selection configuration, showing the same
+  improved f11254 / 1 frontier.
+- S2 trace guard:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 S2 trace classes with only the expected-red set: CNZ2 f11254 / 1
+  and MTZ3 f13477 / 4. All other S2 trace classes remained green.
 
 ## 2026-07-02 - S2 round 75 CNZ2 boss-lock boundary source
 
