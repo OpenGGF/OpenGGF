@@ -75,6 +75,30 @@ Verification:
   `TestS3kAizCompleteRunTraceReplay` f1095 `x_sub` and
   `TestS3kAizTraceReplay` f8941 `camera_y`.
 
+## 2026-07-02 - S2 round 56 closure
+
+Round 56 merged the ARZ2 worker commit `6520b75b3` into the conductor as
+`026852725`. CNZ2 and MTZ3 did not produce committed changes.
+
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round56-next` /
+  `bugfix/ai-s2-cnz2-round56-next` reproduced f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`). The expected knockback is
+  ROM hurt response from an Obj51 split electric ball, but the engine's left
+  split orb is still around `28EF,06E8` while ROM has the 4x4 hurt orb around
+  `28EC,06EB`. Rejected candidates stayed out of split-earlier, radius, and
+  touch-projection hacks because Obj51's ROM init/split/touch-size paths fix
+  those values (`docs/s2disasm/s2.asm:67013-67024,67049-67108,85110-85431`).
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round56-next` /
+  `bugfix/ai-s2-mtz3-round56-next` reproduced f13358 / 6
+  (`tails_x_speed` expected `-020C`, actual `0x020C`). A BizHawk no-render probe
+  sampled BK2 frames 39520-39526 and confirmed ROM Obj54 stays at
+  `Boss_X_pos=$2B31.0000` through the contact window while the engine collides
+  at `$2B32`, causing a one-row-early edge overlap. A deferred Obj54
+  hit-reaction candidate regressed MTZ3 to f12909, so it was rejected and
+  reverted.
+- After `git fetch origin`, local `develop` (`3ad3b174b`) and `origin/develop`
+  (`4f673dfdf`) were already contained in conductor commit `026852725`.
+
 ## 2026-07-02 - S2 round 55 conductor baseline
 
 Round 55 starts from conductor commit `62936ec3f` on
