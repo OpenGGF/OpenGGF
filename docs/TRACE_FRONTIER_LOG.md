@@ -6,15 +6,53 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 44 targeted no-change pass is
-unchanged:
-ARZ2 is f4707 / 1945 (`x` expected `0x2B4D`, actual `0x2B4F`), CNZ2 is f9946 /
-300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
+Current branch-local S2 state after the round 45 ARZ2 targeted pass:
+ARZ2 is f4749 / 1833 (`obj_extra_s10_x` expected absent, actual `0x2AE0`),
+CNZ2 is f9946 / 300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 is f12107 / 99
 (`tails_y` expected `0x02A5`, actual `0x02A4` in the refreshed S2 sweep; focused
 OOZ2 runs also report `tails_g_speed` expected `0x00A4`, actual `0x0000`). Full
 S2 is 15 green / 4 expected-red, full S1 remains green, and the S3K guard state
-is unchanged. No S2 trace greened in round 44.
+is unchanged. No S2 trace greened in round 45.
+
+## 2026-07-02 - S2 round 45 ARZ2 targeted advance
+
+Worker ARZ2 used `.worktrees/ai-s2-arz2-round45-next` /
+`bugfix/ai-s2-arz2-round45-next`, based from conductor HEAD `41490eb5e` on
+`bugfix/ai-s2-trace-next`. The focused baseline reproduced ARZ2 f4707 / 1945
+(`x` expected `0x2B4D`, actual `0x2B4F`).
+
+Investigation confirmed the failing right Obj89 pillar side-solid was blocked by
+the engine's `SolidObject_OnScreenTest` proxy even though the ROM reaches the
+side path and sets the pillar push bit. `Obj89_Pillar_Sub0` / `Sub2` call
+`Obj89_Pillar_SolidObject`, which passes `d1=$23`, `d2=$44`, `d3=$45`, and
+temporarily adds 4 to `y_pos` before `JmpTo26_SolidObject`
+(`docs/s2disasm/s2.asm:65330-65345,65348-65374,65531-65539`). The ROM render
+flag source is the default `BuildSprites_ApproxYCheck` 32 px lower-edge band
+(`docs/s2disasm/s2.asm:30603-30611`); the engine recomputes a live bounds proxy
+for the solid gate, so Obj89 needed one pixel of lower-edge slack to keep the
+edge SolidObject call visible without admitting the preceding offscreen row.
+
+Candidate results:
+- Rejected `usesPreUpdatePositionForSolidContact`: no first-frame advance,
+  ARZ2 stayed f4707 / 1945.
+- Rejected `getOnScreenHalfHeight() == 0x20`: total errors dropped to 1938 but
+  ARZ2 stayed f4707.
+- Rejected shared camera `getX/YWithShake()` bounds: no first-frame advance,
+  ARZ2 stayed f4707 / 1945.
+- Rejected parallax-shake live render proxy: regressed to f4706 / 1967.
+- Banked Obj89 lower-edge slack `getOnScreenHalfHeight() == 0x21`: ARZ2 advances
+  to f4749 / 1833 (`obj_extra_s10_x` expected absent, actual `0x2AE0`).
+
+Verification:
+- `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"
+  "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace"
+  test` now reports the expected-red frontier at f4749 / 1833.
+- `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"
+  "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossPillarsUseLowestFreeSlotsAtFrame4692"
+  test` passed the f4692 pillar allocation oracle.
 
 ## 2026-07-02 - S2 round 44 targeted no-change pass
 
