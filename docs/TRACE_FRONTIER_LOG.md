@@ -7,8 +7,9 @@ the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
 Current branch-local S2 state after round 71 ARZ2 worker branch
-`bugfix/ai-s2-arz2-round71-next`, based on conductor branch
-`bugfix/ai-s2-trace-next` at `86a4e0313`:
+`bugfix/ai-s2-arz2-round71-next`, integrated into conductor branch
+`bugfix/ai-s2-trace-next` at `c6178ab63` and banked into `next` as
+`7ef0928da`:
 ARZ2 is green under `frontierOnly`; CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
@@ -16,8 +17,8 @@ round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now CNZ2 and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
-was banked into `next`; ARZ2 greened in round 71 and is not banked until the
-worker branch is merged by the conductor.
+was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
+Round 71 CNZ2 and MTZ3 workers are still active.
 
 ## 2026-07-02 - S2 round 71 ARZ2 Obj3E end-checker delete
 
@@ -65,6 +66,30 @@ Verification:
 - Focused ARZ2 trace:
   `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
   wrote an individual Surefire report with 1 run, 0 failures, and 0 errors.
+
+Conductor integration and banking:
+- Merged worker commit `91c6d322` into conductor branch
+  `bugfix/ai-s2-trace-next` as merge commit `c6178ab63`.
+- Post-ARZ2-green full S2 sweep on conductor:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  confirmed 17 green and two expected-red frontiers: CNZ2 f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`) and MTZ3 f13477 / 4
+  (`x_speed` expected `-03FB`, actual `0x03FB`). ARZ2 was green by exact
+  Surefire class report.
+- Post-ARZ2-green full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- Post-ARZ2-green S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`). The S3K loading/bootstrap
+  guard classes were all green.
+- Banked into `next` from worktree
+  `C:\Users\farre\IdeaProjects\sonic-engine-next` as merge commit
+  `7ef0928da`. The only merge conflict was `CHANGELOG.md`, resolved
+  additively. A post-bank S2 sweep in the `next` worktree matched the conductor:
+  ARZ2 green, CNZ2 f9977 / 10, MTZ3 f13477 / 4.
 
 ## 2026-07-02 - S2 round 70 ARZ2 Obj28 render-flag slot reuse
 
