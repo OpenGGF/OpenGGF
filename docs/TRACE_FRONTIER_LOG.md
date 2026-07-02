@@ -6,14 +6,55 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 41 targeted no-change pass is
+Current branch-local S2 state after the round 42 targeted no-change pass is
 unchanged:
 ARZ2 is f4707 / 1945 (`x` expected `0x2B4D`, actual `0x2B4F`), CNZ2 is f9946 /
 300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 is f12107 / 99
 (`tails_g_speed` expected `0x00A4`, actual `0x0000`). Full S2 is 15 green / 4
 expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. No S2
-trace greened in round 41.
+trace greened in round 42.
+
+## 2026-07-01 - S2 round 42 targeted no-change pass
+
+Round 42 started from `5c4af8445` on `bugfix/ai-s2-trace-next`. No source
+changes were integrated and no S2 trace greened, but MTZ3 and OOZ2 now have
+specific implementation targets for the next round.
+
+- ARZ2 contact worktree `.worktrees/ai-s2-arz2-contact-round42-next` /
+  `bugfix/ai-s2-arz2-contact-round42-next`: reproduced f4707 / 1945. Context
+  showed the engine sees the right Obj89 ARZ boss pillar at `$2B70,$0500` but
+  reports no touch and expected-onObj `$19` missing. Disassembly confirms
+  `Obj89_Pillar_SolidObject` calls `SolidObject` with `d1=$23`, `d2=$44`,
+  `d3=$45`, and `y_pos+4`; `SolidObject_LeftRight` remains the relevant side
+  path. No exact failed engine predicate was isolated. ARZ2 remains f4707 /
+  1945.
+- CNZ2 slope/state worktree `.worktrees/ai-s2-cnz2-slope-round42-next` /
+  `bugfix/ai-s2-cnz2-slope-round42-next`: reproduced f9946 / 300. Investigation
+  reviewed shared movement slope-repel, sidekick CPU object-control/move-lock
+  gates, skid-dust path, and S2/S1/S3K slope-repel disassembly. The target
+  context still shows the engine grounded/rolling with `anim=02`, `g=08A8`,
+  `moveLock=0`, and `angle=00`, while the ROM row shows air/routine `$04`,
+  `status=$02`, `x_speed=$0200`, `y_speed=$FC00`, and rings zero. No genuine
+  fix was isolated. CNZ2 remains f9946 / 300.
+- MTZ3 Obj54 worktree `.worktrees/ai-s2-mtz3-obj54-round42-next` /
+  `bugfix/ai-s2-mtz3-obj54-round42-next`: reproduced f13336 / 352. Context
+  shows ROM Obj54 at slots `$20/$21` and Obj53 starting at `$24`, while the
+  engine has Obj54 at `$18/$19` and Obj53 starting at `$22`. Code evidence:
+  `Sonic2MTZEvents` uses `createDynamicObjectWithReservedSlot` for Obj54 and
+  `Sonic2MTZBossInstance` spawns the shooter with `spawnFreeChild`, but
+  `spawnOrbs` currently allocates all seven Obj53 orbs as fresh children instead
+  of modeling the ROM Obj53 seed-slot/current-slot reuse. No fix was committed.
+  MTZ3 remains f13336 / 352.
+- OOZ2 Obj07P2 worktree `.worktrees/ai-s2-ooz2-obj07p2-round42-next` /
+  `bugfix/ai-s2-ooz2-obj07p2-round42-next`: reproduced f12107 / 99. Context
+  shows ROM Tails `status=$08`, onObj `$0E`, near slot `$0E` Obj07 at
+  `$2935,$02D8`; engine has Tails hurt/air with expected-onObj `$0E` missing
+  and Obj55 touch at `$2940,$028E`. Engine `OilSurfaceManager` already processes
+  all engine players, but investigation found a suspect extra Obj07 hurt-air
+  support abort that is not present in ROM `PlatformObject`. No fix was
+  committed. OOZ2 remains f12107 / 99.
+- No round-42 change was banked into `next`.
 
 ## 2026-07-01 - S2 round 41 targeted no-change pass
 
