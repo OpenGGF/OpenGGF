@@ -1879,6 +1879,34 @@ public class TestS2ObjectOccupancyOracle {
         Assertions.assertTrue(check.actualOnObject());
     }
 
+    @Test
+    public void arz2BossArrowTimerDecayKeepsCpuTailsRidingAtFrame5968() throws Exception {
+        RideCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 5968) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have Tails at ARZ2 f5968");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    Assertions.assertNotNull(expected.sidekick(), "Trace frame must include recorded Tails state");
+                    Assertions.assertEquals(0x14, expected.sidekick().standOnObj(),
+                            "ROM fixture should still have Tails standing on Obj89 arrow slot 0x14 at ARZ2 f5968");
+                    return new RideCheck(expected.sidekick().y() & 0xFFFF,
+                            tails.getCentreY() & 0xFFFF,
+                            tails.getAir(),
+                            tails.isOnObject());
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj89_Arrow_Platform branches to timer decay when obj89_arrow_timer "
+                        + "is nonzero, but that path only decrements the timer; it does not "
+                        + "drop riders until Obj89_Arrow_Sub6 (docs/s2disasm/s2.asm:65658-65702)");
+        Assertions.assertFalse(check.actualAir());
+        Assertions.assertTrue(check.actualOnObject());
+    }
+
     /**
      * Drives the named S2 level-select trace through the engine (mirroring the
      * S2 branch of {@code AbstractTraceReplayTest.replayMatchesTrace}) and

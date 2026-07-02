@@ -65,6 +65,7 @@ public class ARZBossArrow extends AbstractObjectInstance
     private int xVel;
     private int yVel;
     private int arrowTimer;
+    private boolean timerExpiredThisFrame;
 
     // Animation state
     private int arrowAnim;
@@ -140,6 +141,7 @@ public class ARZBossArrow extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        timerExpiredThisFrame = false;
 
         // Check if boss defeated
         if (mainBoss != null && mainBoss.isInDefeatSequence()) {
@@ -221,6 +223,7 @@ public class ARZBossArrow extends AbstractObjectInstance
         }
         arrowTimer--;
         if (arrowTimer == 0) {
+            timerExpiredThisFrame = true;
             routineState = ARROW_SUB_FALLING;
         }
     }
@@ -351,7 +354,17 @@ public class ARZBossArrow extends AbstractObjectInstance
         // equivalent: timer-decay frames skip MvSonicOnPtfm, but the player
         // remains attached until Obj89_Arrow_Sub6 explicitly drops riders.
         // docs/s2disasm/s2.asm:65658-65702
-        return routineState == ARROW_SUB_STUCK && arrowTimer > 0;
+        return (routineState == ARROW_SUB_STUCK && arrowTimer > 0) || timerExpiredThisFrame;
+    }
+
+    @Override
+    public boolean preservesRidingPushStatus(PlayableEntity player) {
+        // During Obj89_Arrow_Platform_Decay the shipped ROM skips PlatformObject
+        // but does not clear Tails' existing Status_Push/standing state; the
+        // explicit drop happens later in Obj89_Arrow_Sub6. Sonic starts the timer,
+        // CPU Tails does not. docs/s2disasm/s2.asm:65658-65702
+        return player != null && player.isCpuControlled()
+                && ((routineState == ARROW_SUB_STUCK && arrowTimer > 0) || timerExpiredThisFrame);
     }
 
     @Override
