@@ -498,6 +498,33 @@ public class TestDisplayShaderPipelineSmoke {
         }
     }
 
+    @Test
+    public void rewindVhsEffectPassPrewarmsAppliesAndStaysHealthy() {
+        try (GlContext ignored = GlContext.open()) {
+            RewindVhsEffectPass pass = new RewindVhsEffectPass();
+
+            // apply before prewarm is a safe no-op
+            pass.apply(1.0f, 1.0f, 32, 32, 0, 0, 32, 32);
+            assertFalse(pass.isFailed());
+
+            pass.prewarm(32, 32, 32, 32);
+            assertFalse(pass.isFailed(), "built-in preset must activate cleanly");
+
+            glViewport(0, 0, 32, 32);
+            glClearColor(0.2f, 0.4f, 0.6f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            pass.apply(1.0f, 1.0f, 32, 32, 0, 0, 32, 32);
+            assertFalse(pass.isFailed(), "healthy apply must not latch failure");
+
+            // zero intensity is a no-op and must not affect health
+            pass.apply(0.0f, 1.0f, 32, 32, 0, 0, 32, 32);
+            assertFalse(pass.isFailed());
+
+            pass.dispose();
+        }
+    }
+
     private static DisplayShaderPreset passthroughPreset() {
         return new DisplayShaderPreset("passthrough", ShaderPhase.FINAL, List.of(
                 new DisplayShaderPass(null, """
