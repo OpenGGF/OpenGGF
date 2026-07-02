@@ -516,19 +516,6 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * Spawns a static destroyed capsule visual.
-     * Mimics ROM orphaned child object behavior - body visual persists after parent deletion.
-     */
-    private void spawnDestroyedCapsule() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-
-        spawnFreeChild(() -> new DestroyedEggPrisonObjectInstance(spawn, spawn.x(), spawn.y()));
-    }
-
-    /**
      * Checks if any animals are still present in object RAM.
      * ROM: loc_3F406 loop
      */
@@ -579,18 +566,10 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
                     elapsedSeconds, ringCount, actNumber, allRingsCollected));
         }
 
-        // Spawn static destroyed capsule visual before destroying main object
-        // This mimics the ROM behavior where the body visual child object (routine 2)
-        // remains alive after parent deletion (loc_3F406), keeping the open capsule visible
-        spawnDestroyedCapsule();
-
-        // Detach button from parent but keep it alive for visual/collision during results
-        if (buttonObject != null) {
-            buttonObject.detachFromParent();
-        }
-
-        // Mark this object for deletion
-        setDestroyed(true);
+        // ROM deletes the routine-$A end-checker sub-object at loc_3F406, not
+        // the routine-2 body. The body keeps running loc_3F278 and therefore
+        // keeps the player's continued SolidObject ride attached through the
+        // results sequence.
     }
 
     @Override
