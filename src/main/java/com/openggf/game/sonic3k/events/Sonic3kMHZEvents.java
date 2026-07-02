@@ -1357,14 +1357,41 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * True once {@code Events_routine_bg} has reached the boss-area range
-     * ({@code >= $8}, {@code ACT2_BG_CUSTOM_LAYOUT_ROUTINE}). From this point
-     * {@code MHZ2_BackgroundEvent}'s dispatch table routes vertical BG deform
-     * through {@code sub_554B8} instead of the shared {@code MHZ_Deform}
-     * routine (sonic3k.asm:112922-112993, 113118).
+     * True when {@code MHZ2_BackgroundEvent}'s dispatch table
+     * (sonic3k.asm:112861-113104) routes vertical BG deform through
+     * {@code sub_554B8} for the current {@code Events_routine_bg} value,
+     * instead of the shared {@code MHZ_Deform} routine.
+     *
+     * <p>This is every routine value except two, both of which stay on
+     * standard {@code MHZ_Deform}:
+     * <ul>
+     *   <li>Routine {@code 0} (loc_551EE, asm 112883-112899): conditional on
+     *       {@code P1.x >= $3700 && P1.y < $500} in the ROM, but that exact
+     *       condition is what {@link #updateAct2InitialBackgroundEvent()}
+     *       already tests to decide whether to advance to routine {@code 4}
+     *       this same frame — so by the time this predicate is read,
+     *       {@code act2BackgroundRoutine} only remains {@code 0} when the
+     *       ROM condition was false (standard deform).</li>
+     *   <li>Routine {@code $C} (loc_552F8, asm 112977-112986): unconditional
+     *       standard {@code MHZ_Deform}. Routine {@code 8}'s own
+     *       {@code y >= $500} branch (loc_55250, asm 112923-112932) also
+     *       calls {@code MHZ_Deform} inline before advancing to {@code $C},
+     *       for the same reason.</li>
+     * </ul>
+     *
+     * <p>Routine {@code 4} (loc_55236, asm 112910-112911) is unconditional
+     * {@code sub_554B8}. Routine {@code 8}'s other two ROM exits both leave
+     * this predicate true: the {@code $420 < P1.y < $500 && status bit 1}
+     * branch (loc_552E0, asm 112938-112966) calls {@code sub_554B8} directly
+     * and leaves {@code Events_routine_bg} at {@code 8}; the remaining case
+     * (loc_5528A, asm 112941-112962) advances to routine {@code $10} within
+     * the same frame, and {@link #updateAct2EndBossArenaBackgroundEvent()}
+     * mirrors the ROM chain into loc_55312, which funnels to {@code sub_554B8}
+     * via loc_55486 (asm 113099) like every routine {@code >= $10}.
      */
     public boolean isBossAreaBackgroundDeformActive() {
-        return act2BackgroundRoutine >= ACT2_BG_CUSTOM_LAYOUT_ROUTINE;
+        return act2BackgroundRoutine != 0
+                && act2BackgroundRoutine != ACT2_BG_CUSTOM_LAYOUT_REDRAW_ROUTINE;
     }
 
     public boolean isEndBossCustomLayoutQueued() {

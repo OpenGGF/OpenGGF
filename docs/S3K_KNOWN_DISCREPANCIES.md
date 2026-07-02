@@ -604,7 +604,7 @@ a backward seek.
 **Location:** `SwScrlMhz.java` (`computeMhzDeform`, `computeBgY`), `Sonic3kMHZEvents.java`
 (`isBossAreaBackgroundDeformActive`), `MhzZoneRuntimeState.java`
 **ROM Reference:** `sub_554B8` (asm ~113118-113151), dispatched from `MHZ2_BackgroundEvent_Index`
-once `Events_routine_bg` reaches the boss-area range (asm 112829-113113)
+per the exact `Events_routine_bg` table below (asm 112861-113104)
 
 ### Original Implementation (engine, pre-fix)
 
@@ -617,12 +617,35 @@ the whole encounter.
 
 ### Fixed Implementation
 
-`Sonic3kMHZEvents.isBossAreaBackgroundDeformActive()` exposes `Events_routine_bg >= $8`
-(`ACT2_BG_CUSTOM_LAYOUT_ROUTINE`, the point where `MHZ2_BackgroundEvent`'s dispatch table
-starts routing through `sub_554B8`) through `MhzZoneRuntimeState`. `SwScrlMhz.computeMhzDeform`
-now branches on that ROM-state predicate (not zone name) and calls the existing generalized
-`computeBgY(cameraY, yOffset, baseY)` helper with `(0x280, 0x180)` during the boss-area range
-instead of the standard `(0, 0x76)`.
+`Sonic3kMHZEvents.isBossAreaBackgroundDeformActive()` exposes the exact ROM routine-to-deform
+mapping through `MhzZoneRuntimeState`, not a flat `Events_routine_bg >= $8` cutoff (the first
+version of this fix used that cutoff and was corrected in review — see below). `SwScrlMhz`'s
+`computeMhzDeform` branches on that predicate and calls the existing generalized
+`computeBgY(cameraY, yOffset, baseY)` helper with `(0x280, 0x180)` when it is true, `(0, 0x76)`
+otherwise.
+
+The predicate is `act2BackgroundRoutine != 0 && act2BackgroundRoutine != $C`, which is every
+routine value the field can hold except those two:
+
+- Routine `0` (loc_551EE, asm 112883-112899): ROM is conditional on `P1.x >= $3700 && P1.y <
+  $500`, but that is the exact condition `updateAct2InitialBackgroundEvent()` already tests to
+  decide whether to advance to routine `4` within the same frame — so by the time this
+  predicate is read, `act2BackgroundRoutine` only remains `0` when the ROM condition was
+  false. Standard deform.
+- Routine `4` (loc_55236, asm 112910-112911): ROM-unconditional `sub_554B8`. Numerically `< $8`,
+  so the original `>= $8` cutoff wrongly used standard deform here.
+- Routine `8` (loc_55250, asm 112922-112966): ROM three-way branches on `P1.y`/status bit 1, but
+  `updateAct2EndBossCustomLayoutEvent()`'s three exits mean `act2BackgroundRoutine` only remains
+  `8` across the frame boundary on the one ROM exit (loc_552E0) that calls `sub_554B8`; its other
+  two exits transition to `$C` (standard) or `$10` (which itself funnels to `sub_554B8`) within
+  the same frame.
+- Routine `$C` (loc_552F8, asm 112977-112986): ROM-unconditional standard `MHZ_Deform`.
+  Numerically `>= $8`, so the original `>= $8` cutoff wrongly used `sub_554B8` here.
+- Routines `>= $10` (loc_55312 onward): all funnel to `sub_554B8` via loc_55486 (asm 113099).
+
+`computeBgY`'s existing shift-based math (`asr.l #3` / `asr.l #2` + add, ported as Java `>>`,
+not `/`) already floors negative deltas correctly per ROM semantics; a regression test pins
+that so a future refactor toward `* 5 / 32` truncating division would be caught.
 
 ### Rationale
 
@@ -632,6 +655,12 @@ handling (`Screen_shake_offset`) was already correct and untouched.
 
 ### Verification
 
-`SwScrlMhzTest.endBossVerticalDeformUsesSub554B8BaseWhenRoutineBgIsInBossAreaRange` drives
-`Events_routine_bg` into the boss-area range via `Sonic3kMHZEvents.setAct2BackgroundRoutineForTest(8)`
-and asserts `getVscrollFactorBG()` equals the ROM `sub_554B8` formula.
+`SwScrlMhzTest`:
+- `endBossVerticalDeformUsesSub554B8BaseWhenRoutineBgIsInBossAreaRange` — routine `8` (the
+  loc_552E0 exit) uses `sub_554B8`.
+- `routineBg4UsesSub554B8Unconditionally` — routine `4` uses `sub_554B8` even though it is
+  numerically below `$8`.
+- `routineBgCUsesStandardMhzDeformUnconditionally` — routine `$C` uses standard `MHZ_Deform`
+  even though it is numerically `>= $8`.
+- `sub554B8UsesAsrFlooringNotTruncatingDivisionForNegativeDelta` — a `cameraY < $280` case
+  asserts the ROM-exact floored result, which a truncating-division oracle would get wrong.
