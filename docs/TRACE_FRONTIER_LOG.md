@@ -6,18 +6,68 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 59 ARZ2/MTZ3 work and the local
-`develop` merge through `d81dd2be1`:
-ARZ2 is f5970 in the focused replay (`tails_status_byte` expected `0x0002`,
-actual `0x0022`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
+Current branch-local S2 state after round 60 ARZ2 work on conductor commit
+`c45e81778`:
+ARZ2 is f6309 / 1 under `frontierOnly` (`obj_s14_type` expected `0x08`,
+actual missing), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now ARZ2, CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
-was banked into `next`; ARZ2 advanced but is not banked under the green-bank
-rule.
+was banked into `next`; ARZ2 advanced again in round 60 but is not banked under
+the green-bank rule.
+
+## 2026-07-02 - S2 round 60 ARZ2 Obj89 arrow drop push-clear cadence
+
+Round 60 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round60-next` /
+`bugfix/ai-s2-arz2-round60-next`, based from conductor commit `c45e81778`.
+The focused baseline reproduced ARZ2 f5970 / 1 under `frontierOnly`
+(`tails_status_byte` expected `0x0002`, actual `0x0022`).
+
+Investigation stayed on the Obj89 arrow drop transition after timer expiry in
+the ARZ2 boss room. A BizHawk PC probe over native frames 13964-13972, launched
+through `tools/bizhawk/run_bizhawk_lua.bat` with the fast no-audio/no-visual
+defaults, showed the ROM entering Obj89 Sub6 while CPU Tails still had the
+pushed status visible around the first drop sample. On the following sampled
+frame, `Tails_Animate` had cleared `Status_Push` before Obj89 reached its next
+drop check.
+
+The ROM Obj89 Sub6 path clears the p1/p2 standing bits and calls
+`Obj89_Arrow_DropPlayer`, which sets `Status_InAir` and clears
+`Status_OnObj`; it does not clear `Status_Push`
+(`docs/s2disasm/s2.asm:65689-65704`). The later Tails animation/status path
+clears `Status_Push` when the animation byte changes
+(`docs/s2disasm/s2.asm:41272-41279`). The engine was only dropping the main
+player from the arrow and left CPU Tails' persistent interact/side-push status
+latched after the ROM-visible clear window.
+
+Fix:
+- `ARZBossArrow` now runs the drop over both the main player and sidekick
+  participants, keyed by either a current ride on the arrow or a persistent
+  interact slot that still names this arrow.
+- The arrow models the two-step release cadence: the first falling update
+  clears the ride/on-object latch while preserving push, and the next falling
+  update clears the pushed status after the ROM-equivalent later
+  Tails-animation/status phase.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f5970 / 1
+  (`tails_status_byte` expected `0x0002`, actual `0x0022`) to f6309 / 1 under
+  `frontierOnly` (`obj_s14_type` expected `0x08`, actual missing). The new
+  frontier is likely the next Obj08/skid-dust allocation cadence after the
+  boss-room arrow release.
+
+Verification:
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Dtrace.context.diagnosticChars=full" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f6309 / 1.
+- Same-game guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  preserved the accepted expected-red frontiers: CNZ2 f9977 / 10 and MTZ3
+  f13477 / 4.
 
 ## 2026-07-02 - S2 round 59 MTZ3 Obj54 hit-reaction X velocity clear
 
