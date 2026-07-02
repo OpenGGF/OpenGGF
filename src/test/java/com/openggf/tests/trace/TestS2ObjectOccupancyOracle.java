@@ -576,6 +576,10 @@ public class TestS2ObjectOccupancyOracle {
     private record RideCheck(int expectedY, int actualY, boolean actualAir, boolean actualOnObject) {
     }
 
+    private record PushStatusCheck(boolean expectedPushing, boolean actualPushing, int expectedStatus,
+                                   int actualStatus) {
+    }
+
     private record DeadRideReleaseCheck(
             boolean onObject,
             boolean air,
@@ -1940,6 +1944,35 @@ public class TestS2ObjectOccupancyOracle {
                         + "drop riders until Obj89_Arrow_Sub6 (docs/s2disasm/s2.asm:65658-65702)");
         Assertions.assertFalse(check.actualAir());
         Assertions.assertTrue(check.actualOnObject());
+    }
+
+    @Test
+    public void arz2BossArrowTimerDecayDoesNotRestoreTailsPushAfterAnimationClear() throws Exception {
+        PushStatusCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 6487) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    Assertions.assertNotNull(expected.sidekick(), "Trace frame must include recorded Tails state");
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have Tails at ARZ2 f6487");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    int expectedStatus = expected.sidekick().statusByte() & 0xFF;
+                    int actualStatus = TraceCharacterState.statusByteFromSprite(tails);
+                    return new PushStatusCheck(
+                            (expectedStatus & AbstractPlayableSprite.STATUS_PUSHING) != 0,
+                            tails.getPushing(),
+                            expectedStatus,
+                            actualStatus);
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedPushing(), check.actualPushing(),
+                "S2 Tails_Animate clears Status_Push when anim changes, and Obj89_Arrow_Platform_Decay "
+                        + "skips PlatformObject, so the arrow must not re-set Tails' push bit at f6487 "
+                        + "(docs/s2disasm/s2.asm:41272-41279,65658-65683); expected status=0x"
+                        + Integer.toHexString(check.expectedStatus()) + " actual status=0x"
+                        + Integer.toHexString(check.actualStatus()));
     }
 
     /**
