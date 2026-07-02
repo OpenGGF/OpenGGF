@@ -75,9 +75,34 @@ Verification:
   `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
   ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5852 / 6, CNZ2
   f9977 / 10, and MTZ3 f13358 / 6. OOZ2 stayed green.
-- Cross-game S1/S3K guards were not rerun because the change is isolated to
-  the S2 Obj89 pillar object implementation and its S2 unit coverage; no shared
-  physics, collision, sidekick, or object infrastructure changed.
+- Conductor S1 guard after merging commit `836b88c8e`:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  plus fresh Surefire XML filtering reported `S1_RECENT=29 S1_BAD=0`.
+- Conductor S3K guard after merging commit `836b88c8e`:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 tests with only the two known AIZ expected-red frontiers:
+  `TestS3kAizCompleteRunTraceReplay` f1095 `x_sub` and
+  `TestS3kAizTraceReplay` f8941 `camera_y`.
+
+## 2026-07-02 - S2 round 55 closure
+
+Round 55 merged the ARZ2 worker commit `836b88c8e` into the conductor as
+`bf9cdc4be`. CNZ2 and MTZ3 did not produce committed changes.
+
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round55-next` /
+  `bugfix/ai-s2-cnz2-round55-next` reproduced f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`) after testing Obj51
+  countdown, split touch timing, and rightward attach-coordinate hypotheses.
+  Projection variants regressed to f9199; coordinate-only/current-position
+  variants were no-change. No files were changed, and the worktree was clean.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round55-next` /
+  `bugfix/ai-s2-mtz3-round55-next` reproduced f13358 / 6
+  (`tails_x_speed` expected `-020C`, actual `0x020C`). A BizHawk probe showed
+  ROM negates Tails at BK2 frame 39523 / trace f13359 through Obj54 slot 20
+  `Touch_Enemy`, while the engine applies the bounce one trace row early. No
+  committed candidate advanced the frontier.
+- After `git fetch origin`, local `develop` (`3ad3b174b`) and `origin/develop`
+  (`4f673dfdf`) were already contained in conductor commit `bf9cdc4be`.
 
 ## 2026-07-02 - S2 round 54 OOZ2 Obj3E capsule body lifetime green
 
