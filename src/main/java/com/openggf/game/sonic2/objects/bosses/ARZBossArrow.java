@@ -366,8 +366,13 @@ public class ARZBossArrow extends AbstractObjectInstance
             // The ROM writes #$1F and immediately falls through to
             // Obj89_Arrow_Platform_Decay in the same object call. This
             // callback runs after object update, so store the already
-            // decremented post-call value. docs/s2disasm/s2.asm:65658-65683
-            arrowTimer = 0x1E;
+            // decremented post-call value. CPU Tails does not start the timer
+            // in the shipped ROM: the p2-standing timer write lives under the
+            // disabled fixBugs block, while p1-standing still writes #$1F.
+            // docs/s2disasm/s2.asm:65658-65683
+            if (!playerEntity.isCpuControlled()) {
+                arrowTimer = 0x1E;
+            }
         }
     }
 

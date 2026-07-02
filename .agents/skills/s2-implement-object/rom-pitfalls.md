@@ -3359,6 +3359,40 @@ delete the routine-2 body slot.
 
 ---
 
+## P81 -- Disabled `fixBugs` branches must not drive shipped P2 behavior
+
+**Pattern.** The S2 disassembly includes conditional `fixBugs` blocks that are
+not present in the shipped ROM behavior. If a P2/Tails write or branch lives
+only inside one of those blocks, the engine must not implement it as normal
+runtime behavior unless the selected ROM/build actually enables that code.
+
+**Engine symptom.** CPU Tails interacts with the right object and slot but
+takes a timer/state transition that only Sonic should trigger. In ARZ2, the
+engine started Obj89 arrow's timer when CPU Tails stood on the arrow. The
+shipped ROM leaves the P2-standing timer write under disabled `fixBugs`, so
+`Obj89_Arrow_Platform` keeps calling `PlatformObject` and `MvSonicOnPtfm`
+reseats hurt Tails one pixel lower on the next support pass.
+
+**What to check / fix.**
+1. When a copied routine contains `if fixBugs` / `else` blocks, verify which
+   side is active in the shipped ROM before porting any behavior.
+2. Treat P1 and P2 standing/contact checks separately when only one side of the
+   ROM code is outside the disabled block.
+3. Keep the fix keyed to the object-local ROM state and shipped build path. Do
+   not compensate by route, zone, trace frame, or a known failing trace.
+
+**ROM citation.** Obj89 arrow calls `PlatformObject` while
+`obj89_arrow_timer` is zero. The P2-standing timer write appears only inside
+the disabled `fixBugs` block, while the active P1-standing branch writes
+`#$1F` and immediately decays it (`docs/s2disasm/s2.asm:65658-65683`).
+`PlatformObject` processes P1 then P2, and continued support moves the rider
+through `MvSonicOnPtfm` (`docs/s2disasm/s2.asm:35728-35739,35641-35660`).
+
+**Originating commit.** `<pending>` S2 ARZ2 Obj89 arrow CPU Tails timer gate:
+`TestS2Arz2LevelSelectTraceReplay` advances f5929 -> f5968.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

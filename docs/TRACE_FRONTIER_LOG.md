@@ -6,10 +6,9 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 57 ARZ2 work on top of the develop
+Current branch-local S2 state after round 58 ARZ2 work on top of the develop
 GameRules refactor baseline:
-ARZ2 is f5929 / 2 under `frontierOnly` (`tails_y` expected `0x0450`, actual
-`0x044F`),
+ARZ2 is f5968 / 8 under `frontierOnly` (`tails_air` expected `0`, actual `1`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
 expected `-020C`, actual `0x020C`), and OOZ2 is green after the round 54 Obj3E
@@ -19,6 +18,58 @@ The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 advanced but is not banked under the green-bank
 rule.
+
+## 2026-07-02 - S2 round 58 ARZ2 Obj89 arrow CPU Tails timer gate
+
+Round 58 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round58-next` /
+`bugfix/ai-s2-arz2-round58-next`, based from conductor commit `c80b846f7`.
+The focused baseline reproduced ARZ2 f5929 / 2 under `frontierOnly`
+(`tails_y` expected `0x0450`, actual `0x044F`).
+
+Investigation stayed on the Obj89 arrow platform in the ARZ2 boss room. At the
+frontier, Tails is in the S2 hurt-stop handoff while still standing on Obj89
+slot `$14`. A BizHawk PC probe over the corresponding native frames showed
+`Tails_HurtStop` setting routine 2 and `Status_Push`, then Obj89 still running
+`Obj89_Arrow_Platform` with `obj89_arrow_timer=0`; `MvSonicOnPtfm` reseated
+Tails from `0x044F.8100` to `0x0450.8100` in the same object pass.
+
+The shipped ROM's Obj89 arrow path calls `PlatformObject` with `d1=$1B`,
+`d2=1`, `d3=2`, and `d4=x_pos(a0)` while the timer is zero. The only P2/Tails
+standing write to `obj89_arrow_timer` is inside the disabled `fixBugs` block,
+whereas the active P1-standing branch writes `#$1F` and immediately decays it
+(`docs/s2disasm/s2.asm:65658-65683`). `PlatformObject` processes P1 then P2,
+and the continued support path moves the rider with `MvSonicOnPtfm`
+(`docs/s2disasm/s2.asm:35728-35739,35641-35660`). The engine had started the
+timer for any standing rider, including CPU Tails, so it suppressed the next
+platform support pass and left Tails one pixel too high.
+
+Fix:
+- `ARZBossArrow` now starts `arrowTimer` only for non-CPU-controlled standing
+  riders, preserving the shipped-ROM P1 path while leaving CPU Tails on the
+  zero-timer `PlatformObject` path.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f5929 / 2
+  (`tails_y` expected `0x0450`, actual `0x044F`) to f5968 / 8 under
+  `frontierOnly` (`tails_air` expected `0`, actual `1`). The new frontier is a
+  later Obj89 arrow support-release timing mismatch: ROM keeps Tails grounded
+  with `Status_Push`, while the engine has already released the ride.
+
+Verification:
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f5968 / 8.
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5968 / 8, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6. OOZ2 stayed green.
+- An A/B sweep of ARZ2, CNZ2, and MTZ3 with this patch reversed showed CNZ2
+  f9977 and MTZ3 f13358 were already present, so the round 58 Obj89 change did
+  not introduce those expected-red frontiers.
+- S1 and S3K sweeps were not run because the code change is object-local to S2
+  Obj89; no shared physics, collision, sidekick, or cross-game object
+  infrastructure was touched.
 
 ## 2026-07-02 - S2 round 57 ARZ2 Obj89 arrow PlatformObject landing dimensions
 
