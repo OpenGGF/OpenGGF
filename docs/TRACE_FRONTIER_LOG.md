@@ -6,18 +6,19 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after merging the develop GameRules refactor
-(`44073db0b`) and re-running the round 51 verification baseline:
-ARZ2 is f5827 / 2 under `frontierOnly` (`x_speed` expected `0x0000`,
-actual `-015D`),
+Current branch-local S2 state after round 54 ARZ2 work on top of the develop
+GameRules refactor baseline:
+ARZ2 is f5845 / 4 under `frontierOnly` (`tails_x_speed` expected `0x0000`,
+actual `-0057`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
 expected `-020C`, actual `0x020C`), and OOZ2 is green after the round 54 Obj3E
 capsule body lifetime fix. The branch-local S2 expected-red set is now ARZ2,
 CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
-with only the known AIZ expected-red frontiers. No S2 trace greened in round 51
-or during the post-GameRules re-baseline.
+with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
+was banked into `next`; ARZ2 advanced but is not banked under the green-bank
+rule.
 
 ## 2026-07-02 - S2 round 54 OOZ2 Obj3E capsule body lifetime green
 
@@ -58,6 +59,56 @@ Verification:
   `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
   plus fresh Surefire XML filtering reported `S1_RECENT=29 S1_BAD=0`.
 - Conductor S3K guard after merge:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 guard tests: 66 green / 2 known AIZ expected-red frontiers
+  (complete-run f1095 `x_sub`, AIZ trace f8941 `camera_y`).
+
+## 2026-07-02 - S2 round 54 ARZ2 Obj89 Sonic stop advance
+
+Round 54 started from conductor commit `0bd000c9d` on
+`bugfix/ai-s2-trace-next`. Worker ARZ2 used
+`.worktrees/ai-s2-arz2-round54-next` /
+`bugfix/ai-s2-arz2-round54-next`, based from that conductor commit rather than
+`develop`. The focused baseline reproduced ARZ2 f5827 / 2 under
+`frontierOnly` (`x_speed` expected `0x0000`, actual `-015D`).
+
+Investigation stayed on the later Obj89 pillar side contact after the round 51
+Tails push-entry stop. The f5827 context showed Sonic at the same edge while
+the engine still applied the Obj89 moving side-contact velocity preservation
+that was introduced for a CPU-sidekick object-slot handoff. That preservation is
+only valid for Tails: `Obj89_Pillar_Sub0` / `Sub2` call
+`Obj89_Pillar_SolidObject` before the pillar body update at the temporary
+`y_pos+4` anchor (`d1=$23,d2=$44,d3=$45`), and the normal side path reaches
+`SolidObject_StopCharacter` when the contact is moving into the pillar
+(`docs/s2disasm/s2.asm:35413-35436,65330-65374,65531-65539`). Sonic has no
+later sidekick CPU/movement slot to overwrite that stop, so the Obj89
+preservation hook is now limited to CPU-controlled sidekicks.
+
+Candidate result:
+- ARZ2 advances to f5845 / 4 under `frontierOnly` (`tails_x_speed` expected
+  `0x0000`, actual `-0057`). The next owner remains the Obj89/Tails
+  order-sensitive side-stop window: ROM carries Tails' decelerating velocity
+  through f5843-f5844, then zeroes it at f5845.
+
+Verification:
+- `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#arzBossPillarPostPhysicsSidePushPreservesTailsVelocity+arzBossPillarMainPlayerSidePushUsesRomStopPath+arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff" test`
+  passed the three focused Obj89 pillar contact tests.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f5845 / 4.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.*TraceReplay" "-Ds2.rom.path=s2.gen" test`
+  ran 19 S2 trace tests: 15 green / 4 expected-red. Expected-red frontiers were
+  ARZ2 f5845, CNZ2 f9977, MTZ3 f13358, and OOZ2 f12861.
+- Conductor composed verification after merging with the OOZ2 green:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 S2 trace tests: 16 green / 3 expected-red at ARZ2 f5845 / 4, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6; OOZ2 stayed green.
+- Focused Obj89 unit tests passed after clearing a generated `target/antrun`
+  XML race from an overlapping Maven invocation:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#arzBossPillarPostPhysicsSidePushPreservesTailsVelocity+arzBossPillarMainPlayerSidePushUsesRomStopPath+arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff" test`.
+- Conductor S1 guard:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  plus fresh Surefire XML filtering reported `S1_RECENT=29 S1_BAD=0`.
+- Conductor S3K guard:
   `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
   ran 68 guard tests: 66 green / 2 known AIZ expected-red frontiers
   (complete-run f1095 `x_sub`, AIZ trace f8941 `camera_y`).

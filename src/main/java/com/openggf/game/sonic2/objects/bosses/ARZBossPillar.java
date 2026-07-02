@@ -285,15 +285,16 @@ public class ARZBossPillar extends AbstractObjectInstance
         // y_pos+4 anchor. In the ROM object-slot order, that side contact can set
         // Status_Push before Tails' later CPU/movement path writes the frame's
         // x_vel/inertia when this contact is newly setting Status_Push after
-        // Tails' CPU/movement slot. Once Status_Push is already visible at
-        // contact entry, ROM follows the normal SolidObject_StopCharacter path
-        // and clears x_vel/inertia. The engine's inline post-physics checkpoint
-        // sees the new-push side contact after movement, so preserve only that
-        // handoff while retaining the side correction and push bits.
+        // Tails' CPU/movement slot. The main player has no later sidekick
+        // CPU/movement slot to overwrite the stop, so Sonic follows the normal
+        // SolidObject_StopCharacter path and clears x_vel/inertia. The engine's
+        // inline post-physics checkpoint sees the new-push side contact after
+        // movement, so preserve only the CPU sidekick handoff while retaining
+        // the side correction and push bits.
         // docs/s2disasm/s2.asm:35413-35436,65330-65374,65531-65539
         int anchorX = isRightPillar() ? RIGHT_PILLAR_X : LEFT_PILLAR_X;
         int rightEdgeX = anchorX + PILLAR_SOLID_PARAMS.halfWidth();
-        return player != null && !player.getAir() && player.getGSpeed() < 0
+        return player != null && player.isCpuControlled() && !player.getAir() && player.getGSpeed() < 0
                 && (!(player instanceof AbstractPlayableSprite sprite) || !sprite.getPushing())
                 && player.getCentreX() >= rightEdgeX - 1;
     }
