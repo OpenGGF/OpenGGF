@@ -6,18 +6,74 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 64 ARZ2 worker merge on next
+Current branch-local S2 state after round 65 ARZ2 worker on next
 campaign branch `bugfix/ai-s2-trace-next`:
-ARZ2 is f6513 / 1 under `frontierOnly` (`obj_s13_type` expected `0x58`,
-actual missing), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
+ARZ2 is f6913 / 1 under `frontierOnly` (`camera_x` expected `0x2B29`,
+actual `0x2B28`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now ARZ2, CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
-was banked into `next`; ARZ2 advanced again in round 64 but is not banked under
+was banked into `next`; ARZ2 advanced again in round 65 but is not banked under
 the green-bank rule until it greens.
+
+## 2026-07-02 - S2 round 65 ARZ2 Boss_LoadExplosion object identity
+
+Round 65 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round65-next` /
+`bugfix/ai-s2-arz2-round65-next`, based from next conductor commit
+`9505ae703`. The focused baseline reproduced ARZ2 f6513 / 1 under
+`frontierOnly` (`obj_s13_type` expected `0x58`, actual missing).
+
+Investigation stayed on the Obj89 defeat-start explosion stream. The engine
+already spawned a `Boss Explosion` at the ROM coordinates in slot `$13`, but
+the object exported id `0x00`, so the trace reported ROM Obj58 as missing.
+The ROM path is data-bearing, not just cosmetic: S2 `Boss_LoadExplosion`
+allocates an object, writes `ObjID_BossExplosion` into `id(a1)`, copies the
+boss `x_pos/y_pos`, and applies random offsets. S2 Obj58's init routine then
+sets animation state and plays the boss-explosion SFX without falling through
+to the main animation decrement until the next object pass
+(`docs/s2disasm/s2.constants.asm:690`,
+`docs/s2disasm/s2.asm:61193-61218,61413-61433,65177`). S1's shared boss helper
+does the same kind of real explosion allocation with Obj3F
+(`docs/s1disasm/_inc/Object Pointers.asm:78`,
+`docs/s1disasm/_incObj/sub BossDefeated & BossMove.asm:9-14`).
+
+Fix:
+- `BossExplosionObjectInstance` now accepts a ROM object id for runtime-spawned
+  boss explosions and returns after its init/SFX frame before ticking the
+  animation timer.
+- S2 boss-defeat explosion spawns use Obj58, while S1 boss-defeat explosion
+  spawns use Obj3F. The shared default remains anonymous only for callers that
+  explicitly do not model a ROM object id.
+- The S2 transient rewind fixture now asserts the Obj58 id for the
+  `Boss_LoadExplosion`-style fixture.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f6513 / 1 (`obj_s13_type` expected `0x58`, actual missing) to
+  f6913 / 1 (`camera_x` expected `0x2B29`, actual `0x2B28`). The new owner is
+  a later camera-position mismatch after the boss-defeat sequence has started.
+
+Verification:
+- Focused S2 transient rewind fixture:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestS2SelfContainedTransientRewind" "-DfailIfNoTests=false" test`
+  passed by its Surefire class report.
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f6913 / 1.
+- Same-game guards:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  preserved CNZ2 f9977 / 10 and MTZ3 f13477 / 4.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  and level-select f8941 / 1.
 
 ## 2026-07-02 - S2 round 64 conductor closure
 

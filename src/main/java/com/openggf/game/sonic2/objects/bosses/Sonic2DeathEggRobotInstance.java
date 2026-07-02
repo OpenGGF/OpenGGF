@@ -1610,6 +1610,11 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         return Sonic2Sfx.BOSS_EXPLOSION.id;
     }
 
+    @Override
+    protected int getBossExplosionObjectId() {
+        return com.openggf.game.sonic2.constants.Sonic2ObjectIds.BOSS_EXPLOSION;
+    }
+
     // ========================================================================
     // INNER CLASS: ArticulatedChild - Body part with subpixel position tracking
     // ========================================================================

@@ -24,7 +24,11 @@ public class BossExplosionObjectInstance extends AbstractObjectInstance
     private boolean initialized;
 
     public BossExplosionObjectInstance(int x, int y, int sfxId) {
-        super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "Boss Explosion");
+        this(x, y, 0, sfxId);
+    }
+
+    public BossExplosionObjectInstance(int x, int y, int objectId, int sfxId) {
+        super(new ObjectSpawn(x, y, objectId, 0, 0, false, 0), "Boss Explosion");
         this.sfxId = sfxId;
         this.mappingFrame = 0;
         this.frameTimer = FRAME_DELAY;
@@ -35,6 +39,7 @@ public class BossExplosionObjectInstance extends AbstractObjectInstance
         if (!initialized) {
             services().playSfx(sfxId);
             initialized = true;
+            return;
         }
         frameTimer--;
         if (frameTimer >= 0) {

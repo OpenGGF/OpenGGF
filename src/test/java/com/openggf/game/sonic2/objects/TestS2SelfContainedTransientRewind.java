@@ -206,7 +206,10 @@ class TestS2SelfContainedTransientRewind {
                 () -> new BossExplosionObjectInstance(
                         baseX + 0x1B0,
                         baseY,
+                        Sonic2ObjectIds.BOSS_EXPLOSION,
                         Sonic2Sfx.BOSS_EXPLOSION.id));
+        assertEquals(Sonic2ObjectIds.BOSS_EXPLOSION, bossExplosion.getSpawn().objectId(),
+                "S2 Boss_LoadExplosion creates ROM Obj58, not an anonymous transient object");
         BadnikProjectileInstance badnikProjectile = objectManager.createDynamicObject(
                 () -> new BadnikProjectileInstance(
                         new ObjectSpawn(baseX + 0x1E0, baseY - 0x28, 0x98, 0, 0, true, 0),

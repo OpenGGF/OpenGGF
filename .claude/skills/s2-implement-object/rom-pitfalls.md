@@ -16,6 +16,39 @@ implementation, ROM citation, originating fix commit.
 
 ---
 
+## P82 — Dynamic ROM effects must keep their object id and init frame
+
+**Symptom.** A trace reports `obj_sNN_type` expected `0x58`, actual missing,
+or a later slot is reused one frame early after a boss-defeat sequence starts,
+even though the engine diagnostics show a visually correct `Boss Explosion` at
+the ROM coordinates.
+
+**Root cause.** The dynamic effect was treated as an anonymous Java transient
+instead of a real SST object. ROM helper routines such as S2
+`Boss_LoadExplosion` write the effect's object id into the allocated slot, and
+routine-0 init may play sound and return/jump without also consuming the main
+routine's animation decrement in the same object pass.
+
+**What to check.** For explosion, dust, sparkle, score, projectile, and other
+helper-spawned effects, verify whether the ROM writes an object id into the
+new slot and whether the init routine falls through to main logic. Carry the
+per-game id into `ObjectSpawn.objectId()` (S2 Boss Explosion Obj58; S1
+Explosion Obj3F) and return after init when the ROM init path does not execute
+main logic until the next frame.
+
+**ROM citation.** S2 defines `ObjID_BossExplosion` as Obj58, and
+`Boss_LoadExplosion` writes that id into the allocated slot before copying boss
+position and random offsets. Obj58 init sets mapping/art/timer state and plays
+SFX, while Obj58 main decrements the frame timer on later passes
+(`docs/s2disasm/s2.constants.asm:690`,
+`docs/s2disasm/s2.asm:61193-61218,61413-61433`). S1 boss defeat helpers load
+Obj3F explosions (`docs/s1disasm/_inc/Object Pointers.asm:78`,
+`docs/s1disasm/_incObj/sub BossDefeated & BossMove.asm:9-14`).
+
+**Originating commit.** `fix(s2): preserve boss explosion object identity`.
+
+---
+
 ## P0A — Child-to-parent shared counters must be visible in the same object pass
 
 **Symptom.** A parent object waits one extra frame to release the player or

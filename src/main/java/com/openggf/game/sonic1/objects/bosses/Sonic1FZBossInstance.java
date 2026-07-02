@@ -6,6 +6,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.graphics.GLCommand;
@@ -968,6 +969,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         spawnFreeChild(() -> new BossExplosionObjectInstance(
                 finalSourceX,
                 finalSourceY,
+                Sonic1ObjectIds.EXPLOSION,
                 Sonic1Sfx.BOSS_EXPLOSION.id));
     }
 
@@ -1106,6 +1108,11 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     @Override
     protected int getBossExplosionSfxId() {
         return Sonic1Sfx.BOSS_EXPLOSION.id;
+    }
+
+    @Override
+    protected int getBossExplosionObjectId() {
+        return Sonic1ObjectIds.EXPLOSION;
     }
 
 }
