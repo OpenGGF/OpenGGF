@@ -17,7 +17,9 @@ green, and the S3K guard state is unchanged. No S2 trace greened in round 46.
 
 ## 2026-07-02 - S2 round 46 ARZ2 targeted advance
 
-Worker ARZ2 used `.worktrees/ai-s2-arz2-round46-next` /
+Round 46 started from `b36813f4b` on `bugfix/ai-s2-trace-next`; `origin/develop`
+was already up to date before dispatch. Worker ARZ2 used
+`.worktrees/ai-s2-arz2-round46-next` /
 `bugfix/ai-s2-arz2-round46-next`, based from conductor HEAD `b36813f4b` on
 `bugfix/ai-s2-trace-next` rather than `develop`. The focused baseline
 reproduced ARZ2 f4749 / 1833 (`obj_extra_s10_x` expected absent, actual
@@ -40,6 +42,34 @@ Candidate result:
   player/pillar landing mismatch while both ROM and engine are riding the right
   Obj89 pillar at y `$04C2`.
 
+Other round-46 workers made no commits:
+- CNZ2 worktree `.worktrees/ai-s2-cnz2-round46-next` /
+  `bugfix/ai-s2-cnz2-round46-next`: reproduced f9946 / 300 (frontier-only
+  f9946 / 8). Instrumentation showed the engine Obj51 electric ball reaches the
+  hurt-producing vertical position one update later than the ROM trace. A
+  current-touch opt-in for `CNZBossElectricBall` did not advance beyond f9946,
+  and an object-order/countdown compensation reproduced the known f9199
+  `tails_x_speed` regression, so both were reverted. CNZ2 remains f9946.
+- MTZ3 worktree `.worktrees/ai-s2-mtz3-round46-next` /
+  `bugfix/ai-s2-mtz3-round46-next`: reproduced f13336 / 352 (frontier-only
+  f13336 / 6). BizHawk PC hooks confirmed ROM hurts Sonic from intact Obj53
+  slot `$18` at movie frame 39500 / VFC `$33C6`: Obj53 x `$2B55`, y `$0493`,
+  `collision_flags=$87`, `objoff_28=$38`, `objoff_3B=$34`; `Touch_ChkHurt` /
+  `HurtCharacter` then sets `x_vel=+$0200`. Engine touch scan at the matching
+  gameplay frame reads the corresponding Obj53 at x `$2B56`, y `$0489`,
+  `objoff_28=$38`, but `objoff_3B=$24`, so horizontal orbit timing matches
+  while vertical orbit phase is uniformly `$10` behind ROM across live orbs. A
+  candidate deferring Obj54 hit reaction to the update tail regressed to f12909
+  / 431 and was reverted. MTZ3 remains f13336.
+- OOZ2 worktree `.worktrees/ai-s2-ooz2-round46-next` /
+  `bugfix/ai-s2-ooz2-round46-next`: reproduced f12107 / 99 (frontier-only
+  f12107 / 13). Expanded diagnostics show frames 12102-12106 match, then the
+  engine applies Obj55 hurt to Tails while ROM keeps Tails supported by Obj07
+  slot `$0E` with `status=$08`, `onObj=$0E`, and `g_speed=$00A4`. No
+  disassembly-backed candidate was isolated without repeating previously
+  rejected Obj55 broad-region, hit-disable, or Obj07 hurt-air support changes.
+  OOZ2 remains f12107.
+
 Verification:
 - `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
   ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen""
@@ -57,6 +87,18 @@ Verification:
   ""-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen""
   ""-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils""
   test"` passed 51/51 after clearing stale Surefire reports.
+- Integrated conductor target:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen"
+  test` reports the expected-red frontier at f4769 / 1.
+- Integrated S2 subset:
+  `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen"
+  test` ran 5 requested checks: ARZ1 passed; ARZ2 f4769 / 1, CNZ2 f9946 / 8,
+  MTZ3 f13336 / 6, and OOZ2 f12107 / 13 remained expected-red.
+- No S2 trace turned green in round 46, so the ARZ2 advance was merged into the
+  campaign branch only and was not banked into `next`.
 
 ## 2026-07-02 - S2 round 45 ARZ2 targeted advance
 
