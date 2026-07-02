@@ -199,6 +199,9 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
      */
     private boolean pendingOrbBreak;
 
+    /** Defer only the Obj54_AnimateFace Boss_X_vel clear until after movement. */
+    private boolean pendingXVelocityClearAfterMove;
+
     /** objoff_3E: remaining attack cycles before laser dive */
     private int attackCyclesRemaining;
 
@@ -254,6 +257,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         bossCountdown = 0;
         faceFrame = FRAME_FACE;
         pendingOrbBreak = false;
+        pendingXVelocityClearAfterMove = false;
         bossDefeatedFlag = false;
 
         initialized = true;
@@ -413,10 +417,21 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             case 0x12 -> updateSub12Flee();
         }
 
+        applyPendingXVelocityClearAfterMove();
+
         // Check hits (except during defeat sequence)
         if (state.routine < 0x10) {
             checkHit(player);
         }
+    }
+
+    private void applyPendingXVelocityClearAfterMove() {
+        if (!pendingXVelocityClearAfterMove || state.routine >= 0x10) {
+            pendingXVelocityClearAfterMove = false;
+            return;
+        }
+        pendingXVelocityClearAfterMove = false;
+        state.xVel = 0;
     }
 
     // =========================================================================
@@ -928,8 +943,12 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             state.yVel = -VEL_DIVE;  // move.w #-$180,(Boss_Y_vel)
             attackCyclesRemaining--; // subq.b #1,objoff_3E
         }
-        // ROM: move.w #0,(Boss_X_vel) executes in BOTH branches.
-        state.xVel = 0;
+        // ROM clears Boss_X_vel from Obj54_AnimateFace, after the current routine's
+        // Boss_MoveObject/x_pos copy (docs/s2disasm/s2.asm:67314-67342,
+        // 67605-67620, 67726-67748). Touch_Enemy reaches this method before Obj54's
+        // update in the engine's S2 player-slot-first order, so queue only this
+        // velocity clear and keep the rest of the established hit reaction timing.
+        pendingXVelocityClearAfterMove = true;
 
         // NOTE: ROM Obj54_CheckHit also flashes $EEE -> Normal_palette_line2+2
         // (s2.asm:67247-67253). The base AbstractBossInstance.BossPaletteFlasher already
