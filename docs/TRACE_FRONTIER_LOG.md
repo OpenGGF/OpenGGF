@@ -6,9 +6,9 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 62 ARZ2 worker
-`bugfix/ai-s2-arz2-round62-next` from next conductor commit `81347df9d`:
-ARZ2 is f6487 / 262 in the focused replay (`tails_status_byte` expected
+Current branch-local S2 state after round 62 ARZ2 worker merge on next
+conductor branch `bugfix/ai-s2-trace-next`:
+ARZ2 is f6487 / 1 under `frontierOnly` (`tails_status_byte` expected
 `0x000F`, actual `0x002F`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
@@ -74,6 +74,25 @@ Verification:
   `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.frontierOnly=true" "-DfailIfNoTests=false" test`
   preserved the known expected-red frontiers: CNZ2 f9977 / 10 and MTZ3
   f13477 / 4.
+- Conductor merge verification after merge commit:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and 3 expected-red frontiers: ARZ2 f6487 / 1,
+  CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  and level-select f8941 / 1.
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round62-next` / `bugfix/ai-s2-cnz2-round62-next`
+  made no commit. It ruled out Obj86 with BizHawk RAM probes and reverted an
+  Obj51 split-touch projection candidate that moved the first error backward to
+  f9199. CNZ2 remains f9977 / 10.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round62-next` / `bugfix/ai-s2-mtz3-round62-next`
+  made no commit. It reproduced the Obj53 orb-contact frontier and inspected
+  `docs/s2disasm/s2.asm:67832-67865,67968-67987`, but found no genuine
+  advancing fix. MTZ3 remains f13477 / 4.
 
 ## 2026-07-02 - S2 post-GameRules-refactor merge baseline
 
