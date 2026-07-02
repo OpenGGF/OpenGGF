@@ -360,6 +360,33 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void arzBossPillarReleasedSidePushKeepsTailsCpuAutoJumpGateVisible() {
+        ARZBossPillar pillar = new ARZBossPillar(
+                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
+                null);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCentreX((short) 0x2A73);
+        tails.setCentreY((short) 0x04C0);
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setOnObject(false);
+        tails.setRolling(false);
+
+        assertTrue(pillar.preservesSidekickCpuPushGraceAfterRideClears(tails),
+                "Obj89_Pillar_SolidObject writes Tails' Status_Push before TailsCPU_Normal reads "
+                        + "the push-bypass auto-jump gate; the engine may have cleared the local "
+                        + "push by the CPU read, so the object exposes a narrow side-edge grace "
+                        + "(docs/s2disasm/s2.asm:39287-39300,65330-65339,65531-65539).");
+
+        tails.setCentreX((short) 0x2A70);
+        assertFalse(pillar.preservesSidekickCpuPushGraceAfterRideClears(tails));
+    }
+
+    @Test
     void steamPuffDoesNotUseMarkObjGoneUnloadWindow() {
         SteamPuffObjectInstance puff = new SteamPuffObjectInstance(0x0208, 0x0270, true);
 
