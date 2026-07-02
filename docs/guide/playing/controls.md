@@ -1,18 +1,41 @@
 # Controls Reference
 
-All controls are keyboard-based. Key bindings can be changed in `config.yaml`
-(see [Configuration](configuration.md)) using either GLFW integer codes or
-human-readable key names such as `"SPACE"` and `"F9"`.
+Gameplay accepts keyboard input and standard GLFW gamepads. Keyboard bindings
+can be changed in `config.yaml` (see [Configuration](configuration.md)) using
+either GLFW integer codes or human-readable key names such as `"SPACE"` and
+`"F9"`.
 
 ## Gameplay
 
 | Key | Action |
 |-----|--------|
 | Arrow Keys | Move left/right, look up, crouch/roll |
-| Space | Jump |
+| Space | Player 1 action A / jump |
+| Right Shift | Player 2 action A / jump |
 | Enter | Pause / unpause |
 | Backspace | Player 1 start / in-game pause (engine default; add `input.player1.start` to `config.yaml` to override) |
+| Right Control | Player 2 start |
 | Q | Advance one frame (while paused) |
+
+Keyboard B and C action bindings are intentionally unbound by default. All
+three Mega Drive actions act as jump buttons during platforming gameplay when
+bound.
+
+## Gamepads
+
+Controller input is enabled by default through GLFW's gamepad API. D-pad and
+left stick feed movement. Face buttons use position-based Mega Drive action
+mapping:
+
+| Position | Mega Drive action | Xbox label | PlayStation label |
+|----------|-------------------|------------|-------------------|
+| West | A | X | Square |
+| South | B | A | Cross |
+| East | C | B | Circle |
+
+The startup disclaimer, master title, and S3K-style data select accept
+controller input. On data select screens, east/C is Back; A, B, and Start
+confirm.
 
 ## Rewind
 

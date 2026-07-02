@@ -61,7 +61,20 @@ public enum SonicConfiguration {
 	 */
 	RIGHT,
 	/**
-	 * Key to jump etc.
+	 * Player 1 action button A.
+	 */
+	P1_A,
+	/**
+	 * Player 1 action button B.
+	 */
+	P1_B,
+	/**
+	 * Player 1 action button C.
+	 */
+	P1_C,
+	/**
+	 * Deprecated compatibility key for old flat configs. Runtime gameplay should
+	 * read logical Player 1 action buttons via P1_A/P1_B/P1_C.
 	 */
 	JUMP,
 	/**
@@ -76,8 +89,40 @@ public enum SonicConfiguration {
 	P2_DOWN,
 	P2_LEFT,
 	P2_RIGHT,
+	/**
+	 * Player 2 action button A.
+	 */
+	P2_A,
+	/**
+	 * Player 2 action button B.
+	 */
+	P2_B,
+	/**
+	 * Player 2 action button C.
+	 */
+	P2_C,
+	/**
+	 * Deprecated compatibility key for old flat configs. Runtime gameplay should
+	 * read logical Player 2 action buttons via P2_A/P2_B/P2_C.
+	 */
 	P2_JUMP,
 	P2_START,
+	/**
+	 * Whether gamepad/controller input is enabled.
+	 */
+	CONTROLLER_ENABLED,
+	/**
+	 * Analog deadzone applied to controller axes.
+	 */
+	CONTROLLER_DEADZONE,
+	/**
+	 * Controller assignment policy for Player 1.
+	 */
+	CONTROLLER_PLAYER1,
+	/**
+	 * Controller assignment policy for Player 2.
+	 */
+	CONTROLLER_PLAYER2,
 
 	/**
 	 * Test button only used in debug

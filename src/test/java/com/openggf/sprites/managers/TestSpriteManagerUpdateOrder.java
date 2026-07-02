@@ -2,6 +2,9 @@ package com.openggf.sprites.managers;
 
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
+import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PlayerInputState;
 import com.openggf.physics.Sensor;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -9,8 +12,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class TestSpriteManagerUpdateOrder {
+public class TestSpriteManagerUpdateOrder {
 
     @BeforeEach
     void configureRuntime() {
@@ -47,6 +52,31 @@ class TestSpriteManagerUpdateOrder {
                 true);
 
         assertEquals(List.of(main), ordered);
+    }
+
+    @Test
+    void publishHeldInputForLevelEventsUsesLogicalPlayerOneDirections() {
+        SpriteManager manager = new SpriteManager();
+        TestPlayableSprite main = new TestPlayableSprite("main");
+        manager.addSprite(main);
+
+        InputHandler input = new InputHandler();
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(
+                        AbstractPlayableSprite.INPUT_UP | AbstractPlayableSprite.INPUT_RIGHT,
+                        0,
+                        0,
+                        0,
+                        false,
+                        false),
+                PlayerInputState.neutral()));
+
+        manager.publishHeldInputForLevelEvents(input);
+
+        assertTrue(main.isUpPressed());
+        assertTrue(main.isRightPressed());
+        assertFalse(main.isDownPressed());
+        assertFalse(main.isLeftPressed());
     }
 
     private static final class TestPlayableSprite extends AbstractPlayableSprite {

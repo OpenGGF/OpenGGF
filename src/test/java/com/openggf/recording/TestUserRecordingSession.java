@@ -2,7 +2,10 @@ package com.openggf.game.recording;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PlayerInputState;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -108,12 +111,25 @@ class TestUserRecordingSession {
     }
 
     @Test
-    void capturedJumpUsesActionBitAOnlyForBothPlayers() {
+    void capturesLogicalActionMasksForBothPlayers() {
         RecordingWrite write = new RecordingWrite();
         UserRecordingSession session = newSession(write, frameSource());
-        InputHandler input = new InputHandler();
-        input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS);
-        input.handleKeyEvent(GLFW_KEY_RIGHT_SHIFT, GLFW_PRESS);
+        InputHandler input = new InputHandler(configuredKeys());
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(
+                        AbstractPlayableSprite.INPUT_RIGHT,
+                        AbstractPlayableSprite.INPUT_RIGHT,
+                        InputActionMasks.ACTION_B | InputActionMasks.ACTION_C,
+                        InputActionMasks.ACTION_B,
+                        true,
+                        true),
+                PlayerInputState.of(
+                        AbstractPlayableSprite.INPUT_LEFT,
+                        AbstractPlayableSprite.INPUT_LEFT,
+                        InputActionMasks.ACTION_C,
+                        InputActionMasks.ACTION_C,
+                        true,
+                        true)));
 
         session.beforeLevelFrame(input);
         session.afterLevelFrame();
@@ -122,8 +138,10 @@ class TestUserRecordingSession {
         RecordedFrameInput frame = write.inputs.getFirst();
         assertEquals(AbstractPlayableSprite.INPUT_JUMP, frame.p1InputMask() & AbstractPlayableSprite.INPUT_JUMP);
         assertEquals(AbstractPlayableSprite.INPUT_JUMP, frame.p2InputMask() & AbstractPlayableSprite.INPUT_JUMP);
-        assertEquals(0x01, frame.p1ActionMask());
-        assertEquals(0x01, frame.p2ActionMask());
+        assertEquals(InputActionMasks.ACTION_B | InputActionMasks.ACTION_C, frame.p1ActionMask());
+        assertEquals(InputActionMasks.ACTION_C, frame.p2ActionMask());
+        assertTrue(frame.p1Start());
+        assertTrue(frame.p2Start());
     }
 
     @Test

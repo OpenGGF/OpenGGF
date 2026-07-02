@@ -2,8 +2,11 @@ package com.openggf.tools;
 
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
-import com.openggf.configuration.SonicConfiguration;
+import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PlayerInputState;
+import com.openggf.control.RecordedInputSnapshots;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.game.GameServices;
@@ -13,22 +16,19 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
-import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
-
 /**
  * Deterministic per-frame gameplay drive shared by headless trace tests and the
  * headless trace-capture tool. Delegates frame-level ordering to
  * {@link LevelFrameStep} and team updates to {@code SpriteManager.update(...)},
- * driving input through a synthetic {@link InputHandler} so both consumers use
- * the exact same production update path.
+ * driving input through logical snapshots on an {@link InputHandler} so both
+ * consumers use the exact same production update path.
  *
  * <p>This is the engine-side extraction of the BK2-recording playback +
  * {@code stepFrame} logic that lived in the test-only {@code HeadlessTestRunner};
  * the runner now delegates to this driver so capture and tests cannot drift.
  *
- * <p>All replay state (input keys, P1 Start edge, BK2 cursor, frame counter)
- * lives here so the capture tool reproduces the trace-faithful trajectory the
+ * <p>All replay state (logical snapshots, BK2 cursor, frame counter) lives here
+ * so the capture tool reproduces the trace-faithful trajectory the
  * trace-replay tests validate, rather than the live-playback {@code GameLoop}
  * path which omits P2/sidekick input plumbing and the explicit phase loop.
  */
@@ -36,22 +36,10 @@ public final class RecordingFrameDriver {
 
     private final AbstractPlayableSprite sprite;
     private final LevelManager levelManager;
-    private final InputHandler inputHandler = new InputHandler();
-
-    private final int upKey = GameServices.configuration().getInt(SonicConfiguration.UP);
-    private final int downKey = GameServices.configuration().getInt(SonicConfiguration.DOWN);
-    private final int leftKey = GameServices.configuration().getInt(SonicConfiguration.LEFT);
-    private final int rightKey = GameServices.configuration().getInt(SonicConfiguration.RIGHT);
-    private final int jumpKey = GameServices.configuration().getInt(SonicConfiguration.JUMP);
-    private final int p2UpKey = GameServices.configuration().getInt(SonicConfiguration.P2_UP);
-    private final int p2DownKey = GameServices.configuration().getInt(SonicConfiguration.P2_DOWN);
-    private final int p2LeftKey = GameServices.configuration().getInt(SonicConfiguration.P2_LEFT);
-    private final int p2RightKey = GameServices.configuration().getInt(SonicConfiguration.P2_RIGHT);
-    private final int p2JumpKey = GameServices.configuration().getInt(SonicConfiguration.P2_JUMP);
-    private final int p2StartKey = GameServices.configuration().getInt(SonicConfiguration.P2_START);
+    private final InputHandler inputHandler = new InputHandler(GameServices.configuration());
 
     private int frameCounter = 0;
-    private boolean p1StartHeldPrev = false;
+    private LogicalInputSnapshot previousDriverSnapshot = LogicalInputSnapshot.neutral();
 
     // BK2 recording playback fields
     private Bk2Movie bk2Movie;
@@ -89,58 +77,40 @@ public final class RecordingFrameDriver {
 
     public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
                           int p2Mask, boolean p2Start, boolean p1Start) {
-        frameCounter++;
-        boolean startEdge = p1Start && !p1StartHeldPrev;
-        p1StartHeldPrev = p1Start;
-        updateActiveTitleCardOverlay();
-        if (applyPendingSeamlessTransition()) {
-            return;
-        }
-        startPendingInLevelTitleCardIfRequested();
-        LevelFrameContext context = LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
-        LevelFrameStep.updateTimers(context);
-        setKeyState(upKey, up);
-        setKeyState(downKey, down);
-        setKeyState(leftKey, left);
-        setKeyState(rightKey, right);
-        setKeyState(jumpKey, jump);
-        setKeyState(p2UpKey, (p2Mask & AbstractPlayableSprite.INPUT_UP) != 0);
-        setKeyState(p2DownKey, (p2Mask & AbstractPlayableSprite.INPUT_DOWN) != 0);
-        setKeyState(p2LeftKey, (p2Mask & AbstractPlayableSprite.INPUT_LEFT) != 0);
-        setKeyState(p2RightKey, (p2Mask & AbstractPlayableSprite.INPUT_RIGHT) != 0);
-        setKeyState(p2JumpKey, (p2Mask & AbstractPlayableSprite.INPUT_JUMP) != 0);
-        setKeyState(p2StartKey, p2Start);
+        stepFrame(driverSnapshot(up, down, left, right, jump, p2Mask, p2Start, p1Start));
+    }
 
-        GameServices.sprites().publishHeldInputForLevelEvents(inputHandler);
-        LevelFrameStep.executeWithPause(
-                context, levelManager, GameServices.camera(),
-                () -> GameServices.sprites().update(inputHandler),
-                startEdge, LevelFrameStep.DIRECT_WRAPPER);
-        inputHandler.update();
+    private void stepFrame(LogicalInputSnapshot snapshot) {
+        frameCounter++;
+        try {
+            updateActiveTitleCardOverlay();
+            if (applyPendingSeamlessTransition()) {
+                return;
+            }
+            startPendingInLevelTitleCardIfRequested();
+            LevelFrameContext context = LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
+            LevelFrameStep.updateTimers(context);
+            inputHandler.setLogicalOverride(snapshot);
+            GameServices.sprites().publishHeldInputForLevelEvents(inputHandler);
+            LevelFrameStep.executeWithPause(
+                    context, levelManager, GameServices.camera(),
+                    () -> GameServices.sprites().update(inputHandler),
+                    snapshot.player1().startPressed(), LevelFrameStep.DIRECT_WRAPPER);
+        } finally {
+            inputHandler.clearLogicalOverride();
+            inputHandler.update();
+            previousDriverSnapshot = snapshot;
+        }
     }
 
     public void primeInputState(Bk2FrameInput frameInput) {
         if (frameInput == null) {
             return;
         }
-        int p1Mask = frameInput.p1InputMask();
-        setKeyState(upKey, (p1Mask & AbstractPlayableSprite.INPUT_UP) != 0);
-        setKeyState(downKey, (p1Mask & AbstractPlayableSprite.INPUT_DOWN) != 0);
-        setKeyState(leftKey, (p1Mask & AbstractPlayableSprite.INPUT_LEFT) != 0);
-        setKeyState(rightKey, (p1Mask & AbstractPlayableSprite.INPUT_RIGHT) != 0);
-        setKeyState(jumpKey, (p1Mask & AbstractPlayableSprite.INPUT_JUMP) != 0);
-        int p2Mask = frameInput.p2InputMask();
-        setKeyState(p2UpKey, (p2Mask & AbstractPlayableSprite.INPUT_UP) != 0);
-        setKeyState(p2DownKey, (p2Mask & AbstractPlayableSprite.INPUT_DOWN) != 0);
-        setKeyState(p2LeftKey, (p2Mask & AbstractPlayableSprite.INPUT_LEFT) != 0);
-        setKeyState(p2RightKey, (p2Mask & AbstractPlayableSprite.INPUT_RIGHT) != 0);
-        setKeyState(p2JumpKey, (p2Mask & AbstractPlayableSprite.INPUT_JUMP) != 0);
-        setKeyState(p2StartKey, frameInput.p2StartPressed());
+        previousDriverSnapshot = RecordedInputSnapshots.fromBk2(frameInput, null);
+        inputHandler.setLogicalOverride(previousDriverSnapshot);
         inputHandler.update();
-    }
-
-    private void setKeyState(int keyCode, boolean pressed) {
-        inputHandler.handleKeyEvent(keyCode, pressed ? GLFW_PRESS : GLFW_RELEASE);
+        inputHandler.clearLogicalOverride();
     }
 
     private void updateActiveTitleCardOverlay() {
@@ -199,27 +169,11 @@ public final class RecordingFrameDriver {
         }
 
         Bk2FrameInput frameInput = bk2Movie.getFrame(currentBk2Index);
-        int mask = frameInput.p1InputMask();
-        if (frameInput.p1ActionMask() != 0) {
-            mask |= AbstractPlayableSprite.INPUT_JUMP;
-        }
-
-        int p2Mask = frameInput.p2InputMask();
-        if (frameInput.p2ActionMask() != 0) {
-            p2Mask |= AbstractPlayableSprite.INPUT_JUMP;
-        }
-        boolean p2Start = frameInput.p2StartPressed();
-
-        boolean up = (mask & AbstractPlayableSprite.INPUT_UP) != 0;
-        boolean down = (mask & AbstractPlayableSprite.INPUT_DOWN) != 0;
-        boolean left = (mask & AbstractPlayableSprite.INPUT_LEFT) != 0;
-        boolean right = (mask & AbstractPlayableSprite.INPUT_RIGHT) != 0;
-        boolean jump = (mask & AbstractPlayableSprite.INPUT_JUMP) != 0;
-
-        boolean p1Start = frameInput.p1StartPressed();
+        Bk2FrameInput previousInput = previousBk2Input(currentBk2Index);
+        int mask = inputMask(frameInput);
 
         applyP1ActionPressEdge(currentBk2Index);
-        stepFrame(up, down, left, right, jump, p2Mask, p2Start, p1Start);
+        stepFrame(RecordedInputSnapshots.fromBk2(frameInput, previousInput));
         currentBk2Index++;
 
         return mask;
@@ -239,19 +193,9 @@ public final class RecordingFrameDriver {
         Bk2FrameInput validationInput = bk2Movie.getFrame(currentBk2Index);
         Bk2FrameInput driveInput = bk2Movie.getFrame(currentBk2Index - 1);
         int validationMask = inputMask(validationInput);
-        int driveMask = inputMask(driveInput);
-        int p2Mask = p2InputMask(driveInput);
 
         applyP1ActionPressEdge(currentBk2Index - 1);
-        stepFrame(
-                (driveMask & AbstractPlayableSprite.INPUT_UP) != 0,
-                (driveMask & AbstractPlayableSprite.INPUT_DOWN) != 0,
-                (driveMask & AbstractPlayableSprite.INPUT_LEFT) != 0,
-                (driveMask & AbstractPlayableSprite.INPUT_RIGHT) != 0,
-                (driveMask & AbstractPlayableSprite.INPUT_JUMP) != 0,
-                p2Mask,
-                driveInput.p2StartPressed(),
-                driveInput.p1StartPressed());
+        stepFrame(RecordedInputSnapshots.fromBk2(driveInput, previousBk2Input(currentBk2Index - 1)));
         currentBk2Index++;
 
         return validationMask;
@@ -292,7 +236,7 @@ public final class RecordingFrameDriver {
             mask |= AbstractPlayableSprite.INPUT_JUMP;
         }
 
-        p1StartHeldPrev = frameInput.p1StartPressed();
+        previousDriverSnapshot = RecordedInputSnapshots.fromBk2(frameInput, previousBk2Input(currentBk2Index));
         currentBk2Index++;
         levelManager.getObjectManager().advanceVblaCounter();
         return mask;
@@ -301,14 +245,6 @@ public final class RecordingFrameDriver {
     private static int inputMask(Bk2FrameInput frameInput) {
         int mask = frameInput.p1InputMask();
         if (frameInput.p1ActionMask() != 0) {
-            mask |= AbstractPlayableSprite.INPUT_JUMP;
-        }
-        return mask;
-    }
-
-    private static int p2InputMask(Bk2FrameInput frameInput) {
-        int mask = frameInput.p2InputMask();
-        if (frameInput.p2ActionMask() != 0) {
             mask |= AbstractPlayableSprite.INPUT_JUMP;
         }
         return mask;
@@ -372,5 +308,60 @@ public final class RecordingFrameDriver {
         if (bk2Movie == null) {
             throw new IllegalStateException("No BK2 movie loaded. Call setBk2Movie() first.");
         }
+    }
+
+    private LogicalInputSnapshot driverSnapshot(boolean up, boolean down, boolean left, boolean right, boolean jump,
+                                                int p2Mask, boolean p2Start, boolean p1Start) {
+        int p1DirectionHeld = directionMask(up, down, left, right);
+        int p1ActionHeld = jump ? InputActionMasks.ACTION_A : 0;
+        int p2DirectionHeld = p2Mask & directionBits();
+        int p2ActionHeld = (p2Mask & AbstractPlayableSprite.INPUT_JUMP) != 0
+                ? InputActionMasks.ACTION_A
+                : 0;
+        PlayerInputState previousP1 = previousDriverSnapshot.player1();
+        PlayerInputState previousP2 = previousDriverSnapshot.player2();
+        PlayerInputState p1 = PlayerInputState.of(
+                p1DirectionHeld,
+                p1DirectionHeld & ~previousP1.heldMask(),
+                p1ActionHeld,
+                p1ActionHeld & ~previousP1.actionHeldMask(),
+                p1Start,
+                p1Start && !previousP1.startHeld());
+        PlayerInputState p2 = PlayerInputState.of(
+                p2DirectionHeld,
+                p2DirectionHeld & ~previousP2.heldMask(),
+                p2ActionHeld,
+                p2ActionHeld & ~previousP2.actionHeldMask(),
+                p2Start,
+                p2Start && !previousP2.startHeld());
+        return LogicalInputSnapshot.ofPlayers(p1, p2);
+    }
+
+    private Bk2FrameInput previousBk2Input(int index) {
+        return index > 0 ? bk2Movie.getFrame(index - 1) : null;
+    }
+
+    private static int directionMask(boolean up, boolean down, boolean left, boolean right) {
+        int mask = 0;
+        if (up) {
+            mask |= AbstractPlayableSprite.INPUT_UP;
+        }
+        if (down) {
+            mask |= AbstractPlayableSprite.INPUT_DOWN;
+        }
+        if (left) {
+            mask |= AbstractPlayableSprite.INPUT_LEFT;
+        }
+        if (right) {
+            mask |= AbstractPlayableSprite.INPUT_RIGHT;
+        }
+        return mask;
+    }
+
+    private static int directionBits() {
+        return AbstractPlayableSprite.INPUT_UP
+                | AbstractPlayableSprite.INPUT_DOWN
+                | AbstractPlayableSprite.INPUT_LEFT
+                | AbstractPlayableSprite.INPUT_RIGHT;
     }
 }
