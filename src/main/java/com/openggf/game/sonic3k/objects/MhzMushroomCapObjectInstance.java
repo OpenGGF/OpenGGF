@@ -319,7 +319,10 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
                 0));
         set.addScript(ANIM_BOUNCE, new SpriteAnimationScript(
                 0,
-                List.of(1, 1, 1, 1, 1, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 2, 0, 2, 0, 2, 0, 2, 0, 0),
+                // Ani_MHZMushroomCap_Seq1 (byte_3E1E1) plays exactly 23 frames before the
+                // $FC "increment routine counter" terminator; no extra trailing idle-delay
+                // frame at speed 0.
+                List.of(1, 1, 1, 1, 1, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 2, 0, 2, 0, 2, 0, 2, 0),
                 SpriteAnimationEndAction.SWITCH,
                 ANIM_IDLE));
         return set;

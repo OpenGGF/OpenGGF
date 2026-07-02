@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
@@ -20,6 +21,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -206,6 +208,20 @@ class TestMhzMushroomCapObjectInstance {
         cap.appendRenderCommands(new ArrayList<>());
 
         verify(renderer).drawFrameIndexForcedPriority(0, 0x1200, 0x0500, false, false, -1, false);
+    }
+
+    @Test
+    void bounceAnimationSeq1HasExactlyTwentyThreeFramesBeforeFcTerminator() throws ReflectiveOperationException {
+        MhzMushroomCapObjectInstance cap = new MhzMushroomCapObjectInstance(new ObjectSpawn(
+                0x1200, 0x0500, MHZ_MUSHROOM_CAP, 0, 0, false, 0));
+        Field field = MhzMushroomCapObjectInstance.class.getDeclaredField("animationState");
+        field.setAccessible(true);
+        ObjectAnimationState animationState = (ObjectAnimationState) field.get(cap);
+
+        assertEquals(23, animationState.frameCount(1 /* ANIM_BOUNCE */),
+                "Ani_MHZMushroomCap_Seq1 (byte_3E1E1, sonic3k.asm Anim - Mushroom Cap.asm:5-6) plays "
+                        + "exactly 23 frames before hitting the $FC 'increment routine counter' terminator; "
+                        + "the script must not carry an extra trailing idle-delay frame at speed 0");
     }
 
     @Test

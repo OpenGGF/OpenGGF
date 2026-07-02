@@ -223,6 +223,11 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
         d0 -= d1 + d1;
         rootAngle = asSigned16(rootAngle - d0);
         priorityBucket = signedAngleByte(rootAngle) < 0 ? PRIORITY_BUCKET_HIGH : PRIORITY_BUCKET_LOW;
+        // ROM loc_226C2 (asm 47056-47061): every SWINGING tick plays sfx_GroundSlide
+        // once the updated angle byte lands in the $40-$47 band.
+        if ((angleByte(rootAngle) & 0xF8) == 0x40) {
+            playSfx(Sonic3kSfx.GROUND_SLIDE.id);
+        }
         if (!anyGrabbed() && (((angleByte(rootAngle) + 8) & 0xFF) < 0x10)) {
             rootState = RootState.RETURNING;
             handleMode = 2;
@@ -325,9 +330,11 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
         }
         player.setRenderFlips(player.getDirection() == Direction.LEFT, false);
         state.grabFlag = fastGrab ? 0x81 : 1;
-        ObjectServices services = tryServices();
-        if (services != null) {
-            services.playSfx(Sonic3kSfx.GRAB.id);
+        // ROM loc_22B3C/22B06 (asm 47472-47494): the slow-grab path returns via the
+        // object_control(a1) guard before reaching "jsr Play_SFX"; only a fast grab
+        // (x_vel >= $400) falls through to play sfx_Grab.
+        if (fastGrab) {
+            playSfx(Sonic3kSfx.GRAB.id);
         }
         holdPlayer(state, player);
     }
@@ -446,6 +453,13 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
 
     private static boolean renderFlagsOnScreen(AbstractPlayableSprite player) {
         return !player.hasRenderFlagOnScreenState() || player.isRenderFlagOnScreen();
+    }
+
+    private void playSfx(int soundId) {
+        ObjectServices services = tryServices();
+        if (services != null) {
+            services.playSfx(soundId);
+        }
     }
 
     private boolean anyGrabbed() {

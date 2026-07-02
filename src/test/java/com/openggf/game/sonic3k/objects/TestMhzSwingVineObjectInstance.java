@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -14,6 +15,7 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -179,6 +181,55 @@ class TestMhzSwingVineObjectInstance {
     }
 
     @Test
+    void slowGrabDoesNotPlayGrabSfx() {
+        RecordingServices services = new RecordingServices();
+        MhzSwingVineObjectInstance vine = new MhzSwingVineObjectInstance(new ObjectSpawn(
+                0x2600, 0x0660, MHZ_SWING_VINE, 0, 0, false, 0));
+        vine.setServices(services);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2600, (short) 0x0680);
+
+        vine.update(0, player);
+
+        assertTrue(player.isObjectControlled(), "setup sanity: slow grab still captures the player");
+        assertFalse(services.playedSfx(Sonic3kSfx.GRAB.id),
+                "loc_22B06 (asm 47472-47494): the slow-grab path returns via the object_control(a1) "
+                        + "guard before reaching 'jsr Play_SFX'; only a fast grab plays sfx_Grab");
+    }
+
+    @Test
+    void fastGrabPlaysGrabSfx() {
+        RecordingServices services = new RecordingServices();
+        MhzSwingVineObjectInstance vine = new MhzSwingVineObjectInstance(new ObjectSpawn(
+                0x2600, 0x0660, MHZ_SWING_VINE, 0, 0, false, 0));
+        vine.setServices(services);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2600, (short) 0x0680);
+        player.setXSpeed((short) 0x0400);
+
+        vine.update(0, player);
+
+        assertTrue(services.playedSfx(Sonic3kSfx.GRAB.id),
+                "asm 47490-47494: fast grab (x_vel >= $400) falls through to 'jsr Play_SFX' (sfx_Grab)");
+    }
+
+    @Test
+    void swingingVinePlaysGroundSlideWhooshWhenAngleCrossesTheHorizontalBand() {
+        RecordingServices services = new RecordingServices();
+        MhzSwingVineObjectInstance vine = new MhzSwingVineObjectInstance(new ObjectSpawn(
+                0x2600, 0x0660, MHZ_SWING_VINE, 0, 0, false, 0));
+        vine.setServices(services);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2600, (short) 0x0680);
+        player.setXSpeed((short) 0x0400); // fast grab -> root enters loc_226B0 SWINGING
+
+        for (int frame = 0; frame < 200; frame++) {
+            vine.update(frame, player);
+        }
+
+        assertTrue(services.playedSfx(Sonic3kSfx.GROUND_SLIDE.id),
+                "loc_226C2 (asm 47056-47061) plays sfx_GroundSlide every SWINGING tick whose updated "
+                        + "angle byte lands in the $40-$47 band");
+    }
+
+    @Test
     void swingingGrabbedVineForcesCameraScrollToVineAnchor() {
         Camera camera = mock(Camera.class);
         MhzSwingVineObjectInstance vine = new MhzSwingVineObjectInstance(new ObjectSpawn(
@@ -234,6 +285,19 @@ class TestMhzSwingVineObjectInstance {
         verify(renderer).drawFrameIndex(0x23, 0x2600, 0x0660, false, false);
         verify(renderer).drawFrameIndex(0, 0x2600, 0x0660, false, false);
         verify(renderer).drawFrameIndex(0x22, 0x2600, 0x0670, false, false);
+    }
+
+    private static final class RecordingServices extends TestObjectServices {
+        private final List<Integer> sfx = new ArrayList<>();
+
+        @Override
+        public void playSfx(int soundId) {
+            sfx.add(soundId);
+        }
+
+        private boolean playedSfx(int soundId) {
+            return sfx.contains(soundId);
+        }
     }
 
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {

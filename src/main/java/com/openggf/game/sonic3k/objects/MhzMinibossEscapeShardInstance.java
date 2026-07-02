@@ -19,8 +19,8 @@ import java.util.List;
  * MHZ miniboss child spawned by {@code ChildObjDat_75E9E}.
  */
 final class MhzMinibossEscapeShardInstance extends AbstractObjectInstance implements RewindRecreatable {
-    private static final int INITIAL_PRIORITY_BUCKET = 4;
-    private static final int RETURN_PRIORITY_BUCKET = 2;
+    private static final int INITIAL_PRIORITY_BUCKET = 6; // word_75E7E priority $300
+    private static final int RETURN_PRIORITY_BUCKET = 3; // loc_7594C priority $180
     private static final int Y_RADIUS = 6;
     private static final int[] LOG_ANIMATION_SCRIPT = {
             0x18, 0x03,
