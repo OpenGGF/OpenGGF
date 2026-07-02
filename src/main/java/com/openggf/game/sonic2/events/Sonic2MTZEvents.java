@@ -128,11 +128,15 @@ public class Sonic2MTZEvents extends Sonic2ZoneEvents {
      * ROM: AllocateObject -> ObjID_MTZBoss at init position
      */
     private void spawnMTZBoss() {
+        var objectManager = levelManager() != null ? levelManager().getObjectManager() : null;
+        if (objectManager == null) {
+            return;
+        }
         ObjectSpawn bossSpawn = new ObjectSpawn(
                 0x2B50, 0x380, Sonic2ObjectIds.MTZ_BOSS, 0, 0, false, 0);
         // ROM Obj54 is already the current SST object before Obj54_Init allocates
         // the laser shooter and Obj53 orb parent (docs/s2disasm/s2.asm:67224-67240).
-        levelManager().getObjectManager().createDynamicObjectWithReservedSlot(
+        objectManager.createDynamicObjectWithReservedSlot(
                 () -> new Sonic2MTZBossInstance(bossSpawn));
     }
 }
