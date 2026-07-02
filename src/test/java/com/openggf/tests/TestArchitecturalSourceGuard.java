@@ -26,8 +26,10 @@ class TestArchitecturalSourceGuard {
     private static final String GAME_LOOP_PATH = "com/openggf/GameLoop.java";
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
     // 2026-07-02: re-ratcheted 2747 -> 2821 after the S2 trace-parity batch
-    // (8766a6889..0f7794de8) grew reserved-slot spawn and placement handling.
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2821;
+    // (8766a6889..0f7794de8) grew reserved-slot spawn and placement handling,
+    // then 2821 -> 2823 for the rewind capture of the S2 post-camera unload
+    // latch (PlacementSnapshot restore path).
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2823;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule
