@@ -110,6 +110,52 @@ Verification:
   ran the campaign S3K guard subset: 68 tests, 66 green / 2 expected-red at
   AIZ complete-run f1095 and AIZ trace f8941.
 
+## 2026-07-02 - S2 round 50 conductor integration and no-change workers
+
+The conductor merged worker commits `43d218fff` (OOZ2) and `1e9da52e7` (ARZ2)
+into `bugfix/ai-s2-trace-next` as merge commits `e0defd96d` and `ce2505aa9`.
+The combined branch state was then verified from
+`.worktrees/ai-s2-trace-next`.
+
+Integrated verification:
+- `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen"
+  test` ran 2 checks and reports the expected-red ARZ2 f5460 / 4 and OOZ2
+  f12416 / 1 frontiers.
+- `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen"
+  test` ran the full S2 sweep: 19 tests, 4 expected-red, 15 green. Current
+  S2 reds are ARZ2 f5460 / 4, CNZ2 f9977 / 10, MTZ3 f13358 / 6, and OOZ2
+  f12416 / 1.
+- `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen"
+  test` plus fresh Surefire XML inspection reports 29 recent S1 trace replay
+  classes and 0 failures/errors.
+- `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen"
+  test` reports 68 tests, 2 expected-red AIZ trace frontiers, and 66 green.
+  The expected-red S3K frontiers are AIZ complete-run f1095 / 3 (`x_sub`) and
+  AIZ f8941 / 1 (`camera_y`).
+
+Other round-50 workers made no commits:
+- CNZ2 worktree `.worktrees/ai-s2-cnz2-round50-next` /
+  `bugfix/ai-s2-cnz2-round50-next`: reproduced f9977 / 10. Split-ball
+  projection and parent-anchor variants were rejected because they moved the
+  first failure backward to f9199 or f9486, so all experiments were reverted.
+- MTZ3 worktree `.worktrees/ai-s2-mtz3-round50-next` /
+  `bugfix/ai-s2-mtz3-round50-next`: reproduced f13358 / 6. BizHawk PC/memory
+  probes confirmed ROM Obj54 `Touch_Enemy` timing and showed the engine applies
+  the Obj54 boss bounce one row early while its boss body snapshot is one pixel
+  to the right of ROM. The Obj54 live collision-flags trial did not move the
+  frontier, and a ROM-plausible Obj54 hit-reaction deferral regressed earlier
+  to f12909; both were reverted.
+- No S2 trace turned green in round 50, so the ARZ2 and OOZ2 advances remain on
+  the campaign branch only and were not banked into `next`.
+
 ## 2026-07-02 - S2 round 49 ARZ2 targeted advance
 
 Round 49 started from conductor HEAD `f27a6dc82` on
