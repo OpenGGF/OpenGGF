@@ -61,6 +61,7 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
     private int waitDelay;
     private State state;
     private AnimalType definition;
+    private boolean romRenderOnScreen = true;
 
     public EggPrisonAnimalInstance(ObjectSpawn spawn, int delay, int artVariant) {
         super(spawn, "Animal");
@@ -272,13 +273,32 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
 
     @Override
     protected boolean isOnScreen(int margin) {
+        return romRenderOnScreen;
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return 8;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
         Camera camera = services().camera();
         if (camera == null) {
-            return true;
+            romRenderOnScreen = true;
+            return;
         }
         int cameraX = camera.getX();
+        int cameraY = camera.getY();
         int screenWidth = viewportWidth();
-        return currentX >= cameraX - margin && currentX <= cameraX + screenWidth + margin;
+        int screenHeight = viewportHeight();
+        // S2 Obj28_Prison/Main/Walk/Fly delete through the cached
+        // render_flags.on_screen bit, not a fresh wide margin
+        // (docs/s2disasm/s2.asm:24732-24734,24644-24646,24683-24686,24713-24716).
+        romRenderOnScreen = currentX >= cameraX - getOnScreenHalfWidth()
+                && currentX < cameraX + screenWidth + getOnScreenHalfWidth()
+                && currentY >= cameraY - 32
+                && currentY < cameraY + screenHeight + 32;
     }
 
     @Override

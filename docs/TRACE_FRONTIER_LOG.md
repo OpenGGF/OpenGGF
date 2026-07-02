@@ -6,20 +6,83 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 69 ARZ2 worker branch
-`bugfix/ai-s2-arz2-round69-next` and the latest local `develop` merge
-`e316864ec`:
-ARZ2 is f7145 / 1 under `frontierOnly` (`obj_s1E_slot` expected `0x1E`,
-actual `0x2D`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
+Current branch-local S2 state after round 70 ARZ2 worker branch
+`bugfix/ai-s2-arz2-round70-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `fb7708f7a`:
+ARZ2 is f7338 / 3 under `frontierOnly` (`obj_extra_s14_x` expected absent,
+actual `0x2C9C`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now ARZ2, CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
-was banked into `next`; ARZ2 advanced again in round 69 but is not banked under
+was banked into `next`; ARZ2 advanced again in round 70 but is not banked under
 the green-bank rule until it greens. Round 70 workers must include targeted
 BizHawk Lua evidence before any `no-change` / `rejected` bounce.
+
+## 2026-07-02 - S2 round 70 ARZ2 Obj28 render-flag slot reuse
+
+Round 70 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round70-next` /
+`bugfix/ai-s2-arz2-round70-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `fb7708f7a`. The focused baseline reproduced
+ARZ2 f7145 / 1 under `frontierOnly`: `obj_s1E_slot` expected `0x1E` but the
+engine allocated the new Obj28 in slot `$2D`.
+
+BizHawk diagnostic:
+- Probe script was launched through `tools/bizhawk/run_bizhawk_lua.bat` with
+  absolute Lua, movie, output, and ROM paths. Script:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round70-next\tools\bizhawk\diag_s2_arz2_round70_obj3e_alloc.lua`.
+  Output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round70-next\tools\bizhawk\trace_output\diag_s2_arz2_round70_obj3e_alloc.txt`.
+- Command summary:
+  `OGGF_START=14988 OGGF_STOP=15150 OGGF_TRACE_OFFSET=7998 OGGF_OUT=<output> run_bizhawk_lua.bat <lua> <s2-lvl-select-ARZ.bk2> <s2.gen>`.
+- Hooked `AllocateObject` return `$17FF8`, `DeleteObject2` `$164E8`, and the
+  Obj3E animal-allocation return PCs `$03F316` (initial release loop) and
+  `$03F3BE` (random animal loop), covering BizHawk frames 14988-15150
+  / trace frames 6990-7152.
+- Captured slot/timing values: initial release allocations filled slots
+  `$13,$15,$16,$17,$18,$19,$1A,$1B` at trace f6994; random release allocations
+  filled `$10,$1C,$1D,$1E,$1F...$2C` from f7001 through f7137. ROM slot `$1E`
+  was still Obj28 routine `$0E` at f7141, deleted through `DeleteObject2` that
+  same trace frame at `x=$2BF2,y=$047D`, was empty through f7145, and Obj3E's
+  random allocator returned slot `$1E` at f7145. The next sample at f7146
+  showed slot `$1E` as Obj28 routine `$1C`, `x=$2C96`, `y=$04B1`,
+  `objoff_36=$000C`, while slot `$2D` remained empty.
+
+Root fixed:
+- `EggPrisonAnimalInstance` now caches the ROM-equivalent
+  `render_flags.on_screen` value after the camera/render pass and uses that
+  cached bit for Obj28_Prison/Main/Walk/Fly deletion. The old path recomputed
+  a fresh wide X margin during the object routine, so the old slot `$1E`
+  survived past the ROM delete point and pushed the later Obj3E allocation to
+  `$2D`. This matches S2 Obj28's on-screen-bit delete tests and Obj3E's
+  lowest-free-slot allocation path
+  (`docs/s2disasm/s2.asm:24644-24734,33681-33695,84935-84955`).
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f7145 / 1 to f7338 / 3. New first error:
+  `obj_extra_s14_x` expected absent, actual `0x2C9C`, exposing the next Obj3E
+  extra-slot lifetime frontier.
+
+Verification:
+- Focused ARZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  exited 0 via failure-ignore and wrote `target/trace-reports/s2_arz2_report.json`
+  with the improved expected-red f7338 / 3 frontier.
+- S2 object guard:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestEggPrisonAnimalRelease" test`
+  wrote an individual Surefire report with 1 run, 0 failures, and 0 errors.
+- Rewind coverage guard:
+  `mvn "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" test`
+  wrote an individual Surefire report with 1 run, 0 failures, and 0 errors.
+- Shared S3K/rewind adjacency guards:
+  `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects,com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind,com.openggf.game.sonic3k.objects.TestRewindFixS3KBatch7Codecs,com.openggf.game.rewind.TestSpawnRewindRecreatableCleanup" test`
+  wrote individual Surefire reports with 32, 9, 1, and 46 runs respectively,
+  all with 0 failures and 0 errors. MSE aggregate output still listed the
+  known retained ARZ2 expected-red report; the class XML reports were used.
 
 ## 2026-07-02 - S2 round 69 ARZ2 Obj3E initial animal delay
 
