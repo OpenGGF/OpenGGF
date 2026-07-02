@@ -1150,24 +1150,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	/**
-	 * @deprecated Use incrementLookUpBias() for ROM-accurate gradual adjustment.
-	 * Sets the bias instantly for looking up (ROM target: 0xC8 = 200).
-	 */
-	@Deprecated
-	public void setLookUpBias() {
-		this.yPosBias = LOOK_UP_BIAS;
-	}
-
-	/**
-	 * @deprecated Use decrementLookDownBias() for ROM-accurate gradual adjustment.
-	 * Sets the bias instantly for looking down/crouching (ROM target: 8).
-	 */
-	@Deprecated
-	public void setLookDownBias() {
-		this.yPosBias = LOOK_DOWN_BIAS;
-	}
-
-	/**
 	 * Gets the default Y bias value.
 	 * @return Default Y bias (96)
 	 */

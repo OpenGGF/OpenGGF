@@ -350,7 +350,7 @@ High-cost landmines (full S3K detail in [AGENTS_S3K.md](AGENTS_S3K.md) and the `
 
 Emulates Mega Drive sound hardware: **YM2612** (FM synthesis, 6 channels), **PSG/SN76489** (square wave + noise, 4 channels), **SMPS Driver** (Sega's sound format).
 
-The audio package splits across `audio` (backend), `audio.synth` (chip emulation — note `PsgChipGPGX` is active, `PsgChip` deprecated), `audio.smps` (sequencer/loader with `OVERFLOW`/`OVERFLOW2`/`TIMEOUT` tempo modes), `audio.driver`, `audio.runtime` (deterministic FIFO/PCM ring buffers used by gameplay rewind), `audio.rewind`, `audio.debug`. Per-game audio data lives under `game.sonicX.audio`.
+The audio package splits across `audio` (backend), `audio.synth` (chip emulation — `PsgChipGPGX` is the PSG implementation), `audio.smps` (sequencer/loader with `OVERFLOW`/`OVERFLOW2`/`TIMEOUT` tempo modes), `audio.driver`, `audio.runtime` (deterministic FIFO/PCM ring buffers used by gameplay rewind), `audio.rewind`, `audio.debug`. Per-game audio data lives under `game.sonicX.audio`.
 
 Reference implementations live in `docs/SMPS-rips/SMPSPlay/` (SMPSPlay source) and the ripped audio data under `docs/SMPS-rips/`. Strive for hardware accuracy — reference SMPSPlay and the libvgm chip cores rather than simplified versions.
 
@@ -418,7 +418,7 @@ See **[docs/KNOWN_DISCREPANCIES.md](docs/KNOWN_DISCREPANCIES.md)** for additiona
 
 ## Data Select & Save System
 
-Full data select (save/load) screen with cross-game donation. `DataSelectProvider` (`com.openggf.game`) holds the lifecycle states; `DataSelectSessionController` is the presentation-independent state machine; each game implements `DataSelectHostProfile` (team configs, slot counts, zone labels, restart destinations). S3K renders with `S3kDataSelectManager`; S1/S2 fall back to `SimpleDataSelectManager` unless cross-game donation routes them through the S3K presentation. `SaveManager` (`game.save`) persists slots as JSON with SHA256 integrity and quarantines corrupt files. Title-screen `ONE_PLAYER` flows through `StartupRouteResolver` → `TitleActionRoute.DATA_SELECT` → controller → `DataSelectAction` → `Engine.launchGameplayFromDataSelect()`.
+Full data select (save/load) screen with cross-game donation. `DataSelectProvider` (`com.openggf.game`) holds the lifecycle states; `DataSelectSessionController` is the presentation-independent state machine; each game implements `DataSelectHostProfile` (team configs, slot counts, zone labels, restart destinations). S3K renders with `S3kDataSelectManager`; S1/S2 route through `CrossGameDataSelectPresentations.donated(...)` to the S3K presentation. `SaveManager` (`game.save`) persists slots as JSON with SHA256 integrity and quarantines corrupt files. Title-screen `ONE_PLAYER` flows through `StartupRouteResolver` → `TitleActionRoute.DATA_SELECT` → controller → `DataSelectAction` → `Engine.launchGameplayFromDataSelect()`.
 
 ## Intentional Divergences
 
