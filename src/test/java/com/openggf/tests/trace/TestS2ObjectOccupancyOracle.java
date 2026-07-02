@@ -740,6 +740,18 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void arz2EggPrisonAnimalDoesNotWalkOnLandingTransitionFrame() throws Exception {
+        AnimalPositionCheck check = animalPositionAtArz2Frame(7064, 0x1C);
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj28_Main must switch the prison animal to its walking/flying routine "
+                        + "without running Obj28_Walk/Fly until the next object pass; slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj28_Main accepts only negative ObjCheckFloorDist (tst.w d1 / bpl.s DisplaySprite) "
+                        + "for prison animals too; slots " + check.summary());
+    }
+
+    @Test
     public void arz2ChopChopAnimalFreesSlotWhenRenderFlagClears() throws Exception {
         SlotCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {
@@ -1129,6 +1141,10 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     private AnimalPositionCheck animalPositionAtArz2Frame(int targetFrame) throws Exception {
+        return animalPositionAtArz2Frame(targetFrame, 24);
+    }
+
+    private AnimalPositionCheck animalPositionAtArz2Frame(int targetFrame, int expectedSlot) throws Exception {
         return driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {
                     if (frame != targetFrame) {
@@ -1137,22 +1153,30 @@ public class TestS2ObjectOccupancyOracle {
                     TraceEvent.ObjectNear expectedAnimal = trace.getEventsForFrame(frame).stream()
                             .filter(TraceEvent.ObjectNear.class::isInstance)
                             .map(TraceEvent.ObjectNear.class::cast)
-                            .filter(near -> near.slot() == 24)
+                            .filter(near -> near.slot() == expectedSlot)
                             .filter(near -> parseObjectType(near.objectType()) == 0x28)
                             .findFirst()
                             .orElse(null);
                     Assertions.assertNotNull(expectedAnimal,
-                            "ARZ2 ROM fixture should report the first ChopChop animal in slot 24 at f"
-                                    + targetFrame);
+                            () -> String.format(
+                                    "ARZ2 ROM fixture should report an Obj28 animal in slot %d at f%d",
+                                    expectedSlot, targetFrame));
 
-                    AnimalObjectInstance actualAnimal = om.activeObjectsOfType(AnimalObjectInstance.class).stream()
-                            .filter(animal -> animal.getSlotIndex() == 24)
+                    AbstractObjectInstance actualAnimal = om.getActiveObjects().stream()
+                            .filter(AbstractObjectInstance.class::isInstance)
+                            .map(AbstractObjectInstance.class::cast)
+                            .filter(animal -> animal.getSlotIndex() == expectedSlot)
+                            .filter(animal -> {
+                                ObjectSpawn spawn = animal.getSpawn();
+                                return spawn != null && spawn.objectId() == 0x28;
+                            })
                             .findFirst()
                             .orElse(null);
                     return new AnimalPositionCheck(expectedAnimal.x() & 0xFFFF, expectedAnimal.y() & 0xFFFF,
                             actualAnimal == null ? -1 : actualAnimal.getX(),
                             actualAnimal == null ? -1 : actualAnimal.getY(),
-                            describeSlots(om.occupiedDynamicSlotIds(), 19, 25));
+                            describeSlots(om.occupiedDynamicSlotIds(),
+                                    Math.max(FIRST_DYNAMIC_SLOT, expectedSlot - 5), expectedSlot + 5));
                 });
     }
 
