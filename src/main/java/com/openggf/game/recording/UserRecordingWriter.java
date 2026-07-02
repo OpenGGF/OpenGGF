@@ -1,6 +1,7 @@
 package com.openggf.game.recording;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.control.InputActionMasks;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
@@ -20,7 +21,6 @@ public final class UserRecordingWriter {
             "#P1 Up|P1 Down|P1 Left|P1 Right|P1 Start|P1 A|P1 B|P1 C|"
                     + "#P2 Up|P2 Down|P2 Left|P2 Right|P2 Start|P2 A|P2 B|P2 C|";
 
-    private static final int ACTION_A_MASK = 0x01;
     private static final ObjectMapper SIDECAR_MAPPER = new ObjectMapper();
 
     private UserRecordingWriter() {
@@ -82,9 +82,10 @@ public final class UserRecordingWriter {
     }
 
     private static void validateActionMask(String fieldName, int frame, int actionMask) {
-        if (actionMask != 0 && actionMask != ACTION_A_MASK) {
+        if ((actionMask & ~InputActionMasks.ACTION_ALL) != 0) {
             throw new IllegalArgumentException(fieldName + " at frame " + frame
-                    + " must be 0 or " + ACTION_A_MASK + " for A-only BK2 output");
+                    + " has bits outside supported A/B/C action mask 0x"
+                    + Integer.toHexString(InputActionMasks.ACTION_ALL));
         }
     }
 
@@ -148,8 +149,16 @@ public final class UserRecordingWriter {
         if (start) {
             field[4] = 'S';
         }
-        if ((inputMask & AbstractPlayableSprite.INPUT_JUMP) != 0 || actionMask != 0) {
+        boolean hasExplicitAction = (actionMask & InputActionMasks.ACTION_ALL) != 0;
+        if ((actionMask & InputActionMasks.ACTION_A) != 0
+                || (!hasExplicitAction && (inputMask & AbstractPlayableSprite.INPUT_JUMP) != 0)) {
             field[5] = 'A';
+        }
+        if ((actionMask & InputActionMasks.ACTION_B) != 0) {
+            field[6] = 'B';
+        }
+        if ((actionMask & InputActionMasks.ACTION_C) != 0) {
+            field[7] = 'C';
         }
         return new String(field);
     }

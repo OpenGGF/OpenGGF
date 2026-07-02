@@ -1,10 +1,9 @@
 package com.openggf.game.recording;
 
-import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.control.PlayerInputState;
 import com.openggf.game.session.EngineServices;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.version.AppVersion;
 
 import java.io.IOException;
@@ -17,11 +16,8 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 public final class UserRecordingSession {
-    private static final int ACTION_A_MASK = 0x01;
-
     private final RecordingLaunchContext launchContext;
     private final Path outputBk2Path;
-    private final SonicConfigurationService configService;
     private final RecordingFileWriter writer;
     private final SidecarSnapshotSource snapshotSource;
     private final Supplier<Instant> clock;
@@ -50,7 +46,7 @@ public final class UserRecordingSession {
             SidecarSnapshotSource snapshotSource, Supplier<Instant> clock) {
         this.launchContext = Objects.requireNonNull(launchContext, "launchContext");
         this.outputBk2Path = Objects.requireNonNull(outputBk2Path, "outputBk2Path");
-        this.configService = Objects.requireNonNull(configService, "configService");
+        Objects.requireNonNull(configService, "configService");
         this.writer = Objects.requireNonNull(writer, "writer");
         this.snapshotSource = Objects.requireNonNull(snapshotSource, "snapshotSource");
         this.clock = Objects.requireNonNull(clock, "clock");
@@ -61,16 +57,16 @@ public final class UserRecordingSession {
             return;
         }
         Objects.requireNonNull(input, "input");
+        PlayerInputState p1 = input.logical().player1();
+        PlayerInputState p2 = input.logical().player2();
         bufferedFrameInput = new RecordedFrameInput(
                 currentMovieFrame,
-                inputMask(input, SonicConfiguration.UP, SonicConfiguration.DOWN,
-                        SonicConfiguration.LEFT, SonicConfiguration.RIGHT, SonicConfiguration.JUMP),
-                actionMask(input, SonicConfiguration.JUMP),
-                input.isKeyDown(configService.getInt(SonicConfiguration.START)),
-                inputMask(input, SonicConfiguration.P2_UP, SonicConfiguration.P2_DOWN,
-                        SonicConfiguration.P2_LEFT, SonicConfiguration.P2_RIGHT, SonicConfiguration.P2_JUMP),
-                actionMask(input, SonicConfiguration.P2_JUMP),
-                input.isKeyDown(configService.getInt(SonicConfiguration.P2_START)));
+                p1.heldMask(),
+                p1.actionHeldMask(),
+                p1.startHeld(),
+                p2.heldMask(),
+                p2.actionHeldMask(),
+                p2.startHeld());
     }
 
     public void afterLevelFrame() {
@@ -165,31 +161,6 @@ public final class UserRecordingSession {
 
     UserRecordingStopReason stopReason() {
         return stopReason;
-    }
-
-    private int inputMask(InputHandler input, SonicConfiguration up, SonicConfiguration down,
-            SonicConfiguration left, SonicConfiguration right, SonicConfiguration jump) {
-        int mask = 0;
-        if (input.isKeyDown(configService.getInt(up))) {
-            mask |= AbstractPlayableSprite.INPUT_UP;
-        }
-        if (input.isKeyDown(configService.getInt(down))) {
-            mask |= AbstractPlayableSprite.INPUT_DOWN;
-        }
-        if (input.isKeyDown(configService.getInt(left))) {
-            mask |= AbstractPlayableSprite.INPUT_LEFT;
-        }
-        if (input.isKeyDown(configService.getInt(right))) {
-            mask |= AbstractPlayableSprite.INPUT_RIGHT;
-        }
-        if (input.isKeyDown(configService.getInt(jump))) {
-            mask |= AbstractPlayableSprite.INPUT_JUMP;
-        }
-        return mask;
-    }
-
-    private int actionMask(InputHandler input, SonicConfiguration jump) {
-        return input.isKeyDown(configService.getInt(jump)) ? ACTION_A_MASK : 0;
     }
 
     private UserRecordingManifest manifest(UserRecordingStopReason reason) {

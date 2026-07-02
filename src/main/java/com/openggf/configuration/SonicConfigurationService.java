@@ -116,6 +116,9 @@ public class SonicConfigurationService {
 		// Migrate deprecated key encodings/defaults before applying defaults.
 		ConfigMigrationService migrationService = new ConfigMigrationService();
 		boolean configChanged = false;
+		if (migrationService.migrateDeprecatedJumpBindings(config)) {
+			configChanged = true;
+		}
 		if (migrationService.detectAwtKeyCodes(config)) {
 			migrationService.migrateConfig(config);
 			configChanged = true;
@@ -163,6 +166,12 @@ public class SonicConfigurationService {
 	}
 
 	private int resolveInt(SonicConfiguration sonicConfiguration) {
+		if (sonicConfiguration == SonicConfiguration.JUMP && !hasExplicitValue(SonicConfiguration.JUMP)) {
+			return getInt(SonicConfiguration.P1_A);
+		}
+		if (sonicConfiguration == SonicConfiguration.P2_JUMP && !hasExplicitValue(SonicConfiguration.P2_JUMP)) {
+			return getInt(SonicConfiguration.P2_A);
+		}
 		Object value = getConfigValue(sonicConfiguration);
 		if (value instanceof Integer) {
 			return sanitizeIntValue(sonicConfiguration, (Integer) value);
@@ -291,6 +300,13 @@ public class SonicConfigurationService {
 			return config.get(sonicConfiguration.name());
 		}
 		return null;
+	}
+
+	private boolean hasExplicitValue(SonicConfiguration sonicConfiguration) {
+		String name = sonicConfiguration.name();
+		return sessionOverrides.containsKey(name)
+				|| transientResolved.containsKey(name)
+				|| (config != null && config.containsKey(name));
 	}
 
 	/**
@@ -573,14 +589,22 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.DOWN, GLFW_KEY_DOWN);
 		putDefaultKey(SonicConfiguration.LEFT, GLFW_KEY_LEFT);
 		putDefaultKey(SonicConfiguration.RIGHT, GLFW_KEY_RIGHT);
-		putDefaultKey(SonicConfiguration.JUMP, GLFW_KEY_SPACE);
+		putDefaultKey(SonicConfiguration.P1_A, GLFW_KEY_SPACE);
+		putDefault(SonicConfiguration.P1_B, "");
+		putDefault(SonicConfiguration.P1_C, "");
 		putDefaultKey(SonicConfiguration.START, GLFW_KEY_BACKSPACE);
 		putDefaultKey(SonicConfiguration.P2_UP, GLFW_KEY_I);
 		putDefaultKey(SonicConfiguration.P2_DOWN, GLFW_KEY_K);
 		putDefaultKey(SonicConfiguration.P2_LEFT, GLFW_KEY_J);
 		putDefaultKey(SonicConfiguration.P2_RIGHT, GLFW_KEY_L);
-		putDefaultKey(SonicConfiguration.P2_JUMP, GLFW_KEY_RIGHT_SHIFT);
+		putDefaultKey(SonicConfiguration.P2_A, GLFW_KEY_RIGHT_SHIFT);
+		putDefault(SonicConfiguration.P2_B, "");
+		putDefault(SonicConfiguration.P2_C, "");
 		putDefaultKey(SonicConfiguration.P2_START, GLFW_KEY_RIGHT_CONTROL);
+		putDefault(SonicConfiguration.CONTROLLER_ENABLED, true);
+		putDefault(SonicConfiguration.CONTROLLER_DEADZONE, 0.35);
+		putDefault(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+		putDefault(SonicConfiguration.CONTROLLER_PLAYER2, "auto");
 		putDefaultKey(SonicConfiguration.TEST, GLFW_KEY_T);
 		putDefaultKey(SonicConfiguration.NEXT_ACT, GLFW_KEY_PAGE_UP);
 		putDefaultKey(SonicConfiguration.NEXT_ZONE, GLFW_KEY_PAGE_DOWN);

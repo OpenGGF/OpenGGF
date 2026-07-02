@@ -1,5 +1,6 @@
 package com.openggf.game.recording;
 
+import com.openggf.control.InputActionMasks;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -32,7 +33,7 @@ class TestUserRecordingWriter {
                 new RecordedFrameInput(
                         0,
                         AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
-                        0x01,
+                        InputActionMasks.ACTION_A,
                         false,
                         0,
                         0,
@@ -43,7 +44,7 @@ class TestUserRecordingWriter {
                         0,
                         true,
                         AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_JUMP,
-                        0x01,
+                        InputActionMasks.ACTION_A,
                         true));
 
         UserRecordingWriter.write(bk2Path, manifest, inputs, sidecarFrames(2));
@@ -63,27 +64,55 @@ class TestUserRecordingWriter {
         assertEquals("s3k", movie.getHeaderMetadata().get("GameName"));
         assertEquals("2", movie.getHeaderMetadata().get("Frames"));
         assertTrue((movie.getFrame(0).p1InputMask() & AbstractPlayableSprite.INPUT_RIGHT) != 0);
-        assertEquals(0x01, movie.getFrame(0).p1ActionMask());
+        assertEquals(InputActionMasks.ACTION_A, movie.getFrame(0).p1ActionMask());
         assertTrue(movie.getFrame(1).p1StartPressed());
         assertTrue((movie.getFrame(1).p2InputMask() & AbstractPlayableSprite.INPUT_LEFT) != 0);
-        assertEquals(0x01, movie.getFrame(1).p2ActionMask());
+        assertEquals(InputActionMasks.ACTION_A, movie.getFrame(1).p2ActionMask());
         assertTrue(movie.getFrame(1).p2StartPressed());
     }
 
     @Test
-    void rejectsP1ActionMasksWithUnsupportedBOrCBitsBeforeWriting() {
-        Path bk2Path = tempDir.resolve("invalid-p1-action.bk2");
-        List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(0, 0, 0x02, false, 0, 0, false));
+    void writesP1BAndRoundTripsWithBk2MovieLoader() throws Exception {
+        Path bk2Path = tempDir.resolve("p1-b-action.bk2");
+        List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(
+                0,
+                AbstractPlayableSprite.INPUT_JUMP,
+                InputActionMasks.ACTION_B,
+                false,
+                0,
+                0,
+                false));
 
-        assertThrows(IllegalArgumentException.class,
-                () -> UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, sidecarFrames(1)));
-        assertFalse(Files.exists(bk2Path));
+        UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, sidecarFrames(1));
+
+        Bk2Movie movie = new Bk2MovieLoader().load(bk2Path);
+        assertEquals(InputActionMasks.ACTION_B, movie.getFrame(0).p1ActionMask());
+        assertEquals(0, movie.getFrame(0).p2ActionMask());
     }
 
     @Test
-    void rejectsP2ActionMasksWithUnsupportedBOrCBitsBeforeWriting() {
-        Path bk2Path = tempDir.resolve("invalid-p2-action.bk2");
-        List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(0, 0, 0, false, 0, 0x04, false));
+    void writesP2CAndRoundTripsWithBk2MovieLoader() throws Exception {
+        Path bk2Path = tempDir.resolve("p2-c-action.bk2");
+        List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(
+                0,
+                0,
+                0,
+                false,
+                AbstractPlayableSprite.INPUT_JUMP,
+                InputActionMasks.ACTION_C,
+                false));
+
+        UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, sidecarFrames(1));
+
+        Bk2Movie movie = new Bk2MovieLoader().load(bk2Path);
+        assertEquals(0, movie.getFrame(0).p1ActionMask());
+        assertEquals(InputActionMasks.ACTION_C, movie.getFrame(0).p2ActionMask());
+    }
+
+    @Test
+    void rejectsActionMasksWithBitsOutsideActionAllBeforeWriting() {
+        Path bk2Path = tempDir.resolve("invalid-action-bit.bk2");
+        List<RecordedFrameInput> inputs = List.of(new RecordedFrameInput(0, 0, 0x08, false, 0, 0, false));
 
         assertThrows(IllegalArgumentException.class,
                 () -> UserRecordingWriter.write(bk2Path, sampleManifest(1), inputs, sidecarFrames(1)));

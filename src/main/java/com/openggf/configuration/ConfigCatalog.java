@@ -33,6 +33,7 @@ public final class ConfigCatalog {
     private static final Set<String> LAUNCH_CROSS_GAME_VALUES = Set.of("off", "s1", "s2", "s3k");
     private static final Set<String> LAUNCH_MAIN_CHARACTER_VALUES = Set.of("sonic", "tails", "knuckles");
     private static final Set<String> LAUNCH_SIDEKICK_VALUES = Set.of("none", "sonic", "tails", "knuckles");
+    private static final Set<String> CONTROLLER_ASSIGNMENT_VALUES = Set.of("auto", "none");
 
     private static void put(SonicConfiguration key, ConfigKeyMeta meta) {
         META.put(key, meta);
@@ -76,17 +77,32 @@ public final class ConfigCatalog {
 
         // input (player-agnostic leaf first, then per-player subsections)
         put(PAUSE_KEY, of("input", "pause", KEY, "Toggle pause"));
+        put(CONTROLLER_ENABLED, of("input.controller", "enabled", BOOL, "Enable gamepad/controller input"));
+        put(CONTROLLER_DEADZONE, of("input.controller", "deadzone", DOUBLE,
+                "Analog controller deadzone"));
+        put(CONTROLLER_PLAYER1, ofEnum("input.controller", "player1",
+                "Controller assignment for Player 1", CONTROLLER_ASSIGNMENT_VALUES));
+        put(CONTROLLER_PLAYER2, ofEnum("input.controller", "player2",
+                "Controller assignment for Player 2", CONTROLLER_ASSIGNMENT_VALUES));
         put(UP, of("input.player1", "up", KEY, "Player 1: look up"));
         put(DOWN, of("input.player1", "down", KEY, "Player 1: crouch/roll"));
         put(LEFT, of("input.player1", "left", KEY, "Player 1: move left"));
         put(RIGHT, of("input.player1", "right", KEY, "Player 1: move right"));
-        put(JUMP, of("input.player1", "jump", KEY, "Player 1: jump"));
+        put(P1_A, of("input.player1", "a", KEY, "Player 1: action button A"));
+        put(P1_B, of("input.player1", "b", KEY, "Player 1: action button B"));
+        put(P1_C, of("input.player1", "c", KEY, "Player 1: action button C"));
+        put(JUMP, derived(KEY,
+                "Deprecated flat-key compatibility alias for Player 1 action button A"));
         put(START, of("input.player1", "start", KEY, "Player 1: start (in-game pause)"));
         put(P2_UP, of("input.player2", "up", KEY, "Player 2: look up"));
         put(P2_DOWN, of("input.player2", "down", KEY, "Player 2: crouch/roll"));
         put(P2_LEFT, of("input.player2", "left", KEY, "Player 2: move left"));
         put(P2_RIGHT, of("input.player2", "right", KEY, "Player 2: move right"));
-        put(P2_JUMP, of("input.player2", "jump", KEY, "Player 2: jump"));
+        put(P2_A, of("input.player2", "a", KEY, "Player 2: action button A"));
+        put(P2_B, of("input.player2", "b", KEY, "Player 2: action button B"));
+        put(P2_C, of("input.player2", "c", KEY, "Player 2: action button C"));
+        put(P2_JUMP, derived(KEY,
+                "Deprecated flat-key compatibility alias for Player 2 action button A"));
         put(P2_START, of("input.player2", "start", KEY, "Player 2: start"));
 
         // audio
@@ -314,6 +330,9 @@ public final class ConfigCatalog {
                 BY_PATH.put(m.path(), e.getKey());
             }
         }
+        // Deprecated YAML paths are accepted for migration but never emitted.
+        BY_PATH.put("input.player1.jump", JUMP);
+        BY_PATH.put("input.player2.jump", P2_JUMP);
         EMIT_ORDER = List.copyOf(order);
 
         // Top-level normal sections only. debug.* sub-sections are intentionally untitled

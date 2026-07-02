@@ -3,8 +3,8 @@ package com.openggf.game.rewind;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.control.PlayerInputState;
 import com.openggf.debug.playback.Bk2FrameInput;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,24 +31,16 @@ public final class LiveRewindInputSource implements InputSource {
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(config, "config");
         int frameIndex = baseFrame + frames.size();
+        PlayerInputState p1 = input.logical().player1();
+        PlayerInputState p2 = input.logical().player2();
         frames.add(new Bk2FrameInput(
                 frameIndex,
-                heldMask(input, config,
-                        SonicConfiguration.UP,
-                        SonicConfiguration.DOWN,
-                        SonicConfiguration.LEFT,
-                        SonicConfiguration.RIGHT,
-                        SonicConfiguration.JUMP),
-                input.isKeyPressed(config.getInt(SonicConfiguration.JUMP)) ? 1 : 0,
-                input.isKeyPressed(config.getInt(SonicConfiguration.PAUSE_KEY)),
-                heldMask(input, config,
-                        SonicConfiguration.P2_UP,
-                        SonicConfiguration.P2_DOWN,
-                        SonicConfiguration.P2_LEFT,
-                        SonicConfiguration.P2_RIGHT,
-                        SonicConfiguration.P2_JUMP),
-                input.isKeyPressed(config.getInt(SonicConfiguration.P2_JUMP)) ? 1 : 0,
-                input.isKeyPressed(config.getInt(SonicConfiguration.P2_START)),
+                p1.heldMask(),
+                p1.actionHeldMask(),
+                p1.startPressed(),
+                p2.heldMask(),
+                p2.actionHeldMask(),
+                p2.startPressed(),
                 input.isKeyPressed(config.getInt(SonicConfiguration.DEBUG_MODE_KEY)),
                 input.isShiftDown(),
                 input.isControlDown(),
@@ -116,30 +108,5 @@ public final class LiveRewindInputSource implements InputSource {
     private static Bk2FrameInput neutralFrameInput(int frame) {
         return new Bk2FrameInput(frame, 0, 0, false, 0, 0, false,
                 false, false, false, "live:" + frame);
-    }
-
-    private static int heldMask(InputHandler input, SonicConfigurationService config,
-                                SonicConfiguration up,
-                                SonicConfiguration down,
-                                SonicConfiguration left,
-                                SonicConfiguration right,
-                                SonicConfiguration jump) {
-        int mask = 0;
-        if (input.isKeyDown(config.getInt(up))) {
-            mask |= AbstractPlayableSprite.INPUT_UP;
-        }
-        if (input.isKeyDown(config.getInt(down))) {
-            mask |= AbstractPlayableSprite.INPUT_DOWN;
-        }
-        if (input.isKeyDown(config.getInt(left))) {
-            mask |= AbstractPlayableSprite.INPUT_LEFT;
-        }
-        if (input.isKeyDown(config.getInt(right))) {
-            mask |= AbstractPlayableSprite.INPUT_RIGHT;
-        }
-        if (input.isKeyDown(config.getInt(jump))) {
-            mask |= AbstractPlayableSprite.INPUT_JUMP;
-        }
-        return mask;
     }
 }

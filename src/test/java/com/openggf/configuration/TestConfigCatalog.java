@@ -70,8 +70,16 @@ class TestConfigCatalog {
 
     @Test
     void reverseLookupRoundTrips() {
-        SonicConfiguration key = ConfigCatalog.byPath("input.player1.jump");
-        assertEquals(SonicConfiguration.JUMP, key);
+        SonicConfiguration key = ConfigCatalog.byPath("input.player1.a");
+        assertEquals(SonicConfiguration.P1_A, key);
+        assertEquals(SonicConfiguration.JUMP, ConfigCatalog.byPath("input.player1.jump"),
+                "deprecated JUMP path must still flatten for migration");
+        assertEquals(SonicConfiguration.P2_JUMP, ConfigCatalog.byPath("input.player2.jump"),
+                "deprecated P2_JUMP path must still flatten for migration");
+        assertFalse(ConfigCatalog.emitOrder().contains(SonicConfiguration.JUMP),
+                "deprecated JUMP key must not be emitted");
+        assertFalse(ConfigCatalog.emitOrder().contains(SonicConfiguration.P2_JUMP),
+                "deprecated P2_JUMP key must not be emitted");
         assertEquals(SonicConfiguration.AUDIO_ENABLED, ConfigCatalog.byPath("audio.enabled"));
         assertNull(ConfigCatalog.byPath("audio"), "a section-only path must not resolve to a key");
         assertNull(ConfigCatalog.byPath("nope.not.real"));
