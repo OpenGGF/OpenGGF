@@ -305,6 +305,31 @@ public class ARZBossPillar extends AbstractObjectInstance
                 || (player.getCentreX() == rightEdgeX - 1 && hasSameFrameLeftFollowNudge(player)));
     }
 
+    @Override
+    public boolean preservesSidekickCpuPushGraceAfterRideClears(PlayableEntity player) {
+        // Obj89_Pillar_SolidObject temporarily tests at y_pos+4 and calls
+        // SolidObject before TailsCPU_Normal. A side contact sets Status_Push
+        // for Tails, and the CPU's push-bypass branch can then jump directly to
+        // the $3F auto-jump gate before Tails_InputAcceleration clears it.
+        // docs/s2disasm/s2.asm:39287-39300,39369-39378,65330-65339,65531-65539
+        if (!(player instanceof AbstractPlayableSprite sprite)
+                || !sprite.isCpuControlled()
+                || player.getAir()
+                || player.isOnObject()
+                || player.getRolling()) {
+            return false;
+        }
+        int sideEdgeX = isRightPillar()
+                ? x - PILLAR_SOLID_PARAMS.halfWidth()
+                : x + PILLAR_SOLID_PARAMS.halfWidth();
+        if (Math.abs(player.getCentreX() - sideEdgeX) > 1) {
+            return false;
+        }
+        int solidAnchorY = y + PILLAR_SOLID_PARAMS.offsetY() + 4;
+        int verticalBand = PILLAR_SOLID_PARAMS.airHalfHeight() + player.getYRadius() + 4;
+        return Math.abs(player.getCentreY() - solidAnchorY) <= verticalBand;
+    }
+
     private boolean hasSameFrameLeftFollowNudge(PlayableEntity player) {
         if (!(player instanceof AbstractPlayableSprite sprite)) {
             return false;

@@ -6,10 +6,10 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 55 ARZ2 work on top of the develop
+Current branch-local S2 state after round 56 ARZ2 work on top of the develop
 GameRules refactor baseline:
-ARZ2 is f5852 / 6 under `frontierOnly` (`tails_y` expected `0x04C1`,
-actual `0x04C0`),
+ARZ2 is f5928 / 6 under `frontierOnly` (`tails_y_speed` expected `0x0000`,
+actual `0x02C0`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
 expected `-020C`, actual `0x020C`), and OOZ2 is green after the round 54 Obj3E
@@ -19,6 +19,61 @@ The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 advanced but is not banked under the green-bank
 rule.
+
+## 2026-07-02 - S2 round 56 ARZ2 Obj89 released side-push auto-jump advance
+
+Round 56 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round56-next` /
+`bugfix/ai-s2-arz2-round56-next`, based from conductor commit `a17320e0a`.
+The focused baseline reproduced ARZ2 f5852 / 6 under `frontierOnly`
+(`tails_y` expected `0x04C1`, actual `0x04C0`).
+
+Investigation stayed on the Obj89 pillar side-contact handoff. At the f5852
+ROM row, Tails switches from grounded/pushing to air+rolling with
+`y_vel=-$680` while the engine stayed grounded. The trace row's
+`Level_frame_counter` low six bits are zero, matching the S2 Tails CPU
+auto-jump cadence gate. The ROM object dump also shows Obj89 pillar side-push
+state just before `TailsCPU_Normal` consumes Tails' current `Status_Push`.
+
+The relevant ROM paths are `docs/s2disasm/s2.asm:39287-39300` for
+`TailsCPU_Normal` branching from current `Status_Push` to
+`TailsCPU_Normal_FilterAction_Part2`, `docs/s2disasm/s2.asm:39369-39378` for
+the `$3F` auto-jump gate, and `docs/s2disasm/s2.asm:65330-65339` plus
+`docs/s2disasm/s2.asm:65531-65539` for `Obj89_Pillar_SolidObject` calling the
+shared `SolidObject` path at `y_pos+4`.
+
+Fix:
+- Add a narrow `SolidObjectProvider` bridge consumed only by the sidekick CPU
+  auto-jump distance/height bypass, after live push bits and normal ride or
+  interact-slot grace have cleared.
+- Let Obj89 pillars expose that bridge only for CPU sidekicks at the temporary
+  pillar side edge and within the ROM solid vertical band.
+- Add a focused Obj89 unit test for the f5852 Tails side-edge auto-jump gate.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f5852 / 6
+  (`tails_y` expected `0x04C1`, actual `0x04C0`) to f5928 / 6 under
+  `frontierOnly` (`tails_y_speed` expected `0x0000`, actual `0x02C0`). The new
+  frontier is a later hurt-state Tails landing/support mismatch near the ARZ2
+  boss.
+
+Verification:
+- `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#arzBossPillarReleasedSidePushKeepsTailsCpuAutoJumpGateVisible" "-DfailIfNoTests=false" test`
+  passed the focused Obj89 pillar auto-jump gate test.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f5928 / 6.
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5928 / 6, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6. OOZ2 stayed green.
+- Full S1 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  reported 29/29 green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 tests with only the two known AIZ expected-red frontiers:
+  `TestS3kAizCompleteRunTraceReplay` f1095 `x_sub` and
+  `TestS3kAizTraceReplay` f8941 `camera_y`.
 
 ## 2026-07-02 - S2 round 55 conductor baseline
 
