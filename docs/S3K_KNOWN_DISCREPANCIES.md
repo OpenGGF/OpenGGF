@@ -25,8 +25,11 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 12. [LBZ2 Finale Player Scripts: Engine Animation IDs Instead of Raw Mapping Frames](#lbz2-finale-player-scripts-engine-animation-ids-instead-of-raw-mapping-frames)
 13. [AIZ2 Boss Rewind: Transient Combat/Cosmetic Children Restored](#aiz2-boss-rewind-transient-combatcosmetic-children-restored)
 14. [MHZ StickyVine Pull: Heuristic Replaced with ROM `sub_3EC66` Vector Math](#mhz-stickyvine-pull-heuristic-replaced-with-rom-sub_3ec66-vector-math)
-14. [Madmole Cap/Body: Single Merged Object Instead of Parent+Child Split](#madmole-capbody-single-merged-object-instead-of-parentchild-split)
-14. [MHZ Dragonfly Tail Ripple: Explicit One-Frame Gate Instead of Object-List Reordering](#mhz-dragonfly-tail-ripple-explicit-one-frame-gate-instead-of-object-list-reordering)
+15. [Madmole Cap/Body: Single Merged Object Instead of Parent+Child Split](#madmole-capbody-single-merged-object-instead-of-parentchild-split)
+16. [MHZ Dragonfly Tail Ripple: Explicit One-Frame Gate Instead of Object-List Reordering](#mhz-dragonfly-tail-ripple-explicit-one-frame-gate-instead-of-object-list-reordering)
+17. [MHZ Swing Vine / Vertical Swing Bar Forced Camera Scroll (Resolved)](#mhz-swing-vine--vertical-swing-bar-forced-camera-scroll-resolved)
+18. [MHZ2 End-Boss Background Vertical Deform (`sub_554B8`)](#mhz2-end-boss-background-vertical-deform-sub_554b8)
+19. [MHZ Deferred Items: Out-of-Scope Divergences Confirmed During the Parity-Fix Wave](#mhz-deferred-items-out-of-scope-divergences-confirmed-during-the-parity-fix-wave)
 
 ---
 
@@ -780,6 +783,9 @@ than object-list position, produces byte-for-byte identical animation timing wit
 spawns a real 7-segment tail and asserts each segment enters its return phase exactly one frame
 after the previous segment. `TestDragonflyBadnikInstance#linkedChildStartsVerticalReturnWhenParentEntersHoverWait`
 continues to cover the same-frame Dragonfly-to-segment-0 hop.
+
+---
+
 ## MHZ2 End-Boss Background Vertical Deform (`sub_554B8`)
 
 **Location:** `SwScrlMhz.java` (`computeMhzDeform`, `computeBgY`), `Sonic3kMHZEvents.java`
@@ -845,3 +851,71 @@ handling (`Screen_shake_offset`) was already correct and untouched.
   even though it is numerically `>= $8`.
 - `sub554B8UsesAsrFlooringNotTruncatingDivisionForNegativeDelta` — a `cameraY < $280` case
   asserts the ROM-exact floored result, which a truncating-division oracle would get wrong.
+
+---
+
+## MHZ Deferred Items: Out-of-Scope Divergences Confirmed During the Parity-Fix Wave
+
+**Location:** various (see per-item notes below)
+**ROM Reference:** various (see per-item notes below)
+
+The 2026-07-01 MHZ parity-fix wave's audit identified several additional divergences that
+were deliberately left unfixed, either because the engine's behavior is preferable to the ROM's,
+because the item is a scope-limited follow-up, or because fixing it needs a dedicated
+investigation this wave's task briefs explicitly excluded. Recorded here per the wave's Task 15
+note and Task V1 (Step 5) reconciliation so they are tracked rather than silently dropped.
+
+- **SK-alone / star-post Act 1 start bootstrap, and the Act 1 -> Act 2 title-card handoff.**
+  Not modeled to ROM-exact behavior in this wave. Deferred as a Wave-4-or-later candidate only if
+  the Sonic & Knuckles-alone start slice becomes an active target; MHZ playable-route parity
+  through the swing/vine/mushroom/boss/miniboss/cutscene objects covered by this wave does not
+  depend on it.
+- **Mushmeanie shell-direction stale-pointer read.** ROM re-reads a stale pointer for the shell's
+  facing direction in a way the wave's audit judged to be a ROM quirk rather than intended
+  behavior; the engine's current facing-direction source is more internally consistent than
+  reproducing the stale read would be. Intentionally not ROM-matched.
+- **PulleyLift level-select cheat.** The ROM's MHZ Pulley Lift object has an undocumented
+  level-select easter-egg trigger; the engine does not reproduce it. Intentionally out of scope
+  (`MhzPulleyLiftObjectInstance`).
+- **Mushmeanie left-wall bounce sign (`MushmeanieBadnikInstance.checkSideWallBounce`, currently
+  `currentX += wall.distance();`) and ICZ path-follow platform left-wall stop
+  (`IczPathFollowPlatformObjectInstance.stopFallingAgainstWall`, currently `x += wallDistance;`).**
+  A Task 1 code review raised a distance-sign proof suggesting both left-wall correction sites may
+  need `-=` to match ROM's `sub.w d1,x_pos` convention (the same class of bug Task 1 fixed for
+  `MhzMushroomParachuteObjectInstance`'s left-wall sensor). This was explicitly flagged as
+  out-of-scope for the MHZ wave (neither object is part of the 16 MHZ parity-fix tasks) and is
+  **not fixed here** per the Task V1 brief's explicit instruction to record, not fix. Follow-up:
+  verify the ROM `sub_FD32`-style sign convention against each object's actual wall-check helper
+  before changing either `+=` to `-=`.
+- **MHZ1 cutscene door-lowered latch scope (`Mhz1CutsceneButtonInstance.doorLowered`) across a
+  real death/respawn cycle.** Task 15 ports ROM's global `_unkFAA9` RAM byte as a per-button-instance
+  boolean field. If the engine destroys and recreates `Mhz1CutsceneButtonInstance` across a player
+  death/checkpoint-respawn cycle (rather than keeping the same live instance), the per-instance
+  latch would reset to `false` on respawn while ROM's global `_unkFAA9` byte would not (checkpoint
+  respawn in S3K repositions the player without a full level/RAM reload). This was **not verified
+  at runtime** in this validation pass -- confirming it requires tracing the engine's object
+  lifecycle across an actual checkpoint-respawn cycle, which was judged not cheap enough to fold
+  into this pass. Recorded honestly as unverified per the Task V1 brief's explicit fallback
+  instruction, rather than asserted correct without evidence.
+- **`MhzEndBossDefeatFragmentChild` velocity table and end-boss body collision category
+  (Task V1 Step 4 spot-checks).** The velocity table was verified against raw ROM bytes and found
+  to be genuinely wrong (using `Obj_VelocityIndex` rows 4-9 instead of the ROM-correct rows 2-7,
+  once `CreateChild6_Simple`'s subtype pre-scaling by 2 is accounted for) and has been fixed in this
+  pass; see the class javadoc and `TestMhzBossObjects#mhzEndBossFadeWaitUnderflowSpawnsRomDefeatFragments`.
+  The end-boss body's `BOSS`-category `getCollisionFlags()` (`0xCF`, inherited from
+  `AbstractBossInstance`) alongside the dedicated `MhzEndBossHitProxyChild`'s `ENEMY`-category
+  `0x25` was verified **correct as designed**: ROM's `Obj_MHZEndBoss` (`loc_76004`) sets the main
+  body's own `collision_flags(a0)=$0F` and runs it through `Draw_And_Touch_Sprite` every frame,
+  while the separately-allocated `ChildObjDat_76982 -> loc_764A0` hit-proxy child independently
+  registers its own `word_76964`-sourced `collision_flags=$25` via `Child_AddToTouchList` -- ROM's
+  own architecture genuinely scans both as independent touch surfaces with different roles (general
+  body contact vs. the attackable weak point), predating this wave and already covered by
+  `TestMhzBossObjects#mhzBossesExposeRomCollisionHitCounts` and the `MHZEndBossHitProxy*` tests.
+  No fix needed for the collision-category half of this spot-check.
+
+### Verification
+
+The defeat-fragment velocity fix is covered by
+`TestMhzBossObjects#mhzEndBossFadeWaitUnderflowSpawnsRomDefeatFragments`. The remaining items in
+this section are documentation-only; no test coverage is expected or claimed for the unfixed
+divergences themselves.

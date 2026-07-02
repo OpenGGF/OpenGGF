@@ -27333,3 +27333,34 @@ Verification:
   MTZ3 f7853 / 864, OOZ1 f1790 / 888, and OOZ2 f3919 / 1117.
 - `mvn clean "-Dtest=TestS2SidewaysPformGraphRewind,TestTopSolidRoutineProfileAdoption" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dsonic2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
   exited 0.
+
+## 2026-07-02 -- MHZ complete-run frontier check after the full MHZ parity-fix wave (Task V1)
+
+Worktree `.worktrees/ai-mhz-parity`, branch `bugfix/ai-mhz-parity`, merge commit
+`4f7dbebf3` (16 MHZ parity-fix tasks: mushroom parachute, swing vine, end-boss BG
+deform, curled vine, sticky vine, madmole, dragonfly, pulley lift, forced-scroll
+camera, pollen RNG, cutscene door, end-boss hit-flash, miniboss anim commands, SFX
+nits, swing-bar hurt/dead guards, mushroom platform anim). Command:
+`mvn -Dmse=off "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay" test`
+
+- Result: FAIL. Totals 3616 errors, 0 warnings. First error: frame 1 -- `camera_x`
+  mismatch (expected `0x00C0`, actual `0x0039`).
+- The frontier previously recorded for this fixture in this log (2026-06-21 "Grind
+  cycle 2", MHZ-CR f72, `y_speed` expected `0x00E0` actual `0x0000`) does **not**
+  hold here: the current first divergence is much earlier, at frame 1. Verified this
+  is **not** a regression introduced by the MHZ parity-fix wave: a throwaway
+  worktree at the wave's base commit `2ee7f79c2` (`develop` before any of the 16
+  tasks) was created, and the identical trace test on that clean base produces the
+  exact same first error -- frame 1, `camera_x`, expected `0x00C0` actual `0x0039`
+  -- with 3722 total errors (106 *more* than the wave tree's 3616). The throwaway
+  worktree was removed after the comparison. The wave's fixes measurably reduced
+  total downstream divergence count without moving the first-error frame/field,
+  since the camera_x mismatch at frame 1 occurs upstream of anything any MHZ task
+  touched.
+- Root not investigated further here (out of Task V1 scope: this is a pre-existing
+  MHZ complete-run fixture/bootstrap divergence unrelated to the parity-fix wave,
+  and the historical f72 root note in this log predates whatever changed the
+  fixture/bootstrap state between 2026-06-21 and now -- worth a dedicated MHZ
+  complete-run trace session, not folded into this validation pass).
+- No regression: MHZ parity-fix wave is confirmed net-neutral-to-positive on this
+  trace (same first-error field/frame, fewer total errors).

@@ -2161,8 +2161,12 @@ class TestMhzBossObjects {
         assertEquals(6, fragments.size(),
                 "loc_761B2 creates ChildObjDat_769B0, allocating six loc_766CA flicker fragments");
         int[] expectedPriorityBuckets = {4, 4, 6, 6, 4, 4};
-        int[] expectedXAfterMove = {0x44CD, 0x44D3, 0x44CE, 0x44D0, 0x44CC, 0x44D4};
-        int[] expectedYAfterMove = {0x02DE, 0x02DE, 0x02DE, 0x02DE, 0x02DD, 0x02DD};
+        // Set_IndexedVelocity's d0=8 base combines with CreateChild6_Simple seeding each
+        // fragment's raw ROM subtype byte as 0,2,4,6,8,10 (not 0..5): effective stride is
+        // 8 + spawnIndex*4 -- Obj_VelocityIndex (ROM 0x0852F4) rows 2-7, ROM-verified via
+        // RomOffsetFinder search-rom against the raw ROM bytes.
+        int[] expectedXAfterMove = {0x44CE, 0x44D2, 0x44CD, 0x44D3, 0x44CE, 0x44D0};
+        int[] expectedYAfterMove = {0x02DE, 0x02DE, 0x02DE, 0x02DE, 0x02DE, 0x02DE};
         for (int i = 0; i < fragments.size(); i++) {
             ObjectInstance fragment = fragments.get(i);
             ((AbstractObjectInstance) fragment).setServices(services);
