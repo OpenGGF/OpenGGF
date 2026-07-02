@@ -6,8 +6,8 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 61 ARZ2 work on conductor commit
-`a94ef5694`:
+Current branch-local S2 state after round 61 ARZ2 work merged into conductor
+commit `9341ee808` plus the S3K regression-scope follow-up:
 ARZ2 is f6364 / 6 under `frontierOnly` (`tails_y` expected `0x04C1`,
 actual `0x04C0`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
@@ -45,13 +45,18 @@ freed slots (`docs/s2disasm/s2.asm:65689-65704`).
 
 Fix:
 - `ScriptedVelocityAnimationProfile` now preserves the existing Stop/skid anim
-  during no-input coasting only while the fixed Obj08 dust routine is active.
+  during no-input coasting only while the fixed Obj08 dust routine is active
+  and the typed game rules enable S2's after-dynamic-object fixed dust path.
   Outside that ROM dust state it keeps the prior Walk-on-coast behavior, which
-  preserves the accepted MTZ3 wall-stop frontier.
+  preserves the accepted MTZ3 wall-stop frontier and avoids carrying S2's fixed
+  dust cadence into S3K.
 - `PlayableSpriteMovement` advances the fixed Obj08 dust countdown once per
   `SpriteManager` frame while the parent remains in Stop/skid, clears the
   countdown when the parent leaves that anim, and keeps the fixed-dust active
   bit in playable rewind state.
+- `AbstractPlayableSprite` clears the fixed skid-dust active bit when leaving
+  skid state for games whose `GameRules` do not use S2's fixed Obj08
+  after-object allocation path, restoring the prior S3K animation cadence.
 - `TestS2ObjectOccupancyOracle` now asserts that the ARZ2 boss-room Obj08
   allocations occupy slots `$13/$14/$15` by f6313.
 
@@ -75,6 +80,29 @@ Verification:
   preserved CNZ2 f9977 / 10, and
   `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" test`
   preserved MTZ3 f13477 / 4.
+- Conductor regression follow-up after merging worker commit `476f693e`:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  returned S3K AIZ level-select to the known expected-red frontier f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`) after an intermediate
+  broad-preservation candidate had regressed it to f7539 / 7 (`x_speed`).
+- Conductor focused ARZ2 recheck:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  preserved the advanced f6364 / 6 ARZ2 frontier.
+- Full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and 3 expected-red frontiers: ARZ2 f6364 / 6,
+  CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the two known AIZ expected-reds: complete-run
+  f1095 / 3 and level-select f8941 / 1.
+- Rewind coverage guard:
+  `mvn "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" test`
+  passed 1 / 1. The earlier `com.openggf.tests.TestRewindCoverageGuard`
+  selector was stale and failed before running any matching test.
 
 ## 2026-07-02 - S2 round 60 ARZ2 Obj89 arrow drop push-clear cadence
 

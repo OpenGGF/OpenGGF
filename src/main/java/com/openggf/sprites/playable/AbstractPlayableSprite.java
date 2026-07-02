@@ -2277,6 +2277,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setSkidding(boolean skidding) {
                 this.skidding = skidding;
+                if (!skidding
+                                && (gameRules == null
+                                                || gameRules.powerUp() == null
+                                                || !gameRules.powerUp().fixedSkidDustAllocatesAfterDynamicObjectPass())) {
+                        this.skidDustTimer = 0;
+                        this.fixedSkidDustActive = false;
+                }
         }
 
         public int getSkidDustTimer() {

@@ -252,6 +252,9 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         if (speed > 0
                 && skidAnimId >= 0
                 && sprite.getAnimationId() == skidAnimId
+                && sprite.getGameRules() != null
+                && sprite.getGameRules().powerUp() != null
+                && sprite.getGameRules().powerUp().fixedSkidDustAllocatesAfterDynamicObjectPass()
                 && sprite.isFixedSkidDustActive()) {
             return null;
         }
