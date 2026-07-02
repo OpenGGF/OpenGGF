@@ -7,7 +7,8 @@ the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
 Current branch-local S2 state after round 69 ARZ2 worker branch
-`bugfix/ai-s2-arz2-round69-next`:
+`bugfix/ai-s2-arz2-round69-next` and the latest local `develop` merge
+`e316864ec`:
 ARZ2 is f7145 / 1 under `frontierOnly` (`obj_s1E_slot` expected `0x1E`,
 actual `0x2D`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
@@ -17,7 +18,8 @@ is now ARZ2, CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 advanced again in round 69 but is not banked under
-the green-bank rule until it greens.
+the green-bank rule until it greens. Round 70 workers must include targeted
+BizHawk Lua evidence before any `no-change` / `rejected` bounce.
 
 ## 2026-07-02 - S2 round 69 ARZ2 Obj3E initial animal delay
 
@@ -84,6 +86,46 @@ Verification:
 - S1 full trace and S3K guard were not required for this worker change because
   only S2-local Egg Prison code was touched, with no shared object/lifetime or
   collision changes.
+
+Conductor integration:
+- Merged worker commit `ae8bca3f` into conductor branch
+  `bugfix/ai-s2-trace-next` as merge commit `afbf8be62`, then merged local
+  `develop` twice: first as `c82210083` for the completed GameRules/refactor
+  branch, then as `e316864ec` for the follow-up VHS rewind shader docs commit.
+  Latest local `develop` was `8567c3ef`; `origin/develop` remained
+  `d162131f1`.
+- Post-latest-develop full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  confirmed 16 green and the three expected-red frontiers: ARZ2 f7145 / 1
+  (`obj_s1E_slot` expected `0x1E`, actual `0x2D`), CNZ2 f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`), and MTZ3 f13477 / 4
+  (`x_speed` expected `-03FB`, actual `0x03FB`).
+- Post-develop full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- Post-develop S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`). The S3K loading/bootstrap
+  guard classes were all green.
+
+Other round 69 worker outcomes:
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round69-next` /
+  `bugfix/ai-s2-cnz2-round69-next` made no commit. Lua probes showed ROM hurts
+  Tails from Obj51 split-ball slot `$1A` at trace f9977 before `loc_31FF8`
+  moves it: ROM slot `$1A` was at `$28ED,$06E8` with collision `$98`, while
+  Java was probing `$28F0,$06E6`. A split-birth probe showed slot `$1A` born at
+  trace f9948 at `$2909,$06F7`, with clone slot `$1C` allocated after current
+  and executing the same frame. The same-frame-update trial did not advance and
+  was reverted.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round69-next` /
+  `bugfix/ai-s2-mtz3-round69-next` made no commit. Lua PC hooks captured ROM
+  `Touch_ChkValue` / `Touch_Enemy_Part2` at BK2 frame 39642 against Obj53 slot
+  `$18` / trace slot `$24`, x `$2AE4`, y `$0482`, collision flags `$DA`.
+  The engine had already bounced one comparison frame earlier from a higher and
+  farther-right orb, so round 70 should investigate upstream Obj53 phase /
+  position drift rather than touch deferral.
 
 ## 2026-07-02 - S2 round 68 ARZ2 Obj28 prison animal landing cadence
 
