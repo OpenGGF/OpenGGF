@@ -879,7 +879,10 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         if (!state.invulnerable) {
             return;
         }
-        int flashSet = (state.invulnerabilityTimer & 1) == 0 ? 0 : 1;
+        // ROM loc_767E8: btst #0,$20(a0) reads the countdown BEFORE it is decremented below.
+        // Bit0 clear (even) selects the white/flash row; bit0 set (odd) selects the real-color
+        // row, so the final write (at $20==1, odd) restores real colors as $20 underflows to 0.
+        int flashSet = (state.invulnerabilityTimer & 1) == 0 ? 1 : 0;
         S3kPaletteWriteSupport.applyColors(
                 services().paletteOwnershipRegistryOrNull(),
                 services().currentLevel(),

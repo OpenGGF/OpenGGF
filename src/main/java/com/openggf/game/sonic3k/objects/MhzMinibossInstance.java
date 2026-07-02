@@ -45,6 +45,10 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
     private static final int DEFEAT_EXPLOSION_Y_RANGE = 0x20;
     private static final int DEFEAT_EXPLOSION_INTERVAL = 3;
     private static final int CHOPPING_CALLBACK_COMMAND = 0xF4;
+    // loc_845E4: re-point the script base by a signed relative offset, then fall through to $FC.
+    private static final int SCRIPT_JUMP_COMMAND = 0xF8;
+    // loc_845F2: re-emit the frame/delay pair at the (possibly just re-pointed) script base.
+    private static final int SCRIPT_REPEAT_BASE_COMMAND = 0xFC;
     private static final int[] CHOPPING_SCRIPT = {
             0x04, 0x27,
             0x04, 0x27,
@@ -146,6 +150,10 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
     private int mappingFrame;
     private int animFrame;
     private int animFrameTimer;
+    // ROM $30(a0): the active raw-animation script's base pointer. Normally the script's own
+    // origin (0), but the $F8 command re-points it, and that re-point persists across calls
+    // until the next Set_Raw_Animation-equivalent reset (a fresh script switch).
+    private int scriptBase;
     private boolean defeatHandoffQueued;
     private int defeatExplosionTimer;
     private int defeatExplosionIntervalCounter;
@@ -167,6 +175,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         mappingFrame = 0;
         animFrame = 0;
         animFrameTimer = 0;
+        scriptBase = 0;
         paletteLoaded = false;
         defeatHandoffQueued = false;
         defeatExplosionTimer = -1;
@@ -514,6 +523,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         state.routine = ROUTINE_CHOPPING;
         animFrame = 0;
         animFrameTimer = 0;
+        scriptBase = 0;
     }
 
     private void updateChoppingAnimation() {
@@ -540,10 +550,29 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         }
 
         animFrame += 2;
-        int command = script[animFrame] & 0xFF;
+        int command = script[scriptBase + animFrame] & 0xFF;
         if (command < 0x80) {
             mappingFrame = command;
-            animFrameTimer = script[animFrame + 1] & 0xFF;
+            animFrameTimer = script[scriptBase + animFrame + 1] & 0xFF;
+            return 1;
+        }
+
+        if (command == SCRIPT_JUMP_COMMAND) {
+            // loc_845E4: script[scriptBase + animFrame + 1] is a signed relative offset added to
+            // the CURRENT script base (not the command's own position), and the new base persists
+            // in scriptBase (ROM $30(a0)) for subsequent calls. Falls through to loc_845F2 ($FC)
+            // to emit the frame/delay pair now sitting at the re-pointed base.
+            int offset = (byte) script[scriptBase + animFrame + 1];
+            scriptBase += offset;
+            command = SCRIPT_REPEAT_BASE_COMMAND;
+        }
+
+        if (command == SCRIPT_REPEAT_BASE_COMMAND) {
+            // loc_845F2: re-emit the frame/delay pair sitting at the script base (unchanged for a
+            // bare $FC, or freshly re-pointed by a preceding $F8), looping the animation there.
+            mappingFrame = script[scriptBase] & 0xFF;
+            animFrameTimer = script[scriptBase + 1] & 0xFF;
+            animFrame = 0;
             return 1;
         }
 
@@ -705,6 +734,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         setCustomFlag(SCRATCH_2E, 0x2A);
         animFrame = 0;
         animFrameTimer = 0;
+        scriptBase = 0;
     }
 
     private void updateFinalReturnWait() {
@@ -726,6 +756,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
             mappingFrame = 0x0F;
             animFrame = 0;
             animFrameTimer = 0;
+            scriptBase = 0;
             setCustomFlag(SCRATCH_42, getCustomFlag(SCRATCH_42) - 1);
             spawnChild(() -> new MhzMinibossEscapeShardInstance(state.x, state.y - 8, this));
         }
@@ -822,6 +853,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
             setCustomFlag(SCRATCH_38, getCustomFlag(SCRATCH_38) & ~0x04);
             animFrame = 0;
             animFrameTimer = 0;
+            scriptBase = 0;
         }
     }
 
