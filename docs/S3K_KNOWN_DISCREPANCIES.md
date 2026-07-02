@@ -681,6 +681,9 @@ from the same production `TrigLookupTable`.
 `TestMhzStickyVineObjectInstance#groundedStickyPullHalvesGroundSpeedWhenRomThresholdIsExceeded`
 exercises the corrected ground `ground_vel`-halving gate with a drift large enough to clear
 the ROM `$200`/`$10` threshold. The full `TestMhzStickyVineObjectInstance` suite passes.
+
+---
+
 ## Madmole Cap/Body: Single Merged Object Instead of Parent+Child Split
 
 **Location:** `MadmoleBadnikInstance.java` (MHZ, S3K SKL slot `$8C`)
@@ -733,6 +736,9 @@ internal latch vs. two SST-slot objects linked by a busy bit); this keeps the
 existing single-object rewind/render/collision wiring for Madmole intact
 rather than requiring a parent+dynamically-spawned-child split purely to
 mirror ROM's slot layout.
+
+---
+
 ## MHZ Dragonfly Tail Ripple: Explicit One-Frame Gate Instead of Object-List Reordering
 
 **Location:** `DragonflyBadnikInstance.java` (`LinkedBodyChild.updateVerticalPhase`,
@@ -912,6 +918,14 @@ note and Task V1 (Step 5) reconciliation so they are tracked rather than silentl
   body contact vs. the attackable weak point), predating this wave and already covered by
   `TestMhzBossObjects#mhzBossesExposeRomCollisionHitCounts` and the `MHZEndBossHitProxy*` tests.
   No fix needed for the collision-category half of this spot-check.
+- **`MhzEndBossDefeatFragmentChild.parentDerivedXVelocity` mirrors x-velocity on the parent's
+  render flip.** The final whole-branch review noted ROM `Set_IndexedVelocity` tests the *child's*
+  `render_flags` bit 0, which is always 0 for these fragments (`CreateChild6_Simple` copies only
+  mappings/art_tile and `SetUp_ObjAttributes` only sets bit 2), so ROM never mirrors the defeat
+  fragments even when the boss body is x-flipped at defeat. The engine's parent-flip mirroring
+  (`MhzEndBossDefeatFragmentChild.java:101-108`) predates this wave and is observable only if the
+  end boss is x-flipped on its defeat frame. Recorded for follow-up rather than fixed in the
+  merge-prep pass.
 
 ### Verification
 
