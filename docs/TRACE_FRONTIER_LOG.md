@@ -6,16 +6,56 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 47 ARZ2 targeted pass:
-ARZ2 is f4920 / 4 under `frontierOnly` (`obj_s14_type` expected `0x08`,
-actual missing),
+Current branch-local S2 state after the round 48 ARZ2 targeted pass:
+ARZ2 is f5174 / 1 under `frontierOnly` (`y` expected `0x044B`, actual
+`0x044C`),
 CNZ2 is f9946 / 8 under `frontierOnly` (`x_speed` expected `0x0200`, actual
 `0x08A8`), MTZ3 is f13336 / 6 under `frontierOnly` (`x_speed` expected
 `0x0200`, actual `-0200`), and OOZ2 is f12107 / 13 under `frontierOnly`
 (`tails_y` expected `0x02A5`, actual `0x02A4`; focused full reports also show
 `tails_g_speed` expected `0x00A4`, actual `0x0000`). Full
 S2 was last swept in round 45 at 15 green / 4 expected-red; full S1 remains
-green, and the S3K guard state is unchanged. No S2 trace greened in round 47.
+green, and the S3K guard state is unchanged. No S2 trace greened in round 48.
+
+## 2026-07-02 - S2 round 48 ARZ2 targeted advance
+
+Round 48 started from conductor HEAD `a1e728db0` on
+`bugfix/ai-s2-trace-next`. Worker ARZ2 used
+`.worktrees/ai-s2-arz2-round48-next` /
+`bugfix/ai-s2-arz2-round48-next`, based from that conductor HEAD rather than
+`develop`. The focused baseline reproduced the handoff frontier: ARZ2 f4920 /
+4 under `frontierOnly` (`obj_s14_type` expected `0x08`, actual missing).
+
+Investigation showed ROM slot `$14` was the Tails Obj08 skid-dust child, not an
+Obj89 boss child. S2 `Obj08_SkidDust` copies the parent `x_pos/y_pos`, adds
+`$10` to the child Y, then subtracts 4 when `obj08_belongs_to_tails` is set
+because Tails' dust sidecar uses the shorter-sprite offset
+(`docs/s2disasm/s2.asm:42821-42841`). The engine already allocated the Obj08
+child in slot `$14` with the correct X, but used the Sonic `+16` Y for Tails,
+placing the child at `0x04D0` instead of the ROM `0x04CC`; the exact-position
+object-near match therefore surfaced as a missing Obj08.
+
+Candidate result:
+- Applied the ROM Tails-only `-4` Y adjustment in `SkidDustObjectInstance`.
+  ARZ2 advances to f5174 / 1 under `frontierOnly` (`y` expected `0x044B`,
+  actual `0x044C`). The next owner is a later player-position mismatch after
+  the Obj08 slot `$14` match.
+
+Verification:
+- `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen""
+  ""-Dtrace.frontierOnly=true""
+  ""-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace""
+  test"` reports the expected-red frontier at f5174 / 1.
+- `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen""
+  ""-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2TailsSkidDustAppliesRomShorterSpriteYOffsetAtFrame4920+arz2SkidDustDoesNotAllocateExtraSlot20AfterRomFixedDustDeletes+arz2SkidDustReusesFreedSlot18AtRomFrame1993,com.openggf.sprites.managers.TestSpindashDustControllerSplash""
+  test"` passed 54/54 after clearing stale Surefire reports.
+- `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  ""-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen""
+  ""-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen""
+  ""-Dtest=com.openggf.tests.TestS1Ghz1Headless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils""
+  test"` passed 51/51 after clearing stale Surefire reports.
 
 ## 2026-07-02 - S2 round 47 ARZ2 targeted advance
 
