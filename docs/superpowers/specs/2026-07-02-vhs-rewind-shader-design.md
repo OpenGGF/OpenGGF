@@ -45,6 +45,11 @@ Small, plain-JUnit-testable intensity envelope:
   `LiveRewindManager` cleanup path resets it.
 - Exposes normalized speed derived from `RewindSpeedController.currentSpeed()` so a longer
   hold (faster tape) drives a busier effect.
+- **Speed latch through release:** with tape coast disabled (the default),
+  `RewindSpeedController` resets to speed 0.0 on the first non-held frame, while the
+  envelope still has a 10-frame visual tail. The envelope therefore latches the last
+  nonzero speed and holds it for the whole release ramp, so the tear bands keep scrolling
+  as the effect fades instead of freezing. Covered by a dedicated envelope test.
 
 ### 2. `LiveRewindManager` (edit)
 
@@ -54,12 +59,20 @@ existing `renderLiveRewindHud` pattern.
 
 ### 3. `RewindVhsEffectPass` (new, `com.openggf.graphics.shaderlib`)
 
-- Owns the private `DisplayShaderPipeline`; activates lazily on the first frame with
-  intensity > 0, loading the built-in preset from the classpath.
+- Owns the private `DisplayShaderPipeline`. **Prewarmed, not lazy:** when
+  `LIVE_REWIND_ENABLED && LIVE_REWIND_VHS_EFFECT`, the built-in classpath preset is
+  compiled and activated once during engine GL initialization (alongside
+  `initializeDisplayShaders()`), so the first rewind press never pays a shader-compile
+  hitch — the same hitch cited when rejecting the preset-swap alternative. Cost of
+  prewarming is a couple of viewport-sized FBO textures held for the session; accepted.
 - Per frame with intensity > 0: `apply(...)` with dynamic uniforms
-  `RewindIntensity` and `RewindSpeed`.
-- On activation/apply failure: log one warning, mark failed, never retry (rides the
-  pipeline's existing disable-and-log path).
+  `RewindIntensity` and `RewindSpeed`. Zero intensity → no call, zero cost.
+- **Failure detection:** `DisplayShaderPipeline.apply(...)` returns void and internally
+  logs and disposes itself on apply failure. The pass accepts those logging semantics and
+  does not duplicate them: it latches a failed state when `activate(...)` returns false at
+  prewarm, or when `pipeline.isActive()` is false after an `apply(...)` call (the
+  pipeline's dispose-on-failure makes this a reliable signal). Once failed, the pass logs
+  one summary warning and never retries for the session.
 - Disposed with other GL resources at shutdown.
 
 ### 4. `DisplayShaderPipeline` (edit)
@@ -106,9 +119,13 @@ New boolean key `LIVE_REWIND_VHS_EFFECT` mapped to YAML path `rewind.vhsEffect` 
 ## Testing
 
 - `TestRewindEffectEnvelope` — attack/release timing, instant-zero on boundary/clear,
-  speed normalization (JUnit 5, no GL).
+  speed normalization, and the release-tail speed latch (JUnit 5, no GL).
 - Resource sanity test — preset resource loads and declares the required uniforms (no GL).
-- GL compile/visuals verified manually by running the game and holding the rewind key.
+- GL smoke test — extend the existing `TestDisplayShaderPipelineSmoke` harness
+  (`GlContext.open()`): build the built-in VHS preset, assert activation succeeds, and
+  apply it once with the dynamic uniforms, asserting the pipeline stays active. This
+  catches GLSL syntax/link errors that a no-GL resource check cannot.
+- Visuals verified manually by running the game and holding the rewind key.
 
 ## Files
 
