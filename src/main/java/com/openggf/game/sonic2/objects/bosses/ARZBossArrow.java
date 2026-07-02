@@ -66,6 +66,8 @@ public class ARZBossArrow extends AbstractObjectInstance
     private int yVel;
     private int arrowTimer;
     private boolean timerExpiredThisFrame;
+    private boolean dropPlayersProcessed;
+    private boolean dropPushClearProcessed;
 
     // Animation state
     private int arrowAnim;
@@ -86,6 +88,8 @@ public class ARZBossArrow extends AbstractObjectInstance
         this.collisionFlags = 0;
         this.arrowAnim = 0;
         this.arrowTimer = 0;
+        this.dropPlayersProcessed = false;
+        this.dropPushClearProcessed = false;
     }
 
     ARZBossArrow(ObjectSpawn spawn) {
@@ -208,7 +212,13 @@ public class ARZBossArrow extends AbstractObjectInstance
     }
 
     private void updateArrowFalling(AbstractPlayableSprite player) {
-        dropPlayers(player);
+        if (!dropPlayersProcessed) {
+            dropPlayers(player, false);
+            dropPlayersProcessed = true;
+        } else if (!dropPushClearProcessed) {
+            dropPlayers(player, true);
+            dropPushClearProcessed = true;
+        }
         int nextY = y + yVel;
         if (nextY > ARROW_FLOOR_Y) {
             setDestroyed(true);
@@ -228,16 +238,39 @@ public class ARZBossArrow extends AbstractObjectInstance
         }
     }
 
-    private void dropPlayers(AbstractPlayableSprite player) {
-        if (player == null || services().objectManager() == null) {
+    private void dropPlayers(AbstractPlayableSprite player, boolean clearPush) {
+        if (services().objectManager() == null) {
             return;
         }
-        if (!services().objectManager().isRidingObject(player, this)) {
+        dropPlayerIfLatched(player, clearPush);
+        for (PlayableEntity sidekick : services().sidekicks()) {
+            if (sidekick instanceof AbstractPlayableSprite sprite) {
+                dropPlayerIfLatched(sprite, clearPush);
+            }
+        }
+    }
+
+    private void dropPlayerIfLatched(AbstractPlayableSprite player, boolean clearPush) {
+        if (player == null) {
             return;
         }
-        services().objectManager().clearRidingObject(player);
+        ObjectManager objectManager = services().objectManager();
+        boolean ridingThisArrow = objectManager.isRidingObject(player, this);
+        boolean interactStillNamesThisArrow = player.getInteractSlotIndex() == getSlotIndex();
+        if (!ridingThisArrow && !interactStillNamesThisArrow) {
+            return;
+        }
+        if (ridingThisArrow) {
+            objectManager.clearRidingObject(player);
+        }
         player.setOnObject(false);
         player.setAir(true);
+        // Obj89_Arrow_ChkDropPlayers clears both p1/p2 standing latches once.
+        // The following Tails_Animate pass clears Status_Push one sampled frame later.
+        // docs/s2disasm/s2.asm:65689-65704, 41272-41279
+        if (clearPush) {
+            player.setPushing(false);
+        }
     }
 
     private void animateArrow() {
