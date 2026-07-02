@@ -12,10 +12,41 @@ actual `-015D`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
 expected `-020C`, actual `0x020C`), and OOZ2 is f12861 / 1 under `frontierOnly`
-(`y` expected `0x0215`, actual `0x0214`). The round 51 worker
+(`y` expected `0x0215`, actual `0x0214`). The round 51 conductor
 verification keeps the full S2 sweep at 15 green / 4 expected-red.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. No S2 trace greened in round 51.
+
+## 2026-07-02 - S2 round 51 conductor integration pause
+
+Round 51 integrated two verified worker commits into
+`.worktrees/ai-s2-trace-next` / `bugfix/ai-s2-trace-next`:
+`f71de1d12` for OOZ2 Obj55 defeated camera release and `b6f1271bf` for ARZ2
+Obj89 push-entry side-stop handoff. The conductor merge commits are
+`d49582f48` and `2b20feb88`.
+
+Round 51 worker outcomes:
+- ARZ2 advanced from f5460 / 4 (`tails_x_speed` expected `0x0000`, actual
+  `-0048`) to f5827 / 2 (`x_speed` expected `0x0000`, actual `-015D`).
+- OOZ2 advanced from f12416 / 1 (`camera_x` expected `0x2A04`, actual
+  `0x2A02`) to f12861 / 1 (`y` expected `0x0215`, actual `0x0214`).
+- CNZ2 remained at f9977 / 10 after rejected/no-change candidates around
+  Obj51 touch timing.
+- MTZ3 remained at f13358 / 6 after no-change Obj54/Touch_Boss timing checks.
+
+Conductor verification after both merges:
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 S2 trace tests: 15 green / 4 expected-red at ARZ2 f5827 / 2, CNZ2
+  f9977 / 10, MTZ3 f13358 / 6, and OOZ2 f12861 / 1.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  plus fresh Surefire XML filtering reported `recent=29 bad=0`.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 S3K guard tests: 66 green / 2 known AIZ expected-red frontiers
+  (complete-run f1095 `x_sub`, AIZ trace f8941 `camera_y`).
+
+No S2 trace turned green, so no changes were banked into `next`. Per user
+direction, the campaign pauses here before pulling the incoming `develop`
+GameRules refactor and before dispatching the next worker round.
 
 ## 2026-07-02 - S2 round 51 ARZ2 Obj89 push-entry stop advance
 
