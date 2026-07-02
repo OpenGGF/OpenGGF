@@ -50,7 +50,7 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
     private int currentY;
     private int xVelocity;      // Fixed-point (8.8)
     private int yVelocity;      // Fixed-point (8.8)
-    private int xSub = 0;       // Sub-pixel accumulator
+    private int xSub = 0;       // 16.16 sub-pixel accumulator for ObjectMove/ObjectFall
     private int ySub = 0;
     private int groundXVelocity;
     private int groundYVelocity;
@@ -100,7 +100,7 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
     public void update(int frameCounter, PlayableEntity player) {
         switch (state) {
             case PRISON_WAIT -> updatePrisonWait(frameCounter);
-            case MAIN -> updateMain();
+            case MAIN -> updateMain(frameCounter);
             case WALK -> updateWalk();
             case FLY -> updateFly();
         }
@@ -127,18 +127,13 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
         state = State.MAIN;
         yVelocity = -0x400;  // Initial upward velocity
         animFrame = 2;
-
-        // ROM: btst #4,(Vint_runcount+3).w for random direction
-        if ((frameCounter & 0x10) != 0) {
-            groundXVelocity = -groundXVelocity;
-        }
     }
 
     /**
      * ROM: Obj28_Main (loc_11ADE)
      * Falling after initial spawn.
      */
-    private void updateMain() {
+    private void updateMain(int frameCounter) {
         objectMoveAndFall();
 
         if (yVelocity >= 0 && checkFloorCollision()) {
@@ -147,6 +142,13 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
             yVelocity = groundYVelocity;
             animFrame = 1;
             state = definition.flying() ? State.FLY : State.WALK;
+            // Prison animals sample Vint_runcount only after floor contact,
+            // while Obj28_Main switches to the walking/flying routine
+            // (docs/s2disasm/s2.asm:24644-24667).
+            if ((frameCounter & 0x10) != 0) {
+                xVelocity = -xVelocity;
+                groundXVelocity = -groundXVelocity;
+            }
         }
 
         if (!isOnScreen(64)) {
@@ -203,8 +205,10 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
      * Apply gravity and move.
      */
     private void objectMoveAndFall() {
-        yVelocity += GRAVITY;
-        objectMove();
+        SubpixelMotion.State motion = new SubpixelMotion.State(
+                currentX, currentY, xSub, ySub, xVelocity, yVelocity);
+        SubpixelMotion.objectFallXY(motion, GRAVITY);
+        applyMotion(motion);
     }
 
     /**
@@ -212,13 +216,18 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
      * Apply velocities to position.
      */
     private void objectMove() {
-        xSub += xVelocity;
-        ySub += yVelocity;
+        SubpixelMotion.State motion = new SubpixelMotion.State(
+                currentX, currentY, xSub, ySub, xVelocity, yVelocity);
+        SubpixelMotion.speedToPos(motion);
+        applyMotion(motion);
+    }
 
-        currentX += (xSub >> 8);
-        currentY += (ySub >> 8);
-        xSub &= 0xFF;
-        ySub &= 0xFF;
+    private void applyMotion(SubpixelMotion.State motion) {
+        currentX = motion.x;
+        currentY = motion.y;
+        xSub = motion.xSub;
+        ySub = motion.ySub;
+        yVelocity = motion.yVel;
     }
 
     /**

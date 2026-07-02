@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ExplosionObjectInstance;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic2.Sonic2Rng;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.level.objects.AnimalObjectInstance;
@@ -130,8 +131,13 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
 
     // Button state (now managed by separate button object)
     private EggPrisonButtonObjectInstance buttonObject;
+    @RewindTransient(reason = "structural Obj3E routine-6 slot child is recreated from the parent update path")
+    private EggPrisonLockSlotChild lockSlotChild;
+    @RewindTransient(reason = "structural Obj3E routine-8 slot child is recreated from the parent update path")
+    private EggPrisonBrokenSlotChild brokenSlotChild;
     private boolean buttonTriggered = false;  // objoff_32
     private boolean buttonSpawned = false;
+    private boolean componentSlotsSpawned = false;
 
     // Lock state
     private int lockX;
@@ -146,6 +152,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     // Broken piece state (spawns random animals)
     private int brokenRoutineSecondary = BROKEN_STATE_WAITING;
     private int brokenAnimDuration = 0;
+    private boolean skipRandomAnimalSpawnThisFrame = false;
 
     // Player reference for results screen
     private AbstractPlayableSprite lastPlayer;
@@ -168,16 +175,48 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * Spawns the button as a separate object with full solid collision.
-     * ROM: Button is child object 2 with routine 4 (loc_3F354).
+     * Spawns the ROM-visible Obj3E component slots.
+     * <p>
+     * ROM loc_3F212 initializes the body in a0, then AllocateObject creates
+     * the routine-4 button, routine-6 lock, and routine-8 broken/end-checker
+     * from Obj3E_ObjLoadData (docs/s2disasm/s2.asm:84798-84829). The Java
+     * parent still owns lock physics and animal spawning, but these children
+     * preserve the SST slot pressure later AllocateObject scans observe.
      */
-    private void spawnButtonObject() {
-        if (buttonSpawned || services().objectManager() == null) {
+    private void spawnComponentSlotObjects() {
+        if (componentSlotsSpawned || services().objectManager() == null) {
             return;
         }
 
         buttonSpawned = true;
         buttonObject = spawnChild(() -> new EggPrisonButtonObjectInstance(spawn, this));
+        lockSlotChild = spawnChild(() -> new EggPrisonLockSlotChild(
+                buildComponentSpawn(LOCK_Y_OFFSET), this));
+        brokenSlotChild = spawnChild(() -> new EggPrisonBrokenSlotChild(
+                buildComponentSpawn(0), this));
+        componentSlotsSpawned = true;
+    }
+
+    private ObjectSpawn buildComponentSpawn(int yOffset) {
+        return new ObjectSpawn(
+                spawn.x(),
+                spawn.y() - yOffset,
+                spawn.objectId(),
+                spawn.subtype(),
+                spawn.renderFlags(),
+                false,
+                spawn.rawYWord(),
+                spawn.layoutIndex());
+    }
+
+    private void attachLockSlotChildForRewind(EggPrisonLockSlotChild child) {
+        lockSlotChild = child;
+        componentSlotsSpawned = buttonSpawned && lockSlotChild != null && brokenSlotChild != null;
+    }
+
+    private void attachBrokenSlotChildForRewind(EggPrisonBrokenSlotChild child) {
+        brokenSlotChild = child;
+        componentSlotsSpawned = buttonSpawned && lockSlotChild != null && brokenSlotChild != null;
     }
 
     /**
@@ -205,7 +244,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
 
         this.lastPlayer = player;
         this.globalFrameCounter = frameCounter;
-        spawnButtonObject();
+        spawnComponentSlotObjects();
 
         // Update each sub-object according to its routine
         updateBody(player);
@@ -278,6 +317,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         // Tell broken piece to start spawning random animals after $B4 frames
         brokenAnimDuration = SPAWN_PHASE_DURATION;
         brokenRoutineSecondary = BROKEN_STATE_SPAWNING;
+        skipRandomAnimalSpawnThisFrame = true;
 
         // Body is done
         bodyRoutineSecondary = BODY_STATE_DONE;
@@ -322,10 +362,13 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Apply ObjectMoveAndFall physics
+        // ROM ObjectMoveAndFall reads old y_vel for this frame's position
+        // update, then stores y_vel+$38 for the next frame
+        // (docs/s2disasm/s2.asm:30165-30177; Obj3E call at 84920-84927).
+        int oldLockYVel = lockYVel;
         lockYVel += GRAVITY;
         lockXSub += lockXVel;
-        lockYSub += lockYVel;
+        lockYSub += oldLockYVel;
 
         // Convert from fixed-point to pixels
         lockX += (lockXSub >> 8);
@@ -340,6 +383,8 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
             int screenBottom = camera.getY() + viewportHeight() + 64;
             if (lockX > screenRight || lockY > screenBottom) {
                 lockVisible = false;
+                expireSlotChild(lockSlotChild);
+                lockSlotChild = null;
             }
         }
     }
@@ -354,11 +399,12 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         }
 
         if (brokenRoutineSecondary == BROKEN_STATE_SPAWNING) {
-            // ROM: andi.b #7,d0 / bne.s skip_spawn
-            // Spawn one animal every 8 frames
-            if ((frameCounter & 7) == 0) {
+            // ROM loc_3F3A8 samples (Vint_runcount+3) and spawns only when
+            // its low three bits are zero (docs/s2disasm/s2.asm:84935-84942).
+            if (!skipRandomAnimalSpawnThisFrame && (frameCounter & 7) == 0) {
                 spawnRandomAnimal();
             }
+            skipRandomAnimalSpawnThisFrame = false;
 
             // Count down duration
             brokenAnimDuration--;
@@ -497,9 +543,11 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         );
         final int artVariant = Sonic2Rng.nextAnimalArtVariant(services().rng());
         // spawnFreeChild sets the construction context so the animal resolves its
-        // sprite renderer (see spawnInitialAnimals); a raw addDynamicObject leaves
-        // the renderer null and the animal invisible.
-        spawnFreeChild(() -> new EggPrisonAnimalInstance(animalSpawn, SPAWN_ANIMAL_DELAY, artVariant));
+        // sprite renderer (see spawnInitialAnimals). The constructor folds Obj28
+        // routine-0 setup into Java state, so preserve the ROM's first visible
+        // routine-0 pass before Obj28_Prison starts decrementing objoff_36
+        // (docs/s2disasm/s2.asm:24596-24636,84943-84955).
+        spawnFreeChild(() -> new EggPrisonAnimalInstance(animalSpawn, SPAWN_ANIMAL_DELAY + 1, artVariant));
     }
 
     /**
@@ -570,6 +618,21 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         // the routine-2 body. The body keeps running loc_3F278 and therefore
         // keeps the player's continued SolidObject ride attached through the
         // results sequence.
+    }
+
+    @Override
+    public void onUnload() {
+        expireSlotChild(lockSlotChild);
+        expireSlotChild(brokenSlotChild);
+        lockSlotChild = null;
+        brokenSlotChild = null;
+        super.onUnload();
+    }
+
+    private static void expireSlotChild(AbstractObjectInstance child) {
+        if (child != null && !child.isDestroyed()) {
+            ObjectLifetimeOps.expireDynamic(child);
+        }
     }
 
     @Override
@@ -647,5 +710,123 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     @Override
     public int getY() {
         return spawn.y();
+    }
+
+    private static EggPrisonObjectInstance nearestParentForRewind(
+            RewindRecreateContext ctx,
+            ObjectSpawn childSpawn) {
+        ObjectManager manager = ctx.objectManager();
+        if (manager == null && ctx.objectServices() != null) {
+            manager = ctx.objectServices().objectManager();
+        }
+        if (manager == null) {
+            return null;
+        }
+        return manager.getActiveObjects().stream()
+                .filter(EggPrisonObjectInstance.class::isInstance)
+                .map(EggPrisonObjectInstance.class::cast)
+                .filter(parent -> !parent.isDestroyed())
+                .min((a, b) -> Integer.compare(
+                        distanceFromChildSpawn(a, childSpawn),
+                        distanceFromChildSpawn(b, childSpawn)))
+                .orElse(null);
+    }
+
+    private static int distanceFromChildSpawn(EggPrisonObjectInstance parent, ObjectSpawn childSpawn) {
+        return Math.abs(parent.spawn.x() - childSpawn.x()) + Math.abs(parent.spawn.y() - childSpawn.y());
+    }
+
+    private static final class EggPrisonLockSlotChild extends AbstractObjectInstance
+            implements RewindRecreatable {
+        @RewindTransient(reason = "structural Obj3E component link is restored by parent lookup")
+        private final EggPrisonObjectInstance parent;
+
+        private EggPrisonLockSlotChild(ObjectSpawn spawn) {
+            this(spawn, null);
+        }
+
+        private EggPrisonLockSlotChild(ObjectSpawn spawn, EggPrisonObjectInstance parent) {
+            super(spawn, "EggPrison Lock");
+            this.parent = parent;
+        }
+
+        @Override
+        public EggPrisonLockSlotChild recreateForRewind(RewindRecreateContext ctx) {
+            EggPrisonObjectInstance restoredParent = nearestParentForRewind(ctx, ctx.spawn());
+            EggPrisonLockSlotChild child = new EggPrisonLockSlotChild(ctx.spawn(), restoredParent);
+            if (restoredParent != null) {
+                restoredParent.attachLockSlotChildForRewind(child);
+            }
+            return child;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (parent == null || parent.isDestroyed()) {
+                ObjectLifetimeOps.expireDynamic(this);
+            }
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // Slot-pressure child only; the parent renders the lock sprite.
+        }
+
+        @Override
+        public int getX() {
+            return parent != null ? parent.lockX : spawn.x();
+        }
+
+        @Override
+        public int getY() {
+            return parent != null ? parent.lockY : spawn.y();
+        }
+    }
+
+    private static final class EggPrisonBrokenSlotChild extends AbstractObjectInstance
+            implements RewindRecreatable {
+        @RewindTransient(reason = "structural Obj3E component link is restored by parent lookup")
+        private final EggPrisonObjectInstance parent;
+
+        private EggPrisonBrokenSlotChild(ObjectSpawn spawn) {
+            this(spawn, null);
+        }
+
+        private EggPrisonBrokenSlotChild(ObjectSpawn spawn, EggPrisonObjectInstance parent) {
+            super(spawn, "EggPrison Broken Slot");
+            this.parent = parent;
+        }
+
+        @Override
+        public EggPrisonBrokenSlotChild recreateForRewind(RewindRecreateContext ctx) {
+            EggPrisonObjectInstance restoredParent = nearestParentForRewind(ctx, ctx.spawn());
+            EggPrisonBrokenSlotChild child = new EggPrisonBrokenSlotChild(ctx.spawn(), restoredParent);
+            if (restoredParent != null) {
+                restoredParent.attachBrokenSlotChildForRewind(child);
+            }
+            return child;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (parent == null || parent.isDestroyed()) {
+                ObjectLifetimeOps.expireDynamic(this);
+            }
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // Slot-pressure child only; the parent owns the broken/end-checker routine effects.
+        }
+
+        @Override
+        public int getX() {
+            return parent != null ? parent.spawn.x() : spawn.x();
+        }
+
+        @Override
+        public int getY() {
+            return parent != null ? parent.spawn.y() : spawn.y();
+        }
     }
 }

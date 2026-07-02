@@ -6,18 +6,82 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 66 ARZ2 worker on next
+Current branch-local S2 state after round 67 ARZ2 worker on next
 campaign branch `bugfix/ai-s2-trace-next`:
-ARZ2 is f6923 / 3 under `frontierOnly` (`obj_s12_type` expected `0x3E`,
+ARZ2 is f7064 / 4 under `frontierOnly` (`obj_s1C_type` expected `0x28`,
 actual missing), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now ARZ2, CNZ2, and MTZ3.
-The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
-with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
-was banked into `next`; ARZ2 advanced again in round 66 but is not banked under
+The full S1 sweep remains 29/29 green, and the S3K guard subset used by round
+67 remains green by exact Surefire class reports. OOZ2 greened in round 54 and
+was banked into `next`; ARZ2 advanced again in round 67 but is not banked under
 the green-bank rule until it greens.
+
+## 2026-07-02 - S2 round 67 ARZ2 Obj3E capsule slot graph and Obj28 timing
+
+Round 67 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round67-next` /
+`bugfix/ai-s2-arz2-round67-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `ea439cd68`. The focused baseline reproduced
+ARZ2 f6923 / 3 under `frontierOnly`: `obj_s12_type` and `obj_s13_type`
+expected `0x3E`, actual missing, and `obj_s14_slot` expected `0x14`, actual
+`0x12`.
+
+Root fixed:
+- Obj3E's ROM init routine writes the body into the current slot, then creates
+  three more Obj3E slots from `Obj3E_ObjLoadData`: routine-4 button, routine-6
+  lock, and routine-8 broken/end-checker
+  (`docs/s2disasm/s2.asm:84790-84829`). The Java object had compressed those
+  into one body plus a button child, so later `AllocateObject` scans saw lower
+  free slots than the ROM. The engine now creates structural lock and broken
+  slot children while the parent continues to own rendering and behavior.
+- Obj3E lock motion now uses the ROM `ObjectMoveAndFall` ordering: add
+  `#$38` to `y_vel` for the next frame, but move with the old velocity on the
+  current frame (`docs/s2disasm/s2.asm:84920-84927,30164-30177`). The
+  structural lock slot is freed when the parent lock leaves the screen, matching
+  the routine-6 `DeleteObject`/`MarkObjGone` path.
+- Obj3E's routine-8 random animal path samples `(Vint_runcount+3) & 7` and
+  allocates Obj28 only when the low three bits are zero
+  (`docs/s2disasm/s2.asm:84935-84955`). The engine now suppresses the same
+  frame as the initial animal burst and preserves the folded Obj28 init pass in
+  the random animal delay.
+- Released capsule animals now use the shared 16.16 `ObjectMove` /
+  `ObjectMoveAndFall` helpers and choose prison-spawn horizontal direction only
+  at the Obj28 floor-contact transition, matching `Obj28_InitRandom`,
+  `Obj28_Main`, and `Obj28_Prison` (`docs/s2disasm/s2.asm:24596-24667,
+  24731-24740`). The same old-velocity ObjectFall semantics are also the S1
+  object helper (`docs/s1disasm/_incObj/sub ObjectFall & SpeedToPos.asm:8-25`).
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f6923 / 3 to f7064 / 4. New first error:
+  `obj_s1C_type` expected `0x28`, actual missing, with matching extra Obj28
+  coordinates in the later released-animal slot family.
+- New owner is a later Obj28 animal slot/semantic matching mismatch after the
+  initial Obj3E component graph and first random-animal activation now pass.
+
+Verification:
+- Focused ARZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  exited 0 via failure-ignore and reported the improved expected-red f7064 / 4
+  frontier.
+- Focused S2 object/trace/rewind batch:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.game.rewind.TestS2EggPrisonButtonGraphRewind,com.openggf.game.sonic2.objects.TestEggPrisonAnimalRelease" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 11 tests: DEZ ending, rewind coverage, S2 Egg Prison rewind graph, and
+  Egg Prison animal release were green; expected-red traces were ARZ2 f7064 / 4,
+  CNZ2 f9977 / 10, and MTZ3 f13477 / 4. CNZ2 and MTZ3 match the preserved
+  round-64 frontiers.
+- Full S1 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  wrote 29 fresh S1 Surefire trace reports with zero failures/errors. The MSE
+  aggregate also printed stale S2 expected-red reports left in the report
+  directory; exact S1 XMLs were checked directly.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" test`
+  exact Surefire class reports were green: 8 + 30 + 5 + 5 + 3 checks, zero
+  failures/errors. The MSE aggregate again included stale S2 expected-red XMLs.
 
 ## 2026-07-02 - S2 round 66 ARZ2 Obj89 camera-release lifetime
 
