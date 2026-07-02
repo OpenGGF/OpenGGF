@@ -6,14 +6,55 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 39 targeted no-change pass is
+Current branch-local S2 state after the round 40 targeted no-change pass is
 unchanged:
 ARZ2 is f4707 / 1945 (`x` expected `0x2B4D`, actual `0x2B4F`), CNZ2 is f9946 /
 300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 is f12107 / 99
 (`tails_g_speed` expected `0x00A4`, actual `0x0000`). Full S2 is 15 green / 4
 expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. No S2
-trace greened in round 39.
+trace greened in round 40.
+
+## 2026-07-01 - S2 round 40 targeted no-change pass
+
+Round 40 started from `2119a57b5` on `bugfix/ai-s2-trace-next`. All temporary
+probe/candidate edits were reverted by their owning workers; no source changes
+were integrated and no S2 trace greened.
+
+- ARZ2 contact worktree `.worktrees/ai-s2-arz2-contact-round40-next` /
+  `bugfix/ai-s2-arz2-contact-round40-next`: reproduced f4707 / 1945. The worker
+  inspected the S2 `SolidObject`/Obj89 ranges and briefly added comparison-only
+  `ObjectSolidContactController` probes, but the initial probe did not fire
+  because it was gated on trace frame rather than controller phase. The probe
+  edit and log were removed. ARZ2 remains f4707 / 1945.
+- CNZ2 Obj08 worktree `.worktrees/ai-s2-cnz2-obj08-round40-next` /
+  `bugfix/ai-s2-cnz2-obj08-round40-next`: reproduced f9946 / 300. A temporary
+  `SkidDustObjectInstance` probe showed engine CPU Tails dynamic Obj08 skid-dust
+  allocations around object frames 8011/8015/8019/8023, including slot `$19`,
+  while ROM aux has slot `$25` receiving Obj51 at f7995 and later Obj51
+  boss/falling ball in slots `$25/$26`. The probe also showed the engine Tails
+  dust comes from Stop/skid state; ROM aux around f7988-f7998 has Tails
+  `control_locked`/`move_lock` and `anim_id=0`, so `Obj08_CheckSkid` would reset
+  instead of allocating. The probe edit was reverted. CNZ2 remains f9946 / 300.
+- MTZ3 on-object worktree `.worktrees/ai-s2-mtz3-onobj-round40-next` /
+  `bugfix/ai-s2-mtz3-onobj-round40-next`: reproduced f13336 / 352. ROM physics
+  keeps `sonic_stand_on_obj=$20` from `$340C` through `$3418`; at f13336 ROM
+  slot `$20` is Obj54 at `$2B31,$0476` and slot `$21` is another Obj54. Engine
+  context has `ride=0`, `standsnap=0`, `eng-expected-onObj s20 missing`, Obj54
+  at slots `$18/$19`, and lower-slot Obj53 contacts before the ROM slot `$24`
+  Obj53 at `$2B56,$0497`. No genuine fix was isolated. MTZ3 remains f13336 /
+  352.
+- OOZ2 ride worktree `.worktrees/ai-s2-ooz2-ride-round40-next` /
+  `bugfix/ai-s2-ooz2-ride-round40-next`: reproduced f12107 / 99. ROM slot `$0E`
+  is Obj07 Oil Ocean oil surface; `Obj07_Main` handles P2 via `p2_standing_bit`,
+  copies Tails `x_pos` into Obj07, and calls `PlatformObject_SingleCharacter`,
+  matching trace slot `$0E` id `$07` at `$2935,$02D8` with Tails `status=$08`.
+  Engine context instead has Tails hurt by Obj55 `collision_flags=$CF` at
+  `$2940,$028E`, expected-onObj `$0E` missing, and Tails in hurt routine. The
+  likely owner remains OOZ boss-specific collision suppression versus Obj07
+  ride-state preservation, but no commit-safe fix was isolated. OOZ2 remains
+  f12107 / 99.
+- No round-40 change was banked into `next`.
 
 ## 2026-07-01 - S2 round 39 targeted no-change pass
 
