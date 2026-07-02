@@ -305,6 +305,43 @@ class TestMhzBossObjects {
         endBoss.update(1, null);
         services.registry.resolveInto(services.level.palettes(), null, null, null);
 
+        // loc_767B0 seeds $20(a0)=$20 (32, even) on the fresh-hit frame; loc_767E8's
+        // btst #0,$20(a0) is clear on an even count, so the first painted frame is the
+        // white/flash row, not the real-color row.
+        Palette palette = services.level.getPalette(1);
+        assertColorWord(palette, 4, 0x0888);
+        assertColorWord(palette, 10, 0x0AAA);
+        assertColorWord(palette, 11, 0x0EEE);
+        assertColorWord(palette, 13, 0x0888);
+        assertColorWord(palette, 14, 0x0AAA);
+    }
+
+    @Test
+    void mhzEndBossHitFlashRestoresRomRealColorsWhenInvulnerabilityWindowEnds() {
+        RecordingPaletteServices services = new RecordingPaletteServices();
+        services.withRom(new FixedReadRom(new byte[32]));
+        com.openggf.graphics.GraphicsManager graphicsManager = mock(com.openggf.graphics.GraphicsManager.class);
+        when(graphicsManager.isGlInitialized()).thenReturn(false);
+        services.withGraphicsManager(graphicsManager);
+        services.registry.beginFrame();
+        MhzEndBossInstance endBoss = new MhzEndBossInstance(new ObjectSpawn(
+                0x4200, 0x0300, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
+        endBoss.setServices(services);
+        endBoss.update(0, null);
+        services.registry.resolveInto(services.level.palettes(), null, null, null);
+
+        endBoss.onPlayerAttack(null, null);
+        for (int frame = 1; frame <= 32; frame++) {
+            services.registry.beginFrame();
+            endBoss.update(frame, null);
+            services.registry.resolveInto(services.level.palettes(), null, null, null);
+        }
+
+        // loc_767E8 decrements $20(a0) AFTER painting; the last painted frame occurs at
+        // $20==1 (odd), which selects the real-color row, so the flash ends resting on the
+        // boss's normal colors rather than the white row.
+        assertEquals(false, endBoss.getState().invulnerable,
+                "loc_767F6 clears status bit 6 once $20(a0) underflows to zero");
         Palette palette = services.level.getPalette(1);
         assertColorWord(palette, 4, 0x0E42);
         assertColorWord(palette, 10, 0x0228);
