@@ -401,6 +401,28 @@ public class ARZBossArrow extends AbstractObjectInstance
     }
 
     @Override
+    public boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
+        return preservesReleasedSidekickPushForCpu(player);
+    }
+
+    private boolean preservesReleasedSidekickPushForCpu(PlayableEntity player) {
+        // Obj89_Arrow_ChkDropPlayers only sets InAir and clears OnObject on the
+        // player; it does not clear Status_Push. At ARZ2 f6364 the ordinary
+        // engine grace counter has already reached zero, but TailsCPU_Normal can
+        // still read the ROM-visible push bit through the sidekick's persistent
+        // interact slot and take the push-bypass auto-jump path.
+        // docs/s2disasm/s2.asm:39297-39300,65689-65704.
+        if (!(player instanceof AbstractPlayableSprite sprite)
+                || !sprite.isCpuControlled()
+                || sprite.getAir()
+                || sprite.isOnObject()
+                || sprite.getRolling()) {
+            return false;
+        }
+        return getSlotIndex() >= 0 && sprite.getInteractSlotIndex() == getSlotIndex();
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         if (routineState != ARROW_SUB_STUCK) {
             return;

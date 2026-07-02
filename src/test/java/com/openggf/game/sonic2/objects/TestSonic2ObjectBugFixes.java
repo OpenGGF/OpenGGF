@@ -4,6 +4,7 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
+import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
 import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -384,6 +385,50 @@ class TestSonic2ObjectBugFixes {
 
         tails.setCentreX((short) 0x2A70);
         assertFalse(pillar.preservesSidekickCpuPushGraceAfterRideClears(tails));
+    }
+
+    @Test
+    void arzBossArrowReleasedRideKeepsTailsCpuAutoJumpGateVisible() throws Exception {
+        ARZBossArrow arrow = new ARZBossArrow(
+                new ObjectSpawn(0x2AFF, 0x0481, Sonic2ObjectIds.ARZ_BOSS, 0x06, 0, false, 0),
+                null, null, true);
+        arrow.setSlotIndex(0x14);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCentreX((short) 0x2A73);
+        tails.setCentreY((short) 0x04C0);
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setOnObject(false);
+        tails.setRolling(false);
+        tails.setInteractSlotIndex(0x14);
+
+        assertTrue(arrow.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(tails),
+                "At ARZ2 f6364 the local grace counter has already reached zero, but Tails' "
+                        + "interact slot still dereferences the Obj89 arrow status byte for the "
+                        + "same push-bypass CPU read (docs/s2disasm/s2.asm:39297-39300,65689-65704).");
+        assertFalse(arrow.preservesSidekickCpuPushGraceAfterRideClears(tails),
+                "The ARZ arrow only needs the zero-grace interact-slot bridge; the broader released-ride "
+                        + "window would keep Status_Push visible after Tails has reattached to the arrow.");
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setGameRulesForTest(GameRules.SONIC_2);
+        sonic.setWidth(18);
+        sonic.setHeight(18);
+        sonic.setCentreX((short) 0x2A73);
+        sonic.setCentreY((short) 0x04C0);
+        sonic.setCpuControlled(false);
+        sonic.setAir(false);
+        sonic.setOnObject(false);
+        sonic.setRolling(false);
+        sonic.setInteractSlotIndex(0x14);
+
+        assertFalse(arrow.preservesSidekickCpuPushGraceAfterRideClears(sonic),
+                "The push-grace bridge is only for CPU sidekick reads of TailsCPU_Normal.");
+        assertFalse(arrow.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sonic),
+                "The zero-grace interact bridge is only for CPU sidekick reads of TailsCPU_Normal.");
     }
 
     @Test
