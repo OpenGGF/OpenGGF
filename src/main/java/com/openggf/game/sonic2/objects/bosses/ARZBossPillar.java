@@ -35,6 +35,8 @@ public class ARZBossPillar extends AbstractObjectInstance
     private static final int PILLAR_SUB_IDLE = 2;
     private static final int PILLAR_SUB_LOWERING = 4;
 
+    private static final int LEFT_PILLAR_X = 0x2A50;
+    private static final int RIGHT_PILLAR_X = 0x2B70;
     private static final int PILLAR_TARGET_Y = 0x488;
     private static final int PILLAR_START_Y = 0x510;
 
@@ -189,14 +191,14 @@ public class ARZBossPillar extends AbstractObjectInstance
             resetPillarBasePosition();
             return;
         }
-        int baseX = isRightPillar() ? 0x2B70 : 0x2A50;
+        int baseX = isRightPillar() ? RIGHT_PILLAR_X : LEFT_PILLAR_X;
         int offset = ((frameCounter & 1) == 0) ? 1 : -1;
         x = baseX + offset;
         y = PILLAR_TARGET_Y + offset;
     }
 
     private void resetPillarBasePosition() {
-        x = isRightPillar() ? 0x2B70 : 0x2A50;
+        x = isRightPillar() ? RIGHT_PILLAR_X : LEFT_PILLAR_X;
         y = PILLAR_TARGET_Y;
     }
 
@@ -282,11 +284,18 @@ public class ARZBossPillar extends AbstractObjectInstance
         // body update, and the helper calls ordinary SolidObject at the temporary
         // y_pos+4 anchor. In the ROM object-slot order, that side contact can set
         // Status_Push before Tails' later CPU/movement path writes the frame's
-        // x_vel/inertia. The engine's inline post-physics checkpoint sees the
-        // same side contact after movement, so preserve velocity while retaining
-        // the side correction and push bits.
+        // x_vel/inertia when this contact is newly setting Status_Push after
+        // Tails' CPU/movement slot. Once Status_Push is already visible at
+        // contact entry, ROM follows the normal SolidObject_StopCharacter path
+        // and clears x_vel/inertia. The engine's inline post-physics checkpoint
+        // sees the new-push side contact after movement, so preserve only that
+        // handoff while retaining the side correction and push bits.
         // docs/s2disasm/s2.asm:35413-35436,65330-65374,65531-65539
-        return player != null && !player.getAir() && player.getGSpeed() < 0;
+        int anchorX = isRightPillar() ? RIGHT_PILLAR_X : LEFT_PILLAR_X;
+        int rightEdgeX = anchorX + PILLAR_SOLID_PARAMS.halfWidth();
+        return player != null && !player.getAir() && player.getGSpeed() < 0
+                && (!(player instanceof AbstractPlayableSprite sprite) || !sprite.getPushing())
+                && player.getCentreX() >= rightEdgeX - 1;
     }
 
     @Override
