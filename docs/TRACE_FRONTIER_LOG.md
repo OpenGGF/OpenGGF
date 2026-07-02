@@ -6,18 +6,74 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 62 ARZ2 worker merge on next
-conductor branch `bugfix/ai-s2-trace-next`:
-ARZ2 is f6487 / 1 under `frontierOnly` (`tails_status_byte` expected
-`0x000F`, actual `0x002F`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
+Current branch-local S2 state after round 63 ARZ2 worker on next campaign
+branch `bugfix/ai-s2-arz2-round63-next`:
+ARZ2 is f6507 / 4 under `frontierOnly` (`obj_extra_s10_x` expected absent,
+actual `0x2AB0`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now ARZ2, CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
-was banked into `next`; ARZ2 advanced again in round 62 but is not banked under
-the green-bank rule.
+was banked into `next`; ARZ2 advanced again in round 63 but is not banked under
+the green-bank rule until it greens.
+
+## 2026-07-02 - S2 round 63 ARZ2 Obj89 roll-animation push clear
+
+Round 63 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round63-next` /
+`bugfix/ai-s2-arz2-round63-next`, based from next conductor commit
+`9f0aea485`. The focused baseline reproduced ARZ2 f6487 / 1 under
+`frontierOnly` (`tails_status_byte` expected `0x000F`, actual `0x002F`).
+
+Investigation showed the engine matched ROM through Tails' movement/animation
+tail: CPU Tails reached the same position/subpixel on the Obj89 arrow, and the
+engine-side CPU diagnostic reported post-physics status `0x0F`. The mismatch
+was introduced later when `ARZBossArrow.preservesRidingPushStatus` re-applied
+`Status_Push` during the arrow timer-decay continued-ride pass. ROM
+`Tails_Animate` clears `Status_Push` when the animation byte changes, and
+`Obj89_Arrow_Platform_Decay` branches around `PlatformObject`, so that later
+Obj89 pass cannot synthesize a fresh side-push bit
+(`docs/s2disasm/s2.asm:41272-41279,65658-65683`).
+
+Fix:
+- `ARZBossArrow.preservesRidingPushStatus` still preserves the existing
+  timer-decay push bridge for non-rolling CPU Tails, keeping the earlier f5969
+  support/CPU window intact, but it stops once the sidekick is rolling. That
+  models the ROM animation-change push clear rather than adding a zone, route,
+  or frame carve-out.
+- `TestS2ObjectOccupancyOracle` now has an ARZ2 f6487 regression oracle for
+  the Obj89 arrow decay path, asserting that the arrow does not restore Tails'
+  push bit after the animation clear.
+
+Rejected candidate:
+- Requiring `sprite.getPushing()` inside `preservesRidingPushStatus` removed
+  the f6487 status mismatch but regressed the trace to f5969 (`tails_x`
+  expected `0x2A73`, actual `0x2A74`). ROM still needs the non-rolling CPU
+  Tails timer-decay push bridge before the later roll-animation clear.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f6487 / 1
+  (`tails_status_byte` expected `0x000F`, actual `0x002F`) to f6507 / 4
+  (`obj_extra_s10_x` expected absent, actual `0x2AB0`).
+- New owner is a later Obj89 slot/object-lifetime mismatch: ROM reports slot
+  `$10` as Obj89 while the engine reports the same Obj89 body as an extra object.
+
+Verification:
+- Focused ARZ boss-arrow oracle group:
+  `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossArrow*" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  passed 4/4.
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.frontierOnly=true" "-DfailIfNoTests=false" test`
+  exited 1 at the advanced expected-red frontier f6507 / 4.
+- Same-game guards on this branch:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.frontierOnly=true" "-DfailIfNoTests=false" test`
+  preserved CNZ2 f9977 / 10 and MTZ3 f13477 / 4.
+- The same CNZ2/MTZ3 guard command on conductor worktree
+  `.worktrees/ai-s2-trace-next` produced the same f9977 and f13477 frontiers,
+  confirming those failures are pre-existing and not introduced by this ARZ2
+  object-local change.
 
 ## 2026-07-02 - S2 round 62 ARZ2 Obj89 zero-grace arrow push bridge
 

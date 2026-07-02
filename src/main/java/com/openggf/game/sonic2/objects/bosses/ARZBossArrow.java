@@ -392,11 +392,15 @@ public class ARZBossArrow extends AbstractObjectInstance
 
     @Override
     public boolean preservesRidingPushStatus(PlayableEntity player) {
-        // During Obj89_Arrow_Platform_Decay the shipped ROM skips PlatformObject
-        // but does not clear Tails' existing Status_Push/standing state; the
-        // explicit drop happens later in Obj89_Arrow_Sub6. Sonic starts the timer,
-        // CPU Tails does not. docs/s2disasm/s2.asm:65658-65702
-        return player != null && player.isCpuControlled()
+        // During Obj89_Arrow_Platform_Decay the shipped ROM skips PlatformObject,
+        // so non-rolling CPU Tails keeps the prior side-push state while the
+        // arrow remains latched. Tails_Animate can still clear Status_Push when
+        // the sidekick switches to the rolling/jump animation before this later
+        // object pass samples the arrow.
+        // docs/s2disasm/s2.asm:41272-41279,65658-65702
+        return player instanceof AbstractPlayableSprite sprite
+                && sprite.isCpuControlled()
+                && !sprite.getRolling()
                 && ((routineState == ARROW_SUB_STUCK && arrowTimer > 0) || timerExpiredThisFrame);
     }
 
