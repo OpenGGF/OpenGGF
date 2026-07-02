@@ -11,6 +11,7 @@ import java.lang.reflect.Field;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class TestLegalDisclaimerControllerInput {
@@ -32,7 +33,23 @@ class TestLegalDisclaimerControllerInput {
     }
 
     @Test
-    void logicalSecondPlayerStartDismissesAfterReadabilityGate() throws Exception {
+    void logicalPlayerOneStartDismissesAfterReadabilityGate() throws Exception {
+        FadeManager fadeManager = mock(FadeManager.class);
+        LegalDisclaimerScreen screen = new LegalDisclaimerScreen(fadeManager);
+        advanceToDismissible(screen);
+
+        InputHandler input = new InputHandler();
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, 0, 0, false, true),
+                PlayerInputState.neutral()));
+
+        screen.update(input);
+
+        verify(fadeManager).startFadeToBlack(any(Runnable.class));
+    }
+
+    @Test
+    void logicalSecondPlayerStartDoesNotDismissAfterReadabilityGate() throws Exception {
         FadeManager fadeManager = mock(FadeManager.class);
         LegalDisclaimerScreen screen = new LegalDisclaimerScreen(fadeManager);
         advanceToDismissible(screen);
@@ -44,7 +61,7 @@ class TestLegalDisclaimerControllerInput {
 
         screen.update(input);
 
-        verify(fadeManager).startFadeToBlack(any(Runnable.class));
+        verify(fadeManager, never()).startFadeToBlack(any(Runnable.class));
     }
 
     private static void advanceToDismissible(LegalDisclaimerScreen screen) throws Exception {
