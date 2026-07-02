@@ -19,6 +19,62 @@ Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9342 / 505
 (`tails_x_sub` expected `0x4700`, actual `0xC700`) after trace capture keeps
 the ROM Obj02 hurt routine visible for object-solid landing samples.
 
+## 2026-07-02 - S3K MHZ complete-run advances f2159 -> f2966 (TailsCPU sub_13EFC interact-code-word despawn watchdog)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  HEAD `d56f33a88` + this fix (6 source/test files + docs).
+- Command (verified independently via `mvn.cmd`, `-Dmse=off`):
+  `mvn.cmd "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before (6 files reverted to HEAD):
+  f2159 / **2323** errors (`tails_x`, expected `0x7F00`, actual `0x066D`).
+  After: f2966 / **4454** errors (`tails_air`, expected `1`, actual `0`).
+- Fix: model ROM `sub_13EFC`'s off-screen on-object branch
+  (`cmp.w (a3),d0 / bne -> sub_13ECA`, `docs/skdisasm/sonic3k.asm:26816-26843`).
+  New S3K-only `ObjectInteractionRules.sidekickDespawnUsesInteractCodeWordChange`
+  gates a word-change compare in `SidekickCpuController.checkDespawn()` (compare
+  before the fall-through latch refresh; armed only when the latch is non-zero).
+  Despawn reuses the existing `applyDespawnMarker` (`x_pos=0x7F00`, `y_pos=0`,
+  routine 2, `Status_InAir`, `object_control=0x81`, velocity preserved per
+  `sub_13ECA`, `:26800-26809`); no new rewind field (`diagnosticS3kInteractWord`
+  already captured). The stood-on object's ROM code word is exposed via a new
+  `RomObjectCodePointerProvider` on `Mhz1CutsceneButtonInstance` (word `0x0006`,
+  `MHZ1CutsceneButton_Main` @ ROM `0x00062F0A`) and `MhzCurledVineObjectInstance`
+  (word `0x0003`, `loc_3E8A2` @ ROM `0x0003E8A2`) — data-driven, not zone-gated.
+- +2131 error-delta adjudication (independent A/B, copy-aside; NO `git stash`):
+  BEFORE first error f2159 (`tails_x=0x7F00` sentinel — the fix target);
+  AFTER first error f2966. The f2159 target is gone and the f2159-2965 respawn
+  window is byte-clean; the AFTER report's first error frame (2966) is strictly
+  deeper than the entire fixed window, so every AFTER-only error key is at
+  frame >= 2966 by construction. The +2131 net is a wider per-frame signature:
+  the old divergence was a despawned sidekick parked at a sentinel `x`; the new
+  one desyncs a live, alive sidekick's air/status/position/subpixels plus
+  downstream object interactions across the remaining ~thousands of frames.
+- f2966 characterization (round-9 target): position and subpixels still match
+  at f2966 (`tails_x/y = 0x103E/0x0730`, subs match); the first fields to flip
+  are `tails_air` (exp `1`, act `0`) and `tails_status_byte` (exp `0x0003`, act
+  `0x0001`) — ROM Tails goes airborne while the engine keeps it grounded. The
+  tails-interact slot there is decimal 21 = object slot `0x15`, code pointer
+  `0x0001D566` (high word `0x0001`), routine `02`, @ `0x0F30,0870`; ROM sidekick
+  diag shows `onObj=15 status=03`. Round 9 = Tails carried airborne by moving
+  object slot `0x15`. Note the slot is NOT the vine's (slots recycle).
+- Sibling S3K complete-run frontier check (all frame-neutral vs documented; run
+  individually with `-Dsurefire.argLine=-Xshare:off -Xmx4g` because the longer
+  traces OOM under the default `-Xmx1g` fork): AIZ f1095 / 4319 (doc f1095),
+  CNZ f1846 / 7143 (doc f1846; count drift from develop merge, same frame),
+  HCZ f1489 / 3503 (doc f1489 `leader y`), ICZ f3139 / 3207 (doc f3139),
+  LBZ f2270 / 5881 (doc f2270/5881 exact), MGZ f866 / 10761 (doc f866; count
+  drift, same frame). No frontier regressed. The new despawn only fires when the
+  sidekick stands on a `RomObjectCodePointerProvider` (MHZ button/vine only), so
+  it is structurally inert in the sibling zones.
+- Guards green (`-Dmse=off`, respective ROM paths): `TestSidekickCpuDespawnParity`
+  (55/55, +6 new), `TestSidekickCpuFollowParity` (93), `TestOnObjectAtFrameStartSnapshot`
+  (4), `TestSidekickCpuControllerLevelStart` (16), `TestSidekickDespawnXRule` (4),
+  `TestTraceBinder` (62), `TestS3kAiz1SkipHeadless` (8), `TestSonic3kLevelLoading`
+  (5 + 30), `TestSonic3kBootstrapResolver` (5), `TestS2Ehz1TraceReplay` (1),
+  `TestS1Ghz1TraceReplay` (1). Pre-existing failures `TestRespawnStrategies` (5)
+  and `TestS2Ehz1Headless` (1) confirmed failing identically on clean HEAD
+  (inherited from the develop merge), not introduced by this fix.
+
 ## 2026-07-02 - S3K MHZ complete-run advances f2158 -> f2159 (curled vine lands players on the contoured curl surface per loc_3EA1E)
 
 - Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,

@@ -95,6 +95,7 @@ public record GameRules(
                     true,
                     false,
                     false,
+                    false, // sidekickDespawnUsesInteractCodeWordChange (S3K-only)
                     false,
                     false,
                     true,
@@ -222,6 +223,7 @@ public record GameRules(
                     true,
                     true,
                     false,
+                    false, // sidekickDespawnUsesInteractCodeWordChange (S3K-only)
                     true,
                     false,
                     true,
@@ -349,6 +351,7 @@ public record GameRules(
                     false,
                     false,
                     true,
+                    true, // sidekickDespawnUsesInteractCodeWordChange (S3K sub_13EFC word compare)
                     true,
                     true,
                     true,

@@ -11,6 +11,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -29,7 +30,15 @@ import java.util.List;
  * child used by the {@code _unkFAB8=$0C} release callback.
  */
 public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable,
+        RomObjectCodePointerProvider {
+    // Obj_MHZ1CutsceneButton installs its main code pointer
+    // MHZ1CutsceneButton_Main at 0x00062xxx, so word 0 of the stood-on object
+    // SST is high word 0x0006 (docs/skdisasm/sonic3k.asm:130055-130125). S3K
+    // sub_13EFC latches this as Tails_CPU_interact while a sidekick stands on
+    // the button (sonic3k.asm:26816-26843); a later off-screen landing on a
+    // different-word object (e.g. the 0x0003 MHZ curled vine) then despawns.
+    private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0006;
     private static final int INIT_Y_OFFSET = 4;
     private static final int PRIORITY = 2;
     private static final int CALLBACK_WAIT = 0x5F;
@@ -62,6 +71,11 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
         super(spawn, "MHZ1CutsceneButton");
         this.x = spawn.x();
         this.y = spawn.y() + INIT_Y_OFFSET;
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return ROM_CODE_POINTER_HIGH_WORD;
     }
 
     @Override

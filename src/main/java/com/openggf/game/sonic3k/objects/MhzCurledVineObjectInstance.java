@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
@@ -27,7 +28,13 @@ import java.util.Map;
  * the generated segment surface.
  */
 public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable,
+        RomObjectCodePointerProvider {
+    // Obj_MHZCurledVine installs its main code pointer loc_3E8A2 (and display
+    // child loc_3E9A6) at 0x0003Exxx, so word 0 of the stood-on object SST is
+    // high word 0x0003 (docs/skdisasm/sonic3k.asm:82778-82797). S3K sub_13EFC
+    // compares this against Tails_CPU_interact (sonic3k.asm:26816-26843).
+    private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0003;
     private static final int INITIAL_CURVE_STATE = 0xFFF40000;
     private static final int INITIAL_RANGE_WIDTH = 0x40;
     private static final int DISPLAY_HALF_HEIGHT = 0x30;
@@ -57,6 +64,11 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
         super(spawn, "MHZCurledVine");
         hFlip = (spawn.renderFlags() & 0x01) != 0;
         updateSegmentPositions();
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return ROM_CODE_POINTER_HIGH_WORD;
     }
 
     @Override
