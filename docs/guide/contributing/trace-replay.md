@@ -537,19 +537,17 @@ ROM-citation requirements and per-game parity rules.
   add raw focused-player access, first-sidekick access, object-control setters, or direct
   lifecycle mutation unless the native-only reason is documented and covered by the guard.
 - **Branching on game id in shared physics/AI code.** Per-game divergences must be gated via
-  `PhysicsFeatureSet` flags, never `if (gameId == GameId.S3K)`. When ROM uses a different
-  semantic on a value that exists across games (e.g. `cmp.w y_pos(a0),d0` in
-  `Player_LevelBound` reads centre-Y while the engine's `getY()` returns top-left), prefer
-  adding a feature flag (default-false on games whose trace baselines were calibrated against
-  the engine's prior behaviour) over flipping the global default in the same change. See
-  `PhysicsFeatureSet.levelBoundaryUsesCentreY` for the canonical example: ROM-cited as correct
-  for S1/S2/S3K but enabled only on S3K initially so S1 GHZ/MZ1 and S2 EHZ baselines stay
-  green until they are re-validated. Another example is
-  `PhysicsFeatureSet.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity`, which enables ROM
-  `loc_1E154` (sonic3k.asm:41606-41632) writing the top-branch position lift before the
+  the narrowest typed `GameRules` rule or an existing provider/profile/registry/object owner,
+  never `if (gameId == GameId.S3K)`. When ROM uses a different semantic on a value that
+  exists across games (e.g. `cmp.w y_pos(a0),d0` in `Player_LevelBound` reads centre-Y while
+  the engine's `getY()` returns top-left), prefer adding a focused rule with explicit
+  cross-game values over flipping an unrelated global default in the same change. See
+  `PlayerMovementRules.levelBoundaryUsesCentreY` for the canonical example. Another example
+  is `ObjectInteractionRules.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity`, which enables
+  ROM `loc_1E154` (sonic3k.asm:41606-41632) writing the top-branch position lift before the
   `tst.w y_vel(a1) / bmi.s loc_1E198` test only on S3K; S1 `Solid_Landed`
   (s1disasm/_incObj/sub SolidObject.asm:278) and S2 `SolidObject_Landed` (s2.asm:35379-35380)
-  bail on upward y_vel BEFORE any lift, so the flag stays false there.
+  bail on upward y_vel BEFORE any lift, so the rule stays false there.
 - **Edit-tool BOM/CRLF silent failure.** Some files (e.g. `CnzCylinderInstance.java`,
   `AbstractTraceReplayTest.java`) have UTF-8 BOM + CRLF endings. The Claude Code Edit tool
   has been observed to silently fail on these — it returns "successfully" but doesn't write.

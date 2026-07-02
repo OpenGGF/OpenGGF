@@ -1216,8 +1216,9 @@ playable code, read the reset routine for each game and character:
    rolling is set.
 3. S3K restores default radii before checking roll state and uses the
    current-radius delta model.
-4. Gate shared cleanup through the owning feature flag (or a narrower object
-   hook) instead of assuming all games consume the same landing radii.
+4. Gate shared cleanup through the owning `GameRules` rule, provider/profile,
+   or narrower object hook instead of assuming all games consume the same
+   landing radii.
 
 **ROM citation.** `docs/s2disasm/s2.asm:40629-40636`
 (`Tails_ResetOnFloor_Part2` branches past radius restore when rolling is
