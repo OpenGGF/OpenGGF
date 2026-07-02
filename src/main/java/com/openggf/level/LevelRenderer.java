@@ -10,7 +10,6 @@ import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PhysicsProvider;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
@@ -688,14 +687,16 @@ public final class LevelRenderer {
             // Use visual water level (with oscillation) for rendering effects
             int waterLevel = lm.waterSystem.getVisualWaterLevelY(zoneId, actId);
 
-            // Determine shimmer style from current game module's physics feature set.
+            // Determine shimmer style from current game module's typed camera rules.
             // 0 = S2/S3K smooth sine wave, 1 = S1 integer-snapped shimmer
             int shimmerStyle = 0;
-            PhysicsFeatureSet featureSet = null;
+            boolean waterShimmerEnabled = false;
             GameModule currentModule = lm.activeGameModule();
-            if (currentModule != null && currentModule.getPhysicsProvider() != null) {
-                featureSet = currentModule.getPhysicsProvider().getFeatureSet();
-                if (featureSet != null && featureSet.waterShimmerEnabled()) {
+            if (currentModule != null
+                    && currentModule.getRules() != null
+                    && currentModule.getRules().camera() != null) {
+                waterShimmerEnabled = currentModule.getRules().camera().waterShimmerEnabled();
+                if (waterShimmerEnabled) {
                     shimmerStyle = 1;
                 }
             }
@@ -703,7 +704,7 @@ public final class LevelRenderer {
             // S2/S3K split starts 8px above water level so the surface strip is tinted.
             // S1 uses v_waterpos1 directly as the underwater split (ROM-accurate boundary).
             float waterlineOffset = -8.0f;
-            if (featureSet != null && featureSet.waterShimmerEnabled()) {
+            if (waterShimmerEnabled) {
                 waterlineOffset = 0.0f;
             }
             // Zone feature provider can override waterline offset (e.g. zones with

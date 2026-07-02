@@ -178,6 +178,10 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
                 return;
             }
             finishInitialization();
+            // ROM Obj89_Init initializes the boss/pillars and returns; Obj89_Main_Sub0
+            // starts moving the boss on the next object dispatch.
+            // docs/s2disasm/s2.asm:64778-64870,64905-64918
+            return;
         }
 
         if (bossCollisionRoutine != 0) {
@@ -198,15 +202,48 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     private boolean checkInitConditions(AbstractPlayableSprite player) {
         var participants = services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
-        if (participants.size() > 1) {
-            for (PlayableEntity participant : participants) {
-                int x = participant.getCentreX();
-                if (x < PLAYER_CHECK_LEFT_X || x > PLAYER_CHECK_RIGHT_X) {
-                    return false;
-                }
+        if (participants.size() <= 1) {
+            return true;
+        }
+
+        if (!isInPillarRaiseWindow(player)) {
+            return false;
+        }
+
+        for (PlayableEntity participant : participants) {
+            if (participant == player || hasArzBossSidekickFlightBypass(participant)) {
+                continue;
+            }
+            if (!isInPillarRaiseWindow(participant)) {
+                return false;
             }
         }
         return true;
+    }
+
+    private static boolean isInPillarRaiseWindow(PlayableEntity participant) {
+        int x = participant.getCentreX();
+        return x >= PLAYER_CHECK_LEFT_X && x <= PLAYER_CHECK_RIGHT_X;
+    }
+
+    private static boolean hasArzBossSidekickFlightBypass(PlayableEntity participant) {
+        if (!(participant instanceof AbstractPlayableSprite sprite)) {
+            return false;
+        }
+
+        int objectControl = 0;
+        if (sprite.isObjectControlled()) {
+            objectControl |= 0x80;
+        }
+        if (sprite.isObjectControlAllowsCpu()) {
+            objectControl |= 0x40;
+        }
+        if (sprite.isObjectControlSuppressesMovement()) {
+            objectControl |= 0x01;
+        }
+        // Obj89_Init skips the Tails X check when Sidekick+obj_control is $81.
+        // docs/s2disasm/s2.asm:64791-64792
+        return objectControl == 0x81;
     }
 
     private void finishInitialization() {

@@ -22,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Comparator;
 import java.util.List;
 
@@ -112,6 +113,26 @@ class TestMhzMinibossEscapeShardGraphRewind {
 
         assertShardState(restoredShard, 0x034C, 0x04FC, 0x034C0000, 0x04FC0000,
                 -0x123, 0x234, 0x1A, 4, 7, 6, 0x1D, 2, true, true);
+    }
+
+    @Test
+    void priorityBucketsMatchRomWordAndLocPriorities() throws ReflectiveOperationException {
+        Harness harness = Harness.create(List.of(CAPTURED_PARENT_SPAWN));
+        MhzMinibossInstance parent = liveObjects(harness.objectManager(), MhzMinibossInstance.class).get(0);
+        MhzMinibossEscapeShardInstance shard = harness.objectManager().createDynamicObject(
+                () -> new MhzMinibossEscapeShardInstance(0x0348, 0x04F8, parent));
+
+        assertEquals(6, shard.getPriorityBucket(),
+                "word_75E7E (sonic3k.asm:156794-156795) sets initial priority=$300 (bucket 6), "
+                        + "not bucket 4 ($200)");
+
+        Method startReturnFall = MhzMinibossEscapeShardInstance.class.getDeclaredMethod("startReturnFall");
+        startReturnFall.setAccessible(true);
+        startReturnFall.invoke(shard);
+
+        assertEquals(3, shard.getPriorityBucket(),
+                "loc_7594C (sonic3k.asm:156232-156234) sets priority=$180 (bucket 3), "
+                        + "not bucket 2 ($100)");
     }
 
     @Test

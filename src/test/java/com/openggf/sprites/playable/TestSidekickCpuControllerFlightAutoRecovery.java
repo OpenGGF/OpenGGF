@@ -1,7 +1,7 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.tests.TestEnvironment;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.SessionManager;
 import com.openggf.physics.Direction;
 import org.junit.jupiter.api.AfterEach;
@@ -31,8 +31,8 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         @Override public void draw() {}
         @Override public void defineSpeeds() {}
         @Override protected void createSensorLines() {}
-        void usePhysicsFeatureSet(PhysicsFeatureSet featureSet) {
-            setPhysicsFeatureSet(featureSet);
+        void useGameRules(GameRules featureSet) {
+            super.setGameRulesForTest(featureSet);
         }
     }
 
@@ -198,7 +198,7 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         sonic.setObjectControlled(true);
         sonic.setObjectControlSuppressesMovement(true);
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1000);
         tails.setCentreY((short) 0x0400);
@@ -222,7 +222,7 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         TestableSprite sonic = sonicAtWithStatus(0x1000, 0x0400,
                 AbstractPlayableSprite.STATUS_PREVENT_TAILS_RESPAWN);
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1000);
         tails.setCentreY((short) 0x0400);
@@ -248,7 +248,7 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 (short) AbstractPlayableSprite.INPUT_RIGHT, (byte) 0);
         sonic.setWallCling(true);
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0F00);
         tails.setCentreY((short) 0x0400);
@@ -371,7 +371,7 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         TestableSprite sonic = sonicAt(0x1000, 0x0400);
         sonic.setDead(true);
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0F00);
         tails.setCentreY((short) 0x0400);

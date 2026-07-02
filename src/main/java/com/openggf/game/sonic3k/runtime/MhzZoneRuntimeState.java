@@ -143,6 +143,10 @@ public final class MhzZoneRuntimeState implements S3kZoneRuntimeState {
         return events != null && events.isEndBossArenaBackgroundActive();
     }
 
+    public boolean isBossAreaBackgroundDeformActive() {
+        return events != null && events.isBossAreaBackgroundDeformActive();
+    }
+
     public boolean isEndBossArenaForegroundRefreshActive() {
         return events != null && events.isEndBossArenaForegroundRefreshActive();
     }

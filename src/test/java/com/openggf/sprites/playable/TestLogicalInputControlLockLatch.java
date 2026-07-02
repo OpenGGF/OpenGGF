@@ -4,7 +4,7 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.tests.TestablePlayableSprite;
@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 /**
  * Verifies the ROM-faithful Ctrl_1_locked latch on
  * {@link AbstractPlayableSprite#setLogicalInputState} is gated by
- * {@link PhysicsFeatureSet#controlLockLatchesLogicalInput()}.
+ * {@link GameRules#controlLockLatchesLogicalInput()}.
  *
  * <p>ROM ref (sonic3k.asm:21541-21545 {@code loc_10760}, S2 s2.asm:35933-35935
  * {@code Obj01_Control}):
@@ -51,7 +51,7 @@ class TestLogicalInputControlLockLatch {
     @Test
     void s3kFlagSetSkipsLogicalInputWriteSoPreviousValuePersists() {
         TestablePlayableSprite sprite = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sprite.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        sprite.setGameRulesForTest(GameRules.SONIC_3K);
 
         // Frame N-1: no lock, RIGHT pressed -> logical input recorded as RIGHT.
         sprite.setControlLocked(false);
@@ -74,7 +74,7 @@ class TestLogicalInputControlLockLatch {
     @Test
     void s3kFlagSetClearedRestoresFreshWrites() {
         TestablePlayableSprite sprite = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sprite.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        sprite.setGameRulesForTest(GameRules.SONIC_3K);
 
         // Seed RIGHT while unlocked.
         sprite.setLogicalInputState(false, false, false, true, false);
@@ -100,7 +100,7 @@ class TestLogicalInputControlLockLatch {
     @Test
     void s2FlagSetLatchesLogicalInput() {
         TestablePlayableSprite sprite = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sprite.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sprite.setGameRulesForTest(GameRules.SONIC_2);
 
         // Frame N-1: no lock, RIGHT pressed.
         sprite.setControlLocked(false);
@@ -121,7 +121,7 @@ class TestLogicalInputControlLockLatch {
     @Test
     void s1FlagClearedDoesNotLatchLogicalInput() {
         TestablePlayableSprite sprite = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sprite.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_1);
+        sprite.setGameRulesForTest(GameRules.SONIC_1);
 
         // Frame N-1: unlocked RIGHT.
         sprite.setControlLocked(false);

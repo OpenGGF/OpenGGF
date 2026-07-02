@@ -706,6 +706,47 @@ class TestMadmoleBadnikInstance {
                 "loc_8D724 also leaves Status_InAir set on the released player");
     }
 
+    @Test
+    void defeatingBodyLeavesSolidCapStumpThatNeverReEmerges() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        CapturingServices services = new CapturingServices(objectManager);
+        MadmoleBadnikInstance madmole = madmole(services);
+        TestablePlayableSprite player = player(0x100, 0x100);
+        advanceToRising(madmole, player);
+
+        for (int frame = 3; frame <= 0x42; frame++) {
+            madmole.update(frame, player);
+        }
+        assertEquals("DRILLING", madmole.getStateName());
+
+        TouchResponseResult result = new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY);
+        madmole.onPlayerAttack(player, result);
+
+        assertEquals(false, madmole.isDestroyed(),
+                "sub_8D876 keeps running unconditionally on the parent's own SST slot every frame; "
+                        + "EnemyDefeated only removes the body child, not the cap");
+        assertEquals("BURIED", madmole.getStateName(),
+                "the body child role is gone; the parent snaps back to its cap-only state");
+        assertEquals(0, madmole.getCollisionFlags(),
+                "the body child's $0B enemy collision is gone; only the cap's zero-collision solid stump remains");
+
+        SolidObjectProvider solid = assertInstanceOf(SolidObjectProvider.class, madmole,
+                "the cap keeps SolidObjectFull collision even after the body is destroyed");
+        assertEquals(0, solid.getSolidParams().offsetY(),
+                "the cap stays anchored at its original home position -- still solid, not raised/sunk");
+
+        // Player stays within the ROM $A0 activation range for many more frames;
+        // the busy bit ($38 bit 1) never clears off the normal sink-delete path
+        // (loc_8D6D6) once the body was destroyed by EnemyDefeated, so the parent
+        // must never spawn a new body child again.
+        for (int frame = 0x43; frame <= 0x140; frame++) {
+            madmole.update(frame, player);
+        }
+        assertEquals("BURIED", madmole.getStateName(),
+                "the cap must remain a permanent stump and never re-emerge the body");
+        assertEquals(false, madmole.isDestroyed());
+    }
+
     private static MadmoleBadnikInstance madmole() {
         return madmole(new TestObjectServices().withGameState(mock(GameStateManager.class)));
     }

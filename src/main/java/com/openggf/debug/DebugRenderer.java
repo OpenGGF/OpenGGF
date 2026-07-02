@@ -2,7 +2,6 @@ package com.openggf.debug;
 
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.GameModule;
 
@@ -1057,8 +1056,9 @@ public class DebugRenderer {
         }
 
         private boolean isUnifiedCollision(AbstractPlayableSprite sprite) {
-                PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-                return fs != null && fs.collisionModel() == CollisionModel.UNIFIED;
+                return sprite.getGameRules() != null
+                        && sprite.getGameRules().collision() != null
+                        && sprite.getGameRules().collision().collisionModel() == CollisionModel.UNIFIED;
         }
 
         private char formatPriority(boolean highPriority) {

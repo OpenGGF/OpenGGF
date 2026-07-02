@@ -1,7 +1,8 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.game.CanonicalAnimation;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.SidekickCpuRules;
 import com.openggf.physics.Direction;
 
 /**
@@ -15,8 +16,9 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     private static final int S2_FLYING_OFFSCREEN_TIMEOUT_FRAMES = 300;
     private final int flyAnimId;
     private final int walkAnimId;
-    /** S2 fallback if no PhysicsFeatureSet is resolved (legacy unit-test sidekicks). */
-    private static final int FLY_LAND_BLOCKERS_FALLBACK = PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_S2;
+    /** S2 fallback if no typed rules are resolved, matching legacy unit-test sidekicks. */
+    private static final int FLY_LAND_BLOCKERS_FALLBACK =
+            GameRules.SONIC_2.sidekickCpu().sidekickFlyLandStatusBlockerMask();
     /** Sonic OST routine value at/above which the leader is considered dead/dying.
      *  ROM: {@code cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42} (sonic3k.asm:26629-26630). */
     private static final int LEADER_DEAD_ROUTINE_THRESHOLD = 6;
@@ -33,6 +35,14 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         this.walkAnimId = controller.resolveAnimationId(CanonicalAnimation.WALK);
     }
 
+    private SidekickCpuRules sidekickCpuRulesOrNull(AbstractPlayableSprite sidekick) {
+        GameRules rules = sidekick.getGameRules();
+        if (rules != null && rules.sidekickCpu() != null) {
+            return rules.sidekickCpu();
+        }
+        return null;
+    }
+
     @Override
     public boolean beginApproach(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
         offscreenFlightFrames = 0;
@@ -40,8 +50,8 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         diagnosticTargetY = leader.getCentreY() & 0xFFFF;
         sidekick.setCentreXPreserveSubpixel(leader.getCentreX());
         sidekick.setCentreYPreserveSubpixel((short) (leader.getCentreY() - RESPAWN_Y_OFFSET));
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        boolean catchUpMarker = fs != null && fs.sidekickRespawnEntersCatchUpFlight();
+        SidekickCpuRules rules = sidekickCpuRulesOrNull(sidekick);
+        boolean catchUpMarker = rules != null && rules.sidekickRespawnEntersCatchUpFlight();
         approachRunsObjectPhysics = false;
         if (catchUpMarker) {
             // S3K Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26503-26506)
@@ -100,8 +110,8 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     public boolean updateApproaching(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader,
                                      int frameCounter) {
         sidekick.setForcedAnimationId(flyAnimId);
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        boolean catchUpMarker = fs != null && fs.sidekickRespawnEntersCatchUpFlight();
+        SidekickCpuRules rules = sidekickCpuRulesOrNull(sidekick);
+        boolean catchUpMarker = rules != null && rules.sidekickRespawnEntersCatchUpFlight();
         approachRunsObjectPhysics = !catchUpMarker && !sidekick.isObjectControlSuppressesMovement();
         if (catchUpMarker) {
             sidekick.setControlLocked(true);
@@ -165,11 +175,11 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         //     to NORMAL even if Sonic is hurt or dead.
         //   * S3K (sonic3k.asm:26625, 26629-26630) andi.b #$80,d2 (bit 7 only) AND
         //     cmpi.b #6,(Player_1+routine).w / bhs (skip if Sonic dead).
-        // Resolved through PhysicsFeatureSet so each game's ROM behavior is preserved.
-        int statusBlockerMask = fs != null
-                ? fs.sidekickFlyLandStatusBlockerMask()
+        // Resolved through SidekickCpuRules so each game's ROM behavior is preserved.
+        int statusBlockerMask = rules != null
+                ? rules.sidekickFlyLandStatusBlockerMask()
                 : FLY_LAND_BLOCKERS_FALLBACK;
-        boolean requireLeaderAlive = fs != null && fs.sidekickFlyLandRequiresLeaderAlive();
+        boolean requireLeaderAlive = rules != null && rules.sidekickFlyLandRequiresLeaderAlive();
         if ((recordedStatus & statusBlockerMask) == 0 && remainingDx == 0 && dy == 0) {
             if (requireLeaderAlive && leader.getDead()) {
                 return false;
@@ -190,8 +200,9 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     }
 
     @Override
-    public boolean usesS3kCatchUpMarker(PhysicsFeatureSet featureSet) {
-        return featureSet != null && featureSet.sidekickRespawnEntersCatchUpFlight();
+    public boolean usesS3kCatchUpMarker(AbstractPlayableSprite sidekick) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull(sidekick);
+        return rules != null && rules.sidekickRespawnEntersCatchUpFlight();
     }
 
     @Override
@@ -235,8 +246,8 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     }
 
     private boolean handleS2FlyingOffscreenTimeout(AbstractPlayableSprite sidekick) {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        if (fs != null && fs.sidekickRespawnEntersCatchUpFlight()) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull(sidekick);
+        if (rules != null && rules.sidekickRespawnEntersCatchUpFlight()) {
             return false;
         }
         boolean onScreen = sidekick.hasRenderFlagOnScreenState()
@@ -276,8 +287,8 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     }
 
     private boolean consumesTopEdgeRenderFlagOneStepLate(AbstractPlayableSprite sidekick) {
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        if (fs != null && fs.sidekickRespawnEntersCatchUpFlight()) {
+        SidekickCpuRules rules = sidekickCpuRulesOrNull(sidekick);
+        if (rules != null && rules.sidekickRespawnEntersCatchUpFlight()) {
             return false;
         }
         var camera = sidekick.currentCamera();

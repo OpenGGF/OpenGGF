@@ -1,9 +1,13 @@
 package com.openggf.timer.timers;
 
+import com.openggf.game.rules.GameRules;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Phase-alignment tests for the speed-shoes decrement cadence.
@@ -53,5 +57,18 @@ class TestSpeedShoesTimer {
             assertEquals(expected, SpeedShoesTimer.isDecrementFrame(frame, 8),
                     "frame " + frame + " decrement gate");
         }
+    }
+
+    @Test
+    void constructorUsesDefaultRulesWhenGameRulesMissing() {
+        AbstractPlayableSprite sprite = mock(AbstractPlayableSprite.class);
+        when(sprite.getGameRules()).thenReturn(null);
+        when(sprite.getGameRules()).thenReturn(GameRules.SONIC_3K);
+
+        SpeedShoesTimer timer = new SpeedShoesTimer("speed-shoes", sprite);
+
+        assertEquals(SpeedShoesTimer.ROM_DURATION_FRAMES
+                        / GameRules.SONIC_3K.powerUp().speedShoesTimerDecimation(),
+                timer.getTicks());
     }
 }

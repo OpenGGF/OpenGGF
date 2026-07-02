@@ -2,13 +2,13 @@ package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.graphics.GLCommand;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.PhysicsProvider;
 
 import java.util.List;
 
@@ -244,20 +244,20 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     }
 
     private boolean preservesObjectMoveXSubpixel() {
-        PhysicsFeatureSet featureSet = animalFeatureSet();
-        return featureSet != null && featureSet.animalObjectPreservesObjectMoveXSubpixel();
+        ObjectInteractionRules rules = animalObjectInteractionRules();
+        return rules != null && rules.animalObjectPreservesObjectMoveXSubpixel();
     }
 
     private boolean usesRenderFlagDeleteBounds() {
-        PhysicsFeatureSet featureSet = animalFeatureSet();
-        return featureSet != null && featureSet.animalObjectUsesRenderFlagDeleteBounds();
+        ObjectInteractionRules rules = animalObjectInteractionRules();
+        return rules != null && rules.animalObjectUsesRenderFlagDeleteBounds();
     }
 
-    private PhysicsFeatureSet animalFeatureSet() {
+    private ObjectInteractionRules animalObjectInteractionRules() {
         ObjectServices ctx = tryServices();
         GameModule module = ctx != null ? ctx.gameModule() : null;
-        PhysicsProvider physProvider = module != null ? module.getPhysicsProvider() : null;
-        return physProvider != null ? physProvider.getFeatureSet() : null;
+        GameRules rules = module != null ? module.getRules() : null;
+        return rules != null ? rules.objectInteraction() : null;
     }
 
     private boolean checkFloorCollision() {

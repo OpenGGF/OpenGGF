@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.game.rules.GameRules;
+
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import org.junit.jupiter.api.AfterEach;
@@ -36,9 +38,9 @@ public class TestGroundSpeedCapping {
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
         TestableSprite sprite = new TestableSprite("test", (short) 100, (short) 100);
 
-        PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+        GameRules fs = sprite.getGameRules();
         assertNotNull(fs, "Feature set should be set");
-        assertTrue(fs.inputAlwaysCapsGroundSpeed(), "S1 should always cap ground speed on input");
+        assertTrue(fs.playerMovement().inputAlwaysCapsGroundSpeed(), "S1 should always cap ground speed on input");
     }
 
     @Test
@@ -46,9 +48,9 @@ public class TestGroundSpeedCapping {
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         TestableSprite sprite = new TestableSprite("test", (short) 100, (short) 100);
 
-        PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+        GameRules fs = sprite.getGameRules();
         assertNotNull(fs, "Feature set should be set");
-        assertFalse(fs.inputAlwaysCapsGroundSpeed(), "S2 should preserve high ground speed on input");
+        assertFalse(fs.playerMovement().inputAlwaysCapsGroundSpeed(), "S2 should preserve high ground speed on input");
     }
 
     @Test
@@ -64,8 +66,8 @@ public class TestGroundSpeedCapping {
         // S1 behavior: pressing right when going right at high speed should clamp to max
         // This matches: add accel, then unconditional clamp
         // Result: min(highSpeed + accel, max) = max since highSpeed + accel > max
-        PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-        assertTrue(fs.inputAlwaysCapsGroundSpeed(), "S1 feature flag");
+        GameRules fs = sprite.getGameRules();
+        assertTrue(fs.playerMovement().inputAlwaysCapsGroundSpeed(), "S1 rule");
 
         // Verify the clamp would reduce the speed: highSpeed + accel still > max
         short accel = sprite.getRunAccel();
@@ -88,9 +90,9 @@ public class TestGroundSpeedCapping {
 
         // S2 behavior: pressing right when going right at high speed should preserve speed
         // because inputAlwaysCapsGroundSpeed is false (acceleration is skipped when >= max).
-        // Full integration is tested via HeadlessTestRunner; here we verify the feature flag.
-        PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-        assertFalse(fs.inputAlwaysCapsGroundSpeed(), "S2 should not cap ground speed on input (preserves high speed from springs/slopes)");
+        // Full integration is tested via HeadlessTestRunner; here we verify the rule.
+        GameRules fs = sprite.getGameRules();
+        assertFalse(fs.playerMovement().inputAlwaysCapsGroundSpeed(), "S2 should not cap ground speed on input (preserves high speed from springs/slopes)");
     }
 
     private static class TestableSprite extends AbstractPlayableSprite {

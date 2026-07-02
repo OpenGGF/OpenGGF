@@ -332,6 +332,10 @@ public class ObjectManager {
         return slotLayout.twoAxisCursorPlacement();
     }
 
+    public boolean usesCounterBasedRespawn() {
+        return placement.isCounterBasedRespawn();
+    }
+
     /**
      * Instantiates all spawns currently in the ObjectPlacementController window. Intended for
      * trace replay and editor state restoration that need engine object
@@ -1877,23 +1881,17 @@ public class ObjectManager {
     }
 
     /**
-     * Reserves the next free dynamic slot while ignoring holes opened earlier in
-     * the same object pass. S2 {@code HurtCharacter} calls {@code AllocateObject}
-     * before later dynamic slots finish and delete themselves; when the engine
-     * defers Obj37 materialization until after the pass, those newly-freed lower
-     * slots must not become the Obj37 owner. The owner should use the first slot
-     * that was free at the ROM hurt instant; {@code Obj37_Init} can then use the
-     * lower holes for child rings via ordinary {@code AllocateObject}
+     * Reserves the next free dynamic slot for a deferred S2 Obj37 owner. S2
+     * {@code HurtCharacter} calls {@code AllocateObject} before later dynamic slots
+     * finish and delete themselves; reserving the owner slot immediately captures
+     * the first slot that is free at the ROM hurt instant.
+     * Slots already freed earlier in the pass are visible to the ROM allocator, so
+     * the scan must use the live allocator state instead of the per-pass freed-slot
+     * ledger. {@code Obj37_Init} can then use later holes for child rings via ordinary
+     * {@code AllocateObject}
      * (docs/s2disasm/s2.asm:85444-85461, 25125-25146).
      */
     public int allocateDynamicSlotAvoidingCurrentPassFrees() {
-        int first = slotLayout.firstDynamicSlot();
-        int last = slotLayout.lastDynamicSlotExclusive();
-        for (int slot = first; slot < last; slot++) {
-            if (!slotsFreedDuringObjectPass.get(slot) && slotAllocator.isEmpty(slot)) {
-                return slotAllocator.reserve(slot) ? slot : -1;
-            }
-        }
         return allocateDynamicSlot();
     }
 

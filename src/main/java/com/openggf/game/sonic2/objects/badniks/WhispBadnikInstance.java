@@ -230,10 +230,11 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
             return;
         }
 
-        if (player != null) {
+        PlayableEntity target = closestRomOrientationTarget(player);
+        if (target != null) {
             // Calculate direction to player
-            int playerX = player.getCentreX();
-            int playerY = player.getCentreY();
+            int playerX = target.getCentreX();
+            int playerY = target.getCentreY();
 
             // Obj_GetOrientationToPlayer (s2.asm:72836-72848) leaves d0/d1 at
             // index 0 when object-pos minus player-pos is zero. Obj8C therefore
@@ -268,6 +269,28 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
         // Apply velocity to position
         xPosFixed += xVelFixed;
         yPosFixed += yVelFixed;
+    }
+
+    private PlayableEntity closestRomOrientationTarget(AbstractPlayableSprite player) {
+        PlayableEntity target = player;
+        int bestDistance = player != null ? Math.abs(currentX - player.getCentreX()) : Integer.MAX_VALUE;
+        List<PlayableEntity> sidekicks = services().sidekicks();
+        if (sidekicks == null || sidekicks.isEmpty()) {
+            return target;
+        }
+        for (PlayableEntity sidekick : sidekicks) {
+            if (sidekick == null) {
+                continue;
+            }
+            int distance = Math.abs(currentX - sidekick.getCentreX());
+            // Obj_GetOrientationToPlayer compares horizontal distance to Sonic
+            // and Tails, keeping Sonic on ties (docs/s2disasm/s2.asm:72812-72834).
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                target = sidekick;
+            }
+        }
+        return target;
     }
 
     /**

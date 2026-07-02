@@ -65,6 +65,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -305,6 +306,43 @@ class TestMhzBossObjects {
         endBoss.update(1, null);
         services.registry.resolveInto(services.level.palettes(), null, null, null);
 
+        // loc_767B0 seeds $20(a0)=$20 (32, even) on the fresh-hit frame; loc_767E8's
+        // btst #0,$20(a0) is clear on an even count, so the first painted frame is the
+        // white/flash row, not the real-color row.
+        Palette palette = services.level.getPalette(1);
+        assertColorWord(palette, 4, 0x0888);
+        assertColorWord(palette, 10, 0x0AAA);
+        assertColorWord(palette, 11, 0x0EEE);
+        assertColorWord(palette, 13, 0x0888);
+        assertColorWord(palette, 14, 0x0AAA);
+    }
+
+    @Test
+    void mhzEndBossHitFlashRestoresRomRealColorsWhenInvulnerabilityWindowEnds() {
+        RecordingPaletteServices services = new RecordingPaletteServices();
+        services.withRom(new FixedReadRom(new byte[32]));
+        com.openggf.graphics.GraphicsManager graphicsManager = mock(com.openggf.graphics.GraphicsManager.class);
+        when(graphicsManager.isGlInitialized()).thenReturn(false);
+        services.withGraphicsManager(graphicsManager);
+        services.registry.beginFrame();
+        MhzEndBossInstance endBoss = new MhzEndBossInstance(new ObjectSpawn(
+                0x4200, 0x0300, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
+        endBoss.setServices(services);
+        endBoss.update(0, null);
+        services.registry.resolveInto(services.level.palettes(), null, null, null);
+
+        endBoss.onPlayerAttack(null, null);
+        for (int frame = 1; frame <= 32; frame++) {
+            services.registry.beginFrame();
+            endBoss.update(frame, null);
+            services.registry.resolveInto(services.level.palettes(), null, null, null);
+        }
+
+        // loc_767E8 decrements $20(a0) AFTER painting; the last painted frame occurs at
+        // $20==1 (odd), which selects the real-color row, so the flash ends resting on the
+        // boss's normal colors rather than the white row.
+        assertEquals(false, endBoss.getState().invulnerable,
+                "loc_767F6 clears status bit 6 once $20(a0) underflows to zero");
         Palette palette = services.level.getPalette(1);
         assertColorWord(palette, 4, 0x0E42);
         assertColorWord(palette, 10, 0x0228);
@@ -852,10 +890,12 @@ class TestMhzBossObjects {
         }
 
         verify(renderer, org.mockito.Mockito.times(2)).drawFrameIndex(5, 0x42D1, 0x02AF, false, false);
-        verify(renderer).drawFrameIndex(0x0E, 0x4284, 0x0261, false, false);
-        verify(renderer).drawFrameIndex(0x0E, 0x4230, 0x020D, false, false);
-        verify(renderer).drawFrameIndex(0x0E, 0x41DC, 0x01B9, false, false);
-        verify(renderer).drawFrameIndex(0x0E, 0x4188, 0x0165, false, false);
+        // byte_769CE's initial mapping frame is $D (sonic3k.asm:157786-157787); the
+        // three Animate_Raw ticks that follow are $E, $F, $10.
+        verify(renderer).drawFrameIndex(0x0D, 0x4284, 0x0261, false, false);
+        verify(renderer).drawFrameIndex(0x0D, 0x4230, 0x020D, false, false);
+        verify(renderer).drawFrameIndex(0x0D, 0x41DC, 0x01B9, false, false);
+        verify(renderer).drawFrameIndex(0x0D, 0x4188, 0x0165, false, false);
     }
 
     @Test
@@ -2121,8 +2161,12 @@ class TestMhzBossObjects {
         assertEquals(6, fragments.size(),
                 "loc_761B2 creates ChildObjDat_769B0, allocating six loc_766CA flicker fragments");
         int[] expectedPriorityBuckets = {4, 4, 6, 6, 4, 4};
-        int[] expectedXAfterMove = {0x44CD, 0x44D3, 0x44CE, 0x44D0, 0x44CC, 0x44D4};
-        int[] expectedYAfterMove = {0x02DE, 0x02DE, 0x02DE, 0x02DE, 0x02DD, 0x02DD};
+        // Set_IndexedVelocity's d0=8 base combines with CreateChild6_Simple seeding each
+        // fragment's raw ROM subtype byte as 0,2,4,6,8,10 (not 0..5): effective stride is
+        // 8 + spawnIndex*4 -- Obj_VelocityIndex (ROM 0x0852F4) rows 2-7, ROM-verified via
+        // RomOffsetFinder search-rom against the raw ROM bytes.
+        int[] expectedXAfterMove = {0x44CE, 0x44D2, 0x44CD, 0x44D3, 0x44CE, 0x44D0};
+        int[] expectedYAfterMove = {0x02DE, 0x02DE, 0x02DE, 0x02DE, 0x02DE, 0x02DE};
         for (int i = 0; i < fragments.size(); i++) {
             ObjectInstance fragment = fragments.get(i);
             ((AbstractObjectInstance) fragment).setServices(services);
@@ -4355,8 +4399,8 @@ class TestMhzBossObjects {
                 "loc_7594C starts the return fall with y_vel=-$300");
         assertEquals(0x1D, getPrivateInt(shard, "xVel"),
                 "loc_7594C targets parent x_pos-6 over divisor $6100");
-        assertEquals(2, shard.getPriorityBucket(),
-                "loc_7594C lowers priority to $180 for the return arc");
+        assertEquals(3, shard.getPriorityBucket(),
+                "loc_7594C lowers priority to $180 (bucket 3) for the return arc");
     }
 
     @Test
@@ -4847,6 +4891,58 @@ class TestMhzBossObjects {
                 "ObjDat3_76934 gives the active MHZ end boss core x/y radius $80,$80");
     }
 
+    @Test
+    void mhzMinibossFinalLaunchScriptSettlesOnRomFrameSixAfterJumpCommand() throws Exception {
+        MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
+                0x1800, 0x0400, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
+        int[] script = getPrivateStaticIntArray("FINAL_LAUNCH_SCRIPT");
+        Method animate = MhzMinibossInstance.class.getDeclaredMethod("animateRawMultiDelay", int[].class);
+        animate.setAccessible(true);
+
+        // Run past the leading $0A/$08/$06 frames and the $F8 jump so the script settles.
+        for (int i = 0; i < 400; i++) {
+            animate.invoke(miniboss, (Object) script);
+        }
+        assertEquals(6, getPrivateInt(miniboss, "mappingFrame"),
+                "loc_845E4's $F8 re-points the raw-animation script base by its signed relative "
+                        + "offset, and loc_845F2's fallthrough settles the launch animation on the "
+                        + "repeated frame $06 pair sitting at the new base");
+
+        // Without $F8 re-pointing scriptBase, the script would restart from index 0 and cycle
+        // back through $0A/$08 again; collecting every frame seen after settling proves the
+        // animation is genuinely pinned on $06 forever, not just coincidentally $06 at this tick.
+        java.util.Set<Integer> framesAfterSettling = new java.util.LinkedHashSet<>();
+        for (int i = 0; i < 600; i++) {
+            animate.invoke(miniboss, (Object) script);
+            framesAfterSettling.add(getPrivateInt(miniboss, "mappingFrame"));
+        }
+        assertEquals(java.util.Set.of(6), framesAfterSettling,
+                "the $F8 re-point base keeps re-emitting only frame $06 indefinitely through the "
+                        + "bare $FC command at the tail of FINAL_LAUNCH_SCRIPT, never cycling back "
+                        + "to $0A/$08");
+    }
+
+    @Test
+    void mhzMinibossFinalCameraRiseScriptLoopsBackToRomFrameZero() throws Exception {
+        MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
+                0x1800, 0x0400, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
+        int[] script = getPrivateStaticIntArray("FINAL_CAMERA_RISE_SCRIPT");
+        Method animate = MhzMinibossInstance.class.getDeclaredMethod("animateRawMultiDelay", int[].class);
+        animate.setAccessible(true);
+
+        int zeroHits = 0;
+        for (int i = 0; i < 400; i++) {
+            Object result = animate.invoke(miniboss, (Object) script);
+            if ((int) result == 1 && getPrivateInt(miniboss, "mappingFrame") == 0) {
+                zeroHits++;
+            }
+        }
+
+        assertTrue(zeroHits >= 2,
+                "loc_845F2's bare $FC command should re-emit FINAL_CAMERA_RISE_SCRIPT's frame-0 "
+                        + "entry every time the 1-2-3-2-1-0 cycle wraps, not just once");
+    }
+
     private static PatternSpriteRenderer readyRenderer() {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         when(renderer.isReady()).thenReturn(true);
@@ -4882,6 +4978,12 @@ class TestMhzBossObjects {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(target);
+    }
+
+    private static int[] getPrivateStaticIntArray(String fieldName) throws Exception {
+        Field field = MhzMinibossInstance.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return (int[]) field.get(null);
     }
 
     private static MhzMinibossInstance managedMinibossAtCamera(int cameraX, int cameraY) {

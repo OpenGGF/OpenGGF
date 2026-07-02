@@ -10,7 +10,9 @@ import com.openggf.game.sonic2.OilSurfaceManager;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -72,6 +74,24 @@ public class TestOilSurfaceManager {
     }
 
     @Test
+    public void jumpReleaseTicksSubmersionBeforeClearingSupport() {
+        landOnOilSurface();
+        assertTrue(manager.isStandingOnOil());
+        int before = manager.getSubmersion(sprite);
+
+        sprite.setAir(true);
+        sprite.setJumping(true);
+        sprite.setYSpeed((short) -0x200);
+
+        manager.updateSurface(sprite);
+
+        assertEquals(before - 1, manager.getSubmersion(sprite),
+                "Obj07 decrements oil_charNsubmersion before PlatformObject clears an airborne rider");
+        assertFalse(manager.isStandingOnOil(sprite));
+        assertFalse(sprite.isOnObject());
+    }
+
+    @Test
     public void suffocatesAfterSubmersionCountdownExpires() {
         landOnOilSurface();
         assertTrue(manager.isStandingOnOil());
@@ -126,6 +146,70 @@ public class TestOilSurfaceManager {
                 "Obj07 is manager-hosted, so its ROM interact target is represented by a synthetic slot");
     }
 
+    @Test
+    public void hurtLandingOnOilKeepsRoutineFourUntilHurtStop() {
+        int centreY = OIL_SURFACE_Y + 1 - sprite.getYRadius();
+        sprite.setCentreY((short) centreY);
+        sprite.setAir(true);
+        sprite.setOnObject(false);
+        sprite.setJumping(false);
+        sprite.setHurt(true);
+        sprite.setXSpeed((short) 0x0200);
+        sprite.setYSpeed((short) 0x0200);
+        sprite.setGSpeed((short) 0);
+
+        manager.update(sprite);
+
+        assertTrue(sprite.isHurt(),
+                "Obj07 landing clears Status_InAir, but S2 Tails_HurtStop owns routine-4 recovery next frame");
+        assertFalse(sprite.getAir());
+        assertTrue(sprite.isOnObject());
+        assertEquals(0x0200, sprite.getXSpeed() & 0xFFFF);
+        assertEquals(0x0200, sprite.getGSpeed() & 0xFFFF,
+                "RideObject_SetRide copies x_vel to inertia on the landing frame before HurtStop zeroes it");
+        assertEquals(0, sprite.getYSpeed());
+    }
+
+    @Test
+    public void deadFallingSidekickReleasesExistingOilSupport() throws Exception {
+        landOnOilSurface();
+        assertTrue(manager.isStandingOnOil(sprite));
+
+        makeDeadFallingCpuSidekick(sprite);
+        sprite.setAir(true);
+        sprite.setOnObject(true);
+        sprite.setYSpeed((short) 0x0620);
+
+        manager.updateSurface(sprite);
+
+        assertFalse(manager.isStandingOnOil(sprite));
+        assertTrue(sprite.getAir(),
+                "S2 Obj07 PlatformObject aborts for Obj02_Dead (routine >= 6), leaving Tails airborne");
+        assertFalse(sprite.isOnObject(),
+                "DEAD_FALLING mirrors ROM routine 6, so stale Obj07 support must be cleared");
+        assertEquals(0x0620, sprite.getYSpeed() & 0xFFFF,
+                "Obj07 must not run RideObject_SetRide for dead-falling Tails");
+    }
+
+    @Test
+    public void deadFallingSidekickDoesNotLandOnBossLoweredOilSurface() throws Exception {
+        makeDeadFallingCpuSidekick(sprite);
+        manager.setOilSurfaceY(0x02D8);
+        sprite.setCentreY((short) 0x0299);
+        sprite.setAir(true);
+        sprite.setOnObject(false);
+        sprite.setYSpeed((short) 0x0620);
+
+        manager.updateSurface(sprite);
+
+        assertFalse(manager.isStandingOnOil(sprite));
+        assertTrue(sprite.getAir());
+        assertFalse(sprite.isOnObject());
+        assertEquals(0x0299, sprite.getCentreY() & 0xFFFF,
+                "PlatformObject_ChkYRange skips routine >= 6 before snapping y_pos");
+        assertEquals(0x0620, sprite.getYSpeed() & 0xFFFF);
+    }
+
     private void landOnOilSurface() {
         int centreY = OIL_SURFACE_Y + 1 - sprite.getYRadius();
         sprite.setCentreY((short) centreY);
@@ -134,6 +218,15 @@ public class TestOilSurfaceManager {
         sprite.setJumping(false);
         sprite.setYSpeed((short) 0x200);
         manager.update(sprite);
+    }
+
+    private static void makeDeadFallingCpuSidekick(TestOilSprite sidekick) throws Exception {
+        TestOilSprite leader = new TestOilSprite("leader", (short) 0, (short) 0);
+        sidekick.setCpuControlled(true);
+        SidekickCpuController controller = new SidekickCpuController(sidekick, leader);
+        Field stateField = SidekickCpuController.class.getDeclaredField("state");
+        stateField.setAccessible(true);
+        stateField.set(controller, SidekickCpuController.State.DEAD_FALLING);
     }
 
     private void invokeFrictionSlide() throws Exception {

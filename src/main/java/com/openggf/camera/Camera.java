@@ -4,7 +4,8 @@ import com.openggf.configuration.DeadzoneMode;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.CameraRules;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
 import com.openggf.sprites.Sprite;
@@ -116,13 +117,22 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// to .moveLeft and adds the full (possibly >16px) offset
 	// (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:59-99). S2 (s2.asm:18102-
 	// 18105) and S3K (sonic3k.asm:38403-38406) cap BOTH directions, so this stays
-	// false for them. Set per-game from PhysicsFeatureSet.uncappedLeftwardHorizontalScroll.
+	// false for them. Set per-game from CameraRules.uncappedLeftwardHorizontalScroll.
 	private boolean uncappedLeftwardHorizontalScroll = false;
 
 	// ROM: Fast_V_scroll_flag. Moving solids request this for the current frame
 	// when the player is standing on them, so grounded vertical follow uses the
 	// fast cap even if the player's own ground speed is low.
 	private boolean fastVerticalScrollRequested = false;
+
+	// ROM: Scroll_force_positions + Scroll_forced_X_pos/Scroll_forced_Y_pos.
+	// Traversal objects (MHZ swing vine, vertical swing bar; AIZ ride vine) set
+	// these so the camera position math tracks the supplied forced coordinates
+	// instead of Player_1 for that frame, and the horizontal scroll frame offset
+	// (H_scroll_frame_offset) is zeroed. Frame-scoped; cleared each update.
+	private boolean forcedScrollRequested = false;
+	private int forcedScrollX = 0;
+	private int forcedScrollY = 0;
 
 	public Camera() {
 		this(GameServices.configuration());
@@ -159,6 +169,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			x = clampAxisWithWrap(x, minX, maxX);
 			y = clampAxisWithWrap(y, minY, maxY);
 			fastVerticalScrollRequested = false;
+			forcedScrollRequested = false;
 			applyDeferredMaxYWrite();
 			return;
 		}
@@ -166,8 +177,17 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// Full camera freeze (death, cutscenes) - don't update X or Y at all
 		if (frozen) {
 			fastVerticalScrollRequested = false;
+			forcedScrollRequested = false;
 			applyDeferredMaxYWrite();
 			return;
+		}
+
+		// ROM loc_1BFB8: a forced-scroll frame zeroes H_scroll_frame_offset before
+		// the camera-position math runs (move.w #0,(H_scroll_frame_offset).w). The
+		// forced coordinates then feed MoveCameraX/MoveCameraY below in place of the
+		// focused sprite's position (see currentFocusCentreX/Y).
+		if (forcedScrollRequested) {
+			horizScrollDelayFrames = 0;
 		}
 
 		// ROM behavior: Horiz_scroll_delay_val only affects horizontal scrolling.
@@ -185,15 +205,16 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// cases where Sonic and camera are in different wrap periods (e.g. Sonic's Y was
 		// updated by ground collision across the wrap boundary between frames).
 		short focusedSpriteRealY;
+		int focusCentreY = currentFocusCentreY();
 		if (verticalWrapEnabled) {
-			int diff = (int) focusedSprite.getCentreY() - (int) y;
+			int diff = focusCentreY - (int) y;
 			diff = ((diff % verticalWrapRange) + verticalWrapRange) % verticalWrapRange;
 			if (diff > verticalWrapRange / 2) {
 				diff -= verticalWrapRange;
 			}
 			focusedSpriteRealY = (short) diff;
 		} else {
-			focusedSpriteRealY = (short) (focusedSprite.getCentreY() - y);
+			focusedSpriteRealY = (short) (focusCentreY - y);
 		}
 
 		short yBeforeVerticalScroll = y;
@@ -366,7 +387,26 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			// else: ROM SV_NoUpdate - no scroll, no boundary clamp.
 		}
 		fastVerticalScrollRequested = false;
+		forcedScrollRequested = false;
 		applyDeferredMaxYWrite();
+	}
+
+	/**
+	 * Returns the X the camera should track this frame: the forced X when a
+	 * forced-scroll request is active (ROM Scroll_forced_X_pos), else the focused
+	 * sprite's centre X.
+	 */
+	private int currentFocusCentreX() {
+		return forcedScrollRequested ? forcedScrollX : focusedSprite.getCentreX();
+	}
+
+	/**
+	 * Returns the Y the camera should track this frame: the forced Y when a
+	 * forced-scroll request is active (ROM Scroll_forced_Y_pos), else the focused
+	 * sprite's centre Y.
+	 */
+	private int currentFocusCentreY() {
+		return forcedScrollRequested ? forcedScrollY : focusedSprite.getCentreY();
 	}
 
 	private void applyDeferredMaxYWrite() {
@@ -414,7 +454,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				horizScrollDelayFrames--;
 			}
 		} else {
-			focusedSpriteRealX = (short) (focusedSprite.getCentreX() - nextX);
+			focusedSpriteRealX = (short) (currentFocusCentreX() - nextX);
 		}
 
 		short cameraStepCap = fastScrollCap;
@@ -715,7 +755,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * symmetrically, NOT 32.
 	 * <p>S1/S2 don't have a {@code Screen_Y_wrap_value} mechanism and the ROM
 	 * routines use slightly different margins. Gate the S3K-specific 24-margin
-	 * via {@link com.openggf.game.PhysicsFeatureSet#useScreenYWrapValueForVisibility()}
+	 * via {@link CameraRules#useScreenYWrapValueForVisibility()}
 	 * so existing S1/S2 traces keep their 32-margin behaviour.
 	 *
 	 * <p><b>Vertical-wrap windowing (the off-screen-flag Y boundary):</b> the ROM
@@ -751,8 +791,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			return false;
 		}
 		int relY = sprite.getRenderCentreY() - cameraYCopy;
-		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		boolean useS3kMargin = fs != null && fs.useScreenYWrapValueForVisibility();
+		CameraRules rules = cameraRulesFor(sprite);
+		boolean useS3kMargin = rules != null && rules.useScreenYWrapValueForVisibility();
 		int yMargin = useS3kMargin ? widthPixels : 32;
 		if (verticalWrapEnabled) {
 			// ROM-accurate wrap window: bias by the low margin BEFORE masking, then
@@ -922,8 +962,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// This is separate from the render visibility wrap margin: S2 control
 		// paths apply the $7FF y_pos mask, while S1 LZ3/SBZ2 only masks Sonic on
 		// the camera wrap-crossing frame mirrored by updatePosition().
-		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		if (fs == null || !fs.playerControlAppliesVerticalWrapMask()) {
+		CameraRules rules = cameraRulesFor(sprite);
+		if (rules == null || !rules.playerControlAppliesVerticalWrapMask()) {
 			return false;
 		}
 		short before = sprite.getCentreY();
@@ -933,6 +973,17 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		}
 		sprite.setCentreYPreserveSubpixel(after);
 		return true;
+	}
+
+	private static CameraRules cameraRulesFor(AbstractPlayableSprite sprite) {
+		if (sprite == null) {
+			return null;
+		}
+		GameRules rules = sprite.getGameRules();
+		if (rules != null && rules.camera() != null) {
+			return rules.camera();
+		}
+		return null;
 	}
 
 	/**
@@ -1203,6 +1254,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		yPosBias = DEFAULT_Y_BIAS;
 		fastScrollCap = DEFAULT_FAST_SCROLL_CAP;
 		fastVerticalScrollRequested = false;
+		forcedScrollRequested = false;
+		forcedScrollX = 0;
+		forcedScrollY = 0;
 		verticalWrapEnabled = false;
 		verticalWrapRange = VERTICAL_WRAP_RANGE;
 		verticalWrapMask = VERTICAL_WRAP_RANGE - 1;
@@ -1225,7 +1279,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Sets whether leftward horizontal camera scrolling is uncapped (ROM S1
 	 * FixBugs=0 behavior). When true, the per-frame cap applies only to rightward
 	 * scrolling. Set per-game from
-	 * {@link PhysicsFeatureSet#uncappedLeftwardHorizontalScroll()}.
+	 * {@link CameraRules#uncappedLeftwardHorizontalScroll()}.
 	 */
 	public void setUncappedLeftwardScroll(boolean uncapped) {
 		this.uncappedLeftwardHorizontalScroll = uncapped;
@@ -1242,6 +1296,25 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public void requestFastVerticalScroll() {
 		fastVerticalScrollRequested = true;
+	}
+
+	/**
+	 * Requests ROM {@code Scroll_force_positions} behavior for the next camera
+	 * update. Instead of tracking the focused sprite, the camera-position math
+	 * (both horizontal and vertical) tracks the supplied forced coordinates, and
+	 * the horizontal scroll frame offset ({@code H_scroll_frame_offset}) is
+	 * zeroed. The request is frame-scoped and is cleared by
+	 * {@link #updatePosition()}. Traversal objects (e.g. MHZ swing vine / vertical
+	 * swing bar) call this every frame a player is grabbed.
+	 * (sonic3k.asm {@code loc_1BFB8}:38296-38300, setter {@code loc_226F2}:47072-47074.)
+	 *
+	 * @param forcedXPos world X the camera should track this frame (ROM Scroll_forced_X_pos)
+	 * @param forcedYPos world Y the camera should track this frame (ROM Scroll_forced_Y_pos)
+	 */
+	public void requestForcedScroll(int forcedXPos, int forcedYPos) {
+		forcedScrollRequested = true;
+		forcedScrollX = forcedXPos;
+		forcedScrollY = forcedYPos;
 	}
 
 	@Override

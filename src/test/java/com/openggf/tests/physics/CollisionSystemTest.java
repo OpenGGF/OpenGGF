@@ -3,10 +3,11 @@ package com.openggf.tests.physics;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.rules.GameRules;
 import com.openggf.level.LevelManager;
 import com.openggf.game.GroundMode;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.physics.*;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRegistry;
@@ -18,6 +19,7 @@ import org.mockito.Mockito;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -683,8 +685,8 @@ public class CollisionSystemTest {
 
     @Test
     public void oddRightWallZeroDistanceUsesCurrentCardinalFallbackInsteadOfStaleAlternate() {
-        FeatureSetCollisionTestSprite player = newCollisionTestSprite();
-        player.setFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        GameRulesCollisionTestSprite player = newCollisionTestSprite();
+        player.setGameRules(GameRules.SONIC_3K);
         player.setGroundMode(GroundMode.RIGHTWALL);
         player.setAngle((byte) 0xC0);
 
@@ -721,6 +723,48 @@ public class CollisionSystemTest {
                 "Odd floor angles use the ROM cardinal fallback; the farther alternate slope must not be borrowed");
     }
 
+    @Test
+    public void typedCollisionRulePreservesRightWallDeepProbeWhenBaseRulesDiffer() throws Exception {
+        GameRulesCollisionTestSprite player = newCollisionTestSprite();
+        player.setGameRules(GameRules.SONIC_1);
+        GameRules base = GameRules.SONIC_1;
+        setGameRulesForTest(player, new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                GameRules.SONIC_3K.collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble()));
+
+        assertTrue(invokePreservesRightWallPenetrationOnDeepProbe(player),
+                "CollisionSystem should read the typed CollisionRules group");
+    }
+
+    @Test
+    public void collisionRuleUsesDefaultWhenTypedCollisionGroupMissing() throws Exception {
+        GameRulesCollisionTestSprite player = newCollisionTestSprite();
+        player.setGameRules(GameRules.SONIC_3K);
+        GameRules base = GameRules.SONIC_3K;
+        setGameRulesForTest(player, new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                null,
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble()));
+
+        assertFalse(invokePreservesRightWallPenetrationOnDeepProbe(player),
+                "A null CollisionRules group should not recreate removed feature-set collision rules");
+    }
+
     private static Object describeCalcRoomInFrontProbe(int angle, short gSpeed) {
         try {
             Method method = CollisionSystem.class.getDeclaredMethod(
@@ -745,8 +789,25 @@ public class CollisionSystemTest {
         }
     }
 
-    private static FeatureSetCollisionTestSprite newCollisionTestSprite() {
-        return new FeatureSetCollisionTestSprite();
+    private boolean invokePreservesRightWallPenetrationOnDeepProbe(AbstractPlayableSprite player) {
+        try {
+            Method method = CollisionSystem.class.getDeclaredMethod(
+                    "preservesRightWallPenetrationOnDeepProbe", AbstractPlayableSprite.class);
+            method.setAccessible(true);
+            return (Boolean) method.invoke(collisionSystem, player);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to invoke preservesRightWallPenetrationOnDeepProbe", e);
+        }
+    }
+
+    private static void setGameRulesForTest(AbstractPlayableSprite player, GameRules rules) throws Exception {
+        Field field = AbstractPlayableSprite.class.getDeclaredField("gameRules");
+        field.setAccessible(true);
+        field.set(player, rules);
+    }
+
+    private static GameRulesCollisionTestSprite newCollisionTestSprite() {
+        return new GameRulesCollisionTestSprite();
     }
 
     private static Object[] describeCalcRoomOverHeadProbes(AbstractPlayableSprite player, int quadrant) {
@@ -801,13 +862,13 @@ public class CollisionSystemTest {
         }
     }
 
-    private static final class FeatureSetCollisionTestSprite extends AbstractPlayableSprite {
-        private FeatureSetCollisionTestSprite() {
+    private static final class GameRulesCollisionTestSprite extends AbstractPlayableSprite {
+        private GameRulesCollisionTestSprite() {
             super("collision-test", (short) 0, (short) 0);
         }
 
-        private void setFeatureSet(PhysicsFeatureSet featureSet) {
-            setPhysicsFeatureSet(featureSet);
+        private void setGameRules(GameRules rules) {
+            super.setGameRulesForTest(rules);
         }
 
         @Override

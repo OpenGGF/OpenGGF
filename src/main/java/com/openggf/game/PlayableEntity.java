@@ -134,6 +134,6 @@ public interface PlayableEntity {
     // ── Scoring ─────────────────────────────────────────────────────
     int incrementBadnikChain();
 
-    // ── Feature set ─────────────────────────────────────────────────
-    PhysicsFeatureSet getPhysicsFeatureSet();
+    // ── Per-game rules ──────────────────────────────────────────────
+    com.openggf.game.rules.GameRules getGameRules();
 }

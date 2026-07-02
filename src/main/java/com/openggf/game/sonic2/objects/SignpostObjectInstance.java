@@ -262,8 +262,9 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
 
     private boolean usesInlineWalkOffUpdate(AbstractPlayableSprite player) {
         return player != null
-                && player.getPhysicsFeatureSet() != null
-                && player.getPhysicsFeatureSet().collisionModel() == CollisionModel.DUAL_PATH;
+                && player.getGameRules() != null
+                && player.getGameRules().collision() != null
+                && player.getGameRules().collision().collisionModel() == CollisionModel.DUAL_PATH;
     }
 
     private void updateSparkleCountdown() {

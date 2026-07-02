@@ -28,8 +28,6 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
     private static final int LEFT_HANDLE_X_OFFSET = -0x32;
     private static final int RIGHT_HANDLE_X_OFFSET = 0x32;
-    private static final int LEFT_INITIAL_HANDLE_OFFSET = 0x34;
-    private static final int RIGHT_INITIAL_HANDLE_OFFSET = 0x36;
     private static final int HANDLE_Y_BIAS = -6;
     private static final int PLAYER_Y_OFFSET = 0x42;
     private static final int GRAB_X_BIAS = 0x10;
@@ -51,8 +49,8 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
             0, 8, 8, 8, 8, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0
     };
 
-    private final HandleState leftHandle = new HandleState(LEFT_HANDLE_X_OFFSET, LEFT_INITIAL_HANDLE_OFFSET);
-    private final HandleState rightHandle = new HandleState(RIGHT_HANDLE_X_OFFSET, RIGHT_INITIAL_HANDLE_OFFSET);
+    private final HandleState leftHandle = new HandleState(LEFT_HANDLE_X_OFFSET);
+    private final HandleState rightHandle = new HandleState(RIGHT_HANDLE_X_OFFSET);
     private int parentY;
     private int parentLeftHandleOffset;
     private int parentRightHandleOffset;
@@ -411,9 +409,8 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
         private boolean downPressedLastFrame;
         private AbstractPlayableSprite grabbedPlayer;
 
-        private HandleState(int xOffset, int offset) {
+        private HandleState(int xOffset) {
             this.xOffset = xOffset;
-            this.offset = offset;
         }
     }
 }

@@ -18,18 +18,30 @@ import java.util.List;
  * <p>ROM reference: {@code ChildObjDat_769B0 -> loc_766CA}. The child uses
  * {@code Set_IndexedVelocity} with base index $08 and then runs
  * {@code Obj_FlickerMove}.
+ *
+ * <p>{@code Set_IndexedVelocity} (asm 179163-179177) computes its
+ * {@code Obj_VelocityIndex} row as {@code d0(=8) + subtype(a0)*2}, and
+ * {@code CreateChild6_Simple} (asm 177119-177139, the routine that spawns
+ * these six fragments) seeds each child's raw ROM {@code subtype} byte as
+ * {@code 0,2,4,6,8,10} (not {@code 0..5}) via its {@code d2}
+ * init-then-{@code addq.w #2,d2} loop. So the *effective* table stride per
+ * spawn-order index is {@code 8 + (index*2)*2 = 8 + index*4} -- byte offsets
+ * 8,12,16,20,24,28 into {@code Obj_VelocityIndex} (ROM 0x0852F4), i.e. rows
+ * 2-7, not rows 4-9. Verified directly against ROM bytes (not just the
+ * disassembly transcription) via
+ * {@code RomOffsetFinder --game s3k search-rom "FF 00 FF 00 ..."}.
  */
 public final class MhzEndBossDefeatFragmentChild extends AbstractObjectInstance
         implements RewindRecreatable {
     private static final int[] MAPPING_FRAMES = {0x12, 0x13, 0x14, 0x15, 0x16, 0x17};
     private static final int[] PRIORITY_BUCKETS = {4, 4, 6, 6, 4, 4};
     private static final int[][] VELOCITIES = {
+            {-0x200, -0x200},
+            {0x200, -0x200},
             {-0x300, -0x200},
             {0x300, -0x200},
             {-0x200, -0x200},
             {0, -0x200},
-            {-0x400, -0x300},
-            {0x400, -0x300},
     };
     private static final int GRAVITY = 0x38;
     private static final int SUBPIXEL_SHIFT = 8;

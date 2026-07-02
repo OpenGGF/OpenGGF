@@ -62,7 +62,7 @@ Always use `trace-replay-bug-fixing` for actual trace investigation or fixes.
 - Comparison-only: trace data is read-only diagnostic input. Never hydrate or sync engine state from trace data in the per-frame test loop.
 - No zone, route, frame, or "known failing trace" carve-outs. Model ROM state: object id/routine, status/control bits, physics profile, event flag, frame-counter visibility, or data-driven condition.
 - Cite disassembly in code comments and summaries when behavior changes.
-- Cross-game parity: before changing shared physics, collision, sidekick, oscillation, or shared object code, check all three disassemblies. Universal corrections must keep all games green. Real per-game divergences must be gated by `PhysicsFeatureSet` or the narrowest owning abstraction, never `gameId`.
+- Cross-game parity: before changing shared physics, collision, sidekick, oscillation, or shared object code, check all three disassemblies. Universal corrections must keep all games green. Real per-game divergences must use the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`, never `gameId`.
 - Environmental flakes are not parity failures. Ignore `UnsatisfiedLinkError` from native extraction races and `TestBundledConfigResource` config contamination unless the targeted trace itself fails on a real `AssertionFailedError` with `First error: frame N -- <field>`.
 - Judge the targeted trace by its own Surefire class line and `target/trace-reports/<game>_<zone>_report.json`, not MSE's project-wide `total=NNNN`.
 - This repo may have concurrent agent sessions. Stage only files you changed. Never use `git add -A`.

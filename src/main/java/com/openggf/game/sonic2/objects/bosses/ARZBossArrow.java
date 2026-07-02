@@ -315,8 +315,11 @@ public class ARZBossArrow extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        return routineState == ARROW_SUB_STUCK;
+        // ROM Obj89_Arrow_Platform only calls PlatformObject while
+        // obj89_arrow_timer is zero. Once a rider starts the timer, later
+        // decay frames skip fresh platform contact entirely.
+        // docs/s2disasm/s2.asm:65658-65683
+        return routineState == ARROW_SUB_STUCK && arrowTimer == 0;
     }
 
     @Override
@@ -325,8 +328,16 @@ public class ARZBossArrow extends AbstractObjectInstance
     }
 
     @Override
+    public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
+        // Despite the generic hook name, this is the flat PlatformObject
+        // equivalent: timer-decay frames skip MvSonicOnPtfm, but the player
+        // remains attached until Obj89_Arrow_Sub6 explicitly drops riders.
+        // docs/s2disasm/s2.asm:65658-65702
+        return routineState == ARROW_SUB_STUCK && arrowTimer > 0;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (routineState != ARROW_SUB_STUCK) {
             return;
         }
@@ -334,7 +345,11 @@ public class ARZBossArrow extends AbstractObjectInstance
             return;
         }
         if (arrowTimer == 0) {
-            arrowTimer = 0x1F;
+            // The ROM writes #$1F and immediately falls through to
+            // Obj89_Arrow_Platform_Decay in the same object call. This
+            // callback runs after object update, so store the already
+            // decremented post-call value. docs/s2disasm/s2.asm:65658-65683
+            arrowTimer = 0x1E;
         }
     }
 

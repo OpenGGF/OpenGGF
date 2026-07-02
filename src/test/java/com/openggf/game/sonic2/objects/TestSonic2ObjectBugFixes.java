@@ -4,10 +4,11 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
+import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
@@ -55,7 +56,7 @@ class TestSonic2ObjectBugFixes {
         LauncherBallObjectInstance.clearActiveCaptures();
         ObjectSpawn spawn = new ObjectSpawn(0x1240, 0x02E0, Sonic2ObjectIds.LAUNCHER_BALL, 0x00, 0, false, 0);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) spawn.x(), (short) spawn.y());
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setGameRulesForTest(GameRules.SONIC_2);
         player.setLogicalInputState(false, false, true, false, false);
         player.endOfTick();
         assertEquals(AbstractPlayableSprite.INPUT_LEFT, player.getInputHistory(0));
@@ -84,7 +85,7 @@ class TestSonic2ObjectBugFixes {
     void oozInvisibleLauncherCaptureUsesObjectControlWithoutGlobalControlLockedLatch() throws Exception {
         ObjectSpawn spawn = new ObjectSpawn(0x1110, 0x0298, Sonic2ObjectIds.OOZ_LAUNCHER, 0x00, 0, false, 0);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) spawn.x(), (short) spawn.y());
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setGameRulesForTest(GameRules.SONIC_2);
         player.setLogicalInputState(false, false, true, false, false);
         player.endOfTick();
         assertEquals(AbstractPlayableSprite.INPUT_LEFT, player.getInputHistory(0));
@@ -123,7 +124,7 @@ class TestSonic2ObjectBugFixes {
                 Sonic2ObjectIds.LAUNCHER_BALL, 0x00, 0, false, 0);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic",
                 (short) launcherSpawn.x(), (short) (launcherSpawn.y() - 0x10));
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setGameRulesForTest(GameRules.SONIC_2);
         player.setAnimationId(Sonic2AnimationIds.ROLL.id());
         player.setGSpeed((short) 0x0800);
         player.setYSpeed((short) -0x0800);
@@ -247,6 +248,65 @@ class TestSonic2ObjectBugFixes {
         assertEquals(0, tails.getGSpeed());
         assertEquals(0x04CB, tails.getCentreX(),
                 "Exact right-edge contact has zero shove distance and should not move Tails");
+    }
+
+    @Test
+    void arzBossPillarPostPhysicsSidePushPreservesTailsVelocity() {
+        ARZBossPillar pillar = new ARZBossPillar(
+                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
+                null);
+        ObjectManager manager = buildSingleObjectManager(pillar);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCentreX((short) 0x2A73);
+        tails.setCentreY((short) 0x04C0);
+        tails.setCpuControlled(true);
+        tails.setRenderFlagOnScreen(true);
+        tails.setAir(false);
+        tails.setPushing(false);
+        tails.setXSpeed((short) -0x24);
+        tails.setGSpeed((short) -0x24);
+
+        assertTrue(pillar.preservesMovingSideContactVelocity(tails),
+                "The Round 50 Obj89 handoff is only preserved while Tails' integer x_pos is still "
+                        + "at the pillar edge.");
+        manager.processImmediateInlineSolidCheckpoint(pillar, null, List.of(tails));
+
+        assertEquals(0xFFDC, tails.getXSpeed() & 0xFFFF);
+        assertEquals(0xFFDC, tails.getGSpeed() & 0xFFFF,
+                "Obj89's pillar can run an engine-side post-physics checkpoint after Tails has "
+                        + "already applied the ROM-visible CPU/movement velocity. Preserve that "
+                        + "velocity while the integrated trace replay verifies the same side "
+                        + "contact still carries Status_Push "
+                        + "(docs/s2disasm/s2.asm:35424-35436,65330-65374).");
+    }
+
+    @Test
+    void arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff() {
+        ARZBossPillar pillar = new ARZBossPillar(
+                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
+                null);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCentreX((short) 0x2A72);
+        tails.setCentreY((short) 0x04C0);
+        tails.setCpuControlled(true);
+        tails.setRenderFlagOnScreen(true);
+        tails.setAir(false);
+        tails.setPushing(true);
+        tails.setXSpeed((short) -0x48);
+        tails.setGSpeed((short) -0x48);
+
+        assertFalse(pillar.preservesMovingSideContactVelocity(tails),
+                "Once Tails' integrated x_pos crosses inside Obj89 pillar's right edge, the object-local "
+                        + "handoff no longer suppresses ROM SolidObject_StopCharacter "
+                        + "(docs/s2disasm/s2.asm:35424-35436).");
     }
 
     @Test
@@ -1067,7 +1127,7 @@ class TestSonic2ObjectBugFixes {
                 setAirForTest(air);
             }
         };
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonic.setGameRulesForTest(GameRules.SONIC_2);
         sonic.setWidth(18);
         sonic.setHeight(28);
         sonic.setAir(true);
@@ -1317,7 +1377,7 @@ class TestSonic2ObjectBugFixes {
                 setAirForTest(air);
             }
         };
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonic.setGameRulesForTest(GameRules.SONIC_2);
         sonic.setWidth(18);
         sonic.setHeight(28);
         sonic.setAir(true);

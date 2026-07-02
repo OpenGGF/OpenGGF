@@ -8,7 +8,9 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.SidekickCpuRules;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.objects.RisingLavaObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
@@ -56,8 +58,8 @@ class TestSidekickCpuFollowParity {
         @Override
         protected void createSensorLines() {}
 
-        void setPhysicsFeatureSetForTest(PhysicsFeatureSet featureSet) {
-            setPhysicsFeatureSet(featureSet);
+        public void setGameRulesForTest(GameRules featureSet) {
+            super.setGameRulesForTest(featureSet);
         }
     }
 
@@ -80,12 +82,12 @@ class TestSidekickCpuFollowParity {
     @Test
     void s3kFreshSpawnInitFrameResetsKinematicsWithoutRunningNormalCpu() {
         TestableSprite sonic = new TestableSprite("sonic");
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        sonic.setGameRulesForTest(GameRules.SONIC_3K);
         sonic.setCentreX((short) 0x1200);
         sonic.setCentreY((short) 0x0320);
 
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0800);
         tails.setCentreY((short) 0x0200);
@@ -120,12 +122,12 @@ class TestSidekickCpuFollowParity {
     @Test
     void s3kDormantSentinelInitReinstallsObjectControl83WithoutRunningNormalCpu() {
         TestableSprite sonic = new TestableSprite("sonic");
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        sonic.setGameRulesForTest(GameRules.SONIC_3K);
         sonic.setCentreX((short) 0x1200);
         sonic.setCentreY((short) 0x0320);
 
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x7F00);
         tails.setCentreY((short) 0x0000);
@@ -323,6 +325,115 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void followSnapThresholdPrefersTypedSidekickCpuRules() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
+        setGameRulesForTest(tails, withSidekickCpuRules(
+                GameRules.SONIC_2,
+                new SidekickCpuRules(
+                        0x30,
+                        GameRules.SONIC_2.sidekickCpu().sidekickDespawnX(),
+                        0,
+                        false,
+                        false,
+                        true,
+                        true,
+                        GameRules.SONIC_2.sidekickCpu().sidekickFlyLandStatusBlockerMask(),
+                        false,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        false,
+                        false,
+                        false)));
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0140);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+        tails.setCentreX((short) 0x0118);
+        tails.setCentreY((short) 0);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(1);
+
+        assertFalse(controller.getInputRight(),
+                "Typed SidekickCpuRules should override the legacy S2 follow snap threshold");
+    }
+
+    @Test
+    void followSnapThresholdFallsBackToLegacyWhenTypedSidekickCpuGroupMissing() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
+        GameRules base = GameRules.SONIC_2;
+        setGameRulesForTest(tails, new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                base.collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                null,
+                base.powerUp(),
+                base.drowningBubble()));
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0140);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+        tails.setCentreX((short) 0x0118);
+        tails.setCentreY((short) 0);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(1);
+
+        assertTrue(controller.getInputRight(),
+                "A null typed SidekickCpuRules group should fall back to legacy-derived S2 rules");
+    }
+
+    @Test
+    void followSnapThresholdFallsBackToLegacyWhenGameRulesMissing() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
+        setGameRulesForTest(tails, null);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0140);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+        tails.setCentreX((short) 0x0118);
+        tails.setCentreY((short) 0);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(1);
+
+        assertTrue(controller.getInputRight(),
+                "Missing GameRules should fall back to legacy-derived S2 sidekick CPU rules");
+    }
+
+    @Test
     void followNudgeIsSuppressedWhileObjectControlBitZeroIsSet() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -338,7 +449,7 @@ class TestSidekickCpuFollowParity {
         tails.setX((short) 10);
         tails.setDirection(Direction.RIGHT);
         tails.setGSpeed((short) 0x0100);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         tails.setObjectControlled(true);
         tails.setObjectControlAllowsCpu(true);
         tails.setObjectControlSuppressesMovement(true);
@@ -358,7 +469,7 @@ class TestSidekickCpuFollowParity {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
 
         short[] xHistory = new short[64];
         short[] yHistory = new short[64];
@@ -388,13 +499,13 @@ class TestSidekickCpuFollowParity {
     @Test
     void s2NormalFollowUsesDirectCpuLeaderBeforeSettledThreshold() {
         TestableSprite rootSonic = new TestableSprite("sonic");
-        rootSonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        rootSonic.setGameRulesForTest(GameRules.SONIC_2);
         rootSonic.setCentreX((short) 100);
         rootSonic.setCentreY((short) 655);
 
         TestableSprite sonicLeader = new TestableSprite("sonic_p3");
         sonicLeader.setCpuControlled(true);
-        sonicLeader.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonicLeader.setGameRulesForTest(GameRules.SONIC_2);
         sonicLeader.setCentreX((short) 180);
         sonicLeader.setCentreY((short) 655);
         SidekickCpuController sonicController = new SidekickCpuController(sonicLeader, rootSonic);
@@ -403,7 +514,7 @@ class TestSidekickCpuFollowParity {
 
         TestableSprite tails = new TestableSprite("tails_p4");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setCentreX((short) 100);
         tails.setCentreY((short) 655);
         tails.setAir(false);
@@ -436,13 +547,13 @@ class TestSidekickCpuFollowParity {
     @Test
     void s2TailsFlyInUsesDirectCpuLeaderBeforeSettledThreshold() {
         TestableSprite rootSonic = new TestableSprite("sonic");
-        rootSonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        rootSonic.setGameRulesForTest(GameRules.SONIC_2);
         rootSonic.setCentreX((short) 100);
         rootSonic.setCentreY((short) 655);
 
         TestableSprite sonicLeader = new TestableSprite("sonic_p3");
         sonicLeader.setCpuControlled(true);
-        sonicLeader.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonicLeader.setGameRulesForTest(GameRules.SONIC_2);
         sonicLeader.setCentreX((short) 180);
         sonicLeader.setCentreY((short) 655);
         SidekickCpuController sonicController = new SidekickCpuController(sonicLeader, rootSonic);
@@ -464,7 +575,7 @@ class TestSidekickCpuFollowParity {
 
         TestableSprite tails = new TestableSprite("tails_p4");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setCentreX((short) 100);
         tails.setCentreY((short) 655);
         tails.setAir(true);
@@ -485,7 +596,7 @@ class TestSidekickCpuFollowParity {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         tails.setAir(false);
         tails.setDirection(Direction.LEFT);
         tails.setCentreX((short) 0x1B9A);
@@ -550,7 +661,7 @@ class TestSidekickCpuFollowParity {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
 
         short[] xHistory = new short[64];
         short[] yHistory = new short[64];
@@ -626,12 +737,12 @@ class TestSidekickCpuFollowParity {
         try {
             installStandaloneGameModule(new Sonic2GameModule());
             TestableSprite sonic = new TestableSprite("sonic");
-            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            sonic.setGameRulesForTest(GameRules.SONIC_2);
             sonic.setCentreX((short) 0x0AF6);
 
             TestableSprite tails = new TestableSprite("tails_p2");
             tails.setCpuControlled(true);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setGameRulesForTest(GameRules.SONIC_2);
             tails.setCentreX((short) 0x0ACB);
             tails.setGSpeed((short) 0);
             tails.setMoveLockTimer(0);
@@ -709,7 +820,7 @@ class TestSidekickCpuFollowParity {
     void releasedAizIntroMarkerSuppressesFirstNormalMovementPulse() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x138A);
         tails.setCentreY((short) 0x041F);
@@ -756,7 +867,7 @@ class TestSidekickCpuFollowParity {
     void releasedAizIntroMarkerConsumesSuppressionOnFlightToNormalTransition() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         sonic.setCentreX((short) 0x138A);
         sonic.setCentreY((short) 0x041F);
@@ -901,7 +1012,7 @@ class TestSidekickCpuFollowParity {
             sonic.setLatchedSolidObjectId(0x03);
 
             SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
             controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
             controller.update(0x097F);
@@ -924,7 +1035,7 @@ class TestSidekickCpuFollowParity {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(false);
         tails.setRolling(true);
         tails.setPushing(true);
@@ -993,7 +1104,7 @@ class TestSidekickCpuFollowParity {
             sonic.setLatchedSolidObjectId(0x03);
 
             SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
             controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
             controller.update(0x097F);
@@ -1033,7 +1144,7 @@ class TestSidekickCpuFollowParity {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(true);
         tails.setCentreX((short) 0x1800);
         tails.setCentreY((short) 0x0400);
@@ -1074,7 +1185,7 @@ class TestSidekickCpuFollowParity {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         tails.setAir(true);
         tails.setCentreX((short) 0x16E6);
         tails.setCentreY((short) 0x0A73);
@@ -1118,7 +1229,7 @@ class TestSidekickCpuFollowParity {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(true);
         tails.setPushing(true);
         tails.setCentreX((short) 0x1000);
@@ -1156,7 +1267,7 @@ class TestSidekickCpuFollowParity {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(false);
         tails.setRolling(true);
         tails.setPushing(true);
@@ -1219,7 +1330,7 @@ class TestSidekickCpuFollowParity {
             sonic.setLatchedSolidObjectId(0x04);
 
             SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
             controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
             tails.setPushing(true);
@@ -1263,7 +1374,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, historyPos);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         tails.setPushing(true);
@@ -1281,7 +1392,7 @@ class TestSidekickCpuFollowParity {
     @Test
     void s3kHurtRoutineRecordPosKeepsPreviousLogicalInputForFollowerHistory() {
         TestableSprite sonic = new TestableSprite("sonic");
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        sonic.setGameRulesForTest(GameRules.SONIC_3K);
 
         sonic.setLogicalInputState(false, false, false, false, true);
         sonic.setHurt(true);
@@ -1307,7 +1418,7 @@ class TestSidekickCpuFollowParity {
             TestableSprite sonic = new TestableSprite("sonic");
             TestableSprite tails = new TestableSprite("tails_p2");
             tails.setCpuControlled(true);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
             tails.setAir(false);
             tails.setOnObject(true);
             tails.setLatchedSolidObjectId(0x3C);
@@ -1366,7 +1477,7 @@ class TestSidekickCpuFollowParity {
         sonic.setAir(false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         tails.setPushing(true);
@@ -1404,7 +1515,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         tails.setPushing(true);
@@ -1443,7 +1554,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         tails.setPushing(true);
@@ -1483,7 +1594,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         tails.setPushing(true);
@@ -1530,7 +1641,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 15);
 
@@ -1569,7 +1680,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 12);
 
@@ -1611,7 +1722,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 13);
         controller.update(0x29F1);
@@ -1655,7 +1766,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 11);
 
@@ -1702,7 +1813,7 @@ class TestSidekickCpuFollowParity {
             sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
             SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
             controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
             setNormalPushingGraceFrames(controller, 3);
 
@@ -1751,7 +1862,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 16);
 
@@ -1800,7 +1911,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         controller.update(0x37D7);
@@ -1850,7 +1961,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         controller.update(0x1240);
@@ -1905,7 +2016,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 16);
 
@@ -1957,7 +2068,7 @@ class TestSidekickCpuFollowParity {
             sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
             SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
             controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
             setNormalPushingGraceFrames(controller, 16);
 
@@ -2016,7 +2127,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         controller.update(0x0AE4);
@@ -2063,7 +2174,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x07AD);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         controller.update(0x07C3);
@@ -2104,7 +2215,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         tails.setPushing(true);
@@ -2151,7 +2262,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x040E);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 15);
 
@@ -2197,7 +2308,7 @@ class TestSidekickCpuFollowParity {
             sonic.setGSpeed((short) 0x0600);
 
             SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
             controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
             controller.update(0x1524);
@@ -2239,7 +2350,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0600);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 15);
 
@@ -2279,7 +2390,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0600);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         tails.setPushing(true);
@@ -2319,7 +2430,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0325);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         tails.setPushing(true);
@@ -2365,7 +2476,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0600);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         tails.setPushing(true);
@@ -2406,7 +2517,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0600);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         tails.setPushing(true);
@@ -2445,7 +2556,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0600);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         controller.update(0x04C9);
@@ -2485,7 +2596,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0547);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 13);
 
@@ -2526,7 +2637,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0547);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 5);
 
@@ -2567,7 +2678,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x06A8);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 14);
 
@@ -2608,7 +2719,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0674);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 12);
 
@@ -2649,7 +2760,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0674);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 9);
 
@@ -2690,7 +2801,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0674);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 7);
 
@@ -2731,7 +2842,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0674);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 5);
 
@@ -2775,7 +2886,7 @@ class TestSidekickCpuFollowParity {
         sonic.captureOnObjectAtFrameStart();
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 14);
 
@@ -2815,7 +2926,7 @@ class TestSidekickCpuFollowParity {
         sonic.captureOnObjectAtFrameStart();
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 11);
 
@@ -2856,7 +2967,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x061A);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         controller.update(0x0909);
@@ -2895,7 +3006,7 @@ class TestSidekickCpuFollowParity {
         sonic.setGSpeed((short) 0x0602);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         controller.update(0x0923);
@@ -2941,7 +3052,7 @@ class TestSidekickCpuFollowParity {
             sonic.setGSpeed((short) 0x0600);
 
             SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
             controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
             controller.update(0x10B5);
@@ -2985,7 +3096,7 @@ class TestSidekickCpuFollowParity {
             sonic.setGSpeed((short) 0x07C0);
 
             SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
             controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
             tails.setPushing(true);
@@ -3026,7 +3137,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         tails.setPushing(true);
@@ -3067,7 +3178,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         tails.setPushing(true);
@@ -3091,7 +3202,7 @@ class TestSidekickCpuFollowParity {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         tails.setAir(true);
         tails.setRolling(true);
         tails.setPushing(true);
@@ -3146,7 +3257,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
         controller.update(0x0980);
@@ -3182,7 +3293,7 @@ class TestSidekickCpuFollowParity {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         tails.setAir(true);
         tails.setRolling(true);
         tails.setCentreX((short) 0x030F);
@@ -3219,10 +3330,10 @@ class TestSidekickCpuFollowParity {
     @Test
     void s2AirborneAutoJumpFlagPreservesDelayedLeaderPressByte() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonic.setGameRulesForTest(GameRules.SONIC_2);
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(true);
         tails.setRolling(true);
         tails.setCentreX((short) 0x1675);
@@ -3266,10 +3377,10 @@ class TestSidekickCpuFollowParity {
             installStandaloneGameModule(new Sonic2GameModule());
             installEmptyObjectManager();
             TestableSprite sonic = new TestableSprite("sonic");
-            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            sonic.setGameRulesForTest(GameRules.SONIC_2);
             TestableSprite tails = new TestableSprite("tails_p2");
             tails.setCpuControlled(true);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setGameRulesForTest(GameRules.SONIC_2);
             tails.setAir(false);
             tails.setPushing(false);
             tails.setOnObject(false);
@@ -3321,10 +3432,10 @@ class TestSidekickCpuFollowParity {
             installStandaloneGameModule(new Sonic2GameModule());
             installEmptyObjectManager();
             TestableSprite sonic = new TestableSprite("sonic");
-            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            sonic.setGameRulesForTest(GameRules.SONIC_2);
             TestableSprite tails = new TestableSprite("tails_p2");
             tails.setCpuControlled(true);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setGameRulesForTest(GameRules.SONIC_2);
             tails.setAir(false);
             tails.setPushing(false);
             tails.setOnObject(false);
@@ -3379,10 +3490,10 @@ class TestSidekickCpuFollowParity {
             installStandaloneGameModule(new Sonic2GameModule());
             installEmptyObjectManager();
             TestableSprite sonic = new TestableSprite("sonic");
-            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            sonic.setGameRulesForTest(GameRules.SONIC_2);
             TestableSprite tails = new TestableSprite("tails_p2");
             tails.setCpuControlled(true);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setGameRulesForTest(GameRules.SONIC_2);
             tails.setAir(false);
             tails.setPushing(false);
             tails.setOnObject(false);
@@ -3434,10 +3545,10 @@ class TestSidekickCpuFollowParity {
             installStandaloneGameModule(new Sonic2GameModule());
             installEmptyObjectManager();
             TestableSprite sonic = new TestableSprite("sonic");
-            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            sonic.setGameRulesForTest(GameRules.SONIC_2);
             TestableSprite tails = new TestableSprite("tails_p2");
             tails.setCpuControlled(true);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setGameRulesForTest(GameRules.SONIC_2);
             tails.setAir(false);
             tails.setPushing(false);
             tails.setOnObject(false);
@@ -3488,10 +3599,10 @@ class TestSidekickCpuFollowParity {
             installStandaloneGameModule(new Sonic2GameModule());
             installEmptyObjectManager();
             TestableSprite sonic = new TestableSprite("sonic");
-            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            sonic.setGameRulesForTest(GameRules.SONIC_2);
             TestableSprite tails = new TestableSprite("tails_p2");
             tails.setCpuControlled(true);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setGameRulesForTest(GameRules.SONIC_2);
             tails.setAir(false);
             tails.setPushing(false);
             tails.setOnObject(false);
@@ -3540,10 +3651,10 @@ class TestSidekickCpuFollowParity {
             installStandaloneGameModule(new Sonic2GameModule());
             installEmptyObjectManager();
             TestableSprite sonic = new TestableSprite("sonic");
-            sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            sonic.setGameRulesForTest(GameRules.SONIC_2);
             TestableSprite tails = new TestableSprite("tails_p2");
             tails.setCpuControlled(true);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+            tails.setGameRulesForTest(GameRules.SONIC_2);
             tails.setAir(false);
             tails.setPushing(false);
             tails.setOnObject(false);
@@ -3679,7 +3790,7 @@ class TestSidekickCpuFollowParity {
             sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
 
             SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
             controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
             setLevelFrameCounter(0x06BF);
@@ -3710,7 +3821,7 @@ class TestSidekickCpuFollowParity {
             TestableSprite sonic = new TestableSprite("sonic");
             TestableSprite tails = new TestableSprite("tails_p2");
             tails.setCpuControlled(true);
-            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
             tails.setPinballMode(true);
             tails.setGSpeed((short) 0x0A16);
 
@@ -3744,7 +3855,7 @@ class TestSidekickCpuFollowParity {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
 
         sonic.setCentreX((short) 0x0B78);
         sonic.setCentreY((short) 0x0325);
@@ -3866,6 +3977,26 @@ class TestSidekickCpuFollowParity {
         field.setAccessible(true);
         byte[] history = (byte[]) field.get(sprite);
         history[slot] = (byte) (value ? 1 : 0);
+    }
+
+    private static void setGameRulesForTest(TestableSprite sprite, GameRules rules) throws Exception {
+        Field field = AbstractPlayableSprite.class.getDeclaredField("gameRules");
+        field.setAccessible(true);
+        field.set(sprite, rules);
+    }
+
+    private static GameRules withSidekickCpuRules(GameRules base, SidekickCpuRules sidekickCpuRules) {
+        return new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                base.collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                sidekickCpuRules,
+                base.powerUp(),
+                base.drowningBubble());
     }
 
 }

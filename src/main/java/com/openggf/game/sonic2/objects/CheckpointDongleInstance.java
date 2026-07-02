@@ -50,8 +50,10 @@ public class CheckpointDongleInstance extends AbstractObjectInstance implements 
         this.centerY = parent.getCenterY() - 0x14; // Y offset from ROM
         this.lifetime = INITIAL_LIFETIME;
         this.angle = 0;
-        this.currentX = centerX;
-        this.currentY = centerY;
+        // Obj79_CheckActivation seeds objoff_30/32 but leaves child x_pos/y_pos
+        // at RAM default until Obj79_MoveDonglyThing runs.
+        this.currentX = 0;
+        this.currentY = 0;
     }
 
     private static ObjectSpawn createDummySpawn(CheckpointObjectInstance parent) {
@@ -138,5 +140,15 @@ public class CheckpointDongleInstance extends AbstractObjectInstance implements 
     @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(5);
+    }
+
+    @Override
+    public int getX() {
+        return currentX;
+    }
+
+    @Override
+    public int getY() {
+        return currentY;
     }
 }

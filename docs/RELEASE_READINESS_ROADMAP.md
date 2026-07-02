@@ -207,7 +207,7 @@ Work:
     when a native-prelude trace records snapshots that the engine cannot
     compare.
 - Completed: S1/S2 bottom-boundary centre-Y parity.
-  - `PhysicsFeatureSet.SONIC_1` and `SONIC_2` now use centre-Y for the
+  - `GameRules.SONIC_1` and `SONIC_2` now use centre-Y for the
     bottom-boundary death check, matching the ROM `obY` / `y_pos` coordinate.
   - Focused `TestPlayableSpriteMovement` coverage guards both games.
 - Classified: S2 Tornado ride-start bootstrap is an explicit trace comparison
@@ -291,7 +291,7 @@ Recommended order:
    when new recorder metadata or regenerated fixtures are available.
 10. Add focused bottom-boundary tests for S1/S2 centre-Y behavior before any
    future flag flip.
-11. Re-run affected S1/S2 traces before changing the feature flags.
+11. Re-run affected S1/S2 traces before changing related typed rules.
 12. Keep the S2 Tornado contract tests green before changing trace bootstrap
    setup.
 
@@ -791,7 +791,7 @@ Work:
     A/B pass; ROM evidence is clear, but existing S1/S2 unit tests deliberately
     preserve old trace-baseline behavior.
   - the exact pre-flip focused unit check is:
-    `mvn -q "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement,com.openggf.game.TestHybridPhysicsFeatureSet" test`
+    `mvn -q "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement,com.openggf.game.TestHybridGameRules" test`
   - the minimum trace A/B commands before a future flip are:
     `mvn -q -Ptrace-replay "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s1.TestS1Mz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay" test -DfailIfNoTests=false`
     then same-game sweeps:

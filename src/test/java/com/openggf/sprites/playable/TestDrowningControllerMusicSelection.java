@@ -16,7 +16,7 @@ import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.game.GameRng;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
@@ -29,6 +29,8 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
+import com.openggf.game.rules.DrowningBubbleRules;
+import com.openggf.game.rules.GameRules;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.stream.Stream;
@@ -143,7 +145,7 @@ class TestDrowningControllerMusicSelection {
         GameServices.level().resetState();
 
         Sonic sonic = new Sonic("test", (short) 0, (short) 0);
-        sonic.setPhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        sonic.setGameRulesForTest(GameRules.SONIC_2);
         DrowningController controller = new DrowningController(sonic);
         controller.reset();
 
@@ -155,9 +157,56 @@ class TestDrowningControllerMusicSelection {
     }
 
     @Test
+    void typedDrowningBubbleRulesOverrideLegacyInitialTimer() throws Exception {
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.currentAudioManager()).thenReturn(AudioManager.getInstance());
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_2);
+        when(player.getGameRules()).thenReturn(withDrowningBubbleRules(
+                GameRules.SONIC_2,
+                new DrowningBubbleRules(37, 8, true, -0x88)));
+
+        DrowningController controller = new DrowningController(player);
+
+        assertEquals(37, getPrivateInt(controller, "frameTimer"));
+    }
+
+    @Test
+    void typedDrowningBubbleRulesOverrideLegacyMouthBubbleTimerBias() throws Exception {
+        GameRng rng = new GameRng(GameRng.Flavour.S1_S2, 0x2468ACE0L);
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.currentAudioManager()).thenReturn(AudioManager.getInstance());
+        when(player.currentRng()).thenReturn(rng);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_2);
+        when(player.getGameRules()).thenReturn(withDrowningBubbleRules(
+                GameRules.SONIC_2,
+                new DrowningBubbleRules(0, 3, true, -0x88)));
+        DrowningController controller = new DrowningController(player);
+        setPrivateInt(controller, "bubbleFlags", 1);
+        setPrivateInt(controller, "bubblesRemainingInBurst", 1);
+
+        invokeSpawnRomMouthBubble(controller);
+
+        GameRng expected = new GameRng(GameRng.Flavour.S1_S2, 0x2468ACE0L);
+        assertEquals(expected.nextBits(0x0F) + 3, getPrivateInt(controller, "nextBubbleTimer"));
+    }
+
+    @Test
+    void nullDrowningBubbleGroupUsesGenericDefaultTimer() throws Exception {
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.currentAudioManager()).thenReturn(AudioManager.getInstance());
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_2);
+        when(player.getGameRules()).thenReturn(withDrowningBubbleRules(
+                GameRules.SONIC_2, null));
+
+        DrowningController controller = new DrowningController(player);
+
+        assertEquals(60, getPrivateInt(controller, "frameTimer"));
+    }
+
+    @Test
     void s3kGenericCountdownFallbackKeepsFullSecondReset() throws Exception {
         Sonic sonic = new Sonic("test", (short) 0, (short) 0);
-        sonic.setPhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonic.setGameRulesForTest(GameRules.SONIC_3K);
         DrowningController controller = new DrowningController(sonic);
         controller.reset();
 
@@ -207,6 +256,26 @@ class TestDrowningControllerMusicSelection {
         Field field = DrowningController.class.getDeclaredField(fieldName);
         field.setAccessible(true);
         return (String) field.get(controller);
+    }
+
+    private static void invokeSpawnRomMouthBubble(DrowningController controller) throws Exception {
+        Method method = DrowningController.class.getDeclaredMethod("spawnRomMouthBubble");
+        method.setAccessible(true);
+        method.invoke(controller);
+    }
+
+    private static GameRules withDrowningBubbleRules(GameRules base, DrowningBubbleRules drowningBubble) {
+        return new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                base.collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                base.sidekickCpu(),
+                base.powerUp(),
+                drowningBubble);
     }
 
     private static final class CapturingBackend implements AudioBackend {
