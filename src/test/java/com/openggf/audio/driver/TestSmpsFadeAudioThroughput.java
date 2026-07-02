@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * Measurement harness, not a regression test: quantifies fade-window render
  * throughput of the real SMPS synthesis stack (SmpsDriver -> SmpsSequencer ->
- * Ym2612Chip / PsgChipGPGX / BlipResampler) in production-shaped 1024-frame
+ * Ym2612Chip / PsgChip / BlipResampler) in production-shaped 1024-frame
  * buffer chunks with the production-default read mode.
  *
  * <p>Each iteration constructs a fresh driver with ROM-loaded EHZ music,

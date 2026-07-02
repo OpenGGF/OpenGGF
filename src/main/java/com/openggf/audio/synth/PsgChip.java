@@ -1,75 +1,249 @@
 package com.openggf.audio.synth;
 
+import java.util.Arrays;
+
 /**
- * Legacy PSG (SN76489) emulator using float-based timing.
+ * High-fidelity SN76489 PSG emulator using band-limited synthesis.
  *
- * @deprecated Use {@link PsgChipGPGX} instead, which provides higher-fidelity
- *             band-limited synthesis via {@link BlipDeltaBuffer}.
+ * <p>Emulates 3 square-wave tone channels and 1 noise channel with
+ * per-channel stereo panning and mute control. Uses {@link BlipDeltaBuffer}
+ * for band-limited sample generation, eliminating aliasing artifacts.
+ *
+ * <p>Based on the Genesis Plus GX PSG core.
  */
-@Deprecated
 public class PsgChip {
-    private static final double CLOCK = 3579545.0; // Master NTSC clock
+    public enum ChipType {
+        INTEGRATED,
+        DISCRETE
+    }
+
+    private static final double INPUT_CLOCK = 3579545.0; // NTSC PSG input clock (Hz)
+    private static final double INTERNAL_RATE = INPUT_CLOCK / 16.0;
     private static final double DEFAULT_SAMPLE_RATE = 44100.0;
-    // SN76489 pre-divides master by 16 (see libvgm sn76489.c dClock)
-    private static final double CLOCK_DIV = 16.0;
-    private double step = (CLOCK / CLOCK_DIV) / DEFAULT_SAMPLE_RATE;
 
-    // SN76489 Volume Values (from sn76489.c, Mega Drive behavior)
-    private static final double[] VOLUME_TABLE = {
-            4096, 3254, 2584, 2053, 1631, 1295, 1029, 817, 649, 516, 410, 325, 258, 205, 163, 0
-    };
+    // Clock ratio for integer timing precision (matches GPGX PSG_MCYCLES_RATIO = 15*16)
+    private static final int CLOCK_RATIO = 15 * 16;
+    private static final int CLOCK_FRAC_BITS = 32;
+    private static final long CLOCK_FRAC_UNIT = 1L << CLOCK_FRAC_BITS;
 
-    private static final int PSG_CUTOFF = 6;
+    private static final int PSG_MAX_VOLUME = 2800;
+    private static final int DEFAULT_PREAMP = 150; // GPGX uses ~1.5x PSG amplification for MD balance
 
-    private final int[] registers = new int[8];
-    // counters now track current progress (like ToneFreqVals in sn76489.c)
-    private final double[] counters = new double[4];
-    // toneFreqPos acts as the flip-flop state
-    private final boolean[] outputs = new boolean[4];
-    private final int[] tonePeriod = new int[3];
+    private static final int[] NOISE_SHIFT_WIDTH = {14, 15};
+    private static final int[] NOISE_BIT_MASK = {0x6, 0x9};
+    private static final int[] NOISE_FEEDBACK = {0, 1, 1, 0, 1, 0, 0, 1, 1, 0};
 
-    // Intermediate position for anti-aliasing (Bipolar: -1.0 to 1.0)
-    private final double[] intermediatePos = new double[3];
+    private static final int[] VOLUME_TABLE = new int[16];
 
-    // High-frequency cutoff flag - mute channels above Nyquist (MAME behavior)
-    private final boolean[] highFreqCutoff = new boolean[3];
+    static {
+        double[] multipliers = {
+                1.0,
+                0.794328234,
+                0.630957344,
+                0.501187233,
+                0.398107170,
+                0.316227766,
+                0.251188643,
+                0.199526231,
+                0.158489319,
+                0.125892541,
+                0.1,
+                0.079432823,
+                0.063095734,
+                0.050118723,
+                0.039810717,
+                0.0
+        };
+        for (int i = 0; i < multipliers.length; i++) {
+            VOLUME_TABLE[i] = (int) (PSG_MAX_VOLUME * multipliers[i]);
+        }
+    }
 
-    private double clock = 0;
-    private int latch = 0;
-    private int lfsr = 0x8000; // 16-bit noise register
-
+    private final int[] regs = new int[8];
+    private final int[] freqInc = new int[4];
+    private final int[] freqCounter = new int[4];  // Integer for drift-free timing
+    private final int[] polarity = new int[4];
+    private final int[][] chanOut = new int[4][2];
+    private final int[][] chanAmp = new int[4][2];
     private final boolean[] mutes = new boolean[4];
+    private final int[][] chanDelta = new int[4][2];  // Deferred deltas for volume changes
+
+    private int latch;
+    private int zeroFreqInc;
+    private int noiseShiftValue;
+    private int noiseShiftWidth;
+    private int noiseBitMask;
+
+    private double outputRate = DEFAULT_SAMPLE_RATE;
+    private final BlipDeltaBuffer blip = new BlipDeltaBuffer(INTERNAL_RATE * CLOCK_RATIO, DEFAULT_SAMPLE_RATE);
+    private int clocks = 0;  // Integer for drift-free timing
+    private long clockFrac = 0;
+    private long clocksPerSampleFixed = 0;
+    private boolean hqPsg = false;  // false = fast mode (rawer/brighter, GPGX default), true = HQ sinc filter
+    private boolean noiseShiftOnEveryToggle = true; // true=MAME-style, false=GPGX/libvgm positive-edge only
 
     public PsgChip() {
-        this(DEFAULT_SAMPLE_RATE);
+        this(DEFAULT_SAMPLE_RATE, ChipType.INTEGRATED);
     }
 
     public PsgChip(double sampleRate) {
+        this(sampleRate, ChipType.INTEGRATED);
+    }
+
+    public PsgChip(double sampleRate, ChipType type) {
+        setChipType(type);
         setSampleRate(sampleRate);
-        for (int i = 1; i < 8; i += 2) {
-            registers[i] = 0xF; // Silence
-        }
-        tonePeriod[0] = tonePeriod[1] = tonePeriod[2] = 1;
-        for (int ch = 0; ch < 3; ch++) {
-            outputs[ch] = true;
-            counters[ch] = 0;
-            intermediatePos[ch] = -2.0; // Sentinel value (valid range -1.0 to 1.0)
-        }
-        // Match libvgm: ToneFreqPos[3] = 1, independent of LFSR state
-        outputs[3] = true;
-        counters[3] = 0;
+        reset();
     }
 
     public void setSampleRate(double sampleRate) {
         if (sampleRate > 0.0) {
-            this.step = (CLOCK / CLOCK_DIV) / sampleRate;
+            this.outputRate = sampleRate;
+            blip.reset(INTERNAL_RATE * CLOCK_RATIO, outputRate);
+            double clocksPerSample = (INTERNAL_RATE * CLOCK_RATIO) / outputRate;
+            clocksPerSampleFixed = (long) (clocksPerSample * CLOCK_FRAC_UNIT + 0.5);
         }
     }
 
+    public void setChipType(ChipType type) {
+        int idx = (type == ChipType.DISCRETE) ? 0 : 1;
+        this.zeroFreqInc = (type == ChipType.DISCRETE) ? 0x400 : 0x1;
+        this.noiseShiftWidth = NOISE_SHIFT_WIDTH[idx];
+        this.noiseBitMask = NOISE_BIT_MASK[idx];
+    }
+
+    /**
+     * Set PSG quality mode.
+     * @param hq true for high-quality sinc filtering (smoother),
+     *           false for fast linear interpolation (rawer, brighter - matches GPGX default)
+     */
+    public void setHqMode(boolean hq) {
+        this.hqPsg = hq;
+    }
+
+    public boolean isHqMode() {
+        return hqPsg;
+    }
+
+    /**
+     * Set noise LFSR clocking mode.
+     * @param everyToggle true = shift on every polarity toggle (MAME-style, brighter),
+     *                    false = shift on positive edges only (GPGX/libvgm behavior).
+     */
+    public void setNoiseShiftOnEveryToggle(boolean everyToggle) {
+        this.noiseShiftOnEveryToggle = everyToggle;
+    }
+
+    public boolean isNoiseShiftOnEveryToggle() {
+        return noiseShiftOnEveryToggle;
+    }
+
+    public Snapshot captureSnapshot() {
+        return new Snapshot(
+                regs,
+                freqInc,
+                freqCounter,
+                polarity,
+                chanOut,
+                chanAmp,
+                mutes,
+                chanDelta,
+                latch,
+                zeroFreqInc,
+                noiseShiftValue,
+                noiseShiftWidth,
+                noiseBitMask,
+                outputRate,
+                clocks,
+                clockFrac,
+                clocksPerSampleFixed,
+                hqPsg,
+                noiseShiftOnEveryToggle,
+                blip.captureSnapshot());
+    }
+
+    public void restoreSnapshot(Snapshot snapshot) {
+        copyInto(snapshot.regs(), regs);
+        copyInto(snapshot.freqInc(), freqInc);
+        copyInto(snapshot.freqCounter(), freqCounter);
+        copyInto(snapshot.polarity(), polarity);
+        copyInto(snapshot.chanOut(), chanOut);
+        copyInto(snapshot.chanAmp(), chanAmp);
+        copyInto(snapshot.mutes(), mutes);
+        copyInto(snapshot.chanDelta(), chanDelta);
+        latch = snapshot.latch();
+        zeroFreqInc = snapshot.zeroFreqInc();
+        noiseShiftValue = snapshot.noiseShiftValue();
+        noiseShiftWidth = snapshot.noiseShiftWidth();
+        noiseBitMask = snapshot.noiseBitMask();
+        outputRate = snapshot.outputRate();
+        clocks = snapshot.clocks();
+        clockFrac = snapshot.clockFrac();
+        clocksPerSampleFixed = snapshot.clocksPerSampleFixed();
+        hqPsg = snapshot.hqPsg();
+        noiseShiftOnEveryToggle = snapshot.noiseShiftOnEveryToggle();
+        blip.restoreSnapshot(snapshot.blip());
+    }
+
     public void setMute(int ch, boolean mute) {
-        if (ch >= 0 && ch < 4) {
-            mutes[ch] = mute;
+        if (ch < 0 || ch >= 4) {
+            return;
         }
+        if (mutes[ch] == mute) {
+            return;
+        }
+        int deltaL = 0;
+        int deltaR = 0;
+        if (ch < 3) {
+            if (polarity[ch] > 0) {
+                int sign = mute ? -1 : 1;
+                deltaL = sign * chanOut[ch][0];
+                deltaR = sign * chanOut[ch][1];
+            }
+        } else {
+            if ((noiseShiftValue & 1) != 0) {
+                int sign = mute ? -1 : 1;
+                deltaL = sign * chanOut[3][0];
+                deltaR = sign * chanOut[3][1];
+            }
+        }
+        // Defer mute delta
+        if (deltaL != 0 || deltaR != 0) {
+            chanDelta[ch][0] += deltaL;
+            chanDelta[ch][1] += deltaR;
+        }
+        mutes[ch] = mute;
+    }
+
+    public void configure(int preamp, int panning) {
+        for (int i = 0; i < 4; i++) {
+            chanAmp[i][0] = preamp * ((panning >> (i + 4)) & 1);
+            chanAmp[i][1] = preamp * ((panning >> (i + 0)) & 1);
+        }
+        for (int i = 0; i < 3; i++) {
+            updateToneVolume(i);
+        }
+        updateNoiseVolume();
+    }
+
+    public void reset() {
+        for (int i = 0; i < 4; i++) {
+            regs[i * 2] = 0;
+            regs[i * 2 + 1] = 0;
+            freqInc[i] = ((i < 3) ? zeroFreqInc : 16) * CLOCK_RATIO;
+            freqCounter[i] = 0;
+            polarity[i] = -1;
+            chanOut[i][0] = 0;
+            chanOut[i][1] = 0;
+            chanDelta[i][0] = 0;
+            chanDelta[i][1] = 0;
+        }
+        latch = 3;
+        noiseShiftValue = 1 << noiseShiftWidth;
+        configure(DEFAULT_PREAMP, 0xFF);
+        blip.reset(INTERNAL_RATE * CLOCK_RATIO, outputRate);
+        clocks = 0;
+        clockFrac = 0;
     }
 
     /**
@@ -77,168 +251,292 @@ public class PsgChip {
      * Writes 0x9F, 0xBF, 0xDF, 0xFF to set all volumes to max attenuation.
      */
     public void silenceAll() {
-        write(0x9F); // Channel 0 volume = 0xF (silence)
-        write(0xBF); // Channel 1 volume = 0xF (silence)
-        write(0xDF); // Channel 2 volume = 0xF (silence)
-        write(0xFF); // Channel 3 (noise) volume = 0xF (silence)
+        write(0x9F);
+        write(0xBF);
+        write(0xDF);
+        write(0xFF);
     }
 
-    public void write(int val) {
-        if ((val & 0x80) != 0) {
-            int channel = (val >> 5) & 0x03;
-            int type = (val >> 4) & 0x01;
-            int data = val & 0x0F;
-            latch = (channel << 1) | type;
-            if (type == 1) { // Volume
-                registers[latch] = data & 0x0F;
-            } else { // Tone/Noise
-                registers[latch] = (registers[latch] & 0x3F0) | data;
-                if (channel < 3) {
-                    tonePeriod[channel] = Math.max(1, registers[latch] & 0x3FF);
-                } else {
-                    registers[latch] = data & 0x07;
-                    lfsr = 0x8000;
-                }
-            }
+    /**
+     * Synchronize clock to PSG cycle boundary (matches GPGX psg.clocks sync).
+     * This ensures timestamps are aligned to PSG_MCYCLES_RATIO boundaries,
+     * eliminating fractional clock drift.
+     */
+    private int syncToPsgBoundary(int currentClocks) {
+        return ((currentClocks + CLOCK_RATIO - 1) / CLOCK_RATIO) * CLOCK_RATIO;
+    }
+
+    /**
+     * Write with cycle synchronization before processing.
+     * Matches GPGX behavior of syncing to PSG_MCYCLES_RATIO boundary at every write.
+     */
+    public void write(int value) {
+        // Sync to PSG cycle boundary before processing (GPGX behavior)
+        clocks = syncToPsgBoundary(clocks);
+        int index;
+        if ((value & 0x80) != 0) {
+            latch = index = (value >> 4) & 0x07;
         } else {
-            if ((latch & 1) == 0 && latch < 6) { // Tone Data
-                int data = val & 0x3F;
-                registers[latch] = (registers[latch] & 0x0F) | (data << 4);
-                int channel = latch >> 1;
-                tonePeriod[channel] = Math.max(1, registers[latch] & 0x3FF);
-            } else { // Volume/Noise Data
-                int data = val & 0x0F;
-                if ((latch & 1) == 1) {
-                    registers[latch] = data;
-                } else if (latch == 6) {
-                    registers[latch] = data & 0x07;
-                    lfsr = 0x8000;
+            index = latch;
+        }
+
+        switch (index) {
+            case 0:
+            case 2:
+            case 4: {
+                int data;
+                if ((value & 0x80) != 0) {
+                    data = (regs[index] & 0x3F0) | (value & 0x0F);
+                } else {
+                    data = (regs[index] & 0x00F) | ((value & 0x3F) << 4);
                 }
+                regs[index] = data;
+                freqInc[index >> 1] = ((data != 0) ? data : zeroFreqInc) * CLOCK_RATIO;
+                if (index == 4 && (regs[6] & 0x03) == 0x03) {
+                    freqInc[3] = freqInc[2];
+                    freqCounter[3] = freqCounter[2];
+                }
+                break;
+            }
+            case 6: {
+                int noise = value & 0x07;
+                regs[6] = noise;
+                int noiseFreq = noise & 0x03;
+                if (noiseFreq == 0x03) {
+                    freqInc[3] = freqInc[2];
+                    freqCounter[3] = freqCounter[2];
+                } else {
+                    freqInc[3] = (0x10 << noiseFreq) * CLOCK_RATIO;
+                }
+                // Defer noise reset delta
+                if ((noiseShiftValue & 1) != 0 && !mutes[3]) {
+                    chanDelta[3][0] -= chanOut[3][0];
+                    chanDelta[3][1] -= chanOut[3][1];
+                }
+                noiseShiftValue = 1 << noiseShiftWidth;
+                break;
+            }
+            case 7: {
+                regs[7] = value & 0x0F;
+                updateNoiseVolume();
+                break;
+            }
+            default: {
+                int channel = index >> 1;
+                regs[index] = value & 0x0F;
+                updateToneVolume(channel);
+                break;
             }
         }
     }
 
     public void renderStereo(int[] left, int[] right) {
-        int len = Math.min(left.length, right.length);
+        renderStereo(left, right, Math.min(left.length, right.length));
+    }
 
-        for (int j = 0; j < len; j++) {
-            // Tone Channels (0-2)
-            for (int i = 0; i <= 2; i++) {
-                if (!mutes[i] && !highFreqCutoff[i]) {
-                    // MAME: High-frequency tones (period <= FNumLimit) are muted via vol[i] = 0
-                    // We skip output entirely when highFreqCutoff is true
-                    double sample;
-                    if (intermediatePos[i] != -2.0) {
-                        sample = intermediatePos[i];
-                    } else {
-                        // Flat: Bipolar +/- 1.0
-                        sample = outputs[i] ? 1.0 : -1.0;
-                    }
+    public void renderStereo(int[] left, int[] right, int len) {
+        len = Math.min(len, Math.min(left.length, right.length));
+        if (len <= 0) {
+            return;
+        }
+        blip.ensureCapacity(len);
+        long total = clockFrac + clocksPerSampleFixed * len;
+        int target = (int) (total >> CLOCK_FRAC_BITS);
+        clockFrac = total & (CLOCK_FRAC_UNIT - 1);
+        psgUpdate(target);
+        endFrame(target);
+        blip.readSamples(left, right, len);
+    }
 
-                    int vol = registers[i * 2 + 1] & 0x0F;
-                    double amp = VOLUME_TABLE[vol];
-                    double voice = sample * amp;
-
-                    left[j] += voice;
-                    right[j] += voice;
-                }
-            }
-
-            // Noise Channel (3)
-            if (!mutes[3]) {
-                // Noise Logic (Bipolar)
-                // Output is determined by the LFSR bit 0.
-                // Bipolar: (lfsr & 1) ? 1.0 : -1.0
-                double noiseSample = (lfsr & 1) != 0 ? 1.0 : -1.0;
-
-                int noiseVol = registers[7] & 0x0F;
-                double amp = VOLUME_TABLE[noiseVol];
-
-                // Note: Maxim's sn76489.c halves white noise amplitude with a comment
-                // "due to the way the white noise works here, it seems twice as loud".
-                // However, MAME's sn76496.c (used by SMPSPlay) does NOT halve it.
-                // We match MAME/SMPSPlay behavior for consistency.
-
-                double noiseVoice = noiseSample * amp;
-                left[j] += noiseVoice;
-                right[j] += noiseVoice;
-            }
-
-            // Update Clock & Counters
-            clock += step;
-            double numClocksForSample = Math.floor(clock);
-            clock -= numClocksForSample;
-
-            // Decrement Tone Counters
-            for (int i = 0; i <= 2; i++) {
-                counters[i] -= numClocksForSample;
-            }
-
-            // Noise Counter
-            int noiseReg = registers[6];
-
-            // Sync Logic: Must copy counters[2] *before* Tone 2 reloads it in the loop below.
-            if ((noiseReg & 0x3) == 3) {
-                counters[3] = counters[2];
-            } else {
-                counters[3] -= numClocksForSample;
-            }
-
-            // Process Tone Transitions
-            for (int i = 0; i <= 2; i++) {
-                if (counters[i] <= 0) {
-                    int period = Math.max(1, tonePeriod[i]);
-                    if (period >= PSG_CUTOFF) {
-                        double toneFreqPosVal = outputs[i] ? 1.0 : -1.0;
-                        double intermediate = (numClocksForSample - clock + 2 * counters[i]) * toneFreqPosVal / (numClocksForSample + clock);
-
-                        // Bipolar intermediate: directly use the calculated value (-1..1)
-                        intermediatePos[i] = intermediate;
-
-                        outputs[i] = !outputs[i];
-                        highFreqCutoff[i] = false;
-                    } else {
-                        // High-frequency cutoff: mute channel (MAME behavior)
-                        // MAME sets vol[i] = 0 for periods <= FNumLimit
-                        outputs[i] = true;
-                        intermediatePos[i] = -2.0;
-                        highFreqCutoff[i] = true;
-                    }
-
-                    counters[i] += period * (Math.floor(numClocksForSample / period) + 1);
+    private void psgUpdate(int targetClocks) {
+        // Apply pending deferred deltas at current clock position
+        for (int i = 0; i < 4; i++) {
+            if ((chanDelta[i][0] | chanDelta[i][1]) != 0) {
+                if (hqPsg) {
+                    blip.addDelta(clocks, chanDelta[i][0], chanDelta[i][1]);
                 } else {
-                    intermediatePos[i] = -2.0;
+                    blip.addDeltaFast(clocks, chanDelta[i][0], chanDelta[i][1]);
                 }
-            }
-
-            // Process Noise Transitions
-            // MAME sn76496.c shifts LFSR on EVERY counter underflow (no flip-flop gating)
-            // Maxim sn76489.c only shifts on positive edge of flip-flop (half rate)
-            // We use MAME behavior for accurate noise spectrum
-            if (counters[3] <= 0) {
-                // Shift LFSR on every underflow (MAME behavior)
-                int bit0 = lfsr & 1;
-                int feedback;
-                if ((noiseReg & 0x04) != 0) { // White Noise
-                    int bit3 = (lfsr >> 3) & 1;
-                    feedback = bit0 ^ bit3;
-                } else { // Periodic
-                    feedback = bit0;
-                }
-                lfsr = (lfsr >> 1) | (feedback << 15);
-
-                // Only reload counter if NOT in sync mode (Tone 2 handles the effective rate otherwise)
-                if ((noiseReg & 0x3) != 3) {
-                    double noiseRate;
-                    switch (noiseReg & 0x3) {
-                        case 0: noiseRate = 0x10; break;
-                        case 1: noiseRate = 0x20; break;
-                        case 2: noiseRate = 0x40; break;
-                        default: noiseRate = 0x10; break;
-                    }
-                    counters[3] += noiseRate * (Math.floor(numClocksForSample / noiseRate) + 1);
-                }
+                chanDelta[i][0] = 0;
+                chanDelta[i][1] = 0;
             }
         }
+
+        // Run tone/noise generation with integer timestamps
+        for (int i = 0; i < 4; i++) {
+            int timestamp = freqCounter[i];
+            int pol = polarity[i];
+
+            if (i < 3) {
+                while (timestamp < targetClocks) {
+                    pol = -pol;
+                    if (!mutes[i]) {
+                        if (hqPsg) {
+                            blip.addDelta(timestamp, pol * chanOut[i][0], pol * chanOut[i][1]);
+                        } else {
+                            blip.addDeltaFast(timestamp, pol * chanOut[i][0], pol * chanOut[i][1]);
+                        }
+                    }
+                    timestamp += freqInc[i];
+                }
+            } else {
+                int shiftValue = noiseShiftValue;
+                // Configurable noise stepping mode: every-toggle (MAME-style)
+                // or positive-edge only (GPGX/libvgm style).
+                while (timestamp < targetClocks) {
+                    pol = -pol;
+                    if (noiseShiftOnEveryToggle || pol > 0) {
+                        int shiftOutput = shiftValue & 0x01;
+                        if ((regs[6] & 0x04) != 0) {
+                            int feedback = NOISE_FEEDBACK[shiftValue & noiseBitMask];
+                            shiftValue = (shiftValue >> 1) | (feedback << noiseShiftWidth);
+                        } else {
+                            shiftValue = (shiftValue >> 1) | (shiftOutput << noiseShiftWidth);
+                        }
+                        int delta = (shiftValue & 0x01) - shiftOutput;
+                        if (delta != 0 && !mutes[3]) {
+                            if (hqPsg) {
+                                blip.addDelta(timestamp, delta * chanOut[3][0], delta * chanOut[3][1]);
+                            } else {
+                                blip.addDeltaFast(timestamp, delta * chanOut[3][0], delta * chanOut[3][1]);
+                            }
+                        }
+                    }
+                    timestamp += freqInc[3];
+                }
+                noiseShiftValue = shiftValue;
+            }
+
+            freqCounter[i] = timestamp;
+            polarity[i] = pol;
+        }
+    }
+
+    private void endFrame(int clocksToAdvance) {
+        int delta = clocksToAdvance - clocks;
+        if (delta > 0) {
+            int aligned = (delta + CLOCK_RATIO - 1) / CLOCK_RATIO;
+            clocks += aligned * CLOCK_RATIO;
+        }
+        clocks -= clocksToAdvance;
+        for (int i = 0; i < 4; i++) {
+            freqCounter[i] -= clocksToAdvance;
+        }
+        blip.endFrame(clocksToAdvance);
+    }
+
+    private void updateToneVolume(int channel) {
+        int vol = regs[channel * 2 + 1] & 0x0F;
+        int base = VOLUME_TABLE[vol];
+        int newL = (base * chanAmp[channel][0]) / 100;
+        int newR = (base * chanAmp[channel][1]) / 100;
+        // Defer volume delta to be applied at next psgUpdate
+        if (polarity[channel] > 0 && !mutes[channel]) {
+            chanDelta[channel][0] += newL - chanOut[channel][0];
+            chanDelta[channel][1] += newR - chanOut[channel][1];
+        }
+        chanOut[channel][0] = newL;
+        chanOut[channel][1] = newR;
+    }
+
+    private void updateNoiseVolume() {
+        int vol = regs[7] & 0x0F;
+        int base = VOLUME_TABLE[vol];
+        int newL = (base * chanAmp[3][0]) / 100;
+        int newR = (base * chanAmp[3][1]) / 100;
+        // Defer volume delta to be applied at next psgUpdate
+        if ((noiseShiftValue & 1) != 0 && !mutes[3]) {
+            chanDelta[3][0] += newL - chanOut[3][0];
+            chanDelta[3][1] += newR - chanOut[3][1];
+        }
+        chanOut[3][0] = newL;
+        chanOut[3][1] = newR;
+    }
+
+    private static void copyInto(int[] source, int[] target) {
+        System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+    }
+
+    private static void copyInto(int[][] source, int[][] target) {
+        for (int i = 0; i < Math.min(source.length, target.length); i++) {
+            copyInto(source[i], target[i]);
+        }
+    }
+
+    private static void copyInto(boolean[] source, boolean[] target) {
+        System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+    }
+
+    public record Snapshot(
+            int[] regs,
+            int[] freqInc,
+            int[] freqCounter,
+            int[] polarity,
+            int[][] chanOut,
+            int[][] chanAmp,
+            boolean[] mutes,
+            int[][] chanDelta,
+            int latch,
+            int zeroFreqInc,
+            int noiseShiftValue,
+            int noiseShiftWidth,
+            int noiseBitMask,
+            double outputRate,
+            int clocks,
+            long clockFrac,
+            long clocksPerSampleFixed,
+            boolean hqPsg,
+            boolean noiseShiftOnEveryToggle,
+            BlipDeltaBuffer.Snapshot blip) {
+        public Snapshot {
+            regs = copy(regs);
+            freqInc = copy(freqInc);
+            freqCounter = copy(freqCounter);
+            polarity = copy(polarity);
+            chanOut = copy(chanOut);
+            chanAmp = copy(chanAmp);
+            mutes = copy(mutes);
+            chanDelta = copy(chanDelta);
+        }
+
+        @Override
+        public int[] regs() { return copy(regs); }
+
+        @Override
+        public int[] freqInc() { return copy(freqInc); }
+
+        @Override
+        public int[] freqCounter() { return copy(freqCounter); }
+
+        @Override
+        public int[] polarity() { return copy(polarity); }
+
+        @Override
+        public int[][] chanOut() { return copy(chanOut); }
+
+        @Override
+        public int[][] chanAmp() { return copy(chanAmp); }
+
+        @Override
+        public boolean[] mutes() { return copy(mutes); }
+
+        @Override
+        public int[][] chanDelta() { return copy(chanDelta); }
+    }
+
+    private static int[] copy(int[] values) {
+        return Arrays.copyOf(values, values.length);
+    }
+
+    private static int[][] copy(int[][] values) {
+        int[][] copy = new int[values.length][];
+        for (int i = 0; i < values.length; i++) {
+            copy[i] = Arrays.copyOf(values[i], values[i].length);
+        }
+        return copy;
+    }
+
+    private static boolean[] copy(boolean[] values) {
+        return Arrays.copyOf(values, values.length);
     }
 }

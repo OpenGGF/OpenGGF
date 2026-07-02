@@ -8,8 +8,8 @@ class TestPsgChipSnapshot {
 
     @Test
     void restoreSnapshotProducesBitExactFutureSamples() {
-        PsgChipGPGX uninterrupted = configuredChip();
-        PsgChipGPGX restored = configuredChip();
+        PsgChip uninterrupted = configuredChip();
+        PsgChip restored = configuredChip();
 
         prime(uninterrupted);
         prime(restored);
@@ -19,7 +19,7 @@ class TestPsgChipSnapshot {
         uninterrupted.renderStereo(ignoredLeft, ignoredRight, ignoredLeft.length);
         restored.renderStereo(new int[37], new int[37], 37);
 
-        PsgChipGPGX.Snapshot snapshot = uninterrupted.captureSnapshot();
+        PsgChip.Snapshot snapshot = uninterrupted.captureSnapshot();
         uninterrupted.write(0xE7);
         uninterrupted.write(0xF2);
         int[] expectedLeft = new int[96];
@@ -39,14 +39,14 @@ class TestPsgChipSnapshot {
         assertArrayEquals(expectedRight, actualRight);
     }
 
-    private static PsgChipGPGX configuredChip() {
-        PsgChipGPGX chip = new PsgChipGPGX(48000.0, PsgChipGPGX.ChipType.INTEGRATED);
+    private static PsgChip configuredChip() {
+        PsgChip chip = new PsgChip(48000.0, PsgChip.ChipType.INTEGRATED);
         chip.setHqMode(true);
         chip.setNoiseShiftOnEveryToggle(false);
         return chip;
     }
 
-    private static void prime(PsgChipGPGX chip) {
+    private static void prime(PsgChip chip) {
         chip.write(0x80 | 0x04);
         chip.write(0x12);
         chip.write(0x90 | 0x02);

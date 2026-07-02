@@ -51,10 +51,11 @@ Git hooks in `.githooks/` and CI enforce the branch policy below. A Maven build 
 *   **Important packages** under `src/main/java/com/openggf` (package names are mostly self-describing; non-obvious facts only):
     *   `game.zone` / `palette` / `animation` / `mutation` / `render` - runtime-owned shared framework layers
     *   `game.profiles.*` – canonical cross-game object behavior profiles. New solid, touch-response, and object-lifecycle vocabulary should live here and be adapted by `level.objects` execution code instead of creating game-local profile types.
-    *   `game.dataselect` – shared data select framework. The `DataSelectProvider` interface itself lives in `com.openggf.game`.
+    *   `game.dataselect` – shared data select framework. The `DataSelectProvider` interface itself lives in `com.openggf.game`. All three games use the S3K presentation: S1/S2 route through `CrossGameDataSelectPresentations.donated(...)` (there is no simplified fallback presentation).
     *   `game.rewind` – gameplay-scoped rewind framework: keyframes, deterministic seek/replay, generic field capture, rewind field annotations, identity ids, policy registry, compact schema capture.
     *   `level.objects` – unified `ObjectManager` (placement, collision, touch response), `ObjectServices` interface, shared base classes (`AbstractBadnikInstance`, `AbstractSpikeObjectInstance`, etc.), utility helpers (`SubpixelMotion`, `PatrolMovementHelper`, `PlatformBobHelper`, `DestructionEffects`, ...).
     *   `level.scroll.compose` – shared deform/parallax composition helpers built around `ScrollEffectComposer`.
+    *   `audio.synth` – chip emulation; `PsgChip` is the sole PSG core (Genesis Plus GX-derived, formerly `PsgChipGPGX`).
     *   `physics` – sensors, terrain collision, unified `CollisionSystem`.
     *   `configuration` – `SonicConfiguration` / `SonicConfigurationService`. Dev-only: `TEST_MODE_ENABLED` (replaces master-title game-select with a trace picker, needs `TRACE_CATALOG_DIR`), `TRACE_CATALOG_DIR` (default `src/test/resources/traces`).
     *   `LevelFrameStep` lives at the `com.openggf` package root, not under `level`.

@@ -5,7 +5,7 @@ import com.openggf.audio.smps.DacData;
 import java.util.Arrays;
 
 public class VirtualSynthesizer implements Synthesizer {
-    private final PsgChipGPGX psg;
+    private final PsgChip psg;
     private final Ym2612Chip ym;
     private double outputSampleRate = Ym2612Chip.getDefaultOutputRate();
 
@@ -22,7 +22,7 @@ public class VirtualSynthesizer implements Synthesizer {
 
     public VirtualSynthesizer(double outputSampleRate) {
         // Use the GPGX PSG core for better timing/pitch parity with Genesis hardware.
-        this.psg = new PsgChipGPGX(outputSampleRate, PsgChipGPGX.ChipType.INTEGRATED);
+        this.psg = new PsgChip(outputSampleRate, PsgChip.ChipType.INTEGRATED);
         this.ym = new Ym2612Chip();
         setOutputSampleRate(outputSampleRate);
         // Match typical driver init: silence chips on startup to avoid power-on noise.
@@ -164,6 +164,6 @@ public class VirtualSynthesizer implements Synthesizer {
     public record Snapshot(
             double outputSampleRate,
             Ym2612Chip.Snapshot ym,
-            PsgChipGPGX.Snapshot psg) {
+            PsgChip.Snapshot psg) {
     }
 }

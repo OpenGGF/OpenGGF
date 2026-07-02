@@ -972,7 +972,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     /**
      * Restores a driver snapshot into the previous same-role driver instance
      * when possible, avoiding a full SmpsDriver/VirtualSynthesizer/Ym2612Chip/
-     * PsgChipGPGX/BlipResampler rebuild per restore (hot during held rewind).
+     * PsgChip/BlipResampler rebuild per restore (hot during held rewind).
      *
      * <p>Reuse boundary: {@code SmpsDriver.restoreSnapshot} clears and rebuilds
      * every sequencer, lock, latch, and continuous-SFX field, and — when the

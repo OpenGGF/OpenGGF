@@ -113,20 +113,6 @@ public class PatternRenderCommand implements GLCommandable {
         // Private constructor for pooling
     }
 
-    /**
-     * @deprecated Use {@link #obtain(PatternAtlas.Entry, int, PatternDesc, int, int)} instead for pooled allocation.
-     */
-    @Deprecated
-    public PatternRenderCommand(PatternAtlas.Entry entry, int paletteTextureId, PatternDesc desc, int x, int y) {
-        this(entry, paletteTextureId, desc, x, y, GameServices.graphics());
-    }
-
-    @Deprecated
-    public PatternRenderCommand(PatternAtlas.Entry entry, int paletteTextureId, PatternDesc desc, int x, int y,
-            GraphicsManager graphicsManager) {
-        init(entry, paletteTextureId, desc, x, y, 8f, 8f, graphicsManager);
-    }
-
     private void init(PatternAtlas.Entry entry, int paletteTextureId, PatternDesc desc, float x, float y,
             float width, float height,
             GraphicsManager graphicsManager) {
