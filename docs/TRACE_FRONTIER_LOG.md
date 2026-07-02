@@ -6,10 +6,10 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 56 ARZ2 work on top of the develop
+Current branch-local S2 state after round 57 ARZ2 work on top of the develop
 GameRules refactor baseline:
-ARZ2 is f5928 / 6 under `frontierOnly` (`tails_y_speed` expected `0x0000`,
-actual `0x02C0`),
+ARZ2 is f5929 / 2 under `frontierOnly` (`tails_y` expected `0x0450`, actual
+`0x044F`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
 expected `-020C`, actual `0x020C`), and OOZ2 is green after the round 54 Obj3E
@@ -19,6 +19,55 @@ The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 advanced but is not banked under the green-bank
 rule.
+
+## 2026-07-02 - S2 round 57 ARZ2 Obj89 arrow PlatformObject landing dimensions
+
+Round 57 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round57-next` /
+`bugfix/ai-s2-arz2-round57-next`, based from conductor commit `faca3451e`.
+The focused baseline reproduced ARZ2 f5928 / 6 under `frontierOnly`
+(`tails_y_speed` expected `0x0000`, actual `0x02C0`).
+
+Investigation stayed on Obj89's arrow platform near the ARZ2 boss. At the f5928
+ROM row, Tails is hurt-state landing on Obj89 slot `$14` with `y_vel=0`,
+`Status_OnObj` set, and `standOnObj=$14`. The engine had the same arrow slot
+near `@2A77,0461` but missed the top-solid landing by one pixel, leaving Tails
+airborne with `y_vel=$02C0`.
+
+The ROM path is `Obj89_Arrow_Platform` calling the shared `PlatformObject` path
+with `d1=$1B`, `d2=1`, `d3=2`, and `d4=x_pos(a0)`
+(`docs/s2disasm/s2.asm:65658-65665`). Those registers are already the
+standable top half-width and the landing surface height consumed by the shared
+platform routine, so Obj89 arrows should not apply the generic extra landing
+width narrowing or fall back to the ground half-height for the top contact.
+
+Fix:
+- Let `ARZBossArrow` opt into `usesCollisionHalfWidthForTopLanding()` so its
+  `d1=$1B` value is used directly as the top platform half-width.
+- Let `ARZBossArrow` opt into `usesGroundHalfHeightForTopSolidContact()` so its
+  `d3=2` value is used for the landing surface height.
+- Add a focused occupancy oracle for the f5928 Tails landing row.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f5928 / 6
+  (`tails_y_speed` expected `0x0000`, actual `0x02C0`) to f5929 / 2 under
+  `frontierOnly` (`tails_y` expected `0x0450`, actual `0x044F`). The new
+  frontier is the next hurt-state continued-ride/support sample: ROM has Tails
+  one pixel lower with `Status_Push` also set, while the engine is riding the
+  arrow at `0x044F` with only `Status_OnObj`.
+
+Verification:
+- `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossArrowUsesPlatformObjectD3ForTailsLandingAtFrame5928" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" test`
+  passed the focused f5928 Obj89 arrow landing oracle.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f5929 / 2.
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5929 / 2, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6. OOZ2 stayed green.
+- S1 and S3K sweeps were not run because the engine change is object-local to
+  S2 Obj89 plus a focused S2 trace oracle; no shared physics, collision,
+  sidekick, or cross-game object infrastructure was touched.
 
 ## 2026-07-02 - S2 round 56 ARZ2 Obj89 released side-push auto-jump advance
 
