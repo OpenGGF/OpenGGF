@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -96,6 +97,37 @@ class TestS3kMhzPatternAnimation {
         manager.update();
         assertEquals(0, state.mushroomCapPositionCounter(),
                 "AnimateTiles_MHZ wraps Anim_Counters+$F to zero when it reaches $58");
+    }
+
+    @Test
+    void mhzReplayBootstrapPreludeDoesNotAdvanceMushroomCapCounter() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
+                .build();
+
+        MhzZoneRuntimeState state = GameServices.zoneRuntimeRegistry()
+                .currentAs(MhzZoneRuntimeState.class)
+                .orElseThrow(() -> new AssertionError("MHZ runtime state should be installed"));
+        AnimatedPatternManager manager = GameServices.level().getAnimatedPatternManager();
+        Sonic3kLevelAnimationManager s3kManager =
+                assertInstanceOf(Sonic3kLevelAnimationManager.class, manager,
+                        "S3K installs Sonic3kLevelAnimationManager");
+
+        state.publishMushroomCapPositionCounter(0x20);
+
+        // The trace-replay bootstrap prelude warms the ROM's pre-first-frame VRAM
+        // tile state, but Anim_Counters+$F is a stateful accumulator already seeded
+        // to its ROM LevelLoop frame-0 phase (loc_6468 pre-loop Animate_Tiles). The
+        // warmup pass must not advance it, or caps read two bob-steps ahead.
+        s3kManager.updatePatternsOnlyForReplayBootstrap();
+        assertEquals(0x20, state.mushroomCapPositionCounter(),
+                "Replay-bootstrap VRAM warmup must preserve the mushroom-cap "
+                        + "Anim_Counters+$F accumulator");
+
+        // A normal per-frame Animate_Tiles pass still advances it by 2.
+        manager.update();
+        assertEquals(0x22, state.mushroomCapPositionCounter(),
+                "Normal AnimateTiles_MHZ still adds 2 to Anim_Counters+$F each frame");
     }
 
     @Test

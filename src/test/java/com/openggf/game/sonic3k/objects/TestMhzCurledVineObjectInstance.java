@@ -7,6 +7,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -117,7 +118,11 @@ class TestMhzCurledVineObjectInstance {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2030, (short) 0x05E0);
 
         SolidObjectListener listener = assertInstanceOf(SolidObjectListener.class, vine);
+        // Frame 0 establishes the ride (ROM standing bit still clear: the fall-through
+        // loc_3EA1E/loc_1E45A landing owns Y). Frame 1 is a continued-ride frame with the
+        // bit set, so loc_3E9FA (sonic3k.asm:82963-82977) contours Y to the curl surface.
         listener.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+        listener.onSolidContact(player, new SolidContact(true, false, false, true, false), 1);
 
         // relativeX = 0x2030 - 0x2000 = 0x30; segmentIndex = (0x30 + 0x40) >> 4 = 7
         // (matches the standing-segment index used by standingPlayerNearRightEdge...).
@@ -128,6 +133,62 @@ class TestMhzCurledVineObjectInstance {
                 "Obj_MHZCurledVine writes y_pos(a1) = segmentY - 8 - y_radius(a1) every standing frame "
                         + "from the generated curl segment table (loc_3E9FA, sonic3k.asm:82963-82977), "
                         + "not a flat surface at spawn.y");
+    }
+
+    @Test
+    void fallingPlayerLandsOnRaisedPerSegmentCurlSurfaceNotFlatSpawnY() {
+        int vineX = 0x2000;
+        int vineY = 0x0600;
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance vine = registry.create(new ObjectSpawn(
+                vineX, vineY, MHZ_CURLED_VINE, 0, 0, false, 0));
+        MhzCurledVineObjectInstance concreteVine =
+                assertInstanceOf(MhzCurledVineObjectInstance.class, vine);
+
+        // ROM sub_3E9C6->loc_3EA1E (sonic3k.asm:82942-82986): a FALLING player
+        // (y_vel>=0) whose (playerX - vineX + $40) is in [0, rangeWidth) lands via
+        // the SEGMENT-height surface $1A(a2,d0*6) - 8, not a flat surface at spawn.y.
+        // The engine must expose that per-x curl surface to landing detection, i.e.
+        // the curled vine must resolve new landings through the sloped-solid path.
+        SlopedSolidProvider sloped = assertInstanceOf(SlopedSolidProvider.class, vine,
+                "Obj_MHZCurledVine lands falling players on the generated per-segment curl "
+                        + "surface (loc_3EA1E), so its top-solid must be sloped, not flat");
+        assertEquals(0, sloped.getSlopeBaseline(),
+                "loc_3EA1E reads absolute segment heights ($1A(a2,d0*6)); baseline must be 0");
+
+        SolidObjectParams params = sloped.getSolidParams();
+        int halfWidth = params.halfWidth();
+        int width2 = halfWidth * 2;
+        int anchorX = vineX + params.offsetX();
+        int anchorY = vineY + params.offsetY();
+
+        // Player one segment into the ROM window: d0 = playerX - vineX + $40 = $30,
+        // segment index d0>>4 = 3 (surface generated ~32px above spawn.y).
+        int playerCenterX = vineX - 0x10;
+        int relX = playerCenterX - anchorX + halfWidth; // = ROM d0
+        assertEquals(0x30, relX, "player must sit one segment into the ROM landing window");
+        int sampleX = relX >> 1; // ROM lsr.w #1,d0 before the segment lookup
+        int segment = sampleX >> 3; // d0>>4
+        assertEquals(3, segment);
+
+        byte[] slopeData = sloped.getSlopeData();
+        assertTrue(sampleX < slopeData.length, "slope table must cover the full landing window");
+        int surfaceY = anchorY - (slopeData[sampleX] - sloped.getSlopeBaseline());
+
+        assertEquals(concreteVine.segmentY(segment) - 8, surfaceY,
+                "The sloped landing surface must be the generated curl segment height minus 8 "
+                        + "(loc_3EA1E: $1A(a2,d0*6) then subq.w #8,d0), so a falling player lands "
+                        + "on the raised curl instead of falling past a flat surface at spawn.y");
+        assertTrue(surfaceY < vineY,
+                "Segment " + segment + " is curled above spawn.y; the landing surface a falling "
+                        + "player reaches must be raised, not the flat spawn.y the old top-solid used");
+
+        // Outside the ROM window (d0 >= rangeWidth) there is no landing surface, so a
+        // player there keeps falling -- loc_3EA1E's `cmp.w d2,d0 / bhs locret_3EA4A`.
+        int outsidePlayerX = vineX + 0x10; // d0 = $50 >= rangeWidth $40
+        int outsideRelX = outsidePlayerX - anchorX + halfWidth;
+        assertTrue(outsideRelX >= width2,
+                "playerX past the ROM window's right edge falls through with no curl surface");
     }
 
     @Test

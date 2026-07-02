@@ -365,6 +365,85 @@ public class TestSolidObjectManager {
                 "Normal S3K SolidObject support must not preserve stale object_control bit-6 wall suppression");
     }
 
+    // ROM: SolidObjectFull's top-slice clamp (sonic3k.asm loc_1E154:41611) reads
+    // width_pixels(a0) for its landing X gate, which is NOT always the collision
+    // half-width minus $B. The MHZ1 cutscene button passes collision d1 = $1B but
+    // has width_pixels = $80, so a rising rolling-jump graze at the exact right
+    // edge (relX == width*2) must still receive the top-slice lift (MHZ1 trace
+    // F966). isWithinTopLandingWidth must honor an explicitly wider configured
+    // landing width, and the S3K upward-velocity lift must fire without latching a
+    // ride (loc_1E154 writes y_pos before tst.w y_vel / bmi loc_1E198).
+    @Test
+    public void s3kRisingGrazeGetsTopSliceLiftWhenLandingWidthWiderThanCollisionBox() {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        try {
+            SolidObjectParams params = new SolidObjectParams(27, 4, 5);
+            // topLandingHalfWidth 128 mirrors the button's ROM width_pixels = $80,
+            // wider than the $1B (27) side-collision half-width.
+            TestSolidObject object = new TestSolidObject(100, 100, params, false, 128);
+            ObjectManager manager = buildManager(object);
+
+            TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+            player.useGameRules(GameRules.SONIC_3K);
+            player.setWidth(20);
+            player.setHeight(38);
+            int maxTop = params.airHalfHeight() + player.getYRadius();
+            // Right-edge graze: relX = 2*halfWidth - 1 (just inside), distY = 0.
+            player.setCentreX((short) (100 - params.halfWidth() + (params.halfWidth() * 2 - 1)));
+            player.setCentreY((short) (100 - 4 - maxTop));
+            player.setYSpeed((short) -0x100);
+            player.setAir(true);
+
+            int startCentreY = player.getCentreY();
+            manager.updateSolidContacts(player);
+
+            assertEquals(startCentreY + 3, player.getCentreY(),
+                    "loc_1E154 lifts the rising graze by +3 (distY=0) even at the right edge");
+            assertEquals((short) -0x100, player.getYSpeed(),
+                    "Rising player keeps its upward velocity (tst.w y_vel / bmi loc_1E198 skips the ride)");
+            assertFalse(player.isOnObject(),
+                    "loc_1E154 returns d4=0 for the rising graze: no RideObject_SetRide latch");
+            assertTrue(player.getAir(),
+                    "Rising graze must not be grounded by the top-slice lift");
+        } finally {
+            GameModuleRegistry.setCurrent(previous);
+        }
+    }
+
+    @Test
+    public void s3kRisingGrazeAtRightEdgeIsNotLiftedWithDefaultNarrowLandingWidth() {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        try {
+            SolidObjectParams params = new SolidObjectParams(27, 4, 5);
+            // Default landing width: engine narrows to width_pixels = collision d1 - $B,
+            // which rejects the exact-edge graze (this is the pre-button-fix behavior
+            // and must be preserved for ordinary full solids that pass d1 = obActWid + $B).
+            TestSolidObject object = new TestSolidObject(100, 100, params, false);
+            ObjectManager manager = buildManager(object);
+
+            TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+            player.useGameRules(GameRules.SONIC_3K);
+            player.setWidth(20);
+            player.setHeight(38);
+            int maxTop = params.airHalfHeight() + player.getYRadius();
+            player.setCentreX((short) (100 - params.halfWidth() + (params.halfWidth() * 2 - 1)));
+            player.setCentreY((short) (100 - 4 - maxTop));
+            player.setYSpeed((short) -0x100);
+            player.setAir(true);
+
+            int startCentreY = player.getCentreY();
+            manager.updateSolidContacts(player);
+
+            assertEquals(startCentreY, player.getCentreY(),
+                    "Narrow default landing width rejects the right-edge graze: no lift");
+            assertFalse(player.isOnObject());
+        } finally {
+            GameModuleRegistry.setCurrent(previous);
+        }
+    }
+
     @Test
     public void walkingToExactRightRidingBoundaryClearsOnObjectWithoutStickyExtension() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);

@@ -10,6 +10,8 @@ import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
+import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
+import com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -967,6 +969,165 @@ class TestSidekickCpuDespawnParity {
                         + "through the marker warp");
     }
 
+    @Test
+    void s3kInteractWordProvidersMatchRomCodePointerHighWords() {
+        assertEquals(0x0003,
+                new MhzCurledVineObjectInstance(
+                        new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0))
+                        .romObjectCodePointerHighWord(),
+                "Obj_MHZCurledVine code pointer loc_3E8A2 is at 0x0003Exxx "
+                        + "(docs/skdisasm/sonic3k.asm:82778-82797)");
+        assertEquals(0x0006,
+                new Mhz1CutsceneButtonInstance(
+                        new ObjectSpawn(0x03F7, 0x067C, 0xA9, 0, 0, false, 0))
+                        .romObjectCodePointerHighWord(),
+                "Obj_MHZ1CutsceneButton code pointer MHZ1CutsceneButton_Main is at 0x00062xxx "
+                        + "(docs/skdisasm/sonic3k.asm:130055-130125)");
+    }
+
+    @Test
+    void s3kOffscreenWordChangeDespawnsAndPreservesVelocity() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0668);
+        tails.setCentreY((short) 0x0598);
+        tails.setSubpixelRaw(0x0000, 0x0000);
+        tails.setXSpeed((short) 0x0370);
+        tails.setYSpeed((short) 0x0000);
+        tails.setGSpeed((short) 0x0370);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        // Latched to the 0x0003 MHZ curled vine while off-screen; the CPU
+        // interact latch still holds 0x0006 from the earlier MHZ1 cutscene
+        // button ride, so sub_13EFC's off-screen word compare mismatches.
+        tails.setLatchedSolidObject(0x09, new MhzCurledVineObjectInstance(
+                new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0)));
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 40, 0x0006, false, 0, 0);
+        tails.setLatchedSolidObject(0x09, new MhzCurledVineObjectInstance(
+                new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0)));
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(false);
+
+        controller.update(2159);
+
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
+                "S3K sub_13EFC despawns when the stood-on object's code word differs from "
+                        + "the Tails_CPU_interact latch (sonic3k.asm:26825-26826)");
+        assertEquals((short) 0x7F00, tails.getCentreX());
+        assertEquals((short) 0x0000, tails.getCentreY());
+        assertEquals((short) 0x0370, tails.getXSpeed(),
+                "sub_13ECA warps position but leaves x_vel untouched (sonic3k.asm:26800-26809)");
+        assertEquals((short) 0x0370, tails.getGSpeed());
+        assertTrue(tails.getAir());
+        assertEquals(0x0006, controller.getDiagnosticInteractId(),
+                "sub_13ECA does not clear Tails_CPU_interact; the prior 0x0006 latch is preserved");
+    }
+
+    @Test
+    void s3kOffscreenSameWordDoesNotDespawn() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0668);
+        tails.setCentreY((short) 0x0598);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setLatchedSolidObject(0x09, new MhzCurledVineObjectInstance(
+                new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0)));
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        // Latch already holds the vine's own 0x0003 word: no mismatch.
+        controller.hydrateFromRomCpuState(6, 0, 40, 0x0003, false, 0, 0);
+        tails.setLatchedSolidObject(0x09, new MhzCurledVineObjectInstance(
+                new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0)));
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(false);
+
+        controller.update(2159);
+
+        assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
+                "A matching code word keeps Tails alive (sonic3k.asm:26825 same-word fall-through)");
+        assertNotEquals((short) 0x7F00, tails.getCentreX());
+    }
+
+    @Test
+    void s3kOnScreenWordChangeRelatchesWithoutDespawn() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0668);
+        tails.setCentreY((short) 0x0598);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setLatchedSolidObject(0x09, new MhzCurledVineObjectInstance(
+                new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0)));
+        tails.setRenderFlagOnScreen(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x0006, false, tails.getCentreX(), tails.getCentreY());
+        tails.setLatchedSolidObject(0x09, new MhzCurledVineObjectInstance(
+                new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0)));
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(true);
+
+        controller.update(2159);
+
+        assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
+                "On-screen sub_13EFC re-latches Tails_CPU_interact and returns without comparing "
+                        + "(sonic3k.asm:26840-26843)");
+        assertEquals(0x0003, controller.getDiagnosticInteractId(),
+                "The on-screen branch refreshes the latch to the current 0x0003 vine word");
+    }
+
+    @Test
+    void s3kOffscreenWordChangeDoesNotDespawnWhenLatchUnarmed() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0668);
+        tails.setCentreY((short) 0x0598);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setLatchedSolidObject(0x09, new MhzCurledVineObjectInstance(
+                new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0)));
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        // Latch is the cleared 0x0000 default: no prior word captured, so the
+        // watchdog must not fire against the first stood-on object.
+        controller.hydrateFromRomCpuState(6, 0, 40, 0x0000, false, 0, 0);
+        tails.setLatchedSolidObject(0x09, new MhzCurledVineObjectInstance(
+                new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0)));
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(false);
+
+        controller.update(2159);
+
+        assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
+                "A cleared (0x0000) interact latch is unarmed and must not despawn on the first "
+                        + "stood-on object's word");
+        assertNotEquals((short) 0x7F00, tails.getCentreX());
+    }
+
+    @Test
+    void interactCodeWordChangeDespawnGatedToSonic3kRulesOnly() {
+        assertTrue(GameRules.SONIC_3K.objectInteraction().sidekickDespawnUsesInteractCodeWordChange(),
+                "S3K sub_13EFC uses the routine-pointer word compare (sonic3k.asm:26816-26843)");
+        assertFalse(GameRules.SONIC_2.objectInteraction().sidekickDespawnUsesInteractCodeWordChange(),
+                "S2 TailsCPU_CheckDespawn compares the Tails_interact_ID byte, not a code word");
+        assertFalse(GameRules.SONIC_1.objectInteraction().sidekickDespawnUsesInteractCodeWordChange(),
+                "S1 has no CPU sidekick and never runs the word-change watchdog");
+    }
+
     private static void installEmptyObjectManager() throws Exception {
         var field = GameServices.level().getClass().getDeclaredField("objectManager");
         field.setAccessible(true);
@@ -1093,6 +1254,7 @@ class TestSidekickCpuDespawnParity {
                 false,
                 objectRules.sidekickNormalDespawnDelaysFreshRenderEntry(),
                 objectRules.sidekickDespawnUsesRidingInstanceLoss(),
+                objectRules.sidekickDespawnUsesInteractCodeWordChange(),
                 objectRules.sidekickNormalCpuSkipsHurtRoutine(),
                 objectRules.permanentRespawnTableLatch(),
                 objectRules.objectsExecuteAfterPlayerPhysics(),

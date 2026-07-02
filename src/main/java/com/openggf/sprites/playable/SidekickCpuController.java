@@ -4229,6 +4229,32 @@ public class SidekickCpuController {
                 }
             }
 
+            // S3K sub_13EFC's off-screen + on-object branch (sonic3k.asm:26825-26826)
+            // does `cmp.w (a3),d0` comparing word 0 of the stood-on object's code
+            // longword against the Tails_CPU_interact latch. A DIFFERENT word (Tails
+            // switched to a different-code object while off-screen) despawns through
+            // sub_13ECA. This is the general word-change trigger; the riding-instance
+            // loss above is the special case where the slot's word was zeroed by
+            // Delete_Referenced_Sprite. The armed check is diagnosticS3kInteractWord
+            // != 0: a real object code high word is always non-zero (ROM object code
+            // lives at >= 0x0003xxxx), and the reset paths zero the latch, so a
+            // non-zero latch means a real word was captured on a prior on-object
+            // frame. sub_13ECA preserves the latch, but sets object_control/off-object
+            // so no compare runs post-despawn until the next on-object landing
+            // re-latches through refreshInteractIdSnapshot below. Compared BEFORE the
+            // fall-through refreshInteractIdSnapshot so the latch still holds the
+            // previous on-object frame's word (ROM compare-then-latch).
+            boolean useInteractWordChangeDespawn = rules != null
+                    && rules.sidekickDespawnUsesInteractCodeWordChange();
+            if (useInteractWordChangeDespawn && (diagnosticS3kInteractWord & 0xFFFF) != 0) {
+                Integer currentWord = currentS3kInteractWord();
+                if (currentWord != null
+                        && (currentWord & 0xFFFF) != (diagnosticS3kInteractWord & 0xFFFF)) {
+                    triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
+                    return true;
+                }
+            }
+
             // S2: cmp.b id(a3),d0 — latched Tails_interact_ID snapshot vs the
             // live id byte ROM dereferences at interact(a0). romEffectiveInteractSlotId
             // resolves the single unified ROM model across all three cases:

@@ -83,6 +83,46 @@ class TestSonic3kMHZEvents {
     }
 
     @Test
+    void act1LevelLoadPinsCameraAndMinXToRomMhzStart() {
+        // ROM Get_LevelSizeStart loc_1BF1E (sonic3k.asm:38214-38225): MHZ1
+        // (Current_zone_and_act==$0700) played as Sonic/Tails (Player_mode<3)
+        // with Sonic 3 locked on (SK_alone_flag==0) overrides Camera_min_X_pos
+        // to $00C0 and forces the initial Camera_X_pos to $00C0.
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
+                .build();
+
+        Camera camera = fixture.camera();
+        assertEquals(0x00C0, camera.getMinX() & 0xFFFF,
+                "MHZ1 Get_LevelSizeStart should set Camera_min_X_pos to $00C0 at level load");
+        assertEquals(0x00C0, camera.getX() & 0xFFFF,
+                "MHZ1 Get_LevelSizeStart should force the initial Camera_X_pos to $00C0 at level load");
+    }
+
+    @Test
+    void act1LevelLoadKeepsLevelSizesMinXForKnuckles() {
+        // ROM loc_1BF1E skips the $00C0 override when Player_mode >= 3
+        // (Knuckles, cmpi.w #3 / bhs.s), leaving Camera_min_X_pos at MHZ1's
+        // LevelSizes xstart of 0 (sonic3k.asm:38111,38217-38218).
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
+                .build();
+
+        Level level = GameServices.level().getCurrentLevel();
+        assertNotNull(level, "MHZ1 level should load for Knuckles");
+        assertEquals(0x0000, level.getMinX() & 0xFFFF,
+                "MHZ1 loaded as Knuckles should keep the LevelSizes xstart of 0 (no $00C0 override)");
+    }
+
+    @Test
     void act1ScreenEventUsesRomKnucklesAloneMinX() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
