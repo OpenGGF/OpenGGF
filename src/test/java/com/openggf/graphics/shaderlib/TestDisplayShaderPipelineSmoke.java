@@ -479,6 +479,25 @@ public class TestDisplayShaderPipelineSmoke {
         }
     }
 
+    @Test
+    public void vhsRewindBuiltInPresetActivatesAndApplies() throws Exception {
+        try (GlContext ignored = GlContext.open()) {
+            DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
+            pipeline.resize(32, 32, 32, 32);
+
+            assertTrue(pipeline.activate(RewindVhsEffectPass.builtInPreset()),
+                    pipeline.lastActivationFailure());
+
+            glViewport(0, 0, 32, 32);
+            glClearColor(0.2f, 0.4f, 0.6f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            pipeline.apply(0, 0, 32, 32, 5, Map.of("RewindIntensity", 1.0f, "RewindSpeed", 1.0f));
+
+            assertTrue(pipeline.isActive(), "VHS preset apply must not disable the pipeline");
+            pipeline.dispose();
+        }
+    }
+
     private static DisplayShaderPreset passthroughPreset() {
         return new DisplayShaderPreset("passthrough", ShaderPhase.FINAL, List.of(
                 new DisplayShaderPass(null, """
