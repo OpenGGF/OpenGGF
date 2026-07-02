@@ -134,7 +134,9 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         state.xVel = 0;
         state.yVel = -0x80;
         state.routineSecondary = MAIN_SURFACE;
-        state.hitCount = getInitialHitCount();
+        // Obj55_Init seeds boss_hitcount2 once; Obj55_Main_Init only resets the
+        // current pass state, collision, and collision routine. Preserve HP across
+        // later laser/spike cycles (docs/s2disasm/s2.asm:68225-68238,68258-68283).
         state.sineCounter = 0;
         flipped = faceLeft;
         status = 0;
@@ -773,6 +775,14 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     }
 
     @Override
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        // Obj55_HandleHits runs at Obj55_Main_End after the current main routine
+        // has already dispatched; Boss_Defeat writes boss_routine=8 for the next
+        // object pass (docs/s2disasm/s2.asm:68355-68359,61270-61275).
+        return true;
+    }
+
+    @Override
     protected void onDefeatStarted() {
         bossSubtype = SUB_MAIN;
         state.routineSecondary = MAIN_DEFEATED;
@@ -809,6 +819,13 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
 
     public int getBossSubtypeForTesting() {
         return bossSubtype;
+    }
+
+    public boolean hasRaisedBossDefeatedFlag() {
+        // LevEvents_OOZ2_Routine4 keys off Boss_defeated_flag, which Obj55 raises
+        // after its defeat countdown, not when hitcount first reaches zero.
+        // docs/s2disasm/s2.asm:21396-21400,68435-68447.
+        return bossDefeatedFlagSet;
     }
 
     public int getMainFrameForTesting() {

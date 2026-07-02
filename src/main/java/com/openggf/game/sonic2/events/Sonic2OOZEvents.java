@@ -124,7 +124,7 @@ public class Sonic2OOZEvents extends Sonic2ZoneEvents {
                 }
             }
             case 6 -> {
-                if (oozBoss != null && oozBoss.isDefeated()) {
+                if (oozBoss != null && oozBoss.hasRaisedBossDefeatedFlag()) {
                     camera().setMinX(camera().getX());
                     syncSidekickBoundsToCamera();
                 }
