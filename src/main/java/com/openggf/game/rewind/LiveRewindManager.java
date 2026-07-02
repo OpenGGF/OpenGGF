@@ -30,6 +30,7 @@ public final class LiveRewindManager {
     private RewindSpeedController speedController = RewindSpeedController.disabled();
     private InputHandler activeInputHandler;
     private boolean rewinding;
+    private final RewindEffectEnvelope effectEnvelope = new RewindEffectEnvelope();
 
     public LiveRewindManager(SonicConfigurationService config) {
         this.config = Objects.requireNonNull(config, "config");
@@ -56,6 +57,7 @@ public final class LiveRewindManager {
             int steps = speedController.stepsWhileHeld();
             GameServices.audio().setReversePlaybackRate(speedController.currentSpeed());
             stepBackward(steps);
+            effectEnvelope.frameActive(speedController.currentSpeed());
             GameServices.audio().update();
             return true;
         }
@@ -63,6 +65,7 @@ public final class LiveRewindManager {
         if (rewinding && coastSteps > 0) {
             if (stepBackward(coastSteps) > 0) {
                 GameServices.audio().setReversePlaybackRate(speedController.currentSpeed());
+                effectEnvelope.frameActive(speedController.currentSpeed());
                 GameServices.audio().update();
                 return true;
             }
@@ -72,6 +75,7 @@ public final class LiveRewindManager {
             cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
         }
         rewinding = false;
+        effectEnvelope.frameInactive();
         return false;
     }
 
@@ -121,6 +125,16 @@ public final class LiveRewindManager {
         hudOverlay.render(text);
     }
 
+    /** Current VHS rewind presentation intensity, 0..1. */
+    public float effectIntensity() {
+        return effectEnvelope.intensity();
+    }
+
+    /** Latched tape speed for the VHS rewind presentation, 0.25..4.0. */
+    public float effectSpeed() {
+        return effectEnvelope.speed();
+    }
+
     private String statusLabel() {
         if (!enabled() || !rewinding || rewindController == null) {
             return null;
@@ -168,6 +182,7 @@ public final class LiveRewindManager {
             cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
         }
         rewinding = false;
+        effectEnvelope.reset();
     }
 
     private void handleSeamlessLevelTransitionBoundary() {
@@ -186,6 +201,7 @@ public final class LiveRewindManager {
             cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
         }
         rewinding = false;
+        effectEnvelope.reset();
     }
 
     private void handleModeEnterRewindableBoundary() {
@@ -254,5 +270,6 @@ public final class LiveRewindManager {
         speedController.reset();
         speedController = RewindSpeedController.disabled();
         rewinding = false;
+        effectEnvelope.reset();
     }
 }
