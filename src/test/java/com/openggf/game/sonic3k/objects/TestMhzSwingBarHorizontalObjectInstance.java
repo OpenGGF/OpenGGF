@@ -275,6 +275,61 @@ class TestMhzSwingBarHorizontalObjectInstance {
     }
 
     @Test
+    void grabPreservesPlayerYSubpixelOnHorizontalBar() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance bar = registry.create(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_HORIZONTAL, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2200, (short) 0x0720);
+        player.setYSpeed((short) 0x0300);
+        player.setSubpixelRaw(0, 0xA500);
+
+        bar.update(0, player);
+
+        assertEquals(0x0714, player.getCentreY(),
+                "Grab still snaps y_pos to object y_pos+$14");
+        assertEquals(0xA500, player.getYSubpixelRaw(),
+                "ROM loc_3EEDA (sonic3k.asm:83448-83450) writes y_pos(a1) with move.w, which does not "
+                        + "touch y_sub; the grab must preserve the player's subpixel fraction");
+    }
+
+    @Test
+    void hangingFramePreservesPlayerYSubpixelOnHorizontalBar() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance bar = registry.create(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_HORIZONTAL, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2200, (short) 0x0720);
+        player.setYSpeed((short) 0x0300);
+
+        bar.update(0, player);
+        player.setSubpixelRaw(0, 0x4200);
+        bar.update(1, player);
+
+        assertTrue(player.isObjectControlled(),
+                "The mid hang phase must not auto-release for a moderate incoming y_vel");
+        assertEquals(0x4200, player.getYSubpixelRaw(),
+                "ROM sub_3EFBA (sonic3k.asm:83533-83534) writes y_pos(a1) with move.w each hang frame, "
+                        + "which does not touch y_sub");
+    }
+
+    @Test
+    void horizontalInputPreservesPlayerXSubpixelOnHorizontalBar() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance bar = registry.create(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_HORIZONTAL, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2200, (short) 0x0720);
+
+        bar.update(0, player);
+        player.setSubpixelRaw(0x6300, 0);
+        player.setDirectionalInputPressed(false, false, true, false);
+        bar.update(1, player);
+
+        assertEquals(0x21FF, player.getCentreX(),
+                "loc_3ED8E still subtracts one pixel while LEFT is held");
+        assertEquals(0x6300, player.getXSubpixelRaw(),
+                "ROM loc_3ED8E (sonic3k.asm:83326) uses subq.w on x_pos(a1), which does not touch x_sub");
+    }
+
+    @Test
     void horizontalSwingBarRendersRomFrameAtAnchor() {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         when(renderer.isReady()).thenReturn(true);

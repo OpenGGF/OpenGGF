@@ -19,6 +19,58 @@ Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9342 / 505
 (`tails_x_sub` expected `0x4700`, actual `0xC700`) after trace capture keeps
 the ROM Obj02 hurt routine visible for object-solid landing samples.
 
+## 2026-07-02 - S3K MHZ complete-run advances f1994 -> f2158 (swing bars preserve player subpixels per ROM word-only position writes)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `6a255aa3e` + this fix).
+- Command (verified independently on this branch via `mvn.cmd`):
+  `mvn.cmd "-Ds3k.rom.path=...\Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f1994 / **2621** errors
+  (`y_sub`, expected `0xA500`, actual `0x0000`). After: f2158 / **4388** errors
+  (`tails_y_speed`, expected `0x0000`, actual `0x0428`). The error count rises
+  by **+1767**; this is adjudicated below as masked-now-reachable, not a
+  regression.
+- Root cause: both MHZ swing bars snapped the captured player's ROM centre with
+  the subpixel-zeroing `setCentreX/Y`, but the ROM writes only the pixel word at
+  every position site — `move.w`/`add.w`/`subq.w`/`addq.w` on `x_pos`/`y_pos`,
+  never the long that would clear `x_sub`/`y_sub`. Fix swaps 8 sites to
+  `set...PreserveSubpixel`. ROM cites (all verified word-only writes in
+  `docs/skdisasm/sonic3k.asm`): horizontal grab `:83448-83450` (`move.w d0,y_pos`),
+  hang `:83533-83534` (`add.w y_pos(a0),d1 / move.w d1,y_pos`), input nudges
+  `:83326` (`subq.w #1,x_pos`) / `:83340` (`addq.w #1,x_pos`); vertical
+  roll-radius y add `:83752-83754` (`add.w d0,y_pos`), grab `:83757-83759`
+  (`move.w d0,x_pos`), climb `:83625-83626` (`add.w x_pos(a0),d1 / move.w d1,x_pos`),
+  auto-release `:83669` (`move.w x_pos(a0),x_pos`).
+- Error-delta adjudication (independent A/B on this branch, BEFORE = these 4
+  files reverted, AFTER = fix in place): the fix's own three targets are gone
+  in AFTER (`y_sub@f1994`, `tails_y_sub@f2011`, `x_sub@f2451` present in BEFORE,
+  absent in AFTER). AFTER has **zero** divergence records before f2158
+  (min error frame is exactly 2158); BEFORE had 51 error records in the
+  [1994,2157] window. Every one of the 3197 AFTER-only `(field,frame)` error
+  keys is at frame >= 2159 — no new pre-frontier divergence was introduced.
+  So AFTER is byte-exact through f2157 (strictly better than BEFORE) and the
+  +1767 is a previously-masked downstream Tails root now reachable once the
+  subpixel noise is removed.
+- f2158 characterization (next-round target): at f2158 the player subpixels are
+  byte-exact (`tails_x_sub`/`tails_y_sub` match), but the engine releases CPU
+  Tails into an **air + rolling** state (`tails_air` 0->1, `tails_rolling` 0->1,
+  `tails_y_speed` `0x0000`->`0x0428` falling, `tails_g_speed` `0x0370`->`0x00B8`,
+  `tails_status_byte` `0x08`->`0x06`) while the ROM keeps Tails riding object
+  slot 15 grounded (ROM `onObj=15`, `status=08`; engine `onObj=false`,
+  `ride=s-1`). `tails_cpu_interact` (exp `0x0006`, act `0x0003`) and
+  `tails_y` (exp `0x0598`, act `0x05A4`) flip first; position/subpixel fields
+  only cascade at f2159. Next root is Tails's swing-bar release/riding-state
+  timing (appears to jump/roll off one interaction-cycle early), not a subpixel
+  issue.
+- Guards: full module suite 296 tests, 295 pass / 1 fail (only
+  `TestS3kMhzCompleteRunTraceReplay`, still-red frontier). Named guards all
+  green (0 fail/err/skip): `TestMhzSwingBarHorizontalObjectInstance` (16),
+  `TestMhzSwingBarVerticalObjectInstance` (19), `TestMhz1CutsceneObjects` (82),
+  `TestSonic3kMHZEvents` (62), `TestS3kAiz1SkipHeadless` (8),
+  `TestSonic3kLevelLoading` (30). The 7 new subpixel-preserve unit tests are
+  fail-first (verified: reverting only the two main files while keeping the
+  tests fails all 7 with `expected: <nonzero> but was: <0>`).
+
 ## 2026-07-02 - S3K MHZ complete-run advances f1162 -> f1994 (MHZ1 cutscene door trigger-frame movement)
 
 - Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
