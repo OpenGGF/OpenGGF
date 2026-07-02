@@ -152,7 +152,9 @@ public class LegalDisclaimerScreen {
     }
 
     public void update(InputHandler inputHandler) {
-        boolean keyPressed = inputHandler.isAnyKeyJustPressed();
+        boolean keyPressed = inputHandler.isAnyKeyJustPressed()
+                || inputHandler.logical().anyActionPressed()
+                || inputHandler.logical().menuStart();
         boolean enteredExiting = state.tick(keyPressed);
         if (enteredExiting) {
             fadeManager.startFadeToBlack(state::onFadeOutComplete);

@@ -215,6 +215,12 @@ public class InputHandler {
 		return logicalSnapshot;
 	}
 
+	public boolean menuAcceptExcludingBackAction() {
+		PlayerInputState p1 = logical().player1();
+		return (p1.actionPressedMask() & (InputActionMasks.ACTION_A | InputActionMasks.ACTION_B)) != 0
+				|| p1.startPressed();
+	}
+
 	/**
 	 * Updates the input handler state. Should be called at the end of the game loop.
 	 */

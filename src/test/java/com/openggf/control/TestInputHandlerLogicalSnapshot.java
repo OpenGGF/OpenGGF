@@ -95,6 +95,31 @@ class TestInputHandlerLogicalSnapshot {
         assertEquals(0, input.logical().player1().actionPressedMask());
     }
 
+    @Test
+    void menuAcceptExcludingBackActionAcceptsOnlyABOrStart() {
+        InputHandler input = new InputHandler();
+
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, 0, InputActionMasks.ACTION_C, false, false),
+                PlayerInputState.neutral()));
+        assertFalse(input.menuAcceptExcludingBackAction());
+
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, 0, InputActionMasks.ACTION_A, false, false),
+                PlayerInputState.neutral()));
+        assertTrue(input.menuAcceptExcludingBackAction());
+
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, 0, InputActionMasks.ACTION_B, false, false),
+                PlayerInputState.neutral()));
+        assertTrue(input.menuAcceptExcludingBackAction());
+
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, 0, 0, false, true),
+                PlayerInputState.neutral()));
+        assertTrue(input.menuAcceptExcludingBackAction());
+    }
+
     private static GamepadStateSource.DeviceState connectedPad(int joystickId, boolean[] buttons) {
         return GamepadStateSource.DeviceState.connected(joystickId, "pad-" + joystickId, buttons, 0.0f, 0.0f);
     }
