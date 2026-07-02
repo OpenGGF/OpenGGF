@@ -881,7 +881,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ### Task 6: Engine wiring, CHANGELOG, verification
 
 **Files:**
-- Modify: `src/main/java/com/openggf/Engine.java` (field ~line 131; `initializeDisplayShaders()` ~line 487-503; `display()` fade/PRESENTATION block ~lines 1582-1588)
+- Modify: `src/main/java/com/openggf/Engine.java` (field ~line 131; `initializeDisplayShaders()` ~line 487-503; `display()` fade/PRESENTATION block ~lines 1582-1588; `cleanup()` ~line 2310)
 - Modify: `CHANGELOG.md` (top of `## Unreleased`)
 
 **Interfaces:**
@@ -912,7 +912,20 @@ At the END of `initializeDisplayShaders()` (after `displayShaderController.apply
 		}
 ```
 
-If either flag is false, `rewindVhsEffectPass` stays null — no GL resources, matching the spec's "never activated" rule. (Disposal follows the same pattern as the user display pipeline: GL teardown at process exit; the pass's `dispose()` exists for tests.)
+If either flag is false, `rewindVhsEffectPass` stays null — no GL resources, matching the spec's "never activated" rule.
+
+- [ ] **Step 2b: Dispose at shutdown**
+
+The pass owns a private `DisplayShaderPipeline` that GraphicsManager does not know about, so it needs its own cleanup step. In `Engine.cleanup()` (~line 2310), add a step immediately BEFORE the `cleanupStep("graphics manager", graphicsManager::cleanup);` line (GL context is still current there, matching how the user display pipeline is disposed inside `GraphicsManager.cleanup()`):
+
+```java
+		cleanupStep("VHS rewind effect", () -> {
+			if (rewindVhsEffectPass != null) {
+				rewindVhsEffectPass.dispose();
+				rewindVhsEffectPass = null;
+			}
+		});
+```
 
 - [ ] **Step 3: Apply in display() between fade pass and PRESENTATION phase**
 
