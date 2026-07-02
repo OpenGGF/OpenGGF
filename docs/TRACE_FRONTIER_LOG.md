@@ -13,10 +13,10 @@ CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
 expected `-020C`, actual `0x020C`), and OOZ2 is f12107 / 13 under `frontierOnly`
 (`tails_y` expected `0x02A5`, actual `0x02A4`; focused full reports also show
-`tails_g_speed` expected `0x00A4`, actual `0x0000`). The round 49 worker
-verification keeps the full S2 sweep at 15 green / 4 expected-red. The full S1
-sweep remains 29/29 green, and the S3K guard subset remains 66/68 with only the
-known AIZ expected-red frontiers. No S2 trace greened in round 49.
+`tails_g_speed` expected `0x00A4`, actual `0x0000`). The round 49 integrated
+conductor verification keeps the full S2 sweep at 15 green / 4 expected-red.
+The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
+with only the known AIZ expected-red frontiers. No S2 trace greened in round 49.
 
 ## 2026-07-02 - S2 round 49 ARZ2 targeted advance
 
@@ -116,6 +116,54 @@ Verification:
   "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsonic3k.rom.path=s3k.gen"
   test` ran the campaign S3K guard subset: 68 tests, 66 green / 2 expected-red
   at AIZ complete-run f1095 and AIZ trace f8941.
+
+## 2026-07-02 - S2 round 49 conductor integration and no-change workers
+
+The conductor merged worker commits `c7d3c4626` (ARZ2) and `ea4ad8eda` (CNZ2)
+into `bugfix/ai-s2-trace-next` as merge commits `9bf209dcf` and `410a67488`.
+The combined branch state was then verified from
+`.worktrees/ai-s2-trace-next`.
+
+Integrated verification:
+- `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen"
+  test` ran 2 checks and reports the expected-red ARZ2 f5457 / 4 and CNZ2
+  f9977 / 10 frontiers.
+- `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen"
+  test` ran the full S2 sweep: 19 tests, 4 expected-red, 15 green. Current
+  S2 reds are ARZ2 f5457 / 4, CNZ2 f9977 / 10, MTZ3 f13358 / 6, and OOZ2
+  f12107 / 13.
+- `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen"
+  test` plus fresh Surefire XML inspection reports 29 recent S1 trace replay
+  classes and 0 failures/errors.
+- `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen"
+  test` reports 68 tests, 2 expected-red AIZ trace frontiers, and 66 green.
+  The expected-red S3K frontiers are AIZ complete-run f1095 / 3 (`x_sub`) and
+  AIZ f8941 / 1 (`camera_y`).
+
+Other round-49 workers made no commits:
+- MTZ3 worktree `.worktrees/ai-s2-mtz3-round49-next` /
+  `bugfix/ai-s2-mtz3-round49-next`: reproduced f13358 / 6. BizHawk PC probes
+  confirmed ROM reaches `Touch_Enemy` on Obj54 slot `$20` during the
+  corresponding frame and the negated Tails velocity is first visible in the
+  next recorded row. Trial fixes for Obj54 first-touch eligibility and raw
+  `$0F` category did not advance the frontier and were reverted.
+- OOZ2 worktree `.worktrees/ai-s2-ooz2-round49-next` /
+  `bugfix/ai-s2-ooz2-round49-next`: reproduced f12107 / 13. BizHawk confirmed
+  ROM Obj55 reaches hitcount 0, `collision_flags=$00`, and boss routine `$08`
+  at movie frame 26043 / trace frame 12076, while the engine still has Obj55
+  HP 7 and active at f12107. A narrow raw ENEMY/$0F main-body candidate still
+  failed at f12107 and was reverted; the remaining owner is earlier missed
+  Obj55 hit progression, not Tails-side hurt suppression.
+- No S2 trace turned green in round 49, so the ARZ2 and CNZ2 advances remain on
+  the campaign branch only and were not banked into `next`.
 
 ## 2026-07-02 - S2 round 48 ARZ2 targeted advance
 
