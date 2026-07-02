@@ -59,6 +59,7 @@ import com.openggf.graphics.shaderlib.DisplayShaderPipeline;
 import com.openggf.graphics.shaderlib.DisplayShaderPresetLoader;
 import com.openggf.graphics.shaderlib.DisplayShaderPresetRef;
 import com.openggf.graphics.shaderlib.DisplayShaderSelectionModel;
+import com.openggf.graphics.shaderlib.RewindVhsEffectPass;
 import com.openggf.graphics.shaderlib.ShaderPhase;
 import com.openggf.render.EngineRenderDispatcher;
 import com.openggf.util.RetroArchGlslShaderPackDownloader;
@@ -128,6 +129,7 @@ public class Engine {
 	private DisplayColorProfileController displayColorProfileController;
 	private DisplayShaderController displayShaderController;
 	private DisplayShaderPickerController displayShaderPickerController;
+	private RewindVhsEffectPass rewindVhsEffectPass;
 	private int displayShaderFrameCounter;
 	private volatile boolean displayShaderPackDownloadInProgress;
 	private volatile boolean displayShaderPackRescanRequested;
@@ -500,6 +502,16 @@ public class Engine {
 				this::persistDisplayShaderSelection,
 				ref -> activateDisplayShader(ref, loader, defaultPhase));
 		displayShaderController.applySavedSelectionSilently();
+
+		if (configService.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED)
+				&& configService.getBoolean(SonicConfiguration.LIVE_REWIND_VHS_EFFECT)) {
+			rewindVhsEffectPass = new RewindVhsEffectPass();
+			rewindVhsEffectPass.prewarm(
+					configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
+					configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS),
+					Math.max(1, viewportWidth),
+					Math.max(1, viewportHeight));
+		}
 	}
 
 	private void reloadDisplayShaderLibrary() {
@@ -1583,6 +1595,17 @@ public class Engine {
 		if (uiPipeline != null && !userRecordingSceneSuppressed) {
 			uiPipeline.renderFadePass();
 		}
+		// VHS picture-search effect while live rewind is active. Runs BEFORE the
+		// user's PRESENTATION-phase display shader so a CRT preset displays the
+		// damaged "signal" (tape artifacts precede the TV in the real chain).
+		if (!userRecordingSceneSuppressed && rewindVhsEffectPass != null && gameLoop != null) {
+			rewindVhsEffectPass.apply(
+					gameLoop.liveRewindEffectIntensity(),
+					gameLoop.liveRewindEffectSpeed(),
+					configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
+					configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS),
+					viewportX, viewportY, viewportWidth, viewportHeight);
+		}
 		if (!userRecordingSceneSuppressed) {
 			applyDisplayShaderPhase(ShaderPhase.PRESENTATION);
 		}
@@ -2320,6 +2343,12 @@ public class Engine {
 		});
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
 		cleanupStep("pause text renderer", pauseTextRenderer::cleanup);
+		cleanupStep("VHS rewind effect", () -> {
+			if (rewindVhsEffectPass != null) {
+				rewindVhsEffectPass.dispose();
+				rewindVhsEffectPass = null;
+			}
+		});
 		cleanupStep("graphics manager", graphicsManager::cleanup);
 		cleanupStep("presence", gameLoop::closePresence);
 		cleanupStep("audio manager", audioManager::destroy);
