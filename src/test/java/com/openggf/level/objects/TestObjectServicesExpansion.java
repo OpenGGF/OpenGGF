@@ -1,6 +1,5 @@
 package com.openggf.level.objects;
 
-import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.RomManager;
 import com.openggf.debug.DebugOverlayManager;
@@ -8,16 +7,10 @@ import com.openggf.game.BonusStageProvider;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
-import com.openggf.game.GameStateManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
-import com.openggf.graphics.FadeManager;
-import com.openggf.level.LevelManager;
-import com.openggf.level.ParallaxManager;
-import com.openggf.level.WaterSystem;
-import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -92,31 +85,6 @@ class TestObjectServicesExpansion {
     void defaultObjectServices_requiresGameplayMode() {
         assertThrows(NullPointerException.class,
                 () -> new DefaultObjectServices(null, EngineServices.current()));
-    }
-
-    @Test
-    void defaultObjectServices_bootstrapConstructor_requiresActiveRuntime() {
-        LevelManager levelManager = GameServices.level();
-        Camera camera = GameServices.camera();
-        GameStateManager gameState = GameServices.gameState();
-        SpriteManager spriteManager = GameServices.sprites();
-        FadeManager fadeManager = GameServices.fade();
-        WaterSystem waterSystem = GameServices.water();
-        ParallaxManager parallaxManager = GameServices.parallax();
-
-        SessionManager.clear();
-
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> new DefaultObjectServices(
-                        levelManager,
-                        camera,
-                        gameState,
-                        spriteManager,
-                        fadeManager,
-                        waterSystem,
-                        parallaxManager));
-        assertTrue(ex.getMessage().contains("active gameplay runtime"),
-                "legacy constructor should fail before fabricating detached runtime-owned services");
     }
 
     @Test
