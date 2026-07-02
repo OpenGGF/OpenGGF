@@ -395,6 +395,11 @@ public enum SonicConfiguration {
 	LIVE_REWIND_TAPE_COAST_MIN_STEPS,
 
 	/**
+	 * Whether the VHS picture-search shader effect renders while live rewind is active.
+	 */
+	LIVE_REWIND_VHS_EFFECT,
+
+	/**
 	 * Seconds of live rewind keyframe and input history to retain. The actual
 	 * retained window may be up to one keyframe interval longer so replay always
 	 * has a complete keyframe-to-target input segment.

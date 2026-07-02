@@ -151,6 +151,8 @@ public final class ConfigCatalog {
                 "Maximum rewind steps per tick"));
         put(LIVE_REWIND_TAPE_COAST_MIN_STEPS, of("rewind", "tapeCoastMinSteps", DOUBLE,
                 "Minimum rewind steps per tick; below 1.0 gives slow-motion rewind"));
+        put(LIVE_REWIND_VHS_EFFECT, of("rewind", "vhsEffect", BOOL,
+                "Render a VHS picture-search effect while live rewind is active"));
         put(REWIND_HISTORY_SECONDS, of("rewind", "historySeconds", INT,
                 "Seconds of live rewind keyframe and input history to retain"));
         put(REWIND_AUDIO_HISTORY_LIMIT_TYPE, ofEnum("rewind", "audioHistoryLimitType",
