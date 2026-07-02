@@ -780,3 +780,68 @@ than object-list position, produces byte-for-byte identical animation timing wit
 spawns a real 7-segment tail and asserts each segment enters its return phase exactly one frame
 after the previous segment. `TestDragonflyBadnikInstance#linkedChildStartsVerticalReturnWhenParentEntersHoverWait`
 continues to cover the same-frame Dragonfly-to-segment-0 hop.
+## MHZ2 End-Boss Background Vertical Deform (`sub_554B8`)
+
+**Location:** `SwScrlMhz.java` (`computeMhzDeform`, `computeBgY`), `Sonic3kMHZEvents.java`
+(`isBossAreaBackgroundDeformActive`), `MhzZoneRuntimeState.java`
+**ROM Reference:** `sub_554B8` (asm ~113118-113151), dispatched from `MHZ2_BackgroundEvent_Index`
+per the exact `Events_routine_bg` table below (asm 112861-113104)
+
+### Original Implementation (engine, pre-fix)
+
+`SwScrlMhz.computeMhzDeform` unconditionally computed the BG vertical scroll factor with
+the standard `MHZ_Deform` formula, `Camera_Y_pos_copy * 5/32 + $76`, for every frame of
+act 2. During the end-boss arena the ROM instead routes through `sub_554B8`, which uses
+`(Camera_Y_pos_copy - $280) * 5/32 + $180` — a different offset and base. The engine never
+modeled this branch, so the boss-arena background scrolled at the wrong vertical rate/bias
+the whole encounter.
+
+### Fixed Implementation
+
+`Sonic3kMHZEvents.isBossAreaBackgroundDeformActive()` exposes the exact ROM routine-to-deform
+mapping through `MhzZoneRuntimeState`, not a flat `Events_routine_bg >= $8` cutoff (the first
+version of this fix used that cutoff and was corrected in review — see below). `SwScrlMhz`'s
+`computeMhzDeform` branches on that predicate and calls the existing generalized
+`computeBgY(cameraY, yOffset, baseY)` helper with `(0x280, 0x180)` when it is true, `(0, 0x76)`
+otherwise.
+
+The predicate is `act2BackgroundRoutine != 0 && act2BackgroundRoutine != $C`, which is every
+routine value the field can hold except those two:
+
+- Routine `0` (loc_551EE, asm 112883-112899): ROM is conditional on `P1.x >= $3700 && P1.y <
+  $500`, but that is the exact condition `updateAct2InitialBackgroundEvent()` already tests to
+  decide whether to advance to routine `4` within the same frame — so by the time this
+  predicate is read, `act2BackgroundRoutine` only remains `0` when the ROM condition was
+  false. Standard deform.
+- Routine `4` (loc_55236, asm 112910-112911): ROM-unconditional `sub_554B8`. Numerically `< $8`,
+  so the original `>= $8` cutoff wrongly used standard deform here.
+- Routine `8` (loc_55250, asm 112922-112966): ROM three-way branches on `P1.y`/status bit 1, but
+  `updateAct2EndBossCustomLayoutEvent()`'s three exits mean `act2BackgroundRoutine` only remains
+  `8` across the frame boundary on the one ROM exit (loc_552E0) that calls `sub_554B8`; its other
+  two exits transition to `$C` (standard) or `$10` (which itself funnels to `sub_554B8`) within
+  the same frame.
+- Routine `$C` (loc_552F8, asm 112977-112986): ROM-unconditional standard `MHZ_Deform`.
+  Numerically `>= $8`, so the original `>= $8` cutoff wrongly used `sub_554B8` here.
+- Routines `>= $10` (loc_55312 onward): all funnel to `sub_554B8` via loc_55486 (asm 113099).
+
+`computeBgY`'s existing shift-based math (`asr.l #3` / `asr.l #2` + add, ported as Java `>>`,
+not `/`) already floors negative deltas correctly per ROM semantics; a regression test pins
+that so a future refactor toward `* 5 / 32` truncating division would be caught.
+
+### Rationale
+
+This is a parity fix, not an intentional deviation — recorded here per the MHZ parity-fix
+plan's per-commit documentation rule so the resolved defect is traceable. Horizontal shake
+handling (`Screen_shake_offset`) was already correct and untouched.
+
+### Verification
+
+`SwScrlMhzTest`:
+- `endBossVerticalDeformUsesSub554B8BaseWhenRoutineBgIsInBossAreaRange` — routine `8` (the
+  loc_552E0 exit) uses `sub_554B8`.
+- `routineBg4UsesSub554B8Unconditionally` — routine `4` uses `sub_554B8` even though it is
+  numerically below `$8`.
+- `routineBgCUsesStandardMhzDeformUnconditionally` — routine `$C` uses standard `MHZ_Deform`
+  even though it is numerically `>= $8`.
+- `sub554B8UsesAsrFlooringNotTruncatingDivisionForNegativeDelta` — a `cameraY < $280` case
+  asserts the ROM-exact floored result, which a truncating-division oracle would get wrong.
