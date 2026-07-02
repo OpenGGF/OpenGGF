@@ -17,7 +17,9 @@ is unchanged. No S2 trace greened in round 45.
 
 ## 2026-07-02 - S2 round 45 ARZ2 targeted advance
 
-Worker ARZ2 used `.worktrees/ai-s2-arz2-round45-next` /
+Round 45 started from `41490eb5e` on `bugfix/ai-s2-trace-next`; `origin/develop`
+was already up to date before dispatch. Worker ARZ2 used
+`.worktrees/ai-s2-arz2-round45-next` /
 `bugfix/ai-s2-arz2-round45-next`, based from conductor HEAD `41490eb5e` on
 `bugfix/ai-s2-trace-next`. The focused baseline reproduced ARZ2 f4707 / 1945
 (`x` expected `0x2B4D`, actual `0x2B4F`).
@@ -44,6 +46,30 @@ Candidate results:
 - Banked Obj89 lower-edge slack `getOnScreenHalfHeight() == 0x21`: ARZ2 advances
   to f4749 / 1833 (`obj_extra_s10_x` expected absent, actual `0x2AE0`).
 
+Other round-45 workers made no commits:
+- CNZ2 worktree `.worktrees/ai-s2-cnz2-round45-next` /
+  `bugfix/ai-s2-cnz2-round45-next`: reproduced f9946 / 300. Two Obj51
+  electric-ball timing candidates were tested and reverted. Changing the ball
+  spawn from FindFreeObj-style `spawnFreeChild` to after-current `spawnChild`
+  regressed to f9199 / 437 (`tails_x_speed`), and predicting split-ball touch
+  coordinates from `loc_31FF8` regressed to f9199 / 370. CNZ2 remains f9946 /
+  300.
+- MTZ3 worktree `.worktrees/ai-s2-mtz3-round45-next` /
+  `bugfix/ai-s2-mtz3-round45-next`: reproduced f13336 / 352. Temporary probes
+  showed Obj54 body does not overlap at the failure frame, Obj53 uses the 6x6
+  hurt hitbox, and the first engine Obj53 overlap is one gameplay frame later
+  than ROM; the tested hurt source position would push Sonic right, so generic
+  hurt-direction handoff was not the cause. Offsetting the Obj53 vertical angle
+  by `+0x18` regressed to f12594 / 409 and was reverted. MTZ3 remains f13336 /
+  352.
+- OOZ2 worktree `.worktrees/ai-s2-ooz2-round45-next` /
+  `bugfix/ai-s2-ooz2-round45-next`: reproduced f12107 / 99. A live-zero
+  collision flag precedence candidate did not advance, and extending Obj55
+  hit-disable timing regressed to f9302 / 386. Diagnostics showed Sonic was not
+  overlapping Obj55 on the relevant pass while Tails overlapped Obj55 with flags
+  `$CF`, so same-frame Sonic-hit clearing is not the direct f12107 cause. OOZ2
+  remains f12107 / 99.
+
 Verification:
 - `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
   "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"
@@ -53,6 +79,32 @@ Verification:
   "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen"
   "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossPillarsUseLowestFreeSlotsAtFrame4692"
   test` passed the f4692 pillar allocation oracle.
+- Integrated S2 subset:
+  `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen"
+  test` ran 5 requested checks: ARZ1 passed; ARZ2 f4749 / 4, CNZ2 f9946 /
+  8, MTZ3 f13336 / 6, and OOZ2 f12107 / 13 remained expected-red.
+- Full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen"
+  test` ran 19 tests with 15 green / 4 expected-red at ARZ2 f4749 / 4, CNZ2
+  f9946 / 8, MTZ3 f13336 / 6, and OOZ2 f12107 / 13.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen"
+  test` refreshed 29 S1 trace Surefire XMLs with 0 failures.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true"
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils"
+  "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen"
+  test` ran 68 checks with 66 green plus the known AIZ expected-reds:
+  complete-run f1095 / 3 (`x_sub` expected `0x0000`, actual `0x0C00`) and
+  level-select f8941 / 1 (`camera_y` expected `0x02C1`, actual `0x02B9`).
+- No S2 trace turned green in round 45, so the ARZ2 advance was merged into the
+  campaign branch only and was not banked into `next`.
 
 ## 2026-07-02 - S2 round 44 targeted no-change pass
 
