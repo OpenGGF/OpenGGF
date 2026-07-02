@@ -12,6 +12,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PlatformBobHelper;
@@ -312,8 +313,9 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
         if (player != null && isRomVisibleStandingLatch(om, player)) {
             return true;
         }
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick != null && isRomVisibleStandingLatch(om, sidekick)) {
+        for (PlayableEntity participant : services().playerQuery()
+                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (participant != null && isRomVisibleStandingLatch(om, participant)) {
                 return true;
             }
         }
