@@ -236,7 +236,10 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
      */
     private boolean checkFloorCollision() {
         TerrainCheckResult result = ObjectTerrainUtils.checkFloorDist(currentX, currentY, 12);
-        if (result.hasCollision()) {
+        // S2 Obj28_Main/Walk/Fly accepts only a negative ObjCheckFloorDist:
+        // tst.w d1 / bpl.s DisplaySprite, so a zero-distance probe must not
+        // advance the prison animal into its walk/fly routine early.
+        if (result.distance() < 0) {
             currentY = currentY + result.distance();
             return true;
         }
