@@ -27364,3 +27364,44 @@ nits, swing-bar hurt/dead guards, mushroom platform anim). Command:
   complete-run trace session, not folded into this validation pass).
 - No regression: MHZ parity-fix wave is confirmed net-neutral-to-positive on this
   trace (same first-error field/frame, fewer total errors).
+
+## 2026-07-02 -- MHZ complete-run frame-1 `camera_x` root fixed: Get_LevelSizeStart MHZ1 load-time override
+
+Worktree `.worktrees/trace-s3k-mhz`, branch `bugfix/ai-trace-s3k-mhz`. Command:
+`mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`
+
+- Root cause: the frame-1 `camera_x` divergence recorded in the 2026-07-02 Task V1
+  entry above was a missing ROM level-load special case. ROM `Get_LevelSizeStart`
+  `loc_1BF1E` (`docs/skdisasm/sonic3k.asm:38214-38225`) checks
+  `Current_zone_and_act == $700` (MHZ1) with `Player_mode < 3` (Sonic/Tails, not
+  Knuckles) and `SK_alone_flag == 0` (locked-on S&K, which the engine always
+  models): when true it overrides `Camera_min_X_pos`/`Camera_target_min_X_pos`/
+  `Camera_min_X_pos_P2` to `$C0` and feeds `d1=$160` into the shared tail
+  (`subi.w #$A0,d1` at `sonic3k.asm:38246`) that forces the initial
+  `Camera_X_pos`/`Camera_X_pos_P2`. MHZ1's `LevelSizes` entry
+  (`sonic3k.asm:38111`) has `xstart=0`, so without the override the engine loaded
+  a `0` min-X boundary and started the camera unclamped at `playerCentreX-$A0`
+  (`0x0039`) instead of ROM's `$C0`.
+- Fix: `Sonic3k.loadLevelData` (`src/main/java/com/openggf/game/sonic3k/Sonic3k.java`)
+  now sets `boundariesMinXOverride = 0xC0` for `zone == ZONE_MHZ && act == 0 &&
+  !knuckles`, mirroring the existing sibling AIZ-intro `boundariesMinXOverride`
+  pattern. The override both pins `Camera_min_X_pos` and, via the existing
+  level-load force-position clamp, snaps the initial camera X up to `$C0`. This is
+  a zone/act-indexed level-load boundary override (matching ROM
+  `Get_LevelSizeStart`'s own per-zone/act structure), not a zone check inside
+  shared camera/physics code.
+- New regression coverage in `TestSonic3kMHZEvents`:
+  `act1LevelLoadPinsCameraAndMinXToRomMhzStart` (Sonic/Tails gets the `$C0`
+  override) and `act1LevelLoadKeepsLevelSizesMinXForKnuckles` (Knuckles keeps the
+  ROM `LevelSizes` `xstart=0`, no override -- `Player_mode >= 3` skips
+  `loc_1BF1E`'s branch per `sonic3k.asm:38217-38218`).
+- Result: frame-1 `camera_x` divergence is gone. Trace replay now advances to the
+  frontier recorded in the 2026-06-21 "Grind cycle 2" entry: FAIL, 3615 errors, 0
+  warnings, first error frame 72 -- `y_speed` mismatch (expected `0x00E0`, actual
+  `0x0000`). This exactly matches that pre-existing historical frontier, confirming
+  the camera_x regression between 2026-06-21 and the Task V1 check was the sole
+  cause of the frame-1 divergence, and that frame 72 `y_speed` is a distinct,
+  still-open root (out of scope here).
+- Verified green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+  `TestSonic3kMHZEvents` (all pass, no regressions).
