@@ -21,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -776,7 +777,7 @@ class TestRespawnStrategies {
 
         when(levelManager.getCurrentLevel()).thenReturn(mock(Level.class));
         when(levelManager.getChunkDescAt(eq((byte) 0), anyInt(), anyInt())).thenReturn(solidFloor);
-        when(levelManager.getSolidTileForChunkDesc(solidFloor, 0x0C)).thenReturn(flatTile);
+        when(levelManager.getSolidTileForChunkDesc(eq(solidFloor), eq(0x0C), anyBoolean())).thenReturn(flatTile);
 
         mode.attachLevelManagers(mode.getWaterSystem(), mode.getParallaxManager(),
                 mode.getTerrainCollisionManager(), mode.getCollisionSystem(),
@@ -801,9 +802,9 @@ class TestRespawnStrategies {
                     int x = invocation.getArgument(1);
                     return x < 0 ? edgeWallFloor : clearFloor;
                 });
-        when(levelManager.getSolidTileForChunkDesc(edgeWallFloor, 0x0C)).thenReturn(wallFloorTile);
-        when(levelManager.getSolidTileForChunkDesc(edgeWallFloor, 0x0D)).thenReturn(wallFloorTile);
-        when(levelManager.getSolidTileForChunkDesc(clearFloor, 0x0C)).thenReturn(clearFloorTile);
+        when(levelManager.getSolidTileForChunkDesc(eq(edgeWallFloor), eq(0x0C), anyBoolean())).thenReturn(wallFloorTile);
+        when(levelManager.getSolidTileForChunkDesc(eq(edgeWallFloor), eq(0x0D), anyBoolean())).thenReturn(wallFloorTile);
+        when(levelManager.getSolidTileForChunkDesc(eq(clearFloor), eq(0x0C), anyBoolean())).thenReturn(clearFloorTile);
 
         mode.attachLevelManagers(mode.getWaterSystem(), mode.getParallaxManager(),
                 mode.getTerrainCollisionManager(), mode.getCollisionSystem(),

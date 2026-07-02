@@ -227,7 +227,24 @@ class TestZoneLayoutMutationPipeline {
         when(levelManager.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
         when(levelManager.getCurrentLevel()).thenReturn(new TestLevel());
         doCallRealMethod().when(levelManager).flushQueuedLayoutMutations();
-        doCallRealMethod().when(levelManager).applyMutationEffects(org.mockito.ArgumentMatchers.any());
+        // The real applyMutationEffects delegates to the package-private
+        // LevelDirtyRegionDispatcher field, which a Mockito mock never
+        // initializes; mirror its public-effect routing on the mock instead.
+        doAnswer(invocation -> {
+            com.openggf.game.mutation.MutationEffects effects = invocation.getArgument(0);
+            if (effects == null || effects.isEmpty()) {
+                return null;
+            }
+            if (effects.dirtyRegionProcessingRequired()) {
+                levelManager.processDirtyRegions();
+            }
+            if (effects.allTilemapsRedrawRequired()) {
+                levelManager.invalidateAllTilemaps();
+            } else if (effects.foregroundRedrawRequired()) {
+                levelManager.invalidateForegroundTilemap();
+            }
+            return null;
+        }).when(levelManager).applyMutationEffects(org.mockito.ArgumentMatchers.any());
         doAnswer(invocation -> {
             log.append('D');
             return null;

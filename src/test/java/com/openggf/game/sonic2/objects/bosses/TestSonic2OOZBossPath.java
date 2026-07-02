@@ -45,6 +45,10 @@ class TestSonic2OOZBossPath {
                 0, 0, Sonic2ObjectIds.OOZ_BOSS, 0, 0, false, 0));
         boss.setServices(new TestObjectServices());
 
+        // Obj55_Init only sets boss_subtype and returns; Obj55_Main_Init runs on the
+        // next object pass (s2.asm:68225-68238,68258-68276), so drive one update.
+        boss.update(0, null);
+
         assertEquals(0x2940, boss.getState().x);
         assertEquals(0x02D0, boss.getState().y);
         assertEquals(0x02, boss.getBossSubtypeForTesting());
@@ -62,6 +66,9 @@ class TestSonic2OOZBossPath {
         Sonic2OOZBossInstance boss = new Sonic2OOZBossInstance(new ObjectSpawn(
                 0, 0, Sonic2ObjectIds.OOZ_BOSS, 0, 0, false, 0));
         boss.setServices(new TestObjectServices());
+
+        // Run the deferred Obj55_Main_Init pass before seeding the surface-rise state.
+        boss.update(0, null);
 
         boss.getState().yFixed = 0x0291_0000;
         boss.getState().y = 0x0291;
