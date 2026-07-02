@@ -4,6 +4,7 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
+import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -247,6 +248,36 @@ class TestSonic2ObjectBugFixes {
         assertEquals(0, tails.getGSpeed());
         assertEquals(0x04CB, tails.getCentreX(),
                 "Exact right-edge contact has zero shove distance and should not move Tails");
+    }
+
+    @Test
+    void arzBossPillarPostPhysicsSidePushPreservesTailsVelocity() {
+        ARZBossPillar pillar = new ARZBossPillar(
+                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
+                null);
+        ObjectManager manager = buildSingleObjectManager(pillar);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCentreX((short) 0x2A73);
+        tails.setCentreY((short) 0x04C0);
+        tails.setCpuControlled(true);
+        tails.setRenderFlagOnScreen(true);
+        tails.setAir(false);
+        tails.setXSpeed((short) -0x24);
+        tails.setGSpeed((short) -0x24);
+
+        manager.processImmediateInlineSolidCheckpoint(pillar, null, List.of(tails));
+
+        assertEquals(0xFFDC, tails.getXSpeed() & 0xFFFF);
+        assertEquals(0xFFDC, tails.getGSpeed() & 0xFFFF,
+                "Obj89's pillar can run an engine-side post-physics checkpoint after Tails has "
+                        + "already applied the ROM-visible CPU/movement velocity. Preserve that "
+                        + "velocity while the integrated trace replay verifies the same side "
+                        + "contact still carries Status_Push "
+                        + "(docs/s2disasm/s2.asm:35424-35436,65330-65374).");
     }
 
     @Test

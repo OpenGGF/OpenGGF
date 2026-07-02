@@ -327,6 +327,19 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a moving side contact should preserve the player's horizontal
+     * velocity while still applying the side position correction and push bits.
+     * <p>
+     * Most shared {@code SolidObject} callers keep the ROM stop-on-side-contact
+     * behavior. Object-local ordering exceptions can opt in when the engine's
+     * inline post-physics checkpoint observes a side contact after the ROM frame
+     * would have already let the player slot overwrite the stopped velocity.
+     */
+    default boolean preservesMovingSideContactVelocity(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether a zero horizontal velocity on the object's left side still routes
      * through {@code SolidObject_StopCharacter}.
      * <p>
