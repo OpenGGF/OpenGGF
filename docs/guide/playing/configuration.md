@@ -139,6 +139,16 @@ input:
     a: "A"
 ```
 
+The engine models Mega Drive A, B, and C as separate actions. All three act as
+jump buttons during platforming gameplay, but keyboard B/C are unbound in the
+default config. Gamepads use position-based face buttons: west maps to Mega
+Drive A, south maps to B, and east maps to C.
+
+Controller input is controlled by `input.controller.enabled`,
+`input.controller.deadzone`, `input.controller.player1`, and
+`input.controller.player2`. Player assignments currently accept `"auto"` or
+`"none"`.
+
 See [Controls](controls.md) for the full list of bindable actions and
 `CONFIGURATION.md` for current YAML key names.
 

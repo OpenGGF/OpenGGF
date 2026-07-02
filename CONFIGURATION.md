@@ -383,6 +383,17 @@ The tables below list each key's name, default code, and the human-readable key 
 
 ### Gameplay Controls
 
+Keyboard action bindings are Mega Drive actions. A, B, and C all function as
+jump buttons during platforming gameplay. By default only A is bound on
+keyboard: P1 A is `SPACE`, P2 A is `RIGHT_SHIFT`, and keyboard B/C are
+unbound.
+
+Gamepads use GLFW's standard position-based gamepad layout. D-pad and left
+stick feed digital movement; the west face button maps to Mega Drive A, south
+maps to Mega Drive B, and east maps to Mega Drive C. On an Xbox controller
+that is X/A/B respectively; on a PlayStation controller that is
+Square/Cross/Circle respectively.
+
 | Key | YAML path | Default | Key Name | Description |
 |-----|-----------|---------|----------|-------------|
 | `UP` | `input.player1.up` | `265` | ↑ Arrow | Look up / enter tubes. |
@@ -397,8 +408,8 @@ The tables below list each key's name, default code, and the human-readable key 
 | `P2_B` | `input.player2.b` | `-1` | unbound | Player 2 action button B. |
 | `P2_C` | `input.player2.c` | `-1` | unbound | Player 2 action button C. |
 | `P2_START` | `input.player2.start` | `345` | Right Control | Player 2 Start. |
-| `CONTROLLER_ENABLED` | `input.controller.enabled` | `true` | true | Enable gamepad/controller input. |
-| `CONTROLLER_DEADZONE` | `input.controller.deadzone` | `0.35` | 0.35 | Analog controller deadzone. |
+| `CONTROLLER_ENABLED` | `input.controller.enabled` | `true` | true | Enable GLFW gamepad/controller input. |
+| `CONTROLLER_DEADZONE` | `input.controller.deadzone` | `0.35` | 0.35 | Left-stick digital direction deadzone. |
 | `CONTROLLER_PLAYER1` | `input.controller.player1` | `"auto"` | auto | Controller assignment for Player 1 (`auto` or `none`). |
 | `CONTROLLER_PLAYER2` | `input.controller.player2` | `"auto"` | auto | Controller assignment for Player 2 (`auto` or `none`). |
 | `PAUSE_KEY` | `input.pause` | `257` | Enter | Pause / unpause the game. |
@@ -406,8 +417,6 @@ The tables below list each key's name, default code, and the human-readable key 
 | `RECORDING_RECORD_KEY` | `debug.recording.recordKey` | `298` | F9 | `Shift+Record` starts/opens user recording flows; plain Record stops active recording. |
 | `TRACE_REWIND_KEY` | `debug.traceRewind.key` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time, including reverse audio presentation and restored fade snapshots. |
 | `LIVE_REWIND_KEY` | `rewind.liveKey` | `82` | R | Hold during live level play to rewind deterministic gameplay state when `LIVE_REWIND_ENABLED` is true, including reverse audio presentation and restored fade snapshots. |
-
-Keyboard defaults bind only A for each player; B/C are unbound by default. Gamepads map west/south/east to A/B/C.
 
 ### Debug Navigation
 

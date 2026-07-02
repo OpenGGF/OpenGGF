@@ -6,7 +6,7 @@ All notable changes to the OpenGGF project are documented in this file.
 - Basic startup/title/data-select screens now accept controller directions and face-button actions.
 - Rewind and recording playback now inject logical input snapshots instead of fake key-code input.
 - Gameplay and special-stage input now consume logical P1/P2 state, preserving Mega Drive A/B/C identity for special stages.
-- GLFW gamepads now map D-pad/left-stick directions and west/south/east face buttons to Mega Drive A/B/C logical input.
+- GLFW gamepads now map D-pad/left-stick directions and west/south/east face buttons to Mega Drive A/B/C logical input (Xbox X/A/B, PlayStation Square/Cross/Circle).
 - Keyboard input now feeds the controller-ready logical input layer while preserving the existing Space/Right Shift defaults.
 - Add controller-ready input configuration keys, defaults, and deprecated jump-binding migration.
 - Add logical controller-ready player input state for the controller support MVP.
