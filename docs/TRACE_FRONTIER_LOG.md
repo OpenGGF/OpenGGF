@@ -19,6 +19,48 @@ with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 advanced again in round 65 but is not banked under
 the green-bank rule until it greens.
 
+## 2026-07-02 - S2 round 65 conductor closure
+
+Integrated ARZ2 worker commit `ce95436a9` and conductor repair commit
+`453060c44` into conductor branch `bugfix/ai-s2-trace-next`, then merged local
+`develop` commit `df23cfac` into the conductor. Remote `origin/develop`
+remained at `d162131f1` and was already contained.
+
+Conductor verification after the local `develop` merge:
+- Full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and 3 expected-red frontiers: ARZ2 f6913 / 1
+  (`camera_x` expected `0x2B29`, actual `0x2B28`), CNZ2 f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`), and MTZ3 f13477 / 4
+  (`x_speed` expected `-03FB`, actual `0x03FB`). `TestS2DezEndingLevelSelectTraceReplay`
+  is green after the duplicate-ObjC6 repair.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`).
+
+Round 65 worker outcomes:
+- ARZ2 advanced f6513 -> f6913 through real Obj58 boss-explosion identity and
+  init-frame timing. The conductor full-S2 sweep initially found a DEZ ending
+  regression from a duplicate dynamic ObjC6 spawn; the conductor repair removed
+  that spawn, because ObjAF terminal defeat does not allocate ObjC6 and the DEZ
+  layout already owns the transition object.
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round65-next` /
+  `bugfix/ai-s2-cnz2-round65-next` made no commit. It confirmed the failing
+  touch is already the split-ball path: ROM hurts Tails from Obj51 split ball
+  previous-frame position `$28ED,$06E8`, while the engine scans the split ball
+  around `$28F0,$06E6`; a falling-ball X projection candidate did not affect
+  f9977 and was reverted.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round65-next` /
+  `bugfix/ai-s2-mtz3-round65-next` made no commit. A BizHawk PC-execute probe
+  around f13477/f13478 showed ROM slot `$24` Obj53 has collision `$DA` at
+  f13477, but `Touch_ChkValue` / `Touch_Enemy_Part2` fires on the next trace
+  frame; the engine still contacts the breakaway orb one frame early.
+
 ## 2026-07-02 - S2 round 65 ARZ2 Boss_LoadExplosion object identity
 
 Round 65 ARZ2 worker used
