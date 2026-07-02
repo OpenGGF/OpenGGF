@@ -6,16 +6,41 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 51 ARZ2 and OOZ2 targeted passes:
+Current branch-local S2 state after merging the develop GameRules refactor
+(`44073db0b`) and re-running the round 51 verification baseline:
 ARZ2 is f5827 / 2 under `frontierOnly` (`x_speed` expected `0x0000`,
 actual `-015D`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
 expected `-020C`, actual `0x020C`), and OOZ2 is f12861 / 1 under `frontierOnly`
-(`y` expected `0x0215`, actual `0x0214`). The round 51 conductor
+(`y` expected `0x0215`, actual `0x0214`). The post-GameRules conductor
 verification keeps the full S2 sweep at 15 green / 4 expected-red.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
-with only the known AIZ expected-red frontiers. No S2 trace greened in round 51.
+with only the known AIZ expected-red frontiers. No S2 trace greened in round 51
+or during the post-GameRules re-baseline.
+
+## 2026-07-02 - S2 post-GameRules round 54 baseline
+
+After the external `feature/ai-game-rule-gating-refactor` landed in local
+`develop`, the conductor merged it into
+`.worktrees/ai-s2-trace-next` / `bugfix/ai-s2-trace-next` as merge commit
+`44073db0b`. The merge removed `PhysicsFeatureSet`, resolved
+`SidekickCpuController` onto typed `GameRules`, and ported the S2/S3K water-exit
+rule split into `GameRules`.
+
+Post-merge verification:
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 S2 trace tests: 15 green / 4 expected-red at the same frontiers as
+  round 51: ARZ2 f5827 / 2, CNZ2 f9977 / 10, MTZ3 f13358 / 6, and OOZ2
+  f12861 / 1.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  plus fresh Surefire XML filtering reported `S1_RECENT=29 S1_BAD=0`.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 S3K guard tests: 66 green / 2 known AIZ expected-red frontiers
+  (complete-run f1095 `x_sub`, AIZ trace f8941 `camera_y`).
+
+This is the clean baseline for round 54 workers. No S2 trace turned green, so
+no changes were banked into `next`.
 
 ## 2026-07-02 - S2 round 51 conductor integration pause
 
