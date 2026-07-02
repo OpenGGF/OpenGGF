@@ -6,13 +6,12 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 70 ARZ2 worker branch
-`bugfix/ai-s2-arz2-round70-next`, integrated into conductor branch
-`bugfix/ai-s2-trace-next` at `f04af74a0` and followed by local `develop`
-merge `71a646512`:
+Current branch-local S2 state after round 71 CNZ2 worker branch
+`bugfix/ai-s2-cnz2-round71-next`, based on conductor branch
+`bugfix/ai-s2-trace-next` at `86a4e0313`:
 ARZ2 is f7338 / 3 under `frontierOnly` (`obj_extra_s14_x` expected absent,
-actual `0x2C9C`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
-expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
+actual `0x2C9C`), CNZ2 is f10661 / 4 under `frontierOnly` (`x_speed`
+expected `0x022E`, actual `-022E`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now ARZ2, CNZ2, and MTZ3.
@@ -21,6 +20,70 @@ with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 advanced again in round 70 but is not banked under
 the green-bank rule until it greens. Round 71 workers must include targeted
 BizHawk Lua evidence before any `no-change` / `rejected` bounce.
+
+## 2026-07-02 - S2 round 71 CNZ2 Obj51 original split-half touch position
+
+Round 71 CNZ2 worker used
+`.worktrees/ai-s2-cnz2-round71-next` /
+`bugfix/ai-s2-cnz2-round71-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `86a4e0313`. The focused baseline reproduced
+CNZ2 f9977 / 10 under `frontierOnly`: `tails_x_speed` expected `-0200`,
+actual `0x023A`.
+
+BizHawk diagnostic:
+- Probe script was launched through `tools/bizhawk/run_bizhawk_lua.bat` with
+  absolute Lua, movie, output, and ROM paths. Script:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round71-next\tools\bizhawk\diag_s2_cnz2_obj51_round71.lua`.
+  Output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round71-next\target\bizhawk\cnz2_obj51_round71.txt`.
+- Command summary:
+  `OGGF_START=22432 OGGF_STOP=22462 OGGF_TRACE_OFFSET=12484 OGGF_OUT=<output> run_bizhawk_lua.bat <lua> <s2-lvl-select-CNZ.bk2> <s2.gen>`.
+- Hooked `loc_31FF8` `$31FF8`, `loc_32030` split birth `$32030`,
+  copy loop `$3206E`, split routine `$32080`, `DisplaySprite` `$164F4`,
+  `Touch_Boss_CheckCollision` `$3F6AE`, `Touch_ChkValue` `$3F6F2`,
+  `Touch_Hurt` `$3F86E`, and `Hurt_Sidekick` `$3F8BE`, covering BizHawk
+  frames 22432-22462 / trace frames f9948-f9978.
+- Captured slot/timing values: at f9948 ROM slot `$1A` entered `loc_31FF8`
+  at `x=$2909,y=$06F2,y_vel=$07A8`, split at `x=$2909,y=$06F7`, then
+  `loc_32030` set original velocities `x_vel=$FF00,y_vel=$FD00`,
+  `collision_flags=$98`, `routine_secondary=$06`. Clone slot `$1C` was
+  allocated after current and executed the same frame, displaying at
+  `x=$290A,y=$06F4`. At f9977, `Touch_Boss_CheckCollision`,
+  `Touch_ChkValue`, `Touch_Hurt`, and `Hurt_Sidekick` fired from slot `$1A`
+  at `x=$28ED,y=$06E8,x_vel=$FF00,y_vel=$0320` before slot `$1A` ran its
+  same-frame split move/display update to `x=$28EC,y=$06EB`.
+
+Root fixed:
+- `CNZBossElectricBall.updateBallAttach()` no longer recopies X from the
+  engine boss helper while Obj51 is in `loc_31BA8`; ROM has stopped calling
+  `Boss_MoveObject` in that post-trigger countdown, so the child keeps the
+  X copied during init/attach instead of drifting ahead.
+- The original negative-X split half now exposes a projected `loc_31FF8`
+  touch region. `loc_32030` leaves that half in the current slot with
+  `x_vel=-$100`, while the copied positive-X half is allocated after current
+  and runs in the same object pass. Projecting only the original half gives
+  the f9977 contact row the ROM-visible `$28ED,$06E8` position without a
+  trace/zone/frame carve-out and without changing the clone timing. This
+  matches Obj51 post-trigger/child/split code and the Obj51 boss touch path
+  (`docs/s2disasm/s2.asm:66638-66664,67029-67118,85164-85484`).
+
+Result:
+- `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f9977 / 10 to f10661 / 4. New first error:
+  `x_speed` expected `0x022E`, actual `-022E`, exposing a later CNZ boss-ball
+  rebound/contact direction frontier.
+
+Verification:
+- Focused CNZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  exited 0 via failure-ignore and wrote the improved expected-red f10661 / 4
+  frontier in the `TestS2Cnz2LevelSelectTraceReplay` Surefire report and
+  `target/trace-reports`.
+- Focused CNZ boss unit guard:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.bosses.TestSonic2CNZBossCollision" test`
+  wrote an individual Surefire report with 6 runs, 0 failures, and 0 errors.
+  The MSE aggregate still included the retained expected-red CNZ2 trace report;
+  the class report was used.
 
 ## 2026-07-02 - S2 round 70 ARZ2 Obj28 render-flag slot reuse
 
