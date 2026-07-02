@@ -6,9 +6,9 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 51 OOZ2 targeted pass:
-ARZ2 is f5460 / 4 under `frontierOnly` (`tails_x_speed` expected `0x0000`,
-actual `-0048`),
+Current branch-local S2 state after the round 51 ARZ2 and OOZ2 targeted passes:
+ARZ2 is f5827 / 2 under `frontierOnly` (`x_speed` expected `0x0000`,
+actual `-015D`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
 expected `-020C`, actual `0x020C`), and OOZ2 is f12861 / 1 under `frontierOnly`
@@ -16,6 +16,54 @@ expected `-020C`, actual `0x020C`), and OOZ2 is f12861 / 1 under `frontierOnly`
 verification keeps the full S2 sweep at 15 green / 4 expected-red.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. No S2 trace greened in round 51.
+
+## 2026-07-02 - S2 round 51 ARZ2 Obj89 push-entry stop advance
+
+Round 51 started from conductor HEAD `f21c28647` on the `next` campaign via
+`.worktrees/ai-s2-trace-next`. Worker ARZ2 used
+`.worktrees/ai-s2-arz2-round51-next` /
+`bugfix/ai-s2-arz2-round51-next`, based from that conductor HEAD rather than
+`develop`. The focused baseline reproduced ARZ2 f5460 / 4 under
+`frontierOnly` (`tails_x_speed` expected `0x0000`, actual `-0048`).
+
+Investigation stayed on the follow-up Tails stop handoff after the round 50
+Obj89 pillar fix. The trace rows showed Tails' f5457-f5459 leftward velocity
+rows now surviving, then ROM zeroing Tails at f5460 while the engine kept
+`x_vel/inertia=$FFB8`. A BizHawk Lua write probe over the same window
+confirmed that `TailsCPU_Normal` still wrote held-left input, Tails movement
+accelerated `x_vel` to `$FFB8`, then the Obj89 pillar side contact reached
+`SolidObject_StopCharacter` and wrote zero to `inertia(a1)` / `x_vel(a1)`.
+The write PCs were in the shared `SolidObject_LeftRight` stop path
+(`docs/s2disasm/s2.asm:35413-35436`), while the object call remains
+`Obj89_Pillar_SolidObject`, which runs before the pillar body update at a
+`y_pos+4` anchor with `d1=$23,d2=$44,d3=$45`
+(`docs/s2disasm/s2.asm:65330-65374,65531-65539`).
+
+The fix narrows Obj89 pillar's moving side-contact velocity preservation to
+the object-order handoff where the side contact is newly publishing
+`Status_Push` after Tails' CPU/movement slot. If `Status_Push` is already
+visible at contact entry, the provider no longer suppresses the shared
+`SolidObject_StopCharacter` zeroing path. This preserves the round 50
+f5457-f5459 velocity rows and lets the f5460 stop land exactly where ROM does.
+
+Candidate result:
+- ARZ2 advances to f5827 / 2 under `frontierOnly` (`x_speed` expected
+  `0x0000`, actual `-015D`). The new owner is Sonic's later side-stop near the
+  ARZ boss after the Obj89 Tails handoff and stop rows align.
+
+Verification:
+- `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#arzBossPillarPostPhysicsSidePushPreservesTailsVelocity+arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff" "-DfailIfNoTests=false" test`
+  passes the focused Obj89 pillar handoff/stop-boundary oracle.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.frontierOnly=true" "-Dtrace.context.diagnosticChars=full" "-DfailIfNoTests=false" test`
+  reports the expected-red frontier at f5827 / 2.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtrace.frontierOnly=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" test`
+  ran the full S2 sweep: 19 trace tests, 15 green / 4 expected-red at ARZ2
+  f5827 / 2, CNZ2 f9977 / 10, MTZ3 f13358 / 6, and OOZ2 f12416 / 1.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtrace.frontierOnly=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Dsonic1.rom.path=s1.gen" test`
+  ran the full S1 sweep after clearing stale Surefire reports: 29 / 29 green.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtrace.frontierOnly=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsonic3k.rom.path=s3k.gen" test`
+  ran the campaign S3K guard subset: 68 tests, 66 green / 2 expected-red at
+  AIZ complete-run f1095 and AIZ trace f8941.
 
 ## 2026-07-02 - S2 round 51 OOZ2 Obj55 camera-release advance
 

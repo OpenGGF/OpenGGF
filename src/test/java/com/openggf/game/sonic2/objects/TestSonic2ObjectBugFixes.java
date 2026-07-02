@@ -266,9 +266,13 @@ class TestSonic2ObjectBugFixes {
         tails.setCpuControlled(true);
         tails.setRenderFlagOnScreen(true);
         tails.setAir(false);
+        tails.setPushing(false);
         tails.setXSpeed((short) -0x24);
         tails.setGSpeed((short) -0x24);
 
+        assertTrue(pillar.preservesMovingSideContactVelocity(tails),
+                "The Round 50 Obj89 handoff is only preserved while Tails' integer x_pos is still "
+                        + "at the pillar edge.");
         manager.processImmediateInlineSolidCheckpoint(pillar, null, List.of(tails));
 
         assertEquals(0xFFDC, tails.getXSpeed() & 0xFFFF);
@@ -278,6 +282,31 @@ class TestSonic2ObjectBugFixes {
                         + "velocity while the integrated trace replay verifies the same side "
                         + "contact still carries Status_Push "
                         + "(docs/s2disasm/s2.asm:35424-35436,65330-65374).");
+    }
+
+    @Test
+    void arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff() {
+        ARZBossPillar pillar = new ARZBossPillar(
+                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
+                null);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setCentreX((short) 0x2A72);
+        tails.setCentreY((short) 0x04C0);
+        tails.setCpuControlled(true);
+        tails.setRenderFlagOnScreen(true);
+        tails.setAir(false);
+        tails.setPushing(true);
+        tails.setXSpeed((short) -0x48);
+        tails.setGSpeed((short) -0x48);
+
+        assertFalse(pillar.preservesMovingSideContactVelocity(tails),
+                "Once Tails' integrated x_pos crosses inside Obj89 pillar's right edge, the object-local "
+                        + "handoff no longer suppresses ROM SolidObject_StopCharacter "
+                        + "(docs/s2disasm/s2.asm:35424-35436).");
     }
 
     @Test
