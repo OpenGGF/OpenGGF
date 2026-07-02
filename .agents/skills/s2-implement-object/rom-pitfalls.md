@@ -3354,7 +3354,7 @@ routine-$A end-checker scans for released animals, calls `Load_EndOfAct`, then
 deletes that checker slot (`docs/s2disasm/s2.asm:84967-84978`); it does not
 delete the routine-2 body slot.
 
-**Originating commit.** `<pending>` S2 OOZ2 Obj3E capsule body lifetime:
+**Originating commit.** `90011d815` S2 OOZ2 Obj3E capsule body lifetime:
 `TestS2Ooz2LevelSelectTraceReplay` advances f12861 -> green.
 
 ---
