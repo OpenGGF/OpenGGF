@@ -6,14 +6,33 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 42 targeted no-change pass is
+Current branch-local S2 state after the round 43 targeted no-change pass is
 unchanged:
 ARZ2 is f4707 / 1945 (`x` expected `0x2B4D`, actual `0x2B4F`), CNZ2 is f9946 /
 300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 is f12107 / 99
 (`tails_g_speed` expected `0x00A4`, actual `0x0000`). Full S2 is 15 green / 4
 expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. No S2
-trace greened in round 42.
+trace greened in round 43.
+
+## 2026-07-01 - S2 round 43 targeted no-change pass
+
+Round 43 started from `daa87b75c` on `bugfix/ai-s2-trace-next`. No source
+changes were integrated and no S2 trace greened.
+
+- MTZ3 Obj53 seed-slot worktree `.worktrees/ai-s2-mtz3-obj53seed-round43-next` /
+  `bugfix/ai-s2-mtz3-obj53seed-round43-next`: reproduced f13336 / 352. No
+  production fix or commit was made; the worker removed its temporary untracked
+  focused oracle file before returning. The round-42 finding remains the active
+  target: `spawnOrbs` allocates all seven Obj53 orbs as fresh children instead
+  of modeling ROM Obj53 seed-slot/current-slot reuse. MTZ3 remains f13336 /
+  352.
+- OOZ2 Obj07 abort worktree `.worktrees/ai-s2-ooz2-obj07abort-round43-next` /
+  `bugfix/ai-s2-ooz2-obj07abort-round43-next`: tested removing the Obj07
+  hurt-air support abort. The focused oil test passed, but OOZ2 replay regressed
+  to f9302 / 397, so the candidate was rejected as not genuine and reverted.
+  OOZ2 remains f12107 / 99.
+- No round-43 change was banked into `next`.
 
 ## 2026-07-01 - S2 round 42 targeted no-change pass
 
