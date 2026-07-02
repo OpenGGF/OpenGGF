@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -149,6 +150,35 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     @Override
     protected int getCollisionSizeIndex() {
         return 0x0F;
+    }
+
+    @Override
+    protected boolean usesBaseHitHandler() {
+        // Obj89 handles boss_invulnerable_time inside Obj89_Main_HandleHoveringAndHits
+        // after writing the current-frame hover position, not through Boss_HandleHits.
+        // docs/s2disasm/s2.asm:65079-65112
+        return false;
+    }
+
+    @Override
+    public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+        if (state.invulnerable || state.defeated || state.hitCount <= 0) {
+            return;
+        }
+
+        // ROM Touch_Enemy_Part2 only decrements boss_hitcount2/collision state here.
+        // Obj89_Main_HandleHoveringAndHits observes the zero hit count later in this
+        // object's own routine and selects the defeat routine after the hover write.
+        // docs/s2disasm/s2.asm:85266-85275,65079-65124
+        state.hitCount--;
+        if (state.hitCount == 0) {
+            return;
+        }
+
+        state.invulnerable = true;
+        state.invulnerabilityTimer = getInvulnerabilityDuration();
+        services().playSfx(getBossHitSfxId());
+        paletteFlasher.startFlash();
     }
 
     @Override
@@ -439,6 +469,26 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
             state.defeated = true;
             services().gameState().addScore(1000);
             onDefeatStarted();
+            return;
+        }
+
+        if (state.invulnerable) {
+            updateArzInvulnerability();
+        }
+    }
+
+    private void updateArzInvulnerability() {
+        if (state.invulnerabilityTimer <= 0) {
+            state.invulnerable = false;
+            paletteFlasher.stopFlash();
+            return;
+        }
+
+        paletteFlasher.update();
+        state.invulnerabilityTimer--;
+        if (state.invulnerabilityTimer <= 0) {
+            state.invulnerable = false;
+            paletteFlasher.stopFlash();
         }
     }
 
@@ -702,6 +752,14 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     @Override
+    public boolean isPersistent() {
+        // Obj89_Main_SubC owns the post-defeat camera release: it increments
+        // Camera_Max_X_pos to $2C00 before testing the on-screen bit and deleting.
+        // docs/s2disasm/s2.asm:65267-65278
+        return true;
+    }
+
+    @Override
     protected boolean isOnScreen() {
         Camera camera = services().camera();
         int screenX = state.x - camera.getX();
@@ -723,5 +781,10 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     @Override
     protected int getBossExplosionSfxId() {
         return Sonic2Sfx.BOSS_EXPLOSION.id;
+    }
+
+    @Override
+    protected int getBossExplosionObjectId() {
+        return com.openggf.game.sonic2.constants.Sonic2ObjectIds.BOSS_EXPLOSION;
     }
 }

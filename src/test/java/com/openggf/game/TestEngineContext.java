@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestEngineContext {
     @AfterEach
@@ -106,11 +107,21 @@ class TestEngineContext {
         assertNoRootBypass(Path.of("src/main/java/com/openggf/GameLoop.java"));
     }
 
+    @Test
+    void engineCreatesInputHandlerFromEngineOwnedConfiguration() throws IOException {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+
+        assertFalse(source.contains("new InputHandler()"),
+                "Production Engine input must use the engine-owned SonicConfigurationService");
+        assertFalse(source.contains("new InputHandler(configService)"),
+                "Production Engine input must use the live input factory");
+        assertTrue(source.contains("InputHandler.live(InputBindingFactory.supplier(configService))"),
+                "Production Engine input must use the live input factory");
+    }
+
     private static void assertNoRootBypass(Path path) throws IOException {
         String source = Files.readString(path);
         assertFalse(source.contains("GameServices.debugOverlay()"), path + " should use EngineContext.debugOverlay()");
         assertFalse(source.contains("GameServices.rom()"), path + " should use EngineContext.roms()");
     }
 }
-
-

@@ -13,6 +13,7 @@ import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
@@ -225,6 +226,11 @@ class TestPointPokeyObjectInstance {
         @Override
         public List<PlayableEntity> sidekicks() {
             return sidekicks;
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> null, () -> sidekicks);
         }
     }
 }

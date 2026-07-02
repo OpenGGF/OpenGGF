@@ -94,6 +94,9 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance",
                     "TestS1BadnikChildGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic2.objects.MCZBrickObjectInstance$MCZBrickDisplayChild",
+                    "TestS2MczBrickDisplayChildGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance",
                     "TestS1BadnikChildGraphRewind"),
             Map.entry(

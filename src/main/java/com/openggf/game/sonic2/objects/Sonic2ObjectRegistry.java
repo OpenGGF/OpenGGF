@@ -389,6 +389,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new BossExplosionObjectInstance(
                         spawn.x(),
                         spawn.y(),
+                        Sonic2ObjectIds.BOSS_EXPLOSION,
                         Sonic2Sfx.BOSS_EXPLOSION.id));
 
         // SwingingPlatform (Object 0x15) - chain-suspended platform in OOZ, ARZ, MCZ

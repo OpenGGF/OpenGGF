@@ -387,6 +387,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Decrements each frame; when < 0, spawn dust and reset to 3.
          */
         protected int skidDustTimer = 0;
+        protected boolean fixedSkidDustActive = false;
 
         /**
          * Frames remaining for post-hit invulnerability.
@@ -827,6 +828,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.pushing = false;
                 this.skidding = false;
                 this.skidDustTimer = 0;
+                this.fixedSkidDustActive = false;
                 this.crouching = false;
                 this.lookingUp = false;
                 this.balanceState = 0;
@@ -927,7 +929,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         hurtRecoveryCompletedThisFrame,
                         latchedSolidObjectId, interactSlotIndex, slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
-                        skidding, skidDustTimer,
+                        skidding, skidDustTimer, fixedSkidDustActive,
                         wallClimbX, rightWallPenetrationTimer,
                         balanceState,
                         springing, springingFrames,
@@ -1066,6 +1068,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.pushing = extra.pushing();
                 this.skidding = extra.skidding();
                 this.skidDustTimer = extra.skidDustTimer();
+                this.fixedSkidDustActive = extra.fixedSkidDustActive();
                 this.wallClimbX = extra.wallClimbX();
                 this.rightWallPenetrationTimer = extra.rightWallPenetrationTimer();
                 this.balanceState = extra.balanceState();
@@ -2274,9 +2277,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setSkidding(boolean skidding) {
                 this.skidding = skidding;
-                if (!skidding) {
-                        // Reset dust timer when skidding ends
+                if (!skidding
+                                && (gameRules == null
+                                                || gameRules.powerUp() == null
+                                                || !gameRules.powerUp().fixedSkidDustAllocatesAfterDynamicObjectPass())) {
                         this.skidDustTimer = 0;
+                        this.fixedSkidDustActive = false;
                 }
         }
 
@@ -2286,6 +2292,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setSkidDustTimer(int timer) {
                 this.skidDustTimer = timer;
+        }
+
+        public boolean isFixedSkidDustActive() {
+                return fixedSkidDustActive;
+        }
+
+        public void setFixedSkidDustActive(boolean active) {
+                this.fixedSkidDustActive = active;
         }
 
         public boolean getInvulnerable() {

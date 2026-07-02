@@ -365,7 +365,7 @@ public record PerObjectRewindSnapshot(
             boolean hurtRecoveryCompletedThisFrame,
             int latchedSolidObjectId, int interactSlotIndex, boolean slopeRepelJustSlipped,
             boolean stickToConvex, boolean sliding, boolean pushing,
-            boolean skidding, int skidDustTimer,
+            boolean skidding, int skidDustTimer, boolean fixedSkidDustActive,
             short wallClimbX, int rightWallPenetrationTimer,
             int balanceState,
             // Special states / hazards

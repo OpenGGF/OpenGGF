@@ -1,10 +1,14 @@
 package com.openggf.game;
 
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PlayerInputState;
 import com.openggf.game.launch.LaunchProfile;
 import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.graphics.PixelFont;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.testmode.TestModeTracePicker;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -332,6 +336,32 @@ class TestMasterTitleScreenLayout {
     }
 
     @Test
+    void logicalLeftRightNavigateActiveGameSelection() {
+        MasterTitleScreen screen = activeScreen();
+        InputHandler input = new InputHandler();
+
+        input.setLogicalOverride(logicalPress(AbstractPlayableSprite.INPUT_RIGHT, 0, false));
+        screen.update(input);
+        assertEquals("s3k", screen.getSelectedGameId());
+
+        input.setLogicalOverride(logicalPress(AbstractPlayableSprite.INPUT_LEFT, 0, false));
+        screen.update(input);
+        assertEquals("s2", screen.getSelectedGameId());
+    }
+
+    @Test
+    void logicalMenuAcceptConfirmsActiveGameSelection() {
+        MasterTitleScreen screen = activeScreen();
+        InputHandler input = new InputHandler();
+
+        input.setLogicalOverride(logicalPress(0, InputActionMasks.ACTION_C, false));
+        screen.update(input);
+
+        assertTrue(screen.isGameSelected());
+        assertFalse(screen.isProgrammaticSelection());
+    }
+
+    @Test
     void selectEntryMarksProgrammaticSelection() {
         MasterTitleScreen screen = activeScreen();
 
@@ -354,6 +384,12 @@ class TestMasterTitleScreenLayout {
         screen.update(input);
         input.handleKeyEvent(key, GLFW_RELEASE);
         input.update();
+    }
+
+    private static LogicalInputSnapshot logicalPress(int directionMask, int actionMask, boolean startPressed) {
+        return LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(directionMask, directionMask, actionMask, actionMask, false, startPressed),
+                PlayerInputState.neutral());
     }
 
     private static final class TrackingStore extends LaunchProfileStore {

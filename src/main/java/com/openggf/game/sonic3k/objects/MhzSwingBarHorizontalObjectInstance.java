@@ -118,7 +118,9 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         player.setRenderFlips(false, false);
-        player.setCentreY((short) (spawn.y() + GRAB_Y_OFFSET));
+        // ROM loc_3EEDA (sonic3k.asm:83448-83450): move.w d0,y_pos(a1) touches only the pixel word,
+        // leaving y_sub untouched.
+        player.setCentreYPreserveSubpixel((short) (spawn.y() + GRAB_Y_OFFSET));
         player.setAnimationId(Sonic3kAnimationIds.WALK);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setObjectMappingFrameControl(true);
@@ -156,17 +158,21 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
             return;
         }
         advancePhase(state);
-        player.setCentreY((short) (spawn.y() + hangingYOffsetFor(state.animationPhase, state.framePage)));
+        // ROM sub_3EFBA (sonic3k.asm:83533-83534): add.w y_pos(a0),d1 / move.w d1,y_pos(a1) writes only
+        // the pixel word each hang frame, leaving y_sub untouched.
+        player.setCentreYPreserveSubpixel((short) (spawn.y() + hangingYOffsetFor(state.animationPhase, state.framePage)));
         player.setMappingFrame(hangingFrameFor(state.animationPhase, state.framePage));
     }
 
     private void applyHorizontalInput(AbstractPlayableSprite player, HangState state) {
+        // ROM sub_3ED6E (sonic3k.asm:83326, 83340): subq.w/addq.w #1,x_pos(a1) modify only the pixel
+        // word, leaving x_sub untouched.
         if (player.isLeftPressed() && player.getCentreX() > spawn.x() - GRAB_X_BIAS) {
-            player.setCentreX((short) (player.getCentreX() - 1));
+            player.setCentreXPreserveSubpixel((short) (player.getCentreX() - 1));
             tickInputFramePage(state);
         }
         if (player.isRightPressed() && player.getCentreX() < spawn.x() + 0x15) {
-            player.setCentreX((short) (player.getCentreX() + 1));
+            player.setCentreXPreserveSubpixel((short) (player.getCentreX() + 1));
             tickInputFramePage(state);
         }
     }

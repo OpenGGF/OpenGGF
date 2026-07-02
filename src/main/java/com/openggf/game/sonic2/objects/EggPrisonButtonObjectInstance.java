@@ -82,7 +82,7 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
             BUTTON_HALF_HEIGHT,         // airHalfHeight = 8px
             BUTTON_HALF_HEIGHT,         // groundHalfHeight = 8px
             0,                          // offsetX
-            currentY - spawn.y()        // offsetY (button moves down 8px when triggered)
+            0                           // getY() already reports the ROM y_pos/current centre
         );
     }
 
@@ -200,6 +200,16 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
     @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(5); // Priority 5 per ROM
+    }
+
+    @Override
+    public int getX() {
+        return spawn.x();
+    }
+
+    @Override
+    public int getY() {
+        return currentY;
     }
 
     // ========================================================================================

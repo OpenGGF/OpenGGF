@@ -10,13 +10,11 @@ import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.game.BonusStageType;
-import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
@@ -95,30 +93,6 @@ public class DefaultObjectServices implements ObjectServices {
                 gameplayMode.getActiveBonusStageProvider());
     }
 
-    /**
-     * Legacy fallback constructor that reconstitutes the engine context from
-     * {@link GameServices} static accessors. Retained only for test/bootstrap
-     * paths that predate session ownership; production code must use the
-     * {@link #DefaultObjectServices(GameplayModeContext, EngineContext)} form.
-     *
-     * @deprecated Migrate callers to the session-backed constructor; this
-     * constructor will be removed once all legacy paths have been updated.
-     */
-    @Deprecated
-    public DefaultObjectServices(LevelManager levelManager,
-                                 Camera camera,
-                                 GameStateManager gameState,
-                                 SpriteManager spriteManager,
-                                 FadeManager fadeManager,
-                                 WaterSystem waterSystem,
-                                 ParallaxManager parallaxManager) {
-        this(levelManager, camera, gameState, spriteManager, fadeManager, waterSystem,
-                parallaxManager, legacyCollisionSystem(), legacyWorldSession(), legacyRng(),
-                legacyZoneRuntimeRegistry(), legacyPaletteOwnershipRegistry(), legacyZoneLayoutMutationPipeline(),
-                legacySolidExecutionRegistry(),
-                engineServicesFromGameServices(), NoOpBonusStageProvider.INSTANCE);
-    }
-
     private DefaultObjectServices(LevelManager levelManager,
                                  Camera camera,
                                  GameStateManager gameState,
@@ -151,61 +125,6 @@ public class DefaultObjectServices implements ObjectServices {
         this.solidExecutionRegistry = Objects.requireNonNull(solidExecutionRegistry, "solidExecutionRegistry");
         this.engineServices = Objects.requireNonNull(engineServices, "engineServices");
         this.bonusStageProvider = Objects.requireNonNull(bonusStageProvider, "bonusStageProvider");
-    }
-
-    private static EngineContext engineServicesFromGameServices() {
-        return new EngineContext(
-                GameServices.configuration(),
-                GameServices.graphics(),
-                GameServices.audio(),
-                GameServices.rom(),
-                GameServices.profiler(),
-                GameServices.debugOverlay(),
-                GameServices.playbackDebug(),
-                GameServices.romDetection(),
-                GameServices.crossGameFeatures());
-    }
-
-    private static CollisionSystem legacyCollisionSystem() {
-        requireActiveRuntimeForLegacyConstructor();
-        return GameServices.collision();
-    }
-
-    private static WorldSession legacyWorldSession() {
-        requireActiveRuntimeForLegacyConstructor();
-        return GameServices.worldSession();
-    }
-
-    private static GameRng legacyRng() {
-        requireActiveRuntimeForLegacyConstructor();
-        return GameServices.rng();
-    }
-
-    private static ZoneRuntimeRegistry legacyZoneRuntimeRegistry() {
-        requireActiveRuntimeForLegacyConstructor();
-        return GameServices.zoneRuntimeRegistry();
-    }
-
-    private static PaletteOwnershipRegistry legacyPaletteOwnershipRegistry() {
-        requireActiveRuntimeForLegacyConstructor();
-        return GameServices.paletteOwnershipRegistryOrNull();
-    }
-
-    private static ZoneLayoutMutationPipeline legacyZoneLayoutMutationPipeline() {
-        requireActiveRuntimeForLegacyConstructor();
-        return GameServices.zoneLayoutMutationPipeline();
-    }
-
-    private static SolidExecutionRegistry legacySolidExecutionRegistry() {
-        requireActiveRuntimeForLegacyConstructor();
-        return GameServices.solidExecutionRegistry();
-    }
-
-    private static void requireActiveRuntimeForLegacyConstructor() {
-        if (!GameServices.hasRuntime()) {
-            throw new IllegalStateException(
-                    "DefaultObjectServices legacy constructor requires an active gameplay runtime");
-        }
     }
 
     private LevelManager lm() {

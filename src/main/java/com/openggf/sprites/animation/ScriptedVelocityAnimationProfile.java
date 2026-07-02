@@ -214,16 +214,17 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
      * the full ROM anim byte must go through
      * {@code resolveAnimationId(..., false)} rather than calling this directly.
      */
-    public int resolveGroundMovementAnimId(AbstractPlayableSprite sprite) {
+    public Integer resolveGroundMovementAnimId(AbstractPlayableSprite sprite) {
         // ROM-accurate: Skidding state (braking at speed >= 0x400)
         if (sprite.getSkidding() && skidAnimId >= 0) {
             return skidAnimId;
         }
 
-        // ROM-accurate animation selection (s2.asm:36558, 36619, 36242-36245):
+        // ROM-accurate animation selection (s2.asm:36558-36577, 36945-36962):
         // - Sonic_MoveLeft/MoveRight set anim = Walk unconditionally when direction pressed
+        // - No-input coasting with non-zero inertia branches to Obj01_ResetScr without
+        //   writing anim, so a prior Stop/skid animation persists until its script switches
         // - Idle animation only set when inertia == 0 AND no direction pressed
-        // This means: walk plays when pressing direction OR when still moving (coasting)
         // Use isMovementInputActive() which reflects EFFECTIVE input (after control lock filtering),
         // not raw button state, to match ROM behavior where animation is only set in movement routines.
         boolean pressingDirection = sprite.isMovementInputActive();
@@ -241,8 +242,23 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             return runAnimId;
         }
 
-        // Walk animation when pressing direction OR when still moving (inertia != 0)
-        if (pressingDirection || speed > 0) {
+        // Walk animation when pressing direction. If no direction is pressed and
+        // inertia is non-zero, preserve Stop only while the fixed Obj08 dust
+        // routine is active; Obj08_CheckSkid keys its allocation cadence from the
+        // parent's Stop anim byte (s2.asm:42813-42841).
+        if (pressingDirection) {
+            return walkAnimId;
+        }
+        if (speed > 0
+                && skidAnimId >= 0
+                && sprite.getAnimationId() == skidAnimId
+                && sprite.getGameRules() != null
+                && sprite.getGameRules().powerUp() != null
+                && sprite.getGameRules().powerUp().fixedSkidDustAllocatesAfterDynamicObjectPass()
+                && sprite.isFixedSkidDustActive()) {
+            return null;
+        }
+        if (speed > 0) {
             return walkAnimId;
         }
 

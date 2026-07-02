@@ -6,18 +6,1521 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after merging the develop GameRules refactor
-(`44073db0b`) and re-running the round 51 verification baseline:
-ARZ2 is f5827 / 2 under `frontierOnly` (`x_speed` expected `0x0000`,
-actual `-015D`),
-CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
-actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
-expected `-020C`, actual `0x020C`), and OOZ2 is green after the round 54 Obj3E
-capsule body lifetime fix. The branch-local S2 expected-red set is now ARZ2,
-CNZ2, and MTZ3.
+Current branch-local S2 state after round 71 ARZ2 worker branch
+`bugfix/ai-s2-arz2-round71-next`, based on conductor branch
+`bugfix/ai-s2-trace-next` at `86a4e0313`:
+ARZ2 is green under `frontierOnly`; CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
+expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
+(`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
+round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
+is now CNZ2 and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
-with only the known AIZ expected-red frontiers. No S2 trace greened in round 51
-or during the post-GameRules re-baseline.
+with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
+was banked into `next`; ARZ2 greened in round 71 and is not banked until the
+worker branch is merged by the conductor.
+
+## 2026-07-02 - S2 round 71 ARZ2 Obj3E end-checker delete
+
+Round 71 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round71-next` /
+`bugfix/ai-s2-arz2-round71-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `86a4e0313`. The focused baseline reproduced
+ARZ2 f7338 / 3 under `frontierOnly`: `obj_extra_s14_x` expected absent but
+the engine still exposed Obj3E at `$2C9C,$04B1`.
+
+BizHawk diagnostic:
+- Probe script was launched through `tools/bizhawk/run_bizhawk_lua.bat` with
+  absolute Lua, movie, output, and ROM paths. Script:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round71-next\tools\bizhawk\diag_s2_arz2_round71_obj3e_lifetime.lua`.
+  Output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round71-next\tools\bizhawk\trace_output\diag_s2_arz2_round71_obj3e_lifetime.txt`.
+- Command summary:
+  `OGGF_START=15298 OGGF_STOP=15345 OGGF_TRACE_OFFSET=7998 OGGF_OUT=<output> run_bizhawk_lua.bat <lua> <s2-lvl-select-ARZ.bk2> <s2.gen>`.
+- Hooked Obj3E final scan `$03F406`, `Load_EndOfAct` `$008820`,
+  `DeleteObject` `$0164E4`, `DeleteObject2` `$0164E8`, `AllocateObject`
+  return `$017FF8`, and Obj28 Prison/Main/Walk/Fly `$011BF4/$011ADE/$011B38/$011B74`,
+  covering BizHawk frames 15298-15345 / trace frames 7300-7347.
+- Captured slot/timing values: ROM Obj3E routine `$0A` occupied slot `$14`
+  at `x=$2C9C,y=$04B1` from trace f7300 through f7338. The last captured Obj28
+  animal in slot `$21` deleted through `DeleteObject2` at f7337. At f7338,
+  Obj3E routine `$0A` ran its final scan, `AllocateObject` returned slot `$10`
+  for the results object path, and `DeleteObject2` cleared the Obj3E slot `$14`.
+  The f7339 sample showed slot `$14` empty.
+
+Root fixed:
+- `EggPrisonObjectInstance` no longer adds a second `$B4`-frame wait after the
+  random-release phase. S2 Obj3E routine `$08` decrements
+  `anim_frame_duration` and switches to routine `$0A`; routine `$0A`
+  immediately scans Dynamic Object RAM for Obj28 every frame and calls
+  `Load_EndOfAct` followed by `DeleteObject` when none remain
+  (`docs/s2disasm/s2.asm:84957-84979`). The engine now frees the routine-$A
+  slot-pressure child in the same object pass while leaving the routine-2 body
+  alive for the stage-clear ride path.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f7338 / 3 to green.
+
+Verification:
+- Focused ARZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  wrote an individual Surefire report with 1 run, 0 failures, and 0 errors.
+
+## 2026-07-02 - S2 round 70 ARZ2 Obj28 render-flag slot reuse
+
+Round 70 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round70-next` /
+`bugfix/ai-s2-arz2-round70-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `fb7708f7a`. The focused baseline reproduced
+ARZ2 f7145 / 1 under `frontierOnly`: `obj_s1E_slot` expected `0x1E` but the
+engine allocated the new Obj28 in slot `$2D`.
+
+BizHawk diagnostic:
+- Probe script was launched through `tools/bizhawk/run_bizhawk_lua.bat` with
+  absolute Lua, movie, output, and ROM paths. Script:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round70-next\tools\bizhawk\diag_s2_arz2_round70_obj3e_alloc.lua`.
+  Output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round70-next\tools\bizhawk\trace_output\diag_s2_arz2_round70_obj3e_alloc.txt`.
+- Command summary:
+  `OGGF_START=14988 OGGF_STOP=15150 OGGF_TRACE_OFFSET=7998 OGGF_OUT=<output> run_bizhawk_lua.bat <lua> <s2-lvl-select-ARZ.bk2> <s2.gen>`.
+- Hooked `AllocateObject` return `$17FF8`, `DeleteObject2` `$164E8`, and the
+  Obj3E animal-allocation return PCs `$03F316` (initial release loop) and
+  `$03F3BE` (random animal loop), covering BizHawk frames 14988-15150
+  / trace frames 6990-7152.
+- Captured slot/timing values: initial release allocations filled slots
+  `$13,$15,$16,$17,$18,$19,$1A,$1B` at trace f6994; random release allocations
+  filled `$10,$1C,$1D,$1E,$1F...$2C` from f7001 through f7137. ROM slot `$1E`
+  was still Obj28 routine `$0E` at f7141, deleted through `DeleteObject2` that
+  same trace frame at `x=$2BF2,y=$047D`, was empty through f7145, and Obj3E's
+  random allocator returned slot `$1E` at f7145. The next sample at f7146
+  showed slot `$1E` as Obj28 routine `$1C`, `x=$2C96`, `y=$04B1`,
+  `objoff_36=$000C`, while slot `$2D` remained empty.
+
+Root fixed:
+- `EggPrisonAnimalInstance` now caches the ROM-equivalent
+  `render_flags.on_screen` value after the camera/render pass and uses that
+  cached bit for Obj28_Prison/Main/Walk/Fly deletion. The old path recomputed
+  a fresh wide X margin during the object routine, so the old slot `$1E`
+  survived past the ROM delete point and pushed the later Obj3E allocation to
+  `$2D`. This matches S2 Obj28's on-screen-bit delete tests and Obj3E's
+  lowest-free-slot allocation path
+  (`docs/s2disasm/s2.asm:24644-24734,33681-33695,84935-84955`).
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f7145 / 1 to f7338 / 3. New first error:
+  `obj_extra_s14_x` expected absent, actual `0x2C9C`, exposing the next Obj3E
+  extra-slot lifetime frontier.
+
+Verification:
+- Focused ARZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  exited 0 via failure-ignore and wrote `target/trace-reports/s2_arz2_report.json`
+  with the improved expected-red f7338 / 3 frontier.
+- S2 object guard:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestEggPrisonAnimalRelease" test`
+  wrote an individual Surefire report with 1 run, 0 failures, and 0 errors.
+- Rewind coverage guard:
+  `mvn "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" test`
+  wrote an individual Surefire report with 1 run, 0 failures, and 0 errors.
+- Shared S3K/rewind adjacency guards:
+  `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects,com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind,com.openggf.game.sonic3k.objects.TestRewindFixS3KBatch7Codecs,com.openggf.game.rewind.TestSpawnRewindRecreatableCleanup" test`
+  wrote individual Surefire reports with 32, 9, 1, and 46 runs respectively,
+  all with 0 failures and 0 errors. MSE aggregate output still listed the
+  known retained ARZ2 expected-red report; the class XML reports were used.
+
+Conductor integration:
+- Merged worker commit `f9da6563` into conductor branch
+  `bugfix/ai-s2-trace-next` as merge commit `f04af74a0`, then merged local
+  `develop` commit `f834e175` as `71a646512`. `origin/develop` remained
+  contained at `d162131f1`. The local-develop merge was docs-only for the VHS
+  rewind shader plan, so the post-merge trace results below remain the current
+  code baseline.
+- Post-ARZ2-merge full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  confirmed 16 green and the three expected-red frontiers: ARZ2 f7338 / 3
+  (`obj_extra_s14_x` expected absent, actual `0x2C9C`), CNZ2 f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`), and MTZ3 f13477 / 4
+  (`x_speed` expected `-03FB`, actual `0x03FB`).
+- Post-ARZ2-merge full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- Post-ARZ2-merge S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`). The S3K loading/bootstrap
+  guard classes were all green.
+
+Other round 70 worker outcomes:
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round70-next` /
+  `bugfix/ai-s2-cnz2-round70-next` made no commit. Mandatory Lua probe
+  `tools\bizhawk\diag_s2_cnz2_obj51_split_round70.lua` wrote
+  `target\bizhawk\cnz2_obj51_split_round70.txt`. It confirmed ROM Obj51 slot
+  `$1A` splits at trace f9948, sets `x_vel=$FF00`, `y_vel=$FD00`,
+  `collision=$98`, then copies to clone slot `$1C`, which executes the same
+  frame. At f9977, `Touch_Boss_CheckCollision`, `Touch_ChkValue`,
+  `Touch_Hurt`, and `Hurt_Sidekick` all fire from Obj51 slot `$1A` at
+  `$28ED,$06E8`; after the touch, slot `$1A` moves/display-updates to
+  `$28EC,$06EB`. The Java side still reaches the comparable split ball too far
+  right/up, so round 71 should investigate the engine Obj51 split-ball movement
+  offset rather than adding a touch carve-out.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round70-next` /
+  `bugfix/ai-s2-mtz3-round70-next` made no commit. Mandatory Lua probe
+  `tools\bizhawk\diag_s2_mtz3_round70_obj53.lua` wrote
+  `tools\bizhawk\trace_output\s2_mtz3_round70_obj53.txt`. It confirmed ROM
+  `Touch_ChkValue`, `Touch_Enemy`, and `Touch_Enemy_Part2` fire at BK2 frame
+  39642 / trace f13478 against Obj53 slot `$18` / trace slot `$24` at
+  `$2AE4.0000,$0482.E800`, `collision=$DA`, `collision_property=$02`. The ROM
+  trajectory from BK2 39635-39642 advances from `$2AE7.8000,$0478.6800` to
+  `$2AE4.0000,$0482.E800`; the engine bounces while the comparable orb is
+  still around `$2AE7,$047A`. Round 71 should keep digging upstream Obj53
+  breakaway phase/position drift.
+
+## 2026-07-02 - S2 round 69 ARZ2 Obj3E initial animal delay
+
+Round 69 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round69-next` /
+`bugfix/ai-s2-arz2-round69-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `34ad35634`. The focused baseline reproduced
+ARZ2 f7091 / 4 under `frontierOnly`: `obj_extra_s1B_x` reported an extra
+engine Obj28 at `$2CB1`, while the ROM still had slot `$1B` in the Obj28 prison
+delay state.
+
+BizHawk diagnostic:
+- Probe script was launched through `tools/bizhawk/run_bizhawk_lua.bat` with
+  absolute Lua, movie, output, and ROM paths, using the reusable fast template
+  conventions. Script:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\tools\bizhawk\diag_s2_arz2_round69_obj28_slot1b.lua`.
+  Output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\tools\bizhawk\trace_output\diag_s2_arz2_round69_obj28_slot1b.txt`.
+- Command:
+  `powershell -Command "$env:OGGF_START='15058'; $env:OGGF_STOP='15098'; $env:OGGF_TRACE_OFFSET='7998'; $env:OGGF_OUT='C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\tools\bizhawk\trace_output\diag_s2_arz2_round69_obj28_slot1b.txt'; & 'C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\tools\bizhawk\run_bizhawk_lua.bat' 'C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\tools\bizhawk\diag_s2_arz2_round69_obj28_slot1b.lua' 'C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\src\test\resources\traces\s2\arz2\s2-lvl-select-ARZ.bk2' 'C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\s2.gen'"`.
+- The hook covered Obj28 Main/Walk/Fly/Prison PCs, Obj3E initial/random
+  animal allocation, `AllocateObject`, `DeleteObject`, `ObjectMove`,
+  `ObjectMoveAndFall`, slot `$1B`/`$1C` occupancy, and Vint/random state
+  around trace f7060-f7100. At trace f7091, ROM slot `$1B` was still Obj28
+  with `routine=$1C`, `x=$2CB1.0000`, `y=$04B1.0000`, `objoff_36=$0002`,
+  `objoff_38=$01`, Vint `$399A`, and RNG `$F8316B9A`.
+
+Root fixed:
+- `EggPrisonObjectInstance.spawnInitialAnimals()` now adds two frames to the
+  initial Obj3E animal delay. The Java constructor folds Obj28 routine-0 setup
+  into child state, and these lower-slot initial children become visible on the
+  allocation frame, so the delay must preserve the ROM Obj28_InitRandom pass
+  plus the first later Obj28_Prison decrement pass before movement begins. This
+  matches Obj28 init/prison dispatch and Obj3E's initial animal loop
+  (`docs/s2disasm/s2.asm:24596-24636,24732-24741,84943-84955`).
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f7091 / 4 to f7145 / 1. New first error:
+  `obj_s1E_slot` expected `0x1E`, actual `0x2D`, exposing a later released
+  animal slot-pressure frontier.
+
+Verification:
+- BizHawk Lua probe:
+  `tools/bizhawk/run_bizhawk_lua.bat` with absolute paths to
+  `tools/bizhawk/diag_s2_arz2_round69_obj28_slot1b.lua`,
+  `src/test/resources/traces/s2/arz2/s2-lvl-select-ARZ.bk2`,
+  `tools/bizhawk/trace_output/diag_s2_arz2_round69_obj28_slot1b.txt`, and
+  `s2.gen`; confirmed the ROM's f7091 slot `$1B` Obj28_Prison state.
+- Focused ARZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  exited 0 via failure-ignore and reported the improved expected-red f7145 / 1
+  frontier.
+- DEZ ending trace guard:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  was required because the fix touches capsule/end-of-level behavior; the
+  individual Surefire report for `TestS2DezEndingLevelSelectTraceReplay`
+  remained green with 1 run, 0 failures, and 0 errors.
+- Same-game expected-red guards:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  preserved CNZ2 at f9977 / 10 (`tails_x_speed` expected `-0200`, actual
+  `0x023A`) and MTZ3 at f13477 / 4 (`x_speed` expected `-03FB`, actual
+  `0x03FB`).
+- S1 full trace and S3K guard were not required for this worker change because
+  only S2-local Egg Prison code was touched, with no shared object/lifetime or
+  collision changes.
+
+Conductor integration:
+- Merged worker commit `ae8bca3f` into conductor branch
+  `bugfix/ai-s2-trace-next` as merge commit `afbf8be62`, then merged local
+  `develop` twice: first as `c82210083` for the completed GameRules/refactor
+  branch, then as `e316864ec` for the follow-up VHS rewind shader docs commit.
+  Latest local `develop` was `8567c3ef`; `origin/develop` remained
+  `d162131f1`.
+- Post-latest-develop full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  confirmed 16 green and the three expected-red frontiers: ARZ2 f7145 / 1
+  (`obj_s1E_slot` expected `0x1E`, actual `0x2D`), CNZ2 f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`), and MTZ3 f13477 / 4
+  (`x_speed` expected `-03FB`, actual `0x03FB`).
+- Post-develop full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- Post-develop S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`). The S3K loading/bootstrap
+  guard classes were all green.
+
+Other round 69 worker outcomes:
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round69-next` /
+  `bugfix/ai-s2-cnz2-round69-next` made no commit. Lua probes showed ROM hurts
+  Tails from Obj51 split-ball slot `$1A` at trace f9977 before `loc_31FF8`
+  moves it: ROM slot `$1A` was at `$28ED,$06E8` with collision `$98`, while
+  Java was probing `$28F0,$06E6`. A split-birth probe showed slot `$1A` born at
+  trace f9948 at `$2909,$06F7`, with clone slot `$1C` allocated after current
+  and executing the same frame. The same-frame-update trial did not advance and
+  was reverted.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round69-next` /
+  `bugfix/ai-s2-mtz3-round69-next` made no commit. Lua PC hooks captured ROM
+  `Touch_ChkValue` / `Touch_Enemy_Part2` at BK2 frame 39642 against Obj53 slot
+  `$18` / trace slot `$24`, x `$2AE4`, y `$0482`, collision flags `$DA`.
+  The engine had already bounced one comparison frame earlier from a higher and
+  farther-right orb, so round 70 should investigate upstream Obj53 phase /
+  position drift rather than touch deferral.
+
+## 2026-07-02 - S2 round 68 ARZ2 Obj28 prison animal landing cadence
+
+Round 68 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round68-next` /
+`bugfix/ai-s2-arz2-round68-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `709914093`. The focused baseline reproduced
+ARZ2 f7064 / 4 under `frontierOnly`: `obj_extra_s1C_x`/`y` reported an
+extra engine Obj28 at `$2C92,$04C2`, while the ROM still had slot `$1C`
+at `$2C91,$04C5`.
+
+BizHawk diagnostic:
+- Probe script was launched through `tools/bizhawk/run_bizhawk_lua.bat` with
+  absolute Lua, movie, output, and ROM paths, using the reusable fast template
+  conventions. Output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round68-next\target\bizhawk-diag\arz2_round68_obj28.txt`.
+- The hook covered Obj3E random allocation, `FindFreeObj`/allocation return,
+  Obj28 Main/Walk/Fly/Prison PCs, and `DeleteObject` around trace f7009-f7066.
+  It showed slot `$1C` allocated from Obj3E's random-animal path at f7009,
+  then still entering `Obj28_Main` at f7064 with routine `$02`,
+  `x=$2C91`, `y=$04C5`, and `y_vel=$0530`. After that pass the slot had
+  routine `$08`, but the first `Obj28_Walk` hook for slot `$1C` did not occur
+  until f7065.
+
+Root fixed:
+- `EggPrisonAnimalInstance` now treats only a negative `ObjCheckFloorDist`
+  result as a landing collision. A zero-distance floor result stays on the
+  display-only path for the current object pass, matching `Obj28_Main` /
+  `Obj28_Walk` / `Obj28_Fly` using `ObjCheckFloorDist`, `tst.w d1`, and
+  `bpl.s DisplaySprite` (`docs/s2disasm/s2.asm:24596-24727`). The allocation
+  context still matches Obj3E's `(Vint_runcount+3)&7` random-animal path
+  (`docs/s2disasm/s2.asm:84935-84955`).
+- Added a focused occupancy oracle for ARZ2 f7064 slot `$1C` so the prison
+  animal must match the ROM position on the routine-transition frame rather
+  than running its first walk/fly movement one pass early.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f7064 / 4 to f7091 / 4. New first error:
+  `obj_extra_s1B_x` expected absent, actual `0x2CB1`, with the matching
+  missing ROM-visible Obj28 in slot `$1B`.
+
+Verification:
+- BizHawk Lua probe:
+  `tools/bizhawk/run_bizhawk_lua.bat` with absolute paths to
+  `tools/bizhawk/diag_s2_arz2_round68_obj28.lua`,
+  `src/test/resources/traces/s2/arz2/s2-lvl-select-ARZ.bk2`,
+  `target/bizhawk-diag/arz2_round68_obj28.txt`, and `s2.gen`; confirmed the
+  ROM's f7064 transition / f7065 walk ordering for Obj28 slot `$1C`.
+- Focused ARZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  exited 0 via failure-ignore and reported the improved expected-red f7091 / 4
+  frontier.
+- Focused occupancy oracle:
+  `mvn "-Dtest=TestS2ObjectOccupancyOracle#arz2EggPrisonAnimalDoesNotWalkOnLandingTransitionFrame" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" test`
+  wrote a green `TestS2ObjectOccupancyOracle` Surefire class report for the new
+  ARZ2 f7064 slot `$1C` check.
+- S2 Egg Prison animal release guard:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestEggPrisonAnimalRelease" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" test`
+  wrote a green `TestEggPrisonAnimalRelease` Surefire class report.
+- Same-game trace guards:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  was rerun after clearing a corrupted worktree-local `.lwjgl` native cache.
+  DEZ ending and OOZ2 were green by their exact Surefire class reports; CNZ2
+  stayed at f9977 / 10 and MTZ3 stayed at f13477 / 4, matching the prior
+  expected-red frontiers.
+
+Conductor integration:
+- Merged worker commit `e4012dd5` into conductor branch
+  `bugfix/ai-s2-trace-next` as merge commit `a9ac9f04`.
+- Post-merge full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  confirmed 16 green and the three expected-red frontiers: ARZ2 f7091 / 4
+  (`obj_extra_s1B_x` expected absent, actual `0x2CB1`), CNZ2 f9977 / 10, and
+  MTZ3 f13477 / 4.
+- Post-merge full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- Post-merge S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`).
+- Local `develop` (`7a2317a96`) and `origin/develop` (`d162131f1`) were both
+  already contained after the round.
+
+Other round 68 worker outcomes:
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round68-next` /
+  `bugfix/ai-s2-cnz2-round68-next` made no commit. Mandatory Lua probes were
+  run through `tools/bizhawk/run_bizhawk_lua.bat` with absolute paths. Probe
+  output `target\bizhawk-diag\s2_cnz2_obj51_round68_f9977.txt` showed ROM hurts
+  Tails from Obj51 split ball slot `$1A` at frame-start position
+  `$28ED,$06E8` before `loc_31FF8` moves that slot. Probe output
+  `target\bizhawk-diag\s2_cnz2_obj51_round68_splitbirth.txt` showed ROM split
+  birth is slot `$1A` at `$2909,$06F7`, with clone slot `$1C` allocated after
+  current and executing in the same frame. Engine experiments around Obj51
+  attach X and split touch projection did not advance f9977 / 10 and were
+  removed.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round68-next` /
+  `bugfix/ai-s2-mtz3-round68-next` made no commit. Mandatory Lua probes were
+  run through `tools/bizhawk/run_bizhawk_lua.bat` with absolute paths. Outputs
+  under `tools\bizhawk\trace_output\diag_s2_mtz3_round68_obj53*.txt` showed
+  ROM slot `$24` Obj53 has collision `$DA` at trace f13477, but
+  `Touch_ChkValue` / `Touch_Enemy_Part2` fires on trace f13478. The subpixel
+  and wider-window probes showed slot `$24` already in `Obj53_BreakAway`
+  through f13456-f13478 and reaching y=`$0482` before touch; the engine's
+  comparable failing state is several Obj53 frames behind, so a local
+  touch-deferral fix was rejected as not ROM-backed.
+
+## 2026-07-02 - S2 round 67 ARZ2 Obj3E capsule slot graph and Obj28 timing
+
+Round 67 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round67-next` /
+`bugfix/ai-s2-arz2-round67-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `ea439cd68`. The focused baseline reproduced
+ARZ2 f6923 / 3 under `frontierOnly`: `obj_s12_type` and `obj_s13_type`
+expected `0x3E`, actual missing, and `obj_s14_slot` expected `0x14`, actual
+`0x12`.
+
+Root fixed:
+- Obj3E's ROM init routine writes the body into the current slot, then creates
+  three more Obj3E slots from `Obj3E_ObjLoadData`: routine-4 button, routine-6
+  lock, and routine-8 broken/end-checker
+  (`docs/s2disasm/s2.asm:84790-84829`). The Java object had compressed those
+  into one body plus a button child, so later `AllocateObject` scans saw lower
+  free slots than the ROM. The engine now creates structural lock and broken
+  slot children while the parent continues to own rendering and behavior.
+- Obj3E lock motion now uses the ROM `ObjectMoveAndFall` ordering: add
+  `#$38` to `y_vel` for the next frame, but move with the old velocity on the
+  current frame (`docs/s2disasm/s2.asm:84920-84927,30164-30177`). The
+  structural lock slot is freed when the parent lock leaves the screen, matching
+  the routine-6 `DeleteObject`/`MarkObjGone` path.
+- Obj3E's routine-8 random animal path samples `(Vint_runcount+3) & 7` and
+  allocates Obj28 only when the low three bits are zero
+  (`docs/s2disasm/s2.asm:84935-84955`). The engine now suppresses the same
+  frame as the initial animal burst and preserves the folded Obj28 init pass in
+  the random animal delay.
+- Released capsule animals now use the shared 16.16 `ObjectMove` /
+  `ObjectMoveAndFall` helpers and choose prison-spawn horizontal direction only
+  at the Obj28 floor-contact transition, matching `Obj28_InitRandom`,
+  `Obj28_Main`, and `Obj28_Prison` (`docs/s2disasm/s2.asm:24596-24667,
+  24731-24740`). The same old-velocity ObjectFall semantics are also the S1
+  object helper (`docs/s1disasm/_incObj/sub ObjectFall & SpeedToPos.asm:8-25`).
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f6923 / 3 to f7064 / 4. New first error:
+  `obj_s1C_type` expected `0x28`, actual missing, with matching extra Obj28
+  coordinates in the later released-animal slot family.
+- New owner is a later Obj28 animal slot/semantic matching mismatch after the
+  initial Obj3E component graph and first random-animal activation now pass.
+
+Verification:
+- Focused ARZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  exited 0 via failure-ignore and reported the improved expected-red f7064 / 4
+  frontier.
+- Focused S2 object/trace/rewind batch:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.game.rewind.TestS2EggPrisonButtonGraphRewind,com.openggf.game.sonic2.objects.TestEggPrisonAnimalRelease" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 11 tests: DEZ ending, rewind coverage, S2 Egg Prison rewind graph, and
+  Egg Prison animal release were green; expected-red traces were ARZ2 f7064 / 4,
+  CNZ2 f9977 / 10, and MTZ3 f13477 / 4. CNZ2 and MTZ3 match the preserved
+  round-64 frontiers.
+- Full S1 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  wrote 29 fresh S1 Surefire trace reports with zero failures/errors. The MSE
+  aggregate also printed stale S2 expected-red reports left in the report
+  directory; exact S1 XMLs were checked directly.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" test`
+  exact Surefire class reports were green: 8 + 30 + 5 + 5 + 3 checks, zero
+  failures/errors. The MSE aggregate again included stale S2 expected-red XMLs.
+
+Conductor integration:
+- Merged worker commit `5de1782a` into conductor branch
+  `bugfix/ai-s2-trace-next` as merge commit `d22cad26b`.
+- Post-merge full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  confirmed 16 green and the three expected-red frontiers: ARZ2 f7064 / 4
+  (`obj_extra_s1C_x` expected absent, actual `0x2C92`), CNZ2 f9977 / 10, and
+  MTZ3 f13477 / 4.
+- Post-merge full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- Post-merge S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`).
+- Local `develop` (`7a2317a96`) and `origin/develop` (`d162131f1`) were both
+  already contained after the round.
+
+Other round 67 worker outcomes:
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round67-next` /
+  `bugfix/ai-s2-cnz2-round67-next` made no commit. It reproduced f9977 / 10,
+  reran with full diagnostic chars, confirmed the split-ball path is still
+  behind ROM at the contact window, and reverted temporary diagnostics cleanly.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round67-next` /
+  `bugfix/ai-s2-mtz3-round67-next` made no commit. It rejected an Obj53 seed
+  allocation candidate because it regressed to f12820 / 4, restored f13477 / 4,
+  and left the worktree clean.
+
+## 2026-07-02 - S2 round 66 ARZ2 Obj89 camera-release lifetime
+
+Round 66 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round66-next` /
+`bugfix/ai-s2-arz2-round66-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at merge commit `358c371ea`. The focused baseline
+reproduced ARZ2 f6913 / 1 under `frontierOnly` (`camera_x` expected
+`0x2B29`, actual `0x2B28`).
+
+Investigation showed Obj89 reached its defeated escape routine and raised
+`Camera_Max_X_pos` by 2 per frame only through `$2B28`, then vanished before
+the ROM release target `$2C00`. The player/camera math then correctly clamped
+at the stale max, producing the one-pixel camera mismatch. This was the generic
+object-window unload retiring the event-spawned ARZ boss before the boss's own
+routine had finished its ROM-owned release gate.
+
+Fix:
+- `Sonic2ARZBossInstance` is now persistent, matching other S2 event-spawned
+  bosses whose defeat routines own camera expansion and deletion. Obj89's
+  `Obj89_Main_SubC` writes `Boss_X_vel/Boss_Y_vel`, increments
+  `Camera_Max_X_pos` until `$2C00`, and only then checks the on-screen bit
+  before deleting (`docs/s2disasm/s2.asm:65267-65278`).
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f6913 / 1 (`camera_x` expected `0x2B29`, actual `0x2B28`) to
+  f6923 / 3 (`obj_s12_type` and `obj_s13_type` expected `0x3E`, actual
+  missing; `obj_s14_slot` expected `0x14`, actual `0x12`). The new owner is
+  the Obj3E capsule load sequence: the ROM initializes four Obj3E sub-objects
+  from `Obj3E_ObjLoadData`, while the current Java capsule compresses most of
+  those routines into one body instance plus a button child
+  (`docs/s2disasm/s2.asm:84774-84845`).
+
+Verification:
+- Focused ARZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  reproduced the new f6923 / 3 frontier.
+- Focused DEZ ending trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  passed by its Surefire class report.
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and the three expected-red frontiers: ARZ2
+  f6923 / 3, CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
+
+Conductor integration:
+- Merged worker commit `015355d65` into conductor branch
+  `bugfix/ai-s2-trace-next` as merge commit `ba2d29776`.
+- Post-merge full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  confirmed 16 green and the three expected-red frontiers: ARZ2 f6923 / 3
+  (`obj_s12_type` expected `0x3E`, actual missing), CNZ2 f9977 / 10, and MTZ3
+  f13477 / 4.
+- Post-merge full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- Post-merge S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`).
+- Local `develop` (`7a2317a96`) and `origin/develop` (`d162131f1`) were both
+  already contained after the round.
+
+Other round 66 worker outcomes:
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round66-next` /
+  `bugfix/ai-s2-cnz2-round66-next` made no commit. It reproduced f9977 / 10,
+  found the split-ball path is born two pixels right because the attached ball
+  freezes at x=`0x290B` while ROM is x=`0x2909`, rejected a parent pre-update
+  attach experiment that did not move the frontier, rejected a moving-right Obj51
+  trigger experiment that regressed to f8614 / 5, and reverted cleanly.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round66-next` /
+  `bugfix/ai-s2-mtz3-round66-next` made no commit. It reproduced f13477 / 4,
+  rejected an Obj54 hit-reaction dispatch deferral that regressed to f12909 /
+  11, and reverted cleanly.
+
+## 2026-07-02 - S2 round 65 conductor closure
+
+Integrated ARZ2 worker commit `ce95436a9` and conductor repair commit
+`453060c44` into conductor branch `bugfix/ai-s2-trace-next`, then merged local
+`develop` commit `df23cfac` into the conductor. Remote `origin/develop`
+remained at `d162131f1` and was already contained.
+
+Conductor verification after the local `develop` merge:
+- Full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and 3 expected-red frontiers: ARZ2 f6913 / 1
+  (`camera_x` expected `0x2B29`, actual `0x2B28`), CNZ2 f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`), and MTZ3 f13477 / 4
+  (`x_speed` expected `-03FB`, actual `0x03FB`). `TestS2DezEndingLevelSelectTraceReplay`
+  is green after the duplicate-ObjC6 repair.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`).
+
+Round 65 worker outcomes:
+- ARZ2 advanced f6513 -> f6913 through real Obj58 boss-explosion identity and
+  init-frame timing. The conductor full-S2 sweep initially found a DEZ ending
+  regression from a duplicate dynamic ObjC6 spawn; the conductor repair removed
+  that spawn, because ObjAF terminal defeat does not allocate ObjC6 and the DEZ
+  layout already owns the transition object.
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round65-next` /
+  `bugfix/ai-s2-cnz2-round65-next` made no commit. It confirmed the failing
+  touch is already the split-ball path: ROM hurts Tails from Obj51 split ball
+  previous-frame position `$28ED,$06E8`, while the engine scans the split ball
+  around `$28F0,$06E6`; a falling-ball X projection candidate did not affect
+  f9977 and was reverted.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round65-next` /
+  `bugfix/ai-s2-mtz3-round65-next` made no commit. A BizHawk PC-execute probe
+  around f13477/f13478 showed ROM slot `$24` Obj53 has collision `$DA` at
+  f13477, but `Touch_ChkValue` / `Touch_Enemy_Part2` fires on the next trace
+  frame; the engine still contacts the breakaway orb one frame early.
+
+## 2026-07-02 - S2 round 65 ARZ2 Boss_LoadExplosion object identity
+
+Round 65 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round65-next` /
+`bugfix/ai-s2-arz2-round65-next`, based from next conductor commit
+`9505ae703`. The focused baseline reproduced ARZ2 f6513 / 1 under
+`frontierOnly` (`obj_s13_type` expected `0x58`, actual missing).
+
+Investigation stayed on the Obj89 defeat-start explosion stream. The engine
+already spawned a `Boss Explosion` at the ROM coordinates in slot `$13`, but
+the object exported id `0x00`, so the trace reported ROM Obj58 as missing.
+The ROM path is data-bearing, not just cosmetic: S2 `Boss_LoadExplosion`
+allocates an object, writes `ObjID_BossExplosion` into `id(a1)`, copies the
+boss `x_pos/y_pos`, and applies random offsets. S2 Obj58's init routine then
+sets animation state and plays the boss-explosion SFX without falling through
+to the main animation decrement until the next object pass
+(`docs/s2disasm/s2.constants.asm:690`,
+`docs/s2disasm/s2.asm:61193-61218,61413-61433,65177`). S1's shared boss helper
+does the same kind of real explosion allocation with Obj3F
+(`docs/s1disasm/_inc/Object Pointers.asm:78`,
+`docs/s1disasm/_incObj/sub BossDefeated & BossMove.asm:9-14`).
+
+Fix:
+- `BossExplosionObjectInstance` now accepts a ROM object id for runtime-spawned
+  boss explosions and returns after its init/SFX frame before ticking the
+  animation timer.
+- S2 boss-defeat explosion spawns use Obj58, while S1 boss-defeat explosion
+  spawns use Obj3F. The shared default remains anonymous only for callers that
+  explicitly do not model a ROM object id.
+- The S2 transient rewind fixture now asserts the Obj58 id for the
+  `Boss_LoadExplosion`-style fixture.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f6513 / 1 (`obj_s13_type` expected `0x58`, actual missing) to
+  f6913 / 1 (`camera_x` expected `0x2B29`, actual `0x2B28`). The new owner is
+  a later camera-position mismatch after the boss-defeat sequence has started.
+
+Regression repair:
+- Conductor full-S2 verification initially found a regression in
+  `TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace`: f4007 / 5,
+  first field `x_speed` expected `-01F3`, actual `0x01F3`. A probe of the
+  DEZ ending occupancy at f1718 showed ROM slot 17 already held ObjC7 while
+  ObjC6 lived in slot 22, but the engine had an extra dynamically spawned
+  ObjC6 in slot 17 and shifted the Death Egg Robot body/children to slots
+  18-29. The duplicate came from `Sonic2MechaSonicInstance` spawning ObjC6
+  after Silver Sonic's defeat even though the DEZ layout already owns ObjC6.
+- The repair removes that dynamic ObjC6 spawn. ROM ObjAF terminal defeat
+  `loc_39BA4` only unlocks the camera, advances `Dynamic_Resize_Routine`,
+  resumes music, and deletes ObjAF (`docs/s2disasm/s2.asm:77913-77925`); it
+  does not allocate ObjC6.
+
+Verification:
+- Focused S2 transient rewind fixture:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestS2SelfContainedTransientRewind" "-DfailIfNoTests=false" test`
+  passed by its Surefire class report.
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f6913 / 1.
+- Focused ARZ2 + DEZ ending regression check after conductor repair:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  left ARZ2 at f6913 / 1 and restored DEZ ending to green by its Surefire
+  class report.
+- Same-game guards:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  preserved CNZ2 f9977 / 10 and MTZ3 f13477 / 4.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  and level-select f8941 / 1.
+
+## 2026-07-02 - S2 round 64 conductor closure
+
+Integrated ARZ2 worker commit `e09f0a9e3` into conductor branch
+`bugfix/ai-s2-trace-next`. The worker's detailed ARZ2 investigation entry is
+also present below as `S2 ARZ2 round 64 Obj89 final-hit hover ordering`.
+
+Conductor verification:
+- Full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and 3 expected-red frontiers: ARZ2 f6513 / 1,
+  CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  and level-select f8941 / 1.
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round64-next` / `bugfix/ai-s2-cnz2-round64-next`
+  made no commit. A BizHawk PC hook at BK2 f22461 / trace f9977 captured ROM
+  hurting Tails from Obj51 slot `$26` at `$28ED,$06E8`; the engine scans the
+  corresponding ball at `$28F0,$06E6` and misses. No new advancing candidate
+  avoided the known f9199 projection/order regression.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round64-next` / `bugfix/ai-s2-mtz3-round64-next`
+  made no commit. A final-orbit-on-break Obj53 candidate regressed MTZ3 to
+  f12818 and was reverted; clean state remains f13477 / 4.
+
+## 2026-07-02 - S2 round 63 ARZ2 Obj89 roll-animation push clear
+
+Round 63 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round63-next` /
+`bugfix/ai-s2-arz2-round63-next`, based from next conductor commit
+`9f0aea485`. The focused baseline reproduced ARZ2 f6487 / 1 under
+`frontierOnly` (`tails_status_byte` expected `0x000F`, actual `0x002F`).
+
+Investigation showed the engine matched ROM through Tails' movement/animation
+tail: CPU Tails reached the same position/subpixel on the Obj89 arrow, and the
+engine-side CPU diagnostic reported post-physics status `0x0F`. The mismatch
+was introduced later when `ARZBossArrow.preservesRidingPushStatus` re-applied
+`Status_Push` during the arrow timer-decay continued-ride pass. ROM
+`Tails_Animate` clears `Status_Push` when the animation byte changes, and
+`Obj89_Arrow_Platform_Decay` branches around `PlatformObject`, so that later
+Obj89 pass cannot synthesize a fresh side-push bit
+(`docs/s2disasm/s2.asm:41272-41279,65658-65683`).
+
+Fix:
+- `ARZBossArrow.preservesRidingPushStatus` still preserves the existing
+  timer-decay push bridge for non-rolling CPU Tails, keeping the earlier f5969
+  support/CPU window intact, but it stops once the sidekick is rolling. That
+  models the ROM animation-change push clear rather than adding a zone, route,
+  or frame carve-out.
+- `TestS2ObjectOccupancyOracle` now has an ARZ2 f6487 regression oracle for
+  the Obj89 arrow decay path, asserting that the arrow does not restore Tails'
+  push bit after the animation clear.
+
+Rejected candidate:
+- Requiring `sprite.getPushing()` inside `preservesRidingPushStatus` removed
+  the f6487 status mismatch but regressed the trace to f5969 (`tails_x`
+  expected `0x2A73`, actual `0x2A74`). ROM still needs the non-rolling CPU
+  Tails timer-decay push bridge before the later roll-animation clear.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f6487 / 1
+  (`tails_status_byte` expected `0x000F`, actual `0x002F`) to f6507 / 4
+  (`obj_extra_s10_x` expected absent, actual `0x2AB0`).
+- New owner is a later Obj89 slot/object-lifetime mismatch: ROM reports slot
+  `$10` as Obj89 while the engine reports the same Obj89 body as an extra object.
+
+Verification:
+- Focused ARZ boss-arrow oracle group:
+  `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossArrow*" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  passed 4/4.
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.frontierOnly=true" "-DfailIfNoTests=false" test`
+  exited 1 at the advanced expected-red frontier f6507 / 4.
+- Same-game guards on this branch:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.frontierOnly=true" "-DfailIfNoTests=false" test`
+  preserved CNZ2 f9977 / 10 and MTZ3 f13477 / 4.
+- The same CNZ2/MTZ3 guard command on conductor worktree
+  `.worktrees/ai-s2-trace-next` produced the same f9977 and f13477 frontiers,
+  confirming those failures are pre-existing and not introduced by this ARZ2
+  object-local change.
+- Conductor full S2 sweep after merge:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and 3 expected-red frontiers: ARZ2 f6507 / 4,
+  CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  and level-select f8941 / 1.
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round63-next` / `bugfix/ai-s2-cnz2-round63-next`
+  made no commit. It reproduced f9977 / 10 and found the same Obj51 split-ball
+  phase/position mismatch; no ROM-backed advancing candidate avoided the known
+  f9199 projection/order regression. CNZ2 remains f9977 / 10.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round63-next` / `bugfix/ai-s2-mtz3-round63-next`
+  made no commit. It probed lost-ring touch-state timing and a one-frame Obj53
+  collision exposure delay; the delay regressed MTZ3 to f12820, so all probes
+  were reverted. MTZ3 remains f13477 / 4.
+
+## 2026-07-02 - S2 round 62 ARZ2 Obj89 zero-grace arrow push bridge
+
+Round 62 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round62-next` /
+`bugfix/ai-s2-arz2-round62-next`, based from next conductor commit
+`81347df9d`. The focused baseline reproduced ARZ2 f6364 / 6
+(`tails_y` expected `0x04C1`, actual `0x04C0`).
+
+Investigation followed the sidekick state at the Obj89 arrow drop. At f6364 ROM
+Tails has `Status_InAir|Status_Roll|Status_Push` with `y_vel=-$680`, while the
+engine still has CPU Tails grounded and unpushed with `interact` pointing at the
+released arrow slot. The relevant ROM paths are `TailsCPU_Normal` checking the
+current sidekick `Status_Push` bit before the auto-jump distance/height gate
+(`docs/s2disasm/s2.asm:39297-39300`) and
+`Obj89_Arrow_ChkDropPlayers` / `Obj89_Arrow_DropPlayer` setting `Status_InAir`
+and clearing `Status_OnObj` without clearing `Status_Push`
+(`docs/s2disasm/s2.asm:65689-65704`).
+
+Fix:
+- `ARZBossArrow` now exposes a narrow zero-grace moving sidekick CPU push bridge
+  through its persistent interact slot after a drop. The hook requires CPU
+  Tails, no active air/on-object/rolling state, and a matching Obj89 arrow slot,
+  so it models the ROM-visible push read instead of a zone or frame exception.
+- `TestSonic2ObjectBugFixes` covers the Obj89 arrow handoff and asserts that
+  Sonic/P1 cannot use this CPU-sidekick-only bridge. It also asserts that the
+  broader released-ride grace hook remains disabled for the arrow; only the
+  f6364 zero-grace interact-slot shape is modelled.
+
+Rejected candidate:
+- Narrowing `ARZBossArrow.preservesRidingPushStatus` to require a live push bit
+  removed the later f6487 status mismatch, but regressed the trace to f5969
+  (`tails_x` expected `0x2A73`, actual `0x2A74`). That confirmed the existing
+  timer-decay riding push preservation remains necessary for the earlier Obj89
+  support window.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f6364 / 6
+  (`tails_y` expected `0x04C1`, actual `0x04C0`) to f6487 / 262
+  (`tails_status_byte` expected `0x000F`, actual `0x002F`).
+- New owner is the later ARZ arrow timer-decay/status lifetime: ROM has Tails
+  on the arrow with `Status_Push` clear, while the engine still reports the
+  pushed bit.
+
+Verification:
+- Focused unit:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#arzBossArrowReleasedRideKeepsTailsCpuAutoJumpGateVisible" test`
+  produced a clean Surefire report for the requested method (MSE also surfaced
+  the stale expected-red ARZ2 trace aggregate from the target directory).
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-DfailIfNoTests=false" test`
+  exited 1 at the advanced expected-red frontier f6487 / 262.
+- Same-game guards:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.frontierOnly=true" "-DfailIfNoTests=false" test`
+  preserved the known expected-red frontiers: CNZ2 f9977 / 10 and MTZ3
+  f13477 / 4.
+- Conductor merge verification after merge commit:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and 3 expected-red frontiers: ARZ2 f6487 / 1,
+  CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  and level-select f8941 / 1.
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round62-next` / `bugfix/ai-s2-cnz2-round62-next`
+  made no commit. It ruled out Obj86 with BizHawk RAM probes and reverted an
+  Obj51 split-touch projection candidate that moved the first error backward to
+  f9199. CNZ2 remains f9977 / 10.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round62-next` / `bugfix/ai-s2-mtz3-round62-next`
+  made no commit. It reproduced the Obj53 orb-contact frontier and inspected
+  `docs/s2disasm/s2.asm:67832-67865,67968-67987`, but found no genuine
+  advancing fix. MTZ3 remains f13477 / 4.
+
+## 2026-07-02 - S2 post-GameRules-refactor merge baseline
+
+Merged local `develop` at `d162131f1` into `bugfix/ai-s2-trace-next` as
+`ff6fa16e6` after the typed GameRules/refactor work completed. The only merge
+conflict was `CHANGELOG.md`, resolved additively.
+
+Post-merge verification:
+- Full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and the same three expected-red frontiers:
+  ARZ2 f6364 / 6, CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  and level-select f8941 / 1.
+
+## 2026-07-02 - S2 round 61 ARZ2 Obj08 skid-dust Stop-animation cadence
+
+Round 61 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round61-next` /
+`bugfix/ai-s2-arz2-round61-next`, based from conductor commit `a94ef5694`.
+The focused baseline reproduced ARZ2 f6309 / 1 under `frontierOnly`
+(`obj_s14_type` expected `0x08`, actual missing).
+
+Investigation stayed on the boss-room slot cadence after the Obj89 arrow
+released riders. The trace aux object stream showed ROM Obj08 allocations for
+Sonic in slots `$13`, `$14`, and `$15` at f6305/f6309/f6313, with X positions
+matching Sonic's physics trace. This made the missing f6309 slot a fixed
+Sonic_Dust cadence issue rather than a Tails or arrow-slot ownership issue.
+
+The ROM `Obj08_CheckSkid` path checks the parent animation byte for
+`AniIDSonAni_Stop`, decrements `obj08_dust_timer`, and calls `AllocateObject`
+when the countdown underflows (`docs/s2disasm/s2.asm:42813-42841`). Sonic's
+turn routines set that Stop/skid animation and arm Sonic_Dust
+(`docs/s2disasm/s2.asm:36927-36935,36988-36996`), while the no-input
+grounded movement path with non-zero inertia reaches reset-scroll without
+writing a fresh Walk animation byte (`docs/s2disasm/s2.asm:36558-36577,
+36945-36962`). The arrow Sub6 release context remains the prior owner of the
+freed slots (`docs/s2disasm/s2.asm:65689-65704`).
+
+Fix:
+- `ScriptedVelocityAnimationProfile` now preserves the existing Stop/skid anim
+  during no-input coasting only while the fixed Obj08 dust routine is active
+  and the typed game rules enable S2's after-dynamic-object fixed dust path.
+  Outside that ROM dust state it keeps the prior Walk-on-coast behavior, which
+  preserves the accepted MTZ3 wall-stop frontier and avoids carrying S2's fixed
+  dust cadence into S3K.
+- `PlayableSpriteMovement` advances the fixed Obj08 dust countdown once per
+  `SpriteManager` frame while the parent remains in Stop/skid, clears the
+  countdown when the parent leaves that anim, and keeps the fixed-dust active
+  bit in playable rewind state.
+- `AbstractPlayableSprite` clears the fixed skid-dust active bit when leaving
+  skid state for games whose `GameRules` do not use S2's fixed Obj08
+  after-object allocation path, restoring the prior S3K animation cadence.
+- `TestS2ObjectOccupancyOracle` now asserts that the ARZ2 boss-room Obj08
+  allocations occupy slots `$13/$14/$15` by f6313.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f6309 / 1
+  (`obj_s14_type` expected `0x08`, actual missing) to f6364 / 6 under
+  `frontierOnly` (`tails_y` expected `0x04C1`, actual `0x04C0`). The new owner
+  is the next Obj89 arrow/Tails release state: ROM has Tails airborne/rolling
+  with upward velocity, while the engine still has Tails grounded on the arrow.
+
+Verification:
+- Focused movement/oracle subset:
+  `mvn "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#s2FixedSkidDustTicksWhileAirborneStopAnimationPersists,com.openggf.sprites.managers.TestPlayableSpriteMovement#s2GroundedFixedSkidDustAllocatesFromPostMovementPosition,com.openggf.sprites.managers.TestPlayableSpriteMovement#s2SkidDustDeletesOnRomRoutineFourFrame,com.openggf.sprites.managers.TestPlayableSpriteMovement#s2FixedSkidDustDoesNotTickDuringHurtRoutine,com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossRoomSkidDustReusesFreedArrowSlotsAfterRelease" "-DfailIfNoTests=false" test`
+  exited 0 for the requested checks; MSE also printed the expected-red S2
+  trace frontier aggregate.
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" test`
+  failed at the advanced expected-red frontier f6364 / 6.
+- Same-game guards:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" test`
+  preserved CNZ2 f9977 / 10, and
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" test`
+  preserved MTZ3 f13477 / 4.
+- Conductor regression follow-up after merging worker commit `476f693e`:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  returned S3K AIZ level-select to the known expected-red frontier f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`) after an intermediate
+  broad-preservation candidate had regressed it to f7539 / 7 (`x_speed`).
+- Conductor focused ARZ2 recheck:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  preserved the advanced f6364 / 6 ARZ2 frontier.
+- Full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and 3 expected-red frontiers: ARZ2 f6364 / 6,
+  CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the two known AIZ expected-reds: complete-run
+  f1095 / 3 and level-select f8941 / 1.
+- Rewind coverage guard:
+  `mvn "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard" "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false" test`
+  passed 1 / 1. The earlier `com.openggf.tests.TestRewindCoverageGuard`
+  selector was stale and failed before running any matching test.
+
+## 2026-07-02 - S2 round 60 ARZ2 Obj89 arrow drop push-clear cadence
+
+Round 60 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round60-next` /
+`bugfix/ai-s2-arz2-round60-next`, based from conductor commit `c45e81778`.
+The focused baseline reproduced ARZ2 f5970 / 1 under `frontierOnly`
+(`tails_status_byte` expected `0x0002`, actual `0x0022`).
+
+Investigation stayed on the Obj89 arrow drop transition after timer expiry in
+the ARZ2 boss room. A BizHawk PC probe over native frames 13964-13972, launched
+through `tools/bizhawk/run_bizhawk_lua.bat` with the fast no-audio/no-visual
+defaults, showed the ROM entering Obj89 Sub6 while CPU Tails still had the
+pushed status visible around the first drop sample. On the following sampled
+frame, `Tails_Animate` had cleared `Status_Push` before Obj89 reached its next
+drop check.
+
+The ROM Obj89 Sub6 path clears the p1/p2 standing bits and calls
+`Obj89_Arrow_DropPlayer`, which sets `Status_InAir` and clears
+`Status_OnObj`; it does not clear `Status_Push`
+(`docs/s2disasm/s2.asm:65689-65704`). The later Tails animation/status path
+clears `Status_Push` when the animation byte changes
+(`docs/s2disasm/s2.asm:41272-41279`). The engine was only dropping the main
+player from the arrow and left CPU Tails' persistent interact/side-push status
+latched after the ROM-visible clear window.
+
+Fix:
+- `ARZBossArrow` now runs the drop over both the main player and sidekick
+  participants, keyed by either a current ride on the arrow or a persistent
+  interact slot that still names this arrow.
+- The arrow models the two-step release cadence: the first falling update
+  clears the ride/on-object latch while preserving push, and the next falling
+  update clears the pushed status after the ROM-equivalent later
+  Tails-animation/status phase.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f5970 / 1
+  (`tails_status_byte` expected `0x0002`, actual `0x0022`) to f6309 / 1 under
+  `frontierOnly` (`obj_s14_type` expected `0x08`, actual missing). The new
+  frontier is likely the next Obj08/skid-dust allocation cadence after the
+  boss-room arrow release.
+
+Verification:
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Dtrace.context.diagnosticChars=full" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f6309 / 1.
+- Same-game guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  preserved the accepted expected-red frontiers: CNZ2 f9977 / 10 and MTZ3
+  f13477 / 4.
+
+## 2026-07-02 - S2 round 60 closure
+
+Round 60 merged ARZ2 worker commit `84896fb02` into the conductor as
+`56ca930e1`, advancing ARZ2 from f5970 / 1 to f6309 / 1.
+
+CNZ2 worker `.worktrees/ai-s2-cnz2-round60-next` /
+`bugfix/ai-s2-cnz2-round60-next` made no commit. It reproduced f9977 / 10 and
+confirmed via BizHawk/engine probes that the miss is a real Obj51 split-ball
+phase/position mismatch, but the tested countdown/order compensation regressed
+to f9199 and was rejected. Current useful ROM areas:
+`docs/s2disasm/s2.asm:66590-66595,66638-66654,67049-67118,85164-85252`.
+
+MTZ3 worker `.worktrees/ai-s2-mtz3-round60-next` /
+`bugfix/ai-s2-mtz3-round60-next` made no commit. It reproduced f13477 / 4 and
+probed Obj53/Obj54 timing. The inspected orb trajectory and `$DA` attack path
+did not yield a ROM-backed advancing candidate. Current useful ROM areas:
+`docs/s2disasm/s2.asm:67832-67855,67968-67979,85013-85345,85533-85604`.
+
+Composed verification on `bugfix/ai-s2-trace-next`:
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f6309 / 1, CNZ2
+  f9977 / 10, and MTZ3 f13477 / 4. OOZ2 stayed green.
+- Full S1 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  completed with 29/29 green by the fresh S1 Surefire reports.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks: 66 green plus the known AIZ expected-reds
+  (`TestS3kAizCompleteRunTraceReplay` f1095 / 3 and
+  `TestS3kAizTraceReplay` f8941 / 1).
+
+No S2 trace turned green in round 60, so no round-60 change was banked into
+`next`.
+
+## 2026-07-02 - S2 round 59 MTZ3 Obj54 hit-reaction X velocity clear
+
+Round 59 MTZ3 worker used
+`.worktrees/ai-s2-mtz3-round59-next` /
+`bugfix/ai-s2-mtz3-round59-next`, based from conductor commit `02a47bba4`.
+The focused baseline reproduced MTZ3 f13358 / 6 under `frontierOnly`
+(`tails_x_speed` expected `-020C`, actual `0x020C`).
+
+Investigation stayed on Obj54's body contact window in the MTZ3 boss room. The
+round-58 BizHawk probe had already shown the ROM Obj54 `Boss_X` remains
+`$2B31` through the f13358/f13359 contact window while the engine snapshot was
+already `$2B32`. In the failing engine row, the extra pixel made Obj54's boss
+touch box reach Tails and invert `tails_x_speed`; the ROM body was still one
+pixel farther left and did not touch yet.
+
+The ROM's Obj54 main body path calls `Boss_MoveObject` and then copies
+`Boss_X_pos` to `x_pos(a0)` before display and face animation
+(`docs/s2disasm/s2.asm:67314-67342`). `Obj54_AnimateFace` later calls
+`Obj54_CheckHit`, reacts only when `boss_invulnerable_time == $3F`, and clears
+`Boss_X_vel` in that post-movement phase
+(`docs/s2disasm/s2.asm:67605-67620,67726-67748`). The touch path can set and
+decrement the hit/invulnerability state from the player collision loop
+(`docs/s2disasm/s2.asm:85318-85345`), but it does not make Obj54 skip its
+current movement copy. The engine's player-slot-first touch callback was
+clearing Obj54's `xVel` before Obj54's own update, stopping the body one
+leftward pixel too early.
+
+Fix:
+- `Sonic2MTZBossInstance` now queues only Obj54's `Boss_X_vel` clear from
+  `onHitTaken` until after the current boss routine has completed its movement
+  and position copy. The established routine, Y velocity, face, and orb-break
+  timing remains immediate; a broader hit-reaction deferral was rejected because
+  it regressed the trace to f12909 / 11.
+
+Result:
+- `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace` advances from f13358 / 6
+  (`tails_x_speed` expected `-020C`, actual `0x020C`) to f13477 / 4 under
+  `frontierOnly` (`x_speed` expected `-03FB`, actual `0x03FB`). The new frontier
+  is a later Sonic rebound mismatch around the Obj53/MTZ orb contact window.
+
+Verification:
+- Focused MTZ3 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Dtrace.context.diagnosticChars=full" test`
+  failed at the advanced expected-red frontier f13477 / 4.
+- Same-game guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" test`
+  preserved the accepted expected-red frontiers: ARZ2 f5968 / 8 and CNZ2
+  f9977 / 10. The conductor later merges the ARZ2 round59 advance separately,
+  so ARZ2 is f5970 in the composed branch.
+
+## 2026-07-02 - S2 round 59 ARZ2 Obj89 arrow timer-expiry support frame
+
+Round 59 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round59-next` /
+`bugfix/ai-s2-arz2-round59-next`, based from conductor commit `02a47bba4`.
+The focused baseline reproduced ARZ2 f5968 in the normal replay
+(`tails_air` expected `0`, actual `1`), matching the conductor's f5968 / 8
+`frontierOnly` state after round 58.
+
+Investigation stayed on Obj89's arrow platform in the ARZ2 boss room. At f5968
+the ROM still has CPU Tails standing on Obj89 slot `$14` with `Status_Push`
+set, while the engine had already released the ride during the object-solid
+checkpoint after the arrow timer expired. The shipped ROM's timer-decay path
+decrements `obj89_arrow_timer` and writes routine 6 when it reaches zero, but
+the actual rider-drop code lives in `Obj89_Arrow_Sub6` and is not dispatched
+until the next object pass. `PlatformObject` / `MvSonicOnPtfm` define the
+continued platform support state that must survive that final decay pass
+(`docs/s2disasm/s2.asm:65658-65702,35641-35660,35728-35739`).
+
+Fix:
+- `ARZBossArrow` now records the same frame where the arrow timer reaches zero
+  as a timer-decay support frame, so the shared solid-contact controller keeps
+  existing CPU Tails ride/push state through that object pass.
+- `ObjectSolidContactController` now lets providers that suppress a fresh slope
+  sample still preserve an already-riding support in both inline and
+  post-movement riding checkpoints.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f5968
+  (`tails_air` expected `0`, actual `1`) to f5970
+  (`tails_status_byte` expected `0x0002`, actual `0x0022`) in the focused
+  normal replay. The focused error count drops from 445 to 313.
+
+Verification:
+- New oracle:
+  `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossArrowTimerDecayKeepsCpuTailsRidingAtFrame5968" "-DfailIfNoTests=false" test`
+  passes after the fix and failed with `actualAir=true` before the production
+  change.
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+  fails at the advanced expected-red frontier f5970.
+- Same-game shared-behavior guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  preserves the known expected-red frontiers CNZ2 f9977 and MTZ3 f13358.
+  Those match the current branch-local routing table, so this Obj89 change did
+  not introduce new CNZ2 or MTZ3 regressions.
+
+## 2026-07-02 - S2 round 59 closure
+
+Round 59 merged two worker commits into the conductor:
+- `8723599ee` as `2ed729948`, advancing ARZ2 from f5968 to f5970.
+- `558993a21` as `16fc8752a`, advancing MTZ3 from f13358 to f13477.
+
+CNZ2 worker `.worktrees/ai-s2-cnz2-round59-next` /
+`bugfix/ai-s2-cnz2-round59-next` made no commit. It reproduced f9977 / 10
+(`tails_x_speed` expected `-0200`, actual `0x023A`) and tested trigger-phase
+and Obj51 split-ball touch-projection hypotheses. Neither produced a genuine
+advance; a broad split projection regressed earlier to f9199. Useful current
+ROM areas remain Obj51 trigger/fall/split and `Touch_Boss`
+(`docs/s2disasm/s2.asm:66577-66595,67049-67118,85164-85252`).
+
+Composed verification on `bugfix/ai-s2-trace-next`:
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5970 / 1, CNZ2
+  f9977 / 10, and MTZ3 f13477 / 4. OOZ2 stayed green.
+- Full S1 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  completed with 29/29 green by the fresh S1 Surefire reports.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks: 66 green plus the known AIZ expected-reds
+  (`TestS3kAizCompleteRunTraceReplay` f1095 / 3 and
+  `TestS3kAizTraceReplay` f8941 / 1).
+
+No S2 trace turned green in round 59, so no round-59 change was banked into
+`next`.
+
+## 2026-07-02 - S2 round 58 ARZ2 Obj89 arrow CPU Tails timer gate
+
+Round 58 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round58-next` /
+`bugfix/ai-s2-arz2-round58-next`, based from conductor commit `c80b846f7`.
+The focused baseline reproduced ARZ2 f5929 / 2 under `frontierOnly`
+(`tails_y` expected `0x0450`, actual `0x044F`).
+
+Investigation stayed on the Obj89 arrow platform in the ARZ2 boss room. At the
+frontier, Tails is in the S2 hurt-stop handoff while still standing on Obj89
+slot `$14`. A BizHawk PC probe over the corresponding native frames showed
+`Tails_HurtStop` setting routine 2 and `Status_Push`, then Obj89 still running
+`Obj89_Arrow_Platform` with `obj89_arrow_timer=0`; `MvSonicOnPtfm` reseated
+Tails from `0x044F.8100` to `0x0450.8100` in the same object pass.
+
+The shipped ROM's Obj89 arrow path calls `PlatformObject` with `d1=$1B`,
+`d2=1`, `d3=2`, and `d4=x_pos(a0)` while the timer is zero. The only P2/Tails
+standing write to `obj89_arrow_timer` is inside the disabled `fixBugs` block,
+whereas the active P1-standing branch writes `#$1F` and immediately decays it
+(`docs/s2disasm/s2.asm:65658-65683`). `PlatformObject` processes P1 then P2,
+and the continued support path moves the rider with `MvSonicOnPtfm`
+(`docs/s2disasm/s2.asm:35728-35739,35641-35660`). The engine had started the
+timer for any standing rider, including CPU Tails, so it suppressed the next
+platform support pass and left Tails one pixel too high.
+
+Fix:
+- `ARZBossArrow` now starts `arrowTimer` only for non-CPU-controlled standing
+  riders, preserving the shipped-ROM P1 path while leaving CPU Tails on the
+  zero-timer `PlatformObject` path.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f5929 / 2
+  (`tails_y` expected `0x0450`, actual `0x044F`) to f5968 / 8 under
+  `frontierOnly` (`tails_air` expected `0`, actual `1`). The new frontier is a
+  later Obj89 arrow support-release timing mismatch: ROM keeps Tails grounded
+  with `Status_Push`, while the engine has already released the ride.
+
+Verification:
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f5968 / 8.
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5968 / 8, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6. OOZ2 stayed green.
+- An A/B sweep of ARZ2, CNZ2, and MTZ3 with this patch reversed showed CNZ2
+  f9977 and MTZ3 f13358 were already present, so the round 58 Obj89 change did
+  not introduce those expected-red frontiers.
+- S1 and S3K sweeps were not run because the code change is object-local to S2
+  Obj89; no shared physics, collision, sidekick, or cross-game object
+  infrastructure was touched.
+
+## 2026-07-02 - S2 round 58 closure
+
+Round 58 merged ARZ2 worker commit `dd03abfa9` into the conductor as
+`1d8b8c2aa`. CNZ2 and MTZ3 did not produce committed changes.
+
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round58-next` /
+  `bugfix/ai-s2-cnz2-round58-next` reproduced f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`). The latest useful
+  evidence is upstream phase drift in Obj51's split electric ball: BizHawk
+  showed the ROM falling/split ball around x `0x2909` with the split clone
+  already present when the boss x is `0x2921`; the engine's equivalent ball is
+  around x `0x290B` and splits around boss x `0x2923`. No disassembly-backed
+  candidate advanced the frontier.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round58-next` /
+  `bugfix/ai-s2-mtz3-round58-next` reproduced f13358 / 6
+  (`tails_x_speed` expected `-020C`, actual `0x020C`). BizHawk diagnostics
+  sampled BK2 frames 39518-39526 and confirmed ROM Obj54 remains at
+  `Boss_X=$2B31` through the f13358/f13359 contact window while the engine
+  snapshot is already `$2B32`. Rejected candidates included an Obj54 SubE
+  pause display-only correction, Obj54 current-touch-state adjustment, and
+  deferring only Obj54 `onHitTaken` to invulnerability `$3F` because that
+  regressed to f12909.
+- Conductor verification after the ARZ2 merge used:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  and ran 19 S2 trace tests: 16 green / 3 expected-red at ARZ2 f5968 / 8,
+  CNZ2 f9977 / 10, and MTZ3 f13358 / 6. No S2 trace turned green this round,
+  so no round-58 change was banked into `next`.
+
+## 2026-07-02 - S2 round 58 post-develop merge baseline
+
+After closing round 58, local `develop` advanced to `d81dd2be1`
+(`feature/ai-remove-legacy-objectservices-ctor`, containing `origin/develop`
+`4f673dfdf`). The conductor merged it as `02a47bba4`; `CHANGELOG.md` was the
+only conflict and was resolved additively.
+
+Post-merge verification on `bugfix/ai-s2-trace-next`:
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5968 / 8, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6.
+- Full S1 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  completed with 29/29 green by the fresh S1 Surefire reports. An earlier
+  parallel S1/S3K attempt failed before tests in `target/antrun`; that was a
+  Maven target-directory race, not a trace result.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks: 66 green plus the known AIZ expected-reds
+  (`TestS3kAizCompleteRunTraceReplay` f1095 / 3 and
+  `TestS3kAizTraceReplay` f8941 / 1).
+
+## 2026-07-02 - S2 round 57 ARZ2 Obj89 arrow PlatformObject landing dimensions
+
+Round 57 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round57-next` /
+`bugfix/ai-s2-arz2-round57-next`, based from conductor commit `faca3451e`.
+The focused baseline reproduced ARZ2 f5928 / 6 under `frontierOnly`
+(`tails_y_speed` expected `0x0000`, actual `0x02C0`).
+
+Investigation stayed on Obj89's arrow platform near the ARZ2 boss. At the f5928
+ROM row, Tails is hurt-state landing on Obj89 slot `$14` with `y_vel=0`,
+`Status_OnObj` set, and `standOnObj=$14`. The engine had the same arrow slot
+near `@2A77,0461` but missed the top-solid landing by one pixel, leaving Tails
+airborne with `y_vel=$02C0`.
+
+The ROM path is `Obj89_Arrow_Platform` calling the shared `PlatformObject` path
+with `d1=$1B`, `d2=1`, `d3=2`, and `d4=x_pos(a0)`
+(`docs/s2disasm/s2.asm:65658-65665`). Those registers are already the
+standable top half-width and the landing surface height consumed by the shared
+platform routine, so Obj89 arrows should not apply the generic extra landing
+width narrowing or fall back to the ground half-height for the top contact.
+
+Fix:
+- Let `ARZBossArrow` opt into `usesCollisionHalfWidthForTopLanding()` so its
+  `d1=$1B` value is used directly as the top platform half-width.
+- Let `ARZBossArrow` opt into `usesGroundHalfHeightForTopSolidContact()` so its
+  `d3=2` value is used for the landing surface height.
+- Add a focused occupancy oracle for the f5928 Tails landing row.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f5928 / 6
+  (`tails_y_speed` expected `0x0000`, actual `0x02C0`) to f5929 / 2 under
+  `frontierOnly` (`tails_y` expected `0x0450`, actual `0x044F`). The new
+  frontier is the next hurt-state continued-ride/support sample: ROM has Tails
+  one pixel lower with `Status_Push` also set, while the engine is riding the
+  arrow at `0x044F` with only `Status_OnObj`.
+
+Verification:
+- `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossArrowUsesPlatformObjectD3ForTailsLandingAtFrame5928" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" test`
+  passed the focused f5928 Obj89 arrow landing oracle.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f5929 / 2.
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5929 / 2, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6. OOZ2 stayed green.
+- S1 and S3K sweeps were not run because the engine change is object-local to
+  S2 Obj89 plus a focused S2 trace oracle; no shared physics, collision,
+  sidekick, or cross-game object infrastructure was touched.
+
+## 2026-07-02 - S2 round 57 closure and develop merge
+
+Round 57 merged the ARZ2 worker commit `ef229bac1` into the conductor as
+`c6db3706e`. CNZ2 and MTZ3 did not produce committed changes.
+
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round57-next` /
+  `bugfix/ai-s2-cnz2-round57-next` reproduced f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`). Diagnostics again
+  confirmed the ROM hurt comes from an Obj51 split electric ball and that the
+  engine split ball is phase-shifted by a few pixels. X-latch and split
+  live-touch candidates did not advance the trace and were reverted.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round57-next` /
+  `bugfix/ai-s2-mtz3-round57-next` reproduced f13358 / 6
+  (`tails_x_speed` expected `-020C`, actual `0x020C`). BizHawk confirmed ROM
+  hits Obj53 at BK2 frame 39522 and Obj54 at BK2 frame 39523; the engine reaches
+  Obj54 body contact one step early because Obj54 is already held at
+  `Boss_X=$2B32` while ROM remains at `$2B31`. A raw `$0F` ENEMY flag plus
+  delayed Obj54 hit-reaction candidate regressed MTZ3 to f12909 and was
+  rejected/reverted.
+- Local `develop` moved to `37eb5f619` after the LevelManager decomposition and
+  tier-A dead-code-removal work. The conductor merged it as `4a02c8e7f`
+  (`origin/develop` `4f673dfdf` was already contained). The only manual conflict
+  was `CHANGELOG.md`; the resolution preserved both the S2 trace bullets and the
+  develop refactor/dead-code bullets.
+- Post-merge S2 baseline:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5929 / 2, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6. OOZ2 stayed green.
+- Post-merge S1 guard:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  plus fresh Surefire XML filtering reported `S1_RECENT=29 S1_BAD=0`.
+- Post-merge S3K guard:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 tests with only the two known AIZ expected-red frontiers:
+  `TestS3kAizCompleteRunTraceReplay` f1095 `x_sub` and
+  `TestS3kAizTraceReplay` f8941 `camera_y`.
+
+## 2026-07-02 - S2 round 56 ARZ2 Obj89 released side-push auto-jump advance
+
+Round 56 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round56-next` /
+`bugfix/ai-s2-arz2-round56-next`, based from conductor commit `a17320e0a`.
+The focused baseline reproduced ARZ2 f5852 / 6 under `frontierOnly`
+(`tails_y` expected `0x04C1`, actual `0x04C0`).
+
+Investigation stayed on the Obj89 pillar side-contact handoff. At the f5852
+ROM row, Tails switches from grounded/pushing to air+rolling with
+`y_vel=-$680` while the engine stayed grounded. The trace row's
+`Level_frame_counter` low six bits are zero, matching the S2 Tails CPU
+auto-jump cadence gate. The ROM object dump also shows Obj89 pillar side-push
+state just before `TailsCPU_Normal` consumes Tails' current `Status_Push`.
+
+The relevant ROM paths are `docs/s2disasm/s2.asm:39287-39300` for
+`TailsCPU_Normal` branching from current `Status_Push` to
+`TailsCPU_Normal_FilterAction_Part2`, `docs/s2disasm/s2.asm:39369-39378` for
+the `$3F` auto-jump gate, and `docs/s2disasm/s2.asm:65330-65339` plus
+`docs/s2disasm/s2.asm:65531-65539` for `Obj89_Pillar_SolidObject` calling the
+shared `SolidObject` path at `y_pos+4`.
+
+Fix:
+- Add a narrow `SolidObjectProvider` bridge consumed only by the sidekick CPU
+  auto-jump distance/height bypass, after live push bits and normal ride or
+  interact-slot grace have cleared.
+- Let Obj89 pillars expose that bridge only for CPU sidekicks at the temporary
+  pillar side edge and within the ROM solid vertical band.
+- Add a focused Obj89 unit test for the f5852 Tails side-edge auto-jump gate.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f5852 / 6
+  (`tails_y` expected `0x04C1`, actual `0x04C0`) to f5928 / 6 under
+  `frontierOnly` (`tails_y_speed` expected `0x0000`, actual `0x02C0`). The new
+  frontier is a later hurt-state Tails landing/support mismatch near the ARZ2
+  boss.
+
+Verification:
+- `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#arzBossPillarReleasedSidePushKeepsTailsCpuAutoJumpGateVisible" "-DfailIfNoTests=false" test`
+  passed the focused Obj89 pillar auto-jump gate test.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f5928 / 6.
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5928 / 6, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6. OOZ2 stayed green.
+- Full S1 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  reported 29/29 green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 tests with only the two known AIZ expected-red frontiers:
+  `TestS3kAizCompleteRunTraceReplay` f1095 `x_sub` and
+  `TestS3kAizTraceReplay` f8941 `camera_y`.
+
+## 2026-07-02 - S2 round 56 closure
+
+Round 56 merged the ARZ2 worker commit `6520b75b3` into the conductor as
+`026852725`. CNZ2 and MTZ3 did not produce committed changes.
+
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round56-next` /
+  `bugfix/ai-s2-cnz2-round56-next` reproduced f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`). The expected knockback is
+  ROM hurt response from an Obj51 split electric ball, but the engine's left
+  split orb is still around `28EF,06E8` while ROM has the 4x4 hurt orb around
+  `28EC,06EB`. Rejected candidates stayed out of split-earlier, radius, and
+  touch-projection hacks because Obj51's ROM init/split/touch-size paths fix
+  those values (`docs/s2disasm/s2.asm:67013-67024,67049-67108,85110-85431`).
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round56-next` /
+  `bugfix/ai-s2-mtz3-round56-next` reproduced f13358 / 6
+  (`tails_x_speed` expected `-020C`, actual `0x020C`). A BizHawk no-render probe
+  sampled BK2 frames 39520-39526 and confirmed ROM Obj54 stays at
+  `Boss_X_pos=$2B31.0000` through the contact window while the engine collides
+  at `$2B32`, causing a one-row-early edge overlap. A deferred Obj54
+  hit-reaction candidate regressed MTZ3 to f12909, so it was rejected and
+  reverted.
+- After `git fetch origin`, local `develop` (`3ad3b174b`) and `origin/develop`
+  (`4f673dfdf`) were already contained in conductor commit `026852725`.
+
+## 2026-07-02 - S2 round 55 conductor baseline
+
+Round 55 starts from conductor commit `62936ec3f` on
+`.worktrees/ai-s2-trace-next` / `bugfix/ai-s2-trace-next`. Local `develop`
+(`3ad3b174b`) and `origin/develop` (`4f673dfdf`) are already contained in the
+conductor branch. Local `next` has the round 54 OOZ2 green banked as merge
+commit `bcf557815`.
+
+Baseline sweep:
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 S2 trace tests: 16 green / 3 expected-red. Remaining frontiers are
+  ARZ2 f5845 / 4 (`tails_x_speed` expected `0x0000`, actual `-0057`), CNZ2
+  f9977 / 10 (`tails_x_speed` expected `-0200`, actual `0x023A`), and MTZ3
+  f13358 / 6 (`tails_x_speed` expected `-020C`, actual `0x020C`).
+
+## 2026-07-02 - S2 round 55 ARZ2 Obj89 Tails nudge-gated side stop advance
+
+Round 55 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round55-next` /
+`bugfix/ai-s2-arz2-round55-next`, based from conductor commit `5c0625c04`.
+The focused baseline reproduced ARZ2 f5845 / 4 under `frontierOnly`
+(`tails_x_speed` expected `0x0000`, actual `-0057`).
+
+Investigation stayed on the Obj89 pillar side-contact handoff identified in
+round 54. The one-pixel-inside contact is still a ROM-visible moving handoff
+when `TailsCPU_Normal_FollowLeft` first applies its same-frame `subq.w #1,x_pos`
+nudge, but without that nudge the later Obj89 pillar `SolidObject` call reaches
+`SolidObject_StopCharacter` and clears Tails' `x_vel`/inertia. The relevant ROM
+paths are `docs/s2disasm/s2.asm:35413-35436`,
+`docs/s2disasm/s2.asm:38952-38975`,
+`docs/s2disasm/s2.asm:65330-65374`, and
+`docs/s2disasm/s2.asm:65531-65539`.
+
+Fix:
+- Narrow `ARZBossPillar.preservesMovingSideContactVelocity` so the Obj89
+  one-pixel-inside preservation requires the latest sidekick CPU normal-step
+  diagnostics to show a same-frame left follow nudge.
+- Add a focused Obj89 unit test for the f5845 no-nudge stop path.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f5845 / 4
+  (`tails_x_speed` expected `0x0000`, actual `-0057`) to f5852 / 6 under
+  `frontierOnly` (`tails_y` expected `0x04C1`, actual `0x04C0`). The new
+  frontier is Tails remaining grounded one frame after ROM switches to
+  air/rolling with `y_vel=-$680`.
+
+Verification:
+- `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#arzBossPillarPostPhysicsSidePushPreservesTailsVelocity+arzBossPillarOnePixelInsideWithoutPushUsesRomStopPath+arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff" test`
+  passed the focused Obj89 pillar handoff/stop-boundary tests.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f5852 / 6.
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5852 / 6, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6. OOZ2 stayed green.
+- Conductor S1 guard after merging commit `836b88c8e`:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  plus fresh Surefire XML filtering reported `S1_RECENT=29 S1_BAD=0`.
+- Conductor S3K guard after merging commit `836b88c8e`:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 tests with only the two known AIZ expected-red frontiers:
+  `TestS3kAizCompleteRunTraceReplay` f1095 `x_sub` and
+  `TestS3kAizTraceReplay` f8941 `camera_y`.
+
+## 2026-07-02 - S2 round 55 closure
+
+Round 55 merged the ARZ2 worker commit `836b88c8e` into the conductor as
+`bf9cdc4be`. CNZ2 and MTZ3 did not produce committed changes.
+
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round55-next` /
+  `bugfix/ai-s2-cnz2-round55-next` reproduced f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`) after testing Obj51
+  countdown, split touch timing, and rightward attach-coordinate hypotheses.
+  Projection variants regressed to f9199; coordinate-only/current-position
+  variants were no-change. No files were changed, and the worktree was clean.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round55-next` /
+  `bugfix/ai-s2-mtz3-round55-next` reproduced f13358 / 6
+  (`tails_x_speed` expected `-020C`, actual `0x020C`). A BizHawk probe showed
+  ROM negates Tails at BK2 frame 39523 / trace f13359 through Obj54 slot 20
+  `Touch_Enemy`, while the engine applies the bounce one trace row early. No
+  committed candidate advanced the frontier.
+- After `git fetch origin`, local `develop` (`3ad3b174b`) and `origin/develop`
+  (`4f673dfdf`) were already contained in conductor commit `bf9cdc4be`.
 
 ## 2026-07-02 - S2 round 54 OOZ2 Obj3E capsule body lifetime green
 
@@ -58,6 +1561,56 @@ Verification:
   `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
   plus fresh Surefire XML filtering reported `S1_RECENT=29 S1_BAD=0`.
 - Conductor S3K guard after merge:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 guard tests: 66 green / 2 known AIZ expected-red frontiers
+  (complete-run f1095 `x_sub`, AIZ trace f8941 `camera_y`).
+
+## 2026-07-02 - S2 round 54 ARZ2 Obj89 Sonic stop advance
+
+Round 54 started from conductor commit `0bd000c9d` on
+`bugfix/ai-s2-trace-next`. Worker ARZ2 used
+`.worktrees/ai-s2-arz2-round54-next` /
+`bugfix/ai-s2-arz2-round54-next`, based from that conductor commit rather than
+`develop`. The focused baseline reproduced ARZ2 f5827 / 2 under
+`frontierOnly` (`x_speed` expected `0x0000`, actual `-015D`).
+
+Investigation stayed on the later Obj89 pillar side contact after the round 51
+Tails push-entry stop. The f5827 context showed Sonic at the same edge while
+the engine still applied the Obj89 moving side-contact velocity preservation
+that was introduced for a CPU-sidekick object-slot handoff. That preservation is
+only valid for Tails: `Obj89_Pillar_Sub0` / `Sub2` call
+`Obj89_Pillar_SolidObject` before the pillar body update at the temporary
+`y_pos+4` anchor (`d1=$23,d2=$44,d3=$45`), and the normal side path reaches
+`SolidObject_StopCharacter` when the contact is moving into the pillar
+(`docs/s2disasm/s2.asm:35413-35436,65330-65374,65531-65539`). Sonic has no
+later sidekick CPU/movement slot to overwrite that stop, so the Obj89
+preservation hook is now limited to CPU-controlled sidekicks.
+
+Candidate result:
+- ARZ2 advances to f5845 / 4 under `frontierOnly` (`tails_x_speed` expected
+  `0x0000`, actual `-0057`). The next owner remains the Obj89/Tails
+  order-sensitive side-stop window: ROM carries Tails' decelerating velocity
+  through f5843-f5844, then zeroes it at f5845.
+
+Verification:
+- `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#arzBossPillarPostPhysicsSidePushPreservesTailsVelocity+arzBossPillarMainPlayerSidePushUsesRomStopPath+arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff" test`
+  passed the three focused Obj89 pillar contact tests.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f5845 / 4.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.*TraceReplay" "-Ds2.rom.path=s2.gen" test`
+  ran 19 S2 trace tests: 15 green / 4 expected-red. Expected-red frontiers were
+  ARZ2 f5845, CNZ2 f9977, MTZ3 f13358, and OOZ2 f12861.
+- Conductor composed verification after merging with the OOZ2 green:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 S2 trace tests: 16 green / 3 expected-red at ARZ2 f5845 / 4, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6; OOZ2 stayed green.
+- Focused Obj89 unit tests passed after clearing a generated `target/antrun`
+  XML race from an overlapping Maven invocation:
+  `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#arzBossPillarPostPhysicsSidePushPreservesTailsVelocity+arzBossPillarMainPlayerSidePushUsesRomStopPath+arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff" test`.
+- Conductor S1 guard:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  plus fresh Surefire XML filtering reported `S1_RECENT=29 S1_BAD=0`.
+- Conductor S3K guard:
   `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
   ran 68 guard tests: 66 green / 2 known AIZ expected-red frontiers
   (complete-run f1095 `x_sub`, AIZ trace f8941 `camera_y`).
@@ -2141,6 +3694,469 @@ banked into `next` under the green-bank rule.
     tree.
   - `mvn "-Dtest=TestSonic2CNZBossCollision,TestCNZBossArtAndAnimation,TestCNZBossRomArtMappings" "-DfailIfNoTests=false" test`
     completed the focused Obj51 collision/art coverage successfully.
+
+## 2026-07-02 - S3K MHZ complete-run advances f2966 -> f2986 (Madmole arc-throw grab applies on the ROM frame)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  HEAD `c3f06d930` + this fix (2 source/test files + docs).
+- Command (verified independently via `mvn.cmd`, `-Dmse=off`):
+  `mvn.cmd "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before (2 files reverted to HEAD):
+  f2966 / **4454** errors (`tails_air`, expected `1`, actual `0`).
+  After: f2986 / **2413** errors (`tails_y`, expected `0x0779`, actual `0x076F`).
+- Root: the SKL Obj $8C Madmole arc-throw arm (`Obj_Madmole` /
+  `docs/skdisasm/sonic3k.asm:193075`) grabbed the carried player two frames
+  late. Seven ROM-cited changes in `MadmoleBadnikInstance`:
+  (1) the body child rises on its creation frame (`loc_8D620` falls straight
+  through to `loc_8D636`, `:193147-193158`);
+  (2) a one-frame parent-observe gap before the 60-frame cooldown (parent
+  `loc_8D5D4` tests the still-set `$38` bit and waits while the body clears it
+  at `loc_8D6D6`, so `loc_8D5DE` arms the cooldown the next frame,
+  `:193110-193120,193212-193215`);
+  (3) `usesCurrentTouchResponseState=true` — `loc_8D6E6` moves the arm, then
+  `Add_SpriteToCollisionResponseList`/`Draw_Sprite` (`:193264-193278,193233`),
+  matching the AizSpikedLog/Orbinaut post-move contract;
+  (4) light gravity `$20` via `MoveSprite_LightGravity` (`moveq #$20`,
+  `:178358`), not the `$38` object default;
+  (5) the carry defers to routine 8 — `sub_8D94A` sets routine 8 during the
+  arm's routine-4 `loc_8D778`, which still runs `MoveSprite_LightGravity` that
+  frame; `loc_8D7A8` carries the next frame (`:193271,193478,193291`);
+  (6) subpixel-preserving word-write carry — `loc_8D7D4` does `move.w` to
+  `x_pos(a1)`/`y_pos(a1)` (`:193307-193312`), leaving the carried CPU's
+  `x_sub`/`y_sub` untouched (F600/2E00);
+  (7) single-player grab via a pending `collision_property` candidate —
+  `sub_8D94A` grabs the one player indexed by `word_8D944` = `{Player_1,
+  Player_2, Player_2}` (`:193457-193460`); last overlap wins (Player_2 after
+  Player_1), lead player never modified.
+- -2041 error-delta adjudication (independent A/B, copy-aside; NO `git stash`):
+  BEFORE first error f2966 (`tails_air` — the grab-not-applying target);
+  AFTER first error f2986. The f2966 target is gone and the f2966-2985
+  grab/carry window (air, status, object_control, carried subpixels F600/2E00,
+  arm arc) is byte-clean; the AFTER first error frame (2986) is strictly deeper
+  than the fixed window, so every AFTER-only error key is at frame >= 2986 by
+  construction.
+- f2986 characterization (next roots, out of scope): `tails_y` flips (exp
+  `0x0779`, act `0x076F`) — the arm arc rebound animation callback fires ~3
+  frames early (`byte_8D9E7` `$FC` -> `loc_8D846`, `:193353`) and the mid-carry
+  `ObjHitFloor` on the moved arm (`loc_8D80A`, `:193325-193330`) is not yet
+  modeled. End-of-session frontier.
+- Guards green (`-Dmse=off`, ROM path): `TestMadmoleBadnikInstance` (31, incl.
+  the untouched Task-6 cap-stump/defeat suite), `TestSidekickCpuDespawnParity`
+  (55), `TestSidekickCpuFollowParity` (93), `TestSonic3kMHZEvents` (62),
+  `TestS3kAiz1SkipHeadless` (8), `TestSonic3kLevelLoading` (5 + 30),
+  `TestRewindCoverageGuard` (1, no baseline change; new `pendingCapturePlayer`
+  is `@RewindTransient` — nulled at update start, always null at snapshot),
+  `TestS1Ghz1TraceReplay` (1), `TestS2Ehz1TraceReplay` (1). Pre-existing
+  `TestS2Ehz1Headless` (1) confirmed failing identically on clean HEAD
+  (inherited from the develop merge), not introduced by this fix.
+
+## 2026-07-02 - S3K MHZ complete-run advances f2159 -> f2966 (TailsCPU sub_13EFC interact-code-word despawn watchdog)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  HEAD `d56f33a88` + this fix (6 source/test files + docs).
+- Command (verified independently via `mvn.cmd`, `-Dmse=off`):
+  `mvn.cmd "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before (6 files reverted to HEAD):
+  f2159 / **2323** errors (`tails_x`, expected `0x7F00`, actual `0x066D`).
+  After: f2966 / **4454** errors (`tails_air`, expected `1`, actual `0`).
+- Fix: model ROM `sub_13EFC`'s off-screen on-object branch
+  (`cmp.w (a3),d0 / bne -> sub_13ECA`, `docs/skdisasm/sonic3k.asm:26816-26843`).
+  New S3K-only `ObjectInteractionRules.sidekickDespawnUsesInteractCodeWordChange`
+  gates a word-change compare in `SidekickCpuController.checkDespawn()` (compare
+  before the fall-through latch refresh; armed only when the latch is non-zero).
+  Despawn reuses the existing `applyDespawnMarker` (`x_pos=0x7F00`, `y_pos=0`,
+  routine 2, `Status_InAir`, `object_control=0x81`, velocity preserved per
+  `sub_13ECA`, `:26800-26809`); no new rewind field (`diagnosticS3kInteractWord`
+  already captured). The stood-on object's ROM code word is exposed via a new
+  `RomObjectCodePointerProvider` on `Mhz1CutsceneButtonInstance` (word `0x0006`,
+  `MHZ1CutsceneButton_Main` @ ROM `0x00062F0A`) and `MhzCurledVineObjectInstance`
+  (word `0x0003`, `loc_3E8A2` @ ROM `0x0003E8A2`) — data-driven, not zone-gated.
+- +2131 error-delta adjudication (independent A/B, copy-aside; NO `git stash`):
+  BEFORE first error f2159 (`tails_x=0x7F00` sentinel — the fix target);
+  AFTER first error f2966. The f2159 target is gone and the f2159-2965 respawn
+  window is byte-clean; the AFTER report's first error frame (2966) is strictly
+  deeper than the entire fixed window, so every AFTER-only error key is at
+  frame >= 2966 by construction. The +2131 net is a wider per-frame signature:
+  the old divergence was a despawned sidekick parked at a sentinel `x`; the new
+  one desyncs a live, alive sidekick's air/status/position/subpixels plus
+  downstream object interactions across the remaining ~thousands of frames.
+- f2966 characterization (round-9 target): position and subpixels still match
+  at f2966 (`tails_x/y = 0x103E/0x0730`, subs match); the first fields to flip
+  are `tails_air` (exp `1`, act `0`) and `tails_status_byte` (exp `0x0003`, act
+  `0x0001`) — ROM Tails goes airborne while the engine keeps it grounded. The
+  tails-interact slot there is decimal 21 = object slot `0x15`, code pointer
+  `0x0001D566` (high word `0x0001`), routine `02`, @ `0x0F30,0870`; ROM sidekick
+  diag shows `onObj=15 status=03`. Round 9 = Tails carried airborne by moving
+  object slot `0x15`. Note the slot is NOT the vine's (slots recycle).
+- Sibling S3K complete-run frontier check (all frame-neutral vs documented; run
+  individually with `-Dsurefire.argLine=-Xshare:off -Xmx4g` because the longer
+  traces OOM under the default `-Xmx1g` fork): AIZ f1095 / 4319 (doc f1095),
+  CNZ f1846 / 7143 (doc f1846; count drift from develop merge, same frame),
+  HCZ f1489 / 3503 (doc f1489 `leader y`), ICZ f3139 / 3207 (doc f3139),
+  LBZ f2270 / 5881 (doc f2270/5881 exact), MGZ f866 / 10761 (doc f866; count
+  drift, same frame). No frontier regressed. The new despawn only fires when the
+  sidekick stands on a `RomObjectCodePointerProvider` (MHZ button/vine only), so
+  it is structurally inert in the sibling zones.
+- Guards green (`-Dmse=off`, respective ROM paths): `TestSidekickCpuDespawnParity`
+  (55/55, +6 new), `TestSidekickCpuFollowParity` (93), `TestOnObjectAtFrameStartSnapshot`
+  (4), `TestSidekickCpuControllerLevelStart` (16), `TestSidekickDespawnXRule` (4),
+  `TestTraceBinder` (62), `TestS3kAiz1SkipHeadless` (8), `TestSonic3kLevelLoading`
+  (5 + 30), `TestSonic3kBootstrapResolver` (5), `TestS2Ehz1TraceReplay` (1),
+  `TestS1Ghz1TraceReplay` (1). Pre-existing failures `TestRespawnStrategies` (5)
+  and `TestS2Ehz1Headless` (1) confirmed failing identically on clean HEAD
+  (inherited from the develop merge), not introduced by this fix.
+
+## 2026-07-02 - S3K MHZ complete-run advances f2158 -> f2159 (curled vine lands players on the contoured curl surface per loc_3EA1E)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `84103f0ab` + this fix).
+- Command (verified independently on this branch via `mvn.cmd`):
+  `mvn.cmd "-Ds3k.rom.path=...\Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f2158 / **4388** errors
+  (`tails_y_speed`, expected `0x0000`, actual `0x0428`). After: f2159 /
+  **2323** errors (`tails_x`, expected `0x7F00`, actual `0x066D`). The error
+  count falls by **-2065** (cascade collapse from resolving the f2158 root).
+- Root cause: `MhzCurledVineObjectInstance` used a flat top-solid at spawn.y
+  for new-landing detection; the generated curl segment contour
+  (`onSolidContact`, per `loc_3E9FA`) was only applied AFTER a player was
+  already riding, so a falling player could land on/pass through the wrong
+  Y. Fix implements `SlopedSolidProvider`: `getSlopeData()` samples
+  `vineY - (segmentY[segment] - 8)` per 2px `sampleX` (baseline 0), so the
+  shared resolver's `baseY = anchorY - slopeSample` reproduces ROM
+  `loc_3EA1E`'s (`sonic3k.asm:82980-82996`) `$1A(a2,d0*6) - 8` landing
+  surface; `isSlopeFlipped()` returns `false` because the segment generator
+  (`:82861-82893`) does no render-flag mirroring, and h-flip is folded into
+  the existing `segmentIndexForRomD0` index instead (now shared by both the
+  landing sampler and `onSolidContact`, refactored with no behavior change —
+  verified algebraically equivalent to the prior inline computation for both
+  `hFlip` cases). `onSolidContact` now also distinguishes the *establishing*
+  frame from *continued* rides via `standingSegmentIndices.containsKey`: the
+  ROM gates the surface Y write on the per-player standing bit
+  (`btst d6,status(a0)`, `:82943`) — clear on first contact (fall-through
+  into `loc_3EA1E` -> `loc_1E45A`, `:42004-42028`, which snaps
+  `y_pos = surface - y_radius - 1`), set on subsequent frames
+  (`loc_3E9FA`, `:82963-82977`, `y_pos = surface - y_radius`, no `-1`). The
+  engine previously applied the continued-ride `-y_radius` snap even on the
+  landing frame, off by 1px.
+- Error-delta adjudication (independent A/B on this branch, BEFORE = the 2
+  touched files reverted to HEAD `84103f0ab`, AFTER = fix in place, both
+  reruns performed by this verification pass, not reused from the fix
+  worker's numbers): BEFORE reproduces exactly f2158 / 4388 errors
+  (`tails_y_speed`) as claimed. AFTER has **zero** divergence records before
+  f2159 (min error `start_frame` across all 2323 entries is exactly 2159).
+  AFTER's error `field` set (37 distinct fields) is an exact subset match of
+  BEFORE's field set (37 distinct fields, identical) — no new divergence
+  category was introduced anywhere in the run; `total_frames` (27986) and
+  `warning_count`/`bootstrap_error_count` (0/0) are unchanged between BEFORE
+  and AFTER. This is a genuine cascade collapse, not a masked regression.
+- Next root (un-modeled, left for the next round): at f2159 Tails's
+  `tails_x`/subpixel fields diverge first, tracing to the S3K TailsCPU
+  watchdog respawn path (`sub_13EFC`/`sub_13ECA`, `sonic3k.asm:26816`/
+  `26800`) — shared sidekick-controller code, correctly left untouched by
+  this object-local vine fix.
+- Guards (all fresh-run this pass, 0 fail/err/skip): `TestMhzCurledVineObjectInstance`
+  (9, incl. 2 new tests: a fail-first sloped-landing discriminator and an
+  establishing-vs-continued-ride assertion), `TestMhzSwingBarHorizontalObjectInstance`
+  (16), `TestMhzSwingBarVerticalObjectInstance` (19), `TestSolidObjectManager`
+  (48), `TestSonic3kMHZEvents` (62), `TestS3kAiz1SkipHeadless` (8),
+  `TestSonic3kLevelLoading` (30 in `game.sonic3k` + 5 in `tests`, both
+  same-named classes in the requested guard list).
+
+## 2026-07-02 - S3K MHZ complete-run advances f1994 -> f2158 (swing bars preserve player subpixels per ROM word-only position writes)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `6a255aa3e` + this fix).
+- Command (verified independently on this branch via `mvn.cmd`):
+  `mvn.cmd "-Ds3k.rom.path=...\Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f1994 / **2621** errors
+  (`y_sub`, expected `0xA500`, actual `0x0000`). After: f2158 / **4388** errors
+  (`tails_y_speed`, expected `0x0000`, actual `0x0428`). The error count rises
+  by **+1767**; this is adjudicated below as masked-now-reachable, not a
+  regression.
+- Root cause: both MHZ swing bars snapped the captured player's ROM centre with
+  the subpixel-zeroing `setCentreX/Y`, but the ROM writes only the pixel word at
+  every position site — `move.w`/`add.w`/`subq.w`/`addq.w` on `x_pos`/`y_pos`,
+  never the long that would clear `x_sub`/`y_sub`. Fix swaps 8 sites to
+  `set...PreserveSubpixel`. ROM cites (all verified word-only writes in
+  `docs/skdisasm/sonic3k.asm`): horizontal grab `:83448-83450` (`move.w d0,y_pos`),
+  hang `:83533-83534` (`add.w y_pos(a0),d1 / move.w d1,y_pos`), input nudges
+  `:83326` (`subq.w #1,x_pos`) / `:83340` (`addq.w #1,x_pos`); vertical
+  roll-radius y add `:83752-83754` (`add.w d0,y_pos`), grab `:83757-83759`
+  (`move.w d0,x_pos`), climb `:83625-83626` (`add.w x_pos(a0),d1 / move.w d1,x_pos`),
+  auto-release `:83669` (`move.w x_pos(a0),x_pos`).
+- Error-delta adjudication (independent A/B on this branch, BEFORE = these 4
+  files reverted, AFTER = fix in place): the fix's own three targets are gone
+  in AFTER (`y_sub@f1994`, `tails_y_sub@f2011`, `x_sub@f2451` present in BEFORE,
+  absent in AFTER). AFTER has **zero** divergence records before f2158
+  (min error frame is exactly 2158); BEFORE had 51 error records in the
+  [1994,2157] window. Every one of the 3197 AFTER-only `(field,frame)` error
+  keys is at frame >= 2159 — no new pre-frontier divergence was introduced.
+  So AFTER is byte-exact through f2157 (strictly better than BEFORE) and the
+  +1767 is a previously-masked downstream Tails root now reachable once the
+  subpixel noise is removed.
+- f2158 characterization (next-round target): at f2158 the player subpixels are
+  byte-exact (`tails_x_sub`/`tails_y_sub` match), but the engine releases CPU
+  Tails into an **air + rolling** state (`tails_air` 0->1, `tails_rolling` 0->1,
+  `tails_y_speed` `0x0000`->`0x0428` falling, `tails_g_speed` `0x0370`->`0x00B8`,
+  `tails_status_byte` `0x08`->`0x06`) while the ROM keeps Tails riding object
+  slot 15 grounded (ROM `onObj=15`, `status=08`; engine `onObj=false`,
+  `ride=s-1`). `tails_cpu_interact` (exp `0x0006`, act `0x0003`) and
+  `tails_y` (exp `0x0598`, act `0x05A4`) flip first; position/subpixel fields
+  only cascade at f2159. Next root is Tails's swing-bar release/riding-state
+  timing (appears to jump/roll off one interaction-cycle early), not a subpixel
+  issue.
+- Guards: full module suite 296 tests, 295 pass / 1 fail (only
+  `TestS3kMhzCompleteRunTraceReplay`, still-red frontier). Named guards all
+  green (0 fail/err/skip): `TestMhzSwingBarHorizontalObjectInstance` (16),
+  `TestMhzSwingBarVerticalObjectInstance` (19), `TestMhz1CutsceneObjects` (82),
+  `TestSonic3kMHZEvents` (62), `TestS3kAiz1SkipHeadless` (8),
+  `TestSonic3kLevelLoading` (30). The 7 new subpixel-preserve unit tests are
+  fail-first (verified: reverting only the two main files while keeping the
+  tests fails all 7 with `expected: <nonzero> but was: <0>`).
+
+## 2026-07-02 - S3K MHZ complete-run advances f1162 -> f1994 (MHZ1 cutscene door trigger-frame movement)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `5a09a8006` + this fix).
+- Command (verified independently on this branch):
+  `mvn.cmd "-Ds3k.rom.path=...\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f1162 / 2855 errors
+  (`tails_y`, expected `0x064E`, actual `0x0653`). After: f1994 / 2621 errors
+  (`y_sub`, expected `0xA500`, actual `0x0000`). Confirmed against
+  `target/trace-reports/s3k_mhz1_report.json`: zero divergence records at or
+  before f1162, so all five prior fix signatures (f1 `camera_x`, f72
+  `y_speed`, f966 `y`, f1025 `status_byte`, f1162 `tails_y`) hold.
+- Root cause: `MHZ1CutsceneButton_Door_Move` (`sonic3k.asm:130237`) arms
+  `y_vel`/`$2E`/`$34` and falls straight through
+  `MHZ1CutsceneButton_Door_SetVelocity` (`:130246`) into
+  `MHZ1CutsceneButton_Door_Moving` (`:130251`, `jsr MoveSprite2`) with no
+  `rts` anywhere in that chain (confirmed against `sonic3k.lst:151974-151988`:
+  `63094` -> `630A6` is straight-line). Both trigger paths reach this
+  fall-through: the switch branch jumps directly to `Door_Move`
+  (`bne.s MHZ1CutsceneButton_Door_Move`, `:130217`), and the auto-raise
+  proximity branch falls through `MHZ1CutsceneButton_Door_ClearFlag`
+  (`:130234`) into the same `Door_Move`. So the door moves 1px on its
+  trigger frame; `Mhz1CutsceneDoorInstance.update()` previously `return`ed
+  after arming the slide on both trigger branches, deferring the first move
+  to the next frame and lagging the ROM door by 1px through the whole slide.
+  At f1162 that 1px let the engine door's underside clip the rising CPU
+  Tails jump apex instead of clearing it as the ROM door does.
+- Fix: both trigger branches (switch-driven and auto-raise) now fall through
+  into the movement step (`SubpixelMotion.moveSprite2` + wait-timer
+  decrement) on the trigger frame itself, instead of `return`ing. Four
+  `TestMhz1CutsceneObjects` assertions and two down-slide loop counts were
+  corrected to encode the trigger-frame move (arming frame's Y already
+  reflects one step; the 64px slide completes over `update(1)..update(64)`
+  rather than `update(1)..update(65)`).
+- Out-of-scope note (left untouched): an inverted auto-raise Y-proximity
+  check (engine `yDistance >= 0x60` vs ROM `d3 < 0x60`) was noticed but not
+  exercised by this trace and not touched here — flagged as a follow-up.
+- Guards green: `TestMhz1CutsceneObjects` (82/82), `TestSolidObjectManager`
+  (48/48), `TestSonic3kMHZEvents` (62/62), `TestS3kAiz1SkipHeadless` (8/8),
+  `TestSonic3kLevelLoading` (35/35 across both packages).
+
+## 2026-07-02 - S3K MHZ complete-run advances f1025 -> f1162 (MHZ1 cutscene door inclusive right edge)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `5c6e74a31` + this fix).
+- Command (verified independently on this branch):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds3k.rom.path=...\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f1025 / 2853 errors
+  (`status_byte`, expected `0x0021`, actual `0x0001`). After: f1162 / 2855
+  errors (`tails_y`, expected `0x064E`, actual `0x0653`). Confirmed against
+  `target/trace-reports/s3k_mhz1_report.json` via an independent A/B rerun
+  (copy-aside/`git checkout --`/restore, not `git stash`).
+- Root cause: `Mhz1CutsceneDoorInstance`'s side-contact solid box used the
+  engine's default exclusive right edge. `MHZ1CutsceneButton_Door_Wait`
+  (`sonic3k.asm:130214`) calls `sub_65E4C` (`sonic3k.asm:134149`), which loads
+  `d1=$1B,d2=$20,d3=$20` and jumps into `SolidObjectFull` -> `SolidObject_cont`
+  (`sonic3k.asm:41399`). That gate is `cmp.w d3,d0 / bhi.w loc_1E0A2`
+  (`sonic3k.asm:41405-41406`) -- `bhi`, not `bhs` -- so `relX == width*2` (a
+  player resting exactly at the door's right edge) is still a valid
+  zero-distance side contact that keeps `Status_Push` set. The sibling
+  `Obj_MHZ1CutsceneButton` already overrides the same way for the same gate
+  (`Mhz1CutsceneButtonInstance.usesInclusiveRightEdge()`); the door was missing
+  the equivalent override, so a player resting at its exact right edge lost
+  push/contact status one frame early.
+- Fix: `Mhz1CutsceneDoorInstance.usesInclusiveRightEdge()` now returns `true`.
+  Object-local property read from the door's own ROM call path
+  (`sub_65E4C` -> `SolidObjectFull` -> `SolidObject_cont`); no
+  zone/route/frame carve-out, no trace-row hydration.
+- Error-count delta adjudication (+2 net, 2853 -> 2855): the fix's own window
+  (f1025-f1100, the door/push/status region) goes from 2 errors (`status_byte`
+  at f1025/f1029) to 0 in the AFTER run -- confirmed no new errors appear
+  there. The region f1030-f1811 is byte-identical between BEFORE and AFTER
+  (131 errors each, same field/frame/expected/actual set) -- the pre-existing
+  f1162 `tails_y` frontier is unchanged by this fix. The entire +2 net comes
+  from downstream cascading redistribution starting at f1811 (76 BEFORE-only
+  error tuples replaced by 80 AFTER-only tuples, all in `tails_x` /
+  `tails_status_byte` / `tails_y_speed`, already-diverged state past the
+  pre-existing f1162 desync) -- benign redistribution, not a regression
+  introduced by this change.
+- Guards green: `TestMhz1CutsceneObjects` (82/82, +1 new discriminator test),
+  `TestSolidObjectManager` (47/47), `TestSonic3kMHZEvents` (62/62),
+  `TestS3kAiz1SkipHeadless` (8/8), `TestSonic3kLevelLoading` (35/35 across both
+  packages).
+
+## 2026-07-02 - S3K MHZ complete-run advances f966 -> f1025 (MHZ1 cutscene button top-landing width/anchor)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `02efe3a1c` + this fix).
+- Command (verified independently on this branch):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds3k.rom.path=...\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f966 / 2967 errors (`y`).
+  After: f1025 / 2853 errors (`status_byte`, expected `0x0021`, actual
+  `0x0001`). Confirmed against `target/trace-reports/s3k_mhz1_report.json`.
+- Root cause: `Obj_MHZ1CutsceneButton`'s solid box was mis-anchored and its
+  top-landing X gate too narrow. (1) The ROM object keeps its solid box on the
+  raw object `y_pos` (0x67C), but the engine stores `this.y = spawn.y() + 4`
+  for the sprite draw, so the solid box sat 4px low. (2) ROM `sub_65DEC`
+  (`sonic3k.asm:134105`) passes collision `d1 = $1B` into `SolidObjectFull`, but
+  `loc_1E154` (`sonic3k.asm:41611-41632`) re-reads `width_pixels(a0)` = `$80`
+  (`ObjDat_MHZ1CutsceneButton`, `sonic3k.asm:134853`) for the landing X gate, so
+  the landing window is the full `$80` half-width, far wider than the `$1B`
+  side box. The engine's default landing heuristic (`collision d1 - $B = $10`)
+  wrongly rejected a rising rolling-jump graze at the button's right edge.
+- Fix: `Mhz1CutsceneButtonInstance` sets `SolidObjectParams` `offsetY =
+  -INIT_Y_OFFSET` (seats the solid box on ROM `y_pos` without moving the render)
+  and overrides `getTopLandingHalfWidth` to `0x80` (its own ObjDat
+  `width_pixels`). `ObjectSolidContactController.isWithinTopLandingWidth` now
+  honors an explicitly-configured landing width that differs from the collision
+  half-width in EITHER direction (previously only narrower). Behavior-preserving:
+  all 14 existing `getTopLandingHalfWidth` overrides return narrower-or-equal, so
+  only the new button uses the wider path (S1 GHZ1 / S2 EHZ1 green traces + 47
+  `TestSolidObjectManager` cases hold). Object-local ROM-data-driven, no
+  zone/route/frame carve-out; the existing S3K velocity-lift gate
+  (`solidObjectTopBranchAlwaysLiftsOnUpwardVelocity`) is unchanged.
+- Guards green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+  `TestSonic3kMHZEvents`, `TestMhz1CutsceneObjects`, `TestSolidObjectManager`
+  (+2 new discriminator tests), `TestSolidObjectTopBranchUpwardLift`,
+  `TestS1Ghz1CompleteRunTraceReplay`, `TestS2Ehz1TraceReplay`.
+
+## 2026-07-02 - S3K MHZ complete-run advances f72 -> f966 (replay-bootstrap prelude counter preservation)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6`.
+- Command (verified independently on this branch):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f72 / 3615 errors
+  (`y_speed`). After: f966 / 2967 errors (`y`, expected `0x0669`, actual
+  `0x0666`); cascading `camera_y` f970, `tails_x` f981 follow. Confirmed against
+  `target/trace-reports/s3k_mhz1_report.json`.
+- Root cause: the trace-replay bootstrap's animated-tile prelude
+  (`TraceReplaySessionBootstrap.advanceAnimatedTilePreludeForTraceReplay`) warms
+  the ROM's pre-frame-0 VRAM tile state, but each pass was advancing the MHZ
+  mushroom-cap position counter (`Anim_Counters+$F`, the only stateful
+  animated-tile channel; `AnimateTiles_MHZ`, `sonic3k.asm:54901-54908`). The
+  counter is already seeded to its ROM `LevelLoop` frame-0 value by the pre-loop
+  `Animate_Tiles` pass (`loc_6468`, `sonic3k.asm:7853-7855`), so the prelude's
+  extra advances double-counted, landing the cap-driven Y (`MHZMushroomCap_UpdatePosition`,
+  `sonic3k.asm:82199-82221`) two bob-steps (`+4`) ahead. Verified vs cap X window
+  f65-78: ROM counter = `(2N+2) mod $58`, engine read `(2N+6)`.
+- Fix: `Sonic3kPatternAnimator.updateForReplayBootstrapPrelude()` preserves the
+  mushroom-cap counter across the warmup; seed unchanged; replay-only path
+  (fresh gameplay `update()` untouched). Not trace-row hydration and not a
+  zone/frame/route carve-out — it removes a harness-induced perturbation so the
+  engine's own ROM-faithful counter survives to comparison start.
+- Guards green: `TestMhzMushroomCapObjectInstance`, `TestS3kMhzPatternAnimation`,
+  `TestSonic3kMHZEvents`, `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`.
+
+S1 complete-run branch-local state (2026-07-02, `bugfix/ai-slot-cadence-regression`
+off develop `d81dd2be1`): 18 green / 1 red. `TestS1Sbz3CompleteRunTraceReplay`
+fails at f173 / 5795 (`y` expected `0x0088`, actual `0x0085`) on pristine
+develop `d81dd2be1` as well — a pre-existing develop regression from after the
+2026-06-29 19/19 state, not introduced by this branch. The S1 MZ1 slot-layout
+probes (`TestS1Mz1SlotLayoutRegression` 8/15 red, `DebugS1Mz1RingParity` f759
+rings 6-vs-7) are long-standing reds: bisect pins the first behavioral
+divergence to the 2026-06-14 pair `47f48650d` (does not compile standalone) +
+`e54b10db2` "preserve S1 counter-latched delete slots", already 8/15 red at
+that commit and unchanged through `84f1f269d` and the `next` merge `003f16d43`.
+
+## 2026-07-02 - Rewind S2 unload-latch capture + slot-cadence attribution audit
+
+- Worktree/branch: `.claude/worktrees/agent-a081438ddeb981e7b` /
+  `bugfix/ai-slot-cadence-regression`, based on develop `d81dd2be1`.
+- Regression: `TestRewindTorture#tortureFixedAdjacent` diverged at frame 1700
+  (`ObjectSpawn objectId=28` EHZ bridge stake at slot 17 vs 20) and the three
+  random-seed tortures diverged at frame 6776 including `gamerng.seed`;
+  `TestRewindIter1631Diagnostic` and
+  `TestRewindEncounterValidation#s2Ehz1MidRunTraversalMatchesAfterRewindReplay`
+  failed with the same slot permutations. `git bisect` over
+  `84f1f269d..d81dd2be1` with `mvn test
+  "-Dtest=TestRewindTorture#tortureFixedAdjacent"` pinned the first bad commit
+  to `4d1f8c4f4` "fix: advance S2 ARZ2 Obj82 dust slot timing".
+- Root cause: `4d1f8c4f4` added `ObjectManager.s2LatchedObjectManagerCameraX`
+  (the S2 post-camera coarse-X latch consumed by object-side
+  MarkObjGone/MarkObjGone2 unload checks on the next RunObjects pass,
+  docs/s2disasm/s2.asm:5111-5112, 33033-33036) without adding it to
+  `ObjectManagerSnapshot`, so a rewind `seekTo` restored placement cursors but
+  left the latch at its later live-frame value; the first replayed frames
+  unloaded objects against a future camera edge and dynamic slot allocation
+  permuted, cascading into RNG divergence.
+- Fix: the latch now rides `PlacementSnapshot` next to `twoAxisCameraYCoarse`
+  (capture in `ObjectPlacementController.captureRewindState`, restore in
+  `ObjectManager`; legacy snapshots default `Integer.MIN_VALUE` = live-camera
+  fallback). Snapshot-only change, no gameplay-path behavior change.
+- Attribution corrections for the dispatching investigation: the two named
+  suspects do NOT cause the S1 MZ1 failures. `970d24796` (slot reservation
+  before construction) was already scoped to the MTZ boss spawn by
+  `0f7794de8` on develop, and `3cfce6b93` (backward placement old edge)
+  changes only the non-counter `extendForPostCamera` branch, which S1's
+  counter-based respawn mode never reaches. The S1 MZ1 probes were already
+  red at `84f1f269d` (2026-06-29 19/19-green baseline) and at the pre-merge
+  parent `2d804bf28`, and were 15/15 green at `fdf9369b9` (2026-04-23);
+  bisect over that window (discriminator
+  `TestS1Mz1SlotLayoutRegression#lowSlotLayoutStillMatchesRecordedRomAtHurtFrame`,
+  hurt-frame 517 low-slot layout vs recorded v_objstate) lands on the
+  2026-06-14 pair `47f48650d`+`e54b10db2` (S1 counter-latched delete-slot
+  modeling, SBZ3-frontier-validated), already 8/15 red there. Reconciling
+  that model with the MZ1 v_objstate ground truth is follow-up work; a naive
+  revert would re-break the SBZ3/complete-run behavior it was validated
+  against.
+- Verification on this branch (all `mvn test` with quoted `-Dtest=`):
+  - `TestRewindTorture` 4 passed / 1 skipped; `TestRewindIter1631Diagnostic`
+    1/1; `TestRewindEncounterValidation` 2/2.
+  - `TestRewind*` sweep: 275 passed / 1 failed / 1 skipped — the failure is
+    `TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage`,
+    which fails identically on pristine develop `d81dd2be1` (annotation-ratchet
+    growth from already-merged LBZ/S2 object work; not this branch).
+  - `TestS1Mz1TraceReplay,TestS1Mz1CompleteRunTraceReplay`: 2/2 green.
+  - `com.openggf.tests.trace.s1.TestS1*CompleteRunTraceReplay`: 18 green /
+    1 red — `TestS1Sbz3CompleteRunTraceReplay` f173 / 5795 (`y` expected
+    `0x0088`, actual `0x0085`), reproduced identically on pristine develop
+    `d81dd2be1` (pre-existing).
+  - `com.openggf.tests.trace.s2.*TraceReplay`: 15 green / 4 expected-red
+    (ARZ2, CNZ2, MTZ3, OOZ2), matching the routing table above.
+  - `TestS2ObjectOccupancyOracle,TestObjectPlacementManager,TestObjectManagerCounterBasedDynamicUnload`:
+    65/65 green.
+## 2026-07-02 - S2 sweep preservation for the Tails fly-in regression fix
+
+- Worktree/branch: `.claude/worktrees/agent-a6eb852d30a6c04d1` /
+  `bugfix/ai-tails-flyin-regression`, based on `develop` at `d81dd2be1`.
+- Context: fixing two non-trace regressions from `dcaa4cb3e` ("fix: advance S2
+  CNZ2 Tails fly-in frontier") — the multi-sidekick root-crossing completion
+  firing for the S2 Tails fly-in, and engine-owned SPAWNING entries missing
+  the ROM `obj_control=$81` spawn-wait invariant. Fix adds
+  `SidekickRespawnStrategy.approachMovementUsesPhysics()` (Tails false) for
+  the crossing gate / approach-leader resolution and makes
+  `setInitialState(SPAWNING)` apply `nativeBit7FullControl()`. No trace
+  hydration, tolerance, route, frame, or zone carve-out.
+- Regression tests back to green:
+  `mvn test "-Dtest=TestMultiSidekickSpawn,TestS2Ehz1Headless,TestRespawnStrategies,TestSidekickCpuDespawnParity,TestSidekickCpuFollowParity,TestSidekickCpuControllerLevelStart,TestSidekickCpuControllerCarry"`
+  — 239/244 passed; the 5 remaining `TestRespawnStrategies` failures are the
+  pre-existing develop-baseline Mockito stub gaps (verified identical before
+  the change).
+- S2 trace sweep (all 19, split across three runs with `-Ds2.rom.path=s2.gen`):
+  green set (`TestS2Ehz1TraceReplay`, ARZ1, CNZ1, DEZ ending, HTZ1, MCZ1,
+  MCZ2, SCZ, WFZ, CPZ1, CPZ2, HTZ2, MTZ1, MTZ2, OOZ1) all passed; expected
+  reds held exactly: ARZ2 f2016 / 753 (`obj_extra_s21_x`), CNZ2 f9487 / 288
+  (`g_speed`), MTZ3 f13336 / 352 (`x_speed`), OOZ2 f9342 / 505
+  (`tails_x_sub`). Matches the routing-table state — no frontier movement.
+- S3K guard:
+  `mvn test "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kAizIntroEventsHeadless,TestSonic3kMgz2EndBossEvents,TestForcedSpinObjectInstance"`
+  — 98/98 passed.
 
 ## 2026-07-01 - S2 round 22 integrated verification after OOZ2 advance
 
@@ -32467,6 +34483,48 @@ nits, swing-bar hurt/dead guards, mushroom platform anim). Command:
   complete-run trace session, not folded into this validation pass).
 - No regression: MHZ parity-fix wave is confirmed net-neutral-to-positive on this
   trace (same first-error field/frame, fewer total errors).
+
+## 2026-07-02 -- MHZ complete-run frame-1 `camera_x` root fixed: Get_LevelSizeStart MHZ1 load-time override
+
+Worktree `.worktrees/trace-s3k-mhz`, branch `bugfix/ai-trace-s3k-mhz`. Command:
+`mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`
+
+- Root cause: the frame-1 `camera_x` divergence recorded in the 2026-07-02 Task V1
+  entry above was a missing ROM level-load special case. ROM `Get_LevelSizeStart`
+  `loc_1BF1E` (`docs/skdisasm/sonic3k.asm:38214-38225`) checks
+  `Current_zone_and_act == $700` (MHZ1) with `Player_mode < 3` (Sonic/Tails, not
+  Knuckles) and `SK_alone_flag == 0` (locked-on S&K, which the engine always
+  models): when true it overrides `Camera_min_X_pos`/`Camera_target_min_X_pos`/
+  `Camera_min_X_pos_P2` to `$C0` and feeds `d1=$160` into the shared tail
+  (`subi.w #$A0,d1` at `sonic3k.asm:38246`) that forces the initial
+  `Camera_X_pos`/`Camera_X_pos_P2`. MHZ1's `LevelSizes` entry
+  (`sonic3k.asm:38111`) has `xstart=0`, so without the override the engine loaded
+  a `0` min-X boundary and started the camera unclamped at `playerCentreX-$A0`
+  (`0x0039`) instead of ROM's `$C0`.
+- Fix: `Sonic3k.loadLevelData` (`src/main/java/com/openggf/game/sonic3k/Sonic3k.java`)
+  now sets `boundariesMinXOverride = 0xC0` for `zone == ZONE_MHZ && act == 0 &&
+  !knuckles`, mirroring the existing sibling AIZ-intro `boundariesMinXOverride`
+  pattern. The override both pins `Camera_min_X_pos` and, via the existing
+  level-load force-position clamp, snaps the initial camera X up to `$C0`. This is
+  a zone/act-indexed level-load boundary override (matching ROM
+  `Get_LevelSizeStart`'s own per-zone/act structure), not a zone check inside
+  shared camera/physics code.
+- New regression coverage in `TestSonic3kMHZEvents`:
+  `act1LevelLoadPinsCameraAndMinXToRomMhzStart` (Sonic/Tails gets the `$C0`
+  override) and `act1LevelLoadKeepsLevelSizesMinXForKnuckles` (Knuckles keeps the
+  ROM `LevelSizes` `xstart=0`, no override -- `Player_mode >= 3` skips
+  `loc_1BF1E`'s branch per `sonic3k.asm:38217-38218`).
+- Result: frame-1 `camera_x` divergence is gone. Trace replay now advances to the
+  frontier recorded in the 2026-06-21 "Grind cycle 2" entry: FAIL, 3615 errors, 0
+  warnings, first error frame 72 -- `y_speed` mismatch (expected `0x00E0`, actual
+  `0x0000`). This exactly matches that pre-existing historical frontier, confirming
+  the camera_x regression between 2026-06-21 and the Task V1 check was the sole
+  cause of the frame-1 divergence, and that frame 72 `y_speed` is a distinct,
+  still-open root (out of scope here).
+- Verified green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+  `TestSonic3kMHZEvents` (all pass, no regressions).
+
 ### 2026-06-30 -- S2 next-branch baseline round start
 
 Prerequisite: `next` was updated in `C:\Users\farre\IdeaProjects\sonic-engine-next`
@@ -32883,3 +34941,46 @@ Integrated verification on `bugfix/ai-s2-trace-next`:
 
 No S2 trace turned green in round 30, so these campaign advances were not
 banked into `next` under the green-bank rule.
+
+### 2026-07-02 -- S2 ARZ2 round 64 Obj89 final-hit hover ordering
+
+Baseline on `bugfix/ai-s2-arz2-round64-next` from conductor branch
+`bugfix/ai-s2-trace-next` at `d9e14fea5`:
+`TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+failed at f6507 / 4, first field `obj_extra_s10_x` (`expected absent`,
+actual `0x2AB0`). The context showed the engine did have the ROM Obj89 body in
+slot `$10`, but it had already snapped to the defeat routine's base
+`y_pos=$0430`; its pre-update `y_pos=$0433` matched the ROM object-near sample.
+
+Root fixed:
+- Obj89 does not use the generic `Boss_HandleHits` timing. S2 `Touch_Enemy`
+  only decrements the multi-sprite boss hit count / clears collision state, then
+  `Obj89_Main_HandleHoveringAndHits` writes the current-frame sine-derived
+  `x_pos/y_pos`, checks the zero hit count, and selects the defeat routine from
+  inside the already-running Obj89 routine. The engine's inherited
+  `BossHitHandler` selected `MAIN_SUB8` during touch response before Obj89's
+  slot update, so the same frame skipped the hover write and exposed the next
+  frame's base Y. ARZ now owns its local hit/invulnerability timing and lets the
+  existing hover routine select defeat after the ROM-position write
+  (`docs/s2disasm/s2.asm:65079-65124,85266-85275`).
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f6507 / 4 errors
+  (`obj_extra_s10_x` expected absent, actual `0x2AB0`) -> f6513 / 1 error
+  (`obj_s13_type` expected `0x58`, actual missing).
+- New owner is the Obj58 boss-explosion object identity/export path after the
+  ARZ defeat begins: the engine has a `Boss Explosion` at the ROM coordinates
+  in slot `$13`, but it reports object id `0x00` rather than ROM Obj58.
+
+Verification:
+- Focused oracle:
+  `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossMainHoverPhaseMatchesRomAfterArrowRelease" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  exited 0; the new comparison-only guard passes.
+- Focused target:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.frontierOnly=true" test`
+  exited 1 with the improved expected-red f6513 / 1 frontier above.
+- Same-game preservation guards:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.frontierOnly=true" test`
+  exited 0 with expected-red reports preserved: CNZ2 f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`) and MTZ3 f13477 / 4
+  (`x_speed` expected `-03FB`, actual `0x03FB`).

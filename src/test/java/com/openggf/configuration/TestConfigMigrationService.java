@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_APOSTROPHE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F8;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_V;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_WORLD_1;
 
@@ -22,7 +24,7 @@ class TestConfigMigrationService {
         config.put(SonicConfiguration.DOWN.name(), 40);
         config.put(SonicConfiguration.LEFT.name(), 37);
         config.put(SonicConfiguration.RIGHT.name(), 39);
-        config.put(SonicConfiguration.JUMP.name(), 32);
+        config.put(SonicConfiguration.P1_A.name(), 32);
 
         ConfigMigrationService service = new ConfigMigrationService();
 
@@ -33,7 +35,25 @@ class TestConfigMigrationService {
         assertEquals(264, config.get(SonicConfiguration.DOWN.name()));
         assertEquals(263, config.get(SonicConfiguration.LEFT.name()));
         assertEquals(262, config.get(SonicConfiguration.RIGHT.name()));
-        assertEquals(32, config.get(SonicConfiguration.JUMP.name()));
+        assertEquals(32, config.get(SonicConfiguration.P1_A.name()));
+    }
+
+    @Test
+    void migrateDeprecatedJumpBindings_convertsNumericAwtValuesWhenSentinelArrowsAreAwt() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(SonicConfiguration.UP.name(), 38);
+        config.put(SonicConfiguration.DOWN.name(), 40);
+        config.put(SonicConfiguration.LEFT.name(), 37);
+        config.put(SonicConfiguration.RIGHT.name(), 39);
+        config.put(SonicConfiguration.JUMP.name(), 32);
+        config.put(SonicConfiguration.P2_JUMP.name(), 16);
+
+        ConfigMigrationService service = new ConfigMigrationService();
+
+        assertTrue(service.detectAwtKeyCodes(config));
+        assertTrue(service.migrateDeprecatedJumpBindings(config));
+        assertEquals(GLFW_KEY_SPACE, config.get(SonicConfiguration.P1_A.name()));
+        assertEquals(GLFW_KEY_LEFT_SHIFT, config.get(SonicConfiguration.P2_A.name()));
     }
 
     @Test

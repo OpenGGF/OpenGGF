@@ -194,7 +194,9 @@ class TestS2SelfContainedTransientRewind {
         MCZFallingDebrisInstance mczFallingDebris = objectManager.createDynamicObject(
                 () -> new MCZFallingDebrisInstance(baseX + 0x130, baseY - 0x40, true));
         BubbleObjectInstance bubble = objectManager.createDynamicObject(
-                () -> new BubbleObjectInstance(baseX + 0x150, baseY + 0x30, 1, 0x20));
+                // Keep the bubble inside the camera window: Obj24 self-deletes once
+                // render_flags bit 7 clears off-screen (ROM Obj24 DeleteObject path).
+                () -> new BubbleObjectInstance(baseX - 0x60, baseY + 0x30, 1, 0x20));
         DestroyedEggPrisonObjectInstance destroyedEggPrison = objectManager.createDynamicObject(
                 () -> new DestroyedEggPrisonObjectInstance(
                         new ObjectSpawn(baseX + 0x180, baseY + 0x20, 0x3E, 0, 0, false, 0),
@@ -204,7 +206,10 @@ class TestS2SelfContainedTransientRewind {
                 () -> new BossExplosionObjectInstance(
                         baseX + 0x1B0,
                         baseY,
+                        Sonic2ObjectIds.BOSS_EXPLOSION,
                         Sonic2Sfx.BOSS_EXPLOSION.id));
+        assertEquals(Sonic2ObjectIds.BOSS_EXPLOSION, bossExplosion.getSpawn().objectId(),
+                "S2 Boss_LoadExplosion creates ROM Obj58, not an anonymous transient object");
         BadnikProjectileInstance badnikProjectile = objectManager.createDynamicObject(
                 () -> new BadnikProjectileInstance(
                         new ObjectSpawn(baseX + 0x1E0, baseY - 0x28, 0x98, 0, 0, true, 0),

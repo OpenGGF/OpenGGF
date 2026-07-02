@@ -383,14 +383,35 @@ The tables below list each key's name, default code, and the human-readable key 
 
 ### Gameplay Controls
 
+Keyboard action bindings are Mega Drive actions. A, B, and C all function as
+jump buttons during platforming gameplay. By default only A is bound on
+keyboard: P1 A is `SPACE`, P2 A is `RIGHT_SHIFT`, and keyboard B/C are
+unbound.
+
+Gamepads use GLFW's standard position-based gamepad layout. D-pad and left
+stick feed digital movement; the west face button maps to Mega Drive A, south
+maps to Mega Drive B, and east maps to Mega Drive C. On an Xbox controller
+that is X/A/B respectively; on a PlayStation controller that is
+Square/Cross/Circle respectively.
+
 | Key | YAML path | Default | Key Name | Description |
 |-----|-----------|---------|----------|-------------|
 | `UP` | `input.player1.up` | `265` | ↑ Arrow | Look up / enter tubes. |
 | `DOWN` | `input.player1.down` | `264` | ↓ Arrow | Crouch / roll / spindash charge. |
 | `LEFT` | `input.player1.left` | `263` | ← Arrow | Move left. |
 | `RIGHT` | `input.player1.right` | `262` | → Arrow | Move right. |
-| `JUMP` | `input.player1.jump` | `32` | Space | Jump / action button. |
+| `P1_A` | `input.player1.a` | `32` | Space | Player 1 action button A / jump. |
+| `P1_B` | `input.player1.b` | `-1` | unbound | Player 1 action button B. |
+| `P1_C` | `input.player1.c` | `-1` | unbound | Player 1 action button C. |
 | `START` | `input.player1.start` | `259` | Backspace | Player 1 Start: ROM-accurate in-game pause (`Game_paused` / `Pause_Loop`). A press during level gameplay freezes the level update for the frame while the frame counter still advances; press again to resume. Distinct from `PAUSE_KEY`, which is the loop/timing-level pause that also halts audio. |
+| `P2_A` | `input.player2.a` | `344` | Right Shift | Player 2 action button A / jump. |
+| `P2_B` | `input.player2.b` | `-1` | unbound | Player 2 action button B. |
+| `P2_C` | `input.player2.c` | `-1` | unbound | Player 2 action button C. |
+| `P2_START` | `input.player2.start` | `345` | Right Control | Player 2 Start. |
+| `CONTROLLER_ENABLED` | `input.controller.enabled` | `true` | true | Enable GLFW gamepad/controller input. |
+| `CONTROLLER_DEADZONE` | `input.controller.deadzone` | `0.35` | 0.35 | Left-stick digital direction deadzone. |
+| `CONTROLLER_PLAYER1` | `input.controller.player1` | `"auto"` | auto | Controller assignment for Player 1 (`auto` or `none`). |
+| `CONTROLLER_PLAYER2` | `input.controller.player2` | `"auto"` | auto | Controller assignment for Player 2 (`auto` or `none`). |
 | `PAUSE_KEY` | `input.pause` | `257` | Enter | Pause / unpause the game. |
 | `FRAME_STEP_KEY` | `debug.keys.frameStep` | `81` | Q | Advance one frame while paused. |
 | `RECORDING_RECORD_KEY` | `debug.recording.recordKey` | `298` | F9 | `Shift+Record` starts/opens user recording flows; plain Record stops active recording. |
@@ -468,19 +489,29 @@ display:
 # ── Input ──
 input:
   pause: ENTER   # Toggle pause
+  controller:
+    enabled: true   # Enable gamepad/controller input
+    deadzone: 0.35   # Analog controller deadzone
+    player1: "auto"   # Controller assignment for Player 1
+    player2: "auto"   # Controller assignment for Player 2
   player1:
     up: UP   # Player 1: look up
     down: DOWN   # Player 1: crouch/roll
     left: LEFT   # Player 1: move left
     right: RIGHT   # Player 1: move right
-    jump: SPACE   # Player 1: jump
+    a: SPACE   # Player 1: action button A
+    b: ""   # Player 1: action button B
+    c: ""   # Player 1: action button C
+    start: BACKSPACE   # Player 1: start (in-game pause)
   player2:
     up: I   # Player 2: look up
     down: K   # Player 2: crouch/roll
     left: J   # Player 2: move left
     right: L   # Player 2: move right
-    jump: RIGHT_SHIFT   # Player 2: jump
-    start: ENTER   # Player 2: start
+    a: RIGHT_SHIFT   # Player 2: action button A
+    b: ""   # Player 2: action button B
+    c: ""   # Player 2: action button C
+    start: RIGHT_CONTROL   # Player 2: start
 
 # ── Audio ──
 audio:

@@ -812,6 +812,11 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     }
 
     @Override
+    protected int getBossExplosionObjectId() {
+        return com.openggf.game.sonic2.constants.Sonic2ObjectIds.BOSS_EXPLOSION;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.OOZ_BOSS);
         if (renderer == null) {

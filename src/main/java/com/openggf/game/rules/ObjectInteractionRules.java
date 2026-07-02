@@ -6,6 +6,7 @@ public record ObjectInteractionRules(
         boolean sidekickDespawnUsesObjectIdMismatch,
         boolean sidekickNormalDespawnDelaysFreshRenderEntry,
         boolean sidekickDespawnUsesRidingInstanceLoss,
+        boolean sidekickDespawnUsesInteractCodeWordChange,
         boolean sidekickNormalCpuSkipsHurtRoutine,
         boolean permanentRespawnTableLatch,
         boolean objectsExecuteAfterPlayerPhysics,

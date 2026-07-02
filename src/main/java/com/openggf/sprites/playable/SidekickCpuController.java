@@ -1703,7 +1703,7 @@ public class SidekickCpuController {
         int previousCentreX = sidekick.getCentreX();
         boolean approachComplete = respawnStrategy.updateApproaching(sidekick, effectiveLeader, frameCounter);
         AbstractPlayableSprite completionLeader = effectiveLeader;
-        if (!approachComplete && respawnStrategy.requiresPhysics()) {
+        if (!approachComplete && respawnStrategy.approachMovementUsesPhysics()) {
             AbstractPlayableSprite mainLeader = getRootLeader();
             if (mainLeader != null
                     && mainLeader != effectiveLeader
@@ -1766,7 +1766,7 @@ public class SidekickCpuController {
     }
 
     private AbstractPlayableSprite resolveApproachLeader() {
-        return respawnStrategy.requiresPhysics()
+        return respawnStrategy.approachMovementUsesPhysics()
                 ? getEffectiveLeader()
                 : resolveActiveFollowLeader();
     }
@@ -2159,6 +2159,14 @@ public class SidekickCpuController {
                 && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
+        boolean releasedObjectAutoJumpGrace = !sidekick.getAir()
+                && !sidekick.isOnObject()
+                && !sidekick.getRolling()
+                && normalPushingGraceFrames > 0
+                && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
+                && preservesSidekickCpuPushGraceAfterRideClears();
         int followSnapThreshold = resolveFollowSnapThreshold();
         boolean localBelowTargetFacingIntoFollowSide =
                 (dx > 0 && sidekick.getDirection() == Direction.RIGHT)
@@ -2529,7 +2537,7 @@ public class SidekickCpuController {
             // stale delayed jump hold below; it must not block the push-bypass
             // jump that launches Tails out of the stopper chamber.
             boolean pushingBypass = currentPushBypass || objectOrderGrace || ridingObjectPushGrace
-                    || interactObjectPushGrace;
+                    || interactObjectPushGrace || releasedObjectAutoJumpGrace;
             // resolveCpuFrameCounter() already yields the ROM-visible
             // Level_frame_counter: the per-frame sprite cadence is the
             // post-increment value, and bootstrap paths preload LevelManager with
@@ -2911,6 +2919,23 @@ public class SidekickCpuController {
         }
         if (interactObject instanceof SolidObjectProvider provider) {
             return provider.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sidekick);
+        }
+        return false;
+    }
+
+    private boolean preservesSidekickCpuPushGraceAfterRideClears() {
+        LevelManager levelManager = sidekick.currentLevelManager();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return false;
+        }
+        for (ObjectInstance instance : levelManager.getObjectManager().getActiveObjects()) {
+            if (instance == null || instance.isDestroyed()) {
+                continue;
+            }
+            if (instance instanceof SolidObjectProvider provider
+                    && provider.preservesSidekickCpuPushGraceAfterRideClears(sidekick)) {
+                return true;
+            }
         }
         return false;
     }
@@ -4204,6 +4229,32 @@ public class SidekickCpuController {
                 }
             }
 
+            // S3K sub_13EFC's off-screen + on-object branch (sonic3k.asm:26825-26826)
+            // does `cmp.w (a3),d0` comparing word 0 of the stood-on object's code
+            // longword against the Tails_CPU_interact latch. A DIFFERENT word (Tails
+            // switched to a different-code object while off-screen) despawns through
+            // sub_13ECA. This is the general word-change trigger; the riding-instance
+            // loss above is the special case where the slot's word was zeroed by
+            // Delete_Referenced_Sprite. The armed check is diagnosticS3kInteractWord
+            // != 0: a real object code high word is always non-zero (ROM object code
+            // lives at >= 0x0003xxxx), and the reset paths zero the latch, so a
+            // non-zero latch means a real word was captured on a prior on-object
+            // frame. sub_13ECA preserves the latch, but sets object_control/off-object
+            // so no compare runs post-despawn until the next on-object landing
+            // re-latches through refreshInteractIdSnapshot below. Compared BEFORE the
+            // fall-through refreshInteractIdSnapshot so the latch still holds the
+            // previous on-object frame's word (ROM compare-then-latch).
+            boolean useInteractWordChangeDespawn = rules != null
+                    && rules.sidekickDespawnUsesInteractCodeWordChange();
+            if (useInteractWordChangeDespawn && (diagnosticS3kInteractWord & 0xFFFF) != 0) {
+                Integer currentWord = currentS3kInteractWord();
+                if (currentWord != null
+                        && (currentWord & 0xFFFF) != (diagnosticS3kInteractWord & 0xFFFF)) {
+                    triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
+                    return true;
+                }
+            }
+
             // S2: cmp.b id(a3),d0 — latched Tails_interact_ID snapshot vs the
             // live id byte ROM dereferences at interact(a0). romEffectiveInteractSlotId
             // resolves the single unified ROM model across all three cases:
@@ -4986,9 +5037,27 @@ public class SidekickCpuController {
     /**
      * Sets the initial state for production use (e.g. pre-setting SPAWNING
      * after a level transition).
+     *
+     * <p>Entering SPAWNING here also establishes the ROM spawn-wait
+     * object-control invariant: every ROM path into the spawn-wait routine
+     * leaves {@code obj_control=$81} — S2 {@code TailsCPU_Despawn}
+     * (docs/s2disasm/s2.asm:39396-39406), the {@code TailsCPU_Flying}
+     * off-screen timeout (s2.asm:39142-39157), and S3K {@code sub_13ECA}
+     * (docs/skdisasm/sonic3k.asm:26800-26809). {@code TailsCPU_Respawn}
+     * itself does not write {@code obj_control} (s2.asm:39122-39140), so the
+     * subsequent fly-in only runs object physics when a live object actually
+     * cleared the byte while Tails was parked (e.g. the CNZ tube release,
+     * {@code loc_25036} {@code move.b #0,obj_control(a1)}, s2.asm:51166-51172).
+     * Engine-owned SPAWNING entries (level-transition bootstrap, focused
+     * tests) must start from the same $81 state or the fly-in would run
+     * physics the ROM cycle suppresses.
      */
     public void setInitialState(State state) {
         this.state = state;
+        if (state == State.SPAWNING) {
+            sidekick.setControlLocked(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        }
         deadFallingRomCpuRoutine = -1;
         aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;

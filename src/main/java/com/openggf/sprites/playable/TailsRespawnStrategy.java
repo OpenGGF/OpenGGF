@@ -199,6 +199,20 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         return approachRunsObjectPhysics;
     }
 
+    /**
+     * The Tails fly-in is always scripted homing: {@code TailsCPU_Flying}
+     * nudges x/y toward the recorded leader position and completes on its own
+     * residual test (docs/s2disasm/s2.asm:39161-39232). When {@code obj_control}
+     * bit 0 is clear, {@code Obj02_MdAir} additionally runs ObjectMoveAndFall
+     * ({@link #requiresPhysics()}), but that gravity never re-targets the
+     * approach, so the multi-sidekick root-leader-crossing completion shortcut
+     * must stay off (the fly-in keeps targeting its chain leader).
+     */
+    @Override
+    public boolean approachMovementUsesPhysics() {
+        return false;
+    }
+
     @Override
     public boolean usesS3kCatchUpMarker(AbstractPlayableSprite sidekick) {
         SidekickCpuRules rules = sidekickCpuRulesOrNull(sidekick);

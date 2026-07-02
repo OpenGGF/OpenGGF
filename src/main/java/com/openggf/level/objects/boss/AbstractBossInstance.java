@@ -218,6 +218,13 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      */
     protected abstract int getBossExplosionSfxId();
 
+    /**
+     * ROM object id used by the transient boss-defeat explosion object.
+     */
+    protected int getBossExplosionObjectId() {
+        return 0;
+    }
+
     // ========================================================================
     // HELPER METHODS - Common functionality for all bosses
     // ========================================================================
@@ -248,6 +255,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         BossExplosionObjectInstance explosion = new BossExplosionObjectInstance(
                 state.x + xOffset,
                 state.y + yOffset,
+                getBossExplosionObjectId(),
                 getBossExplosionSfxId());
         services().objectManager().addDynamicObject(explosion);
     }

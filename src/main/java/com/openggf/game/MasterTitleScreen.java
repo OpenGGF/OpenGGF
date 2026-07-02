@@ -365,6 +365,11 @@ public class MasterTitleScreen {
         int leftKey = configService.getInt(SonicConfiguration.LEFT);
         int rightKey = configService.getInt(SonicConfiguration.RIGHT);
         int jumpKey = configService.getInt(SonicConfiguration.JUMP);
+        boolean leftPressed = inputHandler.isKeyPressed(leftKey) || inputHandler.logical().menuLeft();
+        boolean rightPressed = inputHandler.isKeyPressed(rightKey) || inputHandler.logical().menuRight();
+        boolean confirmPressed = inputHandler.isKeyPressed(jumpKey)
+                || inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER)
+                || inputHandler.logical().menuAccept();
 
         int recordKey = configService.getInt(SonicConfiguration.RECORDING_RECORD_KEY);
         boolean recordingMenuRequested = inputHandler.isKeyPressed(recordKey) && inputHandler.isShiftDown();
@@ -384,20 +389,19 @@ public class MasterTitleScreen {
             return;
         }
 
-        if (inputHandler.isKeyPressed(leftKey)) {
+        if (leftPressed) {
             if (setSelectedIndex(selectedIndex - 1)) {
                 playNavigateSound();
             }
         }
-        if (inputHandler.isKeyPressed(rightKey)) {
+        if (rightPressed) {
             if (setSelectedIndex(selectedIndex + 1)) {
                 playNavigateSound();
             }
         }
 
         // Confirm with Jump or Enter
-        if (inputHandler.isKeyPressed(jumpKey) ||
-            inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER)) {
+        if (confirmPressed) {
             if (!romAvailable[selectedIndex]) {
                 state = State.ERROR_DISPLAY;
                 errorFrameCounter = 0;

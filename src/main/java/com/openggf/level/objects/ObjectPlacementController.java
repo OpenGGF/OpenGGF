@@ -256,7 +256,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlacementSnapshot captureRewindState(
-            int twoAxisCameraYCoarse) {
+            int twoAxisCameraYCoarse, int s2LatchedCameraX) {
         int[] activeIndices = active.stream()
                 .mapToInt(this::getSpawnIndex)
                 .filter(index -> index >= 0)
@@ -298,7 +298,8 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                         .mapToInt(Integer::intValue)
                         .toArray(),
                 deferredVerticalLoad.toLongArray(),
-                twoAxisCameraYCoarse);
+                twoAxisCameraYCoarse,
+                s2LatchedCameraX);
     }
 
     int restoreRewindState(

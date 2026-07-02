@@ -65,6 +65,9 @@ public class ARZBossArrow extends AbstractObjectInstance
     private int xVel;
     private int yVel;
     private int arrowTimer;
+    private boolean timerExpiredThisFrame;
+    private boolean dropPlayersProcessed;
+    private boolean dropPushClearProcessed;
 
     // Animation state
     private int arrowAnim;
@@ -85,6 +88,8 @@ public class ARZBossArrow extends AbstractObjectInstance
         this.collisionFlags = 0;
         this.arrowAnim = 0;
         this.arrowTimer = 0;
+        this.dropPlayersProcessed = false;
+        this.dropPushClearProcessed = false;
     }
 
     ARZBossArrow(ObjectSpawn spawn) {
@@ -140,6 +145,7 @@ public class ARZBossArrow extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        timerExpiredThisFrame = false;
 
         // Check if boss defeated
         if (mainBoss != null && mainBoss.isInDefeatSequence()) {
@@ -206,7 +212,13 @@ public class ARZBossArrow extends AbstractObjectInstance
     }
 
     private void updateArrowFalling(AbstractPlayableSprite player) {
-        dropPlayers(player);
+        if (!dropPlayersProcessed) {
+            dropPlayers(player, false);
+            dropPlayersProcessed = true;
+        } else if (!dropPushClearProcessed) {
+            dropPlayers(player, true);
+            dropPushClearProcessed = true;
+        }
         int nextY = y + yVel;
         if (nextY > ARROW_FLOOR_Y) {
             setDestroyed(true);
@@ -221,20 +233,44 @@ public class ARZBossArrow extends AbstractObjectInstance
         }
         arrowTimer--;
         if (arrowTimer == 0) {
+            timerExpiredThisFrame = true;
             routineState = ARROW_SUB_FALLING;
         }
     }
 
-    private void dropPlayers(AbstractPlayableSprite player) {
-        if (player == null || services().objectManager() == null) {
+    private void dropPlayers(AbstractPlayableSprite player, boolean clearPush) {
+        if (services().objectManager() == null) {
             return;
         }
-        if (!services().objectManager().isRidingObject(player, this)) {
+        dropPlayerIfLatched(player, clearPush);
+        for (PlayableEntity sidekick : services().sidekicks()) {
+            if (sidekick instanceof AbstractPlayableSprite sprite) {
+                dropPlayerIfLatched(sprite, clearPush);
+            }
+        }
+    }
+
+    private void dropPlayerIfLatched(AbstractPlayableSprite player, boolean clearPush) {
+        if (player == null) {
             return;
         }
-        services().objectManager().clearRidingObject(player);
+        ObjectManager objectManager = services().objectManager();
+        boolean ridingThisArrow = objectManager.isRidingObject(player, this);
+        boolean interactStillNamesThisArrow = player.getInteractSlotIndex() == getSlotIndex();
+        if (!ridingThisArrow && !interactStillNamesThisArrow) {
+            return;
+        }
+        if (ridingThisArrow) {
+            objectManager.clearRidingObject(player);
+        }
         player.setOnObject(false);
         player.setAir(true);
+        // Obj89_Arrow_ChkDropPlayers clears both p1/p2 standing latches once.
+        // The following Tails_Animate pass clears Status_Push one sampled frame later.
+        // docs/s2disasm/s2.asm:65689-65704, 41272-41279
+        if (clearPush) {
+            player.setPushing(false);
+        }
     }
 
     private void animateArrow() {
@@ -328,12 +364,66 @@ public class ARZBossArrow extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // Obj89_Arrow_Platform passes d1=$1B directly to PlatformObject.
+        // That is already the standable top half-width, not a full-solid
+        // obActWid+$B width that needs the generic landing narrowing.
+        // docs/s2disasm/s2.asm:65658-65665
+        return true;
+    }
+
+    @Override
+    public boolean usesGroundHalfHeightForTopSolidContact() {
+        // Obj89_Arrow_Platform passes d3=2 to PlatformObject; S2's
+        // PlatformObject_ChkYRange uses d3 as the landing surface height.
+        // Using d2=1 misses the f5928 Tails landing by one pixel.
+        // docs/s2disasm/s2.asm:65658-65665
+        return true;
+    }
+
+    @Override
     public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
         // Despite the generic hook name, this is the flat PlatformObject
         // equivalent: timer-decay frames skip MvSonicOnPtfm, but the player
         // remains attached until Obj89_Arrow_Sub6 explicitly drops riders.
         // docs/s2disasm/s2.asm:65658-65702
-        return routineState == ARROW_SUB_STUCK && arrowTimer > 0;
+        return (routineState == ARROW_SUB_STUCK && arrowTimer > 0) || timerExpiredThisFrame;
+    }
+
+    @Override
+    public boolean preservesRidingPushStatus(PlayableEntity player) {
+        // During Obj89_Arrow_Platform_Decay the shipped ROM skips PlatformObject,
+        // so non-rolling CPU Tails keeps the prior side-push state while the
+        // arrow remains latched. Tails_Animate can still clear Status_Push when
+        // the sidekick switches to the rolling/jump animation before this later
+        // object pass samples the arrow.
+        // docs/s2disasm/s2.asm:41272-41279,65658-65702
+        return player instanceof AbstractPlayableSprite sprite
+                && sprite.isCpuControlled()
+                && !sprite.getRolling()
+                && ((routineState == ARROW_SUB_STUCK && arrowTimer > 0) || timerExpiredThisFrame);
+    }
+
+    @Override
+    public boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
+        return preservesReleasedSidekickPushForCpu(player);
+    }
+
+    private boolean preservesReleasedSidekickPushForCpu(PlayableEntity player) {
+        // Obj89_Arrow_ChkDropPlayers only sets InAir and clears OnObject on the
+        // player; it does not clear Status_Push. At ARZ2 f6364 the ordinary
+        // engine grace counter has already reached zero, but TailsCPU_Normal can
+        // still read the ROM-visible push bit through the sidekick's persistent
+        // interact slot and take the push-bypass auto-jump path.
+        // docs/s2disasm/s2.asm:39297-39300,65689-65704.
+        if (!(player instanceof AbstractPlayableSprite sprite)
+                || !sprite.isCpuControlled()
+                || sprite.getAir()
+                || sprite.isOnObject()
+                || sprite.getRolling()) {
+            return false;
+        }
+        return getSlotIndex() >= 0 && sprite.getInteractSlotIndex() == getSlotIndex();
     }
 
     @Override
@@ -348,8 +438,13 @@ public class ARZBossArrow extends AbstractObjectInstance
             // The ROM writes #$1F and immediately falls through to
             // Obj89_Arrow_Platform_Decay in the same object call. This
             // callback runs after object update, so store the already
-            // decremented post-call value. docs/s2disasm/s2.asm:65658-65683
-            arrowTimer = 0x1E;
+            // decremented post-call value. CPU Tails does not start the timer
+            // in the shipped ROM: the p2-standing timer write lives under the
+            // disabled fixBugs block, while p1-standing still writes #$1F.
+            // docs/s2disasm/s2.asm:65658-65683
+            if (!playerEntity.isCpuControlled()) {
+                arrowTimer = 0x1E;
+            }
         }
     }
 

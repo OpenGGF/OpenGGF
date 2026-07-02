@@ -16,6 +16,39 @@ implementation, ROM citation, originating fix commit.
 
 ---
 
+## P82 — Dynamic ROM effects must keep their object id and init frame
+
+**Symptom.** A trace reports `obj_sNN_type` expected `0x58`, actual missing,
+or a later slot is reused one frame early after a boss-defeat sequence starts,
+even though the engine diagnostics show a visually correct `Boss Explosion` at
+the ROM coordinates.
+
+**Root cause.** The dynamic effect was treated as an anonymous Java transient
+instead of a real SST object. ROM helper routines such as S2
+`Boss_LoadExplosion` write the effect's object id into the allocated slot, and
+routine-0 init may play sound and return/jump without also consuming the main
+routine's animation decrement in the same object pass.
+
+**What to check.** For explosion, dust, sparkle, score, projectile, and other
+helper-spawned effects, verify whether the ROM writes an object id into the
+new slot and whether the init routine falls through to main logic. Carry the
+per-game id into `ObjectSpawn.objectId()` (S2 Boss Explosion Obj58; S1
+Explosion Obj3F) and return after init when the ROM init path does not execute
+main logic until the next frame.
+
+**ROM citation.** S2 defines `ObjID_BossExplosion` as Obj58, and
+`Boss_LoadExplosion` writes that id into the allocated slot before copying boss
+position and random offsets. Obj58 init sets mapping/art/timer state and plays
+SFX, while Obj58 main decrements the frame timer on later passes
+(`docs/s2disasm/s2.constants.asm:690`,
+`docs/s2disasm/s2.asm:61193-61218,61413-61433`). S1 boss defeat helpers load
+Obj3F explosions (`docs/s1disasm/_inc/Object Pointers.asm:78`,
+`docs/s1disasm/_incObj/sub BossDefeated & BossMove.asm:9-14`).
+
+**Originating commit.** `fix(s2): preserve boss explosion object identity`.
+
+---
+
 ## P0A — Child-to-parent shared counters must be visible in the same object pass
 
 **Symptom.** A parent object waits one extra frame to release the player or
@@ -3356,6 +3389,40 @@ delete the routine-2 body slot.
 
 **Originating commit.** `90011d815` S2 OOZ2 Obj3E capsule body lifetime:
 `TestS2Ooz2LevelSelectTraceReplay` advances f12861 -> green.
+
+---
+
+## P81 -- Disabled `fixBugs` branches must not drive shipped P2 behavior
+
+**Pattern.** The S2 disassembly includes conditional `fixBugs` blocks that are
+not present in the shipped ROM behavior. If a P2/Tails write or branch lives
+only inside one of those blocks, the engine must not implement it as normal
+runtime behavior unless the selected ROM/build actually enables that code.
+
+**Engine symptom.** CPU Tails interacts with the right object and slot but
+takes a timer/state transition that only Sonic should trigger. In ARZ2, the
+engine started Obj89 arrow's timer when CPU Tails stood on the arrow. The
+shipped ROM leaves the P2-standing timer write under disabled `fixBugs`, so
+`Obj89_Arrow_Platform` keeps calling `PlatformObject` and `MvSonicOnPtfm`
+reseats hurt Tails one pixel lower on the next support pass.
+
+**What to check / fix.**
+1. When a copied routine contains `if fixBugs` / `else` blocks, verify which
+   side is active in the shipped ROM before porting any behavior.
+2. Treat P1 and P2 standing/contact checks separately when only one side of the
+   ROM code is outside the disabled block.
+3. Keep the fix keyed to the object-local ROM state and shipped build path. Do
+   not compensate by route, zone, trace frame, or a known failing trace.
+
+**ROM citation.** Obj89 arrow calls `PlatformObject` while
+`obj89_arrow_timer` is zero. The P2-standing timer write appears only inside
+the disabled `fixBugs` block, while the active P1-standing branch writes
+`#$1F` and immediately decays it (`docs/s2disasm/s2.asm:65658-65683`).
+`PlatformObject` processes P1 then P2, and continued support moves the rider
+through `MvSonicOnPtfm` (`docs/s2disasm/s2.asm:35728-35739,35641-35660`).
+
+**Originating commit.** `dd03abfa9` S2 ARZ2 Obj89 arrow CPU Tails timer gate:
+`TestS2Arz2LevelSelectTraceReplay` advances f5929 -> f5968.
 
 ---
 
