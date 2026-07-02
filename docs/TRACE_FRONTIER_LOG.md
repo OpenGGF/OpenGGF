@@ -74,6 +74,25 @@ Verification:
   `.worktrees/ai-s2-trace-next` produced the same f9977 and f13477 frontiers,
   confirming those failures are pre-existing and not introduced by this ARZ2
   object-local change.
+- Conductor full S2 sweep after merge:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and 3 expected-red frontiers: ARZ2 f6507 / 4,
+  CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  and level-select f8941 / 1.
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round63-next` / `bugfix/ai-s2-cnz2-round63-next`
+  made no commit. It reproduced f9977 / 10 and found the same Obj51 split-ball
+  phase/position mismatch; no ROM-backed advancing candidate avoided the known
+  f9199 projection/order regression. CNZ2 remains f9977 / 10.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round63-next` / `bugfix/ai-s2-mtz3-round63-next`
+  made no commit. It probed lost-ring touch-state timing and a one-frame Obj53
+  collision exposure delay; the delay regressed MTZ3 to f12820, so all probes
+  were reverted. MTZ3 remains f13477 / 4.
 
 ## 2026-07-02 - S2 round 62 ARZ2 Obj89 zero-grace arrow push bridge
 
