@@ -80,6 +80,7 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
     private int sequenceOffset;
     private int displayFrame = GENERATOR_FRAMES[0];
     private boolean visible;
+    private boolean romRenderOnScreen;
 
     // Bit 6 of objoff_36: Used to track if large bubble already spawned this burst
     private static final int FLAG_LARGE_SPAWNED = 0x40;
@@ -99,6 +100,7 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
         this.frameTimer = 0;
         this.bubblesRemainingInBurst = 0;
         this.sequenceOffset = 0;
+        this.romRenderOnScreen = true;
     }
 
     @Override
@@ -110,6 +112,7 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         visible = false;
+        boolean observedRomRenderOnScreen = romRenderOnScreen;
 
         // ROM: Check if generator is above water (only spawn when underwater)
         if (services().currentLevel() != null) {
@@ -127,22 +130,32 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
             }
         }
 
-        // ROM: Check if on screen (only spawn when visible)
-        if (!isOnScreen(640)) {
+        // ROM loc_1FACE: Obj24 generator deletes by the standard chunk-aligned
+        // out_of_range window, then DisplaySprite refreshes render_flags bit 7.
+        if (!isInRangeAt(spawn.x())) {
+            setDestroyed(true);
             return;
         }
 
-        visible = true;
         displayFrame = GENERATOR_FRAMES[(frameCounter / GENERATOR_ANIMATION_TICKS) & 1];
 
         // ROM state machine logic (loc_1F9C0)
         if ((stateFlags & FLAG_ACTIVE_BURST) == 0) {
             // No active burst - check if timer expired to start new burst
+            // ROM gates the ready-state timer on render_flags.on_screen from the
+            // previous DisplaySprite pass. An off-screen generator still displays
+            // this frame, but it does not count down or start a burst until the
+            // refreshed render flag is observable on a later object pass.
+            if (!observedRomRenderOnScreen) {
+                refreshRomRenderFlag();
+                return;
+            }
             // ROM: tst.w objoff_36(a0) / bne.s loc_1FA22,
             //      subq.w #1,objoff_38(a0) / bpl.w loc_1FAC2.
             // A zero timer spends one frame counting down to -1 before a burst starts.
             frameTimer--;
             if (frameTimer >= 0) {
+                refreshRomRenderFlag();
                 return;
             }
             // Timer expired, start new burst
@@ -152,11 +165,18 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
             // ROM: loc_1FA22: subq.w #1,objoff_38(a0) / bpl.w loc_1FAC2
             frameTimer--;
             if (frameTimer >= 0) {
+                refreshRomRenderFlag();
                 return;
             }
             // Timer expired, spawn next bubble
             spawnNextBubble();
         }
+        refreshRomRenderFlag();
+    }
+
+    private void refreshRomRenderFlag() {
+        romRenderOnScreen = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
+        visible = romRenderOnScreen;
     }
 
     /**
@@ -249,8 +269,7 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
         }
         int finalBubbleSize = bubbleSize;
 
-        int wobbleAngle = rng.nextByte();
-        spawnFreeChild(() -> new BubbleObjectInstance(spawnX, spawnY, finalBubbleSize, wobbleAngle));
+        spawnFreeChild(() -> new BubbleObjectInstance(spawnX, spawnY, finalBubbleSize, 0, true));
 
         // ROM: Decrement bubble counter
         // subq.b #1,objoff_34(a0) / bpl.s loc_1FAC2

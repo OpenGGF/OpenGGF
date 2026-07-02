@@ -53,8 +53,25 @@ public class TestHTZBossEventRoutine9 {
     }
 
     @Test
-    public void routine9UnlocksAfterBossDefeatAndEasesVerticalBounds() {
-        GameServices.gameState().setCurrentBossId(0); // Boss defeated
+    public void routine9DoesNotUnlockJustBecauseCurrentBossIdCleared() {
+        GameServices.gameState().setCurrentBossId(0);
+
+        camera.setX((short) 0x30E0);
+        camera.setMinX((short) 0x2EE0);
+        camera.setMinY((short) 0x42A);
+        camera.setMaxY((short) 0x432); // also sets maxY target
+
+        levelEvents.update();
+
+        assertEquals((short) 0x2EE0, camera.getMinX());
+        assertEquals((short) 0x42A, camera.getMinY());
+        assertEquals((short) 0x432, camera.getMaxYTarget());
+    }
+
+    @Test
+    public void routine9UnlocksAfterBossDefeatedFlagAndEasesVerticalBounds() {
+        GameServices.gameState().setCurrentBossId(3); // ROM Current_Boss_ID remains set
+        GameServices.gameState().setBossDefeatedFlag(true);
 
         camera.setX((short) 0x30E0);
         camera.setMinX((short) 0x2EE0);
@@ -68,4 +85,3 @@ public class TestHTZBossEventRoutine9 {
         assertEquals((short) 0x430, camera.getMaxYTarget());
     }
 }
-

@@ -3,7 +3,6 @@ package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
@@ -1358,7 +1357,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 if (sx <= newWindowStart) {
                     break;
                 }
-                if (sx < oldWindowStart) {
+                // The first backward pass stops on equality, so the catch-up
+                // gap includes objects exactly on the previous left edge.
+                if (sx <= oldWindowStart) {
                     if (legacyNoCreate) {
                         trySpawn(i);
                     } else {

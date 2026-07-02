@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.game.sonic2.OilSurfaceManager;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Method;
@@ -102,6 +103,29 @@ public class TestOilSurfaceManager {
         assertTrue(sprite.isSliding());
     }
 
+    @Test
+    public void airborneSlideExitRefreshesMoveLockToRomDuration() {
+        sprite.setAir(true);
+        sprite.setSliding(true);
+        sprite.setMoveLockTimer(3);
+
+        manager.updateSlides(sprite);
+
+        assertFalse(sprite.isSliding());
+        assertEquals(5, sprite.getMoveLockTimer(),
+                "OilSlides writes #5 to move_lock every time sliding exits, even over a shorter active lock");
+    }
+
+    @Test
+    public void oilLandingPublishesSyntheticObj07InteractLatch() {
+        landOnOilSurface();
+
+        assertEquals(Sonic2ObjectIds.OIL, sprite.getLatchedSolidObjectId(),
+                "Obj07 PlatformObject landing should publish the oil object id for TailsCPU_CheckDespawn");
+        assertEquals(AbstractPlayableSprite.SYNTHETIC_INTERACT_SLOT, sprite.getInteractSlotIndex(),
+                "Obj07 is manager-hosted, so its ROM interact target is represented by a synthetic slot");
+    }
+
     private void landOnOilSurface() {
         int centreY = OIL_SURFACE_Y + 1 - sprite.getYRadius();
         sprite.setCentreY((short) centreY);
@@ -141,4 +165,3 @@ public class TestOilSurfaceManager {
         }
     }
 }
-

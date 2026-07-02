@@ -78,7 +78,9 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
         this.shotsRemaining = INITIAL_SHOTS;
         this.shootingFlag = false;
         this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
-        this.facingLeft = (spawn.renderFlags() & 0x01) != 0;
+        // S2 NPC status/render x_flip means the Aquis faces right; clear means
+        // left (docs/s2disasm/s2.constants.asm:224, s2.asm:60708-60718).
+        this.facingLeft = (spawn.renderFlags() & 0x01) == 0;
         this.animationState = new ObjectAnimationState(ANIMATIONS, 0, 0);
         this.wingChild = null;
         this.wingSpawned = false;
@@ -113,20 +115,14 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void updateWaitForScreen() {
-        // ROM Obj50_CheckIfOnScreen (s2.asm:60600-60611) tests
-        // render_flags.on_screen and advances routine_secondary to Obj50_Chase
-        // the instant that bit is set. render_flags.on_screen is set by
-        // Render_Sprites (the BuildSprites pass) when the object's rendered
-        // bounding box overlaps the camera viewport; it is NOT contingent on
-        // draw commands being emitted by any particular caller. Model it with
-        // the shared frame-driven camera-bounds overlap test
-        // (isWithinSolidContactBounds == cameraBounds.containsRenderSpriteBounds,
-        // see AbstractObjectInstance.java:580-600), which already carries the
-        // ROM's one-frame "set last frame, tested this frame" lag because the
-        // cached camera bounds reflect the prior frame's Render_Sprites pass.
-        // The previous draw-command-driven flag never fired under headless
-        // trace replay, so the Aquis stayed frozen at spawn and never chased.
-        if (isWithinSolidContactBounds()) {
+        // ROM Obj50_CheckIfOnScreen (docs/s2disasm/s2.asm:60662-60671)
+        // observes render_flags.on_screen from BuildSprites. Obj50_Init sets
+        // width_pixels=$10 and does not set explicit_height (s2.asm:60567-60574),
+        // so S2 BuildSprites takes its approximate-Y path: X uses width_pixels
+        // and Y uses the assumed 32px band (s2.asm:30566-30611). The solid
+        // contact gate uses the object's 16px half-height and keeps this Aquis
+        // waiting 37 frames too long in the OOZ2 route.
+        if (isWithinRenderSpriteBounds(WIDTH_PIXELS, 32)) {
             // ROM Obj50_CheckIfOnScreen (s2.asm:60607-60614) only advances
             // routine_secondary to Obj50_Chase; it does NOT initialise
             // Obj50_timer. The SST timer byte is therefore still 0 from the
@@ -157,7 +153,6 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
             yVelocity = 0;
             state = State.SHOOTING;
             timer = SHOOT_DELAY;
-            shootingFlag = false;
             animationState.setAnimId(0); // Static body
             return;
         }
@@ -177,7 +172,7 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
                 facingLeft = false;
             }
 
-            if (player.getCentreY() < currentY) {
+            if (player.getCentreY() <= currentY) {
                 yVelocity -= CHASE_ACCEL;
             } else {
                 yVelocity += CHASE_ACCEL;
@@ -192,20 +187,15 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void updateShooting(AbstractPlayableSprite player) {
-        // ROM Obj50_ChkIfShoot sets the one-shot flag before the vertical
-        // eligibility check, so a too-high player still consumes this window.
-        if (!shootingFlag && player != null && !player.isDebugMode()) {
-            shootingFlag = true;
-            if (player.getCentreY() > currentY) {
-                fireProjectile();
-            }
-        }
-
-        // Bug 2 fix: ROM uses subq.b #1, timer / bmi (s2.asm:60275-60276).
+        // ROM Obj50_Shooting calls Obj50_WaitForNextShot before Obj50_ChkIfShoot
+        // (docs/s2disasm/s2.asm:60679-60681). On the expiry frame,
+        // Obj50_WaitForNextShot clears Obj50_shooting_flag and returns to the
+        // caller, which still falls through to Obj50_ChkIfShoot in that same
+        // ExecuteObjects pass (s2.asm:60757-60769, 60685-60721).
         timer = (byte) (timer - 1);
         if (timer < 0) {
             shotsRemaining--;
-            if (shotsRemaining > 0) {
+            if (shotsRemaining >= 0) {
                 // Return to chase
                 state = State.CHASE;
                 timer = CHASE_TIMER;
@@ -217,6 +207,15 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
                 state = State.ESCAPE;
                 xVelocity = ESCAPE_X_VEL;
                 yVelocity = 0;
+            }
+        }
+
+        // ROM Obj50_ChkIfShoot sets the one-shot flag before the vertical
+        // eligibility check, so a too-high player still consumes this window.
+        if (!shootingFlag && player != null && !player.isDebugMode()) {
+            shootingFlag = true;
+            if (player.getCentreY() > currentY) {
+                fireProjectile();
             }
         }
     }
@@ -240,7 +239,9 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
         }
         int wingX = currentX + WING_X_OFFSET;
         int wingY = currentY + WING_Y_OFFSET;
-        wingChild = spawnFreeChild(() -> new AquisWingChild(
+        // ROM OOZ1 route keeps the Obj50 wing after its parent in the SST
+        // during the launcher-ball cluster, preserving Obj48 source/target order.
+        wingChild = spawnChild(() -> new AquisWingChild(
                 new ObjectSpawn(wingX, wingY, spawn.objectId(), 0, spawn.renderFlags(), false, spawn.rawYWord()),
                 this));
         syncWingChild();
@@ -269,12 +270,15 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
             return;
         }
 
-        final int bulletX = facingLeft ? currentX + BULLET_X_OFFSET : currentX - BULLET_X_OFFSET;
-        // Obj50_ChkIfShoot subtracts the $0A Y offset before setting velocity
-        // (docs/s2disasm/s2.asm:60651,60659).
+        // Obj50_ChkIfShoot starts with d1=$10/d2=-$300, negates both only when
+        // status.npc.x_flip is set, then subtracts d1 from x_pos and stores d2
+        // to x_vel (docs/s2disasm/s2.asm:60708-60719). Engine facingLeft mirrors
+        // Obj50's clear x-flip state, so the unflipped ROM shot travels left.
+        final int bulletX = facingLeft ? currentX - BULLET_X_OFFSET : currentX + BULLET_X_OFFSET;
+        // Obj50_ChkIfShoot subtracts the $0A Y offset before setting velocity.
         final int bulletY = currentY - BULLET_Y_OFFSET;
-        final int bulletXVel = facingLeft ? BULLET_X_VEL : -BULLET_X_VEL;
-        final boolean bulletHFlip = facingLeft;
+        final int bulletXVel = facingLeft ? -BULLET_X_VEL : BULLET_X_VEL;
+        final boolean bulletHFlip = !facingLeft;
 
         spawnFreeChild(() -> new BadnikProjectileInstance(
                 spawn,
@@ -323,7 +327,9 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
         motionState.y = currentY;
         motionState.xVel = xVelocity;
         motionState.yVel = yVelocity;
-        SubpixelMotion.moveSprite2(motionState);
+        // ROM Obj50 uses ObjectMove/SpeedToPos (s2.asm:60736-60743),
+        // which preserves the full 16-bit x_sub/y_sub words.
+        SubpixelMotion.speedToPos(motionState);
         currentX = motionState.x;
         currentY = motionState.y;
     }
@@ -362,6 +368,11 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         expireWingChild();
         super.destroyBadnik(player);
+    }
+
+    @Override
+    public void onUnload() {
+        expireWingChild();
     }
 
     private static final class AquisWingChild extends AbstractObjectInstance implements RewindRecreatable {

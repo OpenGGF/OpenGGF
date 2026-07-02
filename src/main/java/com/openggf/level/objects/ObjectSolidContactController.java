@@ -3,8 +3,10 @@ package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rules.CollisionRules;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
@@ -151,7 +153,7 @@ final class ObjectSolidContactController {
     // The engine's inline post-physics solid pass can otherwise observe the
     // post-jump airborne state in the same engine tick that established the
     // ride and unseat it one frame early. When
-    // PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame() is true,
+    // CollisionRules.solidObjectKeepsOnObjWhenJumpedOffSameFrame() is true,
     // this latch suppresses the same-frame unseat. Cleared per-frame
     // (beginInlineFrame). ROM: sonic3k.asm:41016-41035 (loc_1DC98),
     // 41066-41084 (loc_1DCF0), 42033-42034 (RideObject_SetRide sets the bit),
@@ -219,6 +221,17 @@ final class ObjectSolidContactController {
         return key != null && set.contains(key);
     }
 
+    private boolean hasAnyMultiPieceStandingBitOrSnapshot(
+            PlayableEntity player, ObjectInstance instance, MultiPieceSolidProvider multiPiece) {
+        for (int i = 0; i < multiPiece.getPieceCount(); i++) {
+            if (hasObjectStandingBit(player, instance, i)
+                    || wasObjectStandingBitSetThisFrame(player, instance, i)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     boolean hasStandingLatch(PlayableEntity player, ObjectInstance instance) {
         return hasObjectStandingBit(player, instance);
     }
@@ -227,7 +240,7 @@ final class ObjectSolidContactController {
      * Mark this instance's standing bit as established (by a fresh landing) on
      * the current frame, so the same-frame airborne-rider unseat is suppressed
      * for games that gate on
-     * {@link PhysicsFeatureSet#solidObjectKeepsOnObjWhenJumpedOffSameFrame()}.
+     * {@link CollisionRules#solidObjectKeepsOnObjWhenJumpedOffSameFrame()}.
      * Mirrors ROM's once-per-frame SolidObjectFull evaluation: the unseat
      * (loc_1DC98 / loc_1DCF0) only observes a bit set on a prior frame.
      */
@@ -259,8 +272,8 @@ final class ObjectSolidContactController {
     }
 
     private static boolean keepsOnObjWhenJumpedOffSameFrame(PlayableEntity player) {
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame();
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules != null && rules.solidObjectKeepsOnObjWhenJumpedOffSameFrame();
     }
 
     private static boolean keepsOnObjWhenAirborneAfterSameFrameStandingContact(
@@ -458,6 +471,7 @@ final class ObjectSolidContactController {
             new IdentityHashMap<>(2);
 
     private record ProjectedPreMovementX(int centerX, int subpixel) {}
+    private record ProjectedPreMovementY(int centerY, int relY) {}
 
     ObjectSolidContactController(ObjectManager objectManager) {
         this.objectManager = objectManager;
@@ -885,6 +899,13 @@ final class ObjectSolidContactController {
         }
         if (candidate instanceof SolidObjectProvider provider
                 && provider.getSolidRoutineProfile().allowsObjectControlledSolidContacts()) {
+            // ROM SolidObject_ChkBounds uses a signed obj_control test before
+            // side/top classification (S2 s2.asm:35376-35377). Objects that
+            // deliberately allow positive obj_control states, such as Obj33's
+            // lift lock, may still reject bit-7 states via an object-local hook.
+            if (isSignedObjectControlNewSolidContactRejected(player, candidate)) {
+                return true;
+            }
             return false;
         }
         // Most object-controlled states skip SolidObject entirely. MGZ top-platform
@@ -1131,7 +1152,7 @@ final class ObjectSolidContactController {
                 // the loc_1DCF0 air-unseat cannot fire on the same frame the
                 // ride was established by RideObject_SetRide. Skip the
                 // same-frame unseat when this ride was just established this
-                // frame. Games can opt in globally via PhysicsFeatureSet;
+                // frame. Games can opt in globally via CollisionRules;
                 // individual solid routines can opt in for same-frame status
                 // writes after their solid helper runs (sonic3k.asm:41066-41084,
                 // 42033-42034, 28553-28554).
@@ -1417,10 +1438,10 @@ final class ObjectSolidContactController {
         // (camera.x=0x1C99, spike right edge at 0x1C90 -> off screen left), while
         // the ROM correctly preserved the velocity.
         //
-        // Gated by PhysicsFeatureSet.solidObjectOffscreenGate so we can roll out
+        // Gated by CollisionRules.solidObjectOffscreenGate so we can roll out
         // the engine-wide ROM-parity behaviour incrementally without disturbing
         // existing S1/S2 trace baselines that depend on the prior (more
-        // permissive) collision semantics.  See PhysicsFeatureSet definitions.
+        // permissive) collision semantics. See typed CollisionRules definitions.
         //
         // The riding-state branch above (processInlineRidingObject) is unaffected:
         // ROM platform-ride (MvSonicOnPtfm via SolidObjectFull_1P standing branch)
@@ -2933,6 +2954,15 @@ final class ObjectSolidContactController {
 
         int minRelY = ridingThisPiece ? -16 : 0;
 
+        if (relY < minRelY) {
+            ProjectedPreMovementY projectedPreMovementY = projectedPreMovementYForSolidContact(
+                    player, instance, anchorY, maxTop, minRelY);
+            if (projectedPreMovementY != null) {
+                playerCenterY = projectedPreMovementY.centerY();
+                relY = projectedPreMovementY.relY();
+            }
+        }
+
         if (relY < minRelY || relY >= totalHeight) {
             return null;
         }
@@ -3031,8 +3061,8 @@ final class ObjectSolidContactController {
 
     private short accelerateLeftForProjection(AbstractPlayableSprite sprite, short gSpeed,
             short runAccel, short max) {
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        boolean alwaysCap = featureSet != null && featureSet.inputAlwaysCapsGroundSpeed();
+        PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
+        boolean alwaysCap = rules != null && rules.inputAlwaysCapsGroundSpeed();
         if (alwaysCap || gSpeed > -max) {
             gSpeed -= runAccel;
             if (gSpeed < -max) {
@@ -3044,8 +3074,8 @@ final class ObjectSolidContactController {
 
     private short accelerateRightForProjection(AbstractPlayableSprite sprite, short gSpeed,
             short runAccel, short max) {
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        boolean alwaysCap = featureSet != null && featureSet.inputAlwaysCapsGroundSpeed();
+        PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
+        boolean alwaysCap = rules != null && rules.inputAlwaysCapsGroundSpeed();
         if (alwaysCap || gSpeed < max) {
             gSpeed += runAccel;
             if (gSpeed > max) {
@@ -3079,6 +3109,28 @@ final class ObjectSolidContactController {
             return;
         }
         sprite.setSubpixelRaw(projectedPreMovementX.subpixel(), sprite.getYSubpixelRaw());
+    }
+
+    private ProjectedPreMovementY projectedPreMovementYForSolidContact(PlayableEntity player,
+            ObjectInstance instance, int anchorY, int maxTop, int minRelY) {
+        if (postMovement
+                || !(instance instanceof SolidObjectProvider provider)
+                || !provider.projectsPreMovementAirYForSolidContact(player)
+                || !(player instanceof AbstractPlayableSprite sprite)
+                || !player.getAir()
+                || player.getYSpeed() <= 0) {
+            return null;
+        }
+
+        int projectedFullY = ((int) sprite.getCentreY() << 16)
+                | (sprite.getYSubpixelRaw() & 0xFFFF);
+        projectedFullY += (int) player.getYSpeed() << 8;
+        int projectedCenterY = projectedFullY >> 16;
+        int projectedRelY = projectedCenterY - anchorY + 4 + maxTop;
+        if (projectedRelY < minRelY || projectedRelY >= 0x10) {
+            return null;
+        }
+        return new ProjectedPreMovementY(projectedCenterY, projectedRelY);
     }
 
     private int getSolidTopYRadius(PlayableEntity player) {
@@ -3552,7 +3604,7 @@ final class ObjectSolidContactController {
         //      cmpi.w #4,d1; b{ls|bls} <branch by game>
         //
         // Per-game divergence on the d1<=4 ("barely poking") boundary,
-        // gated by PhysicsFeatureSet#solidObjectBarelyPokingResolvesAsSide:
+        // gated by CollisionRules#solidObjectBarelyPokingResolvesAsSide:
         //
         //   S3K (false): cmp d1,d5 / bhi.w loc_1E0D4 ; cmpi.w #4,d1 /
         //     bls.w loc_1E0D4 — when d5<=d1 AND d1<=4, ROM goes to the
@@ -3746,7 +3798,7 @@ final class ObjectSolidContactController {
             boolean upwardVelocity = player.getYSpeed() < 0;
             // ROM divergence (S3K loc_1E154 vs S1/S2 Solid_Landed),
             // gated by
-            // PhysicsFeatureSet#solidObjectTopBranchAlwaysLiftsOnUpwardVelocity:
+            // CollisionRules#solidObjectTopBranchAlwaysLiftsOnUpwardVelocity:
             //   S3K loc_1E154 (sonic3k.asm:41606-41632) writes the position
             //   lift (subq.w #1, y_pos(a1) at 41617; sub.w d3, y_pos(a1) at
             //   41624) BEFORE testing tst.w y_vel(a1) / bmi.s loc_1E198 at
@@ -3977,13 +4029,18 @@ final class ObjectSolidContactController {
                 && multiPiece.usesPieceScopedStandingBits()) {
             return hasObjectStandingBit(player, instance, pieceIndex)
                     || wasObjectStandingBitSetThisFrame(player, instance, pieceIndex)
-                    // Folded ROM-slot solids such as S2 Obj70 can classify a
-                    // stale airborne leftward rider as a fresh side hit on the
-                    // SAME tooth whose d6 bit returned d4=0 before
-                    // SolidObject_cont. Suppress only that piece-specific branch:
-                    // Obj70 sibling slots with clear d6 still run SolidObject_cont
-                    // in ROM slot order (s2.asm:35028-35047, 55137-55191).
-                    || (player.getAir() && !isHurtRoutineSideStopCandidate(player) && player.getXSpeed() < 0)
+                    // Preserve ROM airborne inward-side no-contact when a real
+                    // leftward speed was already present at contact entry
+                    // (SolidObject_InsideLeft -> AtEdge -> SideAir), and add
+                    // only the folded Obj70 zero-speed stale-latch case. ROM
+                    // Obj70 keeps each tooth in a real SST slot, so a tooth's
+                    // standing-bit air-unseat can return before a folded sibling
+                    // can run SolidObject_StopCharacter (docs/s2disasm/s2.asm:
+                    // 35413-35436,55084-55191,35021-35040).
+                    || (player.getAir() && !isHurtRoutineSideStopCandidate(player)
+                            && ((preContactXSpeed <= -0x100 && player.getXSpeed() < 0)
+                                    || (player.getXSpeed() <= 0
+                                            && hasAnyMultiPieceStandingBitOrSnapshot(player, instance, multiPiece))))
                     || (!player.getAir() && preContactXSpeed <= -0x100 && player.getXSpeed() < 0);
         }
         return true;
@@ -4038,16 +4095,16 @@ final class ObjectSolidContactController {
         if (player == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.collisionModel() == CollisionModel.UNIFIED;
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules != null && rules.collisionModel() == CollisionModel.UNIFIED;
     }
 
     private boolean allowsZeroDistTopSolidLanding(PlayableEntity player) {
         if (player == null) {
             return true;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet == null || featureSet.topSolidLandingAllowsZeroDist();
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules == null || rules.topSolidLandingAllowsZeroDist();
     }
 
     private boolean rejectsZeroDistanceTopSolidLanding(ObjectInstance instance) {
@@ -4105,26 +4162,26 @@ final class ObjectSolidContactController {
         if (player == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        CollisionRules rules = collisionRulesOrNull(player);
         return player.getAir()
-                && featureSet != null
-                && featureSet.airBottomSolidHitClearsGroundSpeed();
+                && rules != null
+                && rules.airBottomSolidHitClearsGroundSpeed();
     }
 
     private boolean usesCurrentYRadiusOnlyForFullSolidBottomOverlap(PlayableEntity player) {
         if (player == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.fullSolidBottomOverlapUsesCurrentYRadiusOnly();
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules != null && rules.fullSolidBottomOverlapUsesCurrentYRadiusOnly();
     }
 
     private boolean isSolidObjectOffscreenGateEnabled(PlayableEntity player) {
         if (player == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.solidObjectOffscreenGate();
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules != null && rules.solidObjectOffscreenGate();
     }
 
     private boolean shouldSkipOffscreenSidekickFullSolid(PlayableEntity player,
@@ -4133,8 +4190,8 @@ final class ObjectSolidContactController {
         if (!(player instanceof AbstractPlayableSprite sidekick) || !sidekick.isCpuControlled()) {
             return false;
         }
-        PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
-        if (featureSet == null || !featureSet.solidObjectRequiresSidekickOnScreen()) {
+        CollisionRules rules = collisionRulesOrNull(sidekick);
+        if (rules == null || !rules.solidObjectRequiresSidekickOnScreen()) {
             return false;
         }
         if (solidProfile.bypassesOffscreenSolidGate()
@@ -4176,14 +4233,14 @@ final class ObjectSolidContactController {
      * lift before testing {@code y_vel}; {@code Solid_Landed} /
      * {@code SolidObject_Landed} (S1/S2) test {@code y_vel} first and bail
      * without lifting. Gated via
-     * {@link PhysicsFeatureSet#solidObjectTopBranchAlwaysLiftsOnUpwardVelocity()}.
+     * {@link CollisionRules#solidObjectTopBranchAlwaysLiftsOnUpwardVelocity()}.
      */
     private boolean topBranchAlwaysLiftsOnUpwardVelocity(PlayableEntity player) {
         if (player == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity();
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules != null && rules.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity();
     }
 
     /**
@@ -4195,14 +4252,14 @@ final class ObjectSolidContactController {
      * s1disasm/_incObj/sub SolidObject.asm:181-184,211-214). S3K sends it to
      * {@code loc_1E0D4}, the TOP/BOTTOM path
      * (sonic3k.asm:41463-41466,41541-41546). Gated via
-     * {@link PhysicsFeatureSet#solidObjectBarelyPokingResolvesAsSide()}.
+     * {@link CollisionRules#solidObjectBarelyPokingResolvesAsSide()}.
      */
     private boolean solidObjectBarelyPokingResolvesAsSide(PlayableEntity player) {
         if (player == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.solidObjectBarelyPokingResolvesAsSide();
+        CollisionRules rules = collisionRulesOrNull(player);
+        return rules != null && rules.solidObjectBarelyPokingResolvesAsSide();
     }
 
     private boolean preservesEdgeSubpixelMotion(ObjectInstance instance) {
@@ -4305,8 +4362,30 @@ final class ObjectSolidContactController {
     }
 
     private boolean usesCurrentYRadiusDeltaOnLanding(AbstractPlayableSprite sprite) {
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta();
+        PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
+        return rules != null && rules.landingRollClearUsesCurrentYRadiusDelta();
+    }
+
+    private static CollisionRules collisionRulesOrNull(PlayableEntity player) {
+        if (player == null) {
+            return null;
+        }
+        GameRules rules = player.getGameRules();
+        if (rules != null && rules.collision() != null) {
+            return rules.collision();
+        }
+        return null;
+    }
+
+    private static PlayerMovementRules playerMovementRulesOrNull(PlayableEntity player) {
+        if (player == null) {
+            return null;
+        }
+        GameRules rules = player.getGameRules();
+        if (rules != null && rules.playerMovement() != null) {
+            return rules.playerMovement();
+        }
+        return null;
     }
 
     private void applyObjectLandingState(PlayableEntity player) {

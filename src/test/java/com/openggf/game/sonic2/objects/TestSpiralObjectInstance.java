@@ -7,7 +7,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
@@ -209,7 +209,7 @@ class TestSpiralObjectInstance {
     void mtzCylinderCaptureUsesRomOverlapSnap() {
         SpiralObjectInstance cylinder = newCylinder();
         TestablePlayableSprite sonic = playerAt("sonic", 0x0B82, 0x03EC);
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonic.setGameRulesForTest(GameRules.SONIC_2);
         sonic.setAir(false);
         sonic.setOnObject(false);
         sonic.setXSpeed((short) 0x0599);
@@ -234,7 +234,7 @@ class TestSpiralObjectInstance {
     void mtzCylinderAirborneRollingCaptureRunsResetOnFloorPart2() {
         SpiralObjectInstance cylinder = newCylinder();
         TestablePlayableSprite sonic = playerAt("sonic", 0x0B82, 0x03ED);
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonic.setGameRulesForTest(GameRules.SONIC_2);
         sonic.setRolling(true);
         sonic.setCentreY((short) 0x03ED);
         sonic.setAir(true);
@@ -266,7 +266,7 @@ class TestSpiralObjectInstance {
         objectManager.preloadInitialSpawnsForHydration();
 
         TestablePlayableSprite sonic = playerAt("sonic", 0x0B82, 0x03EA);
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonic.setGameRulesForTest(GameRules.SONIC_2);
         sonic.setRolling(true);
         sonic.setCentreY((short) 0x03EA);
         sonic.setAir(true);
@@ -294,7 +294,7 @@ class TestSpiralObjectInstance {
     void mtzCylinderRidingUsesCosineYOffsetAndAdvancesAngle() {
         SpiralObjectInstance cylinder = newCylinder();
         TestablePlayableSprite sonic = playerAt("sonic", 0x0B82, 0x03EC);
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonic.setGameRulesForTest(GameRules.SONIC_2);
         sonic.setAir(false);
         sonic.setOnObject(false);
         sonic.setXSpeed((short) 0x0599);

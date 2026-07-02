@@ -375,12 +375,54 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
         // supported-player hurt path after TailsCPU_Normal has already sampled
         // Ctrl_2 (docs/s2disasm/s2.asm:49636-49643,39291-39294). The HTZ2
         // lower-route platform keeps that object-order push visible to the CPU
-        // slot while the adjacent history input word has already flipped.
-        return subtype == 6 && player != null && player.isCpuControlled();
+        // slot only on the left/probed side of the support. On the right side,
+        // TailsCPU_Normal keeps the already-loaded d1 history word from the same
+        // slot as d4 (s2.asm:39285-39300); re-reading the adjacent older input
+        // manufactures stale LEFT on HTZ2 f4442.
+        return subtype == 6
+                && player != null
+                && player.isCpuControlled()
+                && ((short) (player.getCentreX() - getX())) <= 0;
+    }
+
+    @Override
+    public boolean preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity player) {
+        // HTZ2 Obj30 subtype 6 keeps its SST status visible through the
+        // interact(a0) slot when TailsCPU_Normal tests Status_Push at
+        // s2.asm:39297-39300, before Obj30's later SolidObject_Always /
+        // DropOnFloor pass refreshes supported-player state (s2.asm:49635-49642).
+        return subtype == 6
+                && player != null
+                && player.isCpuControlled();
+    }
+
+    @Override
+    public boolean preservesSidekickDelayedLeaderPushFromInteractSlot(PlayableEntity player) {
+        // Same Obj30 object-order window, but for the delayed d4 Status_Push
+        // fall-through at s2.asm:39297-39300 after the current push grace has
+        // decayed and Tails is stationary on the released interact target.
+        return preservesSidekickCpuPushGraceFromInteractSlot(player);
+    }
+
+    @Override
+    public int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {
+        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MAX_VALUE;
+    }
+
+    @Override
+    public int sidekickCpuPushGraceMaximumFramesFromInteractSlot(PlayableEntity player) {
+        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 9 : Integer.MIN_VALUE;
     }
 
     @Override
     public int getOnScreenHalfWidth() {
+        return widthPixels;
+    }
+
+    @Override
+    public int getBalanceWidthPixels() {
+        // Obj30_Init writes Obj30_Widths[subtype] to width_pixels(a0)
+        // before the player balance routines read it (docs/s2disasm/s2.asm:49545-49547).
         return widthPixels;
     }
 

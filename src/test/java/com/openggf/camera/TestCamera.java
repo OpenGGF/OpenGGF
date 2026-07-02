@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.GameServices;
+import com.openggf.game.rules.GameRules;
 import com.openggf.tests.TestEnvironment;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -361,6 +362,33 @@ public class TestCamera {
                 "S2 BuildSprites_ApproxYCheck masks relative Y with $7FF before the 32px render-flag band");
     }
 
+    @Test
+    public void testPlayableRenderFlagVisibilityUsesCameraCopyShake() {
+        camera.setX((short) 0x18DC);
+        camera.setY((short) 0x053D);
+        camera.setShakeOffsets(2, 3);
+        when(mockSprite.getRenderCentreX()).thenReturn((short) 0x1987);
+        when(mockSprite.getRenderCentreY()).thenReturn((short) 0x063F);
+        when(mockSprite.getRenderFlagWidthPixels()).thenReturn(0x18);
+
+        assertTrue(camera.isVisibleForRenderFlag(mockSprite),
+                "BuildSprites subtracts Camera_Y_pos_copy, so screen shake can keep a sprite on-screen at the bottom edge");
+    }
+
+    @Test
+    public void testPlayableRenderFlagVisibilityUsesGameRules() {
+        camera.setX((short) 0);
+        camera.setY((short) 100);
+        when(mockSprite.getGameRules()).thenReturn(null);
+        when(mockSprite.getGameRules()).thenReturn(GameRules.SONIC_3K);
+        when(mockSprite.getRenderCentreX()).thenReturn((short) 160);
+        when(mockSprite.getRenderCentreY()).thenReturn((short) 72);
+        when(mockSprite.getRenderFlagWidthPixels()).thenReturn(0x18);
+
+        assertFalse(camera.isVisibleForRenderFlag(mockSprite),
+                "S3K legacy camera rules should use the 24px render margin when GameRules are absent");
+    }
+
     // ==================== Increment Tests ====================
 
     @Test
@@ -383,4 +411,3 @@ public class TestCamera {
         assertEquals(120, camera.getY(), "incrementY should subtract when negative");
     }
 }
-

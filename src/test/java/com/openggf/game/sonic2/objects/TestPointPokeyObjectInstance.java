@@ -1,6 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
@@ -47,7 +47,7 @@ class TestPointPokeyObjectInstance {
     @Test
     void captureUsesObjectControlWithoutGlobalControlLockedLatch() throws Exception {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x04D3, (short) 0x043C);
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setGameRulesForTest(GameRules.SONIC_2);
         player.setLogicalInputState(false, false, true, false, false);
         player.endOfTick();
         assertEquals(AbstractPlayableSprite.INPUT_LEFT, player.getInputHistory(0));
@@ -74,7 +74,7 @@ class TestPointPokeyObjectInstance {
     @Test
     void bottomSolidReturnCapturesWithoutRideLatch() throws Exception {
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x1DBF, (short) 0x0382);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setAir(true);
         tails.setRolling(true);
@@ -111,10 +111,10 @@ class TestPointPokeyObjectInstance {
     @Test
     void offscreenReleaseTargetsCapturedSidekick() throws Exception {
         TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x1E60, (short) 0x01C6);
-        main.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        main.setGameRulesForTest(GameRules.SONIC_2);
         main.setYSpeed((short) 0x1234);
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x1DBF, (short) 0x0382);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setAir(true);
         tails.setRolling(true);
@@ -156,7 +156,7 @@ class TestPointPokeyObjectInstance {
     @Test
     void childPrizeCounterEmptyReleasesCapturedPlayerInSameFrame() throws Exception {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x1DC0, (short) 0x0368);
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setGameRulesForTest(GameRules.SONIC_2);
         PointPokeyObjectInstance pokey = new PointPokeyObjectInstance(
                 new ObjectSpawn(0x1DC0, 0x0368, 0xD6, 0x01, 0, false, 0),
                 "PointPokey");

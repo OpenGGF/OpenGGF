@@ -15,9 +15,6 @@ REM s1_trace_recorder.lua (set to true).
 
 setlocal
 
-set "BIZHAWK_EXE=%BIZHAWK_EXE%"
-if "%BIZHAWK_EXE%"=="" set "BIZHAWK_EXE=C:\Users\farre\IdeaProjects\sonic-engine\docs\BizHawk-2.11-win-x64\EmuHawk.exe"
-
 set "LUA_SCRIPT=%~dp0s1_trace_recorder.lua"
 
 set "OUTPUT_DIR=%~dp0trace_output"
@@ -38,8 +35,8 @@ if "%~2"=="" (
     exit /b 1
 )
 
-set "ROM_PATH=%~1"
-set "BK2_PATH=%~2"
+for %%I in ("%~1") do set "ROM_PATH=%%~fI"
+for %%I in ("%~2") do set "BK2_PATH=%%~fI"
 
 echo === BizHawk Trace Recorder ===
 echo ROM:    %ROM_PATH%
@@ -47,9 +44,9 @@ echo Movie:  %BK2_PATH%
 echo Lua:    %LUA_SCRIPT%
 echo Output: %OUTPUT_DIR%\
 echo.
-echo Starting BizHawk in headless mode...
+echo Starting BizHawk through reusable no-audio/no-render launcher...
 
-"%BIZHAWK_EXE%" --chromeless --lua "%LUA_SCRIPT%" --movie "%BK2_PATH%" "%ROM_PATH%"
+call "%~dp0run_bizhawk_lua.bat" "%LUA_SCRIPT%" "%BK2_PATH%" "%ROM_PATH%"
 
 if %ERRORLEVEL% neq 0 (
     echo BizHawk exited with error code %ERRORLEVEL%

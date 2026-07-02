@@ -1476,11 +1476,13 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         if (player == null) return;
         int playerX = player.getCentreX();
         int playerY = player.getCentreY();
+        int playerXVel = player.getXSpeed();
+        int playerYVel = player.getYSpeed();
         // ROM loc_3D744 calls LoadChildObject, whose helper uses
         // AllocateObjectAfterCurrent (docs/s2disasm/s2.asm:82785-82786,
         // 72978-72986). Keeping the sensor above the body slot preserves the
         // body-before-sensor report handoff in loc_3D784/loc_3DE62.
-        sensorChild = spawnChild(() -> new SensorChild(this, playerX, playerY));
+        sensorChild = spawnChild(() -> new SensorChild(this, playerX, playerY, playerXVel, playerYVel));
     }
 
     /** Report player X from targeting sensor */
@@ -2148,13 +2150,18 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         // slot 0 traverses 3 shifts before being consumed at slot 3.
         private final int[] xVelBuffer = new int[4];
         private final int[] yVelBuffer = new int[4];
-        private int bufferIdx = 0;
-        private boolean bufferSeeded = false;
 
         SensorChild(Sonic2DeathEggRobotInstance parent, int playerX, int playerY) {
+            this(parent, playerX, playerY, 0, 0);
+        }
+
+        SensorChild(Sonic2DeathEggRobotInstance parent, int playerX, int playerY,
+                    int initialXVel, int initialYVel) {
             super(parent, "Sensor", 1, Sonic2ObjectIds.DEATH_EGG_ROBOT);
             this.currentX = playerX;
             this.currentY = playerY;
+            this.xVelBuffer[0] = initialXVel;
+            this.yVelBuffer[0] = initialYVel;
             this.sensorRoutine = 0;
             this.countdown = 0xA0; // 160 frames
             this.beepInterval = 0x18; // Initial interval = 24 frames
@@ -2228,23 +2235,19 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
                                 currentY = player.getCentreY();
                             }
 
-                            // ROM: Seed buffer slot 0 with player's initial velocity on first update
-                            // move.w x_vel(a1),objoff_30(a0) / move.w y_vel(a1),objoff_32(a0)
-                            if (!bufferSeeded) {
-                                xVelBuffer[0] = playerXVel;
-                                yVelBuffer[0] = playerYVel;
-                                bufferSeeded = true;
+                            // ROM loc_3DDA6 consumes objoff_3C/3E, shifts
+                            // objoff_30..3B upward, then writes the current
+                            // x_vel/y_vel into objoff_30/32 (s2.asm:83493-83516).
+                            int applyXVel = xVelBuffer[3];
+                            int applyYVel = yVelBuffer[3];
+                            for (int i = 3; i > 0; i--) {
+                                xVelBuffer[i] = xVelBuffer[i - 1];
+                                yVelBuffer[i] = yVelBuffer[i - 1];
                             }
-
-                            // Push player velocity into FIFO
-                            xVelBuffer[bufferIdx] = playerXVel;
-                            yVelBuffer[bufferIdx] = playerYVel;
-
-                            // Apply oldest velocity (3-frame delay via 4-slot buffer)
-                            int applyIdx = (bufferIdx + 1) % 4;
-                            currentX += (xVelBuffer[applyIdx] >> 8); // 8.8 fixed -> pixel
-                            currentY += (yVelBuffer[applyIdx] >> 8);
-                            bufferIdx = (bufferIdx + 1) % 4;
+                            xVelBuffer[0] = playerXVel;
+                            yVelBuffer[0] = playerYVel;
+                            currentX += (applyXVel >> 8); // 8.8 fixed -> pixel
+                            currentY += (applyYVel >> 8);
                         }
 
                         // Beep with decreasing interval

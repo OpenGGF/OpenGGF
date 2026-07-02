@@ -160,6 +160,11 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
     }
 
     @Override
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        return true;
+    }
+
+    @Override
     protected void onDefeatStarted() {
         bossDefeated = true;
         state.routine = MAIN_EXPLODE;
@@ -556,6 +561,13 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
     @Override
     public int getPriorityBucket() {
         return 3;
+    }
+
+    @Override
+    public boolean isPersistent() {
+        // Obj5D_Main_Retreat owns its delete gate: it keeps widening
+        // Camera_Max_X_pos to $2C30 before testing the on-screen bit.
+        return true;
     }
 
     @Override

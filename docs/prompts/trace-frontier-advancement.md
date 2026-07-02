@@ -85,8 +85,9 @@ target.
    - trace recorder/parser/reporting diagnostics only.
 6. For any shared or plausibly shared behavior, verify the corresponding ROM
    behavior across Sonic 1, Sonic 2, and Sonic 3&K before choosing the code
-   shape. If the games differ, introduce or reuse an explicit feature flag or
-   game-specific provider path; do not let an S2 fix silently change S1/S3K.
+   shape. If the games differ, introduce or reuse the narrowest typed
+   `GameRules` rule, provider/profile, registry, or object-local path; do not
+   let an S2 fix silently change S1/S3K.
 7. Fix the engine path that should have produced the ROM value.
 8. Run the focused test again.
 9. Run cross-game regression checks proportional to the touched surface. Shared
@@ -119,8 +120,8 @@ passes. Report the exact new first failing frame.
   engine convenience alone.
 - For shared physics, collision, sidekick, object, camera, or scroll code,
   check whether S1, S2, and S3K share the behavior. Gate real per-game
-  divergence with `PhysicsFeatureSet` or an equivalent existing feature flag,
-  not game-name checks.
+  divergence with the narrowest typed `GameRules` rule or an existing
+  provider/profile/registry/object owner, not game-name checks.
 - Never assume a shared engine path is safe because one game's trace improves.
   Before landing shared behavior changes, verify whether Sonic 1, Sonic 2, and
   Sonic 3&K use the same ROM rule and run tests that can catch regressions in

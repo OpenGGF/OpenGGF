@@ -2,7 +2,9 @@ package com.openggf.physics;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.CollisionRules;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -334,9 +336,9 @@ public class CollisionSystem {
     }
 
     private boolean shouldDeferRepeatedObjectRideResponse(AbstractPlayableSprite sprite, int mode, short predictedDx) {
-        var featureSet = sprite.getPhysicsFeatureSet();
-        if (featureSet == null
-                || !featureSet.repeatedObjectRideGroundWallResponseDeferred()
+        CollisionRules rules = collisionRulesOrNull(sprite);
+        if (rules == null
+                || !rules.repeatedObjectRideGroundWallResponseDeferred()
                 || objectManager == null
                 || !sprite.isOnObject()
                 || !sprite.getPushing()
@@ -353,14 +355,15 @@ public class CollisionSystem {
         // 49674-49676). Plain PlatformObjectD5 does not call DropOnFloor
         // after MvSonicOnPtfm, so deferring here would apply CalcRoomInFront's
         // wall response twice (docs/s2disasm/s2.asm:35860-35894, 58905-58915).
-        return provider.dropOnFloor();
+        return provider.dropOnFloor()
+                && isRiderOnGroundWallProbeSide(sprite, ridingObject, mode);
     }
 
     private boolean shouldDeferFlushWallResponseForRiddenDropOnFloor(
             AbstractPlayableSprite sprite, int mode, short gSpeed) {
-        var featureSet = sprite.getPhysicsFeatureSet();
-        if (featureSet == null
-                || !featureSet.repeatedObjectRideGroundWallResponseDeferred()
+        CollisionRules rules = collisionRulesOrNull(sprite);
+        if (rules == null
+                || !rules.repeatedObjectRideGroundWallResponseDeferred()
                 || objectManager == null
                 || !sprite.isOnObject()
                 || !sprite.getPushing()) {
@@ -373,10 +376,26 @@ public class CollisionSystem {
         }
         // S2 Obj30 routes its SolidObject_Always/SlopedSolid helper through
         // DropOnFloor (s2.asm:49560-49604,49674-49676). While riding that support,
-        // the ROM stores the repeated push correction after this frame's position
-        // update, so the engine must defer this exact flush-wall correction.
-        return (mode == 0x40 && gSpeed <= -0x18)
-                || (mode == 0xC0 && gSpeed >= 0x18);
+        // the ROM stores a repeated push correction only when the rider is on the
+        // probed wall side of the object. HTZ2 f3317 (Obj30 x=$1760, Tails left
+        // of centre) reaches d1=-1 in CalcRoomInFront; f4422 (Obj30 x=$1920,
+        // Tails right of centre) returns d1=0 and must not synthesize the push.
+        return isRiderOnGroundWallProbeSide(sprite, ridingObject, mode)
+                && ((mode == 0x40 && gSpeed <= -0x18)
+                || (mode == 0xC0 && gSpeed >= 0x18));
+    }
+
+    static boolean isRiderOnGroundWallProbeSide(
+            AbstractPlayableSprite sprite, ObjectInstance ridingObject, int mode) {
+        if (sprite == null || ridingObject == null) {
+            return false;
+        }
+        int dx = (short) (sprite.getCentreX() - ridingObject.getX());
+        return switch (mode) {
+            case 0x40 -> dx <= 0;
+            case 0xC0 -> dx >= 0;
+            default -> false;
+        };
     }
 
     public void applyDeferredGroundWallVelocityResponse(AbstractPlayableSprite sprite) {
@@ -416,8 +435,8 @@ public class CollisionSystem {
     }
 
     private static boolean shouldSetGroundWallPush(AbstractPlayableSprite sprite, int mode) {
-        var featureSet = sprite.getPhysicsFeatureSet();
-        if (featureSet == null || !featureSet.groundWallPushRequiresFacingIntoWall()) {
+        CollisionRules rules = collisionRulesOrNull(sprite);
+        if (rules == null || !rules.groundWallPushRequiresFacingIntoWall()) {
             return true;
         }
         boolean facingLeft = sprite.getDirection() == com.openggf.physics.Direction.LEFT;
@@ -582,8 +601,8 @@ public class CollisionSystem {
         if (sprite == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.rightWallDeepProbePreservesPenetration();
+        CollisionRules rules = collisionRulesOrNull(sprite);
+        return rules != null && rules.rightWallDeepProbePreservesPenetration();
     }
 
     private int getTerrainHeadroomDistance(AbstractPlayableSprite sprite, int hexAngle) {
@@ -779,13 +798,13 @@ public class CollisionSystem {
     }
 
     private boolean airRightWallHitContinuesIntoCeilingSeparation(AbstractPlayableSprite sprite) {
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.airRightWallHitContinuesIntoCeilingSeparation();
+        CollisionRules rules = collisionRulesOrNull(sprite);
+        return rules != null && rules.airRightWallHitContinuesIntoCeilingSeparation();
     }
 
     private boolean airLeftWallHitContinuesIntoCeilingSeparation(AbstractPlayableSprite sprite) {
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.airLeftWallHitContinuesIntoCeilingSeparation();
+        CollisionRules rules = collisionRulesOrNull(sprite);
+        return rules != null && rules.airLeftWallHitContinuesIntoCeilingSeparation();
     }
 
     /**
@@ -936,11 +955,11 @@ public class CollisionSystem {
             return;
         }
 
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        boolean preservePinballRoll = featureSet != null && featureSet.pinballLandingPreservesRoll();
-        boolean preservePinballMode = featureSet != null && featureSet.pinballLandingPreservesPinballMode();
+        PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
+        boolean preservePinballRoll = rules != null && rules.pinballLandingPreservesRoll();
+        boolean preservePinballMode = rules != null && rules.pinballLandingPreservesPinballMode();
         if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
-            if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
+            if (rules != null && rules.landingRollClearUsesCurrentYRadiusDelta()) {
                 int oldYRadius = sprite.getYRadius();
                 int centreX = sprite.getCentreX();
                 int centreY = sprite.getCentreY();
@@ -1063,8 +1082,8 @@ public class CollisionSystem {
             return;
         }
 
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        if (featureSet == null || featureSet.angleDiffCardinalSnap()) {
+        PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
+        if (rules == null || rules.angleDiffCardinalSnap()) {
             int currentAngle = sprite.getAngle() & 0xFF;
             int newAngle = sensorAngle & 0xFF;
             int diff = Math.abs(newAngle - currentAngle);
@@ -1078,6 +1097,28 @@ public class CollisionSystem {
         }
 
         sprite.setAngle(sensorAngle);
+    }
+
+    private static CollisionRules collisionRulesOrNull(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return null;
+        }
+        GameRules rules = sprite.getGameRules();
+        if (rules != null && rules.collision() != null) {
+            return rules.collision();
+        }
+        return null;
+    }
+
+    private static PlayerMovementRules playerMovementRulesOrNull(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return null;
+        }
+        GameRules rules = sprite.getGameRules();
+        if (rules != null && rules.playerMovement() != null) {
+            return rules.playerMovement();
+        }
+        return null;
     }
 
     private void updateGroundMode(AbstractPlayableSprite sprite) {

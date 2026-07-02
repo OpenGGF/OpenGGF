@@ -581,6 +581,38 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void oozPoppingPlatformRejectsBit7ObjectControlFreshLanding() {
+        TestablePlayableSprite tails = player("tails", 0x1EBB, 0x021D);
+        tails.setCpuControlled(true);
+        tails.setAir(true);
+        tails.setOnObject(false);
+        tails.setYSpeed((short) 0x04D8);
+        tails.setGSpeed((short) 0x0954);
+        tails.setRenderFlagOnScreen(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(tails);
+
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(tails, List.of());
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        services.withObjectManager(objectManager);
+        OOZPoppingPlatformObjectInstance platform = objectManager.createDynamicObject(
+                () -> new OOZPoppingPlatformObjectInstance(
+                        new ObjectSpawn(0x1EC0, 0x0238, 0x33, 0, 0, false, 0),
+                        "OOZPoppingPlatform"));
+        platform.snapshotPreUpdatePosition();
+
+        objectManager.updateSolidContacts(tails);
+
+        assertFalse(tails.isOnObject(),
+                "Obj33 must branch to SolidObject_TestClearPush for obj_control=$81 "
+                        + "before SolidObject_TopBottom can re-seat Tails (s2.asm:35344-35489)");
+        assertTrue(tails.getAir());
+        assertEquals(0x021D, tails.getCentreY() & 0xFFFF);
+        assertEquals(0x04D8, tails.getYSpeed() & 0xFFFF);
+        assertEquals(0x0954, tails.getGSpeed() & 0xFFFF);
+    }
+
+    @Test
     void oozPoppingPlatformApexLaunchesStandingSidekickWithoutJavaLockLatch() throws Exception {
         TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x1000, 0x0F83);

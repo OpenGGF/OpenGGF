@@ -6,9 +6,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.sonic1.Sonic1GameModule;
+import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
@@ -182,7 +183,7 @@ public class TestSolidObjectManager {
         ObjectManager manager = buildManager(object);
 
         TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
-        sidekick.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sidekick.useGameRules(GameRules.SONIC_3K);
         sidekick.setCpuControlled(true);
         sidekick.setRenderFlagOnScreen(true);
         sidekick.setWidth(20);
@@ -215,7 +216,7 @@ public class TestSolidObjectManager {
         ObjectManager manager = buildManager(object);
 
         TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
-        sidekick.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sidekick.useGameRules(GameRules.SONIC_3K);
         sidekick.setCpuControlled(true);
         sidekick.setRenderFlagOnScreen(true);
         sidekick.setWidth(20);
@@ -255,7 +256,7 @@ public class TestSolidObjectManager {
         main.setCentreY((short) 0);
 
         TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
-        sidekick.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sidekick.useGameRules(GameRules.SONIC_3K);
         sidekick.setCpuControlled(true);
         sidekick.setRenderFlagOnScreen(true);
         sidekick.setWidth(20);
@@ -292,7 +293,7 @@ public class TestSolidObjectManager {
         ObjectManager manager = buildManager(object);
 
         TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
-        sidekick.useFeatureSet(PhysicsFeatureSet.SONIC_2);
+        sidekick.useGameRules(GameRules.SONIC_2);
         sidekick.setCpuControlled(true);
         sidekick.setRenderFlagOnScreen(true);
         sidekick.setWidth(20);
@@ -344,7 +345,7 @@ public class TestSolidObjectManager {
         ObjectManager manager = buildManager(object);
 
         TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.useGameRules(GameRules.SONIC_3K);
         player.setWidth(20);
         player.setHeight(38);
         player.setCentreX((short) 100);
@@ -384,7 +385,7 @@ public class TestSolidObjectManager {
             ObjectManager manager = buildManager(object);
 
             TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-            player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+            player.useGameRules(GameRules.SONIC_3K);
             player.setWidth(20);
             player.setHeight(38);
             int maxTop = params.airHalfHeight() + player.getYRadius();
@@ -423,7 +424,7 @@ public class TestSolidObjectManager {
             ObjectManager manager = buildManager(object);
 
             TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-            player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+            player.useGameRules(GameRules.SONIC_3K);
             player.setWidth(20);
             player.setHeight(38);
             int maxTop = params.airHalfHeight() + player.getYRadius();
@@ -755,7 +756,7 @@ public class TestSolidObjectManager {
         int halfWidth = wall.getSolidParams().halfWidth();
 
         TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.useGameRules(GameRules.SONIC_3K);
         player.setWidth(20);
         player.setHeight(38);
         player.setAir(false);
@@ -799,6 +800,36 @@ public class TestSolidObjectManager {
                 "Inclusive exact-edge contact has d0 == 0 in SolidObject_cont and must not shove X by 1px");
         assertEquals(0, player.getXSpeed());
         assertEquals(0, player.getGSpeed());
+    }
+
+    @Test
+    public void eggPrisonBodyExactLeftEdgeSetsGroundPushWithoutStoppingSpeed() {
+        EggPrisonObjectInstance eggPrison = new EggPrisonObjectInstance(
+                new ObjectSpawn(0x3202, 0x04C2, 0x3E, 0, 0, false, 0),
+                "EggPrison");
+        ObjectManager manager = buildManager(eggPrison);
+        AbstractObjectInstance.updateCameraBounds(0x315C, 0x0427, 0x315C + 320, 0x0427 + 224, 0);
+        eggPrison.snapshotPreUpdatePosition();
+
+        TestPlayableSprite tails = new TestPlayableSprite((short) 0, (short) 0);
+        tails.useGameRules(GameRules.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setWidth(20);
+        tails.setHeight(38);
+        tails.setAir(false);
+        tails.setXSpeed((short) 0x0018);
+        tails.setGSpeed((short) 0x0018);
+        tails.setCentreX((short) 0x31D7);
+        tails.setCentreY((short) 0x04D4);
+
+        manager.updateSolidContacts(tails);
+
+        assertTrue(tails.getPushing(),
+                "S2 SolidObject_AtEdge sets Status_Push for grounded exact-edge capsule body contact");
+        assertEquals(0x0018, tails.getXSpeed() & 0xFFFF,
+                "AtEdge uses d0 == 0, so SolidObject must not stop Tails's x_vel");
+        assertEquals(0x0018, tails.getGSpeed() & 0xFFFF,
+                "AtEdge uses d0 == 0, so SolidObject must not stop Tails's ground_vel");
     }
 
     @Test
@@ -946,7 +977,7 @@ public class TestSolidObjectManager {
         ObjectManager manager = buildManager(object);
 
         TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useFeatureSet(PhysicsFeatureSet.SONIC_2);
+        player.useGameRules(GameRules.SONIC_2);
         player.setWidth(20);
         player.setHeight(20);
         player.setAir(true);
@@ -964,13 +995,13 @@ public class TestSolidObjectManager {
     }
 
     @Test
-    public void upwardBottomCollisionCanClearGroundSpeedPerFeatureSet() {
+    public void upwardBottomCollisionCanClearGroundSpeedPerGameRules() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         TestSolidObject object = new TestSolidObject(100, 100, params);
         ObjectManager manager = buildManager(object);
 
         TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.useGameRules(GameRules.SONIC_3K);
         player.setWidth(20);
         player.setHeight(20);
         player.setAir(true);
@@ -994,7 +1025,7 @@ public class TestSolidObjectManager {
         ObjectManager manager = buildManager(object);
 
         TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.useGameRules(GameRules.SONIC_3K);
         player.setWidth(28);
         player.setHeight(38);
         player.setAir(false);
@@ -1020,7 +1051,7 @@ public class TestSolidObjectManager {
         ObjectManager manager = buildManager(object);
 
         TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useFeatureSet(PhysicsFeatureSet.SONIC_1);
+        player.useGameRules(GameRules.SONIC_1);
         player.setWidth(28);
         player.setHeight(38);
         player.setAir(true);
@@ -1047,7 +1078,7 @@ public class TestSolidObjectManager {
         ObjectManager manager = buildManager(object);
 
         TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.useGameRules(GameRules.SONIC_3K);
         player.setWidth(28);
         player.setHeight(38);
         player.setAir(true);
@@ -1125,7 +1156,7 @@ public class TestSolidObjectManager {
         SolidObjectParams params = object.getSolidParams();
 
         TestPlayableSprite exactBoundary = new TestPlayableSprite((short) 0, (short) 0);
-        exactBoundary.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        exactBoundary.useGameRules(GameRules.SONIC_3K);
         exactBoundary.setWidth(20);
         exactBoundary.setHeight(38);
         exactBoundary.setAir(true);
@@ -1145,7 +1176,7 @@ public class TestSolidObjectManager {
                 exactBoundary.getCentreY());
 
         TestPlayableSprite insideBoundary = new TestPlayableSprite((short) 0, (short) 0);
-        insideBoundary.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        insideBoundary.useGameRules(GameRules.SONIC_3K);
         insideBoundary.setWidth(20);
         insideBoundary.setHeight(38);
         insideBoundary.setAir(true);
@@ -1171,7 +1202,7 @@ public class TestSolidObjectManager {
         object.snapshotPreUpdatePosition();
 
         TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.useGameRules(GameRules.SONIC_3K);
         player.setWidth(20);
         player.setHeight(38);
         player.setAir(true);
@@ -1199,7 +1230,7 @@ public class TestSolidObjectManager {
         SolidObjectParams params = floor.getSolidParams();
 
         TestPlayableSprite sonic = new TestPlayableSprite((short) 0, (short) 0);
-        sonic.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonic.useGameRules(GameRules.SONIC_3K);
         sonic.setWidth(20);
         sonic.setHeight(38);
         sonic.setAir(false);
@@ -1209,7 +1240,7 @@ public class TestSolidObjectManager {
         sonic.setCentreY((short) exactBoundaryY);
 
         TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
-        sidekick.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sidekick.useGameRules(GameRules.SONIC_3K);
         sidekick.setWidth(20);
         sidekick.setHeight(38);
         sidekick.setAir(false);
@@ -1342,7 +1373,7 @@ public class TestSolidObjectManager {
         ObjectManager manager = buildManager(object);
 
         TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.useGameRules(GameRules.SONIC_3K);
         player.setWidth(20);
         player.setHeight(20);
         int maxTop = params.airHalfHeight() + player.getYRadius();
@@ -1376,7 +1407,7 @@ public class TestSolidObjectManager {
             ObjectManager manager = buildManager(object);
 
             TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-            player.useFeatureSet(PhysicsFeatureSet.SONIC_1);
+            player.useGameRules(GameRules.SONIC_1);
             player.setWidth(20);
             player.setHeight(20);
             player.setAir(false);
@@ -1448,7 +1479,7 @@ public class TestSolidObjectManager {
             ObjectManager manager = buildManager(object);
 
             TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-            player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+            player.useGameRules(GameRules.SONIC_3K);
             player.setWidth(20);
             player.setHeight(38);
             player.setAir(true);
@@ -2058,8 +2089,8 @@ public class TestSolidObjectManager {
             super("TEST", x, y);
         }
 
-        private void useFeatureSet(PhysicsFeatureSet fs) {
-            setPhysicsFeatureSet(fs);
+        private void useGameRules(GameRules fs) {
+            super.setGameRulesForTest(fs);
         }
 
         @Override

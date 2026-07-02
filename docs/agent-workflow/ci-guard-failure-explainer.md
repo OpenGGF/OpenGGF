@@ -254,8 +254,9 @@ mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry" "-Ds3k.rom.path=
 - **Failure symptom:** Assertion naming the offending file and rule (game-id branch,
   disassembly literal, zone-specific art field, or top-left coordinate usage).
 - **Correct fix:**
-  - Replace game-name branching with a `PhysicsFeatureSet` flag / `CrossGameFeatureProvider`
-    — never `if (gameId == S1)`-style logic (`CLAUDE.md` physics rules).
+  - Replace game-name branching with the smallest accurate owner from
+    `docs/architecture/per-game-rule-placement.md` — never `if (gameId == S1)`-style
+    logic (`CLAUDE.md` physics rules).
   - Remove `docs/...disasm` path literals from source; disassembly is research-only.
   - Rename zone-specific art fields to be game-neutral.
   - Use `getCentreX()`/`getCentreY()` (or `NativePositionOps`) for ROM-position/collision
@@ -342,7 +343,8 @@ through the sanctioned bridge): `S3kAizTreeRuntimeStateGuard`, `S3kAizWriteBridg
 - S3K: prefer S&K-side (`sonic3k.asm`, `< 0x200000`); use an `s3.asm` reference only if no S&K equivalent exists (rare; verify).
 - No carve-outs — model ROM state (object id/routine/status bits/event flags/profile), never
   branch on zone id/name, route, or frame number.
-- No game-name `if/else` for physics divergences — use `PhysicsFeatureSet` flags.
+- No game-name `if/else` for physics divergences — use the smallest accurate owner from
+  `docs/architecture/per-game-rule-placement.md`.
 - Trace data is comparison-only — never hydrate/sync engine state from a trace.
 - Object code uses injected `ObjectServices` via `services()`; never `getInstance()`; never
   `services()` in constructors.

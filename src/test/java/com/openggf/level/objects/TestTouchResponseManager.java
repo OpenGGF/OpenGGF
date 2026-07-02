@@ -7,9 +7,11 @@ import org.junit.jupiter.api.Test;
 import com.openggf.graphics.GLCommand;
 import org.mockito.Mockito;
 import com.openggf.game.DamageCause;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.Knuckles;
 import com.openggf.game.PlayableEntity;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.camera.Camera;
@@ -384,6 +386,162 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void typedPlayerCapabilityRuleExpandsInstaShieldTouchHitboxWhenBaseRulesDiffer() {
+        GameRules base = GameRules.SONIC_1;
+        GameRules typedRules = new GameRules(
+                base.playerMovement(),
+                GameRules.SONIC_3K.playerCapability(),
+                base.collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble());
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_1);
+        when(player.getGameRules()).thenReturn(typedRules);
+        when(player.getDoubleJumpFlag()).thenReturn(1);
+        when(player.getShieldType()).thenReturn(null);
+        when(player.getInvincibleFrames()).thenReturn(0);
+
+        MockAttackableEnemy enemy = new MockAttackableEnemy(143, 112, 0x08);
+        setupTableSize(8, 8, 8);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertTrue(enemy.wasAttacked,
+                "Object touch should prefer typed PlayerCapabilityRules for the insta-shield hitbox");
+    }
+
+    @Test
+    public void playerCapabilityRuleUsesDefaultWhenTypedCapabilityGroupMissingForTouch() {
+        GameRules base = GameRules.SONIC_3K;
+        GameRules rulesWithoutCapabilityGroup = new GameRules(
+                base.playerMovement(),
+                null,
+                base.collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble());
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
+        when(player.getGameRules()).thenReturn(rulesWithoutCapabilityGroup);
+        when(player.getDoubleJumpFlag()).thenReturn(1);
+        when(player.getShieldType()).thenReturn(null);
+        when(player.getInvincibleFrames()).thenReturn(0);
+
+        MockAttackableEnemy enemy = new MockAttackableEnemy(143, 112, 0x08);
+        setupTableSize(8, 8, 8);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertFalse(enemy.wasAttacked,
+                "A null PlayerCapabilityRules group should not recreate removed feature-set insta-shield rules");
+    }
+
+    @Test
+    public void typedPlayerCapabilityRuleEnablesKnucklesAbilityAttack() {
+        Knuckles knuckles = mockKnucklesTouchPlayer(
+                gameRulesWithPlayerCapability(GameRules.SONIC_1, GameRules.SONIC_3K));
+        when(knuckles.getDoubleJumpFlag()).thenReturn(3);
+
+        MockAttackableEnemy enemy = new MockAttackableEnemy(160, 112, 0x08);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, knuckles, List.of(), 1);
+
+        assertTrue(enemy.wasAttacked,
+                "Typed PlayerCapabilityRules.elementalShieldsEnabled should enable Knuckles ability attacks");
+    }
+
+    @Test
+    public void typedPlayerCapabilityRuleDisablesKnucklesAbilityAttack() {
+        Knuckles knuckles = mockKnucklesTouchPlayer(
+                gameRulesWithPlayerCapability(GameRules.SONIC_3K, GameRules.SONIC_1));
+        when(knuckles.getDoubleJumpFlag()).thenReturn(3);
+
+        MockAttackableEnemy enemy = new MockAttackableEnemy(160, 112, 0x08);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, knuckles, List.of(), 1);
+
+        assertFalse(enemy.wasAttacked,
+                "Typed PlayerCapabilityRules.elementalShieldsEnabled=false should keep ability attacks disabled");
+    }
+
+    @Test
+    public void typedObjectInteractionRuleHalvesBossBounceWhenBaseRulesDiffer() {
+        GameRules base = GameRules.SONIC_2;
+        GameRules typedRules = new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                base.collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                GameRules.SONIC_1.objectInteraction(),
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble());
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_2);
+        when(player.getGameRules()).thenReturn(typedRules);
+        when(player.getRolling()).thenReturn(true);
+        when(player.getAnimationId()).thenReturn(ObjectManager.ANIM_ROLL);
+        when(player.getXSpeed()).thenReturn((short) 0x0400);
+        when(player.getYSpeed()).thenReturn((short) -0x0600);
+
+        MockAttackableEnemy boss = new MockAttackableEnemy(160, 112, 0xC8);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(boss);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertTrue(boss.wasAttacked, "Boss should be attacked before bounce rules are applied");
+        verify(player).setXSpeed((short) -0x0200);
+        verify(player).setYSpeed((short) 0x0300);
+    }
+
+    @Test
+    public void objectInteractionRuleUsesDefaultWhenTypedGroupMissingForBossBounce() {
+        GameRules base = GameRules.SONIC_1;
+        GameRules rulesWithoutObjectInteractionGroup = new GameRules(
+                base.playerMovement(),
+                base.playerCapability(),
+                base.collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                null,
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble());
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_1);
+        when(player.getGameRules()).thenReturn(rulesWithoutObjectInteractionGroup);
+        when(player.getRolling()).thenReturn(true);
+        when(player.getAnimationId()).thenReturn(ObjectManager.ANIM_ROLL);
+        when(player.getXSpeed()).thenReturn((short) 0x0400);
+        when(player.getYSpeed()).thenReturn((short) -0x0600);
+
+        MockAttackableEnemy boss = new MockAttackableEnemy(160, 112, 0xC8);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(boss);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertTrue(boss.wasAttacked, "Boss should be attacked before bounce rules are applied");
+        verify(player).setXSpeed((short) -0x0400);
+        verify(player).setYSpeed((short) 0x0600);
+    }
+
+    @Test
     public void testS3kSidekickRollingStatusWithoutRollAnimationDoesNotAttackEnemy() {
         when(player.getCentreX()).thenReturn((short) 500);
 
@@ -395,7 +553,7 @@ public class TestTouchResponseManager {
         when(sidekick.getDead()).thenReturn(false);
         when(sidekick.getInvulnerable()).thenReturn(false);
         when(sidekick.getInvincibleFrames()).thenReturn(0);
-        when(sidekick.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(sidekick.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(sidekick.getRolling()).thenReturn(true);
         when(sidekick.getAnimationId()).thenReturn(Sonic3kAnimationIds.WALK.id());
 
@@ -411,6 +569,33 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void sidekickStaleRollAnimationWithoutRollingStatusDoesNotAttackBoss() {
+        when(player.getCentreX()).thenReturn((short) 500);
+
+        AbstractPlayableSprite sidekick = mock(AbstractPlayableSprite.class);
+        when(sidekick.getCentreX()).thenReturn((short) 160);
+        when(sidekick.getCentreY()).thenReturn((short) 112);
+        when(sidekick.getYRadius()).thenReturn((short) 20);
+        when(sidekick.getCrouching()).thenReturn(false);
+        when(sidekick.getDead()).thenReturn(false);
+        when(sidekick.getInvulnerable()).thenReturn(false);
+        when(sidekick.getInvincibleFrames()).thenReturn(0);
+        when(sidekick.getGameRules()).thenReturn(GameRules.SONIC_2);
+        when(sidekick.getRolling()).thenReturn(false);
+        when(sidekick.getAnimationId()).thenReturn(ObjectManager.ANIM_ROLL);
+
+        MockAttackableEnemy boss = new MockAttackableEnemy(160, 112, 0xC8);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(boss);
+
+        objectManager.update(0, player, List.of(sidekick), 1);
+
+        assertFalse(boss.wasAttacked,
+                "A stale roll animation byte must not make a non-rolling sidekick attack a boss");
+        verify(sidekick).applyHurt(anyInt());
+    }
+
+    @Test
     public void testSidekickTouchResponseStopsAfterFirstOverlappingObject() {
         when(player.getCentreX()).thenReturn((short) 500);
 
@@ -422,7 +607,7 @@ public class TestTouchResponseManager {
         when(sidekick.getDead()).thenReturn(false);
         when(sidekick.getInvulnerable()).thenReturn(false);
         when(sidekick.getInvincibleFrames()).thenReturn(0);
-        when(sidekick.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(sidekick.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(sidekick.getAnimationId()).thenReturn(Sonic3kAnimationIds.ROLL.id());
 
         MockTouchObject firstOverlap = new MockTouchObject(160, 112, 0x48);
@@ -450,7 +635,7 @@ public class TestTouchResponseManager {
         when(sidekick.getDead()).thenReturn(false);
         when(sidekick.getInvulnerable()).thenReturn(false);
         when(sidekick.getInvincibleFrames()).thenReturn(0);
-        when(sidekick.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(sidekick.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(sidekick.getAnimationId()).thenReturn(Sonic3kAnimationIds.WALK.id());
 
         MockMainOnlyTouchObject mainOnlyOverlap = new MockMainOnlyTouchObject(160, 112, 0x48);
@@ -480,7 +665,7 @@ public class TestTouchResponseManager {
         when(sidekick.getDead()).thenReturn(false);
         when(sidekick.getInvulnerable()).thenReturn(false);
         when(sidekick.getInvincibleFrames()).thenReturn(0);
-        when(sidekick.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(sidekick.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(sidekick.getAnimationId()).thenReturn(Sonic3kAnimationIds.ROLL.id());
 
         MockMultiRegionTouchObject firstOverlap = new MockMultiRegionTouchObject(
@@ -535,7 +720,7 @@ public class TestTouchResponseManager {
 
     @Test
     public void s3kInstaShieldSuppressesHurtWithoutDeflectingShieldReactiveHurtObject() {
-        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(player.getDoubleJumpFlag()).thenReturn(1);
         when(player.getShieldType()).thenReturn(null);
         when(player.hasShield()).thenReturn(false);
@@ -553,7 +738,7 @@ public class TestTouchResponseManager {
 
     @Test
     public void realShieldDeflectsShieldReactiveHurtObject() {
-        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(player.getDoubleJumpFlag()).thenReturn(0);
         when(player.hasShield()).thenReturn(true);
 
@@ -570,7 +755,7 @@ public class TestTouchResponseManager {
 
     @Test
     public void s3kInstaShieldSuppressionUsesPreUpdateObjectPositionDuringPostObjectTouchPass() {
-        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(player.getDoubleJumpFlag()).thenReturn(1);
         when(player.getShieldType()).thenReturn(null);
         when(player.hasShield()).thenReturn(false);
@@ -765,7 +950,7 @@ public class TestTouchResponseManager {
         when(player.getCentreX()).thenReturn((short) 160);
         when(player.getCentreY()).thenReturn((short) 112);
         when(player.getYRadius()).thenReturn((short) 15);
-        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(player.getAnimationId()).thenReturn(Sonic3kAnimationIds.SPINDASH.id());
         when(player.getYSpeed()).thenReturn((short) 0);
 
@@ -787,7 +972,7 @@ public class TestTouchResponseManager {
         when(player.getCentreX()).thenReturn((short) 160);
         when(player.getCentreY()).thenReturn((short) 112);
         when(player.getYRadius()).thenReturn((short) 15);
-        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(player.getAnimationId()).thenReturn(Sonic3kAnimationIds.SPINDASH.id());
         when(player.getYSpeed()).thenReturn((short) 0);
 
@@ -809,7 +994,7 @@ public class TestTouchResponseManager {
         when(player.getCentreX()).thenReturn((short) 160);
         when(player.getCentreY()).thenReturn((short) 112);
         when(player.getYRadius()).thenReturn((short) 15);
-        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(player.getAnimationId()).thenReturn(Sonic3kAnimationIds.SPINDASH.id());
         when(player.getYSpeed()).thenReturn((short) 0);
 
@@ -835,6 +1020,7 @@ public class TestTouchResponseManager {
         when(player.getCentreY()).thenReturn((short) 112);
         when(player.getYRadius()).thenReturn((short) 20);
         when(player.getAnimationId()).thenReturn(ObjectManager.ANIM_ROLL);
+        when(player.getRolling()).thenReturn(true);
 
         MockSnapshotAttackableEnemy enemy = new MockSnapshotAttackableEnemy(190, 112, 0x02);
         setupTableSize(2, 0x0C, 0x14);
@@ -942,6 +1128,37 @@ public class TestTouchResponseManager {
     }
 
     // ==================== Helper Classes ====================
+
+    private static Knuckles mockKnucklesTouchPlayer(GameRules rules) {
+        Knuckles knuckles = mock(Knuckles.class);
+        when(knuckles.getCentreX()).thenReturn((short) 160);
+        when(knuckles.getCentreY()).thenReturn((short) 112);
+        when(knuckles.getYRadius()).thenReturn((short) 20);
+        when(knuckles.getCrouching()).thenReturn(false);
+        when(knuckles.getDead()).thenReturn(false);
+        when(knuckles.getInvulnerable()).thenReturn(false);
+        when(knuckles.getInvincibleFrames()).thenReturn(0);
+        when(knuckles.getAnimationId()).thenReturn(Sonic3kAnimationIds.WALK.id());
+        when(knuckles.getRolling()).thenReturn(false);
+        when(knuckles.getGameRules()).thenReturn(rules);
+        return knuckles;
+    }
+
+    private static GameRules gameRulesWithPlayerCapability(
+            GameRules baseGameRules, GameRules capabilityGameRules) {
+        GameRules base = baseGameRules;
+        return new GameRules(
+                base.playerMovement(),
+                capabilityGameRules.playerCapability(),
+                base.collision(),
+                base.playerAnimation(),
+                base.camera(),
+                base.ring(),
+                base.objectInteraction(),
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble());
+    }
 
     /**
      * Mock object that tracks touch events.
@@ -1409,4 +1626,3 @@ public class TestTouchResponseManager {
         }
     }
 }
-

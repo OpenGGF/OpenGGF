@@ -1,7 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic1.objects.TestPlayableSprite;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
@@ -86,8 +86,8 @@ class TestCnzCylinderInstance {
     void captureDoesNotLatchStaleLogicalInputWhileHeld() {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawn());
         cylinder.setServices(new TestObjectServices());
-        FeatureSetTestPlayableSprite player = new FeatureSetTestPlayableSprite();
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        GameRulesTestPlayableSprite player = new GameRulesTestPlayableSprite();
+        player.setGameRulesForTest(GameRules.SONIC_3K);
         player.setCentreX((short) 0x1BC6);
         player.setCentreY((short) 0x07AC);
         player.setLogicalInputState(false, false, false, true, false);
@@ -787,9 +787,9 @@ class TestCnzCylinderInstance {
         releaseSlot.invoke(cylinder, slot, frameCounter, jumpedOff, jumpReleaseY);
     }
 
-    private static final class FeatureSetTestPlayableSprite extends TestPlayableSprite {
-        void setPhysicsFeatureSetForTest(PhysicsFeatureSet featureSet) {
-            setPhysicsFeatureSet(featureSet);
+    private static final class GameRulesTestPlayableSprite extends TestPlayableSprite {
+        public void setGameRulesForTest(GameRules featureSet) {
+            super.setGameRulesForTest(featureSet);
         }
     }
 }

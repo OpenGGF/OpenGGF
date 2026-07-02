@@ -7,7 +7,6 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.WaterDataProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.WaterSystemSnapshot;
-import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.objects.ObjectSpawn;
 
 import java.util.HashMap;
@@ -25,9 +24,8 @@ import java.util.logging.Logger;
  * which delegates to a game-specific {@link WaterDataProvider} implementation. Each game module
  * supplies its own provider via {@code GameModule.getWaterDataProvider()}.
  *
- * <p>Legacy methods {@link #loadForLevel(Rom, int, int, List)} (S2) and
- * {@link #loadForLevelS1(Rom, int, int)} (S1) are deprecated and retained only for
- * backward compatibility with existing tests.
+ * <p>The legacy method {@link #loadForLevel(Rom, int, int, List)} (S2) is deprecated and
+ * retained only for backward compatibility with existing tests.
  */
 public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(WaterSystem.class.getName());
@@ -55,10 +53,6 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
     // ROM zone IDs - Sonic 2 (from SPGSonic2Overlay.Lua ZONE_NAMES table)
     private static final int ZONE_ID_CPZ = 0x0D; // Chemical Plant Zone
     private static final int ZONE_ID_ARZ = 0x0F; // Aquatic Ruin Zone
-
-    // ROM zone IDs - Sonic 1 (from Constants.asm: id_LZ = 1, id_SBZ = 5)
-    private static final int S1_ZONE_ID_LZ  = Sonic1Constants.ZONE_LZ;  // 0x01 - Labyrinth Zone
-    private static final int S1_ZONE_ID_SBZ = Sonic1Constants.ZONE_SBZ; // 0x05 - Scrap Brain Zone
 
     // Water configuration data
     private final Map<String, WaterConfig> waterConfigs = new HashMap<>();
@@ -228,36 +222,6 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
     }
 
     /**
-     * Load water configuration for Sonic 1 levels using hardcoded heights.
-     * S1 water heights are defined in LZWaterFeatures.asm (lines 49-52) rather
-     * than a ROM table like S2. Only LZ acts 1-3 and SBZ3 have water.
-     *
-     * @param rom    ROM data (used for loading underwater palettes)
-     * @param zoneId S1 ROM zone ID (e.g., Sonic1Constants.ZONE_LZ)
-     * @param actId  Act index (0-based)
-     * @deprecated Use {@link #loadForLevelFromProvider(WaterDataProvider, Rom, int, int, PlayerCharacter)} instead.
-     *             Retained for backward compatibility with tests.
-     */
-    @Deprecated
-    public void loadForLevelS1(Rom rom, int zoneId, int actId) {
-        String key = makeKey(zoneId, actId);
-
-        Integer waterHeight = getS1WaterHeight(zoneId, actId);
-        if (waterHeight == null) {
-            waterConfigs.put(key, new WaterConfig(false, 0, null));
-            return;
-        }
-
-        Palette[] underwaterPalette = loadS1UnderwaterPalette(rom, zoneId);
-        waterConfigs.put(key, new WaterConfig(true, waterHeight, underwaterPalette));
-        dynamicWaterStates.put(key, new DynamicWaterState(waterHeight));
-
-        LOGGER.info(String.format("S1 Zone %d Act %d: Water at Y=%d (0x%X), palette=%s",
-                zoneId, actId, waterHeight, waterHeight,
-                underwaterPalette != null ? "loaded" : "none"));
-    }
-
-    /**
      * Load water configuration using a game-agnostic provider.
      * New entry point that replaces game-specific loadForLevel/loadForLevelS1.
      *
@@ -333,92 +297,6 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
         // Tick screen shake countdown (ROM: Obj_6E6E 180-frame timer)
         if (state.shakeTimer > 0) {
             state.shakeTimer--;
-        }
-    }
-
-    /**
-     * Get the hardcoded initial water height for a Sonic 1 level.
-     * Values from LZWaterFeatures.asm WaterHeight table (lines 49-52).
-     * <p>
-     * The table has 4 entries indexed by act (0-2 for LZ acts 1-3, 3 for SBZ3).
-     * SBZ act 3 reuses the LZ water system with its own height.
-     *
-     * @param zoneId S1 ROM zone ID
-     * @param actId  Act index (0-based)
-     * @return Water height in pixels, or null if no water in this level
-     */
-    private Integer getS1WaterHeight(int zoneId, int actId) {
-        if (zoneId == S1_ZONE_ID_LZ) {
-            return switch (actId) {
-                case 0 -> Sonic1Constants.WATER_HEIGHT_LZ1;  // 0x00B8
-                case 1 -> Sonic1Constants.WATER_HEIGHT_LZ2;  // 0x0328
-                case 2 -> Sonic1Constants.WATER_HEIGHT_LZ3;  // 0x0900
-                default -> null;
-            };
-        }
-        // SBZ Act 3 (actId == 2) reuses LZ water mechanics
-        if (zoneId == S1_ZONE_ID_SBZ && actId == 2) {
-            return Sonic1Constants.WATER_HEIGHT_SBZ3; // 0x0228
-        }
-        return null;
-    }
-
-    /**
-     * Load the underwater palette for a Sonic 1 water zone from ROM.
-     * <p>
-     * S1 has two separate underwater palette sets:
-     * <ul>
-     *   <li>Pal_LZWater (128 bytes at 0x2460): zone palette lines 0-3 for LZ</li>
-     *   <li>Pal_SBZ3Water (128 bytes at 0x27A0): zone palette lines 0-3 for SBZ3</li>
-     * </ul>
-     * Additionally, S1 has separate Sonic underwater palettes (Pal_LZSonWater,
-     * Pal_SBZ3SonWat) which replace palette line 0. These are loaded into the
-     * main underwater palette array at index 0.
-     *
-     * @param rom    ROM data
-     * @param zoneId S1 ROM zone ID
-     * @return 4-line underwater palette, or null if no underwater palette
-     */
-    private Palette[] loadS1UnderwaterPalette(Rom rom, int zoneId) {
-        int zoneUnderwaterAddr;
-        int sonicUnderwaterAddr;
-
-        if (zoneId == S1_ZONE_ID_LZ) {
-            zoneUnderwaterAddr = Sonic1Constants.PAL_LZ_UNDERWATER_ADDR;    // 0x2460
-            sonicUnderwaterAddr = Sonic1Constants.PAL_LZ_SONIC_UNDERWATER_ADDR; // 0x2820
-        } else if (zoneId == S1_ZONE_ID_SBZ) {
-            zoneUnderwaterAddr = Sonic1Constants.PAL_SBZ3_UNDERWATER_ADDR;  // 0x27A0
-            sonicUnderwaterAddr = Sonic1Constants.PAL_SBZ3_SONIC_UNDERWATER_ADDR; // 0x2840
-        } else {
-            return null;
-        }
-
-        try {
-            // Load the 4-line zone underwater palette (128 bytes)
-            byte[] paletteData = rom.readBytes(zoneUnderwaterAddr, PALETTE_SIZE_BYTES);
-            Palette[] palettes = new Palette[4];
-            for (int i = 0; i < 4; i++) {
-                byte[] lineData = new byte[32];
-                System.arraycopy(paletteData, i * 32, lineData, 0, 32);
-                palettes[i] = new Palette();
-                palettes[i].fromSegaFormat(lineData);
-            }
-
-            // Load Sonic's underwater palette (32 bytes = 1 palette line) into line 0.
-            // In S1, the Sonic underwater palette replaces palette line 0 (the sprite
-            // palette line containing Sonic's colors). The zone underwater palette at
-            // destinationPaletteLine=0 covers all 4 lines, then the Sonic-specific
-            // palette overwrites line 0 with Sonic's underwater colors.
-            byte[] sonicPalData = rom.readBytes(sonicUnderwaterAddr, 32);
-            palettes[0] = new Palette();
-            palettes[0].fromSegaFormat(sonicPalData);
-
-            return palettes;
-        } catch (Exception e) {
-            LOGGER.warning(String.format(
-                    "Failed to load S1 underwater palette for zone %d at 0x%X: %s",
-                    zoneId, zoneUnderwaterAddr, e.getMessage()));
-            return null;
         }
     }
 

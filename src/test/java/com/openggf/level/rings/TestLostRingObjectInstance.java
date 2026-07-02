@@ -1,5 +1,7 @@
 package com.openggf.level.rings;
 
+import com.openggf.game.rules.GameRules;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,6 +11,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
@@ -68,12 +71,12 @@ class TestLostRingObjectInstance {
     }
 
     @Test
-    void floorCheckCadenceReadsFeatureSetMaskS1EveryFourFramesS2EveryEight() {
+    void floorCheckCadenceReadsGameRulesMaskS1EveryFourFramesS2EveryEight() {
         // ROM: per-game floor-check cadence (relocated from RingManager.LostRingPool.updatePhysics,
         // RingManager.java:1242-1248). S1 probes every 4 frames (andi.b #3), S2/S3K every 8 (andi.b #7).
-        // The object must consult PhysicsFeatureSet.ringFloorCheckMask(), not a hardcoded constant.
+        // The object must consult GameRules.ringFloorCheckMask(), not a hardcoded constant.
         ProbeRecordingRing s1Ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
-                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S1,
+                /*mask*/GameRules.SONIC_1.ring().ringFloorCheckMask(),
                 /*reverseGravity*/false);
         // phaseOffset 0: probe fires when (vbla & mask) == 0.
         s1Ring.setVblaForTest(4);   // 4 & 3 == 0 → S1 probes; would NOT probe under S2 mask (4 & 7 == 4)
@@ -81,7 +84,7 @@ class TestLostRingObjectInstance {
         assertEquals(1, s1Ring.floorProbeCount, "S1 (#3 mask) must probe the floor on frame 4");
 
         ProbeRecordingRing s2Ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
-                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
+                /*mask*/GameRules.SONIC_2.ring().ringFloorCheckMask(),
                 /*reverseGravity*/false);
         s2Ring.setVblaForTest(4);   // 4 & 7 == 4 → S2 does NOT probe on frame 4
         s2Ring.stepPhysicsForTest(0x18, true);
@@ -97,7 +100,7 @@ class TestLostRingObjectInstance {
         // which probes the CEILING (RingCheckFloorDist_ReverseGravity, upward) and only when
         // yVel <= 0 (rising). Relocated from RingManager.java:1271-1294.
         ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, /*yVel rising*/-0x0400,
-                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
+                /*mask*/GameRules.SONIC_2.ring().ringFloorCheckMask(),
                 /*reverseGravity*/true);
         ring.setVblaForTest(0);     // 0 & 7 == 0 → probe fires this frame
         ring.stepPhysicsForTest(0x18, true);
@@ -111,7 +114,7 @@ class TestLostRingObjectInstance {
         // (s2.asm:25215-25217): off-screen rings keep moving, but do not
         // bounce on terrain until the render pass has marked them visible.
         ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
-                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
+                /*mask*/GameRules.SONIC_2.ring().ringFloorCheckMask(),
                 /*reverseGravity*/false,
                 /*renderFlagForFloorProbe*/false);
         ring.setVblaForTest(0);
@@ -123,11 +126,34 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void s2LostRingFloorProbeUsesLatchedPriorBuildSpritesRenderFlag() {
+        // S2 Obj37_Main reads render_flags bit 7 before RingCheckFloorDist (s2.asm:25215-25217).
+        // BuildSprites clears and refreshes that bit after DisplaySprite using width_pixels=8 and
+        // the assumed 32 px Y band (s2.asm:30560-30588), so the floor probe must observe the
+        // previously latched bit, not a same-step visibility recomputation after movement.
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        LatchedRenderProbeRing ring = new LatchedRenderProbeRing(
+                0x100, 0x00FF, 0, 0x0200);
+
+        ring.update(0, null);
+
+        assertEquals(1, ring.floorProbeCount,
+                "Obj37_Init starts render_flags at $84, so the first cadence hit may probe");
+        assertFalse(ring.renderFlagForTest(),
+                "post-step BuildSprites should clear bit 7 once y_pos reaches the assumed-height band edge");
+
+        ring.update(1, null);
+
+        assertEquals(1, ring.floorProbeCount,
+                "the next object step must consume the latched clear bit and skip terrain");
+    }
+
+    @Test
     void s1OffscreenLostRingStillProbesTerrain() {
         // S1 RLoss_Bounce calls ObjFloorDist directly after the vblank cadence gate; unlike S2/S3K,
         // there is no render_flags bit-7 check before the floor probe.
         ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
-                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S1,
+                /*mask*/GameRules.SONIC_1.ring().ringFloorCheckMask(),
                 /*reverseGravity*/false,
                 /*renderFlagForFloorProbe*/false,
                 /*requiresRenderFlagForFloorProbe*/false);
@@ -147,7 +173,7 @@ class TestLostRingObjectInstance {
         // one-tile shortcut, or shallow/sloped terrain bounces too low.
         TerrainBackedRing ring = new TerrainBackedRing(
                 0x4512, 0x07E1, 0x0200, 0x0D1E,
-                com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
+                GameRules.SONIC_2.ring().ringFloorCheckMask(),
                 false,
                 true);
         ring.setVblaForTest(0);
@@ -241,6 +267,35 @@ class TestLostRingObjectInstance {
         @Override
         protected int ringCheckCeilingDist(int x, int y) {
             ceilingProbeCount++;
+            return 0;
+        }
+    }
+
+    private static final class LatchedRenderProbeRing extends LostRingObjectInstance {
+        int floorProbeCount;
+
+        private LatchedRenderProbeRing(int xPixel, int yPixel, int xVel, int yVel) {
+            super(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF, 0x37, 0, 0, false, 0));
+            initFixedPointForTest(xPixel, yPixel, xVel, yVel, 0, 0xFF);
+        }
+
+        boolean renderFlagForTest() {
+            return hasRomRenderFlagForFloorProbe();
+        }
+
+        @Override
+        protected int resolveFloorCheckMask() {
+            return GameRules.SONIC_2.ring().ringFloorCheckMask();
+        }
+
+        @Override
+        protected int resolveVblaCounter() {
+            return 0;
+        }
+
+        @Override
+        protected int ringCheckFloorDist(int x, int y) {
+            floorProbeCount++;
             return 0;
         }
     }
@@ -424,7 +479,35 @@ class TestLostRingObjectInstance {
         assertEquals(23, rings.get(0).getSlotIndex(),
                 "S2 HurtCharacter preallocates the first Obj37 owner slot before Obj37_Init");
         assertTrue(rings.get(1).getSlotIndex() > rings.get(0).getSlotIndex(),
-                "subsequent S2 lost rings allocate after the owner slot");
+                "with no lower holes, subsequent S2 lost rings occupy later slots");
+    }
+
+    @Test
+    void s2LostRingRemainderUsesPlainAllocateObject() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_2), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        for (int slot = 16; slot <= 22; slot++) {
+            assertTrue(objectManager.reserveDynamicSlot(slot), "setup should reserve slot " + slot);
+        }
+        assertTrue(objectManager.reserveDynamicSlot(30), "setup should reserve the owner slot");
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+
+        ringManager.spawnLostRings(player, 3, 0, player.getCentreX(), player.getCentreY(), 30);
+
+        List<LostRing> rings = ringManager.getActiveLostRings();
+        assertEquals(3, rings.size());
+        assertEquals(30, rings.get(0).getSlotIndex(),
+                "S2 ring 0 uses the HurtCharacter-preallocated Obj37 owner slot");
+        assertEquals(23, rings.get(1).getSlotIndex(),
+                "S2 Obj37_Init calls plain AllocateObject for ring 1, not AllocateObjectAfterCurrent");
+        assertEquals(24, rings.get(2).getSlotIndex(),
+                "S2 plain AllocateObject continues from the lowest free dynamic slot");
     }
 
     @Test
@@ -451,6 +534,34 @@ class TestLostRingObjectInstance {
                 "S3K HurtCharacter preallocates the first Obj37 owner slot before Obj37_Init");
         assertTrue(rings.get(1).getSlotIndex() > rings.get(0).getSlotIndex(),
                 "subsequent S3K lost rings allocate after the owner slot");
+    }
+
+    @Test
+    void s3kLostRingRemainderUsesAllocateObjectAfterCurrent() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        for (int slot = 4; slot <= 8; slot++) {
+            assertTrue(objectManager.reserveDynamicSlot(slot), "setup should reserve slot " + slot);
+        }
+        assertTrue(objectManager.reserveDynamicSlot(30), "setup should reserve the owner slot");
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+
+        ringManager.spawnLostRings(player, 3, 0, player.getCentreX(), player.getCentreY(), 30);
+
+        List<LostRing> rings = ringManager.getActiveLostRings();
+        assertEquals(3, rings.size());
+        assertEquals(30, rings.get(0).getSlotIndex(),
+                "S3K ring 0 uses the HurtCharacter-preallocated owner slot");
+        assertEquals(31, rings.get(1).getSlotIndex(),
+                "S3K Obj_Bouncing_Ring allocates ring 1 after the owner slot");
+        assertEquals(32, rings.get(2).getSlotIndex(),
+                "S3K Obj_Bouncing_Ring continues after the previous ring slot");
     }
 
     @Test
@@ -489,6 +600,60 @@ class TestLostRingObjectInstance {
         assertEquals(baselineYSub + baselineYVel, stepped.getYSubpixelForTest());
         assertEquals(baselineYVel + 0x18, stepped.getYVelForTest(),
                 "Obj37_Main applies gravity after the same-frame position update");
+    }
+
+    @Test
+    void delayedS2SpawnSkipsInitialObj37StepForAlreadyPassedChildSlots() throws Exception {
+        LevelManager baselineLevelManager = GameServices.level();
+        ObjectManager baselineObjectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_2), 0, null, null);
+        setField(baselineLevelManager, "objectManager", baselineObjectManager);
+        reserveS2Arz2LateFreedLostRingLayout(baselineObjectManager);
+
+        RingManager baselineRingManager = buildRingManagerWithLevelManager(baselineLevelManager);
+        setField(baselineLevelManager, "ringManager", baselineRingManager);
+
+        SpawnTestPlayableSprite baselinePlayer = new SpawnTestPlayableSprite((short) 0x13D2, (short) 0x043C);
+        baselineRingManager.spawnLostRings(
+                baselinePlayer, 6, 0, baselinePlayer.getCentreX(), baselinePlayer.getCentreY(), 56);
+        List<LostRingObjectInstance> baseline =
+                baselineObjectManager.activeObjectsOfType(LostRingObjectInstance.class);
+
+        LevelManager steppedLevelManager = GameServices.level();
+        ObjectManager steppedObjectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_2), 0, null, null);
+        setField(steppedLevelManager, "objectManager", steppedObjectManager);
+        reserveS2Arz2LateFreedLostRingLayout(steppedObjectManager);
+
+        RingManager steppedRingManager = buildRingManagerWithLevelManager(steppedLevelManager);
+        setField(steppedLevelManager, "ringManager", steppedRingManager);
+
+        SpawnTestPlayableSprite steppedPlayer = new SpawnTestPlayableSprite((short) 0x13D2, (short) 0x043C);
+        steppedRingManager.spawnLostRingsWithInitialObjectStep(
+                steppedPlayer, 6, 0, steppedPlayer.getCentreX(), steppedPlayer.getCentreY(), 56);
+        List<LostRingObjectInstance> stepped =
+                steppedObjectManager.activeObjectsOfType(LostRingObjectInstance.class);
+
+        assertEquals(6, baseline.size());
+        assertEquals(6, stepped.size());
+        for (int i = 0; i < stepped.size(); i++) {
+            LostRingObjectInstance baselineRing = baseline.get(i);
+            LostRingObjectInstance steppedRing = stepped.get(i);
+            assertEquals(baselineRing.getSlotIndex(), steppedRing.getSlotIndex());
+            if (steppedRing.getSlotIndex() < 56) {
+                assertEquals(baselineRing.getXSubpixelForTest(), steppedRing.getXSubpixelForTest(),
+                        "child Obj37 slots below the owner were already passed by ExecuteObjects");
+                assertEquals(baselineRing.getYSubpixelForTest(), steppedRing.getYSubpixelForTest());
+                assertEquals(baselineRing.getYVelForTest(), steppedRing.getYVelForTest());
+            } else {
+                assertEquals(baselineRing.getXSubpixelForTest() + baselineRing.getXVelForTest(),
+                        steppedRing.getXSubpixelForTest(),
+                        "owner-or-later Obj37 slots execute Obj37_Main in the spawn frame");
+                assertEquals(baselineRing.getYSubpixelForTest() + baselineRing.getYVelForTest(),
+                        steppedRing.getYSubpixelForTest());
+                assertEquals(baselineRing.getYVelForTest() + 0x18, steppedRing.getYVelForTest());
+            }
+        }
     }
 
     @Test
@@ -569,6 +734,15 @@ class TestLostRingObjectInstance {
             }
         });
         return ring;
+    }
+
+    private void reserveS2Arz2LateFreedLostRingLayout(ObjectManager objectManager) {
+        for (int slot = 16; slot <= 57; slot++) {
+            if (slot == 48 || slot == 49 || slot == 54 || slot == 55 || slot == 57) {
+                continue;
+            }
+            assertTrue(objectManager.reserveDynamicSlot(slot), "setup should reserve slot " + slot);
+        }
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {

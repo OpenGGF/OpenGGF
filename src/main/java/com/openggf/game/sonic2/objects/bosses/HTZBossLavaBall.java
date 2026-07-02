@@ -59,6 +59,7 @@ public class HTZBossLavaBall extends AbstractBossChild
     private int yVel;
 
     // State
+    private boolean initialized;
     private boolean leftBall;
     private boolean fromLeftSide;
     private int animFrame;
@@ -69,33 +70,54 @@ public class HTZBossLavaBall extends AbstractBossChild
         this(new Sonic2HTZBossInstance(spawn), spawn.x(), spawn.y(), false, false);
     }
 
+    public static HTZBossLavaBall createInitialPairSpawner(Sonic2HTZBossInstance parent, int spawnX, int spawnY) {
+        return new HTZBossLavaBall(parent, spawnX, spawnY, true, false, 0);
+    }
+
     public HTZBossLavaBall(Sonic2HTZBossInstance parent, int spawnX, int spawnY,
                            boolean leftBall, boolean fromLeftSide) {
+        this(parent, spawnX, spawnY, leftBall, true, 0);
+    }
+
+    private HTZBossLavaBall(Sonic2HTZBossInstance parent, int spawnX, int spawnY,
+                            boolean leftBall, boolean initialized, int ignored) {
         super(parent, "HTZ Lava Ball", 3, Sonic2ObjectIds.HTZ_BOSS);
-        this.leftBall = leftBall;
-        this.fromLeftSide = fromLeftSide;
 
         // Initial position
         this.currentX = spawnX;
         this.currentY = spawnY;
-        this.xFixed = spawnX << 16;
-        this.yFixed = spawnY << 16;
-
-        // Set velocities based on which ball and which side boss is on
-        // ROM: s2.asm:63968-64000
-        this.xVel = leftBall ? LEFT_X_VEL : RIGHT_X_VEL;
-
-        // Y velocity depends on boss position (stronger launch from right side)
-        // ROM: cmpi.w #$2F40,x_pos(a1) / beq.s loc_30000 / move.w #-$6400,y_vel(a1)
-        if (fromLeftSide) {
-            this.yVel = Y_VEL_LEFT_SIDE;
-        } else {
-            this.yVel = Y_VEL_RIGHT_SIDE;
+        if (initialized) {
+            initializeBall(leftBall);
         }
+    }
 
-        // Animation state
+    private void initializeBall(boolean leftBall) {
+        this.initialized = true;
+        this.leftBall = leftBall;
+        this.fromLeftSide = currentX == 0x2F40;
+        this.xFixed = currentX << 16;
+        this.yFixed = currentY << 16;
+        this.xVel = leftBall ? LEFT_X_VEL : RIGHT_X_VEL;
+        this.yVel = fromLeftSide ? Y_VEL_LEFT_SIDE : Y_VEL_RIGHT_SIDE;
         this.animFrame = 0;
         this.animTimer = 3;
+    }
+
+    private void initializePairFromCurrentSlot() {
+        // ROM loc_2FF78 initializes the current SST slot as ball 0, then
+        // AllocateObject creates ball 1 with the same starting x_pos/y_pos.
+        initializeBall(true);
+        Sonic2HTZBossInstance htzParent = (Sonic2HTZBossInstance) parent;
+        HTZBossLavaBall rightBall = spawnFreeChild(() -> new HTZBossLavaBall(
+                htzParent,
+                currentX,
+                currentY,
+                false,
+                true,
+                0));
+        if (htzParent != null) {
+            htzParent.getChildComponents().add(rightBall);
+        }
     }
 
     @Override
@@ -120,6 +142,11 @@ public class HTZBossLavaBall extends AbstractBossChild
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!shouldUpdate(frameCounter)) {
+            return;
+        }
+        if (!initialized) {
+            initializePairFromCurrentSlot();
+            updateDynamicSpawn();
             return;
         }
 
@@ -180,7 +207,7 @@ public class HTZBossLavaBall extends AbstractBossChild
      * ROM: move.b #$8B,collision_flags(a1) - enemy projectile with collision size
      */
     public int getCollisionFlags() {
-        if (isDestroyed()) {
+        if (!initialized || isDestroyed()) {
             return 0;
         }
         return 0x8B;
@@ -193,7 +220,7 @@ public class HTZBossLavaBall extends AbstractBossChild
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (isDestroyed()) {
+        if (!initialized || isDestroyed()) {
             return;
         }
         ObjectRenderManager renderManager =

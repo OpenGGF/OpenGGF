@@ -4,6 +4,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -34,7 +35,7 @@ import java.util.Map;
 public class OilSurfaceManager {
 
     // Oil surface constants (ROM: Obj07_Init at s2.asm:49671-49677)
-    private final int oilY = Sonic2Constants.OIL_SURFACE_Y;
+    private int oilY = Sonic2Constants.OIL_SURFACE_Y;
     private final int submersionMax = Sonic2Constants.OIL_SUBMERSION_MAX;
 
     // Per-player oil state, keyed by sprite identity.
@@ -144,9 +145,18 @@ public class OilSurfaceManager {
      */
     public void reset() {
         playerStates.clear();
+        oilY = Sonic2Constants.OIL_SURFACE_Y;
         frameCounter = 0;
         frameAdvancedThisTick = false;
         registeredOilPlayers = 0;
+    }
+
+    /**
+     * Mirrors event-script writes to {@code (Oil+y_pos).w}, such as the OOZ2
+     * boss approach lowering the oil support plane to {@code $2D8}.
+     */
+    public void setOilSurfaceY(int oilY) {
+        this.oilY = oilY & 0xFFFF;
     }
 
     // =========================================================================
@@ -158,6 +168,14 @@ public class OilSurfaceManager {
         PlayerOilState state = stateFor(player);
 
         if (player.getDead() || player.isDebugMode()) {
+            clearOilTrackingOnly(state);
+            return;
+        }
+        if (player.isObjectControlSuppressesMovement()) {
+            // PlatformObject_ChkYRange returns before support when
+            // obj_control bit 7 is set (s2.asm:35978-35981). This matters
+            // after TailsCPU_Despawn writes $81: Obj07 runs later in the same
+            // object phase and must not re-seat Tails on the oil surface.
             clearOilTrackingOnly(state);
             return;
         }
@@ -193,6 +211,7 @@ public class OilSurfaceManager {
             int targetY = oilY - state.submersion - player.getYRadius();
             player.setAir(false);
             player.setOnObject(true);
+            latchOilSupport(player);
             player.setCentreYPreserveSubpixel((short) targetY);
         } else {
             // Not on oil - recover submersion counter
@@ -208,6 +227,7 @@ public class OilSurfaceManager {
                 state.standingOnOil = true;
                 player.setAir(false);
                 player.setOnObject(true);
+                latchOilSupport(player);
 
                 // ROM RideObject_SetRide (s2.asm:35741-35743):
                 //   move.b #0, angle(a1)
@@ -300,6 +320,15 @@ public class OilSurfaceManager {
 
     private void clearOilTrackingOnly(PlayerOilState state) {
         state.standingOnOil = false;
+    }
+
+    private void latchOilSupport(AbstractPlayableSprite player) {
+        // Obj07 calls PlatformObject_SingleCharacter (s2.asm:50157,50189),
+        // whose RideObject_SetRide tail writes interact(a1) to Obj07's SST slot
+        // before TailsCPU_CheckDespawn re-dereferences that slot on the next
+        // CPU tick (s2.asm:35999-36006,39409-39429). Obj07 is manager-hosted
+        // in the engine, so publish a synthetic live id for the same compare.
+        player.setSyntheticLatchedSolidObject(Sonic2ObjectIds.OIL);
     }
 
     // =========================================================================
@@ -491,10 +520,7 @@ public class OilSurfaceManager {
 
     private void setMoveLock(AbstractPlayableSprite player, int frames) {
         // ROM: move.w #5,move_lock(a1)
-        // Only set if not already locked (don't override longer locks)
-        if (player.getMoveLockTimer() <= 0) {
-            player.setMoveLockTimer(frames);
-        }
+        player.setMoveLockTimer(frames);
     }
 
     /**

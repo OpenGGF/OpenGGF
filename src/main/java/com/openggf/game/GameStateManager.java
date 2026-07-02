@@ -38,6 +38,14 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     private int currentBossId;
 
     /**
+     * Boss defeated flag (S2 ROM: {@code Boss_defeated_flag} at $FFFFF7A7).
+     * Dynamic level events use this separately from {@link #currentBossId}; S2
+     * bosses set it when their escape sequence begins while {@code Current_Boss_ID}
+     * can remain nonzero for boundary/player logic.
+     */
+    private boolean bossDefeatedFlag;
+
+    /**
      * Screen-lock flag (ROM: {@code f_lockscreen} at $FFFFF7AA).
      *
      * <p>S1 {@code Sonic_LevelBound} gates the +64 right level-boundary
@@ -172,6 +180,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         }
 
         this.currentBossId = 0;
+        this.bossDefeatedFlag = false;
         this.screenLocked = false;
         this.screenShakeActive = false;
         this.backgroundCollisionFlag = false;
@@ -207,6 +216,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         // when the boss spawns. Resetting here prevents a prior act's screen lock
         // from leaking into the next act's free-scroll approach.
         screenLocked = false;
+        bossDefeatedFlag = false;
     }
 
     public int getScore() {
@@ -471,6 +481,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     public void setCurrentBossId(int bossId) {
         this.currentBossId = bossId;
         if (bossId != 0) {
+            bossDefeatedFlag = false;
             // ROM: each boss's dynamic-level-event spawn does
             // move.b #1,(f_lockscreen).w alongside loading the boss object.
             // Setting the boss id is the engine's spawn point, so latch the
@@ -485,6 +496,20 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      */
     public boolean isBossFightActive() {
         return currentBossId != 0;
+    }
+
+    /**
+     * Returns the ROM boss defeated flag used by dynamic level events.
+     */
+    public boolean isBossDefeatedFlag() {
+        return bossDefeatedFlag;
+    }
+
+    /**
+     * Sets the ROM boss defeated flag.
+     */
+    public void setBossDefeatedFlag(boolean bossDefeatedFlag) {
+        this.bossDefeatedFlag = bossDefeatedFlag;
     }
 
     /**
@@ -718,7 +743,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     public GameStateSnapshot capture() {
         return new GameStateSnapshot(
                 score, lives, continues, currentSpecialStageIndex, emeraldCount,
-                gotEmeralds, gotSuperEmeralds, currentBossId,
+                gotEmeralds, gotSuperEmeralds, currentBossId, bossDefeatedFlag,
                 screenShakeActive, backgroundCollisionFlag, bigRingCollected,
                 wfzFireToggle, itemBonus, reverseGravityActive,
                 collectedSpecialRings, endOfLevelActive, endOfLevelFlag, screenLocked);
@@ -734,6 +759,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         this.gotEmeralds = snapshot.gotEmeralds().clone();
         this.gotSuperEmeralds = snapshot.gotSuperEmeralds().clone();
         this.currentBossId = snapshot.currentBossId();
+        this.bossDefeatedFlag = snapshot.bossDefeatedFlag();
         this.screenShakeActive = snapshot.screenShakeActive();
         this.backgroundCollisionFlag = snapshot.backgroundCollisionFlag();
         this.bigRingCollected = snapshot.bigRingCollected();

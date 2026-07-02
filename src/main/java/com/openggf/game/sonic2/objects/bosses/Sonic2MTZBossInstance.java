@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
@@ -444,8 +445,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             }
         }
 
+        // ROM Obj54_MainSub0 writes Boss_Y_pos directly and does not call
+        // Obj54_Float until Obj54_MoveAndShow in later substates
+        // (docs/s2disasm/s2.asm:67271-67298, 67322-67333).
         state.x = getBossX();
-        state.y = getBossY() + applyFloat();
+        state.y = getBossY();
     }
 
     // =========================================================================
@@ -596,8 +600,12 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             state.yVel = 0;
         }
 
-        // Check orb break count: if orbs still breaking away, stay in SubA
-        if (orbBreakCount != 0) {
+        // ROM Obj54_MainSubA waits while objoff_2C (active broken-orb count)
+        // is nonzero. The engine's base touch pass can set Obj54's break flag
+        // before this parent update, while Obj53 consumes it in the later child
+        // update. Treat that pending flag as a same-frame effective count so
+        // SubA cannot skip directly to SubC before the orb has detached.
+        if (orbBreakCount != 0 || pendingOrbBreak) {
             // Still waiting for orbs
         } else {
             // All orbs done: signal and advance
@@ -1076,16 +1084,13 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         private static final int RT_BURST = 8;
 
         /**
-         * ROM intact-orb collision_flags = $87 (s2.asm:67312). In the ROM, $87 with
-         * collision_property=2 reaches Touch_ChkValue, where property 2 routes to
-         * Touch_Special (s2.asm:84707-84729) — which is INERT for this property value
-         * and does NOT hurt the player. The engine's category decoder is driven by the
-         * top two flag bits ($87 & $C0 = $80 = HURT), so emitting the raw $87 would
-         * wrongly hurt the player. We therefore expose the intact orb with a SPECIAL
-         * category ($40 | size) so the dispatcher treats it as listener-only/inert,
-         * matching the ROM's Touch_Special outcome. Size index = $87 & $3F = 7.
+         * ROM intact-orb collision_flags = $87 (s2.asm:67806). S2 TouchResponse
+         * decodes the top two bits directly: $87 & $C0 = $80, which branches to
+         * Touch_ChkHurt rather than Touch_Special (s2.asm:85252-85264). The
+         * MTZ3 trace confirms this path when Sonic touches the intact shield at
+         * f12594 and enters hurt routine before the boss body can rebound him.
          */
-        private static final int ORB_COLLISION = 0x40 | (0x87 & 0x3F);
+        private static final int ORB_COLLISION = 0x87;
         /**
          * ROM break/bounce-orb collision_flags = $DA (s2.asm:67481/67527), set once the
          * objoff_32 timer expires. $DA & $C0 = $C0 = BOSS category, so a rolling/attacking
@@ -1119,7 +1124,10 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         private int bounceBaseY;      // objoff_2E: ground baseline for bounce
         private int xVel;             // x_vel (8.8)
         private int yVel;             // y_vel (8.8)
+        private int xSub;             // low word of x_pos during ObjectMoveAndFall
+        private int ySub;             // low word of y_pos during ObjectMoveAndFall
         private boolean flipX2;       // render_flags.x_flip for break/bounce/face
+        private boolean burstCollisionProperty; // ROM collision_property <= -2 latch
 
         // Display
         private int mappingFrame = 5; // ROM: move.b #5,mapping_frame (s2.asm:67307)
@@ -1160,7 +1168,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 case RT_MAIN -> updateMain(boss, player);
                 case RT_BREAK_AWAY -> updateBreakAway(player);
                 case RT_BOUNCE_AROUND -> updateBounceAround(player);
-                case RT_BURST -> { /* burst handled on touch (Obj53_Burst) */ }
+                case RT_BURST -> finishBurst();
                 default -> { }
             }
 
@@ -1204,6 +1212,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 // ROM: bclr x_flip; if d1 >= 0 bset x_flip.
                 flipX2 = d1 >= 0;
                 xVel = d1;
+                xSub = 0;
+                ySub = 0;
                 return;
             }
 
@@ -1230,9 +1240,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             int d0 = (short) d3 * outerR; // muls.w: operands are 16-bit signed
             int d5 = d0;
             int d4 = d0;
-            // d2 = objoff_39(boss); if objoff_3A(orb) != 0 -> d2 = $10
+            // d2 = objoff_39(boss); if objoff_3A(boss) != 0 -> d2 = $10
+            // (docs/s2disasm/s2.asm:67896-67901). The per-orb objoff_3A tilt
+            // byte from Obj53_Init is not the gate for this flattening branch.
             int d2 = boss.getInnerOrbParam() & 0xFF;
-            if (tiltFlag != 0) {
+            if (breakState != 0) {
                 d2 = 0x10;
             }
             // muls.w d3,d2 (16-bit signed operands)
@@ -1249,8 +1261,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             depth = (short) d4; // move.w d4,objoff_30
             // d6 = objoff_2A(orb) = bossY - 4
             d6 = bossY;
-            // d0 = CalcSine(objoff_3B); if objoff_3A(orb) != 0 -> CalcSine(objoff_3C)
-            int vertAngle = (tiltFlag != 0) ? (flattenAngle & 0xFF) : (verticalAngle & 0xFF);
+            // d0 = CalcSine(objoff_3B); if objoff_3A(boss) != 0 -> CalcSine(objoff_3C)
+            int vertAngle = (breakState != 0) ? (flattenAngle & 0xFF) : (verticalAngle & 0xFF);
             d0 = TrigLookupTable.sinHex(vertAngle);
             // muls.w d0,d2; swap d2 (>>16); add.w d6,d2
             d2 = ((short) d0 * (short) d2) >> 16;
@@ -1260,8 +1272,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             // ROM: addq.b #4,objoff_28
             orbitAngle = (orbitAngle + 4) & 0xFF;
 
-            if (tiltFlag == 0) {
-                // ROM: addq.b #8,objoff_3B; rts
+            if (breakState == 0) {
+                // ROM: tst.b objoff_3A(boss); bne.s +; addq.b #8,objoff_3B; rts
                 verticalAngle = (verticalAngle + 8) & 0xFF;
                 return;
             }
@@ -1320,11 +1332,16 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 // when it goes negative this frame, switch to the hit collision flags
             }
 
-            // ROM: ObjectMoveAndFall (move + add gravity $38), then subi.w #$20,y_vel.
-            currentX += (xVel >> 8); // 16.8 fixed move (x)
-            currentY += (yVel >> 8); // 16.8 fixed move (y)
-            yVel += ORB_GRAVITY;     // +$38
-            yVel -= 0x20;            // subi.w #$20,y_vel => net +$18
+            // ROM: ObjectMoveAndFall moves x_pos/y_pos as longwords, then Obj53
+            // subtracts $20 from y_vel. Preserve x_sub/y_sub so ±$80 horizontal
+            // velocity advances one pixel every other frame.
+            SubpixelMotion.State motion = new SubpixelMotion.State(currentX, currentY, xSub, ySub, xVel, yVel);
+            SubpixelMotion.objectFallXY(motion, ORB_GRAVITY);
+            currentX = motion.x;
+            currentY = motion.y;
+            xSub = motion.xSub;
+            ySub = motion.ySub;
+            yVel = motion.yVel - 0x20; // subi.w #$20,y_vel => net +$18
             // ROM: cmpi.w #$180,y_vel / blt + / move.w #$180,y_vel
             if (yVel >= 0x180) {
                 yVel = 0x180;
@@ -1337,6 +1354,14 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 bounceAngle = 1;                // move.b #1,objoff_2C(orb)
                 routine = RT_BOUNCE_AROUND;     // addq.b #2,routine
                 faceLeader(player);             // bsr Obj53_FaceLeader
+            }
+
+            // ROM Obj53_Animate checks collision_property after BreakAway motion.
+            // A hit while in routine 4 only advances to routine 6; Obj53_Burst
+            // is not reached until the later routine-8 dispatch.
+            if (burstCollisionProperty) {
+                mappingFrame = FRAME_BURST;
+                routine = RT_BOUNCE_AROUND;
             }
         }
 
@@ -1351,10 +1376,12 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 breakTimer--;
             }
 
-            // ROM: bsr Obj53_CheckPlayerHit (the per-frame poll happens via touch).
-            // If the burst frame got latched by a hit, fall through to burst handling.
-            if (mappingFrame == 0x0B) {
-                // ROM bug-path guard: not reachable in our impl (we never set $B); keep alive.
+            // ROM: bsr Obj53_CheckPlayerHit, then Obj53_Animate's local hit check
+            // can advance routine 6 -> routine 8. The actual parent count
+            // decrement happens only when routine 8 dispatches Obj53_Burst.
+            if (burstCollisionProperty) {
+                mappingFrame = FRAME_BURST;
+                routine = RT_BURST;
                 return;
             }
 
@@ -1398,12 +1425,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
          * ROM: Obj53_Burst (s2.asm:67593-67598).
          * PlaySound boss-explosion; decrement boss objoff_2C; DeleteObject.
          */
-        private void burst() {
-            if (routine == RT_BURST) {
-                return; // already bursting
-            }
-            routine = RT_BURST;
-            mappingFrame = FRAME_BURST;
+        private void finishBurst() {
             Sonic2MTZBossInstance boss = (Sonic2MTZBossInstance) parent;
             boss.services().playSfx(Sonic2Sfx.BOSS_EXPLOSION.id);
             boss.decrementOrbBreakCount(); // ROM: subi_.b #1,objoff_2C(boss)
@@ -1452,10 +1474,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         @Override
         public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
             // ROM: a rolling player hitting the $DA (BOSS-category) orb drives
-            // collision_property <= -2 -> Obj53_Burst. Only the break/bounce orb is
-            // burstable; the intact $87 orb (SPECIAL) is not attackable.
+            // collision_property <= -2. Obj53's own update later advances through
+            // Obj53_Animate/Obj53_Burst; Touch_Boss does not decrement the parent
+            // broken-orb count directly.
             if (routine == RT_BREAK_AWAY || routine == RT_BOUNCE_AROUND) {
-                burst();
+                burstCollisionProperty = true;
             }
         }
 

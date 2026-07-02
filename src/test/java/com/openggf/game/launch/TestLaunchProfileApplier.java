@@ -48,7 +48,7 @@ class TestLaunchProfileApplier {
     }
 
     @Test
-    void donationOffOverridesFeatureFlagAndDefaultSource() {
+    void donationOffOverridesRuleAndDefaultSource() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, true);
         config.setConfigValue(SonicConfiguration.CROSS_GAME_SOURCE, "s3k");

@@ -11,7 +11,7 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -103,7 +103,7 @@ public class TestPachinkoTitleCardIntegration {
         spawner.registerObject(player.getInstaShieldObject());
 
         int instaShieldSlot = ((AbstractObjectInstance) player.getInstaShieldObject()).getSlotIndex();
-        assertEquals(PhysicsFeatureSet.SONIC_3K.shieldObjectFixedSlotIndex(), instaShieldSlot,
+        assertEquals(GameRules.SONIC_3K.powerUp().shieldObjectFixedSlotIndex(), instaShieldSlot,
                 "S3K insta-shield reuses the ROM shield fixed Level_object_RAM slot before bonus entry");
 
         BonusStageProvider provider = GameModuleRegistry.getCurrent().getBonusStageProvider();

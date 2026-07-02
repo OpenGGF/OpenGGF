@@ -1,5 +1,7 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
@@ -32,6 +34,14 @@ public class PlayableSpriteAnimation {
 
     public PlayableSpriteAnimation(AbstractPlayableSprite sprite) {
         this.sprite = sprite;
+    }
+
+    private PlayerAnimationRules playerAnimationRulesOrNull() {
+        GameRules rules = sprite.getGameRules();
+        if (rules != null && rules.playerAnimation() != null) {
+            return rules.playerAnimation();
+        }
+        return null;
     }
 
     /**
@@ -371,6 +381,13 @@ public class PlayableSpriteAnimation {
                 // then immediately switching back with a reset.
                 SpriteAnimationProfile profile = sprite.getAnimationProfile();
                 if (profile != null) {
+                    boolean currentSkidAnimation = profile instanceof ScriptedVelocityAnimationProfile velocityProfile
+                            && velocityProfile.getSkidAnimId() == sprite.getAnimationId();
+                    boolean skidRefreshed = sprite.getMovementManager() instanceof PlayableSpriteMovement movement
+                            && movement.isSkidAnimationRefreshedThisFrame();
+                    if (currentSkidAnimation && !skidRefreshed) {
+                        sprite.setSkidding(false);
+                    }
                     Integer desired = profile.resolveAnimationId(sprite, 0,
                             sprite.getAnimationSet() != null ? sprite.getAnimationSet().getScriptCount() : 0);
                     if (desired != null && desired == sprite.getAnimationId()) {
@@ -524,8 +541,8 @@ public class PlayableSpriteAnimation {
         if (!sprite.getPushing()) {
             return;
         }
-        if (sprite.getPhysicsFeatureSet() == null
-                || !sprite.getPhysicsFeatureSet().animationChangeClearsPush()) {
+        PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+        if (animationRules == null || !animationRules.animationChangeClearsPush()) {
             return;
         }
         if (prevAnimByteId < 0 || animByteId == prevAnimByteId) {

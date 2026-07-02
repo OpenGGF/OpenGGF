@@ -281,10 +281,12 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      * the hit pass, where the object dispatches on {@code routine(a0)} read <em>once</em>
      * at the top of its update (ObjAF / DEZ Mecha Sonic:
      * docs/s2disasm/s2.asm:77412-77415, loc_39CF0 sets {@code routine=$C} at
-     * docs/s2disasm/s2.asm:78003-78004). For those, the newly-selected defeat routine
-     * must not be dispatched until the next frame, and because the engine runs touch
-     * responses before this object's own {@code update()}, the deferral restores that
-     * one-frame offset.
+     * docs/s2disasm/s2.asm:78003-78004), or whose object routine only observes the
+     * defeated status at its own tail before selecting the defeat subroutine and
+     * returning (Obj5D / CPZ boss: docs/s2disasm/s2.asm:61723-61772). For those, the
+     * newly-selected defeat routine must not be dispatched until the next frame, and
+     * because the engine runs touch responses before this object's own {@code update()},
+     * the deferral restores that one-frame offset.
      *
      * <p>It must stay {@code false} for bosses whose defeat is selected via a different
      * dispatch — e.g. ObjC5 / Wing Fortress, which sets {@code routine_secondary=$1E}
@@ -356,13 +358,14 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
                 // touch-response pass BEFORE this object's own update() this frame, so
                 // without deferral updateBossLogic() would dispatch the defeat routine
                 // (and decrement its countdown) on the same frame the routine changed.
-                // ROM reads routine(a0) once per object update, so the defeat routine
-                // first runs next frame (docs/s2disasm/s2.asm:77412-77415, 78003-78004,
-                // 77848-77853). Defer the first defeat dispatch by one frame -- but ONLY
-                // for bosses whose defeat overwrites the primary routine dispatched
-                // read-once at the top of their update (ObjAF / DEZ Mecha Sonic).
-                // Bosses that select defeat via routine_secondary dispatched fresh each
-                // frame (ObjC5 / WFZ) do not carry this offset and must not be deferred.
+                // ROM reads routine(a0) once per object update, or selects a defeated
+                // routine_secondary at the tail of the object's own update and returns,
+                // so the defeat routine first runs next frame (docs/s2disasm/s2.asm:
+                // 77412-77415, 78003-78004, 77848-77853; Obj5D tail:
+                // 61723-61772). Defer the first defeat dispatch by one frame only for
+                // bosses whose ROM dispatch shape carries that offset. Bosses that
+                // select defeat via routine_secondary dispatched fresh each frame
+                // (ObjC5 / WFZ) do not carry this offset and must not be deferred.
                 if (defeatDeferralAppliesToThisBoss()) {
                     deferDefeatRoutineDispatch = true;
                 }

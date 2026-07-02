@@ -356,7 +356,13 @@ public final class ObjectTerrainUtils {
         if (desc == null || !desc.isSolidityBitSet(solidityBit)) {
             return null;
         }
-        return lm.getSolidTileForChunkDesc(desc, solidityBit);
+        return lm.getSolidTileForChunkDesc(desc, solidityBit, useSecondaryCollisionPath());
+    }
+
+    private static boolean useSecondaryCollisionPath() {
+        var camera = com.openggf.game.GameServices.cameraOrNull();
+        var focused = camera != null ? camera.getFocusedSprite() : null;
+        return focused != null && (focused.getTopSolidBit() & 0xFF) != SOLIDITY_TOP;
     }
 
     private static byte getHeightMetric(SolidTile tile, ChunkDesc desc, int x) {

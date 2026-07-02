@@ -63,7 +63,7 @@ Shared base/helpers: `src/main/java/com/openggf/level/objects/` (`AbstractObject
 - Lazy `ensureInitialized()` at top of `update()`.
 - Center coordinates (`getCentreX/Y`) for player interaction; `NativePositionOps` for native writes.
 - `spawnChild` / `spawnFreeChild` for children; `ObjectLifetimeOps` / `DestructionEffects` for destruction.
-- Per-game physics differences go through `PhysicsFeatureSet` flags, never `if (gameId == ...)`.
+- Per-game differences use the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`, never `if (gameId == ...)`.
 
 ---
 
@@ -88,7 +88,7 @@ Use `HeadlessTestRunner`, `@FullReset`/`SingletonResetExtension`, and `StubObjec
 | `TestNoServicesInObjectConstructors` / `TestConstructionContextGuard` fail | Defer `services()` to `update()`; use `spawnChild`/`spawnFreeChild` or wrap construction context. |
 | Sprite garbled / wrong tiles | Mapping/art offset wrong; for S1 verify against ROM bytes, not just label. Check VDP column-major tile order and h/v-flip rules. |
 | Collision feels offset by ~19px | Used `getX/getY` instead of `getCentreX/getCentreY`. |
-| Per-game `if/else` flagged in review | Move divergence to a `PhysicsFeatureSet` flag. |
+| Per-game `if/else` flagged in review | Move divergence to the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`. |
 
 ---
 

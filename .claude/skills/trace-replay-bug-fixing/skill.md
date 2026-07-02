@@ -23,7 +23,7 @@ Use these to get oriented on a divergence before you start editing engine code. 
 1. **No hacks or dirty fixes.** Every behaviour change must be backed by the disassembly for the relevant game. Cite ROM file and line numbers in commits and code comments.
 2. **You may regenerate a trace** when the recorded data is genuinely insufficient for diagnosis (missing per-frame data, broken setup, recorder schema changed). Use the `tools/bizhawk/record_*_trace.bat` launcher with the matching `.lua` recorder. Regeneration is part of the loop — don't avoid it. **But** do not regenerate just to "make the test match"; regenerate to gain visibility.
 3. **If the engine architecture is missing or fundamentally broken**, or game objects/functionality aren't yet implemented, **plan and delegate**. Use review agents and parallel subagent execution for large-scope work. Don't try to land everything in one pass.
-4. **Cross-game parity is non-negotiable.** The engine supports three games (Sonic 1, Sonic 2, Sonic 3 & Knuckles). Before changing any shared/root code (physics, collision, sidekick AI, oscillation, rendering, audio, shared object base classes, shared object helpers, etc.), check the disassemblies for **all three games** to confirm whether the change is a universal correction or a per-game divergence. Universal corrections must cite the matching ROM pattern for each affected game and keep all games' traces green. Per-game divergences must be gated behind a `PhysicsFeatureSet` flag (see CLAUDE.md "Per-Game Physics Framework") or an equivalent explicit behaviour flag at the owning abstraction. Prefer the smallest accurate scope: use a per-object or per-class hook when the divergence belongs to one object family, and reserve per-game flags for true game-wide ROM/system differences. **Never** branch on `if (gameId == GameId.S3K) ...`.
+4. **Cross-game parity is non-negotiable.** The engine supports three games (Sonic 1, Sonic 2, Sonic 3 & Knuckles). Before changing any shared/root code (physics, collision, sidekick AI, oscillation, rendering, audio, shared object base classes, shared object helpers, etc.), check the disassemblies for **all three games** to confirm whether the change is a universal correction or a per-game divergence. Per-game divergences must use the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`: a typed `GameRules` record for game-wide shared runtime gates, or an existing provider/profile/registry/object hook for narrower behavior. **Never** branch on `if (gameId == GameId.S3K) ...`.
 5. **No zone/route/frame carve-outs for trace fixes.** A trace failure in AIZ, CNZ, MGZ, or any other zone must be fixed by modelling the ROM state, object routine, physics profile, event flag, or data-driven object/profile condition that caused it. Do not add behaviour branches whose only predicate is a zone id/name, trace route, frame number, or "known failing trace" exception. "Use ROM-default behaviour except in AIZ" is still a zone-specific carve-out and is not acceptable. Zone/event/object providers may expose ROM state at the owning boundary, but shared physics/sidekick/object behaviour must consume semantic predicates such as object id/routine/control bits/status bits/frame-counter visibility, not "this zone".
 
 ## The Core Invariant — Comparison Only, Never Sync
@@ -49,7 +49,7 @@ If a trace replay test passes only because engine state is snapped back to ROM-c
 ### What to do when the engine diverges from ROM
 
 - Find the engine code path that should have produced the ROM-correct value but didn't. Fix the engine.
-- If the engine has no equivalent path, port the ROM logic with disassembly citations and a `PhysicsFeatureSet` flag if it's game-divergent.
+- If the engine has no equivalent path, port the ROM logic with disassembly citations and route any game-divergent behavior through the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`.
 - If the trace lacks the diagnostic data needed to pinpoint the bug, extend the recorder. New fields are comparison context, not write-back targets.
 
 ### Frame-0 bootstrap comparator (post-2026-05-15)
@@ -150,7 +150,7 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
      - Engine code path missing a step that ROM does:    add it.
      - Engine code path doing a step ROM doesn't:        remove it (carefully).
      - Engine code path with wrong constant/threshold:   fix the value.
-     - Per-game divergence:                              add a PhysicsFeatureSet flag.
+     - Per-game divergence:                              choose the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`.
      - Test infrastructure asserting wrong behaviour:    fix the test (with disasm citation).
      - Wall/floor probe X/Y offset mismatch: the player path uses
        fixed-pixel offsets in places (e.g. S3K
@@ -177,8 +177,8 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
      - Cross-check the other two games' disassemblies for shared code.
      - Gate divergences at the narrowest owning abstraction:
        per-object/per-class hook for object-family quirks, or
-       `PhysicsFeatureSet`/equivalent per-game flag only for game-wide
-       ROM/system behaviour.
+      a typed `GameRules` record,
+      only for game-wide ROM/system behaviour.
 
 8. Run the trace test plus cross-game traces:
      mvn test -Dtest='Test<Game1>Ghz1TraceReplay,Test<Game1>Mz1TraceReplay,Test<Game2>Ehz1TraceReplay,Test<Game3><Zone>TraceReplay' -DfailIfNoTests=false
@@ -234,7 +234,7 @@ Separate moving-platform timing from generic collision timing. If a trace first 
 
 When a trace mismatch lands on trigonometric object physics, do not replace ROM math with host floating-point approximations. Check whether the ROM routine calls `CalcAngle`, `CalcSine`, or a game-specific lookup table, then use the engine's integer lookup helpers (for example `TrigLookupTable`) or add an equivalent integer path with disassembly cites. S2 CNZ map bumpers are a concrete case: `CNZBumpersReact_Angle` reflects the incoming `CalcAngle` result and multiplies the `CalcSine` components by `-$A00` (`docs/s2disasm/s2.asm:32334-32677`); a one-angle rounding difference changed the bounce velocity and moved the CNZ frontier.
 
-For power-up timer divergences, identify both the ROM counter value and the phase where the ROM decrements it. S1/S2 speed shoes use a word `$4B0` timer decremented from display after movement, while S3K uses a byte `(20*60)/8` timer decremented only every eighth frame. If the engine timer runs in a different phase, gate the compensation in `PhysicsFeatureSet` instead of changing a shared timer constant globally.
+For power-up timer divergences, identify both the ROM counter value and the phase where the ROM decrements it. S1/S2 speed shoes use a word `$4B0` timer decremented from display after movement, while S3K uses a byte `(20*60)/8` timer decremented only every eighth frame. If the engine timer runs in a different phase, gate the compensation through the smallest accurate owner from `docs/architecture/per-game-rule-placement.md` instead of changing a shared timer constant globally.
 
 When comparing sidekick CPU gates, distinguish ROM's raw `object_control` byte tests from the engine's split flags (`objectControlled`, `objectControlAllowsCpu`, `objectControlSuppressesMovement`). S2 `TailsCPU_Spawning` uses `tst.b obj_control(a1)` and must block respawn for any nonzero object-control byte; S3K catch-up code has narrower bit-7-style gates in other paths. Keep S2's Tails respawn/flying timeout separate from normal despawn: `TailsCPU_CheckDespawn` writes the `$4000,0` marker, but `TailsCPU_Flying`'s 300-frame offscreen timeout writes `x_pos=0,y_pos=0`, `Tails_CPU_routine=2`, `obj_control=$81`, and `Status_InAir` (`docs/s2disasm/s2.asm:38795-38806,39043-39052`). However, S2 uses the same `Tails_respawn_counter` word across `TailsCPU_Flying` and `TailsCPU_CheckDespawn`; if Tails is offscreen during fly-in and lands before the 300-frame flying timeout, the accumulated count must carry into the NORMAL despawn check rather than restarting at zero.
 
@@ -318,27 +318,29 @@ Camera/boundary/event-timing frontiers are often not a value bug but an **orderi
 
 Separate from the recorder (which produces full trace files), you often need a **one-off lua** that dumps ROM registers/RAM at a few specific frames to compare against the engine — e.g. the ROM value of a player/object field at the exact divergence frame. Three hard-won rules make this fast and non-destructive.
 
-**Use the canonical template — do NOT hand-roll.** Copy `tools/bizhawk/diag_template_fast.lua` and fill only its two USER sections (PC hooks via `event.onmemoryexecute`, and per-frame `mainmemory` reads). It bakes in the non-negotiables below. Run it headless:
+**Use the canonical template — do NOT hand-roll.** Copy `tools/bizhawk/diag_template_fast.lua` and fill only its two USER sections (PC hooks via `event.onmemoryexecute`, and per-frame `mainmemory` reads). It bakes in the non-negotiables below. Run it through the reusable launcher:
 
-```
-OGGF_START=<firstFrame> OGGF_STOP=<lastFrame> OGGF_OUT=tools/bizhawk/trace_output/<name>.txt \
-  "docs/BizHawk-2.11-win-x64/EmuHawk.exe" --chromeless \
-      --lua "tools/bizhawk/<your_copy>.lua" --movie "<bk2>" "<rom>.gen"
+```bat
+set OGGF_START=<firstFrame>
+set OGGF_STOP=<lastFrame>
+set OGGF_OUT=C:\tmp\<name>.txt
+tools\bizhawk\run_bizhawk_lua.bat tools\bizhawk\<your_copy>.lua <bk2> <rom>.gen
 ```
 
 BizHawk frame for trace frame `F` = `bk2_frame_offset` (from `metadata.json`) + `F`.
 
 **ROM arg: use the simple-named copy, NOT the full filename.** The full ROM name (e.g. `Sonic The Hedgehog (W) (REV01) [!].gen`) has spaces, parens, and `[!]` (a shell glob char) that don't pass through to EmuHawk — it launches, loads **no ROM**, and hangs (~316 MB resident, never writes output, `emu.framecount()` stays 0). The repo root has byte-identical simple-named copies — `s1.gen` / `s2.gen` / `s3k.gen` (md5-verified == the REV01 ROMs) — pass one of those (absolute path) as the EmuHawk ROM arg. This failure looks like the timeout case below but is distinct: here EmuHawk runs yet never advances a frame (no ROM); there it advances but is killed mid-seek. (The trace-replay mvn tests are unaffected — this only bites the EmuHawk invocation.)
 
-**1. Fast headless is THREE lua calls, not the `--chromeless` flag.** At the top, before the loop:
+**1. Fast headless is the reusable launcher plus Lua toggles, not the `--chromeless` flag.** Run `tools/bizhawk/run_bizhawk_lua.bat` so EmuHawk starts with the generated no-audio diagnostic config and a generated wrapper that runs the fast-headless calls before your diagnostic. The launcher also verifies the copied diagnostic still has executable fast-headless calls before its main loop, so commented-out template text does not pass the guard. Keep these Lua toggles at the top, before the loop:
 
 ```lua
 emu.limitframerate(false)        -- remove the 60fps cap
 client.speedmode(6400)           -- 6400% speed
 client.invisibleemulation(true)  -- SKIP rendering: ~100x faster AND bounds memory
+if client.SetSoundOn then pcall(client.SetSoundOn, false) end
 ```
 
-`--chromeless` only hides window chrome. Without these calls a long seek (e.g. to BizHawk frame ~190000) runs at real-time (~50 min) while EmuHawk renders, piling up to multiple GB. `invisibleemulation(true)` is the memory fix (captures drop from ~3.4 GB to ~475 MB).
+`--chromeless` only hides window chrome. Without these calls a long seek (e.g. to BizHawk frame ~190000) runs at real-time (~50 min) while EmuHawk renders, piling up to multiple GB. `invisibleemulation(true)` is the memory fix (captures drop from ~3.4 GB to ~475 MB). The generated config and `SetSoundOn(false)` keep probes silent even when BizHawk's remembered config has audio enabled. Set `BIZHAWK_ALLOW_SLOW_LUA=1` only when deliberately running a visible/interactive diagnostic.
 
 **2. The script MUST self-exit, or EmuHawk lingers as a multi-GB zombie.** End the capture window with `client.exit()` (flush/close the outfile first). Both of these LEAK the process: a `while true do emu.frameadvance() end` loop with no exit, and a `...; client.pause()` tail. The robust pattern (what the production recorder uses) is: detect `movie.mode() == "FINISHED"` (or `emu.framecount() > STOP`) → flush → `client.exit()`. Always check `tasklist | grep -i emuhawk` is empty before each run and kill any stray instance after — `client.exit()` is not 100% reliable in every BizHawk build.
 
@@ -558,7 +560,7 @@ For S3K work specifically, also keep the S3K must-keep-green tests green:
 - `TestSonic3kBootstrapResolver`
 - `TestSonic3kDecodingUtils`
 
-If a fix is genuinely game-divergent (different games' ROMs really do behave differently), add a flag to `PhysicsFeatureSet`, set the right value on each game's `SONIC_1`/`SONIC_2`/`SONIC_3K` constant, and branch on the flag at the call site.
+If a fix is genuinely game-divergent (different games' ROMs really do behave differently), choose the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`, set all Sonic 1/Sonic 2/Sonic 3&K values explicitly, and branch on that semantic rule/profile/provider value at the call site.
 
 ## Do NOT bounce a frontier as "RAM-gated" without a PC-execute probe first
 

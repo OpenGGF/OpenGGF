@@ -38,7 +38,13 @@ com.openggf/
     sonic3k/                 -- Sonic 3&K module (same structure)
 
   level/                     -- Level infrastructure
-    LevelManager.java        -- Active level state, tile grid, object spawning
+    LevelManager.java        -- Public coordinator/facade for the active level
+    LevelTilemapManager.java -- Tile grid, chunk/block state, VRAM upload
+    LevelRenderer.java       -- Scene, sprite/object, and ending-background render passes
+    LevelActTransitionExecutor.java -- In-place act-transition reload choreography
+    LevelWaterCoordinator.java      -- Water loading and playable underwater state
+    LevelCheckpointCoordinator.java -- Checkpoint/respawn state and restore
+    LevelDirtyRegionDispatcher.java -- MutableLevel dirty-region dispatch
     objects/                 -- Base object classes, registry interface, spawn records
       AbstractObjectInstance.java  -- Base class for all game objects
       ObjectRegistry.java         -- Interface: maps object IDs to factories

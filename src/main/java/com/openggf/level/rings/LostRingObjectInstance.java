@@ -2,9 +2,9 @@ package com.openggf.level.rings;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.PhysicsProvider;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.RingRules;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.ChunkDesc;
@@ -55,6 +55,10 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * (relocated from RingManager.java:1089).
      */
     private static final int RING_Y_RADIUS = 8;
+    /** ROM Obj37_Init sets width_pixels(a1) = 8 for BuildSprites' X gate. */
+    private static final int RING_RENDER_HALF_WIDTH = 8;
+    /** BuildSprites assumed-height path uses a 32 px Y band when render_flags bit 4 is clear. */
+    private static final int BUILDSPRITES_ASSUMED_Y_MARGIN = 32;
     /** ROM RingCheckFloorDist top-solidity bit (s2.asm Obj37 floor probe). */
     private static final int SOLIDITY_TOP = 0x0C;
 
@@ -67,6 +71,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private boolean collected;
     private int sparkleStartFrame = -1;
     private int lastFrameCounter;
+    private boolean romRenderFlagForFloorProbe = true;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -96,6 +101,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         this.phaseOffset = phaseOffset;
         this.lifetime = lifetime;
         this.collected = false;
+        this.romRenderFlagForFloorProbe = true;
     }
 
     /**
@@ -115,6 +121,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         ring.phaseOffset = phaseOffset;
         ring.lifetime = lifetime;
         ring.collected = false;
+        ring.romRenderFlagForFloorProbe = true;
         return ring;
     }
 
@@ -154,7 +161,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * {@code RingManager.LostRingPool.updatePhysics} per-game branches (RingManager.java:1242-1306,
      * s2.asm Obj37 RLoss_Move / sonic3k.asm Obj_Bouncing_Ring_Reverse_Gravity).
      * <p>
-     * The per-game floor-check cadence is read from {@link PhysicsFeatureSet#ringFloorCheckMask()}
+     * The per-game floor-check cadence is read from {@link RingRules#ringFloorCheckMask()}
      * (S1 every 4 frames {@code andi.b #3}; S2/S3K every 8 {@code andi.b #7}); reverse gravity is the
      * ROM {@code Reverse_gravity_flag} runtime state, NOT a zone/game carve-out. {@code floorCheck}
      * skips the world probe entirely (unit-testable pure-integrate path with no loaded level).
@@ -273,8 +280,11 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             int boundary = (camera.getMaxY() & 0xFFFF) + (camera.getHeight() & 0xFFFF);
             if (getY() > boundary) {
                 setDestroyed(true);
+                return;
             }
         }
+
+        refreshRomRenderFlagForFloorProbe();
     }
 
     @Override
@@ -297,14 +307,14 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     // ── Per-game / runtime-state seams (overridable for unit tests) ────────────
 
     /**
-     * Per-game floor-check cadence mask from {@link PhysicsFeatureSet#ringFloorCheckMask()}
-     * (S1 {@code #3}, S2/S3K {@code #7}); S2 default when no feature set is resolvable.
+     * Per-game floor-check cadence mask from {@link RingRules#ringFloorCheckMask()}
+     * (S1 {@code #3}, S2/S3K {@code #7}); S2 default when no typed rules are resolvable.
      */
     protected int resolveFloorCheckMask() {
-        PhysicsFeatureSet featureSet = resolveFeatureSet();
-        return featureSet != null
-                ? featureSet.ringFloorCheckMask()
-                : PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2;
+        RingRules rules = resolveRingRules();
+        return rules != null
+                ? rules.ringFloorCheckMask()
+                : GameRules.SONIC_2.ring().ringFloorCheckMask();
     }
 
     /** ROM {@code Reverse_gravity_flag} runtime state (S3K only ever sets it). */
@@ -318,14 +328,24 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * S2/S3K Obj37 only calls RingCheckFloorDist while render_flags bit 7 is set
      * (s2.asm:25215-25217; sonic3k.asm Obj_Bouncing_Ring floor path). S1's
      * RLoss_Bounce has no render-flag gate before ObjFloorDist.
+     * <p>
+     * The bit is latched by the prior BuildSprites pass, not recomputed inside
+     * Obj37_Main. Obj37_Init starts with render_flags=$84, then DisplaySprite/
+     * BuildSprites refreshes bit 7 after each object step using width_pixels=8
+     * and the assumed 32 px Y band because render_flags bit 4 is clear.
      */
     protected boolean hasRomRenderFlagForFloorProbe() {
-        return isWithinSolidContactBounds();
+        return romRenderFlagForFloorProbe;
+    }
+
+    private void refreshRomRenderFlagForFloorProbe() {
+        romRenderFlagForFloorProbe = isWithinRenderSpriteBounds(
+                RING_RENDER_HALF_WIDTH, BUILDSPRITES_ASSUMED_Y_MARGIN);
     }
 
     protected boolean ringFloorProbeRequiresRenderFlag() {
-        PhysicsFeatureSet featureSet = resolveFeatureSet();
-        return featureSet == null || featureSet.ringFloorProbeRequiresRenderFlag();
+        RingRules rules = resolveRingRules();
+        return rules == null || rules.ringFloorProbeRequiresRenderFlag();
     }
 
     /**
@@ -349,11 +369,20 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         return objectManager != null ? objectManager.getFrameCounter() : fallback;
     }
 
-    private PhysicsFeatureSet resolveFeatureSet() {
+    private RingRules resolveRingRules() {
         ObjectServices services = servicesOrNull();
         GameModule module = services != null ? services.gameModule() : null;
-        PhysicsProvider provider = module != null ? module.getPhysicsProvider() : null;
-        return provider != null ? provider.getFeatureSet() : null;
+        if (module == null) {
+            return null;
+        }
+        try {
+            GameRules rules = module.getRules();
+            if (rules != null) {
+                return rules.ring();
+            }
+        } catch (IllegalArgumentException | IllegalStateException ignored) {
+        }
+        return null;
     }
 
     private ObjectServices servicesOrNull() {

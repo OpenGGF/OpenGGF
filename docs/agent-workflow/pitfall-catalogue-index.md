@@ -156,7 +156,7 @@ These existing S2 entries do not map cleanly onto the bug classes above but are 
 | P24 | Landing radius restore is not always shared across games | S2 | Yes (mechanism) |
 | P30 | `bmi` countdown timers fire at -1, not 0 | S2 | Yes (mechanism) |
 | P31 | Property table byte-offset mistakenly divided as entry index | S2 | Yes (mechanism) |
-| P33 | `PhysicsFeatureSet` flags must be set to the correct ROM value when guard code is added | S2 | Yes (mechanism) |
+| P33 | Per-game rule/profile/provider values must be set to the correct ROM value when gates are added | S2 | Yes (mechanism) |
 
 Note on numbering: the monitor-icon pre-move-velocity pitfall is `P19` in the S2 file but `P18` in the S3K file (the S3K file omits the S2-only bounce-velocity entry, shifting later numbers). Always confirm the heading text, not just the number, when cross-referencing between files.
 

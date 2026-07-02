@@ -1,12 +1,14 @@
 package com.openggf.game;
 
+import com.openggf.game.rules.GameRules;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Verifies the per-game {@code sidekickFollowLeadOffset} feature-flag values
- * match the disassembly references documented on {@link PhysicsFeatureSet}.
+ * match the disassembly references documented on {@link GameRules}.
  *
  * <p>Disassembly references:
  * <ul>
@@ -25,36 +27,36 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *       {@code 0} for symmetry with S2.</li>
  * </ul>
  */
-class TestSidekickFollowLeadOffsetFeatureFlag {
+class TestSidekickFollowLeadOffsetRule {
 
     @Test
     void sonic1HasNoLeadOffset() {
-        assertEquals(0, PhysicsFeatureSet.SONIC_1.sidekickFollowLeadOffset(),
+        assertEquals(0, GameRules.SONIC_1.sidekickCpu().sidekickFollowLeadOffset(),
                 "S1 has no Tails CPU sidekick; lead offset is unreachable");
     }
 
     @Test
     void sonic2HasNoLeadOffset() {
-        assertEquals(0, PhysicsFeatureSet.SONIC_2.sidekickFollowLeadOffset(),
+        assertEquals(0, GameRules.SONIC_2.sidekickCpu().sidekickFollowLeadOffset(),
                 "S2 TailsCPU_Normal reads d2 directly with no bias (s2.asm:38933, 38945)");
     }
 
     @Test
     void sonic3kMatchesRomSubi20() {
-        assertEquals(0x20, PhysicsFeatureSet.SONIC_3K.sidekickFollowLeadOffset(),
+        assertEquals(0x20, GameRules.SONIC_3K.sidekickCpu().sidekickFollowLeadOffset(),
                 "S3K must match TailsCPU_Normal's subi.w #$20, d2 (sonic3k.asm:26694)");
     }
 
     @Test
-    void namedConstantsMirrorFeatureFlags() {
-        assertEquals(PhysicsFeatureSet.SIDEKICK_FOLLOW_LEAD_OFFSET_NONE,
-                PhysicsFeatureSet.SONIC_1.sidekickFollowLeadOffset(),
-                "S1 feature flag must mirror SIDEKICK_FOLLOW_LEAD_OFFSET_NONE");
-        assertEquals(PhysicsFeatureSet.SIDEKICK_FOLLOW_LEAD_OFFSET_NONE,
-                PhysicsFeatureSet.SONIC_2.sidekickFollowLeadOffset(),
-                "S2 feature flag must mirror SIDEKICK_FOLLOW_LEAD_OFFSET_NONE");
-        assertEquals(PhysicsFeatureSet.SIDEKICK_FOLLOW_LEAD_OFFSET_S3K,
-                PhysicsFeatureSet.SONIC_3K.sidekickFollowLeadOffset(),
-                "S3K feature flag must mirror SIDEKICK_FOLLOW_LEAD_OFFSET_S3K");
+    void namedConstantsMirrorRules() {
+        assertEquals(0,
+                GameRules.SONIC_1.sidekickCpu().sidekickFollowLeadOffset(),
+                "S1 rule must mirror SIDEKICK_FOLLOW_LEAD_OFFSET_NONE");
+        assertEquals(0,
+                GameRules.SONIC_2.sidekickCpu().sidekickFollowLeadOffset(),
+                "S2 rule must mirror SIDEKICK_FOLLOW_LEAD_OFFSET_NONE");
+        assertEquals(GameRules.SONIC_3K.sidekickCpu().sidekickFollowLeadOffset(),
+                GameRules.SONIC_3K.sidekickCpu().sidekickFollowLeadOffset(),
+                "S3K rule must mirror SIDEKICK_FOLLOW_LEAD_OFFSET_S3K");
     }
 }

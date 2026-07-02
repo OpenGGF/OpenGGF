@@ -1,0 +1,7 @@
+package com.openggf.game.rules;
+
+public record PlayerAnimationRules(
+        boolean extendedEdgeBalance,
+        boolean singleFacingBalanceAnimationSet,
+        boolean animationChangeClearsPush) {
+}

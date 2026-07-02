@@ -16,8 +16,9 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.ShieldType;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.PhysicsProvider;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PlayerCapabilityRules;
+import com.openggf.game.rules.RingRules;
 import com.openggf.physics.TrigLookupTable;
 
 import com.openggf.game.rewind.RewindSnapshottable;
@@ -64,14 +65,13 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     public RingManager(List<RingSpawn> spawns, RingSpriteSheet spriteSheet,
                        LevelManager levelManager, TouchResponseTable touchResponseTable,
                        AudioManager audioManager) {
-        // Feature-flag: ROM parity sources this from the current game's physics feature set.
+        // Feature-flag: ROM parity sources this from the current game's ring rules.
         // S1 routes stage rings through Obj25's touch-response pipeline (Touch_Rings);
         // S2/S3K collect them via the bounding-box sweep (Touch_Rings_Test).
         GameModule module = GameServices.currentOrBootstrapGameModule();
-        PhysicsProvider physProvider = module != null ? module.getPhysicsProvider() : null;
-        PhysicsFeatureSet featureSet = physProvider != null ? physProvider.getFeatureSet() : null;
+        RingRules ringRules = moduleRingRules(module);
         this.placement = new RingPlacement(spawns,
-                featureSet != null && featureSet.stageRingSweepUsesRawCameraWindow());
+                ringRules != null && ringRules.stageRingSweepUsesRawCameraWindow());
         this.renderer = (spriteSheet != null && spriteSheet.getFrameCount() > 0)
                 ? new RingRenderer(spriteSheet)
                 : null;
@@ -79,7 +79,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         this.audioManager = audioManager;
         this.lostRings = new LostRingPool(levelManager, this.renderer, touchResponseTable, audioManager);
         this.stageRingsUseObjectTouchCollection =
-                featureSet != null && featureSet.stageRingsUseObjectTouchCollection();
+                ringRules != null && ringRules.stageRingsUseObjectTouchCollection();
         this.attractedRings = new AttractedRing[MAX_ATTRACTED_RINGS];
         for (int i = 0; i < MAX_ATTRACTED_RINGS; i++) {
             attractedRings[i] = new AttractedRing();
@@ -126,15 +126,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         // Lightning shield ring attraction — S3K only
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        if (featureSet == null) {
-            GameModule module = GameServices.currentOrBootstrapGameModule();
-            PhysicsProvider physProvider = module != null ? module.getPhysicsProvider() : null;
-            if (physProvider != null) {
-                featureSet = physProvider.getFeatureSet();
-            }
-        }
-        boolean lightningAttractionActive = featureSet != null && featureSet.lightningShieldEnabled()
+        RingRules ringRules = playerRingRules(player);
+        boolean lightningAttractionActive = lightningShieldEnabled(player)
                 && player.getShieldType() == ShieldType.LIGHTNING;
         if (lightningAttractionActive) {
             int pcx = player.getCentreX();
@@ -149,7 +142,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 int dx = pcx - ring.x();
                 int dy = pcy - ring.y();
                 // ROM: box check — ±$40 from player centre, extended by ring half-width
-                int ringHalf = featureSet.ringCollisionWidth();
+                int ringHalf = ringRules != null ? ringRules.ringCollisionWidth() : RING_COLLISION_HALF;
                 int effectiveHalf = ATTRACT_BOX_HALF + ringHalf;
                 if (Math.abs(dx) <= effectiveHalf && Math.abs(dy) <= effectiveHalf) {
                     if (addAttractedRing(index, ring.x(), ring.y())) {
@@ -186,7 +179,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             return;
         }
 
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        RingRules ringRules = playerRingRules(player);
         int playerLeft = player.getCentreX() - 8;
         // ROM ReactToItem/Test_Ring_Collisions uses obHeight-3 for Sonic's
         // touch box before the ducking special-case; this is not limited to
@@ -199,8 +192,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             playerTop += 12;
             playerHeight = 20;
         }
-        int ringWidth = featureSet != null ? featureSet.ringCollisionWidth() : RING_COLLISION_HALF;
-        int ringHeight = featureSet != null ? featureSet.ringCollisionHeight() : RING_COLLISION_HALF;
+        int ringWidth = ringRules != null ? ringRules.ringCollisionWidth() : RING_COLLISION_HALF;
+        int ringHeight = ringRules != null ? ringRules.ringCollisionHeight() : RING_COLLISION_HALF;
 
         for (int i = 0; i < activeCount; i++) {
             int index = placement.activeIndexAt(i);
@@ -220,6 +213,57 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
     public boolean usesObjectTouchCollection() {
         return stageRingsUseObjectTouchCollection;
+    }
+
+    private static RingRules moduleRingRules(GameModule module) {
+        GameRules rules = moduleGameRules(module);
+        return rules != null ? rules.ring() : null;
+    }
+
+    private static PlayerCapabilityRules modulePlayerCapabilityRules(GameModule module) {
+        GameRules rules = moduleGameRules(module);
+        return rules != null ? rules.playerCapability() : null;
+    }
+
+    private static GameRules moduleGameRules(GameModule module) {
+        if (module == null) {
+            return null;
+        }
+        try {
+            GameRules rules = module.getRules();
+            if (rules != null) {
+                return rules;
+            }
+        } catch (IllegalArgumentException | IllegalStateException ignored) {
+        }
+        return null;
+    }
+
+    private static RingRules playerRingRules(AbstractPlayableSprite player) {
+        if (player == null) {
+            return moduleRingRules(GameServices.currentOrBootstrapGameModule());
+        }
+        GameRules rules = player.getGameRules();
+        if (rules != null && rules.ring() != null) {
+            return rules.ring();
+        }
+        return moduleRingRules(GameServices.currentOrBootstrapGameModule());
+    }
+
+    private static boolean lightningShieldEnabled(AbstractPlayableSprite player) {
+        PlayerCapabilityRules rules = playerCapabilityRules(player);
+        return rules != null && rules.lightningShieldEnabled();
+    }
+
+    private static PlayerCapabilityRules playerCapabilityRules(AbstractPlayableSprite player) {
+        if (player == null) {
+            return modulePlayerCapabilityRules(GameServices.currentOrBootstrapGameModule());
+        }
+        GameRules rules = player.getGameRules();
+        if (rules != null && rules.playerCapability() != null) {
+            return rules.playerCapability();
+        }
+        return modulePlayerCapabilityRules(GameServices.currentOrBootstrapGameModule());
     }
 
     public boolean collectPlacedRing(RingSpawn ring, AbstractPlayableSprite player, int frameCounter) {
@@ -1286,18 +1330,21 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             spillAnimation.reset();
             ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
 
-            // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25137-25138:
+            // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25143-25144:
             // `bsr.w AllocateObject; bne.w +++` — a failed AllocateObject branches PAST the
-            // spill loop, truncating the spill). S1/S2 allocate every Obj37 from the loop. S3K
-            // HurtCharacter first allocates the Obj37 owner slot, then Obj37_Init uses that slot
-            // for ring 0 and AllocateObjectAfterCurrent for the rest (sonic3k.asm:21065-21088,
-            // 35490-35528).
+            // spill loop, truncating the spill). S1 allocates every Obj37 from the loop. S2
+            // HurtCharacter preallocates ring 0 with AllocateObject, then Obj37_Init uses
+            // plain AllocateObject for the remainder (s2.asm:85444-85461,25125-25146). S3K
+            // uses the owner slot and AllocateObjectAfterCurrent for the rest
+            // (sonic3k.asm:21065-21088,35549-35591).
             boolean preallocateOwnerSlot = objectManager != null && objectManager.preallocatesLostRingOwnerSlot();
+            boolean allocateRemainderAfterOwner = objectManager != null
+                    && objectManager.lostRingRemainderAllocatesAfterOwnerSlot();
             int firstReservedSlot = preallocatedFirstSlot;
             if (preallocateOwnerSlot && firstReservedSlot < 0) {
                 firstReservedSlot = objectManager.allocateDynamicSlot();
             }
-            int previousSlot = preallocateOwnerSlot ? firstReservedSlot : 31;
+            int previousSlot = firstReservedSlot;
             int spawned = 0;
             for (int i = 0; i < toSpawn; i++) {
                 if (angle >= 0) {
@@ -1320,11 +1367,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     }
                 }
 
-                int slotIndex = i == 0 && preallocateOwnerSlot
-                        ? firstReservedSlot
-                        : objectManager != null
-                                ? objectManager.allocateSlotAfter(previousSlot)
-                                : -1;
+                int slotIndex = -1;
+                if (i == 0 && preallocateOwnerSlot) {
+                    slotIndex = firstReservedSlot;
+                } else if (objectManager != null) {
+                    slotIndex = allocateRemainderAfterOwner
+                            ? objectManager.allocateSlotAfter(previousSlot)
+                            : objectManager.allocateDynamicSlot();
+                }
                 if (slotIndex < 0) {
                     // ROM: no free slot → stop spilling (truncate the remainder).
                     int truncated = toSpawn - spawned;
@@ -1346,7 +1396,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                             x, y, xVel, yVel,
                             phase, LIFETIME_FRAMES, spillAnimation);
                     objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
-                    if (applyInitialObjectStep) {
+                    if (applyInitialObjectStep && appliesInitialObj37Step(slotIndex, firstReservedSlot)) {
                         ringObject.updateMovement();
                     }
                 }
@@ -1359,6 +1409,15 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
             player.setRingCount(0);
             audioManager.playSfx(GameSound.RING_SPILL);
+        }
+
+        private static boolean appliesInitialObj37Step(int slotIndex, int ownerSlot) {
+            // S2 ARZ2 PC probe: HurtCharacter reserves the owner Obj37 slot (56)
+            // before same-pass lower slots (48,49,54,55) free. Obj37_Init then
+            // allocates child rings into those lower slots, but ExecuteObjects has
+            // already passed them, so only owner-or-later slots run Obj37_Main in
+            // that frame (docs/s2disasm/s2.asm:85444-85461, 25125-25245).
+            return ownerSlot < 0 || slotIndex >= ownerSlot;
         }
 
         private static int phaseOffsetForSlot(ObjectManager objectManager, int slotIndex) {

@@ -1,6 +1,8 @@
 package com.openggf.timer.timers;
 
 import com.openggf.audio.GameAudioProfile;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PowerUpRules;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.timer.AbstractTimer;
@@ -11,7 +13,7 @@ import com.openggf.timer.AbstractTimer;
  * When timer expires, speed shoes are deactivated and music slows back down.
  *
  * <p>The ROM decrement cadence is per-game (see
- * {@link com.openggf.game.PhysicsFeatureSet#speedShoesTimerDecimation()}):
+ * {@link PowerUpRules#speedShoesTimerDecimation()}):
  * S1/S2 use a per-frame word timer counting from {@code 0x4B0}
  * (s2.asm:36008-36025); S3K uses a byte timer counting from
  * {@code (20*60)/8 = 150} and decremented only on every 8th level frame —
@@ -51,17 +53,30 @@ public class SpeedShoesTimer extends AbstractTimer {
     }
 
     private static int decimationFor(AbstractPlayableSprite sprite) {
-        int d = sprite != null && sprite.getPhysicsFeatureSet() != null
-                ? sprite.getPhysicsFeatureSet().speedShoesTimerDecimation()
+        PowerUpRules rules = powerUpRulesFor(sprite);
+        int d = rules != null
+                ? rules.speedShoesTimerDecimation()
                 : 1;
         return d < 1 ? 1 : d;
     }
 
     private static int durationTicks(AbstractPlayableSprite sprite) {
-        int extraTicks = sprite != null && sprite.getPhysicsFeatureSet() != null
-                ? sprite.getPhysicsFeatureSet().speedShoesTimerPrePhysicsExtraTicks()
+        PowerUpRules rules = powerUpRulesFor(sprite);
+        int extraTicks = rules != null
+                ? rules.speedShoesTimerPrePhysicsExtraTicks()
                 : 0;
         return (ROM_DURATION_FRAMES / decimationFor(sprite)) + extraTicks;
+    }
+
+    private static PowerUpRules powerUpRulesFor(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return null;
+        }
+        GameRules rules = sprite.getGameRules();
+        if (rules != null && rules.powerUp() != null) {
+            return rules.powerUp();
+        }
+        return null;
     }
 
     @Override

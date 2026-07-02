@@ -37,8 +37,8 @@ NON-NEGOTIABLE PROJECT RULES
    status/control bits, event flags, frame-counter visibility, physics profile,
    data-driven condition). NEVER branch on zone id/name, trace route, frame number, or a
    "known failing trace" exception. "ROM default except in AIZ" is still a carve-out.
-4. No game-name physics branches. Cross-game divergences go through PhysicsFeatureSet flags
-   (SONIC_1/SONIC_2/SONIC_3K constants), NEVER `if (gameId == GameId.S3K)`.
+4. No game-name physics branches. Cross-game divergences use the smallest accurate owner
+   from `docs/architecture/per-game-rule-placement.md`, NEVER `if (gameId == GameId.S3K)`.
 5. Trace data is comparison-only. Never hydrate/sync engine state FROM trace data in
    committed test code. The property oggf.trace.hydrate must stay unset.
 6. Injected ObjectServices in object code. Call services() (or tryServices()); NEVER
@@ -271,7 +271,8 @@ CHECK AGAINST RULE BLOCK (cite the specific rule + guard test for each finding):
 2  S3K: prefer S&K-side; s3.asm reference only when no S&K equivalent exists (rare; verify).
 3  No zone/route/frame/"known failing trace" carve-outs — branches model ROM state.
      Guard: source review + trace guards.
-4  No game-name physics branches — uses PhysicsFeatureSet. Guard: TestArchitecturalSourceGuard.
+4  No game-name physics branches — use the smallest accurate owner from
+   `docs/architecture/per-game-rule-placement.md`. Guard: TestArchitecturalSourceGuard.
 5  Trace comparison-only, oggf.trace.hydrate unset. Guards: TestTraceReplayInvariantGuard,
      TestTraceHydrateSwitchDefault.
 6  services() not getInstance(); no services() in constructors; child spawn wrapped. Guards:

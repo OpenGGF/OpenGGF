@@ -2,13 +2,13 @@ package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.graphics.GLCommand;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.PhysicsProvider;
 
 import java.util.List;
 
@@ -48,6 +48,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private boolean firstDisplayFrame;
     private boolean spawnedPoints;
     private boolean deferArtVariantRng;
+    private boolean romRenderOnScreen;
     private transient DestructionEffects.PointsFactory pointsFactory;
 
     public AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services) {
@@ -86,6 +87,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         this.animFrame = 2;
         this.state = State.MAIN;
         this.firstDisplayFrame = true;
+        this.romRenderOnScreen = true;
 
         this.artVariant = artVariant;
         this.pointsValue = spawn.rawYWord();
@@ -242,20 +244,20 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     }
 
     private boolean preservesObjectMoveXSubpixel() {
-        PhysicsFeatureSet featureSet = animalFeatureSet();
-        return featureSet != null && featureSet.animalObjectPreservesObjectMoveXSubpixel();
+        ObjectInteractionRules rules = animalObjectInteractionRules();
+        return rules != null && rules.animalObjectPreservesObjectMoveXSubpixel();
     }
 
     private boolean usesRenderFlagDeleteBounds() {
-        PhysicsFeatureSet featureSet = animalFeatureSet();
-        return featureSet != null && featureSet.animalObjectUsesRenderFlagDeleteBounds();
+        ObjectInteractionRules rules = animalObjectInteractionRules();
+        return rules != null && rules.animalObjectUsesRenderFlagDeleteBounds();
     }
 
-    private PhysicsFeatureSet animalFeatureSet() {
+    private ObjectInteractionRules animalObjectInteractionRules() {
         ObjectServices ctx = tryServices();
         GameModule module = ctx != null ? ctx.gameModule() : null;
-        PhysicsProvider physProvider = module != null ? module.getPhysicsProvider() : null;
-        return physProvider != null ? physProvider.getFeatureSet() : null;
+        GameRules rules = module != null ? module.getRules() : null;
+        return rules != null ? rules.objectInteraction() : null;
     }
 
     private boolean checkFloorCollision() {
@@ -290,12 +292,9 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private boolean onScreen(int margin) {
         Camera camera = services().camera();
         if (usesRenderFlagDeleteBounds()) {
-            int cameraX = camera.getX();
-            int cameraY = camera.getY();
-            return currentX >= cameraX - getOnScreenHalfWidth()
-                    && currentX < cameraX + viewportWidth() + getOnScreenHalfWidth()
-                    && currentY >= cameraY - APPROX_RENDER_HALF_HEIGHT
-                    && currentY < cameraY + viewportHeight() + APPROX_RENDER_HALF_HEIGHT;
+            // S2 Obj28 tests render_flags.on_screen during its routine; that bit
+            // is the prior BuildSprites result, not a fresh post-move bounds test.
+            return romRenderOnScreen;
         }
 
         int cameraX = camera.getX();
@@ -312,6 +311,21 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     @Override
     public int getOnScreenHalfWidth() {
         return S2_RENDER_HALF_WIDTH;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (!usesRenderFlagDeleteBounds()) {
+            return;
+        }
+        // BuildSprites updates render_flags.on_screen after Obj28 has displayed.
+        Camera camera = services().camera();
+        int cameraX = camera.getX();
+        int cameraY = camera.getY();
+        romRenderOnScreen = currentX >= cameraX - getOnScreenHalfWidth()
+                && currentX < cameraX + viewportWidth() + getOnScreenHalfWidth()
+                && currentY >= cameraY - APPROX_RENDER_HALF_HEIGHT
+                && currentY < cameraY + viewportHeight() + APPROX_RENDER_HALF_HEIGHT;
     }
 
     public int getX() {

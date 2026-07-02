@@ -91,6 +91,46 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
         return true; // Solid for all players
     }
 
+    @Override
+    public boolean preservesEdgeSubpixelMotion() {
+        // S2 Obj3E button calls SolidObject at loc_3F354; exact-edge
+        // SolidObject_AtEdge contact sets pushing without stopping velocity.
+        return true;
+    }
+
+    @Override
+    public boolean preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity player) {
+        // The button is Obj3E's routine-4 child and owns a normal SolidObject
+        // status byte when TailsCPU_Normal samples interact(a0).
+        return isGroundedCpuSidekickAtCapsuleBodyEdge(player);
+    }
+
+    @Override
+    public boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
+        return isGroundedCpuSidekickAtCapsuleBodyEdge(player);
+    }
+
+    @Override
+    public int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {
+        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MAX_VALUE;
+    }
+
+    @Override
+    public int sidekickCpuPushGraceMaximumFramesFromInteractSlot(PlayableEntity player) {
+        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MIN_VALUE;
+    }
+
+    private boolean isGroundedCpuSidekickAtCapsuleBodyEdge(PlayableEntity player) {
+        if (player == null || !player.isCpuControlled() || player.getAir()) {
+            return false;
+        }
+        // The engine's persistent interact slot can point at Obj3E's button
+        // child while the ROM-visible push is against the capsule body.
+        int dx = Math.abs(player.getCentreX() - spawn.x());
+        int dy = Math.abs(player.getCentreY() - spawn.y());
+        return dx == 0x2B && dy <= 0x18;
+    }
+
     // ========================================================================================
     // SolidObjectListener Implementation
     // ========================================================================================

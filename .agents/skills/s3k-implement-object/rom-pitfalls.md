@@ -236,9 +236,9 @@ semantics across games. The most prominent in trace work:
 
 **What to check.** When implementing or modifying post-event flows
 (despawn, results-screen handoff, level-end), look at each game's ROM
-equivalent separately. If they diverge, add a `PhysicsFeatureSet` flag
-following the established pattern (e.g. `sidekickDeathUsesDeferredDespawn`).
-Never gate on `gameId`.
+equivalent separately. If they diverge, route the behavior through the smallest
+accurate owner from `docs/architecture/per-game-rule-placement.md`. Never gate on
+`gameId`.
 
 **ROM citation.** S3K immediate-warp baseline at
 `docs/skdisasm/sonic3k.asm:26800-26809` (`sub_13ECA`). S2 deferred flow at
@@ -925,6 +925,36 @@ camera-coarse bound keyed on its width, not a fixed engine margin.
 **Also covers object SELF-motion.** Same rule when an object moves ITSELF (`add.w speed,x_pos(a0)` preserves its own 16.16 sub-pixel word): a rideable object that self-moves via a sub-pixel-zeroing centre setter drifts ~1px and surfaces it where the player rides/hits it. Use `SubpixelMotion.moveSprite`/`shiftX`/`shiftY`. (Objects that move in integer pixel steps with no sub-pixel accumulator need no change.) See S1 P15 for the `-Dobjsubpxaudit` method.
 
 **Originating commit (S1 origin).** `b5bc778d4` (S1 Conveyor preserves rider sub-pixel via `shiftX`; SBZ2 f2224 -> f2323). See `s1-implement-object/rom-pitfalls.md` P15 / `s2-implement-object/rom-pitfalls.md` P53.
+
+---
+
+## P25 -- Obj37 post-owner ring allocation is S3K after-current, unlike S2
+
+**Pattern.** S3K `Obj_Bouncing_Ring` keeps the HurtCharacter-created owner slot
+for ring 0, then allocates each remaining ring with
+`AllocateObjectAfterCurrent`. Do not replace this with S2's plain
+`AllocateObject` remainder semantics.
+
+**Engine symptom.** A hurt spill appears with the right count but the post-owner
+ring slots fill earlier low holes instead of following the owner/previous ring.
+This shifts the dynamic-object countdown phase and can move ring floor probes,
+collection windows, or same-frame object execution.
+
+**What to check / fix.**
+1. Treat owner preallocation and post-owner allocation as separate ROM facts.
+2. For S3K, keep the post-owner chain anchored to the owner/previous Obj37 slot
+   via `AllocateObjectAfterCurrent`.
+3. Cross-check S2 separately: S2 also preallocates an Obj37 owner, but its
+   `Obj37_Init` calls plain `AllocateObject` for the remaining rings.
+
+**ROM citation.** S3K `HurtCharacter` creates the first Obj_Bouncing_Ring owner
+(`docs/skdisasm/sonic3k.asm:21065-21088`). `Obj_Bouncing_Ring` then loops with
+`AllocateObjectAfterCurrent` for the remaining rings
+(`docs/skdisasm/sonic3k.asm:35549-35591`). S2 analog:
+`docs/s2disasm/s2.asm:85444-85461,25125-25146`.
+
+**Originating commit (S2 origin).** `d27307e27` S2 ARZ2 Obj37 allocation split:
+see `s2-implement-object/rom-pitfalls.md` P79.
 
 ---
 

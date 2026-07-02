@@ -79,7 +79,13 @@ public record TraceCharacterState(
         if (sprite.getDead()) {
             return 0x06;
         }
-        if (sprite.isHurt()) {
+        if (sprite.isHurt()
+                || (sprite.getHurtAtFrameStart()
+                        && sprite.isOnObject()
+                        && !sprite.getHurtRecoveryCompletedThisFrame())) {
+            // S2 Obj02_Hurt owns object-solid landing samples until the next
+            // Obj02_Control tick unless Tails_HurtStop already completed in
+            // this sampled frame (docs/s2disasm/s2.asm:41063-41112).
             return 0x04;
         }
         SidekickCpuController cpu = sprite.getCpuController();

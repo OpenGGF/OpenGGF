@@ -385,6 +385,12 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
 
     @Override
     public void refreshPostCameraRenderState() {
+        // Obj0A/AirCountdown Init sets obRender/render_flags to on-screen before
+        // its first ChkWater on-screen test; a child in an already-passed lower
+        // SST slot must not have that initial bit cleared by BuildSprites first.
+        if (lifetime == 0) {
+            return;
+        }
         romRenderOnScreen = isWithinS1BuildSpritesBounds();
     }
 

@@ -5,7 +5,7 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.CanonicalAnimation;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -47,8 +47,8 @@ class TestRespawnStrategies {
         @Override public void draw() {}
         @Override public void defineSpeeds() {}
         @Override protected void createSensorLines() {}
-        void setPhysicsFeatureSetForTest(PhysicsFeatureSet featureSet) {
-            setPhysicsFeatureSet(featureSet);
+        public void setGameRulesForTest(GameRules featureSet) {
+            super.setGameRulesForTest(featureSet);
         }
         void enterDrowningPreDeathForTest() {
             drowningDeath = true;
@@ -485,7 +485,7 @@ class TestRespawnStrategies {
     @Test
     void sonic2TailsRespawnPreservesExistingVelocity() {
         TestableSprite sk = new TestableSprite("tails_p2");
-        sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sk.setGameRulesForTest(GameRules.SONIC_2);
         sk.setXSpeed((short) 0x041C);
         sk.setYSpeed((short) 0x0012);
         sk.setGSpeed((short) 0x041C);
@@ -512,7 +512,7 @@ class TestRespawnStrategies {
 
         TestableSprite sk = new TestableSprite("tails_p2");
         sk.setCpuControlled(true);
-        sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sk.setGameRulesForTest(GameRules.SONIC_2);
         TestableSprite main = new TestableSprite("sonic");
         main.setCentreY((short) 0x0600);
         short[] xHistory = new short[64];
@@ -536,7 +536,7 @@ class TestRespawnStrategies {
     @Test
     void sonic2DeadLeaderEntryUsesFlyingRoutineWithoutRespawnTeleport() {
         TestableSprite sk = new TestableSprite("tails_p2");
-        sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sk.setGameRulesForTest(GameRules.SONIC_2);
         sk.setCpuControlled(true);
         sk.setCentreX((short) 0x1234);
         sk.setCentreY((short) 0x0456);
@@ -581,11 +581,11 @@ class TestRespawnStrategies {
     @Test
     void sonic2RespawnRoutinePreservesCpuJumpingFlagOnFlyingEntry() {
         TestableSprite sk = new TestableSprite("tails_p2");
-        sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sk.setGameRulesForTest(GameRules.SONIC_2);
         sk.setCpuControlled(true);
 
         TestableSprite main = new TestableSprite("sonic");
-        main.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        main.setGameRulesForTest(GameRules.SONIC_2);
         main.setCentreX((short) 0x032C);
         main.setCentreY((short) 0x032C);
         main.setAir(false);
@@ -609,7 +609,7 @@ class TestRespawnStrategies {
     @Test
     void sonic2TailsFlyInKeepsNormalAirPhysicsActive() {
         TestableSprite sk = new TestableSprite("tails_p2");
-        sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sk.setGameRulesForTest(GameRules.SONIC_2);
         sk.setObjectControlled(true);
         sk.setObjectControlSuppressesMovement(false);
         TestableSprite main = new TestableSprite("sonic");
@@ -642,7 +642,7 @@ class TestRespawnStrategies {
     @Test
     void sonic3kTailsCatchUpRespawnClearsVelocity() {
         TestableSprite sk = new TestableSprite("tails_p2");
-        sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        sk.setGameRulesForTest(GameRules.SONIC_3K);
         sk.setXSpeed((short) 0x041C);
         sk.setYSpeed((short) 0x0012);
         sk.setGSpeed((short) 0x041C);
