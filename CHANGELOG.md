@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- GLFW gamepads now map D-pad/left-stick directions and west/south/east face buttons to Mega Drive A/B/C logical input.
 - Keyboard input now feeds the controller-ready logical input layer while preserving the existing Space/Right Shift defaults.
 - Add controller-ready input configuration keys, defaults, and deprecated jump-binding migration.
 - Add logical controller-ready player input state for the controller support MVP.

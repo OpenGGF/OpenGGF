@@ -4,6 +4,7 @@ import com.openggf.configuration.SonicConfigurationService;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Objects;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -22,6 +23,7 @@ public class InputHandler {
 	private final SonicConfigurationService configService;
 	private InputBindings inputBindings;
 	private final KeyboardInputMapper keyboardInputMapper;
+	private final GamepadInputManager gamepadInputManager;
 	private LogicalInputSnapshot logicalSnapshot = LogicalInputSnapshot.neutral();
 	private double mouseX;
 	private double mouseY;
@@ -36,7 +38,16 @@ public class InputHandler {
 	}
 
 	public InputHandler(SonicConfigurationService configService) {
-		this.configService = configService;
+		this(configService, new GamepadInputManager(GamepadStateSource.noop()));
+	}
+
+	public static InputHandler live(SonicConfigurationService configService) {
+		return new InputHandler(configService, new GamepadInputManager(new GlfwGamepadStateSource()));
+	}
+
+	InputHandler(SonicConfigurationService configService, GamepadInputManager gamepadInputManager) {
+		this.configService = Objects.requireNonNull(configService, "configService");
+		this.gamepadInputManager = Objects.requireNonNull(gamepadInputManager, "gamepadInputManager");
 		this.inputBindings = InputBindings.fromConfig(configService);
 		this.keyboardInputMapper = new KeyboardInputMapper();
 	}
@@ -163,8 +174,11 @@ public class InputHandler {
 
 	public void refreshLogicalSnapshot() {
 		inputBindings = InputBindings.fromConfig(configService);
-		PlayerInputState p1 = keyboardInputMapper.mapPlayer1(this, inputBindings);
-		PlayerInputState p2 = keyboardInputMapper.mapPlayer2(this, inputBindings);
+		PlayerInputState keyboardP1 = keyboardInputMapper.mapPlayer1(this, inputBindings);
+		PlayerInputState keyboardP2 = keyboardInputMapper.mapPlayer2(this, inputBindings);
+		LogicalInputSnapshot gamepadSnapshot = gamepadInputManager.poll(inputBindings);
+		PlayerInputState p1 = keyboardP1.merge(gamepadSnapshot.player1());
+		PlayerInputState p2 = keyboardP2.merge(gamepadSnapshot.player2());
 		logicalSnapshot = LogicalInputSnapshot.ofPlayers(p1, p2);
 	}
 
