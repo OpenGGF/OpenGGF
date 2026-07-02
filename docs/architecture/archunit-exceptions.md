@@ -28,7 +28,7 @@ target rather than walking back the assertion.
 
 | Rule | Baseline | Target | Trigger |
 |------|----------|--------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 213 | <=150 | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 209 | <=150 | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 20 | 0 | `DefaultPowerUpSpawner` visual object creation and master-title ROM preview mapping move behind provider contracts and bootstrap module construction becomes an explicit composition-root allowlist |
 | `per_game_packages_do_not_cross_depend` | 37 | <=20 | Data-select preview loading, payload validation, and menu animation helpers extracted out of per-game packages |
 
@@ -122,7 +122,7 @@ by `TestArchitecturalReviewGuard.archUnitPublishedBaselineCountsMatchFrozenStore
 When a frozen baseline shrinks or grows intentionally, update the matching count
 in the same commit.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 213
+- `low_level_layers_do_not_depend_on_runtime_layers`: 209
 - `shared_layers_do_not_depend_on_game_specific_packages`: 20
 - `per_game_packages_do_not_cross_depend`: 37
 

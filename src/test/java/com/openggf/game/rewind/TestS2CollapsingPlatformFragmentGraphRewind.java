@@ -46,7 +46,7 @@ class TestS2CollapsingPlatformFragmentGraphRewind {
 
         CollapsingPlatformFragmentInstance before = objectManager.createDynamicObject(
                 () -> newFragment(0x0140, 0x0180, 0x12, 2, true, false));
-        seedFragmentMetadata(before, 3, false, true, -0x20, 0x10);
+        seedFragmentMetadata(before, 3, false, true);
         ObjectRefId beforeId = objectId(objectManager, before);
         Map<String, Object> beforeScalars = scalarSnapshot(before);
         RewindRegistry registry = registryFor(objectManager);
@@ -103,14 +103,10 @@ class TestS2CollapsingPlatformFragmentGraphRewind {
             CollapsingPlatformFragmentInstance fragment,
             int fragmentIndex,
             boolean hFlip,
-            boolean vFlip,
-            int pieceOffsetX,
-            int pieceOffsetY) {
+            boolean vFlip) {
         writeInt(fragment, "fragmentIndex", fragmentIndex);
         writeBoolean(fragment, "hFlip", hFlip);
         writeBoolean(fragment, "vFlip", vFlip);
-        writeInt(fragment, "pieceOffsetX", pieceOffsetX);
-        writeInt(fragment, "pieceOffsetY", pieceOffsetY);
     }
 
     private static Map<String, Object> scalarSnapshot(CollapsingPlatformFragmentInstance fragment) {
@@ -118,8 +114,6 @@ class TestS2CollapsingPlatformFragmentGraphRewind {
         scalars.put("fragmentIndex", readInt(fragment, "fragmentIndex"));
         scalars.put("hFlip", readBoolean(fragment, "hFlip"));
         scalars.put("vFlip", readBoolean(fragment, "vFlip"));
-        scalars.put("pieceOffsetX", readInt(fragment, "pieceOffsetX"));
-        scalars.put("pieceOffsetY", readInt(fragment, "pieceOffsetY"));
         return scalars;
     }
 

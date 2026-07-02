@@ -2842,6 +2842,102 @@ banked into `next` under the green-bank rule.
   - `mvn "-Dtest=TestSonic2CNZBossCollision,TestCNZBossArtAndAnimation,TestCNZBossRomArtMappings" "-DfailIfNoTests=false" test`
     completed the focused Obj51 collision/art coverage successfully.
 
+
+S1 complete-run branch-local state (2026-07-02, `bugfix/ai-slot-cadence-regression`
+off develop `d81dd2be1`): 18 green / 1 red. `TestS1Sbz3CompleteRunTraceReplay`
+fails at f173 / 5795 (`y` expected `0x0088`, actual `0x0085`) on pristine
+develop `d81dd2be1` as well — a pre-existing develop regression from after the
+2026-06-29 19/19 state, not introduced by this branch. The S1 MZ1 slot-layout
+probes (`TestS1Mz1SlotLayoutRegression` 8/15 red, `DebugS1Mz1RingParity` f759
+rings 6-vs-7) are long-standing reds: bisect pins the first behavioral
+divergence to the 2026-06-14 pair `47f48650d` (does not compile standalone) +
+`e54b10db2` "preserve S1 counter-latched delete slots", already 8/15 red at
+that commit and unchanged through `84f1f269d` and the `next` merge `003f16d43`.
+
+## 2026-07-02 - Rewind S2 unload-latch capture + slot-cadence attribution audit
+
+- Worktree/branch: `.claude/worktrees/agent-a081438ddeb981e7b` /
+  `bugfix/ai-slot-cadence-regression`, based on develop `d81dd2be1`.
+- Regression: `TestRewindTorture#tortureFixedAdjacent` diverged at frame 1700
+  (`ObjectSpawn objectId=28` EHZ bridge stake at slot 17 vs 20) and the three
+  random-seed tortures diverged at frame 6776 including `gamerng.seed`;
+  `TestRewindIter1631Diagnostic` and
+  `TestRewindEncounterValidation#s2Ehz1MidRunTraversalMatchesAfterRewindReplay`
+  failed with the same slot permutations. `git bisect` over
+  `84f1f269d..d81dd2be1` with `mvn test
+  "-Dtest=TestRewindTorture#tortureFixedAdjacent"` pinned the first bad commit
+  to `4d1f8c4f4` "fix: advance S2 ARZ2 Obj82 dust slot timing".
+- Root cause: `4d1f8c4f4` added `ObjectManager.s2LatchedObjectManagerCameraX`
+  (the S2 post-camera coarse-X latch consumed by object-side
+  MarkObjGone/MarkObjGone2 unload checks on the next RunObjects pass,
+  docs/s2disasm/s2.asm:5111-5112, 33033-33036) without adding it to
+  `ObjectManagerSnapshot`, so a rewind `seekTo` restored placement cursors but
+  left the latch at its later live-frame value; the first replayed frames
+  unloaded objects against a future camera edge and dynamic slot allocation
+  permuted, cascading into RNG divergence.
+- Fix: the latch now rides `PlacementSnapshot` next to `twoAxisCameraYCoarse`
+  (capture in `ObjectPlacementController.captureRewindState`, restore in
+  `ObjectManager`; legacy snapshots default `Integer.MIN_VALUE` = live-camera
+  fallback). Snapshot-only change, no gameplay-path behavior change.
+- Attribution corrections for the dispatching investigation: the two named
+  suspects do NOT cause the S1 MZ1 failures. `970d24796` (slot reservation
+  before construction) was already scoped to the MTZ boss spawn by
+  `0f7794de8` on develop, and `3cfce6b93` (backward placement old edge)
+  changes only the non-counter `extendForPostCamera` branch, which S1's
+  counter-based respawn mode never reaches. The S1 MZ1 probes were already
+  red at `84f1f269d` (2026-06-29 19/19-green baseline) and at the pre-merge
+  parent `2d804bf28`, and were 15/15 green at `fdf9369b9` (2026-04-23);
+  bisect over that window (discriminator
+  `TestS1Mz1SlotLayoutRegression#lowSlotLayoutStillMatchesRecordedRomAtHurtFrame`,
+  hurt-frame 517 low-slot layout vs recorded v_objstate) lands on the
+  2026-06-14 pair `47f48650d`+`e54b10db2` (S1 counter-latched delete-slot
+  modeling, SBZ3-frontier-validated), already 8/15 red there. Reconciling
+  that model with the MZ1 v_objstate ground truth is follow-up work; a naive
+  revert would re-break the SBZ3/complete-run behavior it was validated
+  against.
+- Verification on this branch (all `mvn test` with quoted `-Dtest=`):
+  - `TestRewindTorture` 4 passed / 1 skipped; `TestRewindIter1631Diagnostic`
+    1/1; `TestRewindEncounterValidation` 2/2.
+  - `TestRewind*` sweep: 275 passed / 1 failed / 1 skipped — the failure is
+    `TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage`,
+    which fails identically on pristine develop `d81dd2be1` (annotation-ratchet
+    growth from already-merged LBZ/S2 object work; not this branch).
+  - `TestS1Mz1TraceReplay,TestS1Mz1CompleteRunTraceReplay`: 2/2 green.
+  - `com.openggf.tests.trace.s1.TestS1*CompleteRunTraceReplay`: 18 green /
+    1 red — `TestS1Sbz3CompleteRunTraceReplay` f173 / 5795 (`y` expected
+    `0x0088`, actual `0x0085`), reproduced identically on pristine develop
+    `d81dd2be1` (pre-existing).
+  - `com.openggf.tests.trace.s2.*TraceReplay`: 15 green / 4 expected-red
+    (ARZ2, CNZ2, MTZ3, OOZ2), matching the routing table above.
+  - `TestS2ObjectOccupancyOracle,TestObjectPlacementManager,TestObjectManagerCounterBasedDynamicUnload`:
+    65/65 green.
+## 2026-07-02 - S2 sweep preservation for the Tails fly-in regression fix
+
+- Worktree/branch: `.claude/worktrees/agent-a6eb852d30a6c04d1` /
+  `bugfix/ai-tails-flyin-regression`, based on `develop` at `d81dd2be1`.
+- Context: fixing two non-trace regressions from `dcaa4cb3e` ("fix: advance S2
+  CNZ2 Tails fly-in frontier") — the multi-sidekick root-crossing completion
+  firing for the S2 Tails fly-in, and engine-owned SPAWNING entries missing
+  the ROM `obj_control=$81` spawn-wait invariant. Fix adds
+  `SidekickRespawnStrategy.approachMovementUsesPhysics()` (Tails false) for
+  the crossing gate / approach-leader resolution and makes
+  `setInitialState(SPAWNING)` apply `nativeBit7FullControl()`. No trace
+  hydration, tolerance, route, frame, or zone carve-out.
+- Regression tests back to green:
+  `mvn test "-Dtest=TestMultiSidekickSpawn,TestS2Ehz1Headless,TestRespawnStrategies,TestSidekickCpuDespawnParity,TestSidekickCpuFollowParity,TestSidekickCpuControllerLevelStart,TestSidekickCpuControllerCarry"`
+  — 239/244 passed; the 5 remaining `TestRespawnStrategies` failures are the
+  pre-existing develop-baseline Mockito stub gaps (verified identical before
+  the change).
+- S2 trace sweep (all 19, split across three runs with `-Ds2.rom.path=s2.gen`):
+  green set (`TestS2Ehz1TraceReplay`, ARZ1, CNZ1, DEZ ending, HTZ1, MCZ1,
+  MCZ2, SCZ, WFZ, CPZ1, CPZ2, HTZ2, MTZ1, MTZ2, OOZ1) all passed; expected
+  reds held exactly: ARZ2 f2016 / 753 (`obj_extra_s21_x`), CNZ2 f9487 / 288
+  (`g_speed`), MTZ3 f13336 / 352 (`x_speed`), OOZ2 f9342 / 505
+  (`tails_x_sub`). Matches the routing-table state — no frontier movement.
+- S3K guard:
+  `mvn test "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kAizIntroEventsHeadless,TestSonic3kMgz2EndBossEvents,TestForcedSpinObjectInstance"`
+  — 98/98 passed.
+
 ## 2026-07-01 - S2 round 22 integrated verification after OOZ2 advance
 
 - Campaign branch/worktree: `bugfix/ai-s2-trace-next` /

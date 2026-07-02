@@ -1,9 +1,9 @@
 #
-#Tue May 12 09:51:16 BST 2026
+#Thu Jul 02 14:04:24 BST 2026
 Sonic1*\ classes\ should\ live\ under\ the\ Sonic\ 1\ package\ or\ explicit\ tooling,\ because\ game-specific\ names\ should\ not\ leak\ into\ shared\ packages;\ frozen\ baseline\:\ 1\ violation=189a6718-1f70-4e38-8b78-fdb0af52fa74
 Sonic2*\ classes\ should\ live\ under\ the\ Sonic\ 2\ package\ or\ explicit\ tooling,\ because\ game-specific\ names\ should\ not\ leak\ into\ shared\ packages;\ frozen\ baseline\:\ 0\ violations=864896fc-078f-470d-a45f-6825f0c085da
 Sonic3k*/S3k*\ classes\ should\ live\ under\ the\ Sonic\ 3&K\ package\ or\ explicit\ tooling,\ because\ game-specific\ names\ should\ not\ leak\ into\ shared\ packages;\ frozen\ baseline\:\ 0\ violations=c96bbeda-8419-4abe-9a80-f286bb7df0ca
-audio,\ graphics,\ and\ data\ layers\ should\ not\ depend\ on\ runtime\ gameplay\ layers,\ because\ lower-level\ services\ should\ stay\ reusable\ and\ should\ not\ know\ about\ level/sprite/game\ orchestration;\ frozen\ baseline\:\ 213\ violations=f52197e5-cea3-4e14-994b-b17b42333e42
+audio,\ graphics,\ and\ data\ layers\ should\ not\ depend\ on\ runtime\ gameplay\ layers,\ because\ lower-level\ services\ should\ stay\ reusable\ and\ should\ not\ know\ about\ level/sprite/game\ orchestration;\ frozen\ baseline\:\ 209\ violations\ (2026-07-02\:\ +2\ ROM-backed\ SEGA-boot\ PCM\ edges\ in\ AudioManager,\ solved\ edges\ pruned)=40afa018-d450-4b84-8cb9-d539d75d8062
 object\ classes\ named\ *Instance\ should\ extend\ AbstractObjectInstance,\ because\ object\ lifecycle,\ services\ injection,\ collision,\ and\ rewind\ coverage\ assume\ object\ instances\ share\ the\ base\ class;\ frozen\ baseline\:\ 1\ violation=09f6f5b4-f1d1-4f5b-b31a-a55517616ebe
 object\ packages\ should\ not\ access\ global\ GameServices\ except\ approved\ bridges,\ because\ object\ instances\ should\ use\ injected\ ObjectServices;\ frozen\ baseline\:\ 0\ violations=337d93ab-2301-45a4-a9a8-0619623eaab1
 per-game\ packages\ should\ not\ cross-depend,\ because\ cross-game\ donation\ and\ asset\ reuse\ must\ be\ explicit\ and\ must\ not\ grow\ accidentally;\ frozen\ baseline\:\ 37\ violations=8ad38e23-983b-4e07-aeca-6d2cf8c9f844
