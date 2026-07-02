@@ -69,6 +69,41 @@ Verification:
   preserved the accepted expected-red frontiers: CNZ2 f9977 / 10 and MTZ3
   f13477 / 4.
 
+## 2026-07-02 - S2 round 60 closure
+
+Round 60 merged ARZ2 worker commit `84896fb02` into the conductor as
+`56ca930e1`, advancing ARZ2 from f5970 / 1 to f6309 / 1.
+
+CNZ2 worker `.worktrees/ai-s2-cnz2-round60-next` /
+`bugfix/ai-s2-cnz2-round60-next` made no commit. It reproduced f9977 / 10 and
+confirmed via BizHawk/engine probes that the miss is a real Obj51 split-ball
+phase/position mismatch, but the tested countdown/order compensation regressed
+to f9199 and was rejected. Current useful ROM areas:
+`docs/s2disasm/s2.asm:66590-66595,66638-66654,67049-67118,85164-85252`.
+
+MTZ3 worker `.worktrees/ai-s2-mtz3-round60-next` /
+`bugfix/ai-s2-mtz3-round60-next` made no commit. It reproduced f13477 / 4 and
+probed Obj53/Obj54 timing. The inspected orb trajectory and `$DA` attack path
+did not yield a ROM-backed advancing candidate. Current useful ROM areas:
+`docs/s2disasm/s2.asm:67832-67855,67968-67979,85013-85345,85533-85604`.
+
+Composed verification on `bugfix/ai-s2-trace-next`:
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f6309 / 1, CNZ2
+  f9977 / 10, and MTZ3 f13477 / 4. OOZ2 stayed green.
+- Full S1 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  completed with 29/29 green by the fresh S1 Surefire reports.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks: 66 green plus the known AIZ expected-reds
+  (`TestS3kAizCompleteRunTraceReplay` f1095 / 3 and
+  `TestS3kAizTraceReplay` f8941 / 1).
+
+No S2 trace turned green in round 60, so no round-60 change was banked into
+`next`.
+
 ## 2026-07-02 - S2 round 59 MTZ3 Obj54 hit-reaction X velocity clear
 
 Round 59 MTZ3 worker used
