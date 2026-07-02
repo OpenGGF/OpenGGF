@@ -1290,6 +1290,10 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 flattenAngle -= 2;
                 if (flattenAngle < 0) {
                     flattenAngle = 0;
+                    // The Obj53 slot that completes contraction resumes the normal
+                    // orbit phase at the ROM-observed restart angle, while the just-
+                    // rendered contraction position still used objoff_3C above.
+                    verticalAngle = (verticalAngle + 0x10) & 0xFF;
                     boss.setOrbBreakState(0); // move.b #0,objoff_3A(boss)
                 }
             }
