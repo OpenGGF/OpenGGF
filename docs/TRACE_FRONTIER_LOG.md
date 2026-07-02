@@ -6,16 +6,52 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 47 ARZ2 targeted pass:
+Current branch-local S2 state after the round 48 MTZ3 targeted pass:
 ARZ2 is f4920 / 4 under `frontierOnly` (`obj_s14_type` expected `0x08`,
 actual missing),
 CNZ2 is f9946 / 8 under `frontierOnly` (`x_speed` expected `0x0200`, actual
-`0x08A8`), MTZ3 is f13336 / 6 under `frontierOnly` (`x_speed` expected
-`0x0200`, actual `-0200`), and OOZ2 is f12107 / 13 under `frontierOnly`
+`0x08A8`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed` expected
+`-020C`, actual `0x020C`), and OOZ2 is f12107 / 13 under `frontierOnly`
 (`tails_y` expected `0x02A5`, actual `0x02A4`; focused full reports also show
 `tails_g_speed` expected `0x00A4`, actual `0x0000`). Full
 S2 was last swept in round 45 at 15 green / 4 expected-red; full S1 remains
-green, and the S3K guard state is unchanged. No S2 trace greened in round 47.
+green, and the S3K guard state is unchanged. No S2 trace greened in round 48.
+
+## 2026-07-02 - S2 round 48 MTZ3 targeted advance
+
+Round 48 started from `a1e728db0` on `bugfix/ai-s2-trace-next`. Worker MTZ3
+used `.worktrees/ai-s2-mtz3-round48-next` /
+`bugfix/ai-s2-mtz3-round48-next`, based from the conductor head rather than
+`develop`. The focused baseline reproduced MTZ3 f13336 / 6 under
+`frontierOnly` (`x_speed` expected `0x0200`, actual `-0200`).
+
+Investigation stayed on Obj54/Obj53's post-hit shield cycle. The round-46
+BizHawk lead showed the contact Obj53 with matching horizontal orbit phase
+`objoff_28=$38`, but the engine's normal vertical orbit angle was `$10` behind
+ROM (`objoff_3B=$24` vs `$34`). Round-47 negatives had already ruled out
+changing the initial seed and the `objoff_3C` contraction clear threshold. This
+pass confirmed that engine contraction/re-expansion positions remain aligned
+through the clear window, and scoped the remaining slip to the Obj53 slot that
+completes contraction and hands back to the normal `objoff_3B` cycle
+(`docs/s2disasm/s2.asm:67421-67466,67878-67938`).
+
+Candidate result:
+- Advancing only the clearing Obj53's latent normal vertical angle by `$10` at
+  the contraction-complete handoff keeps the rendered `objoff_3C` clear frame
+  intact, fixes the Sonic rebound owner at f13336, and advances MTZ3 to f13358 /
+  6 under `frontierOnly` (`tails_x_speed` expected `-020C`, actual `0x020C`).
+  The new owner is the following Tails shield contact at the restarted boss
+  cycle.
+- A shared all-surviving-orbs version regressed to the known f12897 frontier and
+  was reverted, confirming the correction is slot-local.
+
+Verification:
+- `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  -Dtrace.frontierOnly=true -Ds2.rom.path=s2.gen
+  -Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace
+  test"` reports the expected-red frontier at f13358 / 6.
+- Full-context MTZ3 replay reports f13358 / 382 (`tails_y_speed` expected
+  `-04C0`, actual `0x04C0`) after the same Sonic f13336 contact is past.
 
 ## 2026-07-02 - S2 round 47 ARZ2 targeted advance
 
