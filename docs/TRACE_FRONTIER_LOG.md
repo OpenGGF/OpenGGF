@@ -33848,3 +33848,46 @@ Integrated verification on `bugfix/ai-s2-trace-next`:
 
 No S2 trace turned green in round 30, so these campaign advances were not
 banked into `next` under the green-bank rule.
+
+### 2026-07-02 -- S2 ARZ2 round 64 Obj89 final-hit hover ordering
+
+Baseline on `bugfix/ai-s2-arz2-round64-next` from conductor branch
+`bugfix/ai-s2-trace-next` at `d9e14fea5`:
+`TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+failed at f6507 / 4, first field `obj_extra_s10_x` (`expected absent`,
+actual `0x2AB0`). The context showed the engine did have the ROM Obj89 body in
+slot `$10`, but it had already snapped to the defeat routine's base
+`y_pos=$0430`; its pre-update `y_pos=$0433` matched the ROM object-near sample.
+
+Root fixed:
+- Obj89 does not use the generic `Boss_HandleHits` timing. S2 `Touch_Enemy`
+  only decrements the multi-sprite boss hit count / clears collision state, then
+  `Obj89_Main_HandleHoveringAndHits` writes the current-frame sine-derived
+  `x_pos/y_pos`, checks the zero hit count, and selects the defeat routine from
+  inside the already-running Obj89 routine. The engine's inherited
+  `BossHitHandler` selected `MAIN_SUB8` during touch response before Obj89's
+  slot update, so the same frame skipped the hover write and exposed the next
+  frame's base Y. ARZ now owns its local hit/invulnerability timing and lets the
+  existing hover routine select defeat after the ROM-position write
+  (`docs/s2disasm/s2.asm:65079-65124,85266-85275`).
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace`: f6507 / 4 errors
+  (`obj_extra_s10_x` expected absent, actual `0x2AB0`) -> f6513 / 1 error
+  (`obj_s13_type` expected `0x58`, actual missing).
+- New owner is the Obj58 boss-explosion object identity/export path after the
+  ARZ defeat begins: the engine has a `Boss Explosion` at the ROM coordinates
+  in slot `$13`, but it reports object id `0x00` rather than ROM Obj58.
+
+Verification:
+- Focused oracle:
+  `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossMainHoverPhaseMatchesRomAfterArrowRelease" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" test`
+  exited 0; the new comparison-only guard passes.
+- Focused target:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.frontierOnly=true" test`
+  exited 1 with the improved expected-red f6513 / 1 frontier above.
+- Same-game preservation guards:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtrace.frontierOnly=true" test`
+  exited 0 with expected-red reports preserved: CNZ2 f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`) and MTZ3 f13477 / 4
+  (`x_speed` expected `-03FB`, actual `0x03FB`).

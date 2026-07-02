@@ -1975,6 +1975,51 @@ public class TestS2ObjectOccupancyOracle {
                         + Integer.toHexString(check.actualStatus()));
     }
 
+    @Test
+    public void arz2BossMainHoverPhaseMatchesRomAfterArrowRelease() throws Exception {
+        PlatformPositionCheck firstMismatch = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame < 6300 || frame > 6507) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedBoss = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 0x10)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x89)
+                            .findFirst()
+                            .orElse(null);
+                    if (expectedBoss == null) {
+                        return null;
+                    }
+                    AbstractObjectInstance actualBoss = om.getActiveObjects().stream()
+                            .filter(AbstractObjectInstance.class::isInstance)
+                            .map(AbstractObjectInstance.class::cast)
+                            .filter(instance -> instance.getSlotIndex() == 0x10)
+                            .findFirst()
+                            .orElse(null);
+                    int actualX = actualBoss == null ? -1 : actualBoss.getX();
+                    int actualY = actualBoss == null ? -1 : actualBoss.getY();
+                    int expectedX = expectedBoss.x() & 0xFFFF;
+                    int expectedY = expectedBoss.y() & 0xFFFF;
+                    if (expectedX == actualX && expectedY == actualY) {
+                        return null;
+                    }
+                    return new PlatformPositionCheck(expectedX, expectedY, actualX, actualY,
+                            "frame=" + frame + " live " + describeLiveSlots(om, 0x10, 0x15));
+                });
+        Assertions.assertNull(firstMismatch,
+                () -> firstMismatch == null ? "" :
+                        "S2 Obj89_Main_HandleHoveringAndHits writes the sine-derived y_pos "
+                                + "before incrementing boss_sine_count; slot 0x10 must stay in "
+                                + "the ROM hover phase through the post-arrow-release window "
+                                + "(docs/s2disasm/s2.asm:65079-65091). Expected @"
+                                + String.format("%04X,%04X", firstMismatch.expectedX(), firstMismatch.expectedY())
+                                + " actual @"
+                                + String.format("%04X,%04X", firstMismatch.actualX(), firstMismatch.actualY())
+                                + "; " + firstMismatch.summary());
+    }
+
     /**
      * Drives the named S2 level-select trace through the engine (mirroring the
      * S2 branch of {@code AbstractTraceReplayTest.replayMatchesTrace}) and
