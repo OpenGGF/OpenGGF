@@ -6,18 +6,45 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 63 ARZ2 worker on next campaign
-branch `bugfix/ai-s2-arz2-round63-next`:
-ARZ2 is f6507 / 4 under `frontierOnly` (`obj_extra_s10_x` expected absent,
-actual `0x2AB0`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
+Current branch-local S2 state after round 64 ARZ2 worker merge on next
+campaign branch `bugfix/ai-s2-trace-next`:
+ARZ2 is f6513 / 1 under `frontierOnly` (`obj_s13_type` expected `0x58`,
+actual missing), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now ARZ2, CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
-was banked into `next`; ARZ2 advanced again in round 63 but is not banked under
+was banked into `next`; ARZ2 advanced again in round 64 but is not banked under
 the green-bank rule until it greens.
+
+## 2026-07-02 - S2 round 64 conductor closure
+
+Integrated ARZ2 worker commit `e09f0a9e3` into conductor branch
+`bugfix/ai-s2-trace-next`. The worker's detailed ARZ2 investigation entry is
+also present below as `S2 ARZ2 round 64 Obj89 final-hit hover ordering`.
+
+Conductor verification:
+- Full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and 3 expected-red frontiers: ARZ2 f6513 / 1,
+  CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  and level-select f8941 / 1.
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round64-next` / `bugfix/ai-s2-cnz2-round64-next`
+  made no commit. A BizHawk PC hook at BK2 f22461 / trace f9977 captured ROM
+  hurting Tails from Obj51 slot `$26` at `$28ED,$06E8`; the engine scans the
+  corresponding ball at `$28F0,$06E6` and misses. No new advancing candidate
+  avoided the known f9199 projection/order regression.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round64-next` / `bugfix/ai-s2-mtz3-round64-next`
+  made no commit. A final-orbit-on-break Obj53 candidate regressed MTZ3 to
+  f12818 and was reverted; clean state remains f13477 / 4.
 
 ## 2026-07-02 - S2 round 63 ARZ2 Obj89 roll-animation push clear
 
