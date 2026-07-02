@@ -319,6 +319,26 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
     }
 
     @Override
+    public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
+        if (isDestroyed()) {
+            return null;
+        }
+        if (routineState != BALL_FALL || exploding) {
+            return null;
+        }
+        // ROM Touch_Boss scans Obj51's collision_flags and x_pos/y_pos directly
+        // (docs/s2disasm/s2.asm:85164-85252). In the captured CNZ2 boss
+        // population, the parent Obj51 runs before the original falling ball,
+        // so the contact row sees the next loc_31FF8 fall position
+        // (docs/s2disasm/s2.asm:67049-67079). Project only this pre-split
+        // original hurt region; split clones keep their existing timing.
+        int projectedY = ((y << 16) + (yVel << 8)) >> 16;
+        return new TouchResponseProvider.TouchRegion[] {
+                new TouchResponseProvider.TouchRegion(x, projectedY, 0x98)
+        };
+    }
+
+    @Override
     public boolean requiresRenderFlagForTouch() {
         // S2 Touch_Boss scans Obj51 child collision_flags directly while the
         // boss is active; there is no render/on-screen touch gate in that path.

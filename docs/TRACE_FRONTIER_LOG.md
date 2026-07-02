@@ -6,17 +6,71 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 48 ARZ2 and MTZ3 targeted pass:
+Current branch-local S2 state after the round 49 CNZ2 targeted pass:
 ARZ2 is f5174 / 1 under `frontierOnly` (`y` expected `0x044B`, actual
 `0x044C`),
-CNZ2 is f9946 / 8 under `frontierOnly` (`x_speed` expected `0x0200`, actual
-`0x08A8`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed` expected
+CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
+actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed` expected
 `-020C`, actual `0x020C`), and OOZ2 is f12107 / 13 under `frontierOnly`
 (`tails_y` expected `0x02A5`, actual `0x02A4`; focused full reports also show
-`tails_g_speed` expected `0x00A4`, actual `0x0000`). The round 48 integrated
-full S2 sweep is 15 green / 4 expected-red. The full S1 sweep remains 29/29
+`tails_g_speed` expected `0x00A4`, actual `0x0000`). The round 49 full S2
+sweep is 15 green / 4 expected-red. The full S1 sweep remains 29/29
 green, and the S3K guard subset remains 66/68 with only the known AIZ
-expected-red frontiers. No S2 trace greened in round 48.
+expected-red frontiers. No S2 trace greened in round 49.
+
+## 2026-07-02 - S2 round 49 CNZ2 targeted advance
+
+Round 49 started from conductor HEAD `f27a6dc82` on
+`bugfix/ai-s2-trace-next`. Worker CNZ2 used
+`.worktrees/ai-s2-cnz2-round49-next` /
+`bugfix/ai-s2-cnz2-round49-next`, based from that conductor HEAD rather than
+`develop`. The focused baseline reproduced CNZ2 f9946 / 8 under
+`frontierOnly` (`x_speed` expected `0x0200`, actual `0x08A8`).
+
+Investigation stayed on Obj51's pre-split falling electric ball. A BizHawk Lua
+probe over trace frames 9944-9949 showed the ROM f9946 `Touch_Boss` pass
+checking slot 26 Obj51 at `x=$2909,y=$06E4,y_vel=$0738`, then calling
+`Touch_ChkValue`, `Touch_Hurt`, and `HurtCharacter` before slot 26 enters
+`Obj51_Fall` / `loc_31FF8` later in the same frame. The Java object had the
+same original ball one fall tick behind at the touch row because the engine's
+current CNZ boss slot ordering places the ball before the parent; a broad
+parent-before-child allocation change reproduced the known split-pair
+regression at f9199 and was rejected. The accepted fix therefore projects only
+the original non-exploded falling ball's hurt region to the next `loc_31FF8`
+fall position, leaving object update, floor split, and split-clone timing
+unchanged (`docs/s2disasm/s2.asm:67049-67079,85164-85252`).
+
+Candidate result:
+- CNZ2 advances to f9977 / 10 under `frontierOnly` (`tails_x_speed` expected
+  `-0200`, actual `0x023A`). The new owner is a later Tails hurt/contact miss
+  after Sonic's f9946 Obj51 hurt row matches.
+
+Verification:
+- `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false"
+  "-Dtrace.frontierOnly=true" "-Dtrace.context.radius=12"
+  "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace"
+  "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen"
+  test` reports the expected-red frontier at f9977 / 10.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dmse=relaxed"
+  "-Dsurefire.forkCount=1" "-DreuseForks=true"
+  "-Dtrace.frontierOnly=true"
+  "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay"
+  "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen"
+  test` ran the full S2 sweep: 19 tests, 15 green / 4 expected-red at ARZ2
+  f5174 / 1, CNZ2 f9977 / 10, MTZ3 f13358 / 6, and OOZ2 f12107 / 13.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dmse=relaxed"
+  "-Dsurefire.forkCount=1" "-DreuseForks=true"
+  "-Dtrace.frontierOnly=true"
+  "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay"
+  "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Dsonic1.rom.path=s1.gen"
+  test` ran the full S1 sweep: 29 / 29 green.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dmse=relaxed"
+  "-Dsurefire.forkCount=1" "-DreuseForks=false"
+  "-Dtrace.frontierOnly=true"
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils"
+  "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsonic3k.rom.path=s3k.gen"
+  test` ran the campaign S3K guard subset: 68 tests, 66 green / 2 expected-red
+  at AIZ complete-run f1095 and AIZ trace f8941.
 
 ## 2026-07-02 - S2 round 48 ARZ2 targeted advance
 
