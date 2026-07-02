@@ -57,6 +57,20 @@ Result:
   f6913 / 1 (`camera_x` expected `0x2B29`, actual `0x2B28`). The new owner is
   a later camera-position mismatch after the boss-defeat sequence has started.
 
+Regression repair:
+- Conductor full-S2 verification initially found a regression in
+  `TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace`: f4007 / 5,
+  first field `x_speed` expected `-01F3`, actual `0x01F3`. A probe of the
+  DEZ ending occupancy at f1718 showed ROM slot 17 already held ObjC7 while
+  ObjC6 lived in slot 22, but the engine had an extra dynamically spawned
+  ObjC6 in slot 17 and shifted the Death Egg Robot body/children to slots
+  18-29. The duplicate came from `Sonic2MechaSonicInstance` spawning ObjC6
+  after Silver Sonic's defeat even though the DEZ layout already owns ObjC6.
+- The repair removes that dynamic ObjC6 spawn. ROM ObjAF terminal defeat
+  `loc_39BA4` only unlocks the camera, advances `Dynamic_Resize_Routine`,
+  resumes music, and deletes ObjAF (`docs/s2disasm/s2.asm:77913-77925`); it
+  does not allocate ObjC6.
+
 Verification:
 - Focused S2 transient rewind fixture:
   `mvn "-Dtest=com.openggf.game.sonic2.objects.TestS2SelfContainedTransientRewind" "-DfailIfNoTests=false" test`
@@ -64,6 +78,10 @@ Verification:
 - Focused ARZ2 trace:
   `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
   failed at the advanced expected-red frontier f6913 / 1.
+- Focused ARZ2 + DEZ ending regression check after conductor repair:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  left ARZ2 at f6913 / 1 and restored DEZ ending to green by its Surefire
+  class report.
 - Same-game guards:
   `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
   preserved CNZ2 f9977 / 10 and MTZ3 f13477 / 4.
