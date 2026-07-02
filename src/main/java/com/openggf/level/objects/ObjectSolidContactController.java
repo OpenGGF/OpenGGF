@@ -3731,6 +3731,8 @@ final class ObjectSolidContactController {
             // (ROM processes objects after Sonic moves). Ground side collision keeps
             // pre-movement behavior for wall alignment consistency.
             boolean skipSideEffects = deferSideToPostMovement && player.getAir();
+            boolean preserveMovingSideVelocity = instance instanceof SolidObjectProvider solidProvider
+                    && solidProvider.preservesMovingSideContactVelocity(player);
             if (instance instanceof SolidObjectProvider solidProvider
                     && sideContactProviderReturnsNoContact(player, instance, pieceIndex, solidProvider)) {
                 return null;
@@ -3754,7 +3756,7 @@ final class ObjectSolidContactController {
                             && player.getAir()
                             && distX == (player.getXSpeed() >> 8);
                     if (distX != 0 && movingInto) {
-                        if (!airborneSpecialTouchEdge) {
+                        if (!airborneSpecialTouchEdge && !preserveMovingSideVelocity) {
                             player.setXSpeed((short) 0);
                             player.setGSpeed((short) 0);
                         } else if (airborneSpecialTouchEdge) {
@@ -3771,12 +3773,12 @@ final class ObjectSolidContactController {
                     boolean preserveSubpixels = preservesEdgeSubpixelMotion(instance);
                     if (distX == 0 && !preserveSubpixels) {
                         player.setCentreX((short) playerCenterX);
-                        if (movingInto) {
+                        if (movingInto && !preserveMovingSideVelocity) {
                             player.setXSpeed((short) 0);
                             player.setGSpeed((short) 0);
                         }
                     }
-                    if (distX != 0 && movingInto) {
+                    if (distX != 0 && movingInto && !preserveMovingSideVelocity) {
                         player.setXSpeed((short) 0);
                         player.setGSpeed((short) 0);
                     }

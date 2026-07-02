@@ -277,6 +277,19 @@ public class ARZBossPillar extends AbstractObjectInstance
     }
 
     @Override
+    public boolean preservesMovingSideContactVelocity(PlayableEntity player) {
+        // Obj89_Pillar_Sub0/Sub2 run Obj89_Pillar_SolidObject before the pillar
+        // body update, and the helper calls ordinary SolidObject at the temporary
+        // y_pos+4 anchor. In the ROM object-slot order, that side contact can set
+        // Status_Push before Tails' later CPU/movement path writes the frame's
+        // x_vel/inertia. The engine's inline post-physics checkpoint sees the
+        // same side contact after movement, so preserve velocity while retaining
+        // the side correction and push bits.
+        // docs/s2disasm/s2.asm:35413-35436,65330-65374,65531-65539
+        return player != null && !player.getAir() && player.getGSpeed() < 0;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Pillar doesn't need special contact handling
