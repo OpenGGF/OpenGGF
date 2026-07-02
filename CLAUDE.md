@@ -350,7 +350,7 @@ High-cost landmines (full S3K detail in [AGENTS_S3K.md](AGENTS_S3K.md) and the `
 
 Emulates Mega Drive sound hardware: **YM2612** (FM synthesis, 6 channels), **PSG/SN76489** (square wave + noise, 4 channels), **SMPS Driver** (Sega's sound format).
 
-The audio package splits across `audio` (backend), `audio.synth` (chip emulation — `PsgChipGPGX` is the PSG implementation), `audio.smps` (sequencer/loader with `OVERFLOW`/`OVERFLOW2`/`TIMEOUT` tempo modes), `audio.driver`, `audio.runtime` (deterministic FIFO/PCM ring buffers used by gameplay rewind), `audio.rewind`, `audio.debug`. Per-game audio data lives under `game.sonicX.audio`.
+The audio package splits across `audio` (backend), `audio.synth` (chip emulation — `PsgChip` is the PSG implementation, a Genesis Plus GX-derived core), `audio.smps` (sequencer/loader with `OVERFLOW`/`OVERFLOW2`/`TIMEOUT` tempo modes), `audio.driver`, `audio.runtime` (deterministic FIFO/PCM ring buffers used by gameplay rewind), `audio.rewind`, `audio.debug`. Per-game audio data lives under `game.sonicX.audio`.
 
 Reference implementations live in `docs/SMPS-rips/SMPSPlay/` (SMPSPlay source) and the ripped audio data under `docs/SMPS-rips/`. Strive for hardware accuracy — reference SMPSPlay and the libvgm chip cores rather than simplified versions.
 

@@ -55,6 +55,7 @@ Git hooks in `.githooks/` and CI enforce the branch policy below. A Maven build 
     *   `game.rewind` – gameplay-scoped rewind framework: keyframes, deterministic seek/replay, generic field capture, rewind field annotations, identity ids, policy registry, compact schema capture.
     *   `level.objects` – unified `ObjectManager` (placement, collision, touch response), `ObjectServices` interface, shared base classes (`AbstractBadnikInstance`, `AbstractSpikeObjectInstance`, etc.), utility helpers (`SubpixelMotion`, `PatrolMovementHelper`, `PlatformBobHelper`, `DestructionEffects`, ...).
     *   `level.scroll.compose` – shared deform/parallax composition helpers built around `ScrollEffectComposer`.
+    *   `audio.synth` – chip emulation; `PsgChip` is the sole PSG core (Genesis Plus GX-derived, formerly `PsgChipGPGX`).
     *   `physics` – sensors, terrain collision, unified `CollisionSystem`.
     *   `configuration` – `SonicConfiguration` / `SonicConfigurationService`. Dev-only: `TEST_MODE_ENABLED` (replaces master-title game-select with a trace picker, needs `TRACE_CATALOG_DIR`), `TRACE_CATALOG_DIR` (default `src/test/resources/traces`).
     *   `LevelFrameStep` lives at the `com.openggf` package root, not under `level`.

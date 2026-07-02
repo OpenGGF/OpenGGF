@@ -11,7 +11,7 @@ import java.util.Arrays;
  *
  * <p>Based on the Genesis Plus GX PSG core.
  */
-public class PsgChipGPGX {
+public class PsgChip {
     public enum ChipType {
         INTEGRATED,
         DISCRETE
@@ -82,15 +82,15 @@ public class PsgChipGPGX {
     private boolean hqPsg = false;  // false = fast mode (rawer/brighter, GPGX default), true = HQ sinc filter
     private boolean noiseShiftOnEveryToggle = true; // true=MAME-style, false=GPGX/libvgm positive-edge only
 
-    public PsgChipGPGX() {
+    public PsgChip() {
         this(DEFAULT_SAMPLE_RATE, ChipType.INTEGRATED);
     }
 
-    public PsgChipGPGX(double sampleRate) {
+    public PsgChip(double sampleRate) {
         this(sampleRate, ChipType.INTEGRATED);
     }
 
-    public PsgChipGPGX(double sampleRate, ChipType type) {
+    public PsgChip(double sampleRate, ChipType type) {
         setChipType(type);
         setSampleRate(sampleRate);
         reset();
