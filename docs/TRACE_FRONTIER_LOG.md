@@ -6,14 +6,38 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 40 targeted no-change pass is
+Current branch-local S2 state after the round 41 targeted no-change pass is
 unchanged:
 ARZ2 is f4707 / 1945 (`x` expected `0x2B4D`, actual `0x2B4F`), CNZ2 is f9946 /
 300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 is f12107 / 99
 (`tails_g_speed` expected `0x00A4`, actual `0x0000`). Full S2 is 15 green / 4
 expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. No S2
-trace greened in round 40.
+trace greened in round 41.
+
+## 2026-07-01 - S2 round 41 targeted no-change pass
+
+Round 41 started from `8e84d6573` on `bugfix/ai-s2-trace-next` and rechecked
+the two strongest CNZ2/OOZ2 leads. No edits were made and no S2 trace greened.
+
+- CNZ2 Tails-state worktree `.worktrees/ai-s2-cnz2-tails-state-round41-next` /
+  `bugfix/ai-s2-cnz2-tails-state-round41-next`: reproduced f9946 / 300. ROM
+  aux confirms Tails at f7988 has `control_locked=true`, `move_lock=$001E`,
+  `anim_id=0`, and `status=$02`; ROM slot `$25` remains free until Obj51
+  appears at f7995. This supports the round-40 diagnosis that engine CPU Tails
+  remains in Stop/skid state and allocates dynamic Obj08 dust where ROM
+  `Obj08_CheckSkid` would reset. No genuine Tails control/animation fix was
+  isolated. CNZ2 remains f9946 / 300.
+- OOZ2 Obj07 worktree `.worktrees/ai-s2-ooz2-obj07-round41-next` /
+  `bugfix/ai-s2-ooz2-obj07-round41-next`: reproduced f12107 / 99. ROM aux has
+  Obj07 slot `$0E` at `$2935,$02D8` and Obj55 slot `$14` at `$2940,$0299` on
+  f12107; engine context has Tails hurt by Obj55 at `$2940,$028E` with
+  expected-onObj `$0E` missing. Disassembly confirms Obj07 processes P1 then P2,
+  copies each character `x_pos` into Obj07, and calls
+  `PlatformObject_SingleCharacter` with the per-player standing bit. No genuine
+  Obj07 P2 ride or Obj55 collision-suppression fix was isolated. OOZ2 remains
+  f12107 / 99.
+- No round-41 change was banked into `next`.
 
 ## 2026-07-01 - S2 round 40 targeted no-change pass
 
