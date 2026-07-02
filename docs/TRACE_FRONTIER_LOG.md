@@ -19,6 +19,61 @@ Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9342 / 505
 (`tails_x_sub` expected `0x4700`, actual `0xC700`) after trace capture keeps
 the ROM Obj02 hurt routine visible for object-solid landing samples.
 
+## 2026-07-02 - S3K MHZ complete-run advances f2966 -> f2986 (Madmole arc-throw grab applies on the ROM frame)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  HEAD `c3f06d930` + this fix (2 source/test files + docs).
+- Command (verified independently via `mvn.cmd`, `-Dmse=off`):
+  `mvn.cmd "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before (2 files reverted to HEAD):
+  f2966 / **4454** errors (`tails_air`, expected `1`, actual `0`).
+  After: f2986 / **2413** errors (`tails_y`, expected `0x0779`, actual `0x076F`).
+- Root: the SKL Obj $8C Madmole arc-throw arm (`Obj_Madmole` /
+  `docs/skdisasm/sonic3k.asm:193075`) grabbed the carried player two frames
+  late. Seven ROM-cited changes in `MadmoleBadnikInstance`:
+  (1) the body child rises on its creation frame (`loc_8D620` falls straight
+  through to `loc_8D636`, `:193147-193158`);
+  (2) a one-frame parent-observe gap before the 60-frame cooldown (parent
+  `loc_8D5D4` tests the still-set `$38` bit and waits while the body clears it
+  at `loc_8D6D6`, so `loc_8D5DE` arms the cooldown the next frame,
+  `:193110-193120,193212-193215`);
+  (3) `usesCurrentTouchResponseState=true` — `loc_8D6E6` moves the arm, then
+  `Add_SpriteToCollisionResponseList`/`Draw_Sprite` (`:193264-193278,193233`),
+  matching the AizSpikedLog/Orbinaut post-move contract;
+  (4) light gravity `$20` via `MoveSprite_LightGravity` (`moveq #$20`,
+  `:178358`), not the `$38` object default;
+  (5) the carry defers to routine 8 — `sub_8D94A` sets routine 8 during the
+  arm's routine-4 `loc_8D778`, which still runs `MoveSprite_LightGravity` that
+  frame; `loc_8D7A8` carries the next frame (`:193271,193478,193291`);
+  (6) subpixel-preserving word-write carry — `loc_8D7D4` does `move.w` to
+  `x_pos(a1)`/`y_pos(a1)` (`:193307-193312`), leaving the carried CPU's
+  `x_sub`/`y_sub` untouched (F600/2E00);
+  (7) single-player grab via a pending `collision_property` candidate —
+  `sub_8D94A` grabs the one player indexed by `word_8D944` = `{Player_1,
+  Player_2, Player_2}` (`:193457-193460`); last overlap wins (Player_2 after
+  Player_1), lead player never modified.
+- -2041 error-delta adjudication (independent A/B, copy-aside; NO `git stash`):
+  BEFORE first error f2966 (`tails_air` — the grab-not-applying target);
+  AFTER first error f2986. The f2966 target is gone and the f2966-2985
+  grab/carry window (air, status, object_control, carried subpixels F600/2E00,
+  arm arc) is byte-clean; the AFTER first error frame (2986) is strictly deeper
+  than the fixed window, so every AFTER-only error key is at frame >= 2986 by
+  construction.
+- f2986 characterization (next roots, out of scope): `tails_y` flips (exp
+  `0x0779`, act `0x076F`) — the arm arc rebound animation callback fires ~3
+  frames early (`byte_8D9E7` `$FC` -> `loc_8D846`, `:193353`) and the mid-carry
+  `ObjHitFloor` on the moved arm (`loc_8D80A`, `:193325-193330`) is not yet
+  modeled. End-of-session frontier.
+- Guards green (`-Dmse=off`, ROM path): `TestMadmoleBadnikInstance` (31, incl.
+  the untouched Task-6 cap-stump/defeat suite), `TestSidekickCpuDespawnParity`
+  (55), `TestSidekickCpuFollowParity` (93), `TestSonic3kMHZEvents` (62),
+  `TestS3kAiz1SkipHeadless` (8), `TestSonic3kLevelLoading` (5 + 30),
+  `TestRewindCoverageGuard` (1, no baseline change; new `pendingCapturePlayer`
+  is `@RewindTransient` — nulled at update start, always null at snapshot),
+  `TestS1Ghz1TraceReplay` (1), `TestS2Ehz1TraceReplay` (1). Pre-existing
+  `TestS2Ehz1Headless` (1) confirmed failing identically on clean HEAD
+  (inherited from the develop merge), not introduced by this fix.
+
 ## 2026-07-02 - S3K MHZ complete-run advances f2159 -> f2966 (TailsCPU sub_13EFC interact-code-word despawn watchdog)
 
 - Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
