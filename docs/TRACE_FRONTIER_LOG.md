@@ -6,8 +6,8 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 68 ARZ2 worker branch
-`bugfix/ai-s2-arz2-round68-next`:
+Current branch-local S2 state after round 68 on next campaign branch
+`bugfix/ai-s2-trace-next`:
 ARZ2 is f7091 / 4 under `frontierOnly` (`obj_extra_s1B_x` expected absent,
 actual `0x2CB1`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
@@ -84,6 +84,48 @@ Verification:
   DEZ ending and OOZ2 were green by their exact Surefire class reports; CNZ2
   stayed at f9977 / 10 and MTZ3 stayed at f13477 / 4, matching the prior
   expected-red frontiers.
+
+Conductor integration:
+- Merged worker commit `e4012dd5` into conductor branch
+  `bugfix/ai-s2-trace-next` as merge commit `a9ac9f04`.
+- Post-merge full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  confirmed 16 green and the three expected-red frontiers: ARZ2 f7091 / 4
+  (`obj_extra_s1B_x` expected absent, actual `0x2CB1`), CNZ2 f9977 / 10, and
+  MTZ3 f13477 / 4.
+- Post-merge full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- Post-merge S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`).
+- Local `develop` (`7a2317a96`) and `origin/develop` (`d162131f1`) were both
+  already contained after the round.
+
+Other round 68 worker outcomes:
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round68-next` /
+  `bugfix/ai-s2-cnz2-round68-next` made no commit. Mandatory Lua probes were
+  run through `tools/bizhawk/run_bizhawk_lua.bat` with absolute paths. Probe
+  output `target\bizhawk-diag\s2_cnz2_obj51_round68_f9977.txt` showed ROM hurts
+  Tails from Obj51 split ball slot `$1A` at frame-start position
+  `$28ED,$06E8` before `loc_31FF8` moves that slot. Probe output
+  `target\bizhawk-diag\s2_cnz2_obj51_round68_splitbirth.txt` showed ROM split
+  birth is slot `$1A` at `$2909,$06F7`, with clone slot `$1C` allocated after
+  current and executing in the same frame. Engine experiments around Obj51
+  attach X and split touch projection did not advance f9977 / 10 and were
+  removed.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round68-next` /
+  `bugfix/ai-s2-mtz3-round68-next` made no commit. Mandatory Lua probes were
+  run through `tools/bizhawk/run_bizhawk_lua.bat` with absolute paths. Outputs
+  under `tools\bizhawk\trace_output\diag_s2_mtz3_round68_obj53*.txt` showed
+  ROM slot `$24` Obj53 has collision `$DA` at trace f13477, but
+  `Touch_ChkValue` / `Touch_Enemy_Part2` fires on trace f13478. The subpixel
+  and wider-window probes showed slot `$24` already in `Obj53_BreakAway`
+  through f13456-f13478 and reaching y=`$0482` before touch; the engine's
+  comparable failing state is several Obj53 frames behind, so a local
+  touch-deferral fix was rejected as not ROM-backed.
 
 ## 2026-07-02 - S2 round 67 ARZ2 Obj3E capsule slot graph and Obj28 timing
 
