@@ -45,6 +45,7 @@ public final class LiveRewindManager {
         }
         activeInputHandler = input;
         if (!ensureInstalled()) {
+            effectEnvelope.frameInactive();
             return false;
         }
         int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);

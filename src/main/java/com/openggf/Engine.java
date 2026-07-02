@@ -1599,12 +1599,15 @@ public class Engine {
 		// user's PRESENTATION-phase display shader so a CRT preset displays the
 		// damaged "signal" (tape artifacts precede the TV in the real chain).
 		if (!userRecordingSceneSuppressed && rewindVhsEffectPass != null && gameLoop != null) {
-			rewindVhsEffectPass.apply(
-					gameLoop.liveRewindEffectIntensity(),
-					gameLoop.liveRewindEffectSpeed(),
-					configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
-					configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS),
-					viewportX, viewportY, viewportWidth, viewportHeight);
+			float rewindEffectIntensity = gameLoop.liveRewindEffectIntensity();
+			if (rewindEffectIntensity > 0.0f) {
+				rewindVhsEffectPass.apply(
+						rewindEffectIntensity,
+						gameLoop.liveRewindEffectSpeed(),
+						configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
+						configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS),
+						viewportX, viewportY, viewportWidth, viewportHeight);
+			}
 		}
 		if (!userRecordingSceneSuppressed) {
 			applyDisplayShaderPhase(ShaderPhase.PRESENTATION);

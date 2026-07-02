@@ -54,7 +54,10 @@ class TestArchitecturalSourceGuard {
             // 2026-07-02: display 206 -> 217 for the live-rewind VHS picture-search
             // pass (RewindVhsEffectPass.apply between the fade pass and the
             // PRESENTATION display-shader phase; the pass itself is a collaborator).
-            new MethodBudget(ENGINE_PATH, "display", 217),
+            // 2026-07-02: display 217 -> 220 for the final-review fix hoisting the
+            // zero-intensity check above the RewindVhsEffectPass.apply call so the
+            // config lookups and gameLoop accessors are skipped when intensity==0.
+            new MethodBudget(ENGINE_PATH, "display", 220),
             new MethodBudget(GAME_LOOP_PATH, "stepInternal", 213),
             new MethodBudget(GAME_LOOP_PATH, "doExitBonusStage", 142),
             new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 105),

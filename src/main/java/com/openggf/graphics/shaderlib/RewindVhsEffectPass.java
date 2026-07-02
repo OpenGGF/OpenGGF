@@ -65,8 +65,11 @@ public final class RewindVhsEffectPass {
             return;
         }
         pipeline.resize(sourceW, sourceH, vpW, vpH);
-        pipeline.apply(vpX, vpY, vpW, vpH, frameCounter++,
+        pipeline.apply(vpX, vpY, vpW, vpH, frameCounter,
                 Map.of("RewindIntensity", intensity, "RewindSpeed", speed));
+        // Wrap well below the int range: the shader's sin-hash needs FrameCount
+        // to stay small for float precision, long before a 32-bit wrap would occur.
+        frameCounter = (frameCounter + 1) & 0xFFFF;
         if (!pipeline.isActive()) {
             // apply() disposes the pipeline internally on failure
             activated = false;
