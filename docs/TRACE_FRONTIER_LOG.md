@@ -20,6 +20,21 @@ with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 advanced but is not banked under the green-bank
 rule.
 
+## 2026-07-02 - S2 round 55 conductor baseline
+
+Round 55 starts from conductor commit `62936ec3f` on
+`.worktrees/ai-s2-trace-next` / `bugfix/ai-s2-trace-next`. Local `develop`
+(`3ad3b174b`) and `origin/develop` (`4f673dfdf`) are already contained in the
+conductor branch. Local `next` has the round 54 OOZ2 green banked as merge
+commit `bcf557815`.
+
+Baseline sweep:
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 S2 trace tests: 16 green / 3 expected-red. Remaining frontiers are
+  ARZ2 f5845 / 4 (`tails_x_speed` expected `0x0000`, actual `-0057`), CNZ2
+  f9977 / 10 (`tails_x_speed` expected `-0200`, actual `0x023A`), and MTZ3
+  f13358 / 6 (`tails_x_speed` expected `-020C`, actual `0x020C`).
+
 ## 2026-07-02 - S2 round 54 OOZ2 Obj3E capsule body lifetime green
 
 Round 54 OOZ2 worker used
