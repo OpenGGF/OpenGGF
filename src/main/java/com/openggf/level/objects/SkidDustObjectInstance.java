@@ -5,6 +5,7 @@ import com.openggf.physics.Direction;
 import com.openggf.game.PlayableEntity;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.util.List;
@@ -178,9 +179,13 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         }
 
         // ROM: Skid dust position is player center + 0x10 to Y
-        // See s2.asm Obj08_SkidDust: move.w y_pos(a2),y_pos(a1) / addi.w #$10,y_pos(a1)
+        // See s2.asm Obj08_SkidDust: move.w y_pos(a2),y_pos(a1) / addi.w #$10,y_pos(a1).
+        // Tails then subtracts 4 because his sprite is shorter.
         int dustX = player.getCentreX();
         int dustY = player.getCentreY() + 16;
+        if (player instanceof Tails) {
+            dustY -= 4;
+        }
         boolean facingLeft = player.getDirection() == Direction.LEFT;
 
         return new SkidDustObjectInstance(dustX, dustY, renderer, facingLeft);

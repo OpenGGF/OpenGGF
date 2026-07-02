@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
@@ -1403,6 +1404,43 @@ public class TestS2ObjectOccupancyOracle {
                             return null;
                         });
         Assertions.assertNull(divergence);
+    }
+
+    @Test
+    public void arz2TailsSkidDustAppliesRomShorterSpriteYOffsetAtFrame4920() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 4920) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedDust = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 0x14)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x08)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedDust,
+                            "ARZ2 ROM fixture should report Obj08 skid dust slot 0x14 at f4920");
+                    SkidDustObjectInstance actualDust = om.activeObjectsOfType(SkidDustObjectInstance.class)
+                            .stream()
+                            .filter(dust -> dust.getSlotIndex() == 0x14)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(
+                            expectedDust.x() & 0xFFFF,
+                            expectedDust.y() & 0xFFFF,
+                            actualDust == null ? -1 : actualDust.getX(),
+                            actualDust == null ? -1 : actualDust.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 0x10, 0x18));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj08 skid dust X should still use the parent x_pos; slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj08_SkidDust adds $10 to parent y_pos, then subtracts 4 for Tails' shorter "
+                        + "sprite before allocating the child dust "
+                        + "(docs/s2disasm/s2.asm:42821-42841); slots " + check.summary());
     }
 
     @Test
