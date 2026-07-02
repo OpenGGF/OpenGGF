@@ -29,7 +29,7 @@ class TestArchitecturalSourceGuard {
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3065,
-            "com/openggf/level/LevelManager.java", 2771,
+            "com/openggf/level/LevelManager.java", 2500,
             GAME_LOOP_PATH, 2888
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
@@ -597,6 +597,114 @@ class TestArchitecturalSourceGuard {
         assertTrue(!source.contains("new LevelRewindSnapshotAdapter("),
                 "Use LevelRewindSnapshotAdapter.create(...) so LevelManager owns construction policy only, "
                 + "not snapshot capture/restore implementation details");
+    }
+
+    @Test
+    void levelManagerDelegatesPlayableArtInitializationToNamedCollaborator() throws IOException {
+        String source = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/level/LevelManager.java")));
+        List<String> forbiddenSignals = List.of(
+                "PlayerSpriteRenderer",
+                "SpindashDustController",
+                "TailsTailsController",
+                "initPlayerSpriteArt(",
+                "initSpindashDust(",
+                "initTailsTails(",
+                "initSuperState(",
+                "createSidekickPaletteContext(",
+                "propagateSidekickPaletteContext(");
+        List<String> violations = forbiddenSignals.stream()
+                .filter(source::contains)
+                .toList();
+        assertTrue(violations.isEmpty(),
+                "LevelManager should coordinate playable art through LevelPlayableArtInitializer, "
+                        + "not own renderer/controller setup directly. Found: " + violations);
+    }
+
+    @Test
+    void levelManagerDelegatesDirtyRegionDispatchToNamedCollaborator() throws IOException {
+        String source = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/level/LevelManager.java")));
+        List<String> forbiddenSignals = List.of(
+                "consumeDirtyPatterns(",
+                "consumeDirtyBlocks(",
+                "consumeDirtyMapCells(",
+                "consumeDirtySolidTiles(",
+                "consumeObjectsDirty(",
+                "consumeRingsDirty(",
+                "effects.hasDirtyPatterns(",
+                "effects.objectResyncRequired(",
+                "effects.ringResyncRequired(");
+        List<String> violations = forbiddenSignals.stream()
+                .filter(source::contains)
+                .toList();
+        assertTrue(violations.isEmpty(),
+                "LevelManager should delegate dirty-region and mutation-effect dispatch "
+                        + "to LevelDirtyRegionDispatcher. Found: " + violations);
+    }
+
+    @Test
+    void levelManagerDelegatesWaterLifecycleToNamedCollaborator() throws IOException {
+        String source = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/level/LevelManager.java")));
+        List<String> forbiddenSignals = List.of(
+                "WaterDataProvider",
+                "loadForLevelFromProvider(",
+                "waterSystem.loadForLevel(",
+                "waterSystem.updateDynamic(",
+                "getGameplayWaterLevelY(",
+                "updateWaterStateObjectControlled(",
+                "zoneFeatureProvider.shouldSuppressUnderwaterPalette(");
+        List<String> violations = forbiddenSignals.stream()
+                .filter(source::contains)
+                .toList();
+        assertTrue(violations.isEmpty(),
+                "LevelManager should delegate water load, movement, and playable-water state "
+                        + "to LevelWaterCoordinator. Found: " + violations);
+    }
+
+    @Test
+    void levelManagerDelegatesCheckpointStateToNamedCollaborator() throws IOException {
+        String source = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/level/LevelManager.java")));
+        List<String> forbiddenSignals = List.of(
+                "checkpointState",
+                "createRespawnState(",
+                "restoreFromSaved(",
+                "saveWaterState(",
+                "saveS3kRuntimeState(",
+                "saveSolidBits(",
+                "restoreEventRoutineState(");
+        List<String> violations = forbiddenSignals.stream()
+                .filter(source::contains)
+                .toList();
+        assertTrue(violations.isEmpty(),
+                "LevelManager should delegate checkpoint storage and restore details "
+                        + "to LevelCheckpointCoordinator. Found: " + violations);
+    }
+
+    @Test
+    void levelManagerDelegatesActTransitionExecutionToNamedCollaborator() throws IOException {
+        Path path = SRC_MAIN.resolve("com/openggf/level/LevelManager.java");
+        SourceFile sourceFile = SourceFile.read(path);
+        MethodSpan method = sourceFile.methodNamed("executeActTransition");
+        assertTrue(method != null, "LevelManager should retain the public executeActTransition facade");
+        assertTrue(method.lineCount() <= 4,
+                "LevelManager.executeActTransition should delegate to LevelActTransitionExecutor");
+
+        String source = stripCommentsAndStrings(String.join("\n",
+                sourceFile.lines().subList(method.startLine() - 1, method.endLine())));
+        List<String> forbiddenSignals = List.of(
+                "reloadStandaloneArtForActTransition(",
+                "snapshotPersistentDynamicObjectsForTransition(",
+                "preserveLevelGamestate()",
+                "showInLevelTitleCard()");
+        List<String> violations = forbiddenSignals.stream()
+                .filter(source::contains)
+                .toList();
+        assertTrue(violations.isEmpty(),
+                "LevelManager.executeActTransition should delegate act-transition reload choreography "
+                        + "to LevelActTransitionExecutor. Found: " + violations);
     }
 
     @Test
@@ -1638,7 +1746,9 @@ class TestArchitecturalSourceGuard {
 
     private record SourceFile(String text, List<String> lines) {
         private static final Pattern METHOD_START = Pattern.compile(
-                "^\\s*(?:public|private|protected)\\s+(?:static\\s+)?(?:synchronized\\s+)?[\\w<>\\[\\].?, ]+\\s+(\\w+)\\s*\\([^;]*\\)\\s*\\{\\s*$");
+                "^\\s*(?:public|private|protected)\\s+(?:static\\s+)?(?:synchronized\\s+)?"
+                        + "[\\w<>\\[\\].?, ]+\\s+(\\w+)\\s*\\([^;]*\\)"
+                        + "(?:\\s+throws\\s+[^\\{]+)?\\s*\\{\\s*$");
 
         static SourceFile read(Path path) throws IOException {
             return new SourceFile(Files.readString(path), Files.readAllLines(path));
