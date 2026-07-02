@@ -682,6 +682,7 @@ public class GameLoop {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
         }
+        inputHandler.refreshLogicalSnapshot();
         audioUpdatedThisStep = false;
         refreshRuntimeBindings();
         PaletteOwnershipRegistry paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();

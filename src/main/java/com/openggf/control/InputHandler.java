@@ -1,5 +1,6 @@
 package com.openggf.control;
 
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 
 import java.io.IOException;
@@ -25,6 +26,7 @@ public class InputHandler {
 	private final KeyboardInputMapper keyboardInputMapper;
 	private final GamepadInputManager gamepadInputManager;
 	private LogicalInputSnapshot logicalSnapshot = LogicalInputSnapshot.neutral();
+	private LogicalInputSnapshot logicalOverride;
 	private double mouseX;
 	private double mouseY;
 	private boolean mouseInputSeen;
@@ -105,6 +107,9 @@ public class InputHandler {
 	 * @return Whether the key was just pressed
 	 */
 	public boolean isKeyPressed(int keyCode) {
+		if (logicalOverride != null && keyCode == configService.getInt(SonicConfiguration.DEBUG_MODE_KEY)) {
+			return logicalOverride.debugModeTogglePressed();
+		}
 		if (keyCode >= 0 && keyCode < MAX_KEYS) {
 			return keys[keyCode] && !previousKeys[keyCode];
 		}
@@ -127,10 +132,16 @@ public class InputHandler {
 	}
 
 	public boolean isShiftDown() {
+		if (logicalOverride != null) {
+			return logicalOverride.debugShiftDown();
+		}
 		return isKeyDown(GLFW_KEY_LEFT_SHIFT) || isKeyDown(GLFW_KEY_RIGHT_SHIFT);
 	}
 
 	public boolean isControlDown() {
+		if (logicalOverride != null) {
+			return logicalOverride.debugControlDown();
+		}
 		return isKeyDown(GLFW_KEY_LEFT_CONTROL) || isKeyDown(GLFW_KEY_RIGHT_CONTROL);
 	}
 
@@ -172,8 +183,26 @@ public class InputHandler {
 		return mouseInputSeen;
 	}
 
+	public void setLogicalOverride(LogicalInputSnapshot override) {
+		logicalOverride = override != null ? override : LogicalInputSnapshot.neutral();
+		logicalSnapshot = logicalOverride;
+	}
+
+	public void clearLogicalOverride() {
+		logicalOverride = null;
+	}
+
+	public boolean hasLogicalOverride() {
+		return logicalOverride != null;
+	}
+
 	public void refreshLogicalSnapshot() {
 		inputBindings = InputBindings.fromConfig(configService);
+		if (logicalOverride != null) {
+			gamepadInputManager.poll(inputBindings);
+			logicalSnapshot = logicalOverride;
+			return;
+		}
 		PlayerInputState keyboardP1 = keyboardInputMapper.mapPlayer1(this, inputBindings);
 		PlayerInputState keyboardP2 = keyboardInputMapper.mapPlayer2(this, inputBindings);
 		LogicalInputSnapshot gamepadSnapshot = gamepadInputManager.poll(inputBindings);
