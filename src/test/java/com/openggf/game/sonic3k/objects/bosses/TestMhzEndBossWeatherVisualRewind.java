@@ -14,12 +14,14 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Field;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,6 +44,18 @@ class TestMhzEndBossWeatherVisualRewind {
     @AfterEach
     void resetGraphics() {
         GraphicsManager.getInstance().resetState();
+    }
+
+    @Test
+    void sparkFramesRestoreRomByte769CEQuartet() throws ReflectiveOperationException {
+        Field field = MhzEndBossWeatherVisualChild.class.getDeclaredField("SPARK_FRAMES");
+        field.setAccessible(true);
+        int[] sparkFrames = (int[]) field.get(null);
+
+        assertArrayEquals(new int[]{0x0D, 0x0E, 0x0F, 0x10}, sparkFrames,
+                "byte_769CE (sonic3k.asm:157786-157787) is [1,$D,$E,$F,$10,$FC]; the initial mapping "
+                        + "frame ($D) plus the three Animate_Raw ticks ($E,$F,$10) form the full quartet, "
+                        + "so the frame array must not drop $D");
     }
 
     @ParameterizedTest

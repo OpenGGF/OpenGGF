@@ -295,10 +295,11 @@ public final class MhzMushroomCatapultObjectInstance extends AbstractObjectInsta
                 sprite.setHurt(false);
                 sprite.setAnimationId(Sonic3kAnimationIds.SPRING);
             }
-            ObjectServices services = tryServices();
-            if (services != null) {
-                services.playSfx(Sonic3kSfx.MUSHROOM_BOUNCE.id);
-            }
+        }
+        // ROM sub_3FA5A/sub_3FA26 (asm 84339-84353) end with a single shared
+        // "jmp Play_SFX" per launch call, not once per rider standing on the cap.
+        if (!riders.isEmpty()) {
+            playSfx(Sonic3kSfx.MUSHROOM_BOUNCE.id);
         }
     }
 

@@ -890,10 +890,12 @@ class TestMhzBossObjects {
         }
 
         verify(renderer, org.mockito.Mockito.times(2)).drawFrameIndex(5, 0x42D1, 0x02AF, false, false);
-        verify(renderer).drawFrameIndex(0x0E, 0x4284, 0x0261, false, false);
-        verify(renderer).drawFrameIndex(0x0E, 0x4230, 0x020D, false, false);
-        verify(renderer).drawFrameIndex(0x0E, 0x41DC, 0x01B9, false, false);
-        verify(renderer).drawFrameIndex(0x0E, 0x4188, 0x0165, false, false);
+        // byte_769CE's initial mapping frame is $D (sonic3k.asm:157786-157787); the
+        // three Animate_Raw ticks that follow are $E, $F, $10.
+        verify(renderer).drawFrameIndex(0x0D, 0x4284, 0x0261, false, false);
+        verify(renderer).drawFrameIndex(0x0D, 0x4230, 0x020D, false, false);
+        verify(renderer).drawFrameIndex(0x0D, 0x41DC, 0x01B9, false, false);
+        verify(renderer).drawFrameIndex(0x0D, 0x4188, 0x0165, false, false);
     }
 
     @Test
@@ -4393,8 +4395,8 @@ class TestMhzBossObjects {
                 "loc_7594C starts the return fall with y_vel=-$300");
         assertEquals(0x1D, getPrivateInt(shard, "xVel"),
                 "loc_7594C targets parent x_pos-6 over divisor $6100");
-        assertEquals(2, shard.getPriorityBucket(),
-                "loc_7594C lowers priority to $180 for the return arc");
+        assertEquals(3, shard.getPriorityBucket(),
+                "loc_7594C lowers priority to $180 (bucket 3) for the return arc");
     }
 
     @Test
