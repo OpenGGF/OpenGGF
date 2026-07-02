@@ -6,18 +6,65 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 58 ARZ2 work and the local
+Current branch-local S2 state after round 59 ARZ2 work and the local
 `develop` merge through `d81dd2be1`:
-ARZ2 is f5968 / 8 under `frontierOnly` (`tails_air` expected `0`, actual `1`),
-CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
-actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
-expected `-020C`, actual `0x020C`), and OOZ2 is green after the round 54 Obj3E
-capsule body lifetime fix. The branch-local S2 expected-red set is now ARZ2,
-CNZ2, and MTZ3.
+ARZ2 is f5970 in the focused replay (`tails_status_byte` expected `0x0002`,
+actual `0x0022`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
+expected `-0200`, actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly`
+(`tails_x_speed` expected `-020C`, actual `0x020C`), and OOZ2 is green after
+the round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red
+set is now ARZ2, CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 advanced but is not banked under the green-bank
 rule.
+
+## 2026-07-02 - S2 round 59 ARZ2 Obj89 arrow timer-expiry support frame
+
+Round 59 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round59-next` /
+`bugfix/ai-s2-arz2-round59-next`, based from conductor commit `02a47bba4`.
+The focused baseline reproduced ARZ2 f5968 in the normal replay
+(`tails_air` expected `0`, actual `1`), matching the conductor's f5968 / 8
+`frontierOnly` state after round 58.
+
+Investigation stayed on Obj89's arrow platform in the ARZ2 boss room. At f5968
+the ROM still has CPU Tails standing on Obj89 slot `$14` with `Status_Push`
+set, while the engine had already released the ride during the object-solid
+checkpoint after the arrow timer expired. The shipped ROM's timer-decay path
+decrements `obj89_arrow_timer` and writes routine 6 when it reaches zero, but
+the actual rider-drop code lives in `Obj89_Arrow_Sub6` and is not dispatched
+until the next object pass. `PlatformObject` / `MvSonicOnPtfm` define the
+continued platform support state that must survive that final decay pass
+(`docs/s2disasm/s2.asm:65658-65702,35641-35660,35728-35739`).
+
+Fix:
+- `ARZBossArrow` now records the same frame where the arrow timer reaches zero
+  as a timer-decay support frame, so the shared solid-contact controller keeps
+  existing CPU Tails ride/push state through that object pass.
+- `ObjectSolidContactController` now lets providers that suppress a fresh slope
+  sample still preserve an already-riding support in both inline and
+  post-movement riding checkpoints.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f5968
+  (`tails_air` expected `0`, actual `1`) to f5970
+  (`tails_status_byte` expected `0x0002`, actual `0x0022`) in the focused
+  normal replay. The focused error count drops from 445 to 313.
+
+Verification:
+- New oracle:
+  `mvn "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossArrowTimerDecayKeepsCpuTailsRidingAtFrame5968" "-DfailIfNoTests=false" test`
+  passes after the fix and failed with `actualAir=true` before the production
+  change.
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.context.diagnosticChars=full" test`
+  fails at the advanced expected-red frontier f5970.
+- Same-game shared-behavior guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`
+  preserves the known expected-red frontiers CNZ2 f9977 and MTZ3 f13358.
+  Those match the current branch-local routing table, so this Obj89 change did
+  not introduce new CNZ2 or MTZ3 regressions.
 
 ## 2026-07-02 - S2 round 58 ARZ2 Obj89 arrow CPU Tails timer gate
 

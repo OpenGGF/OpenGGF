@@ -1600,6 +1600,7 @@ final class ObjectSolidContactController {
             putRidingState(player, instance, currentX, currentY, ridingPieceIndex);
             setObjectStandingBit(player, instance, ridingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
+            preserveRidingPushStatusIfNeeded(player, instance, provider);
             inlineSupportedPlayers.add(player);
             return SolidContact.STANDING;
         }
@@ -2291,7 +2292,14 @@ final class ObjectSolidContactController {
                 int maxRelXExclusive = (ridingHalfWidth * 2) + stickyX;
                 boolean inBounds = relX >= minRelX && relX < maxRelXExclusive;
                 // ROM: s2.asm:35387 — skip repositioning if obj_control bit 7 set
-                if (inBounds && provider.isSolidFor(player) && !blocksSolidContacts(player, ridingObject)) {
+                if (inBounds && provider.suppressSlopeSampleThisFrame(player)) {
+                    ridingX = currentX;
+                    ridingY = currentY;
+                    putRidingState(player, ridingObject, ridingX, ridingY, ridingPieceIndex);
+                    setObjectStandingBit(player, ridingObject, ridingPieceIndex);
+                    clearGroundWallSuppressionForNormalSolidSupport(player, ridingObject);
+                    preserveRidingPushStatusIfNeeded(player, ridingObject, provider);
+                } else if (inBounds && provider.isSolidFor(player) && !blocksSolidContacts(player, ridingObject)) {
                     // ROM: s2.asm:35377-35401 — X uses delta tracking, Y uses absolute positioning
                     int deltaX = currentX - ridingX;
                     if (deltaX != 0) {
