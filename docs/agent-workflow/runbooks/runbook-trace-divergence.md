@@ -11,7 +11,7 @@ Companion skill: [`.agents/skills/trace-replay-bug-fixing/SKILL.md`](../../../.a
 1. **Comparison-only.** Do not call `player.setCentreX(trace.xPos())` or any setter sourced from trace snapshot/frame fields in committed code. Enforced by `TestTraceReplayInvariantGuard`.
 2. **No carve-outs.** Fix the divergence by modeling the ROM state that drives the branch (object id/routine, status/control bits, frame-counter visibility, physics profile, event flag, data-driven condition). NEVER branch on zone id/name, trace route, frame number, or "known failing trace".
 3. **Diagnostic hydration stays off.** `oggf.trace.hydrate` must remain unset (`TestTraceHydrateSwitchDefault`). Use it locally for diagnosis only; never commit it on.
-4. **No game-name physics branches.** Use `PhysicsFeatureSet` flags.
+4. **No game-name physics branches.** Use the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`.
 
 ---
 
@@ -41,11 +41,11 @@ From the report, find the first divergent frame and field, then map to the likel
 
 | First divergent field | Likely owner | Files to inspect |
 |-----------------------|--------------|------------------|
-| Player position/speed/angle | Player physics | `com.openggf.sprites.playable.*`, `PhysicsProfile`/`PhysicsFeatureSet` |
+| Player position/speed/angle | Player physics | `com.openggf.sprites.playable.*`, `PhysicsProfile`, typed `GameRules` |
 | Position only while on a platform/solid | Object solid contact | `ObjectManager.SolidContacts`, the riding object instance |
 | Ring count / damage spike | Touch response | `ObjectManager.TouchResponses`, badnik instance |
 | Camera | Event / camera | `Sonic{1,2,3k}LevelEventManager`, `Camera` |
-| Sidekick fields | Sidekick rules | `PhysicsFeatureSet` sidekick flags, sidekick controller |
+| Sidekick fields | Sidekick rules | `SidekickCpuRules`, sidekick controller |
 | Palette / tile | Palette / layout | `PaletteOwnershipRegistry`, `ZoneLayoutMutationPipeline` |
 | Diverges at frame 0 / before input | Test bootstrap | replay test setup |
 

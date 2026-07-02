@@ -4,7 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import com.openggf.camera.Camera;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -309,7 +309,7 @@ public class TestDEZEggman {
 
         TestablePlayableSprite player =
                 new TestablePlayableSprite("sonic", (short) 0x03E5, (short) 0x0160);
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setGameRulesForTest(GameRules.SONIC_2);
         player.setWidth(20);
         player.setHeight(38);
         player.setCentreX((short) 0x03E5);

@@ -4,7 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.GameRng;
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.RespawnState;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.solid.ContactKind;
@@ -2973,7 +2973,7 @@ class TestMhz1CutsceneObjects {
 
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0300, (short) 0x0580);
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0371, (short) 0x0580);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         tails.setLogicalInputState(false, false, true, false, true);
         StubObjectServices services = new StubObjectServices() {
             @Override

@@ -6,7 +6,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -87,7 +87,7 @@ class TestS3kSignpostInstance {
     @Test
     void mainEndingPoseDoesNotLockCtrl1LogicalInputHistory() {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        player.setGameRulesForTest(GameRules.SONIC_3K);
         player.setControlLocked(false);
         player.setLogicalInputState(false, false, false, false, false);
         player.endOfTick();

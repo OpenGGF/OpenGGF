@@ -63,9 +63,9 @@ messages (per-fix ROM rationale).
 12. **No zone/route/frame/"known-failing-trace" carve-outs.** Model the ROM
     state that drives the branch; cite disasm file+line.
 13. **Scope rule, audited before integrating any shared-code change:** a genuine
-    per-game divergence is gated via `PhysicsFeatureSet`/a profile or kept in a
-    per-game object file; a *universal* ROM correction goes engine-level; never
-    branch on `gameId`. Example from this effort: the `GroundSensor.FindFloor`
+    per-game divergence uses the smallest accurate owner from
+    `docs/architecture/per-game-rule-placement.md`; a *universal* ROM correction
+    goes engine-level; never branch on `gameId`. Example from this effort: the `GroundSensor.FindFloor`
     blank-extension-tile fix is universal Sonic floor physics → engine-level,
     and was empirically confirmed inert for S1/S3K by the integration sweep. The
     `LevelEventProvider.updatePrePhysics()` hook defaults to no-op so non-OOZ

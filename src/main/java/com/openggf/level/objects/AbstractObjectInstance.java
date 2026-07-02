@@ -8,8 +8,8 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.PhysicsProvider;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -748,7 +748,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * during list build, not at touch time.
      * <p>
      * The engine therefore branches on
-     * {@link PhysicsFeatureSet#touchResponseUsesRenderFlagYGate()}: S1
+     * {@link ObjectInteractionRules#touchResponseUsesRenderFlagYGate()}: S1
      * gets the X+Y check; S2/S3K fall back to the X-only check the
      * engine used pre-Task-3 (commits b4ff4ea01/86871035c). Without this
      * gating the universal X+Y check filters S3K objects ROM allows to
@@ -800,7 +800,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     /**
      * Resolves whether the active game gates {@link #isOnScreenForTouch()}
      * on the BuildSprites Y-band. Defaults to {@code true} when no game
-     * module / feature set is available so test fixtures (which often run
+     * module / game rules are available so test fixtures (which often run
      * without a fully-bootstrapped runtime) keep the stricter S1 gate the
      * regression suite was calibrated against.
      */
@@ -810,12 +810,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         if (module == null) {
             return true;
         }
-        PhysicsProvider physProvider = module.getPhysicsProvider();
-        PhysicsFeatureSet featureSet = physProvider != null ? physProvider.getFeatureSet() : null;
-        if (featureSet == null) {
+        GameRules rules = module.getRules();
+        if (rules == null || rules.objectInteraction() == null) {
             return true;
         }
-        return featureSet.touchResponseUsesRenderFlagYGate();
+        return rules.objectInteraction().touchResponseUsesRenderFlagYGate();
     }
 
     /**

@@ -1,6 +1,6 @@
 package com.openggf.sprites.managers;
 
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
@@ -28,9 +28,9 @@ class TestSpindashDustControllerSplash {
 
     @Test
     void s3kDustSidecarsUseFixedLevelObjectSlotsOutsideDynamicAllocator() {
-        assertEquals(98, PhysicsFeatureSet.SONIC_3K.fixedDustSlotIndex(false),
+        assertEquals(98, GameRules.SONIC_3K.powerUp().fixedDustSlotIndex(false),
                 "S3K Dust is fixed Level_object_RAM slot 98 (sonic3k.constants.asm:309-317)");
-        assertEquals(99, PhysicsFeatureSet.SONIC_3K.fixedDustSlotIndex(true),
+        assertEquals(99, GameRules.SONIC_3K.powerUp().fixedDustSlotIndex(true),
                 "S3K Dust_P2 is fixed Level_object_RAM slot 99 (sonic3k.constants.asm:309-317)");
         assertFalse(ObjectSlotLayout.SONIC_3K.isDynamicSlot(98),
                 "Dust must not consume S3K AllocateObject dynamic slot pressure");
@@ -40,9 +40,9 @@ class TestSpindashDustControllerSplash {
 
     @Test
     void s2DustSidecarsShareTheSameRelativeFixedSlotLayout() {
-        assertEquals(132, PhysicsFeatureSet.SONIC_2.fixedDustSlotIndex(false),
+        assertEquals(132, GameRules.SONIC_2.powerUp().fixedDustSlotIndex(false),
                 "S2 Sonic_Dust sits two slots before Sonic_Shield");
-        assertEquals(133, PhysicsFeatureSet.SONIC_2.fixedDustSlotIndex(true),
+        assertEquals(133, GameRules.SONIC_2.powerUp().fixedDustSlotIndex(true),
                 "S2 Tails_Dust sits one slot before Sonic_Shield");
     }
 

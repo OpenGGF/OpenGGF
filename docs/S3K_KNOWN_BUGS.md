@@ -329,9 +329,9 @@ First strict error advanced F1740 → F1758.
 
 ## CNZ1 Trace F1685 — Tails CPU Spurious Despawn on Barber-Pole→Wire-Cage Object Switch (FIXED)
 
-**Status:** Fixed in iter-10 by gating the engine's despawn-on-object-id-mismatch path behind `PhysicsFeatureSet.sidekickDespawnUsesObjectIdMismatch`. S3K disables the path because ROM's `sub_13EFC` (`sonic3k.asm:26823`) compares the high word of the cached vs current object's routine pointer (`cmp.w (a3),d0`), and all S3K gameplay objects share the same high word `0x0003`, making the ROM check effectively dormant. Engine was comparing 8-bit object IDs (`0x4D` barber pole vs `0x4E` wire cage) and triggering despawn on legitimate same-region transitions. S2 keeps the existing behaviour because `TailsCPU_CheckDespawn` (`s2.asm:39067`) genuinely does compare object id bytes.
+**Status:** Fixed in iter-10 by gating the engine's despawn-on-object-id-mismatch path behind `ObjectInteractionRules.sidekickDespawnUsesObjectIdMismatch`. S3K disables the path because ROM's `sub_13EFC` (`sonic3k.asm:26823`) compares the high word of the cached vs current object's routine pointer (`cmp.w (a3),d0`), and all S3K gameplay objects share the same high word `0x0003`, making the ROM check effectively dormant. Engine was comparing 8-bit object IDs (`0x4D` barber pole vs `0x4E` wire cage) and triggering despawn on legitimate same-region transitions. S2 keeps the existing behaviour because `TailsCPU_CheckDespawn` (`s2.asm:39067`) genuinely does compare object id bytes.
 
-**Location:** `SidekickCpuController.checkDespawn()`, `PhysicsFeatureSet.sidekickDespawnUsesObjectIdMismatch`.
+**Location:** `SidekickCpuController.checkDespawn()`, `ObjectInteractionRules.sidekickDespawnUsesObjectIdMismatch`.
 **Trace reference:** `src/test/resources/traces/s3k/cnz`, first strict error at frame 1685.
 
 ### Symptom (pre-fix)
@@ -352,7 +352,7 @@ Removed when `TestS3kCnzTraceReplay`'s first strict error advanced past F1685.
 
 **Status:** Fixed in iter-12 by adding the ROM `SolidObject_cont` on-screen
 gate to `ObjectManager.SolidContacts.processInlineObjectForPlayer`,
-gated for S3K via `PhysicsFeatureSet.solidObjectOffscreenGate`. The v6.2-s3k
+gated for S3K via `CollisionRules.solidObjectOffscreenGate`. The v6.2-s3k
 recorder added per-frame `object_state` and `interact_state` events that
 made the camera-vs-spike geometry directly inspectable; with those events
 the ROM control flow at F2667 became unambiguous. First strict error
@@ -413,7 +413,7 @@ The S2 disassembly even documents this gate:
   16-pixel margin matches the typical ROM `width_pixels` for gameplay
   solids and avoids depending on `SolidObjectParams.halfWidth` (which
   reflects collision halfwidth, not render extent).
-* Added `PhysicsFeatureSet.solidObjectOffscreenGate` (S3K=true, S1/S2=false
+* Added `CollisionRules.solidObjectOffscreenGate` (S3K=true, S1/S2=false
   for now to keep current trace baselines stable while the on-screen
   semantic is validated game-by-game).
 * Inserted the gate in
@@ -531,7 +531,7 @@ natively in engine code.
 
 ## AIZ1 Trace F2590 — Tails Fly-Back Exit Gate Per-Game Mask Mismatch (FIXED)
 
-**Status:** Fixed in iter-10 by splitting `TailsRespawnStrategy.updateApproaching`'s exit-gate mask per game via `PhysicsFeatureSet.sidekickFlyLandStatusBlockerMask` and `sidekickFlyLandRequiresLeaderAlive`. Kept here for context — the F2590 entry rolled forward through several investigations before the per-game divergence was identified.
+**Status:** Fixed in iter-10 by splitting `TailsRespawnStrategy.updateApproaching`'s exit-gate mask per game via `SidekickCpuRules.sidekickFlyLandStatusBlockerMask` and `sidekickFlyLandRequiresLeaderAlive`. Kept here for context — the F2590 entry rolled forward through several investigations before the per-game divergence was identified.
 
 **Location:** `TailsRespawnStrategy.updateApproaching` (engine APPROACHING → NORMAL transition, equivalent to ROM `Tails_FlySwim_Unknown` exit at sonic3k.asm:26622-26648 / s2.asm:38870-38883).
 
@@ -564,16 +564,16 @@ are zero. ROM S3K also adds a leader-alive check that S2 lacks
 
 ### Iter-10 Fix
 
-- `PhysicsFeatureSet`: added two fields:
+- `SidekickCpuRules`: added two fields:
   - `sidekickFlyLandStatusBlockerMask` — `0xD2` (S2) / `0x80` (S3K) /
     `0` (S1, no CPU sidekick).
   - `sidekickFlyLandRequiresLeaderAlive` — `false` (S1/S2) / `true`
     (S3K, ROM `cmpi.b #6,(Player_1+routine).w`).
-- `TailsRespawnStrategy.updateApproaching` now reads both fields off
-  `sidekick.getPhysicsFeatureSet()`. The legacy `0xD2` mask is kept
-  as a fallback when no feature set is resolved (legacy unit tests
+- `TailsRespawnStrategy.updateApproaching` now reads both fields from
+  `sidekick.getGameRules().sidekickCpu()`. The legacy `0xD2` mask is kept
+  as a fallback when no rules are resolved (legacy unit tests
   that build a sprite without a game module).
-- `CrossGameFeatureProvider` and `TestHybridPhysicsFeatureSet`
+- `CrossGameFeatureProvider` and `TestHybridGameRules`
   threaded through the new fields.
 
 ### Effect on AIZ trace replay
@@ -1109,7 +1109,7 @@ In the engine, Tails has matching `(sk_x, sk_y)` up to F6254 but **never has `on
 
 Three layers — first two now resolved, third remains:
 
-1. **Engine SidekickCpuController had no `(a3)=0` analog.** [Resolved in commit 2b8cd723f.] ROM's `cmp.w (a3),d0` mismatch fires on slot deletion (the SST is zeroed by `Delete_Referenced_Sprite` sonic3k.asm:36116). The engine added `latchedSolidObjectInstance` (`AbstractPlayableSprite`), `setLatchedSolidObject(int, ObjectInstance)` (ObjectManager wires this on `processInline*` standing/touchTop), `SidekickCpuController.lastRidingInstance` per-frame cache, and the `sub_13EFC` `(a3)=0` analog gated by `PhysicsFeatureSet.sidekickDespawnUsesRidingInstanceLoss`.
+1. **Engine SidekickCpuController had no `(a3)=0` analog.** [Resolved in commit 2b8cd723f.] ROM's `cmp.w (a3),d0` mismatch fires on slot deletion (the SST is zeroed by `Delete_Referenced_Sprite` sonic3k.asm:36116). The engine added `latchedSolidObjectInstance` (`AbstractPlayableSprite`), `setLatchedSolidObject(int, ObjectInstance)` (ObjectManager wires this on `processInline*` standing/touchTop), `SidekickCpuController.lastRidingInstance` per-frame cache, and the `sub_13EFC` `(a3)=0` analog gated by `ObjectInteractionRules.sidekickDespawnUsesRidingInstanceLoss`.
 
 2. **Engine collapsing-platform lifecycle was off by one frame.** [Resolved in this commit.] `ObjectManager.unloadCounterBasedOutOfRange()` (ObjectManager.java:1842) reproduces ROM's `Sprite_OnScreen_Test` formula but feeds the **current** frame's `cameraX`. ROM's S3K `Sprite_OnScreen_Test` (sonic3k.asm:37262) uses `Camera_X_pos_coarse_back`, which `Load_Sprites` (sonic3k.asm:37545 `loc_1B7F2`) updates **after** `Process_Sprites` each frame — so the value seen during a given frame's object pass reflects the camera's X at the **end of the previous frame**. The engine's eager check destroyed the platform at frame K (cam_x=0x0985), one frame before ROM's frame K+1 deletion (using `Camera_X_pos_coarse_back` = end-of-K value = 0x0900, distance=0xFF80 > 0x280 → delete). Fix: `Sonic3kCollapsingPlatformObjectInstance.isPersistent()` returns `true` to bypass the eager engine OOR, plus `spriteOnScreenTestPasses()` runs the lagged-camera variant inside `update()` using `previousFrameCameraX` cached from the prior tick. With this, the platform now reaches `setDestroyed(true)` at gfc=0x1746 / F6254 — matching ROM exactly.
 
@@ -1278,7 +1278,8 @@ shared rider path. A prior local experiment that sampled the previous X for
 S3K sloped riding fixed the F6920 shape but regressed AIZ F5904 from
 `y=0x0317` to `y=0x0316`, which means the signal is not "always previous X".
 Any real fix needs to preserve the shared S1/S2/S3K slope sample order above,
-or gate a proven S3K-specific divergence through `PhysicsFeatureSet`.
+or gate a proven S3K-specific divergence through the narrowest typed
+`GameRules` rule or object-local owner.
 
 The object-level ordering signal is real but not yet isolated enough to land:
 S3K `Obj_CollapsingPlatform` state `loc_205DE` calls `sub_205B6` before
@@ -1401,8 +1402,8 @@ Once the open hypotheses are settled, the fix has to:
 1. Identify the ROM divergence that produces a one-pixel "y-hold" on
    F6917/F6920 with cite (likely a standing-bit transition or a ROM-side
    y_pos snap inside Sonic's own routine that the engine isn't reproducing).
-2. Gate the divergence behind a `PhysicsFeatureSet` flag so S1/S2 are
-   unaffected.
+2. Gate the divergence behind the narrowest typed `GameRules` rule or
+   object-local owner so S1/S2 are unaffected.
 3. Preserve F5904 (`y = 0x0317`), pass F6920 (`y = 0x0342`), and not
    regress CNZ F6304 / S1 GHZ / S1 MZ / S2 EHZ baselines.
 
@@ -1437,7 +1438,7 @@ The fix exposes `getOnScreenHalfWidth()` on `AbstractObjectInstance`
 `previousFrameCameraBounds` snapshot rolled forward in
 `updateCameraBounds` so the gate matches ROM's one-frame-old observation
 order. Cross-game safe: the gate is still feature-flagged on
-`PhysicsFeatureSet.solidObjectOffscreenGate` (S3K only); the new accessor
+`CollisionRules.solidObjectOffscreenGate` (S3K only); the new accessor
 just sharpens the per-object margin and the snapshot timing. Verified
 green: S1 GHZ, S1 MZ, S2 EHZ, S3K AIZ first-error stable at F6920.
 
@@ -1541,8 +1542,8 @@ disassembly walk that ROM does call `SolidObjectFull` on Tails in
 `Tails_CPU_routine = 6 leader_fast` for the same frame the door's
 trigger advances, and (b) port the airborne-from-above latch shape
 proven for horizontal springs into the CNZ door's Tails-side path,
-gated by a `PhysicsFeatureSet` flag if it does not also apply to S2's
-ARZ doors / S1's MZ doors. Cross-game parity is required: S2 EHZ trace
+gated by the narrowest typed `GameRules` rule or object-local owner if it
+does not also apply to S2's ARZ doors / S1's MZ doors. Cross-game parity is required: S2 EHZ trace
 F1151 must stay green, S1 GHZ/MZ must stay green / F311 respectively,
 and S3K AIZ trace must not regress past its current F6920 sloped-ride
 blocker.
@@ -1557,7 +1558,7 @@ strict error has advanced to F7614 (see the next entry for details).
 ## CNZ1 Trace F7614 — Tails Jump Frame 2-Pixel y_pos Drift (RESOLVED)
 
 **Resolution (2026-04-30):** Added
-`PhysicsFeatureSet.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity` (true
+`CollisionRules.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity` (true
 on S3K, false on S1/S2) so `ObjectManager.SolidContacts.resolveContactInternal`
 applies the position lift on upward-velocity contacts instead of returning
 null.  The lift mirrors ROM `loc_1E154` (sonic3k.asm:41606-41632) which
@@ -2122,7 +2123,7 @@ write that has not yet been identified.
    No engine-side fix lands in this round. The remaining work is
    isolating which dispatch gate prevents the engine from invoking
    `resolveContactInternal` for the spring/Tails pair on F7614, then
-   landing a ROM-cited fix gated through `PhysicsFeatureSet` or via
+   landing a ROM-cited fix gated through typed `GameRules` or via
    a spring-instance change that mirrors the ROM `Obj_Spring_Horizontal`
    per-frame `SolidObjectFull2_1P` dispatch independent of Tails's
    air state.
@@ -2138,8 +2139,8 @@ y_pos delta on the `Tails_Jump` frame. The fix must:
 - Preserve the comparison-only trace invariant (no per-frame writes
   from CSV/aux into the engine in committed test code).
 - Keep S1 GHZ, S1 MZ1, S2 EHZ, and S3K AIZ traces green.
-- If the fix is per-game, gate it through `PhysicsFeatureSet`, not
-  `if (gameId == GameId.S3K)`.
+- If the fix is per-game, gate it through the narrowest typed `GameRules`
+  rule or object-local owner, not `if (gameId == GameId.S3K)`.
 
 ---
 
@@ -2289,8 +2290,8 @@ candidates above. The fix must:
 - Preserve the comparison-only trace invariant (no per-frame writes
   from CSV/aux into the engine in committed test code).
 - Keep S1 GHZ, S1 MZ1, S2 EHZ traces green.
-- If the fix is per-game, gate it through `PhysicsFeatureSet`, not
-  `if (gameId == GameId.S3K)`.
+- If the fix is per-game, gate it through the narrowest typed `GameRules`
+  rule or object-local owner, not `if (gameId == GameId.S3K)`.
 
 ---
 
@@ -2471,8 +2472,8 @@ advances past F7171 with a ROM-cited fix. The fix must:
 - Keep S1 GHZ, S1 MZ1, S2 EHZ, S3K AIZ post-F7127, and S3K CNZ
   pre-F7614 traces green (CNZ first-error must stay at or advance
   past F7614).
-- If the fix is per-game, gate it through `PhysicsFeatureSet`,
-  not `if (gameId == GameId.S3K)`.
+- If the fix is per-game, gate it through the narrowest typed `GameRules`
+  rule or object-local owner, not `if (gameId == GameId.S3K)`.
 - The boundary-kill `getY()` vs `getCentreY()` divergence
   identified above is the most promising candidate. Before
   switching, audit Sonic-side kill behaviour across traces
@@ -2480,9 +2481,8 @@ advances past F7171 with a ROM-cited fix. The fix must:
   calibrated against the off-by-12 semantics). The shared
   `getY()` call lives in `PlayableSpriteMovement.doLevelBoundary`
   (line ~1891), used uniformly by all sprites; if the change
-  is needed only for sidekicks, gate via a new
-  `PhysicsFeatureSet.levelBoundaryUsesCentreY` flag that defaults
-  to `false` for current behaviour.
+  is needed only for sidekicks, use a focused `PlayerMovementRules` field
+  or a sidekick-local owner with explicit cross-game values.
 
 ### Cross-Game Audit (2026-04-30)
 
@@ -2519,8 +2519,8 @@ are already replicated by:
 
 So the missing piece is purely the **comparand**: switch
 `sprite.getY()` to `sprite.getCentreY()` for the bottom kill plane
-test. The proposed `PhysicsFeatureSet.levelBoundaryUsesCentreY`
-flag should default to `true` for `SONIC_3K` (ROM-accurate) and
+test. The proposed `PlayerMovementRules.levelBoundaryUsesCentreY`
+rule should default to `true` for `SONIC_3K` (ROM-accurate) and
 `false` for `SONIC_1` and `SONIC_2` until their trace baselines
 are verified to honour the same kill semantics. The S1 GHZ/MZ1
 and S2 EHZ traces were recorded against the engine's existing
@@ -2531,9 +2531,9 @@ flag can be flipped to `true` for all three games.
 
 ### Implementation Status (2026-04-30)
 
-The centre-Y feature flag landed on this branch:
+The centre-Y rule landed on this branch:
 
-- `PhysicsFeatureSet.levelBoundaryUsesCentreY` added,
+- `PlayerMovementRules.levelBoundaryUsesCentreY` added,
   `SONIC_3K = true`, `SONIC_1`/`SONIC_2 = false` (deferred until
   S1 GHZ/MZ1 and S2 EHZ trace baselines are re-recorded — ROM
   cites for those games at `s1disasm/_incObj/01 Sonic.asm:1014`
@@ -3372,7 +3372,7 @@ actually enters `controlLocked` at the same ROM-cited site.
   `$40/4 = 16` frames back (sonic3k.asm:26683-26689 and
   s2.asm:38927-38932). Both reads must observe the same
   `Ctrl_1_logical`-equivalent value.
-- `PhysicsFeatureSet` already gates the `loc_13DA6` lead offset
+- `SidekickCpuRules` already gates the `loc_13DA6` lead offset
   via `sidekickFollowLeadOffset()`; a second flag for "preserve
   logical input across `controlLocked`" would be redundant once
   controlLocked is wired correctly.
@@ -3622,7 +3622,8 @@ Any candidate fix must keep:
 - Cross-game spring parity (S1/S2/S3K share spring objects) — any
   change in `SpringBounceHelper` / `Sonic3kSpringObjectInstance` /
   `SpringObjectInstance` / `Sonic1SpringObjectInstance` must gate
-  S3K-only differences via `PhysicsFeatureSet`, never `gameId ==`.
+  S3K-only differences via the narrowest typed `GameRules` rule or
+  object-local owner, never `gameId ==`.
 
 **Status update — branch `bugfix/ai-cnz-f7919-tails-spring-impulse`**
 
@@ -3796,7 +3797,8 @@ must keep:
 - Cross-game touch-response parity (S1/S2/S3K share
   `AbstractObjectInstance` / `TouchResponseProvider`) — any change
   in `ClamerObjectInstance` or shared touch dispatch must gate
-  S3K-only differences via `PhysicsFeatureSet`, never `gameId ==`.
+  S3K-only differences via the narrowest typed `GameRules` rule or
+  object-local owner, never `gameId ==`.
 
 **Status update — branch `bugfix/ai-cnz-tails-cpu-drift` (root
 cause re-localised: Clamer parent state machine, NOT Tails CPU)**
@@ -3942,7 +3944,7 @@ slot 6 routine transitions (ROM, parent Clamer @0x0C98,0x0470):
      the close animation completes, then resets via `loc_89056`
      (`move.b #2, routine; move.b #$A, collision_flags`).
 2. **Cross-game audit.** S1 has no Clamer; S2 has no Clamer.
-   This is purely an S3K-only object, so no `PhysicsFeatureSet`
+   This is purely an S3K-only object, so no `GameRules`
    gate is needed — the entire `Clamer_Index` port lives in
    `ClamerObjectInstance` (S3K-only file).
 3. **Do NOT add an engine-only proximity gate that fires the
@@ -4120,8 +4122,8 @@ in *when* the engine evaluates the overlap.
   (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
   `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`)
   GREEN.
-- Cross-game spring/touch-response parity gated via
-  `PhysicsFeatureSet`, never `gameId ==`.
+- Cross-game spring/touch-response parity gated via the narrowest typed
+  `GameRules` rule or object-local owner, never `gameId ==`.
 
 **Out-of-scope rationale.** The mission brief asked
 specifically about the spring-child collision-box dimensions.
@@ -4271,7 +4273,7 @@ A surgical fix needs:
    if the body — not the projectile — is the actual ride target),
    gated on the object being touchable from above.
 4. Cross-game audit: S1/S2 have no AIZ miniboss, so this is S3K-only
-   (no `PhysicsFeatureSet` flag needed; the fix lives entirely in the
+   (no `GameRules` rule needed; the fix lives entirely in the
    AIZ miniboss object files).
 
 The investigation revealed that the on-screen object closest to
@@ -4352,8 +4354,8 @@ spring's behaviour.
   has been verified against:
   - 6 unit tests in `TestClamerObjectInstance` (2 pre-existing for the
     spring-launch path + 4 new for the auto-close gate).
-  - Cross-game parity (S1/S2 do not have Clamer; no `PhysicsFeatureSet`
-    flag needed).
+  - Cross-game parity (S1/S2 do not have Clamer; no `GameRules`
+    rule needed).
   - Wide S3K test suite: 1127 passed, 28 failed, 9 errors — identical
     failure set to baseline (no new failures).
 - The original diagnosis claim that ROM stays in routine 0x06 from
@@ -4665,8 +4667,8 @@ additional probe work):
   (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
   `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`)
   GREEN.
-- Cross-game spring/touch-response parity gated via
-  `PhysicsFeatureSet`, never `gameId ==`.
+- Cross-game spring/touch-response parity gated via the narrowest typed
+  `GameRules` rule or object-local owner, never `gameId ==`.
 
 **Why no code change this round.**
 
@@ -4888,8 +4890,8 @@ that touches only `ClamerObjectInstance`.
   (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
   `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`)
   GREEN.
-- Cross-game spring/touch-response parity gated via
-  `PhysicsFeatureSet`, never `gameId ==`.
+- Cross-game spring/touch-response parity gated via the narrowest typed
+  `GameRules` rule or object-local owner, never `gameId ==`.
 
 ## CNZ F=621 Clamer re-fire — recorder gap closed; ROM mechanism localised (diagnosis only, round 3)
 

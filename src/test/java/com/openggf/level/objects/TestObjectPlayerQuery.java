@@ -5,7 +5,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.DamageCause;
 import com.openggf.game.GroundMode;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ShieldType;
 import com.openggf.physics.Direction;
@@ -292,6 +292,6 @@ class TestObjectPlayerQuery {
         @Override public boolean applyHurtOrDeath(int sourceX, DamageCause cause, boolean hadRings) { return false; }
         @Override public boolean applyCrushDeath() { return false; }
         @Override public int incrementBadnikChain() { return 0; }
-        @Override public PhysicsFeatureSet getPhysicsFeatureSet() { return null; }
+        @Override public com.openggf.game.rules.GameRules getGameRules() { return null; }
     }
 }

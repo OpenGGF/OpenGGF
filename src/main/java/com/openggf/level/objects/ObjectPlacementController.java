@@ -3,7 +3,6 @@ package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;

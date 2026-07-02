@@ -3,7 +3,12 @@ package com.openggf.sprites.managers;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.CollisionRules;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PlayerAnimationRules;
+import com.openggf.game.rules.PlayerCapabilityRules;
+import com.openggf.game.rules.PlayerMovementRules;
+import com.openggf.game.rules.PowerUpRules;
 
 import com.openggf.camera.Camera;
 import com.openggf.level.LevelManager;
@@ -135,6 +140,46 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	public PlayableSpriteMovement(AbstractPlayableSprite sprite) {
 		this(sprite, sprite.currentCollisionSystemOrNull(), sprite.currentGameStateOrNull());
+	}
+
+	private PlayerMovementRules playerMovementRulesOrNull() {
+		GameRules rules = sprite.getGameRules();
+		if (rules != null && rules.playerMovement() != null) {
+			return rules.playerMovement();
+		}
+		return null;
+	}
+
+	private PlayerAnimationRules playerAnimationRulesOrNull() {
+		GameRules rules = sprite.getGameRules();
+		if (rules != null && rules.playerAnimation() != null) {
+			return rules.playerAnimation();
+		}
+		return null;
+	}
+
+	private PlayerCapabilityRules playerCapabilityRulesOrNull() {
+		GameRules rules = sprite.getGameRules();
+		if (rules != null && rules.playerCapability() != null) {
+			return rules.playerCapability();
+		}
+		return null;
+	}
+
+	private CollisionRules collisionRulesOrNull() {
+		GameRules rules = sprite.getGameRules();
+		if (rules != null && rules.collision() != null) {
+			return rules.collision();
+		}
+		return null;
+	}
+
+	private PowerUpRules powerUpRulesOrNull() {
+		GameRules rules = sprite.getGameRules();
+		if (rules != null && rules.powerUp() != null) {
+			return rules.powerUp();
+		}
+		return null;
 	}
 
 	@Override
@@ -333,19 +378,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	/**
-	 * Returns the spindash speed table from the physics feature set,
+	 * Returns the spindash speed table from typed player capability rules,
 	 * falling back to the static SPINDASH_SPEEDS constant.
 	 * S3K Super/Hyper forms use a higher speed table (sonic3k.asm:23743 word_11D04).
 	 * S2 Super Sonic uses SpindashSpeedsSuper (s2.asm:37305).
 	 */
 	private short[] getSpindashSpeedTable() {
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (sprite.isSuperSonic() && featureSet != null
-				&& featureSet.superSpindashSpeedTable() != null) {
-			return featureSet.superSpindashSpeedTable();
+		PlayerCapabilityRules rules = playerCapabilityRulesOrNull();
+		if (sprite.isSuperSonic() && rules != null
+				&& rules.superSpindashSpeedTable() != null) {
+			return rules.superSpindashSpeedTable();
 		}
-		if (featureSet != null && featureSet.spindashSpeedTable() != null) {
-			return featureSet.spindashSpeedTable();
+		if (rules != null && rules.spindashSpeedTable() != null) {
+			return rules.spindashSpeedTable();
 		}
 		return SPINDASH_SPEEDS;
 	}
@@ -646,9 +691,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (!sprite.getPinballMode()) {
 			return false;
 		}
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (featureSet != null
-				&& featureSet.rollingJumpPinballGateRequiresSpindashFlag()
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		if (movementRules != null
+				&& movementRules.rollingJumpPinballGateRequiresSpindashFlag()
 				&& !sprite.getSpindash()) {
 			// S2 Obj85/Obj86 do not write pinball_mode; the engine uses
 			// pinballMode there only to carry a temporary roll-preservation
@@ -829,8 +874,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	/** Sonic_CheckSpindash: Check for spindash initiation (s2.asm:37206) */
 	private boolean doCheckSpindash() {
 		// Feature gate: skip entirely if spindash is disabled (e.g., Sonic 1)
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (featureSet != null && !featureSet.spindashEnabled()) {
+		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
+		if (capabilityRules != null && !capabilityRules.spindashEnabled()) {
 			return false;
 		}
 
@@ -1000,7 +1045,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		//  docs/s2disasm/s2.asm:40428-40429 Tails_JumpHeight;
 		//  docs/s1disasm/_incObj/01 Sonic.asm:1197-1198;
 		//  docs/skdisasm/sonic3k.asm:23366-23367 -- identical gate in all
-		//  three games, so this is a universal correction, no feature flag).
+		//  three games, so this is a universal correction, no per-game rule).
 		// Previously this branched on the `jumpPressed` controller-loop latch.
 		// That latch is set whenever a jump button is held (including the
 		// A/B/C bits TailsCPU_Normal_FilterAction synthesizes into Ctrl_2
@@ -1023,8 +1068,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 			// Shield ability: re-press jump after release while airborne (docs/skdisasm/sonic3k.asm:23397).
 			if (jumpReleasedSinceJump && inputJumpPress && sprite.getDoubleJumpFlag() == 0) {
-				PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-				if (fs != null && fs.jumpRepressClearsRollJumpBeforeAbility()
+				PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
+				if (capabilityRules != null && capabilityRules.jumpRepressClearsRollJumpBeforeAbility()
 						&& sprite.getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD) {
 					// ROM: S3K Sonic_ShieldMoves clears Status_RollJump before
 					// testing Super, invincibility, elemental shields, or insta-shield
@@ -1052,12 +1097,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * @return true if an ability was activated (or suppressed by Super)
 	 */
 	private boolean tryShieldAbility() {
-		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		if (fs == null) {
+		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
+		if (capabilityRules == null) {
 			return false;
 		}
-		boolean hasElemental = fs.elementalShieldsEnabled();
-		boolean hasInsta = fs.instaShieldEnabled();
+		boolean hasElemental = capabilityRules.elementalShieldsEnabled();
+		boolean hasInsta = capabilityRules.instaShieldEnabled();
 		if (!hasElemental && !hasInsta) {
 			return false;
 		}
@@ -1856,8 +1901,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// S3K Player_SlopeResist (sonic3k.asm:23830-23856) instead branches
 			// to loc_11DDC on inertia=0 and applies the force when |force| >= $D,
 			// kicking the stationary player into motion on a steep enough slope.
-			PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-			boolean s3kKickAtRest = fs != null && fs.slopeResistAppliesAtZeroInertia();
+			PlayerMovementRules movementRules = playerMovementRulesOrNull();
+			boolean s3kKickAtRest = movementRules != null && movementRules.slopeResistAppliesAtZeroInertia();
 			if (!s3kKickAtRest || Math.abs(slopeEffect) < 0x0D) {
 				return false;
 			}
@@ -2018,9 +2063,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 			if (lookGateActive && !balancingNow) {
 				short lookDelay = sprite.getLookDelayCounter();
-				PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-				short lookScrollDelay = (featureSet != null) ? featureSet.lookScrollDelay()
-						: PhysicsFeatureSet.LOOK_SCROLL_DELAY_S2;
+				GameRules rules = sprite.getGameRules();
+				short lookScrollDelay = rules != null && rules.camera() != null
+						? rules.camera().lookScrollDelay()
+						: GameRules.SONIC_2.camera().lookScrollDelay();
 				if (inputUp) {
 					// ROM: Sonic_Lookup (s2.asm:36398-36409, s1.asm: Sonic_LookUp)
 					// Animation is set immediately, camera pan may have delay
@@ -2102,9 +2148,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// S3K uses movingCrouchThreshold ($100) as the roll speed threshold;
 		// below that speed, down enters crouch (handled in updateCrouchState).
-		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		int rollThreshold = (fs != null && fs.movingCrouchThreshold() > 0)
-				? fs.movingCrouchThreshold() : minStartRollSpeed;
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		int rollThreshold = (movementRules != null && movementRules.movingCrouchThreshold() > 0)
+				? movementRules.movingCrouchThreshold() : minStartRollSpeed;
 		if (Math.abs(gSpeed) < rollThreshold) return;
 		// ROM roll-entry tests the held controller bits directly, not the
 		// move_lock-filtered left/right movement inputs. In S3K, move_lock only
@@ -2119,7 +2165,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		short preRollCentreX = sprite.getCentreX();
 		sprite.setRolling(true);
-		if (fs != null && fs.animationChangeClearsPush()) {
+		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+		if (animationRules != null && animationRules.animationChangeClearsPush()) {
 			// Tails_Roll/SonicKnux_Roll write anim=#2 on roll entry
 			// (sonic3k.asm:23259-23264,28494-28500). Animate_Tails/
 			// Animate_Sonic later clears Status_Push when anim != prev_anim
@@ -2203,9 +2250,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.clearObjectPreservedRollVelocityCarry();
 		}
 
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		short rollDecel = (short) 0x20;
-		if (featureSet != null && featureSet.rollControlledDecelUsesEffectiveDecelQuarter()) {
+		if (movementRules != null && movementRules.rollControlledDecelUsesEffectiveDecelQuarter()) {
 			// S1 Sonic_RollSpeed derives d4 from v_sonspeeddec >> 2, so the
 			// underwater value is $40 >> 2 = $10. S2/S3K hardcode $20.
 			rollDecel = (short) (sprite.getRunDecel() >> 2);
@@ -2246,7 +2293,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// abs(ground_vel) against min_roll_speed ($80) and unrolls below it.
 		// Refs: s1disasm/_incObj/01 Sonic.asm:760-768; s2.asm:37046-37055,
 		// 40072-40081; sonic3k.asm:22971-22986,28216-28231.
-		boolean stopRolling = featureSet != null && featureSet.rollStopsBelowMinimumSpeed()
+		boolean stopRolling = movementRules != null && movementRules.rollStopsBelowMinimumSpeed()
 				? Math.abs(gSpeed) < minRollSpeed
 				: gSpeed == 0;
 		if (stopRolling) {
@@ -2287,8 +2334,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 		sprite.setAnimationId(idleAnimId);
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (featureSet != null && featureSet.animationChangeClearsPush()) {
+		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+		if (animationRules != null && animationRules.animationChangeClearsPush()) {
 			// ROM Tails_RollSpeed/Sonic_RollSpeed writes anim=$05 on roll stop
 			// (sonic3k.asm:28198-28210) and the S2/S3K animation driver clears
 			// Status_Push when anim != prev_anim (sonic3k.asm:29359-29364,
@@ -2326,8 +2373,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Air control (skip if rolling jump)
 		// S1/S2 (s1:01 Sonic.asm:736-750, s2.asm:36826-36840): unconditional cap at max.
 		// S3K (sonic3k.asm:23088-23121): preserves speeds already above max (undo+check).
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		boolean preserveSuperspeed = featureSet != null && featureSet.airSuperspeedPreserved();
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		boolean preserveSuperspeed = movementRules != null && movementRules.airSuperspeedPreserved();
 		if (!sprite.getRollingJump()) {
 			if (inputLeft) {
 				sprite.setDirection(Direction.LEFT);
@@ -2519,7 +2566,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		int leftBoundary = minX + LEFT_OFFSET;
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		// S3K Player_Boundary_Sides/Tails_Check_Screen_Boundaries use
 		// Camera_max_X_pos+$128 directly, with no normal-play +$40 extension
 		// (sonic3k.asm:23183-23186, 28418-28421). This reproduces +$128 / +$128+$40
@@ -2530,17 +2577,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// f_lockscreen (set at boss spawn, cleared only by Egg Prison / LZ boss,
 		// so it survives boss defeat in the Final Zone — s1disasm/_incObj/01
 		// Sonic.asm:1047-1049); S2 uses Current_Boss_ID, i.e. boss-alive
-		// (s2.asm:37247-37250). PhysicsFeatureSet.levelBoundaryLockUsesScreenLockFlag
+		// (s2.asm:37247-37250). PlayerMovementRules.levelBoundaryLockUsesScreenLockFlag
 		// selects which. S3K never adds the +64 (levelBoundaryRightStrict).
-		boolean lockActive = (featureSet != null && featureSet.levelBoundaryLockUsesScreenLockFlag())
+		boolean lockActive = (movementRules != null && movementRules.levelBoundaryLockUsesScreenLockFlag())
 				? gameState().isScreenLocked()
 				: gameState().isBossFightActive();
-		boolean strict = (featureSet != null && featureSet.levelBoundaryRightStrict())
+		boolean strict = (movementRules != null && movementRules.levelBoundaryRightStrict())
 				|| lockActive || gameState().isEndOfLevelActive();
 		int rightBoundary = RightBoundary.compute(maxX, LEVEL_DESIGN_WIDTH, SONIC_WIDTH, RIGHT_EXTRA, strict);
 
 		// ROM comparison: left is always bhi.s (<). S1/S2 right uses bls.s
-		// (>=), while S3K uses blo.s (>), gated by PhysicsFeatureSet.
+		// (>=), while S3K uses blo.s (>), gated by PlayerMovementRules.
 		if (predictedX < leftBoundary) {
 			sprite.setCentreX((short) leftBoundary);
 			sprite.setXSpeed((short) 0);
@@ -2570,7 +2617,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			//     / blt.s Player_Boundary_Bottom (sonic3k.asm:23195).
 			//   S3K Tails_Check_Screen_Boundaries loc_14F30: cmp.w y_pos(a0),d0
 			//     / blt.s loc_14F56 (sonic3k.asm:28430-28431).
-			// PhysicsFeatureSet.levelBoundaryUsesCentreY gates centre-Y semantics
+			// PlayerMovementRules.levelBoundaryUsesCentreY gates centre-Y semantics
 			// for each game. S1/S2/S3K all enable it because their ROM routines
 			// compare y_pos(a0)/obY(a0), which maps to engine centre-Y.
 			//
@@ -2580,7 +2627,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// centre-Y=0x0807 with maxY+screen_height=0x0800, triggering
 			// JmpTo2_KillCharacter (s2.asm:39929-39939). Using top-left (Y=0x07F9) misses
 			// the kill by 8 pixels and Tails keeps falling instead of dying.
-			boolean useCentreY = (featureSet != null && featureSet.levelBoundaryUsesCentreY())
+			boolean useCentreY = (movementRules != null && movementRules.levelBoundaryUsesCentreY())
 					|| (sprite.isCpuControlled() && sprite.getCpuController() != null);
 			int playerY = useCentreY ? sprite.getCentreY() : sprite.getY();
 			if (playerY > effectiveMaxY + 224) {
@@ -2615,8 +2662,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private boolean isPastRightLevelBoundary(int predictedX, int rightBoundary) {
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		return featureSet != null && featureSet.levelBoundaryRightStrict()
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		return movementRules != null && movementRules.levelBoundaryRightStrict()
 				? predictedX > rightBoundary
 				: predictedX >= rightBoundary;
 	}
@@ -2630,8 +2677,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** AnglePos: Ground terrain collision (s2.asm:42534) */
 	private void doAnglePos() {
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		int positiveThreshold = (featureSet != null && featureSet.fixedAnglePosThreshold())
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		int positiveThreshold = (movementRules != null && movementRules.fixedAnglePosThreshold())
 				? 14
 				: Math.min(getSpeedForThreshold() + 4, 14);
 		// resolveGroundAttachment handles the ROM Status_OnObj early return only
@@ -2660,12 +2707,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// an object owns ground contact. Preserve the existing guard against arming
 		// a fresh slope slip from that stale terrain angle; the ROM move_lock
 		// countdown has already run above.
-		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		boolean checksOnObject = (fs == null || fs.slopeRepelChecksOnObject());
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		boolean checksOnObject = (movementRules == null || movementRules.slopeRepelChecksOnObject());
 		if (checksOnObject && (sprite.isOnObject() || collisionSystem().hasObjectSupport(sprite))) return;
 
 		int angle = sprite.getAngle() & 0xFF;
-		boolean s3kSlipKick = fs != null && fs.slopeRepelUsesS3kSlipKick();
+		boolean s3kSlipKick = movementRules != null && movementRules.slopeRepelUsesS3kSlipKick();
 		if (s3kSlipKick) {
 			if (((angle + 0x18) & 0xFF) < 0x30) return;
 			if (Math.abs(sprite.getGSpeed()) >= SLOPE_REPEL_MIN_SPEED) return;
@@ -2690,7 +2737,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setAir(true);
 		sprite.setSlopeRepelJustSlipped(true);
 		sprite.setMoveLockTimer(MOVE_LOCK_FRAMES);
-		if (fs != null && fs.animationChangeClearsPush()) {
+		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+		if (animationRules != null && animationRules.animationChangeClearsPush()) {
 			// S2/S3K SlopeRepel sets Status_InAir and move_lock from the
 			// ground movement path; the same frame's Animate_Tails/Sonic
 			// then clears Status_Push when the movement-selected anim byte
@@ -2857,8 +2905,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private boolean shouldSetGroundWallPush(int mode) {
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (featureSet == null || !featureSet.groundWallPushRequiresFacingIntoWall()) {
+		CollisionRules rules = collisionRulesOrNull();
+		if (rules == null || !rules.groundWallPushRequiresFacingIntoWall()) {
 			return true;
 		}
 		boolean facingLeft = sprite.getDirection() == Direction.LEFT;
@@ -2877,14 +2925,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		boolean preservePinballRoll = featureSet != null && featureSet.pinballLandingPreservesRoll();
-		boolean preservePinballMode = featureSet != null && featureSet.pinballLandingPreservesPinballMode();
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		boolean preservePinballRoll = movementRules != null && movementRules.pinballLandingPreservesRoll();
+		boolean preservePinballMode = movementRules != null && movementRules.pinballLandingPreservesPinballMode();
 		boolean preserveObjectLandingRoll = sprite.consumePreserveRollingOnNextLanding();
 		boolean skipLandingRollClear = sprite.getRolling()
 				&& ((sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
 		if (sprite.getRolling() && !skipLandingRollClear) {
-			if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
+			if (movementRules != null && movementRules.landingRollClearUsesCurrentYRadiusDelta()) {
 				int oldCentreY = sprite.getCentreY();
 				int oldYRadius = sprite.getYRadius();
 				sprite.setRolling(false);
@@ -2897,8 +2945,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setRolling(false);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
 			}
-		} else if (featureSet != null
-				&& featureSet.landingRollClearUsesCurrentYRadiusDelta()
+		} else if (movementRules != null
+				&& movementRules.landingRollClearUsesCurrentYRadiusDelta()
 				&& !skipLandingRollClear
 				&& (sprite.getYRadius() != sprite.getStandYRadius()
 				|| sprite.getXRadius() != sprite.getStandXRadius())) {
@@ -3044,8 +3092,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Bubble shield bounce check (s3.asm:21849-21859 Player_TouchFloor tail)
 		// ROM: Only Sonic (character_id 0) can trigger this — Knuckles/Tails have
 		// separate jump code that never sets doubleJumpFlag via bubbleShieldBounce.
-		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		if (fs != null && fs.elementalShieldsEnabled() && savedDoubleJumpFlag != 0
+		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
+		if (capabilityRules != null && capabilityRules.elementalShieldsEnabled() && savedDoubleJumpFlag != 0
 				&& sprite.getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD) {
 			if (sprite.hasShield() && sprite.getShieldType() == ShieldType.BUBBLE) {
 				applyBubbleShieldBounce(sprite);
@@ -3278,8 +3326,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void forceGroundFacingFlipAnimationRestart() {
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (featureSet == null || !featureSet.animationChangeClearsPush()) {
+		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+		if (animationRules == null || !animationRules.animationChangeClearsPush()) {
 			return;
 		}
 		sprite.forceAnimationRestart();
@@ -3289,8 +3337,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (!facingFlipForcesPushClearAfterGroundWall) {
 			return;
 		}
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (featureSet == null || !featureSet.animationChangeClearsPush()) {
+		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+		if (animationRules == null || !animationRules.animationChangeClearsPush()) {
 			return;
 		}
 		// S2/S3K MoveLeft/MoveRight clear pushing and force prev_anim=Run when
@@ -3299,7 +3347,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// clear pushing when anim differs from prev_anim (s2.asm:38033-38038,
 		// 40879-40884; sonic3k.asm:29359-29364,29681-29686), after ground-wall
 		// collision can set Status_Push. S1 leaves the animation clear behind a
-		// FixBugs guard, so PhysicsFeatureSet.animationChangeClearsPush() gates it.
+		// FixBugs guard, so PlayerAnimationRules.animationChangeClearsPush() gates it.
 		sprite.setPushing(false);
 	}
 
@@ -3312,8 +3360,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				|| inputRight) {
 			return;
 		}
-		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		if (fs == null || !fs.sidekickClearsStalePushVelocityBeforeGroundMove()) {
+		CollisionRules rules = collisionRulesOrNull();
+		if (rules == null || !rules.sidekickClearsStalePushVelocityBeforeGroundMove()) {
 			return;
 		}
 		SidekickCpuController cpu = sprite.getCpuController();
@@ -3346,8 +3394,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	void advanceFixedSkidDustWhileStopAnimPersists() {
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (featureSet == null || !featureSet.fixedSkidDustAllocatesAfterDynamicObjectPass()) {
+		PowerUpRules rules = powerUpRulesOrNull();
+		if (rules == null || !rules.fixedSkidDustAllocatesAfterDynamicObjectPass()) {
 			return;
 		}
 		if (!(sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile profile)) {
@@ -3379,10 +3427,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Sonic_TurnLeft/Right only switches the dust object into that routine
 		// and seeds mapping_frame=$15 (docs/s2disasm/s2.asm:36927-36929,
 		// 36988-36990, 42759-42797).
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		PowerUpRules rules = powerUpRulesOrNull();
 		if (!processingFixedSkidDustTick
-				&& featureSet != null
-				&& featureSet.fixedSkidDustAllocatesAfterDynamicObjectPass()) {
+				&& rules != null
+				&& rules.fixedSkidDustAllocatesAfterDynamicObjectPass()) {
 			fixedSkidDustTickPending = true;
 			return;
 		}
@@ -3398,8 +3446,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// S3K: allow ducking while moving at speeds below the roll threshold.
 		// ROM: sonic3k.asm:23223-23240 (SonicKnux_Roll) — down pressed + |gSpeed| < $100
 		// + not left/right + not on object → enter duck animation.
-		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		short movingThreshold = (fs != null) ? fs.movingCrouchThreshold() : 0;
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		short movingThreshold = (movementRules != null) ? movementRules.movingCrouchThreshold() : 0;
 		if (movingThreshold > 0 && inputDown && !inputLeft && !inputRight
 				&& !sprite.getAir() && !sprite.getRolling() && !sprite.getSpindash()
 				&& Math.abs(sprite.getGSpeed()) < movingThreshold
@@ -3481,8 +3529,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * ROM: s2.asm:36547-36556 — undo accel if was already >= max.
 	 */
 	private short accelerateLeft(short gSpeed, short runAccel, short max) {
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		boolean alwaysCap = featureSet != null && featureSet.inputAlwaysCapsGroundSpeed();
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		boolean alwaysCap = movementRules != null && movementRules.inputAlwaysCapsGroundSpeed();
 
 		if (alwaysCap) {
 			// S1: sub, then unconditional clamp
@@ -3508,8 +3556,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * ROM: s2.asm:36610-36616 — undo accel if was already >= max.
 	 */
 	private short accelerateRight(short gSpeed, short runAccel, short max) {
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		boolean alwaysCap = featureSet != null && featureSet.inputAlwaysCapsGroundSpeed();
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		boolean alwaysCap = movementRules != null && movementRules.inputAlwaysCapsGroundSpeed();
 
 		if (alwaysCap) {
 			// S1: add, then unconditional clamp
@@ -3626,8 +3674,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private boolean isUnifiedCollision() {
-		var fs = sprite.getPhysicsFeatureSet();
-		return fs != null && fs.collisionModel() == com.openggf.game.CollisionModel.UNIFIED;
+		CollisionRules rules = collisionRulesOrNull();
+		return rules != null && rules.collisionModel() == com.openggf.game.CollisionModel.UNIFIED;
 	}
 
 	private boolean hasObjectSupport() {
@@ -3802,9 +3850,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		boolean extended = featureSet != null && featureSet.extendedEdgeBalance();
-		boolean singleFacingBalanceSet = usesSingleFacingBalance(featureSet);
+		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+		boolean extended = animationRules != null && animationRules.extendedEdgeBalance();
+		boolean singleFacingBalanceSet = usesSingleFacingBalance(animationRules);
 
 		// ROM Sonic_Move (s2.asm:36285) / Tails_Move (s2.asm:39359) read
 		// `width_pixels(a1)` from the object's SST for the balance computation,
@@ -3908,8 +3956,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 	}
 
-	private boolean usesSingleFacingBalance(PhysicsFeatureSet featureSet) {
-		return (featureSet != null && featureSet.singleFacingBalanceAnimationSet())
+	private boolean usesSingleFacingBalance(PlayerAnimationRules animationRules) {
+		return (animationRules != null && animationRules.singleFacingBalanceAnimationSet())
 				|| profileUsesSingleFacingBalance();
 	}
 
@@ -3954,8 +4002,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		boolean facingRight = sprite.getDirection() == Direction.RIGHT;
 
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		boolean extended = featureSet != null && featureSet.extendedEdgeBalance();
+		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+		boolean extended = animationRules != null && animationRules.extendedEdgeBalance();
 
 		if (!extended) {
 			// S1: ObjFloorDist probes at CENTER X, not at the ±9 side sensors.
@@ -4081,8 +4129,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Determine if precarious (closer to falling)
 		boolean precarious = distanceFromPrecarious < 6;
 
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (usesSingleFacingBalance(featureSet)) {
+		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+		if (usesSingleFacingBalance(animationRules)) {
 			sprite.setDirection(isLeftEdge ? Direction.LEFT : Direction.RIGHT);
 			sprite.setBalanceState(singleFacingBalanceState(precarious));
 			return;

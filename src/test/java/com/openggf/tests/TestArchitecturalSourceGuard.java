@@ -1,5 +1,7 @@
 package com.openggf.tests;
 
+import com.openggf.game.rules.GameRules;
+
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -297,7 +299,7 @@ class TestArchitecturalSourceGuard {
             }
         }
 
-        assertNoViolations("GameId behavior branches must use feature flags or approved routing/composition code",
+        assertNoViolations("GameId behavior branches must use typed rules or approved routing/composition code",
                 violations);
     }
 
@@ -317,29 +319,30 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
-    void physicsFeatureSetConstructionStaysInsideBuilderSurface() throws IOException {
-        Pattern positionalConstructor = Pattern.compile("\\bnew\\s+PhysicsFeatureSet\\s*\\(");
+    void gameRulesPositionalConstructionStaysInsideOwnedFactories() throws IOException {
+        Pattern positionalConstructor = Pattern.compile("\\bnew\\s+GameRules\\s*\\(");
         List<String> violations = new ArrayList<>();
-        Path root = Path.of("src");
+        Path root = Path.of("src/main/java");
         try (Stream<Path> stream = Files.walk(root)) {
             for (Path file : stream
                     .filter(Files::isRegularFile)
                     .filter(path -> path.toString().endsWith(".java"))
                     .toList()) {
                 String relative = root.relativize(file).toString().replace('\\', '/');
-                if (relative.equals("main/java/com/openggf/game/PhysicsFeatureSet.java")) {
+                if (relative.equals("com/openggf/game/rules/GameRules.java")
+                        || relative.equals("com/openggf/game/rules/CrossGameRuleComposer.java")) {
                     continue;
                 }
                 String source = stripCommentsAndStrings(Files.readString(file));
                 Matcher matcher = positionalConstructor.matcher(source);
                 while (matcher.find()) {
                     violations.add(relative + ":" + lineNumberForOffset(source, matcher.start())
-                            + " - use PhysicsFeatureSet.builderFrom(...) instead of positional construction");
+                            + " - use GameRules constants or CrossGameRuleComposer instead of positional construction");
                 }
             }
         }
 
-        assertNoViolations("PhysicsFeatureSet has too many fields for call-site positional construction",
+        assertNoViolations("GameRules positional construction should stay inside owned rule factories",
                 violations);
     }
 
@@ -498,7 +501,7 @@ class TestArchitecturalSourceGuard {
         }
 
         assertNoViolations(
-                "Shared sprite code must use feature sets, providers, or shared contracts instead of concrete Sonic packages",
+                "Shared sprite code must use GameRules, providers, or shared contracts instead of concrete Sonic packages",
                 references);
     }
 
@@ -1220,14 +1223,14 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
-    void sampleScannerDetectsGameIdBranchButAllowsFeatureFlagBranch() {
+    void sampleScannerDetectsGameIdBranchButAllowsTypedRuleBranch() {
         List<String> violations = scanGameIdBranches("sample/Physics.java", """
                 class Physics {
                     void bad(GameModule module) {
                         if (module.getGameId() == GameId.S1) runS1();
                     }
-                    void good(PhysicsFeatureSet features) {
-                        if (features.spindashEnabled()) run();
+                    void good(GameRules rules) {
+                        if (rules.playerCapability().spindashEnabled()) run();
                     }
                 }
                 """);

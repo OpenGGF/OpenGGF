@@ -1,7 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.GroundMode;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -51,7 +51,7 @@ class TestForcedSpinObjectInstance {
     @Test
     void forcedSpinEntryKeepsRollAnimationWhenPinballModeSharesSpindashByte() {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setGameRulesForTest(GameRules.SONIC_2);
         ScriptedVelocityAnimationProfile profile = s2AnimationProfile();
         player.setAnimationProfile(profile);
         player.setAnimationId(Sonic2AnimationIds.WAIT.id());

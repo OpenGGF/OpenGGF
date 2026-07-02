@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.game.rules.GameRules;
+
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
@@ -32,9 +34,9 @@ public class TestLookScrollDelay {
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
         TestableSprite sprite = new TestableSprite("test", (short) 100, (short) 100);
 
-        PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+        GameRules fs = sprite.getGameRules();
         assertNotNull(fs, "Feature set should be set");
-        assertEquals(PhysicsFeatureSet.LOOK_SCROLL_DELAY_NONE, fs.lookScrollDelay(), "S1 should have no look scroll delay");
+        assertEquals((short) 0, fs.camera().lookScrollDelay(), "S1 should have no look scroll delay");
     }
 
     @Test
@@ -42,9 +44,9 @@ public class TestLookScrollDelay {
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         TestableSprite sprite = new TestableSprite("test", (short) 100, (short) 100);
 
-        PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+        GameRules fs = sprite.getGameRules();
         assertNotNull(fs, "Feature set should be set");
-        assertEquals(PhysicsFeatureSet.LOOK_SCROLL_DELAY_S2, fs.lookScrollDelay(), "S2 should have 120-frame look scroll delay");
+        assertEquals((short) 120, fs.camera().lookScrollDelay(), "S2 should have 120-frame look scroll delay");
     }
 
     @Test
@@ -52,16 +54,16 @@ public class TestLookScrollDelay {
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         TestableSprite sprite = new TestableSprite("test", (short) 100, (short) 100);
 
-        PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+        GameRules fs = sprite.getGameRules();
         assertNotNull(fs, "Feature set should be set");
-        assertEquals(PhysicsFeatureSet.LOOK_SCROLL_DELAY_S2, fs.lookScrollDelay(), "S3K should have 120-frame look scroll delay");
+        assertEquals((short) 120, fs.camera().lookScrollDelay(), "S3K should have 120-frame look scroll delay");
     }
 
     @Test
     public void testSonic1_ZeroDelayMeansImmediatePan() {
         // Verify that delay=0 means lookDelay (starting at 0) immediately
         // satisfies the >= threshold, so panning starts on the first frame.
-        short lookScrollDelay = PhysicsFeatureSet.LOOK_SCROLL_DELAY_NONE;
+        short lookScrollDelay = (short) 0;
         short lookDelay = 1; // After one increment
         assertTrue(lookDelay >= lookScrollDelay, "With zero delay, first frame should pan");
     }
@@ -69,7 +71,7 @@ public class TestLookScrollDelay {
     @Test
     public void testSonic2_DelayRequiresFrames() {
         // Verify that delay=0x78 requires 120 frames before panning starts.
-        short lookScrollDelay = PhysicsFeatureSet.LOOK_SCROLL_DELAY_S2;
+        short lookScrollDelay = (short) 120;
         assertEquals(0x78, lookScrollDelay, "S2 delay should be 120 frames");
 
         // After 1 frame, should NOT pan yet
