@@ -236,6 +236,17 @@ public class ARZBossPillar extends AbstractObjectInstance
     }
 
     @Override
+    public int getOnScreenHalfHeight() {
+        // Obj89 leaves render_flags.explicit_height clear, so S2 BuildSprites
+        // uses the approximate-Y path with a 32 px radius (docs/s2disasm/s2.asm:
+        // 30603-30611). The engine recomputes the bit as a live proxy for
+        // SolidObject_OnScreenTest instead of retaining the prior BuildSprites
+        // render_flags bit; the one-pixel lower-edge slack keeps Obj89's edge
+        // SolidObject frame visible without widening the preceding offscreen row.
+        return 0x21;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         return PILLAR_SOLID_PARAMS;
     }
