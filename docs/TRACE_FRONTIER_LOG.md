@@ -6,14 +6,67 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 46 ARZ2 targeted pass:
-ARZ2 is f4769 / 748 (`y` expected `0x046F`, actual `0x046E`),
+Current branch-local S2 state after the round 47 ARZ2 targeted pass:
+ARZ2 is f4920 / 4 under `frontierOnly` (`obj_s14_type` expected `0x08`,
+actual missing),
 CNZ2 is f9946 / 300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 is f12107 / 99
 (`tails_y` expected `0x02A5`, actual `0x02A4` in the refreshed S2 sweep; focused
 OOZ2 runs also report `tails_g_speed` expected `0x00A4`, actual `0x0000`). Full
 S2 was last swept in round 45 at 15 green / 4 expected-red; full S1 remains
-green, and the S3K guard state is unchanged. No S2 trace greened in round 46.
+green, and the S3K guard state is unchanged. No S2 trace greened in round 47.
+
+## 2026-07-02 - S2 round 47 ARZ2 targeted advance
+
+Round 47 started from `639f88646` on `bugfix/ai-s2-trace-next`. Worker ARZ2 used
+`.worktrees/ai-s2-arz2-round47-next` /
+`bugfix/ai-s2-arz2-round47-next`, based from conductor HEAD `639f88646` on
+`bugfix/ai-s2-trace-next` rather than `develop`. The focused baseline
+reproduced the handoff frontier under `frontierOnly`: ARZ2 f4769 / 1 (`y`
+expected `0x046F`, actual `0x046E`).
+
+Investigation confirmed the pillar dimensions and solid parameters were already
+ROM-correct: `Obj89_Pillar_SolidObject` passes `d1=$23`, `d2=$44`, `d3=$45`,
+saves `y_pos`, temporarily adds 4, calls `JmpTo26_SolidObject`, and restores
+`y_pos` (`docs/s2disasm/s2.asm:65531-65539`). The missing one pixel came from
+order instead of size. `Obj89_Pillar_Sub0` calls `Obj89_Pillar_SolidObject`
+before subtracting 1 from the raising pillar Y, and `Obj89_Pillar_Sub2` calls
+the same solid helper before the shake offset mutates position
+(`docs/s2disasm/s2.asm:65330-65374`). The engine had already applied the
+object's frame movement before the shared solid pass, so both the first landing
+snap and the next `MvSonicOnPtfm` continued-ride carry used the post-move pillar
+Y and placed Sonic one pixel too high.
+
+Candidate result:
+- Banked Obj89 pre-update solid position and continued-ride Y: ARZ2 advances to
+  f4920 / 4 under `frontierOnly` (`obj_s14_type` expected `0x08`, actual
+  missing). The new owner is a later boss-area Obj08 slot/cleanup mismatch after
+  the right Obj89 pillar landing now matches the ROM.
+
+Verification:
+- `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen""
+  ""-Dtrace.frontierOnly=true""
+  ""-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace""
+  test"` reports the expected-red frontier at f4920 / 4.
+- `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen""
+  ""-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossPillarsUseLowestFreeSlotsAtFrame4692,com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace""
+  test"` passed 2/2 after clearing stale Surefire reports.
+- `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  ""-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard""
+  test"` passed 1/1 after clearing stale Surefire reports.
+- `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  ""-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen""
+  ""-Dtrace.frontierOnly=true""
+  ""-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace""
+  test"` exited 0 with passing test counts; the quiet Maven log also printed a
+  non-failing `[exec] Result: 255` helper line.
+- S3K keep-green subset:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  ""-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen""
+  ""-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils""
+  test"` passed 51/51 after clearing stale Surefire reports.
 
 ## 2026-07-02 - S2 round 46 ARZ2 targeted advance
 

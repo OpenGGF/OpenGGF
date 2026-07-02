@@ -263,6 +263,20 @@ public class ARZBossPillar extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
+        // Obj89_Pillar_Sub0/Sub2 call Obj89_Pillar_SolidObject before raise/shake movement.
+        // docs/s2disasm/s2.asm:65330-65345,65348-65374,65531-65539
+        return true;
+    }
+
+    @Override
+    public boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
+        // MvSonicOnPtfm inherits the same pre-motion y_pos used by Obj89_Pillar_SolidObject.
+        // docs/s2disasm/s2.asm:65330-65345,65348-65374,65531-65539
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Pillar doesn't need special contact handling
