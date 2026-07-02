@@ -6,10 +6,10 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 54 ARZ2 work on top of the develop
+Current branch-local S2 state after round 55 ARZ2 work on top of the develop
 GameRules refactor baseline:
-ARZ2 is f5845 / 4 under `frontierOnly` (`tails_x_speed` expected `0x0000`,
-actual `-0057`),
+ARZ2 is f5852 / 6 under `frontierOnly` (`tails_y` expected `0x04C1`,
+actual `0x04C0`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
 expected `-020C`, actual `0x020C`), and OOZ2 is green after the round 54 Obj3E
@@ -34,6 +34,50 @@ Baseline sweep:
   ARZ2 f5845 / 4 (`tails_x_speed` expected `0x0000`, actual `-0057`), CNZ2
   f9977 / 10 (`tails_x_speed` expected `-0200`, actual `0x023A`), and MTZ3
   f13358 / 6 (`tails_x_speed` expected `-020C`, actual `0x020C`).
+
+## 2026-07-02 - S2 round 55 ARZ2 Obj89 Tails nudge-gated side stop advance
+
+Round 55 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round55-next` /
+`bugfix/ai-s2-arz2-round55-next`, based from conductor commit `5c0625c04`.
+The focused baseline reproduced ARZ2 f5845 / 4 under `frontierOnly`
+(`tails_x_speed` expected `0x0000`, actual `-0057`).
+
+Investigation stayed on the Obj89 pillar side-contact handoff identified in
+round 54. The one-pixel-inside contact is still a ROM-visible moving handoff
+when `TailsCPU_Normal_FollowLeft` first applies its same-frame `subq.w #1,x_pos`
+nudge, but without that nudge the later Obj89 pillar `SolidObject` call reaches
+`SolidObject_StopCharacter` and clears Tails' `x_vel`/inertia. The relevant ROM
+paths are `docs/s2disasm/s2.asm:35413-35436`,
+`docs/s2disasm/s2.asm:38952-38975`,
+`docs/s2disasm/s2.asm:65330-65374`, and
+`docs/s2disasm/s2.asm:65531-65539`.
+
+Fix:
+- Narrow `ARZBossPillar.preservesMovingSideContactVelocity` so the Obj89
+  one-pixel-inside preservation requires the latest sidekick CPU normal-step
+  diagnostics to show a same-frame left follow nudge.
+- Add a focused Obj89 unit test for the f5845 no-nudge stop path.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f5845 / 4
+  (`tails_x_speed` expected `0x0000`, actual `-0057`) to f5852 / 6 under
+  `frontierOnly` (`tails_y` expected `0x04C1`, actual `0x04C0`). The new
+  frontier is Tails remaining grounded one frame after ROM switches to
+  air/rolling with `y_vel=-$680`.
+
+Verification:
+- `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#arzBossPillarPostPhysicsSidePushPreservesTailsVelocity+arzBossPillarOnePixelInsideWithoutPushUsesRomStopPath+arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff" test`
+  passed the focused Obj89 pillar handoff/stop-boundary tests.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f5852 / 6.
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5852 / 6, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6. OOZ2 stayed green.
+- Cross-game S1/S3K guards were not rerun because the change is isolated to
+  the S2 Obj89 pillar object implementation and its S2 unit coverage; no shared
+  physics, collision, sidekick, or object infrastructure changed.
 
 ## 2026-07-02 - S2 round 54 OOZ2 Obj3E capsule body lifetime green
 

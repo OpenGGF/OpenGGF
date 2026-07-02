@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.util.List;
 
@@ -291,12 +292,29 @@ public class ARZBossPillar extends AbstractObjectInstance
         // inline post-physics checkpoint sees the new-push side contact after
         // movement, so preserve only the CPU sidekick handoff while retaining
         // the side correction and push bits.
-        // docs/s2disasm/s2.asm:35413-35436,65330-65374,65531-65539
+        // A one-pixel-inside contact is still part of that handoff only when
+        // TailsCPU_Normal_FollowLeft applied the same-frame -1 x_pos nudge
+        // before Tails movement; without that nudge, the later Obj89
+        // SolidObject call reaches SolidObject_StopCharacter.
+        // docs/s2disasm/s2.asm:35413-35436,38952-38975,65330-65374,65531-65539
         int anchorX = isRightPillar() ? RIGHT_PILLAR_X : LEFT_PILLAR_X;
         int rightEdgeX = anchorX + PILLAR_SOLID_PARAMS.halfWidth();
         return player != null && player.isCpuControlled() && !player.getAir() && player.getGSpeed() < 0
                 && (!(player instanceof AbstractPlayableSprite sprite) || !sprite.getPushing())
-                && player.getCentreX() >= rightEdgeX - 1;
+                && (player.getCentreX() >= rightEdgeX
+                || (player.getCentreX() == rightEdgeX - 1 && hasSameFrameLeftFollowNudge(player)));
+    }
+
+    private boolean hasSameFrameLeftFollowNudge(PlayableEntity player) {
+        if (!(player instanceof AbstractPlayableSprite sprite)) {
+            return false;
+        }
+        SidekickCpuController controller = sprite.getCpuController();
+        if (controller == null) {
+            return false;
+        }
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        return diagnostics != null && diagnostics.appliedFollowNudge() < 0;
     }
 
     @Override
