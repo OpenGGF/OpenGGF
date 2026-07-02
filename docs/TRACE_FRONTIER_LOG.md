@@ -6,14 +6,58 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 43 targeted no-change pass is
+Current branch-local S2 state after the round 44 targeted no-change pass is
 unchanged:
 ARZ2 is f4707 / 1945 (`x` expected `0x2B4D`, actual `0x2B4F`), CNZ2 is f9946 /
 300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 is f12107 / 99
-(`tails_g_speed` expected `0x00A4`, actual `0x0000`). Full S2 is 15 green / 4
-expected-red, full S1 remains green, and the S3K AIZ guard is unchanged. No S2
-trace greened in round 43.
+(`tails_y` expected `0x02A5`, actual `0x02A4` in the refreshed S2 sweep; focused
+OOZ2 runs also report `tails_g_speed` expected `0x00A4`, actual `0x0000`). Full
+S2 is 15 green / 4 expected-red, full S1 remains green, and the S3K guard state
+is unchanged. No S2 trace greened in round 44.
+
+## 2026-07-02 - S2 round 44 targeted no-change pass
+
+Round 44 restarted after the PC crash from `856ea3f71` on
+`bugfix/ai-s2-trace-next`, confirmed the branch is still next-based, and merged
+`origin/develop` into the conductor branch (`Already up to date`). No source
+changes were integrated and no S2 trace greened.
+
+Conductor baseline:
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay"
+  "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test` ran the 19 S2 trace
+  classes with 15 green / 4 expected-red at the same four frontiers: ARZ2 f4707
+  / 1945, CNZ2 f9946 / 300, MTZ3 f13336 / 352, and OOZ2 f12107 / 99. The broad
+  selector also discovered unrelated S3K expected-red tests, so only the S2
+  block was used for this round's baseline.
+
+Worker outcomes:
+- ARZ2 worktree `.worktrees/ai-s2-arz2-round44-next` /
+  `bugfix/ai-s2-arz2-round44-next`: reproduced f4707 / 1945. Instrumentation
+  showed the pillar/player geometry could produce the ROM-like 2 px side
+  correction, but the object solid offscreen gate skipped contact. Tested
+  Obj89 pillar render-bound candidates: `0x20` did not advance the first
+  divergence, and ROM mapping extent `0x48` regressed to f4692. Both candidates
+  were reverted. ARZ2 remains f4707 / 1945.
+- CNZ2 worktree `.worktrees/ai-s2-cnz2-round44-next` /
+  `bugfix/ai-s2-cnz2-round44-next`: reproduced f9946 / 300. A ROM-state
+  candidate suppressing fixed Obj08 dust for CPU Tails while airborne and
+  move-locked reduced total mismatches from 300 to 264 but did not advance the
+  f9946 first error, so it was reverted. The next target is Sonic's Obj86/Obj51
+  transition state at f9946 rather than dust slot pressure alone. CNZ2 remains
+  f9946 / 300.
+- MTZ3 worktree `.worktrees/ai-s2-mtz3-round44-next` /
+  `bugfix/ai-s2-mtz3-round44-next`: reproduced f13336 / 352. A ROM-backed Obj3E
+  structural-slot candidate aligned Obj54 to slots `$20/$21` and Obj53 to
+  `$24+`, but the replay still failed at f13336 and total errors worsened to
+  413. An Obj53 seed update deferral candidate regressed to f12820. Both
+  candidates were reverted; slot identity alone is not the MTZ3 fix. MTZ3
+  remains f13336 / 352.
+- OOZ2 worktree `.worktrees/ai-s2-ooz2-round44-next` /
+  `bugfix/ai-s2-ooz2-round44-next`: reproduced f12107 / 99. Obj55 custom-region
+  collision regressed to f9561, and narrower hit-main collision suppression
+  regressed to f9302. Both candidates were reverted. OOZ2 remains f12107 / 99.
+- No round-44 change was banked into `next`.
 
 ## 2026-07-01 - S2 round 43 targeted no-change pass
 
