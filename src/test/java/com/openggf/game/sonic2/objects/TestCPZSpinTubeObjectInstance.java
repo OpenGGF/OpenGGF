@@ -1,6 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
@@ -22,7 +22,7 @@ class TestCPZSpinTubeObjectInstance {
                 "sonic",
                 (short) spawn.x(),
                 (short) spawn.y());
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setGameRulesForTest(GameRules.SONIC_2);
         player.setLogicalInputState(false, false, true, false, false);
         player.setJumping(true);
         player.endOfTick();
@@ -56,7 +56,7 @@ class TestCPZSpinTubeObjectInstance {
                 "sonic",
                 (short) spawn.x(),
                 (short) spawn.y());
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setGameRulesForTest(GameRules.SONIC_2);
         assertFalse(player.getRolling(), "precondition: standing player enters Obj1E");
 
         CPZSpinTubeObjectInstance tube = new CPZSpinTubeObjectInstance(spawn, "CPZSpinTube");
@@ -76,7 +76,7 @@ class TestCPZSpinTubeObjectInstance {
     void fullReleaseClearsObjectControlAndPreservesYSubpixel() throws Exception {
         ObjectSpawn spawn = new ObjectSpawn(0x2480, 0x0500, 0x1E, 0x02, 0, false, 0);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x24E8, (short) 0x0B30);
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setGameRulesForTest(GameRules.SONIC_2);
         player.setSubpixelRaw(0x4000, 0xAA00);
         player.setObjectControlled(true);
         player.setObjectControlSuppressesMovement(true);
@@ -132,7 +132,7 @@ class TestCPZSpinTubeObjectInstance {
     void mainPathCompletionKeepsObjectControlForNeighborTubeHandoff() throws Exception {
         ObjectSpawn spawn = new ObjectSpawn(0x2480, 0x0500, 0x1E, 0x02, 0, false, 0);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x24E8, (short) 0x0B30);
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setGameRulesForTest(GameRules.SONIC_2);
         player.setSubpixelRaw(0x4000, 0xAA00);
         player.setObjectControlled(true);
         player.setObjectControlSuppressesMovement(true);
@@ -174,7 +174,7 @@ class TestCPZSpinTubeObjectInstance {
     void lowerSlotDestinationHandoffPreservesOwnerOverwriteTiming() {
         ObjectSpawn spawn = new ObjectSpawn(0x1000, 0x0200, 0x1E, 0x3D, 0, false, 0);
         TestablePlayableSprite player = new TestablePlayableSprite("tails", (short) 0x10F8, (short) 0x0230);
-        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setGameRulesForTest(GameRules.SONIC_2);
         player.setSubpixelRaw(0xD900, 0x0500);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.capturePrePhysicsSnapshot();

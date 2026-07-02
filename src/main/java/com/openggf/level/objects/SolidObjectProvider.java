@@ -888,7 +888,7 @@ public interface SolidObjectProvider {
 
     /**
      * Whether the {@code SolidObject_cont} on-screen gate (engine flag
-     * {@link com.openggf.game.PhysicsFeatureSet#solidObjectOffscreenGate()})
+     * {@link com.openggf.game.rules.CollisionRules#solidObjectOffscreenGate()})
      * should be bypassed for this object's new-contact resolution path.
      * <p>
      * ROM divergence: the on-screen gate at {@code loc_1DF88}
@@ -904,7 +904,7 @@ public interface SolidObjectProvider {
      * (s2.asm:33709/33718/33784/33802) which also bypasses the on-screen gate.
      * <p>
      * Default: {@code false} (gate applies, matching the existing
-     * {@link com.openggf.game.PhysicsFeatureSet#solidObjectOffscreenGate()}
+     * {@link com.openggf.game.rules.CollisionRules#solidObjectOffscreenGate()}
      * default behaviour). Spring instances and other objects that route through
      * the {@code Full2} helpers must override to {@code true}.
      */

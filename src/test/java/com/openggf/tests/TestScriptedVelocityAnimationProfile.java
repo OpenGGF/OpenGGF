@@ -1,7 +1,7 @@
 package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -77,7 +77,7 @@ public class TestScriptedVelocityAnimationProfile {
                 .setBalance3AnimId(22)
                 .setBalance4AnimId(23);
         TestSprite sprite = new TestSprite();
-        sprite.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sprite.useGameRules(GameRules.SONIC_3K);
         sprite.setBalanceState(4);
 
         Integer animId = profile.resolveAnimationId(sprite, 0, 32);
@@ -131,8 +131,8 @@ public class TestScriptedVelocityAnimationProfile {
         protected void createSensorLines() {
         }
 
-        void useFeatureSet(PhysicsFeatureSet fs) {
-            setPhysicsFeatureSet(fs);
+        void useGameRules(GameRules fs) {
+            super.setGameRulesForTest(fs);
         }
     }
 }

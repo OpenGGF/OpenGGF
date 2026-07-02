@@ -379,7 +379,7 @@ public final class AgentWorkflowTool {
         line(sb, "  - Object code uses injected ObjectServices via services(); never getInstance();");
         line(sb, "    never call services() in constructors.");
         line(sb, "  - ROM positions use centre coords (getCentreX/Y / NativePositionOps), not getX/getY.");
-        line(sb, "  - No game-name if/else for physics divergences; gate via PhysicsFeatureSet.");
+        line(sb, "  - No game-name if/else for physics divergences; gate via the narrowest typed GameRules group.");
 
         return sb.toString();
     }

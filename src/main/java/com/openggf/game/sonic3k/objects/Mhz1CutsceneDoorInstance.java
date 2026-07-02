@@ -32,6 +32,7 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
     private static final int SLIDE_WAIT = 0x3F;
     private static final int AUTO_RAISE_MAX_X_DISTANCE = 0x40;
     private static final int AUTO_RAISE_MIN_Y_DISTANCE = 0x60;
+    private static final int RE_ENTRY_LOWERED_Y_OFFSET = 0x40;
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x1B, 0x20, 0x20);
 
     private Mhz1CutsceneButtonInstance parent;
@@ -43,6 +44,16 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
         super(new ObjectSpawn(INITIAL_X, INITIAL_Y, parent.getSpawn().objectId(), 0, 0, false, 0),
                 "MHZ1CutsceneDoor");
         this.parent = parent;
+        // ROM MHZ1CutsceneButton_Door (asm 130205-130212): after setting
+        // x_pos/y_pos to the fixed door coordinates, tst.b (_unkFAA9) and
+        // add $40 to y_pos when it is already set. _unkFAA9 is this pair's
+        // door-lowered latch (see Mhz1CutsceneButtonInstance.doorLowered,
+        // toggled by loc_62F0A's not.b/clr.b on the same RAM byte), so a
+        // mid-act re-entry that recreates this child while the latch is
+        // still set must spawn the door already in its lowered position.
+        if (parent.isDoorLowered()) {
+            motion.y += RE_ENTRY_LOWERED_Y_OFFSET;
+        }
     }
 
     @Override

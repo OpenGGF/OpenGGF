@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.TrigLookupTable;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -82,6 +83,44 @@ class TestMhzStickyVineObjectInstance {
     }
 
     @Test
+    void activeAirPullMatchesRomArcTanSineCosineVector() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance vine = registry.create(new ObjectSpawn(
+                0x2400, 0x0680, MHZ_STICKY_VINE, 0, 0, false, 0));
+        short dx = 6;
+        short dy = -8;
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) (0x2400 + dx), (short) (0x0680 + dy));
+        player.setAir(true);
+
+        // sub_3EC66: angle = GetArcTan(dxPixel, dyPixel); (sin, cos) = GetSineCosine(angle);
+        // d3 = (|dxPixel| + |dyPixel|) * 2; x_pos -= cos(angle)*d3*4; y_pos -= sin(angle)*d3*2
+        // (air branch only) -- computed here from the engine's own production trig tables.
+        int angle = TrigLookupTable.calcAngle(dx, dy);
+        int sin = TrigLookupTable.sinHex(angle);
+        int cos = TrigLookupTable.cosHex(angle);
+        short d3 = (short) ((Math.abs(dx) + Math.abs(dy)) * 2);
+        int xPullQ = (cos * d3) << 2;
+        int yPullQ = (sin * d3) << 1;
+
+        int playerXQ = (player.getCentreX() << 16) | (player.getXSubpixelRaw() & 0xFFFF);
+        int playerYQ = (player.getCentreY() << 16) | (player.getYSubpixelRaw() & 0xFFFF);
+        int expectedXQ = playerXQ - xPullQ;
+        int expectedYQ = playerYQ - yPullQ;
+
+        vine.update(0, player);
+
+        assertEquals(expectedXQ >> 16, player.getCentreX(),
+                "sub_3EC66 subtracts cos(angle)*d3*4 from x_pos via GetArcTan/GetSineCosine over (dx,dy)");
+        assertEquals(expectedXQ & 0xFFFF, player.getXSubpixelRaw(),
+                "the x_pos pull is a full 32-bit sub.l, preserving ROM sub-pixel precision");
+        assertEquals(expectedYQ >> 16, player.getCentreY(),
+                "sub_3EC66 subtracts sin(angle)*d3*2 from y_pos while the player is airborne");
+        assertEquals(expectedYQ & 0xFFFF, player.getYSubpixelRaw(),
+                "the y_pos pull is a full 32-bit sub.l, preserving ROM sub-pixel precision");
+    }
+
+    @Test
     void activeStickyPullClearsPlayerPushStatus() {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance vine = registry.create(new ObjectSpawn(
@@ -100,14 +139,22 @@ class TestMhzStickyVineObjectInstance {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance vine = registry.create(new ObjectSpawn(
                 0x2400, 0x0680, MHZ_STICKY_VINE, 0, 0, false, 0));
-        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2408, (short) 0x0680);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2406, (short) 0x0680);
         player.setAir(false);
         player.setGSpeed((short) 0x0200);
 
+        // Capture within the grab window first (sub_3EC66's pull is sub-pixel and does not
+        // re-check the window once active), then simulate the player's own ground momentum
+        // carrying them well past the original window before the next per-frame pull --
+        // this is what actually drives dx large enough for the ROM cos(angle)*d3*4 pull
+        // magnitude (scaled to ground_vel's Q8.8 units via >>8) to clear the $200/$10 gate.
         vine.update(0, player);
+        player.setCentreX((short) (0x2400 + 64));
+        vine.update(1, player);
 
         assertEquals((short) 0x0100, player.getGSpeed(),
-                "sub_3EC66 halves ground_vel when grounded pull force exceeds abs(ground_vel)-$10");
+                "sub_3EC66 halves ground_vel when the ROM cos(angle)*d3*4 pull magnitude (>>8) "
+                        + "exceeds abs(ground_vel)-$10");
     }
 
     @Test

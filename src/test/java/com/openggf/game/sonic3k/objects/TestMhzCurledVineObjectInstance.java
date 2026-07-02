@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
+import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -103,6 +105,59 @@ class TestMhzCurledVineObjectInstance {
                 "The curve state moves one $10000 step from $FFF40000 toward byte index 8's $FFFF0000 target");
         assertTrue(vine.traceDebugDetails().contains("range=$80"),
                 "The live standable range mirrors byte_3E8F6 for the selected rider index");
+    }
+
+    @Test
+    void standingPlayerSagsToPerSegmentContourY() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance vine = registry.create(new ObjectSpawn(
+                0x2000, 0x0600, MHZ_CURLED_VINE, 0, 0, false, 0));
+        MhzCurledVineObjectInstance concreteVine =
+                assertInstanceOf(MhzCurledVineObjectInstance.class, vine);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2030, (short) 0x05E0);
+
+        SolidObjectListener listener = assertInstanceOf(SolidObjectListener.class, vine);
+        listener.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+
+        // relativeX = 0x2030 - 0x2000 = 0x30; segmentIndex = (0x30 + 0x40) >> 4 = 7
+        // (matches the standing-segment index used by standingPlayerNearRightEdge...).
+        int expectedY = concreteVine.segmentY(7) - 8 - player.getYRadius();
+        assertNotEquals(0x0600, concreteVine.segmentY(7),
+                "Segment 7 must sample a non-zero curl offset from spawn.y for this assertion to be meaningful");
+        assertEquals(expectedY, player.getCentreY(),
+                "Obj_MHZCurledVine writes y_pos(a1) = segmentY - 8 - y_radius(a1) every standing frame "
+                        + "from the generated curl segment table (loc_3E9FA, sonic3k.asm:82963-82977), "
+                        + "not a flat surface at spawn.y");
+    }
+
+    @Test
+    void topSolidWindowIsAsymmetricOffsetLeftNotCentredOnSpawnX() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance vine = registry.create(new ObjectSpawn(
+                0x2000, 0x0600, MHZ_CURLED_VINE, 0, 0, false, 0));
+        SolidObjectProvider solid = assertInstanceOf(SolidObjectProvider.class, vine);
+        SolidObjectParams params = solid.getSolidParams();
+
+        int vineX = 0x2000;
+        int boundsX = vineX + params.offsetX();
+        int halfWidth = params.halfWidth();
+        int width2 = halfWidth * 2;
+
+        // ROM sub_3E9C6 (sonic3k.asm:82949-82953) accepts
+        // 0 <= (playerX - vineX + $40) < rangeWidth, i.e. window
+        // [vineX-$40, vineX-$40+rangeWidth) -- offset $40 LEFT of vineX, not centred.
+        int justInsideRomWindowX = vineX - 0x40 + 1;
+        int relInside = justInsideRomWindowX - boundsX + halfWidth;
+        assertTrue(relInside >= 0 && relInside < width2,
+                "playerX = vineX-$40+1 satisfies the ROM window's left edge");
+
+        // The OLD (buggy) centred window's right edge (offsetX=0) is now outside
+        // the ROM's asymmetric window once rangeWidth <= $40 (the initial/default case).
+        int oldCentredRightEdgeX = vineX + halfWidth - 1;
+        int relOld = oldCentredRightEdgeX - boundsX + halfWidth;
+        assertFalse(relOld >= 0 && relOld < width2,
+                "playerX at the old centred window's right edge must fall outside "
+                        + "the ROM's [vineX-$40, vineX-$40+rangeWidth) window");
     }
 
     @Test

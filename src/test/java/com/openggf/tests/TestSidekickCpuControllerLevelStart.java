@@ -1,6 +1,6 @@
 package com.openggf.tests;
 
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectInstance;
@@ -114,7 +114,7 @@ class TestSidekickCpuControllerLevelStart {
         tails.setCentreX((short) 0x0CE3);
         tails.setCentreY((short) 0x0574);
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(false);
         tails.setOnObject(true);
         tails.setRolling(false);
@@ -151,7 +151,7 @@ class TestSidekickCpuControllerLevelStart {
         tails.setCentreX((short) 0x0CE3);
         tails.setCentreY((short) 0x0574);
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(false);
         tails.setOnObject(true);
         tails.setRolling(false);
@@ -185,7 +185,7 @@ class TestSidekickCpuControllerLevelStart {
         tails.setCentreX((short) 0x0CE4);
         tails.setCentreY((short) 0x0574);
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(false);
         tails.setOnObject(true);
         tails.setRolling(false);
@@ -216,7 +216,7 @@ class TestSidekickCpuControllerLevelStart {
         tails.setCentreX((short) 0x0CE3);
         tails.setCentreY((short) 0x0574);
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(false);
         tails.setOnObject(true);
         tails.setRolling(false);
@@ -250,7 +250,7 @@ class TestSidekickCpuControllerLevelStart {
         tails.setCentreX((short) 0x0CE3);
         tails.setCentreY((short) 0x0574);
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(false);
         tails.setOnObject(true);
         tails.setRolling(false);
@@ -284,7 +284,7 @@ class TestSidekickCpuControllerLevelStart {
         tails.setCentreX((short) 0x0CE4);
         tails.setCentreY((short) 0x0574);
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(false);
         tails.setOnObject(true);
         tails.setRolling(false);
@@ -316,7 +316,7 @@ class TestSidekickCpuControllerLevelStart {
         tails.setCentreX((short) 0x0CE3);
         tails.setCentreY((short) 0x0574);
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(false);
         tails.setOnObject(true);
         tails.setRolling(false);
@@ -348,7 +348,7 @@ class TestSidekickCpuControllerLevelStart {
         tails.setCentreX((short) 0x0CE3);
         tails.setCentreY((short) 0x0574);
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(false);
         tails.setOnObject(true);
         tails.setRolling(false);
@@ -380,7 +380,7 @@ class TestSidekickCpuControllerLevelStart {
         tails.setCentreX((short) 0x115A);
         tails.setCentreY((short) 0x0278);
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setAir(false);
         tails.setOnObject(true);
         tails.setRolling(false);
@@ -443,7 +443,7 @@ class TestSidekickCpuControllerLevelStart {
         tails.setCentreX((short) 0x100);
         tails.setCentreY((short) 0x200);
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
 
         SidekickCpuController controller = new SidekickCpuController(tails, leader);
         controller.setInitialState(SidekickCpuController.State.NORMAL);
@@ -469,7 +469,7 @@ class TestSidekickCpuControllerLevelStart {
         TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0x29D, (short) 0x749);
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setOnObject(true);
         tails.setAir(false);
         tails.setPushing(true);
@@ -503,7 +503,7 @@ class TestSidekickCpuControllerLevelStart {
         TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0x29D, (short) 0x700);
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setDead(true);
         tails.setAir(true);
         tails.setOnObject(true);

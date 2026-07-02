@@ -13,7 +13,7 @@ import com.openggf.game.CollisionModel;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.camera.Camera;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
@@ -1491,8 +1491,9 @@ public class SpriteManager {
 		if (playable == null) {
 			return false;
 		}
-		PhysicsFeatureSet featureSet = playable.getPhysicsFeatureSet();
-		return featureSet != null && featureSet.collisionModel() == CollisionModel.UNIFIED;
+		GameRules rules = playable.getGameRules();
+		return rules != null && rules.collision() != null
+				&& rules.collision().collisionModel() == CollisionModel.UNIFIED;
 	}
 
 	static List<AbstractPlayableSprite> buildPlayableUpdateOrder(Collection<Sprite> sprites,

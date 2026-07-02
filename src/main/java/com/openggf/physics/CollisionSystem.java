@@ -2,7 +2,9 @@ package com.openggf.physics;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.CollisionRules;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -341,9 +343,9 @@ public class CollisionSystem {
     }
 
     private boolean shouldDeferRepeatedObjectRideResponse(AbstractPlayableSprite sprite, int mode, short predictedDx) {
-        var featureSet = sprite.getPhysicsFeatureSet();
-        if (featureSet == null
-                || !featureSet.repeatedObjectRideGroundWallResponseDeferred()
+        CollisionRules rules = collisionRulesOrNull(sprite);
+        if (rules == null
+                || !rules.repeatedObjectRideGroundWallResponseDeferred()
                 || objectManager == null
                 || !sprite.isOnObject()
                 || !sprite.getPushing()
@@ -366,9 +368,9 @@ public class CollisionSystem {
 
     private boolean shouldDeferFlushWallResponseForRiddenDropOnFloor(
             AbstractPlayableSprite sprite, int mode, short gSpeed) {
-        var featureSet = sprite.getPhysicsFeatureSet();
-        if (featureSet == null
-                || !featureSet.repeatedObjectRideGroundWallResponseDeferred()
+        CollisionRules rules = collisionRulesOrNull(sprite);
+        if (rules == null
+                || !rules.repeatedObjectRideGroundWallResponseDeferred()
                 || objectManager == null
                 || !sprite.isOnObject()
                 || !sprite.getPushing()) {
@@ -440,8 +442,8 @@ public class CollisionSystem {
     }
 
     private static boolean shouldSetGroundWallPush(AbstractPlayableSprite sprite, int mode) {
-        var featureSet = sprite.getPhysicsFeatureSet();
-        if (featureSet == null || !featureSet.groundWallPushRequiresFacingIntoWall()) {
+        CollisionRules rules = collisionRulesOrNull(sprite);
+        if (rules == null || !rules.groundWallPushRequiresFacingIntoWall()) {
             return true;
         }
         boolean facingLeft = sprite.getDirection() == com.openggf.physics.Direction.LEFT;
@@ -606,8 +608,8 @@ public class CollisionSystem {
         if (sprite == null) {
             return false;
         }
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.rightWallDeepProbePreservesPenetration();
+        CollisionRules rules = collisionRulesOrNull(sprite);
+        return rules != null && rules.rightWallDeepProbePreservesPenetration();
     }
 
     private int getTerrainHeadroomDistance(AbstractPlayableSprite sprite, int hexAngle) {
@@ -803,13 +805,13 @@ public class CollisionSystem {
     }
 
     private boolean airRightWallHitContinuesIntoCeilingSeparation(AbstractPlayableSprite sprite) {
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.airRightWallHitContinuesIntoCeilingSeparation();
+        CollisionRules rules = collisionRulesOrNull(sprite);
+        return rules != null && rules.airRightWallHitContinuesIntoCeilingSeparation();
     }
 
     private boolean airLeftWallHitContinuesIntoCeilingSeparation(AbstractPlayableSprite sprite) {
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null && featureSet.airLeftWallHitContinuesIntoCeilingSeparation();
+        CollisionRules rules = collisionRulesOrNull(sprite);
+        return rules != null && rules.airLeftWallHitContinuesIntoCeilingSeparation();
     }
 
     /**
@@ -960,11 +962,11 @@ public class CollisionSystem {
             return;
         }
 
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        boolean preservePinballRoll = featureSet != null && featureSet.pinballLandingPreservesRoll();
-        boolean preservePinballMode = featureSet != null && featureSet.pinballLandingPreservesPinballMode();
+        PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
+        boolean preservePinballRoll = rules != null && rules.pinballLandingPreservesRoll();
+        boolean preservePinballMode = rules != null && rules.pinballLandingPreservesPinballMode();
         if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
-            if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
+            if (rules != null && rules.landingRollClearUsesCurrentYRadiusDelta()) {
                 int oldYRadius = sprite.getYRadius();
                 int centreX = sprite.getCentreX();
                 int centreY = sprite.getCentreY();
@@ -1087,8 +1089,8 @@ public class CollisionSystem {
             return;
         }
 
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        if (featureSet == null || featureSet.angleDiffCardinalSnap()) {
+        PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
+        if (rules == null || rules.angleDiffCardinalSnap()) {
             int currentAngle = sprite.getAngle() & 0xFF;
             int newAngle = sensorAngle & 0xFF;
             int diff = Math.abs(newAngle - currentAngle);
@@ -1102,6 +1104,28 @@ public class CollisionSystem {
         }
 
         sprite.setAngle(sensorAngle);
+    }
+
+    private static CollisionRules collisionRulesOrNull(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return null;
+        }
+        GameRules rules = sprite.getGameRules();
+        if (rules != null && rules.collision() != null) {
+            return rules.collision();
+        }
+        return null;
+    }
+
+    private static PlayerMovementRules playerMovementRulesOrNull(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return null;
+        }
+        GameRules rules = sprite.getGameRules();
+        if (rules != null && rules.playerMovement() != null) {
+            return rules.playerMovement();
+        }
+        return null;
     }
 
     private void updateGroundMode(AbstractPlayableSprite sprite) {

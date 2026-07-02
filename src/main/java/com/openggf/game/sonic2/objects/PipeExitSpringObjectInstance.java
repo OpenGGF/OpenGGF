@@ -227,7 +227,7 @@ public class PipeExitSpringObjectInstance extends BoxObjectInstance
         // SolidObject_Always_SingleCharacter (s2.asm:56335/56343), bypassing the
         // SolidObject_OnScreenTest render_flags(a0) gate at s2.asm:35330-35336.
         // Off-screen pipe-exit springs still resolve solid contact in ROM.
-        // Required so enabling PhysicsFeatureSet.solidObjectOffscreenGate for S2
+        // Required so enabling CollisionRules.solidObjectOffscreenGate for S2
         // keeps OOZ pipe-exit launches behaving as before.
         return true;
     }

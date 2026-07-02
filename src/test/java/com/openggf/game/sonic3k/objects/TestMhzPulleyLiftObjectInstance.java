@@ -46,7 +46,7 @@ class TestMhzPulleyLiftObjectInstance {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance pulley = registry.create(new ObjectSpawn(
                 0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
-        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x0660);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
         player.setRenderFlips(false, true);
 
         assertEquals("MHZPulleyLift", pulley.getName(),
@@ -61,10 +61,11 @@ class TestMhzPulleyLiftObjectInstance {
                 "object_control=3 suppresses normal player movement while the pulley owns positioning");
         assertEquals(0x17CE, player.getCentreX() & 0xFFFF,
                 "left child handle spawns at parent x_pos-$32");
-        assertEquals(0x0670, player.getCentreY() & 0xFFFF,
+        assertEquals(0x063C, player.getCentreY() & 0xFFFF,
                 "grabbed player is snapped to child handle y_pos+$42");
-        assertEquals(0x92, player.getMappingFrame(),
-                "loc_3E658 writes mapping_frame=$92 when the grabbed handle offset is at least $20");
+        assertEquals(0x90, player.getMappingFrame(),
+                "loc_3E658 keeps mapping_frame=$90 (GRAB) on a fresh grab because the handle's own $34 "
+                        + "offset is seeded at 0, not $20+");
         assertTrue(player.isObjectMappingFrameControl(),
                 "Perform_Player_DPLC uses the pulley-owned mapping frame while object_control=3 holds the player");
         assertFalse(player.getRenderVFlip(),
@@ -79,7 +80,7 @@ class TestMhzPulleyLiftObjectInstance {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         AbstractObjectInstance pulley = (AbstractObjectInstance) registry.create(new ObjectSpawn(
                 0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
-        TestablePlayableSprite sidekick = fallingPlayerAt(0x17CE, 0x0660);
+        TestablePlayableSprite sidekick = fallingPlayerAt(0x17CE, 0x062C);
         pulley.setServices(new TestObjectServices()
                 .withGameState(mock(GameStateManager.class))
                 .withSidekicks(List.of(sidekick)));
@@ -91,7 +92,7 @@ class TestMhzPulleyLiftObjectInstance {
         assertTrue(sidekick.isObjectControlled(),
                 "sub_3E4EC checks Player_2 before Player_1, so native P2 can grab a pulley handle independently");
         assertEquals(0x17CE, sidekick.getCentreX() & 0xFFFF);
-        assertEquals(0x0670, sidekick.getCentreY() & 0xFFFF);
+        assertEquals(0x063C, sidekick.getCentreY() & 0xFFFF);
     }
 
     @Test
@@ -99,7 +100,7 @@ class TestMhzPulleyLiftObjectInstance {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance pulley = registry.create(new ObjectSpawn(
                 0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
-        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x0660);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
         player.setHurt(true);
 
         pulley.update(0, player);
@@ -117,7 +118,7 @@ class TestMhzPulleyLiftObjectInstance {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance pulley = registry.create(new ObjectSpawn(
                 0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
-        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x0660);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
 
         assertEquals("MHZPulleyLift", pulley.getName(),
                 "SKL slot $06 must construct the MHZ pulley before behavior can be validated");
@@ -144,7 +145,7 @@ class TestMhzPulleyLiftObjectInstance {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance pulley = registry.create(new ObjectSpawn(
                 0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
-        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x0660);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
 
         pulley.update(0, player);
         player.setJumpInputPressed(true, false);
@@ -163,7 +164,7 @@ class TestMhzPulleyLiftObjectInstance {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance pulley = registry.create(new ObjectSpawn(
                 0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
-        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x0660);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
 
         pulley.update(0, player);
         player.setHurt(true);
@@ -184,7 +185,7 @@ class TestMhzPulleyLiftObjectInstance {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance pulley = registry.create(new ObjectSpawn(
                 0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
-        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x0660);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
 
         player.setDirection(Direction.RIGHT);
         player.setRenderFlips(false, false);
@@ -208,18 +209,41 @@ class TestMhzPulleyLiftObjectInstance {
     }
 
     @Test
-    void idleHandleRetractionMovesParentYBeforeSnappingPlayer() {
+    void initialHandleExtensionsAreZeroWithNoParentYNudgeOnFrameOne() {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance pulley = registry.create(new ObjectSpawn(
                 0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
-        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x0660);
+        TestablePlayableSprite player = fallingPlayerAt(0x1900, 0x0660);
+
+        pulley.update(0, player);
+
+        String details = pulley.traceDebugDetails();
+        assertTrue(details.contains(" leftOffset=0 rightOffset=0 "),
+                "Obj_MHZPulleyLift's init writes $34/$36 into field $36(a1) as a PARENT-FIELD-OFFSET "
+                        + "selector (loc_3E4B6 reads $36(a0) to pick which parent field to mirror into), not "
+                        + "an extension seed; the handle's own $34(a0) offset is left at its implicit "
+                        + "RAM-zero default on frame 1");
+        assertTrue(details.contains(" parentY=1536 "),
+                "loc_3E37E only adjusts parent y_pos on a nonzero average-handle-offset delta; with both "
+                        + "handle offsets seeded at 0 there is no delta on frame 1, so parentY (spawn y_pos "
+                        + "$600 = 1536) must not nudge");
+    }
+
+    @Test
+    void heldPlayerPositionRemainsStableAcrossIdleFramesWithNoParentYNudge() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance pulley = registry.create(new ObjectSpawn(
+                0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
 
         pulley.update(0, player);
         pulley.update(1, player);
         pulley.update(2, player);
 
-        assertEquals(0x0666, player.getCentreY() & 0xFFFF,
-                "loc_3E37E subtracts 2 from parent y_pos at this alignment before loc_3E646 snaps the held player");
+        assertEquals(0x063C, player.getCentreY() & 0xFFFF,
+                "with both handle offsets seeded at 0, loc_3E37E never sees a nonzero average-offset "
+                        + "delta, so parentY stays put and loc_3E646 snaps the held player to a constant "
+                        + "handle y_pos+$42 across idle frames");
     }
 
     @Test
@@ -229,7 +253,7 @@ class TestMhzPulleyLiftObjectInstance {
         AbstractObjectInstance pulley = (AbstractObjectInstance) registry.create(new ObjectSpawn(
                 0x1800, 0x0600, MHZ_PULLEY_LIFT, 0, 0, false, 0));
         pulley.setServices(services);
-        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x0660);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
 
         pulley.update(0, player);
         services.clear();
@@ -244,7 +268,7 @@ class TestMhzPulleyLiftObjectInstance {
         AbstractObjectInstance enabledPulley = (AbstractObjectInstance) registry.create(new ObjectSpawn(
                 0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
         enabledPulley.setServices(enabledServices);
-        TestablePlayableSprite enabledPlayer = fallingPlayerAt(0x17CE, 0x0660);
+        TestablePlayableSprite enabledPlayer = fallingPlayerAt(0x17CE, 0x062C);
 
         enabledPulley.update(0, enabledPlayer);
         enabledServices.clear();
@@ -263,7 +287,7 @@ class TestMhzPulleyLiftObjectInstance {
         AbstractObjectInstance pulley = (AbstractObjectInstance) registry.create(new ObjectSpawn(
                 0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
         pulley.setServices(services);
-        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x0660);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
 
         pulley.update(0, player);
         services.clear();
@@ -283,7 +307,7 @@ class TestMhzPulleyLiftObjectInstance {
         AbstractObjectInstance pulley = (AbstractObjectInstance) registry.create(new ObjectSpawn(
                 0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
         pulley.setServices(services);
-        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x0660);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
 
         player.setDirectionalInputPressed(false, true, false, false);
         pulley.update(0, player);
@@ -312,8 +336,8 @@ class TestMhzPulleyLiftObjectInstance {
         verify(renderer).drawFrameIndex(0, 0x1800, 0x0640, false, false);
         verify(renderer).drawFrameIndex(5, 0x17F0, 0x0678, false, false);
         verify(renderer).drawFrameIndex(6, 0x1810, 0x0678, false, false);
-        verify(renderer).drawFrameIndex(7, 0x17CE, 0x062E, false, false);
-        verify(renderer).drawFrameIndex(7, 0x1832, 0x0630, true, false);
+        verify(renderer).drawFrameIndex(3, 0x17CE, 0x05FA, false, false);
+        verify(renderer).drawFrameIndex(3, 0x1832, 0x05FA, true, false);
     }
 
     @Test
@@ -336,8 +360,8 @@ class TestMhzPulleyLiftObjectInstance {
         verify(renderer).drawFrameIndex(0, 0x1800, 0x0640, false, false);
         verify(renderer).drawFrameIndex(5, 0x17F0, 0x0678, false, false);
         verify(renderer).drawFrameIndex(6, 0x1810, 0x0678, false, false);
-        verify(renderer).drawFrameIndex(7, 0x17CE, 0x062A, false, false);
-        verify(renderer).drawFrameIndex(7, 0x1832, 0x062C, true, false);
+        verify(renderer).drawFrameIndex(3, 0x17CE, 0x05FA, false, false);
+        verify(renderer).drawFrameIndex(3, 0x1832, 0x05FA, true, false);
     }
 
     private static TestablePlayableSprite fallingPlayerAt(int x, int y) {

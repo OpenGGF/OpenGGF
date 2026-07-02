@@ -1,6 +1,6 @@
 package com.openggf.sprites.playable;
 
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.trace.TraceCharacterState;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +19,7 @@ class TestTraceCharacterState {
     void cpuSidekickDeadFallingCapturesObjectRoutineSix() {
         Sonic sonic = new Sonic("sonic", (short) 0x04AF, (short) 0x0665);
         Tails tails = new Tails("tails_p2", (short) 0x0464, (short) 0x07FF);
-        tails.setPhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setAir(true);
         tails.setXSpeed((short) 0);

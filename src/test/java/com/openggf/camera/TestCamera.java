@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.GameServices;
+import com.openggf.game.rules.GameRules;
 import com.openggf.tests.TestEnvironment;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -372,6 +373,20 @@ public class TestCamera {
 
         assertTrue(camera.isVisibleForRenderFlag(mockSprite),
                 "BuildSprites subtracts Camera_Y_pos_copy, so screen shake can keep a sprite on-screen at the bottom edge");
+    }
+
+    @Test
+    public void testPlayableRenderFlagVisibilityUsesGameRules() {
+        camera.setX((short) 0);
+        camera.setY((short) 100);
+        when(mockSprite.getGameRules()).thenReturn(null);
+        when(mockSprite.getGameRules()).thenReturn(GameRules.SONIC_3K);
+        when(mockSprite.getRenderCentreX()).thenReturn((short) 160);
+        when(mockSprite.getRenderCentreY()).thenReturn((short) 72);
+        when(mockSprite.getRenderFlagWidthPixels()).thenReturn(0x18);
+
+        assertFalse(camera.isVisibleForRenderFlag(mockSprite),
+                "S3K legacy camera rules should use the 24px render margin when GameRules are absent");
     }
 
     // ==================== Increment Tests ====================

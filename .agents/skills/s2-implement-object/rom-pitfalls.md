@@ -333,10 +333,9 @@ flow for both games, breaking S2.
 
 **What to check.** When implementing sidekick state machines or
 post-event flows that touch despawn / clean-up / return-to-pool, look at
-each game's ROM equivalent separately. If they diverge, add a
-`PhysicsFeatureSet` flag (already established pattern; see
-`sidekickDeathUsesDeferredDespawn` for an example) and branch on the
-flag — never on `gameId`.
+each game's ROM equivalent separately. If they diverge, route the behavior
+through the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`
+and branch on that semantic rule/profile/provider value — never on `gameId`.
 
 **ROM citation.** `docs/s2disasm/s2.asm:40736-40759` (`Obj02_Dead` +
 `Obj02_CheckGameOver` deferred-fall), `docs/s2disasm/s2.asm:29967-29981`
@@ -1244,8 +1243,9 @@ playable code, read the reset routine for each game and character:
    rolling is set.
 3. S3K restores default radii before checking roll state and uses the
    current-radius delta model.
-4. Gate shared cleanup through the owning feature flag (or a narrower object
-   hook) instead of assuming all games consume the same landing radii.
+4. Gate shared cleanup through the owning `GameRules` rule, provider/profile,
+   or narrower object hook instead of assuming all games consume the same
+   landing radii.
 
 **ROM citation.** `docs/s2disasm/s2.asm:40629-40636`
 (`Tails_ResetOnFloor_Part2` branches past radius restore when rolling is
@@ -1575,32 +1575,34 @@ MTZLongPlatform props-lookup`.
 
 ---
 
-## P33 -- PhysicsFeatureSet flags must be set to the correct ROM value when guard code is added
+## P33 -- Per-game rule/profile/provider values must be set to the correct ROM value when gates are added
 
-**Symptom.** A PhysicsFeatureSet flag is added to gate new behaviour, the guard
-is wired into the physics code path, and all existing tests still pass — but the
-trace diverges at the exact frame the guarded behaviour should fire, because the
-flag is set to the wrong default for one or more games. CNZ2 trace regressed from
-f1490 to f936 when `pinballLandingPreservesPinballMode` was added with `false` in
-`SONIC_2` even though S2 ROM preserves pinball mode on landing.
+**Symptom.** A per-game rule/profile/provider value is added to gate new
+behaviour, the guard is wired into the owning code path, and all existing tests
+still pass — but the trace diverges at the exact frame the guarded behaviour
+should fire, because the value is set to the wrong default for one or more games.
+CNZ2 trace regressed from f1490 to f936 when the legacy
+`pinballLandingPreservesPinballMode` gate was added with `false` in `SONIC_2`
+even though S2 ROM preserves pinball mode on landing.
 
-**Root cause.** PhysicsFeatureSet constants (`SONIC_1`, `SONIC_2`, `SONIC_3K`)
-are long field lists. A new field typically has a conservative default in the
-shared constructor, and the per-game factory constant must explicitly set the
-correct value. It is easy to add the flag, wire the guard, verify that S1/S3K
-behave correctly, and forget to flip the flag for S2 (or vice versa). Unit tests
-rarely cover the exact multi-frame state required to exercise a newly-gated
-branch, so the error is silent until the trace replay runs.
+**Root cause.** Per-game gates need an explicit owner and a complete Sonic 1 /
+Sonic 2 / Sonic 3&K value table. Use
+`docs/architecture/per-game-rule-placement.md` to choose the smallest accurate
+owner before adding the gate. It is easy to wire the guard, verify that one or
+two games behave correctly, and forget to set the value for the remaining game.
+Unit tests rarely cover the exact multi-frame state required to exercise a
+newly-gated branch, so the error is silent until the trace replay runs.
 
-**What to check.** When adding a PhysicsFeatureSet field:
+**What to check.** When adding any per-game rule/profile/provider value:
 1. Open the disassembly for ALL three games and find the equivalent routine.
-2. Set the correct value in `SONIC_1`, `SONIC_2`, and `SONIC_3K` factory
-   constants immediately — never leave any game at the fallback default unless
-   you have verified the disassembly confirms it.
-3. If a game's behaviour is unknown, mark it `TODO` in a comment beside the
+2. Choose the owner using `docs/architecture/per-game-rule-placement.md`.
+3. Set the correct Sonic 1, Sonic 2, and Sonic 3&K values immediately — never
+   leave any game at the fallback default unless you have verified the
+   disassembly confirms it.
+4. If a game's behaviour is unknown, mark it `TODO` in a comment beside the
    constant and log it in `docs/KNOWN_DISCREPANCIES.md`, but do not leave the
    wrong value silently in place.
-4. Run the relevant trace replay for all three games after the change.
+5. Run the relevant trace replay for all three games after the change.
 
 **ROM citation.** `docs/s2disasm/s2.asm:37770-37771` (`Sonic_ResetOnFloor` S2:
 `bclr #status.player.in_pinball_mode,status(a1)` is absent — pinball mode is

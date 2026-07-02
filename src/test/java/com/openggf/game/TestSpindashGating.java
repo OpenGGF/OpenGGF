@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.game.rules.GameRules;
+
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.sonic1.Sonic1GameModule;
@@ -56,15 +58,15 @@ class TestSpindashGating {
         TestEnvironment.activeGameplayMode();
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
 
-        PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+        GameRules fs = sprite.getGameRules();
         assertNotNull(fs, "Feature set should be set");
-        assertEquals(expectedEnabled, fs.spindashEnabled(), label);
+        assertEquals(expectedEnabled, fs.playerCapability().spindashEnabled(), label);
 
         if (expectedEnabled) {
-            assertNotNull(fs.spindashSpeedTable(), label + " speed table");
-            assertEquals(9, fs.spindashSpeedTable().length, label + " speed table entries");
+            assertNotNull(fs.playerCapability().spindashSpeedTable(), label + " speed table");
+            assertEquals(9, fs.playerCapability().spindashSpeedTable().length, label + " speed table entries");
         } else {
-            assertNull(fs.spindashSpeedTable(), label + " no speed table");
+            assertNull(fs.playerCapability().spindashSpeedTable(), label + " no speed table");
         }
     }
 
@@ -80,20 +82,20 @@ class TestSpindashGating {
     }
 
     @Test
-    void moduleSwitch_updatesFeatureSet() {
+    void moduleSwitch_updatesGameRules() {
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         SessionManager.clear();
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
-        assertTrue(sprite.getPhysicsFeatureSet().spindashEnabled(), "Initially S2 spindash");
+        assertTrue(sprite.getGameRules().playerCapability().spindashEnabled(), "Initially S2 spindash");
 
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
         SessionManager.clear();
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
         sprite.resetState();
-        assertFalse(sprite.getPhysicsFeatureSet().spindashEnabled(),
+        assertFalse(sprite.getGameRules().playerCapability().spindashEnabled(),
                 "After switch to S1, spindash disabled");
     }
 }

@@ -1,7 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.game.PhysicsProfile;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -104,7 +104,7 @@ public class WaterPhysicsTest {
 
     @Test
     public void s2WaterExitBoostsFastUpwardVelocityAndCaps() {
-        sprite.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sprite.setGameRulesForTest(GameRules.SONIC_2);
         sprite.setInWater(true);
         sprite.setYSpeed((short) -0x990);
 
@@ -118,7 +118,7 @@ public class WaterPhysicsTest {
 
     @Test
     public void s3kWaterExitSkipsFastUpwardBoost() {
-        sprite.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        sprite.setGameRulesForTest(GameRules.SONIC_3K);
         sprite.setInWater(true);
         sprite.setYSpeed((short) -0x990);
 

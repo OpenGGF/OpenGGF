@@ -110,7 +110,7 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
     }
 
     private void tryGrab(AbstractPlayableSprite player) {
-        if (!isInGrabWindow(player) || player.isObjectControlled()) {
+        if (!isInGrabWindow(player) || player.isHurt() || player.getDead() || player.isObjectControlled()) {
             return;
         }
         int incomingYSpeed = player.getYSpeed();

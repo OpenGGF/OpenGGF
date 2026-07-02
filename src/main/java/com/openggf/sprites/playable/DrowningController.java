@@ -3,7 +3,8 @@ package com.openggf.sprites.playable;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.GameSound;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.DrowningBubbleRules;
+import com.openggf.game.rules.GameRules;
 import com.openggf.level.objects.BreathingBubbleInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectArtKeys;
@@ -121,8 +122,8 @@ public class DrowningController {
      */
     public void reset() {
         remainingAir = INITIAL_AIR;
-        PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
-        frameTimer = fs != null ? fs.initialDrowningCountdownFrameTimer() : FRAMES_PER_SECOND;
+        DrowningBubbleRules rules = drowningBubbleRulesOrNull();
+        frameTimer = rules != null ? rules.initialDrowningCountdownFrameTimer() : FRAMES_PER_SECOND;
         drowningMusicStarted = false;
         bubbleFlags = 0;
         bubblesRemainingInBurst = -1;
@@ -232,10 +233,9 @@ public class DrowningController {
         // S2/S3K Obj0A_Animate biases the next mouth-bubble delay by +8
         // (RandomNumber&$F)+8 (s2.asm:42201-42204); S1 LZ Obj64 air bubbles use a
         // different bubble-maker structure with no such bias. Drive this from the
-        // per-game PhysicsFeatureSet constant rather than the loaded bubble art
-        // key; S2 (+8) is the fallback when the feature set is unset.
-        PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
-        int timerBias = fs != null ? fs.mouthBubbleTimerBias() : 8;
+        // per-game drowning bubble rules rather than the loaded bubble art key.
+        DrowningBubbleRules rules = drowningBubbleRulesOrNull();
+        int timerBias = rules != null ? rules.mouthBubbleTimerBias() : 8;
         nextBubbleTimer = rng.nextBits(0x0F) + timerBias;
 
         int countdownNumber = -1;
@@ -291,9 +291,9 @@ public class DrowningController {
         int bubbleX = player.getCentreX() + xOffset;
         int bubbleY = player.getCentreY(); // Player's centre Y (ROM uses centre coordinates for obY)
 
-        PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
-        int riseVelocity = fs != null ? fs.mouthBubbleRiseVelocity() : -0x88;
-        boolean deferFirstPass = fs == null || fs.breathingBubbleDefersFirstObjectPass();
+        DrowningBubbleRules rules = drowningBubbleRulesOrNull();
+        int riseVelocity = rules != null ? rules.mouthBubbleRiseVelocity() : -0x88;
+        boolean deferFirstPass = rules == null || rules.breathingBubbleDefersFirstObjectPass();
         boolean startsFacingLeft = player.getDirection() == Direction.LEFT;
 
         // Create bubble with game-specific art configuration
@@ -361,6 +361,14 @@ public class DrowningController {
         // No bubble art available
         LOGGER.fine("No bubble art renderer available for breathing bubbles");
         bubbleArtKey = null;
+    }
+
+    private DrowningBubbleRules drowningBubbleRulesOrNull() {
+        GameRules gameRules = player.getGameRules();
+        if (gameRules != null && gameRules.drowningBubble() != null) {
+            return gameRules.drowningBubble();
+        }
+        return null;
     }
 
     /**

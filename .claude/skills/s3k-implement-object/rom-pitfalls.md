@@ -236,9 +236,9 @@ semantics across games. The most prominent in trace work:
 
 **What to check.** When implementing or modifying post-event flows
 (despawn, results-screen handoff, level-end), look at each game's ROM
-equivalent separately. If they diverge, add a `PhysicsFeatureSet` flag
-following the established pattern (e.g. `sidekickDeathUsesDeferredDespawn`).
-Never gate on `gameId`.
+equivalent separately. If they diverge, route the behavior through the smallest
+accurate owner from `docs/architecture/per-game-rule-placement.md`. Never gate on
+`gameId`.
 
 **ROM citation.** S3K immediate-warp baseline at
 `docs/skdisasm/sonic3k.asm:26800-26809` (`sub_13ECA`). S2 deferred flow at

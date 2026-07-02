@@ -24,7 +24,7 @@ import java.util.List;
  * path before pausing at the vertical midpoint.
  */
 public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, DragonflyHoverReturnGate {
 
     private static final int COLLISION_SIZE_INDEX = 0x17;
     private static final int PRIORITY_BUCKET = 5;
@@ -220,6 +220,10 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
         return mappingFrame;
     }
 
+    boolean isUsingDownBodyAnimation() {
+        return bodyAnimationScript == BODY_ANIM_DOWN_SCRIPT;
+    }
+
     @Override
     public int getOnScreenHalfWidth() {
         return RENDER_HALF_WIDTH;
@@ -230,7 +234,16 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
         return RENDER_HALF_HEIGHT;
     }
 
-    boolean isHoverWaitActiveForLinkedChildren() {
+    /**
+     * Mirrors ROM {@code $38} bit 2 on the main Dragonfly (set in {@code loc_8DDCA}
+     * on entering hover-wait, cleared in {@code loc_8DDF8} on exit). The first
+     * linked-body segment (whose {@code parent3} anchor is the Dragonfly itself)
+     * reads this directly; unlike the tail-internal hops, the Dragonfly always
+     * runs before any child in the ROM object list, so this is visible the same
+     * frame it changes -- no one-frame delay needed here.
+     */
+    @Override
+    public boolean isHoverReturnGateOpen() {
         return state == State.WAITING;
     }
 
@@ -324,7 +337,7 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     public static final class LinkedBodyChild extends AbstractObjectInstance
-            implements TouchResponseProvider, RewindRecreatable {
+            implements TouchResponseProvider, RewindRecreatable, DragonflyHoverReturnGate {
         private static final int PHASE_FOLLOW_PARENT_OFFSET = 0;
         private static final int PHASE_RETURN_TO_PARENT_Y = 1;
         private static final int PHASE_WAIT_FOR_PARENT_TO_REACH_OPPOSITE_OFFSET = 2;
@@ -349,6 +362,16 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
         private boolean horizontalDirectionPositive;
         private boolean verticalRenderFlip = true;
         private boolean setupFrame = true;
+        // Mirrors this segment's own ROM $38 bit 2 (set entering the return
+        // phase in loc_8DEA8, cleared completing the wait phase in loc_8DF24).
+        private boolean returnGateBit;
+        // What the NEXT segment in the chain observes. CreateChild4_LinkListRepeated
+        // inserts each new segment via AllocateObjectAfterCurrent right after the
+        // Dragonfly's own slot, so later segments end up processed BEFORE earlier
+        // ones within a frame; a segment therefore only sees its predecessor's
+        // returnGateBit as it stood at the end of the PREVIOUS frame, producing
+        // the ROM's one-frame ripple down the chain. Promoted once per own update().
+        private boolean returnGateVisibleToFollower;
 
         private LinkedBodyChild() {
             this(new DragonflyBadnikInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)), 0, 0);
@@ -390,6 +413,7 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
                 setDestroyed(true);
                 return;
             }
+            returnGateVisibleToFollower = returnGateBit;
             if (setupFrame) {
                 setupFrame = false;
                 updateDynamicSpawn(childX, childY);
@@ -425,6 +449,15 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
             return parent.getX();
         }
 
+        boolean isReturningToParentY() {
+            return verticalPhase != PHASE_FOLLOW_PARENT_OFFSET;
+        }
+
+        @Override
+        public boolean isHoverReturnGateOpen() {
+            return returnGateVisibleToFollower;
+        }
+
         private void updateParentRelativeY() {
             childY = followAnchor.getY() + childDy;
         }
@@ -445,8 +478,9 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
         private void updateVerticalPhase() {
             switch (verticalPhase) {
                 case PHASE_FOLLOW_PARENT_OFFSET -> {
-                    if (parent.isHoverWaitActiveForLinkedChildren()) {
+                    if (followAnchor instanceof DragonflyHoverReturnGate gate && gate.isHoverReturnGateOpen()) {
                         verticalPhase = PHASE_RETURN_TO_PARENT_Y;
+                        returnGateBit = true;
                     }
                 }
                 case PHASE_RETURN_TO_PARENT_Y -> moveTowardParentY();
@@ -476,6 +510,7 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
             childY = targetY;
             verticalPhase = PHASE_FOLLOW_PARENT_OFFSET;
             verticalRenderFlip = !verticalRenderFlip;
+            returnGateBit = false;
         }
 
         @Override

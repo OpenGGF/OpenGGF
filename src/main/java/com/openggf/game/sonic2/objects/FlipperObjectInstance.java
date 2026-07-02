@@ -520,7 +520,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
         // SolidObject_OnScreenTest render_flags(a0) gate at s2.asm:35330-35336.
         // Off-screen flippers therefore still resolve push/side contact in ROM,
         // mirroring the S3K SolidObjectFull2_1P behaviour. Required so enabling
-        // PhysicsFeatureSet.solidObjectOffscreenGate for S2 does not regress CNZ
+        // CollisionRules.solidObjectOffscreenGate for S2 does not regress CNZ
         // pinball bounces (CNZ1 trace f355).
         return true;
     }

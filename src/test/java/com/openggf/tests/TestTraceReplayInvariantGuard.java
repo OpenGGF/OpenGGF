@@ -1,6 +1,6 @@
 package com.openggf.tests;
 
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
 import com.openggf.trace.ToleranceConfig;
@@ -91,10 +91,10 @@ class TestTraceReplayInvariantGuard {
 
     @Test
     void s2ControlLockLogicalLatchIsEnabledWithForcedInputBypass() {
-        assertTrue(PhysicsFeatureSet.SONIC_2.controlLockLatchesLogicalInput(),
+        assertTrue(GameRules.SONIC_2.playerMovement().controlLockLatchesLogicalInput(),
                 "S2 Obj01_Control latches Ctrl_1_Logical while Control_Locked; "
                         + "forced-input writers bypass the latch for signpost/auto-walk scripts.");
-        assertTrue(PhysicsFeatureSet.SONIC_3K.controlLockLatchesLogicalInput(),
+        assertTrue(GameRules.SONIC_3K.playerMovement().controlLockLatchesLogicalInput(),
                 "S3K keeps the ROM Ctrl_1_locked logical-input latch enabled.");
     }
 

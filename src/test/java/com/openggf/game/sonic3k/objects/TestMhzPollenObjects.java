@@ -20,6 +20,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -196,8 +197,14 @@ class TestMhzPollenObjects {
             particle.update(frame, null);
         }
 
-        assertEquals(TrigLookupTable.sinHex(0x88), particle.getVelocityX(),
+        // Task 10: loc_3DAD6 `move.w d0,angle(a1)` writes the byte-sized angle
+        // field from the HIGH byte of the low word (big-endian first byte of
+        // the word write); for this seed/call sequence raw=$A43488, so the
+        // seed angle is $34, not the low byte $88.
+        assertEquals(TrigLookupTable.sinHex(0x34), particle.getVelocityX(),
                 "loc_3DC18 switches to loc_3DBE0 without replacing the random angle written at loc_3DAD6");
+        assertNotEquals(TrigLookupTable.sinHex(0x88), particle.getVelocityX(),
+                "the burst-particle seed angle must come from the high byte ($34) of the RNG word, not the low byte ($88)");
     }
 
     @Test

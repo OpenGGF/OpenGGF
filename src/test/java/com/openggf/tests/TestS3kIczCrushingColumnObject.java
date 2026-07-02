@@ -1,7 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -105,7 +105,7 @@ class TestS3kIczCrushingColumnObject {
             column.snapshotPreUpdatePosition();
 
             TestPlayableSprite player = new TestPlayableSprite();
-            player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+            player.useGameRules(GameRules.SONIC_3K);
             player.setWidth(28);
             player.setHeight(38);
             player.setCentreX((short) 0x0064);
@@ -291,8 +291,8 @@ class TestS3kIczCrushingColumnObject {
             super("TEST", (short) 0, (short) 0);
         }
 
-        private void useFeatureSet(PhysicsFeatureSet featureSet) {
-            setPhysicsFeatureSet(featureSet);
+        private void useGameRules(GameRules featureSet) {
+            super.setGameRulesForTest(featureSet);
         }
 
         @Override

@@ -4,7 +4,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.tests.TestEnvironment;
 
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -244,7 +244,7 @@ class TestCnzMinibossTopPhysics {
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
         tails.setCpuControlled(true);
         tails.setRenderFlagOnScreen(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         tails.setAir(false);
         SolidObjectParams params = top.getSolidParams();
         int maxTop = params.airHalfHeight() + tails.getYRadius();

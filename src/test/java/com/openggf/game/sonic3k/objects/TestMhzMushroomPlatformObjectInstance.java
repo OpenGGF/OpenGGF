@@ -208,8 +208,15 @@ class TestMhzMushroomPlatformObjectInstance {
         }
 
         platform.update(5, null);
+        assertEquals(2, platform.getMappingFrame(),
+                "Animate_Sprite's Code FD handler (sonic3k.asm loc_1AC5C) writes anim(a0)=0 and rts's "
+                        + "immediately without touching mapping_frame, so the pressed frame is still "
+                        + "showing on the same call that processes $FD,0");
+
+        platform.update(6, null);
         assertEquals(1, platform.getMappingFrame(),
-                "Ani_MHZMushroomPlatform anim 1 ends with $FD,0, returning to idle animation 0");
+                "The next Animate_Sprite call sees anim(a0) changed to idle animation 0 and loads its "
+                        + "Seq0 script fresh (anim_frame reset to 0), emitting mapping frame 1");
     }
 
     @Test

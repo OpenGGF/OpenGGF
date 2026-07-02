@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -201,22 +202,49 @@ public final class MhzStickyVineObjectInstance extends AbstractObjectInstance im
         }
     }
 
+    /**
+     * ROM: {@code sub_3EC66} (sonic3k.asm ~83210-83258). Computes the pull vector via
+     * {@code GetArcTan}/{@code GetSineCosine} over the full ROM-precision (x_pos:x_sub)
+     * delta to the vine anchor and subtracts it from the player's position, honouring
+     * the distinct air vs ground branches.
+     */
     private void applyStickyPull(AbstractPlayableSprite player) {
-        int dx = player.getCentreX() - spawn.x();
-        int dy = player.getCentreY() - spawn.y();
-        int pullStrength = Math.abs(dx) << 6;
-        int pullX = clamp(Math.abs(dx) / 2, 1, 4);
-        int pullY = clamp(Math.abs(dy) / 2, 0, 4);
-        if (dx != 0) {
-            NativePositionOps.writeXPosPreserveSubpixel(player, player.getCentreX() - Integer.signum(dx) * pullX);
-        }
-        if (player.getAir() && dy != 0) {
-            NativePositionOps.writeYPosPreserveSubpixel(player, player.getCentreY() - Integer.signum(dy) * pullY);
-        }
-        if (player.getAir() && player.getYSpeed() >= 0) {
-            player.setXSpeed((short) (player.getXSpeed() >> 1));
-        }
-        if (!player.getAir()) {
+        // sub_3EC2A: full 32-bit (pixel:subpixel) delta between the player and the anchor,
+        // in the same Q16.16 representation as the ROM's x_pos(a1)/y_pos(a1) longword.
+        int vineXQ = spawn.x() << 16;
+        int vineYQ = spawn.y() << 16;
+        int playerXQ = (player.getCentreX() << 16) | (player.getXSubpixelRaw() & 0xFFFF);
+        int playerYQ = (player.getCentreY() << 16) | (player.getYSubpixelRaw() & 0xFFFF);
+
+        // sub_3EC66: "swap d1/d2" keeps only the integer pixel delta for the arctan input.
+        short dxPixel = (short) ((playerXQ - vineXQ) >> 16);
+        short dyPixel = (short) ((playerYQ - vineYQ) >> 16);
+        short d3 = (short) ((Math.abs(dxPixel) + Math.abs(dyPixel)) * 2);
+
+        int angle = TrigLookupTable.calcAngle(dxPixel, dyPixel);
+        int sin = TrigLookupTable.sinHex(angle);
+        int cos = TrigLookupTable.cosHex(angle);
+
+        // muls.w d3,d1 / asl.l #2,d1 -- x_pos -= cos(angle)*d3*4 (full sub-pixel precision).
+        int xPullQ = (cos * d3) << 2;
+        // muls.w d3,d0 / asl.l #1,d0 -- y_pos -= sin(angle)*d3*2, applied only while airborne.
+        int yPullQ = (sin * d3) << 1;
+
+        int newXQ = playerXQ - xPullQ;
+        player.setSubpixelRaw(newXQ & 0xFFFF, player.getYSubpixelRaw());
+        NativePositionOps.writeXPosPreserveSubpixel(player, newXQ >> 16);
+
+        if (player.getAir()) {
+            int newYQ = playerYQ - yPullQ;
+            player.setSubpixelRaw(player.getXSubpixelRaw(), newYQ & 0xFFFF);
+            NativePositionOps.writeYPosPreserveSubpixel(player, newYQ >> 16);
+            if (player.getYSpeed() >= 0) {
+                player.setXSpeed((short) (player.getXSpeed() >> 1));
+            }
+        } else {
+            // asr.l #8,d1 then tst.w/neg.w -- pullStrength is the low word of the x-pull
+            // delta, scaled from Q16.16 down to the Q8.8 units ground_vel is stored in.
+            int pullStrength = Math.abs((short) (xPullQ >> 8));
             int groundSpeedMagnitude = Math.abs(player.getGSpeed());
             if (groundSpeedMagnitude >= 0x200 && groundSpeedMagnitude - 0x10 < pullStrength) {
                 player.setGSpeed((short) (player.getGSpeed() >> 1));
@@ -232,9 +260,5 @@ public final class MhzStickyVineObjectInstance extends AbstractObjectInstance im
         }
         int relY = player.getCentreY() - spawn.y() + GRAB_Y_BIAS;
         return relY >= 0 && relY < GRAB_Y_RANGE;
-    }
-
-    private static int clamp(int value, int min, int max) {
-        return Math.max(min, Math.min(max, value));
     }
 }

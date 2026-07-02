@@ -1,7 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.game.GroundMode;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
 import com.openggf.physics.FrameCollisionPlan;
@@ -23,7 +23,7 @@ class TestPlayableSpriteRollSpeed {
     @Test
     void s3kTailsStopsRollingBelowMinimumRollSpeedThreshold() throws Exception {
         Tails tails = new Tails("tails", (short) 0, (short) 0);
-        setPhysicsFeatureSet(tails, PhysicsFeatureSet.SONIC_3K);
+        setGameRulesForTest(tails, GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setGroundMode(GroundMode.GROUND);
         tails.setDirection(Direction.LEFT);
@@ -95,7 +95,7 @@ class TestPlayableSpriteRollSpeed {
         // following roll friction (-$06) leaves +$7A and the player keeps rolling.
         // Reproduces S1 LZ1 complete-run frame 12097.
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_1);
+        sonic.setGameRulesForTest(GameRules.SONIC_1);
         sonic.setGroundMode(GroundMode.GROUND);
         sonic.setDirection(Direction.LEFT);
         sonic.setAir(false);
@@ -127,7 +127,7 @@ class TestPlayableSpriteRollSpeed {
         // clamp to -$80; it stays 0 and the player unrolls. This asymmetry between the
         // add-carry and sub-borrow boundaries must be preserved.
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_1);
+        sonic.setGameRulesForTest(GameRules.SONIC_1);
         sonic.setGroundMode(GroundMode.GROUND);
         sonic.setDirection(Direction.RIGHT);
         sonic.setAir(false);
@@ -161,7 +161,7 @@ class TestPlayableSpriteRollSpeed {
 
     private static TestablePlayableSprite s2Sonic(short gSpeed) {
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sonic.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sonic.setGameRulesForTest(GameRules.SONIC_2);
         sonic.setGroundMode(GroundMode.GROUND);
         sonic.setDirection(Direction.RIGHT);
         sonic.setAir(false);
@@ -180,8 +180,8 @@ class TestPlayableSpriteRollSpeed {
         doRollSpeed.invoke(movement);
     }
 
-    private static void setPhysicsFeatureSet(AbstractPlayableSprite sprite, PhysicsFeatureSet featureSet) throws Exception {
-        Field field = AbstractPlayableSprite.class.getDeclaredField("physicsFeatureSet");
+    private static void setGameRulesForTest(AbstractPlayableSprite sprite, GameRules featureSet) throws Exception {
+        Field field = AbstractPlayableSprite.class.getDeclaredField("GameRules");
         field.setAccessible(true);
         field.set(sprite, featureSet);
     }

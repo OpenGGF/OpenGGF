@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.game.rules.GameRules;
+
 import com.openggf.game.sonic1.Sonic1PhysicsProvider;
 import com.openggf.game.sonic2.Sonic2PhysicsProvider;
 import com.openggf.game.sonic3k.Sonic3kPhysicsProvider;
@@ -8,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Unit tests for PhysicsProfile, PhysicsModifiers, and PhysicsFeatureSet.
+ * Unit tests for PhysicsProfile, PhysicsModifiers, and GameRules.
  * Verifies profile values match disassembly-verified constants and
  * modifier math produces correct results.
  */
@@ -202,38 +204,38 @@ public class TestPhysicsProfile {
     }
 
     // ========================================
-    // PhysicsFeatureSet flags
+    // GameRules flags
     // ========================================
 
     @Test
     public void testSonic1_NoSpindash() {
-        PhysicsFeatureSet fs = PhysicsFeatureSet.SONIC_1;
-        assertFalse(fs.spindashEnabled(), "S1 spindash disabled");
-        assertNull(fs.spindashSpeedTable(), "S1 no speed table");
-        assertEquals(CollisionModel.UNIFIED, fs.collisionModel(), "S1 unified collision");
-        assertFalse(fs.hasDualCollisionPaths(), "S1 no dual paths");
+        GameRules fs = GameRules.SONIC_1;
+        assertFalse(fs.playerCapability().spindashEnabled(), "S1 spindash disabled");
+        assertNull(fs.playerCapability().spindashSpeedTable(), "S1 no speed table");
+        assertEquals(CollisionModel.UNIFIED, fs.collision().collisionModel(), "S1 unified collision");
+        assertFalse((fs.collision().collisionModel() == CollisionModel.DUAL_PATH), "S1 no dual paths");
     }
 
     @Test
     public void testSonic2_HasSpindash() {
-        PhysicsFeatureSet fs = PhysicsFeatureSet.SONIC_2;
-        assertTrue(fs.spindashEnabled(), "S2 spindash enabled");
-        assertNotNull(fs.spindashSpeedTable(), "S2 has speed table");
-        assertEquals(9, fs.spindashSpeedTable().length, "S2 speed table length");
-        assertEquals(0x0800, fs.spindashSpeedTable()[0], "S2 speed table[0]");
-        assertEquals(0x0C00, fs.spindashSpeedTable()[8], "S2 speed table[8]");
-        assertEquals(CollisionModel.DUAL_PATH, fs.collisionModel(), "S2 dual path collision");
-        assertTrue(fs.hasDualCollisionPaths(), "S2 has dual paths");
+        GameRules fs = GameRules.SONIC_2;
+        assertTrue(fs.playerCapability().spindashEnabled(), "S2 spindash enabled");
+        assertNotNull(fs.playerCapability().spindashSpeedTable(), "S2 has speed table");
+        assertEquals(9, fs.playerCapability().spindashSpeedTable().length, "S2 speed table length");
+        assertEquals(0x0800, fs.playerCapability().spindashSpeedTable()[0], "S2 speed table[0]");
+        assertEquals(0x0C00, fs.playerCapability().spindashSpeedTable()[8], "S2 speed table[8]");
+        assertEquals(CollisionModel.DUAL_PATH, fs.collision().collisionModel(), "S2 dual path collision");
+        assertTrue((fs.collision().collisionModel() == CollisionModel.DUAL_PATH), "S2 has dual paths");
     }
 
     @Test
     public void testSonic3K_HasSpindash() {
-        PhysicsFeatureSet fs = PhysicsFeatureSet.SONIC_3K;
-        assertTrue(fs.spindashEnabled(), "S3K spindash enabled");
-        assertNotNull(fs.spindashSpeedTable(), "S3K has speed table");
-        assertEquals(9, fs.spindashSpeedTable().length, "S3K speed table length");
-        assertEquals(CollisionModel.DUAL_PATH, fs.collisionModel(), "S3K dual path collision");
-        assertTrue(fs.hasDualCollisionPaths(), "S3K has dual paths");
+        GameRules fs = GameRules.SONIC_3K;
+        assertTrue(fs.playerCapability().spindashEnabled(), "S3K spindash enabled");
+        assertNotNull(fs.playerCapability().spindashSpeedTable(), "S3K has speed table");
+        assertEquals(9, fs.playerCapability().spindashSpeedTable().length, "S3K speed table length");
+        assertEquals(CollisionModel.DUAL_PATH, fs.collision().collisionModel(), "S3K dual path collision");
+        assertTrue((fs.collision().collisionModel() == CollisionModel.DUAL_PATH), "S3K has dual paths");
     }
 
     @Test
@@ -241,11 +243,11 @@ public class TestPhysicsProfile {
         // S3K only: ROM Touch_EnemyNormal sets bit 7 of Object_respawn_table
         // permanently after a player kill (sonic3k.asm:20953 bset #7,status(a1)).
         // S1/S2 ObjectsManager_Main only latches remembered spawns.
-        assertFalse(PhysicsFeatureSet.SONIC_1.permanentRespawnTableLatch(),
+        assertFalse(GameRules.SONIC_1.objectInteraction().permanentRespawnTableLatch(),
                 "S1 does not permanently latch respawn-table bits");
-        assertFalse(PhysicsFeatureSet.SONIC_2.permanentRespawnTableLatch(),
+        assertFalse(GameRules.SONIC_2.objectInteraction().permanentRespawnTableLatch(),
                 "S2 does not permanently latch respawn-table bits");
-        assertTrue(PhysicsFeatureSet.SONIC_3K.permanentRespawnTableLatch(),
+        assertTrue(GameRules.SONIC_3K.objectInteraction().permanentRespawnTableLatch(),
                 "S3K permanently latches respawn-table bits after player kill");
     }
 
@@ -255,21 +257,21 @@ public class TestPhysicsProfile {
         // All three games use post-physics object execution per the
         // 2026-04-18-solid-ordering-rom-accuracy plan: S2/S3K via DUAL_PATH
         // collision model, S1 via the bridged inline-order path.
-        assertTrue(PhysicsFeatureSet.SONIC_1.objectsExecuteAfterPlayerPhysics(),
+        assertTrue(GameRules.SONIC_1.objectInteraction().objectsExecuteAfterPlayerPhysics(),
                 "S1 uses post-physics object ordering");
-        assertTrue(PhysicsFeatureSet.SONIC_2.objectsExecuteAfterPlayerPhysics(),
+        assertTrue(GameRules.SONIC_2.objectInteraction().objectsExecuteAfterPlayerPhysics(),
                 "S2 uses post-physics object ordering");
-        assertTrue(PhysicsFeatureSet.SONIC_3K.objectsExecuteAfterPlayerPhysics(),
+        assertTrue(GameRules.SONIC_3K.objectInteraction().objectsExecuteAfterPlayerPhysics(),
                 "S3K uses post-physics object ordering");
     }
 
     @Test
     public void testSpeedShoesTimerPhaseCompensation_PerGame() {
-        assertEquals(0, PhysicsFeatureSet.SONIC_1.speedShoesTimerPrePhysicsExtraTicks(),
+        assertEquals(0, GameRules.SONIC_1.powerUp().speedShoesTimerPrePhysicsExtraTicks(),
                 "S1 word timer clears on the display-time decrement that reaches zero");
-        assertEquals(1, PhysicsFeatureSet.SONIC_2.speedShoesTimerPrePhysicsExtraTicks(),
+        assertEquals(1, GameRules.SONIC_2.powerUp().speedShoesTimerPrePhysicsExtraTicks(),
                 "S2 display-time decrement happens after movement, while the engine timer updates before movement");
-        assertEquals(0, PhysicsFeatureSet.SONIC_3K.speedShoesTimerPrePhysicsExtraTicks(),
+        assertEquals(0, GameRules.SONIC_3K.powerUp().speedShoesTimerPrePhysicsExtraTicks(),
                 "S3K clears speed shoes from Sonic_Display before the next movement frame consumes acceleration");
     }
 
@@ -277,9 +279,9 @@ public class TestPhysicsProfile {
     public void testSpeedShoesTimerDecimation_PerGame() {
         // S1/S2 use a per-frame word timer; S3K a byte timer decremented every
         // 8th level frame (sonic3k.asm:22072-22078).
-        assertEquals(1, PhysicsFeatureSet.SONIC_1.speedShoesTimerDecimation(), "S1 per-frame word timer");
-        assertEquals(1, PhysicsFeatureSet.SONIC_2.speedShoesTimerDecimation(), "S2 per-frame word timer");
-        assertEquals(8, PhysicsFeatureSet.SONIC_3K.speedShoesTimerDecimation(),
+        assertEquals(1, GameRules.SONIC_1.powerUp().speedShoesTimerDecimation(), "S1 per-frame word timer");
+        assertEquals(1, GameRules.SONIC_2.powerUp().speedShoesTimerDecimation(), "S2 per-frame word timer");
+        assertEquals(8, GameRules.SONIC_3K.powerUp().speedShoesTimerDecimation(),
                 "S3K byte timer decremented every 8th level frame");
     }
 
@@ -313,25 +315,24 @@ public class TestPhysicsProfile {
     }
 
     @Test
-    public void testSonic1Provider_FeatureSet() {
+    public void testSonic1Provider_GameRules() {
         var provider = new Sonic1PhysicsProvider();
-        assertSame(PhysicsFeatureSet.SONIC_1, provider.getFeatureSet(), "S1 feature set");
-        assertFalse(provider.getFeatureSet().spindashEnabled(), "S1 no spindash");
+        assertSame(GameRules.SONIC_1, provider.getRules(), "S1 game rules");
+        assertFalse(provider.getRules().playerCapability().spindashEnabled(), "S1 no spindash");
     }
 
     @Test
-    public void testSonic2Provider_FeatureSet() {
+    public void testSonic2Provider_GameRules() {
         var provider = new Sonic2PhysicsProvider();
-        assertSame(PhysicsFeatureSet.SONIC_2, provider.getFeatureSet(), "S2 feature set");
-        assertTrue(provider.getFeatureSet().spindashEnabled(), "S2 has spindash");
+        assertSame(GameRules.SONIC_2, provider.getRules(), "S2 game rules");
+        assertTrue(provider.getRules().playerCapability().spindashEnabled(), "S2 has spindash");
     }
 
     @Test
-    public void testSonic3kProvider_FeatureSet() {
+    public void testSonic3kProvider_GameRules() {
         var provider = new Sonic3kPhysicsProvider();
-        assertSame(PhysicsFeatureSet.SONIC_3K, provider.getFeatureSet(), "S3K feature set");
-        assertTrue(provider.getFeatureSet().spindashEnabled(), "S3K has spindash");
+        assertSame(GameRules.SONIC_3K, provider.getRules(), "S3K game rules");
+        assertTrue(provider.getRules().playerCapability().spindashEnabled(), "S3K has spindash");
     }
 }
-
 
