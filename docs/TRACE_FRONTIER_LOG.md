@@ -6,18 +6,67 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 58 ARZ2 work on top of the develop
+Current branch-local S2 state after round 59 MTZ3 work on top of the develop
 GameRules refactor baseline:
 ARZ2 is f5968 / 8 under `frontierOnly` (`tails_air` expected `0`, actual `1`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
-actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
-expected `-020C`, actual `0x020C`), and OOZ2 is green after the round 54 Obj3E
+actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly` (`x_speed`
+expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the round 54 Obj3E
 capsule body lifetime fix. The branch-local S2 expected-red set is now ARZ2,
 CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 advanced but is not banked under the green-bank
 rule.
+
+## 2026-07-02 - S2 round 59 MTZ3 Obj54 hit-reaction X velocity clear
+
+Round 59 MTZ3 worker used
+`.worktrees/ai-s2-mtz3-round59-next` /
+`bugfix/ai-s2-mtz3-round59-next`, based from conductor commit `02a47bba4`.
+The focused baseline reproduced MTZ3 f13358 / 6 under `frontierOnly`
+(`tails_x_speed` expected `-020C`, actual `0x020C`).
+
+Investigation stayed on Obj54's body contact window in the MTZ3 boss room. The
+round-58 BizHawk probe had already shown the ROM Obj54 `Boss_X` remains
+`$2B31` through the f13358/f13359 contact window while the engine snapshot was
+already `$2B32`. In the failing engine row, the extra pixel made Obj54's boss
+touch box reach Tails and invert `tails_x_speed`; the ROM body was still one
+pixel farther left and did not touch yet.
+
+The ROM's Obj54 main body path calls `Boss_MoveObject` and then copies
+`Boss_X_pos` to `x_pos(a0)` before display and face animation
+(`docs/s2disasm/s2.asm:67314-67342`). `Obj54_AnimateFace` later calls
+`Obj54_CheckHit`, reacts only when `boss_invulnerable_time == $3F`, and clears
+`Boss_X_vel` in that post-movement phase
+(`docs/s2disasm/s2.asm:67605-67620,67726-67748`). The touch path can set and
+decrement the hit/invulnerability state from the player collision loop
+(`docs/s2disasm/s2.asm:85318-85345`), but it does not make Obj54 skip its
+current movement copy. The engine's player-slot-first touch callback was
+clearing Obj54's `xVel` before Obj54's own update, stopping the body one
+leftward pixel too early.
+
+Fix:
+- `Sonic2MTZBossInstance` now queues only Obj54's `Boss_X_vel` clear from
+  `onHitTaken` until after the current boss routine has completed its movement
+  and position copy. The established routine, Y velocity, face, and orb-break
+  timing remains immediate; a broader hit-reaction deferral was rejected because
+  it regressed the trace to f12909 / 11.
+
+Result:
+- `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace` advances from f13358 / 6
+  (`tails_x_speed` expected `-020C`, actual `0x020C`) to f13477 / 4 under
+  `frontierOnly` (`x_speed` expected `-03FB`, actual `0x03FB`). The new frontier
+  is a later Sonic rebound mismatch around the Obj53/MTZ orb contact window.
+
+Verification:
+- Focused MTZ3 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Dtrace.context.diagnosticChars=full" test`
+  failed at the advanced expected-red frontier f13477 / 4.
+- Same-game guard:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" test`
+  preserved the accepted expected-red frontiers: ARZ2 f5968 / 8 and CNZ2
+  f9977 / 10.
 
 ## 2026-07-02 - S2 round 58 ARZ2 Obj89 arrow CPU Tails timer gate
 
