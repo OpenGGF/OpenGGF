@@ -7,8 +7,9 @@ the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
 Current branch-local S2 state after round 70 ARZ2 worker branch
-`bugfix/ai-s2-arz2-round70-next`, based from conductor branch
-`bugfix/ai-s2-trace-next` at `fb7708f7a`:
+`bugfix/ai-s2-arz2-round70-next`, integrated into conductor branch
+`bugfix/ai-s2-trace-next` at `f04af74a0` and followed by local `develop`
+merge `71a646512`:
 ARZ2 is f7338 / 3 under `frontierOnly` (`obj_extra_s14_x` expected absent,
 actual `0x2C9C`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
@@ -18,7 +19,7 @@ is now ARZ2, CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 advanced again in round 70 but is not banked under
-the green-bank rule until it greens. Round 70 workers must include targeted
+the green-bank rule until it greens. Round 71 workers must include targeted
 BizHawk Lua evidence before any `no-change` / `rejected` bounce.
 
 ## 2026-07-02 - S2 round 70 ARZ2 Obj28 render-flag slot reuse
@@ -83,6 +84,54 @@ Verification:
   wrote individual Surefire reports with 32, 9, 1, and 46 runs respectively,
   all with 0 failures and 0 errors. MSE aggregate output still listed the
   known retained ARZ2 expected-red report; the class XML reports were used.
+
+Conductor integration:
+- Merged worker commit `f9da6563` into conductor branch
+  `bugfix/ai-s2-trace-next` as merge commit `f04af74a0`, then merged local
+  `develop` commit `f834e175` as `71a646512`. `origin/develop` remained
+  contained at `d162131f1`. The local-develop merge was docs-only for the VHS
+  rewind shader plan, so the post-merge trace results below remain the current
+  code baseline.
+- Post-ARZ2-merge full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  confirmed 16 green and the three expected-red frontiers: ARZ2 f7338 / 3
+  (`obj_extra_s14_x` expected absent, actual `0x2C9C`), CNZ2 f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`), and MTZ3 f13477 / 4
+  (`x_speed` expected `-03FB`, actual `0x03FB`).
+- Post-ARZ2-merge full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green by parsed Surefire class reports.
+- Post-ARZ2-merge S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`). The S3K loading/bootstrap
+  guard classes were all green.
+
+Other round 70 worker outcomes:
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round70-next` /
+  `bugfix/ai-s2-cnz2-round70-next` made no commit. Mandatory Lua probe
+  `tools\bizhawk\diag_s2_cnz2_obj51_split_round70.lua` wrote
+  `target\bizhawk\cnz2_obj51_split_round70.txt`. It confirmed ROM Obj51 slot
+  `$1A` splits at trace f9948, sets `x_vel=$FF00`, `y_vel=$FD00`,
+  `collision=$98`, then copies to clone slot `$1C`, which executes the same
+  frame. At f9977, `Touch_Boss_CheckCollision`, `Touch_ChkValue`,
+  `Touch_Hurt`, and `Hurt_Sidekick` all fire from Obj51 slot `$1A` at
+  `$28ED,$06E8`; after the touch, slot `$1A` moves/display-updates to
+  `$28EC,$06EB`. The Java side still reaches the comparable split ball too far
+  right/up, so round 71 should investigate the engine Obj51 split-ball movement
+  offset rather than adding a touch carve-out.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round70-next` /
+  `bugfix/ai-s2-mtz3-round70-next` made no commit. Mandatory Lua probe
+  `tools\bizhawk\diag_s2_mtz3_round70_obj53.lua` wrote
+  `tools\bizhawk\trace_output\s2_mtz3_round70_obj53.txt`. It confirmed ROM
+  `Touch_ChkValue`, `Touch_Enemy`, and `Touch_Enemy_Part2` fire at BK2 frame
+  39642 / trace f13478 against Obj53 slot `$18` / trace slot `$24` at
+  `$2AE4.0000,$0482.E800`, `collision=$DA`, `collision_property=$02`. The ROM
+  trajectory from BK2 39635-39642 advances from `$2AE7.8000,$0478.6800` to
+  `$2AE4.0000,$0482.E800`; the engine bounces while the comparable orb is
+  still around `$2AE7,$047A`. Round 71 should keep digging upstream Obj53
+  breakaway phase/position drift.
 
 ## 2026-07-02 - S2 round 69 ARZ2 Obj3E initial animal delay
 
