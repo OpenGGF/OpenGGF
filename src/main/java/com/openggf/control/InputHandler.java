@@ -1,11 +1,9 @@
 package com.openggf.control;
 
-import com.openggf.configuration.SonicConfiguration;
-import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.InputBindingFactory;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -21,7 +19,7 @@ public class InputHandler {
 	boolean[] previousKeys = new boolean[MAX_KEYS];
 	boolean[] mouseButtons = new boolean[MAX_MOUSE_BUTTONS];
 	boolean[] previousMouseButtons = new boolean[MAX_MOUSE_BUTTONS];
-	private final SonicConfigurationService configService;
+	private final Supplier<InputBindings> inputBindingsSource;
 	private InputBindings inputBindings;
 	private final KeyboardInputMapper keyboardInputMapper;
 	private final GamepadInputManager gamepadInputManager;
@@ -36,21 +34,21 @@ public class InputHandler {
 	 * Key events should be delivered via handleKeyEvent() from GLFW callback.
 	 */
 	public InputHandler() {
-		this(createSyntheticConfig());
+		this(InputBindingFactory.standaloneSupplier());
 	}
 
-	public InputHandler(SonicConfigurationService configService) {
-		this(configService, new GamepadInputManager(GamepadStateSource.noop()));
+	public InputHandler(Supplier<InputBindings> inputBindingsSource) {
+		this(inputBindingsSource, new GamepadInputManager(GamepadStateSource.noop()));
 	}
 
-	public static InputHandler live(SonicConfigurationService configService) {
-		return new InputHandler(configService, new GamepadInputManager(new GlfwGamepadStateSource()));
+	public static InputHandler live(Supplier<InputBindings> inputBindingsSource) {
+		return new InputHandler(inputBindingsSource, new GamepadInputManager(new GlfwGamepadStateSource()));
 	}
 
-	InputHandler(SonicConfigurationService configService, GamepadInputManager gamepadInputManager) {
-		this.configService = Objects.requireNonNull(configService, "configService");
+	InputHandler(Supplier<InputBindings> inputBindingsSource, GamepadInputManager gamepadInputManager) {
+		this.inputBindingsSource = Objects.requireNonNull(inputBindingsSource, "inputBindingsSource");
 		this.gamepadInputManager = Objects.requireNonNull(gamepadInputManager, "gamepadInputManager");
-		this.inputBindings = InputBindings.fromConfig(configService);
+		this.inputBindings = Objects.requireNonNull(inputBindingsSource.get(), "inputBindings");
 		this.keyboardInputMapper = new KeyboardInputMapper();
 	}
 
@@ -107,7 +105,7 @@ public class InputHandler {
 	 * @return Whether the key was just pressed
 	 */
 	public boolean isKeyPressed(int keyCode) {
-		if (logicalOverride != null && keyCode == configService.getInt(SonicConfiguration.DEBUG_MODE_KEY)) {
+		if (logicalOverride != null && keyCode == inputBindings.debugModeKey()) {
 			return logicalOverride.debugModeTogglePressed();
 		}
 		if (keyCode >= 0 && keyCode < MAX_KEYS) {
@@ -197,7 +195,7 @@ public class InputHandler {
 	}
 
 	public void refreshLogicalSnapshot() {
-		inputBindings = InputBindings.fromConfig(configService);
+		inputBindings = Objects.requireNonNull(inputBindingsSource.get(), "inputBindings");
 		if (logicalOverride != null) {
 			gamepadInputManager.poll(inputBindings);
 			logicalSnapshot = logicalOverride;
@@ -229,11 +227,4 @@ public class InputHandler {
 		System.arraycopy(mouseButtons, 0, previousMouseButtons, 0, MAX_MOUSE_BUTTONS);
 	}
 
-	private static SonicConfigurationService createSyntheticConfig() {
-		try {
-			return SonicConfigurationService.createStandalone(Files.createTempDirectory("openggf-input-handler"));
-		} catch (IOException e) {
-			throw new IllegalStateException("Failed to create standalone input configuration", e);
-		}
-	}
 }

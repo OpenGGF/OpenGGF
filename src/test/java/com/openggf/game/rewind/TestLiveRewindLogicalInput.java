@@ -1,13 +1,14 @@
 package com.openggf.game.rewind;
 
+import com.openggf.InputBindingFactory;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.PlayerInputState;
-import com.openggf.control.RecordedInputSnapshots;
 import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +21,7 @@ class TestLiveRewindLogicalInput {
     @Test
     void appendFrameCapturesHeldActionMaskAndRomStart() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
-        InputHandler input = new InputHandler(config);
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
         input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
                 PlayerInputState.of(
                         AbstractPlayableSprite.INPUT_RIGHT,
@@ -44,7 +45,7 @@ class TestLiveRewindLogicalInput {
     @Test
     void recordedSnapshotCarriesDebugModifiersIntoInputOverride() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
-        InputHandler input = new InputHandler(config);
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
         Bk2FrameInput previous = new Bk2FrameInput(0, 0, 0, false, 0, 0, false, "previous");
         Bk2FrameInput current = new Bk2FrameInput(
                 1, 0, 0, false, 0, 0, false,

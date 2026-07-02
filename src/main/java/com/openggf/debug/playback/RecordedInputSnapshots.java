@@ -1,6 +1,7 @@
-package com.openggf.control;
+package com.openggf.debug.playback;
 
-import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PlayerInputState;
 
 import java.util.Objects;
 

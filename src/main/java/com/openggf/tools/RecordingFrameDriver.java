@@ -2,13 +2,14 @@ package com.openggf.tools;
 
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
+import com.openggf.InputBindingFactory;
 import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.PlayerInputState;
-import com.openggf.control.RecordedInputSnapshots;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
+import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.session.SessionManager;
@@ -36,7 +37,7 @@ public final class RecordingFrameDriver {
 
     private final AbstractPlayableSprite sprite;
     private final LevelManager levelManager;
-    private final InputHandler inputHandler = new InputHandler(GameServices.configuration());
+    private final InputHandler inputHandler = new InputHandler(InputBindingFactory.supplier(GameServices.configuration()));
 
     private int frameCounter = 0;
     private LogicalInputSnapshot previousDriverSnapshot = LogicalInputSnapshot.neutral();

@@ -1,5 +1,6 @@
 package com.openggf.game.rewind;
 
+import com.openggf.InputBindingFactory;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputActionMasks;
@@ -40,7 +41,7 @@ class TestLiveRewindInputSource {
 
     @Test
     void appendFrameRecordsP1LogicalHeldButtonsActionMaskAndStartPressEdge() {
-        InputHandler input = new InputHandler(config);
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
         LiveRewindInputSource source = new LiveRewindInputSource();
 
         input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
@@ -64,7 +65,7 @@ class TestLiveRewindInputSource {
 
     @Test
     void appendFrameRecordsHeldActionMaskOnEveryHeldFrame() {
-        InputHandler input = new InputHandler(config);
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
         LiveRewindInputSource source = new LiveRewindInputSource();
 
         input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
@@ -82,7 +83,7 @@ class TestLiveRewindInputSource {
 
     @Test
     void appendFrameRecordsP2HeldButtonsAndStartPressEdge() {
-        InputHandler input = new InputHandler(config);
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
         LiveRewindInputSource source = new LiveRewindInputSource();
 
         input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(

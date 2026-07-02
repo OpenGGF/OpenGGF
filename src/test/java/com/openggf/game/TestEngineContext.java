@@ -115,7 +115,7 @@ class TestEngineContext {
                 "Production Engine input must use the engine-owned SonicConfigurationService");
         assertFalse(source.contains("new InputHandler(configService)"),
                 "Production Engine input must use the live input factory");
-        assertTrue(source.contains("InputHandler.live(configService)"),
+        assertTrue(source.contains("InputHandler.live(InputBindingFactory.supplier(configService))"),
                 "Production Engine input must use the live input factory");
     }
 

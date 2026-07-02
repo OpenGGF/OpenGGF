@@ -3,8 +3,8 @@ package com.openggf.game.rewind;
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
 import com.openggf.control.InputHandler;
-import com.openggf.control.RecordedInputSnapshots;
 import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
 
 import java.util.Objects;

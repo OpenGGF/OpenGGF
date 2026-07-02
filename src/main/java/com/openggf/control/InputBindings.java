@@ -1,10 +1,5 @@
 package com.openggf.control;
 
-import com.openggf.configuration.SonicConfiguration;
-import com.openggf.configuration.SonicConfigurationService;
-
-import java.util.Objects;
-
 public record InputBindings(
         int p1Up,
         int p1Down,
@@ -25,35 +20,11 @@ public record InputBindings(
         boolean controllerEnabled,
         double controllerDeadzone,
         String controllerPlayer1,
-        String controllerPlayer2) {
+        String controllerPlayer2,
+        int debugModeKey) {
 
     public InputBindings {
         controllerDeadzone = clampDeadzone(controllerDeadzone);
-    }
-
-    public static InputBindings fromConfig(SonicConfigurationService config) {
-        Objects.requireNonNull(config, "config");
-        return new InputBindings(
-                config.getInt(SonicConfiguration.UP),
-                config.getInt(SonicConfiguration.DOWN),
-                config.getInt(SonicConfiguration.LEFT),
-                config.getInt(SonicConfiguration.RIGHT),
-                config.getInt(SonicConfiguration.P1_A),
-                config.getInt(SonicConfiguration.P1_B),
-                config.getInt(SonicConfiguration.P1_C),
-                config.getInt(SonicConfiguration.START),
-                config.getInt(SonicConfiguration.P2_UP),
-                config.getInt(SonicConfiguration.P2_DOWN),
-                config.getInt(SonicConfiguration.P2_LEFT),
-                config.getInt(SonicConfiguration.P2_RIGHT),
-                config.getInt(SonicConfiguration.P2_A),
-                config.getInt(SonicConfiguration.P2_B),
-                config.getInt(SonicConfiguration.P2_C),
-                config.getInt(SonicConfiguration.P2_START),
-                config.getBoolean(SonicConfiguration.CONTROLLER_ENABLED),
-                config.getDouble(SonicConfiguration.CONTROLLER_DEADZONE),
-                config.getString(SonicConfiguration.CONTROLLER_PLAYER1),
-                config.getString(SonicConfiguration.CONTROLLER_PLAYER2));
     }
 
     public static double clampDeadzone(double value) {

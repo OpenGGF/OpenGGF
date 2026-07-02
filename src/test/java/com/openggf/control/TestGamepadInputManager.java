@@ -132,7 +132,8 @@ class TestGamepadInputManager {
                 true,
                 0.35,
                 player1,
-                player2);
+                player2,
+                -1);
     }
 
     private static InputBindings disabledBindings() {
@@ -142,7 +143,8 @@ class TestGamepadInputManager {
                 false,
                 0.35,
                 "auto",
-                "auto");
+                "auto",
+                -1);
     }
 
     private static final class FakeGamepadStateSource implements GamepadStateSource {

@@ -1,5 +1,6 @@
 package com.openggf.game.recording;
 
+import com.openggf.InputBindingFactory;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputActionMasks;
@@ -114,7 +115,7 @@ class TestUserRecordingSession {
     void capturesLogicalActionMasksForBothPlayers() {
         RecordingWrite write = new RecordingWrite();
         UserRecordingSession session = newSession(write, frameSource());
-        InputHandler input = new InputHandler(configuredKeys());
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(configuredKeys()));
         input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
                 PlayerInputState.of(
                         AbstractPlayableSprite.INPUT_RIGHT,

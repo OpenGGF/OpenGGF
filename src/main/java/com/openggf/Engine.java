@@ -414,7 +414,7 @@ public class Engine {
 		}
 
 		// Create input handler and set it
-		inputHandler = InputHandler.live(configService);
+		inputHandler = InputHandler.live(InputBindingFactory.supplier(configService));
 		setInputHandler(inputHandler);
 
 		// Set window handle for clipboard operations (GLFW-based, no AWT dependency)

@@ -1,5 +1,6 @@
 package com.openggf.control;
 
+import com.openggf.InputBindingFactory;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -24,7 +25,7 @@ class TestInputHandlerLogicalSnapshot {
     void refreshLogicalSnapshotReadsCurrentKeyboardState() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
         config.setConfigValue(SonicConfiguration.P1_A, GLFW_KEY_SPACE);
-        InputHandler input = new InputHandler(config);
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
 
         input.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS);
         input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS);
@@ -53,7 +54,7 @@ class TestInputHandlerLogicalSnapshot {
     @Test
     void logicalOverrideCarriesRecordedDebugModifiers() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
-        InputHandler input = new InputHandler(config);
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
         int debugModeKey = config.getInt(SonicConfiguration.DEBUG_MODE_KEY);
         input.setLogicalOverride(LogicalInputSnapshot.neutral().withDebugInput(true, true, true));
 
@@ -83,7 +84,7 @@ class TestInputHandlerLogicalSnapshot {
         config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
         config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
         FakeGamepadStateSource source = new FakeGamepadStateSource();
-        InputHandler input = new InputHandler(config, new GamepadInputManager(source));
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), new GamepadInputManager(source));
         source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_X)));
         input.setLogicalOverride(LogicalInputSnapshot.neutral());
 
