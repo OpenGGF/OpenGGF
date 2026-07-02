@@ -19,6 +19,25 @@ with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 advanced again in round 61 but is not banked under
 the green-bank rule.
 
+## 2026-07-02 - S2 post-GameRules-refactor merge baseline
+
+Merged local `develop` at `d162131f1` into `bugfix/ai-s2-trace-next` as
+`ff6fa16e6` after the typed GameRules/refactor work completed. The only merge
+conflict was `CHANGELOG.md`, resolved additively.
+
+Post-merge verification:
+- Full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and the same three expected-red frontiers:
+  ARZ2 f6364 / 6, CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
+- Full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace reports green.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  and level-select f8941 / 1.
+
 ## 2026-07-02 - S2 round 61 ARZ2 Obj08 skid-dust Stop-animation cadence
 
 Round 61 ARZ2 worker used
