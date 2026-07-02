@@ -113,7 +113,12 @@ New boolean key `LIVE_REWIND_VHS_EFFECT` mapped to YAML path `rewind.vhsEffect` 
 
 - Shader compile/apply failure → warn once, effect permanently off for the session;
   gameplay and the user's display shader unaffected.
-- Config off, headless, or non-LEVEL modes → pass never activates.
+- Config off or headless → pipeline is never activated (no prewarm, no GL resources).
+- Non-LEVEL modes (legal disclaimer, master title, data select, ...) → the prewarmed
+  pipeline stays activated but the pass never **applies**: envelope intensity only rises
+  during LEVEL-mode live rewind, and zero intensity means no `apply(...)` call.
+  Activation must NOT be deferred to LEVEL entry — that would reintroduce the
+  first-rewind compile hitch the prewarm exists to avoid.
 - No effect on trace replay, playback seeks, or user recording capture.
 
 ## Testing
