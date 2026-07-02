@@ -1703,7 +1703,7 @@ public class SidekickCpuController {
         int previousCentreX = sidekick.getCentreX();
         boolean approachComplete = respawnStrategy.updateApproaching(sidekick, effectiveLeader, frameCounter);
         AbstractPlayableSprite completionLeader = effectiveLeader;
-        if (!approachComplete && respawnStrategy.requiresPhysics()) {
+        if (!approachComplete && respawnStrategy.approachMovementUsesPhysics()) {
             AbstractPlayableSprite mainLeader = getRootLeader();
             if (mainLeader != null
                     && mainLeader != effectiveLeader
@@ -1766,7 +1766,7 @@ public class SidekickCpuController {
     }
 
     private AbstractPlayableSprite resolveApproachLeader() {
-        return respawnStrategy.requiresPhysics()
+        return respawnStrategy.approachMovementUsesPhysics()
                 ? getEffectiveLeader()
                 : resolveActiveFollowLeader();
     }
@@ -4983,9 +4983,27 @@ public class SidekickCpuController {
     /**
      * Sets the initial state for production use (e.g. pre-setting SPAWNING
      * after a level transition).
+     *
+     * <p>Entering SPAWNING here also establishes the ROM spawn-wait
+     * object-control invariant: every ROM path into the spawn-wait routine
+     * leaves {@code obj_control=$81} — S2 {@code TailsCPU_Despawn}
+     * (docs/s2disasm/s2.asm:39396-39406), the {@code TailsCPU_Flying}
+     * off-screen timeout (s2.asm:39142-39157), and S3K {@code sub_13ECA}
+     * (docs/skdisasm/sonic3k.asm:26800-26809). {@code TailsCPU_Respawn}
+     * itself does not write {@code obj_control} (s2.asm:39122-39140), so the
+     * subsequent fly-in only runs object physics when a live object actually
+     * cleared the byte while Tails was parked (e.g. the CNZ tube release,
+     * {@code loc_25036} {@code move.b #0,obj_control(a1)}, s2.asm:51166-51172).
+     * Engine-owned SPAWNING entries (level-transition bootstrap, focused
+     * tests) must start from the same $81 state or the fly-in would run
+     * physics the ROM cycle suppresses.
      */
     public void setInitialState(State state) {
         this.state = state;
+        if (state == State.SPAWNING) {
+            sidekick.setControlLocked(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        }
         deadFallingRomCpuRoutine = -1;
         aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;

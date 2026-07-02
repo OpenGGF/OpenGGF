@@ -19,6 +19,33 @@ Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9342 / 505
 (`tails_x_sub` expected `0x4700`, actual `0xC700`) after trace capture keeps
 the ROM Obj02 hurt routine visible for object-solid landing samples.
 
+## 2026-07-02 - S2 sweep preservation for the Tails fly-in regression fix
+
+- Worktree/branch: `.claude/worktrees/agent-a6eb852d30a6c04d1` /
+  `bugfix/ai-tails-flyin-regression`, based on `develop` at `d81dd2be1`.
+- Context: fixing two non-trace regressions from `dcaa4cb3e` ("fix: advance S2
+  CNZ2 Tails fly-in frontier") — the multi-sidekick root-crossing completion
+  firing for the S2 Tails fly-in, and engine-owned SPAWNING entries missing
+  the ROM `obj_control=$81` spawn-wait invariant. Fix adds
+  `SidekickRespawnStrategy.approachMovementUsesPhysics()` (Tails false) for
+  the crossing gate / approach-leader resolution and makes
+  `setInitialState(SPAWNING)` apply `nativeBit7FullControl()`. No trace
+  hydration, tolerance, route, frame, or zone carve-out.
+- Regression tests back to green:
+  `mvn test "-Dtest=TestMultiSidekickSpawn,TestS2Ehz1Headless,TestRespawnStrategies,TestSidekickCpuDespawnParity,TestSidekickCpuFollowParity,TestSidekickCpuControllerLevelStart,TestSidekickCpuControllerCarry"`
+  — 239/244 passed; the 5 remaining `TestRespawnStrategies` failures are the
+  pre-existing develop-baseline Mockito stub gaps (verified identical before
+  the change).
+- S2 trace sweep (all 19, split across three runs with `-Ds2.rom.path=s2.gen`):
+  green set (`TestS2Ehz1TraceReplay`, ARZ1, CNZ1, DEZ ending, HTZ1, MCZ1,
+  MCZ2, SCZ, WFZ, CPZ1, CPZ2, HTZ2, MTZ1, MTZ2, OOZ1) all passed; expected
+  reds held exactly: ARZ2 f2016 / 753 (`obj_extra_s21_x`), CNZ2 f9487 / 288
+  (`g_speed`), MTZ3 f13336 / 352 (`x_speed`), OOZ2 f9342 / 505
+  (`tails_x_sub`). Matches the routing-table state — no frontier movement.
+- S3K guard:
+  `mvn test "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kAizIntroEventsHeadless,TestSonic3kMgz2EndBossEvents,TestForcedSpinObjectInstance"`
+  — 98/98 passed.
+
 ## 2026-07-01 - S2 round 22 integrated verification after OOZ2 advance
 
 - Campaign branch/worktree: `bugfix/ai-s2-trace-next` /
