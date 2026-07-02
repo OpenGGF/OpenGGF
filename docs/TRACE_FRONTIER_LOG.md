@@ -116,6 +116,37 @@ Verification:
   Those match the current branch-local routing table, so this Obj89 change did
   not introduce new CNZ2 or MTZ3 regressions.
 
+## 2026-07-02 - S2 round 59 closure
+
+Round 59 merged two worker commits into the conductor:
+- `8723599ee` as `2ed729948`, advancing ARZ2 from f5968 to f5970.
+- `558993a21` as `16fc8752a`, advancing MTZ3 from f13358 to f13477.
+
+CNZ2 worker `.worktrees/ai-s2-cnz2-round59-next` /
+`bugfix/ai-s2-cnz2-round59-next` made no commit. It reproduced f9977 / 10
+(`tails_x_speed` expected `-0200`, actual `0x023A`) and tested trigger-phase
+and Obj51 split-ball touch-projection hypotheses. Neither produced a genuine
+advance; a broad split projection regressed earlier to f9199. Useful current
+ROM areas remain Obj51 trigger/fall/split and `Touch_Boss`
+(`docs/s2disasm/s2.asm:66577-66595,67049-67118,85164-85252`).
+
+Composed verification on `bugfix/ai-s2-trace-next`:
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5970 / 1, CNZ2
+  f9977 / 10, and MTZ3 f13477 / 4. OOZ2 stayed green.
+- Full S1 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  completed with 29/29 green by the fresh S1 Surefire reports.
+- S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks: 66 green plus the known AIZ expected-reds
+  (`TestS3kAizCompleteRunTraceReplay` f1095 / 3 and
+  `TestS3kAizTraceReplay` f8941 / 1).
+
+No S2 trace turned green in round 59, so no round-59 change was banked into
+`next`.
+
 ## 2026-07-02 - S2 round 58 ARZ2 Obj89 arrow CPU Tails timer gate
 
 Round 58 ARZ2 worker used
