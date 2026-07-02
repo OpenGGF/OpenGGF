@@ -1579,6 +1579,41 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void arz2BossRoomSkidDustReusesFreedArrowSlotsAfterRelease() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 6313) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    ObjectOccupancyOracle.Divergence first =
+                            ObjectOccupancyOracle.firstDivergence(trace, om, frame, FIRST_DYNAMIC_SLOT);
+                    Assertions.assertNull(first,
+                            "ARZ2 boss-room Obj08 skid dust should reuse the lowest slots freed by "
+                                    + "the Obj89 arrow release before ObjectsManager loads later objects; "
+                                    + "Obj08_CheckSkid calls AllocateObject every fourth Stop-animation tick "
+                                    + "(docs/s2disasm/s2.asm:42813-42841) after Obj89 clears riders "
+                                    + "(docs/s2disasm/s2.asm:65689-65704). Expected slots "
+                                    + describeSlots(expected, 16, 36) + " actual "
+                                    + describeSlots(actual, 16, 36) + " live "
+                                    + describeLiveSlots(om, 16, 36));
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 36));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x08, slotCheck.idAt(0x13),
+                "ROM has Sonic's first boss-room Obj08 skid dust in slot 0x13 by ARZ2 f6313; "
+                        + slotCheck.summary());
+        Assertions.assertEquals(0x08, slotCheck.idAt(0x14),
+                "ROM has Sonic's second boss-room Obj08 skid dust in slot 0x14 at ARZ2 f6313; "
+                        + slotCheck.summary());
+        Assertions.assertEquals(0x08, slotCheck.idAt(0x15),
+                "ROM has Sonic's third boss-room Obj08 skid dust in slot 0x15 at ARZ2 f6313; "
+                        + slotCheck.summary());
+    }
+
+    @Test
     public void arz2LostRingOwnerRunsObjectStepAtRomFrame2016() throws Exception {
         AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {

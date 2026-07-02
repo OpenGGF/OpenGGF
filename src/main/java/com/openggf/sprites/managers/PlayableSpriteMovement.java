@@ -117,6 +117,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean fixedSkidDustTickPending;
 	private boolean processingFixedSkidDustTick;
 	private boolean skidAnimationRefreshedThisFrame;
+	private int lastFixedSkidDustTickFrame = Integer.MIN_VALUE;
 	private int staleHorizontalInputRideSlotIndex;
 	private int staleHorizontalInputSuppressFrames;
 	private int staleHorizontalInputRideFrames;
@@ -3404,6 +3405,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	void advanceFixedSkidDustWhileStopAnimPersists() {
+		advanceFixedSkidDustWhileStopAnimPersists(Integer.MIN_VALUE);
+	}
+
+	void advanceFixedSkidDustWhileStopAnimPersists(int frameCounter) {
 		PowerUpRules rules = powerUpRulesOrNull();
 		if (rules == null || !rules.fixedSkidDustAllocatesAfterDynamicObjectPass()) {
 			return;
@@ -3412,16 +3417,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 		if (sprite.isHurt() || sprite.getDead()) {
+			sprite.setFixedSkidDustActive(false);
 			return;
 		}
 		int skidAnimId = profile.getSkidAnimId();
 		if (skidAnimId < 0 || sprite.getAnimationId() != skidAnimId) {
 			fixedSkidDustTickPending = false;
+			sprite.setSkidDustTimer(0);
+			sprite.setFixedSkidDustActive(false);
 			return;
 		}
-		if (!fixedSkidDustTickPending && !sprite.getAir()) {
+		if (frameCounter != Integer.MIN_VALUE && lastFixedSkidDustTickFrame == frameCounter) {
 			return;
 		}
+		lastFixedSkidDustTickFrame = frameCounter;
 		fixedSkidDustTickPending = false;
 		processingFixedSkidDustTick = true;
 		try {
@@ -3438,6 +3447,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// and seeds mapping_frame=$15 (docs/s2disasm/s2.asm:36927-36929,
 		// 36988-36990, 42759-42797).
 		PowerUpRules rules = powerUpRulesOrNull();
+		sprite.setFixedSkidDustActive(true);
 		if (!processingFixedSkidDustTick
 				&& rules != null
 				&& rules.fixedSkidDustAllocatesAfterDynamicObjectPass()) {

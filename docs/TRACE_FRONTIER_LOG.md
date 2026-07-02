@@ -6,18 +6,75 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 60 ARZ2 work on conductor commit
-`c45e81778`:
-ARZ2 is f6309 / 1 under `frontierOnly` (`obj_s14_type` expected `0x08`,
-actual missing), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
+Current branch-local S2 state after round 61 ARZ2 work on conductor commit
+`a94ef5694`:
+ARZ2 is f6364 / 6 under `frontierOnly` (`tails_y` expected `0x04C1`,
+actual `0x04C0`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now ARZ2, CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
-was banked into `next`; ARZ2 advanced again in round 60 but is not banked under
+was banked into `next`; ARZ2 advanced again in round 61 but is not banked under
 the green-bank rule.
+
+## 2026-07-02 - S2 round 61 ARZ2 Obj08 skid-dust Stop-animation cadence
+
+Round 61 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round61-next` /
+`bugfix/ai-s2-arz2-round61-next`, based from conductor commit `a94ef5694`.
+The focused baseline reproduced ARZ2 f6309 / 1 under `frontierOnly`
+(`obj_s14_type` expected `0x08`, actual missing).
+
+Investigation stayed on the boss-room slot cadence after the Obj89 arrow
+released riders. The trace aux object stream showed ROM Obj08 allocations for
+Sonic in slots `$13`, `$14`, and `$15` at f6305/f6309/f6313, with X positions
+matching Sonic's physics trace. This made the missing f6309 slot a fixed
+Sonic_Dust cadence issue rather than a Tails or arrow-slot ownership issue.
+
+The ROM `Obj08_CheckSkid` path checks the parent animation byte for
+`AniIDSonAni_Stop`, decrements `obj08_dust_timer`, and calls `AllocateObject`
+when the countdown underflows (`docs/s2disasm/s2.asm:42813-42841`). Sonic's
+turn routines set that Stop/skid animation and arm Sonic_Dust
+(`docs/s2disasm/s2.asm:36927-36935,36988-36996`), while the no-input
+grounded movement path with non-zero inertia reaches reset-scroll without
+writing a fresh Walk animation byte (`docs/s2disasm/s2.asm:36558-36577,
+36945-36962`). The arrow Sub6 release context remains the prior owner of the
+freed slots (`docs/s2disasm/s2.asm:65689-65704`).
+
+Fix:
+- `ScriptedVelocityAnimationProfile` now preserves the existing Stop/skid anim
+  during no-input coasting only while the fixed Obj08 dust routine is active.
+  Outside that ROM dust state it keeps the prior Walk-on-coast behavior, which
+  preserves the accepted MTZ3 wall-stop frontier.
+- `PlayableSpriteMovement` advances the fixed Obj08 dust countdown once per
+  `SpriteManager` frame while the parent remains in Stop/skid, clears the
+  countdown when the parent leaves that anim, and keeps the fixed-dust active
+  bit in playable rewind state.
+- `TestS2ObjectOccupancyOracle` now asserts that the ARZ2 boss-room Obj08
+  allocations occupy slots `$13/$14/$15` by f6313.
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` advances from f6309 / 1
+  (`obj_s14_type` expected `0x08`, actual missing) to f6364 / 6 under
+  `frontierOnly` (`tails_y` expected `0x04C1`, actual `0x04C0`). The new owner
+  is the next Obj89 arrow/Tails release state: ROM has Tails airborne/rolling
+  with upward velocity, while the engine still has Tails grounded on the arrow.
+
+Verification:
+- Focused movement/oracle subset:
+  `mvn "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#s2FixedSkidDustTicksWhileAirborneStopAnimationPersists,com.openggf.sprites.managers.TestPlayableSpriteMovement#s2GroundedFixedSkidDustAllocatesFromPostMovementPosition,com.openggf.sprites.managers.TestPlayableSpriteMovement#s2SkidDustDeletesOnRomRoutineFourFrame,com.openggf.sprites.managers.TestPlayableSpriteMovement#s2FixedSkidDustDoesNotTickDuringHurtRoutine,com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossRoomSkidDustReusesFreedArrowSlotsAfterRelease" "-DfailIfNoTests=false" test`
+  exited 0 for the requested checks; MSE also printed the expected-red S2
+  trace frontier aggregate.
+- Focused ARZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" test`
+  failed at the advanced expected-red frontier f6364 / 6.
+- Same-game guards:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" test`
+  preserved CNZ2 f9977 / 10, and
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" test`
+  preserved MTZ3 f13477 / 4.
 
 ## 2026-07-02 - S2 round 60 ARZ2 Obj89 arrow drop push-clear cadence
 
