@@ -93,6 +93,18 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // MHZ1CutsceneButton_Door_Wait's jsr sub_65E4C (sonic3k.asm:130214,134149)
+        // reaches SolidObjectFull -> SolidObject_cont, whose right-edge X-window
+        // check is cmp.w d3,d0 / bhi.w (sonic3k.asm:41399-41406) -- not bhs -- so
+        // relX == width*2 remains a valid zero-distance side contact and keeps
+        // Status_Push (bit 5, constants.asm:140/179) set. The sibling
+        // Obj_MHZ1CutsceneButton overrides the same way for the same gate; see
+        // Mhz1CutsceneButtonInstance.usesInclusiveRightEdge().
+        return true;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (state == State.IDLE) {
             if (parent.isDoorSwitchActive()) {

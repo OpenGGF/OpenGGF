@@ -6,6 +6,49 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-02 - S3K MHZ complete-run advances f1025 -> f1162 (MHZ1 cutscene door inclusive right edge)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `5c6e74a31` + this fix).
+- Command (verified independently on this branch):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds3k.rom.path=...\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f1025 / 2853 errors
+  (`status_byte`, expected `0x0021`, actual `0x0001`). After: f1162 / 2855
+  errors (`tails_y`, expected `0x064E`, actual `0x0653`). Confirmed against
+  `target/trace-reports/s3k_mhz1_report.json` via an independent A/B rerun
+  (copy-aside/`git checkout --`/restore, not `git stash`).
+- Root cause: `Mhz1CutsceneDoorInstance`'s side-contact solid box used the
+  engine's default exclusive right edge. `MHZ1CutsceneButton_Door_Wait`
+  (`sonic3k.asm:130214`) calls `sub_65E4C` (`sonic3k.asm:134149`), which loads
+  `d1=$1B,d2=$20,d3=$20` and jumps into `SolidObjectFull` -> `SolidObject_cont`
+  (`sonic3k.asm:41399`). That gate is `cmp.w d3,d0 / bhi.w loc_1E0A2`
+  (`sonic3k.asm:41405-41406`) -- `bhi`, not `bhs` -- so `relX == width*2` (a
+  player resting exactly at the door's right edge) is still a valid
+  zero-distance side contact that keeps `Status_Push` set. The sibling
+  `Obj_MHZ1CutsceneButton` already overrides the same way for the same gate
+  (`Mhz1CutsceneButtonInstance.usesInclusiveRightEdge()`); the door was missing
+  the equivalent override, so a player resting at its exact right edge lost
+  push/contact status one frame early.
+- Fix: `Mhz1CutsceneDoorInstance.usesInclusiveRightEdge()` now returns `true`.
+  Object-local property read from the door's own ROM call path
+  (`sub_65E4C` -> `SolidObjectFull` -> `SolidObject_cont`); no
+  zone/route/frame carve-out, no trace-row hydration.
+- Error-count delta adjudication (+2 net, 2853 -> 2855): the fix's own window
+  (f1025-f1100, the door/push/status region) goes from 2 errors (`status_byte`
+  at f1025/f1029) to 0 in the AFTER run -- confirmed no new errors appear
+  there. The region f1030-f1811 is byte-identical between BEFORE and AFTER
+  (131 errors each, same field/frame/expected/actual set) -- the pre-existing
+  f1162 `tails_y` frontier is unchanged by this fix. The entire +2 net comes
+  from downstream cascading redistribution starting at f1811 (76 BEFORE-only
+  error tuples replaced by 80 AFTER-only tuples, all in `tails_x` /
+  `tails_status_byte` / `tails_y_speed`, already-diverged state past the
+  pre-existing f1162 desync) -- benign redistribution, not a regression
+  introduced by this change.
+- Guards green: `TestMhz1CutsceneObjects` (82/82, +1 new discriminator test),
+  `TestSolidObjectManager` (47/47), `TestSonic3kMHZEvents` (62/62),
+  `TestS3kAiz1SkipHeadless` (8/8), `TestSonic3kLevelLoading` (35/35 across both
+  packages).
+
 ## 2026-07-02 - S3K MHZ complete-run advances f966 -> f1025 (MHZ1 cutscene button top-landing width/anchor)
 
 - Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,

@@ -2368,6 +2368,20 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
+    void mhz1DoorUsesInclusiveRightEdgeForRestingSidePush() {
+        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+        Mhz1CutsceneDoorInstance door = new Mhz1CutsceneDoorInstance(button);
+
+        assertTrue(door.usesInclusiveRightEdge(),
+                "MHZ1CutsceneButton_Door_Wait's jsr sub_65E4C reaches SolidObjectFull/SolidObject_cont, whose "
+                        + "right-edge X-window check rejects with bhi, not bhs; relX == width*2 (a player resting "
+                        + "exactly against the door's right edge) is still a valid zero-distance side contact, "
+                        + "just like the sibling Obj_MHZ1CutsceneButton "
+                        + "(docs/skdisasm/sonic3k.asm:130214,134149,41399)");
+    }
+
+    @Test
     void knucklesCutsceneCleanupSavesRomRestartPoint() {
         Camera camera = new Camera();
         camera.setX((short) 0x0100);
