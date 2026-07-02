@@ -164,7 +164,7 @@ public abstract class Sonic2ZoneEvents {
     protected void syncSidekickBoundsToCamera() {
         Camera cam = camera();
         setSidekickBounds((int) cam.getMinX(), (int) cam.getMaxX(),
-                (int) Math.max(cam.getMaxY(), cam.getMaxYTarget()));
+                (int) cam.getMaxYTarget());
     }
 
     protected void requestSonic2Plc(int plcId) {
