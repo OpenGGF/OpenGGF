@@ -243,20 +243,19 @@ Physics differences across S1/S2/S3K are handled through a layered provider syst
 |-------|---------|
 | `PhysicsProfile` | Immutable per-character movement constants (18 fields, values in subpixels where 256=1px) |
 | `PhysicsModifiers` | Water/speed shoes multiplier rules (shared `STANDARD` across all games) |
-| `PhysicsFeatureSet` | Legacy constants source and bridge fallback while older game-wide gates migrate to typed `GameRules` |
 | `CollisionModel` | Enum: `UNIFIED` (S1) vs `DUAL_PATH` (S2/S3K) |
 | `PhysicsProvider` | Interface tying above together, per game module |
 
 ### Resolution Flow
 1. `AbstractPlayableSprite` constructor calls `defineSpeeds()` (S2 fallback values)
 2. Then `resolvePhysicsProfile()` queries `GameModuleRegistry.getCurrent().getPhysicsProvider()`
-3. Profile values overwrite fallbacks; modifiers, the typed rules, and the legacy feature-set bridge are cached
+3. Profile values overwrite fallbacks; modifiers and typed `GameRules` are cached
 4. Getters apply modifiers dynamically (water/speed shoes)
-5. Shared runtime gates should use the narrow typed `GameRules` records; keep `PhysicsFeatureSet` only for bridge fallback or provider-owned constants
+5. Shared runtime gates must use the narrow typed `GameRules` records
 
 ### Rule Placement
 
-Per-game behavioral differences must use the smallest accurate owner: typed `GameRules` records for game-wide shared runtime gates, or an existing provider/profile/registry for data, art, zone-local, or object-family behavior. `PhysicsFeatureSet` is the legacy constants/bridge fallback during migration; do not add new broad runtime users. Raw game-name branches in shared runtime code are prohibited. See `docs/architecture/per-game-rule-placement.md` before adding a new per-game gate.
+Per-game behavioral differences must use the smallest accurate owner: typed `GameRules` records for game-wide shared runtime gates, or an existing provider/profile/registry for data, art, zone-local, or object-family behavior. Do not add broad feature-set bags or raw game-name branches in shared runtime code. See `docs/architecture/per-game-rule-placement.md` before adding a new per-game gate.
 
 For multi-sidekick daisy chains, `getEffectiveLeader()` uses a direct CPU leader immediately once that leader is in NORMAL. The 15-frame settled threshold is only for healing past broken or not-yet-normal links, not for skipping a direct NORMAL leader while its history warms.
 

@@ -15,7 +15,6 @@ import com.openggf.data.SpindashDustArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.DynamicStartPositionProvider;
 import com.openggf.debug.DebugObjectArtViewer;
 import com.openggf.debug.DebugOverlayManager;
@@ -31,7 +30,9 @@ import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.rules.CameraRules;
+import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PowerUpRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
@@ -134,11 +135,10 @@ public class LevelManager {
 
     /** Collision model metadata only; frame scheduling may still use inline checkpoints. */
     private boolean isUnifiedCollisionModel() {
-        PhysicsProvider pp = activeGameModule().getPhysicsProvider();
-        return pp != null
-                && pp.getFeatureSet() != null
-                && pp.getFeatureSet().collisionModel()
-                   == com.openggf.game.CollisionModel.UNIFIED;
+        GameRules rules = activeGameModule().getRules();
+        return rules != null
+                && rules.collision() != null
+                && rules.collision().collisionModel() == com.openggf.game.CollisionModel.UNIFIED;
     }
 
     /** Returns the tilemap lifecycle delegate. */
@@ -565,10 +565,10 @@ public class LevelManager {
         // to the same object. The ROM doesn't have this issue because ObjPosLoad
         // never unloads objects — they persist until their own code deletes them.
         // S1 counter-based respawn tracking.
-        if (gameModule.getPhysicsProvider() != null
-                && gameModule.getPhysicsProvider().getFeatureSet() != null
-                && gameModule.getPhysicsProvider().getFeatureSet().collisionModel()
-                   == com.openggf.game.CollisionModel.UNIFIED) {
+        GameRules gameRules = gameModule.getRules();
+        if (gameRules != null
+                && gameRules.collision() != null
+                && gameRules.collision().collisionModel() == com.openggf.game.CollisionModel.UNIFIED) {
             objectManager.enableCounterBasedRespawn();
         } else {
             objectManager.enableExecThenLoadPlacement();
@@ -578,9 +578,9 @@ public class LevelManager {
         // S3K parity: ROM's Object_respawn_table bit 7 stays set permanently
         // after a player kill (sonic3k.asm loc_1BA40 / Touch_EnemyNormal). Match
         // by latching destroyedInWindow for the rest of the level.
-        if (gameModule.getPhysicsProvider() != null
-                && gameModule.getPhysicsProvider().getFeatureSet() != null
-                && gameModule.getPhysicsProvider().getFeatureSet().permanentRespawnTableLatch()) {
+        if (gameRules != null
+                && gameRules.objectInteraction() != null
+                && gameRules.objectInteraction().permanentRespawnTableLatch()) {
             objectManager.enablePermanentDestroyLatch();
         }
 
@@ -862,18 +862,18 @@ public class LevelManager {
     /**
      * Returns true when the active module executes objects after player physics and
      * solid checkpoints are resolved during object execution. Driven by the
-     * {@link PhysicsFeatureSet#objectsExecuteAfterPlayerPhysics()} flag — independent
+     * {@link ObjectInteractionRules#objectsExecuteAfterPlayerPhysics()} flag — independent
      * of collision model so S1 (UNIFIED) and S2/S3K (DUAL_PATH) can share the
      * post-physics ordering per the 2026-04-18-solid-ordering-rom-accuracy plan.
      */
     public boolean objectsExecuteAfterPlayerPhysics() {
         GameModule activeModule = activeGameModule();
         if (activeModule == null
-                || activeModule.getPhysicsProvider() == null
-                || activeModule.getPhysicsProvider().getFeatureSet() == null) {
+                || activeModule.getRules() == null
+                || activeModule.getRules().objectInteraction() == null) {
             return false;
         }
-        return activeModule.getPhysicsProvider().getFeatureSet().objectsExecuteAfterPlayerPhysics();
+        return activeModule.getRules().objectInteraction().objectsExecuteAfterPlayerPhysics();
     }
 
     /**
@@ -883,17 +883,16 @@ public class LevelManager {
      * {@code ExecuteObjects}/{@code RunObjects}). S3K returns false because
      * {@code Process_Sprites} runs before {@code Handle_Onscreen_Water_Height},
      * so the player reads the previous frame's water level there. Driven by the
-     * {@link PhysicsFeatureSet#advanceWaterLevelBeforePlayerPhysics()} flag.
+     * {@link CollisionRules#advanceWaterLevelBeforePlayerPhysics()} flag.
      */
     public boolean advanceWaterLevelBeforePlayerPhysics() {
         GameModule activeModule = activeGameModule();
         if (activeModule == null
-                || activeModule.getPhysicsProvider() == null
-                || activeModule.getPhysicsProvider().getFeatureSet() == null) {
+                || activeModule.getRules() == null
+                || activeModule.getRules().collision() == null) {
             return false;
         }
-        return activeModule.getPhysicsProvider().getFeatureSet()
-                .advanceWaterLevelBeforePlayerPhysics();
+        return activeModule.getRules().collision().advanceWaterLevelBeforePlayerPhysics();
     }
 
     /**
@@ -949,9 +948,9 @@ public class LevelManager {
     private boolean touchResponseUsesPreviousCollisionResponseList() {
         GameModule activeModule = activeGameModule();
         return activeModule != null
-                && activeModule.getPhysicsProvider() != null
-                && activeModule.getPhysicsProvider().getFeatureSet() != null
-                && activeModule.getPhysicsProvider().getFeatureSet().touchResponseUsesPreviousCollisionResponseList();
+                && activeModule.getRules() != null
+                && activeModule.getRules().objectInteraction() != null
+                && activeModule.getRules().objectInteraction().touchResponseUsesPreviousCollisionResponseList();
     }
 
     /**
@@ -3086,9 +3085,7 @@ public class LevelManager {
             }
         } catch (IllegalArgumentException | IllegalStateException ignored) {
         }
-        PhysicsProvider provider = module.getPhysicsProvider();
-        PhysicsFeatureSet featureSet = provider != null ? provider.getFeatureSet() : null;
-        return featureSet != null ? GameRules.fromLegacy(featureSet) : null;
+        return null;
     }
 
     /**
@@ -3650,18 +3647,18 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
-        if (gameModule.getPhysicsProvider() != null
-                && gameModule.getPhysicsProvider().getFeatureSet() != null
-                && gameModule.getPhysicsProvider().getFeatureSet().collisionModel()
-                   == com.openggf.game.CollisionModel.UNIFIED) {
+        GameRules gameRules = gameModule.getRules();
+        if (gameRules != null
+                && gameRules.collision() != null
+                && gameRules.collision().collisionModel() == com.openggf.game.CollisionModel.UNIFIED) {
             objectManager.enableCounterBasedRespawn();
         } else {
             objectManager.enableExecThenLoadPlacement();
             objectManager.enforceSlotLimit();
         }
-        if (gameModule.getPhysicsProvider() != null
-                && gameModule.getPhysicsProvider().getFeatureSet() != null
-                && gameModule.getPhysicsProvider().getFeatureSet().permanentRespawnTableLatch()) {
+        if (gameRules != null
+                && gameRules.objectInteraction() != null
+                && gameRules.objectInteraction().permanentRespawnTableLatch()) {
             objectManager.enablePermanentDestroyLatch();
         }
         collisionSystem.setObjectManager(objectManager);

@@ -51,7 +51,6 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     private SpindashDustArtProvider donorDustArtProvider;
     private SmpsLoader donorSmpsLoader;
     private DacData donorDacData;
-    private PhysicsFeatureSet hybridFeatureSet;
     private GameRules hybridRules;
     private RenderContext donorRenderContext;
     private PlayerSpriteRenderer instaShieldRenderer;
@@ -125,8 +124,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         this.donorPlayerArtProvider = donorProvider.createPlayerArtProvider(donorReader);
         this.donorDustArtProvider = donorProvider.createSpindashDustArtProvider(donorReader);
 
-        hybridFeatureSet = buildHybridFeatureSet();
-        hybridRules = buildHybridRules();
+        hybridRules = buildHybridRules(donorModule.getRules());
 
         // Create donor render context for palette isolation
         donorRenderContext = RenderContext.getOrCreateDonor(donorGameId);
@@ -182,14 +180,6 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     @Override
     public SpriteArtSet loadSpindashDustArt(String characterCode) throws IOException {
         return donorDustArtProvider == null ? null : donorDustArtProvider.loadSpindashDustArt(characterCode);
-    }
-
-    /**
-     * Returns a hybrid PhysicsFeatureSet: spindash/insta-shield from donor capabilities,
-     * everything else from the current (base) game module.
-     */
-    public PhysicsFeatureSet getHybridFeatureSet() {
-        return hybridFeatureSet;
     }
 
     /**
@@ -365,7 +355,6 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         donorDustArtProvider = null;
         donorSmpsLoader = null;
         donorDacData = null;
-        hybridFeatureSet = null;
         hybridRules = null;
         donorRenderContext = null;
         instaShieldRenderer = null;
@@ -412,45 +401,10 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         return instaShieldArtSet;
     }
 
-    /**
-     * Builds a hybrid feature set: spindash/insta-shield enabled based on donor capabilities,
-     * collision model and other flags inherited from the current (base) game module.
-     * This ensures that S2/S3K levels keep DUAL_PATH collision (required for plane switching)
-     * while S1 levels keep UNIFIED collision.
-     */
-    private PhysicsFeatureSet buildHybridFeatureSet() {
-        PhysicsFeatureSet donorFeatureSet = resolveDonorFeatureSet();
-        short[] spindashSpeedTable = donorCapabilities.hasSpindash()
-                ? donorFeatureSet.spindashSpeedTable()
-                : null;
-
-        // Inherit collision model from the base game module so plane switching
-        // works correctly in S2/S3K levels with cross-game features enabled
-        PhysicsFeatureSet baseFeatureSet = GameServices.module()
-                .getPhysicsProvider().getFeatureSet();
-
-        return PhysicsFeatureSet.builderFrom(baseFeatureSet)
-                .spindashEnabled(donorCapabilities.hasSpindash())
-                .spindashSpeedTable(spindashSpeedTable)
-                .elementalShieldsEnabled(donorCapabilities.hasElementalShields())
-                .instaShieldEnabled(donorCapabilities.hasInstaShield())
-                .lightningShieldEnabled(donorCapabilities.hasElementalShields())
-                .build();
-    }
-
-    private GameRules buildHybridRules() {
+    private GameRules buildHybridRules(GameRules donorRules) {
         GameRules baseRules = GameServices.module().getRules();
-        GameRules donorRules = GameRules.fromLegacy(resolveDonorFeatureSet());
 
         return CrossGameRuleComposer.compose(baseRules, donorRules, donorCapabilities);
-    }
-
-    private PhysicsFeatureSet resolveDonorFeatureSet() {
-        return switch (donorGameId) {
-            case S1 -> PhysicsFeatureSet.SONIC_1;
-            case S2 -> PhysicsFeatureSet.SONIC_2;
-            case S3K -> PhysicsFeatureSet.SONIC_3K;
-        };
     }
 
     private GameModule resolveDonorModule(Rom donorRom, GameId expectedGameId) {

@@ -1,6 +1,6 @@
 package com.openggf.tests;
 
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.ShieldType;
 
@@ -48,9 +48,9 @@ public class TestablePlayableSprite extends AbstractPlayableSprite {
         this.yPixel = y;
     }
 
-    /** Override the physics feature set for testing without a GameModule. */
-    public void setPhysicsFeatureSetForTest(PhysicsFeatureSet fs) {
-        setPhysicsFeatureSet(fs);
+    /** Override game rules for testing without a GameModule. */
+    public void setGameRulesForTest(GameRules rules) {
+        super.setGameRulesForTest(rules);
     }
 
     /** Set shield state directly without spawning a shield object. For testing only. */
@@ -68,5 +68,3 @@ public class TestablePlayableSprite extends AbstractPlayableSprite {
         this.max = maxSpeed;
     }
 }
-
-

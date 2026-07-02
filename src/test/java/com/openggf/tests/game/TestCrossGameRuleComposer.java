@@ -4,7 +4,7 @@ import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.DonorCapabilities;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rules.CrossGameRuleComposer;
 import com.openggf.game.rules.GameRules;
@@ -33,8 +33,8 @@ class TestCrossGameRuleComposer {
 
     @Test
     void donorCapabilitiesAffectOnlyDonorOwnedPlayerCapabilities() throws Exception {
-        GameRules host = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_1);
-        GameRules donor = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_3K);
+        GameRules host = GameRules.SONIC_1;
+        GameRules donor = GameRules.SONIC_3K;
         DonorCapabilities capabilities = new StubDonorCapabilities(true, true, true);
 
         GameRules hybrid = CrossGameRuleComposer.compose(host, donor, capabilities);
@@ -52,8 +52,8 @@ class TestCrossGameRuleComposer {
 
     @Test
     void spindashTableIsNullWhenDonorDoesNotDonateSpindash() {
-        GameRules host = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2);
-        GameRules donor = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_3K);
+        GameRules host = GameRules.SONIC_2;
+        GameRules donor = GameRules.SONIC_3K;
         DonorCapabilities capabilities = new StubDonorCapabilities(false, true, false);
 
         GameRules hybrid = CrossGameRuleComposer.compose(host, donor, capabilities);
@@ -67,15 +67,15 @@ class TestCrossGameRuleComposer {
 
     @Test
     void nullDonorCapabilitiesReturnHostRulesInstance() {
-        GameRules host = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2);
-        GameRules donor = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_3K);
+        GameRules host = GameRules.SONIC_2;
+        GameRules donor = GameRules.SONIC_3K;
 
         assertSame(host, CrossGameRuleComposer.compose(host, donor, null));
     }
 
     @Test
     void nullRulesAreRejected() {
-        GameRules rules = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2);
+        GameRules rules = GameRules.SONIC_2;
         DonorCapabilities capabilities = new StubDonorCapabilities(true, true, true);
 
         IllegalArgumentException nullHost = assertThrows(IllegalArgumentException.class,

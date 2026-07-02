@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.tests.TestEnvironment;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -376,11 +376,11 @@ public class TestCamera {
     }
 
     @Test
-    public void testPlayableRenderFlagVisibilityFallsBackToLegacyFeatureSetRules() {
+    public void testPlayableRenderFlagVisibilityUsesGameRules() {
         camera.setX((short) 0);
         camera.setY((short) 100);
         when(mockSprite.getGameRules()).thenReturn(null);
-        when(mockSprite.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(mockSprite.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(mockSprite.getRenderCentreX()).thenReturn((short) 160);
         when(mockSprite.getRenderCentreY()).thenReturn((short) 72);
         when(mockSprite.getRenderFlagWidthPixels()).thenReturn(0x18);

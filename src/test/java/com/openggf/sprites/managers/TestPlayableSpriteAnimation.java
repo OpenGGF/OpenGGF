@@ -3,7 +3,7 @@ package com.openggf.sprites.managers;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
@@ -39,7 +39,7 @@ public class TestPlayableSpriteAnimation {
 
     @Test
     public void s3kIdleToWalkAnimationChangeClearsGroundPush() {
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
         sprite.setAnimationId(5);
         sprite.setMovementInputActive(false);
         sprite.getAnimationManager().update(0);
@@ -57,7 +57,7 @@ public class TestPlayableSpriteAnimation {
 
     @Test
     public void s2IdleToWalkAnimationChangeClearsGroundPush() {
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
         sprite.setAnimationId(5);
         sprite.setMovementInputActive(false);
         sprite.getAnimationManager().update(0);
@@ -75,7 +75,7 @@ public class TestPlayableSpriteAnimation {
 
     @Test
     public void s2GroundPushSurvivesInitialRomAnimByteCapture() {
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
         sprite.setAnimationId(0);
         sprite.setMovementInputActive(false);
         sprite.setGSpeed((short) 0);
@@ -91,7 +91,7 @@ public class TestPlayableSpriteAnimation {
 
     @Test
     public void s3kRunToWalkAnimationStepKeepsGroundPush() {
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
         sprite.setAnimationId(1);
         sprite.setMovementInputActive(true);
         sprite.setGSpeed((short) 0x0700);
@@ -110,7 +110,7 @@ public class TestPlayableSpriteAnimation {
 
     @Test
     public void s3kAirborneRollAnimationChangeClearsPush() {
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
         sprite.setAnimationId(5);
         sprite.getAnimationManager().update(0);
 
@@ -129,7 +129,7 @@ public class TestPlayableSpriteAnimation {
 
     @Test
     public void s2AirborneRollAnimationChangeClearsPush() {
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
         sprite.setAnimationId(5);
         sprite.getAnimationManager().update(0);
 
@@ -148,7 +148,7 @@ public class TestPlayableSpriteAnimation {
 
     @Test
     public void s3kActivePushAnimationDoesNotClearEveryFrame() {
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
         sprite.setAnimationId(4);
         sprite.setMovementInputActive(true);
         sprite.setPushing(true);
@@ -164,7 +164,7 @@ public class TestPlayableSpriteAnimation {
 
     @Test
     public void s3kRunToPushDoesNotUseIdleToWalkClear() {
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
         sprite.setAnimationId(1);
         sprite.setMovementInputActive(true);
         sprite.setPushing(true);
@@ -180,7 +180,7 @@ public class TestPlayableSpriteAnimation {
 
     @Test
     public void s1IdleToWalkDoesNotClearPush() {
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_1);
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_1);
         sprite.setAnimationId(5);
         sprite.setMovementInputActive(true);
         sprite.setPushing(true);
@@ -194,13 +194,13 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
-    public void typedPlayerAnimationRuleClearsPushWhenLegacyFeatureSetIsMissing() throws Exception {
-        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_1);
+    public void typedPlayerAnimationRuleClearsPushWithoutFallback() throws Exception {
+        GameRules base = GameRules.SONIC_1;
         GameRules typedRules = new GameRules(
                 base.playerMovement(),
                 base.playerCapability(),
                 base.collision(),
-                GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2).playerAnimation(),
+                GameRules.SONIC_2.playerAnimation(),
                 base.camera(),
                 base.ring(),
                 base.objectInteraction(),
@@ -223,8 +223,8 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
-    public void playerAnimationRuleFallsBackToLegacyFeatureSetWhenTypedRulesMissing() throws Exception {
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+    public void playerAnimationRuleUsesDefaultWhenTypedRulesMissing() throws Exception {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
         setGameRulesForTest(sprite, null);
         sprite.setAnimationId(5);
         sprite.setMovementInputActive(false);
@@ -235,13 +235,13 @@ public class TestPlayableSpriteAnimation {
 
         sprite.getAnimationManager().update(1);
 
-        assertFalse(sprite.getPushing(),
-                "Legacy PhysicsFeatureSet should still be converted to PlayerAnimationRules when typed rules are absent");
+        assertTrue(sprite.getPushing(),
+                "Missing GameRules should not recreate removed feature-set animation rules");
     }
 
     @Test
-    public void playerAnimationRuleFallsBackToLegacyFeatureSetWhenTypedGroupMissing() throws Exception {
-        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_1);
+    public void playerAnimationRuleUsesDefaultWhenTypedGroupMissing() throws Exception {
+        GameRules base = GameRules.SONIC_1;
         GameRules rulesWithoutAnimationGroup = new GameRules(
                 base.playerMovement(),
                 base.playerCapability(),
@@ -253,7 +253,7 @@ public class TestPlayableSpriteAnimation {
                 base.sidekickCpu(),
                 base.powerUp(),
                 base.drowningBubble());
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
         setGameRulesForTest(sprite, rulesWithoutAnimationGroup);
         sprite.setAnimationId(5);
         sprite.setMovementInputActive(false);
@@ -264,13 +264,13 @@ public class TestPlayableSpriteAnimation {
 
         sprite.getAnimationManager().update(1);
 
-        assertFalse(sprite.getPushing(),
-                "A null typed PlayerAnimationRules group should fall back to legacy-derived rules");
+        assertTrue(sprite.getPushing(),
+                "A null PlayerAnimationRules group should not recreate removed feature-set animation rules");
     }
 
     @Test
     public void scriptedSwitchDoesNotRunOnFirstDisplayedFrame() {
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
         SpriteAnimationSet animations = new SpriteAnimationSet();
         animations.addScript(0, new SpriteAnimationScript(0,
                 List.of(7), SpriteAnimationEndAction.LOOP, 0));
@@ -291,7 +291,7 @@ public class TestPlayableSpriteAnimation {
 
     @Test
     public void slowSteepSlopeTurnaroundRefreshesMappingFrameBeforeWalkTickExpires() {
-        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
         SpriteAnimationSet animations = new SpriteAnimationSet();
         SpriteAnimationScript walk = new SpriteAnimationScript(0xFF,
                 List.of(10, 11, 12, 13), SpriteAnimationEndAction.LOOP, 0);
@@ -319,9 +319,9 @@ public class TestPlayableSpriteAnimation {
                 "The refreshed frame set is intentionally paired with the flipped render flags");
     }
 
-    private static TestablePlayableSprite createSprite(PhysicsFeatureSet featureSet) {
+    private static TestablePlayableSprite createSprite(GameRules featureSet) {
         TestablePlayableSprite sprite = new TestablePlayableSprite("tails", (short) 0, (short) 0);
-        sprite.setPhysicsFeatureSetForTest(featureSet);
+        sprite.setGameRulesForTest(featureSet);
         sprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
                 .setIdleAnimId(5)
                 .setWalkAnimId(0)

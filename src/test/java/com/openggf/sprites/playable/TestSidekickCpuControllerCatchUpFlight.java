@@ -1,7 +1,7 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import java.lang.reflect.Field;
@@ -28,7 +28,7 @@ class TestSidekickCpuControllerCatchUpFlight {
 
     static class TestableSprite extends AbstractPlayableSprite {
         TestableSprite(String code) { super(code, (short) 0, (short) 0); }
-        void setPhysicsFeatureSetForTest(PhysicsFeatureSet featureSet) { setPhysicsFeatureSet(featureSet); }
+        public void setGameRulesForTest(GameRules featureSet) { super.setGameRulesForTest(featureSet); }
         @Override public void draw() {}
         @Override public void defineSpeeds() {}
         @Override protected void createSensorLines() {}
@@ -198,7 +198,7 @@ class TestSidekickCpuControllerCatchUpFlight {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         sonic.setCentreX((short) 0x1000);
         sonic.setCentreY((short) 0x0400);
         tails.setCentreX((short) 0x7F00);
@@ -223,7 +223,7 @@ class TestSidekickCpuControllerCatchUpFlight {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
         sonic.setCentreX((short) 0x13CC);
         sonic.setCentreY((short) 0x0400);
         sonic.setObjectControlled(false);

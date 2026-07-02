@@ -1,7 +1,5 @@
 package com.openggf.game.rules;
 
-import com.openggf.game.PhysicsFeatureSet;
-
 public record PlayerMovementRules(
         boolean fixedAnglePosThreshold,
         boolean inputAlwaysCapsGroundSpeed,
@@ -24,29 +22,4 @@ public record PlayerMovementRules(
         boolean waterExitBoostSkipsFastUpwardVelocity,
         boolean slopeResistAppliesAtZeroInertia,
         boolean levelBoundaryLockUsesScreenLockFlag) {
-
-    public static PlayerMovementRules fromLegacy(PhysicsFeatureSet fs) {
-        return new PlayerMovementRules(
-                fs.fixedAnglePosThreshold(),
-                fs.inputAlwaysCapsGroundSpeed(),
-                fs.angleDiffCardinalSnap(),
-                fs.movingCrouchThreshold(),
-                fs.airSuperspeedPreserved(),
-                fs.slopeResistStartsFromRest(),
-                fs.slopeRepelChecksOnObject(),
-                fs.slopeRepelUsesS3kSlipKick(),
-                fs.pinballLandingPreservesRoll(),
-                fs.pinballLandingPreservesPinballMode(),
-                fs.rollingJumpPinballGateRequiresSpindashFlag(),
-                fs.landingRollClearUsesCurrentYRadiusDelta(),
-                fs.rollStopsBelowMinimumSpeed(),
-                fs.rollControlledDecelUsesEffectiveDecelQuarter(),
-                fs.levelBoundaryRightStrict(),
-                fs.levelBoundaryUsesCentreY(),
-                fs.controlLockLatchesLogicalInput(),
-                fs.hurtRoutineLatchesLogicalInput(),
-                fs.waterExitBoostSkipsFastUpwardVelocity(),
-                fs.slopeResistAppliesAtZeroInertia(),
-                fs.levelBoundaryLockUsesScreenLockFlag());
-    }
 }

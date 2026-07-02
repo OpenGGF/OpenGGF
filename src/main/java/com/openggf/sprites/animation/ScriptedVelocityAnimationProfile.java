@@ -250,8 +250,10 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // Balance state is set by movement code based on terrain/object edge detection
         int balanceState = sprite.getBalanceState();
         if (balanceState > 0 && balanceAnimId >= 0) {
-            var featureSet = sprite.getPhysicsFeatureSet();
-            if (featureSet != null && featureSet.singleFacingBalanceAnimationSet()) {
+            var rules = sprite.getGameRules();
+            if (rules != null
+                    && rules.playerAnimation() != null
+                    && rules.playerAnimation().singleFacingBalanceAnimationSet()) {
                 balanceState = switch (balanceState) {
                     case 3 -> 1;
                     case 4 -> 2;

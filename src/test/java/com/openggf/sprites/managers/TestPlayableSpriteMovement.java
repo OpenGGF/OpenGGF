@@ -4,7 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
@@ -103,15 +103,8 @@ public class TestPlayableSpriteMovement {
                 }
         }
 
-        private void setPhysicsFeatureSetForTest(PhysicsFeatureSet featureSet) throws Exception {
-                setPhysicsFeatureSetForTest(mockSprite, featureSet);
-        }
-
-        private void setPhysicsFeatureSetForTest(AbstractPlayableSprite sprite, PhysicsFeatureSet featureSet) throws Exception {
-                Field field = AbstractPlayableSprite.class.getDeclaredField("physicsFeatureSet");
-                field.setAccessible(true);
-                field.set(sprite, featureSet);
-                setGameRulesForTest(sprite, featureSet != null ? GameRules.fromLegacy(featureSet) : null);
+        private void setGameRulesForTest(GameRules featureSet) throws Exception {
+                setGameRulesForTest(mockSprite, featureSet);
         }
 
         private void setGameRulesForTest(AbstractPlayableSprite sprite, GameRules rules) throws Exception {
@@ -149,10 +142,10 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void typedPlayerMovementRuleCapsGroundSpeedWhenLegacyFeatureSetIsMissing() throws Exception {
-                GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2);
+        public void typedPlayerMovementRuleCapsGroundSpeedWithoutFallback() throws Exception {
+                GameRules base = GameRules.SONIC_2;
                 GameRules typedRules = new GameRules(
-                                GameRules.fromLegacy(PhysicsFeatureSet.SONIC_1).playerMovement(),
+                                GameRules.SONIC_1.playerMovement(),
                                 base.playerCapability(),
                                 base.collision(),
                                 base.playerAnimation(),
@@ -162,7 +155,7 @@ public class TestPlayableSpriteMovement {
                                 base.sidekickCpu(),
                                 base.powerUp(),
                                 base.drowningBubble());
-                setPhysicsFeatureSetForTest(null);
+                setGameRulesForTest(null);
                 setGameRulesForTest(mockSprite, typedRules);
 
                 Method method = PlayableSpriteMovement.class.getDeclaredMethod("accelerateRight",
@@ -175,8 +168,8 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void playerMovementRuleFallsBackToLegacyFeatureSetWhenTypedRulesMissing() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_1);
+        public void playerMovementRuleUsesDefaultWhenTypedRulesMissing() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_1);
                 setGameRulesForTest(mockSprite, null);
 
                 Method method = PlayableSpriteMovement.class.getDeclaredMethod("accelerateRight",
@@ -184,13 +177,13 @@ public class TestPlayableSpriteMovement {
                 method.setAccessible(true);
                 short speed = (Short) method.invoke(manager, (short) 0x0700, (short) 0x000C, (short) 0x0600);
 
-                assertEquals((short) 0x0600, speed,
-                                "Legacy PhysicsFeatureSet should still be converted to PlayerMovementRules when typed rules are absent");
+                assertEquals((short) 0x0700, speed,
+                                "Missing GameRules should not recreate removed feature-set movement rules");
         }
 
         @Test
-        public void playerMovementRuleFallsBackToLegacyFeatureSetWhenTypedGroupMissing() throws Exception {
-                GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2);
+        public void playerMovementRuleUsesDefaultWhenTypedGroupMissing() throws Exception {
+                GameRules base = GameRules.SONIC_2;
                 GameRules rulesWithoutMovementGroup = new GameRules(
                                 null,
                                 base.playerCapability(),
@@ -202,7 +195,7 @@ public class TestPlayableSpriteMovement {
                                 base.sidekickCpu(),
                                 base.powerUp(),
                                 base.drowningBubble());
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_1);
+                setGameRulesForTest(GameRules.SONIC_1);
                 setGameRulesForTest(mockSprite, rulesWithoutMovementGroup);
 
                 Method method = PlayableSpriteMovement.class.getDeclaredMethod("accelerateRight",
@@ -210,14 +203,14 @@ public class TestPlayableSpriteMovement {
                 method.setAccessible(true);
                 short speed = (Short) method.invoke(manager, (short) 0x0700, (short) 0x000C, (short) 0x0600);
 
-                assertEquals((short) 0x0600, speed,
-                                "A null typed PlayerMovementRules group should fall back to legacy-derived rules");
+                assertEquals((short) 0x0700, speed,
+                                "A null PlayerMovementRules group should not recreate removed feature-set movement rules");
         }
 
         @Test
         public void s3kJumpRepressClearsRollingJumpBeforeAirControl() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAir(true);
                 mockSprite.setRolling(true);
                 mockSprite.setRollingJump(true);
@@ -248,7 +241,7 @@ public class TestPlayableSpriteMovement {
         @Test
         public void s3kShieldMoveTransformsInsteadOfInstaShieldWhenEligible() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setSuperStateController(new Sonic3kSuperStateController(mockSprite));
                 installCurrentModuleLevelState();
                 collectAllChaosEmeralds();
@@ -273,7 +266,7 @@ public class TestPlayableSpriteMovement {
         @Test
         public void s3kHyperSonicSecondJumpUsesDirectionalDashInsteadOfInstaShield() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 collectAllChaosEmeralds();
                 collectAllSuperEmeralds();
                 mockSprite.setSuperSonic(true);
@@ -301,7 +294,7 @@ public class TestPlayableSpriteMovement {
         @Test
         public void s2JumpTriggerStillActivatesSuperSonic() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic2GameModule());
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setSuperStateController(new Sonic2SuperStateController(mockSprite));
                 installCurrentModuleLevelState();
                 collectAllChaosEmeralds();
@@ -321,7 +314,7 @@ public class TestPlayableSpriteMovement {
         @Test
         public void s3kSpeedShoesDoubleAirAccelerationAfterWallZeroing() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.giveSpeedShoes();
                 mockSprite.setAir(true);
                 mockSprite.setRolling(true);
@@ -342,7 +335,7 @@ public class TestPlayableSpriteMovement {
         @Test
         public void s3kVerticalWrapMasksYAfterControlEvenWhenObjectControlsMovement() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 Camera camera = GameServices.camera();
                 camera.setMinY((short) -0x100);
                 camera.setMaxY((short) 0x1000);
@@ -360,7 +353,7 @@ public class TestPlayableSpriteMovement {
         @Test
         public void s3kVerticalWrapPreservesYSubpixelLikeRomWordMask() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 Camera camera = GameServices.camera();
                 camera.setMinY((short) -0x100);
                 camera.setMaxY((short) 0x1000);
@@ -379,7 +372,7 @@ public class TestPlayableSpriteMovement {
         @Test
         public void s2VerticalWrapMasksYAfterControl() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic2GameModule());
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 Camera camera = GameServices.camera();
                 camera.setMinY((short) -0x100);
                 camera.setMaxY((short) 0x0800);
@@ -404,7 +397,7 @@ public class TestPlayableSpriteMovement {
                 camera.setVerticalWrapEnabled(true, 0x0800);
 
                 Tails tails = new Tails("tails_p2", (short) 0x0C07, (short) 0x0805);
-                setPhysicsFeatureSetForTest(tails, PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(tails, GameRules.SONIC_2);
                 tails.setCpuControlled(true);
                 tails.setDead(true);
                 tails.setAir(true);
@@ -424,7 +417,7 @@ public class TestPlayableSpriteMovement {
         @Test
         public void s3kCameraUpdateWrapPreservesFocusedSpriteYSubpixelLikeRomWordMask() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 Camera camera = GameServices.camera();
                 camera.setFocusedSprite(mockSprite);
                 camera.setMinY((short) -0x100);
@@ -467,7 +460,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void s3kRightLevelBoundaryAllowsEqualPredictedPosition() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 GameServices.camera().setMinX((short) 0x0200);
                 GameServices.camera().setMaxX((short) 0x2ED0);
                 GameServices.gameState().setCurrentBossId(0);
@@ -492,7 +485,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void s2RightLevelBoundaryClampsEqualPredictedPosition() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 GameServices.camera().setMinX((short) 0x0200);
                 GameServices.camera().setMaxX((short) 0x2ED0);
                 GameServices.gameState().setCurrentBossId(0);
@@ -519,7 +512,7 @@ public class TestPlayableSpriteMovement {
                 // (Camera_Max_X_pos + 320), not the render viewport. Widening it by a
                 // widescreen viewport let the player walk past the level's right wall
                 // into the void beyond a camera lock and fall to their death.
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 Camera camera = GameServices.camera();
                 // Simulate an ULTRA_21_9 (528px) viewport on the gameplay camera.
                 Field widthField = Camera.class.getDeclaredField("width");
@@ -571,7 +564,7 @@ public class TestPlayableSpriteMovement {
                 // centreY sits 1 px past the kill threshold but its top-left
                 // getY() sits exactly AT the threshold. With centre-Y compare
                 // (S3K), kill fires; with top-left compare it would not.
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setHeight(24); // Tails height_pixels = 0x18
 
                 int maxY = 0x02B8; // ROM AIZ2 boss-area Camera_max_Y_pos
@@ -618,7 +611,7 @@ public class TestPlayableSpriteMovement {
                 // S2 ROM uses centre-Y at s2.asm:36950. Kill must fire for the
                 // same centreY-just-past geometry even when top-left getY()
                 // remains below the threshold.
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setHeight(24);
 
                 int maxY = 0x02B8;
@@ -636,7 +629,7 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setGSpeed((short) 0);
                 mockSprite.setCentreX((short) 0x1000);
 
-                assertTrue(PhysicsFeatureSet.SONIC_2.levelBoundaryUsesCentreY(),
+                assertTrue(GameRules.SONIC_2.playerMovement().levelBoundaryUsesCentreY(),
                                 "S2 must compare ROM y_pos(a0), which maps to engine centre-Y");
                 assertTrue(mockSprite.getY() <= killThreshold,
                                 "Top-left getY must NOT exceed threshold so this proves centre-Y comparison");
@@ -653,7 +646,7 @@ public class TestPlayableSpriteMovement {
         @Test
         public void s1BottomLevelBoundaryUsesCentreY() throws Exception {
                 // S1 ROM uses centre-Y at s1disasm/_incObj/01 Sonic.asm:1014.
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_1);
+                setGameRulesForTest(GameRules.SONIC_1);
                 mockSprite.setHeight(40); // Sonic height_pixels = 0x28
 
                 int maxY = 0x02B8;
@@ -673,7 +666,7 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setGSpeed((short) 0);
                 mockSprite.setCentreX((short) 0x1000);
 
-                assertTrue(PhysicsFeatureSet.SONIC_1.levelBoundaryUsesCentreY(),
+                assertTrue(GameRules.SONIC_1.playerMovement().levelBoundaryUsesCentreY(),
                                 "S1 must compare ROM obY(a0), which maps to engine centre-Y");
                 assertTrue(mockSprite.getY() <= killThreshold,
                                 "Top-left getY must NOT exceed threshold so this proves centre-Y comparison");
@@ -693,7 +686,7 @@ public class TestPlayableSpriteMovement {
                 // S3K must not fire just because top-left getY would also be
                 // below. Confirms the centre-Y compare is not stricter than
                 // ROM in the negative direction.
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setHeight(24);
 
                 int maxY = 0x02B8;
@@ -917,7 +910,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void s3kSlopeResistCanStartGroundVelocityFromRest() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);
                 mockSprite.setAngle((byte) 0x30);
@@ -1012,7 +1005,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void s2FixedSkidDustTicksWhileAirborneStopAnimationPersists() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
                 objectManagerField.setAccessible(true);
                 objectManagerField.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
@@ -1040,7 +1033,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void s2GroundedFixedSkidDustAllocatesFromPostMovementPosition() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
                 objectManagerField.setAccessible(true);
                 objectManagerField.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
@@ -1097,7 +1090,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void s2FixedSkidDustDoesNotTickDuringHurtRoutine() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
                 objectManagerField.setAccessible(true);
                 objectManagerField.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
@@ -1401,7 +1394,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void s2ObjectOnlyPinballGuardDoesNotBlockRollingJump() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(true);
                 mockSprite.setPinballMode(true);
@@ -1427,7 +1420,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void s2RomBackedPinballStillBlocksRollingJump() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(true);
                 mockSprite.setPinballMode(true);
@@ -1596,7 +1589,7 @@ public class TestPlayableSpriteMovement {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
 
                 Tails tails = new Tails("tails", (short) 0, (short) 0);
-                setPhysicsFeatureSetForTest(tails, PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(tails, GameRules.SONIC_3K);
                 PlayableSpriteMovement tailsMovement = new PlayableSpriteMovement(tails);
 
                 GameServices.camera().setMinX((short) 0);
@@ -1631,7 +1624,7 @@ public class TestPlayableSpriteMovement {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
 
                 Tails tails = new Tails("tails_p2", (short) 0, (short) 0);
-                setPhysicsFeatureSetForTest(tails, PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(tails, GameRules.SONIC_3K);
                 CollisionSystem collisionSystem = new NoGroundAttachmentCollisionSystem();
                 PlayableSpriteMovement tailsMovement = new PlayableSpriteMovement(tails, collisionSystem, GameServices.gameState());
                 installRuntimeCollisionSystem(collisionSystem);
@@ -1672,7 +1665,7 @@ public class TestPlayableSpriteMovement {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
 
                 Tails tails = new Tails("tails_p2", (short) 0, (short) 0);
-                setPhysicsFeatureSetForTest(tails, PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(tails, GameRules.SONIC_3K);
                 CollisionSystem collisionSystem = new StableGroundCollisionSystem();
                 PlayableSpriteMovement tailsMovement = new PlayableSpriteMovement(tails, collisionSystem, GameServices.gameState());
                 installRuntimeCollisionSystem(collisionSystem);
@@ -1705,7 +1698,7 @@ public class TestPlayableSpriteMovement {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
 
                 Tails tails = new Tails("tails_p2", (short) 0, (short) 0);
-                setPhysicsFeatureSetForTest(tails, PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(tails, GameRules.SONIC_3K);
                 CollisionSystem collisionSystem = new PushCollisionVelocitySystem();
                 PlayableSpriteMovement tailsMovement = new PlayableSpriteMovement(tails, collisionSystem, GameServices.gameState());
                 installRuntimeCollisionSystem(collisionSystem);
@@ -1817,7 +1810,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void s3kRollEntryClearsGroundPush() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);
                 mockSprite.setCrouching(false);
@@ -1837,7 +1830,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void slidingStatusSuppressesManualDownRoll() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);
                 mockSprite.setSliding(true);
@@ -1883,7 +1876,7 @@ public class TestPlayableSpriteMovement {
                 // active (sonic3k.asm:27796-27797), but Tails_Stand_Path still calls
                 // Tails_Roll afterward (sonic3k.asm:27523-27524), and Tails_Roll has
                 // no move_lock gate before entering roll (sonic3k.asm:28461-28472).
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setCpuControlled(true);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);
@@ -2143,7 +2136,7 @@ public class TestPlayableSpriteMovement {
         @Test
         public void s3kBubbleShieldSteepLandingCopiesPostBounceYSpeedToGroundSpeed() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setInWater(true);
                 mockSprite.giveShield(ShieldType.BUBBLE);
                 mockSprite.setDoubleJumpFlag(1);
@@ -2442,7 +2435,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void testSlopeRepelAddsDownhillKickBeforeMoveLock() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAir(false);
                 mockSprite.setOnObject(false);
                 mockSprite.setStickToConvex(false);
@@ -2463,7 +2456,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void testSlopeRepelSetsAirOnSteepSlipRange() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAir(false);
                 mockSprite.setOnObject(false);
                 mockSprite.setStickToConvex(false);
@@ -2484,7 +2477,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void testSlopeRepelMoveLockCountsDownWhileObjectSupported() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setAir(false);
                 mockSprite.setOnObject(true);
                 mockSprite.setStickToConvex(false);
@@ -2505,7 +2498,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void testS3kLandingPreservesRollingInPinballMode() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setRolling(true);
                 mockSprite.setPinballMode(true);
                 mockSprite.setAir(true);
@@ -2522,7 +2515,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void testLandingClearingRollUsesCurrentStandingRadiusDelta() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setGroundMode(GroundMode.GROUND);
                 mockSprite.setCentreY((short) 0x0D40);
                 mockSprite.setRolling(true);
@@ -2545,7 +2538,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void testS2LandingClearingRollUsesFixedLiftEvenWithStandingRadius() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setGroundMode(GroundMode.GROUND);
                 mockSprite.setCentreY((short) 0x0D40);
                 mockSprite.setRolling(true);
@@ -2568,7 +2561,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void testLandingClearingRollStillLiftsFromRollingRadius() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setGroundMode(GroundMode.GROUND);
                 mockSprite.setCentreY((short) 0x0D40);
                 mockSprite.setRolling(true);
@@ -2589,7 +2582,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void testS2LandingPreservesRollingInPinballMode() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setRolling(true);
                 mockSprite.setPinballMode(true);
                 mockSprite.setAir(true);
@@ -2606,7 +2599,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void testS3kRollStopAnimationChangeClearsPushing() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
                                 .setIdleAnimId(5)
                                 .setRollAnimId(2));
@@ -2630,7 +2623,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void testS3kFacingFlipClearsLeftWallPushLatchLikeRom() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);
                 mockSprite.setDirection(Direction.RIGHT);
@@ -2658,7 +2651,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void airborneFacingFlipPreservesPushLikeRomJumpDirectionControl() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setAir(true);
                 mockSprite.setRolling(false);
                 mockSprite.setDirection(Direction.LEFT);
@@ -2677,7 +2670,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void groundedFacingFlipRestartsWalkScriptLikeRomPrevAnimSentinel() throws Exception {
-                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                setGameRulesForTest(GameRules.SONIC_3K);
                 SpriteAnimationSet animations = new SpriteAnimationSet();
                 animations.addScript(0, new SpriteAnimationScript(0xFF,
                                 List.of(10, 11, 12, 13), SpriteAnimationEndAction.LOOP, 0));

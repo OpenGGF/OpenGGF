@@ -136,7 +136,7 @@ public final class LevelFrameStep {
         //     so the player's same-frame Sonic_Water underwater check reads the
         //     just-moved level. S3K runs Handle_Onscreen_Water_Height AFTER the
         //     object loop, so it keeps the move in step 6 (LevelManager.update).
-        //     Gated by PhysicsFeatureSet.advanceWaterLevelBeforePlayerPhysics().
+        //     Gated by CollisionRules.advanceWaterLevelBeforePlayerPhysics().
         if (levelManager.advanceWaterLevelBeforePlayerPhysics()) {
             wrapper.wrap("water-move", levelManager::advanceDynamicWaterLevel);
         }

@@ -261,7 +261,7 @@ public interface GameModule {
     /**
      * Returns the physics provider for this game.
      * Provides per-character physics profiles, modifier rules (water/speed shoes),
-     * and feature flags (spindash availability).
+     * and typed game rules (spindash availability, collision model, and runtime gates).
      *
      * @return the physics provider
      */

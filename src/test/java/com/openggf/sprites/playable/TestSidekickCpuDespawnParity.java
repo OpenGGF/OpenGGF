@@ -3,7 +3,7 @@ package com.openggf.sprites.playable;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
@@ -64,8 +64,8 @@ class TestSidekickCpuDespawnParity {
         @Override
         protected void createSensorLines() {}
 
-        void usePhysicsFeatureSet(PhysicsFeatureSet featureSet) {
-            setPhysicsFeatureSet(featureSet);
+        void useGameRules(GameRules featureSet) {
+            super.setGameRulesForTest(featureSet);
         }
 
         void useS3kTailsRadii() {
@@ -187,7 +187,7 @@ class TestSidekickCpuDespawnParity {
     void s2FlyingRespawnTimeoutReturnsToSpawningAtZeroMarker() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x2375);
         tails.setCentreY((short) 0x03D9);
@@ -229,7 +229,7 @@ class TestSidekickCpuDespawnParity {
         sonic.resetPositionAndStatTableHistory();
 
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1C97);
         tails.setCentreY((short) 0x04AD);
@@ -269,7 +269,7 @@ class TestSidekickCpuDespawnParity {
         sonic.resetPositionAndStatTableHistory();
 
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0423);
         tails.setCentreY((short) 0x03A9);
@@ -309,7 +309,7 @@ class TestSidekickCpuDespawnParity {
         sonic.resetPositionAndStatTableHistory();
 
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x2908);
         tails.setCentreY((short) 0x0682);
@@ -354,7 +354,7 @@ class TestSidekickCpuDespawnParity {
     void s3kDespawnMarkerReturnsToCatchUpFlightRoutine() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0545);
         tails.setCentreY((short) 0x0270);
@@ -389,7 +389,7 @@ class TestSidekickCpuDespawnParity {
     void s3kSonicSidekickDespawnUsesRunInRespawnStrategy() {
         TestableSprite leader = new TestableSprite("tails");
         TestableSprite sonicSidekick = new TestableSprite("sonic_p2");
-        sonicSidekick.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonicSidekick.useGameRules(GameRules.SONIC_3K);
         sonicSidekick.setCpuControlled(true);
         sonicSidekick.setCentreX((short) 0x0545);
         sonicSidekick.setCentreY((short) 0x0270);
@@ -411,7 +411,7 @@ class TestSidekickCpuDespawnParity {
     void s3kDespawnMarkerClearsRollStatusWithoutRestoringRadii() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.useS3kTailsRadii();
         tails.setCpuControlled(true);
         tails.setRolling(true);
@@ -435,7 +435,7 @@ class TestSidekickCpuDespawnParity {
     void levelBoundaryKillRunsTailsTouchFloorBeforeDeathState() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.useS3kTailsRadii();
         tails.setCpuControlled(true);
         tails.setRolling(true);
@@ -485,7 +485,7 @@ class TestSidekickCpuDespawnParity {
     void s3kSonicSidekickLevelBoundaryKillUsesDeathAnimation() {
         TestableSprite leader = new TestableSprite("tails");
         TestableSprite sonicSidekick = new TestableSprite("sonic_p2");
-        sonicSidekick.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonicSidekick.useGameRules(GameRules.SONIC_3K);
         sonicSidekick.setCpuControlled(true);
         sonicSidekick.setCentreX((short) 0x2D90);
         sonicSidekick.setCentreY((short) 0x0402);
@@ -509,7 +509,7 @@ class TestSidekickCpuDespawnParity {
     void s3kLevelBoundaryKillPreservesCpuGlobalsUntilDespawnMarker() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.useS3kTailsRadii();
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x2D40);
@@ -581,7 +581,7 @@ class TestSidekickCpuDespawnParity {
     void s2LevelBoundaryKillPreservesPanicCpuRoutineUntilDespawnMarker() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x2679);
         tails.setCentreY((short) 0x02E9);
@@ -604,7 +604,7 @@ class TestSidekickCpuDespawnParity {
     void groundedPushAutoJumpFlagPersistsOnPushBypassLikeRom() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setAir(false);
         tails.setPushing(true);
@@ -643,7 +643,7 @@ class TestSidekickCpuDespawnParity {
     void s2DeadFallWaitsForTailsMaxYPlus100BeforeDespawnMarker() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1800);
         tails.setCentreY((short) 0x04FF);
@@ -667,7 +667,7 @@ class TestSidekickCpuDespawnParity {
     void s2DeadFallAppliesDespawnMarkerAfterTailsMaxYPlus100Threshold() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1800);
         tails.setCentreY((short) 0x0501);
@@ -694,7 +694,7 @@ class TestSidekickCpuDespawnParity {
     void s3kDeadFallWaitsForCameraYPlus100BeforeDespawnMarker() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x493F);
         tails.setCentreY((short) 0x022F);
@@ -725,7 +725,7 @@ class TestSidekickCpuDespawnParity {
     void s3kDeadFallAppliesDespawnMarkerAfterCameraYPlus100Threshold() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x493F);
         tails.setCentreY((short) 0x0260);
@@ -756,7 +756,7 @@ class TestSidekickCpuDespawnParity {
     void s3kOffscreenDestroyedRideSlotDespawnsEvenWhenInteractIdIsUnchanged() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x12BE);
         tails.setCentreY((short) 0x08A9);
@@ -785,7 +785,7 @@ class TestSidekickCpuDespawnParity {
         installEmptyObjectManager();
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x142C);
         tails.setCentreY((short) 0x0AB0);
@@ -816,7 +816,7 @@ class TestSidekickCpuDespawnParity {
     void s3kDiagnosticInteractDefaultsToClearedRomWord() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
 
@@ -829,7 +829,7 @@ class TestSidekickCpuDespawnParity {
     void s2DiagnosticInteractKeepsUnsetSentinelUntilFirstSnapshotRefresh() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
 
@@ -842,7 +842,7 @@ class TestSidekickCpuDespawnParity {
     void s3kDiagnosticInteractHydratesRecordedPointerWord() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.hydrateFromRomCpuState(6, 0, 0, 0x0004, false, 0, 0);
@@ -856,7 +856,7 @@ class TestSidekickCpuDespawnParity {
     void s3kDiagnosticInteractRefreshesOnCpuUpdateAfterLanding() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.hydrateFromRomCpuState(6, 0, 0, 0, false, tails.getCentreX(), tails.getCentreY());
@@ -881,7 +881,7 @@ class TestSidekickCpuDespawnParity {
     void s3kEstablishedFollowerHandoffPreservesDiagnosticInteractWord() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.hydrateFromRomCpuState(6, 0, 0, 0x0004, false, 0x2FC5, 0x037A);
@@ -904,7 +904,7 @@ class TestSidekickCpuDespawnParity {
     void s3kDiagnosticInteractPreservesWordWhenStaleRideHasNoRomPointer() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.hydrateFromRomCpuState(6, 0, 0, 0x0004, false, tails.getCentreX(), tails.getCentreY());
@@ -924,7 +924,7 @@ class TestSidekickCpuDespawnParity {
     void s3kDiagnosticInteractRefreshesFromCorkFloorPointerHighWord() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.hydrateFromRomCpuState(6, 0, 0, 0x0004, false, tails.getCentreX(), tails.getCentreY());
@@ -944,7 +944,7 @@ class TestSidekickCpuDespawnParity {
     void s3kDespawnMarkerPreservesDiagnosticInteractWord() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0885);
         tails.setCentreY((short) 0x033B);
@@ -977,7 +977,7 @@ class TestSidekickCpuDespawnParity {
     void s2DestroyedRideSlotDespawnsThroughFreedObjectIdMismatch() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x12BE);
         tails.setCentreY((short) 0x08A9);
@@ -1047,7 +1047,7 @@ class TestSidekickCpuDespawnParity {
         installEmptyObjectManager();
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x02BC);
         tails.setCentreY((short) 0x0250);
@@ -1084,8 +1084,8 @@ class TestSidekickCpuDespawnParity {
         installEmptyObjectManager();
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
-        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
+        GameRules base = GameRules.SONIC_2;
         ObjectInteractionRules objectRules = base.objectInteraction();
         setGameRulesForTest(tails, withObjectInteractionRules(base, new ObjectInteractionRules(
                 objectRules.bossHitNegatesGroundSpeed(),
@@ -1209,7 +1209,7 @@ class TestSidekickCpuDespawnParity {
 
     private static TestableSprite createS2Ooz2FreshRenderEntrySidekick() {
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0F38);
         tails.setCentreY((short) 0x0296);
@@ -1230,7 +1230,7 @@ class TestSidekickCpuDespawnParity {
     }
 
     private static void seedDelayedLeaderStatus(TestableSprite sonic, byte delayedStatus, boolean delayedLeftInput) {
-        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        sonic.useGameRules(GameRules.SONIC_2);
         sonic.setCentreX((short) 0x08FB);
         sonic.setCentreY((short) 0x01AC);
         sonic.resetPositionAndStatTableHistory();
@@ -1262,7 +1262,7 @@ class TestSidekickCpuDespawnParity {
 
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCentreX((short) 0x1C8B);
         tails.setCentreY((short) 0x03C0);
         tails.setInvulnerableFrames(0x02);
@@ -1309,7 +1309,7 @@ class TestSidekickCpuDespawnParity {
         // because Tails has one invulnerability frame remaining, and only hurts at
         // frame 7724 once the timer reaches 0.
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCentreX((short) 0x11E6);
         tails.setInvulnerableFrames(1);
 
@@ -1330,7 +1330,7 @@ class TestSidekickCpuDespawnParity {
     void s3kHurtRoutineDoesNotAdvanceNormalDespawnTimer() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0B04);
         tails.setCentreY((short) 0x0DF2);
@@ -1358,7 +1358,7 @@ class TestSidekickCpuDespawnParity {
     void s3kHurtRoutineDoesNotAdvancePanicDespawnTimer() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0B04);
         tails.setCentreY((short) 0x0DF2);
@@ -1424,7 +1424,7 @@ class TestSidekickCpuDespawnParity {
         installEmptyObjectManager();
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0399);
         tails.setCentreY((short) 0x03C2);
@@ -1454,7 +1454,7 @@ class TestSidekickCpuDespawnParity {
     void panicRoutineClearsTraceVisibleCtrl2LatchFromPreviousFollowStep() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x138C);
         tails.setCentreY((short) 0x0324);
@@ -1488,7 +1488,7 @@ class TestSidekickCpuDespawnParity {
     void panicRoutineWritesDownIntoTraceVisibleCtrl2LatchWhileCharging() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1444);
         tails.setCentreY((short) 0x043D);
@@ -1509,7 +1509,7 @@ class TestSidekickCpuDespawnParity {
     void s2PanicTreatsEnginePinballModeAsSpindashBranch() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1444);
         tails.setCentreY((short) 0x043D);
@@ -1531,7 +1531,7 @@ class TestSidekickCpuDespawnParity {
     void panicContinuesAfterCheckDespawnMarkerAndRewritesCtrl2Latch() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0100);
         tails.setCentreY((short) 0x0200);
@@ -1559,7 +1559,7 @@ class TestSidekickCpuDespawnParity {
     @Test
     void normalRoutineUsesDelayedLogicalJumpPressHistory() {
         TestableSprite sonic = new TestableSprite("sonic");
-        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonic.useGameRules(GameRules.SONIC_3K);
         sonic.setCentreX((short) 0x1200);
         sonic.setCentreY((short) 0x0324);
         sonic.setLogicalInputState(false, false, false, true, true, true);
@@ -1571,7 +1571,7 @@ class TestSidekickCpuDespawnParity {
         }
 
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1100);
         tails.setCentreY((short) 0x0324);
@@ -1591,7 +1591,7 @@ class TestSidekickCpuDespawnParity {
     @Test
     void normalRoutineClearsRepeatedDelayedJumpPressHistoryAfterFirstS3kSample() {
         TestableSprite sonic = new TestableSprite("sonic");
-        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonic.useGameRules(GameRules.SONIC_3K);
         sonic.setCentreX((short) 0x1200);
         sonic.setCentreY((short) 0x0324);
         sonic.setLogicalInputState(false, false, false, true, true, true);
@@ -1604,7 +1604,7 @@ class TestSidekickCpuDespawnParity {
         }
 
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1100);
         tails.setCentreY((short) 0x0324);
@@ -1624,7 +1624,7 @@ class TestSidekickCpuDespawnParity {
     @Test
     void groundedPinballSuppressesJumpMovementButPreservesCtrl2PressDiagnostic() {
         TestableSprite sonic = new TestableSprite("sonic");
-        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonic.useGameRules(GameRules.SONIC_3K);
         sonic.setCentreX((short) 0x1200);
         sonic.setCentreY((short) 0x0324);
         sonic.setLogicalInputState(false, false, false, true, true, true);
@@ -1636,7 +1636,7 @@ class TestSidekickCpuDespawnParity {
         }
 
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useGameRules(GameRules.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1100);
         tails.setCentreY((short) 0x0324);
@@ -1662,12 +1662,12 @@ class TestSidekickCpuDespawnParity {
     @Test
     void s2DeadSidekickRoutinePreservesPreviousCtrl2LogicalLatch() {
         TestableSprite sonic = new TestableSprite("sonic");
-        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        sonic.useGameRules(GameRules.SONIC_2);
         sonic.setCentreX((short) 0x1200);
         sonic.setCentreY((short) 0x0324);
 
         TestableSprite tails = new TestableSprite("tails_p2");
-        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1100);
         tails.setCentreY((short) 0x0340);

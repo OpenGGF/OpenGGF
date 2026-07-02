@@ -2,8 +2,6 @@ package com.openggf.level.objects;
 
 import com.openggf.game.GameModule;
 import com.openggf.game.InstaShieldHandle;
-import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.PhysicsProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.PowerUpSpawner;
@@ -168,8 +166,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         if (rules != null && rules.powerUp() != null) {
             return rules.powerUp();
         }
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).powerUp() : null;
+        return null;
     }
 
     private ObjectServices objectServices() {
@@ -276,8 +273,6 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
             }
         } catch (IllegalArgumentException | IllegalStateException ignored) {
         }
-        PhysicsProvider provider = module.getPhysicsProvider();
-        PhysicsFeatureSet featureSet = provider != null ? provider.getFeatureSet() : null;
-        return featureSet != null ? GameRules.fromLegacy(featureSet) : null;
+        return null;
     }
 }

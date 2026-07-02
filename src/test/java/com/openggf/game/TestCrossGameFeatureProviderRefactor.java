@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.game.rules.GameRules;
+
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
@@ -54,7 +56,7 @@ class TestCrossGameFeatureProviderRefactor {
     }
 
     @Test
-    void hybridFeatureSetReflectsDonorCapabilities() {
+    void hybridRulesReflectDonorCapabilities() {
         DonorCapabilities s1Caps = new com.openggf.game.sonic1.Sonic1GameModule()
                 .getDonorCapabilities();
         assertFalse(s1Caps.hasSpindash());
@@ -63,27 +65,27 @@ class TestCrossGameFeatureProviderRefactor {
     }
 
     @Test
-    void hybridFeatureSetPreservesBaseBoundaryAndSidekickFlags() throws Exception {
+    void hybridRulesPreserveBaseBoundaryAndSidekickFlags() throws Exception {
         TestEnvironment.configureGameModuleFixture(new com.openggf.game.sonic2.Sonic2GameModule());
         CrossGameFeatureProvider provider = new CrossGameFeatureProvider(null, null);
         setField(provider, "donorGameId", GameId.S3K);
         setField(provider, "donorCapabilities", new StubDonorCapabilities());
 
-        PhysicsFeatureSet hybrid = invokeBuildHybridFeatureSet(provider);
-        PhysicsFeatureSet base = PhysicsFeatureSet.SONIC_2;
+        GameRules hybrid = invokeBuildHybridRules(provider);
+        GameRules base = GameRules.SONIC_2;
 
         assertHybridPreservesBaseExceptDonatedCapabilities(base, hybrid);
-        assertEquals(base.sidekickPushBypassUsesGraceStatus(), hybrid.sidekickPushBypassUsesGraceStatus());
-        assertEquals(base.sidekickClearsStalePushVelocityBeforeGroundMove(),
-                hybrid.sidekickClearsStalePushVelocityBeforeGroundMove());
-        assertEquals(base.sidekickCpuUsesLevelFrameCounter(), hybrid.sidekickCpuUsesLevelFrameCounter());
-        assertEquals(base.landingRollClearUsesCurrentYRadiusDelta(),
-                hybrid.landingRollClearUsesCurrentYRadiusDelta());
-        assertEquals(base.levelBoundaryRightStrict(), hybrid.levelBoundaryRightStrict());
-        assertEquals(base.levelBoundaryUsesCentreY(), hybrid.levelBoundaryUsesCentreY());
-        assertEquals(base.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(),
-                hybrid.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity());
-        assertEquals(base.sidekickNormalCpuSkipsHurtRoutine(), hybrid.sidekickNormalCpuSkipsHurtRoutine());
+        assertEquals(base.collision().sidekickPushBypassUsesGraceStatus(), hybrid.collision().sidekickPushBypassUsesGraceStatus());
+        assertEquals(base.collision().sidekickClearsStalePushVelocityBeforeGroundMove(),
+                hybrid.collision().sidekickClearsStalePushVelocityBeforeGroundMove());
+        assertEquals(base.sidekickCpu().sidekickCpuUsesLevelFrameCounter(), hybrid.sidekickCpu().sidekickCpuUsesLevelFrameCounter());
+        assertEquals(base.playerMovement().landingRollClearUsesCurrentYRadiusDelta(),
+                hybrid.playerMovement().landingRollClearUsesCurrentYRadiusDelta());
+        assertEquals(base.playerMovement().levelBoundaryRightStrict(), hybrid.playerMovement().levelBoundaryRightStrict());
+        assertEquals(base.playerMovement().levelBoundaryUsesCentreY(), hybrid.playerMovement().levelBoundaryUsesCentreY());
+        assertEquals(base.collision().solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(),
+                hybrid.collision().solidObjectTopBranchAlwaysLiftsOnUpwardVelocity());
+        assertEquals(base.objectInteraction().sidekickNormalCpuSkipsHurtRoutine(), hybrid.objectInteraction().sidekickNormalCpuSkipsHurtRoutine());
     }
 
     @Test
@@ -113,27 +115,35 @@ class TestCrossGameFeatureProviderRefactor {
         field.set(target, value);
     }
 
-    private static PhysicsFeatureSet invokeBuildHybridFeatureSet(CrossGameFeatureProvider provider) throws Exception {
-        Method method = CrossGameFeatureProvider.class.getDeclaredMethod("buildHybridFeatureSet");
+    private static GameRules invokeBuildHybridRules(CrossGameFeatureProvider provider) throws Exception {
+        Method method = CrossGameFeatureProvider.class.getDeclaredMethod("buildHybridRules", GameRules.class);
         method.setAccessible(true);
-        return (PhysicsFeatureSet) method.invoke(provider);
+        return (GameRules) method.invoke(provider, GameRules.SONIC_3K);
     }
 
     private static void assertHybridPreservesBaseExceptDonatedCapabilities(
-            PhysicsFeatureSet base, PhysicsFeatureSet hybrid) throws Exception {
+            GameRules base, GameRules hybrid) throws Exception {
         Set<String> donorFields = Set.of(
                 "spindashEnabled",
                 "spindashSpeedTable",
                 "elementalShieldsEnabled",
                 "instaShieldEnabled",
                 "lightningShieldEnabled");
-        for (RecordComponent component : PhysicsFeatureSet.class.getRecordComponents()) {
-            if (donorFields.contains(component.getName())) {
+        for (RecordComponent component : GameRules.class.getRecordComponents()) {
+            if ("playerCapability".equals(component.getName())) {
                 continue;
             }
             Method accessor = component.getAccessor();
             assertEquals(accessor.invoke(base), accessor.invoke(hybrid),
-                    "Hybrid physics must preserve base component " + component.getName());
+                    "Hybrid rules must preserve base component " + component.getName());
+        }
+        for (RecordComponent component : base.playerCapability().getClass().getRecordComponents()) {
+            if (donorFields.contains(component.getName())) {
+                continue;
+            }
+            Method accessor = component.getAccessor();
+            assertEquals(accessor.invoke(base.playerCapability()), accessor.invoke(hybrid.playerCapability()),
+                    "Hybrid rules must preserve host player capability component " + component.getName());
         }
     }
 
@@ -165,5 +175,4 @@ class TestCrossGameFeatureProviderRefactor {
         return palette;
     }
 }
-
 

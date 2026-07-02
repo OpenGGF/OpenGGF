@@ -4,11 +4,12 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rewind.snapshot.RingSnapshot;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
+import com.openggf.game.rules.RingRules;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -122,7 +123,7 @@ public class TestRingManager {
         ringManager.reset(0);
 
         TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
-        player.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.useGameRules(GameRules.SONIC_3K);
 
         ringManager.collectStageRings(player, 0);
 
@@ -161,7 +162,7 @@ public class TestRingManager {
         ringManager.reset(0);
 
         TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
-        player.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.useGameRules(GameRules.SONIC_3K);
         player.setInvulnerableFrames(90);
 
         ringManager.collectStageRings(player, 0);
@@ -178,39 +179,39 @@ public class TestRingManager {
     }
 
     @Test
-    public void testStageRingCollectionFallsBackToLegacyFeatureSetWhenGameRulesMissing() {
+    public void testStageRingCollectionUsesTypedRingRules() {
         RingSpawn spawn = new RingSpawn(120, 100);
         RingManager ringManager = buildRingManager(List.of(spawn));
         ringManager.reset(0);
 
-        LegacyOnlyRulesSprite player = new LegacyOnlyRulesSprite((short) 100, (short) 100);
-        player.useLegacyFeatureSet(customRingCollisionFeatureSet(12));
+        TypedOnlyRulesSprite player = new TypedOnlyRulesSprite((short) 100, (short) 100,
+                customRingCollisionRules(12));
 
         ringManager.collectStageRings(player, 0);
 
         assertTrue(ringManager.isCollected(spawn),
-                "Ring geometry should come from the legacy feature set when typed rules are absent");
+                "Ring geometry should come from typed ring rules");
         assertEquals(1, player.getRingCount());
     }
 
     @Test
-    public void testLightningAttractionFallsBackToLegacyFeatureSetWhenGameRulesMissing() {
+    public void testLightningAttractionUsesTypedRingRules() {
         RingSpawn spawn = new RingSpawn(175, 100);
         RingManager ringManager = buildRingManager(List.of(spawn));
         ringManager.reset(0);
 
-        LegacyOnlyRulesSprite player = new LegacyOnlyRulesSprite((short) 100, (short) 100);
-        player.useLegacyFeatureSet(customRingCollisionFeatureSet(12));
+        TypedOnlyRulesSprite player = new TypedOnlyRulesSprite((short) 100, (short) 100,
+                customRingCollisionRules(12));
         player.giveShield(ShieldType.LIGHTNING);
 
         ringManager.update(0, player, 0);
 
         assertTrue(ringManager.isCollected(spawn),
-                "Lightning attraction geometry should come from the legacy feature set when typed rules are absent");
+                "Lightning attraction geometry should come from typed ring rules");
     }
 
     @Test
-    public void testLightningAttractionUsesTypedCapabilityRulesWithoutLegacyFeatureSet() {
+    public void testLightningAttractionUsesTypedCapabilityRulesWithoutLegacyGameRules() {
         RingSpawn spawn = new RingSpawn(169, 100);
         RingManager ringManager = buildRingManager(List.of(spawn));
         ringManager.reset(0);
@@ -222,11 +223,11 @@ public class TestRingManager {
         ringManager.update(0, player, 0);
 
         assertTrue(ringManager.isCollected(spawn),
-                "Typed player capability rules should enable lightning attraction without a legacy feature set");
+                "Typed player capability rules should enable lightning attraction without a legacy game rules");
     }
 
     @Test
-    public void testLightningAttractionDisabledByTypedCapabilityRulesWithoutLegacyFeatureSet() {
+    public void testLightningAttractionDisabledByTypedCapabilityRulesWithoutLegacyGameRules() {
         RingSpawn spawn = new RingSpawn(169, 100);
         RingManager ringManager = buildRingManager(List.of(spawn));
         ringManager.reset(0);
@@ -238,7 +239,7 @@ public class TestRingManager {
         ringManager.update(0, player, 0);
 
         assertFalse(ringManager.isCollected(spawn),
-                "Typed player capability rules should disable lightning attraction without a legacy feature set");
+                "Typed player capability rules should disable lightning attraction without a legacy game rules");
     }
 
     @Test
@@ -248,7 +249,7 @@ public class TestRingManager {
         ringManager.reset(0);
 
         TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
-        player.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_1);
+        player.useGameRules(GameRules.SONIC_1);
         player.setInvulnerableFrames(90);
 
         assertFalse(ringManager.collectPlacedRing(spawn, player, 0),
@@ -400,7 +401,7 @@ public class TestRingManager {
                 }));
 
         TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
-        player.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.useGameRules(GameRules.SONIC_3K);
         player.giveShield(ShieldType.LIGHTNING);
 
         ringManager.update(0, player, 0);
@@ -536,28 +537,31 @@ public class TestRingManager {
         field.set(target, value);
     }
 
-    private PhysicsFeatureSet customRingCollisionFeatureSet(int ringCollisionHalfSize) {
-        try {
-            RecordComponent[] components = PhysicsFeatureSet.class.getRecordComponents();
-            Class<?>[] parameterTypes = new Class<?>[components.length];
-            Object[] values = new Object[components.length];
-            PhysicsFeatureSet source = PhysicsFeatureSet.SONIC_3K;
-            for (int i = 0; i < components.length; i++) {
-                RecordComponent component = components[i];
-                parameterTypes[i] = component.getType();
-                values[i] = switch (component.getName()) {
-                    case "ringCollisionWidth", "ringCollisionHeight" -> ringCollisionHalfSize;
-                    default -> component.getAccessor().invoke(source);
-                };
-            }
-            return PhysicsFeatureSet.class.getDeclaredConstructor(parameterTypes).newInstance(values);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Failed to build custom ring collision feature set", e);
-        }
+    private GameRules customRingCollisionRules(int ringCollisionHalfSize) {
+        GameRules source = GameRules.SONIC_3K;
+        RingRules ringRules = source.ring();
+        RingRules customRingRules = new RingRules(
+                ringRules.ringFloorCheckMask(),
+                ringRules.ringFloorProbeRequiresRenderFlag(),
+                ringCollisionHalfSize,
+                ringCollisionHalfSize,
+                ringRules.stageRingsUseObjectTouchCollection(),
+                ringRules.stageRingSweepUsesRawCameraWindow());
+        return new GameRules(
+                source.playerMovement(),
+                source.playerCapability(),
+                source.collision(),
+                source.playerAnimation(),
+                source.camera(),
+                customRingRules,
+                source.objectInteraction(),
+                source.sidekickCpu(),
+                source.powerUp(),
+                source.drowningBubble());
     }
 
     private GameRules gameRulesWithLightningShieldCapability(boolean enabled) {
-        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_3K);
+        GameRules base = GameRules.SONIC_3K;
         PlayerCapabilityRules capability = base.playerCapability();
         PlayerCapabilityRules playerCapability = new PlayerCapabilityRules(
                 capability.spindashEnabled(),
@@ -605,8 +609,8 @@ public class TestRingManager {
             setCentreY(y);
         }
 
-        private void usePhysicsFeatureSet(PhysicsFeatureSet featureSet) {
-            setPhysicsFeatureSet(featureSet);
+        private void useGameRules(GameRules featureSet) {
+            super.setGameRulesForTest(featureSet);
         }
 
         @Override
@@ -658,32 +662,12 @@ public class TestRingManager {
         }
     }
 
-    private static final class LegacyOnlyRulesSprite extends TestPlayableSprite {
-        private LegacyOnlyRulesSprite(short x, short y) {
-            super(x, y);
-        }
-
-        private void useLegacyFeatureSet(PhysicsFeatureSet featureSet) {
-            setPhysicsFeatureSet(featureSet);
-        }
-
-        @Override
-        public GameRules getGameRules() {
-            return null;
-        }
-    }
-
     private static final class TypedOnlyRulesSprite extends TestPlayableSprite {
         private final GameRules gameRules;
 
         private TypedOnlyRulesSprite(short x, short y, GameRules gameRules) {
             super(x, y);
             this.gameRules = gameRules;
-        }
-
-        @Override
-        public PhysicsFeatureSet getPhysicsFeatureSet() {
-            return null;
         }
 
         @Override

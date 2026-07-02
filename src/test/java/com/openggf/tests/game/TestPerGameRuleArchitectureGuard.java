@@ -19,7 +19,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -30,26 +29,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestPerGameRuleArchitectureGuard {
 
     private static final Path MAIN_SOURCE_ROOT = Path.of("src/main/java");
-    private static final Path BRIDGE_BASELINE =
-            Path.of("src/test/resources/architecture/physics-feature-set-bridge-baseline.txt");
     private static final Pattern LEGACY_FEATURE_SET_USAGE =
-            Pattern.compile("\\bgetPhysicsFeatureSet\\s*\\(|\\bgetFeatureSet\\s*\\(|\\bPhysicsFeatureSet\\b");
+            Pattern.compile("\\bgetPhysicsFeatureSet\\s*\\(|\\bPhysicsFeatureSet\\b");
     private static final Pattern BLOCK_COMMENT = Pattern.compile("/\\*.*?\\*/", Pattern.DOTALL);
     private static final Pattern LINE_COMMENT = Pattern.compile("//.*$", Pattern.MULTILINE);
     private static final int MAX_RULE_COMPONENTS = 20;
     // Existing migration surface: keep it frozen until the next split, and do not let other groups grow this large.
     private static final Map<Class<? extends Record>, Integer> FROZEN_RULE_COMPONENT_LIMITS = Map.of(
             PlayerMovementRules.class, 21
-    );
-
-    private static final List<String> FEATURE_SET_OWNERS = List.of(
-            "src/main/java/com/openggf/game/rules/",
-            "src/main/java/com/openggf/game/PhysicsFeatureSet.java",
-            "src/main/java/com/openggf/game/PhysicsProvider.java",
-            "src/main/java/com/openggf/game/PlayableEntity.java",
-            "src/main/java/com/openggf/game/sonic1/Sonic1PhysicsProvider.java",
-            "src/main/java/com/openggf/game/sonic2/Sonic2PhysicsProvider.java",
-            "src/main/java/com/openggf/game/sonic3k/Sonic3kPhysicsProvider.java"
     );
 
     private static final List<Class<? extends Record>> RULE_RECORDS = List.of(
@@ -67,14 +54,31 @@ class TestPerGameRuleArchitectureGuard {
     );
 
     @Test
-    void noNewRuntimePhysicsFeatureSetBridgeUsers() throws IOException {
-        Set<String> expected = loadBaseline();
-        Set<String> actual = findLegacyFeatureSetUsers();
+    void productionCodeDoesNotUseLegacyPhysicsFeatureSet() throws IOException {
+        TreeSet<String> actual = findLegacyFeatureSetUsers();
 
-        assertEquals(expected, actual, () -> """
-                Runtime code should consume typed GameRules groups instead of adding broad PhysicsFeatureSet users.
-                If a file disappeared, remove it from the baseline. If a file appeared, migrate it to the narrowest
-                typed rule/provider/profile owner or document the bridge-era exception before updating the baseline.
+        assertTrue(actual.isEmpty(), () -> """
+                Production code must consume typed GameRules groups directly.
+                Remove PhysicsFeatureSet references, getPhysicsFeatureSet() APIs, and legacy rule conversion
+                instead of adding a new baseline entry.
+                Remaining files:
+                """ + String.join(System.lineSeparator(), actual));
+        assertTrue(Files.notExists(MAIN_SOURCE_ROOT.resolve("com/openggf/game/PhysicsFeatureSet.java")),
+                "PhysicsFeatureSet should be deleted after typed GameRules fully own per-game gates");
+    }
+
+    @Test
+    void ruleRecordsDoNotExposeLegacyConversionFactories() {
+        for (Class<? extends Record> ruleRecord : RULE_RECORDS) {
+            assertTrue(Stream.of(ruleRecord.getDeclaredMethods())
+                            .noneMatch(method -> method.getName().equals("fromLegacy")),
+                    () -> ruleRecord.getSimpleName() + " should expose direct constants, not fromLegacy(...)");
+        }
+        assertTrue(Stream.of(GameRules.class.getDeclaredMethods())
+                        .noneMatch(method -> method.getName().equals("fromLegacy")),
+                """
+                GameRules should be constructed from direct per-game constants.
+                A fromLegacy(...) factory keeps legacy conversion as a parallel rule source.
                 """);
     }
 
@@ -97,13 +101,12 @@ class TestPerGameRuleArchitectureGuard {
         }
     }
 
-    private static Set<String> findLegacyFeatureSetUsers() throws IOException {
-        Set<String> result = new TreeSet<>();
+    private static TreeSet<String> findLegacyFeatureSetUsers() throws IOException {
+        TreeSet<String> result = new TreeSet<>();
         try (Stream<Path> files = Files.walk(MAIN_SOURCE_ROOT)) {
             files.filter(Files::isRegularFile)
                     .filter(path -> path.toString().endsWith(".java"))
                     .map(TestPerGameRuleArchitectureGuard::normalize)
-                    .filter(path -> FEATURE_SET_OWNERS.stream().noneMatch(path::startsWith))
                     .filter(TestPerGameRuleArchitectureGuard::containsLegacyFeatureSetUsage)
                     .forEach(result::add);
         }
@@ -122,17 +125,6 @@ class TestPerGameRuleArchitectureGuard {
     private static String stripComments(String source) {
         String withoutBlockComments = BLOCK_COMMENT.matcher(source).replaceAll("");
         return LINE_COMMENT.matcher(withoutBlockComments).replaceAll("");
-    }
-
-    private static Set<String> loadBaseline() throws IOException {
-        Set<String> result = new TreeSet<>();
-        for (String line : Files.readAllLines(BRIDGE_BASELINE)) {
-            String trimmed = line.trim();
-            if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
-                result.add(trimmed);
-            }
-        }
-        return result;
     }
 
     private static String normalize(Path path) {

@@ -3,7 +3,6 @@ package com.openggf.sprites.playable;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.GameSound;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.rules.DrowningBubbleRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.level.objects.BreathingBubbleInstance;
@@ -234,8 +233,7 @@ public class DrowningController {
         // S2/S3K Obj0A_Animate biases the next mouth-bubble delay by +8
         // (RandomNumber&$F)+8 (s2.asm:42201-42204); S1 LZ Obj64 air bubbles use a
         // different bubble-maker structure with no such bias. Drive this from the
-        // per-game drowning bubble rules rather than the loaded bubble art
-        // key; S2 (+8) is the fallback when the feature set is unset.
+        // per-game drowning bubble rules rather than the loaded bubble art key.
         DrowningBubbleRules rules = drowningBubbleRulesOrNull();
         int timerBias = rules != null ? rules.mouthBubbleTimerBias() : 8;
         nextBubbleTimer = rng.nextBits(0x0F) + timerBias;
@@ -370,8 +368,7 @@ public class DrowningController {
         if (gameRules != null && gameRules.drowningBubble() != null) {
             return gameRules.drowningBubble();
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).drowningBubble() : null;
+        return null;
     }
 
     /**

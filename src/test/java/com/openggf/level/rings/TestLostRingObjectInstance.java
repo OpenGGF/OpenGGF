@@ -1,5 +1,7 @@
 package com.openggf.level.rings;
 
+import com.openggf.game.rules.GameRules;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -69,12 +71,12 @@ class TestLostRingObjectInstance {
     }
 
     @Test
-    void floorCheckCadenceReadsFeatureSetMaskS1EveryFourFramesS2EveryEight() {
+    void floorCheckCadenceReadsGameRulesMaskS1EveryFourFramesS2EveryEight() {
         // ROM: per-game floor-check cadence (relocated from RingManager.LostRingPool.updatePhysics,
         // RingManager.java:1242-1248). S1 probes every 4 frames (andi.b #3), S2/S3K every 8 (andi.b #7).
-        // The object must consult PhysicsFeatureSet.ringFloorCheckMask(), not a hardcoded constant.
+        // The object must consult GameRules.ringFloorCheckMask(), not a hardcoded constant.
         ProbeRecordingRing s1Ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
-                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S1,
+                /*mask*/GameRules.SONIC_1.ring().ringFloorCheckMask(),
                 /*reverseGravity*/false);
         // phaseOffset 0: probe fires when (vbla & mask) == 0.
         s1Ring.setVblaForTest(4);   // 4 & 3 == 0 → S1 probes; would NOT probe under S2 mask (4 & 7 == 4)
@@ -82,7 +84,7 @@ class TestLostRingObjectInstance {
         assertEquals(1, s1Ring.floorProbeCount, "S1 (#3 mask) must probe the floor on frame 4");
 
         ProbeRecordingRing s2Ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
-                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
+                /*mask*/GameRules.SONIC_2.ring().ringFloorCheckMask(),
                 /*reverseGravity*/false);
         s2Ring.setVblaForTest(4);   // 4 & 7 == 4 → S2 does NOT probe on frame 4
         s2Ring.stepPhysicsForTest(0x18, true);
@@ -98,7 +100,7 @@ class TestLostRingObjectInstance {
         // which probes the CEILING (RingCheckFloorDist_ReverseGravity, upward) and only when
         // yVel <= 0 (rising). Relocated from RingManager.java:1271-1294.
         ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, /*yVel rising*/-0x0400,
-                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
+                /*mask*/GameRules.SONIC_2.ring().ringFloorCheckMask(),
                 /*reverseGravity*/true);
         ring.setVblaForTest(0);     // 0 & 7 == 0 → probe fires this frame
         ring.stepPhysicsForTest(0x18, true);
@@ -112,7 +114,7 @@ class TestLostRingObjectInstance {
         // (s2.asm:25215-25217): off-screen rings keep moving, but do not
         // bounce on terrain until the render pass has marked them visible.
         ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
-                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
+                /*mask*/GameRules.SONIC_2.ring().ringFloorCheckMask(),
                 /*reverseGravity*/false,
                 /*renderFlagForFloorProbe*/false);
         ring.setVblaForTest(0);
@@ -151,7 +153,7 @@ class TestLostRingObjectInstance {
         // S1 RLoss_Bounce calls ObjFloorDist directly after the vblank cadence gate; unlike S2/S3K,
         // there is no render_flags bit-7 check before the floor probe.
         ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
-                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S1,
+                /*mask*/GameRules.SONIC_1.ring().ringFloorCheckMask(),
                 /*reverseGravity*/false,
                 /*renderFlagForFloorProbe*/false,
                 /*requiresRenderFlagForFloorProbe*/false);
@@ -171,7 +173,7 @@ class TestLostRingObjectInstance {
         // one-tile shortcut, or shallow/sloped terrain bounces too low.
         TerrainBackedRing ring = new TerrainBackedRing(
                 0x4512, 0x07E1, 0x0200, 0x0D1E,
-                com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
+                GameRules.SONIC_2.ring().ringFloorCheckMask(),
                 false,
                 true);
         ring.setVblaForTest(0);
@@ -283,7 +285,7 @@ class TestLostRingObjectInstance {
 
         @Override
         protected int resolveFloorCheckMask() {
-            return com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2;
+            return GameRules.SONIC_2.ring().ringFloorCheckMask();
         }
 
         @Override

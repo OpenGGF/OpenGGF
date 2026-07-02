@@ -1,6 +1,5 @@
 package com.openggf.sprites.managers;
 
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.physics.Direction;
@@ -42,8 +41,7 @@ public class PlayableSpriteAnimation {
         if (rules != null && rules.playerAnimation() != null) {
             return rules.playerAnimation();
         }
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).playerAnimation() : null;
+        return null;
     }
 
     /**

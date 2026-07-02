@@ -9,8 +9,8 @@ import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.SidekickCpuRules;
@@ -40,16 +40,16 @@ public class SidekickCpuController {
     // have consumed it. ROM loc_13DD0 itself uses the same Stat_table entry as
     // the normal delayed control word (sonic3k.asm:26696-26705).
     private static final int OBJECT_ORDER_INPUT_DELAY_FRAMES = 17;
-    /** Fallback used when the sidekick sprite has no PhysicsFeatureSet resolved yet
+    /** Fallback used when the sidekick sprite has no typed rules resolved yet
      *  (e.g. unit tests that bypass the full game-module bootstrap). Matches the S2
      *  value so existing S2 behaviour is preserved. */
     private static final int DEFAULT_HORIZONTAL_SNAP_THRESHOLD =
-            PhysicsFeatureSet.SIDEKICK_FOLLOW_SNAP_S2;
-    /** Fallback used when the sidekick sprite has no PhysicsFeatureSet resolved yet
+            GameRules.SONIC_2.sidekickCpu().sidekickFollowSnapThreshold();
+    /** Fallback used when the sidekick sprite has no typed rules resolved yet
      *  (e.g. unit tests that bypass the full game-module bootstrap). Matches the
      *  S2 placeholder so existing S2 traces/tests are unaffected. */
     private static final int DEFAULT_DESPAWN_X =
-            PhysicsFeatureSet.SIDEKICK_DESPAWN_X_S2;
+            GameRules.SONIC_2.sidekickCpu().sidekickDespawnX();
     private static final int JUMP_DISTANCE_TRIGGER = 64;
     private static final int JUMP_HEIGHT_THRESHOLD = 32;
     private static final int PUSH_STATUS_GRACE_FRAMES = 16;
@@ -351,8 +351,7 @@ public class SidekickCpuController {
         if (rules != null && rules.sidekickCpu() != null) {
             return rules.sidekickCpu();
         }
-        PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).sidekickCpu() : null;
+        return null;
     }
 
     private ObjectInteractionRules objectInteractionRulesOrNull() {
@@ -360,8 +359,15 @@ public class SidekickCpuController {
         if (rules != null && rules.objectInteraction() != null) {
             return rules.objectInteraction();
         }
-        PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).objectInteraction() : null;
+        return null;
+    }
+
+    private CollisionRules collisionRulesOrNull() {
+        GameRules rules = sidekick.getGameRules();
+        if (rules != null && rules.collision() != null) {
+            return rules.collision();
+        }
+        return null;
     }
 
     public void update(int frameCount) {
@@ -1263,7 +1269,7 @@ public class SidekickCpuController {
      * x_pos = $7F00 from sub_13ECA, sonic3k.asm:26800-26809,26374). Only
      * considered when a level-start spawn anchor was captured (so focused unit
      * tests that bypass {@code spawnSidekicks} keep the historical path) and the
-     * sidekick CPU enters via the catch-up-flight feature set (S3K). Gated on
+     * sidekick CPU enters via the catch-up-flight sidekick rules (S3K). Gated on
      * the semantic sentinel position, not the zone.
      */
     private boolean isDormantMarkerSentinelEntry() {
@@ -1517,8 +1523,8 @@ public class SidekickCpuController {
     /**
      * Per-game snap threshold for the follow-AI input override in updateNormal().
      *
-     * <p>Read from the sidekick's physics feature set (ROM parity). Falls back
-     * to the S2 default (0x10) when no feature set is resolved yet — this only
+     * <p>Read from the sidekick's typed CPU rules (ROM parity). Falls back
+     * to the S2 default (0x10) when no rules are resolved yet - this only
      * happens in unit tests that construct a standalone {@code AbstractPlayableSprite}
      * without a game module, and those tests assert the existing S2 threshold.
      */
@@ -1533,8 +1539,8 @@ public class SidekickCpuController {
     /**
      * Per-game off-screen marker X-position written by {@link #triggerDespawn()}.
      *
-     * <p>Read from the sidekick's physics feature set (ROM parity). Falls back
-     * to the S2 placeholder ({@code 0x4000}) when no feature set is resolved
+     * <p>Read from the sidekick's typed CPU rules (ROM parity). Falls back
+     * to the S2 placeholder ({@code 0x4000}) when no rules are resolved
      * yet — this only happens in unit tests that construct a standalone
      * {@code AbstractPlayableSprite} without a game module, and those tests
      * assert the existing S2 placeholder value.
@@ -1551,9 +1557,9 @@ public class SidekickCpuController {
      * Whether the sidekick CPU post-kill flow defers the despawn warp until
      * the body falls below the death-routine marker threshold.
      *
-     * <p>Read from the sidekick's physics feature set (ROM parity). Falls
-     * back to {@code false} (legacy immediate-warp semantics) when no feature
-     * set is resolved. This matches the historical engine behaviour and
+     * <p>Read from the sidekick's typed CPU rules (ROM parity). Falls
+     * back to {@code false} (immediate-warp semantics) when no rules are
+     * resolved. This matches the historical engine behaviour and
      * the existing unit-test assertions in
      * {@code TestSidekickCpuDespawnParity}, which were calibrated against
      * the immediate-warp baseline.
@@ -1977,7 +1983,7 @@ public class SidekickCpuController {
         //   - leader.ground_vel >= $400 (sonic3k.asm:26692-26693) — leader
         //     is already faster than the follower can chase.
         // S2 has no equivalent (s2.asm:38933 reads d2 directly), so the
-        // offset is gated by PhysicsFeatureSet.sidekickFollowLeadOffset().
+        // offset is gated by SidekickCpuRules.sidekickFollowLeadOffset().
         //
         // The OnObj read here is mid-frame relative to the leader's tick:
         // ROM only clears Status_OnObj later, in solid-object processing
@@ -2072,10 +2078,10 @@ public class SidekickCpuController {
                         | AbstractPlayableSprite.STATUS_PUSHING)) != 0;
         boolean currentStatusPush =
                 (diagnostics.preStatus() & AbstractPlayableSprite.STATUS_PUSHING) != 0;
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        CollisionRules collisionRules = collisionRulesOrNull();
         boolean rollingNonzeroGroundSpeedStalePush =
-                fs != null
-                        && fs.sidekickPushBypassUsesGraceStatus()
+                collisionRules != null
+                        && collisionRules.sidekickPushBypassUsesGraceStatus()
                         && !sidekick.getAir()
                         && sidekick.getRolling()
                         && sidekick.getGSpeed() != 0;
@@ -2097,7 +2103,7 @@ public class SidekickCpuController {
         // before Tails_InputAcceleration_Path clears the bit again; tiny
         // follow/accel residue is stale and must fall through FollowLeft.
         boolean restrictUnderwaterPushBypassToContactPulses =
-                fs != null && fs.sidekickPushBypassUsesGraceStatus();
+                collisionRules != null && collisionRules.sidekickPushBypassUsesGraceStatus();
         // On the S3K grace-status path, Tails_RollSpeed reaches the same
         // wall-response tail as walking movement, and that tail zeroes
         // ground_vel before setting Status_Push (sonic3k.asm:28013-28017 via
@@ -2114,7 +2120,7 @@ public class SidekickCpuController {
         boolean clearReleasedUnderwaterPushAfterCpu = currentPushBypass
                 && releasedUnderwaterZeroSpeedPush
                 && !releasedUnderwaterPushConsumed;
-        boolean pushBypassGraceEnabled = fs != null && fs.sidekickPushBypassUsesGraceStatus();
+        boolean pushBypassGraceEnabled = collisionRules != null && collisionRules.sidekickPushBypassUsesGraceStatus();
         boolean gracePushBypass = !sidekick.getAir()
                 && pushBypassGraceEnabled
                 && normalPushingGraceFrames > 0
@@ -2216,8 +2222,8 @@ public class SidekickCpuController {
         suppressLocalGraceFollowNudge =
                 suppressLocalGraceFollowNudge && !fastLeaderNoLiveObjectNudge && !smallDxDelayedInputNudge;
         boolean suppressFastLeaderTinyFollowNudge =
-                fs != null
-                        && fs.sidekickSuppressesFastLeaderTinyFollowNudge()
+                collisionRules != null
+                        && collisionRules.sidekickSuppressesFastLeaderTinyFollowNudge()
                         && effectiveLeader.getGSpeed() >= 0x400
                         && !leaderStatusOnObject
                         && Math.abs(sidekick.getGSpeed()) < 0x100
@@ -3596,7 +3602,7 @@ public class SidekickCpuController {
         SidekickCpuRules rules = sidekickCpuRulesOrNull();
         int catchUpYOffset = rules != null
                 ? rules.sidekickCatchUpYOffset()
-                : PhysicsFeatureSet.SIDEKICK_CATCH_UP_Y_OFFSET_S3K;
+                : GameRules.SONIC_3K.sidekickCpu().sidekickCatchUpYOffset();
         sidekick.setCentreYPreserveSubpixel((short) (targetY - catchUpYOffset));
         sidekick.setXSpeed((short) 0);
         sidekick.setYSpeed((short) 0);
@@ -3643,19 +3649,19 @@ public class SidekickCpuController {
         SidekickCpuRules rules = sidekickCpuRulesOrNull();
         final int AUTO_LAND_FRAMES = rules != null
                 ? rules.sidekickFlightAutoLandFrames()
-                : PhysicsFeatureSet.SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K;
+                : GameRules.SONIC_3K.sidekickCpu().sidekickFlightAutoLandFrames();
         final int MAX_X_STEP = rules != null
                 ? rules.sidekickFlightMaxXStep()
-                : PhysicsFeatureSet.SIDEKICK_FLIGHT_MAX_X_STEP_S3K;
+                : GameRules.SONIC_3K.sidekickCpu().sidekickFlightMaxXStep();
         final int Y_STEP = rules != null
                 ? rules.sidekickFlightYStep()
-                : PhysicsFeatureSet.SIDEKICK_FLIGHT_Y_STEP_S3K;
+                : GameRules.SONIC_3K.sidekickCpu().sidekickFlightYStep();
         final int LEAD_SUPPRESS = rules != null
                 ? rules.sidekickFlightLeadSuppressGSpeed()
-                : PhysicsFeatureSet.SIDEKICK_FLIGHT_LEAD_SUPPRESS_GSPEED_S3K;
+                : GameRules.SONIC_3K.sidekickCpu().sidekickFlightLeadSuppressGSpeed();
         final int LEAD_OFFSET = rules != null
                 ? rules.sidekickFlightLeadXOffset()
-                : PhysicsFeatureSet.SIDEKICK_FLIGHT_LEAD_X_OFFSET_S3K;
+                : GameRules.SONIC_3K.sidekickCpu().sidekickFlightLeadXOffset();
         final int FLIGHT_FUEL = (8 * 60) / 2;   // ROM loc_13C3A:26552 double_jump_property reload
 
         // 1. Off-screen timer. The ROM check is `tst.b render_flags(a0); bmi.s loc_13C3A`.
@@ -3760,7 +3766,7 @@ public class SidekickCpuController {
         byte delayedStatus = leader.getStatusHistory(ROM_FOLLOW_DELAY_FRAMES);
         int statusBlockerMask = rules != null
                 ? rules.sidekickFlyLandStatusBlockerMask()
-                : PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_S2;
+                : GameRules.SONIC_2.sidekickCpu().sidekickFlyLandStatusBlockerMask();
         boolean delayedStatusAllowsLand = (delayedStatus & statusBlockerMask) == 0;
         boolean leaderRoutineAllowsLand = rules == null
                 || !rules.sidekickFlyLandRequiresLeaderAlive()
@@ -4121,9 +4127,9 @@ public class SidekickCpuController {
      * gameplay objects, so its only practical despawn trigger is a slot freed by
      * {@code Delete_Referenced_Sprite} (id word → 0, sonic3k.asm:36116-36124).
      * That stays modelled by the riding-instance-loss path, gated by
-     * {@link PhysicsFeatureSet#sidekickDespawnUsesRidingInstanceLoss()} (S3K
+     * {@link ObjectInteractionRules#sidekickDespawnUsesRidingInstanceLoss()} (S3K
      * true). The S2 slot-id-mismatch path is gated by
-     * {@link PhysicsFeatureSet#sidekickDespawnUsesObjectIdMismatch()} (S2 true,
+     * {@link ObjectInteractionRules#sidekickDespawnUsesObjectIdMismatch()} (S2 true,
      * S3K false), so the two games never both fire.
      */
     private boolean checkDespawn() {
@@ -4311,9 +4317,9 @@ public class SidekickCpuController {
      * </ul>
      *
      * <p>Only called on the S2 id-mismatch despawn path (the caller gates with
-     * {@link PhysicsFeatureSet#sidekickDespawnUsesObjectIdMismatch()}); S3K uses
+     * {@link ObjectInteractionRules#sidekickDespawnUsesObjectIdMismatch()}); S3K uses
      * the freed-slot instance path
-     * ({@link PhysicsFeatureSet#sidekickDespawnUsesRidingInstanceLoss()}) and
+     * ({@link ObjectInteractionRules#sidekickDespawnUsesRidingInstanceLoss()}) and
      * never reaches here. The {@code lastInteractObjectId >= 0} precondition at
      * the call site still excludes the never-stood-on-anything snapshot.
      *

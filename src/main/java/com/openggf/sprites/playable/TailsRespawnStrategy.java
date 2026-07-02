@@ -1,7 +1,6 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.game.CanonicalAnimation;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.SidekickCpuRules;
 import com.openggf.physics.Direction;
@@ -17,8 +16,9 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     private static final int S2_FLYING_OFFSCREEN_TIMEOUT_FRAMES = 300;
     private final int flyAnimId;
     private final int walkAnimId;
-    /** S2 fallback if no PhysicsFeatureSet is resolved (legacy unit-test sidekicks). */
-    private static final int FLY_LAND_BLOCKERS_FALLBACK = PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_S2;
+    /** S2 fallback if no typed rules are resolved, matching legacy unit-test sidekicks. */
+    private static final int FLY_LAND_BLOCKERS_FALLBACK =
+            GameRules.SONIC_2.sidekickCpu().sidekickFlyLandStatusBlockerMask();
     /** Sonic OST routine value at/above which the leader is considered dead/dying.
      *  ROM: {@code cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42} (sonic3k.asm:26629-26630). */
     private static final int LEADER_DEAD_ROUTINE_THRESHOLD = 6;
@@ -40,8 +40,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         if (rules != null && rules.sidekickCpu() != null) {
             return rules.sidekickCpu();
         }
-        PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).sidekickCpu() : null;
+        return null;
     }
 
     @Override
@@ -176,7 +175,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         //     to NORMAL even if Sonic is hurt or dead.
         //   * S3K (sonic3k.asm:26625, 26629-26630) andi.b #$80,d2 (bit 7 only) AND
         //     cmpi.b #6,(Player_1+routine).w / bhs (skip if Sonic dead).
-        // Resolved through PhysicsFeatureSet so each game's ROM behavior is preserved.
+        // Resolved through SidekickCpuRules so each game's ROM behavior is preserved.
         int statusBlockerMask = rules != null
                 ? rules.sidekickFlyLandStatusBlockerMask()
                 : FLY_LAND_BLOCKERS_FALLBACK;

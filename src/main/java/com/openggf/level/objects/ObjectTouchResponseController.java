@@ -4,7 +4,6 @@ package com.openggf.level.objects;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
@@ -1092,8 +1091,7 @@ final class ObjectTouchResponseController {
         if (rules != null && rules.playerCapability() != null) {
             return rules.playerCapability();
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).playerCapability() : null;
+        return null;
     }
 
     private ObjectInteractionRules objectInteractionRulesOrNull(PlayableEntity player) {
@@ -1104,8 +1102,7 @@ final class ObjectTouchResponseController {
         if (rules != null && rules.objectInteraction() != null) {
             return rules.objectInteraction();
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).objectInteraction() : null;
+        return null;
     }
 
     private void applyHurt(PlayableEntity player, ObjectInstance instance, TouchResponseResult result) {

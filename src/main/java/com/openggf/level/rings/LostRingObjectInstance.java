@@ -2,8 +2,6 @@ package com.openggf.level.rings;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
-import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.PhysicsProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.RingRules;
@@ -310,13 +308,13 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     /**
      * Per-game floor-check cadence mask from {@link RingRules#ringFloorCheckMask()}
-     * (S1 {@code #3}, S2/S3K {@code #7}); S2 default when no feature set is resolvable.
+     * (S1 {@code #3}, S2/S3K {@code #7}); S2 default when no typed rules are resolvable.
      */
     protected int resolveFloorCheckMask() {
         RingRules rules = resolveRingRules();
         return rules != null
                 ? rules.ringFloorCheckMask()
-                : PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2;
+                : GameRules.SONIC_2.ring().ringFloorCheckMask();
     }
 
     /** ROM {@code Reverse_gravity_flag} runtime state (S3K only ever sets it). */
@@ -384,9 +382,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             }
         } catch (IllegalArgumentException | IllegalStateException ignored) {
         }
-        PhysicsProvider provider = module.getPhysicsProvider();
-        PhysicsFeatureSet featureSet = provider != null ? provider.getFeatureSet() : null;
-        return featureSet != null ? GameRules.fromLegacy(featureSet).ring() : null;
+        return null;
     }
 
     private ObjectServices servicesOrNull() {

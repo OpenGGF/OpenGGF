@@ -4,7 +4,6 @@ import com.openggf.configuration.DeadzoneMode;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.rules.CameraRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rewind.RewindSnapshottable;
@@ -945,8 +944,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		if (rules != null && rules.camera() != null) {
 			return rules.camera();
 		}
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		return featureSet != null ? GameRules.fromLegacy(featureSet).camera() : null;
+		return null;
 	}
 
 	/**

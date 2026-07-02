@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.game.rules.GameRules;
+
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
@@ -45,18 +47,18 @@ class TestCollisionModel {
 
     static Stream<Arguments> featureSetProvider() {
         return Stream.of(
-                Arguments.of(PhysicsFeatureSet.SONIC_1, CollisionModel.UNIFIED, false, "S1"),
-                Arguments.of(PhysicsFeatureSet.SONIC_2, CollisionModel.DUAL_PATH, true, "S2"),
-                Arguments.of(PhysicsFeatureSet.SONIC_3K, CollisionModel.DUAL_PATH, true, "S3K")
+                Arguments.of(GameRules.SONIC_1, CollisionModel.UNIFIED, false, "S1"),
+                Arguments.of(GameRules.SONIC_2, CollisionModel.DUAL_PATH, true, "S2"),
+                Arguments.of(GameRules.SONIC_3K, CollisionModel.DUAL_PATH, true, "S3K")
         );
     }
 
     @ParameterizedTest(name = "{3} collision model")
     @MethodSource("featureSetProvider")
-    void featureSetCollisionModel(PhysicsFeatureSet fs, CollisionModel expectedModel,
+    void featureSetCollisionModel(GameRules fs, CollisionModel expectedModel,
                                   boolean expectedHasDual, String label) {
-        assertEquals(expectedModel, fs.collisionModel(), label + " collision model");
-        assertEquals(expectedHasDual, fs.hasDualCollisionPaths(), label + " dual paths");
+        assertEquals(expectedModel, fs.collision().collisionModel(), label + " collision model");
+        assertEquals(expectedHasDual, (fs.collision().collisionModel() == CollisionModel.DUAL_PATH), label + " dual paths");
     }
 
     // ========================================

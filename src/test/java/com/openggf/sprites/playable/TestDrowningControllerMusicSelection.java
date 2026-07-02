@@ -16,7 +16,7 @@ import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.game.GameRng;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
@@ -145,7 +145,7 @@ class TestDrowningControllerMusicSelection {
         GameServices.level().resetState();
 
         Sonic sonic = new Sonic("test", (short) 0, (short) 0);
-        sonic.setPhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        sonic.setGameRulesForTest(GameRules.SONIC_2);
         DrowningController controller = new DrowningController(sonic);
         controller.reset();
 
@@ -160,9 +160,9 @@ class TestDrowningControllerMusicSelection {
     void typedDrowningBubbleRulesOverrideLegacyInitialTimer() throws Exception {
         AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
         when(player.currentAudioManager()).thenReturn(AudioManager.getInstance());
-        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_2);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_2);
         when(player.getGameRules()).thenReturn(withDrowningBubbleRules(
-                GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2),
+                GameRules.SONIC_2,
                 new DrowningBubbleRules(37, 8, true, -0x88)));
 
         DrowningController controller = new DrowningController(player);
@@ -176,9 +176,9 @@ class TestDrowningControllerMusicSelection {
         AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
         when(player.currentAudioManager()).thenReturn(AudioManager.getInstance());
         when(player.currentRng()).thenReturn(rng);
-        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_2);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_2);
         when(player.getGameRules()).thenReturn(withDrowningBubbleRules(
-                GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2),
+                GameRules.SONIC_2,
                 new DrowningBubbleRules(0, 3, true, -0x88)));
         DrowningController controller = new DrowningController(player);
         setPrivateInt(controller, "bubbleFlags", 1);
@@ -191,22 +191,22 @@ class TestDrowningControllerMusicSelection {
     }
 
     @Test
-    void nullDrowningBubbleGroupFallsBackToLegacyFeatureSet() throws Exception {
+    void nullDrowningBubbleGroupUsesGenericDefaultTimer() throws Exception {
         AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
         when(player.currentAudioManager()).thenReturn(AudioManager.getInstance());
-        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_2);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_2);
         when(player.getGameRules()).thenReturn(withDrowningBubbleRules(
-                GameRules.fromLegacy(PhysicsFeatureSet.SONIC_2), null));
+                GameRules.SONIC_2, null));
 
         DrowningController controller = new DrowningController(player);
 
-        assertEquals(0, getPrivateInt(controller, "frameTimer"));
+        assertEquals(60, getPrivateInt(controller, "frameTimer"));
     }
 
     @Test
     void s3kGenericCountdownFallbackKeepsFullSecondReset() throws Exception {
         Sonic sonic = new Sonic("test", (short) 0, (short) 0);
-        sonic.setPhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonic.setGameRulesForTest(GameRules.SONIC_3K);
         DrowningController controller = new DrowningController(sonic);
         controller.reset();
 

@@ -2,7 +2,6 @@ package com.openggf.physics;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerMovementRules;
@@ -1108,8 +1107,7 @@ public class CollisionSystem {
         if (rules != null && rules.collision() != null) {
             return rules.collision();
         }
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).collision() : null;
+        return null;
     }
 
     private static PlayerMovementRules playerMovementRulesOrNull(AbstractPlayableSprite sprite) {
@@ -1120,8 +1118,7 @@ public class CollisionSystem {
         if (rules != null && rules.playerMovement() != null) {
             return rules.playerMovement();
         }
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).playerMovement() : null;
+        return null;
     }
 
     private void updateGroundMode(AbstractPlayableSprite sprite) {

@@ -3,7 +3,6 @@ package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
@@ -154,7 +153,7 @@ final class ObjectSolidContactController {
     // The engine's inline post-physics solid pass can otherwise observe the
     // post-jump airborne state in the same engine tick that established the
     // ride and unseat it one frame early. When
-    // PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame() is true,
+    // CollisionRules.solidObjectKeepsOnObjWhenJumpedOffSameFrame() is true,
     // this latch suppresses the same-frame unseat. Cleared per-frame
     // (beginInlineFrame). ROM: sonic3k.asm:41016-41035 (loc_1DC98),
     // 41066-41084 (loc_1DCF0), 42033-42034 (RideObject_SetRide sets the bit),
@@ -241,7 +240,7 @@ final class ObjectSolidContactController {
      * Mark this instance's standing bit as established (by a fresh landing) on
      * the current frame, so the same-frame airborne-rider unseat is suppressed
      * for games that gate on
-     * {@link PhysicsFeatureSet#solidObjectKeepsOnObjWhenJumpedOffSameFrame()}.
+     * {@link CollisionRules#solidObjectKeepsOnObjWhenJumpedOffSameFrame()}.
      * Mirrors ROM's once-per-frame SolidObjectFull evaluation: the unseat
      * (loc_1DC98 / loc_1DCF0) only observes a bit set on a prior frame.
      */
@@ -1153,7 +1152,7 @@ final class ObjectSolidContactController {
                 // the loc_1DCF0 air-unseat cannot fire on the same frame the
                 // ride was established by RideObject_SetRide. Skip the
                 // same-frame unseat when this ride was just established this
-                // frame. Games can opt in globally via PhysicsFeatureSet;
+                // frame. Games can opt in globally via CollisionRules;
                 // individual solid routines can opt in for same-frame status
                 // writes after their solid helper runs (sonic3k.asm:41066-41084,
                 // 42033-42034, 28553-28554).
@@ -1439,10 +1438,10 @@ final class ObjectSolidContactController {
         // (camera.x=0x1C99, spike right edge at 0x1C90 -> off screen left), while
         // the ROM correctly preserved the velocity.
         //
-        // Gated by PhysicsFeatureSet.solidObjectOffscreenGate so we can roll out
+        // Gated by CollisionRules.solidObjectOffscreenGate so we can roll out
         // the engine-wide ROM-parity behaviour incrementally without disturbing
         // existing S1/S2 trace baselines that depend on the prior (more
-        // permissive) collision semantics.  See PhysicsFeatureSet definitions.
+        // permissive) collision semantics. See typed CollisionRules definitions.
         //
         // The riding-state branch above (processInlineRidingObject) is unaffected:
         // ROM platform-ride (MvSonicOnPtfm via SolidObjectFull_1P standing branch)
@@ -3062,8 +3061,8 @@ final class ObjectSolidContactController {
 
     private short accelerateLeftForProjection(AbstractPlayableSprite sprite, short gSpeed,
             short runAccel, short max) {
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        boolean alwaysCap = featureSet != null && featureSet.inputAlwaysCapsGroundSpeed();
+        PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
+        boolean alwaysCap = rules != null && rules.inputAlwaysCapsGroundSpeed();
         if (alwaysCap || gSpeed > -max) {
             gSpeed -= runAccel;
             if (gSpeed < -max) {
@@ -3075,8 +3074,8 @@ final class ObjectSolidContactController {
 
     private short accelerateRightForProjection(AbstractPlayableSprite sprite, short gSpeed,
             short runAccel, short max) {
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        boolean alwaysCap = featureSet != null && featureSet.inputAlwaysCapsGroundSpeed();
+        PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
+        boolean alwaysCap = rules != null && rules.inputAlwaysCapsGroundSpeed();
         if (alwaysCap || gSpeed < max) {
             gSpeed += runAccel;
             if (gSpeed > max) {
@@ -3605,7 +3604,7 @@ final class ObjectSolidContactController {
         //      cmpi.w #4,d1; b{ls|bls} <branch by game>
         //
         // Per-game divergence on the d1<=4 ("barely poking") boundary,
-        // gated by PhysicsFeatureSet#solidObjectBarelyPokingResolvesAsSide:
+        // gated by CollisionRules#solidObjectBarelyPokingResolvesAsSide:
         //
         //   S3K (false): cmp d1,d5 / bhi.w loc_1E0D4 ; cmpi.w #4,d1 /
         //     bls.w loc_1E0D4 — when d5<=d1 AND d1<=4, ROM goes to the
@@ -3799,7 +3798,7 @@ final class ObjectSolidContactController {
             boolean upwardVelocity = player.getYSpeed() < 0;
             // ROM divergence (S3K loc_1E154 vs S1/S2 Solid_Landed),
             // gated by
-            // PhysicsFeatureSet#solidObjectTopBranchAlwaysLiftsOnUpwardVelocity:
+            // CollisionRules#solidObjectTopBranchAlwaysLiftsOnUpwardVelocity:
             //   S3K loc_1E154 (sonic3k.asm:41606-41632) writes the position
             //   lift (subq.w #1, y_pos(a1) at 41617; sub.w d3, y_pos(a1) at
             //   41624) BEFORE testing tst.w y_vel(a1) / bmi.s loc_1E198 at
@@ -4227,7 +4226,7 @@ final class ObjectSolidContactController {
      * lift before testing {@code y_vel}; {@code Solid_Landed} /
      * {@code SolidObject_Landed} (S1/S2) test {@code y_vel} first and bail
      * without lifting. Gated via
-     * {@link PhysicsFeatureSet#solidObjectTopBranchAlwaysLiftsOnUpwardVelocity()}.
+     * {@link CollisionRules#solidObjectTopBranchAlwaysLiftsOnUpwardVelocity()}.
      */
     private boolean topBranchAlwaysLiftsOnUpwardVelocity(PlayableEntity player) {
         if (player == null) {
@@ -4246,7 +4245,7 @@ final class ObjectSolidContactController {
      * s1disasm/_incObj/sub SolidObject.asm:181-184,211-214). S3K sends it to
      * {@code loc_1E0D4}, the TOP/BOTTOM path
      * (sonic3k.asm:41463-41466,41541-41546). Gated via
-     * {@link PhysicsFeatureSet#solidObjectBarelyPokingResolvesAsSide()}.
+     * {@link CollisionRules#solidObjectBarelyPokingResolvesAsSide()}.
      */
     private boolean solidObjectBarelyPokingResolvesAsSide(PlayableEntity player) {
         if (player == null) {
@@ -4368,8 +4367,7 @@ final class ObjectSolidContactController {
         if (rules != null && rules.collision() != null) {
             return rules.collision();
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).collision() : null;
+        return null;
     }
 
     private static PlayerMovementRules playerMovementRulesOrNull(PlayableEntity player) {
@@ -4380,8 +4378,7 @@ final class ObjectSolidContactController {
         if (rules != null && rules.playerMovement() != null) {
             return rules.playerMovement();
         }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).playerMovement() : null;
+        return null;
     }
 
     private void applyObjectLandingState(PlayableEntity player) {

@@ -1,7 +1,6 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.game.DamageCause;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rules.GameRules;
 import com.openggf.tests.TestablePlayableSprite;
@@ -15,11 +14,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestPlayableSpriteRuleFallbacks {
 
     @Test
-    public void playerCapabilityRuleFallsBackToLegacyFeatureSetWhenTypedGroupMissing() throws Exception {
+    public void playerCapabilityRuleUsesDefaultWhenTypedGroupMissing() throws Exception {
         TestablePlayableSprite sprite = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sprite.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        sprite.setGameRulesForTest(GameRules.SONIC_3K);
         sprite.setShieldStateForTest(true, ShieldType.FIRE);
-        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_3K);
+        GameRules base = GameRules.SONIC_3K;
         setGameRulesForTest(sprite, new GameRules(
                 base.playerMovement(),
                 null,
@@ -32,9 +31,9 @@ public class TestPlayableSpriteRuleFallbacks {
                 base.powerUp(),
                 base.drowningBubble()));
 
-        assertFalse(sprite.applyHurt(0, DamageCause.FIRE),
-                "A null typed PlayerCapabilityRules group should fall back to legacy-derived elemental shield rules");
-        assertTrue(sprite.hasShield(), "Fire shield should remain when legacy-derived capability rules block fire damage");
+        assertTrue(sprite.applyHurt(0, DamageCause.FIRE),
+                "A null PlayerCapabilityRules group should not recreate removed feature-set shield rules");
+        assertFalse(sprite.hasShield(), "Fire shield should be consumed when no typed capability rules block fire damage");
     }
 
     private static void setGameRulesForTest(TestablePlayableSprite sprite, GameRules rules) throws Exception {

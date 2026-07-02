@@ -16,8 +16,6 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.ShieldType;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.PhysicsProvider;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.rules.RingRules;
@@ -238,9 +236,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             }
         } catch (IllegalArgumentException | IllegalStateException ignored) {
         }
-        PhysicsProvider provider = module.getPhysicsProvider();
-        PhysicsFeatureSet featureSet = provider != null ? provider.getFeatureSet() : null;
-        return featureSet != null ? GameRules.fromLegacy(featureSet) : null;
+        return null;
     }
 
     private static RingRules playerRingRules(AbstractPlayableSprite player) {
@@ -250,10 +246,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         GameRules rules = player.getGameRules();
         if (rules != null && rules.ring() != null) {
             return rules.ring();
-        }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        if (featureSet != null) {
-            return GameRules.fromLegacy(featureSet).ring();
         }
         return moduleRingRules(GameServices.currentOrBootstrapGameModule());
     }
@@ -270,10 +262,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         GameRules rules = player.getGameRules();
         if (rules != null && rules.playerCapability() != null) {
             return rules.playerCapability();
-        }
-        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
-        if (featureSet != null) {
-            return GameRules.fromLegacy(featureSet).playerCapability();
         }
         return modulePlayerCapabilityRules(GameServices.currentOrBootstrapGameModule());
     }

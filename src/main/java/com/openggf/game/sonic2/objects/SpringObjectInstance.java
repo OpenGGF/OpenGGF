@@ -547,7 +547,7 @@ public class SpringObjectInstance extends BoxObjectInstance
      * {@code SolidObject_OnScreenTest} on-screen gate at s2.asm:35140-35145.
      * Off-screen springs therefore still resolve push and side contact in
      * the ROM. Mirrors the S3K {@code SolidObjectFull2_1P} behaviour
-     * (sonic3k.asm:41065-41067).  The S2 PhysicsFeatureSet currently keeps
+     * (sonic3k.asm:41065-41067). The S2 CollisionRules currently keep
      * {@code solidObjectOffscreenGate=false}; this override is defensive so
      * the bypass continues to hold if S2 enables the gate in the future.
      */

@@ -1,6 +1,6 @@
 package com.openggf.timer.timers;
 
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -60,15 +60,15 @@ class TestSpeedShoesTimer {
     }
 
     @Test
-    void constructorFallsBackToLegacyFeatureSetRulesWhenGameRulesMissing() {
+    void constructorUsesDefaultRulesWhenGameRulesMissing() {
         AbstractPlayableSprite sprite = mock(AbstractPlayableSprite.class);
         when(sprite.getGameRules()).thenReturn(null);
-        when(sprite.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(sprite.getGameRules()).thenReturn(GameRules.SONIC_3K);
 
         SpeedShoesTimer timer = new SpeedShoesTimer("speed-shoes", sprite);
 
         assertEquals(SpeedShoesTimer.ROM_DURATION_FRAMES
-                        / PhysicsFeatureSet.SONIC_3K.speedShoesTimerDecimation(),
+                        / GameRules.SONIC_3K.powerUp().speedShoesTimerDecimation(),
                 timer.getTicks());
     }
 }

@@ -8,7 +8,6 @@ import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.InstaShieldHandle;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PhysicsModifiers;
 import com.openggf.game.PhysicsProfile;
 import com.openggf.game.PhysicsProvider;
@@ -533,7 +532,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         private PhysicsProfile physicsProfile;
         private GameModule runtimeBoundStateModule;
         private PhysicsModifiers physicsModifiers;
-        private PhysicsFeatureSet physicsFeatureSet;
         private GameRules gameRules;
 
         /**
@@ -2126,7 +2124,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void setTopSolidBit(byte topSolidBit) {
-                if (physicsFeatureSet != null && !physicsFeatureSet.hasDualCollisionPaths()) {
+                if (gameRules != null && gameRules.collision().collisionModel() != CollisionModel.DUAL_PATH) {
                         return;
                 }
                 this.topSolidBit = topSolidBit;
@@ -2137,7 +2135,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void setLrbSolidBit(byte lrbSolidBit) {
-                if (physicsFeatureSet != null && !physicsFeatureSet.hasDualCollisionPaths()) {
+                if (gameRules != null && gameRules.collision().collisionModel() != CollisionModel.DUAL_PATH) {
                         return;
                 }
                 this.lrbSolidBit = lrbSolidBit;
@@ -3274,7 +3272,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * ROM ref: Sonic_RecordPos stores Ctrl_1_Logical, not the raw held-button state.
          *
          * <p>ROM-faithful Ctrl_1_locked latch: when
-         * {@link PhysicsFeatureSet#controlLockLatchesLogicalInput()} is true and
+         * {@link PlayerMovementRules#controlLockLatchesLogicalInput()} is true and
          * {@link #isControlLocked()} is set, the write is skipped so the
          * previous frame's logical pad state persists.
          * Mirrors {@code Sonic_Control} (S3K sonic3k.asm:21541-21545
@@ -3549,7 +3547,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
-         * Resolves physics profile, modifiers, and feature set from the active GameModule.
+         * Resolves physics profile, modifiers, and game rules from the active GameModule.
          * Overwrites the protected speed fields set by defineSpeeds() with values from the profile.
          * Falls back gracefully if no provider is available (defineSpeeds() values remain).
          */
@@ -3575,7 +3573,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 applyProfileToFields(profile);
                         }
                         this.physicsModifiers = provider.getModifiers();
-                        this.physicsFeatureSet = provider.getFeatureSet();
                         this.gameRules = provider.getRules();
 
                         // S1 (UNIFIED collision) uses d5=$D for ALL terrain probes.
@@ -3607,9 +3604,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         // Graceful fallback: defineSpeeds() values remain
                         LOGGER.fine("PhysicsProvider unavailable, using defineSpeeds() values: " + e.getMessage());
                 }
-                // Cross-game donation: override only the feature set with hybrid (donor spindash + base physics)
+                // Cross-game donation: override only typed rules with donated capabilities.
                 if (CrossGameFeatureProvider.isActive()) {
-                        this.physicsFeatureSet = currentCrossGameFeatures().getHybridFeatureSet();
                         this.gameRules = currentCrossGameFeatures().getHybridRules();
                 }
                 ensurePersistentInstaShieldObject();
@@ -3719,14 +3715,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.rollYRadius = profile.rollYRadius();
         }
 
-        /**
-         * Returns the physics feature set (spindash availability, etc.) for the current game.
-         * May be null if no GameModule provider is active.
-         */
-        public PhysicsFeatureSet getPhysicsFeatureSet() {
-                return physicsFeatureSet;
-        }
-
         @Override
         public GameRules getGameRules() {
                 return gameRules;
@@ -3737,8 +3725,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (rules != null && rules.playerMovement() != null) {
                         return rules.playerMovement();
                 }
-                PhysicsFeatureSet featureSet = getPhysicsFeatureSet();
-                return featureSet != null ? GameRules.fromLegacy(featureSet).playerMovement() : null;
+                return null;
         }
 
         private PlayerCapabilityRules playerCapabilityRulesOrNull() {
@@ -3746,14 +3733,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (rules != null && rules.playerCapability() != null) {
                         return rules.playerCapability();
                 }
-                PhysicsFeatureSet featureSet = getPhysicsFeatureSet();
-                return featureSet != null ? GameRules.fromLegacy(featureSet).playerCapability() : null;
+                return null;
         }
 
         /** Package-private for testing. */
-        protected void setPhysicsFeatureSet(PhysicsFeatureSet fs) {
-                this.physicsFeatureSet = fs;
-                this.gameRules = fs != null ? GameRules.fromLegacy(fs) : null;
+        protected void setGameRulesForTest(GameRules rules) {
+                this.gameRules = rules;
         }
 
         /** Sets shield state directly without spawning a shield object. For testing only. */

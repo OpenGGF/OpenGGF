@@ -1,8 +1,8 @@
 # Per-Game Rule Placement
 
-Use this guide when adding or moving a Sonic 1, Sonic 2, or Sonic 3&K behavior divergence. The goal is to choose the smallest accurate owner instead of adding another broad feature flag.
+Use this guide when adding or moving a Sonic 1, Sonic 2, or Sonic 3&K behavior divergence. The goal is to choose the smallest accurate owner instead of adding another broad rule bag.
 
-This guide describes the ownership model for per-game rule gates. Game-wide shared runtime gates should use the narrowest typed `GameRules` record. `PhysicsFeatureSet` remains as the legacy constant source and bridge fallback while older call sites are migrated; do not add new broad runtime users. Provider, profile, registry, zone, and object-local ownership rules apply now.
+This guide describes the ownership model for per-game rule gates. Game-wide shared runtime gates should use the narrowest typed `GameRules` record. Provider, profile, registry, zone, and object-local ownership rules apply when they are the smaller accurate owner. Do not add broad feature-set bags as a parallel rule source.
 
 ## Decision Tree
 
@@ -38,5 +38,5 @@ Every new per-game divergence must document:
 - Prefer provider/profile ownership when a divergence is not shared runtime behavior.
 - Prefer a new narrow rule group over growing an unrelated rule record.
 - Do not add raw game-name branches in shared runtime code.
-- Do not add new broad `PhysicsFeatureSet` runtime call sites.
+- Do not add broad feature-set bags or compatibility bridges as a parallel rule source.
 - Do not raise rule-record component-count guard thresholds without architecture review.

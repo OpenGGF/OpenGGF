@@ -1,6 +1,6 @@
 package com.openggf.tests;
 
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.sprites.playable.Tails;
 
 /**
@@ -26,9 +26,8 @@ public class TestableTailsSprite extends Tails {
         this.yPixel = y;
     }
 
-    public void setPhysicsFeatureSetForTest(PhysicsFeatureSet featureSet) {
-        setPhysicsFeatureSet(featureSet);
+    public void setGameRulesForTest(GameRules rules) {
+        super.setGameRulesForTest(rules);
     }
 }
-
 

@@ -7,7 +7,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.level.LevelManager;
 import com.openggf.game.GroundMode;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.GameRules;
 import com.openggf.physics.*;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRegistry;
@@ -685,8 +685,8 @@ public class CollisionSystemTest {
 
     @Test
     public void oddRightWallZeroDistanceUsesCurrentCardinalFallbackInsteadOfStaleAlternate() {
-        FeatureSetCollisionTestSprite player = newCollisionTestSprite();
-        player.setFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        GameRulesCollisionTestSprite player = newCollisionTestSprite();
+        player.setGameRules(GameRules.SONIC_3K);
         player.setGroundMode(GroundMode.RIGHTWALL);
         player.setAngle((byte) 0xC0);
 
@@ -724,14 +724,14 @@ public class CollisionSystemTest {
     }
 
     @Test
-    public void typedCollisionRulePreservesRightWallDeepProbeWhenLegacyFeatureDiffers() throws Exception {
-        FeatureSetCollisionTestSprite player = newCollisionTestSprite();
-        player.setFeatureSet(PhysicsFeatureSet.SONIC_1);
-        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_1);
+    public void typedCollisionRulePreservesRightWallDeepProbeWhenBaseRulesDiffer() throws Exception {
+        GameRulesCollisionTestSprite player = newCollisionTestSprite();
+        player.setGameRules(GameRules.SONIC_1);
+        GameRules base = GameRules.SONIC_1;
         setGameRulesForTest(player, new GameRules(
                 base.playerMovement(),
                 base.playerCapability(),
-                GameRules.fromLegacy(PhysicsFeatureSet.SONIC_3K).collision(),
+                GameRules.SONIC_3K.collision(),
                 base.playerAnimation(),
                 base.camera(),
                 base.ring(),
@@ -741,14 +741,14 @@ public class CollisionSystemTest {
                 base.drowningBubble()));
 
         assertTrue(invokePreservesRightWallPenetrationOnDeepProbe(player),
-                "CollisionSystem should prefer typed CollisionRules over legacy PhysicsFeatureSet reads");
+                "CollisionSystem should read the typed CollisionRules group");
     }
 
     @Test
-    public void collisionRuleFallsBackToLegacyWhenTypedCollisionGroupMissing() throws Exception {
-        FeatureSetCollisionTestSprite player = newCollisionTestSprite();
-        player.setFeatureSet(PhysicsFeatureSet.SONIC_3K);
-        GameRules base = GameRules.fromLegacy(PhysicsFeatureSet.SONIC_3K);
+    public void collisionRuleUsesDefaultWhenTypedCollisionGroupMissing() throws Exception {
+        GameRulesCollisionTestSprite player = newCollisionTestSprite();
+        player.setGameRules(GameRules.SONIC_3K);
+        GameRules base = GameRules.SONIC_3K;
         setGameRulesForTest(player, new GameRules(
                 base.playerMovement(),
                 base.playerCapability(),
@@ -761,8 +761,8 @@ public class CollisionSystemTest {
                 base.powerUp(),
                 base.drowningBubble()));
 
-        assertTrue(invokePreservesRightWallPenetrationOnDeepProbe(player),
-                "A null typed CollisionRules group should fall back to legacy-derived collision rules");
+        assertFalse(invokePreservesRightWallPenetrationOnDeepProbe(player),
+                "A null CollisionRules group should not recreate removed feature-set collision rules");
     }
 
     private static Object describeCalcRoomInFrontProbe(int angle, short gSpeed) {
@@ -806,8 +806,8 @@ public class CollisionSystemTest {
         field.set(player, rules);
     }
 
-    private static FeatureSetCollisionTestSprite newCollisionTestSprite() {
-        return new FeatureSetCollisionTestSprite();
+    private static GameRulesCollisionTestSprite newCollisionTestSprite() {
+        return new GameRulesCollisionTestSprite();
     }
 
     private static Object[] describeCalcRoomOverHeadProbes(AbstractPlayableSprite player, int quadrant) {
@@ -862,13 +862,13 @@ public class CollisionSystemTest {
         }
     }
 
-    private static final class FeatureSetCollisionTestSprite extends AbstractPlayableSprite {
-        private FeatureSetCollisionTestSprite() {
+    private static final class GameRulesCollisionTestSprite extends AbstractPlayableSprite {
+        private GameRulesCollisionTestSprite() {
             super("collision-test", (short) 0, (short) 0);
         }
 
-        private void setFeatureSet(PhysicsFeatureSet featureSet) {
-            setPhysicsFeatureSet(featureSet);
+        private void setGameRules(GameRules rules) {
+            super.setGameRulesForTest(rules);
         }
 
         @Override

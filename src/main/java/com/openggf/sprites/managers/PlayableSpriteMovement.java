@@ -3,11 +3,12 @@ package com.openggf.sprites.managers;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
-import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.rules.PlayerMovementRules;
+import com.openggf.game.rules.PowerUpRules;
 
 import com.openggf.camera.Camera;
 import com.openggf.level.LevelManager;
@@ -146,8 +147,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (rules != null && rules.playerMovement() != null) {
 			return rules.playerMovement();
 		}
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		return featureSet != null ? GameRules.fromLegacy(featureSet).playerMovement() : null;
+		return null;
 	}
 
 	private PlayerAnimationRules playerAnimationRulesOrNull() {
@@ -155,8 +155,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (rules != null && rules.playerAnimation() != null) {
 			return rules.playerAnimation();
 		}
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		return featureSet != null ? GameRules.fromLegacy(featureSet).playerAnimation() : null;
+		return null;
 	}
 
 	private PlayerCapabilityRules playerCapabilityRulesOrNull() {
@@ -164,8 +163,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (rules != null && rules.playerCapability() != null) {
 			return rules.playerCapability();
 		}
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		return featureSet != null ? GameRules.fromLegacy(featureSet).playerCapability() : null;
+		return null;
+	}
+
+	private CollisionRules collisionRulesOrNull() {
+		GameRules rules = sprite.getGameRules();
+		if (rules != null && rules.collision() != null) {
+			return rules.collision();
+		}
+		return null;
+	}
+
+	private PowerUpRules powerUpRulesOrNull() {
+		GameRules rules = sprite.getGameRules();
+		if (rules != null && rules.powerUp() != null) {
+			return rules.powerUp();
+		}
+		return null;
 	}
 
 	@Override
@@ -364,7 +378,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	/**
-	 * Returns the spindash speed table from the physics feature set,
+	 * Returns the spindash speed table from typed player capability rules,
 	 * falling back to the static SPINDASH_SPEEDS constant.
 	 * S3K Super/Hyper forms use a higher speed table (sonic3k.asm:23743 word_11D04).
 	 * S2 Super Sonic uses the normal table (no separate Super table in S2).
@@ -1031,7 +1045,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		//  docs/s2disasm/s2.asm:40428-40429 Tails_JumpHeight;
 		//  docs/s1disasm/_incObj/01 Sonic.asm:1197-1198;
 		//  docs/skdisasm/sonic3k.asm:23366-23367 -- identical gate in all
-		//  three games, so this is a universal correction, no feature flag).
+		//  three games, so this is a universal correction, no per-game rule).
 		// Previously this branched on the `jumpPressed` controller-loop latch.
 		// That latch is set whenever a jump button is held (including the
 		// A/B/C bits TailsCPU_Normal_FilterAction synthesizes into Ctrl_2
@@ -2049,9 +2063,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 			if (lookGateActive && !balancingNow) {
 				short lookDelay = sprite.getLookDelayCounter();
-				PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-				short lookScrollDelay = (featureSet != null) ? featureSet.lookScrollDelay()
-						: PhysicsFeatureSet.LOOK_SCROLL_DELAY_S2;
+				GameRules rules = sprite.getGameRules();
+				short lookScrollDelay = rules != null && rules.camera() != null
+						? rules.camera().lookScrollDelay()
+						: GameRules.SONIC_2.camera().lookScrollDelay();
 				if (inputUp) {
 					// ROM: Sonic_Lookup (s2.asm:36398-36409, s1.asm: Sonic_LookUp)
 					// Animation is set immediately, camera pan may have delay
@@ -2562,7 +2577,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// f_lockscreen (set at boss spawn, cleared only by Egg Prison / LZ boss,
 		// so it survives boss defeat in the Final Zone — s1disasm/_incObj/01
 		// Sonic.asm:1047-1049); S2 uses Current_Boss_ID, i.e. boss-alive
-		// (s2.asm:37247-37250). PhysicsFeatureSet.levelBoundaryLockUsesScreenLockFlag
+		// (s2.asm:37247-37250). PlayerMovementRules.levelBoundaryLockUsesScreenLockFlag
 		// selects which. S3K never adds the +64 (levelBoundaryRightStrict).
 		boolean lockActive = (movementRules != null && movementRules.levelBoundaryLockUsesScreenLockFlag())
 				? gameState().isScreenLocked()
@@ -2572,7 +2587,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int rightBoundary = RightBoundary.compute(maxX, LEVEL_DESIGN_WIDTH, SONIC_WIDTH, RIGHT_EXTRA, strict);
 
 		// ROM comparison: left is always bhi.s (<). S1/S2 right uses bls.s
-		// (>=), while S3K uses blo.s (>), gated by PhysicsFeatureSet.
+		// (>=), while S3K uses blo.s (>), gated by PlayerMovementRules.
 		if (predictedX < leftBoundary) {
 			sprite.setCentreX((short) leftBoundary);
 			sprite.setXSpeed((short) 0);
@@ -2602,7 +2617,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			//     / blt.s Player_Boundary_Bottom (sonic3k.asm:23195).
 			//   S3K Tails_Check_Screen_Boundaries loc_14F30: cmp.w y_pos(a0),d0
 			//     / blt.s loc_14F56 (sonic3k.asm:28430-28431).
-			// PhysicsFeatureSet.levelBoundaryUsesCentreY gates centre-Y semantics
+			// PlayerMovementRules.levelBoundaryUsesCentreY gates centre-Y semantics
 			// for each game. S1/S2/S3K all enable it because their ROM routines
 			// compare y_pos(a0)/obY(a0), which maps to engine centre-Y.
 			//
@@ -2890,8 +2905,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private boolean shouldSetGroundWallPush(int mode) {
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (featureSet == null || !featureSet.groundWallPushRequiresFacingIntoWall()) {
+		CollisionRules rules = collisionRulesOrNull();
+		if (rules == null || !rules.groundWallPushRequiresFacingIntoWall()) {
 			return true;
 		}
 		boolean facingLeft = sprite.getDirection() == Direction.LEFT;
@@ -3332,7 +3347,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// clear pushing when anim differs from prev_anim (s2.asm:38033-38038,
 		// 40879-40884; sonic3k.asm:29359-29364,29681-29686), after ground-wall
 		// collision can set Status_Push. S1 leaves the animation clear behind a
-		// FixBugs guard, so PhysicsFeatureSet.animationChangeClearsPush() gates it.
+		// FixBugs guard, so PlayerAnimationRules.animationChangeClearsPush() gates it.
 		sprite.setPushing(false);
 	}
 
@@ -3345,8 +3360,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				|| inputRight) {
 			return;
 		}
-		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		if (fs == null || !fs.sidekickClearsStalePushVelocityBeforeGroundMove()) {
+		CollisionRules rules = collisionRulesOrNull();
+		if (rules == null || !rules.sidekickClearsStalePushVelocityBeforeGroundMove()) {
 			return;
 		}
 		SidekickCpuController cpu = sprite.getCpuController();
@@ -3379,8 +3394,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	void advanceFixedSkidDustWhileStopAnimPersists() {
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (featureSet == null || !featureSet.fixedSkidDustAllocatesAfterDynamicObjectPass()) {
+		PowerUpRules rules = powerUpRulesOrNull();
+		if (rules == null || !rules.fixedSkidDustAllocatesAfterDynamicObjectPass()) {
 			return;
 		}
 		if (!(sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile profile)) {
@@ -3412,10 +3427,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Sonic_TurnLeft/Right only switches the dust object into that routine
 		// and seeds mapping_frame=$15 (docs/s2disasm/s2.asm:36927-36929,
 		// 36988-36990, 42759-42797).
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		PowerUpRules rules = powerUpRulesOrNull();
 		if (!processingFixedSkidDustTick
-				&& featureSet != null
-				&& featureSet.fixedSkidDustAllocatesAfterDynamicObjectPass()) {
+				&& rules != null
+				&& rules.fixedSkidDustAllocatesAfterDynamicObjectPass()) {
 			fixedSkidDustTickPending = true;
 			return;
 		}
@@ -3659,8 +3674,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private boolean isUnifiedCollision() {
-		var fs = sprite.getPhysicsFeatureSet();
-		return fs != null && fs.collisionModel() == com.openggf.game.CollisionModel.UNIFIED;
+		CollisionRules rules = collisionRulesOrNull();
+		return rules != null && rules.collisionModel() == com.openggf.game.CollisionModel.UNIFIED;
 	}
 
 	private boolean hasObjectSupport() {

@@ -1,7 +1,6 @@
 package com.openggf.timer.timers;
 
 import com.openggf.audio.GameAudioProfile;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PowerUpRules;
 import com.openggf.level.LevelManager;
@@ -77,8 +76,7 @@ public class SpeedShoesTimer extends AbstractTimer {
         if (rules != null && rules.powerUp() != null) {
             return rules.powerUp();
         }
-        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-        return featureSet != null ? GameRules.fromLegacy(featureSet).powerUp() : null;
+        return null;
     }
 
     @Override

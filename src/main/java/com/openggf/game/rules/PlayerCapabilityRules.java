@@ -1,7 +1,5 @@
 package com.openggf.game.rules;
 
-import com.openggf.game.PhysicsFeatureSet;
-
 import java.util.Arrays;
 
 public record PlayerCapabilityRules(
@@ -16,17 +14,6 @@ public record PlayerCapabilityRules(
     public PlayerCapabilityRules {
         spindashSpeedTable = copy(spindashSpeedTable);
         superSpindashSpeedTable = copy(superSpindashSpeedTable);
-    }
-
-    public static PlayerCapabilityRules fromLegacy(PhysicsFeatureSet fs) {
-        return new PlayerCapabilityRules(
-                fs.spindashEnabled(),
-                fs.spindashSpeedTable(),
-                fs.elementalShieldsEnabled(),
-                fs.instaShieldEnabled(),
-                fs.jumpRepressClearsRollJumpBeforeAbility(),
-                fs.lightningShieldEnabled(),
-                fs.superSpindashSpeedTable());
     }
 
     @Override
