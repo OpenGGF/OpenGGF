@@ -6,10 +6,10 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after merging the develop GameRules refactor
-(`44073db0b`) and re-running the round 51 verification baseline:
-ARZ2 is f5827 / 2 under `frontierOnly` (`x_speed` expected `0x0000`,
-actual `-015D`),
+Current branch-local S2 state after round 54 ARZ2 work on top of the develop
+GameRules refactor baseline:
+ARZ2 is f5845 / 4 under `frontierOnly` (`tails_x_speed` expected `0x0000`,
+actual `-0057`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
 expected `-020C`, actual `0x020C`), and OOZ2 is f12861 / 1 under `frontierOnly`
@@ -18,6 +18,42 @@ verification keeps the full S2 sweep at 15 green / 4 expected-red.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. No S2 trace greened in round 51
 or during the post-GameRules re-baseline.
+
+## 2026-07-02 - S2 round 54 ARZ2 Obj89 Sonic stop advance
+
+Round 54 started from conductor commit `0bd000c9d` on
+`bugfix/ai-s2-trace-next`. Worker ARZ2 used
+`.worktrees/ai-s2-arz2-round54-next` /
+`bugfix/ai-s2-arz2-round54-next`, based from that conductor commit rather than
+`develop`. The focused baseline reproduced ARZ2 f5827 / 2 under
+`frontierOnly` (`x_speed` expected `0x0000`, actual `-015D`).
+
+Investigation stayed on the later Obj89 pillar side contact after the round 51
+Tails push-entry stop. The f5827 context showed Sonic at the same edge while
+the engine still applied the Obj89 moving side-contact velocity preservation
+that was introduced for a CPU-sidekick object-slot handoff. That preservation is
+only valid for Tails: `Obj89_Pillar_Sub0` / `Sub2` call
+`Obj89_Pillar_SolidObject` before the pillar body update at the temporary
+`y_pos+4` anchor (`d1=$23,d2=$44,d3=$45`), and the normal side path reaches
+`SolidObject_StopCharacter` when the contact is moving into the pillar
+(`docs/s2disasm/s2.asm:35413-35436,65330-65374,65531-65539`). Sonic has no
+later sidekick CPU/movement slot to overwrite that stop, so the Obj89
+preservation hook is now limited to CPU-controlled sidekicks.
+
+Candidate result:
+- ARZ2 advances to f5845 / 4 under `frontierOnly` (`tails_x_speed` expected
+  `0x0000`, actual `-0057`). The next owner remains the Obj89/Tails
+  order-sensitive side-stop window: ROM carries Tails' decelerating velocity
+  through f5843-f5844, then zeroes it at f5845.
+
+Verification:
+- `mvn "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#arzBossPillarPostPhysicsSidePushPreservesTailsVelocity+arzBossPillarMainPlayerSidePushUsesRomStopPath+arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff" test`
+  passed the three focused Obj89 pillar contact tests.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  failed at the advanced expected-red frontier f5845 / 4.
+- `mvn "-Dtest=com.openggf.tests.trace.s2.*TraceReplay" "-Ds2.rom.path=s2.gen" test`
+  ran 19 S2 trace tests: 15 green / 4 expected-red. Expected-red frontiers were
+  ARZ2 f5845, CNZ2 f9977, MTZ3 f13358, and OOZ2 f12861.
 
 ## 2026-07-02 - S2 post-GameRules round 54 baseline
 

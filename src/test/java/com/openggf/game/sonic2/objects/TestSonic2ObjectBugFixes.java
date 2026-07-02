@@ -285,6 +285,31 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void arzBossPillarMainPlayerSidePushUsesRomStopPath() {
+        ARZBossPillar pillar = new ARZBossPillar(
+                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
+                null);
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setGameRulesForTest(GameRules.SONIC_2);
+        sonic.setWidth(18);
+        sonic.setHeight(18);
+        sonic.setCentreX((short) 0x2A73);
+        sonic.setCentreY((short) 0x04BC);
+        sonic.setCpuControlled(false);
+        sonic.setRenderFlagOnScreen(true);
+        sonic.setAir(false);
+        sonic.setPushing(false);
+        sonic.setXSpeed((short) -0x15D);
+        sonic.setGSpeed((short) -0x15D);
+
+        assertFalse(pillar.preservesMovingSideContactVelocity(sonic),
+                "Obj89's temporary-anchor SolidObject call should use SolidObject_StopCharacter "
+                        + "for Sonic because no later sidekick CPU/movement slot overwrites the stop "
+                        + "(docs/s2disasm/s2.asm:35424-35436,65531-65539).");
+    }
+
+    @Test
     void arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff() {
         ARZBossPillar pillar = new ARZBossPillar(
                 new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
