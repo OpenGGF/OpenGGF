@@ -3388,7 +3388,7 @@ the disabled `fixBugs` block, while the active P1-standing branch writes
 `PlatformObject` processes P1 then P2, and continued support moves the rider
 through `MvSonicOnPtfm` (`docs/s2disasm/s2.asm:35728-35739,35641-35660`).
 
-**Originating commit.** `<pending>` S2 ARZ2 Obj89 arrow CPU Tails timer gate:
+**Originating commit.** `dd03abfa9` S2 ARZ2 Obj89 arrow CPU Tails timer gate:
 `TestS2Arz2LevelSelectTraceReplay` advances f5929 -> f5968.
 
 ---
