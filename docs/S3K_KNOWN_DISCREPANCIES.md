@@ -334,6 +334,37 @@ the current smooth-scroll renderer. No remaining display gap.
 
 ---
 
+## MHZ Swing Vine / Vertical Swing Bar Forced Camera Scroll (Resolved)
+
+**Location:** `Camera.requestForcedScroll(int, int)`, `MhzSwingVineObjectInstance`,
+`MhzSwingBarVerticalObjectInstance`
+**ROM Reference:** consumer `loc_1BFB8` (`sonic3k.asm:38296-38300`), setters
+`loc_226F2` (swing vine, `sonic3k.asm:47072-47074`) and `loc_3F0CC` (vertical bar,
+`sonic3k.asm:83575-83577`)
+
+Previously neither MHZ traversal object modeled the ROM `Scroll_force_positions`
+flag, so while a player hung on the vine or climbed the vertical bar the camera kept
+tracking the *player* with its normal deadzone/delay instead of the forced object
+coordinates. Now resolved: `Camera` models the ROM flag as a frame-scoped,
+coordinate-carrying request (`requestForcedScroll(forcedX, forcedY)`) that, for that
+frame, zeroes the horizontal scroll frame offset (`H_scroll_frame_offset`) and points
+the horizontal/vertical camera math at the forced coordinates instead of the focused
+sprite (mirroring the existing `requestFastVerticalScroll()` `Fast_V_scroll_flag`
+pattern). The request auto-clears each `updatePosition`.
+
+The two consumers pass different coordinate pairs, matching the ROM setters:
+- **Swing vine** — forced X and Y both from the vine object (`x_pos(a0)` / `y_pos(a0)`).
+  The setter lives in the swing routine `loc_226B0`, so it fires only while the vine is
+  swinging and Player 1 is grabbed (not during a stationary slow-grab hang).
+- **Vertical bar** — forced X from the bar (`x_pos(a0)`), forced Y from
+  `Player_1+y_pos`, fired every frame Player 1 is hanging.
+
+The abstraction is game-agnostic; the AIZ ride-vine consumers (out of scope here) can
+adopt it later. Covered by `TestCameraForcedScroll`,
+`TestMhzSwingVineObjectInstance`, and `TestMhzSwingBarVerticalObjectInstance`.
+
+---
+
 ## LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped
 
 **Location:** `LbzMinibossBoxRig.java` (`Phase.LINGER` removal), `Lbz1RobotnikEventController.java`, `LbzMinibossBoxInstance.java`

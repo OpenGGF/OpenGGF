@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -112,6 +113,30 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
         updatePlayer(p1, player);
         updatePlayer(p2, firstTrackedSidekick());
         updateDynamicSpawn(spawn.x(), spawn.y());
+        requestForcedScrollWhileSwinging();
+    }
+
+    /**
+     * ROM {@code loc_226F2} (sonic3k.asm:47072-47074): while the swing root
+     * routine {@code loc_226B0} runs and Player 1 is grabbed ({@code $32(a1)} on
+     * the handle), the vine writes {@code Scroll_force_positions} plus the vine's
+     * own {@code x_pos}/{@code y_pos} into {@code Scroll_forced_X_pos}/{@code
+     * Scroll_forced_Y_pos} so the camera tracks the vine anchor instead of the
+     * hanging player for that frame. The setter lives in the swing routine, so it
+     * does not fire during a stationary (mode-0) slow-grab hang.
+     */
+    private void requestForcedScrollWhileSwinging() {
+        if (rootState != RootState.SWINGING || p1.grabFlag == 0) {
+            return;
+        }
+        ObjectServices services = tryServices();
+        if (services == null) {
+            return;
+        }
+        Camera camera = services.camera();
+        if (camera != null) {
+            camera.requestForcedScroll(spawn.x(), spawn.y());
+        }
     }
 
     @Override

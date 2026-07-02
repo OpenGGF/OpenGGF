@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.LevelManager;
@@ -17,7 +18,11 @@ import java.util.ArrayList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -171,6 +176,43 @@ class TestMhzSwingVineObjectInstance {
 
         assertFalse(player.isObjectControlled(),
                 "loc_229E4 writes the $3C recapture delay, so the same player is not immediately grabbed again");
+    }
+
+    @Test
+    void swingingGrabbedVineForcesCameraScrollToVineAnchor() {
+        Camera camera = mock(Camera.class);
+        MhzSwingVineObjectInstance vine = new MhzSwingVineObjectInstance(new ObjectSpawn(
+                0x2600, 0x0660, MHZ_SWING_VINE, 0, 0, false, 0));
+        vine.setServices(new TestObjectServices().withCamera(camera));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2600, (short) 0x0680);
+        player.setXSpeed((short) 0x0400); // fast grab -> root enters the loc_226B0 swing routine
+
+        vine.update(0, player); // grab; root is still WAIT (the setter lives in the swing routine)
+        vine.update(1, player); // root now SWINGING -> loc_226F2 forces scroll to the vine anchor
+
+        verify(camera, atLeastOnce()).requestForcedScroll(0x2600, 0x0660);
+    }
+
+    @Test
+    void releasedVineStopsForcingCameraScroll() {
+        Camera camera = mock(Camera.class);
+        MhzSwingVineObjectInstance vine = new MhzSwingVineObjectInstance(new ObjectSpawn(
+                0x2600, 0x0660, MHZ_SWING_VINE, 0, 0, false, 0));
+        vine.setServices(new TestObjectServices().withCamera(camera));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2600, (short) 0x0680);
+        player.setXSpeed((short) 0x0400);
+
+        vine.update(0, player);
+        vine.update(1, player);
+        player.setJumpInputPressed(true);
+        vine.update(2, player); // jump release clears the grab
+        ((PostPlayerUpdateHook) vine).updatePostPlayer(2, player);
+        clearInvocations(camera);
+
+        vine.update(3, player);
+        vine.update(4, player);
+
+        verify(camera, never()).requestForcedScroll(anyInt(), anyInt());
     }
 
     @Test
