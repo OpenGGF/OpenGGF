@@ -6,14 +6,57 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 45 ARZ2 targeted pass:
-ARZ2 is f4749 / 1833 (`obj_extra_s10_x` expected absent, actual `0x2AE0`),
+Current branch-local S2 state after the round 46 ARZ2 targeted pass:
+ARZ2 is f4769 / 748 (`y` expected `0x046F`, actual `0x046E`),
 CNZ2 is f9946 / 300 (`x_speed` expected `0x0200`, actual `0x08A8`), MTZ3 is f13336 / 352
 (`x_speed` expected `0x0200`, actual `-0200`), and OOZ2 is f12107 / 99
 (`tails_y` expected `0x02A5`, actual `0x02A4` in the refreshed S2 sweep; focused
 OOZ2 runs also report `tails_g_speed` expected `0x00A4`, actual `0x0000`). Full
-S2 is 15 green / 4 expected-red, full S1 remains green, and the S3K guard state
-is unchanged. No S2 trace greened in round 45.
+S2 was last swept in round 45 at 15 green / 4 expected-red; full S1 remains
+green, and the S3K guard state is unchanged. No S2 trace greened in round 46.
+
+## 2026-07-02 - S2 round 46 ARZ2 targeted advance
+
+Worker ARZ2 used `.worktrees/ai-s2-arz2-round46-next` /
+`bugfix/ai-s2-arz2-round46-next`, based from conductor HEAD `b36813f4b` on
+`bugfix/ai-s2-trace-next` rather than `develop`. The focused baseline
+reproduced ARZ2 f4749 / 1833 (`obj_extra_s10_x` expected absent, actual
+`0x2AE0`; frontier-only handoff count was f4749 / 4).
+
+Investigation showed ROM and engine both had Obj89 in slot `$10` at x `$2AE0`,
+but the semantic object-near matcher rejected the main boss because the engine
+had advanced its Y one pixel too far (`$03C3` vs ROM `$03C2`). The root cause
+was Obj89 init timing: ROM `Obj89_Init_RaisePillars` initializes the main boss,
+allocates the two pillar objects, initializes the animation array, and returns;
+`Obj89_Main_Sub0` runs `Boss_MoveObject` only on a later object dispatch
+(`docs/s2disasm/s2.asm:64778-64870,64905-64918`). The engine called
+`finishInitialization()` and then immediately dispatched `MAIN_SUB0` on the same
+frame, giving the main boss an extra initial downward movement tick while the
+pillar child timing remained correct.
+
+Candidate result:
+- Banked Obj89 post-init return: ARZ2 advances to f4769 / 748 (`y` expected
+  `0x046F`, actual `0x046E`). The new frontier is a separate one-pixel
+  player/pillar landing mismatch while both ROM and engine are riding the right
+  Obj89 pillar at y `$04C2`.
+
+Verification:
+- `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen""
+  ""-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace""
+  test"` reports the expected-red frontier at f4769 / 748.
+- `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  ""-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen""
+  ""-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#arz2BossPillarsUseLowestFreeSlotsAtFrame4692,com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay#replayMatchesTrace""
+  test"` passed 2/2 after clearing stale Surefire reports.
+- `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  ""-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard""
+  test"` passed 1/1 after clearing stale Surefire reports.
+- S3K keep-green subset:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  ""-Ds3k.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s3k.gen""
+  ""-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils""
+  test"` passed 51/51 after clearing stale Surefire reports.
 
 ## 2026-07-02 - S2 round 45 ARZ2 targeted advance
 

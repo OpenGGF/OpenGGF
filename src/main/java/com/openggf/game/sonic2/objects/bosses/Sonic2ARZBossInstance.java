@@ -178,6 +178,10 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
                 return;
             }
             finishInitialization();
+            // ROM Obj89_Init initializes the boss/pillars and returns; Obj89_Main_Sub0
+            // starts moving the boss on the next object dispatch.
+            // docs/s2disasm/s2.asm:64778-64870,64905-64918
+            return;
         }
 
         if (bossCollisionRoutine != 0) {
