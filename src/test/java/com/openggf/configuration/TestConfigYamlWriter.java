@@ -62,15 +62,15 @@ class TestConfigYamlWriter {
     @Test
     void digitKeyNamesStayStringsAfterYamlRoundTrip() throws Exception {
         Map<String, Object> flat = defaults();
-        flat.put(SonicConfiguration.JUMP.name(), 49);
+        flat.put(SonicConfiguration.P1_A.name(), 49);
 
         String yaml = new ConfigYamlWriter().write(flat);
 
-        assertTrue(yaml.contains("jump: \"1\""), yaml);
+        assertTrue(yaml.contains("a: \"1\""), yaml);
         ObjectMapper mapper = new YAMLMapper();
         @SuppressWarnings("unchecked")
         Map<String, Object> parsed = mapper.readValue(yaml, Map.class);
         ConfigFlattener.Result r = ConfigFlattener.flatten(parsed);
-        assertEquals("1", r.flat().get(SonicConfiguration.JUMP.name()));
+        assertEquals("1", r.flat().get(SonicConfiguration.P1_A.name()));
     }
 }

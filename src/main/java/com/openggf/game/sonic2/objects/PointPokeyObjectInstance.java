@@ -527,7 +527,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             return mainPlayer;
         }
         try {
-            List<PlayableEntity> sidekicks = services().sidekicks();
+            List<PlayableEntity> sidekicks = services().playerQuery().sidekicks();
             if (capturedSidekickIndex < sidekicks.size()
                     && sidekicks.get(capturedSidekickIndex) instanceof AbstractPlayableSprite sidekick) {
                 return sidekick;
@@ -540,7 +540,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
     private int sidekickIndexFor(AbstractPlayableSprite player) {
         try {
-            List<PlayableEntity> sidekicks = services().sidekicks();
+            List<PlayableEntity> sidekicks = services().playerQuery().sidekicks();
             for (int i = 0; i < sidekicks.size(); i++) {
                 if (sidekicks.get(i) == player) {
                     return i;

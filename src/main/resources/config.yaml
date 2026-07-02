@@ -19,19 +19,28 @@ display:
 # ── Input ──
 input:
   pause: ENTER   # Toggle pause
+  controller:
+    enabled: true   # Enable gamepad/controller input
+    deadzone: 0.35   # Analog controller deadzone
+    player1: "auto"   # Controller assignment for Player 1
+    player2: "auto"   # Controller assignment for Player 2
   player1:
     up: UP   # Player 1: look up
     down: DOWN   # Player 1: crouch/roll
     left: LEFT   # Player 1: move left
     right: RIGHT   # Player 1: move right
-    jump: SPACE   # Player 1: jump
+    a: SPACE   # Player 1: action button A
+    b: ""   # Player 1: action button B
+    c: ""   # Player 1: action button C
     start: BACKSPACE   # Player 1: start (in-game pause)
   player2:
     up: I   # Player 2: look up
     down: K   # Player 2: crouch/roll
     left: J   # Player 2: move left
     right: L   # Player 2: move right
-    jump: RIGHT_SHIFT   # Player 2: jump
+    a: RIGHT_SHIFT   # Player 2: action button A
+    b: ""   # Player 2: action button B
+    c: ""   # Player 2: action button C
     start: RIGHT_CONTROL   # Player 2: start
 
 # ── Audio ──

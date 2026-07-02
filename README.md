@@ -43,20 +43,25 @@ integer codes or as human-readable names such as `SPACE`, `Q`, or `F9`. See
 
 ## Controls
 
-> Currently, only keyboard controls are supported.
+Keyboard and standard GLFW gamepads are supported for gameplay and the basic
+startup/title/data-select menus.
 
 ### Player Controls
 
 | Key | Action |
 |-----|--------|
 | Arrow Keys | Movement |
-| Space | Jump |
+| Space | Player 1 action A / jump |
+| Right Shift | Player 2 action A / jump |
 | Enter | Pause / unpause |
 
-The bundled `config.yaml` exposes these under `input.pause` and `input.player1`.
-Additional bindable controller inputs, including Player 1 Start, are documented in
-[`CONFIGURATION.md`](CONFIGURATION.md); keys omitted from the template still use the
-engine defaults until added explicitly.
+The bundled `config.yaml` exposes keyboard bindings under `input.pause`,
+`input.player1`, and `input.player2`. Keyboard B/C are unbound by default;
+gamepads map west/south/east face buttons to Mega Drive A/B/C. On Xbox-style
+pads that is X/A/B; on PlayStation-style pads that is Square/Cross/Circle.
+Additional bindable inputs, including Start and controller assignment, are
+documented in [`CONFIGURATION.md`](CONFIGURATION.md); keys omitted from the
+template still use the engine defaults until added explicitly.
 
 ### Debug Controls
 
@@ -245,6 +250,10 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
 
 Highlights:
 
+- The S3K AIZ replay bootstrap probe (`bugfix/ai-aiz-probe-debt`) was aligned with the frame-0 replay policy it had lagged since June: 26/26 green, with superseded seed-at-anchor cases removed, expectations re-derived from the recorded trace fixture, and the native intro handoff documented as a trace-verified regression tripwire.
+- Sidekick fly-in repair (`bugfix/ai-tails-flyin-regression`) restored chain-leader targeting and landing for the S2 Tails fly-in after the CNZ2 frontier fix made approach physics dynamic: a new `approachMovementUsesPhysics()` strategy hook gates the root-leader crossing shortcut, and `setInitialState(SPAWNING)` applies the ROM `obj_control=$81` spawn-wait invariant — with the CNZ2 trace frontier and full S2 sweep preserved.
+- Rewind seek/replay determinism (`bugfix/ai-slot-cadence-regression`) regreened the EHZ1 torture/diagnostic/encounter suite by capturing the S2 post-camera unload latch (`s2LatchedObjectManagerCameraX`) in `PlacementSnapshot`; the bisect also documented the S1 MZ1 slot-probe reds as pre-existing June-14 counter-latch debt (player-parity MZ1 gates stay green) and surfaced the pre-existing SBZ3 complete-run f173 regression in the trace frontier log.
+- Non-trace suite triage (`bugfix/ai-suite-red-triage`) closed the 2026-07-02 audit's stale-test and guard debt: updated tests/mocks that lagged trace-validated engine changes (dual-path terrain overload stubs, GameRules field rename, CPZ tube shim removal, OOZ two-pass init, collapsing-platform field removal, on-screen bubble fixture, S2 recorder `Vint_runcount` low word), added MCZ brick display-child graph-rewind coverage, re-ratcheted the documented size/lifecycle/ArchUnit baselines with inline justifications, aligned the build-tooling guard with the confirmed removal of develop push CI, restored the MTZ boss spawn null-guard, and migrated ARZ platform / Point Pokey P2 access to `ObjectPlayerQuery`.
 - The MHZ parity-fix wave (`bugfix/ai-mhz-parity`) closed the 2026-07-01 Mushroom Hill accuracy audit: fixed the inverted mushroom-parachute steering and ported its missing wall sensors, corrected SwingVine launch velocity to the ROM ×$C, made the end-boss BG deform follow the exact per-routine ROM table, contoured CurledVine riders, replaced the StickyVine pull heuristic with the ROM ArcTan/Sine vector math, split Madmole defeat to leave the solid cap stump, restored the Dragonfly tail-return ripple, zeroed PulleyLift initial handle extension, modeled ROM `Scroll_force_positions` as a shared `Camera.requestForcedScroll` consumed by the swing vine and vertical swing bar, fixed end-boss hit-flash parity and defeat-fragment velocity rows, implemented the miniboss `$F8`/`$FC` animation commands, and batched a dozen smaller SFX/frame/guard nits — every fix disassembly-verified in review, with deferred items recorded in `docs/S3K_KNOWN_DISCREPANCIES.md`.
 - S3K coverage has expanded across AIZ, HCZ, CNZ, MGZ, ICZ, MHZ, and LBZ, with route objects, badniks, bosses/minibosses, events, scroll/parallax, animated tiles, palette/PLC state, transitions, and rendering fixes advancing by route impact.
 - S3K Launch Base Act 2 boss polish now matches the disassembly's two laser-bearing turret segments on Robotnik's final ship: the top and middle segments each spawn their laser-head pair while the bottom segment keeps the gun pods.
@@ -257,7 +266,7 @@ Highlights:
 - User recording/playback now supports BK2 movie capture from fresh level starts, in-engine playback with target-frame pause and fast-forward, version mismatch warnings, and a compact desync-lite sidecar for nonblocking verification.
 - Runtime-owned frameworks continue replacing zone-local behavior where they reduce duplication or active risk: typed zone state, palette ownership, animated tile channels, live layout mutation, scroll composition, staged render effects, and render-mode overrides.
 - Release readiness work tightened policy hooks, trace/rewind invariants, object-service boundaries, ROM-only runtime asset rules, singleton lifecycle checks, architecture guards, and test quality gates.
-- Dead-code cleanup removed the audit-verified unreferenced deprecated surface — the legacy `PsgChip`, the unreachable `SimpleDataSelectManager`, and zero-caller deprecated members on `Camera`, `WaterSystem`, and `PatternRenderCommand` — and renamed `PsgChipGPGX` to `PsgChip` as the sole (Genesis Plus GX-derived) PSG core, with agent docs corrected to match the real S1/S2 data-select donation path.
+- Dead-code cleanup removed the audit-verified unreferenced deprecated surface — the legacy `PsgChip`, the unreachable `SimpleDataSelectManager`, and zero-caller deprecated members on `Camera`, `WaterSystem`, and `PatternRenderCommand` — and renamed `PsgChipGPGX` to `PsgChip` as the sole (Genesis Plus GX-derived) PSG core, with agent docs corrected to match the real S1/S2 data-select donation path. A follow-up removed `DefaultObjectServices`' deprecated `GameServices`-reconstituting constructor and its orphaned legacy helpers, moving `BootstrapObjectServices` onto the session-backed composition path and retiring the corresponding migration-guard bridge approvals.
 - IDE prerelease launches now resolve Git build metadata at runtime when Maven placeholders are unresolved, keeping local `Engine.main` window titles from exposing raw `${openggf.git.*}` tokens.
 - Full-suite maintenance restored the non-trace Maven suite to green by tightening rewind object-reference capture, preserving ROM-order level-frame camera/event sequencing while flushing queued layout mutations before boundary easing, and aligning multi-sidekick direct-leader behavior with tests/docs.
 - Player-facing work includes S3K data select/save support, cross-game donation paths, ROM-derived master-title previews, the legal-disclaimer startup flow, display shader support, pause/HUD fixes, multi-sidekick behavior, and level-editor plumbing.

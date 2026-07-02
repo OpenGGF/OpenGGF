@@ -11,7 +11,7 @@ class TestConfigFlattener {
 
     private Map<String, Object> nested() {
         Map<String, Object> player1 = new LinkedHashMap<>();
-        player1.put("jump", "SPACE");
+        player1.put("a", "SPACE");
         Map<String, Object> input = new LinkedHashMap<>();
         input.put("player1", player1);
         input.put("pause", "ENTER");
@@ -26,7 +26,7 @@ class TestConfigFlattener {
     @Test
     void flattensKnownLeavesToEnumNames() {
         ConfigFlattener.Result r = ConfigFlattener.flatten(nested());
-        assertEquals("SPACE", r.flat().get("JUMP"));
+        assertEquals("SPACE", r.flat().get("P1_A"));
         assertEquals("ENTER", r.flat().get("PAUSE_KEY"));
         assertEquals(Boolean.TRUE, r.flat().get("AUDIO_ENABLED"));
         assertTrue(r.unknownKeys().isEmpty());

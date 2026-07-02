@@ -522,7 +522,7 @@ class TestArchUnitRules {
                             .whereLayer("Graphics").mayNotAccessAnyLayer()
                             .whereLayer("Data").mayNotAccessAnyLayer()
                             .as("audio, graphics, and data layers should not depend on runtime gameplay layers"))
-                    .because("lower-level services should stay reusable and should not know about level/sprite/game orchestration; frozen baseline: 213 violations");
+                    .because("lower-level services should stay reusable and should not know about level/sprite/game orchestration; frozen baseline: 209 violations (2026-07-02: +2 ROM-backed SEGA-boot PCM edges in AudioManager, solved edges pruned)");
 
     @ArchTest
     static final ArchRule object_instance_named_classes_extend_object_instance_base =

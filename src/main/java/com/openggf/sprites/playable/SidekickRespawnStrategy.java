@@ -28,6 +28,29 @@ public interface SidekickRespawnStrategy {
     }
 
     /**
+     * Whether the approach's movement toward the leader is produced by the
+     * normal physics pipeline rather than scripted strategy positioning.
+     *
+     * <p>The shared controller uses this for two multi-sidekick decisions:
+     * which leader the approach homes on ({@code resolveApproachLeader}) and
+     * whether crossing/reaching the root (human) leader may complete the
+     * approach early. Physics-movement entries (Sonic walk/spindash run-in,
+     * Knuckles drop) complete on root-leader crossing because their movement
+     * is governed by ground speed and terrain, not a scripted homing target.
+     *
+     * <p>This is distinct from {@link #requiresPhysics()}: the S2 Tails fly-in
+     * lets the object-physics tick run when {@code obj_control} bit 0 is clear
+     * (ROM {@code Obj02_Control_Part2} {@code btst #0,obj_control(a0)},
+     * docs/s2disasm/s2.asm:38973), but its movement toward the leader and its
+     * completion condition remain {@code TailsCPU_Flying}'s own homing nudge
+     * and residual test (s2.asm:39161-39232), so it must never adopt the
+     * root-crossing completion shortcut.
+     */
+    default boolean approachMovementUsesPhysics() {
+        return requiresPhysics();
+    }
+
+    /**
      * Whether this approach routine owns its own off-screen timeout instead of
      * using {@link SidekickCpuController}'s NORMAL-routine despawn check.
      */

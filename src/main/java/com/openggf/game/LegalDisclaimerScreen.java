@@ -1,6 +1,8 @@
 package com.openggf.game;
 
+import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
+import com.openggf.control.PlayerInputState;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.PngTextureLoader;
@@ -152,7 +154,11 @@ public class LegalDisclaimerScreen {
     }
 
     public void update(InputHandler inputHandler) {
-        boolean keyPressed = inputHandler.isAnyKeyJustPressed();
+        PlayerInputState p1 = inputHandler.logical().player1();
+        boolean p1LogicalDismiss = (p1.actionPressedMask() & InputActionMasks.ACTION_ALL) != 0
+                || p1.startPressed();
+        boolean keyPressed = inputHandler.isAnyKeyJustPressed()
+                || p1LogicalDismiss;
         boolean enteredExiting = state.tick(keyPressed);
         if (enteredExiting) {
             fadeManager.startFadeToBlack(state::onFadeOutComplete);

@@ -203,13 +203,19 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         int leftKey = config.getInt(SonicConfiguration.LEFT);
         int rightKey = config.getInt(SonicConfiguration.RIGHT);
         int jumpKey = config.getInt(SonicConfiguration.JUMP);
+        boolean upPressed = input.isKeyPressed(upKey) || input.logical().menuUp();
+        boolean downPressed = input.isKeyPressed(downKey) || input.logical().menuDown();
+        boolean leftPressed = input.isKeyPressed(leftKey) || input.logical().menuLeft();
+        boolean rightPressed = input.isKeyPressed(rightKey) || input.logical().menuRight();
+        boolean backPressed = input.isKeyPressed(GLFW_KEY_ESCAPE) || input.logical().menuBack();
+        boolean confirmPressed = input.isKeyPressed(jumpKey) || input.menuAcceptExcludingBackAction();
 
         if (deleteRobotnikState == DeleteRobotnikState.PROMPT_CHOICE) {
-            if (input.isKeyPressed(leftKey)) {
+            if (leftPressed) {
                 commitDeletePrompt();
                 return;
             }
-            if (input.isKeyPressed(rightKey) || input.isKeyPressed(GLFW_KEY_ESCAPE)) {
+            if (rightPressed || backPressed) {
                 startDeleteRetreat();
                 return;
             }
@@ -217,21 +223,21 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         }
 
         if (deleteRobotnikState == DeleteRobotnikState.PROMPT_ANIMATING) {
-            if (input.isKeyPressed(GLFW_KEY_ESCAPE)) {
+            if (backPressed) {
                 startDeleteRetreat();
             }
             return;
         }
 
-        if (input.isKeyPressed(upKey)) {
+        if (upPressed) {
             handleVerticalAdjustment(1);
             return;
         }
-        if (input.isKeyPressed(downKey)) {
+        if (downPressed) {
             handleVerticalAdjustment(-1);
             return;
         }
-        if (input.isKeyPressed(leftKey)) {
+        if (leftPressed) {
             if (!selectorState.isMoving() && selectorState.moveLeft(menuModel().isDeleteMode())) {
                 displayedSelectedRow = menuModel().getSelectedRow();
                 sessionController.moveSelection(-1);
@@ -239,7 +245,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
             }
             return;
         }
-        if (input.isKeyPressed(rightKey)) {
+        if (rightPressed) {
             if (!selectorState.isMoving() && selectorState.moveRight(menuModel().isDeleteMode())) {
                 displayedSelectedRow = menuModel().getSelectedRow();
                 sessionController.moveSelection(1);
@@ -247,7 +253,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
             }
             return;
         }
-        if (input.isKeyPressed(GLFW_KEY_ESCAPE)) {
+        if (backPressed) {
             if (menuModel().isDeleteMode()) {
                 startDeleteRetreat();
             } else {
@@ -255,7 +261,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
             }
             return;
         }
-        if (input.isKeyPressed(jumpKey)) {
+        if (confirmPressed) {
             if (handleDeleteRobotnikAction()) {
                 return;
             }

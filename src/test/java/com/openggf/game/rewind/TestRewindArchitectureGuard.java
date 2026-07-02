@@ -102,7 +102,20 @@ class TestRewindArchitectureGuard {
             // Obj50 body/wing links are live object graph structure. The child
             // pointer is rebuilt from allocation and the wing's parent pointer
             // mirrors the ROM SST parent pointer rather than rewindable state.
-            Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/AquisBadnikInstance.java#@RewindTransient", 2)
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/AquisBadnikInstance.java#@RewindTransient", 2),
+            // 2026-07-02 triage: LBZ rewind-tail coverage (541d471da) and the CNZ2
+            // point-pokey prize objects (e870059b6) annotate structural parent/child
+            // links and constructor-derived offsets — object-graph structure rebuilt
+            // by the owning reconstruction path, not rewindable scalar state. Every
+            // annotation carries an inline reason; same precedent as the entries above.
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/BombPrizeObjectInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/RingPrizeObjectInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java#@RewindTransient", 4),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Lbz2RobotnikShipInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzKnuxPillarInstance.java#@RewindTransient", 2),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzLoweringGrappleObjectInstance.java#@RewindTransient", 4),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzEndBossInstance.java#@RewindTransient", 14),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzFinalBoss1Instance.java#@RewindTransient", 10)
     );
 
     private static final Set<String> REWIND_REGISTRY_PRODUCTION_ALLOWLIST = Set.of(

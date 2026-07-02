@@ -491,23 +491,19 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void developCiShouldProtectDirectPushes() throws Exception {
+    void developCiShouldProtectPullRequests() throws Exception {
+        // 2026-07-02: direct-push CI on develop was deliberately removed by
+        // f18d4d9be ("fix: stop develop push CI"), and that decision was
+        // confirmed. This guard now covers the pull-request path plus the
+        // scheduled develop trace-replay job; it no longer requires a push
+        // trigger or the validate-policy ci-push step.
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
         String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
         String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
         List<String> violations = new ArrayList<>();
 
-        if (!ci.contains("push:\n    branches:\n      - develop")) {
-            violations.add(".github/workflows/ci.yml must run on direct pushes to develop");
-        }
-        if (!ci.contains(".githooks/validate-policy.sh ci-push")) {
-            violations.add(".github/workflows/ci.yml must run validate-policy.sh ci-push for direct develop pushes");
-        }
         if (!ci.contains("github.event_name == 'pull_request'")) {
             violations.add(".github/workflows/ci.yml policy job must keep pull-request branch policy validation");
-        }
-        if (!ci.contains("github.event_name == 'push'")) {
-            violations.add(".github/workflows/ci.yml policy job must add push branch policy validation");
         }
         if (!ci.contains("develop-trace-replay:")) {
             violations.add(".github/workflows/ci.yml must include the nightly/manual develop trace replay job");
@@ -523,7 +519,7 @@ class TestBuildToolingGuard {
         }
 
         if (!violations.isEmpty()) {
-            fail("develop CI must protect both pull requests and direct pushes:\n  "
+            fail("develop CI must protect pull requests and the scheduled trace replay:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }

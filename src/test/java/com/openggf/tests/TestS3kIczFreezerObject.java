@@ -45,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -553,7 +554,7 @@ class TestS3kIczFreezerObject {
             int y = invocation.getArgument(2, Integer.class);
             return y >= floorProbeY ? floorDesc : ChunkDesc.EMPTY;
         });
-        when(levelManager.getSolidTileForChunkDesc(eq(floorDesc), eq(0x0C))).thenReturn(floorTile);
+        when(levelManager.getSolidTileForChunkDesc(eq(floorDesc), eq(0x0C), anyBoolean())).thenReturn(floorTile);
         mode.attachLevelManagers(mode.getWaterSystem(), mode.getParallaxManager(),
                 mode.getTerrainCollisionManager(), mode.getCollisionSystem(),
                 mode.getSpriteManager(), levelManager);

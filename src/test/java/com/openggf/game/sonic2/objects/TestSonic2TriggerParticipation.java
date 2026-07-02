@@ -121,6 +121,7 @@ class TestSonic2TriggerParticipation {
     void nutSidekickActionSeesLiveObjectStandingBit() {
         TestablePlayableSprite main = player("sonic", 0x1600, 0x0600);
         TestablePlayableSprite tails = player("tails", 0x16C0, 0x04D2);
+        tails.setCpuControlled(true);
         tails.setSubpixelRaw(0xB500, 0x8500);
         NutObjectInstance nut = new NutObjectInstance(
                 new ObjectSpawn(0x16C0, 0x04EE, Sonic2ObjectIds.NUT, 0, 0, false, 0),
