@@ -1826,6 +1826,31 @@ public class TestS2ObjectOccupancyOracle {
                         + "(docs/s2disasm/s2.asm:64836-64861,65330-65341); " + check.summary());
     }
 
+    @Test
+    public void arz2BossArrowTimerDecayDoesNotReseatSonicAtFrame5174() throws Exception {
+        PlatformPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 5174) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    AbstractPlayableSprite sonic =
+                            (AbstractPlayableSprite) GameServices.sprites().getSprite("sonic");
+                    return new PlatformPositionCheck(
+                            expected.x() & 0xFFFF,
+                            expected.y() & 0xFFFF,
+                            sonic == null ? -1 : sonic.getCentreX() & 0xFFFF,
+                            sonic == null ? -1 : sonic.getCentreY() & 0xFFFF,
+                            "live " + describeLiveSlots(om, 0x12, 0x15));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj89_Arrow_Platform branches directly to timer decay when obj89_arrow_timer "
+                        + "is nonzero, skipping PlatformObject/MvSonicOnPtfm and preserving the "
+                        + "landing y_pos through f5174 (docs/s2disasm/s2.asm:65658-65683); "
+                        + check.summary());
+    }
+
     /**
      * Drives the named S2 level-select trace through the engine (mirroring the
      * S2 branch of {@code AbstractTraceReplayTest.replayMatchesTrace}) and
