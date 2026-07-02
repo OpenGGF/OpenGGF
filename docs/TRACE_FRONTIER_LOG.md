@@ -69,6 +69,43 @@ Verification:
   S2 Obj89 plus a focused S2 trace oracle; no shared physics, collision,
   sidekick, or cross-game object infrastructure was touched.
 
+## 2026-07-02 - S2 round 57 closure and develop merge
+
+Round 57 merged the ARZ2 worker commit `ef229bac1` into the conductor as
+`c6db3706e`. CNZ2 and MTZ3 did not produce committed changes.
+
+- CNZ2 worker `.worktrees/ai-s2-cnz2-round57-next` /
+  `bugfix/ai-s2-cnz2-round57-next` reproduced f9977 / 10
+  (`tails_x_speed` expected `-0200`, actual `0x023A`). Diagnostics again
+  confirmed the ROM hurt comes from an Obj51 split electric ball and that the
+  engine split ball is phase-shifted by a few pixels. X-latch and split
+  live-touch candidates did not advance the trace and were reverted.
+- MTZ3 worker `.worktrees/ai-s2-mtz3-round57-next` /
+  `bugfix/ai-s2-mtz3-round57-next` reproduced f13358 / 6
+  (`tails_x_speed` expected `-020C`, actual `0x020C`). BizHawk confirmed ROM
+  hits Obj53 at BK2 frame 39522 and Obj54 at BK2 frame 39523; the engine reaches
+  Obj54 body contact one step early because Obj54 is already held at
+  `Boss_X=$2B32` while ROM remains at `$2B31`. A raw `$0F` ENEMY flag plus
+  delayed Obj54 hit-reaction candidate regressed MTZ3 to f12909 and was
+  rejected/reverted.
+- Local `develop` moved to `37eb5f619` after the LevelManager decomposition and
+  tier-A dead-code-removal work. The conductor merged it as `4a02c8e7f`
+  (`origin/develop` `4f673dfdf` was already contained). The only manual conflict
+  was `CHANGELOG.md`; the resolution preserved both the S2 trace bullets and the
+  develop refactor/dead-code bullets.
+- Post-merge S2 baseline:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5929 / 2, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6. OOZ2 stayed green.
+- Post-merge S1 guard:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  plus fresh Surefire XML filtering reported `S1_RECENT=29 S1_BAD=0`.
+- Post-merge S3K guard:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 tests with only the two known AIZ expected-red frontiers:
+  `TestS3kAizCompleteRunTraceReplay` f1095 `x_sub` and
+  `TestS3kAizTraceReplay` f8941 `camera_y`.
+
 ## 2026-07-02 - S2 round 56 ARZ2 Obj89 released side-push auto-jump advance
 
 Round 56 ARZ2 worker used
