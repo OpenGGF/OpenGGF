@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.LevelManager;
@@ -70,6 +71,64 @@ class TestMhzSwingBarVerticalObjectInstance {
         assertEquals((short) 0, player.getGSpeed());
         assertEquals(0x62, player.getMappingFrame(),
                 "Grab starts from mapping frame $62 before the climb animation advances");
+    }
+
+    @Test
+    void hurtPlayerCannotGrabVerticalBar() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance bar = registry.create(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_VERTICAL, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2214, (short) 0x0700);
+        player.setXSpeed((short) 0x0400);
+        player.setGSpeed((short) 0x0400);
+        player.setAir(false);
+        player.setHurt(true);
+
+        bar.update(0, player);
+
+        assertFalse(player.isObjectControlled(),
+                "ROM cmpi.b #4,routine(a1) / bhs.w locret_3F35E (sonic3k.asm:83737-83738) rejects the grab "
+                        + "while the player's routine is hurt (>=4)");
+    }
+
+    @Test
+    void deadPlayerCannotGrabVerticalBar() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance bar = registry.create(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_VERTICAL, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2214, (short) 0x0700);
+        player.setXSpeed((short) 0x0400);
+        player.setGSpeed((short) 0x0400);
+        player.setAir(false);
+        player.setDead(true);
+
+        bar.update(0, player);
+
+        assertFalse(player.isObjectControlled(),
+                "ROM cmpi.b #4,routine(a1) / bhs.w locret_3F35E (sonic3k.asm:83737-83738) rejects the grab "
+                        + "while the player's routine is dead (>=4)");
+    }
+
+    @Test
+    void grabbingVerticalBarPlaysGrabSfx() {
+        int[] lastSfx = {-1};
+        MhzSwingBarVerticalObjectInstance bar = new MhzSwingBarVerticalObjectInstance(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_VERTICAL, 0, 0, false, 0));
+        bar.setServices(new TestObjectServices() {
+            @Override
+            public void playSfx(int soundId) {
+                lastSfx[0] = soundId;
+            }
+        });
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2214, (short) 0x0700);
+        player.setXSpeed((short) 0x0400);
+        player.setGSpeed((short) 0x0400);
+        player.setAir(false);
+
+        bar.update(0, player);
+
+        assertEquals(Sonic3kSfx.GRAB.id, lastSfx[0],
+                "sub_3F0D8 plays sfx_Grab (sonic3k.asm:83775-83776) once the vertical-bar grab completes");
     }
 
     @Test

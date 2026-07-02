@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -163,7 +164,8 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
             }
             sideOffset = GRAB_SIDE_OFFSET;
         }
-        if (!isInVerticalGrabRange(player) || player.isObjectControlled() || player.getAir()) {
+        if (!isInVerticalGrabRange(player) || player.isHurt() || player.getDead()
+                || player.isObjectControlled() || player.getAir()) {
             return;
         }
         player.setXSpeed((short) 0);
@@ -184,6 +186,11 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
 
         state.hanging = true;
         state.phase = INITIAL_PHASE;
+
+        ObjectServices objectServices = tryServices();
+        if (objectServices != null) {
+            objectServices.playSfx(Sonic3kSfx.GRAB.id);
+        }
     }
 
     private void updateHangingPlayer(AbstractPlayableSprite player, BarState state) {

@@ -73,6 +73,38 @@ class TestMhzSwingBarHorizontalObjectInstance {
     }
 
     @Test
+    void hurtPlayerCannotGrabHorizontalBar() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance bar = registry.create(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_HORIZONTAL, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2200, (short) 0x0720);
+        player.setYSpeed((short) 0x0300);
+        player.setHurt(true);
+
+        bar.update(0, player);
+
+        assertFalse(player.isObjectControlled(),
+                "ROM cmpi.b #4,routine(a1) / bhs.w locret_3EFB8 (sonic3k.asm:83439-83440) rejects the grab "
+                        + "while the player's routine is hurt (>=4)");
+    }
+
+    @Test
+    void deadPlayerCannotGrabHorizontalBar() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance bar = registry.create(new ObjectSpawn(
+                0x2200, 0x0700, MHZ_SWING_BAR_HORIZONTAL, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2200, (short) 0x0720);
+        player.setYSpeed((short) 0x0300);
+        player.setDead(true);
+
+        bar.update(0, player);
+
+        assertFalse(player.isObjectControlled(),
+                "ROM cmpi.b #4,routine(a1) / bhs.w locret_3EFB8 (sonic3k.asm:83439-83440) rejects the grab "
+                        + "while the player's routine is dead (>=4)");
+    }
+
+    @Test
     void nativeP2InsideGrabWindowIsCapturedWhenP1UpdatesObject() {
         MhzSwingBarHorizontalObjectInstance bar = new MhzSwingBarHorizontalObjectInstance(new ObjectSpawn(
                 0x2200, 0x0700, MHZ_SWING_BAR_HORIZONTAL, 0, 0, false, 0));
