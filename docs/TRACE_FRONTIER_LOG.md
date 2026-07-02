@@ -6,18 +6,63 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 65 ARZ2 worker on next
+Current branch-local S2 state after round 66 ARZ2 worker on next
 campaign branch `bugfix/ai-s2-trace-next`:
-ARZ2 is f6913 / 1 under `frontierOnly` (`camera_x` expected `0x2B29`,
-actual `0x2B28`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
+ARZ2 is f6923 / 3 under `frontierOnly` (`obj_s12_type` expected `0x3E`,
+actual missing), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now ARZ2, CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
-was banked into `next`; ARZ2 advanced again in round 65 but is not banked under
+was banked into `next`; ARZ2 advanced again in round 66 but is not banked under
 the green-bank rule until it greens.
+
+## 2026-07-02 - S2 round 66 ARZ2 Obj89 camera-release lifetime
+
+Round 66 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round66-next` /
+`bugfix/ai-s2-arz2-round66-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at merge commit `358c371ea`. The focused baseline
+reproduced ARZ2 f6913 / 1 under `frontierOnly` (`camera_x` expected
+`0x2B29`, actual `0x2B28`).
+
+Investigation showed Obj89 reached its defeated escape routine and raised
+`Camera_Max_X_pos` by 2 per frame only through `$2B28`, then vanished before
+the ROM release target `$2C00`. The player/camera math then correctly clamped
+at the stale max, producing the one-pixel camera mismatch. This was the generic
+object-window unload retiring the event-spawned ARZ boss before the boss's own
+routine had finished its ROM-owned release gate.
+
+Fix:
+- `Sonic2ARZBossInstance` is now persistent, matching other S2 event-spawned
+  bosses whose defeat routines own camera expansion and deletion. Obj89's
+  `Obj89_Main_SubC` writes `Boss_X_vel/Boss_Y_vel`, increments
+  `Camera_Max_X_pos` until `$2C00`, and only then checks the on-screen bit
+  before deleting (`docs/s2disasm/s2.asm:65267-65278`).
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f6913 / 1 (`camera_x` expected `0x2B29`, actual `0x2B28`) to
+  f6923 / 3 (`obj_s12_type` and `obj_s13_type` expected `0x3E`, actual
+  missing; `obj_s14_slot` expected `0x14`, actual `0x12`). The new owner is
+  the Obj3E capsule load sequence: the ROM initializes four Obj3E sub-objects
+  from `Obj3E_ObjLoadData`, while the current Java capsule compresses most of
+  those routines into one body instance plus a button child
+  (`docs/s2disasm/s2.asm:84774-84845`).
+
+Verification:
+- Focused ARZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  reproduced the new f6923 / 3 frontier.
+- Focused DEZ ending trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  passed by its Surefire class report.
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 traces with 16 green and the three expected-red frontiers: ARZ2
+  f6923 / 3, CNZ2 f9977 / 10, and MTZ3 f13477 / 4.
 
 ## 2026-07-02 - S2 round 65 conductor closure
 
