@@ -328,6 +328,24 @@ public class ARZBossArrow extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // Obj89_Arrow_Platform passes d1=$1B directly to PlatformObject.
+        // That is already the standable top half-width, not a full-solid
+        // obActWid+$B width that needs the generic landing narrowing.
+        // docs/s2disasm/s2.asm:65658-65665
+        return true;
+    }
+
+    @Override
+    public boolean usesGroundHalfHeightForTopSolidContact() {
+        // Obj89_Arrow_Platform passes d3=2 to PlatformObject; S2's
+        // PlatformObject_ChkYRange uses d3 as the landing surface height.
+        // Using d2=1 misses the f5928 Tails landing by one pixel.
+        // docs/s2disasm/s2.asm:65658-65665
+        return true;
+    }
+
+    @Override
     public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
         // Despite the generic hook name, this is the flat PlatformObject
         // equivalent: timer-decay frames skip MvSonicOnPtfm, but the player

@@ -1851,6 +1851,34 @@ public class TestS2ObjectOccupancyOracle {
                         + check.summary());
     }
 
+    @Test
+    public void arz2BossArrowUsesPlatformObjectD3ForTailsLandingAtFrame5928() throws Exception {
+        RideCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 5928) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have Tails at ARZ2 f5928");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    Assertions.assertNotNull(expected.sidekick(), "Trace frame must include recorded Tails state");
+                    Assertions.assertEquals(0x14, expected.sidekick().standOnObj(),
+                            "ROM fixture should have Tails standing on Obj89 arrow slot 0x14 at ARZ2 f5928");
+                    return new RideCheck(expected.sidekick().y() & 0xFFFF,
+                            tails.getCentreY() & 0xFFFF,
+                            tails.getAir(),
+                            tails.isOnObject());
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj89_Arrow_Platform passes d1=$1B,d2=1,d3=2 to PlatformObject; "
+                        + "d3 is the landing surface height, so Tails must land on the "
+                        + "arrow at f5928 (docs/s2disasm/s2.asm:65658-65665)");
+        Assertions.assertFalse(check.actualAir());
+        Assertions.assertTrue(check.actualOnObject());
+    }
+
     /**
      * Drives the named S2 level-select trace through the engine (mirroring the
      * S2 branch of {@code AbstractTraceReplayTest.replayMatchesTrace}) and
