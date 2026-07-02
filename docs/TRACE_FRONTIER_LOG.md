@@ -6,16 +6,58 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after the round 50 ARZ2 and OOZ2 targeted pass:
+Current branch-local S2 state after the round 51 OOZ2 targeted pass:
 ARZ2 is f5460 / 4 under `frontierOnly` (`tails_x_speed` expected `0x0000`,
 actual `-0048`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
-expected `-020C`, actual `0x020C`), and OOZ2 is f12416 / 1 under `frontierOnly`
-(`camera_x` expected `0x2A04`, actual `0x2A02`). The round 50 worker
+expected `-020C`, actual `0x020C`), and OOZ2 is f12861 / 1 under `frontierOnly`
+(`y` expected `0x0215`, actual `0x0214`). The round 51 worker
 verification keeps the full S2 sweep at 15 green / 4 expected-red.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
-with only the known AIZ expected-red frontiers. No S2 trace greened in round 50.
+with only the known AIZ expected-red frontiers. No S2 trace greened in round 51.
+
+## 2026-07-02 - S2 round 51 OOZ2 Obj55 camera-release advance
+
+Round 51 started from conductor HEAD `f21c28647` on the `next` campaign via
+`.worktrees/ai-s2-trace-next`. Worker OOZ2 used
+`.worktrees/ai-s2-ooz2-round51-next` /
+`bugfix/ai-s2-ooz2-round51-next`, based from that conductor HEAD rather than
+`develop`. The focused baseline reproduced OOZ2 f12416 / 1 under
+`frontierOnly` (`camera_x` expected `0x2A04`, actual `0x2A02`).
+
+Investigation stayed on the post-defeat camera-release phase. Engine-side
+camera probes showed Obj55 raising `Camera_Max_X_pos` to `$2A02`, then no longer
+executing while the OOZ2 level event kept clamping `Camera_Min_X_pos` to the
+current camera value. ROM `LevEvents_OOZ2_Routine4` only reacts to
+`Boss_defeated_flag` by copying `Camera_X_pos` to the camera/Tails minimums
+and `Camera_Max_X_pos` to Tails' maximum (`docs/s2disasm/s2.asm:21396-21403`).
+The actual release owner is Obj55: `Obj55_ReleaseCamera` increments
+`Camera_Max_X_pos` by 2 until `$2A20`, and `Obj55_ChkDelete` deletes only after
+that target is reached and the boss body has sunk to `y_pos >= $2D0`
+(`docs/s2disasm/s2.asm:68435-68457`).
+
+Candidate result:
+- Main Obj55 now opts out of generic object-window culling through that
+  defeated release/delete gate, matching the existing S2 boss pattern where an
+  event-spawned boss routine owns post-defeat camera expansion. Obj55 laser and
+  wave subobjects keep normal lifetime behavior.
+- OOZ2 advances to f12861 / 1 under `frontierOnly` (`y` expected `0x0215`,
+  actual `0x0214`). At the new frontier, ROM and engine both have
+  `camera_x=$2A20`, so the remaining owner has moved past camera release to the
+  later Egg Prison / player support handoff.
+
+Verification:
+- `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.frontierOnly=true" "-DfailIfNoTests=false" test`
+  reports the expected-red frontier at f12861 / 1.
+- `mvn "-Dmaven.test.failure.ignore=true" "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtrace.frontierOnly=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" test`
+  ran the full S2 sweep: 19 tests, 15 green / 4 expected-red at ARZ2 f5460 / 4,
+  CNZ2 f9977 / 10, MTZ3 f13358 / 6, and OOZ2 f12861 / 1.
+- After clearing stale Surefire reports, `mvn "-Dmaven.test.failure.ignore=true" "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Dtrace.frontierOnly=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Dsonic1.rom.path=s1.gen" test`
+  ran the full S1 sweep: 29 / 29 green.
+- After clearing stale Surefire reports, `mvn "-Dmaven.test.failure.ignore=true" "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtrace.frontierOnly=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsonic3k.rom.path=s3k.gen" test`
+  ran the campaign S3K guard subset: 68 tests, 66 green / 2 expected-red at AIZ
+  complete-run f1095 and AIZ trace f8941.
 
 ## 2026-07-02 - S2 round 50 OOZ2 Obj55 hitcount advance
 

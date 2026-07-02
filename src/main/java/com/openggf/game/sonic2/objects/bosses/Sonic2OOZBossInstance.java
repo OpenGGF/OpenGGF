@@ -755,6 +755,14 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     }
 
     @Override
+    public boolean isPersistent() {
+        // Obj55_ReleaseCamera owns the post-defeat camera release and delete gate:
+        // it advances Camera_Max_X_pos to $2A20, then deletes only after the body
+        // has sunk to y_pos >= $2D0 (docs/s2disasm/s2.asm:68443-68457).
+        return bossSubtype == SUB_MAIN;
+    }
+
+    @Override
     protected int getInitialHitCount() {
         return 8;
     }
