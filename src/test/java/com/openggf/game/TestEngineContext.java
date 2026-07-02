@@ -106,11 +106,18 @@ class TestEngineContext {
         assertNoRootBypass(Path.of("src/main/java/com/openggf/GameLoop.java"));
     }
 
+    @Test
+    void engineCreatesInputHandlerFromEngineOwnedConfiguration() throws IOException {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+
+        assertFalse(source.contains("new InputHandler()"),
+                "Production Engine input must use the engine-owned SonicConfigurationService");
+    }
+
     private static void assertNoRootBypass(Path path) throws IOException {
         String source = Files.readString(path);
         assertFalse(source.contains("GameServices.debugOverlay()"), path + " should use EngineContext.debugOverlay()");
         assertFalse(source.contains("GameServices.rom()"), path + " should use EngineContext.roms()");
     }
 }
-
 
