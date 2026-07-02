@@ -507,6 +507,31 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s2BossLockRightBoundaryUsesPreEasedMaxX() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                Camera camera = GameServices.camera();
+                camera.setMinX((short) 0x0200);
+                camera.setMaxX((short) 0x29FE);
+                camera.setMaxXTarget((short) 0x2A00);
+                camera.updateBoundaryEasing();
+                GameServices.gameState().setCurrentBossId(6);
+
+                int rightBoundary = 0x29FE + 320 - 24;
+                mockSprite.setCentreX((short) rightBoundary);
+                mockSprite.setSubpixelRaw(0, 0);
+                mockSprite.setXSpeed((short) 0x0200);
+                mockSprite.setGSpeed((short) 0x0200);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doLevelBoundary");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals(rightBoundary, mockSprite.getCentreX() & 0xFFFF);
+                assertEquals(0, mockSprite.getXSpeed());
+                assertEquals(0, mockSprite.getGSpeed());
+        }
+
+        @Test
         public void rightLevelBoundaryIsViewportIndependentAtWidescreen() throws Exception {
                 // Regression: the right level boundary is the level's design edge
                 // (Camera_Max_X_pos + 320), not the render viewport. Widening it by a

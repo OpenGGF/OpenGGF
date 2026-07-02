@@ -6,25 +6,98 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 71 ARZ2 and CNZ2 worker branches
-plus the round 73 CNZ2 Obj51 post-trigger body-touch advance,
+Current branch-local S2 state after round 71 ARZ2 and CNZ2 worker branches,
+the round 73 CNZ2 Obj51 post-trigger body-touch advance, and the round 75
+CNZ2 boss-lock boundary-source advance,
 integrated into conductor branch `bugfix/ai-s2-trace-next`: ARZ2 is green
 under `frontierOnly` and was banked into `next` as `7ef0928da`; CNZ2 is
-f11129 / 7 under `frontierOnly` (`x` expected `0x2B26`, actual
-`0x2B28`); MTZ3 is f13477 / 4 under `frontierOnly`
+f11130 / 6 under `frontierOnly` (`tails_y_speed` expected `-0700`, actual
+`0x0000`); MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now CNZ2 and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
-Round 73 CNZ2 has advanced but not greened, and the MTZ3 round 73 worker is
+Round 75 CNZ2 has advanced but not greened, and the MTZ3 round 73 worker is
 still active.
 Worker bounce policy: any `no-change`, `rejected`, `blocked`, or "gated"
 return must include targeted BizHawk Lua evidence in `luaProbes`, including
 script path, output path, frame window, hooked PCs, and the ROM values observed.
 For slot, touch, subpixel, counter, or "RAM-gated" conclusions, a PC-execute
 probe is required before the bounce is accepted.
+
+## 2026-07-02 - S2 round 75 CNZ2 boss-lock boundary source
+
+Round 75 CNZ2 worker used
+`.worktrees/ai-s2-cnz2-round75-next` /
+`bugfix/ai-s2-cnz2-round75-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `c12917323`. The focused baseline reproduced
+CNZ2 f11129 / 7 under `frontierOnly`: `x` expected `0x2B26`, actual
+`0x2B28`.
+
+BizHawk diagnostics:
+- Probe script:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round75-next\tools\bizhawk\diag_s2_cnz2_round75_camera_flee.lua`.
+  Outputs:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round75-next\target\diag_s2_cnz2_round75_camera_flee.txt` and
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round75-next\target\diag_s2_cnz2_round75_rom_clamp.txt`.
+- Early-flee command summary:
+  `OGGF_START=23455 OGGF_STOP=23480 OGGF_TRACE_OFFSET=12484 OGGF_OUT=<output> run_bizhawk_lua.bat <lua> <s2-lvl-select-CNZ.bk2> <s2.gen>`.
+  Hooked Obj51 defeat bounce `$031DCC`, bounce movement `$031E0E`,
+  flee entry `$031E2A`, flee movement `$031E4A`, and copy-position tail
+  `$031CDC`.
+- Clamp-window command summary:
+  `OGGF_START=23600 OGGF_STOP=23620 OGGF_TRACE_OFFSET=12484 OGGF_OUT=<output> run_bizhawk_lua.bat <lua> <s2-lvl-select-CNZ.bk2> <s2.gen>`.
+- Key ordering: at trace f10985, ROM is still in Obj51 defeat bounce;
+  `Camera_X_pos=$28E0`, `Camera_Max_X_pos=$28E0`, and `Boss_Countdown`
+  advances to `$0020` at `$031E0E`. At trace f10986, Obj51 first enters
+  flee at `$031E2A` with `Camera_Max_X_pos=$28E0`, then `$031E4A` observes
+  the routine's add to `$28E2` with `Boss_X_vel=$0400` and
+  `Boss_Y_vel=$FFC0`.
+- At the clamp frontier, the f11129 sample has
+  `Camera_X_pos=$29FE`, `Camera_Max_X_pos=$29FE`,
+  `Current_Boss_ID=$06`, and Sonic at `$2B23` with `x_vel=$0512`.
+  The same frame's later Obj51 flee hook enters at `$031E2A` with max still
+  `$29FE`; after the routine's add, `$031E4A` sees max `$2A00` and Sonic
+  already clamped to `$2B26` with `x_vel=$0000`.
+
+Engine diagnostic:
+- Temporary engine probe output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round75-next\target\diag_s2_cnz2_round75_engine.txt`
+  and Surefire captured output
+  `target\surefire-reports\com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay-output.txt`.
+- Key pre-fix rows showed the Java boundary clamp reading the current
+  post-eased max too early: after Obj51 set `target=$2A00`, the next
+  `level-bound` row saw `camX=$29FE`, `max=$2A00`, `right=$2B28`, and
+  clamped Sonic to `$2B28` instead of the ROM `$2B26`.
+
+Root fixed:
+- `Camera` now captures `maxXBeforeBoundaryEasing` immediately before the
+  DynamicLevelEvents-style boundary-easing tail mutates `maxX`.
+- S2's `PlayerMovementRules` opt into using that pre-eased max during active
+  boss-lock right-boundary clamps. This models the ROM slot ordering: player
+  boundary code consumes the camera max as it stood before later object /
+  boundary-release writes in the frame, while normal non-boss right-boundary
+  behavior and S1/S3K rules remain unchanged.
+
+Result:
+- `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f11129 / 7 to f11130 / 6. New first error:
+  `tails_y_speed` expected `-0700`, actual `0x0000`, exposing the next Tails
+  capsule/sidekick handoff frontier.
+
+Verification:
+- Focused CNZ2 trace:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.frontierOnly=true" "-DfailIfNoTests=false" test`
+  failed as the improved expected-red f11130 / 6 frontier.
+- Unit regression:
+  `mvn "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#s2BossLockRightBoundaryUsesPreEasedMaxX" "-DfailIfNoTests=false" test`
+  passed.
+- Full S2 trace guard:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 S2 trace classes with only the expected-red set: CNZ2 f11130 / 6
+  and MTZ3 f13477 / 4. All other S2 trace classes remained green.
 
 ## 2026-07-02 - S2 round 73 CNZ2 Obj51 post-trigger body touch X
 

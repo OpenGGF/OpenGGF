@@ -2595,6 +2595,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				: gameState().isBossFightActive();
 		boolean strict = (movementRules != null && movementRules.levelBoundaryRightStrict())
 				|| lockActive || gameState().isEndOfLevelActive();
+		if (lockActive && movementRules != null
+				&& movementRules.levelBoundaryUsesPreEasedMaxXDuringBossLock()) {
+			// S2 player slots run before later object/boundary-release writes reach Sonic_LevelBound.
+			maxX = camera.getMaxXBeforeBoundaryEasing();
+		}
 		int rightBoundary = RightBoundary.compute(maxX, LEVEL_DESIGN_WIDTH, SONIC_WIDTH, RIGHT_EXTRA, strict);
 
 		// ROM comparison: left is always bhi.s (<). S1/S2 right uses bls.s

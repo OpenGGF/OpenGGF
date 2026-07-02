@@ -21,6 +21,7 @@ public record CameraSnapshot(
         short minYTarget,
         short maxXTarget,
         short maxYTarget,
+        short maxXBeforeBoundaryEasing,
         boolean maxYChanging,
         int horizScrollDelayFrames,
         boolean frozen,
