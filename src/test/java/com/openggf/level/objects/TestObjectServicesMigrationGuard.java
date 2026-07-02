@@ -93,60 +93,12 @@ class TestObjectServicesMigrationGuard {
             approved("com.openggf.level.objects.AbstractObjectRegistry", "GameServices.",
                     "GameServices.levelOrNull()",
                     "registry placement bootstrap fallback"),
-            approved("com.openggf.level.objects.BootstrapObjectServices", "GameServices.",
-                    "GameServices.",
-                    "explicit GameServices-to-ObjectServices adapter"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.configuration()",
-                    "builds the root EngineContext from current runtime services"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.graphics()",
-                    "builds the root EngineContext from current runtime services"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.audio()",
-                    "builds the root EngineContext from current runtime services"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.rom()",
-                    "builds the root EngineContext from current runtime services"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.profiler()",
-                    "builds the root EngineContext from current runtime services"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.debugOverlay()",
-                    "builds the root EngineContext from current runtime services"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.playbackDebug()",
-                    "builds the root EngineContext from current runtime services"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.romDetection()",
-                    "builds the root EngineContext from current runtime services"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.crossGameFeatures()",
-                    "builds the root EngineContext from current runtime services"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.hasRuntime()",
-                    "legacy fallback constructor refuses to run without active runtime-owned services"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.collision()",
-                    "legacy fallback constructor bridges active collision service into ObjectServices"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.worldSession()",
-                    "legacy fallback constructor bridges active world session into ObjectServices"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.rng()",
-                    "legacy fallback constructor bridges active RNG into ObjectServices"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.zoneRuntimeRegistry()",
-                    "legacy fallback constructor bridges active zone runtime registry into ObjectServices"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.paletteOwnershipRegistryOrNull()",
-                    "legacy fallback constructor bridges active palette ownership registry into ObjectServices"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.zoneLayoutMutationPipeline()",
-                    "legacy fallback constructor bridges active mutation pipeline into ObjectServices"),
-            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
-                    "GameServices.solidExecutionRegistry()",
-                    "legacy fallback constructor bridges active solid execution registry into ObjectServices"),
+            approved("com.openggf.level.objects.BootstrapObjectServices", "EngineServices.",
+                    "EngineServices.current()",
+                    "ObjectServices composition boundary"),
+            approved("com.openggf.level.objects.BootstrapObjectServices", "SessionManager.",
+                    "SessionManager.getCurrentGameplayMode()",
+                    "ObjectServices composition boundary"),
             approved("com.openggf.level.objects.ObjectManager", "EngineServices.",
                     "EngineServices.current()",
                     "ObjectServices composition boundary"),
@@ -265,14 +217,14 @@ class TestObjectServicesMigrationGuard {
     void consolidatedGlobalAccessScan_allowsDocumentedLineLevelBridgeAccess(@TempDir Path tempDir)
             throws IOException {
         Path srcMain = tempDir.resolve("src/main/java");
-        Path source = srcMain.resolve("com/openggf/level/objects/DefaultObjectServices.java");
+        Path source = srcMain.resolve("com/openggf/level/objects/ObjectManager.java");
         Files.createDirectories(source.getParent());
         Files.writeString(source, """
                 package com.openggf.level.objects;
 
-                final class DefaultObjectServices {
-                    void createEngineContext() {
-                        GameServices.configuration();
+                final class ObjectManager {
+                    void composeServices() {
+                        EngineServices.current();
                     }
                 }
                 """);
