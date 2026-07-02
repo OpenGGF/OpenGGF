@@ -126,6 +126,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     // Invisible launcher states per player (ROM routine 6 states).
     private final Map<AbstractPlayableSprite, LauncherPlayerState> playerStates = new IdentityHashMap<>();
     private static final Map<AbstractPlayableSprite, OOZLauncherObjectInstance> activeLaunchers = new IdentityHashMap<>();
+    private static final Map<AbstractPlayableSprite, LauncherMoveSample> recentLauncherMoves = new IdentityHashMap<>();
 
     private final SolidObjectParams solidParams;
 
@@ -350,7 +351,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         boolean anyActive = false;
         for (AbstractPlayableSprite participant : playerParticipants(player)) {
             LauncherPlayerState state = stateFor(participant);
-            state.launcherState = processLauncherState(participant, state.launcherState);
+            state.launcherState = processLauncherState(participant, state.launcherState, frameCounter);
             anyActive |= state.launcherState != 0;
         }
 
@@ -370,10 +371,10 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
      *
      * @return updated state
      */
-    private int processLauncherState(AbstractPlayableSprite player, int state) {
+    private int processLauncherState(AbstractPlayableSprite player, int state, int frameCounter) {
         return switch (state) {
             case 0 -> processProximityDetection(player);
-            case 2 -> processTracking(player);
+            case 2 -> processTracking(player, frameCounter);
             default -> 0;
         };
     }
@@ -452,7 +453,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
      * State 2: Tracking (ROM: loc_25036 / Obj3D_MoveCharacter).
      * Moves the player along their velocity until off-screen or captured by LauncherBall.
      */
-    private int processTracking(AbstractPlayableSprite player) {
+    private int processTracking(AbstractPlayableSprite player, int frameCounter) {
         // If player is no longer on-object (captured by LauncherBall or released), stop tracking
         if (!player.isOnObject() || !player.isObjectControlled()) {
             return 0;
@@ -471,9 +472,28 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
 
         // Move player by velocity (ROM: Obj3D_MoveCharacter)
         // ROM uses 16.16 fixed point: ext.l d0; asl.l #8,d0; add.l d0,x_pos(a1)
+        int beforeX = player.getCentreX();
+        int beforeY = player.getCentreY();
         player.move(player.getXSpeed(), player.getYSpeed());
+        recentLauncherMoves.put(player, new LauncherMoveSample(frameCounter, beforeX, beforeY));
 
         return 2; // Stay in tracking state
+    }
+
+    static boolean crossedIntoLauncherBallThisFrame(AbstractPlayableSprite player, int frameCounter,
+                                                     int ballX, int ballY) {
+        LauncherMoveSample sample = recentLauncherMoves.get(player);
+        if (sample == null || sample.frameCounter != frameCounter) {
+            return false;
+        }
+        return !insideLauncherBall(sample.beforeX, sample.beforeY, ballX, ballY)
+                && insideLauncherBall(player.getCentreX(), player.getCentreY(), ballX, ballY);
+    }
+
+    private static boolean insideLauncherBall(int playerX, int playerY, int ballX, int ballY) {
+        int dx = playerX - ballX + PROXIMITY_HALF_X;
+        int dy = playerY - ballY + PROXIMITY_HALF_X;
+        return dx >= 0 && dx < PROXIMITY_FULL_X && dy >= 0 && dy < PROXIMITY_FULL_X;
     }
 
     private List<AbstractPlayableSprite> playerParticipants(AbstractPlayableSprite updatePlayer) {
@@ -501,6 +521,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
 
     public static void clearActiveLauncherFor(AbstractPlayableSprite player) {
         OOZLauncherObjectInstance launcher = activeLaunchers.remove(player);
+        recentLauncherMoves.remove(player);
         if (launcher != null) {
             LauncherPlayerState state = launcher.playerStates.get(player);
             if (state != null) {
@@ -511,6 +532,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
 
     public static void clearActiveLaunchers() {
         activeLaunchers.clear();
+        recentLauncherMoves.clear();
     }
 
     // ========================================================================
@@ -737,6 +759,9 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         private int savedAnim;
         private int savedYVel;
         private boolean hasSavedState;
+    }
+
+    private record LauncherMoveSample(int frameCounter, int beforeX, int beforeY) {
     }
 
 }

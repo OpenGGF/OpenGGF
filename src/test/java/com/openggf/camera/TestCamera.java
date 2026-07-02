@@ -361,6 +361,19 @@ public class TestCamera {
                 "S2 BuildSprites_ApproxYCheck masks relative Y with $7FF before the 32px render-flag band");
     }
 
+    @Test
+    public void testPlayableRenderFlagVisibilityUsesCameraCopyShake() {
+        camera.setX((short) 0x18DC);
+        camera.setY((short) 0x053D);
+        camera.setShakeOffsets(2, 3);
+        when(mockSprite.getRenderCentreX()).thenReturn((short) 0x1987);
+        when(mockSprite.getRenderCentreY()).thenReturn((short) 0x063F);
+        when(mockSprite.getRenderFlagWidthPixels()).thenReturn(0x18);
+
+        assertTrue(camera.isVisibleForRenderFlag(mockSprite),
+                "BuildSprites subtracts Camera_Y_pos_copy, so screen shake can keep a sprite on-screen at the bottom edge");
+    }
+
     // ==================== Increment Tests ====================
 
     @Test
@@ -383,4 +396,3 @@ public class TestCamera {
         assertEquals(120, camera.getY(), "incrementY should subtract when negative");
     }
 }
-

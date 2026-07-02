@@ -6,13 +6,15 @@ The canonical trace replay documentation now lives in:
 
 Use this folder for the recorder scripts and local BizHawk assets:
 
-- `record_trace.bat` launches headless recording
+- `run_bizhawk_lua.bat` launches any Lua/BK2/ROM combination safely for
+  diagnostics and one-off probes
+- `record_trace.bat` launches S1 recording through the reusable no-audio/no-render launcher
 - `s1_trace_recorder.lua` captures the ROM-side trace data using schema v3
-- `record_s2_trace.bat` launches the Sonic 2 headless recorder
+- `record_s2_trace.bat` launches the Sonic 2 recorder through the reusable no-audio/no-render launcher
 - `record_s2_level_select_traces.ps1` records the Sonic 2 level-select BK2 set into test resources
 - `s2_trace_recorder.lua` captures Sonic 2 ROM-side trace data using schema v8, including
   first-sidekick state for Sonic/Tails parity debugging
-- `record_s3k_trace.bat` launches the Sonic 3&K headless recorder
+- `record_s3k_trace.bat` launches the Sonic 3&K recorder through the reusable no-audio/no-render launcher
 - `s3k_trace_recorder.lua` captures Sonic 3&K ROM-side trace data using schema v3, including
   `zone_act_state` diagnostics and the `aiz_end_to_end` checkpoint stream
 - `record_s1_credits_traces.bat` launches forced Sonic 1 credits-demo capture
@@ -58,3 +60,38 @@ zone/act in aux diagnostics.
 
 If you update the trace workflow, update the guide page above first so the contributor docs stay in
 sync with the tools.
+
+For trace recording, use the `record_*_trace.bat` wrappers. They route through
+`run_bizhawk_lua.bat`, which means recorder regeneration gets the same generated
+no-audio config, fast Lua wrapper, and invisible-emulation mode as one-off
+diagnostics.
+
+For one-off diagnostics, copy `diag_template_fast.lua`, set the capture window
+environment variables, and run the reusable launcher instead of constructing a
+PowerShell `Start-Process` argument array:
+
+```bat
+set OGGF_START=16300
+set OGGF_STOP=16320
+set OGGF_OUT=C:\tmp\htz2_diag.txt
+tools\bizhawk\run_bizhawk_lua.bat ^
+  tools\bizhawk\diag_s2_htz2_obj30.lua ^
+  src\test\resources\traces\s2\htz2\s2-lvl-select-HTZ.bk2 ^
+  s2.gen
+```
+
+The launcher resolves all three input paths to absolute paths, writes a per-launch
+temporary no-audio/offscreen diagnostic config, passes `--audiosync false`, wraps
+the Lua in a per-launch temporary script so the fast-headless calls run first and
+are re-applied on frame start, verifies that the diagnostic itself contains
+executable fast-headless template calls before its main loop, and invokes EmuHawk
+with normal Windows quoting. On the default path it also runs EmuHawk through a
+hidden process wrapper that hides every top-level window owned by the EmuHawk
+process immediately and keeps hiding them if BizHawk re-shows UI after WinForms
+startup. The Lua template mutes audio with
+`client.SetSoundOn(false)` and disables rendering with
+`client.invisibleemulation(true)`. Accidentally inherited
+`BIZHAWK_ALLOW_SLOW_LUA=1` now fails unless `BIZHAWK_CONFIRM_VISIBLE_DEBUG=1` is
+also set. This avoids BizHawk 2.11 failures such as
+`Unrecognized command or argument '<path>\s2.gen'` and
+`System.ArgumentException: The path is not of a legal form`.

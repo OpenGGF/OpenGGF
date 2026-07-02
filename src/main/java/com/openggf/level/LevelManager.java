@@ -994,12 +994,16 @@ public class LevelManager {
      * then processes solid objects in slot order against the player's already-moved state.
      */
     public void updateObjectPositionsPostPhysicsWithoutTouches() {
+        updateObjectPositionsPostPhysicsWithoutTouches(null);
+    }
+
+    public void updateObjectPositionsPostPhysicsWithoutTouches(Runnable afterExecBeforePlacement) {
         if (objectManager != null) {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
             objectManager.update(camera.getX(), playable, sidekicks, frameCounter + 1,
-                    false, true, true);
+                    false, true, true, afterExecBeforePlacement);
         }
 
         // ROM parity: objects read the previous frame's oscillation values, then
@@ -1557,11 +1561,31 @@ public class LevelManager {
                 dustRenderer.setRenderContext(crossGame.getDonorRenderContext());
             }
             dustRenderer.ensureCached(graphicsManager);
-            playable.setSpindashDustController(new SpindashDustController(playable, dustRenderer));
+            playable.setSpindashDustController(new SpindashDustController(
+                    playable, dustRenderer, fixedDustSlotFor(playable)));
         } catch (IOException e) {
             LOGGER.log(SEVERE, "Failed to load spindash dust art.", e);
             playable.setSpindashDustController(null);
         }
+    }
+
+    private int fixedDustSlotFor(AbstractPlayableSprite playable) {
+        if (playable == null) {
+            return -1;
+        }
+        GameModule module = activeGameModule();
+        PhysicsProvider physics = module != null ? module.getPhysicsProvider() : null;
+        PhysicsFeatureSet features = physics != null ? physics.getFeatureSet() : null;
+        if (features == null || !features.waterSplashUsesFixedDustObject()) {
+            return -1;
+        }
+        if (!playable.isCpuControlled()) {
+            return features.fixedDustSlotIndex(false);
+        }
+        List<AbstractPlayableSprite> sidekicks = spriteManager != null ? spriteManager.getSidekicks() : List.of();
+        return !sidekicks.isEmpty() && sidekicks.get(0) == playable
+                ? features.fixedDustSlotIndex(true)
+                : -1;
     }
 
     /** Tracks how many dust DPLC banks have been allocated this level load. */
@@ -2256,6 +2280,11 @@ public class LevelManager {
     }
 
     public SolidTile getSolidTileForChunkDesc(ChunkDesc chunkDesc, int solidityBitIndex) {
+        return getSolidTileForChunkDesc(chunkDesc, solidityBitIndex, solidityBitIndex >= 0x0E);
+    }
+
+    public SolidTile getSolidTileForChunkDesc(
+            ChunkDesc chunkDesc, int solidityBitIndex, boolean useSecondaryCollisionPath) {
         try {
             if (chunkDesc == null) {
                 return null;
@@ -2270,9 +2299,9 @@ public class LevelManager {
             }
             // Get collision index - ROM treats index 0 as "no collision"
             // (s2.asm FindFloor line 42963: beq.s loc_1E7E2)
-            int collisionIndex = (solidityBitIndex < 0x0E)
-                    ? chunk.getSolidTileIndex()
-                    : chunk.getSolidTileAltIndex();
+            int collisionIndex = useSecondaryCollisionPath
+                    ? chunk.getSolidTileAltIndex()
+                    : chunk.getSolidTileIndex();
             if (collisionIndex == 0) {
                 return null; // No collision shape assigned
             }
@@ -2771,7 +2800,7 @@ public class LevelManager {
         }
         int preallocatedFirstSlot = -1;
         if (objectManager != null && objectManager.preallocatesLostRingOwnerSlot()) {
-            preallocatedFirstSlot = objectManager.allocateDynamicSlot();
+            preallocatedFirstSlot = objectManager.allocateDynamicSlotAvoidingCurrentPassFrees();
         }
         pendingLostRingSpawns.add(new PendingLostRingSpawn(
                 player, count, player.getCentreX(), player.getCentreY(), frameCounter,
@@ -2979,6 +3008,7 @@ public class LevelManager {
         if (!(player instanceof AbstractPlayableSprite playable)) {
             return;
         }
+        int preSnapCameraX = camera.getX();
         camera.setFrozen(false);
         camera.setFocusedSprite(playable);
         camera.updatePosition(true);
@@ -3005,11 +3035,14 @@ public class LevelManager {
             }
             verticalWrapEnabled = camera.isVerticalWrapEnabled();
             camera.updatePosition(true);
-            if (objectManager != null && objectManager.usesTwoAxisCursorPlacement()) {
-                // S3K Load_Sprites has a separate Y-camera pass. The object
-                // manager is constructed before the level-start camera snap, so
-                // rebuild its initial cursor state once Camera_Y_pos matches
-                // the actual start band.
+            if (objectManager != null
+                    && (objectManager.usesTwoAxisCursorPlacement() || camera.getX() != preSnapCameraX)) {
+                // The object manager is constructed before the level-start
+                // camera snap. Rebuild its initial window once Camera_X_pos
+                // matches the new start, otherwise cross-zone loads can seed
+                // objects from the previous level's camera band (e.g. SCZ ->
+                // WFZ missing ObjB2 at x=$0060). S3K also needs this for its
+                // separate Y-camera placement pass.
                 objectManager.reset(camera.getX());
             }
             // ROM parity: only when Get_LevelSizeStart had to clamp the camera

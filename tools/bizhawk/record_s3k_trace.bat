@@ -16,9 +16,6 @@ REM s3k_trace_recorder.lua (set to true).
 
 setlocal
 
-set "BIZHAWK_EXE=%BIZHAWK_EXE%"
-if "%BIZHAWK_EXE%"=="" set "BIZHAWK_EXE=C:\Users\farre\IdeaProjects\sonic-engine\docs\BizHawk-2.11-win-x64\EmuHawk.exe"
-
 set "LUA_SCRIPT=%~dp0s3k_trace_recorder.lua"
 
 set "OUTPUT_DIR=%~dp0trace_output"
@@ -54,36 +51,19 @@ echo Profile: %TRACE_PROFILE%
 echo Lua:    %LUA_SCRIPT%
 echo Output: %OUTPUT_DIR%\
 echo.
-echo Starting BizHawk in headless mode...
+echo Starting BizHawk through reusable no-audio/no-render launcher...
 
 set "POWERSHELL_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 
-"%POWERSHELL_EXE%" -NoProfile -ExecutionPolicy Bypass -Command ^
-  "Add-Type -AssemblyName System.IO.Compression.FileSystem;" ^
-  "$zip = [System.IO.Compression.ZipFile]::OpenRead($env:BK2_PATH);" ^
-  "$entry = $zip.Entries | Where-Object { $_.FullName -eq 'Input Log.txt' };" ^
-  "if ($entry -ne $null) {" ^
-  "  $reader = New-Object System.IO.StreamReader($entry.Open());" ^
-  "  $frameCount = 0;" ^
-  "  while (($line = $reader.ReadLine()) -ne $null) { if ($line.StartsWith('|')) { $frameCount++ } }" ^
-  "  $reader.Dispose();" ^
-  "  $env:OGGF_BK2_FRAME_COUNT = [string]$frameCount;" ^
-  "}" ^
-  "$zip.Dispose();" ^
-  "$psi = New-Object System.Diagnostics.ProcessStartInfo;" ^
-  "$psi.FileName = $env:BIZHAWK_EXE;" ^
-  "$psi.WorkingDirectory = [System.IO.Path]::GetDirectoryName($env:BIZHAWK_EXE);" ^
-  "$psi.UseShellExecute = $false;" ^
-  "$psi.RedirectStandardOutput = $true;" ^
-  "$psi.RedirectStandardError = $true;" ^
-  "$psi.Arguments = ('--chromeless --lua \"' + $env:LUA_SCRIPT + '\" --movie \"' + $env:BK2_PATH + '\" \"' + $env:ROM_PATH + '\"');" ^
-  "$proc = [System.Diagnostics.Process]::Start($psi);" ^
-  "$stdout = $proc.StandardOutput.ReadToEnd();" ^
-  "$stderr = $proc.StandardError.ReadToEnd();" ^
-  "$proc.WaitForExit();" ^
-  "if ($stdout) { [Console]::Out.Write($stdout) }" ^
-  "if ($stderr) { [Console]::Error.Write($stderr) }" ^
-  "exit $proc.ExitCode"
+set "OGGF_BK2_FRAME_COUNT="
+for /f "usebackq delims=" %%I in (`%POWERSHELL_EXE% -NoProfile -ExecutionPolicy Bypass -File "%~dp0count_bk2_input_frames.ps1" "%BK2_PATH%"`) do set "OGGF_BK2_FRAME_COUNT=%%I"
+if "%OGGF_BK2_FRAME_COUNT%"=="" (
+    echo ERROR: Failed to count BK2 input frames for %BK2_PATH%
+    exit /b 1
+)
+echo BK2 input frames: %OGGF_BK2_FRAME_COUNT%
+
+call "%~dp0run_bizhawk_lua.bat" "%LUA_SCRIPT%" "%BK2_PATH%" "%ROM_PATH%"
 
 if %ERRORLEVEL% neq 0 (
     echo BizHawk exited with error code %ERRORLEVEL%

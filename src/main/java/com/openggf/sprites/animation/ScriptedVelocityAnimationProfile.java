@@ -131,7 +131,11 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         if (sprite.getSpringing() && sprite.getAir() && springAnimId >= 0) {
             return springAnimId;
         }
-        if (sprite.getSpindash() && spindashAnimId >= 0) {
+        // S2 Obj84 mirrors forced-spin pinball mode into the same ROM byte the
+        // player spindash uses, but it also writes Status_Roll/anim=Roll. Keep
+        // the tunnel visual curled instead of showing the spindash charge pose.
+        if (sprite.getSpindash() && spindashAnimId >= 0
+                && !(sprite.getPinballMode() && sprite.getRolling())) {
             return spindashAnimId;
         }
         // ROM: slide animation only applies on ground. When airborne (e.g. jumping

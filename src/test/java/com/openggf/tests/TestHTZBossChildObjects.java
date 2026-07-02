@@ -14,6 +14,7 @@ import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TestObjectServices;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 /**
@@ -132,6 +134,44 @@ public class TestHTZBossChildObjects {
     }
 
     @Test
+    public void lavaBallInitialPairSpawnerMatchesRomRoutineZeroCadence() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(mockLevelManager.getObjectManager()).thenReturn(objectManager);
+        ObjectServices services = services();
+
+        Sonic2HTZBossInstance parent = new Sonic2HTZBossInstance(
+                new ObjectSpawn(0x2F40, 0x0538, Sonic2ObjectIds.HTZ_BOSS, 0, 0, false, 0));
+        parent.setServices(services);
+        parent.getState().lastUpdatedFrame = 7;
+
+        HTZBossLavaBall firstBall =
+                HTZBossLavaBall.createInitialPairSpawner(parent, 0x2F40, 0x0538);
+        firstBall.setServices(services);
+        assertEquals(0, firstBall.getCollisionFlags());
+
+        firstBall.update(7, null);
+
+        assertEquals(0x8B, firstBall.getCollisionFlags());
+        assertEquals(0x2F40, firstBall.getX());
+        assertEquals(0x0538, firstBall.getY());
+
+        ArgumentCaptor<ObjectInstance> childCaptor = ArgumentCaptor.forClass(ObjectInstance.class);
+        verify(objectManager).addDynamicObject(childCaptor.capture());
+        assertTrue(childCaptor.getValue() instanceof HTZBossLavaBall);
+        HTZBossLavaBall secondBall = (HTZBossLavaBall) childCaptor.getValue();
+        assertEquals(0x8B, secondBall.getCollisionFlags());
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            secondBall.update(7, null);
+        }
+
+        assertEquals(0x2F41, secondBall.getX());
+        assertEquals(0x0532, secondBall.getY());
+    }
+
+    @Test
     public void lavaBallTransformsToGroundFireWhenLandingOnSurface() throws Exception {
         ObjectServices services = services();
 
@@ -183,5 +223,4 @@ public class TestHTZBossChildObjects {
         return new TestObjectServices().withLevelManager(mockLevelManager);
     }
 }
-
 

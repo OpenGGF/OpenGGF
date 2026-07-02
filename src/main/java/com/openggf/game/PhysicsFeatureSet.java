@@ -52,7 +52,8 @@ public record PhysicsFeatureSet(
          *  S3K: true. S1/S2: false (no elemental shields). */
         boolean lightningShieldEnabled,
         /** Spindash speed table used when in Super/Hyper form.
-         *  S3K: word_11D04 (sonic3k.asm:23743), higher speeds ($B00-$F00). S1/S2: null (use normal table). */
+         *  S2 Sonic: SpindashSpeedsSuper (s2.asm:37305), higher speeds ($B00-$F00);
+         *  S3K: word_11D04 (sonic3k.asm:23743), same higher speeds. S1: null. */
         short[] superSpindashSpeedTable,
         /** Speed threshold below which pressing down enters crouch instead of roll.
          *  S3K: 0x100 (sonic3k.asm:23236). S1/S2: 0 (disabled — crouch only when standing still).
@@ -1125,7 +1126,14 @@ public record PhysicsFeatureSet(
          *  Obj28 initializes width_pixels=8 and deletes from Walk/Fly when
          *  render_flags.on_screen is clear (s2.asm:24570-24594,
          *  24670-24727). */
-        boolean animalObjectUsesRenderFlagDeleteBounds
+        boolean animalObjectUsesRenderFlagDeleteBounds,
+        /** Whether fixed Obj08 skid dust arms during player movement and
+         *  allocates its visible child from the later post-dynamic-object fixed
+         *  sidecar pass. S2 does this through Sonic_Dust/Tails_Dust in
+         *  LevelOnly_Object_RAM (s2.asm:36927-36935,36988-36996,42792-42813).
+         *  Keep S3K on its existing trace-preserving timing until that sidecar
+         *  order is separately validated. */
+        boolean fixedSkidDustAllocatesAfterDynamicObjectPass
 ) {
     /** S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp directly modifies v_lookshift). */
     public static final short LOOK_SCROLL_DELAY_NONE = 0;
@@ -1350,7 +1358,8 @@ public record PhysicsFeatureSet(
                     source.levelBoundaryLockUsesScreenLockFlag(),
                     source.advanceWaterLevelBeforePlayerPhysics(),
                     source.animalObjectPreservesObjectMoveXSubpixel(),
-                    source.animalObjectUsesRenderFlagDeleteBounds()
+                    source.animalObjectUsesRenderFlagDeleteBounds(),
+                    source.fixedSkidDustAllocatesAfterDynamicObjectPass()
             );
         }
     }
@@ -1421,9 +1430,11 @@ public record PhysicsFeatureSet(
             true /* levelBoundaryLockUsesScreenLockFlag: S1 Sonic_LevelBound gates the +64 right-extension on f_lockscreen (s1disasm/_incObj/01 Sonic.asm:1047-1049), which persists past boss defeat (FZ has no Egg Prison) */,
             true /* advanceWaterLevelBeforePlayerPhysics: S1 LZWaterFeatures runs before ExecuteObjects (sonic.asm:2986-2987) */,
             false /* animalObjectPreservesObjectMoveXSubpixel: S1 uses Sonic1AnimalsObjectInstance */,
-            false /* animalObjectUsesRenderFlagDeleteBounds: S1 uses Sonic1AnimalsObjectInstance */);
+            false /* animalObjectUsesRenderFlagDeleteBounds: S1 uses Sonic1AnimalsObjectInstance */,
+            false /* fixedSkidDustAllocatesAfterDynamicObjectPass: S1 has no fixed Obj08 skid-dust sidecar */);
 
-    /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
+    /** Sonic 2: spindash with standard speed table (s2.asm:37294), Super Sonic table
+     *  (SpindashSpeedsSuper, s2.asm:37305), dual collision paths, delayed look scroll,
      *  preserves high ground speed on input (s2.asm:36610-36616),
      *  angle diff cardinal snap (s2.asm Sonic_Angle:42658-42664),
      *  extended edge balance: 4 states with precarious/facing-away checks (s2.asm:36246-36373). */
@@ -1431,7 +1442,9 @@ public record PhysicsFeatureSet(
             0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00
     }, CollisionModel.DUAL_PATH, false, LOOK_SCROLL_DELAY_S2, false, false, false, false, false, true, true, false,
             RING_FLOOR_CHECK_MASK_S2, true, RING_COLLISION_SIZE_S2, RING_COLLISION_SIZE_S2, false,
-            null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S2 Sonic/Tails set push unconditionally in wall response (s2.asm:36536-36547,39506-39519) */,
+            new short[]{
+            0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00
+    }, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S2 Sonic/Tails set push unconditionally in wall response (s2.asm:36536-36547,39506-39519) */,
             true /* repeatedObjectRideGroundWallResponseDeferred: sustained object-riding pushes preserve a post-ObjectMove stored velocity correction (s2.asm:39603-39608,35070-35095) */,
             true /* animationChangeClearsPush: S2 Sonic/Tails animation clears pushing on anim change (s2.asm:38033-38038,40879-40884) */, false,
             false /* slopeResistStartsFromRest: S2 Sonic/Tails_SlopeResist returns on zero inertia (s2.asm:37369-37370,40224-40225) */,
@@ -1496,7 +1509,8 @@ public record PhysicsFeatureSet(
             false /* levelBoundaryLockUsesScreenLockFlag: S2 Sonic_LevelBound gates the +$40 right-extension on Current_Boss_ID (s2.asm:37247-37250), i.e. boss-alive; engine uses isBossFightActive() */,
             true /* advanceWaterLevelBeforePlayerPhysics: S2 WaterEffects runs before RunObjects (s2.asm:5094-5095) */,
             true /* animalObjectPreservesObjectMoveXSubpixel: Obj28_Walk/Fly call ObjectMoveAndFall/ObjectMove, which update full x_pos longword (s2.asm:24670-24691,30164-30199) */,
-            true /* animalObjectUsesRenderFlagDeleteBounds: Obj28 Walk/Fly delete when render_flags.on_screen is clear after BuildSprites width_pixels=8 (s2.asm:24570-24594,24670-24727) */);
+            true /* animalObjectUsesRenderFlagDeleteBounds: Obj28 Walk/Fly delete when render_flags.on_screen is clear after BuildSprites width_pixels=8 (s2.asm:24570-24594,24670-24727) */,
+            true /* fixedSkidDustAllocatesAfterDynamicObjectPass: S2 fixed Sonic_Dust/Tails_Dust allocates visible Obj08 skid dust after dynamic object execution */);
 
     /** Sonic 3&K: spindash with same speed table as S2, dual collision paths, delayed look scroll,
      *  preserves high ground speed on input, elemental shields,
@@ -1573,7 +1587,8 @@ public record PhysicsFeatureSet(
             false /* levelBoundaryLockUsesScreenLockFlag: S3K has levelBoundaryRightStrict=true so the +64 extension is never added and this gate is never consulted */,
             false /* advanceWaterLevelBeforePlayerPhysics: S3K Process_Sprites runs before Handle_Onscreen_Water_Height, so the player reads the previous frame's water level */,
             false /* animalObjectPreservesObjectMoveXSubpixel: S3K Obj_Animal uses MoveSprite/MoveSprite2, not S2 ObjectMoveAndFall/ObjectMove (sonic3k.asm:61104-61170) */,
-            false /* animalObjectUsesRenderFlagDeleteBounds: preserve current S3K animal lifetime baseline until validated */);
+            false /* animalObjectUsesRenderFlagDeleteBounds: preserve current S3K animal lifetime baseline until validated */,
+            false /* fixedSkidDustAllocatesAfterDynamicObjectPass: preserve current S3K AIZ trace baseline until fixed sidecar order is validated */);
 
     /** Returns true when the game supports dual collision paths (primary/secondary). */
     public boolean hasDualCollisionPaths() {
@@ -1592,6 +1607,25 @@ public record PhysicsFeatureSet(
      */
     public boolean waterSplashUsesFixedDustObject() {
         return spindashEnabled;
+    }
+
+    /**
+     * Fixed Sonic_Dust/Dust sidecar slot for the native player pair, or
+     * {@code -1} when the active game has no ROM fixed dust sidecar.
+     *
+     * <p>S2's {@code Sonic_Dust}/{@code Tails_Dust} sit immediately before
+     * {@code Sonic_Shield} in {@code LevelOnly_Object_RAM}
+     * (docs/s2disasm/s2.constants.asm:1149-1164). S3K's {@code Dust}/{@code
+     * Dust_P2} sit immediately before {@code Shield} in {@code Level_object_RAM}
+     * (docs/skdisasm/sonic3k.constants.asm:309-321). These fixed sidecars are
+     * slot-identifiable, but they do not consume the allocatable dynamic SST
+     * window used by {@code FindFreeObj}/{@code AllocateObject}.
+     */
+    public int fixedDustSlotIndex(boolean secondaryPlayer) {
+        if (!waterSplashUsesFixedDustObject() || shieldObjectFixedSlotIndex < 0) {
+            return -1;
+        }
+        return shieldObjectFixedSlotIndex - (secondaryPlayer ? 1 : 2);
     }
 
 }

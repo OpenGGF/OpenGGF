@@ -311,6 +311,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         private boolean onObjectAtFrameStart = false;
         private boolean pushingAtFrameStart = false;
+        private boolean hurtAtFrameStart = false;
+        private boolean hurtRecoveryCompletedThisFrame = false;
 
         /**
          * ROM-style latched solid interaction object id.
@@ -335,6 +337,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * field is ROM-universal (S2 and S3K sidekicks both have it).
          */
         protected int interactSlotIndex = -1;
+
+        /**
+         * Engine-only interact marker for ROM support objects hosted by manager
+         * code instead of live {@code ObjectInstance}s. The latched object id
+         * remains the ROM id byte that CPU despawn logic re-dereferences.
+         */
+        public static final int SYNTHETIC_INTERACT_SLOT = -2;
 
         /**
          * Set when {@code Player_SlopeRepel} slipped the player into air on the
@@ -912,7 +921,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
                         preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
                         objectPreservedRollWallProbe, objectPreservedRollVelocityCarry, tunnelMode,
-                        onObject, onObjectAtFrameStart, pushingAtFrameStart,
+                        onObject, onObjectAtFrameStart, pushingAtFrameStart, hurtAtFrameStart,
+                        hurtRecoveryCompletedThisFrame,
                         latchedSolidObjectId, interactSlotIndex, slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
                         skidding, skidDustTimer,
@@ -1044,6 +1054,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.onObject = extra.onObject();
                 this.onObjectAtFrameStart = extra.onObjectAtFrameStart();
                 this.pushingAtFrameStart = extra.pushingAtFrameStart();
+                this.hurtAtFrameStart = extra.hurtAtFrameStart();
+                this.hurtRecoveryCompletedThisFrame = extra.hurtRecoveryCompletedThisFrame();
                 this.latchedSolidObjectId = extra.latchedSolidObjectId();
                 this.interactSlotIndex = extra.interactSlotIndex();
                 this.slopeRepelJustSlipped = extra.slopeRepelJustSlipped();
@@ -1775,6 +1787,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void completeHurtLandingRecovery() {
                 hurt = false;
+                hurtRecoveryCompletedThisFrame = true;
                 setHighPriority(false);
                 invulnerableFrames = 0x78;
                 suppressNextInvulnerabilityDecrement = true;
@@ -1845,6 +1858,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void captureOnObjectAtFrameStart() {
                 this.onObjectAtFrameStart = this.onObject;
                 this.pushingAtFrameStart = this.pushing;
+                this.hurtAtFrameStart = this.hurt;
+                this.hurtRecoveryCompletedThisFrame = false;
         }
 
         /**
@@ -1861,6 +1876,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public boolean getPushingAtFrameStart() {
                 return pushingAtFrameStart;
+        }
+
+        public boolean getHurtAtFrameStart() {
+                return hurtAtFrameStart;
+        }
+
+        public boolean getHurtRecoveryCompletedThisFrame() {
+                return hurtRecoveryCompletedThisFrame;
         }
 
         public int getLatchedSolidObjectId() {
@@ -1918,6 +1941,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 this.interactSlotIndex = slot;
                         }
                 }
+        }
+
+        /**
+         * Records a ROM support contact whose behaviour is hosted by a manager
+         * rather than an {@code ObjectInstance}. This preserves the
+         * {@code RideObject_SetRide} contract for later CPU despawn checks:
+         * the live dereference should read this ROM object id, while the
+         * specific SST slot is intentionally synthetic.
+         */
+        public void setSyntheticLatchedSolidObject(int latchedSolidObjectId) {
+                this.latchedSolidObjectId = latchedSolidObjectId & 0xFF;
+                this.latchedSolidObjectInstance = null;
+                this.interactSlotIndex = SYNTHETIC_INTERACT_SLOT;
         }
 
         /**

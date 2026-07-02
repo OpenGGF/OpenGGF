@@ -6,12 +6,18 @@
 -- settings, so it runs at real-time, renders, and leaves EmuHawk hanging at
 -- multiple GB. This template fixes all three.
 --
--- Run:
---   OGGF_START=<firstCaptureFrame> OGGF_STOP=<lastCaptureFrame> \
---   OGGF_OUT=tools/bizhawk/trace_output/<unique>.txt \
---   "docs/BizHawk-2.11-win-x64/EmuHawk.exe" --chromeless \
---       --lua "tools/bizhawk/<your_copy>.lua" \
---       --movie "<bk2>" "<rom>.gen"
+-- Run from cmd.exe or PowerShell:
+--   set OGGF_START=<firstCaptureFrame>
+--   set OGGF_STOP=<lastCaptureFrame>
+--   set OGGF_OUT=<absolute-output-path>
+--   tools\bizhawk\run_bizhawk_lua.bat ^
+--       tools\bizhawk\<your_copy>.lua ^
+--       <bk2> ^
+--       <rom>.gen
+--
+-- Do not hand-build a PowerShell Start-Process argument array for EmuHawk:
+-- BizHawk 2.11 can reject the positional ROM or throw "path is not of a legal
+-- form" if quotes/backslashes are passed through incorrectly.
 --
 -- BizHawk frame for trace frame F = bk2_frame_offset (from metadata.json) + F.
 -- ============================================================================
@@ -24,6 +30,9 @@ local OUT   = os.getenv("OGGF_OUT") or "tools/bizhawk/trace_output/diag.txt"
 emu.limitframerate(false)        -- remove the 60fps cap
 client.speedmode(6400)           -- run at 6400%
 client.invisibleemulation(true)  -- SKIP rendering: big speedup + low memory
+if client.SetSoundOn then        -- keep diagnostics silent even if config differs
+    pcall(client.SetSoundOn, false)
+end
 
 local outfile = io.open(OUT, "w")
 local function log(s)

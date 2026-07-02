@@ -628,6 +628,49 @@ public class TestDEZDeathEggRobot {
     }
 
     @Test
+    public void sensorFifoConsumesInitialVelocityAfterRomShiftDelay() throws Exception {
+        Class<?> sensorClass = null;
+        for (Class<?> inner : Sonic2DeathEggRobotInstance.class.getDeclaredClasses()) {
+            if (inner.getSimpleName().equals("SensorChild")) {
+                sensorClass = inner;
+                break;
+            }
+        }
+        assertNotNull(sensorClass, "SensorChild inner class should exist");
+
+        java.lang.reflect.Constructor<?> ctor = sensorClass.getDeclaredConstructor(
+                Sonic2DeathEggRobotInstance.class, int.class, int.class, int.class, int.class);
+        ctor.setAccessible(true);
+        setConstructionContext(services);
+        AbstractObjectInstance sensor;
+        try {
+            sensor = (AbstractObjectInstance) ctor.newInstance(boss, 0x100, 0x120, 0x0500, 0);
+        } finally {
+            clearConstructionContext();
+        }
+        sensor.setServices(services);
+
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 0x100);
+        when(player.getCentreY()).thenReturn((short) 0x120);
+        when(player.getXSpeed()).thenReturn((short) 0);
+        when(player.getYSpeed()).thenReturn((short) 0);
+
+        java.lang.reflect.Method update = sensorClass.getMethod("update", int.class, com.openggf.game.PlayableEntity.class);
+        update.setAccessible(true);
+        update.invoke(sensor, 0, player); // routine 0 -> tracking; no FIFO movement yet
+        for (int frame = 1; frame <= 3; frame++) {
+            update.invoke(sensor, frame, player);
+            assertEquals(0x100, sensor.getX(),
+                    "ROM loc_3DDA6 consumes the oldest slot before the initial x_vel reaches objoff_3C");
+        }
+
+        update.invoke(sensor, 4, player);
+        assertEquals(0x105, sensor.getX(),
+                "Initial x_vel from ObjC7_TargettingSensor init must shift through objoff_30..3E before ObjectMove");
+    }
+
+    @Test
     public void bombDetonationRendersObj58BossExplosionFrames() throws Exception {
         Class<?> bombClass = null;
         for (Class<?> inner : Sonic2DeathEggRobotInstance.class.getDeclaredClasses()) {

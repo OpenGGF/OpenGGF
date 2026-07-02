@@ -3,6 +3,9 @@ package com.openggf.tests.trace;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.objects.ARZPlatformObjectInstance;
 import com.openggf.game.sonic2.objects.ArrowProjectileInstance;
+import com.openggf.game.sonic2.objects.GrounderRockProjectile;
+import com.openggf.game.sonic2.objects.GrounderWallInstance;
+import com.openggf.game.sonic2.objects.badniks.WhispBadnikInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -10,6 +13,7 @@ import com.openggf.level.objects.BreathingBubbleInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSlotLayout;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
@@ -279,6 +283,34 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void ooz1LauncherBallChainKeepsSourceBeforeTargetAtRomFrame5957() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("ooz", Sonic2ZoneConstants.ZONE_OOZ, 0,
+                (trace, om, frame) -> {
+                    if (frame != 5957) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x48, expected.get(17),
+                            "OOZ1 ROM fixture should keep the source LauncherBall in slot 17 at f5957");
+                    Assertions.assertEquals(0x48, expected.get(18),
+                            "OOZ1 ROM fixture should keep the target LauncherBall in slot 18 at f5957");
+                    Assertions.assertEquals(0x48, actual.get(17),
+                            "OOZ1 source LauncherBall must execute before the target ball at f5958; actual "
+                                    + describeSlots(actual, 16, 22) + " live "
+                                    + describeLiveSlots(om, 16, 35));
+                    Assertions.assertEquals(0x48, actual.get(18),
+                            "OOZ1 target LauncherBall must stay after the source ball at f5958; actual "
+                                    + describeSlots(actual, 16, 22) + " live "
+                                    + describeLiveSlots(om, 16, 35));
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 22)
+                            + " live " + describeLiveSlots(om, 16, 22));
+                });
+        Assertions.assertNotNull(slotCheck);
+    }
+
+    @Test
     public void mtz3MovingPlatformUnloadReleasesRomSlot17() throws Exception {
         SlotCheck slotCheck = driveTrace("mtz3", Sonic2ZoneConstants.ZONE_MTZ, 2,
                 (trace, om, frame) -> {
@@ -322,6 +354,78 @@ public class TestS2ObjectOccupancyOracle {
                         + "is no longer contacting Tails at MTZ3 f1743; tails=("
                         + String.format("%04X,%04X", pushCheck.tailsX(), pushCheck.tailsY())
                         + ") nearby slots " + pushCheck.summary());
+    }
+
+    @Test
+    public void mtz3CogAirborneStaleStandingBitKeepsTailsXSpeedAtRomFrame9555() throws Exception {
+        SpeedCheck speedCheck = driveTrace("mtz3", Sonic2ZoneConstants.ZONE_MTZ, 2,
+                (trace, om, frame) -> {
+                    TraceFrame expected = trace.getFrame(frame);
+                    if (expected.frame() != 9555) {
+                        return null;
+                    }
+                    Assertions.assertNotNull(expected.sidekick(),
+                            "MTZ3 trace row f9555 (CSV $2553) must include Tails state");
+                    Assertions.assertEquals(0x07, expected.sidekick().statusByte(),
+                            "ROM fixture should have Tails airborne/rolling after Obj70 stale-standing cleanup");
+                    Assertions.assertEquals(0x2B, expected.sidekick().standOnObj(),
+                            "ROM fixture should retain the Obj70 tooth slot latch at MTZ3 f9555");
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have a CPU Tails sidekick at MTZ3 f9555");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    return new SpeedCheck(
+                            expected.sidekick().xSpeed(),
+                            tails.getXSpeed(),
+                            tails.getCentreX(),
+                            tails.getCentreY(),
+                            tails.getAir(),
+                            tails.getRolling(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 27, 44));
+                });
+        Assertions.assertNotNull(speedCheck);
+        Assertions.assertEquals(speedCheck.expectedXSpeed(), speedCheck.actualXSpeed(),
+                "S2 Obj70 folds eight ROM SolidObject slots into one engine parent. "
+                        + "At MTZ3 f9555 (CSV $2553) the ROM's slot-local standing-bit branch "
+                        + "(docs/s2disasm/s2.asm:55084-55191, 35021-35040) returns d4=0 "
+                        + "before a folded sibling side contact can stop Tails; "
+                        + "tails=" + speedCheck.summary());
+    }
+
+    @Test
+    public void mtz2CogAirborneLaunchKeepsTailsLeftwardSpeedAtRomFrame1217() throws Exception {
+        CogLaunchCheck launchCheck = driveTrace("mtz2", Sonic2ZoneConstants.ZONE_MTZ, 1,
+                (trace, om, frame) -> {
+                    TraceFrame expected = trace.getFrame(frame);
+                    if (expected.frame() != 1217) {
+                        return null;
+                    }
+                    Assertions.assertNotNull(expected.sidekick(),
+                            "MTZ2 trace row f1217 (CSV $04C1) must include Tails state");
+                    Assertions.assertEquals(0x17, expected.sidekick().statusByte(),
+                            "ROM fixture should have Tails airborne/rolling left after Obj70 contact");
+                    Assertions.assertEquals(0x38, expected.sidekick().standOnObj(),
+                            "ROM fixture should retain the MTZ2 Obj70 tooth slot latch at f1217");
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have a CPU Tails sidekick at MTZ2 f1217");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    return new CogLaunchCheck(
+                            expected.sidekick().x(),
+                            tails.getCentreX(),
+                            expected.sidekick().xSpeed(),
+                            tails.getXSpeed(),
+                            expected.sidekick().gSpeed(),
+                            tails.getGSpeed(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 36, 56));
+                });
+        Assertions.assertNotNull(launchCheck);
+        Assertions.assertEquals(launchCheck.expectedXSpeed(), launchCheck.actualXSpeed(),
+                "S2 Obj70 folded-tooth stale-latch suppression must not erase an already-applied "
+                        + "leftward airborne launch. At MTZ2 f1217 the ROM keeps x_vel/g_inertia "
+                        + "from the Obj70 contact instead of zeroing Tails; "
+                        + "tails=" + launchCheck.summary());
+        Assertions.assertEquals(launchCheck.expectedGSpeed(), launchCheck.actualGSpeed(),
+                "S2 Obj70 must preserve Tails' ROM ground inertia on the MTZ2 f1217 launch; "
+                        + "tails=" + launchCheck.summary());
     }
 
     @Test
@@ -412,6 +516,46 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     private record PushCheck(boolean pushing, int tailsX, int tailsY, String summary) {
+    }
+
+    private record SpeedCheck(
+            short expectedXSpeed,
+            short actualXSpeed,
+            int tailsX,
+            int tailsY,
+            boolean air,
+            boolean rolling,
+            String slots) {
+        String summary() {
+            return String.format("x=%04X y=%04X xs(exp=%04X act=%04X) air=%s rolling=%s slots %s",
+                    tailsX & 0xFFFF,
+                    tailsY & 0xFFFF,
+                    expectedXSpeed & 0xFFFF,
+                    actualXSpeed & 0xFFFF,
+                    air,
+                    rolling,
+                    slots);
+        }
+    }
+
+    private record CogLaunchCheck(
+            int expectedX,
+            int actualX,
+            short expectedXSpeed,
+            short actualXSpeed,
+            short expectedGSpeed,
+            short actualGSpeed,
+            String slots) {
+        String summary() {
+            return String.format("x(exp=%04X act=%04X) xs(exp=%04X act=%04X) gs(exp=%04X act=%04X) slots %s",
+                    expectedX & 0xFFFF,
+                    actualX & 0xFFFF,
+                    expectedXSpeed & 0xFFFF,
+                    actualXSpeed & 0xFFFF,
+                    expectedGSpeed & 0xFFFF,
+                    actualGSpeed & 0xFFFF,
+                    slots);
+        }
     }
 
     private record StatusCheck(
@@ -575,6 +719,18 @@ public class TestS2ObjectOccupancyOracle {
         Assertions.assertEquals(check.expectedY(), check.actualY(),
                 "S2 Obj28_Walk must keep sharing ObjectMoveAndFall vertical carry after landing; slots "
                         + check.summary());
+    }
+
+    @Test
+    public void arz2ChopChopAnimalKeepsPriorRenderFlagUntilRomDeleteFrame() throws Exception {
+        AnimalPositionCheck check = animalPositionAtArz2Frame(617);
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj28_Walk must not delete from a fresh post-move bounds check before ROM "
+                        + "render_flags.on_screen clears; slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj28_Walk uses the prior DisplaySprite render flag for deletion "
+                        + "(docs/s2disasm/s2.asm:24670-24688); slots " + check.summary());
     }
 
     @Test
@@ -873,6 +1029,77 @@ public class TestS2ObjectOccupancyOracle {
                         + "(docs/s2disasm/s2.asm:73765-73769)");
     }
 
+    @Test
+    public void arz2ChopChopBubbleSurvivesFirstObj0aInitPassAtFrame599() throws Exception {
+        SlotBubbleCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 599) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x0A, expected.get(19),
+                            "ROM fixture should still hold the f598 Obj91 patrol bubble in slot 0x13 "
+                                    + "after its first Obj0A pass at f599");
+                    BreathingBubbleInstance actualBubble = om.activeObjectsOfType(BreathingBubbleInstance.class)
+                            .stream()
+                            .filter(bubble -> bubble.getSlotIndex() == 19)
+                            .findFirst()
+                            .orElse(null);
+                    return new SlotBubbleCheck(actual.get(19),
+                            actualBubble == null ? -1 : actualBubble.getX(),
+                            actualBubble == null ? -1 : actualBubble.getY(),
+                            -1,
+                            -1,
+                            describeSlots(expected, 16, 26),
+                            describeSlots(actual, 16, 26));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x0A, slotCheck.actualId(),
+                "Obj0A_Init sets render_flags on_screen|level_fg before Obj0A_ChkWater tests "
+                        + "render_flags.on_screen, so a lower-slot child not executed on its spawn frame "
+                        + "must not observe a cleared render bit on its first pass "
+                        + "(docs/s2disasm/s2.asm:41888,41951). Expected slots "
+                        + slotCheck.expectedSummary() + " actual slots " + slotCheck.actualSummary());
+    }
+
+    @Test
+    public void arz2WhispSlot13MatchesRomSubpixelCarryAtFrame1225() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1225) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedWhisp = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 0x13)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x8C)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedWhisp,
+                            "ARZ2 ROM fixture should report Obj8C Whisp in slot 0x13 at f1225");
+                    WhispBadnikInstance actualWhisp = om.activeObjectsOfType(WhispBadnikInstance.class)
+                            .stream()
+                            .filter(whisp -> whisp.getSlotIndex() == 0x13)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(expectedWhisp.x() & 0xFFFF, expectedWhisp.y() & 0xFFFF,
+                            actualWhisp == null ? -1 : actualWhisp.getX(),
+                            actualWhisp == null ? -1 : actualWhisp.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 0x10, 0x1A));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "ARZ2 Obj8C slot 0x13 X should still match ROM at f1225; slots "
+                        + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj8C ObjectMove must preserve the ROM y_sub carry phase for slot 0x13 "
+                        + "at ARZ2 f1225 (docs/s2disasm/s2.asm:73231-73249,30191-30204); "
+                        + "slots " + check.summary());
+    }
+
     private record SlotWindowCheck(Map<Integer, Integer> slots, String summary) {
         int idAt(int slot) {
             return slots.getOrDefault(slot, -1);
@@ -945,6 +1172,32 @@ public class TestS2ObjectOccupancyOracle {
             }
             sb.append(slot).append(':').append(String.format("%02X", id & 0xFF));
         }
+        return sb.toString();
+    }
+
+    private static String describeLiveSlots(ObjectManager objectManager, int firstSlot, int lastSlot) {
+        StringBuilder sb = new StringBuilder();
+        objectManager.getActiveObjects().stream()
+                .filter(AbstractObjectInstance.class::isInstance)
+                .map(AbstractObjectInstance.class::cast)
+                .filter(instance -> instance.getSlotIndex() >= firstSlot
+                        && instance.getSlotIndex() <= lastSlot)
+                .sorted(java.util.Comparator.comparingInt(AbstractObjectInstance::getSlotIndex))
+                .forEach(instance -> {
+                    if (!sb.isEmpty()) {
+                        sb.append(' ');
+                    }
+                    ObjectSpawn spawn = instance.getSpawn();
+                    int id = spawn == null ? -1 : spawn.objectId();
+                    int x = spawn == null ? -1 : spawn.x();
+                    int y = spawn == null ? -1 : spawn.y();
+                    sb.append(String.format("s%d:%02X@%04X,%04X/%s",
+                            instance.getSlotIndex(),
+                            id & 0xFF,
+                            x & 0xFFFF,
+                            y & 0xFFFF,
+                            instance.getName()));
+                });
         return sb.toString();
     }
 
@@ -1061,6 +1314,229 @@ public class TestS2ObjectOccupancyOracle {
         return driveTrace(route, zone, act,
                 (trace, om, frame) -> ObjectOccupancyOracle.firstDivergence(
                         trace, om, frame, FIRST_DYNAMIC_SLOT));
+    }
+
+    @Test
+    public void arz2BackwardPostCameraCatchupIncludesOldLeftEdgeClusterAtFrame1992() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1992) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    return new SlotWindowCheck(actual,
+                            "expected " + describeSlots(expected, 16, 60)
+                                    + " actual " + describeSlots(actual, 16, 60)
+                                    + " live " + describeLiveSlots(om, 16, 60));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x2C, slotCheck.idAt(44),
+                "S2 ObjectsManager_GoingBackward loads streamed objects whose x_pos is greater "
+                        + "than the new left edge, including entries equal to the prior left edge; "
+                        + "Obj2C at x=$1400 must take slot 44 before later frees move allocation "
+                        + "to slot 23 (docs/s2disasm/s2.asm:33050-33067); " + slotCheck.summary());
+        Assertions.assertEquals(0x03, slotCheck.idAt(45),
+                "The x=$1400 layer switcher belongs to the same backward streamed cluster; "
+                        + slotCheck.summary());
+        Assertions.assertEquals(0x26, slotCheck.idAt(46),
+                "The x=$1400 monitor belongs to the same backward streamed cluster; "
+                        + slotCheck.summary());
+    }
+
+    @Test
+    public void arz2GrounderRocksFreeSlotsBeforeFrame1648PlacementCluster() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1648) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    ObjectOccupancyOracle.Divergence divergence =
+                            ObjectOccupancyOracle.firstDivergence(trace, om, frame, FIRST_DYNAMIC_SLOT);
+                    Assertions.assertNull(divergence,
+                            "ARZ2 dynamic slots should still match at f1648 after Obj90 rocks "
+                                    + "delete through the prior render_flags.on_screen gate "
+                                    + "(docs/s2disasm/s2.asm:73490-73494); expected "
+                                    + describeSlots(expected, 16, 40) + " actual "
+                                    + describeSlots(actual, 16, 40));
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 40));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x1F, slotCheck.idAt(18),
+                "Obj90 rocks must not occupy slot 0x12 when the f1648 placement cluster "
+                        + "streams in; actual slots " + slotCheck.summary());
+        Assertions.assertEquals(0x03, slotCheck.idAt(32),
+                "The second stale Obj90 rock must be gone before slot 0x20 is reused by "
+                        + "the ROM layer switcher; actual slots " + slotCheck.summary());
+    }
+
+    @Test
+    public void arz2SkidDustDoesNotAllocateExtraSlot20AfterRomFixedDustDeletes() throws Exception {
+        ObjectOccupancyOracle.Divergence divergence =
+                driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                        (trace, om, frame) -> {
+                            if (frame != 1698) {
+                                return null;
+                            }
+                            Map<Integer, Integer> expected =
+                                    ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                            Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                            ObjectOccupancyOracle.Divergence first =
+                                    ObjectOccupancyOracle.firstDivergence(trace, om, frame, FIRST_DYNAMIC_SLOT);
+                            Assertions.assertFalse(expected.containsKey(20),
+                                    "ROM Obj08 fixed dust slot 20 should have deleted by ARZ2 f1698 "
+                                            + "(docs/s2disasm/s2.asm:42759-42797)");
+                            if (first != null) {
+                                Assertions.fail("ARZ2 dynamic slots should still match at f1698 after "
+                                        + "ROM Obj08_CheckSkid stops ticking when Stop animation ends "
+                                        + "(docs/s2disasm/s2.asm:42759-42797); first divergence "
+                                        + String.format("slot=%d expected=0x%02X actual=0x%02X",
+                                        first.slot(), first.expectedId() & 0xFF, first.actualId() & 0xFF)
+                                        + " expected " + describeSlots(expected, 16, 40)
+                                        + " actual " + describeSlots(actual, 16, 40));
+                            }
+                            return null;
+                        });
+        Assertions.assertNull(divergence);
+    }
+
+    @Test
+    public void arz2GrounderWallWaitsOneFrameAfterActivationBeforeMoving() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1712) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedWall = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 38)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x8F)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedWall,
+                            "ARZ2 ROM fixture should report Obj8F wall slot 0x26 at activation frame 1712");
+                    GrounderWallInstance actualWall = om.activeObjectsOfType(GrounderWallInstance.class)
+                            .stream()
+                            .filter(wall -> wall.getSlotIndex() == 38)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(
+                            expectedWall.x() & 0xFFFF,
+                            expectedWall.y() & 0xFFFF,
+                            actualWall == null ? -1 : actualWall.getX(),
+                            actualWall == null ? -1 : actualWall.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 35, 41));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj8F loc_36BA6 only latches velocity when parent objoff_2B becomes nonzero; "
+                        + "Obj8F_Move does not run until the next frame "
+                        + "(docs/s2disasm/s2.asm:73424-73437); slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj8F activation frame should keep the original wall Y until routine 4 runs "
+                        + "(docs/s2disasm/s2.asm:73424-73437); slots " + check.summary());
+    }
+
+    @Test
+    public void arz2GrounderWallUsesApproximateBuildSpritesYBandBeforeDelete() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1760) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedWall = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 0x28)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x8F)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedWall,
+                            "ARZ2 ROM fixture should still report Obj8F wall slot 0x28 at frame 1760");
+                    GrounderWallInstance actualWall = om.activeObjectsOfType(GrounderWallInstance.class)
+                            .stream()
+                            .filter(wall -> wall.getSlotIndex() == 0x28)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(
+                            expectedWall.x() & 0xFFFF,
+                            expectedWall.y() & 0xFFFF,
+                            actualWall == null ? -1 : actualWall.getX(),
+                            actualWall == null ? -1 : actualWall.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 0x26, 0x29));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj8F should survive through ARZ2 f1760 before Obj8F_Move observes "
+                        + "the previous BuildSprites on-screen bit; slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 BuildSprites approximate Y check keeps non-explicit-height sprites "
+                        + "visible with a 32px band before Obj8F_Move's next-frame delete "
+                        + "(docs/s2disasm/s2.asm:30569-30588,73489-73494); slots "
+                        + check.summary());
+    }
+
+    @Test
+    public void arz2GrounderRockUsesObjectMoveAndFallOldVelocityOrder() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1716) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedRock = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 20)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x90)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedRock,
+                            "ARZ2 ROM fixture should report Obj90 rock slot 0x14 at frame 1716");
+                    GrounderRockProjectile actualRock = om.activeObjectsOfType(GrounderRockProjectile.class)
+                            .stream()
+                            .filter(rock -> rock.getSlotIndex() == 20)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(
+                            expectedRock.x() & 0xFFFF,
+                            expectedRock.y() & 0xFFFF,
+                            actualRock == null ? -1 : actualRock.getX(),
+                            actualRock == null ? -1 : actualRock.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 20, 30));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj90 rock X should follow ObjectMoveAndFall at ARZ2 f1716; slots "
+                        + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 ObjectMoveAndFall reads old y_vel for movement, then adds gravity "
+                        + "(docs/s2disasm/s2.asm:30163-30177); slots " + check.summary());
+    }
+
+    @Test
+    public void arz2SkidDustReusesFreedSlot18AtRomFrame1993() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 1993) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x08, expected.get(18),
+                            "ROM fixture should reuse slot 0x12 for Obj08 skid dust at ARZ2 f1993");
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 56));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x08, slotCheck.idAt(18),
+                "S2 Obj08 skid dust must use the lowest free ROM slot after Obj82 unloads at f1993; "
+                        + "actual slots "
+                        + slotCheck.summary());
     }
 
     /**

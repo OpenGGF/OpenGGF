@@ -108,6 +108,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         sonic.drowningDeath = true;
         sonic.drownPreDeathTimer = 60;
         sonic.hurt = true;
+        sonic.captureOnObjectAtFrameStart();
         sonic.deathCountdown = 30;
         sonic.invulnerableFrames = 128;
         sonic.invincibleFrames = 64;
@@ -203,6 +204,8 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertTrue(e1.objectPreservedRollVelocityCarry(), "objectPreservedRollVelocityCarry mismatch");
         assertTrue(e1.tunnelMode(), "tunnelMode mismatch");
         assertTrue(e1.onObject(), "onObject mismatch");
+        assertTrue(e1.hurtAtFrameStart(), "hurtAtFrameStart mismatch");
+        assertFalse(e1.hurtRecoveryCompletedThisFrame(), "hurtRecoveryCompletedThisFrame mismatch");
         assertEquals(0xBEEF, e1.latchedSolidObjectId(), "latchedSolidObjectId mismatch");
         assertTrue(e1.slopeRepelJustSlipped(), "slopeRepelJustSlipped mismatch");
         assertTrue(e1.stickToConvex(), "stickToConvex mismatch");
@@ -417,6 +420,9 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertEquals(e1.onObject(), e2.onObject(), "onObject not restored");
         assertEquals(e1.onObjectAtFrameStart(), e2.onObjectAtFrameStart(), "onObjectAtFrameStart not restored");
         assertEquals(e1.pushingAtFrameStart(), e2.pushingAtFrameStart(), "pushingAtFrameStart not restored");
+        assertEquals(e1.hurtAtFrameStart(), e2.hurtAtFrameStart(), "hurtAtFrameStart not restored");
+        assertEquals(e1.hurtRecoveryCompletedThisFrame(), e2.hurtRecoveryCompletedThisFrame(),
+                "hurtRecoveryCompletedThisFrame not restored");
         assertEquals(e1.latchedSolidObjectId(), e2.latchedSolidObjectId(), "latchedSolidObjectId not restored");
         assertEquals(e1.slopeRepelJustSlipped(), e2.slopeRepelJustSlipped(), "slopeRepelJustSlipped not restored");
         assertEquals(e1.stickToConvex(), e2.stickToConvex(), "stickToConvex not restored");

@@ -142,6 +142,7 @@ public final class LevelFrameStep {
         }
 
         boolean inlineSolidResolution = levelManager.objectsExecuteAfterPlayerPhysics();
+        SpriteManager spriteManager = context.spriteManager();
         if (inlineSolidResolution) {
             // 2. Inline-order modules need a frame-start snapshot of object touch
             //    state because player-slot ReactToItem runs before ExecuteObjects.
@@ -159,7 +160,12 @@ public final class LevelFrameStep {
 
             // 3. Object execution after player physics, with inline solid checkpoints
             //    so later objects see earlier contact adjustments.
-            wrapper.wrap("objects", levelManager::updateObjectPositionsPostPhysicsWithoutTouches);
+            Runnable afterExecBeforePlacement = spriteManager != null
+                    ? spriteManager::advanceFixedSkidDustAfterObjectExecution
+                    : null;
+            wrapper.wrap("objects",
+                    () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
+                            afterExecBeforePlacement));
         } else {
             LevelEventProvider fixedSlotEvents = context.levelEventProvider();
             if (fixedSlotEvents != null) {
@@ -217,6 +223,11 @@ public final class LevelFrameStep {
         //     post-scroll camera. fixed-in-level objects run alongside.
         if (levelEvents != null) {
             wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
+        }
+        if (spriteManager != null && !inlineSolidResolution) {
+            wrapper.wrap("fixed-dust", spriteManager::advanceFixedSkidDustAfterObjectExecution);
+        }
+        if (levelEvents != null) {
             levelEvents.update();
         }
 
@@ -252,7 +263,6 @@ public final class LevelFrameStep {
 
         // 7. Cache BuildSprites on-screen results for next frame's logic.
         levelManager.refreshObjectPostCameraRenderState();
-        SpriteManager spriteManager = context.spriteManager();
         if (spriteManager != null) {
             spriteManager.refreshPlayableRenderFlags(camera);
         }

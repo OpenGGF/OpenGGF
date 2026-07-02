@@ -14,6 +14,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -213,6 +214,7 @@ public class SidekickCpuController {
     private boolean levelEventDormantMarkerReleasePending;
     private boolean skipPhysicsThisFrame;
     private boolean deadOnObjectReenteredVisibleWindow;
+    private int deadFallingRomCpuRoutine = -1;
     // Set by updateDeadFallingDeferredS2 when running the per-frame Obj02_Dead
     // ObjectMoveAndFall continuation (frame N+1+ of the deferred death-fall,
     // before crossing Tails_Max_Y_pos + $100). ROM Obj02_Dead (s2.asm:40736-40742)
@@ -602,6 +604,9 @@ public class SidekickCpuController {
     }
 
     public int getDiagnosticRomCpuRoutine() {
+        if (state == State.DEAD_FALLING && deadFallingRomCpuRoutine >= 0) {
+            return deadFallingRomCpuRoutine;
+        }
         return romCpuRoutineForState(state);
     }
 
@@ -2029,6 +2034,16 @@ public class SidekickCpuController {
                 && preservesSidekickDelayedLeaderPushWhileRiding(ridingObject)) {
             recordedStatus |= AbstractPlayableSprite.STATUS_PUSHING;
         }
+        if ((recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && normalPushingGraceFrames == 0
+                && dx == 0
+                && (recordedInput & (AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_RIGHT)) != 0
+                && (diagnosticGeneratedPressedInput
+                & (AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_RIGHT)) == 0
+                && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
+                && preservesSidekickDelayedLeaderPushFromInteractSlot()) {
+            recordedStatus |= AbstractPlayableSprite.STATUS_PUSHING;
+        }
         byte pushBypassStatus = effectiveLeader.getStatusHistory(OBJECT_ORDER_INPUT_DELAY_FRAMES);
         byte pushBypassLeaderStatus = usesSidekickCpuPushBypassObjectOrderStatusDelay(ridingObject)
                 ? pushBypassStatus
@@ -2110,6 +2125,25 @@ public class SidekickCpuController {
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
                 && preservesSidekickCpuPushGraceWhileRiding(ridingObject);
+        boolean standardInteractPushGrace =
+                normalPushingGraceFrames >= sidekickCpuPushGraceMinimumFramesFromInteractSlot()
+                        && normalPushingGraceFrames <= sidekickCpuPushGraceMaximumFramesFromInteractSlot()
+                        // Once the ordinary push-grace counter has decayed, only the
+                        // stationary local Obj30 release case still matches ROM's
+                        // status-byte read. Moving follow samples must fall through
+                        // to normal steering (HTZ2 f3384).
+                        && (normalPushingGraceFrames > 0 || dx == 0)
+                        && preservesSidekickCpuPushGraceFromInteractSlot();
+        boolean movingZeroGraceInteractPush =
+                normalPushingGraceFrames == 0
+                        && preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot();
+        boolean interactObjectPushGrace = !sidekick.getAir()
+                && !sidekick.isOnObject()
+                && !sidekick.getRolling()
+                && (standardInteractPushGrace || movingZeroGraceInteractPush)
+                && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
         int followSnapThreshold = resolveFollowSnapThreshold();
         boolean localBelowTargetFacingIntoFollowSide =
                 (dx > 0 && sidekick.getDirection() == Direction.RIGHT)
@@ -2219,10 +2253,12 @@ public class SidekickCpuController {
         boolean skipFollowSteering = currentPushBypass
                 || localBelowTargetGrace
                 || ridingObjectPushGrace
+                || interactObjectPushGrace
                 || (objectOrderGrace && !supportGraceKeepsFollowSteering);
         String followBranch = currentPushBypass ? "current_push_bypass"
                 : localBelowTargetGrace ? "grace_push_bypass"
                 : ridingObjectPushGrace ? "riding_push_grace"
+                : interactObjectPushGrace ? "interact_push_grace"
                 : (objectOrderGrace && !supportGraceKeepsFollowSteering) ? "grace_push_bypass"
                 : leaderStatusOnObject ? "leader_on_object"
                 : effectiveLeader.getGSpeed() >= 0x400 ? "leader_fast"
@@ -2388,7 +2424,8 @@ public class SidekickCpuController {
                 ((currentStatusPush
                         && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0)
                         || objectOrderGrace
-                        || ridingObjectPushGrace);
+                        || ridingObjectPushGrace
+                        || interactObjectPushGrace);
         if (jumpingFlag && !autoJumpPushBypass) {
             inputJump = true;
             boolean delayedJumpOnly = (recordedInput & (AbstractPlayableSprite.INPUT_UP
@@ -2473,7 +2510,8 @@ public class SidekickCpuController {
             // 39300, 39369-39378). The preserved-roll flag only suppresses a
             // stale delayed jump hold below; it must not block the push-bypass
             // jump that launches Tails out of the stopper chamber.
-            boolean pushingBypass = currentPushBypass || objectOrderGrace || ridingObjectPushGrace;
+            boolean pushingBypass = currentPushBypass || objectOrderGrace || ridingObjectPushGrace
+                    || interactObjectPushGrace;
             // resolveCpuFrameCounter() already yields the ROM-visible
             // Level_frame_counter: the per-frame sprite cadence is the
             // post-increment value, and bootstrap paths preload LevelManager with
@@ -2718,6 +2756,31 @@ public class SidekickCpuController {
         return sidekick.getLatchedSolidObjectInstance();
     }
 
+    private ObjectInstance currentInteractSlotObject() {
+        int slot = sidekick.getInteractSlotIndex();
+        if (slot < 0) {
+            return null;
+        }
+        LevelManager levelManager = sidekick.currentLevelManager();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return sidekick.getLatchedSolidObjectInstance();
+        }
+        for (ObjectInstance instance : levelManager.getObjectManager().getActiveObjects()) {
+            if (instance instanceof AbstractObjectInstance aoi
+                    && aoi.getSlotIndex() == slot
+                    && !instance.isDestroyed()) {
+                return instance;
+            }
+        }
+        ObjectInstance latched = sidekick.getLatchedSolidObjectInstance();
+        if (latched instanceof AbstractObjectInstance aoi
+                && aoi.getSlotIndex() == slot
+                && !latched.isDestroyed()) {
+            return latched;
+        }
+        return null;
+    }
+
     private boolean clearStaleUnderwaterPushBeforeNormalCpu() {
         ObjectInstance ridingObject = currentRidingObject();
         if (!sidekick.isInWater()
@@ -2774,6 +2837,20 @@ public class SidekickCpuController {
         return levelManager.getObjectManager().isActiveObjectInstance(ridingObject);
     }
 
+    private boolean hasLiveInteractSlotObject(ObjectInstance interactObject) {
+        if (interactObject == null || interactObject.isDestroyed()) {
+            return false;
+        }
+        if (interactObject == sidekick.getLatchedSolidObjectInstance()) {
+            return true;
+        }
+        LevelManager levelManager = sidekick.currentLevelManager();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return true;
+        }
+        return levelManager.getObjectManager().isActiveObjectInstance(interactObject);
+    }
+
     private boolean preservesSidekickCpuPushGraceWhileRiding(ObjectInstance ridingObject) {
         if (!hasLiveRidingObject(ridingObject)) {
             return false;
@@ -2782,6 +2859,61 @@ public class SidekickCpuController {
             return provider.preservesSidekickCpuPushGraceWhileRiding(sidekick);
         }
         return false;
+    }
+
+    private boolean preservesSidekickCpuPushGraceFromInteractSlot() {
+        ObjectInstance interactObject = currentInteractSlotObject();
+        if (!hasLiveInteractSlotObject(interactObject)) {
+            return false;
+        }
+        if (interactObject instanceof SolidObjectProvider provider) {
+            return provider.preservesSidekickCpuPushGraceFromInteractSlot(sidekick);
+        }
+        return false;
+    }
+
+    private boolean preservesSidekickDelayedLeaderPushFromInteractSlot() {
+        ObjectInstance interactObject = currentInteractSlotObject();
+        if (!hasLiveInteractSlotObject(interactObject)) {
+            return false;
+        }
+        if (interactObject instanceof SolidObjectProvider provider) {
+            return provider.preservesSidekickDelayedLeaderPushFromInteractSlot(sidekick);
+        }
+        return false;
+    }
+
+    private boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot() {
+        ObjectInstance interactObject = currentInteractSlotObject();
+        if (interactObject == null || interactObject.isDestroyed()) {
+            return false;
+        }
+        if (interactObject instanceof SolidObjectProvider provider) {
+            return provider.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sidekick);
+        }
+        return false;
+    }
+
+    private int sidekickCpuPushGraceMinimumFramesFromInteractSlot() {
+        ObjectInstance interactObject = currentInteractSlotObject();
+        if (!hasLiveInteractSlotObject(interactObject)) {
+            return Integer.MAX_VALUE;
+        }
+        if (interactObject instanceof SolidObjectProvider provider) {
+            return provider.sidekickCpuPushGraceMinimumFramesFromInteractSlot(sidekick);
+        }
+        return Integer.MAX_VALUE;
+    }
+
+    private int sidekickCpuPushGraceMaximumFramesFromInteractSlot() {
+        ObjectInstance interactObject = currentInteractSlotObject();
+        if (!hasLiveInteractSlotObject(interactObject)) {
+            return Integer.MIN_VALUE;
+        }
+        if (interactObject instanceof SolidObjectProvider provider) {
+            return provider.sidekickCpuPushGraceMaximumFramesFromInteractSlot(sidekick);
+        }
+        return Integer.MIN_VALUE;
     }
 
     private int sidekickCpuPushGraceMinimumFramesWhileRiding(ObjectInstance ridingObject) {
@@ -4122,6 +4254,10 @@ public class SidekickCpuController {
      */
     private int rawInteractSlotObjectId() {
         int slot = sidekick.getInteractSlotIndex();
+        if (slot == AbstractPlayableSprite.SYNTHETIC_INTERACT_SLOT) {
+            int latchedId = sidekick.getLatchedSolidObjectId() & 0xFF;
+            return latchedId != 0 ? latchedId : -1;
+        }
         if (slot < 0) {
             return -1;
         }
@@ -4352,6 +4488,8 @@ public class SidekickCpuController {
      * marker on Frame N+1 (see updateDeadFalling).
      */
     private void beginLevelBoundaryKill() {
+        int romCpuRoutine = romCpuRoutineForState(state);
+        deadFallingRomCpuRoutine = romCpuRoutine >= 0 ? romCpuRoutine : 0x06;
         state = State.DEAD_FALLING;
         normalFrameCount = 0;
         applyKillCharacterTouchFloorReset();
@@ -4606,6 +4744,7 @@ public class SidekickCpuController {
         state = s3kCatchUpMarker
                 ? State.CATCH_UP_FLIGHT
                 : State.SPAWNING;
+        deadFallingRomCpuRoutine = -1;
         despawnCounter = 0;
         controlCounter = 0;
         approachFrameCount = 0;
@@ -4828,6 +4967,7 @@ public class SidekickCpuController {
      */
     public void setInitialState(State state) {
         this.state = state;
+        deadFallingRomCpuRoutine = -1;
         aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;
         catchUpUsesRomVisibleLevelFrameCounter = false;
@@ -4855,6 +4995,7 @@ public class SidekickCpuController {
                                 int respawnCounter, int interactId,
                                 boolean jumping, int targetX, int targetY) {
         state = mapRomCpuRoutine(cpuRoutine);
+        deadFallingRomCpuRoutine = -1;
         aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;
         catchUpUsesRomVisibleLevelFrameCounter = false;
@@ -4885,6 +5026,7 @@ public class SidekickCpuController {
      */
     void forceStateForTest(State state, int normalFrames) {
         this.state = state;
+        deadFallingRomCpuRoutine = -1;
         aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;
         catchUpUsesRomVisibleLevelFrameCounter = false;
@@ -5115,6 +5257,7 @@ public class SidekickCpuController {
     public SidekickCpuRewindExtra captureRewindState() {
         return new SidekickCpuRewindExtra(
                 state,
+                deadFallingRomCpuRoutine,
                 despawnCounter,
                 frameCounter,
                 controlCounter,
@@ -5175,6 +5318,7 @@ public class SidekickCpuController {
 
     public void restoreRewindState(SidekickCpuRewindExtra snapshot) {
         state = snapshot.state();
+        deadFallingRomCpuRoutine = snapshot.deadFallingRomCpuRoutine();
         despawnCounter = snapshot.despawnCounter();
         frameCounter = snapshot.frameCounter();
         controlCounter = snapshot.controlCounter();
@@ -5287,6 +5431,7 @@ public class SidekickCpuController {
 
     public void reset() {
         state = State.INIT;
+        deadFallingRomCpuRoutine = -1;
         despawnCounter = 0;
         controlCounter = 0;
         approachFrameCount = 0;

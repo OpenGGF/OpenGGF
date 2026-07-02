@@ -268,6 +268,7 @@ public record PerObjectRewindSnapshot(
      */
     public record SidekickCpuRewindExtra(
             com.openggf.sprites.playable.SidekickCpuController.State state,
+            int deadFallingRomCpuRoutine,
             int despawnCounter,
             int frameCounter,
             int controlCounter,
@@ -360,6 +361,8 @@ public record PerObjectRewindSnapshot(
             boolean tunnelMode,
             // Surface interaction / collision
             boolean onObject, boolean onObjectAtFrameStart, boolean pushingAtFrameStart,
+            boolean hurtAtFrameStart,
+            boolean hurtRecoveryCompletedThisFrame,
             int latchedSolidObjectId, int interactSlotIndex, boolean slopeRepelJustSlipped,
             boolean stickToConvex, boolean sliding, boolean pushing,
             boolean skidding, int skidDustTimer,

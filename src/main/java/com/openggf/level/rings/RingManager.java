@@ -1286,18 +1286,21 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             spillAnimation.reset();
             ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
 
-            // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25137-25138:
+            // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25143-25144:
             // `bsr.w AllocateObject; bne.w +++` — a failed AllocateObject branches PAST the
-            // spill loop, truncating the spill). S1/S2 allocate every Obj37 from the loop. S3K
-            // HurtCharacter first allocates the Obj37 owner slot, then Obj37_Init uses that slot
-            // for ring 0 and AllocateObjectAfterCurrent for the rest (sonic3k.asm:21065-21088,
-            // 35490-35528).
+            // spill loop, truncating the spill). S1 allocates every Obj37 from the loop. S2
+            // HurtCharacter preallocates ring 0 with AllocateObject, then Obj37_Init uses
+            // plain AllocateObject for the remainder (s2.asm:85444-85461,25125-25146). S3K
+            // uses the owner slot and AllocateObjectAfterCurrent for the rest
+            // (sonic3k.asm:21065-21088,35549-35591).
             boolean preallocateOwnerSlot = objectManager != null && objectManager.preallocatesLostRingOwnerSlot();
+            boolean allocateRemainderAfterOwner = objectManager != null
+                    && objectManager.lostRingRemainderAllocatesAfterOwnerSlot();
             int firstReservedSlot = preallocatedFirstSlot;
             if (preallocateOwnerSlot && firstReservedSlot < 0) {
                 firstReservedSlot = objectManager.allocateDynamicSlot();
             }
-            int previousSlot = preallocateOwnerSlot ? firstReservedSlot : 31;
+            int previousSlot = firstReservedSlot;
             int spawned = 0;
             for (int i = 0; i < toSpawn; i++) {
                 if (angle >= 0) {
@@ -1320,11 +1323,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     }
                 }
 
-                int slotIndex = i == 0 && preallocateOwnerSlot
-                        ? firstReservedSlot
-                        : objectManager != null
-                                ? objectManager.allocateSlotAfter(previousSlot)
-                                : -1;
+                int slotIndex = -1;
+                if (i == 0 && preallocateOwnerSlot) {
+                    slotIndex = firstReservedSlot;
+                } else if (objectManager != null) {
+                    slotIndex = allocateRemainderAfterOwner
+                            ? objectManager.allocateSlotAfter(previousSlot)
+                            : objectManager.allocateDynamicSlot();
+                }
                 if (slotIndex < 0) {
                     // ROM: no free slot → stop spilling (truncate the remainder).
                     int truncated = toSpawn - spawned;
@@ -1346,7 +1352,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                             x, y, xVel, yVel,
                             phase, LIFETIME_FRAMES, spillAnimation);
                     objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
-                    if (applyInitialObjectStep) {
+                    if (applyInitialObjectStep && appliesInitialObj37Step(slotIndex, firstReservedSlot)) {
                         ringObject.updateMovement();
                     }
                 }
@@ -1359,6 +1365,15 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
             player.setRingCount(0);
             audioManager.playSfx(GameSound.RING_SPILL);
+        }
+
+        private static boolean appliesInitialObj37Step(int slotIndex, int ownerSlot) {
+            // S2 ARZ2 PC probe: HurtCharacter reserves the owner Obj37 slot (56)
+            // before same-pass lower slots (48,49,54,55) free. Obj37_Init then
+            // allocates child rings into those lower slots, but ExecuteObjects has
+            // already passed them, so only owner-or-later slots run Obj37_Main in
+            // that frame (docs/s2disasm/s2.asm:85444-85461, 25125-25245).
+            return ownerSlot < 0 || slotIndex >= ownerSlot;
         }
 
         private static int phaseOffsetForSlot(ObjectManager objectManager, int slotIndex) {

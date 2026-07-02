@@ -395,6 +395,20 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether CPU sidekick follow steering should treat this latched object as
+     * preserving a previous push bit after the live ride record has cleared.
+     * <p>
+     * This is narrower than {@link #preservesSidekickCpuPushGraceWhileRiding(PlayableEntity)}:
+     * it only applies when the player is no longer marked on-object locally, but
+     * ROM-visible object state can still feed the {@code Status_Push} branch at
+     * the sidekick CPU slot. Keep it object-local and do not use it to infer
+     * push from route/frame-specific trace data.
+     */
+    default boolean preservesSidekickCpuPushGraceAfterRideClears(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether a current {@code Status_Push} bypass while the CPU sidekick is
      * still riding this object should consume the object-order input history
      * slot rather than the ordinary already-loaded follow slot.
@@ -434,6 +448,60 @@ public interface SolidObjectProvider {
      */
     default boolean preservesSidekickDelayedLeaderPushWhileRiding(PlayableEntity sidekick) {
         return false;
+    }
+
+    /**
+     * Whether a CPU sidekick's persistent {@code interact(a0)} slot should
+     * preserve a just-cleared {@code Status_Push} bit for the ROM CPU read even
+     * after the engine has already released the live ride state.
+     * <p>
+     * This is narrower than {@link #preservesSidekickCpuPushGraceWhileRiding}:
+     * it applies only when the player is no longer riding the object but the ROM
+     * interact slot still dereferences this object's SST status byte before the
+     * object's later solid/drop-floor routine refreshes it.
+     */
+    default boolean preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether an interact-slot object keeps current {@code Status_Push} visible
+     * to {@code TailsCPU_Normal} even after the local push-grace counter has
+     * decayed and the sidekick is not stationary relative to the leader.
+     * <p>
+     * This is narrower than {@link #preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity)}.
+     * Use only for object-local ROM evidence where the sidekick's persistent
+     * {@code interact(a0)} slot still dereferences this object's live
+     * {@code SolidObject} status byte at the CPU read.
+     */
+    default boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether a CPU sidekick's persistent {@code interact(a0)} slot should keep
+     * the delayed leader status sample in the push-visible branch after the live
+     * push-grace window has expired.
+     * <p>
+     * This affects {@code TailsCPU_Normal}'s delayed d4 {@code Status_Push}
+     * fall-through decision, not the current sidekick push-bypass branch.
+     */
+    default boolean preservesSidekickDelayedLeaderPushFromInteractSlot(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Minimum remaining push-grace frames for the released-interact CPU bridge.
+     */
+    default int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {
+        return Integer.MAX_VALUE;
+    }
+
+    /**
+     * Maximum remaining push-grace frames for the released-interact CPU bridge.
+     */
+    default int sidekickCpuPushGraceMaximumFramesFromInteractSlot(PlayableEntity player) {
+        return Integer.MIN_VALUE;
     }
 
     /**
@@ -570,6 +638,20 @@ public interface SolidObjectProvider {
      * trace evidence shows the object must see the post-player-move X position.
      */
     default boolean projectsPreMovementGroundXForSolidContact(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether this object should sample one pending airborne Y step for a
+     * pre-movement {@code SolidObject_cont} top-landing check.
+     * <p>
+     * Use only for object routines that the ROM executes after the player slot
+     * has already applied airborne movement, while the engine's object pass still
+     * sees the pre-move centre. The resolver limits this hook to falling,
+     * airborne players that cross into the normal {@code SolidObject_Landed}
+     * top band; side and bottom contacts are unchanged.
+     */
+    default boolean projectsPreMovementAirYForSolidContact(PlayableEntity player) {
         return false;
     }
 

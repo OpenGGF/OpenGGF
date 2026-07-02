@@ -219,8 +219,8 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
      * Apply physics to ball (ROM: loc_31FF8).
      */
     private void applyBallPhysics() {
-        xFixed += (xVel << 8);
-        yFixed += (yVel << 8);
+        xFixed = (x << 16) + (xVel << 8);
+        yFixed = (y << 16) + (yVel << 8);
         yVel += GRAVITY;
         x = xFixed >> 16;
         y = yFixed >> 16;
@@ -244,7 +244,9 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
         if (services().objectManager() == null) {
             return;
         }
-        spawnFreeChild(() -> new CNZBossElectricBall(x, y, 0x100, -0x300, mainBoss));
+        // ROM loc_32030 copies this object into an AllocateObjectAfterCurrent slot,
+        // then negates the clone's x_vel. Preserve that after-current slot order.
+        spawnChild(() -> new CNZBossElectricBall(x, y, 0x100, -0x300, mainBoss));
     }
 
     @Override

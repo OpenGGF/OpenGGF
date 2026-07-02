@@ -404,6 +404,47 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean preservesEdgeSubpixelMotion() {
+        // S2 Obj3E body calls SolidObject at loc_3F278; SolidObject_AtEdge
+        // preserves x_vel/g_speed when exact-edge contact only sets pushing.
+        return true;
+    }
+
+    @Override
+    public boolean preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity player) {
+        // TailsCPU_Normal reads current Status_Push before Obj3E's later
+        // SolidObject body pass refreshes the live object status byte.
+        return isGroundedCpuSidekickAtBodyEdge(player);
+    }
+
+    @Override
+    public boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
+        // HTZ2 capsule edge: ROM Tails interact still points at Obj3E when
+        // TailsCPU_Normal tests Status_Push (s2.asm:39297-39300), while the
+        // body SolidObject call is Obj3E loc_3F278.
+        return isGroundedCpuSidekickAtBodyEdge(player);
+    }
+
+    @Override
+    public int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {
+        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MAX_VALUE;
+    }
+
+    @Override
+    public int sidekickCpuPushGraceMaximumFramesFromInteractSlot(PlayableEntity player) {
+        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MIN_VALUE;
+    }
+
+    private boolean isGroundedCpuSidekickAtBodyEdge(PlayableEntity player) {
+        if (player == null || !player.isCpuControlled() || player.getAir()) {
+            return false;
+        }
+        int dx = Math.abs(player.getCentreX() - spawn.x());
+        int dy = Math.abs(player.getCentreY() - spawn.y());
+        return dx == BODY_HALF_WIDTH && dy <= BODY_HALF_HEIGHT;
+    }
+
+    @Override
     public boolean shouldStayActiveWhenRemembered() {
         // Capsule needs to stay active to complete its animation sequence
         // (lock flying off, capsule opening, animals spawning, results screen)

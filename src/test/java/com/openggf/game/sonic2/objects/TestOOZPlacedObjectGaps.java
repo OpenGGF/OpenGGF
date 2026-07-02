@@ -495,6 +495,10 @@ class TestOOZPlacedObjectGaps {
                 "Obj33 rebuilds its dynamic spawn while ROM keeps standing/pushing bits in the SST status byte");
         assertTrue(platform.allowsObjectControlledSolidContacts(),
                 "Obj33 keeps calling SolidObject while captured riders have positive obj_control=1");
+        TestablePlayableSprite tails = playerAt(0x1000, 0x04E0);
+        assertTrue(platform.rejectsBit7ObjectControlNewSolidContact(tails),
+                "Obj33 allows positive obj_control=1 support but still rejects signed bit-7 states "
+                        + "at SolidObject_ChkBounds (s2.asm:49727-49740, 35344-35489)");
     }
 
     private static ObjectInstance newSlidingSpike(int x, int y, int subtype) throws Exception {

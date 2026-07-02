@@ -109,6 +109,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// frame" so updateCrouchState falls back to the live g_speed.
 	private static final int NO_PRE_FRICTION_SNAPSHOT = Integer.MIN_VALUE;
 	private int preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
+	private boolean fixedSkidDustTickPending;
+	private boolean processingFixedSkidDustTick;
+	private boolean skidAnimationRefreshedThisFrame;
 	private int staleHorizontalInputRideSlotIndex;
 	private int staleHorizontalInputSuppressFrames;
 	private int staleHorizontalInputRideFrames;
@@ -333,7 +336,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Returns the spindash speed table from the physics feature set,
 	 * falling back to the static SPINDASH_SPEEDS constant.
 	 * S3K Super/Hyper forms use a higher speed table (sonic3k.asm:23743 word_11D04).
-	 * S2 Super Sonic uses the normal table (no separate Super table in S2).
+	 * S2 Super Sonic uses SpindashSpeedsSuper (s2.asm:37305).
 	 */
 	private short[] getSpindashSpeedTable() {
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
@@ -365,6 +368,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// repopulates it before updateCrouchState consumes it (see field comment).
 		preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 		slopeResistAppliedThisFrame = false;
+		skidAnimationRefreshedThisFrame = false;
 		sprite.clearDeferredGroundWallVelocityResponse();
 
 		// Snapshot pre-physics state for per-object hooks running AFTER
@@ -3230,14 +3234,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// bounce: the flip frame's wall hit re-sets push, but ROM's prev_anim
 		// sentinel still clears it that frame, so push is gone entering the next
 		// no-hit frame.)
+		//
+		// Airborne facing changes are handled by Sonic_ChgJumpDir /
+		// Tails_ChgJumpDir and S3K *_InputAcceleration_Freespace; those routines
+		// change Status_Facing without clearing Status_Push (s2.asm:40184-40211,
+		// sonic3k.asm:28330-28363). HTZ2 f4526 depends on that stale push bit
+		// surviving after Obj30 drops CPU Tails into the air.
+		boolean groundedFacingFlip = !sprite.getAir() && !sprite.getRolling();
 		if (left && !right && sprite.getDirection() == Direction.RIGHT && gSpeed <= 0 && !sprite.getRolling()) {
-			sprite.setPushing(false);
-			forceGroundFacingFlipAnimationRestart();
-			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
+			if (groundedFacingFlip) {
+				sprite.setPushing(false);
+				forceGroundFacingFlipAnimationRestart();
+				facingFlipForcesPushClearAfterGroundWall = true;
+			}
 		} else if (right && !left && sprite.getDirection() == Direction.LEFT && gSpeed >= 0 && !sprite.getRolling()) {
-			sprite.setPushing(false);
-			forceGroundFacingFlipAnimationRestart();
-			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
+			if (groundedFacingFlip) {
+				sprite.setPushing(false);
+				forceGroundFacingFlipAnimationRestart();
+				facingFlipForcesPushClearAfterGroundWall = true;
+			}
 		}
 	}
 
@@ -3320,14 +3335,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void handleSkid() {
+		skidAnimationRefreshedThisFrame = true;
 		if (!sprite.getSkidding()) sprite.setSkidding(true);
 		audioManager.playSfx(GameSound.SKID);
 		advanceSkidDustTimer();
 	}
 
+	boolean isSkidAnimationRefreshedThisFrame() {
+		return skidAnimationRefreshedThisFrame;
+	}
+
 	void advanceFixedSkidDustWhileStopAnimPersists() {
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (featureSet == null || !featureSet.waterSplashUsesFixedDustObject()) {
+		if (featureSet == null || !featureSet.fixedSkidDustAllocatesAfterDynamicObjectPass()) {
 			return;
 		}
 		if (!(sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile profile)) {
@@ -3338,9 +3358,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		int skidAnimId = profile.getSkidAnimId();
 		if (skidAnimId < 0 || sprite.getAnimationId() != skidAnimId) {
+			fixedSkidDustTickPending = false;
 			return;
 		}
-		advanceSkidDustTimer();
+		if (!fixedSkidDustTickPending && !sprite.getAir()) {
+			return;
+		}
+		fixedSkidDustTickPending = false;
+		processingFixedSkidDustTick = true;
+		try {
+			advanceSkidDustTimer();
+		} finally {
+			processingFixedSkidDustTick = false;
+		}
 	}
 
 	private void advanceSkidDustTimer() {
@@ -3349,6 +3379,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Sonic_TurnLeft/Right only switches the dust object into that routine
 		// and seeds mapping_frame=$15 (docs/s2disasm/s2.asm:36927-36929,
 		// 36988-36990, 42759-42797).
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (!processingFixedSkidDustTick
+				&& featureSet != null
+				&& featureSet.fixedSkidDustAllocatesAfterDynamicObjectPass()) {
+			fixedSkidDustTickPending = true;
+			return;
+		}
 		int dustTimer = sprite.getSkidDustTimer() - 1;
 		if (dustTimer < 0) {
 			dustTimer = 3;
