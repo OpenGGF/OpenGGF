@@ -2819,12 +2819,13 @@ class TestMhz1CutsceneObjects {
         advanceMhz1CutsceneKnucklesToButtonRange(cutsceneKnuckles, button, sonic);
 
         door.update(2, sonic);
-        assertEquals(0x0620, door.getY(),
-                "loc_63078 only arms y_vel=$100 and $2E=$3F; loc_630A6 movement starts next frame");
+        assertEquals(0x0621, door.getY(),
+                "loc_63078 falls through loc_63094 into loc_630A6 with no rts, so the arming frame "
+                        + "already runs MoveSprite2 with y_vel=$100 while _unkFAA9 is set");
 
         door.update(3, sonic);
-        assertEquals(0x0621, door.getY(),
-                "loc_630A6 calls MoveSprite2 with y_vel=$100 while _unkFAA9 is set");
+        assertEquals(0x0622, door.getY(),
+                "loc_630A6 keeps calling MoveSprite2 each following frame");
 
         for (int frame = 0; frame < 63; frame++) {
             door.update(4 + frame, sonic);
@@ -2904,7 +2905,10 @@ class TestMhz1CutsceneObjects {
                 "loc_62F0A not.b _unkFAA9 turns the clear initial state into the lowered door state");
 
         door.update(1, knuckles);
-        for (int frame = 0; frame < 64; frame++) {
+        // loc_63078 falls through into loc_630A6, so update(1) already runs the
+        // first MoveSprite2; the 64-pixel slide therefore completes over
+        // update(1)..update(64) rather than update(1)..update(65).
+        for (int frame = 0; frame < 63; frame++) {
             door.update(2 + frame, knuckles);
         }
         assertEquals(0x0660, door.getY());
@@ -2952,7 +2956,10 @@ class TestMhz1CutsceneObjects {
                 .findFirst().orElseThrow();
         door.setServices(services);
         door.update(1, knuckles);
-        for (int frame = 0; frame < 64; frame++) {
+        // loc_63078 falls through into loc_630A6, so update(1) already runs the
+        // first MoveSprite2; the 64-pixel slide therefore completes over
+        // update(1)..update(64) rather than update(1)..update(65).
+        for (int frame = 0; frame < 63; frame++) {
             door.update(2 + frame, knuckles);
         }
         assertEquals(0x0660, door.getY());
@@ -2967,13 +2974,14 @@ class TestMhz1CutsceneObjects {
                 "loc_6303C clears _unkFAA9 when Player_1 is left of the lowered door, within $40 X and at least $60 Y away");
         assertTrue(button.isDoorMovingForTest(),
                 "loc_6303C falls through to loc_63078 immediately after clearing _unkFAA9, setting parent bit 2");
-        assertEquals(0x0660, door.getY(),
-                "loc_63078 only arms y_vel=-$100; loc_630A6 movement starts on the next update");
+        assertEquals(0x065F, door.getY(),
+                "loc_63078 arms y_vel=-$100 and falls through loc_63094 into loc_630A6 with no rts, so "
+                        + "the auto-raise trigger frame already moves the door up one pixel");
 
         door.update(68, playerLeftOfDoor);
 
-        assertEquals(0x065F, door.getY(),
-                "loc_630A6 moves the door upward once the auto-raise branch has armed y_vel=-$100");
+        assertEquals(0x065E, door.getY(),
+                "loc_630A6 keeps moving the door upward on each following frame");
     }
 
     @Test

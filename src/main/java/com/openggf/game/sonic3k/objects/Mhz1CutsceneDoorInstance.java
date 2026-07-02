@@ -110,13 +110,23 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
             if (parent.isDoorSwitchActive()) {
                 parent.clearDoorSwitchActive();
                 startSlide();
-                return;
-            }
-            if (shouldAutoRaiseFromPlayerPosition(playerEntity)) {
+                // Fall through to the movement step: MHZ1CutsceneButton_Door_Move
+                // (sonic3k.asm:130237) arms y_vel/$2E/$34 and then falls straight
+                // through MHZ1CutsceneButton_Door_SetVelocity into
+                // MHZ1CutsceneButton_Door_Moving (130251) with no rts, so the
+                // trigger frame itself runs MoveSprite2 + Obj_Wait. Returning here
+                // would delay the whole slide by one frame (MHZ1 trace F1162: the
+                // switch-driven upward slide lags the ROM door by 1px, so its
+                // underside clips the rising sidekick's jump apex instead of
+                // clearing it as the ROM door does).
+            } else if (shouldAutoRaiseFromPlayerPosition(playerEntity)) {
                 parent.setDoorLowered(false);
                 startSlide();
+                // MHZ1CutsceneButton_Door_ClearFlag (130234) clears _unkFAA9 and
+                // also falls through Door_Move into Door_Moving on the same frame.
+            } else {
+                return;
             }
-            return;
         }
 
         SubpixelMotion.moveSprite2(motion);

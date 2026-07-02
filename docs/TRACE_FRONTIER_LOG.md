@@ -19,6 +19,47 @@ Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9342 / 505
 (`tails_x_sub` expected `0x4700`, actual `0xC700`) after trace capture keeps
 the ROM Obj02 hurt routine visible for object-solid landing samples.
 
+## 2026-07-02 - S3K MHZ complete-run advances f1162 -> f1994 (MHZ1 cutscene door trigger-frame movement)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `5a09a8006` + this fix).
+- Command (verified independently on this branch):
+  `mvn.cmd "-Ds3k.rom.path=...\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f1162 / 2855 errors
+  (`tails_y`, expected `0x064E`, actual `0x0653`). After: f1994 / 2621 errors
+  (`y_sub`, expected `0xA500`, actual `0x0000`). Confirmed against
+  `target/trace-reports/s3k_mhz1_report.json`: zero divergence records at or
+  before f1162, so all five prior fix signatures (f1 `camera_x`, f72
+  `y_speed`, f966 `y`, f1025 `status_byte`, f1162 `tails_y`) hold.
+- Root cause: `MHZ1CutsceneButton_Door_Move` (`sonic3k.asm:130237`) arms
+  `y_vel`/`$2E`/`$34` and falls straight through
+  `MHZ1CutsceneButton_Door_SetVelocity` (`:130246`) into
+  `MHZ1CutsceneButton_Door_Moving` (`:130251`, `jsr MoveSprite2`) with no
+  `rts` anywhere in that chain (confirmed against `sonic3k.lst:151974-151988`:
+  `63094` -> `630A6` is straight-line). Both trigger paths reach this
+  fall-through: the switch branch jumps directly to `Door_Move`
+  (`bne.s MHZ1CutsceneButton_Door_Move`, `:130217`), and the auto-raise
+  proximity branch falls through `MHZ1CutsceneButton_Door_ClearFlag`
+  (`:130234`) into the same `Door_Move`. So the door moves 1px on its
+  trigger frame; `Mhz1CutsceneDoorInstance.update()` previously `return`ed
+  after arming the slide on both trigger branches, deferring the first move
+  to the next frame and lagging the ROM door by 1px through the whole slide.
+  At f1162 that 1px let the engine door's underside clip the rising CPU
+  Tails jump apex instead of clearing it as the ROM door does.
+- Fix: both trigger branches (switch-driven and auto-raise) now fall through
+  into the movement step (`SubpixelMotion.moveSprite2` + wait-timer
+  decrement) on the trigger frame itself, instead of `return`ing. Four
+  `TestMhz1CutsceneObjects` assertions and two down-slide loop counts were
+  corrected to encode the trigger-frame move (arming frame's Y already
+  reflects one step; the 64px slide completes over `update(1)..update(64)`
+  rather than `update(1)..update(65)`).
+- Out-of-scope note (left untouched): an inverted auto-raise Y-proximity
+  check (engine `yDistance >= 0x60` vs ROM `d3 < 0x60`) was noticed but not
+  exercised by this trace and not touched here — flagged as a follow-up.
+- Guards green: `TestMhz1CutsceneObjects` (82/82), `TestSolidObjectManager`
+  (48/48), `TestSonic3kMHZEvents` (62/62), `TestS3kAiz1SkipHeadless` (8/8),
+  `TestSonic3kLevelLoading` (35/35 across both packages).
+
 ## 2026-07-02 - S3K MHZ complete-run advances f1025 -> f1162 (MHZ1 cutscene door inclusive right edge)
 
 - Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
