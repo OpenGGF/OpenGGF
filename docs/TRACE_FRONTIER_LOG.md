@@ -6,6 +6,42 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
+## 2026-07-02 - S3K MHZ complete-run advances f966 -> f1025 (MHZ1 cutscene button top-landing width/anchor)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `02efe3a1c` + this fix).
+- Command (verified independently on this branch):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds3k.rom.path=...\s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f966 / 2967 errors (`y`).
+  After: f1025 / 2853 errors (`status_byte`, expected `0x0021`, actual
+  `0x0001`). Confirmed against `target/trace-reports/s3k_mhz1_report.json`.
+- Root cause: `Obj_MHZ1CutsceneButton`'s solid box was mis-anchored and its
+  top-landing X gate too narrow. (1) The ROM object keeps its solid box on the
+  raw object `y_pos` (0x67C), but the engine stores `this.y = spawn.y() + 4`
+  for the sprite draw, so the solid box sat 4px low. (2) ROM `sub_65DEC`
+  (`sonic3k.asm:134105`) passes collision `d1 = $1B` into `SolidObjectFull`, but
+  `loc_1E154` (`sonic3k.asm:41611-41632`) re-reads `width_pixels(a0)` = `$80`
+  (`ObjDat_MHZ1CutsceneButton`, `sonic3k.asm:134853`) for the landing X gate, so
+  the landing window is the full `$80` half-width, far wider than the `$1B`
+  side box. The engine's default landing heuristic (`collision d1 - $B = $10`)
+  wrongly rejected a rising rolling-jump graze at the button's right edge.
+- Fix: `Mhz1CutsceneButtonInstance` sets `SolidObjectParams` `offsetY =
+  -INIT_Y_OFFSET` (seats the solid box on ROM `y_pos` without moving the render)
+  and overrides `getTopLandingHalfWidth` to `0x80` (its own ObjDat
+  `width_pixels`). `ObjectSolidContactController.isWithinTopLandingWidth` now
+  honors an explicitly-configured landing width that differs from the collision
+  half-width in EITHER direction (previously only narrower). Behavior-preserving:
+  all 14 existing `getTopLandingHalfWidth` overrides return narrower-or-equal, so
+  only the new button uses the wider path (S1 GHZ1 / S2 EHZ1 green traces + 47
+  `TestSolidObjectManager` cases hold). Object-local ROM-data-driven, no
+  zone/route/frame carve-out; the existing S3K velocity-lift gate
+  (`solidObjectTopBranchAlwaysLiftsOnUpwardVelocity`) is unchanged.
+- Guards green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+  `TestSonic3kMHZEvents`, `TestMhz1CutsceneObjects`, `TestSolidObjectManager`
+  (+2 new discriminator tests), `TestSolidObjectTopBranchUpwardLift`,
+  `TestS1Ghz1CompleteRunTraceReplay`, `TestS2Ehz1TraceReplay`.
+
 ## 2026-07-02 - S3K MHZ complete-run advances f72 -> f966 (replay-bootstrap prelude counter preservation)
 
 - Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,

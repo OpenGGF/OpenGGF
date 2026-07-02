@@ -33,7 +33,15 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     private static final int INIT_Y_OFFSET = 4;
     private static final int PRIORITY = 2;
     private static final int CALLBACK_WAIT = 0x5F;
-    private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x1B, 4, 5);
+    // ROM Obj_MHZ1CutsceneButton keeps its solid box on the raw object y_pos
+    // (trace slot 11 y = 0x67C). The engine stores this.y = spawn.y() +
+    // INIT_Y_OFFSET for the sprite draw, so the solid anchor must shift back by
+    // -INIT_Y_OFFSET to sit on the ROM y_pos; otherwise SolidObjectFull's
+    // top-slice penetration (d3) is 4px short, misclassifying a falling sidekick
+    // graze (MHZ1 trace F951: Tails must stay a SIDE contact, d3 > 4) and
+    // under-lifting the rising rolling-jump graze (F966).
+    private static final SolidObjectParams SOLID_PARAMS =
+            new SolidObjectParams(0x1B, 4, 5, 0, -INIT_Y_OFFSET);
 
     private int x;
     private int y;
@@ -237,6 +245,20 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
+    }
+
+    @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // ROM: SolidObjectFull's top-slice clamp (sonic3k.asm loc_1E154:41611)
+        // re-reads width_pixels(a0) for the landing X gate. sub_65DEC
+        // (sonic3k.asm:134105) passes a hardcoded collision d1 = $1B into
+        // SolidObjectFull, but ObjDat_MHZ1CutsceneButton (sonic3k.asm:134853)
+        // sets width_pixels = $80. So the landing gate is far WIDER than the
+        // $1B side-collision box: any player already inside the side box passes
+        // the loc_1E154 X check. Without this the engine's default heuristic
+        // (collision d1 - $B = $10) wrongly rejects a rolling-jump graze at the
+        // right edge (MHZ1 trace F966: rising player over the button top slice).
+        return 0x80;
     }
 
     @Override
