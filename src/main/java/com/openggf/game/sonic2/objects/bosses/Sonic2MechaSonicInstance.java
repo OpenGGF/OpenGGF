@@ -1048,6 +1048,11 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
         return Sonic2Sfx.BOSS_EXPLOSION.id;
     }
 
+    @Override
+    protected int getBossExplosionObjectId() {
+        return com.openggf.game.sonic2.constants.Sonic2ObjectIds.BOSS_EXPLOSION;
+    }
+
     private static Sonic2MechaSonicInstance nearestLiveBossForRewind(RewindRecreateContext ctx) {
         if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
                 || ctx.objectServices().objectManager() == null) {

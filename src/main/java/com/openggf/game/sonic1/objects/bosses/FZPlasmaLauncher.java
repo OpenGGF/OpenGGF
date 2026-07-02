@@ -149,7 +149,7 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
                 ObjectRenderManager renderManager = services().renderManager();
                 if (renderManager != null && services().objectManager() != null) {
                     spawnFreeChild(() -> new BossExplosionObjectInstance(
-                            currentX, currentY, Sonic1Sfx.BOSS_EXPLOSION.id));
+                            currentX, currentY, Sonic1ObjectIds.EXPLOSION, Sonic1Sfx.BOSS_EXPLOSION.id));
                 }
                 explodedOnDefeat = true;
             }
