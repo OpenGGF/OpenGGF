@@ -19,6 +19,62 @@ Obj54 laser shooter and Obj53 shield orbs; and OOZ2 advances to f9342 / 505
 (`tails_x_sub` expected `0x4700`, actual `0xC700`) after trace capture keeps
 the ROM Obj02 hurt routine visible for object-solid landing samples.
 
+## 2026-07-02 - S3K MHZ complete-run advances f2158 -> f2159 (curled vine lands players on the contoured curl surface per loc_3EA1E)
+
+- Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
+  off develop base `61aba84e6` (HEAD `84103f0ab` + this fix).
+- Command (verified independently on this branch via `mvn.cmd`):
+  `mvn.cmd "-Ds3k.rom.path=...\Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`.
+- Status: still RED (advanced, not green). Before: f2158 / **4388** errors
+  (`tails_y_speed`, expected `0x0000`, actual `0x0428`). After: f2159 /
+  **2323** errors (`tails_x`, expected `0x7F00`, actual `0x066D`). The error
+  count falls by **-2065** (cascade collapse from resolving the f2158 root).
+- Root cause: `MhzCurledVineObjectInstance` used a flat top-solid at spawn.y
+  for new-landing detection; the generated curl segment contour
+  (`onSolidContact`, per `loc_3E9FA`) was only applied AFTER a player was
+  already riding, so a falling player could land on/pass through the wrong
+  Y. Fix implements `SlopedSolidProvider`: `getSlopeData()` samples
+  `vineY - (segmentY[segment] - 8)` per 2px `sampleX` (baseline 0), so the
+  shared resolver's `baseY = anchorY - slopeSample` reproduces ROM
+  `loc_3EA1E`'s (`sonic3k.asm:82980-82996`) `$1A(a2,d0*6) - 8` landing
+  surface; `isSlopeFlipped()` returns `false` because the segment generator
+  (`:82861-82893`) does no render-flag mirroring, and h-flip is folded into
+  the existing `segmentIndexForRomD0` index instead (now shared by both the
+  landing sampler and `onSolidContact`, refactored with no behavior change —
+  verified algebraically equivalent to the prior inline computation for both
+  `hFlip` cases). `onSolidContact` now also distinguishes the *establishing*
+  frame from *continued* rides via `standingSegmentIndices.containsKey`: the
+  ROM gates the surface Y write on the per-player standing bit
+  (`btst d6,status(a0)`, `:82943`) — clear on first contact (fall-through
+  into `loc_3EA1E` -> `loc_1E45A`, `:42004-42028`, which snaps
+  `y_pos = surface - y_radius - 1`), set on subsequent frames
+  (`loc_3E9FA`, `:82963-82977`, `y_pos = surface - y_radius`, no `-1`). The
+  engine previously applied the continued-ride `-y_radius` snap even on the
+  landing frame, off by 1px.
+- Error-delta adjudication (independent A/B on this branch, BEFORE = the 2
+  touched files reverted to HEAD `84103f0ab`, AFTER = fix in place, both
+  reruns performed by this verification pass, not reused from the fix
+  worker's numbers): BEFORE reproduces exactly f2158 / 4388 errors
+  (`tails_y_speed`) as claimed. AFTER has **zero** divergence records before
+  f2159 (min error `start_frame` across all 2323 entries is exactly 2159).
+  AFTER's error `field` set (37 distinct fields) is an exact subset match of
+  BEFORE's field set (37 distinct fields, identical) — no new divergence
+  category was introduced anywhere in the run; `total_frames` (27986) and
+  `warning_count`/`bootstrap_error_count` (0/0) are unchanged between BEFORE
+  and AFTER. This is a genuine cascade collapse, not a masked regression.
+- Next root (un-modeled, left for the next round): at f2159 Tails's
+  `tails_x`/subpixel fields diverge first, tracing to the S3K TailsCPU
+  watchdog respawn path (`sub_13EFC`/`sub_13ECA`, `sonic3k.asm:26816`/
+  `26800`) — shared sidekick-controller code, correctly left untouched by
+  this object-local vine fix.
+- Guards (all fresh-run this pass, 0 fail/err/skip): `TestMhzCurledVineObjectInstance`
+  (9, incl. 2 new tests: a fail-first sloped-landing discriminator and an
+  establishing-vs-continued-ride assertion), `TestMhzSwingBarHorizontalObjectInstance`
+  (16), `TestMhzSwingBarVerticalObjectInstance` (19), `TestSolidObjectManager`
+  (48), `TestSonic3kMHZEvents` (62), `TestS3kAiz1SkipHeadless` (8),
+  `TestSonic3kLevelLoading` (30 in `game.sonic3k` + 5 in `tests`, both
+  same-named classes in the requested guard list).
+
 ## 2026-07-02 - S3K MHZ complete-run advances f1994 -> f2158 (swing bars preserve player subpixels per ROM word-only position writes)
 
 - Worktree/branch: `.worktrees/trace-s3k-mhz` / `bugfix/ai-trace-s3k-mhz`,
