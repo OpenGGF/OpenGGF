@@ -12,12 +12,48 @@ ARZ2 is f5827 / 2 under `frontierOnly` (`x_speed` expected `0x0000`,
 actual `-015D`),
 CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed` expected `-0200`,
 actual `0x023A`), MTZ3 is f13358 / 6 under `frontierOnly` (`tails_x_speed`
-expected `-020C`, actual `0x020C`), and OOZ2 is f12861 / 1 under `frontierOnly`
-(`y` expected `0x0215`, actual `0x0214`). The post-GameRules conductor
-verification keeps the full S2 sweep at 15 green / 4 expected-red.
+expected `-020C`, actual `0x020C`), and OOZ2 is green after the round 54 Obj3E
+capsule body lifetime fix. The branch-local S2 expected-red set is now ARZ2,
+CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. No S2 trace greened in round 51
 or during the post-GameRules re-baseline.
+
+## 2026-07-02 - S2 round 54 OOZ2 Obj3E capsule body lifetime green
+
+Round 54 OOZ2 worker used
+`.worktrees/ai-s2-ooz2-round54-next` /
+`bugfix/ai-s2-ooz2-round54-next`, based from conductor commit `0bd000c9d`.
+The focused baseline reproduced OOZ2 f12861 / 1 under `frontierOnly`
+(`y` expected `0x0215`, actual `0x0214`).
+
+The mismatch happened after the Egg Prison results sequence started. The ROM's
+Obj3E body routine keeps calling `SolidObject` with `d1=$2B,d2=$18,d3=$18`,
+while the separate routine-$A end-checker scans for animals, calls
+`Load_EndOfAct`, and deletes only that end-checker object. Sonic therefore
+stays on the same routine-2 body and continues through `MvSonicOnPtfm`, which
+seats him at `$240-$18-$13 = $215` instead of taking a new `SolidObject_Landed`
+snap one pixel higher. The relevant ROM paths are
+`docs/s2disasm/s2.asm:84833-84845` and `docs/s2disasm/s2.asm:84967-84978`.
+
+Fix:
+- Keep `EggPrisonObjectInstance` alive after `Load_EndOfAct` instead of
+  deleting it and spawning a replacement `DestroyedEggPrisonObjectInstance`.
+  The same body object keeps its open-capsule render frame and solid contact
+  identity through the results sequence.
+
+Result:
+- `TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace` advances from f12861 /
+  1 (`y` expected `0x0215`, actual `0x0214`) to green under `frontierOnly`.
+
+Verification:
+- Focused target after clearing stale `target/trace-reports/s2_ooz2_report.json`:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  passed 1 / 1. The green path did not regenerate an OOZ2 report JSON.
+- Full S2 trace sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 trace tests: 16 green / 3 expected-red at ARZ2 f5827 / 2, CNZ2
+  f9977 / 10, and MTZ3 f13358 / 6.
 
 ## 2026-07-02 - S2 post-GameRules round 54 baseline
 

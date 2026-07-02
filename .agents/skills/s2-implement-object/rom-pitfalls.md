@@ -3323,6 +3323,42 @@ errors.
 
 ---
 
+## P80 -- Consolidated engine objects must not delete the live body when ROM deletes only a helper sub-object
+
+**Pattern.** Some S2 object assemblies are represented by several SST slots:
+a visible/solid body plus helper children or end-checker slots. A consolidated
+engine class may own all those states, but its delete semantics still need to
+match the specific ROM slot that reaches `DeleteObject`. If the ROM deletes a
+helper slot while the body slot keeps running, the engine must keep the body
+instance alive rather than replacing it with a fresh static visual.
+
+**Engine symptom.** A rider standing on the object gets reseated through the
+new-landing `SolidObject_Landed` path instead of continued `MvSonicOnPtfm`,
+usually producing a one-pixel Y mismatch. In OOZ2, deleting Obj3E's live body
+and spawning a replacement static capsule made Sonic snap to `$214`; ROM kept
+the routine-2 body alive and continued riding at `$240-$18-$13 = $215`.
+
+**What to check / fix.**
+1. For multi-slot objects, identify which routine/object slot calls
+   `DeleteObject`. Do not map that delete onto the consolidated Java parent
+   unless the body slot is the one deleting.
+2. Preserve the same `ObjectInstance` identity for rideable solids through
+   results/cutscene/end-checker transitions when ROM keeps the body slot alive.
+3. If a helper slot disappears but the body should persist visually and
+   physically, transition the body state in place; do not spawn a replacement
+   solid unless the ROM actually allocates a new body slot.
+
+**ROM citation.** S2 Obj3E body routine calls `SolidObject` every body pass
+with `d1=$2B,d2=$18,d3=$18` (`docs/s2disasm/s2.asm:84833-84845`). The
+routine-$A end-checker scans for released animals, calls `Load_EndOfAct`, then
+deletes that checker slot (`docs/s2disasm/s2.asm:84967-84978`); it does not
+delete the routine-2 body slot.
+
+**Originating commit.** `<pending>` S2 OOZ2 Obj3E capsule body lifetime:
+`TestS2Ooz2LevelSelectTraceReplay` advances f12861 -> green.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
