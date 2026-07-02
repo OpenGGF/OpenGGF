@@ -1,5 +1,10 @@
 package com.openggf.control;
 
+import com.openggf.configuration.SonicConfigurationService;
+
+import java.io.IOException;
+import java.nio.file.Files;
+
 import static org.lwjgl.glfw.GLFW.*;
 
 /**
@@ -14,6 +19,10 @@ public class InputHandler {
 	boolean[] previousKeys = new boolean[MAX_KEYS];
 	boolean[] mouseButtons = new boolean[MAX_MOUSE_BUTTONS];
 	boolean[] previousMouseButtons = new boolean[MAX_MOUSE_BUTTONS];
+	private final SonicConfigurationService configService;
+	private InputBindings inputBindings;
+	private final KeyboardInputMapper keyboardInputMapper;
+	private LogicalInputSnapshot logicalSnapshot = LogicalInputSnapshot.neutral();
 	private double mouseX;
 	private double mouseY;
 	private boolean mouseInputSeen;
@@ -23,6 +32,13 @@ public class InputHandler {
 	 * Key events should be delivered via handleKeyEvent() from GLFW callback.
 	 */
 	public InputHandler() {
+		this(createSyntheticConfig());
+	}
+
+	public InputHandler(SonicConfigurationService configService) {
+		this.configService = configService;
+		this.inputBindings = InputBindings.fromConfig(configService);
+		this.keyboardInputMapper = new KeyboardInputMapper();
 	}
 
 	/**
@@ -145,11 +161,30 @@ public class InputHandler {
 		return mouseInputSeen;
 	}
 
+	public void refreshLogicalSnapshot() {
+		inputBindings = InputBindings.fromConfig(configService);
+		PlayerInputState p1 = keyboardInputMapper.mapPlayer1(this, inputBindings);
+		PlayerInputState p2 = keyboardInputMapper.mapPlayer2(this, inputBindings);
+		logicalSnapshot = LogicalInputSnapshot.ofPlayers(p1, p2);
+	}
+
+	public LogicalInputSnapshot logical() {
+		return logicalSnapshot;
+	}
+
 	/**
 	 * Updates the input handler state. Should be called at the end of the game loop.
 	 */
 	public void update() {
 		System.arraycopy(keys, 0, previousKeys, 0, MAX_KEYS);
 		System.arraycopy(mouseButtons, 0, previousMouseButtons, 0, MAX_MOUSE_BUTTONS);
+	}
+
+	private static SonicConfigurationService createSyntheticConfig() {
+		try {
+			return SonicConfigurationService.createStandalone(Files.createTempDirectory("openggf-input-handler"));
+		} catch (IOException e) {
+			throw new IllegalStateException("Failed to create standalone input configuration", e);
+		}
 	}
 }

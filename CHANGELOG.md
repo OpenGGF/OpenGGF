@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Keyboard input now feeds the controller-ready logical input layer while preserving the existing Space/Right Shift defaults.
 - Add controller-ready input configuration keys, defaults, and deprecated jump-binding migration.
 - Add logical controller-ready player input state for the controller support MVP.
 - **`DefaultObjectServices` legacy 7-arg constructor removed (audit tier B):** the deprecated `GameServices`-reconstituting fallback constructor and its nine orphaned private `legacy*()`/`engineServicesFromGameServices()`/`requireActiveRuntimeForLegacyConstructor()` helpers are gone; the session-backed `(GameplayModeContext, EngineContext)` constructor is now the only public form. `BootstrapObjectServices` — the constructor's one real caller, via `super(...)` — now composes from `SessionManager.getCurrentGameplayMode()` + `EngineServices.current()`, keeping its fail-without-active-runtime contract (`IllegalStateException`). `TestObjectServicesMigrationGuard`'s 17 line-level `DefaultObjectServices` bridge approvals were retired (the class no longer touches `GameServices` at all) and `BootstrapObjectServices`' wildcard `GameServices.` approval narrowed to the two composition-boundary lines.
