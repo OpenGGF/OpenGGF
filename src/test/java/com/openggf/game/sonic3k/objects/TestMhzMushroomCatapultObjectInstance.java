@@ -266,6 +266,35 @@ class TestMhzMushroomCatapultObjectInstance {
     }
 
     @Test
+    void fullyRaisedCatapultPlaysLaunchSfxOnceRegardlessOfRiderCount() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        RecordingServices services = new RecordingServices();
+        AbstractObjectInstance catapult = (AbstractObjectInstance) registry.create(new ObjectSpawn(
+                0x1600, 0x0600, MHZ_MUSHROOM_CATAPULT, 0, 0, false, 0));
+        catapult.setServices(services);
+        MultiPieceSolidProvider pieces = assertInstanceOf(MultiPieceSolidProvider.class, catapult);
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x1600, (short) 0x0600);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x1600, (short) 0x0600);
+
+        pieces.onPieceContact(1, null, STANDING_CONTACT, 0);
+        catapult.update(0, null);
+        catapult.update(1, null);
+        catapult.update(2, null);
+
+        sonic.setOnObject(true);
+        sonic.setAir(false);
+        tails.setOnObject(true);
+        tails.setAir(false);
+        pieces.onPieceContact(0, sonic, STANDING_CONTACT, 3);
+        pieces.onPieceContact(0, tails, STANDING_CONTACT, 3);
+        catapult.update(3, sonic);
+
+        assertEquals(1, services.sfxCount(Sonic3kSfx.MUSHROOM_BOUNCE.id),
+                "sub_3FA5A ends with a single shared 'jmp Play_SFX' per launch call (asm 84351-84352), "
+                        + "not once per rider standing on the launching cap");
+    }
+
+    @Test
     void mushroomCatapultRendersParentChildAndCenterCapFrames() {
         PatternSpriteRenderer capRenderer = mock(PatternSpriteRenderer.class);
         PatternSpriteRenderer centerRenderer = mock(PatternSpriteRenderer.class);
@@ -323,6 +352,10 @@ class TestMhzMushroomCatapultObjectInstance {
 
         private boolean playedSfx(int soundId) {
             return sfx.contains(soundId);
+        }
+
+        private long sfxCount(int soundId) {
+            return sfx.stream().filter(id -> id == soundId).count();
         }
     }
 

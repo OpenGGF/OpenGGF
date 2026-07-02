@@ -12,6 +12,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.IdentityHashMap;
@@ -64,7 +65,14 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(rangeWidth / 2, 0, 0);
+        int halfWidth = rangeWidth / 2;
+        // ROM sub_3E9C6 (sonic3k.asm:82949-82953) accepts a standing player when
+        // 0 <= (playerX - vineX + $40) < rangeWidth, i.e. the window
+        // [vineX-$40, vineX-$40+rangeWidth) -- offset $40 LEFT of vineX, not
+        // centred on it. The window's centre therefore sits at
+        // vineX + (halfWidth - $40).
+        int offsetX = halfWidth - INITIAL_RANGE_WIDTH;
+        return new SolidObjectParams(halfWidth, 0, 0, offsetX, 0);
     }
 
     @Override
@@ -73,8 +81,14 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
             return;
         }
         int relativeX = hFlip ? spawn.x() - sprite.getCentreX() : sprite.getCentreX() - spawn.x();
-        int segmentIndex = (relativeX + INITIAL_RANGE_WIDTH) >> 4;
-        standingSegmentIndices.put(sprite, clamp(segmentIndex, 0, 7));
+        int segmentIndex = clamp((relativeX + INITIAL_RANGE_WIDTH) >> 4, 0, SEGMENT_COUNT - 1);
+        standingSegmentIndices.put(sprite, segmentIndex);
+        // ROM loc_3E9FA (sonic3k.asm:82963-82977): every standing frame writes
+        // y_pos(a1) = segmentY - 8 - y_radius(a1) directly from the generated
+        // curl segment table, contouring the rider to the curved surface
+        // instead of a flat surface at spawn.y.
+        int contourY = segmentYs[segmentIndex] - 8 - sprite.getYRadius();
+        NativePositionOps.writeYPosPreserveSubpixel(sprite, contourY);
     }
 
     @Override
@@ -127,6 +141,15 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
                 renderer.drawFrameIndex(0, segmentXs[segment], segmentYs[segment], hFlip, false);
             }
         }
+    }
+
+    /**
+     * World Y of a generated curl segment (0-7), matching the values ROM stores
+     * at {@code sub2_x_pos(a1)+$1A+index*6} (the display child's per-segment
+     * position table populated in {@code loc_3E918}, sonic3k.asm:82861-82893).
+     */
+    int segmentY(int segmentIndex) {
+        return segmentYs[segmentIndex];
     }
 
     @Override

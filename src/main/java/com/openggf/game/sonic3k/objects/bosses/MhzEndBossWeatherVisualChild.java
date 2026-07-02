@@ -43,7 +43,7 @@ public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance i
             {1, 3, 5, 7, 9},
             {1, 1, 1, 1, 1, 1}
     };
-    private static final int[] SPARK_FRAMES = {0x0E, 0x0F, 0x10};
+    private static final int[] SPARK_FRAMES = {0x0D, 0x0E, 0x0F, 0x10};
 
     @RewindTransient(reason = "Structural parent link; child position derives from the weather-machine parent.")
     private final MhzEndBossWeatherMachineChild parent;

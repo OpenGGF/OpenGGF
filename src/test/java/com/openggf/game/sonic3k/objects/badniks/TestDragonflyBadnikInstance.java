@@ -23,6 +23,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -107,6 +108,33 @@ class TestDragonflyBadnikInstance {
     }
 
     @Test
+    void wingFlapSequenceOverFiveHoverCyclesAlternatesUpDownOnToggledBit() {
+        DragonflyBadnikInstance dragonfly = dragonfly();
+        TestablePlayableSprite player = player();
+
+        putDragonflyOnScreen();
+        activateDragonfly(dragonfly);
+
+        List<Boolean> downFlagsAfterEachHoverExit = new ArrayList<>();
+        int frame = 2;
+        boolean wasWaiting = false;
+        while (downFlagsAfterEachHoverExit.size() < 5 && frame < 5000) {
+            dragonfly.update(frame, player);
+            boolean isWaiting = "WAITING".equals(dragonfly.getStateName());
+            if (wasWaiting && !isWaiting) {
+                downFlagsAfterEachHoverExit.add(dragonfly.isUsingDownBodyAnimation());
+            }
+            wasWaiting = isWaiting;
+            frame++;
+        }
+
+        assertEquals(List.of(false, true, false, true, false), downFlagsAfterEachHoverExit,
+                "loc_8DDF8 does bchg #1,$38 then selects on the toggled bit, so five successive "
+                        + "hover-wait exits alternate byte_8DFCE/byte_8DFC2 as UP,DOWN,UP,DOWN,UP "
+                        + "-- not a doubled UP,UP,DOWN,... first cycle");
+    }
+
+    @Test
     void objWaitOffscreenSuppressesPatrolAndCollisionUntilSetupRuns() {
         DragonflyBadnikInstance dragonfly = dragonfly();
 
@@ -187,6 +215,50 @@ class TestDragonflyBadnikInstance {
         assertEquals(segments.get(0).getY() - 5, segments.get(1).getY(),
                 "CreateChild4_LinkListRepeated stores the previous object in parent3(a0), "
                         + "so later body links apply byte_8DF78 to the preceding link");
+    }
+
+    @Test
+    void sevenSegmentTailEntersReturnOneFrameApartDownTheChainNotAllAtOnce() {
+        SpawnHarness harness = new SpawnHarness();
+        DragonflyBadnikInstance dragonfly = dragonfly(harness.services);
+        TestablePlayableSprite player = player();
+
+        putDragonflyOnScreen();
+        dragonfly.update(0, player);
+        dragonfly.update(1, player);
+
+        List<DragonflyBadnikInstance.LinkedBodyChild> segments = harness.spawned.stream()
+                .filter(DragonflyBadnikInstance.LinkedBodyChild.class::isInstance)
+                .map(DragonflyBadnikInstance.LinkedBodyChild.class::cast)
+                .toList();
+        assertEquals(7, segments.size());
+
+        Integer[] returnEntryFrame = new Integer[segments.size()];
+        boolean[] wasReturning = new boolean[segments.size()];
+
+        int frame = 2;
+        while (frame < 500 && (!"WAITING".equals(dragonfly.getStateName())
+                || returnEntryFrame[segments.size() - 1] == null)) {
+            dragonfly.update(frame, player);
+            for (int i = 0; i < segments.size(); i++) {
+                segments.get(i).update(frame, player);
+                boolean isReturning = segments.get(i).isReturningToParentY();
+                if (isReturning && !wasReturning[i] && returnEntryFrame[i] == null) {
+                    returnEntryFrame[i] = frame;
+                }
+                wasReturning[i] = isReturning;
+            }
+            frame++;
+        }
+
+        for (int i = 0; i < segments.size(); i++) {
+            assertNotNull(returnEntryFrame[i], "segment " + i + " never entered the return phase");
+        }
+        for (int i = 1; i < segments.size(); i++) {
+            assertEquals(returnEntryFrame[i - 1] + 1, (int) returnEntryFrame[i],
+                    "loc_8DE8A gates segment " + i + "'s return on btst #2,$38 of segment " + (i - 1)
+                            + ", a 1-frame ripple down the chain, not a simultaneous transition");
+        }
     }
 
     @Test

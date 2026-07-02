@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -112,6 +113,30 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
         updatePlayer(p1, player);
         updatePlayer(p2, firstTrackedSidekick());
         updateDynamicSpawn(spawn.x(), spawn.y());
+        requestForcedScrollWhileSwinging();
+    }
+
+    /**
+     * ROM {@code loc_226F2} (sonic3k.asm:47072-47074): while the swing root
+     * routine {@code loc_226B0} runs and Player 1 is grabbed ({@code $32(a1)} on
+     * the handle), the vine writes {@code Scroll_force_positions} plus the vine's
+     * own {@code x_pos}/{@code y_pos} into {@code Scroll_forced_X_pos}/{@code
+     * Scroll_forced_Y_pos} so the camera tracks the vine anchor instead of the
+     * hanging player for that frame. The setter lives in the swing routine, so it
+     * does not fire during a stationary (mode-0) slow-grab hang.
+     */
+    private void requestForcedScrollWhileSwinging() {
+        if (rootState != RootState.SWINGING || p1.grabFlag == 0) {
+            return;
+        }
+        ObjectServices services = tryServices();
+        if (services == null) {
+            return;
+        }
+        Camera camera = services.camera();
+        if (camera != null) {
+            camera.requestForcedScroll(spawn.x(), spawn.y());
+        }
     }
 
     @Override
@@ -198,6 +223,11 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
         d0 -= d1 + d1;
         rootAngle = asSigned16(rootAngle - d0);
         priorityBucket = signedAngleByte(rootAngle) < 0 ? PRIORITY_BUCKET_HIGH : PRIORITY_BUCKET_LOW;
+        // ROM loc_226C2 (asm 47056-47061): every SWINGING tick plays sfx_GroundSlide
+        // once the updated angle byte lands in the $40-$47 band.
+        if ((angleByte(rootAngle) & 0xF8) == 0x40) {
+            playSfx(Sonic3kSfx.GROUND_SLIDE.id);
+        }
         if (!anyGrabbed() && (((angleByte(rootAngle) + 8) & 0xFF) < 0x10)) {
             rootState = RootState.RETURNING;
             handleMode = 2;
@@ -300,9 +330,11 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
         }
         player.setRenderFlips(player.getDirection() == Direction.LEFT, false);
         state.grabFlag = fastGrab ? 0x81 : 1;
-        ObjectServices services = tryServices();
-        if (services != null) {
-            services.playSfx(Sonic3kSfx.GRAB.id);
+        // ROM loc_22B3C/22B06 (asm 47472-47494): the slow-grab path returns via the
+        // object_control(a1) guard before reaching "jsr Play_SFX"; only a fast grab
+        // (x_vel >= $400) falls through to play sfx_Grab.
+        if (fastGrab) {
+            playSfx(Sonic3kSfx.GRAB.id);
         }
         holdPlayer(state, player);
     }
@@ -375,8 +407,9 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
             int angle = angleByte(rootAngle);
             int sin = TrigLookupTable.sinHex(angle);
             int cos = TrigLookupTable.cosHex(angle);
-            player.setXSpeed((short) (cos << 3));
-            player.setYSpeed((short) (sin << 3));
+            // ROM loc_229B6: asl#2; move; asl#1; add = *$C
+            player.setXSpeed((short) (cos * 0xC));
+            player.setYSpeed((short) (sin * 0xC));
         } else {
             player.setXSpeed((short) ((handleX - prevHandleX) << 7));
             player.setYSpeed((short) (((handleY - prevHandleY) << 7) - 0x380));
@@ -420,6 +453,13 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
 
     private static boolean renderFlagsOnScreen(AbstractPlayableSprite player) {
         return !player.hasRenderFlagOnScreenState() || player.isRenderFlagOnScreen();
+    }
+
+    private void playSfx(int soundId) {
+        ObjectServices services = tryServices();
+        if (services != null) {
+            services.playSfx(soundId);
+        }
     }
 
     private boolean anyGrabbed() {

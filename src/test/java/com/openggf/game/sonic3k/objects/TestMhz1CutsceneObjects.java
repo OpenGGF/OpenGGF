@@ -2717,6 +2717,23 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
+    void mhz1DoorSpawnsLoweredWhenUnkFaa9IsAlreadySetAtInit() {
+        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                0x0380, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+        // Simulate mid-act re-entry: this button/door pair is recreated (e.g.
+        // after a checkpoint respawn) while the shared _unkFAA9 door-lowered
+        // latch from a prior life is still set.
+        button.setDoorLowered(true);
+
+        Mhz1CutsceneDoorInstance door = new Mhz1CutsceneDoorInstance(button);
+
+        assertEquals(0x0390, door.getX(),
+                "loc_6300C initializes the MHZ1 switch door child x_pos to $390 regardless of _unkFAA9");
+        assertEquals(0x0660, door.getY(),
+                "loc_6300C adds $40 to y_pos when _unkFAA9 is already set at spawn (asm 130210-130212)");
+    }
+
+    @Test
     void mhz1DoorUsesRomSolidObjectFullDimensions() {
         ObjectManager objectManager = mock(ObjectManager.class);
         List<ObjectInstance> spawned = new ArrayList<>();
