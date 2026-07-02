@@ -513,7 +513,14 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
                     baseX + xOffset, baseY,
                     0x28, 0, 0, false, 0
             );
-            final int animalDelay = delay;
+            // Obj28_InitRandom runs as the animal's first ExecuteObjects pass
+            // and only then branches to Obj28_Prison for later frames
+            // (docs/s2disasm/s2.asm:24596-24636,84943-84955).
+            // The Java constructor folds that routine-0 setup into state, and
+            // these lower-slot initial children are visible to the manager on
+            // the allocation frame, so preserve the ROM frame before
+            // Obj28_Prison decrements objoff_36.
+            final int animalDelay = delay + 2;
             final int artVariant = Sonic2Rng.nextAnimalArtVariant(services().rng());
             // spawnFreeChild matches the previous addDynamicObject (FindFreeObj /
             // lowest-slot) semantics, but also sets the construction context so the

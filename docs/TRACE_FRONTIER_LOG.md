@@ -6,18 +6,84 @@ Read this section first. Treat it as the current routing table for trace work;
 the dated entries below are the evidence ledger and may include superseded
 branch-local measurements.
 
-Current branch-local S2 state after round 68 on next campaign branch
-`bugfix/ai-s2-trace-next`:
-ARZ2 is f7091 / 4 under `frontierOnly` (`obj_extra_s1B_x` expected absent,
-actual `0x2CB1`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
+Current branch-local S2 state after round 69 ARZ2 worker branch
+`bugfix/ai-s2-arz2-round69-next`:
+ARZ2 is f7145 / 1 under `frontierOnly` (`obj_s1E_slot` expected `0x1E`,
+actual `0x2D`), CNZ2 is f9977 / 10 under `frontierOnly` (`tails_x_speed`
 expected `-0200`, actual `0x023A`), MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now ARZ2, CNZ2, and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
-was banked into `next`; ARZ2 advanced again in round 68 but is not banked under
+was banked into `next`; ARZ2 advanced again in round 69 but is not banked under
 the green-bank rule until it greens.
+
+## 2026-07-02 - S2 round 69 ARZ2 Obj3E initial animal delay
+
+Round 69 ARZ2 worker used
+`.worktrees/ai-s2-arz2-round69-next` /
+`bugfix/ai-s2-arz2-round69-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `34ad35634`. The focused baseline reproduced
+ARZ2 f7091 / 4 under `frontierOnly`: `obj_extra_s1B_x` reported an extra
+engine Obj28 at `$2CB1`, while the ROM still had slot `$1B` in the Obj28 prison
+delay state.
+
+BizHawk diagnostic:
+- Probe script was launched through `tools/bizhawk/run_bizhawk_lua.bat` with
+  absolute Lua, movie, output, and ROM paths, using the reusable fast template
+  conventions. Script:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\tools\bizhawk\diag_s2_arz2_round69_obj28_slot1b.lua`.
+  Output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\tools\bizhawk\trace_output\diag_s2_arz2_round69_obj28_slot1b.txt`.
+- Command:
+  `powershell -Command "$env:OGGF_START='15058'; $env:OGGF_STOP='15098'; $env:OGGF_TRACE_OFFSET='7998'; $env:OGGF_OUT='C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\tools\bizhawk\trace_output\diag_s2_arz2_round69_obj28_slot1b.txt'; & 'C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\tools\bizhawk\run_bizhawk_lua.bat' 'C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\tools\bizhawk\diag_s2_arz2_round69_obj28_slot1b.lua' 'C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\src\test\resources\traces\s2\arz2\s2-lvl-select-ARZ.bk2' 'C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-arz2-round69-next\s2.gen'"`.
+- The hook covered Obj28 Main/Walk/Fly/Prison PCs, Obj3E initial/random
+  animal allocation, `AllocateObject`, `DeleteObject`, `ObjectMove`,
+  `ObjectMoveAndFall`, slot `$1B`/`$1C` occupancy, and Vint/random state
+  around trace f7060-f7100. At trace f7091, ROM slot `$1B` was still Obj28
+  with `routine=$1C`, `x=$2CB1.0000`, `y=$04B1.0000`, `objoff_36=$0002`,
+  `objoff_38=$01`, Vint `$399A`, and RNG `$F8316B9A`.
+
+Root fixed:
+- `EggPrisonObjectInstance.spawnInitialAnimals()` now adds two frames to the
+  initial Obj3E animal delay. The Java constructor folds Obj28 routine-0 setup
+  into child state, and these lower-slot initial children become visible on the
+  allocation frame, so the delay must preserve the ROM Obj28_InitRandom pass
+  plus the first later Obj28_Prison decrement pass before movement begins. This
+  matches Obj28 init/prison dispatch and Obj3E's initial animal loop
+  (`docs/s2disasm/s2.asm:24596-24636,24732-24741,84943-84955`).
+
+Result:
+- `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f7091 / 4 to f7145 / 1. New first error:
+  `obj_s1E_slot` expected `0x1E`, actual `0x2D`, exposing a later released
+  animal slot-pressure frontier.
+
+Verification:
+- BizHawk Lua probe:
+  `tools/bizhawk/run_bizhawk_lua.bat` with absolute paths to
+  `tools/bizhawk/diag_s2_arz2_round69_obj28_slot1b.lua`,
+  `src/test/resources/traces/s2/arz2/s2-lvl-select-ARZ.bk2`,
+  `tools/bizhawk/trace_output/diag_s2_arz2_round69_obj28_slot1b.txt`, and
+  `s2.gen`; confirmed the ROM's f7091 slot `$1B` Obj28_Prison state.
+- Focused ARZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  exited 0 via failure-ignore and reported the improved expected-red f7145 / 1
+  frontier.
+- DEZ ending trace guard:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  was required because the fix touches capsule/end-of-level behavior; the
+  individual Surefire report for `TestS2DezEndingLevelSelectTraceReplay`
+  remained green with 1 run, 0 failures, and 0 errors.
+- Same-game expected-red guards:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  preserved CNZ2 at f9977 / 10 (`tails_x_speed` expected `-0200`, actual
+  `0x023A`) and MTZ3 at f13477 / 4 (`x_speed` expected `-03FB`, actual
+  `0x03FB`).
+- S1 full trace and S3K guard were not required for this worker change because
+  only S2-local Egg Prison code was touched, with no shared object/lifetime or
+  collision changes.
 
 ## 2026-07-02 - S2 round 68 ARZ2 Obj28 prison animal landing cadence
 
