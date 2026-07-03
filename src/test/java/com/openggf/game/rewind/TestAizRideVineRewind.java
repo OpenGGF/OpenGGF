@@ -23,14 +23,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Prove-first rewind coverage for the AIZ ride vines. The vine {@code chain}
- * (a {@code Segment[]} of visual link positions) is intentionally NOT captured:
- * {@code updateSegments()} re-derives every link each frame from the captured
- * root scalars and the {@code handle} plain-state-holder. The player's actual
- * ride anchor is {@code handle} — its grab flags and position ARE captured on
- * the compact path — so a rewind restore preserves the ride without capturing
- * the derived link chain. These tests pin that: the grab/ride state round-trips
- * even though the chain is skipped.
+ * Prove-first rewind coverage for the AIZ ride vines (ride mechanics in the
+ * primary release slice). Both the {@code handle} plain-state-holder (the
+ * player's ride anchor — scalar grab flags, no player refs) and the {@code chain}
+ * {@code Segment[]} (the rendered swing/deploy link positions) ride keyframes: a
+ * live rewind hold renders restored state without re-running {@code update()}, so
+ * a dropped chain would show the vine links detached from the captured root/handle
+ * mid-ride. These tests pin that the grab/ride state AND the chain segment state
+ * survive a capture -> mutate -> restore cycle.
  */
 class TestAizRideVineRewind {
 
@@ -82,6 +82,13 @@ class TestAizRideVineRewind {
         writeInt(vine, "handle.x", 0x1830);
         writeInt(vine, "handle.y", 0x0560);
 
+        // Seed the rendered link chain (Segment[] of angles/positions/mapping frames).
+        writeChainInt(vine, 0, "angle", 0x0080);
+        writeChainInt(vine, 0, "x", 0x1840);
+        writeChainInt(vine, 0, "y", 0x0532);
+        writeChainInt(vine, 2, "angle", 0x00C0);
+        writeChainInt(vine, 2, "mappingFrame", 5);
+
         RewindObjectStateBlob blob = CompactFieldCapturer.captureDefaultObjectSubclassScalars(vine);
 
         // Drive live state away from the captured keyframe (as if play continued forward).
@@ -94,6 +101,11 @@ class TestAizRideVineRewind {
         writeInt(vine, "currentY", 0x0400);
         writeInt(vine, "rootAngle", 0);
         writeBoolean(vine, "firstCopiesParent", false);
+        writeChainInt(vine, 0, "angle", 0);
+        writeChainInt(vine, 0, "x", 0x2000);
+        writeChainInt(vine, 0, "y", 0);
+        writeChainInt(vine, 2, "angle", 0);
+        writeChainInt(vine, 2, "mappingFrame", 0);
 
         CompactFieldCapturer.restoreDefaultObjectSubclassScalars(vine, blob);
 
@@ -106,15 +118,40 @@ class TestAizRideVineRewind {
         assertEquals(0x1830, readInt(vine, "handle.x"), "handle X must survive rewind");
         assertEquals(0x0560, readInt(vine, "handle.y"), "handle Y must survive rewind");
 
-        // Root scalars that drive the derived chain also survive.
+        // Root scalars that drive the chain also survive.
         assertEquals(0x1830, readInt(vine, "currentX"), "root currentX must survive rewind");
         assertEquals(0x0522, readInt(vine, "currentY"), "root currentY must survive rewind");
         assertEquals(0x0140, readInt(vine, "rootAngle"), "rootAngle must survive rewind");
         assertTrue(readBoolean(vine, "firstCopiesParent"), "firstCopiesParent must survive rewind");
+
+        // The rendered link chain survives → a mid-ride live-rewind hold shows a coherent vine.
+        assertEquals(0x0080, readChainInt(vine, 0, "angle"), "chain[0] angle must survive rewind");
+        assertEquals(0x1840, readChainInt(vine, 0, "x"), "chain[0] X must survive rewind");
+        assertEquals(0x0532, readChainInt(vine, 0, "y"), "chain[0] Y must survive rewind");
+        assertEquals(0x00C0, readChainInt(vine, 2, "angle"), "chain[2] angle must survive rewind");
+        assertEquals(5, readChainInt(vine, 2, "mappingFrame"), "chain[2] mappingFrame must survive rewind");
     }
 
     private static TestablePlayableSprite player(String code) {
         return new TestablePlayableSprite(code, (short) 0x1200, (short) 0x0400);
+    }
+
+    private static int readChainInt(Object vine, int index, String segmentField) {
+        try {
+            Object segment = java.lang.reflect.Array.get(findField(vine.getClass(), "chain").get(vine), index);
+            return findField(segment.getClass(), segmentField).getInt(segment);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to read chain[" + index + "]." + segmentField, e);
+        }
+    }
+
+    private static void writeChainInt(Object vine, int index, String segmentField, int value) {
+        try {
+            Object segment = java.lang.reflect.Array.get(findField(vine.getClass(), "chain").get(vine), index);
+            findField(segment.getClass(), segmentField).setInt(segment, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write chain[" + index + "]." + segmentField, e);
+        }
     }
 
     private static int readInt(Object root, String path) {

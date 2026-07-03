@@ -202,14 +202,16 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild", "linkedSplash"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild", "linkedLog"), RewindFieldPolicy.CAPTURED),
-            // Ride-vine link chains are derived visual state: updateSegments()/
-            // updateSegmentsFromGlobalAngle() recompute every Segment each frame from the
-            // captured root scalars + handle before any consumer reads them, so they carry
-            // no cross-frame state. The player's ride anchor is the captured handle
-            // plain-state-holder (scalar grab flags), not the chain. Marked TRANSIENT so the
-            // codec-capable Segment[] is not silently promoted to a redundant CAPTURED array.
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance", "chain"), RewindFieldPolicy.TRANSIENT),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizRideVineObjectInstance", "chain"), RewindFieldPolicy.TRANSIENT),
+            // Ride-vine link chains carry the rendered swing/deploy state of a ride mechanic.
+            // A live rewind hold renders restored state WITHOUT re-running update(), so a
+            // dropped chain would show the vine links detached from the captured root/handle
+            // mid-ride. The sibling root Segment `first` is already captured (it matches the
+            // in-place plain-state-holder gate); capturing the Segment[] keeps the whole vine
+            // coherent. CAPTURED is safe: Segment is a codec-backed plain-state-holder and the
+            // final array restores in place (fixed length 3 / segmentCount-1 from the spawn
+            // subtype, so the recreated length always matches). Covered by TestAizRideVineRewind.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance", "chain"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizRideVineObjectInstance", "chain"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild", "parent"), RewindFieldPolicy.CAPTURED),
             // Cross-frame per-player fire-refresh reject counter; without an explicit CAPTURED
             // policy the identity-keyed map drops the class onto the generic scalar path.
