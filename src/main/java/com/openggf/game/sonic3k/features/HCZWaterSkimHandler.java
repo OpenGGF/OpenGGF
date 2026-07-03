@@ -418,6 +418,38 @@ public final class HCZWaterSkimHandler {
         frameCounter = 0;
     }
 
+    /**
+     * Immutable rewind snapshot of per-player skim/splash-animation state.
+     * Loaded art ({@code splashRenderer}/{@code artLoaded}) and the zone act
+     * ({@code actId}) are level-load-time config, not per-frame gameplay
+     * state, and are intentionally excluded.
+     */
+    public record Snapshot(
+            boolean skimActiveP1, boolean skimActiveP2,
+            int splashAnimFrameP1, int splashAnimFrameP2,
+            int splashAnimTimerP1, int splashAnimTimerP2,
+            int frameCounter) {
+    }
+
+    /** Captures the current per-player skim state for rewind snapshots. */
+    public static Snapshot snapshot() {
+        return new Snapshot(skimActiveP1, skimActiveP2,
+                splashAnimFrameP1, splashAnimFrameP2,
+                splashAnimTimerP1, splashAnimTimerP2,
+                frameCounter);
+    }
+
+    /** Restores per-player skim state from a previously captured snapshot. */
+    public static void restore(Snapshot snapshot) {
+        skimActiveP1 = snapshot.skimActiveP1();
+        skimActiveP2 = snapshot.skimActiveP2();
+        splashAnimFrameP1 = snapshot.splashAnimFrameP1();
+        splashAnimFrameP2 = snapshot.splashAnimFrameP2();
+        splashAnimTimerP1 = snapshot.splashAnimTimerP1();
+        splashAnimTimerP2 = snapshot.splashAnimTimerP2();
+        frameCounter = snapshot.frameCounter();
+    }
+
     // ===== Art loading =====
 
     /**

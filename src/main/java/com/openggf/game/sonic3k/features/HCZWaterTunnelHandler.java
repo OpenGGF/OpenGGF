@@ -175,6 +175,30 @@ public final class HCZWaterTunnelHandler {
         exitAnimTimerP2 = 0;
     }
 
+    /** Immutable rewind snapshot of per-player wind-tunnel state. */
+    public record Snapshot(
+            boolean windTunnelFlagP1, boolean windTunnelFlagP2,
+            int activeTunnelInfluenceP1, int activeTunnelInfluenceP2,
+            int exitAnimTimerP1, int exitAnimTimerP2) {
+    }
+
+    /** Captures the current per-player wind-tunnel state for rewind snapshots. */
+    public static Snapshot snapshot() {
+        return new Snapshot(windTunnelFlagP1, windTunnelFlagP2,
+                activeTunnelInfluenceP1, activeTunnelInfluenceP2,
+                exitAnimTimerP1, exitAnimTimerP2);
+    }
+
+    /** Restores per-player wind-tunnel state from a previously captured snapshot. */
+    public static void restore(Snapshot snapshot) {
+        windTunnelFlagP1 = snapshot.windTunnelFlagP1();
+        windTunnelFlagP2 = snapshot.windTunnelFlagP2();
+        activeTunnelInfluenceP1 = snapshot.activeTunnelInfluenceP1();
+        activeTunnelInfluenceP2 = snapshot.activeTunnelInfluenceP2();
+        exitAnimTimerP1 = snapshot.exitAnimTimerP1();
+        exitAnimTimerP2 = snapshot.exitAnimTimerP2();
+    }
+
     /**
      * Returns whether the given player is currently being moved by the
      * wind tunnel system.

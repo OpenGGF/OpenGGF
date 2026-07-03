@@ -346,4 +346,9 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
             fixedAirCountdownManager.readRewindState(buf);
         }
     }
+
+    @Override
+    public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
+        return java.util.List.of(new ButtonVineTriggerStaticAdapter());
+    }
 }

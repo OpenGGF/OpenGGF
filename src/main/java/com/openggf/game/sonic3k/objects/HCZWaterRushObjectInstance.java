@@ -303,6 +303,18 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance implement
         /** ROM: btst d5,(_unkF7C7).w — test individual player bit */
         public static boolean testBit(int bit) { return (state & (1 << bit)) != 0; }
         public static void reset() { state = 0; }
+
+        /** Immutable rewind snapshot of the breakable-bar player-bit latch. */
+        public record Snapshot(int state) {
+        }
+
+        public static Snapshot snapshot() {
+            return new Snapshot(state);
+        }
+
+        public static void restore(Snapshot snapshot) {
+            state = snapshot.state();
+        }
     }
 
     // ===== Cross-object communication: palette cycle gate =====
@@ -321,5 +333,17 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance implement
         public static void setActive(boolean value) { active = value; }
         public static boolean isActive() { return active; }
         public static void reset() { active = false; }
+
+        /** Immutable rewind snapshot of the water-rush palette-cycle gate. */
+        public record Snapshot(boolean active) {
+        }
+
+        public static Snapshot snapshot() {
+            return new Snapshot(active);
+        }
+
+        public static void restore(Snapshot snapshot) {
+            active = snapshot.active();
+        }
     }
 }

@@ -1,0 +1,20 @@
+# Accepted static-state rewind-coverage gaps for TestStaticStateRewindCoverageGuard.
+# Each line is a gap key: <fully.qualified.Outer[.Inner]>#missingRewindAdapter
+#
+# This guard exists to catch the "level trigger" bug class: a global static
+# manager (mutable state + reset()) consumed by gameplay objects across
+# frames but never registered with the rewind registry, so a backward
+# rewind seek leaves it stale while consuming objects' own instance fields
+# roll back correctly. See Sonic3kLevelTriggerStaticAdapter /
+# ButtonVineTriggerStaticAdapter for the fix pattern and
+# TestSonic3kLevelTriggerStaticAdapter for the reproduction shape.
+#
+# The HCZ water-skim, water-tunnel, breakable-bar, and palette-cycle-gate
+# gaps originally baselined here (2026-07-03) have since been fixed --
+# see HCZWaterSkimStaticAdapter, HCZWaterTunnelStaticAdapter,
+# HCZBreakableBarStaticAdapter, HCZWaterRushPaletteCycleStaticAdapter.
+
+# Boot-time-only config, not per-session gameplay state: the active
+# GameModule is chosen once at ROM detection / boot and does not change
+# mid-play, so it is outside the rewind window entirely.
+com.openggf.game.GameModuleRegistry#missingRewindAdapter
