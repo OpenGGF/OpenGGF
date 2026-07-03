@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.PlatformBobHelper;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.util.AnimationTimer;
 
@@ -211,6 +212,34 @@ public final class RewindCodecs {
                 || isObjectReferenceType(componentType)
                 || componentType == Palette.Color.class
                 || isSupportedConstructiblePlainStateHolder(componentType);
+    }
+
+    /**
+     * Returns whether a <em>non-final</em> field whose codec reports
+     * {@code requiresExistingTargetValue()} can nonetheless be restored without an
+     * existing target value, because the codec allocates a fresh value on restore
+     * rather than mutating one in place. Two shapes qualify:
+     *
+     * <ul>
+     *   <li>codec-backed arrays — {@code ArrayCodec} allocates a fresh array (and
+     *       freshly-allocatable elements) for non-final fields;</li>
+     *   <li>{@link ObjectAnimationState} — {@code ObjectAnimationStateCodec} rebuilds a
+     *       fresh instance from the captured {@code animationSet} reference (carried as an
+     *       in-memory opaque value) plus the int payload, so the reconstructed target need
+     *       not already hold a non-null animation state.</li>
+     * </ul>
+     *
+     * <p>Without this, a single non-final field of one of these types silently knocks the
+     * whole class off the compact schema path, dropping every policy-CAPTURED collection /
+     * reference field with it (see the MGZ top platform grab-state and cork-floor / spring
+     * launch-player rewind bugs).
+     */
+    static boolean supportsFreshTargetAllocation(Field field) {
+        Class<?> type = field.getType();
+        if (type.isArray()) {
+            return supportsFreshArrayElementAllocation(type.getComponentType());
+        }
+        return type == ObjectAnimationState.class;
     }
 
     private static boolean supportedArrayComponent(Class<?> componentType) {
@@ -974,6 +1003,7 @@ public final class RewindCodecs {
     }
 
     private static final class ObjectAnimationStateCodec implements RewindCodec {
+        private static final Field ANIMATION_SET = declaredField(ObjectAnimationState.class, "animationSet");
         private static final Field ANIM_ID = intField(ObjectAnimationState.class, "animId");
         private static final Field LAST_ANIM_ID = intField(ObjectAnimationState.class, "lastAnimId");
         private static final Field FRAME_INDEX = intField(ObjectAnimationState.class, "frameIndex");
@@ -987,6 +1017,13 @@ public final class RewindCodecs {
             scalarData.writeBoolean(state != null);
             if (state == null) {
                 return;
+            }
+            if (!isFinal(field)) {
+                // Non-final fields are rebuilt fresh on restore (the reconstructed target may
+                // be a different instance, or null). Carry the animationSet reference — the one
+                // piece of state the int payload cannot express — as an in-memory opaque value,
+                // exactly as GenericFieldCapturer's copyForRewind snapshot preserves it.
+                opaqueValues.add(get(ANIMATION_SET, state));
             }
             scalarData.writeInt(getInt(ANIM_ID, state));
             scalarData.writeInt(getInt(LAST_ANIM_ID, state));
@@ -1002,13 +1039,31 @@ public final class RewindCodecs {
                 set(field, target, null);
                 return;
             }
-            ObjectAnimationState state = (ObjectAnimationState) requireExistingValue(field, target);
-            setInt(ANIM_ID, state, scalarData.readInt());
-            setInt(LAST_ANIM_ID, state, scalarData.readInt());
-            setInt(FRAME_INDEX, state, scalarData.readInt());
-            setInt(FRAME_TICK, state, scalarData.readInt());
-            setInt(MAPPING_FRAME, state, scalarData.readInt());
-            setInt(PENDING_SWITCH_ANIM_ID, state, scalarData.readInt());
+            if (isFinal(field)) {
+                // Final fields are restored in place into the reconstructed instance,
+                // preserving the same animationSet reference the constructor installed.
+                ObjectAnimationState state = (ObjectAnimationState) requireExistingValue(field, target);
+                setInt(ANIM_ID, state, scalarData.readInt());
+                setInt(LAST_ANIM_ID, state, scalarData.readInt());
+                setInt(FRAME_INDEX, state, scalarData.readInt());
+                setInt(FRAME_TICK, state, scalarData.readInt());
+                setInt(MAPPING_FRAME, state, scalarData.readInt());
+                setInt(PENDING_SWITCH_ANIM_ID, state, scalarData.readInt());
+                return;
+            }
+            SpriteAnimationSet animationSet = (SpriteAnimationSet) opaqueIndex.next(opaqueValues);
+            int animId = scalarData.readInt();
+            int lastAnimId = scalarData.readInt();
+            int frameIndex = scalarData.readInt();
+            int frameTick = scalarData.readInt();
+            int mappingFrame = scalarData.readInt();
+            int pendingSwitchAnimId = scalarData.readInt();
+            ObjectAnimationState state = new ObjectAnimationState(animationSet, animId, mappingFrame);
+            setInt(LAST_ANIM_ID, state, lastAnimId);
+            setInt(FRAME_INDEX, state, frameIndex);
+            setInt(FRAME_TICK, state, frameTick);
+            setInt(PENDING_SWITCH_ANIM_ID, state, pendingSwitchAnimId);
+            set(field, target, state);
         }
 
         @Override
@@ -1153,6 +1208,10 @@ public final class RewindCodecs {
     }
 
     private static Field intField(Class<?> owner, String name) {
+        return declaredField(owner, name);
+    }
+
+    private static Field declaredField(Class<?> owner, String name) {
         try {
             Field field = owner.getDeclaredField(name);
             field.setAccessible(true);

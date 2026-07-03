@@ -223,6 +223,11 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance", "corkFloor"), RewindFieldPolicy.CAPTURED),
+            // effectiveVelTable is a derived reference to a static constant fragment-velocity
+            // table, re-selected identically from subtype/config on recreateForRewind; it has
+            // no per-frame state to capture and no int[][] codec, so capturing it would knock
+            // CorkFloor onto the generic path and silently drop the CAPTURED rollingBreakPlayer.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CorkFloorObjectInstance", "effectiveVelTable"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CorkFloorObjectInstance", "rollingBreakPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", "dispenser"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", "springOriginalPositions"), RewindFieldPolicy.CAPTURED),
