@@ -8,25 +8,76 @@ branch-local measurements.
 
 Current branch-local S2 state after round 71 ARZ2 and CNZ2 worker branches,
 the round 73 CNZ2 Obj51 post-trigger body-touch advance, the round 75
-CNZ2 boss-lock boundary-source advance, and the round 76 CNZ2 sidekick
-max-Y advance,
+CNZ2 boss-lock boundary-source advance, the round 76 CNZ2 sidekick
+max-Y advance, and the round 79 CNZ2 Obj51 flee lifetime fix,
 integrated into conductor branch `bugfix/ai-s2-trace-next`: ARZ2 is green
 under `frontierOnly` and was banked into `next` as `7ef0928da`; CNZ2 is
-f11254 / 1 under `frontierOnly` (`camera_x` expected `0x2AFA`, actual
-`0x2AF8`); MTZ3 is f13477 / 4 under `frontierOnly`
+green under `frontierOnly` on branch
+`bugfix/ai-s2-cnz2-round79-next`; MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
-is now CNZ2 and MTZ3.
+is now MTZ3 only after the round 79 branch is integrated.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
-Round 76 CNZ2 has advanced but not greened, and the MTZ3 round 77 worker is
-still active.
+Round 79 CNZ2 has greened but is not yet banked into conductor `next`, and the
+MTZ3 round 77 worker is still active.
 Worker bounce policy: any `no-change`, `rejected`, `blocked`, or "gated"
 return must include targeted BizHawk Lua evidence in `luaProbes`, including
 script path, output path, frame window, hooked PCs, and the ROM values observed.
 For slot, touch, subpixel, counter, or "RAM-gated" conclusions, a PC-execute
 probe is required before the bounce is accepted.
+
+## 2026-07-03 - S2 round 79 CNZ2 Obj51 flee lifetime
+
+Round 79 CNZ2 worker used
+`.worktrees/ai-s2-cnz2-round79-next` /
+`bugfix/ai-s2-cnz2-round79-next`, based from conductor branch
+`bugfix/ai-s2-trace-next` at `75eada13f`. The focused baseline reproduced
+CNZ2 f11254 / 1 under `frontierOnly`: `camera_x` expected `0x2AFA`, actual
+`0x2AF8`.
+
+Existing ROM evidence used:
+- Round 77 BizHawk PC-execute output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round77-next\target\trace-reports\s2_cnz2_round77_bizhawk_camera.txt`.
+- Round 78 BizHawk PC-execute output:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round78-next\target\trace-reports\s2_cnz2_round78_bizhawk_camera.txt`.
+- Key ROM facts carried forward: BK2 f23469 had no Obj51 flee dispatch before
+  `ScrollHoriz` and camera stayed `$28E0`; BK2 f23470 had the first Obj51 flee
+  dispatch before `ScrollHoriz`, advanced max-X to `$28E2`, and `ScrollHoriz`
+  wrote camera `$28E2`; BK2 f23738 / trace f11254 advanced max-X from `$2AF8`
+  to `$2AFA` before `ScrollHoriz`, which then wrote camera `$2AFA`.
+
+Engine diagnostics:
+- Temporary pre-fix probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round79-next\target\trace-reports\s2_cnz2_round79_engine_diag.txt`.
+- Temporary fixed-candidate probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-cnz2-round79-next\target\trace-reports\s2_cnz2_round79_engine_diag_after_candidate.txt`.
+- Pre-fix, Obj51 wrote `maxXTarget=$2AF8` at trace f11252, then stopped running;
+  f11254 had no Obj51 max-X write, `camera-scroll` stayed at `$2AF8`, and the
+  comparator captured camera `$2AF8` versus expected `$2AFA`.
+- With the object-local lifetime fix, Obj51 continued through f11254:
+  before camera scroll it had `maxX=$2AFA`, `maxXTarget=$2AFC`; camera scroll
+  wrote `$2AFA`, matching the ROM sample and comparator expected value.
+
+Root fixed:
+- `Sonic2CNZBossInstance` now overrides the shared out-of-range unload predicate
+  for Obj51. The boss flee routine keeps ownership of deletion instead of being
+  retired by the generic S2 `MarkObjGone`-style object tail while it is still
+  opening the horizontal camera boundary.
+- ROM cite: `loc_31E2A` compares `Camera_Max_X_pos` to `$2B20`; while not equal
+  it adds `#2` and branches around the on-screen-bit delete test. Only after the
+  boundary reaches `$2B20` can it test `render_flags.on_screen` and delete
+  (`docs/s2disasm/s2.asm:66887-66899`).
+
+Result:
+- `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` under `frontierOnly`
+  advances from f11254 / 1 to green.
+
+Verification:
+- Focused CNZ2 trace:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  passed with 1 test, 0 failures, 0 errors, 0 skipped.
 
 ## 2026-07-03 - S2 round 76 CNZ2 Tails max-Y boundary
 

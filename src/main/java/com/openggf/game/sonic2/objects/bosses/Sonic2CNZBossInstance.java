@@ -615,6 +615,23 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
         applyBossVelocity();
     }
 
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // ROM loc_31E2A opens Camera_Max_X_pos to $2B20 before it can delete:
+        // cmpi.w #$2B20,(Camera_Max_X_pos).w / addq.w #2,(Camera_Max_X_pos)
+        // / bra.s loc_31E4A. Only once the max-X boundary reaches $2B20 does
+        // it test render_flags.on_screen and branch to DeleteObject
+        // (docs/s2disasm/s2.asm:66887-66899). The shared S2 MarkObjGone-style
+        // unload would remove Obj51 while that camera-opening branch is still
+        // active, stopping the boundary advance early.
+        return false;
+    }
+
     /**
      * ROM: loc_31CDC - Hover sine wave and update position.
      */
