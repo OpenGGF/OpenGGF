@@ -198,6 +198,74 @@ class TestS3kLbzEndBossChildLinksRewind {
                 "debris x velocities must round-trip across the rewind");
     }
 
+    @Test
+    void midDefeatRewindKeepsExtenderAndCameraBoundaryCoherent() throws Exception {
+        // POST_DEFEAT_CAMERA_MAX_X is $3AB8; start the boundary below it so the extender
+        // keeps extending (does not immediately snap-and-expire).
+        final int startMaxX = 0x3A00;
+        ObjectManager objectManager = createManagerWithBoss();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        Camera camera = harnessCamera(objectManager);
+        camera.setMaxX((short) startMaxX);
+
+        LbzEndBossInstance boss = only(objectManager, LbzEndBossInstance.class);
+        invokePrivate(boss, "startDefeat");
+        ObjectInstance extender = firstOfSimpleName(objectManager, "LbzEndBossGradualMaxXExtenderChild");
+
+        // Drive the extender a few frames: it accumulates a $4000/frame sub-pixel value and
+        // adds the integer part to Camera_max_X each frame (accelerating), mutating global
+        // camera state and its own accumulator together.
+        for (int f = 1; f <= 6; f++) {
+            driveUpdate(extender, f);
+        }
+        int capturedMaxX = camera.getMaxX() & 0xFFFF;
+        int capturedAccumulator = readInt(extender, "accumulator");
+        assertTrue(capturedMaxX > startMaxX, "precondition: extender advanced the camera boundary");
+        assertTrue(capturedAccumulator > 0, "precondition: extender holds a non-zero accumulator");
+
+        RewindRegistry rewindRegistry = new RewindRegistry();
+        rewindRegistry.register(objectManager.rewindSnapshottable());
+        rewindRegistry.register(camera);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        // Diverge BOTH the global camera boundary and the object graph: push the boundary to
+        // the snap target and drop the extender.
+        camera.setMaxX((short) 0x3AB8);
+        objectManager.removeDynamicObject(extender);
+
+        rewindRegistry.restore(snapshot);
+
+        ObjectInstance restoredExtender =
+                firstOfSimpleName(objectManager, "LbzEndBossGradualMaxXExtenderChild");
+        assertNotSame(extender, restoredExtender, "restore recreates the extender fresh");
+        // Object and global state must agree at the captured frame: neither lost nor double-applied.
+        assertEquals(capturedMaxX, camera.getMaxX() & 0xFFFF,
+                "camera boundary must restore to its captured value (not the diverged one)");
+        assertEquals(capturedAccumulator, readInt(restoredExtender, "accumulator"),
+                "extender accumulator must restore to its captured value");
+
+        // One more step from the restored pair must continue the ROM progression exactly, i.e.
+        // add the current integer accumulator part to the restored boundary (no double-apply).
+        int expectedNextMaxX = capturedMaxX + ((capturedAccumulator + 0x4000) >>> 16);
+        driveUpdate(restoredExtender, 7);
+        assertEquals(expectedNextMaxX, camera.getMaxX() & 0xFFFF,
+                "post-restore extender must continue extending from the restored boundary");
+    }
+
+    private static Camera harnessCamera(ObjectManager objectManager) throws Exception {
+        LbzEndBossInstance boss = only(objectManager, LbzEndBossInstance.class);
+        Method m = LbzEndBossInstance.class.getDeclaredMethod("cameraOrNull");
+        m.setAccessible(true);
+        return (Camera) m.invoke(boss);
+    }
+
+    private static void driveUpdate(ObjectInstance object, int frameCounter) throws Exception {
+        Method m = object.getClass().getDeclaredMethod("update", int.class,
+                com.openggf.game.PlayableEntity.class);
+        m.setAccessible(true);
+        m.invoke(object, frameCounter, null);
+    }
+
     private static List<Integer> intFieldOf(ObjectManager objectManager, String simpleName, String field) {
         return objectManager.getActiveObjects().stream()
                 .filter(o -> o.getClass().getSimpleName().equals(simpleName))
