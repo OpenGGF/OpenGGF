@@ -18,7 +18,7 @@ display:
 
 # ── Input ──
 input:
-  pause: ENTER   # Toggle pause
+  pause: ENTER   # Toggle pause; the gamepad Start button also toggles it
   controller:
     enabled: true   # Enable gamepad/controller input
     deadzone: 0.35   # Analog controller deadzone
@@ -32,7 +32,7 @@ input:
     a: SPACE   # Player 1: action button A
     b: ""   # Player 1: action button B
     c: ""   # Player 1: action button C
-    start: BACKSPACE   # Player 1: start (in-game pause)
+    start: BACKSPACE   # Player 1: start (in-game pause); keyboard-only, gamepad Start toggles input.pause instead
   player2:
     up: I   # Player 2: look up
     down: K   # Player 2: crouch/roll
