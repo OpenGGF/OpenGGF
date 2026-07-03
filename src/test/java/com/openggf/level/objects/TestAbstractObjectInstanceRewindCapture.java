@@ -471,12 +471,15 @@ class TestAbstractObjectInstanceRewindCapture {
     }
 
     @Test
-    void defaultClassFallsBackToGenericSidecarForNullableAnimationState() {
+    void defaultClassCompactCapturesNonFinalAnimationState() {
+        // A non-final ObjectAnimationState field no longer forces the generic-sidecar
+        // fallback: the codec rebuilds a fresh instance from the captured animationSet
+        // reference on restore, so the whole class stays on the compact schema path.
         TestObjectWithAnimationState obj = new TestObjectWithAnimationState(spawn(0, 0));
 
         PerObjectRewindSnapshot snap = obj.captureRewindState();
-        assertNull(snap.compactGenericState());
-        assertNotNull(snap.genericState());
+        assertNotNull(snap.compactGenericState());
+        assertNull(snap.genericState());
 
         obj.animationState = null;
         obj.restoreRewindState(snap);

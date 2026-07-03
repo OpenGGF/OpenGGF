@@ -129,6 +129,14 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild", "originX"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1BumperObjectInstance", "pendingTouchedPlayer"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance", "controlledPlayer"), RewindFieldPolicy.CAPTURED),
+            // Caterkiller head/body linkage is structural, rebuilt on restore: each restored
+            // body re-registers with the nearest live head (adoptBodySegmentForRewind) and the
+            // parent chain + back-reference are rebuilt from restore order (relinkForRewind),
+            // mirroring the already-structural 'head' ref (STRUCTURAL_OBJECT_FIELD_NAMES).
+            // Capturing these identity references instead would fight the relink rebuild.
+            // Covered by TestS1BadnikChildGraphRewind.
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance", "bodySegments"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance", "parentState"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance", "spikes"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance", "grabbedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance", "pendingGrabPlayer"), RewindFieldPolicy.CAPTURED),
@@ -194,6 +202,14 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild", "linkedSplash"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild", "linkedLog"), RewindFieldPolicy.CAPTURED),
+            // Ride-vine link chains are derived visual state: updateSegments()/
+            // updateSegmentsFromGlobalAngle() recompute every Segment each frame from the
+            // captured root scalars + handle before any consumer reads them, so they carry
+            // no cross-frame state. The player's ride anchor is the captured handle
+            // plain-state-holder (scalar grab flags), not the chain. Marked TRANSIENT so the
+            // codec-capable Segment[] is not silently promoted to a redundant CAPTURED array.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance", "chain"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizRideVineObjectInstance", "chain"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild", "parent"), RewindFieldPolicy.CAPTURED),
             // Cross-frame per-player fire-refresh reject counter; without an explicit CAPTURED
             // policy the identity-keyed map drops the class onto the generic scalar path.
@@ -266,6 +282,11 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance", "corkFloor"), RewindFieldPolicy.CAPTURED),
             // Per-player cage ride state: latch/phase/rideAngle/cooldown/standingBit. Cross-frame.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzWireCageObjectInstance", "riders"), RewindFieldPolicy.CAPTURED),
+            // effectiveVelTable is a derived reference to a static constant fragment-velocity
+            // table, re-selected identically from subtype/config on recreateForRewind; it has
+            // no per-frame state to capture and no int[][] codec, so capturing it would knock
+            // CorkFloor onto the generic path and silently drop the CAPTURED rollingBreakPlayer.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CorkFloorObjectInstance", "effectiveVelTable"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CorkFloorObjectInstance", "rollingBreakPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", "dispenser"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", "springOriginalPositions"), RewindFieldPolicy.CAPTURED),
