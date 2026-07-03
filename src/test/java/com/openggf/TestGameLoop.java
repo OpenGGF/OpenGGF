@@ -374,6 +374,37 @@ public class TestGameLoop {
     }
 
     @Test
+    public void endingFadeFreezesGameplayUntilEndingModeEnters() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+
+        assertTrue(source.contains("private boolean endingTransitionPending"),
+                "Ending fade must have a pending flag so LEVEL mode does not keep simulating under the white fade");
+
+        int updateLevel = source.indexOf("private boolean updateLevelMode(");
+        int updateLevelEnd = source.indexOf("private void updateBonusStageMode(", updateLevel);
+        assertTrue(updateLevel >= 0 && updateLevelEnd > updateLevel, "updateLevelMode method must exist");
+        String levelBody = source.substring(updateLevel, updateLevelEnd);
+        assertTrue(levelBody.contains("boolean freezeForEndingTransition = endingTransitionPending;"),
+                "LEVEL mode should include ending fade in its gameplay-freeze flags");
+        assertTrue(levelBody.contains("&& !freezeForEndingTransition"),
+                "LEVEL mode must skip LevelFrameStep while the ending fade callback is pending");
+
+        int startEnding = source.indexOf("private void startEndingFade()");
+        int startEndingEnd = source.indexOf("private void doEnterEnding()", startEnding);
+        assertTrue(startEnding >= 0 && startEndingEnd > startEnding, "startEndingFade method must exist");
+        String startEndingBody = source.substring(startEnding, startEndingEnd);
+        assertTrue(startEndingBody.contains("endingTransitionPending = true;"),
+                "Starting the ending fade should freeze gameplay until doEnterEnding runs");
+
+        int doEnterEnding = startEndingEnd;
+        int doEnterEndingEnd = source.indexOf("private void updateEnding()", doEnterEnding);
+        assertTrue(doEnterEndingEnd > doEnterEnding, "doEnterEnding method must precede updateEnding");
+        String doEnterEndingBody = source.substring(doEnterEnding, doEnterEndingEnd);
+        assertTrue(doEnterEndingBody.contains("endingTransitionPending = false;"),
+                "Entering ending mode should clear the pending freeze");
+    }
+
+    @Test
     public void returnToMasterTitleTearsDownUserRecordingSessionsBeforeLeavingLevel() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int methodStart = source.indexOf("void returnToMasterTitle()");
@@ -1377,6 +1408,35 @@ public class TestGameLoop {
         assertFalse(saveContext.isClear());
         verify(endingProvider).initialize();
         deleteRecursively(saveDir);
+    }
+
+    @Test
+    void doEnterEndingStartsRevealWhenPreviousFadeIsHoldingWhite() throws Exception {
+        SessionManager.clear();
+        SessionManager.clear();
+
+        EndingProvider endingProvider = mock(EndingProvider.class);
+        when(endingProvider.getCurrentPhase()).thenReturn(EndingPhase.CUTSCENE);
+
+        GameModule module = mock(GameModule.class);
+        when(module.getEndingProvider()).thenReturn(endingProvider);
+        when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
+
+        SaveSessionContext saveContext = SaveSessionContext.forSlot(
+                "test_ending_hold_white_reveal", 1, new SelectedTeam("sonic", List.of()), 10, 0);
+        SessionManager.openGameplaySession(module, saveContext);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
+
+        FadeManager fadeManager = mock(FadeManager.class);
+        when(fadeManager.isActive()).thenReturn(true);
+        when(fadeManager.getState()).thenReturn(FadeManager.FadeState.HOLD_WHITE);
+        setPrivateField(gameLoop, "fadeManager", fadeManager);
+
+        invokePrivateMethod(gameLoop, "doEnterEnding");
+
+        verify(endingProvider).initialize();
+        verify(fadeManager).startFadeFromWhite(isNull());
+        assertEquals(GameMode.ENDING_CUTSCENE, gameLoop.getCurrentGameMode());
     }
 
     @Test
