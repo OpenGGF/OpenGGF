@@ -35,7 +35,7 @@ class TestCapturedPolicyCompactReachabilityGuard {
     }
 
     @Test
-    void capturedCollectionPoliciesAreCompactReachable() {
+    void capturedPoliciesNeedingCompactPathAreReachable() {
         List<String> failures = new ArrayList<>();
         for (Map.Entry<FieldKey, RewindFieldPolicy> entry
                 : DefaultObjectRewindPolicies.exactFieldPoliciesForAudit().entrySet()) {
@@ -51,9 +51,8 @@ class TestCapturedPolicyCompactReachabilityGuard {
                 failures.add(entry.getKey() + " -> unresolvable: " + e);
                 continue;
             }
-            if (!Collection.class.isAssignableFrom(field.getType())
-                    && !Map.class.isAssignableFrom(field.getType())) {
-                continue; // Non-collection fields are also captured by the generic fallback path.
+            if (com.openggf.game.rewind.GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(field)) {
+                continue; // Also captured by the generic fallback path, so reachability is moot.
             }
             if (!AbstractObjectInstance.class.isAssignableFrom(declaring)
                     || AbstractBadnikInstance.class.isAssignableFrom(declaring)
@@ -67,7 +66,8 @@ class TestCapturedPolicyCompactReachabilityGuard {
                         .map(plan -> plan.key().toString())
                         .toList();
                 failures.add(entry.getKey() + " policy CAPTURED is unreachable: class falls back to the "
-                        + "generic scalar path (collection fields dropped). Unsupported fields: " + unsupported);
+                        + "generic scalar path, which cannot capture this field. Unsupported fields: "
+                        + unsupported);
             }
         }
         assertTrue(failures.isEmpty(), () -> String.join("\n", failures));
