@@ -7,13 +7,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_A;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_B;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_BACK;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_RIGHT;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_UP;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LAST;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LEFT_BUMPER;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_X;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_Y;
 
 class TestGamepadInputManager {
 
@@ -113,6 +118,119 @@ class TestGamepadInputManager {
         assertEquals(InputActionMasks.ACTION_A, manager.poll(bindings).player1().actionPressedMask());
     }
 
+    @Test
+    void mapsNorthFaceButtonToDebugModeTogglePressedEdge() {
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        GamepadInputManager manager = new GamepadInputManager(source);
+        InputBindings bindings = enabledBindings("auto", "none");
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_Y)));
+        manager.poll(bindings);
+        assertTrue(manager.isDebugModeTogglePressed());
+
+        manager.poll(bindings);
+        assertFalse(manager.isDebugModeTogglePressed());
+
+        source.setDevices(connectedPad(0, buttons()));
+        manager.poll(bindings);
+        assertFalse(manager.isDebugModeTogglePressed());
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_Y)));
+        manager.poll(bindings);
+        assertTrue(manager.isDebugModeTogglePressed());
+    }
+
+    @Test
+    void mapsLeftBumperToRewindHeldWhileButtonIsDown() {
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        GamepadInputManager manager = new GamepadInputManager(source);
+        InputBindings bindings = enabledBindings("auto", "none");
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER)));
+        manager.poll(bindings);
+        assertTrue(manager.isRewindHeld());
+        manager.poll(bindings);
+        assertTrue(manager.isRewindHeld());
+
+        source.setDevices(connectedPad(0, buttons()));
+        manager.poll(bindings);
+        assertFalse(manager.isRewindHeld());
+    }
+
+    @Test
+    void disabledControllerClearsDebugModeAndRewindGamepadState() {
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        GamepadInputManager manager = new GamepadInputManager(source);
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_Y, GLFW_GAMEPAD_BUTTON_LEFT_BUMPER)));
+        manager.poll(enabledBindings("auto", "none"));
+        assertTrue(manager.isDebugModeTogglePressed());
+        assertTrue(manager.isRewindHeld());
+
+        manager.poll(disabledBindings());
+        assertFalse(manager.isDebugModeTogglePressed());
+        assertFalse(manager.isRewindHeld());
+    }
+
+    @Test
+    void mapsBackButtonToBackButtonPressedEdge() {
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        GamepadInputManager manager = new GamepadInputManager(source);
+        InputBindings bindings = enabledBindings("auto", "none");
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_BACK)));
+        manager.poll(bindings);
+        assertTrue(manager.isBackButtonPressed());
+
+        manager.poll(bindings);
+        assertFalse(manager.isBackButtonPressed());
+
+        source.setDevices(connectedPad(0, buttons()));
+        manager.poll(bindings);
+        assertFalse(manager.isBackButtonPressed());
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_BACK)));
+        manager.poll(bindings);
+        assertTrue(manager.isBackButtonPressed());
+    }
+
+    @Test
+    void mapsRightBumperToFrameStepTogglePressedEdge() {
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        GamepadInputManager manager = new GamepadInputManager(source);
+        InputBindings bindings = enabledBindings("auto", "none");
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER)));
+        manager.poll(bindings);
+        assertTrue(manager.isFrameStepTogglePressed());
+
+        manager.poll(bindings);
+        assertFalse(manager.isFrameStepTogglePressed());
+
+        source.setDevices(connectedPad(0, buttons()));
+        manager.poll(bindings);
+        assertFalse(manager.isFrameStepTogglePressed());
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER)));
+        manager.poll(bindings);
+        assertTrue(manager.isFrameStepTogglePressed());
+    }
+
+    @Test
+    void disabledControllerClearsBackButtonAndFrameStepGamepadState() {
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        GamepadInputManager manager = new GamepadInputManager(source);
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_BACK, GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER)));
+        manager.poll(enabledBindings("auto", "none"));
+        assertTrue(manager.isBackButtonPressed());
+        assertTrue(manager.isFrameStepTogglePressed());
+
+        manager.poll(disabledBindings());
+        assertFalse(manager.isBackButtonPressed());
+        assertFalse(manager.isFrameStepTogglePressed());
+    }
+
     private static GamepadStateSource.DeviceState connectedPad(int joystickId, boolean[] buttons) {
         return GamepadStateSource.DeviceState.connected(joystickId, "pad-" + joystickId, buttons, 0.0f, 0.0f);
     }
@@ -133,6 +251,8 @@ class TestGamepadInputManager {
                 0.35,
                 player1,
                 player2,
+                -1,
+                -1,
                 -1);
     }
 
@@ -144,6 +264,8 @@ class TestGamepadInputManager {
                 0.35,
                 "auto",
                 "auto",
+                -1,
+                -1,
                 -1);
     }
 

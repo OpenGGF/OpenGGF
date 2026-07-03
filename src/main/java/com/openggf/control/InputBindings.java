@@ -21,7 +21,9 @@ public record InputBindings(
         double controllerDeadzone,
         String controllerPlayer1,
         String controllerPlayer2,
-        int debugModeKey) {
+        int debugModeKey,
+        int rewindKey,
+        int frameStepKey) {
 
     public InputBindings {
         controllerDeadzone = clampDeadzone(controllerDeadzone);

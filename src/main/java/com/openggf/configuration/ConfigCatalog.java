@@ -140,7 +140,8 @@ public final class ConfigCatalog {
         // rewind (player-facing live rewind)
         put(LIVE_REWIND_ENABLED, of("rewind", "liveEnabled", BOOL,
                 "Enable held-key rewind during ordinary live play"));
-        put(LIVE_REWIND_KEY, of("rewind", "liveKey", KEY, "Key held to rewind during live play"));
+        put(LIVE_REWIND_KEY, of("rewind", "liveKey", KEY,
+                "Key held to rewind during live play; the gamepad left bumper (L1/LB) also holds rewind"));
         put(LIVE_REWIND_HALF_SPEED_KEY, of("rewind", "liveHalfSpeedKey", KEY,
                 "Modifier held with the rewind key for half-speed rewind"));
         put(LIVE_REWIND_DOUBLE_SPEED_KEY, of("rewind", "liveDoubleSpeedKey", KEY,
@@ -243,8 +244,10 @@ public final class ConfigCatalog {
         put(TEST, of("debug.keys", "test", KEY, "Debug-only test button"));
         put(NEXT_ACT, of("debug.keys", "nextAct", KEY, "Advance to the next act"));
         put(NEXT_ZONE, of("debug.keys", "nextZone", KEY, "Advance to the next zone"));
-        put(DEBUG_MODE_KEY, of("debug.keys", "debugMode", KEY, "Toggle debug movement mode"));
-        put(FRAME_STEP_KEY, of("debug.keys", "frameStep", KEY, "Step forward one frame while paused"));
+        put(DEBUG_MODE_KEY, of("debug.keys", "debugMode", KEY,
+                "Toggle debug movement mode; the gamepad north face button (Y/Triangle) also toggles it"));
+        put(FRAME_STEP_KEY, of("debug.keys", "frameStep", KEY,
+                "Step forward one frame while paused; the gamepad right bumper (RB/R1) also steps a frame"));
         put(DEBUG_LAST_CHECKPOINT_KEY, of("debug.keys", "lastCheckpoint", KEY,
                 "Teleport to the last checkpoint"));
         put(LEVEL_SELECT_KEY, of("debug.keys", "levelSelect", KEY, "Open the level select screen"));

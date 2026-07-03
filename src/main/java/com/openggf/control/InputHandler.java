@@ -41,6 +41,14 @@ public class InputHandler {
 		this(inputBindingsSource, new GamepadInputManager(GamepadStateSource.noop()));
 	}
 
+	/**
+	 * Creates an InputHandler backed by a caller-supplied {@link GamepadStateSource},
+	 * for tests that need to drive gamepad state from outside {@code com.openggf.control}.
+	 */
+	public InputHandler(Supplier<InputBindings> inputBindingsSource, GamepadStateSource gamepadStateSource) {
+		this(inputBindingsSource, new GamepadInputManager(gamepadStateSource));
+	}
+
 	public static InputHandler live(Supplier<InputBindings> inputBindingsSource) {
 		return new InputHandler(inputBindingsSource, new GamepadInputManager(new GlfwGamepadStateSource()));
 	}
@@ -92,10 +100,10 @@ public class InputHandler {
 	 * @return Whether the key is pressed or not
 	 */
 	public boolean isKeyDown(int keyCode) {
-		if (keyCode >= 0 && keyCode < MAX_KEYS) {
-			return keys[keyCode];
+		if (keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode]) {
+			return true;
 		}
-		return false;
+		return keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld();
 	}
 
 	/**
@@ -105,9 +113,31 @@ public class InputHandler {
 	 * @return Whether the key was just pressed
 	 */
 	public boolean isKeyPressed(int keyCode) {
-		if (logicalOverride != null && keyCode == inputBindings.debugModeKey()) {
-			return logicalOverride.debugModeTogglePressed();
+		if (keyCode == inputBindings.debugModeKey()) {
+			if (logicalOverride != null) {
+				return logicalOverride.debugModeTogglePressed();
+			}
+			return isRawKeyPressed(keyCode) || gamepadInputManager.isDebugModeTogglePressed();
 		}
+		if (keyCode == inputBindings.frameStepKey()) {
+			return isRawKeyPressed(keyCode) || gamepadInputManager.isFrameStepTogglePressed();
+		}
+		return isRawKeyPressed(keyCode);
+	}
+
+	/**
+	 * Edge-triggered: true only on the frame the gamepad Back/Select/View button on
+	 * the primary connected pad transitions to held. Scoped to the main-menu
+	 * options-panel Tab toggle ({@code MasterTitleScreen} / {@code LaunchConfigPanel}) —
+	 * unlike {@link #isKeyPressed(int)}'s debug-mode/frame-step wiring, this is not a
+	 * blanket substitute for every keyboard use of Tab (editor toggle, special stage
+	 * entry, art viewer), which are unrelated screens/modes.
+	 */
+	public boolean isGamepadBackButtonPressed() {
+		return logicalOverride == null && gamepadInputManager.isBackButtonPressed();
+	}
+
+	private boolean isRawKeyPressed(int keyCode) {
 		if (keyCode >= 0 && keyCode < MAX_KEYS) {
 			return keys[keyCode] && !previousKeys[keyCode];
 		}
