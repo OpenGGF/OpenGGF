@@ -191,6 +191,10 @@ public final class LiveRewindManager {
             clear();
             return false;
         }
+        // Reaching here means a caller already confirmed GameMode.LEVEL and
+        // the feature is enabled this frame, so live rewind could be used —
+        // arm PCM recording so held rewind has history to play back.
+        GameServices.audio().setRewindHistoryArmed(true);
         if (gameplayMode == installedGameplayMode && rewindController != null && inputSource != null) {
             return true;
         }
@@ -224,6 +228,12 @@ public final class LiveRewindManager {
         if (wasRewinding) {
             cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
         }
+        // The raw PCM rewind-history ring is a fixed-duration buffer that is
+        // not gated by the logical rewind reset above: without this, a held
+        // rewind that reaches the new level's frame-zero floor can keep
+        // draining the ring backward into audio recorded before this level
+        // loaded.
+        GameServices.audio().clearPcmHistory();
         rewinding = false;
         effectEnvelope.reset();
     }
@@ -306,6 +316,7 @@ public final class LiveRewindManager {
         if (rewinding && rewindController != null) {
             cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
         }
+        GameServices.audio().setRewindHistoryArmed(false);
         installedGameplayMode = null;
         inputSource = null;
         rewindController = null;

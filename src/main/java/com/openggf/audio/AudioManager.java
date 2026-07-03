@@ -747,6 +747,33 @@ public class AudioManager {
         }
     }
 
+    /**
+     * Clears the raw PCM rewind-history ring. Callers must invoke this at a
+     * hard rewind boundary (e.g. a fresh level load) so a subsequent held
+     * rewind cannot play back samples recorded before the boundary — the
+     * ring is a fixed-duration buffer independent of the logical rewind
+     * keyframe/frame-counter reset, so it survives that reset unless cleared
+     * explicitly.
+     */
+    public void clearPcmHistory() {
+        deterministicAudioRuntime.clearPcmHistory();
+    }
+
+    /**
+     * Arms or disarms continuous PCM rewind-history recording on the current
+     * backend. Callers that own a rewind consumer's lifecycle (held-key live
+     * rewind, Trace Test Mode) should arm this only while that consumer is
+     * actually able to be used, and disarm it the moment it no longer is —
+     * recording unconditionally wastes a buffer copy every audio callback for
+     * sessions that can never rewind, and leaves history around to leak across
+     * a later boundary.
+     */
+    public void setRewindHistoryArmed(boolean armed) {
+        if (backend != null) {
+            backend.setRewindHistoryArmed(armed);
+        }
+    }
+
     public void advancePausedFrameStepAudio() {
         advanceRuntimeFrame(FrameAudioMode.SILENT_STEP);
     }
