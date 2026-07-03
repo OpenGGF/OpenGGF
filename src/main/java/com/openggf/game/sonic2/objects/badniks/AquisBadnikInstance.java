@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -394,13 +395,17 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
 
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            AquisBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestAquis(ctx);
-            if (parent == null) {
-                throw new IllegalStateException("Cannot recreate Aquis wing without a live Aquis parent");
-            }
-            AquisWingChild wing = new AquisWingChild(ctx.spawn(), parent);
-            parent.attachWingForRewind(wing);
-            return wing;
+            // Wing child of an Aquis badnik. If the Aquis was destroyed/swept before
+            // capture there is no body to bind the wing to, so drop the wing (its live
+            // update expires with a dead parent) rather than throw. acceptDestroyed
+            // relinks to a restored-but-destroyed Aquis when that is the captured parent.
+            return RewindRecreateObjectLinks.nearestObject(ctx, AquisBadnikInstance.class, true)
+                    .<AbstractObjectInstance>map(parent -> {
+                        AquisWingChild wing = new AquisWingChild(ctx.spawn(), parent);
+                        parent.attachWingForRewind(wing);
+                        return wing;
+                    })
+                    .orElse(null);
         }
 
         @Override

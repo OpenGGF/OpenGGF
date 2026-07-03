@@ -7,11 +7,11 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.HtzGroundFireObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -122,20 +122,14 @@ public class HTZBossLavaBall extends AbstractBossChild
 
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        Sonic2HTZBossInstance parent = requireLiveHtzBossForRewind(ctx);
-        return new HTZBossLavaBall(parent, ctx.spawn().x(), ctx.spawn().y(), false, false);
-    }
-
-    private static Sonic2HTZBossInstance requireLiveHtzBossForRewind(RewindRecreateContext ctx) {
-        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
-            throw new IllegalStateException("Cannot recreate HTZ boss lava ball without ObjectManager services");
-        }
-        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
-            if (object instanceof Sonic2HTZBossInstance boss && !boss.isDestroyed()) {
-                return boss;
-            }
-        }
-        throw new IllegalStateException("Cannot recreate HTZ boss lava ball: no live HTZ boss exists");
+        // The lava ball is a child of the HTZ boss. If the boss was defeated/swept
+        // before capture there is no parent to bind to, so drop the child rather than
+        // throw. acceptDestroyed relinks to a restored-but-destroyed boss so the
+        // child preserves its captured relationship.
+        return RewindRecreateObjectLinks.nearestObject(ctx, Sonic2HTZBossInstance.class, true)
+                .<AbstractObjectInstance>map(boss ->
+                        new HTZBossLavaBall(boss, ctx.spawn().x(), ctx.spawn().y(), false, false))
+                .orElse(null);
     }
 
     @Override
