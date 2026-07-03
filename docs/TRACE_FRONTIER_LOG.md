@@ -20,17 +20,82 @@ The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
-round 85 is active. Rounds 79-84 used PC-execute Lua plus engine diagnostics to
-narrow MTZ3 to Obj53 same-frame break fall-through: ROM keeps running
-`Obj53_OrbitBoss`/`Obj53_SetAnimPriority` on the frame an orb switches from
-routine 02 to routine 04, but the direct engine fall-through candidate exposes
-slot 22 two frames early at f12818. The active target is the combined
-fall-through plus slot-22 touch/position timing fix.
+round 91 is active. Rounds 90-91 used Lua PC-execute probes to rule out shared
+touch ordering as the current blocker: the engine already evaluates the relevant
+Obj53 before its object update, but the slot 24 orb reaches the f13476-f13478
+touch window around `x=$2AE7,y=$047A` while ROM is
+`x=$2AE4/$2AE4.8000,y=$0482/$0481.6800`. The active target is now the upstream
+Obj53 breakaway position/timing inherited before f13476. Keep the round-90
+slot-22 guard: ROM has `collision_flags=$DA` at f12818/f12819 but does not run
+`Touch_Enemy_Part2` until f12820 because vertical overlap is false before then.
 Worker bounce policy: any `no-change`, `rejected`, `blocked`, or "gated"
 return must include targeted BizHawk Lua evidence in `luaProbes`, including
 script path, output path, frame window, hooked PCs, and the ROM values observed.
 For slot, touch, subpixel, counter, or "RAM-gated" conclusions, a PC-execute
 probe is required before the bounce is accepted.
+
+## 2026-07-03 - S2 rounds 90-91 MTZ3 Lua-first no-change narrowing
+
+Rounds 90 and 91 targeted `TestS2Mtz3LevelSelectTraceReplay` from conductor
+branch `bugfix/ai-s2-trace-next` at `614be1140`. The baseline remained
+MTZ3 f13477 / 4 under `frontierOnly`: `x_speed` expected `-03FB`, actual
+`0x03FB`.
+
+Lua evidence:
+- Round 90 hit-edge probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round90-hit-edge-next\target\s2_mtz3_round90_hit_edge_probe_rerun.txt`.
+  Hooked `Obj54_AnimateFace`, `Obj54_CheckHit`, `Obj53_Main`,
+  `Obj53_OrbitBoss`, `Obj53_SetAnimPriority`, `Obj53_BreakAway`,
+  `Touch_ChkValue`, `Touch_Enemy_Part2`, and `BossCollision_MTZ`.
+- Round 90 ROM-order probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round90-rom-order-next\target\s2_mtz3_round90_rom_order.txt`.
+  It confirmed f12593 `Touch_ChkValue` hits Obj54 slot 20 before
+  `Obj54_AnimateFace`/`Obj54_CheckHit`, and that f13478
+  `Touch_ChkValue` -> `Touch_Enemy_Part2` hits Obj53 raw slot `$18`
+  before later Obj54/Obj53 update dispatch.
+- Round 90 slot-22 touch guard:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round90-slot22-touch-next\target\s2_mtz3_round90_slot22_touch.txt`.
+  ROM slot 22 has `collision_flags=$DA` at f12818/f12819, but the touch
+  box has `yOk=false`, so no `Touch_Enemy_Part2` runs until f12820 when
+  `yOk=true` and overlap becomes true.
+- Round 91 touch/state probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round91-touch-model-next\target\diag\mtz3_round91_touch_probe.txt`.
+  It confirmed f13478 `Touch_ChkValue` sees Obj53 slot 24 at
+  `x=$2AE4,y=$0482,collision_flags=$DA,collision_property=$02`, and
+  `Touch_Enemy_Part2` mutates the property before later object dispatch.
+- Round 91 subword probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round91-touch-model-next\target\diag\mtz3_round91_touch_probe_subwords.txt`.
+  It captured slot 24 ROM samples: f13476 `x=$2AE5.0000,y=$047F.E800`,
+  f13477 `x=$2AE4.8000,y=$0481.6800`, f13478
+  `x=$2AE4.0000,y=$0482.E800`, all routine 04 with
+  `collision_flags=$DA,collision_property=$02`.
+- Round 91 detach probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round91-touch-model-next\target\diag\mtz3_round91_detach_probe.txt`.
+  It confirmed slot 24 is already in breakaway by f13361
+  (`x=$2B1E.8000,y=$0472.0000,x_vel=$FF80,y_vel=$FC18`), so the f13476
+  mismatch is inherited before the touch window.
+
+No source change was accepted:
+- Round 90 tested MTZ-local deferred/direct hit-edge candidates, but each either
+  regressed earlier f12818/f12909/f13358-style guards or failed to advance f13477.
+- Round 91 tested a local mutable Obj53 `collision_flags` /
+  `collision_property` candidate. It matched the ROM mutation idea but did not
+  advance f13477, so it was reverted.
+
+Current diagnosis:
+- The engine's high-level touch ordering is not the active blocker. The clean
+  conductor code evaluates the relevant Obj53 through the pre-update touch
+  snapshot before object execution.
+- The f13477 miss is positional: engine scans the corresponding slot 24 Obj53
+  as BOSS-sized at approximately `x=$2AE7,y=$047A`, overlap false, while ROM is
+  already at `x=$2AE4.8000,y=$0481.6800` / then `x=$2AE4,y=$0482` and overlaps.
+- Next target: trace the upstream Obj53 slot 24 detach/breakaway transition before
+  f13476, not shared touch ordering or route/frame compensation.
+
+Operational note:
+- C: briefly reached near-zero free space during round 91. Generated `target`
+  directories from older `ai-s2-*` worktrees were removed, restoring about
+  24.8 GB free. The conductor and round 90/91 evidence targets were preserved.
 
 ## 2026-07-03 - S2 round 79 CNZ2 Obj51 flee lifetime
 
