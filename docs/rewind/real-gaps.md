@@ -7,9 +7,9 @@ Generated: 2026-07-03
 | Metric | Value |
 |--------|-------|
 | Total classes discovered | 833 |
-| Probed: | 721 |
-| Skipped/Unprobed: | 112 |
-| Probe coverage | 86.6% |
+| Probed: | 722 |
+| Skipped/Unprobed: | 111 |
+| Probe coverage | 86.7% |
 | REAL gaps found | 0 |
 
 ## Real Gaps (fields that differ after capture → restore)
@@ -80,7 +80,6 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | HczEndBossTurbine | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbin... |
 | HczEndBossWaterColumn | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterC... |
 | LbzEndBossInstance$LbzEndBossTubeSegmentChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstan... |
-| LbzEndBossInstance$LbzEndBossDebrisChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstan... |
 | LbzEndBossInstance$LbzEndBossSmokePuffChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstan... |
 | LbzFinalBoss1Instance$DeathEggMiniatureChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Ins... |
 | LbzFinalBoss1Instance$EngineFlameChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Ins... |
