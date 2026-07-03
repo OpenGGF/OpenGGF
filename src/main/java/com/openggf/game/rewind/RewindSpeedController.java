@@ -11,6 +11,7 @@ final class RewindSpeedController {
     private final double maxStepsPerTick;
     private double speed;
     private double stepAccumulator;
+    private double heldMultiplier = 1.0;
 
     static RewindSpeedController disabled() {
         return new RewindSpeedController(false, 1.0, 0.0, 0.0, 1.0);
@@ -41,11 +42,19 @@ final class RewindSpeedController {
         this.maxStepsPerTick = Math.max(this.minStepsPerTick, maxStepsPerTick);
     }
 
+    /**
+     * Held-modifier speed multiplier (e.g. half/double rewind keys). Multiplies
+     * the effective step rate without compounding into the coast acceleration
+     * curve. Non-positive values are treated as the unit multiplier.
+     */
+    void setHeldSpeedMultiplier(double multiplier) {
+        this.heldMultiplier = multiplier > 0.0 ? multiplier : 1.0;
+    }
+
     int stepsWhileHeld() {
         if (!coastEnabled) {
             speed = 1.0;
-            stepAccumulator = 0.0;
-            return 1;
+            return consumeAccumulator();
         }
         if (speed <= 0.0) {
             speed = minStepsPerTick;
@@ -70,18 +79,19 @@ final class RewindSpeedController {
 
     double currentSpeed() {
         if (!coastEnabled) {
-            return speed > 0.0 ? 1.0 : 0.0;
+            return speed > 0.0 ? heldMultiplier : 0.0;
         }
-        return speed;
+        return speed * heldMultiplier;
     }
 
     void reset() {
         speed = 0.0;
         stepAccumulator = 0.0;
+        heldMultiplier = 1.0;
     }
 
     private int consumeAccumulator() {
-        stepAccumulator += speed;
+        stepAccumulator += speed * heldMultiplier;
         int whole = (int) Math.floor(stepAccumulator);
         stepAccumulator -= whole;
         return whole;

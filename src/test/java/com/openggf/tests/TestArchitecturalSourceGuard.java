@@ -36,7 +36,9 @@ class TestArchitecturalSourceGuard {
             // refactor (d9b727925) settled the sprite at 3115 effective lines.
             "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3115,
             "com/openggf/level/LevelManager.java", 2500,
-            GAME_LOOP_PATH, 2888
+            // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
+            // (RewindEffectEnvelope wiring + intensity/speed accessors).
+            GAME_LOOP_PATH, 2890
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
@@ -49,7 +51,15 @@ class TestArchitecturalSourceGuard {
     private static final List<MethodBudget> ROOT_DISPATCH_METHOD_BUDGETS = List.of(
             new MethodBudget(ENGINE_PATH, "draw", 3),
             new MethodBudget(ENGINE_PATH, "init", 181),
-            new MethodBudget(ENGINE_PATH, "display", 206),
+            // 2026-07-02: display 206 -> 217 for the live-rewind VHS picture-search
+            // pass (RewindVhsEffectPass.apply between the fade pass and the
+            // PRESENTATION display-shader phase; the pass itself is a collaborator).
+            // 2026-07-02: display 217 -> 220 for the final-review fix hoisting the
+            // zero-intensity check above the RewindVhsEffectPass.apply call so the
+            // config lookups and gameLoop accessors are skipped when intensity==0.
+            // 2026-07-03: display 220 -> 221 for the rewind.vhsTearBands config
+            // argument threaded into the RewindVhsEffectPass.apply call.
+            new MethodBudget(ENGINE_PATH, "display", 221),
             new MethodBudget(GAME_LOOP_PATH, "stepInternal", 213),
             new MethodBudget(GAME_LOOP_PATH, "doExitBonusStage", 142),
             new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 105),
