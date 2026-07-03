@@ -63,6 +63,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     protected PcmHistoryRing pcmHistory;
     private PcmHistoryRing.ReverseCursor reverseCursor;
     private double pendingReverseRate = 1.0;
+    private boolean rewindHistoryArmed = false;
 
     private static class MusicState {
         final AudioStream stream;
@@ -713,7 +714,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                         sfxStream = null;
                     }
                 }
-                if (reverseCursor == null && pcmHistory != null) {
+                if (rewindHistoryArmed && reverseCursor == null && pcmHistory != null) {
                     pcmHistory.write(streamData, STREAM_BUFFER_SIZE);
                 }
 
@@ -1061,6 +1062,13 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             if (reverseCursor != null) {
                 reverseCursor.setRate(safeRate);
             }
+        }
+    }
+
+    @Override
+    public void setRewindHistoryArmed(boolean armed) {
+        synchronized (streamLock) {
+            rewindHistoryArmed = armed;
         }
     }
 

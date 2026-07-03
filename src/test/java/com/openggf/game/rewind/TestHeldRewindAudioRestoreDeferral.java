@@ -6,6 +6,8 @@ import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
+import com.openggf.audio.runtime.DeterministicAudioRuntime;
+import com.openggf.audio.runtime.FrameAudioMode;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
@@ -314,6 +317,70 @@ class TestHeldRewindAudioRestoreDeferral {
     }
 
     @Test
+    void liveRewindManagerLevelLoadBoundaryClearsPcmRewindHistory() throws Exception {
+        // Reproduces the reported bug: holding rewind at the very start of a
+        // level correctly freezes engine/game state at frame zero, but the
+        // raw PCM rewind-history ring is a fixed-duration buffer independent
+        // of that logical reset. Unless it is explicitly cleared at the
+        // LEVEL_LOAD boundary, a held rewind can keep draining it backward
+        // into audio recorded before this level ever loaded.
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        try {
+            TestEnvironment.activeGameplayMode();
+            LiveRewindManager manager = liveManagerWithControllerAtFrame(config, 8);
+            CountingClearRuntime runtime = new CountingClearRuntime();
+            installDeterministicAudioRuntime(audio, runtime);
+
+            manager.markBoundary(RewindBoundary.LEVEL_LOAD);
+
+            assertEquals(1, runtime.clearPcmHistoryCalls,
+                    "level-load boundary must clear the raw PCM rewind-history ring so held "
+                            + "rewind audio cannot play samples recorded before this level started");
+        } finally {
+            config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+            SessionManager.clear();
+        }
+    }
+
+    @Test
+    void liveRewindManagerArmsPcmHistoryWhileUsableAndDisarmsWhenNot() throws Exception {
+        // The whole point of arming/disarming is to avoid recording PCM
+        // history when nothing can rewind it back: it must be armed exactly
+        // while GameMode.LEVEL + live rewind enabled make held rewind usable,
+        // and disarmed the instant either condition stops holding.
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        try {
+            TestEnvironment.activeGameplayMode();
+            LiveRewindManager manager = new LiveRewindManager(config);
+            InputHandler input = new InputHandler();
+
+            manager.handleRealtimeRewindInput(GameMode.LEVEL, input);
+            assertEquals(Boolean.TRUE, backend.lastRewindHistoryArmed,
+                    "a usable held-rewind session must arm PCM history recording");
+
+            manager.handleRealtimeRewindInput(GameMode.TITLE_SCREEN, input);
+            assertEquals(Boolean.FALSE, backend.lastRewindHistoryArmed,
+                    "leaving GameMode.LEVEL must disarm PCM history recording");
+
+            manager.handleRealtimeRewindInput(GameMode.LEVEL, input);
+            assertEquals(Boolean.TRUE, backend.lastRewindHistoryArmed,
+                    "re-entering GameMode.LEVEL must re-arm PCM history recording");
+
+            config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+            manager.handleRealtimeRewindInput(GameMode.LEVEL, input);
+            assertEquals(Boolean.FALSE, backend.lastRewindHistoryArmed,
+                    "disabling live rewind must disarm PCM history recording even in GameMode.LEVEL");
+        } finally {
+            config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+            SessionManager.clear();
+        }
+    }
+
+    @Test
     void liveRewindManagerSeamlessBoundaryDropsDeferredRestoreBeforePresentationCleanup()
             throws Exception {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
@@ -400,9 +467,31 @@ class TestHeldRewindAudioRestoreDeferral {
         field.set(target, value);
     }
 
+    private static void installDeterministicAudioRuntime(AudioManager audio, DeterministicAudioRuntime runtime)
+            throws Exception {
+        Method method = AudioManager.class.getDeclaredMethod(
+                "setDeterministicAudioRuntime", DeterministicAudioRuntime.class);
+        method.setAccessible(true);
+        method.invoke(audio, runtime);
+    }
+
+    private static final class CountingClearRuntime implements DeterministicAudioRuntime {
+        int clearPcmHistoryCalls;
+
+        @Override
+        public void advanceFrame(long frame, FrameAudioMode mode) {
+        }
+
+        @Override
+        public void clearPcmHistory() {
+            clearPcmHistoryCalls++;
+        }
+    }
+
     private static final class CountingRestoreBackend extends NullAudioBackend {
         final java.util.List<String> calls = new java.util.ArrayList<>();
         int logicalRestores;
+        Boolean lastRewindHistoryArmed;
 
         @Override
         public void restoreLogicalSnapshot(AudioBackendLogicalSnapshot snapshot) {
@@ -418,6 +507,11 @@ class TestHeldRewindAudioRestoreDeferral {
         @Override
         public void restoreMusic() {
             calls.add("restoreMusic");
+        }
+
+        @Override
+        public void setRewindHistoryArmed(boolean armed) {
+            lastRewindHistoryArmed = armed;
         }
     }
 
