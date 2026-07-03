@@ -150,6 +150,16 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
         return super.traceDebugDetails() + " hanging=" + hanging;
     }
 
+    /**
+     * Whether {@code player} is currently hanging on this bar. Used by rewind
+     * coverage tests to assert the per-player hang state survives keyframe
+     * capture/restore.
+     */
+    public boolean isPlayerHanging(AbstractPlayableSprite player) {
+        BarState state = playerStates.get(player);
+        return state != null && state.hanging;
+    }
+
     private void tryGrab(AbstractPlayableSprite player, BarState state) {
         int xSpeed = player.getXSpeed();
         int sideOffset;

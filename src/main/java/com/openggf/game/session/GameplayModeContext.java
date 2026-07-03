@@ -236,6 +236,7 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.deregisterPostRestoreCallback("parallax-derived-state");
             rewindRegistry.deregisterPostRestoreCallback("sprite-powerup-derived-state");
             rewindRegistry.deregisterPostRestoreCallback("sprite-latched-solid-derived-state");
+            rewindRegistry.deregisterPostRestoreCallback("sprite-carry-solid-derived-state");
             rewindRegistry.register(parallaxManager);
             rewindRegistry.register(waterSystem);
             rewindRegistry.register(spriteManager.rewindSnapshottable());
@@ -252,6 +253,10 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.registerPostRestoreCallback(
                     "sprite-latched-solid-derived-state",
                     () -> spriteManager.refreshLatchedSolidObjectsAfterRewindRestore(
+                            levelManager.getObjectManager()));
+            rewindRegistry.registerPostRestoreCallback(
+                    "sprite-carry-solid-derived-state",
+                    () -> spriteManager.refreshCarrySolidContactOwnersAfterRewindRestore(
                             levelManager.getObjectManager()));
         }
     }
@@ -449,9 +454,12 @@ public final class GameplayModeContext implements ModeContext {
         // Post-restore reconciliation (runs after all entry restores, i.e. after
         // object-manager recreate): let level-event handlers reconcile one-shot
         // sequence state against the restored object set (e.g. S3K AIZ2
-        // ship-loop/boss softlock guards), and force a tilemap rebuild so the
-        // camera-history-dependent FG ring / BG window re-derive from the
-        // restored camera position. No-ops outside the zones that need them.
+        // ship-loop/boss softlock guards), and invalidate the BG incremental-shift
+        // window so it re-derives from the restored camera position. The FG
+        // tilemap needs no invalidation here (the AIZ2 FG ring self-heals via the
+        // bidirectional window reconcile; flat FG tilemaps are layout-pure).
+        // Held rewind fires this on every backward step, so it must stay cheap.
+        // No-ops outside the zones that need them.
         final AbstractLevelEventManager reconcileTarget = levelEventManager;
         rewindRegistry.registerPostRestoreCallback("level-tilemap-event-reconcile", () -> {
             if (reconcileTarget != null) {

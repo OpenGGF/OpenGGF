@@ -15,6 +15,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.logging.Logger;
 
@@ -143,7 +144,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
         int jumpKey = configService.getInt(SonicConfiguration.JUMP);
 
         // Up/Down navigation
-        if (input.isKeyDown(upKey)) {
+        if (input.isDirectionHeld(upKey, AbstractPlayableSprite.INPUT_UP)) {
             if (upHoldTimer == 0 || (upHoldTimer >= Sonic3kLevelSelectConstants.HOLD_REPEAT_DELAY
                     && upHoldTimer % Sonic3kLevelSelectConstants.HOLD_REPEAT_RATE == 0)) {
                 moveUp();
@@ -153,7 +154,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
             upHoldTimer = 0;
         }
 
-        if (input.isKeyDown(downKey)) {
+        if (input.isDirectionHeld(downKey, AbstractPlayableSprite.INPUT_DOWN)) {
             if (downHoldTimer == 0 || (downHoldTimer >= Sonic3kLevelSelectConstants.HOLD_REPEAT_DELAY
                     && downHoldTimer % Sonic3kLevelSelectConstants.HOLD_REPEAT_RATE == 0)) {
                 moveDown();
@@ -164,7 +165,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
         }
 
         // Left/Right (column switch or sound test adjustment)
-        if (input.isKeyDown(leftKey)) {
+        if (input.isDirectionHeld(leftKey, AbstractPlayableSprite.INPUT_LEFT)) {
             if (leftHoldTimer == 0 || (leftHoldTimer >= Sonic3kLevelSelectConstants.HOLD_REPEAT_DELAY
                     && leftHoldTimer % Sonic3kLevelSelectConstants.HOLD_REPEAT_RATE == 0)) {
                 moveLeft();
@@ -174,7 +175,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
             leftHoldTimer = 0;
         }
 
-        if (input.isKeyDown(rightKey)) {
+        if (input.isDirectionHeld(rightKey, AbstractPlayableSprite.INPUT_RIGHT)) {
             if (rightHoldTimer == 0 || (rightHoldTimer >= Sonic3kLevelSelectConstants.HOLD_REPEAT_DELAY
                     && rightHoldTimer % Sonic3kLevelSelectConstants.HOLD_REPEAT_RATE == 0)) {
                 moveRight();
@@ -185,7 +186,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
         }
 
         // Jump/Start to select
-        if (input.isKeyPressed(jumpKey)) {
+        if (input.isKeyPressed(jumpKey) || input.logical().menuAccept()) {
             handleSelect();
         }
 

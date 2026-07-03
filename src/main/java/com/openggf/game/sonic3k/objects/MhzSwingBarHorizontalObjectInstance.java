@@ -109,6 +109,15 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
         return super.traceDebugDetails() + " hanging=" + hangingPlayers.size();
     }
 
+    /**
+     * Whether {@code player} is currently hanging on this bar. Used by rewind
+     * coverage tests to assert the per-player hang state survives keyframe
+     * capture/restore.
+     */
+    public boolean isPlayerHanging(AbstractPlayableSprite player) {
+        return hangingPlayers.containsKey(player);
+    }
+
     private void tryGrab(AbstractPlayableSprite player) {
         if (!isInGrabWindow(player) || player.isHurt() || player.getDead() || player.isObjectControlled()) {
             return;

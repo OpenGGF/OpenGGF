@@ -414,7 +414,7 @@ public class TitleScreenManager implements TitleScreenProvider {
         }
         boolean skipable = segaLogoTimer >= SEGA_LOGO_VISUAL_FRAMES;
         boolean autoEnd = segaLogoTimer >= SEGA_LOGO_VISUAL_FRAMES + SEGA_LOGO_PCM_WINDOW_FRAMES;
-        if (autoEnd || (skipable && input.isKeyPressed(jumpKey))) {
+        if (autoEnd || (skipable && confirmPressed(input, jumpKey))) {
             beginSegaLogoFadeOut();
         }
     }
@@ -464,6 +464,14 @@ public class TitleScreenManager implements TitleScreenProvider {
         LOGGER.info("SEGA screen complete, entering INTRO_TEXT_FADE_IN state");
     }
 
+    /**
+     * Keyboard Jump press or gamepad confirm (Start / any face action button),
+     * matching {@link com.openggf.game.MasterTitleScreen}'s gamepad-aware confirm gate.
+     */
+    private static boolean confirmPressed(InputHandler input, int jumpKey) {
+        return input.isKeyPressed(jumpKey) || input.logical().menuAccept();
+    }
+
     private void skipIntroText() {
         introTextTimer = 0;
         creditTextCached = false;
@@ -475,7 +483,7 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     private void updateIntroTextFadeIn(InputHandler input) {
         int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-        if (input.isKeyPressed(jumpKey)) {
+        if (confirmPressed(input, jumpKey)) {
             skipIntroText();
             return;
         }
@@ -489,7 +497,7 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     private void updateIntroTextHold(InputHandler input) {
         int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-        if (input.isKeyPressed(jumpKey)) {
+        if (confirmPressed(input, jumpKey)) {
             skipIntroText();
             return;
         }
@@ -503,7 +511,7 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     private void updateIntroTextFadeOut(InputHandler input) {
         int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-        if (input.isKeyPressed(jumpKey)) {
+        if (confirmPressed(input, jumpKey)) {
             skipIntroText();
             return;
         }
@@ -542,7 +550,7 @@ public class TitleScreenManager implements TitleScreenProvider {
         // Check for jump/start press to exit (only after intro completes)
         if (introComplete) {
             int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-            if (input.isKeyPressed(jumpKey)) {
+            if (confirmPressed(input, jumpKey)) {
                 state = State.EXITING;
                 LOGGER.info("Title screen exiting");
             }
@@ -556,7 +564,7 @@ public class TitleScreenManager implements TitleScreenProvider {
         // Check for skip (Start pressed before frame 288)
         if (!introComplete) {
             int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-            if (input.isKeyPressed(jumpKey)) {
+            if (confirmPressed(input, jumpKey)) {
                 skipToFinalState();
                 return;
             }

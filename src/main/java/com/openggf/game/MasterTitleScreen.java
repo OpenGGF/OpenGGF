@@ -377,7 +377,8 @@ public class MasterTitleScreen {
             return;
         }
 
-        if (inputHandler.isKeyPressed(GLFW_KEY_TAB) && romAvailable[selectedIndex]) {
+        if ((inputHandler.isKeyPressed(GLFW_KEY_TAB) || inputHandler.isGamepadBackButtonPressed())
+                && romAvailable[selectedIndex]) {
             GameEntry entry = GameEntry.values()[selectedIndex];
             launchConfigPanel = new LaunchConfigPanel(
                     entry,

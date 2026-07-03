@@ -37,6 +37,17 @@ The startup disclaimer, master title, and S3K-style data select accept
 controller input. On data select screens, east/C is Back; A, B, and Start
 confirm.
 
+Additional gamepad bindings are hardcoded (not configurable) on the primary
+connected pad:
+
+| Position/Button | Xbox label | PlayStation label | Action |
+|------------------|------------|--------------------|--------|
+| North face button | Y | Triangle | Toggle debug movement mode (`debug.keys.debugMode`) |
+| Left bumper | LB | L1 | Hold to rewind live gameplay (`rewind.liveKey`) |
+| Right bumper | RB | R1 | Advance one frame while paused (`debug.keys.frameStep`) |
+| Back button | View | Select | Open/close the per-game options panel on the main menu (stands in for `Tab` in that flow only) |
+| Start | Start | Options | Pause / unpause (`input.pause`, same as Enter -- shows the "PAUSED" overlay and halts audio). Not wired to the separate silent ROM in-game pause (`input.player1.start` / Backspace). |
+
 ## Rewind
 
 Live rewind is only active when `rewind.liveEnabled` is `true` in `config.yaml`.

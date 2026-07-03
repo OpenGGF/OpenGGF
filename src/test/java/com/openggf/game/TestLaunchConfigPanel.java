@@ -1,7 +1,9 @@
 package com.openggf.game;
 
+import com.openggf.InputBindingFactory;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
 import com.openggf.game.launch.LaunchProfile;
 import com.openggf.game.launch.LaunchProfileStore;
@@ -22,6 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_BACK;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_DOWN;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_LEFT;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_RIGHT;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_UP;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LAST;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_A;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_D;
@@ -99,6 +107,57 @@ class TestLaunchConfigPanel {
         LaunchConfigPanel escapePanel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
         pressFrame(escapePanel, input, GLFW_KEY_ESCAPE);
         assertEquals(LaunchConfigPanel.Result.CLOSED, escapePanel.consumeResult());
+    }
+
+    @Test
+    void gamepadDpadUpDownMoveSelectedRow() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), source);
+
+        pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_UP);
+        assertEquals(SIDEKICK, panel.selectedRowForTest());
+
+        pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
+        assertEquals(REWIND, panel.selectedRowForTest());
+    }
+
+    @Test
+    void gamepadDpadLeftRightCycleSelectedValue() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), source);
+
+        pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_LEFT);
+        assertTrue(panel.currentProfileForTest().rewind());
+
+        pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_RIGHT);
+        assertFalse(panel.currentProfileForTest().rewind());
+    }
+
+    @Test
+    void gamepadBackButtonClosesWithClosedResult() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), source);
+
+        source.setDevices(GamepadStateSource.DeviceState.connected(0, "pad", buttons(GLFW_GAMEPAD_BUTTON_BACK), 0f, 0f));
+        input.refreshLogicalSnapshot();
+        panel.update(input);
+
+        assertEquals(LaunchConfigPanel.Result.CLOSED, panel.consumeResult());
     }
 
     @Test
@@ -249,6 +308,37 @@ class TestLaunchConfigPanel {
         panel.update(input);
         input.handleKeyEvent(key, GLFW_RELEASE);
         input.update();
+    }
+
+    private static void pressGamepadFrame(
+            LaunchConfigPanel panel, InputHandler input, FakeGamepadStateSource source, int gamepadButton) {
+        source.setDevices(GamepadStateSource.DeviceState.connected(0, "pad", buttons(gamepadButton), 0f, 0f));
+        input.refreshLogicalSnapshot();
+        panel.update(input);
+        source.setDevices(GamepadStateSource.DeviceState.connected(0, "pad", buttons(), 0f, 0f));
+        input.refreshLogicalSnapshot();
+    }
+
+    private static boolean[] buttons(int... pressedButtons) {
+        boolean[] buttons = new boolean[GLFW_GAMEPAD_BUTTON_LAST + 1];
+        for (int button : pressedButtons) {
+            buttons[button] = true;
+        }
+        return buttons;
+    }
+
+    private static final class FakeGamepadStateSource implements GamepadStateSource {
+        private final List<DeviceState> devices = new ArrayList<>();
+
+        void setDevices(DeviceState... devices) {
+            this.devices.clear();
+            this.devices.addAll(List.of(devices));
+        }
+
+        @Override
+        public List<DeviceState> pollDevices() {
+            return List.copyOf(devices);
+        }
     }
 
     private static final class TrackingStore extends LaunchProfileStore {
