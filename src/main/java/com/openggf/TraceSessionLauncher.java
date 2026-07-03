@@ -208,6 +208,7 @@ public final class TraceSessionLauncher {
             loop.setTraceCameraFocusController(null);
             this.cameraFocusController = null;
             activeSession = null;
+            GameServices.audio().setRewindHistoryArmed(false);
             TraceGhostHook.clear(ghostHook);
             TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
             LOGGER.log(java.util.logging.Level.SEVERE,
@@ -359,6 +360,11 @@ public final class TraceSessionLauncher {
                 new VisualTraceRewindStepper(loop, movie, trace, movieBaseFrame, traceBaseFrame),
                 60);
         this.rewindController = gameplayMode.getRewindController();
+        // A Trace Test Mode session is the whole reason held rewind exists
+        // here; arm PCM recording for its lifetime so held rewind has audio
+        // history, and disarm it in teardown()/the bootstrap failure path
+        // below so no session leaves it running afterward.
+        GameServices.audio().setRewindHistoryArmed(true);
     }
 
     private void syncVisualRewindCursors(boolean playing) {
@@ -419,6 +425,7 @@ public final class TraceSessionLauncher {
         // half-torn-down launcher.
         activeSession = null;
         TraceGhostHook.clear(ghostHook);
+        GameServices.audio().setRewindHistoryArmed(false);
         GameServices.playbackDebug().endSession();
         if (rewindController != null) {
             rewindController.commitDeferredAudioRestore();

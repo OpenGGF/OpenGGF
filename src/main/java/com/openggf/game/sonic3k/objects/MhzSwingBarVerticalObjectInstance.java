@@ -14,6 +14,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -187,11 +188,11 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
         if (wasRolling) {
             // ROM loc_3F2BE (sonic3k.asm:83752-83754): add.w d0,y_pos(a1) touches only the pixel word,
             // leaving y_sub untouched.
-            player.setCentreYPreserveSubpixel((short) correctedCentreY);
+            NativePositionOps.writeYPosPreserveSubpixel(player, correctedCentreY);
         }
         // ROM loc_3F316 (sonic3k.asm:83757-83759): move.w d0,x_pos(a1) touches only the pixel word,
         // leaving x_sub untouched.
-        player.setCentreXPreserveSubpixel((short) (spawn.x() + sideOffset));
+        NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x() + sideOffset);
         player.setRenderFlips(sideOffset < 0, false);
         player.setAnimationId(Sonic3kAnimationIds.WALK);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
@@ -219,7 +220,7 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
         state.phase = (state.phase + 8) & 0xFF;
         // ROM sub_3F11C (sonic3k.asm:83625-83626): add.w x_pos(a0),d1 / move.w d1,x_pos(a1) writes only
         // the pixel word each climb frame, leaving x_sub untouched.
-        player.setCentreXPreserveSubpixel((short) (spawn.x() + hangingXOffsetFor(state.phase, player.getRenderHFlip())));
+        NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x() + hangingXOffsetFor(state.phase, player.getRenderHFlip()));
         player.setMappingFrame(hangingFrameFor(state.phase));
     }
 
@@ -247,7 +248,7 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
         player.setAnimationId(Sonic3kAnimationIds.WALK);
         // ROM loc_3F1C8 (sonic3k.asm:83669): move.w x_pos(a0),x_pos(a1) touches only the pixel word,
         // leaving x_sub untouched.
-        player.setCentreXPreserveSubpixel((short) spawn.x());
+        NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x());
         player.setXSpeed((short) xSpeed);
         player.setRenderFlips(launchLeft, player.getRenderVFlip());
         player.setMoveLockTimer(AUTO_RELEASE_MOVE_LOCK);

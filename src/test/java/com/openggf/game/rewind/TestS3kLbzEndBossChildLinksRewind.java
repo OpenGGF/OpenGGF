@@ -146,6 +146,145 @@ class TestS3kLbzEndBossChildLinksRewind {
                 "restored boss must rebuild its full owned-child list including tubes and spike ball");
     }
 
+    @Test
+    void midDefeatRewindRebuildsDebrisSmokeAndExtender() throws Exception {
+        ObjectManager objectManager = createManagerWithBoss();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+
+        LbzEndBossInstance boss = only(objectManager, LbzEndBossInstance.class);
+        invokePrivate(boss, "startIntro");
+        invokePrivate(boss, "launchSpikeBall");
+        // The spike-ball explosion sprays eight debris pieces and four smoke puffs.
+        invokePrivate(firstOfSimpleName(objectManager, "LbzEndBossSpikeBallChild"), "explode");
+        // startDefeat spawns the gradual-max-X extender (and the DEFERRED explosion controller).
+        invokePrivate(boss, "startDefeat");
+
+        assertEquals(8, liveOfSimpleName(objectManager, "LbzEndBossDebrisChild"),
+                "precondition: eight debris pieces from the spike-ball spray");
+        assertEquals(4, liveOfSimpleName(objectManager, "LbzEndBossSmokePuffChild"),
+                "precondition: four smoke puffs from the spike-ball spray");
+        assertEquals(1, liveOfSimpleName(objectManager, "LbzEndBossGradualMaxXExtenderChild"),
+                "precondition: one gradual-max-X extender from startDefeat");
+        List<Integer> debrisFramesBefore = intFieldOf(objectManager, "LbzEndBossDebrisChild", "frame");
+        List<Integer> debrisXVelBefore = intFieldOf(objectManager, "LbzEndBossDebrisChild", "xVel");
+        ObjectRefId bossId = objectId(objectManager, boss);
+
+        RewindRegistry rewindRegistry = new RewindRegistry();
+        rewindRegistry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        // Diverge: drop a debris piece, a smoke puff, and the extender.
+        objectManager.removeDynamicObject(firstOfSimpleName(objectManager, "LbzEndBossDebrisChild"));
+        objectManager.removeDynamicObject(firstOfSimpleName(objectManager, "LbzEndBossSmokePuffChild"));
+        objectManager.removeDynamicObject(firstOfSimpleName(objectManager, "LbzEndBossGradualMaxXExtenderChild"));
+
+        rewindRegistry.restore(snapshot);
+
+        LbzEndBossInstance restored = objectById(objectManager, LbzEndBossInstance.class, bossId);
+        assertEquals(8, liveOfSimpleName(objectManager, "LbzEndBossDebrisChild"),
+                "all eight debris pieces must be recreated on restore");
+        assertEquals(4, liveOfSimpleName(objectManager, "LbzEndBossSmokePuffChild"),
+                "all four smoke puffs must be recreated on restore");
+        assertEquals(1, liveOfSimpleName(objectManager, "LbzEndBossGradualMaxXExtenderChild"),
+                "the gradual-max-X extender must be recreated on restore");
+        assertTrue(restored.usesLocalGradualMaxXExtenderForTests(),
+                "the boss's extender-active flag must restore");
+
+        // The debris cosmetics (frame) and motion (xVel) — newly captured scalars — must
+        // round-trip: the restored multiset matches the captured one.
+        assertEquals(debrisFramesBefore, intFieldOf(objectManager, "LbzEndBossDebrisChild", "frame"),
+                "debris render frames must round-trip across the rewind");
+        assertEquals(debrisXVelBefore, intFieldOf(objectManager, "LbzEndBossDebrisChild", "xVel"),
+                "debris x velocities must round-trip across the rewind");
+    }
+
+    @Test
+    void midDefeatRewindKeepsExtenderAndCameraBoundaryCoherent() throws Exception {
+        // POST_DEFEAT_CAMERA_MAX_X is $3AB8; start the boundary below it so the extender
+        // keeps extending (does not immediately snap-and-expire).
+        final int startMaxX = 0x3A00;
+        ObjectManager objectManager = createManagerWithBoss();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        Camera camera = harnessCamera(objectManager);
+        camera.setMaxX((short) startMaxX);
+
+        LbzEndBossInstance boss = only(objectManager, LbzEndBossInstance.class);
+        invokePrivate(boss, "startDefeat");
+        ObjectInstance extender = firstOfSimpleName(objectManager, "LbzEndBossGradualMaxXExtenderChild");
+
+        // Drive the extender a few frames: it accumulates a $4000/frame sub-pixel value and
+        // adds the integer part to Camera_max_X each frame (accelerating), mutating global
+        // camera state and its own accumulator together.
+        for (int f = 1; f <= 6; f++) {
+            driveUpdate(extender, f);
+        }
+        int capturedMaxX = camera.getMaxX() & 0xFFFF;
+        int capturedAccumulator = readInt(extender, "accumulator");
+        assertTrue(capturedMaxX > startMaxX, "precondition: extender advanced the camera boundary");
+        assertTrue(capturedAccumulator > 0, "precondition: extender holds a non-zero accumulator");
+
+        RewindRegistry rewindRegistry = new RewindRegistry();
+        rewindRegistry.register(objectManager.rewindSnapshottable());
+        rewindRegistry.register(camera);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        // Diverge BOTH the global camera boundary and the object graph: push the boundary to
+        // the snap target and drop the extender.
+        camera.setMaxX((short) 0x3AB8);
+        objectManager.removeDynamicObject(extender);
+
+        rewindRegistry.restore(snapshot);
+
+        ObjectInstance restoredExtender =
+                firstOfSimpleName(objectManager, "LbzEndBossGradualMaxXExtenderChild");
+        assertNotSame(extender, restoredExtender, "restore recreates the extender fresh");
+        // Object and global state must agree at the captured frame: neither lost nor double-applied.
+        assertEquals(capturedMaxX, camera.getMaxX() & 0xFFFF,
+                "camera boundary must restore to its captured value (not the diverged one)");
+        assertEquals(capturedAccumulator, readInt(restoredExtender, "accumulator"),
+                "extender accumulator must restore to its captured value");
+
+        // One more step from the restored pair must continue the ROM progression exactly, i.e.
+        // add the current integer accumulator part to the restored boundary (no double-apply).
+        int expectedNextMaxX = capturedMaxX + ((capturedAccumulator + 0x4000) >>> 16);
+        driveUpdate(restoredExtender, 7);
+        assertEquals(expectedNextMaxX, camera.getMaxX() & 0xFFFF,
+                "post-restore extender must continue extending from the restored boundary");
+    }
+
+    private static Camera harnessCamera(ObjectManager objectManager) throws Exception {
+        LbzEndBossInstance boss = only(objectManager, LbzEndBossInstance.class);
+        Method m = LbzEndBossInstance.class.getDeclaredMethod("cameraOrNull");
+        m.setAccessible(true);
+        return (Camera) m.invoke(boss);
+    }
+
+    private static void driveUpdate(ObjectInstance object, int frameCounter) throws Exception {
+        Method m = object.getClass().getDeclaredMethod("update", int.class,
+                com.openggf.game.PlayableEntity.class);
+        m.setAccessible(true);
+        m.invoke(object, frameCounter, null);
+    }
+
+    private static List<Integer> intFieldOf(ObjectManager objectManager, String simpleName, String field) {
+        return objectManager.getActiveObjects().stream()
+                .filter(o -> o.getClass().getSimpleName().equals(simpleName))
+                .filter(o -> !o.isDestroyed())
+                .map(o -> readInt(o, field))
+                .sorted()
+                .toList();
+    }
+
+    private static int readInt(Object target, String field) {
+        try {
+            java.lang.reflect.Field f = target.getClass().getDeclaredField(field);
+            f.setAccessible(true);
+            return f.getInt(target);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static ObjectManager createManagerWithBoss() {
         ObjectManager[] holder = new ObjectManager[1];
         Camera camera = mockCamera();

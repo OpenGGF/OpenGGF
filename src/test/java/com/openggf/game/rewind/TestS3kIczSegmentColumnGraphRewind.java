@@ -122,6 +122,65 @@ class TestS3kIczSegmentColumnGraphRewind {
     }
 
     @Test
+    void segmentColumnRestoresAfterPlayerBreaksBottomSegment() throws Exception {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        objectManager.update(harness.camera().getX(), null, List.of(), 0);
+        List<ObjectInstance> segments = liveSegments(objectManager);
+        assertEquals(4, segments.size(), "precondition: tall ICZ column must spawn four segments");
+        ObjectInstance bottom = segments.get(0);
+        ObjectInstance second = segments.get(1);
+        assertEquals(0, readIntField(bottom, "subtype"), "precondition: bottom segment is subtype 0");
+        assertEquals(2, readIntField(second, "subtype"), "precondition: second segment is subtype 2");
+
+        // Player push-break (tryBreakFromContact): the bottom segment latches its
+        // cascade flag and destroys itself; the segment above has already entered
+        // its cascade wait by the end of the frame (ascending update order).
+        writeBooleanField(bottom, "cascadeActive", true);
+        ((com.openggf.level.objects.AbstractObjectInstance) bottom).setDestroyed(true);
+        writeBooleanField(second, "cascadeActive", true);
+        writeIntField(second, "timer", 10);
+        writeObjectField(second, "phase", enumConstant(second, "Phase", "WAITING_TO_FALL"));
+
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot withDestroyedPrevious = rewindRegistry.capture();
+        objectManager.removeDynamicObject(bottom);
+        CompositeSnapshot withSweptPrevious = rewindRegistry.capture();
+
+        // Rewind back to the break frame: the subtype-2 segment's previous link
+        // target is a DESTROYED (or absent) segment. Restore must not throw.
+        rewindRegistry.restore(withDestroyedPrevious);
+        List<ObjectInstance> restoredAfterBreak = liveSegments(objectManager);
+        assertEquals(3, restoredAfterBreak.size(),
+                "restore must bring back the three surviving segments");
+        ObjectInstance restoredSecond = restoredAfterBreak.get(0);
+        assertEquals(2, readIntField(restoredSecond, "subtype"),
+                "surviving bottom-most segment must still be subtype 2");
+        assertEquals("WAITING_TO_FALL", readObjectField(restoredSecond, "phase").toString(),
+                "cascade phase must survive the restore");
+        assertEquals(10, readIntField(restoredSecond, "timer"),
+                "cascade timer must survive the restore");
+        Object relinkedPrevious = readObjectField(restoredSecond, "previous");
+        if (relinkedPrevious != null) {
+            assertTrue(((ObjectInstance) relinkedPrevious).isDestroyed(),
+                    "a relinked previous segment must be the restored destroyed break victim");
+        }
+
+        // Rewind to a frame where the broken segment was already swept: previous
+        // is legitimately absent from the snapshot entirely.
+        rewindRegistry.restore(withSweptPrevious);
+        List<ObjectInstance> restoredAfterSweep = liveSegments(objectManager);
+        assertEquals(3, restoredAfterSweep.size(),
+                "restore must bring back the three surviving segments after sweep");
+        ObjectInstance sweptSecond = restoredAfterSweep.get(0);
+        assertEquals("WAITING_TO_FALL", readObjectField(sweptSecond, "phase").toString(),
+                "cascade phase must survive the restore without a previous segment");
+        assertNull(readObjectField(sweptSecond, "previous"),
+                "an absent previous segment must relink as null, not crash the restore");
+    }
+
+    @Test
     void segmentColumnFamilyUsesGenericRecreateWithoutExplicitS3kCodecs() throws Exception {
         assertTrue(RewindRecreatable.class.isAssignableFrom(IczSegmentColumnObjectInstance.class),
                 "ICZ segment column root must restore through generic recreate");

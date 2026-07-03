@@ -10,10 +10,10 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.SpriteMaskReplayRole;
 import com.openggf.game.GameRng;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -303,41 +303,6 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
     public GumballMachineObjectInstance(ObjectSpawn spawn) {
         super(spawn, "GumballMachine");
-    }
-
-    private static GumballMachineObjectInstance nearestMachine(RewindRecreateContext ctx) {
-        return nearestLive(ctx, GumballMachineObjectInstance.class, "gumball machine");
-    }
-
-    private static DispenserChild nearestDispenser(RewindRecreateContext ctx) {
-        return nearestLive(ctx, DispenserChild.class, "gumball dispenser");
-    }
-
-    private static <T extends ObjectInstance> T nearestLive(
-            RewindRecreateContext ctx,
-            Class<T> type,
-            String label) {
-        ObjectManager objectManager = ctx.objectServices() != null
-                ? ctx.objectServices().objectManager()
-                : null;
-        if (objectManager == null) {
-            throw new IllegalStateException("Missing ObjectManager while recreating " + label);
-        }
-        ObjectSpawn capturedSpawn = ctx.spawn();
-        return objectManager.getActiveObjects().stream()
-                .filter(type::isInstance)
-                .map(type::cast)
-                .filter(object -> !object.isDestroyed())
-                .min(java.util.Comparator.comparingInt(object -> distanceFromSpawn(object, capturedSpawn)))
-                .orElseThrow(() -> new IllegalStateException(
-                        "Missing restored " + label + " for GumballMachine rewind recreate"));
-    }
-
-    private static int distanceFromSpawn(ObjectInstance object, ObjectSpawn capturedSpawn) {
-        if (capturedSpawn == null) {
-            return 0;
-        }
-        return Math.abs(object.getX() - capturedSpawn.x()) + Math.abs(object.getY() - capturedSpawn.y());
     }
 
     private void spawnChildren() {
@@ -959,7 +924,13 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
         @Override
         public ContainerDisplayChild recreateForRewind(RewindRecreateContext ctx) {
-            return new ContainerDisplayChild(ctx.spawn(), nearestMachine(ctx), CONTAINER_OFFSET_Y);
+            // Display child of the gumball machine. If the machine was swept before
+            // capture there is no anchor to read position from, so drop the child
+            // rather than throw. acceptDestroyed relinks to a restored-but-destroyed
+            // machine when that is the captured parent.
+            return RewindRecreateObjectLinks.nearestObject(ctx, GumballMachineObjectInstance.class, true)
+                    .map(machine -> new ContainerDisplayChild(ctx.spawn(), machine, CONTAINER_OFFSET_Y))
+                    .orElse(null);
         }
 
         @Override
@@ -1344,7 +1315,16 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
         @Override
         public GumballSpringChild recreateForRewind(RewindRecreateContext ctx) {
-            return new GumballSpringChild(ctx.spawn(), nearestMachine(ctx), nearestDispenser(ctx));
+            // Spring child of the gumball machine. Drop it if the machine was swept
+            // before capture (no anchor to bind to). The dispenser link is optional —
+            // the spring's update already null-checks it — so a missing dispenser
+            // still yields a coherent spring. acceptDestroyed relinks to restored-but-
+            // destroyed parts when those are the captured targets.
+            return RewindRecreateObjectLinks.nearestObject(ctx, GumballMachineObjectInstance.class, true)
+                    .map(machine -> new GumballSpringChild(ctx.spawn(), machine,
+                            RewindRecreateObjectLinks.nearestObject(ctx, DispenserChild.class, true)
+                                    .orElse(null)))
+                    .orElse(null);
         }
 
         @Override

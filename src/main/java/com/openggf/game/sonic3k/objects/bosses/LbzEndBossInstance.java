@@ -468,6 +468,24 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         return recordChild(new LbzEndBossSpikeBallChild(this, 0));
     }
 
+    // Defeat-phase ephemerals. All of their live state (motion, cosmetics, timers) is captured
+    // and restored in phase 2, so they are rebuilt with placeholder constructor args and just
+    // re-registered here. The explosion-controller child is deliberately left non-recreatable
+    // (policy-DEFERRED: it owns a non-deterministic explosion emitter), and a structural owned-
+    // child list tolerates that missing child without a dangling reference.
+
+    LbzEndBossDebrisChild recreateDebrisChild() {
+        return recordChild(new LbzEndBossDebrisChild(this));
+    }
+
+    LbzEndBossSmokePuffChild recreateSmokePuffChild() {
+        return recordChild(new LbzEndBossSmokePuffChild(this, 0, 0, 0));
+    }
+
+    LbzEndBossGradualMaxXExtenderChild recreateGradualMaxXExtenderChild() {
+        return recordChild(new LbzEndBossGradualMaxXExtenderChild(this));
+    }
+
     private static final int[][] TUBE_SEGMENT_SPAWN_DATA = {
             {-0x18, 0x38, 0}, {0x18, 0x38, 2}, {0, 0x38, 4}
     };
@@ -1466,6 +1484,15 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             yVel = subtype == 0 ? -0x200 : 0;
         }
 
+        // The (parent, x, y, subtype) constructor already matches the recreate probe's
+        // (enclosing, int, int, int) signature; all state (position, delay, yVel, frame) is
+        // captured and restored in phase 2, so the probe's placeholder args are safe.
+        @Override
+        public AbstractBossChild recreateForRewind(RewindRecreateContext ctx) {
+            LbzEndBossInstance boss = nearestBossForRewind(ctx);
+            return boss == null ? null : boss.recreateSmokePuffChild();
+        }
+
         @Override
         public void update(int frameCounter, PlayableEntity player) {
             if (!beginUpdate(frameCounter)) {
@@ -1505,14 +1532,15 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
      * (MoveChkDel) draw every frame. Both delete via camera-relative bounds.
      */
     private static final class LbzEndBossDebrisChild extends AbstractBossChild implements LbzEndBossGraphChild {
-        @RewindTransient(reason = "Constructor-derived mapping frame for this debris piece.")
-        private final int frame;
-        @RewindTransient(reason = "Constructor-derived render flip for this debris piece.")
-        private final boolean hFlip;
-        @RewindTransient(reason = "Constructor-derived render flip for this debris piece.")
-        private final boolean vFlip;
-        @RewindTransient(reason = "Constructor-derived flicker mode for this debris piece.")
-        private final boolean flicker;
+        // Debris pieces come from three heterogeneous spawn sites (platforms, tube segments,
+        // spike-ball spray) with per-piece render frame/flip/flicker, so these cannot be
+        // re-derived from reconstruction order like the platform chain / tube offsets. They
+        // are captured scalars instead: the rewind recreate path rebuilds a debris piece with
+        // placeholder cosmetics that restore phase 2 overwrites with the exact captured values.
+        private int frame;
+        private boolean hFlip;
+        private boolean vFlip;
+        private boolean flicker;
         private int xVel;
         private int yVel;
         private int xFixed;
@@ -1532,6 +1560,18 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             this.hFlip = hFlip;
             this.vFlip = vFlip;
             this.flicker = flicker;
+        }
+
+        // Probe constructor for the rewind recreate path; the captured cosmetics/motion are
+        // restored in phase 2, so placeholders are safe. Never added to the manager.
+        private LbzEndBossDebrisChild(LbzEndBossInstance parent) {
+            this(parent, 0, 0, 0, 0, 0, false, false, false);
+        }
+
+        @Override
+        public AbstractBossChild recreateForRewind(RewindRecreateContext ctx) {
+            LbzEndBossInstance boss = nearestBossForRewind(ctx);
+            return boss == null ? null : boss.recreateDebrisChild();
         }
 
         @Override
@@ -1643,6 +1683,12 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         private LbzEndBossGradualMaxXExtenderChild(LbzEndBossInstance parent) {
             super(parent, "LBZEndBossMaxXExtender", 0, 0xCB);
             parent.localGradualMaxXExtenderActive = true;
+        }
+
+        @Override
+        public AbstractBossChild recreateForRewind(RewindRecreateContext ctx) {
+            LbzEndBossInstance boss = nearestBossForRewind(ctx);
+            return boss == null ? null : boss.recreateGradualMaxXExtenderChild();
         }
 
         @Override

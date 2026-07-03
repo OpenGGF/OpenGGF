@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -120,7 +121,10 @@ class TestS2HtzBossGraphRewind {
     }
 
     @Test
-    void htzBossHazardRecreateFailsLoudlyWhenNoLiveHtzBossExists() {
+    void htzBossHazardRecreateDropsChildWhenNoLiveHtzBossExists() {
+        // A destroyed/swept HTZ boss is a legitimate rewind state: the flamethrower
+        // hazard has no parent to bind to, so recreate must drop it (return null)
+        // rather than throw. Its live update already self-expires with a dead parent.
         Harness harness = Harness.create(List.of());
         ObjectManager objectManager = harness.objectManager();
         PerObjectRewindSnapshot state = new PerObjectRewindSnapshot(
@@ -131,11 +135,10 @@ class TestS2HtzBossGraphRewind {
                 0,
                 state);
 
-        IllegalStateException thrown = assertThrows(IllegalStateException.class,
-                () -> ObjectRewindDynamicCodecs.genericRecreate(
-                        entry, new DynamicObjectRecreateContext(objectManager)));
-        assertTrue(thrown.getMessage().contains("HTZ boss"),
-                "missing-parent failure should name the HTZ boss requirement");
+        ObjectInstance recreated = ObjectRewindDynamicCodecs.genericRecreate(
+                entry, new DynamicObjectRecreateContext(objectManager));
+        assertNull(recreated,
+                "flamethrower hazard must be dropped when no HTZ boss survives to parent it");
     }
 
     @Test

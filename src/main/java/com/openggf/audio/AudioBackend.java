@@ -188,6 +188,18 @@ public interface AudioBackend {
     default void setReversePlaybackRate(double rate) {
     }
 
+    /**
+     * Arms or disarms continuous PCM rewind-history recording. Implementations
+     * that maintain a raw-PCM rewind ring (for reverse audio presentation)
+     * should only pay the per-buffer copy cost while a rewind consumer is
+     * actually armed (e.g. live rewind enabled and in a rewindable game mode,
+     * or an active Trace Test Mode session) — recording unconditionally wastes
+     * the copy when nothing can ever read it back, and leaves stale history
+     * around to be accidentally rewound into across a boundary.
+     */
+    default void setRewindHistoryArmed(boolean armed) {
+    }
+
     default boolean supportsDeterministicRuntimePresentation() {
         return false;
     }

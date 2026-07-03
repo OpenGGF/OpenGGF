@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -23,6 +22,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
@@ -406,8 +406,8 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         // (e.g. the human-controlled lead) is never modified. This is per-frame
         // scratch state: it is cleared at the start of every update (before any
         // rewind snapshot boundary), so it never needs to be captured for rewind.
-        @RewindTransient(reason = "Per-frame TouchResponse scratch; cleared at the start of "
-                + "every update before any rewind snapshot boundary, so it is always null when captured.")
+        // Its non-capture disposition lives centrally in DefaultObjectRewindPolicies
+        // (TRANSIENT) rather than as a per-object rewind annotation.
         private AbstractPlayableSprite pendingCapturePlayer;
         private int priorityBucket = PRIORITY_BUCKET;
         private int mappingFrame = SIDE_CHILD_FRAMES[0];
@@ -654,8 +654,8 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             // ROM loc_8D7D4 does move.w to x_pos(a1)/y_pos(a1), which leaves the
             // captured player's subpixel words untouched. Preserve them here so a
             // carried CPU keeps its ROM x_sub/y_sub (e.g. F600/2E00).
-            capturedPlayer.setCentreXPreserveSubpixel((short) (currentX + xOffset));
-            capturedPlayer.setCentreYPreserveSubpixel((short) (currentY + 8));
+            NativePositionOps.writeXPosPreserveSubpixel(capturedPlayer, currentX + xOffset);
+            NativePositionOps.writeYPosPreserveSubpixel(capturedPlayer, currentY + 8);
         }
 
         private void releaseCapturedPlayerOnWallImpact() {

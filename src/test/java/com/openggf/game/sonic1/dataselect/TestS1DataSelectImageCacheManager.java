@@ -267,6 +267,7 @@ public class TestS1DataSelectImageCacheManager {
     void captureFramebufferUsesResolvedRequest() throws Exception {
         Camera camera = org.mockito.Mockito.mock(Camera.class);
         com.openggf.level.LevelManager levelManager = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        com.openggf.level.objects.ObjectManager objectManager = org.mockito.Mockito.mock(com.openggf.level.objects.ObjectManager.class);
         RgbaImage captured = new RgbaImage(1, 1, new int[] {0xFF112233});
 
         try (var cameraService = org.mockito.Mockito.mockStatic(GameServices.class);
@@ -274,6 +275,8 @@ public class TestS1DataSelectImageCacheManager {
              var screenshot = org.mockito.Mockito.mockStatic(ScreenshotCapture.class)) {
             cameraService.when(GameServices::camera).thenReturn(camera);
             cameraService.when(GameServices::level).thenReturn(levelManager);
+            org.mockito.Mockito.when(levelManager.getObjectManager()).thenReturn(objectManager);
+            org.mockito.Mockito.when(camera.getX()).thenReturn((short) 0x180);
             GraphicsManager graphicsManager = org.mockito.Mockito.mock(GraphicsManager.class);
             EngineContext engineServices = org.mockito.Mockito.mock(EngineContext.class);
             engineServicesStatic.when(EngineServices::current).thenReturn(engineServices);
@@ -311,6 +314,8 @@ public class TestS1DataSelectImageCacheManager {
                     com.openggf.game.LevelLoadMode.PREVIEW_CAPTURE);
             org.mockito.Mockito.verify(camera).setX((short) 0x180);
             org.mockito.Mockito.verify(camera).setY((short) (0x100 - 96));
+            org.mockito.Mockito.verify(levelManager).recomputeParallaxAfterRewindRestore();
+            org.mockito.Mockito.verify(objectManager).postCameraPlacementUpdate(0x180);
             org.mockito.Mockito.verify(levelManager).drawWithRenderOptions(
                     null,
                     com.openggf.level.LevelManager.LevelRenderOptions.previewCapture());
