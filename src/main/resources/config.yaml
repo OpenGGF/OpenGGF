@@ -18,7 +18,7 @@ display:
 
 # ── Input ──
 input:
-  pause: ENTER   # Toggle pause
+  pause: ENTER   # Toggle pause; the gamepad Start button also toggles it
   controller:
     enabled: true   # Enable gamepad/controller input
     deadzone: 0.35   # Analog controller deadzone
@@ -32,7 +32,7 @@ input:
     a: SPACE   # Player 1: action button A
     b: ""   # Player 1: action button B
     c: ""   # Player 1: action button C
-    start: BACKSPACE   # Player 1: start (in-game pause)
+    start: BACKSPACE   # Player 1: start (in-game pause); keyboard-only, gamepad Start toggles input.pause instead
   player2:
     up: I   # Player 2: look up
     down: K   # Player 2: crouch/roll
@@ -74,7 +74,7 @@ startup:
 # ── Rewind (live) ──
 rewind:
   liveEnabled: false   # Enable held-key rewind during ordinary live play
-  liveKey: R   # Key held to rewind during live play
+  liveKey: R   # Key held to rewind during live play; the gamepad left bumper (L1/LB) also holds rewind
   tapeCoastEnabled: false   # Continue rewinding with a decelerating tape-coast after key release
   tapeCoastAcceleration: 0.25   # Per-tick speed increase while tape-coast is held
   tapeCoastDeceleration: 0.5   # Per-tick speed decrease after release
@@ -140,8 +140,8 @@ debug:
     test: T   # Debug-only test button
     nextAct: PAGE_UP   # Advance to the next act
     nextZone: PAGE_DOWN   # Advance to the next zone
-    debugMode: D   # Toggle debug movement mode
-    frameStep: Q   # Step forward one frame while paused
+    debugMode: D   # Toggle debug movement mode; the gamepad north face button (Y/Triangle) also toggles it
+    frameStep: Q   # Step forward one frame while paused; the gamepad right bumper (RB/R1) also steps a frame
     lastCheckpoint: C   # Teleport to the last checkpoint
     levelSelect: F9   # Open the level select screen
     superSonic: U   # Toggle Super Sonic debug mode

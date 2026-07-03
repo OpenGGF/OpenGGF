@@ -97,6 +97,11 @@ public class LevelTilemapManager {
     // ring fills the leading-edge column at the camera's current position.
     private int foregroundRingCameraX;
     private int foregroundRingScreenWidthPx;
+    // Last reconciled visible window (chunk-aligned WORLD coordinates, valid while
+    // foregroundRingSeeded). World coords — not mod-$200 cell indices — so a
+    // full-lap camera jump reads as disjoint windows, not a spurious match.
+    private int foregroundRingLastLeftCol;
+    private int foregroundRingLastRightCol;
     private static final int FG_RING_WIDTH_PX = VDP_BG_PLANE_WIDTH_PX;
 
     // --- Pattern lookup data ---
@@ -270,10 +275,11 @@ public class LevelTilemapManager {
             return;
         }
 
-        // FG ring active and already built: incremental leading-edge fill only.
+        // FG ring active and already built: incremental window reconcile only
+        // (fills columns entering the visible window on either edge).
         if (fgWrap && !foregroundTilemapDirty && foregroundTilemapData != null
                 && foregroundRingSeeded) {
-            if (foregroundRingFillLeadingEdge(blockLookup, level)) {
+            if (foregroundRingReconcileWindow(blockLookup, level)) {
                 uploadForegroundTilemap();
             }
             ensurePatternLookupData();
@@ -703,37 +709,79 @@ public class LevelTilemapManager {
         // the camera's leading edge. Every cell c == worldX mod $200 is hit once,
         // matching what the flat-sample would show at the current camera position
         // (so the onset is identical to the pre-fix natural scroll-in). The
-        // leading-edge fill then advances forest into the cells frame-by-frame.
+        // window reconcile then advances forest into the cells frame-by-frame.
         int lead = foregroundRingCameraX + foregroundRingScreenWidthPx;
         int rightCol = Math.floorDiv(lead, chunkWidth) * chunkWidth;
         for (int worldX = rightCol - FG_RING_WIDTH_PX + chunkWidth; worldX <= rightCol; worldX += chunkWidth) {
             fillForegroundRingColumnAtWorld(blockLookup, level, worldX);
         }
+        foregroundRingLastLeftCol = Math.floorDiv(foregroundRingCameraX, chunkWidth) * chunkWidth;
+        foregroundRingLastRightCol = rightCol;
     }
 
     /**
-     * Fills the persistent FG ring's leading-edge column(s) (the rightmost
-     * on-screen chunk columns at the camera's current position) from the flat
-     * layout, retaining all other cells. As the camera advances into the forest
-     * band, the entering columns draw forest into their ring cells; the wrapped
-     * camera then re-shows those retained cells (seamless $200 loop), matching
-     * the ROM Plane A ring. Returns true if any cell was rewritten.
+     * Reconciles the persistent FG ring with the camera's current visible window:
+     * fills the chunk columns that ENTERED the window since the last reconcile,
+     * from the flat layout, retaining all other cells.
+     * <p>
+     * Forward motion fills at the leading (right) edge — as the camera advances
+     * into the forest band, entering columns draw forest into their ring cells and
+     * the wrapped camera re-shows retained cells (seamless $200 loop), matching
+     * the ROM Plane A {@code DrawTilesAsYouMove} model. Backward motion (held
+     * rewind) symmetrically fills at the trailing (left) edge, where cells hold
+     * lap-ahead content from the discarded forward timeline. Because every column
+     * is refreshed as it enters view, ring correctness is independent of camera
+     * HISTORY — no rewind-restore invalidation is needed.
+     * <p>
+     * Each moving edge fills one extra prefetch column beyond the window. Its ring
+     * cell aliases (mod $200) to a world column on the far side of the window,
+     * off-screen while the visible span stays under {@code $200 - 2*chunk} px.
+     * A jump of at least the ring width (rewind seek, teleport) leaves no valid
+     * cells and degenerates to a full re-seed — bounded at one ring lap.
+     * <p>
+     * Returns true if any cell was rewritten (caller re-uploads). A stationary
+     * camera rewrites nothing and skips the upload.
      */
-    private boolean foregroundRingFillLeadingEdge(BlockLookup blockLookup, Level level) {
+    private boolean foregroundRingReconcileWindow(BlockLookup blockLookup, Level level) {
         if (foregroundTilemapData == null) {
             return false;
         }
         int chunkWidth = LevelConstants.CHUNK_WIDTH;
-        // Redraw the leading edge region each frame: the rightmost ~2 chunk
-        // columns of the visible window. This is idempotent (re-drawing forest
-        // already there) and guarantees newly-entered columns are filled as the
-        // camera advances up to 4px/frame.
         int lead = foregroundRingCameraX + foregroundRingScreenWidthPx;
         int rightCol = Math.floorDiv(lead, chunkWidth) * chunkWidth;
-        for (int worldX = rightCol - chunkWidth; worldX <= rightCol + chunkWidth; worldX += chunkWidth) {
-            fillForegroundRingColumnAtWorld(blockLookup, level, worldX);
+        int leftCol = Math.floorDiv(foregroundRingCameraX, chunkWidth) * chunkWidth;
+        int rightDelta = rightCol - foregroundRingLastRightCol;
+        int leftDelta = leftCol - foregroundRingLastLeftCol;
+        if (rightDelta == 0 && leftDelta == 0) {
+            return false;
         }
-        return true;
+        if (Math.abs(rightDelta) >= FG_RING_WIDTH_PX - chunkWidth
+                || Math.abs(leftDelta) >= FG_RING_WIDTH_PX - chunkWidth) {
+            foregroundRingSeed(blockLookup, level);
+            return true;
+        }
+        boolean filled = false;
+        if (rightDelta > 0) {
+            // Columns entering at the leading edge, plus one prefetch column.
+            // Refilling the previous edge column is idempotent and covers
+            // sub-chunk movement.
+            for (int worldX = foregroundRingLastRightCol; worldX <= rightCol + chunkWidth;
+                    worldX += chunkWidth) {
+                fillForegroundRingColumnAtWorld(blockLookup, level, worldX);
+            }
+            filled = true;
+        }
+        if (leftDelta < 0) {
+            // Columns entering at the trailing edge (held rewind), plus prefetch.
+            for (int worldX = leftCol - chunkWidth; worldX <= foregroundRingLastLeftCol;
+                    worldX += chunkWidth) {
+                fillForegroundRingColumnAtWorld(blockLookup, level, worldX);
+            }
+            filled = true;
+        }
+        foregroundRingLastLeftCol = leftCol;
+        foregroundRingLastRightCol = rightCol;
+        return filled;
     }
 
     /**
@@ -876,38 +924,6 @@ public class LevelTilemapManager {
     }
 
     /**
-     * Forces the AIZ2 ship-loop foreground "ring" tilemap to be fully rebuilt and
-     * re-seeded on the next {@link #ensureForegroundTilemapData} call, dropping the
-     * incrementally-filled leading-edge state.
-     * <p>
-     * The persistent $200 FG ring is built incrementally: only the camera's
-     * leading-edge column is filled each frame ({@link #foregroundRingFillLeadingEdge}),
-     * so the other ring cells RETAIN whatever forest columns were drawn into them as
-     * the camera advanced. After a rewind restore jumps the camera backward (or to an
-     * arbitrary earlier position), those retained cells hold columns from the
-     * discarded forward timeline and no longer match the flat layout at the restored
-     * camera-X. Because the ring is a PURE FUNCTION of (restored camera-X + static
-     * layout), it does not need to be snapshotted — only force-rebuilt from scratch.
-     * <p>
-     * This clears the seed/dirty latches so the next full build re-seeds every ring
-     * cell from the flat layout at the restored camera position (via
-     * {@link #foregroundRingSeed}), then resumes the cheap incremental fill. The
-     * incremental path is left intact for normal play; only the rewind hook calls
-     * this.
-     * <p>
-     * Real fields reset: {@code foregroundTilemapDirty}=true,
-     * {@code foregroundRingSeeded}=false, {@code lastForegroundWrap}=null.
-     */
-    public void resetForegroundRingForRewind() {
-        foregroundTilemapDirty = true;
-        foregroundRingSeeded = false;
-        // Drop the wrap-state latch so the next ensure treats the current fgWrap as a
-        // state change and forces the full (re-seeding) build rather than the
-        // incremental leading-edge fill.
-        lastForegroundWrap = null;
-    }
-
-    /**
      * Invalidates the incremental BG-window-shift baseline so the first
      * post-rewind {@link #ensureBackgroundTilemapData} performs a full rebuild from
      * the restored camera window rather than an in-place one-column arraycopy shift.
@@ -932,15 +948,21 @@ public class LevelTilemapManager {
     }
 
     /**
-     * Convenience hook for the rewind system: force-rebuilds both the AIZ2 FG ring
-     * and the BG incremental-shift window after a rewind restore. The integrator
-     * registers this as a single post-restore callback. Both underlying tilemaps are
-     * pure functions of the restored camera-X plus static layout, so this only
-     * invalidates — the next-frame {@code ensure*TilemapData} full-build paths do the
-     * actual rebuild.
+     * Convenience hook for the rewind system: invalidates the BG incremental-shift
+     * window after a rewind restore. The integrator registers this as a single
+     * post-restore callback; held rewind fires it on EVERY backward step, so it
+     * must stay cheap. The BG window is a pure function of the restored camera-X
+     * plus static layout — this only invalidates; the next-frame
+     * {@code ensureBackgroundTilemapData} full-build path does the actual rebuild.
+     * <p>
+     * The foreground tilemap needs NO rewind invalidation: a flat FG tilemap is a
+     * pure function of the static layout (rewound layout mutations are covered by
+     * the geometry-reference-swap check in {@code LevelRewindSnapshotAdapter}),
+     * and the AIZ2 FG ring self-heals via {@link #foregroundRingReconcileWindow}
+     * (every column entering view is refilled on entry, on either edge; camera
+     * jumps of at least the ring width degenerate to a full re-seed).
      */
     public void resetTilemapsForRewindRestore() {
-        resetForegroundRingForRewind();
         resetBgIncrementalShiftBaseline();
     }
 

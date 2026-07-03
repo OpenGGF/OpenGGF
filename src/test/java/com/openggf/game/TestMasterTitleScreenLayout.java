@@ -1,6 +1,9 @@
 package com.openggf.game;
 
+import com.openggf.InputBindingFactory;
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
@@ -21,6 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_BACK;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LAST;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
@@ -286,6 +291,34 @@ class TestMasterTitleScreenLayout {
     }
 
     @Test
+    void gamepadBackButtonOpensLaunchPanelOnlyWhenSelectedRomIsAvailable() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        MasterTitleScreen screen = new MasterTitleScreen(config, new TrackingStore(config));
+        screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), source);
+
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, false);
+        source.setDevices(GamepadStateSource.DeviceState.connected(0, "pad", buttons(GLFW_GAMEPAD_BUTTON_BACK), 0f, 0f));
+        input.refreshLogicalSnapshot();
+        screen.update(input);
+        assertFalse(screen.isLaunchConfigPanelOpenForTest());
+
+        source.setDevices(GamepadStateSource.DeviceState.connected(0, "pad", buttons(), 0f, 0f));
+        input.refreshLogicalSnapshot();
+        screen.update(input);
+
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
+        source.setDevices(GamepadStateSource.DeviceState.connected(0, "pad", buttons(GLFW_GAMEPAD_BUTTON_BACK), 0f, 0f));
+        input.refreshLogicalSnapshot();
+        screen.update(input);
+        assertTrue(screen.isLaunchConfigPanelOpenForTest());
+    }
+
+    @Test
     void testModeTracePickerTakesPrecedenceOverLaunchPanelTab() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(com.openggf.configuration.SonicConfiguration.TEST_MODE_ENABLED, true);
@@ -384,6 +417,28 @@ class TestMasterTitleScreenLayout {
         screen.update(input);
         input.handleKeyEvent(key, GLFW_RELEASE);
         input.update();
+    }
+
+    private static boolean[] buttons(int... pressedButtons) {
+        boolean[] buttons = new boolean[GLFW_GAMEPAD_BUTTON_LAST + 1];
+        for (int button : pressedButtons) {
+            buttons[button] = true;
+        }
+        return buttons;
+    }
+
+    private static final class FakeGamepadStateSource implements GamepadStateSource {
+        private final List<DeviceState> devices = new ArrayList<>();
+
+        void setDevices(DeviceState... devices) {
+            this.devices.clear();
+            this.devices.addAll(List.of(devices));
+        }
+
+        @Override
+        public List<DeviceState> pollDevices() {
+            return List.copyOf(devices);
+        }
     }
 
     private static LogicalInputSnapshot logicalPress(int directionMask, int actionMask, boolean startPressed) {

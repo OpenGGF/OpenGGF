@@ -8,4 +8,15 @@ import com.openggf.game.PlayableEntity;
  */
 public interface ObjectControlledSolidContactController {
     boolean allowsObjectControlledSolidContact(PlayableEntity player, ObjectInstance candidate);
+
+    /**
+     * Returns whether this controller currently owns {@code player} through an
+     * active carry state. The rewind post-restore pass uses this to relink the
+     * player's carry-owner reference to the restored controller instance (the
+     * live reference is not part of any snapshot and goes stale when the
+     * restore recreates the owning object).
+     */
+    default boolean ownsCarriedPlayerForRewind(PlayableEntity player) {
+        return false;
+    }
 }

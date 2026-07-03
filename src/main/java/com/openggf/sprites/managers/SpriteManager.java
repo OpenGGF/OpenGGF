@@ -1256,6 +1256,34 @@ public class SpriteManager {
 		}
 	}
 
+	/**
+	 * Relinks each player's carry-owner reference (MGZ top-platform style
+	 * object-controlled carry) after a rewind restore. The reference itself is
+	 * not captured in snapshots: the owning object's restored carry state is
+	 * authoritative, so this pass points the player at the live restored owner
+	 * (or clears a stale reference when no restored object owns the player).
+	 */
+	public void refreshCarrySolidContactOwnersAfterRewindRestore(ObjectManager objectManager) {
+		if (objectManager == null) {
+			return;
+		}
+		Collection<ObjectInstance> activeObjects = objectManager.getActiveObjects();
+		for (Sprite sprite : sprites.values()) {
+			if (!(sprite instanceof AbstractPlayableSprite playable)) {
+				continue;
+			}
+			ObjectInstance owner = null;
+			for (ObjectInstance object : activeObjects) {
+				if (object instanceof com.openggf.level.objects.ObjectControlledSolidContactController controller
+						&& controller.ownsCarriedPlayerForRewind(playable)) {
+					owner = object;
+					break;
+				}
+			}
+			playable.setMgzTopPlatformCarrySolidContactObject(owner);
+		}
+	}
+
 	public void refreshLatchedSolidObjectsAfterRewindRestore(ObjectManager objectManager) {
 		if (objectManager == null) {
 			return;

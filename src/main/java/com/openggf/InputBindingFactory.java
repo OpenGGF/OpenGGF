@@ -46,7 +46,9 @@ public final class InputBindingFactory {
                 config.getDouble(SonicConfiguration.CONTROLLER_DEADZONE),
                 config.getString(SonicConfiguration.CONTROLLER_PLAYER1),
                 config.getString(SonicConfiguration.CONTROLLER_PLAYER2),
-                config.getInt(SonicConfiguration.DEBUG_MODE_KEY));
+                config.getInt(SonicConfiguration.DEBUG_MODE_KEY),
+                config.getInt(SonicConfiguration.LIVE_REWIND_KEY),
+                config.getInt(SonicConfiguration.FRAME_STEP_KEY));
     }
 
     private static SonicConfigurationService createSyntheticConfig() {

@@ -12,12 +12,18 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_BACK;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_UP;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LAST;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LEFT_BUMPER;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_X;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_Y;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F1;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
+import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 class TestInputHandlerLogicalSnapshot {
 
@@ -119,6 +125,106 @@ class TestInputHandlerLogicalSnapshot {
                 PlayerInputState.of(0, 0, 0, 0, false, true),
                 PlayerInputState.neutral()));
         assertTrue(input.menuAcceptExcludingBackAction());
+    }
+
+    @Test
+    void gamepadNorthButtonTriggersDebugModeKeyPressedEdge() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), new GamepadInputManager(source));
+        int debugModeKey = config.getInt(SonicConfiguration.DEBUG_MODE_KEY);
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_Y)));
+        input.refreshLogicalSnapshot();
+
+        assertTrue(input.isKeyPressed(debugModeKey));
+    }
+
+    @Test
+    void gamepadLeftBumperHoldsRewindKeyDown() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), new GamepadInputManager(source));
+        int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER)));
+        input.refreshLogicalSnapshot();
+
+        assertTrue(input.isKeyDown(rewindKey));
+
+        source.setDevices(connectedPad(0, buttons()));
+        input.refreshLogicalSnapshot();
+
+        assertFalse(input.isKeyDown(rewindKey));
+    }
+
+    @Test
+    void gamepadRightBumperTriggersFrameStepKeyPressedEdge() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), new GamepadInputManager(source));
+        int frameStepKey = config.getInt(SonicConfiguration.FRAME_STEP_KEY);
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER)));
+        input.refreshLogicalSnapshot();
+
+        assertTrue(input.isKeyPressed(frameStepKey));
+    }
+
+    @Test
+    void gamepadBackButtonPressedEdgeIsExposedAndSuppressedUnderOverride() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), new GamepadInputManager(source));
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_BACK)));
+        input.refreshLogicalSnapshot();
+
+        assertTrue(input.isGamepadBackButtonPressed());
+
+        input.setLogicalOverride(LogicalInputSnapshot.neutral());
+        assertFalse(input.isGamepadBackButtonPressed());
+    }
+
+    @Test
+    void isDirectionHeldIsTrueForKeyboardOnlyGamepadOnlyBothOrNeither() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), source);
+        int upKey = config.getInt(SonicConfiguration.UP);
+
+        source.setDevices(connectedPad(0, buttons()));
+        input.refreshLogicalSnapshot();
+        assertFalse(input.isDirectionHeld(upKey, AbstractPlayableSprite.INPUT_UP));
+
+        input.handleKeyEvent(upKey, GLFW_PRESS);
+        input.refreshLogicalSnapshot();
+        assertTrue(input.isDirectionHeld(upKey, AbstractPlayableSprite.INPUT_UP));
+        input.handleKeyEvent(upKey, GLFW_RELEASE);
+        input.update();
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_DPAD_UP)));
+        input.refreshLogicalSnapshot();
+        assertTrue(input.isDirectionHeld(upKey, AbstractPlayableSprite.INPUT_UP));
+
+        source.setDevices(connectedPad(0, buttons()));
+        input.refreshLogicalSnapshot();
+        assertFalse(input.isDirectionHeld(upKey, AbstractPlayableSprite.INPUT_UP));
     }
 
     private static GamepadStateSource.DeviceState connectedPad(int joystickId, boolean[] buttons) {
