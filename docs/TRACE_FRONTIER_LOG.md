@@ -19,8 +19,8 @@ is now MTZ3 only.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
-Round 79 CNZ2 has greened and is ready to bank into `next`; MTZ3 round 81 is
-active with mandatory Lua PC-execute plus engine-side diagnostics around the
+Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
+round 81 is active with mandatory Lua PC-execute plus engine-side diagnostics around the
 routine-04 Obj53 contact window.
 Worker bounce policy: any `no-change`, `rejected`, `blocked`, or "gated"
 return must include targeted BizHawk Lua evidence in `luaProbes`, including
@@ -96,6 +96,7 @@ Verification:
   green.
 - Develop refresh after the round: `git fetch origin develop next` followed by
   `git merge develop` on conductor reported `Already up to date`.
+- Banked into `next` as merge `3344c27d3`.
 
 ## 2026-07-03 - S2 round 76 CNZ2 Tails max-Y boundary
 
