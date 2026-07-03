@@ -227,6 +227,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild", "player"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
+            // Per-frame TouchResponse scratch, cleared at the start of every update before any snapshot
+            // boundary (always null when captured). Central TRANSIENT instead of a per-object annotation.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild", "pendingCapturePlayer"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance", "pendingMainPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance", "pendingSidekickPlayer"), RewindFieldPolicy.CAPTURED),
