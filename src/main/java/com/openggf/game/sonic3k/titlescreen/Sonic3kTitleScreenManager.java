@@ -696,12 +696,12 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         int downKey = configService.getInt(SonicConfiguration.DOWN);
 
         // Menu navigation
-        if (input.isKeyPressed(upKey) && menuSelection > 0) {
+        if ((input.isKeyPressed(upKey) || input.logical().menuUp()) && menuSelection > 0) {
             menuSelection--;
             selectionSprite.mappingFrame = menuSelection;
             GameServices.audio().playSfx(Sonic3kSfx.SWITCH.id);
         }
-        if (input.isKeyPressed(downKey) && menuSelection < 1) {
+        if ((input.isKeyPressed(downKey) || input.logical().menuDown()) && menuSelection < 1) {
             menuSelection++;
             selectionSprite.mappingFrame = menuSelection;
             GameServices.audio().playSfx(Sonic3kSfx.SWITCH.id);
@@ -709,7 +709,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
         // Start pressed - 1 PLAYER hands off through GameLoop routing, while the
         // competition path keeps the provider-owned fade sequence.
-        if (input.isKeyPressed(jumpKey)) {
+        if (confirmPressed(input, jumpKey)) {
             if (menuSelection == 0) {
                 state = State.EXITING;
                 LOGGER.info("S3K title screen handing off to GameLoop for 1 PLAYER");
@@ -757,11 +757,19 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      */
     private boolean checkSkipToInteractive(InputHandler input) {
         int jumpKey = configService.getInt(SonicConfiguration.JUMP);
-        if (input.isKeyPressed(jumpKey)) {
+        if (confirmPressed(input, jumpKey)) {
             transitionToWhiteFlash();
             return true;
         }
         return false;
+    }
+
+    /**
+     * Keyboard Jump press or gamepad confirm (Start / any face action button),
+     * matching {@link com.openggf.game.MasterTitleScreen}'s gamepad-aware confirm gate.
+     */
+    private static boolean confirmPressed(InputHandler input, int jumpKey) {
+        return input.isKeyPressed(jumpKey) || input.logical().menuAccept();
     }
 
     private void transitionToWhiteFlash() {

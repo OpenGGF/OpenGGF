@@ -514,7 +514,8 @@ public class Sonic2LogoFlashManager {
         int jumpKey = config.getInt(SonicConfiguration.JUMP);
         int startKey = config.getInt(SonicConfiguration.PAUSE_KEY);
         return (jumpKey > 0 && inputHandler.isKeyPressed(jumpKey))
-                || (startKey > 0 && inputHandler.isKeyPressed(startKey));
+                || (startKey > 0 && inputHandler.isKeyPressed(startKey))
+                || inputHandler.logical().menuAccept();
     }
 
     // ========================================================================

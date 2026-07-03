@@ -11,6 +11,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
 import com.openggf.level.PatternDesc;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.logging.Logger;
 
@@ -179,7 +180,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
         int jumpKey = config.getInt(SonicConfiguration.JUMP);
 
         // Handle up/down navigation
-        if (input.isKeyDown(upKey)) {
+        if (input.isDirectionHeld(upKey, AbstractPlayableSprite.INPUT_UP)) {
             if (upHoldTimer == 0 || (upHoldTimer >= HOLD_REPEAT_DELAY && upHoldTimer % HOLD_REPEAT_RATE == 0)) {
                 moveUp();
             }
@@ -188,7 +189,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
             upHoldTimer = 0;
         }
 
-        if (input.isKeyDown(downKey)) {
+        if (input.isDirectionHeld(downKey, AbstractPlayableSprite.INPUT_DOWN)) {
             if (downHoldTimer == 0 || (downHoldTimer >= HOLD_REPEAT_DELAY && downHoldTimer % HOLD_REPEAT_RATE == 0)) {
                 moveDown();
             }
@@ -198,7 +199,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
         }
 
         // Handle left/right (sound test value adjustment only)
-        if (input.isKeyDown(leftKey)) {
+        if (input.isDirectionHeld(leftKey, AbstractPlayableSprite.INPUT_LEFT)) {
             if (leftHoldTimer == 0 || (leftHoldTimer >= HOLD_REPEAT_DELAY && leftHoldTimer % HOLD_REPEAT_RATE == 0)) {
                 if (selectedIndex == MENU_ENTRY_COUNT - 1) {
                     soundTestValue--;
@@ -212,7 +213,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
             leftHoldTimer = 0;
         }
 
-        if (input.isKeyDown(rightKey)) {
+        if (input.isDirectionHeld(rightKey, AbstractPlayableSprite.INPUT_RIGHT)) {
             if (rightHoldTimer == 0 || (rightHoldTimer >= HOLD_REPEAT_DELAY && rightHoldTimer % HOLD_REPEAT_RATE == 0)) {
                 if (selectedIndex == MENU_ENTRY_COUNT - 1) {
                     soundTestValue++;
@@ -227,7 +228,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
         }
 
         // Handle start/jump to select
-        if (input.isKeyPressed(jumpKey)) {
+        if (input.isKeyPressed(jumpKey) || input.logical().menuAccept()) {
             handleSelect();
         }
     }

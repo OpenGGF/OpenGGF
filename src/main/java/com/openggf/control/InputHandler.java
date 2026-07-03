@@ -107,6 +107,17 @@ public class InputHandler {
 	}
 
 	/**
+	 * Held state for a directional menu-cursor key, keyboard OR gamepad (D-pad/stick),
+	 * for callers that drive their own hold-repeat timer (e.g. level-select screens).
+	 * {@code directionMask} is one of {@code AbstractPlayableSprite.INPUT_UP/_DOWN/_LEFT/_RIGHT}.
+	 * For a single edge-triggered press instead, use {@link #logical()}'s
+	 * {@code menuUp()}/{@code menuDown()}/{@code menuLeft()}/{@code menuRight()}.
+	 */
+	public boolean isDirectionHeld(int keyCode, int directionMask) {
+		return isKeyDown(keyCode) || (logical().player1().heldMask() & directionMask) != 0;
+	}
+
+	/**
 	 * Checks whether a specific key was just pressed this frame.
 	 *
 	 * @param keyCode The GLFW key code to check

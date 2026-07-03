@@ -73,18 +73,18 @@ public final class LaunchConfigPanel {
             profile = profile.withStock(entry);
             return;
         }
-        if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.UP))) {
+        if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.UP)) || inputHandler.logical().menuUp()) {
             selectedRow = wrapRow(selectedRow - 1, visibleRows().size());
         }
-        if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.DOWN))) {
+        if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.DOWN)) || inputHandler.logical().menuDown()) {
             selectedRow = wrapRow(selectedRow + 1, visibleRows().size());
         }
         normalizeSelectedRow();
         LaunchProfile.Row row = visibleRows().get(selectedRow);
-        if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.LEFT))) {
+        if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.LEFT)) || inputHandler.logical().menuLeft()) {
             profile = profile.withPrevious(row, entry);
         }
-        if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.RIGHT))) {
+        if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.RIGHT)) || inputHandler.logical().menuRight()) {
             profile = profile.withNext(row, entry);
         }
         normalizeSelectedRow();
