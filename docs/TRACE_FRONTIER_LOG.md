@@ -20,21 +20,68 @@ The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
-round 94 is active. Rounds 90-93 used Lua PC-execute probes to rule out shared
+round 95 is active. Rounds 90-94 used Lua PC-execute probes to rule out shared
 touch ordering as the current blocker and narrow the owner to Obj53 phase/state.
 The slot 24 orb reaches the f13476-f13478 touch window around `x=$2AE7,y=$047A`
 while ROM is `x=$2AE4/$2AE4.8000,y=$0482/$0481.6800`. Rounds 92-93 proved ROM
 slot 24 consumes the boss break flag at f13359 and still runs
 `Obj53_OrbitBoss`/`Obj53_SetAnimPriority` in the same pass, but the naive engine
-equivalent regresses slot 22 to f12818. The active target is the earlier slot-22
-phase/position compensation: preserve the ROM guard where slot 22 has
-`collision_flags=$DA` at f12818/f12819 but does not run `Touch_Enemy_Part2`
-until f12820 because vertical overlap is false before then.
+equivalent regresses slot 22 to f12818. Round 94 found the root compensation:
+clean engine slot 22 is already one orbit update ahead by f12588
+(`ROM pre=2B41,0409 orbit=F4/C4`; engine pre/post=`2B44,040A` ->
+`2B48,040C orbit=FC/D4`). The active target is Obj53 intact-orbit phase/update
+ordering before f12588, then the f13359 break-tail fix. Preserve the ROM guard
+where slot 22 has `collision_flags=$DA` at f12818/f12819 but does not run
+`Touch_Enemy_Part2` until f12820 because vertical overlap is false before then.
 Worker bounce policy: any `no-change`, `rejected`, `blocked`, or "gated"
 return must include targeted BizHawk Lua evidence in `luaProbes`, including
 script path, output path, frame window, hooked PCs, and the ROM values observed.
 For slot, touch, subpixel, counter, or "RAM-gated" conclusions, a PC-execute
 probe is required before the bounce is accepted.
+Conductor cleanup policy: after a worker returns and its evidence has been
+summarized, remove any no-commit diagnostic/failure worktree and delete its local
+branch when it has no commits outside `bugfix/ai-s2-trace-next`.
+
+## 2026-07-03 - S2 round 94 MTZ3 phase-lead no-change
+
+Round 94 targeted `TestS2Mtz3LevelSelectTraceReplay` from conductor branch
+`bugfix/ai-s2-trace-next` at `b94c8490e`. The clean baseline remained MTZ3
+f13477 / 4 under `frontierOnly`: `x_speed` expected `-03FB`, actual `0x03FB`.
+
+Lua/engine evidence:
+- Read-only diagnostic worktree
+  `.worktrees/ai-s2-mtz3-round94-slot22-phase-next` produced
+  `target\diag\mtz3-round94\slot22_phase_rom.txt`,
+  `slot22_phase_engine_clean.csv`, and side-by-side summaries. ROM slot 22 at
+  f12588 is routine 02, `x=$2B41,y=$0409`, orbit/vertical `$F4/$C4`; the clean
+  engine is already one update ahead, with pre-state `x=$2B44,y=$040A` and
+  post-state `x=$2B48,y=$040C`, orbit/vertical `$FC/$D4`.
+- The same probe confirmed ROM slot 22 consumes the break at f12594 into
+  routine 04 at `x=$2B57.0000,y=$0423.0000`, `x_vel=$0080,y_vel=$FC00`,
+  `breakTimer=$3C`, then first falls at f12595. ROM still rejects the later
+  DA touch at f12818/f12819 (`yd0=$001D/$0018`, `d5=$0016`) and first accepts
+  at f12820 (`yd0=$0013 <= d5=$0016`).
+- Implementation worktree `.worktrees/ai-s2-mtz3-round94-orb-phase-next`
+  confirmed the rejected candidates with
+  `tools\bizhawk\diag_s2_mtz3_round94_orb_touch.lua` and outputs under
+  `target\lua-probes\`. Tail-only regressed to f12818; tail plus an
+  in-place-Obj53-init skip candidate only moved the regression to f12819.
+
+No source change was accepted:
+- Tail-only, tail+init-skip, and tail+init-skip without the local vertical
+  compensation were all rejected because they preserved the slot 24 same-pass
+  detach mechanism but made slot 22 touch before ROM's f12820 height gate.
+- Production source was reverted and the post-revert target run returned to the
+  clean f13477 frontier.
+
+Next target:
+- Find the object-local reason the clean engine advances Obj53 intact orbit one
+  update ahead before f12588, then combine that phase/order fix with the f13359
+  same-pass break-tail behavior. Do not touch shared touch routing or add
+  slot/frame predicates.
+- Cleanup completed after logging: removed the no-commit round 90-94 MTZ
+  diagnostic/failure worktrees and deleted their local branches after confirming
+  they had no commits outside `bugfix/ai-s2-trace-next`.
 
 ## 2026-07-03 - S2 rounds 92-93 MTZ3 Obj53 detach guard
 
