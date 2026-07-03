@@ -12,25 +12,22 @@ CNZ2 boss-lock boundary-source advance, the round 76 CNZ2 sidekick
 max-Y advance, and the round 79 CNZ2 Obj51 flee lifetime fix,
 integrated into conductor branch `bugfix/ai-s2-trace-next`: ARZ2 is green
 under `frontierOnly` and was banked into `next` as `7ef0928da`; CNZ2 is
-green under `frontierOnly` on conductor merge `3f29f2ac0`; MTZ3 is f13477 / 4 under `frontierOnly`
-(`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
+green under `frontierOnly` on conductor merge `3f29f2ac0`; MTZ3 round 96
+advances the normal targeted replay to f14204 / 188
+(`x_speed` expected `0x0200`, actual `0x0000`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now MTZ3 only.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
-round 95 is active. Rounds 90-94 used Lua PC-execute probes to rule out shared
+round 96 landed the ROM-backed later-orb refresh predicate. Rounds 90-94 used Lua PC-execute probes to rule out shared
 touch ordering as the current blocker and narrow the owner to Obj53 phase/state.
-The slot 24 orb reaches the f13476-f13478 touch window around `x=$2AE7,y=$047A`
-while ROM is `x=$2AE4/$2AE4.8000,y=$0482/$0481.6800`. Rounds 92-93 proved ROM
-slot 24 consumes the boss break flag at f13359 and still runs
-`Obj53_OrbitBoss`/`Obj53_SetAnimPriority` in the same pass, but the naive engine
-equivalent regresses slot 22 to f12818. Round 94 found the root compensation:
-clean engine slot 22 is already one orbit update ahead by f12588
-(`ROM pre=2B41,0409 orbit=F4/C4`; engine pre/post=`2B44,040A` ->
-`2B48,040C orbit=FC/D4`). The active target is Obj53 intact-orbit phase/update
-ordering before f12588, then the f13359 break-tail fix. Preserve the ROM guard
+Round 96 replaced the rejected `orbIndex >= 2` diagnostic with Obj54's ROM hit-cycle
+counter state (`objoff_3E`, engine `attackCyclesRemaining <= 4`) and kept
+the disassembly `y_pos-4` copy instead of the trace-shaped `-2` compensation.
+The active target is now the f14204 ground/orb/player transition after the
+later breakaway refresh. Preserve the ROM guard
 where slot 22 has `collision_flags=$DA` at f12818/f12819 but does not run
 `Touch_Enemy_Part2` until f12820 because vertical overlap is false before then.
 Worker bounce policy: any `no-change`, `rejected`, `blocked`, or "gated"
@@ -41,6 +38,42 @@ probe is required before the bounce is accepted.
 Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
+
+## 2026-07-03 - S2 round 96 MTZ3 later-orb refresh predicate
+
+Round 96 targeted `TestS2Mtz3LevelSelectTraceReplay` from conductor branch
+`bugfix/ai-s2-trace-next` at `3bc473b29`. The clean targeted baseline was
+f13477 / 381 errors: `y_speed` expected `0x0220`, actual `-0220`.
+
+Evidence:
+- Recreated the round-95 diagnostic `orbIndex >= 2` refresh locally and
+  confirmed it advanced MTZ3 to f14204 / 188, then rejected the child-index
+  predicate and the `boss.getY()-2` source as diagnostic-only.
+- Engine probes showed boss `objoff_2C` active broken-orb count and break-state
+  did not distinguish first and later breaks: `breakCount=0` and
+  `breakState=00` before each sampled break.
+- BizHawk probes used temporary scripts
+  `tools\bizhawk\diag_s2_mtz3_orb_break_round96.lua` and
+  `tools\bizhawk\diag_s2_mtz3_orb_break_sample_round96.lua`, with outputs
+  `target\s2_mtz3_orb_break_round96_rom.txt` and
+  `target\s2_mtz3_orb_break_sample_round96_rom.txt`.
+- The first break, slot `$22`/orb0, keeps the carried break position: f38758
+  slot `$22` is routine `$04` at `x=$2B57,y=$0423`.
+- The later slot `$24`/orb2 break executes the current copy/orbit path: f39524
+  slot `$24` is routine `$04` at `x=$2B1F,y=$0476`, with `objoff_2A=$0489`
+  matching boss `y_pos-4`, orbit angle `$98`, and vertical angle `$F4`.
+- The ROM-backed predicate is Obj54's hit-cycle counter. `Obj54_AnimateFace`
+  sets `objoff_38`, enters SubA, and decrements `objoff_3E`; Obj53 then copies
+  boss `y_pos-4` / `x_pos` before testing that break flag and running
+  `Obj53_OrbitBoss` (`docs/s2disasm/s2.asm:67605-67617,67832-67878`).
+
+Result:
+- Source now refreshes the break-away start only when the boss hit-cycle counter
+  is in the later-hit state (`attackCyclesRemaining <= 4`), using the ROM
+  `y_pos-4` source. No `-2` trace compensation or child-index gate was landed.
+- `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace` advances from
+  f13477 / 381 to f14204 / 188. The new frontier is `x_speed` expected
+  `0x0200`, actual `0x0000`.
 
 ## 2026-07-03 - S2 round 94 MTZ3 phase-lead no-change
 

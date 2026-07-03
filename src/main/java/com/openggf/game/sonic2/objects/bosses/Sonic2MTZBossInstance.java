@@ -1210,6 +1210,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             // consumeOrbBreak() returns true for the first orb that asks this frame
             // (and clears the boss flag), matching the per-frame one-orb ordering.
             if (boss.consumeOrbBreak()) {
+                refreshLaterHitBreakPosition(boss);
                 // ROM: addi_.b #1,objoff_2C(boss) — count this broken orb.
                 boss.incrementOrbBreakCount();
                 routine = RT_BREAK_AWAY;     // addq.b #2,routine
@@ -1244,6 +1245,46 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             // ROM: Obj53_ClearBossCollision + OrbitBoss + SetAnimPriority.
             orbitBoss(boss);
             setAnimPriority();
+        }
+
+        private void refreshLaterHitBreakPosition(Sonic2MTZBossInstance boss) {
+            // ROM: Obj54_AnimateFace sets objoff_38, enters SubA, and decrements
+            // objoff_3E on each hit (docs/s2disasm/s2.asm:67608-67618).
+            // BizHawk round-96 probes show the first two breaks keep the carried
+            // orbit position, while later objoff_3E states break from the position
+            // produced by the current Obj53_Main copy/orbit step. Use that ROM
+            // counter state rather than the child slot/index as the predicate.
+            if (boss.attackCyclesRemaining > 4) {
+                return;
+            }
+            int[] refreshed = previewOrbit(boss, boss.getX(), boss.getY() - 4);
+            currentX = refreshed[0];
+            currentY = refreshed[1];
+            orbitAngle = (orbitAngle + 4) & 0xFF;
+            if (boss.getOrbBreakState() == 0) {
+                verticalAngle = (verticalAngle + 8) & 0xFF;
+            }
+        }
+
+        private int[] previewOrbit(Sonic2MTZBossInstance boss, int bossX, int bossY) {
+            int outerR = boss.getOuterOrbRadius() & 0xFF;
+            int breakState = boss.getOrbBreakState();
+            int d3 = TrigLookupTable.sinHex(TILT_SCALE_ANGLE);
+            int d0 = (short) d3 * outerR;
+            int d5 = d0;
+            int d2 = boss.getInnerOrbParam() & 0xFF;
+            if (breakState != 0) {
+                d2 = 0x10;
+            }
+            d2 = (short) d2 * (short) d3;
+            d0 = TrigLookupTable.sinHex(orbitAngle & 0xFF);
+            d5 = ((short) d0 * (short) d5) >> 16;
+            int x = (short) (d5 + bossX);
+            int vertAngle = (breakState != 0) ? (flattenAngle & 0xFF) : (verticalAngle & 0xFF);
+            d0 = TrigLookupTable.sinHex(vertAngle);
+            d2 = ((short) d0 * (short) d2) >> 16;
+            int y = (short) (d2 + bossY);
+            return new int[] {x, y};
         }
 
         /**
