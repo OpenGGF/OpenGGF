@@ -401,6 +401,28 @@ public final class RewindController {
     }
 
     /**
+     * Arms or disarms continuous PCM rewind-history recording via the
+     * constructor-injected {@link AudioManager} collaborator. Package-private:
+     * {@code com.openggf.game.rewind} is a runtime-owned framework package
+     * that must not reach audio through the {@code GameServices} static
+     * facade, so held-rewind hosts in this package (e.g. {@code
+     * LiveRewindManager}) go through the controller's own explicit
+     * collaborator instead.
+     */
+    void setRewindHistoryArmed(boolean armed) {
+        if (audioManager != null) {
+            audioManager.setRewindHistoryArmed(armed);
+        }
+    }
+
+    /** See {@link #setRewindHistoryArmed}; clears the ring at a hard boundary. */
+    void clearPcmHistory() {
+        if (audioManager != null) {
+            audioManager.clearPcmHistory();
+        }
+    }
+
+    /**
      * Discards a pending deferred restore without applying it. Buffer re-roots
      * follow a committed level/act boundary whose load path has already
      * reinitialized audio for the new level ({@code LevelManager.loadLevel}

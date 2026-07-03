@@ -191,11 +191,12 @@ public final class LiveRewindManager {
             clear();
             return false;
         }
-        // Reaching here means a caller already confirmed GameMode.LEVEL and
-        // the feature is enabled this frame, so live rewind could be used —
-        // arm PCM recording so held rewind has history to play back.
-        GameServices.audio().setRewindHistoryArmed(true);
         if (gameplayMode == installedGameplayMode && rewindController != null && inputSource != null) {
+            // A caller already confirmed GameMode.LEVEL and the feature is
+            // enabled this frame, so live rewind could be used — arm PCM
+            // recording (via the controller's own AudioManager collaborator,
+            // not GameServices) so held rewind has history to play back.
+            rewindController.setRewindHistoryArmed(true);
             return true;
         }
         inputSource = new LiveRewindInputSource();
@@ -211,6 +212,9 @@ public final class LiveRewindManager {
         installedGameplayMode = gameplayMode;
         speedController = RewindSpeedController.fromConfig(config);
         rewinding = false;
+        if (rewindController != null) {
+            rewindController.setRewindHistoryArmed(true);
+        }
         return rewindController != null;
     }
 
@@ -232,8 +236,9 @@ public final class LiveRewindManager {
         // not gated by the logical rewind reset above: without this, a held
         // rewind that reaches the new level's frame-zero floor can keep
         // draining the ring backward into audio recorded before this level
-        // loaded.
-        GameServices.audio().clearPcmHistory();
+        // loaded. ensureInstalled() above returned true, so rewindController
+        // is non-null here.
+        rewindController.clearPcmHistory();
         rewinding = false;
         effectEnvelope.reset();
     }
@@ -316,7 +321,13 @@ public final class LiveRewindManager {
         if (rewinding && rewindController != null) {
             cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
         }
-        GameServices.audio().setRewindHistoryArmed(false);
+        if (rewindController != null) {
+            // Disarm through the outgoing controller's own AudioManager
+            // collaborator (still valid even though its owning session is
+            // gone) rather than GameServices, matching setRewindHistoryArmed
+            // above.
+            rewindController.setRewindHistoryArmed(false);
+        }
         installedGameplayMode = null;
         inputSource = null;
         rewindController = null;
