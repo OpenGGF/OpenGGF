@@ -716,7 +716,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
-        return java.util.List.of(new com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceStaticAdapter());
+        return java.util.List.of(
+                new com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceStaticAdapter(),
+                new Sonic3kLevelTriggerStaticAdapter(),
+                new com.openggf.game.sonic3k.features.HCZWaterSkimStaticAdapter(),
+                new com.openggf.game.sonic3k.features.HCZWaterTunnelStaticAdapter(),
+                new com.openggf.game.sonic3k.objects.HCZBreakableBarStaticAdapter(),
+                new com.openggf.game.sonic3k.objects.HCZWaterRushPaletteCycleStaticAdapter());
     }
 
     @Override
