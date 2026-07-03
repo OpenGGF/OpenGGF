@@ -297,6 +297,11 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
                 || candidate instanceof Sonic3kSpringObjectInstance;
     }
 
+    @Override
+    public boolean ownsCarriedPlayerForRewind(PlayableEntity player) {
+        return !isDestroyed() && isPlayerGrabbed(player);
+    }
+
     // =============================================================
     // Main update
     // =============================================================

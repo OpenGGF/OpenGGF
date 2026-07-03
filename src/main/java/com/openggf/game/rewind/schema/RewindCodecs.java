@@ -197,6 +197,22 @@ public final class RewindCodecs {
         return isSupportedPlainStateHolder(type);
     }
 
+    /**
+     * Returns whether an array of {@code componentType} can be restored into a
+     * freshly-allocated array (non-final field, no existing elements to reuse):
+     * every element must be materializable without an existing target value.
+     * Plain state holders qualify only when they expose a no-arg constructor
+     * ({@code newPlainStateHolder} would otherwise throw on restore).
+     */
+    static boolean supportsFreshArrayElementAllocation(Class<?> componentType) {
+        return componentType.isPrimitive()
+                || componentType.isEnum()
+                || isPlayerReferenceType(componentType)
+                || isObjectReferenceType(componentType)
+                || componentType == Palette.Color.class
+                || isSupportedConstructiblePlainStateHolder(componentType);
+    }
+
     private static boolean supportedArrayComponent(Class<?> componentType) {
         return componentType.isPrimitive()
                 || componentType.isEnum()

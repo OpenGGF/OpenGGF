@@ -287,6 +287,11 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.level.objects.ShieldObjectInstance", "player"), RewindFieldPolicy.TRANSIENT)
     );
 
+    /** Read-only view of the exact-field policy table for guard tests. */
+    static Map<FieldKey, RewindFieldPolicy> exactFieldPoliciesForAudit() {
+        return EXACT_FIELD_POLICIES;
+    }
+
     static RewindFieldPolicy policyFor(Field field) {
         RewindFieldPolicy exactPolicy = EXACT_FIELD_POLICIES.get(FieldKey.of(field));
         if (exactPolicy != null) {

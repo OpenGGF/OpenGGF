@@ -209,15 +209,27 @@ public final class RewindSchemaRegistry {
         if (finalField && !codec.capturesFinalFields()) {
             return RewindFieldPolicy.UNSUPPORTED;
         }
-        if (!finalField && codec.requiresExistingTargetValue() && !isObjectRefArrayField(field)) {
+        if (!finalField && codec.requiresExistingTargetValue() && !isCodecBackedArrayField(field)) {
             return RewindFieldPolicy.UNSUPPORTED;
         }
         return RewindFieldPolicy.CAPTURED;
     }
 
-    private static boolean isObjectRefArrayField(Field field) {
-        Class<?> type = field.getType();
-        return type.isArray() && ObjectInstance.class.isAssignableFrom(type.getComponentType());
+    /**
+     * Non-final array fields are capturable even though {@code ArrayCodec}
+     * conservatively reports {@code requiresExistingTargetValue()}: that
+     * requirement only applies to final fields (restored in place, length must
+     * match); for non-final fields the codec allocates a fresh array on
+     * restore — provided every element can also be materialized without an
+     * existing value ({@link RewindCodecs#supportsFreshArrayElementAllocation}).
+     * Without this exception a single non-final array field (e.g. a
+     * lazily-loaded ROM data cache) silently knocks the whole class off the
+     * compact schema path, dropping every policy-CAPTURED collection field
+     * with it (see the MGZ top platform grab-state rewind bug).
+     */
+    private static boolean isCodecBackedArrayField(Field field) {
+        return field.getType().isArray()
+                && RewindCodecs.supportsFreshArrayElementAllocation(field.getType().getComponentType());
     }
 
     private RewindSchemaRegistry() {}

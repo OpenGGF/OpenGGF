@@ -236,6 +236,7 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.deregisterPostRestoreCallback("parallax-derived-state");
             rewindRegistry.deregisterPostRestoreCallback("sprite-powerup-derived-state");
             rewindRegistry.deregisterPostRestoreCallback("sprite-latched-solid-derived-state");
+            rewindRegistry.deregisterPostRestoreCallback("sprite-carry-solid-derived-state");
             rewindRegistry.register(parallaxManager);
             rewindRegistry.register(waterSystem);
             rewindRegistry.register(spriteManager.rewindSnapshottable());
@@ -252,6 +253,10 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.registerPostRestoreCallback(
                     "sprite-latched-solid-derived-state",
                     () -> spriteManager.refreshLatchedSolidObjectsAfterRewindRestore(
+                            levelManager.getObjectManager()));
+            rewindRegistry.registerPostRestoreCallback(
+                    "sprite-carry-solid-derived-state",
+                    () -> spriteManager.refreshCarrySolidContactOwnersAfterRewindRestore(
                             levelManager.getObjectManager()));
         }
     }
