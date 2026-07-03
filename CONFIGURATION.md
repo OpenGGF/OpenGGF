@@ -316,6 +316,8 @@ before BK2 playback can be controlled from the keyboard.
 | `LIVE_REWIND_TAPE_COAST_ACCELERATION` | `rewind.tapeCoastAcceleration` | number | `0.25` | Optional tape-coast acceleration in rewind steps per held frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_DECELERATION` | `rewind.tapeCoastDeceleration` | number | `0.5` | Optional tape-coast deceleration in rewind steps per released frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_MAX_STEPS` | `rewind.tapeCoastMaxSteps` | number | `4.0` | Maximum rewind steps per visual frame for optional tape-coast rewind. Values below 1.0 cap the rewind in slow-motion. Used only when tape coast is enabled. |
+| `LIVE_REWIND_VHS_EFFECT` | `rewind.vhsEffect` | bool | `true` | Render an authentic VHS picture-search effect (scrolling noise bars, scanline jitter, chroma bleed, tape dropouts, head-switch strip) while live rewind is active, fading out over ~10 frames after release. Applied after the fade pass and before any user display shader. Only meaningful when `LIVE_REWIND_ENABLED` is true. |
+| `LIVE_REWIND_VHS_TEAR_BANDS` | `rewind.vhsTearBands` | bool | `true` | Include the scrolling tear bands in the VHS rewind effect. Set `false` to keep the rest of the effect (scanline jitter, chroma bleed, tape dropouts, head-switch strip, wobble) without the bands. Only meaningful when the VHS effect is enabled. |
 | `REWIND_HISTORY_SECONDS` | `rewind.historySeconds` | int | `60` | Seconds of live rewind keyframe and input history to retain. The effective retained window may be up to one keyframe interval longer so replay always has a complete keyframe-to-target input segment. |
 | `REWIND_AUDIO_HISTORY_LIMIT_TYPE` | `rewind.audioHistoryLimitType` | string | `"time"` | How the rewind audio PCM history ring is capped. `"time"` caps by `REWIND_AUDIO_HISTORY_SECONDS`; `"size"` caps by `REWIND_AUDIO_HISTORY_SIZE_MB`. Held rewind beyond the cap plays silence on develop (the audio-rewind feature branch engages the reverse resynthesizer instead). |
 | `REWIND_AUDIO_HISTORY_SECONDS` | `rewind.audioHistorySeconds` | int | `60` | Seconds of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"time"`. |
@@ -417,6 +419,8 @@ Square/Cross/Circle respectively.
 | `RECORDING_RECORD_KEY` | `debug.recording.recordKey` | `298` | F9 | `Shift+Record` starts/opens user recording flows; plain Record stops active recording. |
 | `TRACE_REWIND_KEY` | `debug.traceRewind.key` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time, including reverse audio presentation and restored fade snapshots. |
 | `LIVE_REWIND_KEY` | `rewind.liveKey` | `82` | R | Hold during live level play to rewind deterministic gameplay state when `LIVE_REWIND_ENABLED` is true, including reverse audio presentation and restored fade snapshots. |
+| `LIVE_REWIND_HALF_SPEED_KEY` | `rewind.liveHalfSpeedKey` | `341` | Left Ctrl | Modifier held together with the rewind key for half-speed rewind (one engine step every other frame; reverse audio plays slow-motion). The mirrored left/right variant of a modifier key also counts. Holding both speed modifiers cancels back to normal speed. |
+| `LIVE_REWIND_DOUBLE_SPEED_KEY` | `rewind.liveDoubleSpeedKey` | `340` | Left Shift | Modifier held together with the rewind key for double-speed rewind (two engine steps per frame; reverse audio pitches up, and the VHS effect shows a third tear band). The mirrored left/right variant of a modifier key also counts. |
 
 ### Debug Navigation
 
@@ -545,11 +549,15 @@ startup:
 rewind:
   liveEnabled: false   # Enable held-key rewind during ordinary live play
   liveKey: R   # Key held to rewind during live play
+  liveHalfSpeedKey: LEFT_CONTROL   # Modifier held with the rewind key for half-speed rewind
+  liveDoubleSpeedKey: LEFT_SHIFT   # Modifier held with the rewind key for double-speed rewind
   tapeCoastEnabled: false   # Continue rewinding with a decelerating tape-coast after key release
   tapeCoastAcceleration: 0.25   # Per-tick speed increase while tape-coast is held
   tapeCoastDeceleration: 0.5   # Per-tick speed decrease after release
   tapeCoastMaxSteps: 4.0   # Maximum rewind steps per tick
   tapeCoastMinSteps: 0.25   # Minimum rewind steps per tick; below 1.0 gives slow-motion rewind
+  vhsEffect: true   # VHS picture-search effect while live rewind is active
+  vhsTearBands: true   # Include the scrolling tear bands in the VHS rewind effect
   historySeconds: 60   # Seconds of live rewind keyframe and input history to retain
   audioHistoryLimitType: "time"   # How the rewind audio PCM history ring is sized
   audioHistorySeconds: 60   # Seconds of PCM history kept when audioHistoryLimitType=time

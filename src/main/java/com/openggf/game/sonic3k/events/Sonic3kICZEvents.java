@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -105,6 +106,8 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private boolean bigSnowPileSpawned;
     private boolean act2TransitionRequested;
     private int activeAct;
+    @RewindTransient(
+            reason = "live snowboard intro object reference; object lifetime/state is captured by ObjectManager rewind")
     private IczSnowboardIntroInstance snowboardIntro;
 
     @Override

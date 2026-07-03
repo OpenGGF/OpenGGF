@@ -1,9 +1,14 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
+import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
+import com.openggf.level.objects.ObjectSpawn;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,6 +30,19 @@ class TestSonic3kIczRewindRoundTrip {
 
         assertTrue(payload.length >= 25,
                 "ICZ schema must encode at minimum the legacy 5 booleans + 5 ints");
+    }
+
+    @Test
+    void schemaCaptureIgnoresLiveSnowboardIntroReference() throws Exception {
+        Sonic3kICZEvents events = new Sonic3kICZEvents();
+        setSnowboardIntro(events, new IczSnowboardIntroInstance(new ObjectSpawn(
+                IczSnowboardIntroInstance.INITIAL_SNOWBOARD_X,
+                IczSnowboardIntroInstance.INITIAL_SNOWBOARD_Y,
+                0, 0, 0, false,
+                IczSnowboardIntroInstance.INITIAL_SNOWBOARD_Y)));
+
+        assertDoesNotThrow(() -> ZoneEventSchemaSidecar.capture(events),
+                "ICZ zone-event sidecar must not attempt to encode the live snowboard intro object reference");
     }
 
     @Test
@@ -77,5 +95,12 @@ class TestSonic3kIczRewindRoundTrip {
 
         assertArrayEquals(first, second,
                 "captured bytes must be identical after a schema capture-restore-capture cycle");
+    }
+
+    private static void setSnowboardIntro(Sonic3kICZEvents events, IczSnowboardIntroInstance intro)
+            throws ReflectiveOperationException {
+        Field field = Sonic3kICZEvents.class.getDeclaredField("snowboardIntro");
+        field.setAccessible(true);
+        field.set(events, intro);
     }
 }

@@ -12,6 +12,8 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 
+import org.lwjgl.glfw.GLFW;
+
 import java.util.Objects;
 
 /**
@@ -30,6 +32,7 @@ public final class LiveRewindManager {
     private RewindSpeedController speedController = RewindSpeedController.disabled();
     private InputHandler activeInputHandler;
     private boolean rewinding;
+    private final RewindEffectEnvelope effectEnvelope = new RewindEffectEnvelope();
 
     public LiveRewindManager(SonicConfigurationService config) {
         this.config = Objects.requireNonNull(config, "config");
@@ -44,6 +47,7 @@ public final class LiveRewindManager {
         }
         activeInputHandler = input;
         if (!ensureInstalled()) {
+            effectEnvelope.frameInactive();
             return false;
         }
         int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
@@ -53,9 +57,11 @@ public final class LiveRewindManager {
                 beginReverseFadePresentation();
             }
             rewinding = true;
+            speedController.setHeldSpeedMultiplier(resolveHeldSpeedMultiplier(input));
             int steps = speedController.stepsWhileHeld();
             GameServices.audio().setReversePlaybackRate(speedController.currentSpeed());
             stepBackward(steps);
+            effectEnvelope.frameActive(speedController.currentSpeed());
             GameServices.audio().update();
             return true;
         }
@@ -63,6 +69,7 @@ public final class LiveRewindManager {
         if (rewinding && coastSteps > 0) {
             if (stepBackward(coastSteps) > 0) {
                 GameServices.audio().setReversePlaybackRate(speedController.currentSpeed());
+                effectEnvelope.frameActive(speedController.currentSpeed());
                 GameServices.audio().update();
                 return true;
             }
@@ -72,7 +79,47 @@ public final class LiveRewindManager {
             cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
         }
         rewinding = false;
+        effectEnvelope.frameInactive();
         return false;
+    }
+
+    private double resolveHeldSpeedMultiplier(InputHandler input) {
+        boolean halfHeld = isModifierDown(input, config.getInt(SonicConfiguration.LIVE_REWIND_HALF_SPEED_KEY));
+        boolean doubleHeld = isModifierDown(input, config.getInt(SonicConfiguration.LIVE_REWIND_DOUBLE_SPEED_KEY));
+        return speedMultiplier(halfHeld, doubleHeld);
+    }
+
+    /** Half and double stack multiplicatively, so holding both cancels back to normal speed. */
+    static double speedMultiplier(boolean halfHeld, boolean doubleHeld) {
+        double multiplier = 1.0;
+        if (halfHeld) {
+            multiplier *= 0.5;
+        }
+        if (doubleHeld) {
+            multiplier *= 2.0;
+        }
+        return multiplier;
+    }
+
+    private static boolean isModifierDown(InputHandler input, int keyCode) {
+        if (input.isKeyDown(keyCode)) {
+            return true;
+        }
+        int mirrored = mirroredModifier(keyCode);
+        return mirrored != GLFW.GLFW_KEY_UNKNOWN && input.isKeyDown(mirrored);
+    }
+
+    /** Left/right variants of a configured modifier key are interchangeable. */
+    static int mirroredModifier(int keyCode) {
+        return switch (keyCode) {
+            case GLFW.GLFW_KEY_LEFT_CONTROL -> GLFW.GLFW_KEY_RIGHT_CONTROL;
+            case GLFW.GLFW_KEY_RIGHT_CONTROL -> GLFW.GLFW_KEY_LEFT_CONTROL;
+            case GLFW.GLFW_KEY_LEFT_SHIFT -> GLFW.GLFW_KEY_RIGHT_SHIFT;
+            case GLFW.GLFW_KEY_RIGHT_SHIFT -> GLFW.GLFW_KEY_LEFT_SHIFT;
+            case GLFW.GLFW_KEY_LEFT_ALT -> GLFW.GLFW_KEY_RIGHT_ALT;
+            case GLFW.GLFW_KEY_RIGHT_ALT -> GLFW.GLFW_KEY_LEFT_ALT;
+            default -> GLFW.GLFW_KEY_UNKNOWN;
+        };
     }
 
     public void recordExternalFrame(GameMode mode, InputHandler input) {
@@ -119,6 +166,16 @@ public final class LiveRewindManager {
             return;
         }
         hudOverlay.render(text);
+    }
+
+    /** Current VHS rewind presentation intensity, 0..1. */
+    public float effectIntensity() {
+        return effectEnvelope.intensity();
+    }
+
+    /** Latched tape speed for the VHS rewind presentation, 0.25..4.0. */
+    public float effectSpeed() {
+        return effectEnvelope.speed();
     }
 
     private String statusLabel() {
@@ -168,6 +225,7 @@ public final class LiveRewindManager {
             cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
         }
         rewinding = false;
+        effectEnvelope.reset();
     }
 
     private void handleSeamlessLevelTransitionBoundary() {
@@ -186,6 +244,7 @@ public final class LiveRewindManager {
             cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
         }
         rewinding = false;
+        effectEnvelope.reset();
     }
 
     private void handleModeEnterRewindableBoundary() {
@@ -254,5 +313,6 @@ public final class LiveRewindManager {
         speedController.reset();
         speedController = RewindSpeedController.disabled();
         rewinding = false;
+        effectEnvelope.reset();
     }
 }
