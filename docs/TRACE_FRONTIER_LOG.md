@@ -20,7 +20,7 @@ is now CNZ2 and MTZ3.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
-Round 76 CNZ2 has advanced but not greened, and the MTZ3 round 76 worker is
+Round 76 CNZ2 has advanced but not greened, and the MTZ3 round 77 worker is
 still active.
 Worker bounce policy: any `no-change`, `rejected`, `blocked`, or "gated"
 return must include targeted BizHawk Lua evidence in `luaProbes`, including
@@ -93,6 +93,24 @@ Verification:
   `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
   ran 19 S2 trace classes with only the expected-red set: CNZ2 f11254 / 1
   and MTZ3 f13477 / 4. All other S2 trace classes remained green.
+
+Conductor integration and regression checks:
+- Merged worker commit `84674925` into conductor branch
+  `bugfix/ai-s2-trace-next` as merge commit `84d4b15c0`.
+- Post-merge full S2 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  confirmed 17 green and only the expected-red set: CNZ2 f11254 / 1
+  (`camera_x` expected `0x2AFA`, actual `0x2AF8`) and MTZ3 f13477 / 4
+  (`x_speed` expected `-03FB`, actual `0x03FB`) by exact Surefire class reports.
+- Post-merge full S1 sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace class reports green.
+- Post-merge S3K guard subset:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  ran 68 checks with only the known AIZ expected-reds: complete-run f1095 / 3
+  (`x_sub` expected `0x0000`, actual `0x0C00`) and level-select f8941 / 1
+  (`camera_y` expected `0x02C1`, actual `0x02B9`). S3K loading/bootstrap guard
+  classes remained green.
 
 ## 2026-07-02 - S2 round 75 CNZ2 boss-lock boundary source
 
