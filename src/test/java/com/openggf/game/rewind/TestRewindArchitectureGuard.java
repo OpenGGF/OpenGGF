@@ -114,7 +114,7 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Lbz2RobotnikShipInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzKnuxPillarInstance.java#@RewindTransient", 2),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzLoweringGrappleObjectInstance.java#@RewindTransient", 4),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzEndBossInstance.java#@RewindTransient", 14),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzEndBossInstance.java#@RewindTransient", 10),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzFinalBoss1Instance.java#@RewindTransient", 10)
     );
 

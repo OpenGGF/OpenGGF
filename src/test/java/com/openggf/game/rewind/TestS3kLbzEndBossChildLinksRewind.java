@@ -146,6 +146,77 @@ class TestS3kLbzEndBossChildLinksRewind {
                 "restored boss must rebuild its full owned-child list including tubes and spike ball");
     }
 
+    @Test
+    void midDefeatRewindRebuildsDebrisSmokeAndExtender() throws Exception {
+        ObjectManager objectManager = createManagerWithBoss();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+
+        LbzEndBossInstance boss = only(objectManager, LbzEndBossInstance.class);
+        invokePrivate(boss, "startIntro");
+        invokePrivate(boss, "launchSpikeBall");
+        // The spike-ball explosion sprays eight debris pieces and four smoke puffs.
+        invokePrivate(firstOfSimpleName(objectManager, "LbzEndBossSpikeBallChild"), "explode");
+        // startDefeat spawns the gradual-max-X extender (and the DEFERRED explosion controller).
+        invokePrivate(boss, "startDefeat");
+
+        assertEquals(8, liveOfSimpleName(objectManager, "LbzEndBossDebrisChild"),
+                "precondition: eight debris pieces from the spike-ball spray");
+        assertEquals(4, liveOfSimpleName(objectManager, "LbzEndBossSmokePuffChild"),
+                "precondition: four smoke puffs from the spike-ball spray");
+        assertEquals(1, liveOfSimpleName(objectManager, "LbzEndBossGradualMaxXExtenderChild"),
+                "precondition: one gradual-max-X extender from startDefeat");
+        List<Integer> debrisFramesBefore = intFieldOf(objectManager, "LbzEndBossDebrisChild", "frame");
+        List<Integer> debrisXVelBefore = intFieldOf(objectManager, "LbzEndBossDebrisChild", "xVel");
+        ObjectRefId bossId = objectId(objectManager, boss);
+
+        RewindRegistry rewindRegistry = new RewindRegistry();
+        rewindRegistry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        // Diverge: drop a debris piece, a smoke puff, and the extender.
+        objectManager.removeDynamicObject(firstOfSimpleName(objectManager, "LbzEndBossDebrisChild"));
+        objectManager.removeDynamicObject(firstOfSimpleName(objectManager, "LbzEndBossSmokePuffChild"));
+        objectManager.removeDynamicObject(firstOfSimpleName(objectManager, "LbzEndBossGradualMaxXExtenderChild"));
+
+        rewindRegistry.restore(snapshot);
+
+        LbzEndBossInstance restored = objectById(objectManager, LbzEndBossInstance.class, bossId);
+        assertEquals(8, liveOfSimpleName(objectManager, "LbzEndBossDebrisChild"),
+                "all eight debris pieces must be recreated on restore");
+        assertEquals(4, liveOfSimpleName(objectManager, "LbzEndBossSmokePuffChild"),
+                "all four smoke puffs must be recreated on restore");
+        assertEquals(1, liveOfSimpleName(objectManager, "LbzEndBossGradualMaxXExtenderChild"),
+                "the gradual-max-X extender must be recreated on restore");
+        assertTrue(restored.usesLocalGradualMaxXExtenderForTests(),
+                "the boss's extender-active flag must restore");
+
+        // The debris cosmetics (frame) and motion (xVel) — newly captured scalars — must
+        // round-trip: the restored multiset matches the captured one.
+        assertEquals(debrisFramesBefore, intFieldOf(objectManager, "LbzEndBossDebrisChild", "frame"),
+                "debris render frames must round-trip across the rewind");
+        assertEquals(debrisXVelBefore, intFieldOf(objectManager, "LbzEndBossDebrisChild", "xVel"),
+                "debris x velocities must round-trip across the rewind");
+    }
+
+    private static List<Integer> intFieldOf(ObjectManager objectManager, String simpleName, String field) {
+        return objectManager.getActiveObjects().stream()
+                .filter(o -> o.getClass().getSimpleName().equals(simpleName))
+                .filter(o -> !o.isDestroyed())
+                .map(o -> readInt(o, field))
+                .sorted()
+                .toList();
+    }
+
+    private static int readInt(Object target, String field) {
+        try {
+            java.lang.reflect.Field f = target.getClass().getDeclaredField(field);
+            f.setAccessible(true);
+            return f.getInt(target);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static ObjectManager createManagerWithBoss() {
         ObjectManager[] holder = new ObjectManager[1];
         Camera camera = mockCamera();
