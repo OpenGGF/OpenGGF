@@ -298,6 +298,16 @@ public class CPZBossPipe extends AbstractObjectInstance implements RewindRecreat
         segments.add(segment);
     }
 
+    /**
+     * Re-appends a rewind-recreated segment to this pipe's segment list. The list is a
+     * final identity collection (structural rewind state rebuilt by its owner, not captured
+     * through the identity table), so each recreated {@link CPZBossPipeSegment} relinks
+     * itself here during restore — keeping the retract sequence driven off a populated list.
+     */
+    void reregisterRestoredSegment(CPZBossPipeSegment segment) {
+        segments.add(segment);
+    }
+
     private void spawnPumpHead() {
         if (services().objectManager() == null) {
             return;
