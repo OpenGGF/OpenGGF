@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.schema.RewindCodecs;
 import com.openggf.game.rewind.schema.RewindClassSchema;
 import com.openggf.game.rewind.schema.RewindSchemaRegistry;
 import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
@@ -44,7 +45,7 @@ public class TestZoneEventRewindSchemaGuard {
             "cachedMgzQuakeChunkData",
             "collapseSolids");
     private static final Set<String> MHZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
-    private static final Set<String> ICZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
+    private static final Set<String> ICZ_ALLOWED_TRANSIENT_FIELDS = Set.of("snowboardIntro");
 
     /**
      * FIELD names (not getter names) the legacy writeAizState byte layout serialized.
@@ -269,6 +270,22 @@ public class TestZoneEventRewindSchemaGuard {
             assertTrue(schema.unsupportedFields().isEmpty(),
                     handler.getSimpleName() + " has unsupported rewind fields: "
                             + schema.unsupportedFields());
+        }
+    }
+
+    @Test
+    public void convertedHandlersDoNotCaptureIdentityReferenceFields() {
+        for (Class<?> handler : CONVERTED_HANDLERS) {
+            RewindClassSchema schema = RewindSchemaRegistry.schemaFor(handler);
+            List<String> identityFields = schema.capturedFields().stream()
+                    .filter(plan -> RewindCodecs.requiresIdentityTable(plan.field()))
+                    .map(plan -> plan.field().getDeclaringClass().getSimpleName()
+                            + "." + plan.field().getName())
+                    .toList();
+            assertTrue(identityFields.isEmpty(),
+                    handler.getSimpleName()
+                            + " zone-event sidecar is scalar-only and cannot capture identity references: "
+                            + identityFields);
         }
     }
 
