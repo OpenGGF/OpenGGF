@@ -68,7 +68,7 @@ public final class RewindVhsEffectPass {
      * Apply the effect over the current default-framebuffer viewport contents.
      * No-op unless prewarmed, healthy, and intensity is above zero.
      */
-    public void apply(float intensity, float speed,
+    public void apply(float intensity, float speed, boolean tearBands,
                       int sourceW, int sourceH,
                       int vpX, int vpY, int vpW, int vpH) {
         if (!activated || failed || intensity <= 0.0f || vpW <= 0 || vpH <= 0) {
@@ -79,7 +79,8 @@ public final class RewindVhsEffectPass {
         // from FrameCount * speed, or a speed change would teleport the bands.
         scrollPhase = advanceScrollPhase(scrollPhase, speed);
         pipeline.apply(vpX, vpY, vpW, vpH, frameCounter,
-                Map.of("RewindIntensity", intensity, "RewindSpeed", speed, "RewindScroll", scrollPhase));
+                Map.of("RewindIntensity", intensity, "RewindSpeed", speed,
+                        "RewindScroll", scrollPhase, "RewindTearBands", tearBands ? 1.0f : 0.0f));
         // Wrap well below the int range: the shader's sin-hash needs FrameCount
         // to stay small for float precision, long before a 32-bit wrap would occur.
         frameCounter = (frameCounter + 1) & 0xFFFF;

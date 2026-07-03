@@ -176,3 +176,19 @@ clearly visible; gameplay stays readable through them.
   fully visible at double speed, absent at normal/half speed, and no band
   teleport when the modifier is pressed or released mid-rewind (this also
   resolves the band-pop noted in the final branch review).
+
+## Addendum (2026-07-03b): scroll-phase persistence + tear-band toggle
+
+- **Band scroll phase is integrated, not derived:** the shader previously
+  computed band position as `fract(FrameCount * 0.006 * speed)`, so a speed
+  change teleported the bands (phase jumped by `FrameCount * delta`).
+  `RewindVhsEffectPass` now integrates a 0..1 `scrollPhase` per applied frame
+  (`advanceScrollPhase`, rate 0.006 x speed) and passes it as the
+  `RewindScroll` uniform; a speed change alters the scroll rate only, and the
+  phase persists across holds within a session.
+- **`LIVE_REWIND_VHS_TEAR_BANDS`** (YAML `rewind.vhsTearBands`, default
+  `true`): when false, the band field is zeroed in the shader
+  (`RewindTearBands` uniform), which also removes the band tear lines and
+  in-band noise/displacement; jitter, chroma bleed, dropouts, head-switch
+  strip, and wobble remain. Wired as a new `boolean tearBands` parameter on
+  `RewindVhsEffectPass.apply(...)`, read from config in `Engine.display()`.

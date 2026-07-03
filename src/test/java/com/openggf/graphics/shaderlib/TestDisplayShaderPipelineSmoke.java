@@ -504,7 +504,7 @@ public class TestDisplayShaderPipelineSmoke {
             RewindVhsEffectPass pass = new RewindVhsEffectPass();
 
             // apply before prewarm is a safe no-op
-            pass.apply(1.0f, 1.0f, 32, 32, 0, 0, 32, 32);
+            pass.apply(1.0f, 1.0f, true, 32, 32, 0, 0, 32, 32);
             assertFalse(pass.isFailed());
 
             pass.prewarm(32, 32, 32, 32);
@@ -514,11 +514,11 @@ public class TestDisplayShaderPipelineSmoke {
             glClearColor(0.2f, 0.4f, 0.6f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
 
-            pass.apply(1.0f, 1.0f, 32, 32, 0, 0, 32, 32);
+            pass.apply(1.0f, 1.0f, true, 32, 32, 0, 0, 32, 32);
             assertFalse(pass.isFailed(), "healthy apply must not latch failure");
 
             // zero intensity is a no-op and must not affect health
-            pass.apply(0.0f, 1.0f, 32, 32, 0, 0, 32, 32);
+            pass.apply(0.0f, 1.0f, true, 32, 32, 0, 0, 32, 32);
             assertFalse(pass.isFailed());
 
             pass.dispose();

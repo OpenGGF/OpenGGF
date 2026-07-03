@@ -11,6 +11,8 @@ uniform float RewindIntensity; // 0..1 envelope
 uniform float RewindSpeed;     // 0.25..4.0, 1.0 = base tape speed
 uniform float RewindScroll;    // band scroll phase 0..1, integrated CPU-side so a
                                // speed change alters the scroll rate, not the position
+uniform float RewindTearBands; // 1.0 = tear bands on, 0.0 = bands (and their tear
+                               // lines / in-band noise) disabled; other layers remain
 
 float hash21(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -48,7 +50,7 @@ void main() {
         float d = ringDist(uv.y, center);
         band = max(band, amp * (1.0 - smoothstep(0.035, 0.05, d)));
     }
-    band *= k;
+    band *= k * clamp(RewindTearBands, 0.0, 1.0);
 
     // ragged per-line horizontal displacement inside the bands (up to ~14 src px)
     float rag = hash21(vec2(line, t)) * 2.0 - 1.0;

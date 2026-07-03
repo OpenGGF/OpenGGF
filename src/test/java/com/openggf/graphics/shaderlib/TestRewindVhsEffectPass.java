@@ -26,6 +26,7 @@ public class TestRewindVhsEffectPass {
         assertTrue(fragment.contains("uniform float RewindIntensity"), "missing RewindIntensity uniform");
         assertTrue(fragment.contains("uniform float RewindSpeed"), "missing RewindSpeed uniform");
         assertTrue(fragment.contains("uniform float RewindScroll"), "missing RewindScroll uniform");
+        assertTrue(fragment.contains("uniform float RewindTearBands"), "missing RewindTearBands uniform");
     }
 
     @Test

@@ -412,6 +412,13 @@ public enum SonicConfiguration {
 	LIVE_REWIND_VHS_EFFECT,
 
 	/**
+	 * Whether the VHS rewind effect includes the scrolling tear bands. When false,
+	 * the remaining effects (jitter, chroma bleed, dropouts, head-switch strip,
+	 * wobble) still render while live rewind is active.
+	 */
+	LIVE_REWIND_VHS_TEAR_BANDS,
+
+	/**
 	 * Seconds of live rewind keyframe and input history to retain. The actual
 	 * retained window may be up to one keyframe interval longer so replay always
 	 * has a complete keyframe-to-target input segment.

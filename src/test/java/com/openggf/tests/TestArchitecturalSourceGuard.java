@@ -57,7 +57,9 @@ class TestArchitecturalSourceGuard {
             // 2026-07-02: display 217 -> 220 for the final-review fix hoisting the
             // zero-intensity check above the RewindVhsEffectPass.apply call so the
             // config lookups and gameLoop accessors are skipped when intensity==0.
-            new MethodBudget(ENGINE_PATH, "display", 220),
+            // 2026-07-03: display 220 -> 221 for the rewind.vhsTearBands config
+            // argument threaded into the RewindVhsEffectPass.apply call.
+            new MethodBudget(ENGINE_PATH, "display", 221),
             new MethodBudget(GAME_LOOP_PATH, "stepInternal", 213),
             new MethodBudget(GAME_LOOP_PATH, "doExitBonusStage", 142),
             new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 105),

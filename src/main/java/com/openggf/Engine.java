@@ -1604,6 +1604,7 @@ public class Engine {
 				rewindVhsEffectPass.apply(
 						rewindEffectIntensity,
 						gameLoop.liveRewindEffectSpeed(),
+						configService.getBoolean(SonicConfiguration.LIVE_REWIND_VHS_TEAR_BANDS),
 						configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
 						configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS),
 						viewportX, viewportY, viewportWidth, viewportHeight);

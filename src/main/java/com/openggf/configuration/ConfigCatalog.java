@@ -157,6 +157,8 @@ public final class ConfigCatalog {
                 "Minimum rewind steps per tick; below 1.0 gives slow-motion rewind"));
         put(LIVE_REWIND_VHS_EFFECT, of("rewind", "vhsEffect", BOOL,
                 "Render a VHS picture-search effect while live rewind is active"));
+        put(LIVE_REWIND_VHS_TEAR_BANDS, of("rewind", "vhsTearBands", BOOL,
+                "Include the scrolling tear bands in the VHS rewind effect"));
         put(REWIND_HISTORY_SECONDS, of("rewind", "historySeconds", INT,
                 "Seconds of live rewind keyframe and input history to retain"));
         put(REWIND_AUDIO_HISTORY_LIMIT_TYPE, ofEnum("rewind", "audioHistoryLimitType",
