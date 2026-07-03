@@ -8,17 +8,28 @@ import java.util.Objects;
 
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_A;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_B;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_BACK;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_DOWN;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_LEFT;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_RIGHT;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_UP;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LEFT_BUMPER;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_START;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_X;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_Y;
 
 public class GamepadInputManager {
     private final GamepadStateSource stateSource;
     private PlayerInputState previousP1 = PlayerInputState.neutral();
     private PlayerInputState previousP2 = PlayerInputState.neutral();
+    private boolean previousDebugModeButtonHeld;
+    private boolean debugModeTogglePressed;
+    private boolean rewindHeld;
+    private boolean previousBackButtonHeld;
+    private boolean backButtonPressed;
+    private boolean previousFrameStepButtonHeld;
+    private boolean frameStepTogglePressed;
 
     public GamepadInputManager(GamepadStateSource stateSource) {
         this.stateSource = Objects.requireNonNull(stateSource, "stateSource");
@@ -45,7 +56,57 @@ public class GamepadInputManager {
 
         previousP1 = p1;
         previousP2 = p2;
+
+        GamepadStateSource.DeviceState primary = connected.isEmpty() ? null : connected.get(0);
+        boolean debugModeHeld = primary != null && primary.buttonDown(GLFW_GAMEPAD_BUTTON_Y);
+        debugModeTogglePressed = debugModeHeld && !previousDebugModeButtonHeld;
+        previousDebugModeButtonHeld = debugModeHeld;
+        rewindHeld = primary != null && primary.buttonDown(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER);
+
+        boolean backButtonHeld = primary != null && primary.buttonDown(GLFW_GAMEPAD_BUTTON_BACK);
+        backButtonPressed = backButtonHeld && !previousBackButtonHeld;
+        previousBackButtonHeld = backButtonHeld;
+
+        boolean frameStepButtonHeld = primary != null && primary.buttonDown(GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER);
+        frameStepTogglePressed = frameStepButtonHeld && !previousFrameStepButtonHeld;
+        previousFrameStepButtonHeld = frameStepButtonHeld;
+
         return LogicalInputSnapshot.ofPlayers(p1, p2);
+    }
+
+    /**
+     * Edge-triggered: true only on the frame the North face button (Y / Triangle)
+     * transitions to held on the primary connected pad. Mirrors the Debug Movement
+     * toggle keyboard binding ({@code debug.keys.debugMode}).
+     */
+    public boolean isDebugModeTogglePressed() {
+        return debugModeTogglePressed;
+    }
+
+    /**
+     * Held state of the left bumper (L1) on the primary connected pad. Mirrors the
+     * live-rewind hold-key keyboard binding ({@code rewind.liveKey}).
+     */
+    public boolean isRewindHeld() {
+        return rewindHeld;
+    }
+
+    /**
+     * Edge-triggered: true only on the frame the Back/Select/View button transitions
+     * to held on the primary connected pad. Mirrors the main-menu options-panel Tab
+     * toggle ({@link com.openggf.game.MasterTitleScreen} / {@link com.openggf.game.LaunchConfigPanel}).
+     */
+    public boolean isBackButtonPressed() {
+        return backButtonPressed;
+    }
+
+    /**
+     * Edge-triggered: true only on the frame the right bumper (RB/R1) transitions to
+     * held on the primary connected pad. Mirrors the frame-advance keyboard binding
+     * ({@code debug.keys.frameStep}).
+     */
+    public boolean isFrameStepTogglePressed() {
+        return frameStepTogglePressed;
     }
 
     private List<GamepadStateSource.DeviceState> connectedDevices() {
@@ -117,5 +178,12 @@ public class GamepadInputManager {
     private void resetPreviousStates() {
         previousP1 = PlayerInputState.neutral();
         previousP2 = PlayerInputState.neutral();
+        previousDebugModeButtonHeld = false;
+        debugModeTogglePressed = false;
+        rewindHeld = false;
+        previousBackButtonHeld = false;
+        backButtonPressed = false;
+        previousFrameStepButtonHeld = false;
+        frameStepTogglePressed = false;
     }
 }

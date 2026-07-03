@@ -64,7 +64,8 @@ public final class LaunchConfigPanel {
         if (closed || inputHandler == null) {
             return;
         }
-        if (inputHandler.isKeyPressed(GLFW_KEY_TAB) || inputHandler.isKeyPressed(GLFW_KEY_ESCAPE)) {
+        if (inputHandler.isKeyPressed(GLFW_KEY_TAB) || inputHandler.isKeyPressed(GLFW_KEY_ESCAPE)
+                || inputHandler.isGamepadBackButtonPressed()) {
             close();
             return;
         }
