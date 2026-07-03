@@ -20,19 +20,62 @@ The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
-round 91 is active. Rounds 90-91 used Lua PC-execute probes to rule out shared
-touch ordering as the current blocker: the engine already evaluates the relevant
-Obj53 before its object update, but the slot 24 orb reaches the f13476-f13478
-touch window around `x=$2AE7,y=$047A` while ROM is
-`x=$2AE4/$2AE4.8000,y=$0482/$0481.6800`. The active target is now the upstream
-Obj53 breakaway position/timing inherited before f13476. Keep the round-90
-slot-22 guard: ROM has `collision_flags=$DA` at f12818/f12819 but does not run
-`Touch_Enemy_Part2` until f12820 because vertical overlap is false before then.
+round 94 is active. Rounds 90-93 used Lua PC-execute probes to rule out shared
+touch ordering as the current blocker and narrow the owner to Obj53 phase/state.
+The slot 24 orb reaches the f13476-f13478 touch window around `x=$2AE7,y=$047A`
+while ROM is `x=$2AE4/$2AE4.8000,y=$0482/$0481.6800`. Rounds 92-93 proved ROM
+slot 24 consumes the boss break flag at f13359 and still runs
+`Obj53_OrbitBoss`/`Obj53_SetAnimPriority` in the same pass, but the naive engine
+equivalent regresses slot 22 to f12818. The active target is the earlier slot-22
+phase/position compensation: preserve the ROM guard where slot 22 has
+`collision_flags=$DA` at f12818/f12819 but does not run `Touch_Enemy_Part2`
+until f12820 because vertical overlap is false before then.
 Worker bounce policy: any `no-change`, `rejected`, `blocked`, or "gated"
 return must include targeted BizHawk Lua evidence in `luaProbes`, including
 script path, output path, frame window, hooked PCs, and the ROM values observed.
 For slot, touch, subpixel, counter, or "RAM-gated" conclusions, a PC-execute
 probe is required before the bounce is accepted.
+
+## 2026-07-03 - S2 rounds 92-93 MTZ3 Obj53 detach guard
+
+Rounds 92 and 93 targeted `TestS2Mtz3LevelSelectTraceReplay` from conductor
+branch `bugfix/ai-s2-trace-next` at `27f8d8d26`. The clean baseline remained
+MTZ3 f13477 / 4 under `frontierOnly`: `x_speed` expected `-03FB`, actual
+`0x03FB`.
+
+Lua evidence:
+- Round 92 slot-24 probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round92-position-diag-next\target\diag\mtz3-round92\obj53_slot24_lua_pc.txt`.
+  It captured f13359 ROM dispatch order:
+  `Obj54_Main -> Boss_MoveObject -> Obj54_AnimateFace -> Obj54_CheckHit -> Obj53_Dispatch -> Obj53_Main -> Obj53_OrbitBoss -> Obj53_SetAnimPriority`.
+  Slot 24 starts f13359 at routine 02, `x=$2B22,y=$046F`,
+  `orbit=$94/$40/$EC/$00`; `Obj53_Main` consumes parent `objoff_38=$FF`,
+  sets routine 04, `breakTimer=$3C`, `x_vel=$FF80`, `y_vel=$FC00`, and the
+  same pass leaves `Obj53_SetAnimPriority` at `x=$2B1F,y=$0476`,
+  `orbit=$98/$40/$F4/$00`. `Obj53_BreakAway` / `ObjectMoveAndFall` first run
+  at f13360.
+- Round 93 slot-22 touch guard:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round93-slot22-lua-next\target\diag\mtz3-round93\slot22_touch_guard_lua_pc.txt`.
+  It confirmed slot 22 is already touch-scanned at f12818/f12819 with
+  `collision_flags=$DA,collision_property=$02` and horizontal overlap, but
+  `Touch_Boss_HeightCmp` rejects it: f12818 `yd0=$001D,d5=$0016`, f12819
+  `yd0=$0018,d5=$0016`. At f12820 `yd0=$0013 <= d5=$0016`, so
+  `Touch_ChkValue -> Touch_Special -> Touch_Enemy -> Touch_Enemy_Part2` fires
+  and mutates `col=$DA,prop=$02` to `col=$00,prop=$FE`.
+- Round 93 combined detach/touch probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round93-detach-next\target\diag\mtz3-round93\obj53_detach_touch.txt`.
+  It reconfirmed the slot-24 same-pass detach tail and the slot-22 f12818/f12820
+  guard in one probe.
+
+No source change was accepted:
+- A direct Java candidate that let `updateMain` continue into
+  `orbitBoss`/`setAnimPriority` after consuming the break flag reproduced the
+  ROM slot-24 detach mechanism, but regressed MTZ3 to f12818
+  (`x_speed` expected `0x0072`, actual `-0072`). The worker reverted it.
+- The rejected result means the same-pass detach tail is necessary but not
+  sufficient. The next target is to find the earlier slot-22 phase/position
+  compensation that currently masks the missing tail, then land a fix that makes
+  both slot 22 and slot 24 match ROM without slot/frame-specific predicates.
 
 ## 2026-07-03 - S2 rounds 90-91 MTZ3 Lua-first no-change narrowing
 
