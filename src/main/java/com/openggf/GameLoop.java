@@ -417,6 +417,14 @@ public class GameLoop {
         liveRewindManager.renderHud(currentGameMode, textRenderer);
     }
 
+    public float liveRewindEffectIntensity() {
+        return liveRewindManager.effectIntensity();
+    }
+
+    public float liveRewindEffectSpeed() {
+        return liveRewindManager.effectSpeed();
+    }
+
     public void renderUserRecordingHud(PixelFontTextRenderer textRenderer) {
         if (textRenderer == null) {
             return;

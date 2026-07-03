@@ -366,6 +366,18 @@ public enum SonicConfiguration {
 	LIVE_REWIND_KEY,
 
 	/**
+	 * Modifier key held together with the rewind key for half-speed rewind.
+	 * The mirrored left/right variant of a modifier key also counts.
+	 */
+	LIVE_REWIND_HALF_SPEED_KEY,
+
+	/**
+	 * Modifier key held together with the rewind key for double-speed rewind.
+	 * The mirrored left/right variant of a modifier key also counts.
+	 */
+	LIVE_REWIND_DOUBLE_SPEED_KEY,
+
+	/**
 	 * Whether live rewind continues with a short decelerating tape-coast after key release.
 	 */
 	LIVE_REWIND_TAPE_COAST_ENABLED,
@@ -393,6 +405,18 @@ public enum SonicConfiguration {
 	 * acceleration ramps it up to {@link #LIVE_REWIND_TAPE_COAST_MAX_STEPS}.
 	 */
 	LIVE_REWIND_TAPE_COAST_MIN_STEPS,
+
+	/**
+	 * Whether the VHS picture-search shader effect renders while live rewind is active.
+	 */
+	LIVE_REWIND_VHS_EFFECT,
+
+	/**
+	 * Whether the VHS rewind effect includes the scrolling tear bands. When false,
+	 * the remaining effects (jitter, chroma bleed, dropouts, head-switch strip,
+	 * wobble) still render while live rewind is active.
+	 */
+	LIVE_REWIND_VHS_TEAR_BANDS,
 
 	/**
 	 * Seconds of live rewind keyframe and input history to retain. The actual

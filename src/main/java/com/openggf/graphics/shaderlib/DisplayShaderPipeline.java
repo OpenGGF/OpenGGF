@@ -151,6 +151,14 @@ public class DisplayShaderPipeline {
     }
 
     public void apply(int vpX, int vpY, int vpW, int vpH, int frameCount) {
+        apply(vpX, vpY, vpW, vpH, frameCount, Map.of());
+    }
+
+    /**
+     * Apply the pass chain with additional per-frame float uniforms, set after
+     * the preset's static parameter values (so dynamic values win on collision).
+     */
+    public void apply(int vpX, int vpY, int vpW, int vpH, int frameCount, Map<String, Float> dynamicUniforms) {
         if (!active || vpW <= 0 || vpH <= 0) {
             return;
         }
@@ -175,7 +183,7 @@ public class DisplayShaderPipeline {
             for (int i = 0; i < passes.size(); i++) {
                 CompiledPass pass = passes.get(i);
                 PassTarget target = passTargets.get(i);
-                renderPass(i, pass, target, inputTexture, inputWidth, inputHeight, frameCount);
+                renderPass(i, pass, target, inputTexture, inputWidth, inputHeight, frameCount, dynamicUniforms);
                 inputTexture = target.fbo().textureId();
                 inputWidth = target.width();
                 inputHeight = target.height();
@@ -226,7 +234,7 @@ public class DisplayShaderPipeline {
     }
 
     private void renderPass(int passIndex, CompiledPass pass, PassTarget target, int inputTexture,
-                            int inputWidth, int inputHeight, int frameCount) {
+                            int inputWidth, int inputHeight, int frameCount, Map<String, Float> dynamicUniforms) {
         glBindFramebuffer(GL_FRAMEBUFFER, target.fbo().fboId());
         glViewport(0, 0, target.width(), target.height());
         glDisable(GL_DEPTH_TEST);
@@ -237,7 +245,8 @@ public class DisplayShaderPipeline {
         glBindTexture(GL_TEXTURE_2D, inputTexture);
         configureSampler(pass);
         setUniforms(pass.programId(), sourceWidth, sourceHeight,
-                inputWidth, inputHeight, target.width(), target.height(), frameCount, pass.parameterValues());
+                inputWidth, inputHeight, target.width(), target.height(), frameCount,
+                pass.parameterValues(), dynamicUniforms);
         bindPassHistoryTextures(pass.programId(), passIndex, pass);
 
         if (pass.shape() == GlslShape.FRAGMENT_ONLY) {
@@ -283,7 +292,7 @@ public class DisplayShaderPipeline {
 
     private void setUniforms(int programId, int videoWidth, int videoHeight, int inputWidth, int inputHeight,
                              int outputWidth, int outputHeight, int frameCount,
-                             Map<String, Float> parameterValues) {
+                             Map<String, Float> parameterValues, Map<String, Float> dynamicUniforms) {
         setSampler(programId, "s_p");
         setSampler(programId, "SceneTexture");
         setSampler(programId, "Texture");
@@ -299,6 +308,11 @@ public class DisplayShaderPipeline {
         setInt(programId, "FrameDirection", 1);
         if (parameterValues != null) {
             for (Map.Entry<String, Float> entry : parameterValues.entrySet()) {
+                setFloat(programId, entry.getKey(), entry.getValue());
+            }
+        }
+        if (dynamicUniforms != null) {
+            for (Map.Entry<String, Float> entry : dynamicUniforms.entrySet()) {
                 setFloat(programId, entry.getKey(), entry.getValue());
             }
         }

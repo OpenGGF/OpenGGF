@@ -266,6 +266,38 @@ public class TestDisplayShaderPipelineSmoke {
     }
 
     @Test
+    public void dynamicUniformOverloadBindsPerFrameValues() {
+        try (GlContext ignored = GlContext.open()) {
+            DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
+            pipeline.resize(16, 16, 16, 16);
+
+            DisplayShaderPreset preset = new DisplayShaderPreset("dynamic-uniform", ShaderPhase.FINAL, List.of(
+                    new DisplayShaderPass(null, """
+                            uniform float RewindIntensity;
+                            void main() {
+                                gl_FragColor = RewindIntensity == 0.75
+                                    ? vec4(0.0, 1.0, 0.0, 1.0)
+                                    : vec4(1.0, 0.0, 0.0, 1.0);
+                            }
+                            """, GlslShape.FRAGMENT_ONLY, 1, ScaleType.SOURCE, false, WrapMode.CLAMP_TO_EDGE)));
+
+            assertTrue(pipeline.activate(preset));
+            glViewport(0, 0, 16, 16);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            pipeline.apply(0, 0, 16, 16, 1, Map.of("RewindIntensity", 0.75f));
+
+            ByteBuffer pixel = ByteBuffer.allocateDirect(4);
+            glReadPixels(8, 8, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            int red = Byte.toUnsignedInt(pixel.get(0));
+            int green = Byte.toUnsignedInt(pixel.get(1));
+            assertTrue(green > 200, "expected dynamic uniform to render green, red=" + red + " green=" + green);
+            assertTrue(red < 50, "expected low red success pixel, red=" + red + " green=" + green);
+            pipeline.dispose();
+        }
+    }
+
+    @Test
     public void passPrevTextureSamplerBindsEarlierPassOutput() {
         try (GlContext ignored = GlContext.open()) {
             DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
@@ -444,6 +476,52 @@ public class TestDisplayShaderPipelineSmoke {
             assertTrue(green > 200, "expected cascaded source scale uniforms, red=" + red + " green=" + green);
             assertTrue(red < 50, "expected low red success pixel, red=" + red + " green=" + green);
             pipeline.dispose();
+        }
+    }
+
+    @Test
+    public void vhsRewindBuiltInPresetActivatesAndApplies() throws Exception {
+        try (GlContext ignored = GlContext.open()) {
+            DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
+            pipeline.resize(32, 32, 32, 32);
+
+            assertTrue(pipeline.activate(RewindVhsEffectPass.builtInPreset()),
+                    pipeline.lastActivationFailure());
+
+            glViewport(0, 0, 32, 32);
+            glClearColor(0.2f, 0.4f, 0.6f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            pipeline.apply(0, 0, 32, 32, 5, Map.of("RewindIntensity", 1.0f, "RewindSpeed", 1.0f));
+
+            assertTrue(pipeline.isActive(), "VHS preset apply must not disable the pipeline");
+            pipeline.dispose();
+        }
+    }
+
+    @Test
+    public void rewindVhsEffectPassPrewarmsAppliesAndStaysHealthy() {
+        try (GlContext ignored = GlContext.open()) {
+            RewindVhsEffectPass pass = new RewindVhsEffectPass();
+
+            // apply before prewarm is a safe no-op
+            pass.apply(1.0f, 1.0f, true, 32, 32, 0, 0, 32, 32);
+            assertFalse(pass.isFailed());
+
+            pass.prewarm(32, 32, 32, 32);
+            assertFalse(pass.isFailed(), "built-in preset must activate cleanly");
+
+            glViewport(0, 0, 32, 32);
+            glClearColor(0.2f, 0.4f, 0.6f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            pass.apply(1.0f, 1.0f, true, 32, 32, 0, 0, 32, 32);
+            assertFalse(pass.isFailed(), "healthy apply must not latch failure");
+
+            // zero intensity is a no-op and must not affect health
+            pass.apply(0.0f, 1.0f, true, 32, 32, 0, 0, 32, 32);
+            assertFalse(pass.isFailed());
+
+            pass.dispose();
         }
     }
 

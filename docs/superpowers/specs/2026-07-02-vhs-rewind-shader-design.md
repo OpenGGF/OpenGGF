@@ -139,3 +139,56 @@ New: `shaders/shader_vhs_rewind.glsl`, `RewindVhsEffectPass.java`,
 `RewindEffectEnvelope.java`, `TestRewindEffectEnvelope.java` (+ resource sanity test).
 Edited: `DisplayShaderPipeline.java`, `LiveRewindManager.java`, `GameLoop.java`,
 `Engine.java`, config service key list, `CONFIGURATION.md`, `CHANGELOG.md`.
+
+## Addendum (2026-07-03): rewind speed modifiers + softer tear bands
+
+Approved follow-up after the first visual pass.
+
+### Softer tear bands
+
+Tuning only, same layers: in-band displacement ~25 → ~14 source px; in-band luma
+static 40% → 25%; in-band chroma kill full → 70% (a ghost of the image colour
+survives inside a band); band edge tear-line brightness 0.35 → 0.22; band
+slightly narrower (edge smoothstep 0.045/0.06 → 0.035/0.05). Bands remain
+clearly visible; gameplay stays readable through them.
+
+### Rewind speed modifiers
+
+- Holding `LIVE_REWIND_HALF_SPEED_KEY` (default Left Ctrl, YAML
+  `rewind.liveHalfSpeedKey`) with the rewind key rewinds at 0.5x; holding
+  `LIVE_REWIND_DOUBLE_SPEED_KEY` (default Left Shift, YAML
+  `rewind.liveDoubleSpeedKey`) rewinds at 2.0x. Both held cancel to 1.0x
+  (multiplicative). The mirrored left/right variant of a configured modifier
+  key also counts (`LiveRewindManager.mirroredModifier`).
+- `RewindSpeedController` gains a per-frame `setHeldSpeedMultiplier(double)`:
+  the effective step rate is base speed x multiplier, fed through the
+  fractional step accumulator, which now also runs in non-coast mode (half
+  speed = one engine step every other frame, double = two per frame). With
+  tape coast enabled the multiplier scales the coast curve's output without
+  compounding into the acceleration. `currentSpeed()` reports the effective
+  speed, so reverse-audio resampling and the VHS envelope's speed latch pick
+  the modifier up with no further wiring. `reset()` restores the unit
+  multiplier.
+- The manager sets the multiplier only in the held branch; a coast tail after
+  release keeps the last multiplier (tape momentum).
+- Shader: the hard 2-band/3-band cutover at `speed > 2.0` is replaced by a
+  third band whose amplitude fades in via `smoothstep(1.2, 2.0, speed)` —
+  fully visible at double speed, absent at normal/half speed, and no band
+  teleport when the modifier is pressed or released mid-rewind (this also
+  resolves the band-pop noted in the final branch review).
+
+## Addendum (2026-07-03b): scroll-phase persistence + tear-band toggle
+
+- **Band scroll phase is integrated, not derived:** the shader previously
+  computed band position as `fract(FrameCount * 0.006 * speed)`, so a speed
+  change teleported the bands (phase jumped by `FrameCount * delta`).
+  `RewindVhsEffectPass` now integrates a 0..1 `scrollPhase` per applied frame
+  (`advanceScrollPhase`, rate 0.006 x speed) and passes it as the
+  `RewindScroll` uniform; a speed change alters the scroll rate only, and the
+  phase persists across holds within a session.
+- **`LIVE_REWIND_VHS_TEAR_BANDS`** (YAML `rewind.vhsTearBands`, default
+  `true`): when false, the band field is zeroed in the shader
+  (`RewindTearBands` uniform), which also removes the band tear lines and
+  in-band noise/displacement; jitter, chroma bleed, dropouts, head-switch
+  strip, and wobble remain. Wired as a new `boolean tearBands` parameter on
+  `RewindVhsEffectPass.apply(...)`, read from config in `Engine.display()`.
