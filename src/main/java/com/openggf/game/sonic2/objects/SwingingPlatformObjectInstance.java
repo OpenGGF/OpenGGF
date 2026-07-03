@@ -29,6 +29,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.util.LazyMappingHolder;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 /**
@@ -387,19 +388,26 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         displayChild = child;
     }
 
-    private static SwingingPlatformObjectInstance nearestParentForRewind(RewindRecreateContext ctx) {
+    // Returns the swinging platform whose out-of-range reference position is nearest
+    // the display child's captured spawn, or empty when none survives (a legitimate
+    // absent-parent state: the platform was swept before capture). No
+    // {@code !isDestroyed()} filter: during a rewind restore the parent's destroyed
+    // flag is applied in a later pass, so a captured-but-destroyed platform is a valid
+    // relink target here.
+    private static Optional<SwingingPlatformObjectInstance> nearestParentForRewind(RewindRecreateContext ctx) {
         var objectManager = ctx.objectManager() != null
                 ? ctx.objectManager()
                 : ctx.objectServices().objectManager();
+        if (objectManager == null) {
+            return Optional.empty();
+        }
         ObjectSpawn spawn = ctx.spawn();
         return objectManager.getActiveObjects().stream()
                 .filter(SwingingPlatformObjectInstance.class::isInstance)
                 .map(SwingingPlatformObjectInstance.class::cast)
-                .filter(parent -> !parent.isDestroyed())
                 .min((a, b) -> Integer.compare(
                         distanceFromChildSpawn(a, spawn),
-                        distanceFromChildSpawn(b, spawn)))
-                .orElse(null);
+                        distanceFromChildSpawn(b, spawn)));
     }
 
     private static int distanceFromChildSpawn(SwingingPlatformObjectInstance parent, ObjectSpawn spawn) {
@@ -778,14 +786,16 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
 
         @Override
         public SwingingPlatformDisplayChild recreateForRewind(RewindRecreateContext ctx) {
-            SwingingPlatformObjectInstance parent = nearestParentForRewind(ctx);
-            if (parent == null) {
-                throw new IllegalStateException(
-                        "Cannot recreate Swinging Platform display child without a live parent");
-            }
-            SwingingPlatformDisplayChild child = new SwingingPlatformDisplayChild(parent);
-            parent.attachDisplayChildForRewind(child);
-            return child;
+            // Display child of a swinging platform. If the parent was swept before
+            // capture there is no assembly owner to relink to, so drop the child (its
+            // live update self-expires with a dead parent) rather than throw.
+            return nearestParentForRewind(ctx)
+                    .map(parent -> {
+                        SwingingPlatformDisplayChild child = new SwingingPlatformDisplayChild(parent);
+                        parent.attachDisplayChildForRewind(child);
+                        return child;
+                    })
+                    .orElse(null);
         }
 
         private void syncFromParent() {

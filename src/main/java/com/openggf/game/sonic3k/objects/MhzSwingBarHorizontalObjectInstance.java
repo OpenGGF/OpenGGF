@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -129,7 +130,7 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
         player.setRenderFlips(false, false);
         // ROM loc_3EEDA (sonic3k.asm:83448-83450): move.w d0,y_pos(a1) touches only the pixel word,
         // leaving y_sub untouched.
-        player.setCentreYPreserveSubpixel((short) (spawn.y() + GRAB_Y_OFFSET));
+        NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y() + GRAB_Y_OFFSET);
         player.setAnimationId(Sonic3kAnimationIds.WALK);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setObjectMappingFrameControl(true);
@@ -169,7 +170,7 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
         advancePhase(state);
         // ROM sub_3EFBA (sonic3k.asm:83533-83534): add.w y_pos(a0),d1 / move.w d1,y_pos(a1) writes only
         // the pixel word each hang frame, leaving y_sub untouched.
-        player.setCentreYPreserveSubpixel((short) (spawn.y() + hangingYOffsetFor(state.animationPhase, state.framePage)));
+        NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y() + hangingYOffsetFor(state.animationPhase, state.framePage));
         player.setMappingFrame(hangingFrameFor(state.animationPhase, state.framePage));
     }
 
@@ -177,11 +178,11 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
         // ROM sub_3ED6E (sonic3k.asm:83326, 83340): subq.w/addq.w #1,x_pos(a1) modify only the pixel
         // word, leaving x_sub untouched.
         if (player.isLeftPressed() && player.getCentreX() > spawn.x() - GRAB_X_BIAS) {
-            player.setCentreXPreserveSubpixel((short) (player.getCentreX() - 1));
+            NativePositionOps.writeXPosPreserveSubpixel(player, player.getCentreX() - 1);
             tickInputFramePage(state);
         }
         if (player.isRightPressed() && player.getCentreX() < spawn.x() + 0x15) {
-            player.setCentreXPreserveSubpixel((short) (player.getCentreX() + 1));
+            NativePositionOps.writeXPosPreserveSubpixel(player, player.getCentreX() + 1);
             tickInputFramePage(state);
         }
     }

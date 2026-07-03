@@ -9,10 +9,10 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -242,27 +242,6 @@ public class CogObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private static CogObjectInstance nearestParentForRewind(RewindRecreateContext ctx) {
-        ObjectManager manager = ctx.objectManager();
-        if (manager == null && ctx.objectServices() != null) {
-            manager = ctx.objectServices().objectManager();
-        }
-        if (manager == null) {
-            return null;
-        }
-        return manager.getActiveObjects().stream()
-                .filter(CogObjectInstance.class::isInstance)
-                .map(CogObjectInstance.class::cast)
-                .filter(parent -> !parent.isDestroyed())
-                .min((a, b) -> Integer.compare(
-                        distanceFromChildSpawn(a, ctx.spawn()),
-                        distanceFromChildSpawn(b, ctx.spawn())))
-                .orElse(null);
-    }
-
-    private static int distanceFromChildSpawn(CogObjectInstance parent, ObjectSpawn spawn) {
-        return Math.abs(parent.getX() - spawn.x()) + Math.abs(parent.getY() - spawn.y());
-    }
 
     private ObjectSpawn buildCogChildSpawn(int x, int y) {
         return new ObjectSpawn(
@@ -556,13 +535,17 @@ public class CogObjectInstance extends AbstractObjectInstance
 
         @Override
         public CogSlotChildInstance recreateForRewind(RewindRecreateContext ctx) {
-            CogObjectInstance parent = nearestParentForRewind(ctx);
-            if (parent == null) {
-                throw new IllegalStateException("Cannot recreate Cog slot child without a live Cog parent");
-            }
-            CogSlotChildInstance child = new CogSlotChildInstance(ctx.spawn(), parent);
-            parent.attachSlotChildForRewind(child);
-            return child;
+            // Slot-pressure child of a Cog. If the parent Cog was swept before capture
+            // there is nothing to relink to, so drop the child (its live update
+            // self-expires with a dead parent) rather than throw. acceptDestroyed
+            // relinks to a restored-but-destroyed Cog when that is the captured parent.
+            return RewindRecreateObjectLinks.nearestObject(ctx, CogObjectInstance.class, true)
+                    .map(parent -> {
+                        CogSlotChildInstance child = new CogSlotChildInstance(ctx.spawn(), parent);
+                        parent.attachSlotChildForRewind(child);
+                        return child;
+                    })
+                    .orElse(null);
         }
 
         @Override

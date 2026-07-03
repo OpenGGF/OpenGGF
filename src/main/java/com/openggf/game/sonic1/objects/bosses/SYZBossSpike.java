@@ -4,9 +4,9 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectArtKeys;
-import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -49,12 +49,13 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
 
     @Override
     public SYZBossSpike recreateForRewind(RewindRecreateContext ctx) {
-        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
-            if (object instanceof Sonic1SYZBossInstance boss && !boss.isDestroyed()) {
-                return new SYZBossSpike(boss);
-            }
-        }
-        throw new IllegalStateException("Missing restored SYZ boss for SYZBossSpike rewind recreate");
+        // The spike is a child of the SYZ boss. If the boss was defeated/swept
+        // before capture, the spike has no parent to attach to; drop it (its live
+        // update self-expires with a dead parent). acceptDestroyed relinks to a
+        // restored-but-destroyed boss whose captured state the spike still tracks.
+        return RewindRecreateObjectLinks.nearestObject(ctx, Sonic1SYZBossInstance.class, true)
+                .map(SYZBossSpike::new)
+                .orElse(null);
     }
 
     /**

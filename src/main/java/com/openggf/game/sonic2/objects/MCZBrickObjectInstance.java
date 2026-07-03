@@ -25,6 +25,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.util.LazyMappingHolder;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 /**
@@ -225,20 +226,26 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
         displayChild = child;
     }
 
-    private static MCZBrickObjectInstance nearestParentForRewind(RewindRecreateContext ctx) {
+    // Returns the spike-ball brick whose swinging tip is nearest the display child's
+    // captured spawn, or empty when none survives (a legitimate absent-parent state:
+    // the brick was swept before capture). No {@code !isDestroyed()} filter: during a
+    // rewind restore the parent's destroyed flag is applied in a later pass, so a
+    // captured-but-destroyed brick is a valid relink target here.
+    private static Optional<MCZBrickObjectInstance> nearestParentForRewind(RewindRecreateContext ctx) {
         var objectManager = ctx.objectManager() != null
                 ? ctx.objectManager()
                 : ctx.objectServices().objectManager();
+        if (objectManager == null) {
+            return Optional.empty();
+        }
         ObjectSpawn spawn = ctx.spawn();
         return objectManager.getActiveObjects().stream()
                 .filter(MCZBrickObjectInstance.class::isInstance)
                 .map(MCZBrickObjectInstance.class::cast)
                 .filter(parent -> parent.mode == Mode.SPIKE_BALL)
-                .filter(parent -> !parent.isDestroyed())
                 .min((a, b) -> Integer.compare(
                         distanceFromChildSpawn(a, spawn),
-                        distanceFromChildSpawn(b, spawn)))
-                .orElse(null);
+                        distanceFromChildSpawn(b, spawn)));
     }
 
     private static int distanceFromChildSpawn(MCZBrickObjectInstance parent, ObjectSpawn spawn) {
@@ -478,13 +485,18 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
 
         @Override
         public MCZBrickDisplayChild recreateForRewind(RewindRecreateContext ctx) {
-            MCZBrickObjectInstance parent = nearestParentForRewind(ctx);
-            if (parent == null) {
-                throw new IllegalStateException("Cannot recreate MCZ Obj75 display child without a live parent");
-            }
-            MCZBrickDisplayChild child = new MCZBrickDisplayChild(parent);
-            parent.attachDisplayChildForRewind(child);
-            return child;
+            // Obj75 display child of a spike-ball brick. If the parent was swept
+            // before capture there is no assembly owner to relink to, so drop the
+            // child (its live update self-expires with a dead parent) rather than
+            // throw. nearestParentForRewind matches on the swinging spike-ball tip
+            // (the child's captured spawn), so it keeps its own distance metric.
+            return nearestParentForRewind(ctx)
+                    .map(parent -> {
+                        MCZBrickDisplayChild child = new MCZBrickDisplayChild(parent);
+                        parent.attachDisplayChildForRewind(child);
+                        return child;
+                    })
+                    .orElse(null);
         }
 
         private void syncFromParent() {
