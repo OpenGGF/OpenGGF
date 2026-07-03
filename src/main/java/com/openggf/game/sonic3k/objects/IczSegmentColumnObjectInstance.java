@@ -199,11 +199,15 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
         public Segment recreateForRewind(RewindRecreateContext ctx) {
             ObjectSpawn spawn = ctx.spawn();
             int restoredSubtype = spawn.subtype() & 0xFF;
+            // A missing root or previous segment is a legitimate captured state, not a
+            // restore error: a player push-break destroys a segment (and it can be
+            // swept from the captured set entirely) while the survivors keep their
+            // subtypes. Both links are consumed null-safely (updateNormal /
+            // triggerTimedShake), and by end-of-frame capture the segment above a
+            // break has already latched its cascade phase (ascending update order),
+            // so a degraded link never loses the fall.
             IczSegmentColumnObjectInstance restoredRoot =
                     RewindRecreateObjectLinks.nearestLiveObject(ctx, IczSegmentColumnObjectInstance.class);
-            if (restoredRoot == null) {
-                throw new IllegalStateException("Missing restored ICZ segment-column root");
-            }
             Segment restoredPrevious = restoredSubtype == 0 ? null : previousSegmentForRewind(ctx, spawn, restoredSubtype);
             return new Segment(spawn.x(), spawn.y(), restoredSubtype, mappingFrameForSubtype(restoredSubtype),
                     restoredRoot, restoredPrevious);
@@ -218,11 +222,13 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
             long bestDistance = Long.MAX_VALUE;
             ObjectServices services = ctx.objectServices();
             if (services == null || services.objectManager() == null) {
-                throw new IllegalStateException("Missing object manager for ICZ segment-column previous link");
+                return null;
             }
             for (ObjectInstance object : services.objectManager().getActiveObjects()) {
-                if (!(object instanceof Segment candidate) || candidate.isDestroyed()
-                        || candidate.subtype != expectedSubtype) {
+                // Destroyed candidates stay eligible: after a push-break the true live
+                // link points at exactly the destroyed segment, whose restored
+                // cascadeActive flag is load-bearing for the fall sequence.
+                if (!(object instanceof Segment candidate) || candidate.subtype != expectedSubtype) {
                     continue;
                 }
                 long dx = candidate.getX() - spawn.x();
@@ -232,10 +238,6 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
                     bestDistance = distance;
                     best = candidate;
                 }
-            }
-            if (best == null) {
-                throw new IllegalStateException(
-                        "Missing restored ICZ segment-column previous segment for subtype " + subtype);
             }
             return best;
         }
