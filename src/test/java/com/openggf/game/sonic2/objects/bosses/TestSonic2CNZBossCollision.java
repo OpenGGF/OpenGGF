@@ -14,6 +14,7 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -66,6 +67,46 @@ class TestSonic2CNZBossCollision {
         ArgumentCaptor<CNZBossElectricBall> cloneCaptor = ArgumentCaptor.forClass(CNZBossElectricBall.class);
         verify(objectManager).addDynamicObjectAfterCurrent(cloneCaptor.capture());
         verify(objectManager, never()).addDynamicObject(any(CNZBossElectricBall.class));
+    }
+
+    @Test
+    void attachBallPreservesChildInitXDuringPostTriggerCountdown() throws Exception {
+        Sonic2CNZBossInstance boss = newCnzBossAt(0x2909, 0x0657);
+        CNZBossElectricBall ball = new CNZBossElectricBall(
+                new ObjectSpawn(0x2909, 0x0657, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
+        boss.getState().x = 0x290B;
+
+        Method updateBallAttach = CNZBossElectricBall.class.getDeclaredMethod("updateBallAttach");
+        updateBallAttach.setAccessible(true);
+        updateBallAttach.invoke(ball);
+
+        assertEquals(0x2909, ball.getX(),
+                "Obj51 loc_31BA8 no longer runs Boss_MoveObject, so the child keeps its init x_pos");
+    }
+
+    @Test
+    void originalSplitHalfProjectsLoc31ff8TouchRegion() throws Exception {
+        Sonic2CNZBossInstance boss = newCnzBossAt(0x2909, 0x0657);
+        CNZBossElectricBall ball = new CNZBossElectricBall(
+                new ObjectSpawn(0x2909, 0x0657, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
+        setField(ball, "routineState", 2);
+        setField(ball, "x", 0x28EE);
+        setField(ball, "y", 0x06E6);
+        setField(ball, "xVel", -0x100);
+        setField(ball, "yVel", 0x02E8);
+
+        TouchResponseProvider.TouchRegion[] regions = ball.getMultiTouchRegions();
+
+        assertNotNull(regions);
+        assertEquals(1, regions.length);
+        assertEquals(0x28ED, regions[0].x());
+        assertEquals(0x06E8, regions[0].y());
+        assertEquals(0x98, regions[0].collisionFlags());
+
+        setField(ball, "xVel", 0x100);
+
+        assertNull(ball.getMultiTouchRegions(),
+                "The AllocateObjectAfterCurrent clone already executes in the same pass and keeps normal timing");
     }
 
     @Test

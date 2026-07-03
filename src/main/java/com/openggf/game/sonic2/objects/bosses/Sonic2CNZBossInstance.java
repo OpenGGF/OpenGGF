@@ -157,6 +157,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
     private int touchCollisionX;
     private int touchCollisionY;
     private boolean touchCollisionSnapshotReady;
+    private int postTriggerBodyCollisionX = Integer.MIN_VALUE;
 
     private final Sonic2CNZEvents cnzEvents;
 
@@ -373,6 +374,12 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
                     bossAnimArray[3] = 0;  // Reset anim timer at offset 3
                     bossAnimArray[9] = 0;  // Reset anim timer at offset 9
                     bossCollisionRoutine = COLLISION_OFF;
+                    // ROM loc_31AB6 compares against stale x_pos(a0), then loc_31C08
+                    // copies the freshly-moved Boss_X_pos into x_pos(a0). On the leftward
+                    // pass, the engine's fixed accumulator can be one MoveObject step ahead
+                    // while the trigger compare is still aligned via triggerX. Preserve the
+                    // ROM-copied body x for Touch_Boss until post-trigger ends.
+                    postTriggerBodyCollisionX = state.xVel < 0 ? triggerX - 1 : Integer.MIN_VALUE;
                     spawnElectricBall();
                     bossCountdown = TRIGGER_COUNTDOWN;
                     return;
@@ -482,6 +489,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
             bossAnimArray[3] = 0;
             bossAnimArray[9] = 0;
             state.routine = ROUTINE_PATROL;
+            postTriggerBodyCollisionX = Integer.MIN_VALUE;
             bossCountdown = -1;
             cooldownTimer = COOLDOWN_DURATION;
         }
@@ -605,6 +613,23 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
         }
 
         applyBossVelocity();
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // ROM loc_31E2A opens Camera_Max_X_pos to $2B20 before it can delete:
+        // cmpi.w #$2B20,(Camera_Max_X_pos).w / addq.w #2,(Camera_Max_X_pos)
+        // / bra.s loc_31E4A. Only once the max-X boundary reaches $2B20 does
+        // it test render_flags.on_screen and branch to DeleteObject
+        // (docs/s2disasm/s2.asm:66887-66899). The shared S2 MarkObjGone-style
+        // unload would remove Obj51 while that camera-opening branch is still
+        // active, stopping the boundary advance early.
+        return false;
     }
 
     /**
@@ -753,6 +778,12 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
             return null;
         }
         if (bossCollisionRoutine == COLLISION_OFF) {
+            int bodyFlags = getCollisionFlags();
+            if (postTriggerBodyCollisionX != Integer.MIN_VALUE && bodyFlags != 0) {
+                return new TouchResponseProvider.TouchRegion[] {
+                        new TouchResponseProvider.TouchRegion(postTriggerBodyCollisionX, getPreUpdateY(), bodyFlags)
+                };
+            }
             return null;
         }
 

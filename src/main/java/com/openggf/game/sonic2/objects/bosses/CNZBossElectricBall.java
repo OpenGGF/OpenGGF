@@ -164,7 +164,10 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
      * Position = parent.y + objoff_28
      */
     private void updateBallAttach() {
-        x = mainBoss.getX();
+        // ROM Obj51 copies the parent x_pos while the parent is in loc_31BA8,
+        // where Boss_MoveObject is no longer run. Preserve the child-init X here
+        // instead of re-reading the engine's boss fixed-position helper, which is
+        // ahead of the ROM-visible x_pos at the trigger boundary.
         y = mainBoss.getY() + ballRiseOffset;
 
         // ROM: addi_.w #1,d0 / cmpi.w #$2E,d0 / blt.s + / move.w #$2E,d0
@@ -323,19 +326,31 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
         if (isDestroyed()) {
             return null;
         }
-        if (routineState != BALL_FALL || exploding) {
-            return null;
+        if (routineState == BALL_FALL && !exploding) {
+            // ROM Touch_Boss scans Obj51's collision_flags and x_pos/y_pos directly
+            // (docs/s2disasm/s2.asm:85164-85252). In the captured CNZ2 boss
+            // population, the parent Obj51 runs before the original falling ball,
+            // so the contact row sees the next loc_31FF8 fall position
+            // (docs/s2disasm/s2.asm:67049-67079). Project only this pre-split
+            // original hurt region; split clones keep their existing timing.
+            int projectedY = ((y << 16) + (yVel << 8)) >> 16;
+            return new TouchResponseProvider.TouchRegion[] {
+                    new TouchResponseProvider.TouchRegion(x, projectedY, 0x98)
+            };
         }
-        // ROM Touch_Boss scans Obj51's collision_flags and x_pos/y_pos directly
-        // (docs/s2disasm/s2.asm:85164-85252). In the captured CNZ2 boss
-        // population, the parent Obj51 runs before the original falling ball,
-        // so the contact row sees the next loc_31FF8 fall position
-        // (docs/s2disasm/s2.asm:67049-67079). Project only this pre-split
-        // original hurt region; split clones keep their existing timing.
-        int projectedY = ((y << 16) + (yVel << 8)) >> 16;
-        return new TouchResponseProvider.TouchRegion[] {
-                new TouchResponseProvider.TouchRegion(x, projectedY, 0x98)
-        };
+        if (routineState == BALL_SPLIT && xVel < 0) {
+            // loc_32030 leaves the original split half in the current slot with
+            // x_vel=-$100, while the copied +$100 half is allocated after current
+            // and executes immediately. The original half therefore needs the
+            // same loc_31FF8 projection the ROM contact row observes before the
+            // next displayed split step.
+            int projectedX = ((x << 16) + (xVel << 8)) >> 16;
+            int projectedY = ((y << 16) + (yVel << 8)) >> 16;
+            return new TouchResponseProvider.TouchRegion[] {
+                    new TouchResponseProvider.TouchRegion(projectedX, projectedY, 0x98)
+            };
+        }
+        return null;
     }
 
     @Override
