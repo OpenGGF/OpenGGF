@@ -190,6 +190,9 @@ public class GameLoop {
     private boolean bonusStageTransitionPending;
     private BonusStageProvider activeBonusStageProvider;
 
+    // Flag to freeze level updates during the final-boss fade into ending mode.
+    private boolean endingTransitionPending;
+
     private PostTitleCardDestination postTitleCardDestination = PostTitleCardDestination.LEVEL;
 
     // Deferred bonus stage setup — applied when title card exits with BONUS_STAGE destination
@@ -1208,9 +1211,11 @@ public class GameLoop {
         // Freeze level updates during special/bonus stage entry transitions
         boolean freezeForSpecialStage = specialStageTransitionPending;
         boolean freezeForBonusStage = bonusStageTransitionPending;
+        boolean freezeForEndingTransition = endingTransitionPending;
         // ObjB2 transition parity: freeze gameplay during pending zone-act fade.
         boolean freezeForZoneActTransition = levelManager.isLevelInactiveForTransition();
-        if (!freezeForArtViewer && !freezeForSpecialStage && !freezeForBonusStage && !freezeForZoneActTransition) {
+        if (!freezeForArtViewer && !freezeForSpecialStage && !freezeForBonusStage
+                && !freezeForEndingTransition && !freezeForZoneActTransition) {
             beginGameplayAudioFrameForTick();
             // LiveTraceComparator (or any PlaybackFrameObserver) may ask
             // us to skip the gameplay tick on ROM lag frames so the
@@ -3531,9 +3536,7 @@ public class GameLoop {
         audioManager.fadeOutMusic();
 
         // Start fade-to-black, then respawn when complete
-        fadeManager.startFadeToBlack(() -> {
-            doRespawn();
-        });
+        fadeManager.startFadeToBlack(this::doRespawn);
     }
 
     /**
@@ -3559,9 +3562,7 @@ public class GameLoop {
         audioManager.fadeOutMusic();
 
         // Start fade-to-black, then load next act when complete
-        fadeManager.startFadeToBlack(() -> {
-            doNextAct();
-        });
+        fadeManager.startFadeToBlack(this::doNextAct);
     }
 
     /**
@@ -3590,9 +3591,7 @@ public class GameLoop {
         audioManager.fadeOutMusic();
 
         // Start fade-to-black, then load next zone when complete
-        fadeManager.startFadeToBlack(() -> {
-            doNextZone();
-        });
+        fadeManager.startFadeToBlack(this::doNextZone);
     }
 
     /**
@@ -3619,9 +3618,7 @@ public class GameLoop {
 
         audioManager.fadeOutMusic();
 
-        fadeManager.startFadeToBlack(() -> {
-            doZoneAct(zone, act);
-        });
+        fadeManager.startFadeToBlack(() -> doZoneAct(zone, act));
     }
 
     /**
@@ -3840,6 +3837,7 @@ public class GameLoop {
         if (provider != null) {
             provider.saveReasonOnEndingStart().ifPresent(this::requestSessionSave);
         }
+        endingTransitionPending = true;
         audioManager.fadeOutMusic();
         fadeManager.startFadeToWhite(this::doEnterEnding);
     }
@@ -3851,6 +3849,7 @@ public class GameLoop {
     private void doEnterEnding() {
         endingProvider = GameServices.module().getEndingProvider();
         if (endingProvider == null) {
+            endingTransitionPending = false;
             // No ending provider for this game — return to title screen
             LOGGER.warning("No EndingProvider available, returning to title screen");
             setGameMode(GameMode.TITLE_SCREEN);
@@ -3862,13 +3861,14 @@ public class GameLoop {
         }
 
         endingProvider.initialize();
+        endingTransitionPending = false;
         setGameMode(gameModeForPhase(endingProvider.getCurrentPhase()));
 
         // Reveal the ending scene. Only start our own fade if the provider didn't
         // already start one during initialize() (e.g., S1 credits starts its own
         // fade-from-black with a state-advancing callback that must not be overwritten).
         FadeManager fadeManager = this.fadeManager;
-        if (!fadeManager.isActive()) {
+        if (!fadeManager.isActive() || fadeManager.getState() == FadeManager.FadeState.HOLD_WHITE) {
             // Screen is currently white from startEndingFade's fade-to-white.
             // ROM: Normal_palette starts all $0EEE (white), display enabled.
             fadeManager.startFadeFromWhite(null);
