@@ -20,18 +20,20 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies the post-rewind-restore reset hooks on {@link LevelTilemapManager}.
+ * Verifies rewind-friendly tilemap behavior on {@link LevelTilemapManager}.
  * <p>
- * After a rewind restore the AIZ2 FG ship-loop "ring" and the BG incremental-shift
- * baseline are stale (they were filled incrementally against the discarded forward
- * timeline). Both are pure functions of (restored camera-X + static layout), so the
- * reset hooks must invalidate the seed/baseline latches and mark the tilemaps dirty
- * so the next {@code ensure*TilemapData} performs a full rebuild rather than the
- * cheap incremental fill/shift.
+ * After a rewind restore the BG incremental-shift baseline is stale (the retained
+ * bytes reflect the discarded forward window), so the restore hook must invalidate
+ * it for a full rebuild. The foreground needs no rewind invalidation: a flat FG
+ * tilemap is a pure function of the static layout, and the AIZ2 FG ship-loop
+ * "ring" self-heals via the bidirectional window reconcile — every chunk column
+ * entering the visible window (on either edge) is refilled from the flat layout on
+ * entry, and camera jumps of at least the ring width degenerate to a full re-seed.
+ * Held rewind fires the restore hook on every backward step, so anything it
+ * invalidates is rebuilt every rewind frame.
  * <p>
  * Headless: uses {@code GraphicsManager.initHeadless()} (no OpenGL, no GPU upload)
  * and a synthetic {@link StubLevel} (no ROM). Asserts private latch fields via
@@ -112,46 +114,136 @@ public class TestLevelTilemapManagerRewindReset {
                 "post-reset ensure must NOT take the incremental shift path");
     }
 
-    // ── FG ship-loop ring ─────────────────────────────────────────────────────
+    // ── FG ring window reconcile (bidirectional fill) ─────────────────────────
 
     @Test
-    public void resetForegroundRingForRewindClearsSeedAndForcesFullRebuild() throws Exception {
-        ZoneFeatureProvider zfp = new StubZoneFeatures(false, false, true);
+    public void rewindRestoreHookLeavesFlatForegroundTilemapClean() throws Exception {
+        // Normal zone: no FG horizontal wrap, so the flat FG tilemap is a pure
+        // function of the static layout (camera-independent). Held rewind fires
+        // the restore hook on EVERY backward step; it must not dirty the
+        // tilemap, or every rewind frame pays a full-level FG rebuild + GPU
+        // upload (the render.fg rewind hotspot).
+        ZoneFeatureProvider zfp = new StubZoneFeatures(false, false, false);
         LevelTilemapManager manager = new LevelTilemapManager(geometry, graphicsManager, null);
-        // Push a camera position so the ring seeds its visible columns.
-        manager.setForegroundRingCamera(800, 320);
         manager.ensureForegroundTilemapData(blockLookup, zfp, 0, null, false);
 
         assertNotNull(manager.getForegroundTilemapData());
-        assertTrue(getBoolean(manager, "foregroundRingSeeded"),
-                "fixture sanity: the ring must seed on the first fgWrap build");
         assertFalse(manager.isForegroundTilemapDirty(),
-                "fixture sanity: the ring build clears the dirty flag");
-        assertNotNull(getField(manager, "lastForegroundWrap"),
-                "fixture sanity: the wrap-state latch is set after a build");
+                "fixture sanity: the flat build clears the dirty flag");
 
-        // Rewind restore: ring cells retain forest columns from the discarded timeline.
-        manager.resetForegroundRingForRewind();
+        manager.resetTilemapsForRewindRestore();
 
-        assertTrue(manager.isForegroundTilemapDirty(),
-                "foreground tilemap must be marked dirty for a full rebuild");
-        assertFalse(getBoolean(manager, "foregroundRingSeeded"),
-                "ring seed latch must be cleared so the next build re-seeds");
-        assertNull(getField(manager, "lastForegroundWrap"),
-                "wrap-state latch must be cleared so the next ensure forces the full build");
+        assertFalse(manager.isForegroundTilemapDirty(),
+                "a rewind restore must not force a full FG rebuild");
+        assertEquals(Boolean.FALSE, getField(manager, "lastForegroundWrap"),
+                "wrap-state latch must be retained so wrap-transition detection still works");
+    }
 
-        // Next ensure with fgWrap still true must re-seed the ring (full build path).
+    @Test
+    public void backwardCameraScrollRefillsEnteringLeftColumns() throws Exception {
+        // Held rewind retreats the camera a few px per frame. Columns entering the
+        // visible window at the LEFT edge hold content from one ring-lap ahead
+        // (written when the leading edge passed worldX+$200 on the way forward)
+        // and must be refilled from the flat layout on entry — with no rewind
+        // reset / full rebuild involved.
+        ZoneFeatureProvider zfp = new StubZoneFeatures(false, false, true);
+        LevelTilemapManager manager = new LevelTilemapManager(geometry, graphicsManager, null);
+        manager.setForegroundRingCamera(800, 320);
         manager.ensureForegroundTilemapData(blockLookup, zfp, 0, null, false);
-        assertTrue(getBoolean(manager, "foregroundRingSeeded"),
-                "post-reset ensure must re-seed the ring");
-        assertFalse(manager.isForegroundTilemapDirty(),
-                "post-reset ensure must clear the dirty flag again");
+        assertTrue(getBoolean(manager, "foregroundRingSeeded"));
+
+        // Forward play far enough that the ring laps: cells for the 800-window
+        // get overwritten with next-lap forest columns.
+        for (int x = 816; x <= 1200; x += 16) {
+            manager.setForegroundRingCamera(x, 320);
+            manager.ensureForegroundTilemapData(blockLookup, zfp, 0, null, false);
+        }
+        // Held rewind: retreat in sub-chunk steps back to 800.
+        for (int x = 1192; x >= 800; x -= 8) {
+            manager.setForegroundRingCamera(x, 320);
+            manager.ensureForegroundTilemapData(blockLookup, zfp, 0, null, false);
+        }
+
+        assertVisibleRingColumnsMatchFreshSeed(manager, zfp, 800, 320);
+    }
+
+    @Test
+    public void largeBackwardCameraJumpReseedsVisibleWindow() throws Exception {
+        // A rewind seek can teleport the camera arbitrarily far back in one frame.
+        // A jump at/beyond the ring width cannot be filled incrementally (every
+        // cell is stale) and must degenerate to a full re-seed.
+        ZoneFeatureProvider zfp = new StubZoneFeatures(false, false, true);
+        LevelTilemapManager manager = new LevelTilemapManager(geometry, graphicsManager, null);
+        manager.setForegroundRingCamera(1200, 320);
+        manager.ensureForegroundTilemapData(blockLookup, zfp, 0, null, false);
+
+        manager.setForegroundRingCamera(640, 320);
+        manager.ensureForegroundTilemapData(blockLookup, zfp, 0, null, false);
+
+        assertVisibleRingColumnsMatchFreshSeed(manager, zfp, 640, 320);
+    }
+
+    @Test
+    public void forwardCameraScrollKeepsVisibleColumnsCorrect() throws Exception {
+        // Baseline: the existing forward leading-edge behavior must be preserved.
+        ZoneFeatureProvider zfp = new StubZoneFeatures(false, false, true);
+        LevelTilemapManager manager = new LevelTilemapManager(geometry, graphicsManager, null);
+        manager.setForegroundRingCamera(800, 320);
+        manager.ensureForegroundTilemapData(blockLookup, zfp, 0, null, false);
+
+        for (int x = 804; x <= 1200; x += 4) {
+            manager.setForegroundRingCamera(x, 320);
+            manager.ensureForegroundTilemapData(blockLookup, zfp, 0, null, false);
+        }
+
+        assertVisibleRingColumnsMatchFreshSeed(manager, zfp, 1200, 320);
+    }
+
+    /**
+     * Asserts every ring cell displayed in the visible window {@code [cameraX,
+     * cameraX + screenWidthPx)} is byte-identical to a fresh manager seeded
+     * directly at that camera position (the ring is a pure function of visible
+     * camera window + static layout; cells outside the window may differ).
+     */
+    private void assertVisibleRingColumnsMatchFreshSeed(LevelTilemapManager actual,
+                                                        ZoneFeatureProvider zfp,
+                                                        int cameraX, int screenWidthPx) {
+        LevelTilemapManager reference = new LevelTilemapManager(geometry, graphicsManager, null);
+        reference.setForegroundRingCamera(cameraX, screenWidthPx);
+        reference.ensureForegroundTilemapData(blockLookup, zfp, 0, null, false);
+
+        byte[] act = actual.getForegroundTilemapData();
+        byte[] ref = reference.getForegroundTilemapData();
+        assertNotNull(act);
+        assertNotNull(ref);
+        int widthTiles = reference.getForegroundTilemapWidthTiles();
+        int heightTiles = reference.getForegroundTilemapHeightTiles();
+        assertEquals(widthTiles, actual.getForegroundTilemapWidthTiles());
+        assertEquals(heightTiles, actual.getForegroundTilemapHeightTiles());
+
+        int firstTileWorldX = Math.floorDiv(cameraX, 8);
+        int lastTileWorldX = Math.floorDiv(cameraX + screenWidthPx - 1, 8);
+        for (int tileWorldX = firstTileWorldX; tileWorldX <= lastTileWorldX; tileWorldX++) {
+            int cellX = Math.floorMod(tileWorldX, widthTiles);
+            for (int row = 0; row < heightTiles; row++) {
+                int offset = (row * widthTiles + cellX) * 4;
+                for (int b = 0; b < 4; b++) {
+                    assertEquals(ref[offset + b], act[offset + b],
+                            "ring cell mismatch at worldTileX=" + tileWorldX
+                                    + " (cell " + cellX + "), row=" + row + ", byte " + b);
+                }
+            }
+        }
     }
 
     // ── Combined convenience hook ─────────────────────────────────────────────
 
     @Test
-    public void resetTilemapsForRewindRestoreResetsBothFgRingAndBgBaseline() throws Exception {
+    public void resetTilemapsForRewindRestoreResetsBgBaselineAndLeavesRingIntact() throws Exception {
+        // The FG ring self-heals via the bidirectional window reconcile (every
+        // column entering view is refilled on entry, jumps >= ring width re-seed),
+        // so a rewind restore must NOT force a ring rebuild — held rewind fires
+        // this hook on every backward step.
         ZoneFeatureProvider zfp = new StubZoneFeatures(true, false, true);
         LevelTilemapManager manager = new LevelTilemapManager(geometry, graphicsManager, null);
         manager.setCurrentBgPeriodWidth(PERIOD_PX);
@@ -169,10 +261,13 @@ public class TestLevelTilemapManagerRewindReset {
         assertFalse(getBoolean(manager, "bgLastBuildValid"));
         assertFalse(getBoolean(manager, "bgWindowShiftCandidate"));
         assertTrue(manager.isBackgroundTilemapDirty());
-        // FG ring reset
-        assertFalse(getBoolean(manager, "foregroundRingSeeded"));
-        assertTrue(manager.isForegroundTilemapDirty());
-        assertNull(getField(manager, "lastForegroundWrap"));
+        // FG ring untouched
+        assertTrue(getBoolean(manager, "foregroundRingSeeded"),
+                "ring seed must survive a rewind restore");
+        assertFalse(manager.isForegroundTilemapDirty(),
+                "rewind restore must not force a full FG rebuild");
+        assertEquals(Boolean.TRUE, getField(manager, "lastForegroundWrap"),
+                "wrap-state latch must be retained");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
