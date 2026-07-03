@@ -69,7 +69,5 @@ com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance#childComponents
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance#childComponents
 com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance#childComponents
 com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance#launchedSpikeBallRomSubtypes
-com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance#ownedChildren
-com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance#platformChildren
 com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance#spawned
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance#childComponents
