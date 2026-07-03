@@ -20,8 +20,12 @@ The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
-round 81 is active with mandatory Lua PC-execute plus engine-side diagnostics around the
-routine-04 Obj53 contact window.
+round 85 is active. Rounds 79-84 used PC-execute Lua plus engine diagnostics to
+narrow MTZ3 to Obj53 same-frame break fall-through: ROM keeps running
+`Obj53_OrbitBoss`/`Obj53_SetAnimPriority` on the frame an orb switches from
+routine 02 to routine 04, but the direct engine fall-through candidate exposes
+slot 22 two frames early at f12818. The active target is the combined
+fall-through plus slot-22 touch/position timing fix.
 Worker bounce policy: any `no-change`, `rejected`, `blocked`, or "gated"
 return must include targeted BizHawk Lua evidence in `luaProbes`, including
 script path, output path, frame window, hooked PCs, and the ROM values observed.
