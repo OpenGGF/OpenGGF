@@ -405,7 +405,7 @@ Square/Cross/Circle respectively.
 | `P1_A` | `input.player1.a` | `32` | Space | Player 1 action button A / jump. |
 | `P1_B` | `input.player1.b` | `-1` | unbound | Player 1 action button B. |
 | `P1_C` | `input.player1.c` | `-1` | unbound | Player 1 action button C. |
-| `START` | `input.player1.start` | `259` | Backspace | Player 1 Start: ROM-accurate in-game pause (`Game_paused` / `Pause_Loop`). A press during level gameplay freezes the level update for the frame while the frame counter still advances; press again to resume. Distinct from `PAUSE_KEY`, which is the loop/timing-level pause that also halts audio. |
+| `START` | `input.player1.start` | `259` | Backspace | Player 1 Start: ROM-accurate in-game pause (`Game_paused` / `Pause_Loop`). A press during level gameplay freezes the level update for the frame while the frame counter still advances; press again to resume. Distinct from `PAUSE_KEY`, which is the loop/timing-level pause that also halts audio. Keyboard-only: the gamepad Start button is instead wired to `PAUSE_KEY`'s pause (see below), since this one has no visible feedback. |
 | `P2_A` | `input.player2.a` | `344` | Right Shift | Player 2 action button A / jump. |
 | `P2_B` | `input.player2.b` | `-1` | unbound | Player 2 action button B. |
 | `P2_C` | `input.player2.c` | `-1` | unbound | Player 2 action button C. |
@@ -417,7 +417,7 @@ Square/Cross/Circle respectively.
 
 The gamepad Back/Select/View button on the primary connected pad is a hardcoded (not remappable, no config key) stand-in for the keyboard `Tab` key on the main-menu game-select screen (`MasterTitleScreen`) and its per-game options panel (`LaunchConfigPanel`): it opens the options panel for the selected game and closes it again, mirroring `Tab`'s role in that specific flow only. It has no effect on `Tab`'s other keyboard uses elsewhere (level editor toggle, Special Stage entry, art viewer), which are unrelated screens/modes.
 
-| `PAUSE_KEY` | `input.pause` | `257` | Enter | Pause / unpause the game. |
+| `PAUSE_KEY` | `input.pause` | `257` | Enter | Pause / unpause the game (`userPaused`): shows the "PAUSED" HUD overlay and halts audio. The gamepad Start button on the primary connected pad also toggles this pause, unconditionally (not remappable) -- gamepad Start does NOT trigger the ROM `Game_paused` ("Player 1 Start" / `START`) pause above, since that one has no visible feedback. |
 | `FRAME_STEP_KEY` | `debug.keys.frameStep` | `81` | Q | Advance one frame while paused. The gamepad right bumper (RB/R1) on the primary connected pad also steps a frame, unconditionally (not remappable). |
 | `RECORDING_RECORD_KEY` | `debug.recording.recordKey` | `298` | F9 | `Shift+Record` starts/opens user recording flows; plain Record stops active recording. |
 | `TRACE_REWIND_KEY` | `debug.traceRewind.key` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time, including reverse audio presentation and restored fade snapshots. |

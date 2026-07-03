@@ -46,6 +46,7 @@ connected pad:
 | Left bumper | LB | L1 | Hold to rewind live gameplay (`rewind.liveKey`) |
 | Right bumper | RB | R1 | Advance one frame while paused (`debug.keys.frameStep`) |
 | Back button | View | Select | Open/close the per-game options panel on the main menu (stands in for `Tab` in that flow only) |
+| Start | Start | Options | Pause / unpause (`input.pause`, same as Enter -- shows the "PAUSED" overlay and halts audio). Not wired to the separate silent ROM in-game pause (`input.player1.start` / Backspace). |
 
 ## Rewind
 

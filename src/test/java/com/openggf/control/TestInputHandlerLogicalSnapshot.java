@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_BACK;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_UP;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LAST;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LEFT_BUMPER;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER;
@@ -22,6 +23,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_F1;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
+import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 class TestInputHandlerLogicalSnapshot {
 
@@ -194,6 +196,35 @@ class TestInputHandlerLogicalSnapshot {
 
         input.setLogicalOverride(LogicalInputSnapshot.neutral());
         assertFalse(input.isGamepadBackButtonPressed());
+    }
+
+    @Test
+    void isDirectionHeldIsTrueForKeyboardOnlyGamepadOnlyBothOrNeither() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), source);
+        int upKey = config.getInt(SonicConfiguration.UP);
+
+        source.setDevices(connectedPad(0, buttons()));
+        input.refreshLogicalSnapshot();
+        assertFalse(input.isDirectionHeld(upKey, AbstractPlayableSprite.INPUT_UP));
+
+        input.handleKeyEvent(upKey, GLFW_PRESS);
+        input.refreshLogicalSnapshot();
+        assertTrue(input.isDirectionHeld(upKey, AbstractPlayableSprite.INPUT_UP));
+        input.handleKeyEvent(upKey, GLFW_RELEASE);
+        input.update();
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_DPAD_UP)));
+        input.refreshLogicalSnapshot();
+        assertTrue(input.isDirectionHeld(upKey, AbstractPlayableSprite.INPUT_UP));
+
+        source.setDevices(connectedPad(0, buttons()));
+        input.refreshLogicalSnapshot();
+        assertFalse(input.isDirectionHeld(upKey, AbstractPlayableSprite.INPUT_UP));
     }
 
     private static GamepadStateSource.DeviceState connectedPad(int joystickId, boolean[] buttons) {

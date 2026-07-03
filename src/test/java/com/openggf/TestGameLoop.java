@@ -4,6 +4,8 @@ import com.openggf.game.session.EngineServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.openggf.control.GamepadInputManager;
+import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
 import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
@@ -80,6 +82,7 @@ public class TestGameLoop {
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();
         mockInputHandler = mock(InputHandler.class);
+        when(mockInputHandler.logical()).thenReturn(com.openggf.control.LogicalInputSnapshot.neutral());
         gameLoop = new GameLoop(mockInputHandler);
     }
 
@@ -154,6 +157,47 @@ public class TestGameLoop {
 
         assertFalse(loop.isUserPaused(),
                 "Engine pause input should be ignored in menu modes so data-select cannot appear frozen");
+    }
+
+    @Test
+    public void gamepadStartDoesNotToggleUserPauseInDataSelectMode() {
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler inputHandler = new InputHandler(InputBindingFactory.supplier(config), source);
+        GameLoop loop = new GameLoop(inputHandler);
+        loop.setGameMode(GameMode.DATA_SELECT);
+
+        source.setDevices(GamepadStateSource.DeviceState.connected(
+                0, "pad", buttons(GLFW_GAMEPAD_BUTTON_START), 0f, 0f));
+        loop.step();
+
+        assertFalse(loop.isUserPaused(),
+                "Gamepad Start should be ignored in menu modes so data-select cannot appear frozen");
+    }
+
+    private static boolean[] buttons(int... pressedButtons) {
+        boolean[] buttons = new boolean[GLFW_GAMEPAD_BUTTON_LAST + 1];
+        for (int button : pressedButtons) {
+            buttons[button] = true;
+        }
+        return buttons;
+    }
+
+    private static final class FakeGamepadStateSource implements GamepadStateSource {
+        private final List<DeviceState> devices = new java.util.ArrayList<>();
+
+        void setDevices(DeviceState... devices) {
+            this.devices.clear();
+            this.devices.addAll(List.of(devices));
+        }
+
+        @Override
+        public List<DeviceState> pollDevices() {
+            return List.copyOf(devices);
+        }
     }
 
     @Test

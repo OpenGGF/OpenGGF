@@ -343,7 +343,9 @@ public class TryAgainEndManager {
 
         // Check START press (mapped to configured jump key, matching ROM's Start button)
         int startKey = GameServices.configuration().getInt(SonicConfiguration.JUMP);
-        if (inputHandler != null && startKey > 0 && inputHandler.isKeyPressed(startKey)) {
+        if (inputHandler != null
+                && ((startKey > 0 && inputHandler.isKeyPressed(startKey))
+                        || inputHandler.logical().menuAccept())) {
             exitRequested = true;
             return;
         }

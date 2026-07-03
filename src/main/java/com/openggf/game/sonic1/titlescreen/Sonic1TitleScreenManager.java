@@ -273,7 +273,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
                     introTextTimer = 0;
                 }
                 // Skip intro on Start/Jump press
-                if (input.isKeyPressed(startKey)) {
+                if (confirmPressed(input, startKey)) {
                     skipToMainScreen();
                 }
                 break;
@@ -284,7 +284,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
                     state = State.INTRO_TEXT_FADE_OUT;
                     introTextTimer = 0;
                 }
-                if (input.isKeyPressed(startKey)) {
+                if (confirmPressed(input, startKey)) {
                     skipToMainScreen();
                 }
                 break;
@@ -294,7 +294,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
                 if (introTextTimer >= INTRO_TEXT_FADE_DURATION) {
                     transitionToMainScreen();
                 }
-                if (input.isKeyPressed(startKey)) {
+                if (confirmPressed(input, startKey)) {
                     skipToMainScreen();
                 }
                 break;
@@ -310,7 +310,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
             case ACTIVE:
                 updateMainScreen();
-                if (input.isKeyPressed(startKey)) {
+                if (confirmPressed(input, startKey)) {
                     state = State.EXITING;
                 }
                 break;
@@ -326,6 +326,14 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
     private void skipToMainScreen() {
         transitionToMainScreen();
+    }
+
+    /**
+     * Keyboard Start/Jump press or gamepad confirm (Start / any face action button),
+     * matching {@link com.openggf.game.MasterTitleScreen}'s gamepad-aware confirm gate.
+     */
+    private static boolean confirmPressed(InputHandler input, int startKey) {
+        return input.isKeyPressed(startKey) || input.logical().menuAccept();
     }
 
     private void updateSegaLogo(InputHandler input, int startKey) {
@@ -348,7 +356,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
             segaPcmStarted = true;
             GameServices.audio().playMusic(com.openggf.game.sonic1.audio.Sonic1SmpsConstants.CMD_SEGA);
         }
-        if (segaLogoTimer >= autoEnd || (segaLogoTimer >= skipWindowStart && input.isKeyPressed(startKey))) {
+        if (segaLogoTimer >= autoEnd || (segaLogoTimer >= skipWindowStart && confirmPressed(input, startKey))) {
             beginSegaLogoFadeOut();
         }
     }

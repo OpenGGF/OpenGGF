@@ -784,9 +784,12 @@ public class GameLoop {
             userPaused = false;
             updateAudioPauseState();
         }
+        // Gamepad Start toggles this pause (not the silent ROM Game_paused pause
+        // below) because this is the one with visible feedback: the "PAUSED" HUD
+        // overlay and the audio halt both key off userPaused/isUserPaused().
         if (!playbackTakeoverConsumedPausePress
                 && userPauseInputAllowedForCurrentMode()
-                && inputHandler.isKeyPressed(pauseKey)) {
+                && (inputHandler.isKeyPressed(pauseKey) || inputHandler.logical().player1().startPressed())) {
             if (userPaused && userRecordingControls.handlePlaybackTakeoverRequest()) {
                 userPaused = false;
                 updateAudioPauseState();
@@ -1224,9 +1227,11 @@ public class GameLoop {
                 // while the frame counter still advances. Universal across S1/S2/S3K
                 // (the trigger and unpause are a Start-press edge in every game;
                 // per-game pause divergences are debug-only cheats inert in normal
-                // play).
-                boolean startEdge = inputHandler.isKeyPressed(
-                        configService.getInt(SonicConfiguration.START))
+                // play). Keyboard-only on purpose: this pause has no visible HUD
+                // feedback and never halts audio, so gamepad Start instead drives
+                // the PAUSE_KEY-style userPaused toggle below (which does both) --
+                // see the pauseKey handling earlier in this method.
+                boolean startEdge = inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
                         || playbackDebugManager.isCurrentForcedStartPress();
                 userRecordingControls.beforeLevelFrame(inputHandler);
                 LevelFrameStep.executeWithPause(LevelFrameContext.from(gameplayMode),
