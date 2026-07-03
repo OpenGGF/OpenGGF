@@ -129,6 +129,14 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild", "originX"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1BumperObjectInstance", "pendingTouchedPlayer"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance", "controlledPlayer"), RewindFieldPolicy.CAPTURED),
+            // Caterkiller head/body linkage is structural, rebuilt on restore: each restored
+            // body re-registers with the nearest live head (adoptBodySegmentForRewind) and the
+            // parent chain + back-reference are rebuilt from restore order (relinkForRewind),
+            // mirroring the already-structural 'head' ref (STRUCTURAL_OBJECT_FIELD_NAMES).
+            // Capturing these identity references instead would fight the relink rebuild.
+            // Covered by TestS1BadnikChildGraphRewind.
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance", "bodySegments"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance", "parentState"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance", "spikes"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance", "grabbedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance", "pendingGrabPlayer"), RewindFieldPolicy.CAPTURED),
@@ -171,6 +179,16 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild", "linkedSplash"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild", "linkedLog"), RewindFieldPolicy.CAPTURED),
+            // Ride-vine link chains carry the rendered swing/deploy state of a ride mechanic.
+            // A live rewind hold renders restored state WITHOUT re-running update(), so a
+            // dropped chain would show the vine links detached from the captured root/handle
+            // mid-ride. The sibling root Segment `first` is already captured (it matches the
+            // in-place plain-state-holder gate); capturing the Segment[] keeps the whole vine
+            // coherent. CAPTURED is safe: Segment is a codec-backed plain-state-holder and the
+            // final array restores in place (fixed length 3 / segmentCount-1 from the spawn
+            // subtype, so the recreated length always matches). Covered by TestAizRideVineRewind.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance", "chain"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizRideVineObjectInstance", "chain"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.ClamerObjectInstance", "springChildSlot"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesRockChild", "parent"), RewindFieldPolicy.CAPTURED),
