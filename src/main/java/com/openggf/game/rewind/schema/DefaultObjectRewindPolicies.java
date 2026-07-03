@@ -129,9 +129,21 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild", "originX"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1BumperObjectInstance", "pendingTouchedPlayer"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.Sonic1TeleporterObjectInstance", "controlledPlayer"), RewindFieldPolicy.CAPTURED),
+            // Caterkiller head/body linkage is structural, rebuilt on restore: each restored
+            // body re-registers with the nearest live head (adoptBodySegmentForRewind) and the
+            // parent chain + back-reference are rebuilt from restore order (relinkForRewind),
+            // mirroring the already-structural 'head' ref (STRUCTURAL_OBJECT_FIELD_NAMES).
+            // Capturing these identity references instead would fight the relink rebuild.
+            // Covered by TestS1BadnikChildGraphRewind.
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance", "bodySegments"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance", "parentState"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance", "spikes"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance", "grabbedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance", "pendingGrabPlayer"), RewindFieldPolicy.CAPTURED),
+            // CPZ spin tube fully object-controls each rider along a per-character path; losing the
+            // per-player traversal slot across rewind strands a mid-path player frozen (the tube restarts
+            // every character at state 0 and only re-detects players inside the entry box).
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.CPZSpinTubeObjectInstance", "characterStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.EggPrisonObjectInstance", "buttonObject"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.EggPrisonObjectInstance", "lastPlayer"), RewindFieldPolicy.TRANSIENT),
@@ -140,6 +152,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "animationState"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "launchCooldown"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "lockedPlayerPrevSuppressed"), RewindFieldPolicy.CAPTURED),
+            // Sibling of lockedPlayerPrevSuppressed: the saved pre-lock pinball mode restored on release.
+            // Capturing only the suppressed flag left a rewound release clearing the player's pinball mode.
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "lockedPlayerPrevPinballMode"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "playerFlipperState"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.LauncherBallObjectInstance", "playerCooldowns"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.LauncherBallObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
@@ -152,6 +167,11 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZLauncherObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SidewaysPformObjectInstance", "linkedPlatform"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SlidingSpikeObjectInstance", "peer"), RewindFieldPolicy.CAPTURED),
+            // Speed launcher catapult: the launch (upward -0x400 pop) is applied on the destination frame to
+            // whichever players are in these sets. accelerationRiders is not rebuilt from live contact, and a
+            // restore landing on the launch frame with empty sets silently drops/mis-launches the rider.
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance", "accelerationRiders"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SpeedLauncherObjectInstance", "standingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SpiralObjectInstance", "cylinderAngles"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SpiralObjectInstance", "ridingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.bosses.ARZBossArrow", "mainBoss"), RewindFieldPolicy.CAPTURED),
@@ -166,13 +186,41 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.TornadoObjectInstance", "thrusterFollowerChild"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kFloatingEndEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kUprightEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
+            // AIZ collapsing log bridge: once collapsing it stops being a solid surface (onSolidContact no longer
+            // fires), so an empty standingPlayers cannot self-heal and the collapse/final loops never knock the
+            // stranded rider off; ejectedPlayers guards a knocked-off rider from re-standing/double-ejecting.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance", "standingPlayers"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance", "ejectedPlayers"), RewindFieldPolicy.CAPTURED),
+            // AIZ draw bridge stays a live solid surface for the whole collapse countdown, so onSolidContact
+            // refills standingPlayers every frame the player stands — the set is re-derived, not durable state.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance", "standingPlayers"), RewindFieldPolicy.TRANSIENT),
+            // AIZ flipping bridge never terminates; each per-segment solid frame re-adds standing players via
+            // onSolidContact, so an empty list self-heals next frame (mirrors SeesawObjectInstance standing refs).
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance", "standingPlayers"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizEndBossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossCutsceneInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild", "linkedSplash"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild", "linkedLog"), RewindFieldPolicy.CAPTURED),
+            // Ride-vine link chains carry the rendered swing/deploy state of a ride mechanic.
+            // A live rewind hold renders restored state WITHOUT re-running update(), so a
+            // dropped chain would show the vine links detached from the captured root/handle
+            // mid-ride. The sibling root Segment `first` is already captured (it matches the
+            // in-place plain-state-holder gate); capturing the Segment[] keeps the whole vine
+            // coherent. CAPTURED is safe: Segment is a codec-backed plain-state-holder and the
+            // final array restores in place (fixed length 3 / segmentCount-1 from the spawn
+            // subtype, so the recreated length always matches). Covered by TestAizRideVineRewind.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance", "chain"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizRideVineObjectInstance", "chain"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild", "parent"), RewindFieldPolicy.CAPTURED),
+            // Cross-frame per-player fire-refresh reject counter; without an explicit CAPTURED
+            // policy the identity-keyed map drops the class onto the generic scalar path.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance", "zeroDistanceRejects"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.ClamerObjectInstance", "springChildSlot"), RewindFieldPolicy.CAPTURED),
+            // Collapsing bridge wave: riders are seeded once at the collapse trigger and isSolidFor is true only
+            // for seeded riders during the wave; an empty set after a mid-wave restore drops every rider early
+            // (support lost immediately) and never re-seeds (the trigger will not re-run).
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance", "collapseWaveRiders"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesRockChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance", "blockingWall"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance", "owner"), RewindFieldPolicy.CAPTURED),
@@ -212,23 +260,48 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "structuralChildren"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossWalkoffPrepChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance", "parent"), RewindFieldPolicy.CAPTURED),
+            // Per-player pole ride state: latch flag + trackFixed position accumulator (integrates
+            // x-speed each frame) + inner-track flag. Cross-frame; identity-keyed map needs an
+            // explicit CAPTURED policy or the whole map is silently skipped from the compact set.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzBarberPoleObjectInstance", "riders"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzBumperObjectInstance", "pendingPrimaryTouch"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzBumperObjectInstance", "pendingSidekickTouch"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance", "spawnedFlash"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzCannonInstance", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzCannonInstance", "releasedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzCylinderInstance", "releasedJumpSolidSkipPlayer"), RewindFieldPolicy.CAPTURED),
+            // Per-player attach latch that gates the one-time attach setup (animation restart +
+            // stick_to_convex); dropping it re-runs the setup and restarts the ride animation
+            // one frame after a mid-ride rewind restore.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzGiantWheelInstance", "attachedPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzTeleporterInstance", "beam"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
+            // Per-player lift countdown (subtype-scaled timer decremented each lift frame);
+            // dropping it resets or aborts the tube lift on a mid-lift rewind restore.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzVacuumTubeInstance", "activeLiftFrames"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance", "corkFloor"), RewindFieldPolicy.CAPTURED),
+            // Per-player cage ride state: latch/phase/rideAngle/cooldown/standingBit. Cross-frame.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzWireCageObjectInstance", "riders"), RewindFieldPolicy.CAPTURED),
+            // effectiveVelTable is a derived reference to a static constant fragment-velocity
+            // table, re-selected identically from subtype/config on recreateForRewind; it has
+            // no per-frame state to capture and no int[][] codec, so capturing it would knock
+            // CorkFloor onto the generic path and silently drop the CAPTURED rollingBreakPlayer.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CorkFloorObjectInstance", "effectiveVelTable"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CorkFloorObjectInstance", "rollingBreakPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", "dispenser"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", "springOriginalPositions"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", "springs"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance", "rocketTouchChildren"), RewindFieldPolicy.DEFERRED),
+            // Fixed 2-slot rider array whose RiderState holds a live player reference plus the
+            // cross-frame twist angle / horizontal-swing distance. A final array of a
+            // reference-bearing plain state holder is not auto-captured by the scalar policy
+            // (isSupportedValueType rejects it) and, because the class has other scalar fields,
+            // it stays compact-eligible while silently dropping the whole rider array without
+            // this explicit CAPTURED policy.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HCZSpinningColumnObjectInstance", "riders"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance", "lastCaptureCloud"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud", "frozenBlock"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
@@ -259,11 +332,15 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMinibossFlameInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardInstance", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance", "hangStates"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance", "hangingPlayers"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzSwingBarVerticalObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoFlipperObjectInstance", "lockedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance", "rewardItem"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoMagnetOrbObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance", "playerRef"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance", "controller"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance", "controller"), RewindFieldPolicy.TRANSIENT),
@@ -286,6 +363,11 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.level.objects.InvincibilityStarsObjectInstance", "player"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.ShieldObjectInstance", "player"), RewindFieldPolicy.TRANSIENT)
     );
+
+    /** Read-only view of the exact-field policy table for guard tests. */
+    static Map<FieldKey, RewindFieldPolicy> exactFieldPoliciesForAudit() {
+        return EXACT_FIELD_POLICIES;
+    }
 
     static RewindFieldPolicy policyFor(Field field) {
         RewindFieldPolicy exactPolicy = EXACT_FIELD_POLICIES.get(FieldKey.of(field));

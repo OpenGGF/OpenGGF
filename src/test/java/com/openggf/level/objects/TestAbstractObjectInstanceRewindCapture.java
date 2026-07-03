@@ -354,11 +354,37 @@ class TestAbstractObjectInstanceRewindCapture {
     private static final class TestObjectWithFallbackValueMap extends AbstractObjectInstance {
         private byte[] rasterCache = {1, 2, 3};
         private final Map<Integer, Integer> customMemory = new LinkedHashMap<>();
+        // No-arg-constructor-less RewindStateful holder in a non-final array
+        // (same shape as IczMinibossInstance$OrbState): legitimately
+        // unsupported by the compact schema (a fresh array's elements cannot
+        // be allocated on restore), forcing the generic fallback path this
+        // test covers. Non-final primitive arrays alone no longer force the
+        // fallback.
+        private SegmentState[] segments = {new SegmentState(1)};
 
         TestObjectWithFallbackValueMap(ObjectSpawn spawn) {
             super(spawn, "TestObjectWithFallbackValueMap");
             customMemory.put(0x2E, 7);
             customMemory.put(0x46, 1);
+        }
+
+        private static final class SegmentState
+                implements com.openggf.game.rewind.RewindStateful<Integer> {
+            int phase;
+
+            SegmentState(int phase) {
+                this.phase = phase;
+            }
+
+            @Override
+            public Integer captureRewindStateValue() {
+                return phase;
+            }
+
+            @Override
+            public void restoreRewindStateValue(Integer state) {
+                this.phase = state;
+            }
         }
 
         @Override
@@ -445,12 +471,15 @@ class TestAbstractObjectInstanceRewindCapture {
     }
 
     @Test
-    void defaultClassFallsBackToGenericSidecarForNullableAnimationState() {
+    void defaultClassCompactCapturesNonFinalAnimationState() {
+        // A non-final ObjectAnimationState field no longer forces the generic-sidecar
+        // fallback: the codec rebuilds a fresh instance from the captured animationSet
+        // reference on restore, so the whole class stays on the compact schema path.
         TestObjectWithAnimationState obj = new TestObjectWithAnimationState(spawn(0, 0));
 
         PerObjectRewindSnapshot snap = obj.captureRewindState();
-        assertNull(snap.compactGenericState());
-        assertNotNull(snap.genericState());
+        assertNotNull(snap.compactGenericState());
+        assertNull(snap.genericState());
 
         obj.animationState = null;
         obj.restoreRewindState(snap);

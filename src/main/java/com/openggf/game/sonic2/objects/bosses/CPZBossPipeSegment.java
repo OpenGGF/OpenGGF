@@ -59,7 +59,16 @@ public class CPZBossPipeSegment extends AbstractObjectInstance implements Rewind
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         Sonic2CPZBossInstance boss = CpzBossRewindLinks.nearestBoss(ctx);
         CPZBossPipe pipe = CpzBossRewindLinks.nearestPipe(ctx);
-        return pipe == null ? null : new CPZBossPipeSegment(ctx.spawn(), boss, pipe, 0);
+        if (pipe == null) {
+            return null;
+        }
+        CPZBossPipeSegment segment = new CPZBossPipeSegment(ctx.spawn(), boss, pipe, 0);
+        // The pipe's `segments` list is a final identity collection: structural rewind
+        // state the owner must rebuild, not captured through the identity table. Re-register
+        // each recreated segment so the restored pipe drives its one-at-a-time retract
+        // sequence (updateRetract) off a rebuilt list instead of an empty one.
+        pipe.reregisterRestoredSegment(segment);
+        return segment;
     }
 
     @Override

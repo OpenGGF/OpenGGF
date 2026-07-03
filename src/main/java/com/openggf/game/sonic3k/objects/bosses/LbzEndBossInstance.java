@@ -17,6 +17,7 @@ import com.openggf.level.Level;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -99,13 +100,29 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     private int defeatStoredMaxX;
     private boolean localGradualMaxXExtenderActive;
     private int sharedExplosionEmissionCount;
-    private List<AbstractBossChild> ownedChildren;
-    private List<LbzEndBossPlatformChild> platformChildren;
+    // transient: these identity collections are structural rewind state, skipped from
+    // capture and rebuilt by the child reconstruction path (see recreate* below), matching
+    // the base childComponents list. Without transient they would classify UNSUPPORTED
+    // (non-final identity collections) and knock the whole boss onto the generic scalar
+    // fallback path. They stay non-final because initializeBossState (invoked from the base
+    // constructor, before subclass field initializers) reassigns them.
+    private transient List<AbstractBossChild> ownedChildren;
+    private transient List<LbzEndBossPlatformChild> platformChildren;
     private List<Integer> launchedSpikeBallRomSubtypes;
+    // The Java transient keyword (not merely the rewind-transient annotation) is required:
+    // the compact default-object schema only honours the transient keyword / policy table
+    // for object-ref fields, so an annotated-but-non-transient ref would still be captured
+    // here and throw for a dangling target (the runner expires mid-intro). These links are
+    // re-established by the recreate path.
     @RewindTransient(reason = "Structural child link; child graph is owned by the boss reconstruction path.")
-    private LbzEndBossRunnerChild runnerChild;
+    private transient LbzEndBossRunnerChild runnerChild;
     @RewindTransient(reason = "Structural child link; platform chain is rebuilt by the boss reconstruction path.")
-    private LbzEndBossPlatformChild platformLeader;
+    private transient LbzEndBossPlatformChild platformLeader;
+    // Deterministic reconstruction order for the graph children whose constructor args
+    // (chain subtype / sibling link, tube offsets) are structural and re-derived from the
+    // spawn order rather than captured. Reset in initializeBossState before children recreate.
+    private transient int platformRecreateIndex;
+    private transient int tubeRecreateIndex;
 
     public LbzEndBossInstance(ObjectSpawn spawn) {
         super(spawn, "LBZEndBoss");
@@ -143,6 +160,10 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         ownedChildren = new ArrayList<>();
         platformChildren = new ArrayList<>();
         launchedSpikeBallRomSubtypes = new ArrayList<>();
+        platformLeader = null;
+        runnerChild = null;
+        platformRecreateIndex = 0;
+        tubeRecreateIndex = 0;
         requestStartupAssets();
         spawnInitialVisuals();
     }
@@ -398,6 +419,61 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         ownedChildren.add(child);
         childComponents.add(child);
         return child;
+    }
+
+    // ---- Rewind graph-child reconstruction ------------------------------------------------
+    // These mirror the ROM spawn sites but re-derive the structural (non-captured) constructor
+    // arguments from reconstruction order, then re-register the child into the boss's owned/
+    // platform lists exactly as the original spawn did. The ObjectManager restore loop calls
+    // each child's recreateForRewind (below) once per captured child, in capture (= spawn)
+    // order, after the boss itself has been reconstructed and initializeBossState reset the
+    // ordering counters. Captured per-child scalar state (position, velocity, phase, angle,
+    // ...) is applied afterwards in restore phase 2, so a placeholder-derived initial state is
+    // immediately overwritten.
+
+    LbzEndBossPlatformChild recreatePlatformChild() {
+        // startIntro spawns the chain leader (subtype 0) then followers 2/4/6, each linked to
+        // the previously spawned platform; reconstruction reproduces that order. The sibling
+        // link is the last platform already rebuilt into platformChildren (null for the leader).
+        int subtype = platformRecreateIndex * 2;
+        LbzEndBossPlatformChild chainParent =
+                platformChildren.isEmpty() ? null : platformChildren.get(platformChildren.size() - 1);
+        LbzEndBossPlatformChild platform = new LbzEndBossPlatformChild(this, subtype, chainParent);
+        platformRecreateIndex++;
+        recordChild(platform);
+        platformChildren.add(platform);
+        if (subtype == 0) {
+            platformLeader = platform;
+        }
+        return platform;
+    }
+
+    LbzEndBossRunnerChild recreateRunnerChild() {
+        LbzEndBossRunnerChild runner = recordChild(new LbzEndBossRunnerChild(this));
+        runnerChild = runner;
+        return runner;
+    }
+
+    LbzEndBossTubeSegmentChild recreateTubeSegmentChild() {
+        int index = Math.min(tubeRecreateIndex, TUBE_SEGMENT_SPAWN_DATA.length - 1);
+        int[] data = TUBE_SEGMENT_SPAWN_DATA[index];
+        tubeRecreateIndex++;
+        return recordChild(new LbzEndBossTubeSegmentChild(this, data[0], data[1], data[2]));
+    }
+
+    LbzEndBossSpikeBallChild recreateSpikeBallChild() {
+        // romSubtype only feeds the constructor's initial spawn position/velocity, which are
+        // captured scalars restored in phase 2; it is never read afterwards, so a placeholder
+        // yields an identical live projectile.
+        return recordChild(new LbzEndBossSpikeBallChild(this, 0));
+    }
+
+    private static final int[][] TUBE_SEGMENT_SPAWN_DATA = {
+            {-0x18, 0x38, 0}, {0x18, 0x38, 2}, {0, 0x38, 4}
+    };
+
+    private static LbzEndBossInstance nearestBossForRewind(RewindRecreateContext ctx) {
+        return RewindRecreateObjectLinks.nearestLiveObject(ctx, LbzEndBossInstance.class);
     }
 
     private boolean isCameraInRange() {
@@ -819,6 +895,12 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
+        public AbstractBossChild recreateForRewind(RewindRecreateContext ctx) {
+            LbzEndBossInstance boss = nearestBossForRewind(ctx);
+            return boss == null ? null : boss.recreateTubeSegmentChild();
+        }
+
+        @Override
         public void update(int frameCounter, PlayableEntity player) {
             if (!shouldUpdate(frameCounter)) {
                 return;
@@ -906,6 +988,18 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             currentY = parent.getY() + 0x40;
             xFixed = currentX << 16;
             yFixed = currentY << 16;
+        }
+
+        // Probe constructor for the rewind recreate path (the real chain args are re-derived
+        // by the parent in recreatePlatformChild); never added to the manager.
+        private LbzEndBossPlatformChild(LbzEndBossInstance parent) {
+            this(parent, 0, null);
+        }
+
+        @Override
+        public AbstractBossChild recreateForRewind(RewindRecreateContext ctx) {
+            LbzEndBossInstance boss = nearestBossForRewind(ctx);
+            return boss == null ? null : boss.recreatePlatformChild();
         }
 
         @Override
@@ -1038,6 +1132,12 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
+        public AbstractBossChild recreateForRewind(RewindRecreateContext ctx) {
+            LbzEndBossInstance boss = nearestBossForRewind(ctx);
+            return boss == null ? null : boss.recreateRunnerChild();
+        }
+
+        @Override
         public void update(int frameCounter, PlayableEntity player) {
             if (!beginUpdate(frameCounter)) {
                 return;
@@ -1140,6 +1240,17 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             yVel = data[3];
             phase = 0;
             timer = 0x0F;
+        }
+
+        // Probe constructor for the rewind recreate path; never added to the manager.
+        private LbzEndBossSpikeBallChild(LbzEndBossInstance parent) {
+            this(parent, 0);
+        }
+
+        @Override
+        public AbstractBossChild recreateForRewind(RewindRecreateContext ctx) {
+            LbzEndBossInstance boss = nearestBossForRewind(ctx);
+            return boss == null ? null : boss.recreateSpikeBallChild();
         }
 
         @Override

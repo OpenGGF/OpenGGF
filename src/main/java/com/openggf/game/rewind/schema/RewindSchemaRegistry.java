@@ -209,15 +209,11 @@ public final class RewindSchemaRegistry {
         if (finalField && !codec.capturesFinalFields()) {
             return RewindFieldPolicy.UNSUPPORTED;
         }
-        if (!finalField && codec.requiresExistingTargetValue() && !isObjectRefArrayField(field)) {
+        if (!finalField && codec.requiresExistingTargetValue()
+                && !RewindCodecs.supportsFreshTargetAllocation(field)) {
             return RewindFieldPolicy.UNSUPPORTED;
         }
         return RewindFieldPolicy.CAPTURED;
-    }
-
-    private static boolean isObjectRefArrayField(Field field) {
-        Class<?> type = field.getType();
-        return type.isArray() && ObjectInstance.class.isAssignableFrom(type.getComponentType());
     }
 
     private RewindSchemaRegistry() {}
