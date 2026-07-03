@@ -27,6 +27,16 @@ public final class RewindVhsEffectPass {
     private boolean activated;
     private boolean failed;
     private int frameCounter;
+    private float scrollPhase;
+
+    /** Per-frame tear-band scroll advance at base tape speed (fraction of screen height). */
+    private static final float SCROLL_RATE_PER_FRAME = 0.006f;
+
+    /** Advance the 0..1 band scroll phase by one frame at the given tape speed. */
+    static float advanceScrollPhase(float phase, float speed) {
+        float advanced = phase + SCROLL_RATE_PER_FRAME * Math.max(speed, 0.0f);
+        return advanced - (float) Math.floor(advanced);
+    }
 
     /** Builds the built-in preset from the classpath. No GL required. */
     public static DisplayShaderPreset builtInPreset() throws IOException {
@@ -65,8 +75,11 @@ public final class RewindVhsEffectPass {
             return;
         }
         pipeline.resize(sourceW, sourceH, vpW, vpH);
+        // Integrate the band scroll phase CPU-side: the shader must not derive it
+        // from FrameCount * speed, or a speed change would teleport the bands.
+        scrollPhase = advanceScrollPhase(scrollPhase, speed);
         pipeline.apply(vpX, vpY, vpW, vpH, frameCounter,
-                Map.of("RewindIntensity", intensity, "RewindSpeed", speed));
+                Map.of("RewindIntensity", intensity, "RewindSpeed", speed, "RewindScroll", scrollPhase));
         // Wrap well below the int range: the shader's sin-hash needs FrameCount
         // to stay small for float precision, long before a 32-bit wrap would occur.
         frameCounter = (frameCounter + 1) & 0xFFFF;

@@ -9,6 +9,8 @@ uniform vec2 OutputSize;
 uniform int FrameCount;
 uniform float RewindIntensity; // 0..1 envelope
 uniform float RewindSpeed;     // 0.25..4.0, 1.0 = base tape speed
+uniform float RewindScroll;    // band scroll phase 0..1, integrated CPU-side so a
+                               // speed change alters the scroll rate, not the position
 
 float hash21(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -33,8 +35,8 @@ void main() {
 
     // picture-search tear bands: 2 wide noise bands, plus a 3rd whose amplitude
     // fades in as tape speed approaches double (no pop at the speed crossover);
-    // all scroll upward at a rate proportional to tape speed
-    float scroll = fract(t * 0.006 * speed);
+    // all scroll upward at the CPU-integrated phase (rate follows tape speed)
+    float scroll = fract(RewindScroll);
     float thirdBand = smoothstep(1.2, 2.0, speed);
     float band = 0.0;
     for (int i = 0; i < 3; i++) {
