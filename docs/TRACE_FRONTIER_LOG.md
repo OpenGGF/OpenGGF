@@ -12,16 +12,16 @@ CNZ2 boss-lock boundary-source advance, the round 76 CNZ2 sidekick
 max-Y advance, and the round 79 CNZ2 Obj51 flee lifetime fix,
 integrated into conductor branch `bugfix/ai-s2-trace-next`: ARZ2 is green
 under `frontierOnly` and was banked into `next` as `7ef0928da`; CNZ2 is
-green under `frontierOnly` on branch
-`bugfix/ai-s2-cnz2-round79-next`; MTZ3 is f13477 / 4 under `frontierOnly`
+green under `frontierOnly` on conductor merge `3f29f2ac0`; MTZ3 is f13477 / 4 under `frontierOnly`
 (`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
-is now MTZ3 only after the round 79 branch is integrated.
+is now MTZ3 only.
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
-Round 79 CNZ2 has greened but is not yet banked into conductor `next`, and the
-MTZ3 round 77 worker is still active.
+Round 79 CNZ2 has greened and is ready to bank into `next`; MTZ3 round 81 is
+active with mandatory Lua PC-execute plus engine-side diagnostics around the
+routine-04 Obj53 contact window.
 Worker bounce policy: any `no-change`, `rejected`, `blocked`, or "gated"
 return must include targeted BizHawk Lua evidence in `luaProbes`, including
 script path, output path, frame window, hooked PCs, and the ROM values observed.
@@ -78,6 +78,24 @@ Verification:
 - Focused CNZ2 trace:
   `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
   passed with 1 test, 0 failures, 0 errors, 0 skipped.
+- Conductor merge: worker commit `9cd2c7652786a9fc15b885b0f06defa4e9ff349a`
+  was merged into `bugfix/ai-s2-trace-next` as `3f29f2ac0`.
+- Full S2 frontier sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s2.TestS2*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds2.rom.path=s2.gen" test`
+  ran 19 S2 trace classes with only `TestS2Mtz3LevelSelectTraceReplay` red at
+  f13477 / 4 (`x_speed` expected `-03FB`, actual `0x03FB`). CNZ2 was green.
+- Full S1 frontier sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1*TraceReplay" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds1.rom.path=s1.gen" test`
+  left all 29 S1 trace classes green.
+- S3K guard sweep:
+  `mvn "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils" "-DfailIfNoTests=false" "-Dtrace.frontierOnly=true" "-Ds3k.rom.path=s3k.gen" test`
+  stayed at the known AIZ expected-red pair only:
+  `TestS3kAizCompleteRunTraceReplay` f1095 / 3 (`x_sub` expected `0x0000`,
+  actual `0x0C00`) and `TestS3kAizTraceReplay` f8941 / 1 (`camera_y`
+  expected `0x02C1`, actual `0x02B9`); S3K load/bootstrap guards remained
+  green.
+- Develop refresh after the round: `git fetch origin develop next` followed by
+  `git merge develop` on conductor reported `Already up to date`.
 
 ## 2026-07-03 - S2 round 76 CNZ2 Tails max-Y boundary
 
