@@ -234,6 +234,13 @@ public class S1DataSelectImageCacheManager {
 					Camera camera = GameServices.camera();
 					camera.setX((short) Math.max(camera.getMinX(), cameraLeftX));
 					camera.setY((short) Math.max(camera.getMinY(), centreY - 96));
+					// The camera jump above happens outside the normal per-frame update
+					// tick, so parallax's cached FG vscroll offset and the object
+					// placement window are still anchored to the load-time camera
+					// position. Resync both before drawing, or the foreground tilemap
+					// samples world Y=0 and no nearby objects/badniks are spawned.
+					levelManager.recomputeParallaxAfterRewindRestore();
+					levelManager.getObjectManager().postCameraPlacementUpdate(camera.getX());
 					levelManager.drawWithRenderOptions(null, LevelManager.LevelRenderOptions.previewCapture());
 					graphics.flush();
 					int viewportX = graphics.getViewportX();
