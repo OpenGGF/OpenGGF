@@ -12,6 +12,8 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 
+import org.lwjgl.glfw.GLFW;
+
 import java.util.Objects;
 
 /**
@@ -55,6 +57,7 @@ public final class LiveRewindManager {
                 beginReverseFadePresentation();
             }
             rewinding = true;
+            speedController.setHeldSpeedMultiplier(resolveHeldSpeedMultiplier(input));
             int steps = speedController.stepsWhileHeld();
             GameServices.audio().setReversePlaybackRate(speedController.currentSpeed());
             stepBackward(steps);
@@ -78,6 +81,45 @@ public final class LiveRewindManager {
         rewinding = false;
         effectEnvelope.frameInactive();
         return false;
+    }
+
+    private double resolveHeldSpeedMultiplier(InputHandler input) {
+        boolean halfHeld = isModifierDown(input, config.getInt(SonicConfiguration.LIVE_REWIND_HALF_SPEED_KEY));
+        boolean doubleHeld = isModifierDown(input, config.getInt(SonicConfiguration.LIVE_REWIND_DOUBLE_SPEED_KEY));
+        return speedMultiplier(halfHeld, doubleHeld);
+    }
+
+    /** Half and double stack multiplicatively, so holding both cancels back to normal speed. */
+    static double speedMultiplier(boolean halfHeld, boolean doubleHeld) {
+        double multiplier = 1.0;
+        if (halfHeld) {
+            multiplier *= 0.5;
+        }
+        if (doubleHeld) {
+            multiplier *= 2.0;
+        }
+        return multiplier;
+    }
+
+    private static boolean isModifierDown(InputHandler input, int keyCode) {
+        if (input.isKeyDown(keyCode)) {
+            return true;
+        }
+        int mirrored = mirroredModifier(keyCode);
+        return mirrored != GLFW.GLFW_KEY_UNKNOWN && input.isKeyDown(mirrored);
+    }
+
+    /** Left/right variants of a configured modifier key are interchangeable. */
+    static int mirroredModifier(int keyCode) {
+        return switch (keyCode) {
+            case GLFW.GLFW_KEY_LEFT_CONTROL -> GLFW.GLFW_KEY_RIGHT_CONTROL;
+            case GLFW.GLFW_KEY_RIGHT_CONTROL -> GLFW.GLFW_KEY_LEFT_CONTROL;
+            case GLFW.GLFW_KEY_LEFT_SHIFT -> GLFW.GLFW_KEY_RIGHT_SHIFT;
+            case GLFW.GLFW_KEY_RIGHT_SHIFT -> GLFW.GLFW_KEY_LEFT_SHIFT;
+            case GLFW.GLFW_KEY_LEFT_ALT -> GLFW.GLFW_KEY_RIGHT_ALT;
+            case GLFW.GLFW_KEY_RIGHT_ALT -> GLFW.GLFW_KEY_LEFT_ALT;
+            default -> GLFW.GLFW_KEY_UNKNOWN;
+        };
     }
 
     public void recordExternalFrame(GameMode mode, InputHandler input) {

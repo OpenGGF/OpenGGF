@@ -141,6 +141,10 @@ public final class ConfigCatalog {
         put(LIVE_REWIND_ENABLED, of("rewind", "liveEnabled", BOOL,
                 "Enable held-key rewind during ordinary live play"));
         put(LIVE_REWIND_KEY, of("rewind", "liveKey", KEY, "Key held to rewind during live play"));
+        put(LIVE_REWIND_HALF_SPEED_KEY, of("rewind", "liveHalfSpeedKey", KEY,
+                "Modifier held with the rewind key for half-speed rewind"));
+        put(LIVE_REWIND_DOUBLE_SPEED_KEY, of("rewind", "liveDoubleSpeedKey", KEY,
+                "Modifier held with the rewind key for double-speed rewind"));
         put(LIVE_REWIND_TAPE_COAST_ENABLED, of("rewind", "tapeCoastEnabled", BOOL,
                 "Continue rewinding with a decelerating tape-coast after key release"));
         put(LIVE_REWIND_TAPE_COAST_ACCELERATION, of("rewind", "tapeCoastAcceleration", DOUBLE,

@@ -418,6 +418,8 @@ Square/Cross/Circle respectively.
 | `RECORDING_RECORD_KEY` | `debug.recording.recordKey` | `298` | F9 | `Shift+Record` starts/opens user recording flows; plain Record stops active recording. |
 | `TRACE_REWIND_KEY` | `debug.traceRewind.key` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time, including reverse audio presentation and restored fade snapshots. |
 | `LIVE_REWIND_KEY` | `rewind.liveKey` | `82` | R | Hold during live level play to rewind deterministic gameplay state when `LIVE_REWIND_ENABLED` is true, including reverse audio presentation and restored fade snapshots. |
+| `LIVE_REWIND_HALF_SPEED_KEY` | `rewind.liveHalfSpeedKey` | `341` | Left Ctrl | Modifier held together with the rewind key for half-speed rewind (one engine step every other frame; reverse audio plays slow-motion). The mirrored left/right variant of a modifier key also counts. Holding both speed modifiers cancels back to normal speed. |
+| `LIVE_REWIND_DOUBLE_SPEED_KEY` | `rewind.liveDoubleSpeedKey` | `340` | Left Shift | Modifier held together with the rewind key for double-speed rewind (two engine steps per frame; reverse audio pitches up, and the VHS effect shows a third tear band). The mirrored left/right variant of a modifier key also counts. |
 
 ### Debug Navigation
 
@@ -546,6 +548,8 @@ startup:
 rewind:
   liveEnabled: false   # Enable held-key rewind during ordinary live play
   liveKey: R   # Key held to rewind during live play
+  liveHalfSpeedKey: LEFT_CONTROL   # Modifier held with the rewind key for half-speed rewind
+  liveDoubleSpeedKey: LEFT_SHIFT   # Modifier held with the rewind key for double-speed rewind
   tapeCoastEnabled: false   # Continue rewinding with a decelerating tape-coast after key release
   tapeCoastAcceleration: 0.25   # Per-tick speed increase while tape-coast is held
   tapeCoastDeceleration: 0.5   # Per-tick speed decrease after release

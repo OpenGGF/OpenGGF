@@ -31,24 +31,26 @@ void main() {
 
     float line = floor(uv.y * TextureSize.y);
 
-    // picture-search tear bands: 2 (3 at high speed) wide noise bands
-    // scrolling upward at a rate proportional to tape speed
+    // picture-search tear bands: 2 wide noise bands, plus a 3rd whose amplitude
+    // fades in as tape speed approaches double (no pop at the speed crossover);
+    // all scroll upward at a rate proportional to tape speed
     float scroll = fract(t * 0.006 * speed);
-    float bandCount = speed > 2.0 ? 3.0 : 2.0;
+    float thirdBand = smoothstep(1.2, 2.0, speed);
     float band = 0.0;
     for (int i = 0; i < 3; i++) {
-        if (float(i) >= bandCount) {
-            break;
+        float amp = i == 2 ? thirdBand : 1.0;
+        if (amp <= 0.0) {
+            continue;
         }
-        float center = fract(float(i) / bandCount + scroll);
+        float center = fract(float(i) / 3.0 + scroll);
         float d = ringDist(uv.y, center);
-        band = max(band, 1.0 - smoothstep(0.045, 0.06, d));
+        band = max(band, amp * (1.0 - smoothstep(0.035, 0.05, d)));
     }
     band *= k;
 
-    // ragged per-line horizontal displacement inside the bands (up to ~25 src px)
+    // ragged per-line horizontal displacement inside the bands (up to ~14 src px)
     float rag = hash21(vec2(line, t)) * 2.0 - 1.0;
-    float x = uv.x + band * rag * (25.0 / TextureSize.x);
+    float x = uv.x + band * rag * (14.0 / TextureSize.x);
 
     // global per-scanline jitter (+/- 1.5 src px)
     float jitter = hash21(vec2(line * 1.37, t * 0.7)) * 2.0 - 1.0;
@@ -71,15 +73,15 @@ void main() {
     float luma = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(luma), 0.12 * k);
 
-    // inside bands / head-switch strip: kill chroma, mix in luma static
+    // inside bands / head-switch strip: mute (not kill) chroma, mix in luma static
     float noiseZone = max(band, strip * k);
     float staticN = hash21(vec2(floor(suv.x * TextureSize.x), line + t * 13.0));
-    col = mix(col, vec3(luma), noiseZone);
-    col = mix(col, vec3(staticN), noiseZone * 0.4);
+    col = mix(col, vec3(luma), noiseZone * 0.7);
+    col = mix(col, vec3(staticN), noiseZone * 0.25);
 
     // bright tear line at band edges (band field transitions 0 -> 1)
     float tear = smoothstep(0.15, 0.25, band * (1.0 - band)) * k;
-    col += tear * vec3(0.35);
+    col += tear * vec3(0.22);
 
     // tape dropouts: sparse bright horizontal dashes
     float rowRoll = hash21(vec2(line, floor(t * 0.5)));

@@ -640,6 +640,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.LIVE_REWIND_ENABLED, false);
 		putDefault(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
 		putDefaultKey(SonicConfiguration.LIVE_REWIND_KEY, GLFW_KEY_R);
+		putDefaultKey(SonicConfiguration.LIVE_REWIND_HALF_SPEED_KEY, GLFW_KEY_LEFT_CONTROL);
+		putDefaultKey(SonicConfiguration.LIVE_REWIND_DOUBLE_SPEED_KEY, GLFW_KEY_LEFT_SHIFT);
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, false);
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ACCELERATION, 0.25);
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_DECELERATION, 0.5);

@@ -81,4 +81,69 @@ class TestRewindSpeedController {
         controller.stepsAfterRelease();
         assertEquals(0.0, controller.currentSpeed(), 1e-9);
     }
+
+    @Test
+    void halfSpeedMultiplierAlternatesStepsWithoutCoast() {
+        RewindSpeedController controller = RewindSpeedController.disabled();
+        controller.setHeldSpeedMultiplier(0.5);
+
+        assertEquals(0, controller.stepsWhileHeld());
+        assertEquals(1, controller.stepsWhileHeld());
+        assertEquals(0, controller.stepsWhileHeld());
+        assertEquals(1, controller.stepsWhileHeld());
+        assertEquals(0.5, controller.currentSpeed(), 1e-9);
+    }
+
+    @Test
+    void doubleSpeedMultiplierStepsTwicePerFrameWithoutCoast() {
+        RewindSpeedController controller = RewindSpeedController.disabled();
+        controller.setHeldSpeedMultiplier(2.0);
+
+        assertEquals(2, controller.stepsWhileHeld());
+        assertEquals(2, controller.stepsWhileHeld());
+        assertEquals(2.0, controller.currentSpeed(), 1e-9);
+    }
+
+    @Test
+    void unitMultiplierPreservesLegacySingleStepBehaviour() {
+        RewindSpeedController controller = RewindSpeedController.disabled();
+        controller.setHeldSpeedMultiplier(0.5);
+        controller.setHeldSpeedMultiplier(1.0);
+
+        assertEquals(1, controller.stepsWhileHeld());
+        assertEquals(1, controller.stepsWhileHeld());
+        assertEquals(1.0, controller.currentSpeed(), 1e-9);
+    }
+
+    @Test
+    void multiplierScalesCoastSpeedWithoutCompounding() {
+        RewindSpeedController controller = new RewindSpeedController(true, 1.0, 1.0, 1.0, 3.0);
+        controller.setHeldSpeedMultiplier(2.0);
+
+        assertEquals(2, controller.stepsWhileHeld());
+        assertEquals(4, controller.stepsWhileHeld());
+        assertEquals(6, controller.stepsWhileHeld());
+        assertEquals(6, controller.stepsWhileHeld());
+        assertEquals(6.0, controller.currentSpeed(), 1e-9);
+    }
+
+    @Test
+    void resetRestoresUnitMultiplier() {
+        RewindSpeedController controller = RewindSpeedController.disabled();
+        controller.setHeldSpeedMultiplier(2.0);
+        controller.stepsWhileHeld();
+        controller.reset();
+
+        assertEquals(1, controller.stepsWhileHeld());
+        assertEquals(1.0, controller.currentSpeed(), 1e-9);
+    }
+
+    @Test
+    void nonPositiveMultiplierIsTreatedAsUnit() {
+        RewindSpeedController controller = RewindSpeedController.disabled();
+        controller.setHeldSpeedMultiplier(0.0);
+
+        assertEquals(1, controller.stepsWhileHeld());
+        assertEquals(1.0, controller.currentSpeed(), 1e-9);
+    }
 }
