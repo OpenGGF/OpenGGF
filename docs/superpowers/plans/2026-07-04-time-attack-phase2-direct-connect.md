@@ -4,7 +4,7 @@
 
 **Goal:** Host/join a LAN-testable direct-connect time-attack room (≤ 8 players): live rounds with a timed window, unlimited instant retries, streamed non-colliding ghosts, standings — plus the full phase-2 security content (protocol hygiene, `GhostStreamValidator` with pacing, all reserved wire fields live).
 
-**Architecture:** Four new engine-free network packages — `com.openggf.net.protocol` (versioned JSON control + binary ghost codecs), `com.openggf.net.hub` (`GhostHub`, `GhostStreamValidator`, `HostRoundEngine`, `RoomHost` — shared verbatim with the phase-3 master relay), `com.openggf.net.host` (Netty WebSocket server), `com.openggf.net.client` (`RaceClient` on the JDK WebSocket, `ClientRaceSession`, jitter-buffered `RemoteGhostPlayback`, `GhostStreamPublisher`) — plus engine glue in `com.openggf.game.timeattack.mp` (`MultiplayerRaceCoordinator`, `LiveLevelProfileSource`, lobby/HUD UI) that rides the phase-1 `TimeAttackRuntime` and `GhostRenderer` unchanged except for three explicit seams. Each client simulates and times only its own player; the network carries only cosmetic ghost streams and reliable event messages (main spec §1).
+**Architecture:** Four new engine-free network packages — `com.openggf.net.protocol` (versioned JSON control + binary ghost codecs), `com.openggf.net.hub` (`GhostHub`, `GhostStreamValidator`, `HostRoundEngine`, `RoomHost` — shared verbatim with the phase-3 master relay), `com.openggf.net.host` (Netty WebSocket server), `com.openggf.net.client` (`RaceClient` on the JDK WebSocket, `ClientRaceSession`, jitter-buffered `RemoteGhostPlayback`, `GhostStreamPublisher`) — plus engine glue in `com.openggf.game.timeattack.mp` (`MultiplayerRaceCoordinator`, `LiveLevelProfileFactory`, lobby/HUD UI) that rides the phase-1 `TimeAttackRuntime` and `GhostRenderer` unchanged except for three explicit seams. Each client simulates and times only its own player; the network carries only cosmetic ghost streams and reliable event messages (main spec §1).
 
 **Specs:** `docs/superpowers/specs/2026-07-04-multiplayer-time-attack-design.md` (§4–§10, §11 phase 2) and `docs/superpowers/specs/2026-07-04-time-attack-security-design.md` (§3, §6.2, §7, §11 phase 2).
 
@@ -1052,7 +1052,8 @@ Skills: n/a"
 - Consumes: `GhostPackets.FramesBatch` (Task 2), `GhostFrame`/`GhostFrameCodec` (phase 1).
 - Produces:
   - `TrackValidationProfile(int levelWidthPx, int levelHeightPx, int maxSpeedPxPerFrame, int maxFramesPerSecond)` (record). Constants: `GLOBAL_SPEED_CEILING_PX_PER_FRAME = 32` (conservative global ceiling per security spec §7.2 — max across characters/boosts + margin; a gross-spoofing filter that must never false-positive a legitimate run), `FRAME_RATE_CAP = 60`, `BOUNDS_MARGIN_PX = 64`.
-  - `TrackValidationProfileSource` — `Optional<TrackValidationProfile> profileFor(String gameId, int zone, int act)`; `static TrackValidationProfileSource none()`. The hub consumes this interface: bundled table on the phase-3 master, live level on a player host (Task 14's `LiveLevelProfileSource`), `none()` in tests.
+  - `TrackValidationProfileSource` — `Optional<TrackValidationProfile> profileFor(String gameId, int zone, int act)`; `static TrackValidationProfileSource none()`. The hub consumes this interface: bundled table on the phase-3 master, `none()` in tests AND on a player host. A player host has no loaded level when the room starts (and gameplay state must not be read from the room's event loop), so the host path instead PUSHES a profile built on the game thread after its level loads — `Task 14's LiveLevelProfileFactory` → `RoomHost.applyTrackValidationProfile` (Task 7) → `GhostHub.applyProfile` (Task 5) → the validator's `updateProfile` below. Until the push lands, the validator runs in its explicit degraded mode (security spec §7.2).
+  - `GhostStreamValidator.updateProfile(TrackValidationProfile profileOrNull)` — swaps the bounds/speed source WITHOUT touching attempt/stream state (attemptId, frame contiguity, rate bucket, pacing). A reset here would false-positive the `attempt-start` check for every guest already mid-attempt when the host's level finishes loading.
   - `ViolationSink` — `void onViolation(String kind, String detail)`; validator owners wrap it to add slot/fingerprint context.
   - `GhostStreamValidator(TrackValidationProfile profileOrNull, LongSupplier wallClockMillis, ViolationSink sink)`:
     - `enum Verdict { ACCEPT, ACCEPT_FLAGGED, DROP, KICK }` — `onBatch(GhostPackets.FramesBatch batch)` returns one per upstream batch.
@@ -1194,6 +1195,20 @@ class TestGhostStreamValidator {
     }
 
     @Test
+    void updateProfileTightensChecksWithoutResettingStreamState() {
+        GhostStreamValidator v = validator(null); // host level not loaded yet: degraded
+        v.onBatch(batch(1, 0, frames(0x29F0, 2, 3))); // near the eventual boundary, no complaint
+        v.updateProfile(PROFILE); // level loaded mid-attempt: pushed profile
+        // contiguity survives the swap: next expected index is still 3
+        assertEquals(GhostStreamValidator.Verdict.ACCEPT, v.onBatch(batch(1, 3, frames(0x29F6, 2, 3))));
+        byte[] outOfLevel = new byte[GhostFrameCodec.BYTES];
+        GhostFrameCodec.encode(new GhostFrame(0x2A00 + 65, 0x0100, 1, false, false, false, 2, false),
+                outOfLevel, 0);
+        assertEquals(GhostStreamValidator.Verdict.DROP, v.onBatch(batch(1, 6, outOfLevel)));
+        assertFalse(violations.isEmpty()); // bounds (or speed) now enforced
+    }
+
+    @Test
     void tenViolationsKick() {
         GhostStreamValidator v = validator(PROFILE);
         v.onBatch(batch(1, 0, frames(100, 2, 3)));
@@ -1280,7 +1295,7 @@ public final class GhostStreamValidator {
     public static final long PACING_WARMUP_MILLIS = 3000;
     public static final int PACING_MIN_FPS = 54;
 
-    private final TrackValidationProfile profile; // nullable: explicit degrade to track-independent checks
+    private TrackValidationProfile profile; // nullable: explicit degrade to track-independent checks
     private final LongSupplier wallClockMillis;
     private final ViolationSink sink;
 
@@ -1298,6 +1313,15 @@ public final class GhostStreamValidator {
         this.profile = profileOrNull;
         this.wallClockMillis = wallClockMillis;
         this.sink = sink;
+    }
+
+    /**
+     * Swaps the bounds/speed source without touching attempt/stream state. Used when a
+     * player host's level finishes loading after guests are already streaming — a reset
+     * here would false-positive the attempt-start check on their live attempts.
+     */
+    public void updateProfile(TrackValidationProfile profileOrNull) {
+        this.profile = profileOrNull;
     }
 
     public Verdict onBatch(GhostPackets.FramesBatch batch) {
@@ -1390,7 +1414,7 @@ public final class GhostStreamValidator {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.net.hub.TestGhostStreamValidator" test`
-Expected: PASS (9 tests). Reconcile the bounds-test expectation with the single-violation-per-batch rule (see note under Step 1).
+Expected: PASS (10 tests). Reconcile the bounds-test expectation with the single-violation-per-batch rule (see note under Step 1).
 
 - [ ] **Step 5: Commit**
 
@@ -1427,6 +1451,7 @@ Skills: n/a"
     - `void tick()` — one `GhostAggregate` per recipient containing every OTHER player's pending frames (≤ 8 players: everyone is near, no relevance filtering — main spec §4.4), then clears pending. Contiguous pending batches of the same attempt merge into one entry; an attempt change mid-tick emits multiple entries; per-entry frame count capped at `MAX_AGGREGATE_FRAMES_PER_ENTRY` with the remainder left pending for the next tick. Recipients with no entries get NO packet (don't wake idle sockets). Tick counter increments every call — `int tickCount()`.
     - Pending cap per player: `MAX_PENDING_FRAMES = 600` (10 s at 60 fps); overflow drops the OLDEST pending batches (a laggy stream catches up to live rather than replaying ancient frames; the real backpressure ladder is phase 3).
     - `boolean isAttemptFlagged(int slot)` — exposes the slot validator's pacing flag for Task 6.
+    - `void applyProfile(TrackValidationProfile profileOrNull)` — the player-host push path (security spec §7.2): stores the profile for future validators and calls `updateProfile` on every existing player's validator WITHOUT resetting buffers or stream state (unlike `setTrack`, which is a full reset and is only safe between rounds). Called via `RaceHostServer.execute` once the host's level has loaded (Task 15 flow).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1645,6 +1670,18 @@ public final class GhostHub {
         currentProfile = profiles.profileFor(gameId, zone, act).orElse(null);
         for (Map.Entry<Integer, Player> entry : players.entrySet()) {
             resetPlayerStream(entry.getKey(), entry.getValue());
+        }
+    }
+
+    /**
+     * Player-host push path: applies a live-level profile to current AND future
+     * validators without resetting stream state (guests may already be mid-attempt
+     * when the host's level finishes loading — see GhostStreamValidator.updateProfile).
+     */
+    public void applyProfile(TrackValidationProfile profileOrNull) {
+        currentProfile = profileOrNull;
+        for (Player player : players.values()) {
+            player.validator.updateProfile(profileOrNull);
         }
     }
 
@@ -2100,7 +2137,7 @@ Skills: n/a"
     - `void onBinary(HubConnection connection, byte[] data)` — pre-admission → close; else `hub.onBinary(slot, data)`.
     - `void onDisconnected(HubConnection connection)` — revoke token, `hub.removePlayer`, `round.onPlayerLeft`, broadcast `RoomState`.
     - `void tick()` — `hub.tick()` + `round.onTick()` + admission-timeout sweep. Task 11 schedules this at 50 ms (20 Hz — main spec §4.1).
-    - Host-side driving: `boolean requestStartRound(ControlMessage.RoundConfig config)` (used by the hosting player's UI via the server facade), `int playerCount()`, `List<ControlMessage.PlayerInfo> players()`, `HostRoundEngine round()`, `GhostHub hub()`.
+    - Host-side driving: `boolean requestStartRound(ControlMessage.RoundConfig config)` (used by the hosting player's UI via the server facade), `void applyTrackValidationProfile(TrackValidationProfile profile)` (delegates to `hub.applyProfile` — the host engine pushes this via `RaceHostServer.execute` once its level has loaded, closing the gap where a player host has no level at room-start; until it lands the validator runs degraded), `int playerCount()`, `List<ControlMessage.PlayerInfo> players()`, `HostRoundEngine round()`, `GhostHub hub()`.
   - Broadcasts are hub→client messages and carry `token = null`.
 
 - [ ] **Step 1: Write the failing test** (reuses `FakeConnection` from Task 5's test — extract it to `src/test/java/com/openggf/net/hub/FakeHubConnection.java` as a top-level test fixture class with the same fields, and update `TestGhostHub` to use it)
@@ -2489,6 +2526,15 @@ public final class RoomHost {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Player-host push path (security spec §7.2): the host engine builds the profile
+     * on the game thread once its level is loaded and pushes it here via
+     * RaceHostServer.execute — never resetting live guest streams.
+     */
+    public void applyTrackValidationProfile(TrackValidationProfile profile) {
+        hub.applyProfile(profile);
     }
 
     public int playerCount() {
@@ -4003,12 +4049,12 @@ Skills: n/a"
 **Interfaces:**
 - Consumes: `ClientHandshake` (Task 3), `ControlCodec`/`ControlMessage`/`GhostPackets` (Tasks 1–2), `PlayerIdentity`; test consumes `RaceHostServer` (Task 11).
 - Produces `RaceClient`:
-  - `static CompletableFuture<RaceClient> connect(URI wsUri, PlayerIdentity identity, String displayName, String determinismFingerprint)` — opens the JDK WebSocket, drives Hello→Welcome→AuthProof→JoinAccepted internally, completes with a joined client or completes exceptionally with `JoinRejectedException(String reason)` (nested class) / connect failure. **Connect timeout `CONNECT_TIMEOUT_MILLIS = 3000`** — surfaces as a clean join failure with the reason shown (main spec §9: no relay fallback in phase 2).
-  - `sealed interface InboundEvent`: `record Control(ControlMessage message)`, `record Binary(byte[] data)`, `record Disconnected(String reason)`.
+  - `static CompletableFuture<RaceClient> connect(URI wsUri, PlayerIdentity identity, String displayName, String determinismFingerprint)` — opens the JDK WebSocket, drives Hello→Welcome→AuthProof→JoinAccepted internally, completes with a joined client or completes exceptionally with `JoinRejectedException(String reason)` (nested class) / connect failure. **Join timeout `JOIN_TIMEOUT_MILLIS = 3000` covers the ENTIRE sequence** — TCP connect, WebSocket upgrade, AND the Hello→Welcome→AuthProof→JoinAccepted exchange (`orTimeout` on the returned future, aborting the socket on expiry). A server that accepts the socket but never answers still yields a clean failure within 3 s (main spec §9: timeout surfaces as a clean join failure; no relay fallback in phase 2). The `HttpClient` connect timeout is set to the same value as the transport-level backstop.
+  - `sealed interface InboundEvent`: `record Control(ControlMessage message)`, `record GhostData(GhostPackets.Aggregate aggregate)`, `record Disconnected(String reason)`. Binary frames are decoded AND validated on the network thread — the game thread only ever sees parsed, typed events, so RaceClient is the single binary validation boundary.
   - `List<InboundEvent> drainInbound()` — the ONLY consumption point; called once per frame by the game thread (main spec §6.1: all game-state mutation stays on the game thread). Listener callbacks only enqueue.
   - `void sendControl(ControlMessage message)` — encodes with the session token and queues; `void sendBinary(byte[] data)`. Sends are serialized through an internal chain of `CompletableFuture`s (the JDK WebSocket forbids overlapping sends of the same kind).
   - `int playerSlot()`, `String sessionToken()`, `ControlMessage.JoinAccepted joinAccepted()`, `boolean isOpen()`, `void close()`.
-  - Hardening: undecodable inbound text/binary enqueues `Disconnected("protocol violation")` and closes (a hostile HOST must not crash the client — security spec threat table).
+  - Hardening: undecodable inbound text or binary (via `GhostPackets.decodeAggregate`, which also enforces size/type/count caps) enqueues `Disconnected("protocol violation")` and aborts the socket — a hostile HOST must not crash the client (security spec threat table), and no unvalidated bytes ever reach the game thread.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -4093,9 +4139,8 @@ class TestRaceClientLoopback {
         byte[] frame = new byte[GhostFrameCodec.BYTES];
         GhostFrameCodec.encode(new GhostFrame(100, 200, 1, false, false, false, 2, false), frame, 0);
         a.sendBinary(GhostPackets.encodeFrames(1, 0, frame));
-        RaceClient.InboundEvent aggregate = await(b, e -> e instanceof RaceClient.Binary);
-        GhostPackets.Aggregate decoded =
-                GhostPackets.decodeAggregate(((RaceClient.Binary) aggregate).data());
+        RaceClient.InboundEvent aggregate = await(b, e -> e instanceof RaceClient.GhostData);
+        GhostPackets.Aggregate decoded = ((RaceClient.GhostData) aggregate).aggregate();
         assertEquals(0, decoded.entries().get(0).playerSlot());
 
         a.close();
@@ -4140,7 +4185,7 @@ package com.openggf.net.client;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlCodec;
 import com.openggf.net.protocol.ControlMessage;
-import com.openggf.net.protocol.Protocol;
+import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.ProtocolViolationException;
 
 import java.io.ByteArrayOutputStream;
@@ -4161,7 +4206,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * chained because the JDK WebSocket forbids overlapping sends of one kind.
  */
 public final class RaceClient {
-    public static final long CONNECT_TIMEOUT_MILLIS = 3000;
+    /** Whole-join budget: TCP connect + WS upgrade + handshake exchange (main spec §9). */
+    public static final long JOIN_TIMEOUT_MILLIS = 3000;
 
     public static final class JoinRejectedException extends RuntimeException {
         public JoinRejectedException(String reason) {
@@ -4175,7 +4221,8 @@ public final class RaceClient {
     public record Control(ControlMessage message) implements InboundEvent {
     }
 
-    public record Binary(byte[] data) implements InboundEvent {
+    /** A GhostAggregate already decoded and validated on the network thread. */
+    public record GhostData(GhostPackets.Aggregate aggregate) implements InboundEvent {
     }
 
     public record Disconnected(String reason) implements InboundEvent {
@@ -4221,10 +4268,12 @@ public final class RaceClient {
                 if (last) {
                     byte[] packet = binaryPartial.toByteArray();
                     binaryPartial.reset();
-                    if (packet.length <= Protocol.MAX_BINARY_BYTES) {
-                        client.inbound.add(new Binary(packet));
-                    } else {
-                        client.fail(ws, "oversized binary frame");
+                    try {
+                        // decodeAggregate enforces type, counts, and MAX_BINARY_BYTES —
+                        // a hostile host cannot feed junk to the game thread.
+                        client.inbound.add(new GhostData(GhostPackets.decodeAggregate(packet)));
+                    } catch (ProtocolViolationException e) {
+                        client.fail(ws, "protocol violation");
                     }
                 }
                 ws.request(1);
@@ -4279,7 +4328,7 @@ public final class RaceClient {
         };
 
         HttpClient.newHttpClient().newWebSocketBuilder()
-                .connectTimeout(Duration.ofMillis(CONNECT_TIMEOUT_MILLIS))
+                .connectTimeout(Duration.ofMillis(JOIN_TIMEOUT_MILLIS))
                 .buildAsync(wsUri, listener)
                 .whenComplete((ws, error) -> {
                     if (error != null) {
@@ -4288,6 +4337,18 @@ public final class RaceClient {
                     }
                     client.webSocket = ws;
                     client.enqueueSendText(ControlCodec.encode(null, handshake.hello()));
+                });
+        // The whole join sequence — not just the TCP connect — must fail cleanly within
+        // the budget: a server that accepts the socket but never answers would otherwise
+        // hang this future forever (main spec §9).
+        joined.orTimeout(JOIN_TIMEOUT_MILLIS, java.util.concurrent.TimeUnit.MILLISECONDS)
+                .whenComplete((c, error) -> {
+                    if (error != null) {
+                        WebSocket ws = client.webSocket;
+                        if (ws != null) {
+                            ws.abort();
+                        }
+                    }
                 });
         return joined;
     }
@@ -4391,10 +4452,11 @@ Skills: n/a"
 - Produces (three additive seams; NOTHING else in the phase-1 class changes):
   1. `interface AttemptListener` (nested in `TimeAttackRuntime`):
      - `void onAttemptBegan(int attemptOrdinal)` — fired when an attempt begins at spawn (`onLevelReady` / post-retry). `attemptOrdinal` starts at 1 and increments per begun attempt within one armed session — it is the wire `attemptId` (strictly increasing, as the validator and playback require).
-     - `void onAttemptFinished(int attemptOrdinal, int timeFrames, int firstInputFrame, int finishFrame, byte[] inputRecordingSha256)` — fired on the RUNNING→FINISHED transition, after the best-save decision, regardless of whether it was a new best.
+     - `void onFrameSampled(int attemptOrdinal, GhostFrame frame)` — fired EVERY tick from the spawn frame (ARMED idle frames included) through the finishing tick, immediately after the runtime captures the frame into its ghost buffer and BEFORE `onAttemptFinished` fires on the finish tick. This is the network publisher's feed: every frame phase-1 ghost capture records is delivered exactly once, in order, so the wire stream stays spawn-anchored (recorded frame N = attempt frame N) and the ghost-stream hash covers spawn→finish inclusive. (A poll-style `lastSampledFrame()` accessor was rejected: it missed ARMED idle frames and the finishing frame, because `onAttemptFinished` fires inside the runtime tick before any post-tick poll runs.)
+     - `void onAttemptFinished(int attemptOrdinal, int timeFrames, int firstInputFrame, int finishFrame, byte[] inputRecordingSha256)` — fired on the RUNNING→FINISHED transition, after the best-save decision, regardless of whether it was a new best — and always AFTER the finishing tick's `onFrameSampled`.
      - `void onAttemptVoided(int attemptOrdinal)` — fired when an attempt is voided (retry, cap, deadline void, taint).
   2. `void setAttemptListener(AttemptListener listener)` (null clears). `void voidCurrentAttempt()` — public: voids the running attempt and fires `onAttemptVoided` (Task 14 calls this at the round deadline; internal retry/cap paths route through it so the listener always hears about abandoned attempts).
-  3. `GhostFrame lastSampledFrame()` — the ghost frame captured by the most recent tick (null before the first tick of an attempt); `void setExtraGhostSupplier(Supplier<List<ActiveGhost>> supplier)` — extra ghosts merged into the runtime's render list each frame after its own best/import ghosts, truncated to the phase-1 renderer cap of 8 total (main spec §4.6: nearest-8 render cap; at ≤ 8 players a simple truncation is the degenerate case).
+  3. `void setExtraGhostSupplier(Supplier<List<ActiveGhost>> supplier)` — extra ghosts merged into the runtime's render list each frame after its own best/import ghosts, truncated to the phase-1 renderer cap of 8 total (main spec §4.6: nearest-8 render cap; at ≤ 8 players a simple truncation is the degenerate case).
 - Reconcile-first rule: the worktree implements phase 1 concurrently. Before editing, read the as-built `TimeAttackRuntime` and adapt mechanically (field/method names may differ from the phase-1 plan text, the SEMANTICS above may not). If phase 1 shipped `tickForTest(...)`/`beginAttemptForTest(...)` seams (its plan says it must), reuse them for this task's tests.
 
 - [ ] **Step 1: Write the failing test**
@@ -4422,12 +4484,19 @@ class TestTimeAttackRuntimeMultiplayerSeams {
 
     private static final class RecordingListener implements TimeAttackRuntime.AttemptListener {
         final List<Event> events = new ArrayList<>();
+        final List<GhostFrame> sampled = new ArrayList<>();
         byte[] lastInputHash;
         int lastTimeFrames = -1;
 
         @Override
         public void onAttemptBegan(int attemptOrdinal) {
             events.add(new Event("began", attemptOrdinal));
+        }
+
+        @Override
+        public void onFrameSampled(int attemptOrdinal, GhostFrame frame) {
+            events.add(new Event("sampled", attemptOrdinal));
+            sampled.add(frame);
         }
 
         @Override
@@ -4461,7 +4530,11 @@ class TestTimeAttackRuntimeMultiplayerSeams {
         runtime.tickForTest(0, false, false, -1, frame(10));    // spawn idle
         runtime.tickForTest(0x08, false, false, -1, frame(11)); // first input
         runtime.tickForTest(0x08, false, true, -1, frame(12));  // signpost
-        assertEquals(List.of(new Event("began", 1), new Event("finished", 1)), listener.events);
+        // Every tick sampled — spawn idle AND the finishing tick — with finished LAST.
+        assertEquals(List.of(new Event("began", 1),
+                new Event("sampled", 1), new Event("sampled", 1), new Event("sampled", 1),
+                new Event("finished", 1)), listener.events);
+        assertEquals(List.of(10, 11, 12), listener.sampled.stream().map(GhostFrame::x).toList());
         assertEquals(1, listener.lastTimeFrames); // finishFrame 2 − firstInputFrame 1
         assertEquals(32, listener.lastInputHash.length);
     }
@@ -4476,18 +4549,20 @@ class TestTimeAttackRuntimeMultiplayerSeams {
         runtime.tickForTest(0x08, false, false, -1, frame(10));
         runtime.voidCurrentAttempt();
         runtime.beginAttemptForTest("0.6:cafe"); // retry begins attempt 2
-        assertEquals(List.of(new Event("began", 1), new Event("voided", 1), new Event("began", 2)),
-                listener.events);
-        assertFalse(runtime.isAttemptRunning() && listener.events.size() != 3);
+        assertEquals(List.of(new Event("began", 1), new Event("sampled", 1),
+                new Event("voided", 1), new Event("began", 2)), listener.events);
     }
 
     @Test
-    void lastSampledFrameTracksTicks(@TempDir Path root) {
+    void voidedAttemptStopsSampling(@TempDir Path root) {
         TimeAttackRuntime runtime = armedRuntime(root);
+        RecordingListener listener = new RecordingListener();
+        runtime.setAttemptListener(listener);
         runtime.beginAttemptForTest("0.6:cafe");
-        assertNull(runtime.lastSampledFrame());
         runtime.tickForTest(0, false, false, -1, frame(77));
-        assertEquals(77, runtime.lastSampledFrame().x());
+        runtime.voidCurrentAttempt();
+        runtime.tickForTest(0, false, false, -1, frame(78)); // level still ticking post-void
+        assertEquals(1, listener.sampled.size()); // sampling fires only while ARMED/RUNNING
     }
 
     @Test
@@ -4522,6 +4597,9 @@ Read the as-built class, then add (adapting names to what phase 1 actually shipp
 public interface AttemptListener {
     void onAttemptBegan(int attemptOrdinal);
 
+    /** Every captured frame, spawn through finish inclusive — fired only while ARMED/RUNNING. */
+    void onFrameSampled(int attemptOrdinal, GhostFrame frame);
+
     void onAttemptFinished(int attemptOrdinal, int timeFrames, int firstInputFrame, int finishFrame,
                            byte[] inputRecordingSha256);
 
@@ -4530,7 +4608,6 @@ public interface AttemptListener {
 
 private AttemptListener attemptListener;
 private int attemptOrdinal;
-private GhostFrame lastSampledFrame;
 private java.util.function.Supplier<java.util.List<ActiveGhost>> extraGhostSupplier;
 
 public void setAttemptListener(AttemptListener listener) {
@@ -4539,10 +4616,6 @@ public void setAttemptListener(AttemptListener listener) {
 
 public void setExtraGhostSupplier(java.util.function.Supplier<java.util.List<ActiveGhost>> supplier) {
     this.extraGhostSupplier = supplier;
-}
-
-public GhostFrame lastSampledFrame() {
-    return lastSampledFrame;
 }
 
 public void voidCurrentAttempt() {
@@ -4558,8 +4631,8 @@ public void voidCurrentAttempt() {
 ```
 
 Wire-in points (locate the as-built equivalents):
-1. Where an attempt begins at spawn (the code path `onLevelReady`/`beginAttemptForTest` reaches, where the phase-1 code constructs the fresh `TimeAttackAttempt` + `AttemptInputRecording`): increment `attemptOrdinal`, reset `lastSampledFrame = null`, then `if (attemptListener != null) attemptListener.onAttemptBegan(attemptOrdinal);`.
-2. In the per-frame tick where the ghost frame is captured (the `sampledFrame` parameter of `tickForTest`): store it in `lastSampledFrame` BEFORE appending to the capture buffer.
+1. Where an attempt begins at spawn (the code path `onLevelReady`/`beginAttemptForTest` reaches, where the phase-1 code constructs the fresh `TimeAttackAttempt` + `AttemptInputRecording`): increment `attemptOrdinal`, then `if (attemptListener != null) attemptListener.onAttemptBegan(attemptOrdinal);`.
+2. In the per-frame tick, immediately after the phase-1 code appends the sampled frame (the `sampledFrame` parameter of `tickForTest`) to the ghost capture buffer — and ONLY on ticks where it does capture (ARMED/RUNNING): `if (attemptListener != null) attemptListener.onFrameSampled(attemptOrdinal, sampledFrame);`. This must run on the finishing tick too, BEFORE point 3 — the listener's ordering contract is what lets the coordinator seal the ghost-stream hash over the complete spawn→finish stream.
 3. On the FINISHED transition, after the phase-1 best-save decision: `if (attemptListener != null) attemptListener.onAttemptFinished(attemptOrdinal, attempt.finalTimeFrames(), attempt.firstInputFrame(), attempt.finishFrame(), inputRecording.sha256());`.
 4. Re-route the EXISTING internal void paths (retry request, 36 000-frame cap, debug-taint) through `voidCurrentAttempt()` so the listener hears every abandonment exactly once. Guard against double-fire: `voidCurrentAttempt` must be a no-op when no attempt is running.
 5. Where the runtime assembles its `List<ActiveGhost>` for the render hook: after adding its own ghosts, `if (extraGhostSupplier != null) { for (ActiveGhost extra : extraGhostSupplier.get()) { if (ghosts.size() >= 8) break; ghosts.add(extra); } }`. Add package-visible `java.util.List<ActiveGhost> activeGhostsForTest()` returning that assembled list if phase 1 has no equivalent accessor.
@@ -4586,13 +4659,13 @@ Skills: n/a"
 
 ---
 
-### Task 14: MultiplayerRaceCoordinator + LiveLevelProfileSource + GameLoop wiring
+### Task 14: MultiplayerRaceCoordinator + LiveLevelProfileFactory + GameLoop wiring
 
 **Files:**
 - Create: `src/main/java/com/openggf/game/timeattack/mp/RaceTransport.java`
 - Create: `src/main/java/com/openggf/game/timeattack/mp/MultiplayerRaceCoordinator.java`
 - Create: `src/main/java/com/openggf/game/timeattack/mp/MultiplayerHudState.java`
-- Create: `src/main/java/com/openggf/game/timeattack/mp/LiveLevelProfileSource.java`
+- Create: `src/main/java/com/openggf/game/timeattack/mp/LiveLevelProfileFactory.java`
 - Modify: `src/main/java/com/openggf/net/client/RaceClient.java` (implement `RaceTransport` — one `implements` clause; the interface lives engine-side, so instead add an ADAPTER, see below, to keep the fence intact)
 - Modify: `src/main/java/com/openggf/GameLoop.java` (hooks beside the phase-1 `timeAttackRuntime` hooks)
 - Test: `src/test/java/com/openggf/game/timeattack/mp/TestMultiplayerRaceCoordinator.java`
@@ -4602,16 +4675,16 @@ Skills: n/a"
 - Produces:
   - `RaceTransport` — `List<RaceClient.InboundEvent> drainInbound(); void sendControl(ControlMessage m); void sendBinary(byte[] d); int playerSlot(); boolean isOpen(); void close();` (imports from `net.client`/`net.protocol` are fine — engine → net direction is allowed; only the reverse is fenced).
   - `MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session, TimeAttackRuntime runtime)` — implements `TimeAttackRuntime.AttemptListener`; constructor registers itself via `runtime.setAttemptListener(this)` and `runtime.setExtraGhostSupplier(this::remoteActiveGhosts)`; owns a `GhostStreamPublisher` over `transport::sendBinary` and a `RemoteGhostRegistry`.
-    - `void beforeLevelFrame()` — drain transport: `Control` → `session.onControl` (+ `RoomState` also to `registry.onRoomState`); `Binary` → `GhostPackets.decodeAggregate` → `registry.onAggregate` (decode failure → treat as disconnect); `Disconnected` → mark `connectionLost()`.
-    - `void afterLevelFrame()` — (1) if an attempt is running and the frame was sampled, `publisher.onFrame(runtime.lastSampledFrame())`; (2) deadline enforcement (main spec §5.5 hard cutoff): `if (!session.isWindowOpen() && runtime.isAttemptRunning()) runtime.voidCurrentAttempt();` (3) `remoteGhosts = registry.advanceAll(session.localSlot())` cached for the supplier; (4) ping scheduling: while `session.needsMoreClockSamples()` send a `Ping(nowMillis)` at most every 500 ms.
-    - `AttemptListener`: `onAttemptBegan(o)` → `publisher.beginAttempt(o)` + `transport.sendControl(new AttemptStart(o))`; `onAttemptFinished(o, time, first, finish, hash)` → `publisher.finishAttempt()` + `transport.sendControl(new AttemptFinish(o, time, first, finish, hex(hash), hex(publisher.streamHashSha256()), null))`; `onAttemptVoided(o)` → `publisher.abandonAttempt()` + `transport.sendControl(new AttemptReset(o))`.
+    - `void beforeLevelFrame()` — drain transport: `Control` → `session.onControl` (+ `RoomState` also to `registry.onRoomState`); `GhostData` → `registry.onAggregate(ghost.aggregate())` (already decoded and validated by `RaceClient` on the network thread — Task 12); `Disconnected` → mark `connectionLost()`.
+    - `void afterLevelFrame()` — (1) deadline enforcement (main spec §5.5 hard cutoff): `if (!session.isWindowOpen() && runtime.isAttemptRunning()) runtime.voidCurrentAttempt();` (2) `remoteGhosts = registry.advanceAll(session.localSlot())` cached for the supplier; (3) ping scheduling: while `session.needsMoreClockSamples()` send a `Ping(nowMillis)` at most every 500 ms. (Frame publication does NOT live here — see the listener below; a post-tick poll would miss ARMED idle frames and the finishing frame.)
+    - `AttemptListener`: `onAttemptBegan(o)` → `publisher.beginAttempt(o)` + `transport.sendControl(new AttemptStart(o))`; `onFrameSampled(o, frame)` → `publisher.onFrame(frame)` — the runtime fires this for EVERY captured frame from spawn (ARMED idle included) through the finishing tick, before `onAttemptFinished`, so the wire stream is spawn-anchored and complete; `onAttemptFinished(o, time, first, finish, hash)` → `publisher.finishAttempt()` + `transport.sendControl(new AttemptFinish(o, time, first, finish, hex(hash), hex(publisher.streamHashSha256()), null))` — the stream hash seals over the exact frame set phase-1 ghost capture recorded; `onAttemptVoided(o)` → `publisher.abandonAttempt()` + `transport.sendControl(new AttemptReset(o))`.
     - `List<ActiveGhost> remoteActiveGhosts()` — maps cached `RemoteGhost`s to phase-1 `ActiveGhost("net:" + slot, character, state.frame())`. (Opacity-by-state and nameplates are phase-4 polish; the phase-1 renderer already distance-fades.)
     - `MultiplayerHudState hudState()` — `record MultiplayerHudState(boolean active, String phase, long remainingWindowMillis, long remainingCountdownMillis, List<ControlMessage.StandingsRow> standings, List<String> chatLines, boolean connectionLost, String kickReason)`.
     - `void shutdown()` — `runtime.setAttemptListener(null)`, `runtime.setExtraGhostSupplier(null)`, `transport.close()`.
-  - `LiveLevelProfileSource implements TrackValidationProfileSource` (security spec §7.2: the player-host path builds the profile live from its loaded level): `profileFor` reads `GameServices.levelOrNull()` — null → `Optional.empty()` (validator degrades explicitly). Level width/height: use the loaded level's pixel dimensions — grep the phase-1/`LevelGeometry` accessors (`GameServices.level()` exposes the geometry record per CLAUDE.md `LevelGeometry`); speed = `TrackValidationProfile.GLOBAL_SPEED_CEILING_PX_PER_FRAME`, rate = `FRAME_RATE_CAP`.
+  - `LiveLevelProfileFactory` (security spec §7.2: the player-host path builds the profile live from its loaded level): `static TrackValidationProfile fromLoadedLevelOrNull()` — reads `GameServices.levelOrNull()` ON THE GAME THREAD (never from the room's event loop — gameplay state is not thread-safe); null level → null (the validator stays in its explicit degraded mode). Level width/height: the loaded level's pixel dimensions — grep the phase-1/`LevelGeometry` accessors (`GameServices.level()` exposes the geometry record per CLAUDE.md `LevelGeometry`); speed = `TrackValidationProfile.GLOBAL_SPEED_CEILING_PX_PER_FRAME`, rate = `FRAME_RATE_CAP`. The host engine pushes the result via `server.execute(() -> server.room().applyTrackValidationProfile(profile))` once its level is ready (Task 15 flow item 4) — this is a PUSH model because the room starts before any level exists and hub code must not read gameplay state cross-thread.
 - GameLoop wiring (read the as-built phase-1 hook block in `GameLoop.updateLevelMode` first):
   - `Engine` owns an optional `MultiplayerRaceCoordinator` (set by Task 15's host/join flow, cleared on quit-to-title via `coordinator.shutdown()`).
-  - In `updateLevelMode`, immediately AFTER the phase-1 `timeAttackRuntime.beforeLevelFrame(input)` call: `if (coordinator != null) coordinator.beforeLevelFrame();`. Immediately AFTER `timeAttackRuntime.afterLevelFrame()`: `if (coordinator != null) coordinator.afterLevelFrame();` (ordering matters: the runtime samples the frame, then the coordinator publishes it).
+  - In `updateLevelMode`, immediately AFTER the phase-1 `timeAttackRuntime.beforeLevelFrame(input)` call: `if (coordinator != null) coordinator.beforeLevelFrame();`. Immediately AFTER `timeAttackRuntime.afterLevelFrame()`: `if (coordinator != null) coordinator.afterLevelFrame();`. (Frame publication rides the `onFrameSampled` listener INSIDE the runtime tick, so it needs no ordering here; the after-hook ordering matters only so the deadline check sees the tick's final attempt state.)
   - Retry keys, rewind suppression, editor blocking: unchanged — phase 1 already gates them on `isAttemptRunning()`.
 
 - [ ] **Step 1: Write the failing test (fake transport, no sockets)**
@@ -4675,7 +4748,7 @@ class TestMultiplayerRaceCoordinator {
                 root.resolve("identity"), () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", List.of()));
         MultiplayerRaceCoordinator coordinator =
-                new MultiplayerRaceCoordinator(transport, session, runtime);
+                new MultiplayerRaceCoordinator(transport, session, runtime, () -> now);
         return new Rig(transport, session, runtime, coordinator);
     }
 
@@ -4689,11 +4762,15 @@ class TestMultiplayerRaceCoordinator {
         rig.runtime().beginAttemptForTest("0.6:cafe");
         assertInstanceOf(ControlMessage.AttemptStart.class, rig.transport().sentControl.get(0));
 
+        // Publication rides the onFrameSampled listener inside each runtime tick —
+        // no coordinator call needed between ticks for the stream to be complete.
         for (int i = 0; i < 4; i++) {
             rig.runtime().tickForTest(i == 0 ? 0 : 0x08, false, i == 3, -1, frame(10 + i));
-            rig.coordinator().afterLevelFrame();
         }
-        assertFalse(rig.transport().sentBinary.isEmpty()); // 3-frame batch shipped
+        // 4 sampled frames (spawn idle + finish tick included): one 3-frame batch
+        // mid-attempt plus the 1-frame remainder flushed by finishAttempt().
+        assertEquals(2, rig.transport().sentBinary.size());
+        assertEquals(1, GhostPackets.decodeFrames(rig.transport().sentBinary.get(1)).frameCount());
         ControlMessage.AttemptFinish finish = rig.transport().sentControl.stream()
                 .filter(m -> m instanceof ControlMessage.AttemptFinish)
                 .map(m -> (ControlMessage.AttemptFinish) m).findFirst().orElseThrow();
@@ -4732,7 +4809,7 @@ class TestMultiplayerRaceCoordinator {
             for (int k = 0; k < 3; k++) {
                 GhostFrameCodec.encode(frame(200 + i + k), data, k * GhostFrameCodec.BYTES);
             }
-            rig.transport().inbound.add(new RaceClient.Binary(GhostPackets.encodeAggregate(i, List.of(
+            rig.transport().inbound.add(new RaceClient.GhostData(new GhostPackets.Aggregate(i, List.of(
                     new GhostPackets.AggregateEntry(3, 1, i, 3, data)))));
         }
         rig.coordinator().beforeLevelFrame();
@@ -4822,14 +4899,13 @@ public record MultiplayerHudState(boolean active, String phase, long remainingWi
 ```java
 package com.openggf.game.timeattack.mp;
 
+import com.openggf.game.ghost.GhostFrame;
 import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.net.client.ClientRaceSession;
 import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.client.RaceClient;
 import com.openggf.net.client.RemoteGhostRegistry;
 import com.openggf.net.protocol.ControlMessage;
-import com.openggf.net.protocol.GhostPackets;
-import com.openggf.net.protocol.ProtocolViolationException;
 import com.openggf.sprites.ghost.ActiveGhost;
 
 import java.util.ArrayList;
@@ -4850,15 +4926,22 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private final GhostStreamPublisher publisher;
     private final RemoteGhostRegistry registry = new RemoteGhostRegistry();
 
+    private final java.util.function.LongSupplier clockMillis;
     private List<ActiveGhost> remoteGhosts = List.of();
     private boolean connectionLost;
     private long lastPingAtMillis = Long.MIN_VALUE;
 
     public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session,
                                       TimeAttackRuntime runtime) {
+        this(transport, session, runtime, System::currentTimeMillis);
+    }
+
+    public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session,
+                                      TimeAttackRuntime runtime, java.util.function.LongSupplier clockMillis) {
         this.transport = transport;
         this.session = session;
         this.runtime = runtime;
+        this.clockMillis = clockMillis;
         this.publisher = new GhostStreamPublisher(transport::sendBinary);
         runtime.setAttemptListener(this);
         runtime.setExtraGhostSupplier(this::remoteActiveGhosts);
@@ -4873,23 +4956,13 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                         registry.onRoomState(state.players());
                     }
                 }
-                case RaceClient.Binary binary -> {
-                    try {
-                        registry.onAggregate(GhostPackets.decodeAggregate(binary.data()));
-                    } catch (ProtocolViolationException e) {
-                        connectionLost = true;
-                        transport.close();
-                    }
-                }
+                case RaceClient.GhostData ghost -> registry.onAggregate(ghost.aggregate());
                 case RaceClient.Disconnected disconnected -> connectionLost = true;
             }
         }
     }
 
     public void afterLevelFrame() {
-        if (runtime.isAttemptRunning() && runtime.lastSampledFrame() != null) {
-            publisher.onFrame(runtime.lastSampledFrame());
-        }
         if (!session.isWindowOpen() && runtime.isAttemptRunning()) {
             runtime.voidCurrentAttempt(); // hard deadline cutoff (main spec §5.5)
         }
@@ -4929,6 +5002,11 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     @Override
+    public void onFrameSampled(int attemptOrdinal, GhostFrame frame) {
+        publisher.onFrame(frame); // spawn-anchored: every captured frame, spawn through finish
+    }
+
+    @Override
     public void onAttemptFinished(int attemptOrdinal, int timeFrames, int firstInputFrame,
                                   int finishFrame, byte[] inputRecordingSha256) {
         publisher.finishAttempt();
@@ -4957,7 +5035,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         if (!session.needsMoreClockSamples() || !transport.isOpen()) {
             return;
         }
-        long now = System.currentTimeMillis();
+        long now = clockMillis.getAsLong();
         if (now - lastPingAtMillis >= PING_INTERVAL_MILLIS) {
             lastPingAtMillis = now;
             transport.sendControl(new ControlMessage.Ping(now));
@@ -4966,34 +5044,34 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 }
 ```
 
-`LiveLevelProfileSource` (host side; read the as-built level-geometry accessor before finalizing):
+`LiveLevelProfileFactory` (host side; read the as-built level-geometry accessor before finalizing):
 
 ```java
 package com.openggf.game.timeattack.mp;
 
 import com.openggf.game.GameServices;
 import com.openggf.net.hub.TrackValidationProfile;
-import com.openggf.net.hub.TrackValidationProfileSource;
-
-import java.util.Optional;
 
 /**
- * Player-host profile source (security spec §7.2): builds the validation profile
- * live from the loaded level. No level loaded → empty → the validator degrades
- * explicitly to track-independent checks.
+ * Player-host profile builder (security spec §7.2): builds the validation profile
+ * from the loaded level ON THE GAME THREAD; the host engine pushes the result onto
+ * the room's event loop via RaceHostServer.execute → RoomHost.applyTrackValidationProfile.
+ * No level loaded → null → the validator stays in its explicit degraded mode.
  */
-public final class LiveLevelProfileSource implements TrackValidationProfileSource {
-    @Override
-    public Optional<TrackValidationProfile> profileFor(String gameId, int zone, int act) {
+public final class LiveLevelProfileFactory {
+    private LiveLevelProfileFactory() {
+    }
+
+    public static TrackValidationProfile fromLoadedLevelOrNull() {
         var level = GameServices.levelOrNull();
         if (level == null) {
-            return Optional.empty();
+            return null;
         }
         // Use the engine's level pixel dimensions — grep LevelGeometry / the phase-1
         // level accessors for the exact getter names and adapt.
-        return Optional.of(new TrackValidationProfile(level.getWidthPixels(), level.getHeightPixels(),
+        return new TrackValidationProfile(level.getWidthPixels(), level.getHeightPixels(),
                 TrackValidationProfile.GLOBAL_SPEED_CEILING_PX_PER_FRAME,
-                TrackValidationProfile.FRAME_RATE_CAP));
+                TrackValidationProfile.FRAME_RATE_CAP);
     }
 }
 ```
@@ -5003,12 +5081,12 @@ GameLoop wiring (after reading the as-built phase-1 block): add an optional coor
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.game.timeattack.mp.TestMultiplayerRaceCoordinator" test`
-Expected: PASS (5 tests). One nuance: `maybePing` uses `System.currentTimeMillis()` directly — for the ping test to be deterministic, inject the clock instead: add a `LongSupplier clockMillis` constructor parameter (defaulted via a secondary constructor to `System::currentTimeMillis`) and use it in `maybePing`; the test rig passes `() -> now`. Do this — the test above assumes it.
+Expected: PASS (5 tests). The clock is injected (`LongSupplier clockMillis`, production default `System::currentTimeMillis` via the 3-arg constructor) so the ping test is deterministic — the rig passes `() -> now`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/com/openggf/game/timeattack/mp/RaceTransport.java src/main/java/com/openggf/game/timeattack/mp/MultiplayerRaceCoordinator.java src/main/java/com/openggf/game/timeattack/mp/MultiplayerHudState.java src/main/java/com/openggf/game/timeattack/mp/LiveLevelProfileSource.java src/main/java/com/openggf/GameLoop.java src/test/java/com/openggf/game/timeattack/mp/TestMultiplayerRaceCoordinator.java
+git add src/main/java/com/openggf/game/timeattack/mp/RaceTransport.java src/main/java/com/openggf/game/timeattack/mp/MultiplayerRaceCoordinator.java src/main/java/com/openggf/game/timeattack/mp/MultiplayerHudState.java src/main/java/com/openggf/game/timeattack/mp/LiveLevelProfileFactory.java src/main/java/com/openggf/GameLoop.java src/test/java/com/openggf/game/timeattack/mp/TestMultiplayerRaceCoordinator.java
 git commit -m "feat(timeattack): multiplayer race coordinator bridging runtime and room
 
 Changelog: n/a: phase-2 entry added in c1 of this branch
@@ -5045,11 +5123,11 @@ This task is UI glue over as-built phase-1 screens — the exact render calls MU
   1. Menu mode row: `SOLO` (phase-1 flow unchanged) / `HOST LAN` / `JOIN LAN`.
   2. `HOST LAN` → track picker (reuse phase-1 catalog UI) → character-policy row (`OPEN` / `LOCKED <character>`) → window minutes row (1/2/5/10, default 5) → GO: `Engine.hostTimeAttackRoom(...)`:
      - build `DeterminismFingerprint` the same way phase 1 does (AppVersion + ROM checksum) → `RoomHostConfig(roomName = displayName + "'s room", gameId, zone, act, policy, lockedChar, 8, fingerprint.asString())`;
-     - `RaceHostServer.start(configuredPort, config, identity, new LiveLevelProfileSource())`;
+     - `RaceHostServer.start(configuredPort, config, identity, TrackValidationProfileSource.none())` — the room starts with NO validation profile (no level is loaded yet, and the room's event loop must never read gameplay state); the profile is pushed in flow item 4 once the host's level is ready;
      - connect the host's OWN client: `RaceClient.connect(URI.create("ws://127.0.0.1:" + server.port() + "/race"), identity, displayName, fingerprint.asString())` — the hosting player plays through the same client stack as everyone else (main spec §6.1: hosting mode only changes who runs the hub);
      - wrap in the `RaceTransport` adapter, build `ClientRaceSession` (+ `applyJoin`), show `RaceLobbyScreen`.
   3. `JOIN LAN` → address `MenuTextField` (prefilled from config) → GO: parse `host[:port]` (default port = config), `RaceClient.connect` with a 3 s timeout; failure → toast the reason, stay in the menu (main spec §9); success → persist address, lobby.
-  4. `RaceLobbyScreen` (rendered in the master-title mode): room name + track label, player list (name, character, "HOST" badge by fingerprint == serverId, "unverified times" room label — main spec §2), chat log + chat field (ENTER sends via `coordinator.sendChat`), host-only footer "START ROUND (ENTER)" → sends `RoundConfigure(config)` **via the client connection** (the RoomHost host-fingerprint check authorizes it). On `RoundStart` (session phase leaves LOBBY): `Engine.launchTimeAttack(request)` with the room's track + the player's character, then `new MultiplayerRaceCoordinator(transport, session, timeAttackRuntime)` and `gameLoop.setMultiplayerCoordinator(coordinator)`. **The runtime must NOT begin the attempt until the countdown ends:** gate `onLevelReady()`'s attempt start on `session.phase() == RUNNING` — during COUNTDOWN the player waits at spawn with input suppressed (the coordinator exposes `session()`; GameLoop skips `beforeLevelFrame` input forwarding to the runtime while the phase is COUNTDOWN — read the as-built input flow and gate at the same point phase 1 gates trace playback).
+  4. `RaceLobbyScreen` (rendered in the master-title mode): room name + track label, player list (name, character, "HOST" badge by fingerprint == serverId, "unverified times" room label — main spec §2), chat log + chat field (ENTER sends via `coordinator.sendChat`), host-only footer "START ROUND (ENTER)" → sends `RoundConfigure(config)` **via the client connection** (the RoomHost host-fingerprint check authorizes it). On `RoundStart` (session phase leaves LOBBY): `Engine.launchTimeAttack(request)` with the room's track + the player's character, then `new MultiplayerRaceCoordinator(transport, session, timeAttackRuntime)` and `gameLoop.setMultiplayerCoordinator(coordinator)`. **When HOSTING, push the validation profile as soon as the level is ready** (right after `onLevelReady()`): `TrackValidationProfile profile = LiveLevelProfileFactory.fromLoadedLevelOrNull(); if (profile != null) server.execute(() -> server.room().applyTrackValidationProfile(profile));` — built on the game thread, applied on the room loop during the countdown, before guests' attempts start streaming; `applyProfile` never resets live guest streams, so a late push is safe too. **The runtime must NOT begin the attempt until the countdown ends:** gate `onLevelReady()`'s attempt start on `session.phase() == RUNNING` — during COUNTDOWN the player waits at spawn with input suppressed (the coordinator exposes `session()`; GameLoop skips `beforeLevelFrame` input forwarding to the runtime while the phase is COUNTDOWN — read the as-built input flow and gate at the same point phase 1 gates trace playback).
   5. In-round: `MultiplayerHudRenderer.render(coordinator.hudState())` — countdown `3..2..1` center-screen during COUNTDOWN; window clock `W mm:ss` and standings panel (rank, name, mm:ss.ff via the phase-1 time formatter) top-right; `RoundEnd` → final standings overlay for the linger period, then Engine returns to the lobby screen (quit-to-title path with `coordinator.shutdown()` deferred — the connection survives between rounds; only leaving the room closes it).
   6. Disconnect handling (main spec §9): `hudState().connectionLost()` or `kickReason() != null` → toast + full teardown (`coordinator.shutdown()`, `server.close()` if hosting, back to the Time Attack menu).
 - Retry, rewind suppression, editor blocking, ghost saving: all phase-1 behavior, untouched. Personal bests still save locally during multiplayer rounds (same runtime path).
@@ -5467,8 +5545,8 @@ class TestDirectConnectEndToEnd {
         boolean rendered = false;
         while (!rendered && System.currentTimeMillis() < deadline) {
             for (RaceClient.InboundEvent event : guest.drainInbound()) {
-                if (event instanceof RaceClient.Binary binary) {
-                    GhostPackets.decodeAggregate(binary.data()).entries().forEach(playback::onEntry);
+                if (event instanceof RaceClient.GhostData ghost) {
+                    ghost.aggregate().entries().forEach(playback::onEntry);
                 }
             }
             rendered = playback.advance().isPresent();
