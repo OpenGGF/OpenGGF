@@ -1150,16 +1150,20 @@ class TestGhostStreamValidator {
 
     @Test
     void outOfBoundsViolatesOnlyWithProfile() {
+        // Walk to the boundary at a legitimate 2 px/frame — far below the speed cap —
+        // then cross it, so ONLY the bounds check can fire (one violation per batch,
+        // first failed check). Bounds limit = levelWidth 0x2A00 + BOUNDS_MARGIN 64 = 0x2A40.
         GhostStreamValidator withProfile = validator(PROFILE);
-        withProfile.onBatch(batch(1, 0, frames(100, 2, 3)));
-        byte[] outOfLevel = new byte[GhostFrameCodec.BYTES];
-        GhostFrameCodec.encode(new GhostFrame(0x2A00 + 65, 0x0100, 1, false, false, false, 2, false), outOfLevel, 0);
-        assertEquals(GhostStreamValidator.Verdict.DROP, withProfile.onBatch(batch(1, 3, outOfLevel)));
-        assertEquals(List.of("speed", "bounds"), violations); // teleport also trips speed first? see note below
+        assertEquals(GhostStreamValidator.Verdict.ACCEPT,
+                withProfile.onBatch(batch(1, 0, frames(0x2A30, 2, 3)))); // 0x2A30..0x2A34: inside
+        assertEquals(GhostStreamValidator.Verdict.DROP,
+                withProfile.onBatch(batch(1, 3, frames(0x2A3E, 2, 3)))); // 0x2A3E..0x2A42: last > 0x2A40
+        assertEquals(List.of("bounds"), violations);
 
         violations.clear();
         GhostStreamValidator degraded = validator(null); // no profile: bounds check skipped
-        degraded.onBatch(batch(1, 0, frames(0x29F0, 2, 3)));
+        assertEquals(GhostStreamValidator.Verdict.ACCEPT,
+                degraded.onBatch(batch(1, 0, frames(0x2A3E, 2, 3)))); // same out-of-level walk
         assertTrue(violations.isEmpty());
     }
 
@@ -1223,7 +1227,7 @@ class TestGhostStreamValidator {
 }
 ```
 
-Note on `outOfBoundsViolatesOnlyWithProfile`: the out-of-level frame is also a large jump, and the implementation checks speed before bounds per frame — the expected violation list is `["speed", "bounds"]` only if BOTH checks record. Keep it simpler: the implementation records at most ONE violation per batch (first failed check) and returns. Adjust the assertion to `assertEquals(List.of("speed"), violations)` and add a separate case with a slow walk to the boundary (step 2px until x > width+64) asserting `bounds` fires. The implementer picks either single-violation-per-batch (recommended, simpler ladder math) or per-frame recording — but the TEST and IMPLEMENTATION must agree, and the ladder threshold stays 10 either way.
+Violation-recording rule (tests and implementation are written to it): the validator records at most ONE violation per batch — the first failed check — and returns immediately (simpler ladder math; `KICK_THRESHOLD` stays 10). That is why `outOfBoundsViolatesOnlyWithProfile` walks to the boundary at legitimate speed before crossing it: a teleport past the boundary would trip `speed` first and `bounds` would never record. Teleport coverage lives in `teleportViolatesSpeedCapAcrossBatchBoundary`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -1415,7 +1419,7 @@ public final class GhostStreamValidator {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.net.hub.TestGhostStreamValidator" test`
-Expected: PASS (10 tests). Reconcile the bounds-test expectation with the single-violation-per-batch rule (see note under Step 1).
+Expected: PASS (10 tests).
 
 - [ ] **Step 5: Commit**
 
