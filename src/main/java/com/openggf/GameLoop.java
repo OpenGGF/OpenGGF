@@ -84,6 +84,9 @@ import com.openggf.game.recording.UserRecordingStopReason;
 import com.openggf.game.recording.UserRecordingPlaybackState;
 import com.openggf.game.recording.UserRecordingVerificationResult;
 import com.openggf.game.recording.menu.UserRecordingMenu;
+import com.openggf.game.timeattack.GhostStore;
+import com.openggf.game.timeattack.TimeAttackLaunchRequest;
+import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.testmode.TraceCameraFocusController;
 
 import java.io.IOException;
@@ -167,6 +170,7 @@ public class GameLoop {
     private Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler;
     private final UserRecordingSessionLauncher userRecordingSessionLauncher;
     private final UserRecordingRuntimeControls userRecordingControls;
+    private final TimeAttackRuntime timeAttackRuntime;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
     private int lastAppliedUserRecordingPlaybackFrame = -1;
     private long gameplayAudioFrame;
@@ -334,6 +338,11 @@ public class GameLoop {
         this.liveRewindManager = new LiveRewindManager(configService);
         this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
         this.userRecordingControls = new UserRecordingRuntimeControls(new LiveUserRecordingRuntime());
+        this.timeAttackRuntime = new TimeAttackRuntime(new GhostStore(java.nio.file.Path.of("ghosts")),
+                java.nio.file.Path.of("identity"),
+                () -> TraceSessionLauncher.active() != null
+                        || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+                        || playbackDebugManager.isDriving(GameMode.LEVEL));
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
@@ -691,6 +700,25 @@ public class GameLoop {
         presenceManager.close();
     }
 
+    /**
+     * Time-attack retry key. Hardcoded to 'R' for phase 1, mirroring how
+     * {@code LiveUserRecordingRuntime.recordKey()} reads
+     * {@link SonicConfiguration#RECORDING_RECORD_KEY}; Task 12 replaces this
+     * body with a configured key lookup.
+     */
+    private int timeAttackRetryKey() {
+        return GLFW_KEY_R;
+    }
+
+    private static boolean anyDebugOverlayTogglePressed(InputHandler input) {
+        for (DebugOverlayToggle toggle : DebugOverlayToggle.values()) {
+            if (input.isKeyPressed(toggle.keyCode())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void stepInternal() {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
@@ -713,6 +741,7 @@ public class GameLoop {
         }
         if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() == null
+                && !timeAttackRuntime.isAttemptRunning()
                 && liveRewindManager.handleRealtimeRewindInput(currentGameMode, inputHandler)) {
             inputHandler.update();
             return;
@@ -746,6 +775,7 @@ public class GameLoop {
         }
 
         if (!isPaused()
+                && !timeAttackRuntime.isAttemptRunning()
                 && (currentGameMode == GameMode.EDITOR
                 || (currentGameMode == GameMode.LEVEL
                 && configService.getBoolean(SonicConfiguration.EDITOR_ENABLED)))
@@ -780,6 +810,9 @@ public class GameLoop {
         escapeToMasterTitleController.update(currentGameMode, inputHandler);
         if (currentGameMode == GameMode.LEVEL) {
             userRecordingControls.updateLevelControlInput(inputHandler);
+            if (timeAttackRuntime.isActive() && inputHandler.isKeyPressed(timeAttackRetryKey())) {
+                timeAttackRuntime.requestRetry();
+            }
         }
 
         int pauseKey = configService.getInt(SonicConfiguration.PAUSE_KEY);
@@ -827,6 +860,12 @@ public class GameLoop {
 
         profiler.beginSection("input");
         boolean debugShortcutsEnabled = debugShortcutsEnabled();
+        if (timeAttackRuntime.isAttemptRunning() && debugShortcutsEnabled
+                && anyDebugOverlayTogglePressed(inputHandler)) {
+            // Debug tools are never blocked, but using them during a timed
+            // attempt taints it so the run can never be saved as a new best.
+            timeAttackRuntime.markTainted();
+        }
         debugOverlayManager.updateInput(inputHandler, debugShortcutsEnabled);
         if (debugShortcutsEnabled) {
             debugOverlayManager.getObjectArtViewer().updateInput(inputHandler);
@@ -1204,6 +1243,14 @@ public class GameLoop {
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
+            if (timeAttackRuntime.isActive() && timeAttackRuntime.consumeRetryRequested()) {
+                TimeAttackLaunchRequest retryLaunch = timeAttackRuntime.launch();
+                levelManager.getCheckpointState().clear();
+                levelManager.getTransitions().requestZoneAndAct(retryLaunch.zone(), retryLaunch.act());
+                finishUserRecordingPlaybackAtLevelBoundary(false);
+                updateNonGameplayAudio(doFrameStep);
+                return false;
+            }
         }
 
         boolean freezeForArtViewer = debugShortcutsEnabled()
@@ -1239,6 +1286,9 @@ public class GameLoop {
                 boolean startEdge = inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
                         || playbackDebugManager.isCurrentForcedStartPress();
                 userRecordingControls.beforeLevelFrame(inputHandler);
+                if (timeAttackRuntime.isActive()) {
+                    timeAttackRuntime.beforeLevelFrame(inputHandler);
+                }
                 LevelFrameStep.executeWithPause(LevelFrameContext.from(gameplayMode),
                         levelManager, camera, () -> spriteManager.update(inputHandler),
                         startEdge,
@@ -1248,6 +1298,9 @@ public class GameLoop {
                             profiler.endSection(name);
                         });
                 userRecordingControls.afterLevelFrame();
+                if (timeAttackRuntime.isActive()) {
+                    timeAttackRuntime.afterLevelFrame();
+                }
             } else if (levelManager.getObjectManager() != null) {
                 // ROM v_vbla_byte increments in VBlank even on rows where
                 // LevelLoop did not run. Headless trace replay mirrors
@@ -3629,6 +3682,10 @@ public class GameLoop {
             levelManager.loadZoneAndAct(zone, act);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load zone " + zone + " act " + act, e);
+        }
+
+        if (timeAttackRuntime.isActive()) {
+            timeAttackRuntime.onLevelReady();
         }
 
         fadeManager.startFadeFromBlack(null);
