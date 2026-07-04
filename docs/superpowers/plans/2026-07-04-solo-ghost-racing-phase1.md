@@ -182,7 +182,9 @@ Skills: n/a"
 - Produces:
   - `GhostHeader(int formatVersion, String gameId, int zone, int act, String character, String displayName, int firstInputFrame, int finishFrame, int[] splitFrames, byte[] inputRecordingHash)` (record) with `int finalTimeFrames()` = `finishFrame - firstInputFrame`.
   - `GhostRecording` with `GhostHeader header()`, `int frameCount()`, `GhostFrame frameAt(int index)` (clamps: `index >= frameCount()` returns last frame — playback hold), `byte[] frameData()`, constructor `GhostRecording(GhostHeader header, byte[] frameData)`.
-  - `GhostFileCodec.write(GhostRecording r, Path path)`, `GhostFileCodec.read(Path path)`; `GhostFileCodec.FORMAT_VERSION == 1`; IOException with message containing `"not a .ggfghost"` on bad magic.
+  - `GhostFileCodec.write(GhostRecording r, Path path)`, `GhostFileCodec.read(Path path)`; `GhostFileCodec.FORMAT_VERSION == 1`; `GhostFileCodec.MAX_FRAMES == 216_000` (one hour at 60fps).
+  - **Untrusted-input hardening** (imported ghost files are arbitrary user files): `read` throws a friendly `IOException` on bad magic (message contains `"not a .ggfghost"`), on `version != FORMAT_VERSION`, on hash length != 32, and on `frameCount < 1 || frameCount > MAX_FRAMES` — it must never allocate from an unvalidated count (no OutOfMemory/NegativeArraySize from hostile files).
+  - **Immutability:** `GhostHeader` clones its `int[]`/`byte[]` in the compact constructor and returns clones from `splitFrames()`/`inputRecordingHash()`; `GhostRecording` clones `frameData` on construction and from `frameData()`, and rejects empty or non-multiple-of-7 frame data (`IllegalArgumentException` — at least one frame required, so `frameAt` clamping can never index negatively).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -236,6 +238,60 @@ class TestGhostFileCodec {
         IOException ex = assertThrows(IOException.class, () -> GhostFileCodec.read(p));
         assertTrue(ex.getMessage().contains("not a .ggfghost"));
     }
+
+    @Test
+    void rejectsUnsupportedVersion(@TempDir Path dir) throws IOException {
+        Path p = dir.resolve("v99.ggfghost");
+        GhostFileCodec.write(sample(), p);
+        byte[] bytes = Files.readAllBytes(p);
+        bytes[9] = 99; // version u16 low byte sits right after the 8-byte magic
+        Files.write(p, bytes);
+        IOException ex = assertThrows(IOException.class, () -> GhostFileCodec.read(p));
+        assertTrue(ex.getMessage().contains("format version"));
+    }
+
+    @Test
+    void rejectsHostileFrameCountWithoutAllocating(@TempDir Path dir) throws IOException {
+        // Hand-craft a header claiming Integer.MAX_VALUE frames with no frame bytes.
+        Path p = dir.resolve("hostile.ggfghost");
+        try (var out = new java.io.DataOutputStream(Files.newOutputStream(p))) {
+            out.write("GGFGHOST".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            out.writeShort(GhostFileCodec.FORMAT_VERSION);
+            out.writeUTF("s3k"); out.writeByte(0); out.writeByte(0);
+            out.writeUTF("sonic"); out.writeUTF("x");
+            out.writeInt(0); out.writeInt(1);
+            out.writeByte(0);                 // no splits
+            out.writeByte(32); out.write(new byte[32]);
+            out.writeInt(Integer.MAX_VALUE);  // hostile frame count
+        }
+        IOException ex = assertThrows(IOException.class, () -> GhostFileCodec.read(p));
+        assertTrue(ex.getMessage().contains("frame count"));
+    }
+
+    @Test
+    void headerAndRecordingAreDefensivelyCopied() {
+        int[] splits = {900};
+        byte[] hash = new byte[32];
+        GhostHeader h = new GhostHeader(1, "s3k", 0, 0, "sonic", "x", 0, 1000, splits, hash);
+        splits[0] = 7; hash[0] = 7;                       // mutate sources
+        assertEquals(900, h.splitFrames()[0]);
+        assertEquals(0, h.inputRecordingHash()[0]);
+        h.splitFrames()[0] = 5;                           // mutate returned copy
+        assertEquals(900, h.splitFrames()[0]);
+
+        byte[] frames = new byte[GhostFrameCodec.BYTES];
+        GhostRecording r = new GhostRecording(h, frames);
+        frames[0] = 0x7F;
+        assertEquals(0, r.frameAt(0).x());
+        r.frameData()[0] = 0x7F;
+        assertEquals(0, r.frameAt(0).x());
+    }
+
+    @Test
+    void rejectsEmptyFrameData() {
+        GhostHeader h = new GhostHeader(1, "s3k", 0, 0, "sonic", "x", 0, 1, new int[0], new byte[32]);
+        assertThrows(IllegalArgumentException.class, () -> new GhostRecording(h, new byte[0]));
+    }
 }
 ```
 
@@ -253,6 +309,21 @@ package com.openggf.game.ghost;
 public record GhostHeader(int formatVersion, String gameId, int zone, int act, String character,
                           String displayName, int firstInputFrame, int finishFrame,
                           int[] splitFrames, byte[] inputRecordingHash) {
+    public GhostHeader {
+        splitFrames = splitFrames.clone();           // defensive: header is immutable
+        inputRecordingHash = inputRecordingHash.clone();
+    }
+
+    @Override
+    public int[] splitFrames() {
+        return splitFrames.clone();
+    }
+
+    @Override
+    public byte[] inputRecordingHash() {
+        return inputRecordingHash.clone();
+    }
+
     public int finalTimeFrames() {
         return finishFrame - firstInputFrame;
     }
@@ -282,15 +353,16 @@ public final class GhostRecording {
     private final byte[] frameData;
 
     public GhostRecording(GhostHeader header, byte[] frameData) {
-        if (frameData.length % GhostFrameCodec.BYTES != 0) {
-            throw new IllegalArgumentException("frameData not a multiple of " + GhostFrameCodec.BYTES);
+        if (frameData.length < GhostFrameCodec.BYTES || frameData.length % GhostFrameCodec.BYTES != 0) {
+            throw new IllegalArgumentException(
+                    "frameData must be a non-empty multiple of " + GhostFrameCodec.BYTES + " bytes");
         }
         this.header = header;
-        this.frameData = frameData;
+        this.frameData = frameData.clone();   // defensive: recording is immutable
     }
 
     public GhostHeader header() { return header; }
-    public byte[] frameData() { return frameData; }
+    public byte[] frameData() { return frameData.clone(); }
     public int frameCount() { return frameData.length / GhostFrameCodec.BYTES; }
 
     /** Clamps past-the-end reads to the final frame so playback holds the finish pose. */
@@ -315,6 +387,9 @@ import java.nio.file.Path;
 /** Reader/writer for .ggfghost files: header + 7-byte frame stream (main spec §3/§7). */
 public final class GhostFileCodec {
     public static final int FORMAT_VERSION = 1;
+    /** One hour at 60fps — hard cap so hostile files can never force huge allocations. */
+    public static final int MAX_FRAMES = 216_000;
+    private static final int HASH_LENGTH = 32;
     private static final byte[] MAGIC = "GGFGHOST".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
 
     private GhostFileCodec() {
@@ -350,6 +425,9 @@ public final class GhostFileCodec {
                 throw new IOException(path + " is not a .ggfghost file");
             }
             int version = in.readUnsignedShort();
+            if (version != FORMAT_VERSION) {
+                throw new IOException(path + " has unsupported .ggfghost format version " + version);
+            }
             String gameId = in.readUTF();
             int zone = in.readUnsignedByte();
             int act = in.readUnsignedByte();
@@ -359,9 +437,16 @@ public final class GhostFileCodec {
             int finish = in.readInt();
             int[] splits = new int[in.readUnsignedByte()];
             for (int i = 0; i < splits.length; i++) splits[i] = in.readInt();
-            byte[] hash = new byte[in.readUnsignedByte()];
+            int hashLength = in.readUnsignedByte();
+            if (hashLength != HASH_LENGTH) {
+                throw new IOException(path + " has invalid input-recording hash length " + hashLength);
+            }
+            byte[] hash = new byte[HASH_LENGTH];
             in.readFully(hash);
             int frameCount = in.readInt();
+            if (frameCount < 1 || frameCount > MAX_FRAMES) {
+                throw new IOException(path + " has invalid frame count " + frameCount);
+            }
             byte[] frames = new byte[frameCount * GhostFrameCodec.BYTES];
             in.readFully(frames);
             return new GhostRecording(new GhostHeader(version, gameId, zone, act, character,
@@ -374,7 +459,7 @@ public final class GhostFileCodec {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.game.ghost.TestGhostFileCodec" test`
-Expected: PASS (3 tests).
+Expected: PASS (7 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -619,6 +704,17 @@ class TestAttemptInputRecording {
         b.appendFrame(0x04, false);
         assertFalse(java.util.Arrays.equals(a.sha256(), b.sha256()));
     }
+
+    @Test
+    void decodeRejectsHostileFrameLength() {
+        AttemptInputRecording rec = new AttemptInputRecording(start());
+        rec.appendFrame(0x08, false);
+        byte[] encoded = rec.encode();
+        // The frame-count int is the 4 bytes immediately before the single mask byte.
+        int lengthOffset = encoded.length - 1 - 4;
+        encoded[lengthOffset] = (byte) 0x7F; // claim ~2 billion frames
+        assertThrows(java.io.UncheckedIOException.class, () -> AttemptInputRecording.decode(encoded));
+    }
 }
 ```
 
@@ -668,6 +764,8 @@ import java.security.NoSuchAlgorithmException;
  */
 public final class AttemptInputRecording {
     public static final int START_HELD_BIT = 0x20;
+    /** One hour at 60fps — decode cap against hostile/corrupt data. */
+    public static final int MAX_FRAMES = 216_000;
 
     private final AttemptStartDescriptor start;
     private final ByteArrayOutputStream masks;
@@ -711,7 +809,11 @@ public final class AttemptInputRecording {
         try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(encoded))) {
             AttemptStartDescriptor start = new AttemptStartDescriptor(in.readUTF(),
                     in.readUnsignedByte(), in.readUnsignedByte(), in.readUTF(), in.readUTF());
-            byte[] data = new byte[in.readInt()];
+            int length = in.readInt();
+            if (length < 0 || length > MAX_FRAMES) {
+                throw new IOException("invalid attempt recording frame count " + length);
+            }
+            byte[] data = new byte[length];
             in.readFully(data);
             ByteArrayOutputStream masks = new ByteArrayOutputStream();
             masks.write(data, 0, data.length);
@@ -734,7 +836,7 @@ public final class AttemptInputRecording {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.game.timeattack.TestAttemptInputRecording" test`
-Expected: PASS (4 tests).
+Expected: PASS (5 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -905,7 +1007,7 @@ Skills: n/a"
 **Interfaces:**
 - Produces:
   - `TimeAttackAttempt` (pure, no engine imports): `enum Phase { ARMED, RUNNING, FINISHED, VOID }`; `void onFrame(int heldMask, boolean endOfLevelActive, int checkpointIndex)` called once per gameplay frame starting at spawn; `Phase phase()`; `int frameCount()` (frames elapsed since spawn); `int firstInputFrame()` (-1 until input); `int finishFrame()` (-1 until finished); `int finalTimeFrames()`; `int elapsedDisplayFrames()` (0 while ARMED, `frameCount - firstInputFrame` while RUNNING, final time when FINISHED); `int[] splitFrames()` (frame at each NEW checkpoint index, ascending); `void voidAttempt()`.
-  - `TimeAttackDeltas.deltaAtSplit(int[] attemptSplits, int[] ghostSplits, int splitOrdinal)` → attempt minus ghost frames (positive = behind), returns `Integer.MIN_VALUE` when either side lacks that split.
+  - `TimeAttackDeltas.deltaAtSplit(int[] attemptSplits, int attemptFirstInputFrame, int[] ghostSplits, int ghostFirstInputFrame, int splitOrdinal)` → **timed** delta: `(attemptSplit − attemptFirstInput) − (ghostSplit − ghostFirstInput)` (positive = behind), returns `Integer.MIN_VALUE` when either side lacks that split. Splits are stored spawn-anchored, but the timer starts at first input — comparing raw split frames would be wrong by the idle-time difference.
 - Semantics (spec §6.1): first `onFrame` call IS the spawn frame (frame 0). `endOfLevelActive == true` transitions RUNNING→FINISHED with `finishFrame = frameCount` of that call. Checkpoint index `-1` = none; a split records only when the index EXCEEDS the highest seen.
 
 - [ ] **Step 1: Write the failing test**
@@ -957,10 +1059,12 @@ class TestTimeAttackAttempt {
     }
 
     @Test
-    void deltasComparePerSplitOrdinal() {
-        assertEquals(60, TimeAttackDeltas.deltaAtSplit(new int[] {900}, new int[] {840}, 0));
-        assertEquals(-30, TimeAttackDeltas.deltaAtSplit(new int[] {800, 1700}, new int[] {830, 1730}, 1));
-        assertEquals(Integer.MIN_VALUE, TimeAttackDeltas.deltaAtSplit(new int[] {800}, new int[0], 0));
+    void deltasCompareTimedValuesNotSpawnFrames() {
+        // Same timed pace, but the attempt idled 60 frames before first input: delta must be 0.
+        assertEquals(0, TimeAttackDeltas.deltaAtSplit(new int[] {960}, 60, new int[] {900}, 0, 0));
+        assertEquals(60, TimeAttackDeltas.deltaAtSplit(new int[] {900}, 0, new int[] {840}, 0, 0));
+        assertEquals(-30, TimeAttackDeltas.deltaAtSplit(new int[] {800, 1700}, 0, new int[] {830, 1730}, 0, 1));
+        assertEquals(Integer.MIN_VALUE, TimeAttackDeltas.deltaAtSplit(new int[] {800}, 0, new int[0], 0, 0));
     }
 }
 ```
@@ -1035,19 +1139,26 @@ public final class TimeAttackAttempt {
 ```java
 package com.openggf.game.timeattack;
 
-/** Split-ordinal delta between the live attempt and a ghost's recorded splits. */
+/**
+ * Split-ordinal delta between the live attempt and a ghost's recorded splits.
+ * Splits are spawn-anchored frame numbers but the timer starts at first input
+ * (spec §6.1), so deltas compare TIMED values — subtracting each side's own
+ * firstInputFrame — never raw spawn-frame numbers.
+ */
 public final class TimeAttackDeltas {
     public static final int NO_DELTA = Integer.MIN_VALUE;
 
     private TimeAttackDeltas() {
     }
 
-    /** Positive = attempt is behind the ghost at that split. */
-    public static int deltaAtSplit(int[] attemptSplits, int[] ghostSplits, int splitOrdinal) {
+    /** Positive = attempt is behind the ghost at that split (in timed frames). */
+    public static int deltaAtSplit(int[] attemptSplits, int attemptFirstInputFrame,
+                                   int[] ghostSplits, int ghostFirstInputFrame, int splitOrdinal) {
         if (splitOrdinal < 0 || splitOrdinal >= attemptSplits.length || splitOrdinal >= ghostSplits.length) {
             return NO_DELTA;
         }
-        return attemptSplits[splitOrdinal] - ghostSplits[splitOrdinal];
+        return (attemptSplits[splitOrdinal] - attemptFirstInputFrame)
+                - (ghostSplits[splitOrdinal] - ghostFirstInputFrame);
     }
 }
 ```
@@ -1632,7 +1743,7 @@ Skills: n/a"
 - Consumes: everything from Tasks 4-9; `PlayerInputState` (`com.openggf.control`, record with `heldMask()`/`startHeld()`); `InputHandler.logical().player1()`; `GameServices.gameState().isEndOfLevelActive()`; checkpoint index; `AbstractPlayableSprite`/`AbstractSprite` accessors (Task 5 list); `AppVersion.get()`; `RomManager.getInstance().getRom().calculateChecksum()`; `GhostRenderRegistry` (Task 8); `LevelManager.getTransitions().requestZoneAndAct(int, int)`.
 - Produces (used by Tasks 11-13):
   - `TimeAttackLaunchRequest(String gameId, int zone, int act, String character, java.util.List<java.nio.file.Path> extraGhosts)` (record).
-  - `TimeAttackRuntime(GhostStore store)` with: `void armForLaunch(TimeAttackLaunchRequest request)`; `boolean isActive()`; `boolean isAttemptRunning()`; `void onLevelReady()` (called when the level for an armed/retried run is loaded — begins the attempt at spawn, loads best + extra ghosts, registers its `GhostRenderRegistry.GhostLayerRenderer`); `void beforeLevelFrame(com.openggf.control.InputHandler input)`; `void afterLevelFrame()`; `boolean consumeRetryRequested()`; `void requestRetry()`; `void deactivate()` (unregister renderer, clear slots, drop state); `TimeAttackHudState hudState()`.
+  - `TimeAttackRuntime(GhostStore store)` with: `void armForLaunch(TimeAttackLaunchRequest request)`; `boolean isActive()`; `boolean isAttemptRunning()`; `void onLevelReady()` (called when the level for an armed/retried run is loaded — begins the attempt at spawn, loads best + extra ghosts, registers its `GhostRenderRegistry.GhostLayerRenderer`; imported ghosts whose header gameId/zone/act doesn't match the launch are SKIPPED with a warning — wrong-track ghosts must never render — and each import loads in its own try/catch so one corrupt file can't block the rest); `void beforeLevelFrame(com.openggf.control.InputHandler input)`; `void afterLevelFrame()`; `boolean consumeRetryRequested()`; `void requestRetry()`; `void deactivate()` (unregister renderer, clear slots, drop state); `TimeAttackHudState hudState()`.
   - `TimeAttackHudState(boolean active, int elapsedDisplayFrames, int bestTimeFrames, int lastSplitDelta, boolean finished, boolean newBest)` (record; `bestTimeFrames == -1` when none, `lastSplitDelta == Integer.MIN_VALUE` when none).
 - Core loop semantics (all pure logic delegated to `TimeAttackAttempt`):
   - `beforeLevelFrame`: snapshot `PlayerInputState p1 = input.logical().player1()`.
@@ -1691,6 +1802,28 @@ class TestTimeAttackRuntime {
         runtime.tickForTest(0x08, false, true, -1, frame(10));
         assertTrue(store.loadBest("s3k", 0, 0, "sonic").isEmpty());
         assertFalse(runtime.hudState().newBest());
+    }
+
+    @Test
+    void incompatibleImportsAreSkipped(@TempDir Path root, @TempDir Path importDir) throws Exception {
+        // A ghost recorded for a DIFFERENT track must never race in this one.
+        byte[] frames = new byte[com.openggf.game.ghost.GhostFrameCodec.BYTES];
+        var wrongTrack = new com.openggf.game.ghost.GhostRecording(
+                new com.openggf.game.ghost.GhostHeader(1, "s3k", 1, 0, "sonic", "x", 0, 100,
+                        new int[0], new byte[32]), frames);
+        var rightTrack = new com.openggf.game.ghost.GhostRecording(
+                new com.openggf.game.ghost.GhostHeader(1, "s3k", 0, 0, "tails", "y", 0, 100,
+                        new int[0], new byte[32]), frames);
+        Path wrong = importDir.resolve("wrong.ggfghost");
+        Path right = importDir.resolve("right.ggfghost");
+        com.openggf.game.ghost.GhostFileCodec.write(wrongTrack, wrong);
+        com.openggf.game.ghost.GhostFileCodec.write(rightTrack, right);
+
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root));
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic",
+                java.util.List.of(wrong, right)));
+        runtime.beginAttemptForTest("0.6:cafe");
+        assertEquals(1, runtime.opponents().size()); // only the matching-track import raced
     }
 
     @Test
@@ -1802,11 +1935,24 @@ public final class TimeAttackRuntime {
             if (bestGhost != null) {
                 opponents.add(new GhostPlaybackCursor(bestGhost));
             }
-            for (Path extra : launch.extraGhosts()) {
-                opponents.add(new GhostPlaybackCursor(GhostFileCodec.read(extra)));
-            }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Failed loading ghosts", e);
+            LOGGER.log(Level.WARNING, "Failed loading best ghost", e);
+        }
+        for (Path extra : launch.extraGhosts()) {
+            try {
+                GhostRecording imported = GhostFileCodec.read(extra);
+                GhostHeader h = imported.header();
+                if (!h.gameId().equals(launch.gameId())
+                        || h.zone() != launch.zone() || h.act() != launch.act()) {
+                    LOGGER.warning("Skipping import " + extra + ": recorded for "
+                            + h.gameId() + " " + h.zone() + "-" + h.act()
+                            + ", room is " + launch.gameId() + " " + launch.zone() + "-" + launch.act());
+                    continue;
+                }
+                opponents.add(new GhostPlaybackCursor(imported));
+            } catch (IOException e) {
+                LOGGER.log(Level.WARNING, "Skipping unreadable import " + extra, e);
+            }
         }
     }
 
@@ -1854,9 +2000,11 @@ public final class TimeAttackRuntime {
         if (attempt == null) return TimeAttackHudState.INACTIVE;
         int best = bestGhost != null ? bestGhost.header().finalTimeFrames() : -1;
         int[] ghostSplits = bestGhost != null ? bestGhost.header().splitFrames() : new int[0];
+        int ghostFirstInput = bestGhost != null ? bestGhost.header().firstInputFrame() : 0;
         int[] attemptSplits = attempt.splitFrames();
         int lastDelta = attemptSplits.length == 0 ? Integer.MIN_VALUE
-                : TimeAttackDeltas.deltaAtSplit(attemptSplits, ghostSplits, attemptSplits.length - 1);
+                : TimeAttackDeltas.deltaAtSplit(attemptSplits, attempt.firstInputFrame(),
+                        ghostSplits, ghostFirstInput, attemptSplits.length - 1);
         return new TimeAttackHudState(true, attempt.elapsedDisplayFrames(), best, lastDelta,
                 attempt.phase() == TimeAttackAttempt.Phase.FINISHED, newBest);
     }
@@ -1870,7 +2018,7 @@ public final class TimeAttackRuntime {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.game.timeattack.TestTimeAttackRuntime" test`
-Expected: PASS (3 tests).
+Expected: PASS (4 tests).
 
 - [ ] **Step 5: Wire live sampling + GameLoop hooks**
 
