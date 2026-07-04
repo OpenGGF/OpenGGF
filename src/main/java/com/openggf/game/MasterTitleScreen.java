@@ -12,6 +12,9 @@ import com.openggf.graphics.TexturedQuadRenderer;
 import com.openggf.game.recording.UserRecordingCatalog;
 import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.recording.menu.UserRecordingMenuState;
+import com.openggf.game.timeattack.GhostStore;
+import com.openggf.game.timeattack.TimeAttackMenu;
+import com.openggf.game.timeattack.TimeAttackMenuState;
 import com.openggf.testmode.TestModeTracePicker;
 import com.openggf.trace.catalog.TraceCatalog;
 import com.openggf.trace.catalog.TraceEntry;
@@ -153,6 +156,10 @@ public class MasterTitleScreen {
     private UserRecordingMenuFactory userRecordingMenuFactory = this::createUserRecordingMenu;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter =
             (entry, options) -> LOGGER.info("User recording playback callback not configured.");
+    private TimeAttackMenu timeAttackMenu;
+    private TimeAttackMenuFactory timeAttackMenuFactory = this::createTimeAttackMenu;
+    private TimeAttackMenu.LaunchStarter timeAttackLaunchStarter =
+            request -> LOGGER.info("Time attack launch callback not configured.");
     private int bgTextureId;
     private int solidWhiteTextureId; // 1x1 white texture for solid color overlays
     private int titleTextId;
@@ -316,6 +323,7 @@ public class MasterTitleScreen {
 
         if (configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             userRecordingMenu = null;
+            timeAttackMenu = null;
             if (tracePicker == null) {
                 Path root = Path.of(System.getProperty("user.dir"))
                         .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR))
@@ -351,6 +359,14 @@ public class MasterTitleScreen {
             return;
         }
 
+        if (timeAttackMenu != null) {
+            timeAttackMenu.update(inputHandler);
+            if (timeAttackMenu.consumeCloseRequested()) {
+                timeAttackMenu = null;
+            }
+            return;
+        }
+
         if (launchConfigPanel != null) {
             launchConfigPanel.update(inputHandler);
             if (launchConfigPanel.consumeResult() == LaunchConfigPanel.Result.CLOSED) {
@@ -374,6 +390,12 @@ public class MasterTitleScreen {
         int recordKey = configService.getInt(SonicConfiguration.RECORDING_RECORD_KEY);
         boolean recordingMenuRequested = inputHandler.isKeyPressed(recordKey) && inputHandler.isShiftDown();
         if (handleUserRecordingMenuRequest(recordingMenuRequested) || recordingMenuRequested) {
+            return;
+        }
+
+        boolean timeAttackMenuRequested = inputHandler.isKeyPressed(
+                configService.getInt(SonicConfiguration.TIME_ATTACK_MENU_KEY));
+        if (handleTimeAttackMenuRequest(timeAttackMenuRequested) || timeAttackMenuRequested) {
             return;
         }
 
@@ -438,6 +460,13 @@ public class MasterTitleScreen {
             renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
                     0f, 0f, 0f, 1f);
             userRecordingMenu.render();
+            return;
+        }
+
+        if (timeAttackMenu != null) {
+            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
+                    0f, 0f, 0f, 1f);
+            timeAttackMenu.render();
             return;
         }
 
@@ -829,6 +858,22 @@ public class MasterTitleScreen {
         return userRecordingMenu == null ? null : userRecordingMenu.state();
     }
 
+    public void setTimeAttackMenuFactoryForTest(TimeAttackMenuFactory timeAttackMenuFactory) {
+        this.timeAttackMenuFactory = Objects.requireNonNull(timeAttackMenuFactory, "timeAttackMenuFactory");
+    }
+
+    public void setTimeAttackLaunchStarter(TimeAttackMenu.LaunchStarter timeAttackLaunchStarter) {
+        this.timeAttackLaunchStarter = Objects.requireNonNull(timeAttackLaunchStarter, "timeAttackLaunchStarter");
+    }
+
+    public boolean isTimeAttackMenuOpenForTest() {
+        return timeAttackMenu != null;
+    }
+
+    public TimeAttackMenuState timeAttackMenuStateForTest() {
+        return timeAttackMenu == null ? null : timeAttackMenu.state();
+    }
+
     void setTracePickerForTest(TestModeTracePicker tracePicker) {
         this.tracePicker = tracePicker;
     }
@@ -884,6 +929,53 @@ public class MasterTitleScreen {
                 UserRecordingCatalog.scan(root, gameId, AppVersion.identity()),
                 font,
                 userRecordingPlaybackStarter);
+    }
+
+    /**
+     * Opens the Time Attack menu, seeded with the currently highlighted game
+     * entry when its ROM is available (falls back to the first ROM-present
+     * game otherwise). Returns false (no-op) when no game's ROM is available,
+     * test mode is active, or the launch config panel is open.
+     */
+    public boolean tryOpenTimeAttackMenu() {
+        if (state != State.ACTIVE
+                || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+                || launchConfigPanel != null) {
+            return false;
+        }
+        List<String> availableGameIds = new ArrayList<>();
+        for (int i = 0; i < GameEntry.values().length; i++) {
+            if (romAvailable[i]) {
+                availableGameIds.add(GameEntry.values()[i].gameId);
+            }
+        }
+        if (availableGameIds.isEmpty()) {
+            return false;
+        }
+        String initialGameId = GameEntry.values()[selectedIndex].gameId;
+        try {
+            timeAttackMenu = timeAttackMenuFactory.create(availableGameIds, initialGameId, font);
+            return true;
+        } catch (RuntimeException ex) {
+            LOGGER.warning("Failed to open time attack menu: " + ex.getMessage());
+            return false;
+        }
+    }
+
+    public boolean handleTimeAttackMenuRequest(boolean timeAttackMenuRequested) {
+        if (!timeAttackMenuRequested) {
+            return false;
+        }
+        return tryOpenTimeAttackMenu();
+    }
+
+    private TimeAttackMenu createTimeAttackMenu(List<String> availableGameIds, String initialGameId, PixelFont font) {
+        return new TimeAttackMenu(
+                availableGameIds,
+                initialGameId,
+                new GhostStore(Path.of("ghosts")),
+                font,
+                timeAttackLaunchStarter);
     }
 
     private void drawLaunchHoverLine() {
@@ -952,6 +1044,7 @@ public class MasterTitleScreen {
         }
         if (renderer != null) renderer.cleanup();
         userRecordingMenu = null;
+        timeAttackMenu = null;
         state = State.INACTIVE;
         LOGGER.info("Master title screen cleaned up");
     }
@@ -959,5 +1052,10 @@ public class MasterTitleScreen {
     @FunctionalInterface
     public interface UserRecordingMenuFactory {
         UserRecordingMenu create(String gameId, PixelFont font) throws IOException;
+    }
+
+    @FunctionalInterface
+    public interface TimeAttackMenuFactory {
+        TimeAttackMenu create(List<String> availableGameIds, String initialGameId, PixelFont font);
     }
 }

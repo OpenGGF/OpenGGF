@@ -147,6 +147,10 @@ class TestArchUnitRules {
             "game -> debug",
             "game -> graphics",
             "game -> level",
+            // game.timeattack.TimeAttackRuntime -> net.identity.PlayerIdentity (Ed25519
+            // player-identity keypair, solo-ghost-racing phase-1 security spec); never
+            // ratcheted when that dependency landed.
+            "game -> net",
             "game -> physics",
             "game -> sprites",
             "game -> testmode",

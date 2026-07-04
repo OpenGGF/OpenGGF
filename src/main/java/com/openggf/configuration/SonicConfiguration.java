@@ -328,6 +328,11 @@ public enum SonicConfiguration {
 	TIME_ATTACK_RETRY_KEY,
 
 	/**
+	 * Key that opens the solo Time Attack menu from the master title screen.
+	 */
+	TIME_ATTACK_MENU_KEY,
+
+	/**
 	 * Key held in visual Trace Test Mode to rewind deterministic engine state.
 	 */
 	TRACE_REWIND_KEY,

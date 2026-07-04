@@ -87,6 +87,7 @@ import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.timeattack.GhostStore;
 import com.openggf.game.timeattack.TimeAttackHudOverlay;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
+import com.openggf.game.timeattack.TimeAttackMenu;
 import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.testmode.TraceCameraFocusController;
 
@@ -174,6 +175,8 @@ public class GameLoop {
     private final TimeAttackRuntime timeAttackRuntime;
     private final TimeAttackHudOverlay timeAttackHudOverlay;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
+    private TimeAttackMenu.LaunchStarter timeAttackLaunchHandler =
+            request -> LOGGER.warning("Time attack launch handler not configured.");
     private int lastAppliedUserRecordingPlaybackFrame = -1;
     private long gameplayAudioFrame;
     private boolean audioUpdatedThisStep;
@@ -501,6 +504,16 @@ public class GameLoop {
     public void setUserRecordingPlaybackStarter(UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter) {
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingPlaybackStarter);
         installUserRecordingPlaybackStarter(currentMasterTitleScreen());
+    }
+
+    public void setTimeAttackLaunchHandler(TimeAttackMenu.LaunchStarter timeAttackLaunchHandler) {
+        this.timeAttackLaunchHandler = Objects.requireNonNull(timeAttackLaunchHandler, "timeAttackLaunchHandler");
+        installTimeAttackLaunchHandler(currentMasterTitleScreen());
+    }
+
+    /** Exposed so tests/Engine can arm and end a launched Time Attack session. */
+    public TimeAttackRuntime getTimeAttackRuntime() {
+        return timeAttackRuntime;
     }
 
     private UserRecordingMenu.PlaybackStarter withPlaybackAppliedFrameReset(
@@ -2886,7 +2899,14 @@ public class GameLoop {
         MasterTitleScreen masterScreen = masterTitleScreenSupplier != null
                 ? masterTitleScreenSupplier.get() : null;
         installUserRecordingPlaybackStarter(masterScreen);
+        installTimeAttackLaunchHandler(masterScreen);
         return masterScreen;
+    }
+
+    private void installTimeAttackLaunchHandler(MasterTitleScreen masterScreen) {
+        if (masterScreen != null) {
+            masterScreen.setTimeAttackLaunchStarter(timeAttackLaunchHandler);
+        }
     }
 
     private void installUserRecordingPlaybackStarter(MasterTitleScreen masterScreen) {
@@ -2905,6 +2925,12 @@ public class GameLoop {
         userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
         userRecordingSessionLauncher.endPlaybackSession();
         resetLastAppliedUserRecordingPlaybackFrame();
+        // Every route out of a time-attack session funnels through this method
+        // (escape-to-master-title hold and TraceSessionLauncher teardown), so
+        // this is the single place isActive() must be cleared -- otherwise it
+        // stays sticky and the frame hooks above would keep firing during the
+        // next, unrelated gameplay session.
+        timeAttackRuntime.deactivate();
         masterTitleLaunchCoordinator.returnToMasterTitle();
     }
 

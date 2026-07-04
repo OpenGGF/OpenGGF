@@ -38,7 +38,14 @@ class TestArchitecturalSourceGuard {
             "com/openggf/level/LevelManager.java", 2500,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
-            GAME_LOOP_PATH, 2890
+            // 2026-07-04: 2890 -> 2962. The solo-ghost-racing phase-1 tasks (time
+            // attack runtime frame hooks, retry-key handling, HUD overlay wiring)
+            // grew this file past 2890 without re-ratcheting; this bump also folds
+            // in Task 13's master-title Time Attack launch-handler wiring
+            // (setTimeAttackLaunchHandler/installTimeAttackLaunchHandler/
+            // getTimeAttackRuntime()) and the deactivate() call in
+            // returnToMasterTitle().
+            GAME_LOOP_PATH, 2962
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
@@ -59,7 +66,10 @@ class TestArchitecturalSourceGuard {
             // config lookups and gameLoop accessors are skipped when intensity==0.
             // 2026-07-03: display 220 -> 221 for the rewind.vhsTearBands config
             // argument threaded into the RewindVhsEffectPass.apply call.
-            new MethodBudget(ENGINE_PATH, "display", 221),
+            // 2026-07-04: display 221 -> 228 for the time-attack HUD render call
+            // (gameLoop.renderTimeAttackHud) added by the solo-ghost-racing
+            // phase-1 HUD-overlay task; not re-ratcheted at the time.
+            new MethodBudget(ENGINE_PATH, "display", 228),
             new MethodBudget(GAME_LOOP_PATH, "stepInternal", 213),
             new MethodBudget(GAME_LOOP_PATH, "doExitBonusStage", 142),
             new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 105),

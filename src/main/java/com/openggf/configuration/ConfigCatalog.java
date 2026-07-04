@@ -236,6 +236,8 @@ public final class ConfigCatalog {
         // timeAttack
         put(TIME_ATTACK_RETRY_KEY, of("timeAttack", "retryKey", KEY,
                 "Key that instantly retries the current time attack from the act start."));
+        put(TIME_ATTACK_MENU_KEY, of("timeAttack", "menuKey", KEY,
+                "Key that opens the solo Time Attack menu from the master title screen."));
 
         // ───────────────── DEBUG BLOCK ─────────────────
 

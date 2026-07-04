@@ -630,6 +630,7 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.PLAYBACK_START_OFFSET_FRAME, 0);
 		putDefaultKey(SonicConfiguration.RECORDING_RECORD_KEY, GLFW_KEY_F9);
 		putDefaultKey(SonicConfiguration.TIME_ATTACK_RETRY_KEY, GLFW_KEY_R);
+		putDefaultKey(SonicConfiguration.TIME_ATTACK_MENU_KEY, GLFW_KEY_F10);
 		putDefaultKey(SonicConfiguration.TRACE_REWIND_KEY, GLFW_KEY_R);
 		putDefault(SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, true);
 		putDefault(SonicConfiguration.TRACE_SHOW_GAME_HUD, true);

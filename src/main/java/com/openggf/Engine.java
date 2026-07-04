@@ -49,6 +49,8 @@ import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
+import com.openggf.game.timeattack.TimeAttackLaunchRequest;
+import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.data.Rom;
 import com.openggf.physics.Direction;
 import com.openggf.graphics.color.DisplayColorProfileController;
@@ -245,6 +247,7 @@ public class Engine {
 		this.gameLoop.setLegalDisclaimerScreenSupplier(() -> legalDisclaimerScreen);
 		this.gameLoop.setLegalDisclaimerExitHandler(this::exitLegalDisclaimer);
 		this.gameLoop.setDataSelectActionHandler(this::launchGameplayFromDataSelect);
+		this.gameLoop.setTimeAttackLaunchHandler(this::launchTimeAttack);
 		this.gameLoop.setReturnToMasterTitleHandler(this::returnToMasterTitleScreen);
 		this.gameLoop.setMasterTitleLaunchFailureHandler(this::rollbackLaunchSessionCachedConfig);
 		this.gameLoop.setApplicationExitHandler(this::requestApplicationExit);
@@ -1032,6 +1035,64 @@ public class Engine {
 
 		dataSelectLaunchSaveReason(action.type())
 				.ifPresent(gameLoop::requestSaveForCurrentSession);
+	}
+
+	/**
+	 * Launches a solo Time Attack run directly from the master title screen
+	 * (the {@code TimeAttackMenu} sub-mode's GO action). Unlike
+	 * {@link #launchGameplayFromDataSelect}, which fires from inside an
+	 * already-loaded game's Data Select screen (ROM + world session already
+	 * active), Time Attack starts from the master title with no ROM loaded
+	 * yet, so this method also performs the ROM-load / module-detection
+	 * bootstrap that {@link #initializeGame()} and
+	 * {@code GameLoop.restartFromRecordingLaunchContext} perform for the
+	 * same "launch a game fresh from master title" situation.
+	 */
+	private void launchTimeAttack(TimeAttackLaunchRequest request) {
+		Objects.requireNonNull(request, "request");
+
+		refreshLaunchSessionCachedConfig();
+		applyResolvedDisplayDimensions();
+		configService.setConfigValue(SonicConfiguration.DEFAULT_ROM, request.gameId());
+
+		if (masterTitleScreen != null) {
+			masterTitleScreen.cleanup();
+			masterTitleScreen = null;
+		}
+		resetForGameplayFromMasterTitle();
+
+		GameModule module;
+		try {
+			Rom rom = romManager.getRom();
+			var detectedModule = romDetectionService.detectAndCreateModule(rom);
+			if (detectedModule.isEmpty()) {
+				showStartupRomError("ROM not recognized or corrupt for time attack: " + request.gameId());
+				return;
+			}
+			module = detectedModule.orElseThrow();
+		} catch (IOException e) {
+			showStartupRomError("Failed to load ROM for time attack launch: " + e.getMessage());
+			return;
+		}
+
+		SelectedTeam team = new SelectedTeam(request.character(), List.of());
+		com.openggf.game.save.SaveSessionContext saveContext = com.openggf.game.save.SaveSessionContext.noSave(
+				request.gameId(), team, request.zone(), request.act());
+
+		GameplayModeContext gameplay = SessionManager.openGameplaySession(module, saveContext);
+		initializeGameplayRuntime(gameplay, false);
+		loadLevelFromDataSelect(request.zone(), request.act());
+		gameLoop.setGameMode(GameMode.LEVEL);
+
+		// loadLevelFromDataSelect -> levelManager.loadZoneAndAct(...) bypasses
+		// GameLoop.doZoneAct (the mid-game zone-transition path that already
+		// calls onLevelReady() for a time-attack retry), so fire it explicitly
+		// here for this fresh launch.
+		TimeAttackRuntime timeAttackRuntime = gameLoop.getTimeAttackRuntime();
+		timeAttackRuntime.armForLaunch(request);
+		if (timeAttackRuntime.isActive()) {
+			timeAttackRuntime.onLevelReady();
+		}
 	}
 
 	static Optional<com.openggf.game.save.SaveReason> dataSelectLaunchSaveReason(
