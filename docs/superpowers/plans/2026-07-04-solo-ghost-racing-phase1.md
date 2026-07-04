@@ -288,6 +288,16 @@ class TestGhostFileCodec {
     }
 
     @Test
+    void writeRejectsOverCapRecording(@TempDir Path dir) {
+        byte[] frames = new byte[(GhostFileCodec.MAX_FRAMES + 1) * GhostFrameCodec.BYTES];
+        GhostHeader h = new GhostHeader(1, "s3k", 0, 0, "sonic", "x", 0, 1, new int[0], new byte[32]);
+        GhostRecording overCap = new GhostRecording(h, frames);
+        IOException ex = assertThrows(IOException.class,
+                () -> GhostFileCodec.write(overCap, dir.resolve("big.ggfghost")));
+        assertTrue(ex.getMessage().contains("MAX_FRAMES"));
+    }
+
+    @Test
     void rejectsEmptyFrameData() {
         GhostHeader h = new GhostHeader(1, "s3k", 0, 0, "sonic", "x", 0, 1, new int[0], new byte[32]);
         assertThrows(IllegalArgumentException.class, () -> new GhostRecording(h, new byte[0]));
@@ -396,6 +406,10 @@ public final class GhostFileCodec {
     }
 
     public static void write(GhostRecording r, Path path) throws IOException {
+        if (r.frameCount() > MAX_FRAMES) {
+            throw new IOException("recording has " + r.frameCount()
+                    + " frames, exceeding MAX_FRAMES " + MAX_FRAMES);
+        }
         Files.createDirectories(path.getParent());
         try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(path)))) {
             out.write(MAGIC);
@@ -459,7 +473,7 @@ public final class GhostFileCodec {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.game.ghost.TestGhostFileCodec" test`
-Expected: PASS (7 tests).
+Expected: PASS (8 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -1756,7 +1770,7 @@ Skills: n/a"
 - Consumes: everything from Tasks 4-9; `PlayerInputState` (`com.openggf.control`, record with `heldMask()`/`startHeld()`); `InputHandler.logical().player1()`; `GameServices.gameState().isEndOfLevelActive()`; checkpoint index; `AbstractPlayableSprite`/`AbstractSprite` accessors (Task 5 list); `AppVersion.get()`; `RomManager.getInstance().getRom().calculateChecksum()`; `GhostRenderRegistry` (Task 8); `LevelManager.getTransitions().requestZoneAndAct(int, int)`.
 - Produces (used by Tasks 11-13):
   - `TimeAttackLaunchRequest(String gameId, int zone, int act, String character, java.util.List<java.nio.file.Path> extraGhosts)` (record).
-  - `TimeAttackRuntime(GhostStore store, java.nio.file.Path identityDir)` (production: `new TimeAttackRuntime(new GhostStore(Path.of("ghosts")), Path.of("identity"))`, constructed once by `Engine`/`GameLoop`). `armForLaunch` lazily calls `PlayerIdentity.loadOrCreate(identityDir)` on first use (log the fingerprint at INFO; on failure log WARNING and continue with `null` identity — solo play must not break); saved ghost headers use `displayName` = first 8 hex chars of the fingerprint (`""` when identity is unavailable), which is what makes phase-1 identity load-bearing rather than dead code. With: `void armForLaunch(TimeAttackLaunchRequest request)`; `boolean isActive()`; `boolean isAttemptRunning()`; `void onLevelReady()` (called when the level for an armed/retried run is loaded — begins the attempt at spawn, loads best + extra ghosts, registers its `GhostRenderRegistry.GhostLayerRenderer`; imported ghosts whose header gameId/zone/act doesn't match the launch are SKIPPED with a warning — wrong-track ghosts must never render — and each import loads in its own try/catch so one corrupt file can't block the rest); `void beforeLevelFrame(com.openggf.control.InputHandler input)`; `void afterLevelFrame()`; `boolean consumeRetryRequested()`; `void requestRetry()`; `void deactivate()` (unregister renderer, clear slots, drop state); `TimeAttackHudState hudState()`.
+  - `TimeAttackRuntime(GhostStore store, java.nio.file.Path identityDir, java.util.function.BooleanSupplier launchBlocked)` — `launchBlocked` is the trace/test-mode guard, injected so it is unit-testable. Production: `new TimeAttackRuntime(new GhostStore(Path.of("ghosts")), Path.of("identity"), () -> TraceSessionLauncher.active() != null || GameServices.configuration().getBoolean(SonicConfiguration.TEST_MODE_ENABLED) || GameServices.playbackDebug().isDriving(GameMode.LEVEL))` (the `UserRecordingSessionLauncher.LiveTraceModeGuard` predicate), constructed once by `Engine`/`GameLoop`. `armForLaunch` REFUSES (logs a warning, stays inactive) when `launchBlocked` returns true — implemented, not prose. `armForLaunch` lazily calls `PlayerIdentity.loadOrCreate(identityDir)` on first use (log the fingerprint at INFO; on failure log WARNING and continue with `null` identity — solo play must not break); saved ghost headers use `displayName` = first 8 hex chars of the fingerprint (`""` when identity is unavailable), which is what makes phase-1 identity load-bearing rather than dead code. With: `void armForLaunch(TimeAttackLaunchRequest request)`; `boolean isActive()`; `boolean isAttemptRunning()`; `void onLevelReady()` (called when the level for an armed/retried run is loaded — begins the attempt at spawn, loads best + extra ghosts, registers its `GhostRenderRegistry.GhostLayerRenderer`; imported ghosts whose header gameId/zone/act doesn't match the launch are SKIPPED with a warning — wrong-track ghosts must never render — and each import loads in its own try/catch so one corrupt file can't block the rest); `void beforeLevelFrame(com.openggf.control.InputHandler input)`; `void afterLevelFrame()`; `boolean consumeRetryRequested()`; `void requestRetry()`; `void deactivate()` (unregister renderer, clear slots, drop state); `TimeAttackHudState hudState()`.
   - `TimeAttackHudState(boolean active, int elapsedDisplayFrames, int bestTimeFrames, int lastSplitDelta, boolean finished, boolean newBest)` (record; `bestTimeFrames == -1` when none, `lastSplitDelta == Integer.MIN_VALUE` when none).
 - Core loop semantics (all pure logic delegated to `TimeAttackAttempt`):
   - `beforeLevelFrame`: snapshot `PlayerInputState p1 = input.logical().player1()`.
@@ -1764,7 +1778,8 @@ Skills: n/a"
   - `currentCheckpointIndex()`: read the same `CheckpointState` object services expose (`services().checkpointState().getLastCheckpointIndex()` — objects reach it via `DefaultObjectServices`; grep `DefaultObjectServices` for `checkpointState()` to find the owning source and consume it identically, adding a `GameplayModeContext` getter only if none exists).
   - Retry (`requestRetry()`): void attempt, discard capture, then GameLoop clears checkpoint state and calls `levelManager.getTransitions().requestZoneAndAct(zone, act)`; when that load completes GameLoop calls `onLevelReady()` again.
   - Length cap: when `attempt.frameCount()` reaches `GhostFileCodec.MAX_FRAMES` (36,000 = the ROM's 10:00 time-over), void the attempt and stop capture — the ROM's own time-over will end the run anyway; this guarantees no attempt can produce an unsaveable over-cap ghost.
-  - Guards (security spec §11 phase 1 + spec §6.1): refuse `armForLaunch` when trace/test mode active — same predicate as `UserRecordingSessionLauncher.LiveTraceModeGuard` (`TraceSessionLauncher.active() != null || config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED) || GameServices.playbackDebug().isDriving(GameMode.LEVEL)`); while `isAttemptRunning()`, GameLoop skips `liveRewindManager.handleRealtimeRewindInput(...)` and blocks editor-mode entry; if the debug overlay was toggled on during an attempt, mark the attempt tainted → best not saved.
+  - Guards (security spec §11 phase 1 + spec §6.1): `armForLaunch` refuses via the injected `launchBlocked` supplier (see constructor above — covered by a unit test, not just this prose); while `isAttemptRunning()`, GameLoop skips `liveRewindManager.handleRealtimeRewindInput(...)` and blocks editor-mode entry; if the debug overlay was toggled on during an attempt, mark the attempt tainted → best not saved.
+  - Cap enforcement is two-sided: the runtime voids any attempt whose capture reaches `GhostFileCodec.MAX_FRAMES` (implemented in the tick, tested), AND `GhostFileCodec.write` rejects over-cap recordings with an `IOException` — so an over-cap ghost can neither be produced nor persisted, and `read`'s cap can never reject a file `write` produced.
 - Testability: keep ALL decision logic in `TimeAttackAttempt`/pure helpers; `TimeAttackRuntime` methods that touch `GameServices` must null-tolerate (use `*OrNull()` accessors) so the class constructs in plain unit tests. The unit test below covers arm→frame-tick→finish→save via a seam: extract the per-frame sampling into package-visible `void tickForTest(int heldMask, boolean startHeld, boolean endOfLevel, int checkpointIndex, GhostFrame sampledFrame)` that `afterLevelFrame` delegates to after doing the live sampling.
 
 - [ ] **Step 1: Write the failing test**
@@ -1789,7 +1804,7 @@ class TestTimeAttackRuntime {
     void armTickFinishSavesBestGhostAndInputs(@TempDir Path root) throws Exception {
         GhostStore store = new GhostStore(root);
         Path identityDir = root.resolve("identity");
-        TimeAttackRuntime runtime = new TimeAttackRuntime(store, identityDir);
+        TimeAttackRuntime runtime = new TimeAttackRuntime(store, identityDir, () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
         assertTrue(java.nio.file.Files.exists(identityDir.resolve("player-identity.key"))); // identity wired at arm
         runtime.beginAttemptForTest("0.6:cafe");   // package-visible spawn hook used by onLevelReady
@@ -1814,7 +1829,7 @@ class TestTimeAttackRuntime {
     @Test
     void taintedAttemptIsNeverSaved(@TempDir Path root) throws Exception {
         GhostStore store = new GhostStore(root);
-        TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"));
+        TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"), () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
         runtime.beginAttemptForTest("0.6:cafe");
         runtime.markTainted();
@@ -1838,7 +1853,7 @@ class TestTimeAttackRuntime {
         com.openggf.game.ghost.GhostFileCodec.write(wrongTrack, wrong);
         com.openggf.game.ghost.GhostFileCodec.write(rightTrack, right);
 
-        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"));
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"), () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic",
                 java.util.List.of(wrong, right)));
         runtime.beginAttemptForTest("0.6:cafe");
@@ -1846,9 +1861,31 @@ class TestTimeAttackRuntime {
     }
 
     @Test
+    void refusesToArmWhenTraceOrTestModeActive(@TempDir Path root) {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
+                root.resolve("identity"), () -> true); // guard says blocked
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        assertFalse(runtime.isActive());
+    }
+
+    @Test
+    void attemptVoidsAtMaxFramesAndNeverSaves(@TempDir Path root) throws Exception {
+        GhostStore store = new GhostStore(root);
+        TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        runtime.beginAttemptForTest("0.6:cafe");
+        for (int i = 0; i < com.openggf.game.ghost.GhostFileCodec.MAX_FRAMES + 10; i++) {
+            runtime.tickForTest(0x08, false, false, -1, frame(10));
+        }
+        runtime.tickForTest(0x08, false, true, -1, frame(10)); // signpost after cap — ignored
+        assertTrue(store.loadBest("s3k", 0, 0, "sonic").isEmpty());
+        assertFalse(runtime.hudState().finished());
+    }
+
+    @Test
     void retryVoidsAttemptWithoutSaving(@TempDir Path root) throws Exception {
         GhostStore store = new GhostStore(root);
-        TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"));
+        TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"), () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
         runtime.beginAttemptForTest("0.6:cafe");
         runtime.tickForTest(0x08, false, false, -1, frame(10));
@@ -1915,6 +1952,7 @@ public final class TimeAttackRuntime {
 
     private final GhostStore store;
     private final java.nio.file.Path identityDir;
+    private final java.util.function.BooleanSupplier launchBlocked;
     private com.openggf.net.identity.PlayerIdentity identity;
     private TimeAttackLaunchRequest launch;
     private TimeAttackAttempt attempt;
@@ -1928,12 +1966,18 @@ public final class TimeAttackRuntime {
     private int pendingHeldMask;
     private boolean pendingStartHeld;
 
-    public TimeAttackRuntime(GhostStore store, java.nio.file.Path identityDir) {
+    public TimeAttackRuntime(GhostStore store, java.nio.file.Path identityDir,
+                             java.util.function.BooleanSupplier launchBlocked) {
         this.store = store;
         this.identityDir = identityDir;
+        this.launchBlocked = launchBlocked;
     }
 
     public void armForLaunch(TimeAttackLaunchRequest request) {
+        if (launchBlocked.getAsBoolean()) {
+            LOGGER.warning("Time attack refused: trace/test/playback-debug mode is active");
+            return;
+        }
         this.launch = request;
         if (identity == null) {
             try {
@@ -2000,6 +2044,10 @@ public final class TimeAttackRuntime {
     void tickForTest(int heldMask, boolean startHeld, boolean endOfLevel, int checkpointIndex,
                      GhostFrame sampledFrame) {
         if (attempt == null) return;
+        if (capture.frameCount() >= GhostFileCodec.MAX_FRAMES) {
+            attempt.voidAttempt(); // ROM 10:00 time-over cap — over-cap ghosts can never exist
+            return;
+        }
         TimeAttackAttempt.Phase before = attempt.phase();
         attempt.onFrame(heldMask, endOfLevel, checkpointIndex);
         if (attempt.phase() == TimeAttackAttempt.Phase.VOID) return;
@@ -2049,7 +2097,7 @@ public final class TimeAttackRuntime {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.game.timeattack.TestTimeAttackRuntime" test`
-Expected: PASS (4 tests).
+Expected: PASS (6 tests).
 
 - [ ] **Step 5: Wire live sampling + GameLoop hooks**
 
