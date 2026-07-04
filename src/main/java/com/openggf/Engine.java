@@ -1655,6 +1655,13 @@ public class Engine {
 			}
 			gameLoop.renderUserRecordingHud(traceHudTextRenderer);
 		}
+		if (gameLoop != null) {
+			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+			if (postFadeRecorder != null) {
+				postFadeRecorder.recordPostFadeDiagnostic("TimeAttackHud");
+			}
+			gameLoop.renderTimeAttackHud(traceHudTextRenderer);
+		}
 		if (!userRecordingSceneSuppressed) {
 			renderEscapeToMasterTitlePrompt(postFadeRecorder);
 		}

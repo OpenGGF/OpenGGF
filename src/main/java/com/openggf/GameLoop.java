@@ -85,6 +85,7 @@ import com.openggf.game.recording.UserRecordingPlaybackState;
 import com.openggf.game.recording.UserRecordingVerificationResult;
 import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.timeattack.GhostStore;
+import com.openggf.game.timeattack.TimeAttackHudOverlay;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
 import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.testmode.TraceCameraFocusController;
@@ -171,6 +172,7 @@ public class GameLoop {
     private final UserRecordingSessionLauncher userRecordingSessionLauncher;
     private final UserRecordingRuntimeControls userRecordingControls;
     private final TimeAttackRuntime timeAttackRuntime;
+    private final TimeAttackHudOverlay timeAttackHudOverlay;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
     private int lastAppliedUserRecordingPlaybackFrame = -1;
     private long gameplayAudioFrame;
@@ -343,6 +345,7 @@ public class GameLoop {
                 () -> TraceSessionLauncher.active() != null
                         || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
                         || playbackDebugManager.isDriving(GameMode.LEVEL));
+        this.timeAttackHudOverlay = new TimeAttackHudOverlay(timeAttackRuntime::hudState, configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
@@ -454,6 +457,13 @@ public class GameLoop {
             textRenderer.drawShadowedText(state.secondaryText(), 8, 18, color, 0.6f);
         }
         textRenderer.endBatch();
+    }
+
+    public void renderTimeAttackHud(PixelFontTextRenderer textRenderer) {
+        if (textRenderer == null) {
+            return;
+        }
+        timeAttackHudOverlay.render(textRenderer);
     }
 
     public boolean shouldSuppressUserRecordingSceneRendering() {
