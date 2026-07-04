@@ -424,6 +424,10 @@ public class TestObjectServices implements ObjectServices {
     }
 
     @Override
+    public void requestTimeAttackMenuReturn() {
+    }
+
+    @Override
     public void requestSpecialStageEntry() {
     }
 

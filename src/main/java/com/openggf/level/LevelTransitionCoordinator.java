@@ -46,6 +46,9 @@ public class LevelTransitionCoordinator {
     // ── Credits ────────────────────────────────────────────────────────
     private boolean creditsRequested;
 
+    // ── Time attack menu return ─────────────────────────────────────────
+    private boolean timeAttackMenuReturnRequested;
+
     // ── HUD / music suppression ────────────────────────────────────────
     private boolean forceHudSuppressed;
     private boolean suppressNextMusicChange;
@@ -434,6 +437,34 @@ public class LevelTransitionCoordinator {
     }
 
     // ================================================================
+    //  Time attack menu return
+    // ================================================================
+
+    /**
+     * Request a return to the time attack menu instead of the normal act/zone
+     * advance. Called by {@code LevelManager.advanceToNextLevel()} and
+     * {@code S3kResultsScreenObjectInstance.onExitReady()} (and its
+     * subclasses) when {@code GameStateManager.isTimeAttackActive()} is true
+     * at the point where a results tally would otherwise advance to the next
+     * act/zone. GameLoop consumes this the same way as the other transition
+     * requests and routes through the time-attack return-to-menu fade instead.
+     */
+    public void requestTimeAttackMenuReturn() {
+        this.timeAttackMenuReturnRequested = true;
+    }
+
+    /**
+     * Check and consume the time attack menu return request.
+     *
+     * @return true if a return to the time attack menu was requested
+     */
+    public boolean consumeTimeAttackMenuReturnRequest() {
+        boolean requested = timeAttackMenuReturnRequested;
+        timeAttackMenuReturnRequested = false;
+        return requested;
+    }
+
+    // ================================================================
     //  HUD / music suppression
     // ================================================================
 
@@ -509,6 +540,7 @@ public class LevelTransitionCoordinator {
         specificZoneActRequested = false;
         seamlessTransitionRequested = false;
         creditsRequested = false;
+        timeAttackMenuReturnRequested = false;
         forceHudSuppressed = false;
         suppressNextMusicChange = false;
         levelInactiveForTransition = false;

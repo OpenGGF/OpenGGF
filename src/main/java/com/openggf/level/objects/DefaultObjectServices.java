@@ -393,6 +393,11 @@ public class DefaultObjectServices implements ObjectServices {
     }
 
     @Override
+    public void requestTimeAttackMenuReturn() {
+        lm().requestTimeAttackMenuReturn();
+    }
+
+    @Override
     public void requestSpecialStageEntry() {
         lm().requestSpecialStageEntry();
     }

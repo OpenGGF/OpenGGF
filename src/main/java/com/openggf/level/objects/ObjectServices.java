@@ -204,6 +204,14 @@ public interface ObjectServices {
     /** Requests transition to the credits/ending sequence. */
     void requestCreditsTransition();
 
+    /**
+     * Requests a return to the time attack menu instead of the normal act/zone
+     * advance. Called by results-screen completion code when
+     * {@code GameStateManager.isTimeAttackActive()} is true at the point the
+     * act would otherwise advance.
+     */
+    void requestTimeAttackMenuReturn();
+
     /** Requests entry into a special stage. */
     void requestSpecialStageEntry();
 

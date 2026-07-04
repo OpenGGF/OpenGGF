@@ -535,6 +535,22 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     @Override
     protected void onExitReady() {
+        // A finished/abandoned time attack attempt returns to the time attack
+        // menu instead of any of the below: the in-place Apparent_act flip
+        // (most Act 1 zones), arming the seamless-reload trigger via
+        // End_of_level_flag (HCZ/MGZ Act 1 -- see hasSeamlessTransition below
+        // and Sonic3kHCZEvents/Sonic3kMGZEvents), or setting End_of_level_flag
+        // for Act 2 / Sky Sanctuary / LRZ boss (which gates every zone's
+        // post-boss "next zone" handoff, e.g. AbstractS3kFloatingEndEggCapsuleInstance).
+        // Every S3K results-screen subclass (Mgz2ResultsScreenObjectInstance,
+        // the private Aiz2ResultsScreenObjectInstance) shares this onExitReady(),
+        // so gating here covers all S3K zones' act completion in one place.
+        if (services().gameState().isTimeAttackActive()) {
+            services().requestTimeAttackMenuReturn();
+            ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
+
         int zone = services().romZoneId();
         // Zones whose Act 1 → Act 2 boundary is a seamless level reload:
         //   HCZ (zone $01): HCZ1BGE_DoTransition

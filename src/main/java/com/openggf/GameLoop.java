@@ -1289,6 +1289,21 @@ public class GameLoop {
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
+            // The real act-completion gate: LevelManager.advanceToNextLevel() (called
+            // directly by S1/S2 results-screen objects, bypassing the request/consume
+            // queue below) and S3kResultsScreenObjectInstance.onExitReady() both queue
+            // this instead of advancing when a time attack attempt is active. The four
+            // sites below remain for seamless/next-act/next-zone/credits transitions
+            // that are NOT time-attack-gated at their source (debug keys, S1/S2 boss
+            // defeat -> credits, and the S3K seamless cross-act reload).
+            if (levelManager.consumeTimeAttackMenuReturnRequest()) {
+                userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+                timeAttackRuntime.deactivate();
+                startTimeAttackReturnToMenuFade();
+                finishUserRecordingPlaybackAtLevelBoundary(false);
+                updateNonGameplayAudio(doFrameStep);
+                return false;
+            }
             if (levelManager.consumeNextActRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 // A finished/abandoned time attack returns to the time attack menu

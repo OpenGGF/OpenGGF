@@ -2713,8 +2713,21 @@ public class LevelManager {
      * Unlike nextAct() which wraps, this advances to next zone when acts are
      * exhausted.
      * Called by results screen after tally completes.
+     * <p>
+     * S1/S2 results-screen objects call this directly (bypassing the
+     * request/consume transition queue GameLoop otherwise drives), so a
+     * finished/abandoned time attack attempt is gated here rather than at a
+     * GameLoop consume site: when {@code GameStateManager.isTimeAttackActive()}
+     * is true, this queues a {@link LevelTransitionCoordinator#requestTimeAttackMenuReturn()}
+     * and returns without touching the zone/act counters or loading anything —
+     * GameLoop consumes that request on the next frame and routes to the time
+     * attack menu instead.
      */
     public void advanceToNextLevel() throws IOException {
+        if (gameState.isTimeAttackActive()) {
+            transitions.requestTimeAttackMenuReturn();
+            return;
+        }
         writeCurrentAct(currentAct + 1);
         if (currentAct >= levels.get(currentZone).size()) {
             // Move to next zone
@@ -3381,6 +3394,12 @@ public class LevelManager {
 
     /** @see LevelTransitionCoordinator#consumeCreditsRequest() */
     public boolean consumeCreditsRequest() { return transitions.consumeCreditsRequest(); }
+
+    /** @see LevelTransitionCoordinator#requestTimeAttackMenuReturn() */
+    public void requestTimeAttackMenuReturn() { transitions.requestTimeAttackMenuReturn(); }
+
+    /** @see LevelTransitionCoordinator#consumeTimeAttackMenuReturnRequest() */
+    public boolean consumeTimeAttackMenuReturnRequest() { return transitions.consumeTimeAttackMenuReturnRequest(); }
 
     /** @see LevelTransitionCoordinator#setForceHudSuppressed(boolean) */
     public void setForceHudSuppressed(boolean suppressed) { transitions.setForceHudSuppressed(suppressed); }

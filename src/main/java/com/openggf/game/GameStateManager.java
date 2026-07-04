@@ -718,7 +718,11 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     /**
      * Whether a solo time-attack session is currently active (see
      * {@link #timeAttackActive}). Checked by giant-ring / special-stage-portal
-     * objects to skip their touch reaction entirely; never read by physics.
+     * objects to skip their touch reaction entirely, and by the act-advance
+     * gates in {@code LevelManager.advanceToNextLevel()} and
+     * {@code S3kResultsScreenObjectInstance.onExitReady()} (which divert a
+     * finished/abandoned attempt to the time attack menu instead of the next
+     * act/zone); never read by physics.
      */
     public boolean isTimeAttackActive() { return timeAttackActive; }
 

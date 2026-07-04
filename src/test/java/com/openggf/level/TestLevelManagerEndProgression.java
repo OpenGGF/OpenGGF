@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.mock;
@@ -46,6 +47,30 @@ class TestLevelManagerEndProgression {
         assertEquals(1, worldSession.getCurrentZone(),
                 "Current zone should remain at the terminal out-of-range sentinel, not wrap to zone 0");
         assertEquals(0, worldSession.getCurrentAct());
+    }
+
+    @Test
+    void advanceToNextLevelDuringTimeAttackRequestsMenuReturnWithoutAdvancing() {
+        GameModule module = mock(GameModule.class);
+        WorldSession worldSession = new WorldSession(module);
+        GameStateManager gameState = new GameStateManager();
+        gameState.setTimeAttackActive(true);
+        LevelManager levelManager = new LevelManager(mock(Camera.class), mock(SpriteManager.class),
+                mock(ParallaxManager.class), mock(CollisionSystem.class), mock(WaterSystem.class),
+                gameState, engineContext(), worldSession);
+        levelManager.levels.add(List.of(LevelData.DEATH_EGG, LevelData.DEATH_EGG));
+        levelManager.currentZone = 0;
+        levelManager.currentAct = 0;
+
+        assertDoesNotThrow(levelManager::advanceToNextLevel);
+
+        assertTrue(levelManager.consumeTimeAttackMenuReturnRequest(),
+                "A finished/abandoned time attack attempt must request a return to the time attack menu");
+        assertEquals(0, worldSession.getCurrentZone(),
+                "advanceToNextLevel() must not touch zone/act counters while time attack is active");
+        assertEquals(0, worldSession.getCurrentAct());
+        assertFalse(levelManager.consumeCreditsRequest(),
+                "The time-attack gate must return before any of the normal advance/credits requests fire");
     }
 
     private static EngineContext engineContext() {

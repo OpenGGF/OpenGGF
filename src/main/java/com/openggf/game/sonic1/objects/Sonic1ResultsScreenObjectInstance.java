@@ -10,6 +10,7 @@ import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.ZeroScalarArgsRewindRecreatable;
@@ -369,6 +370,21 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
 
     @Override
     protected void onExitReady() {
+        // A finished/abandoned time attack attempt returns to the time attack
+        // menu instead of any of the below. This matters most for the SBZ2
+        // branch: that special transition to Final Zone never calls
+        // services().advanceToNextLevel() at all (it just unlocks controls,
+        // plays FZ music, and scrolls the camera boundary), so the
+        // LevelManager.advanceToNextLevel() gate cannot catch it -- it must be
+        // gated here. (The specialStageAfter branch is already unreachable
+        // during time attack because Sonic1GiantRingObjectInstance's own touch
+        // reaction is fully skipped when isTimeAttackActive(); this check is
+        // defense in depth, not the primary gate for that path.)
+        if (services().gameState().isTimeAttackActive()) {
+            services().requestTimeAttackMenuReturn();
+            ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
         if (specialStageAfter) {
             triggerFadeToWhiteForSpecialStage();
         } else if (isSBZ2()) {

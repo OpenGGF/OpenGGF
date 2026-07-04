@@ -101,6 +101,7 @@ public class StubObjectServices implements ObjectServices {
     @Override public CollisionSystem collisionSystem() { return null; }
     @Override public void advanceToNextLevel() {}
     @Override public void requestCreditsTransition() {}
+    @Override public void requestTimeAttackMenuReturn() {}
     @Override public void requestSessionSave(SaveReason reason) {}
     @Override public void requestSpecialStageEntry() {}
     @Override public void invalidateForegroundTilemap() {}
