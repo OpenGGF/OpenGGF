@@ -1,6 +1,7 @@
 package com.openggf.game.timeattack;
 
 import com.openggf.game.ghost.GhostFrame;
+import com.openggf.game.ghost.GhostRenderRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -93,6 +94,38 @@ class TestTimeAttackRuntime {
         runtime.tickForTest(0x08, false, true, -1, frame(10)); // signpost after cap — ignored
         assertTrue(store.loadBest("s3k", 0, 0, "sonic").isEmpty());
         assertFalse(runtime.hudState().finished());
+    }
+
+    @Test
+    void reattachingRendererDoesNotStackDuplicateRegistrations(@TempDir Path root) {
+        // A retry re-enters onLevelReady() on the same GameplayModeContext, so the ghost
+        // layer renderer must be detached before re-registering — otherwise it draws N+1
+        // times. Two attaches must net exactly one registration: after deactivate()
+        // unregisters once, the registry must be empty.
+        GhostRenderRegistry registry = new GhostRenderRegistry();
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
+                root.resolve("identity"), () -> false);
+        runtime.attachRenderer(registry);
+        runtime.attachRenderer(registry);
+        assertFalse(registry.isEmpty());
+        runtime.deactivate();
+        assertTrue(registry.isEmpty(), "duplicate registration left the ghost rendering after deactivate");
+    }
+
+    @Test
+    void deactivateClearsOpponentGhosts(@TempDir Path root) throws Exception {
+        // A frozen ghost must not keep rendering after a level-ended deactivate.
+        GhostStore store = new GhostStore(root);
+        TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        // Bank a best ghost, then re-arm so it loads as an opponent to race.
+        runtime.beginAttemptForTest("0.6:cafe");
+        runtime.tickForTest(0x08, false, false, -1, frame(10));
+        runtime.tickForTest(0x08, false, true, -1, frame(11));
+        runtime.beginAttemptForTest("0.6:cafe");
+        assertEquals(1, runtime.opponents().size());
+        runtime.deactivate();
+        assertTrue(runtime.opponents().isEmpty());
     }
 
     @Test

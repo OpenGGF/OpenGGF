@@ -44,6 +44,18 @@ class TestTimeAttackAttempt {
     }
 
     @Test
+    void voidAttemptIsNoOpOnceFinished() {
+        TimeAttackAttempt a = new TimeAttackAttempt();
+        a.onFrame(0x08, false, -1);   // first input
+        a.onFrame(0x08, true, -1);    // signpost -> FINISHED
+        assertEquals(TimeAttackAttempt.Phase.FINISHED, a.phase());
+        int finishFrame = a.finishFrame();
+        a.voidAttempt();              // must not discard a finished result
+        assertEquals(TimeAttackAttempt.Phase.FINISHED, a.phase());
+        assertEquals(finishFrame, a.finishFrame());
+    }
+
+    @Test
     void deltasCompareTimedValuesNotSpawnFrames() {
         // Same timed pace, but the attempt idled 60 frames before first input: delta must be 0.
         assertEquals(0, TimeAttackDeltas.deltaAtSplit(new int[] {960}, 60, new int[] {900}, 0, 0));

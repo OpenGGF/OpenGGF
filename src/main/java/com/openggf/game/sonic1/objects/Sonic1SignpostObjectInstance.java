@@ -188,6 +188,15 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
             levelGamestate.pauseTimer();
         }
 
+        // Flag the end-of-level sequence as running. S3K signposts/capsules set
+        // this at act completion; S1 must set it too so shared runtime code that
+        // keys off the flag (the strict right level boundary at Camera_Max_X + $128,
+        // matching this routine's own walk-off trigger) and the time-attack finish
+        // signal both fire. Cleared on the next level load via resetForLevel().
+        if (services().gameState() != null) {
+            services().gameState().setEndOfLevelActive(true);
+        }
+
         // ROM: move.w (v_limitright2).w,(v_limitleft2).w
         // S1 only uses v_limitleft2 as the boundary (v_limitleft1 is marked "unused"
         // in Variables.asm), and ScrollHoriz clamps directly against v_limitleft2.

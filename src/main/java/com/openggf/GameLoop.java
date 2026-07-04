@@ -741,6 +741,19 @@ public class GameLoop {
         return false;
     }
 
+    /**
+     * State-altering debug cheat keys whose use during a timed attempt taints it.
+     * These are the gameplay debug cheats (debug mode, last-checkpoint warp, super,
+     * give emeralds); tainting only — the keys themselves are never blocked.
+     */
+    private boolean anyTimeAttackDebugCheatKeyPressed(InputHandler input) {
+        return input.isKeyPressed(configService.getInt(SonicConfiguration.DEBUG_MODE_KEY))
+                || input.isKeyPressedWithoutModifiers(
+                        configService.getInt(SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY))
+                || input.isKeyPressed(configService.getInt(SonicConfiguration.SUPER_SONIC_DEBUG_KEY))
+                || input.isKeyPressed(configService.getInt(SonicConfiguration.GIVE_EMERALDS_KEY));
+    }
+
     private void stepInternal() {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
@@ -882,10 +895,15 @@ public class GameLoop {
 
         profiler.beginSection("input");
         boolean debugShortcutsEnabled = debugShortcutsEnabled();
-        if (timeAttackRuntime.isAttemptRunning() && debugShortcutsEnabled
-                && anyDebugOverlayTogglePressed(inputHandler)) {
+        if (timeAttackRuntime.isActive() && debugShortcutsEnabled
+                && (anyDebugOverlayTogglePressed(inputHandler)
+                        || anyTimeAttackDebugCheatKeyPressed(inputHandler))) {
             // Debug tools are never blocked, but using them during a timed
             // attempt taints it so the run can never be saved as a new best.
+            // Gated on isActive() (not isAttemptRunning()) so a press during the
+            // ARMED pre-start window taints too, and covers the state-altering
+            // cheat keys (debug mode / last-checkpoint warp / super / emeralds)
+            // alongside the debug overlay toggles.
             timeAttackRuntime.markTainted();
         }
         debugOverlayManager.updateInput(inputHandler, debugShortcutsEnabled);
@@ -1193,6 +1211,19 @@ public class GameLoop {
         SeamlessLevelTransitionRequest seamlessRequest = levelManager.consumeSeamlessTransitionRequest();
         if (seamlessRequest != null) {
             userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+            // A cross-act seamless reload (e.g. AIZ1 -> AIZ2) ends the timed attempt so
+            // the HUD/ghost/retry do not bleed into the next act. Mid-act sequences
+            // (MUTATE_ONLY / RELOAD_SAME_LEVEL, and any RELOAD_TARGET_LEVEL that reloads
+            // the same zone/act) leave the attempt untouched.
+            if (timeAttackRuntime.isActive()
+                    && seamlessRequest.type() == SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL) {
+                TimeAttackLaunchRequest armedLaunch = timeAttackRuntime.launch();
+                if (armedLaunch != null
+                        && (seamlessRequest.targetZone() != armedLaunch.zone()
+                                || seamlessRequest.targetAct() != armedLaunch.act())) {
+                    timeAttackRuntime.deactivate();
+                }
+            }
             levelManager.applySeamlessTransition(seamlessRequest);
             if (levelManager.consumeInLevelTitleCardRequest()) {
                 enterInLevelTitleCard(levelManager.getInLevelTitleCardZone(), levelManager.getInLevelTitleCardAct());
@@ -1364,6 +1395,10 @@ public class GameLoop {
 
             // Check if a checkpoint star requested a special stage
             if (levelManager.consumeSpecialStageRequest()) {
+                // A timed run interrupted by a special stage cannot be replay-verified.
+                if (timeAttackRuntime.isActive()) {
+                    timeAttackRuntime.voidCurrentAttempt();
+                }
                 enterSpecialStage();
             }
 
@@ -1959,6 +1994,11 @@ public class GameLoop {
         if (fadeManager.isActive()) {
             LOGGER.fine("Bonus stage entry ignored: fade already in progress");
             return;
+        }
+
+        // A timed run interrupted by a bonus stage cannot be replay-verified.
+        if (timeAttackRuntime.isActive()) {
+            timeAttackRuntime.voidCurrentAttempt();
         }
 
         // Capture state snapshot

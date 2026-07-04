@@ -27,6 +27,7 @@ public final class TimeAttackAttempt {
             phase = Phase.RUNNING;
             firstInputFrame = frameCount;
         }
+        // RUNNING-gated: splits before the first input (ARMED) are deliberately not recorded.
         if (phase == Phase.RUNNING && checkpointIndex > highestCheckpoint && checkpointIndex >= 0) {
             highestCheckpoint = checkpointIndex;
             splits.add(frameCount);
@@ -37,7 +38,13 @@ public final class TimeAttackAttempt {
         }
     }
 
-    public void voidAttempt() { phase = Phase.VOID; }
+    public void voidAttempt() {
+        // A finished attempt's result must not be silently discarded.
+        if (phase == Phase.FINISHED) {
+            return;
+        }
+        phase = Phase.VOID;
+    }
 
     public Phase phase() { return phase; }
     public int frameCount() { return Math.max(frameCount, 0); }

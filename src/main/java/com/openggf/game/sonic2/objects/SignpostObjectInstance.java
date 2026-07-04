@@ -204,6 +204,15 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
             levelGamestate.pauseTimer();
         }
 
+        // Flag the end-of-level sequence as running. S3K signposts/capsules set
+        // this at act completion; S2 must set it too so shared runtime code that
+        // keys off the flag (the strict right level boundary at Camera_Max_X + $128,
+        // matching this routine's own walk-off trigger) and the time-attack finish
+        // signal both fire. Cleared on the next level load via resetForLevel().
+        if (services().gameState() != null) {
+            services().gameState().setEndOfLevelActive(true);
+        }
+
         routineState = STATE_SPINNING;
         spinTimer = 0;
         sparkleTimer = 0;

@@ -120,6 +120,18 @@ public final class TimeAttackRuntime {
     }
 
     public void markTainted() { tainted = true; }
+
+    /**
+     * Void the in-flight attempt without ending the session. Used when a special/
+     * bonus stage interrupts a timed run: the player returns to the act and the
+     * retry stays available, but this run can never be replay-verified.
+     */
+    public void voidCurrentAttempt() {
+        if (attempt != null) {
+            attempt.voidAttempt();
+        }
+    }
+
     public void requestRetry() {
         if (attempt != null) attempt.voidAttempt();
         retryRequested = true;
@@ -187,7 +199,25 @@ public final class TimeAttackRuntime {
     public void onLevelReady() {
         String fingerprint = new DeterminismFingerprint(AppVersion.get(), romChecksumOrZero()).asString();
         beginAttemptForTest(fingerprint);
-        GhostRenderRegistry registry = GameServices.ghostRenderRegistryOrNull();
+        // The sidekick pattern-bank cursor resets on every level load
+        // (LevelPlayableArtInitializer), so cached ghost slots hold stale bank
+        // bases — clear them before the new level's first render.
+        ghostRenderer.clearSlots();
+        attachRenderer(GameServices.ghostRenderRegistryOrNull());
+    }
+
+    /**
+     * Register the ghost layer renderer on {@code registry}, first detaching from any
+     * previously-registered registry. A retry re-enters {@link #onLevelReady()} on the
+     * same {@code GameplayModeContext} (and an editor round-trip on a rebuilt one), so
+     * without this detach the renderer would stack duplicate registrations and draw the
+     * ghost N+1 times. Package-visible seam so registration is testable engine-free.
+     */
+    void attachRenderer(GhostRenderRegistry registry) {
+        if (registeredRegistry != null) {
+            registeredRegistry.unregister(layerRenderer);
+            registeredRegistry = null;
+        }
         if (registry != null) {
             registry.register(layerRenderer);
             registeredRegistry = registry;
@@ -258,6 +288,10 @@ public final class TimeAttackRuntime {
             registeredRegistry = null;
         }
         ghostRenderer.clearSlots();
+        // Drop opponent cursors so a frozen ghost cannot keep rendering after
+        // a level-ended deactivate.
+        opponents.clear();
+        opponentRecordings.clear();
         launch = null;
         attempt = null;
     }
