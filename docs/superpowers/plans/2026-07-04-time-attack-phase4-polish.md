@@ -156,7 +156,7 @@ Trailers: `Changelog: updated` is NOT required per-commit mid-phase; the final t
 - Produces:
   - `Phase` enum gains `VOTE` (full set: `LOBBY, COUNTDOWN, RUNNING, ROUND_END, VOTE`)
   - `public static final long VOTE_WINDOW_MILLIS = 15_000;` `public static final int VOTE_OPTION_COUNT = 3;`
-  - `public void setVoteTrackPool(List<String> trackKeys)` — empty pool ⇒ voting disabled (today's ROUND_END→LOBBY behavior unchanged). Pool keys are re-validated per round when options are picked (`isEligibleVoteKey`): parseable `game:zone:act`, same `gameId` as the active round config, not the current track — malformed, cross-game, or stale entries are silently excluded, so `closeVote()`'s winner parse can never throw and a vote can never switch the room's game (the descriptor/registry track updates only carry zone/act)
+  - `public void setVoteTrackPool(List<String> trackKeys)` — delegates to the 2-arg overload with a null predicate; `public void setVoteTrackPool(List<String> trackKeys, java.util.function.Predicate<String> knownTrack)` — empty pool ⇒ voting disabled (today's ROUND_END→LOBBY behavior unchanged). Pool keys are re-validated per round when options are picked (`isEligibleVoteKey`): parseable `game:zone:act`, same `gameId` as the active round config, not the current track, **and accepted by `knownTrack` when one is supplied** — the engine is fence-bound and cannot consult `TimeAttackTrackCatalog` itself, so track EXISTENCE is an injected predicate (relay rooms: bundled-profile-backed, Task 3; player-host rooms: null — the pool is built from the host's own catalog by `VoteTrackPools`, and a modified LAN host already owns its whole round engine). Malformed, cross-game, unknown, or stale entries are silently excluded, so `closeVote()`'s winner parse can never throw, a vote can never switch the room's game (the descriptor/registry track updates only carry zone/act), and `votedNextConfig` can never name a track that does not exist
   - `public void onTrackVote(int slot, String trackKey)` — ignored outside VOTE / for non-offered keys; last vote per slot wins; broadcasts `TrackVoteTally`
   - `public List<String> voteOptions()` — current offer ([] outside VOTE)
   - `public ControlMessage.RoundConfig votedNextConfig()` — non-null after a vote completes WITH a winner, cleared by `startRound`; stays null on a zero-vote close (current track retained)
@@ -326,13 +326,19 @@ class TestHostRoundEngineVote {
     }
 
     @Test
-    void malformedAndCrossGameKeysNeverOffered() {
+    void malformedCrossGameAndUnknownKeysNeverOffered() {
         engine = new HostRoundEngine(() -> now, sent::add);
-        engine.setVoteTrackPool(List.of("bad", "s2:0:0", "s3k:9:9:9", "s3k:x:0", "s3k:0:1", "s3k:1:0"));
+        // "s3k:99:99" is parseable and same-game but NOT a real track — only the
+        // injected knownTrack predicate can catch it (the engine is fence-bound
+        // and cannot consult TimeAttackTrackCatalog itself).
+        engine.setVoteTrackPool(
+                List.of("bad", "s2:0:0", "s3k:9:9:9", "s3k:x:0", "s3k:99:99", "s3k:0:1", "s3k:1:0"),
+                java.util.Set.of("s3k:0:0", "s3k:0:1", "s3k:1:0")::contains);
         runRoundToEnd();
         assertEquals(HostRoundEngine.Phase.VOTE, engine.phase());
         assertEquals(List.of("s3k:0:1", "s3k:1:0"), engine.voteOptions(),
-                "only parseable same-game keys may be offered — a vote must never crash the close or switch gameId");
+                "only parseable, same-game, KNOWN tracks may be offered — a vote must never crash the close,"
+                        + " switch gameId, or land the room on a nonexistent track");
     }
 
     @Test
@@ -371,6 +377,7 @@ public static final long VOTE_WINDOW_MILLIS = 15_000;
 public static final int VOTE_OPTION_COUNT = 3;
 
 private final List<String> voteTrackPool = new ArrayList<>();
+private java.util.function.Predicate<String> knownTrack;
 private int voteRotation;
 private List<String> voteOptions = List.of();
 private final Map<Integer, String> votesBySlot = new LinkedHashMap<>();
@@ -378,6 +385,11 @@ private long voteEndsAt;
 private ControlMessage.RoundConfig votedNextConfig;
 
 public void setVoteTrackPool(List<String> trackKeys) {
+    setVoteTrackPool(trackKeys, null);
+}
+
+public void setVoteTrackPool(List<String> trackKeys, java.util.function.Predicate<String> knownTrack) {
+    this.knownTrack = knownTrack;
     voteTrackPool.clear();
     if (trackKeys != null) {
         trackKeys.stream().filter(Objects::nonNull).distinct().forEach(voteTrackPool::add);
@@ -427,8 +439,9 @@ private void beginVote() {
     broadcaster.accept(new ControlMessage.TrackVoteOffer(voteOptions, voteEndsAt));
 }
 
-/** Malformed, cross-game, or current-track keys are never offered — a hostile or stale
- *  pool entry must not crash the winner parse or switch the room's game via a vote. */
+/** Malformed, cross-game, unknown, or current-track keys are never offered — a hostile or
+ *  stale pool entry must not crash the winner parse, switch the room's game via a vote,
+ *  or vote the room onto a track that does not exist. */
 private boolean isEligibleVoteKey(String key) {
     if (key == null || key.equals(currentTrackKey())) {
         return false;
@@ -438,10 +451,13 @@ private boolean isEligibleVoteKey(String key) {
         return false;
     }
     try {
-        return Integer.parseInt(parts[1]) >= 0 && Integer.parseInt(parts[2]) >= 0;
+        if (Integer.parseInt(parts[1]) < 0 || Integer.parseInt(parts[2]) < 0) {
+            return false;
+        }
     } catch (NumberFormatException e) {
         return false;
     }
+    return knownTrack == null || knownTrack.test(key);
 }
 
 private List<String> pickVoteOptions() {
@@ -505,7 +521,8 @@ git commit -m "feat(net): VOTE phase with rotating 3-option offer and tally in H
 ### Task 3: RoomHost + master plumbing — vote dispatch, config acceptance, descriptor refresh
 
 **Files:**
-- Modify: `src/main/java/com/openggf/net/host/RoomHost.java` (+ `RoomHostConfig` record in the same package)
+- Modify: `src/main/java/com/openggf/net/host/RoomHost.java` (+ `RoomHostConfig` record in the same package — locate both from the as-built phase-2/3 tree)
+- Modify: `src/main/java/com/openggf/net/hub/RoomHostHooks.java` (append the `knownVoteTrack` predicate component)
 - Modify: `src/main/java/com/openggf/net/master/SessionRegistry.java`
 - Modify: `src/main/java/com/openggf/net/master/RoomBroker.java`
 - Modify: `src/main/java/com/openggf/net/master/RelayRoomManager.java`
@@ -558,7 +575,21 @@ Run: `mvn "-Dtest=com.openggf.net.host.TestRoomHostVote,com.openggf.net.master.T
 
 - [ ] **Step 3: Implement**
 
-- `RoomHostConfig`: append `List<String> voteTrackKeys`; `RoomHost` constructor calls `round.setVoteTrackPool(config.voteTrackKeys())`.
+- `RoomHostConfig`: append `List<String> voteTrackKeys`. `RoomHostHooks` gains a final component `java.util.function.Predicate<String> knownVoteTrack` (null = pool trusted as catalog-built; update `none()` and all construction sites). `RoomHost` constructor calls `round.setVoteTrackPool(config.voteTrackKeys(), hooks.knownVoteTrack())`. `RelayRoomManager` supplies the predicate from its `TrackValidationProfileSource` (the bundled table IS the exported catalog):
+
+```java
+key -> {
+    String[] parts = key.split(":");
+    try {
+        return parts.length == 3 && profiles.profileFor(parts[0],
+                Integer.parseInt(parts[1]), Integer.parseInt(parts[2])).isPresent();
+    } catch (NumberFormatException e) {
+        return false;
+    }
+}
+```
+
+  Player-host rooms pass null (their pool comes from their own `TimeAttackTrackCatalog` via `VoteTrackPools`; a modified LAN host owns its round engine anyway — the trust boundary this closes is the master's).
 - `RoomHost` member dispatch: add `case ControlMessage.TrackVote vote -> round.onTrackVote(memberSlot, vote.trackKey());` (host member may vote too).
 - `RoundConfigure` validation: replace the strict same-track check with:
 
@@ -574,7 +605,7 @@ private boolean trackAllowed(ControlMessage.RoundConfig config) {
 ```
 
 On acceptance with a changed track: update `roomZone`/`roomAct` (the fields backing the descriptor) so subsequent joins/lobby snapshots advertise the new track, and — when this host is master-registered (direct rooms) — send `new ControlMessage.RoomTrackUpdate(roomId, zone, act)` on the master connection next heartbeat tick.
-- `RoomBroker`: dispatch `RoomTrackUpdate` → `registry.updateTrack(msg.roomId(), senderFingerprint, msg.zone(), msg.act())`. `RoomCreate` additionally validates the pool: every `voteTrackKeys` entry must parse as `game:zone:act` with `game.equals(descriptor.gameId())` → else `RoomCreateRejected("invalid vote track pool")` (the engine's `isEligibleVoteKey` filter is defense-in-depth, not the only gate — a cross-game or malformed pool is rejected at the door). Extend the phase-3 `TestRoomBroker` with a `roomCreateRejectsInvalidVotePool` case (`voteTrackKeys = List.of("s2:0:0")` on an `s3k` room → rejected; `List.of("bad")` → rejected; valid same-game pool → created).
+- `RoomBroker`: dispatch `RoomTrackUpdate` → `registry.updateTrack(msg.roomId(), senderFingerprint, msg.zone(), msg.act())`. `RoomCreate` additionally validates the pool: every `voteTrackKeys` entry must parse as `game:zone:act` with `game.equals(descriptor.gameId())` AND be a known track — `RoomBroker` gains a `Predicate<String> knownTrack` constructor dependency, wired in `MasterServer` from the same `BundledProfileSource` lambda as the relay hook above (the ROM-free master's track knowledge is the bundled table) — → else `RoomCreateRejected("invalid vote track pool")` (the engine's `isEligibleVoteKey` filter is defense-in-depth, not the only gate — a cross-game, malformed, or NONEXISTENT pool is rejected at the door). Extend the phase-3 `TestRoomBroker` with a `roomCreateRejectsInvalidVotePool` case (`voteTrackKeys = List.of("s2:0:0")` on an `s3k` room → rejected; `List.of("bad")` → rejected; `List.of("s3k:99:99")` → rejected as unknown, using a fake predicate accepting only `s3k:0:0`/`s3k:0:1`; valid known same-game pool → created).
 - `SessionRegistry.updateTrack`: owner check, rebuild `RoomEntry` with a descriptor copy carrying the new zone/act.
 - `RelayRoomManager`: relay rooms live master-side — after their `RoomHost` accepts a track change (expose a `Runnable onTrackChanged` hook or poll the descriptor on the room tick), call `registry.updateTrack(...)` with the room's host fingerprint.
 - Thread the pool: `RoomBroker`'s `RoomCreate` handling passes `create.voteTrackKeys()` into `SessionRegistry.create(...)` → store on `RoomEntry` (append component `List<String> voteTrackKeys`) → `RelayRoomManager.createRelayRoom` copies it into the relay room's `RoomHostConfig`.
