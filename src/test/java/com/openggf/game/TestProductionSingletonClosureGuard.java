@@ -62,6 +62,15 @@ public class TestProductionSingletonClosureGuard {
 
     private static final String ENGINE_SERVICES_BOOTSTRAP_EXCEPTION =
             "com/openggf/game/session/EngineContext.java";
+    // These files only call java.security static factories (MessageDigest,
+    // KeyFactory, KeyPairGenerator, Signature .getInstance(...)) for hashing
+    // and Ed25519 keys/signatures -- JDK crypto statics, not closed
+    // process/game singletons, so they are exempt from the raw-getInstance()
+    // scan below.
+    private static final List<String> RAW_GET_INSTANCE_JDK_CRYPTO_ALLOWLIST = List.of(
+            "com/openggf/game/timeattack/AttemptInputRecording.java",
+            "com/openggf/net/identity/PlayerIdentity.java"
+    );
     private static final String LEGACY_BOOTSTRAP_BRIDGE = "EngineContext.fromLegacySingletonsForBootstrap(";
     private static final String ENGINE_SERVICES_LOCATOR = "RuntimeManager.getEngineServices(";
     private static final String ENGINE_SERVICES_LOCATOR_ALIAS = "RuntimeManager.currentEngineServices(";
@@ -259,6 +268,8 @@ public class TestProductionSingletonClosureGuard {
         Files.walk(srcMain)
                 .filter(path -> path.toString().endsWith(".java"))
                 .filter(path -> !ENGINE_SERVICES_BOOTSTRAP_EXCEPTION.equals(
+                        srcMain.relativize(path).toString().replace('\\', '/')))
+                .filter(path -> !RAW_GET_INSTANCE_JDK_CRYPTO_ALLOWLIST.contains(
                         srcMain.relativize(path).toString().replace('\\', '/')))
                 .forEach(path -> scanRawPattern(srcMain, path, violations, rawGetInstancePattern, ".getInstance("));
 

@@ -1239,6 +1239,10 @@ public class GameLoop {
             }
             if (levelManager.consumeNextActRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+                // A finished/abandoned time attack must not bleed into the auto-advanced next act.
+                if (timeAttackRuntime.isActive()) {
+                    timeAttackRuntime.deactivate();
+                }
                 startNextActFade();
                 finishUserRecordingPlaybackAtLevelBoundary(false);
                 updateNonGameplayAudio(doFrameStep);
@@ -1246,6 +1250,10 @@ public class GameLoop {
             }
             if (levelManager.consumeNextZoneRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+                // A finished/abandoned time attack must not bleed into the auto-advanced next act.
+                if (timeAttackRuntime.isActive()) {
+                    timeAttackRuntime.deactivate();
+                }
                 startNextZoneFade();
                 finishUserRecordingPlaybackAtLevelBoundary(false);
                 updateNonGameplayAudio(doFrameStep);
@@ -1260,6 +1268,10 @@ public class GameLoop {
             }
             if (levelManager.consumeCreditsRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+                // A finished/abandoned time attack must not bleed into the auto-advanced next act.
+                if (timeAttackRuntime.isActive()) {
+                    timeAttackRuntime.deactivate();
+                }
                 startEndingFade();
                 finishUserRecordingPlaybackAtLevelBoundary(false);
                 updateNonGameplayAudio(doFrameStep);

@@ -1,7 +1,6 @@
 package com.openggf.game.timeattack;
 
 import com.openggf.control.InputHandler;
-import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.ghost.GhostCaptureBuffer;
 import com.openggf.game.ghost.GhostFrame;
@@ -197,7 +196,7 @@ public final class TimeAttackRuntime {
 
     private int romChecksumOrZero() {
         try {
-            return RomManager.getInstance().getRom().calculateChecksum();
+            return GameServices.rom().getRom().calculateChecksum();
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Failed to compute ROM checksum for time-attack fingerprint", e);
             return 0;
