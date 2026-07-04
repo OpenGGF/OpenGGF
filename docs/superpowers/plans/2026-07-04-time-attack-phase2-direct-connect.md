@@ -33,12 +33,52 @@ These come from `docs/superpowers/plans/2026-07-04-solo-ghost-racing-phase1.md` 
 - ★ `com.openggf.game.ghost.GhostFrameCodec` — `BYTES == 7`, `encode(GhostFrame, byte[], int)`, `decode(byte[], int)`.
 - ★ `com.openggf.net.identity.PlayerIdentity` — `loadOrCreate(Path)`, `fingerprint()` (64-char hex), `sign(byte[])`, `static verify(byte[] pubKeyEncoded, byte[] msg, byte[] sig)`, `publicKeyEncoded()`.
 - ★ `com.openggf.game.timeattack.DeterminismFingerprint` — `asString()` = `engineVersion + ":" + hex(romChecksum)`.
-- `com.openggf.game.timeattack.TimeAttackRuntime` — `armForLaunch(TimeAttackLaunchRequest)`, `onLevelReady()`, `beforeLevelFrame(InputHandler)`, `afterLevelFrame()`, `requestRetry()`, `deactivate()`, `isAttemptRunning()`, `hudState()`; internally owns `TimeAttackAttempt`, `AttemptInputRecording`, ghost capture, `GhostStore` best-save.
+- `com.openggf.game.timeattack.TimeAttackRuntime` — `armForLaunch(TimeAttackLaunchRequest)`, `onLevelReady()`, `beforeLevelFrame(InputHandler)`, `afterLevelFrame()`, `requestRetry()`, `deactivate()`, `isAttemptRunning()`, `hudState()`; internally owns `TimeAttackAttempt`, `AttemptInputRecording`, ghost capture, `GhostStore` best-save. As-built also exposes package-visible seams `attachRenderer(GhostRenderRegistry)` and `applyTimeAttackActiveFlag(GameStateManager, boolean)`; it has NO `voidCurrentAttempt()` (the phase-1 interim helper was removed in c0b9c7583 — Task 13 CREATES the listener-aware method specified in this plan as a new API). See §Phase-1 as-built drift below.
 - `com.openggf.game.timeattack.TimeAttackLaunchRequest` — record `(String gameId, int zone, int act, String character, List<Path> extraGhosts)`.
 - `com.openggf.sprites.ghost.ActiveGhost` — record `(String slotId, String characterCode, GhostFrame frame)`; `GhostRenderer.renderForLayer(List<ActiveGhost>, int bucket, boolean highPriority, int playerCentreX, int playerCentreY)`.
 - `com.openggf.game.ghost.GhostRenderRegistry` — gameplay-owned, hosted on `GameplayModeContext`.
 - `com.openggf.game.timeattack.TimeAttackMenu` / `TimeAttackTrackCatalog` — master-title sub-mode + curated track list (`Track(String gameId, int zone, int act, String label, List<String> characters)`).
 - `AttemptInputRecording.sha256()` — 32-byte hash carried in `AttemptFinish` and the `.ggfghost` header.
+
+## Phase-1 as-built drift (patched 2026-07-04, post-review fixes 68f3d228b onward)
+
+Phase 1 landed with post-plan fixes after this plan was written. Tasks 13-15
+must reconcile against these in addition to the contract above:
+
+- **`TimeAttackRuntime.voidCurrentAttempt()` does not exist as-built** (the
+  phase-1 interim helper was removed in c0b9c7583 with zero callers). Task 13
+  CREATES the richer listener-aware `voidCurrentAttempt()` this plan
+  specifies; it is a new API, not a modification of a leftover.
+- **New runtime seams (as-built):** package-visible
+  `attachRenderer(GhostRenderRegistry)` (detach-before-register, called by
+  `onLevelReady()`) and `applyTimeAttackActiveFlag(GameStateManager, boolean)`.
+- **`GameStateManager.timeAttackActive`** - set in `onLevelReady()`, cleared
+  in `deactivate()`; survives `resetForLevel()` (retry reloads), cleared by
+  `resetSession()`. Consumed by the S1/S3K giant-ring objects and the GameLoop
+  `enterSpecialStage()`/`enterBonusStage()` gates: special/bonus stage entry
+  is fully DISABLED while active. Multiplayer rounds ride `TimeAttackRuntime`
+  and inherit portal suppression automatically; round tests must not expect
+  special-stage entry.
+- **`GameStateManager.actCompletionSignalActive`** is the S1/S2 finish signal
+  (S3K keeps ROM-real `endOfLevelActive`; the runtime polls the OR). Never
+  couple new signals to shared ROM flags read by physics - that exact mistake
+  regressed GHZ1/EHZ1 traces (see b025ff780).
+- **Master-title launches are DEFERRED** (NPE fix 68f3d228b): a
+  `LaunchStarter` must never synchronously tear down the master title screen.
+  GameLoop parks a `pendingTimeAttackLaunch` and fires it after
+  `updateMasterTitle` returns. Any phase-2 lobby UI launched from the master
+  title MUST reuse this deferral pattern.
+- **Solo act completion returns to the time attack menu** (landed as
+  eed6e884e): the GameLoop level-ended consume sites
+  (next-act/next-zone/credits + the S3K cross-act seamless gate) deactivate
+  and route back to the master title with a pending menu-reopen flag instead
+  of loading the next act. THIS IS SOLO BEHAVIOR: a multiplayer round must
+  NOT exit to the menu when an attempt finishes - players keep retrying
+  inside the window. The as-built decision logic lives in the pure helper
+  `TimeAttackLevelEndRouting` (unit-tested) with a `pendingReopenTimeAttackMenu`
+  flag in GameLoop; Tasks 13-15 must add a round-active predicate to that
+  helper's inputs to suppress the menu-return during a round, and must specify
+  the in-round post-finish flow (instant re-arm at spawn) explicitly.
 
 ## What phase 2 explicitly does NOT build (deferred)
 
@@ -4849,7 +4889,7 @@ Wire-in points (locate the as-built equivalents):
 1. Where an attempt begins at spawn (the code path `onLevelReady`/`beginAttemptForTest` reaches, where the phase-1 code constructs the fresh `TimeAttackAttempt` + `AttemptInputRecording`): increment `attemptOrdinal`, then `if (attemptListener != null) attemptListener.onAttemptBegan(attemptOrdinal);`.
 2. In the per-frame tick, immediately after the phase-1 code appends the sampled frame (the `sampledFrame` parameter of `tickForTest`) to the ghost capture buffer — and ONLY on ticks where it does capture (ARMED/RUNNING): `if (attemptListener != null) attemptListener.onFrameSampled(attemptOrdinal, sampledFrame);`. This must run on the finishing tick too, BEFORE point 3 — the listener's ordering contract is what lets the coordinator seal the ghost-stream hash over the complete spawn→finish stream.
 3. On the FINISHED transition, after the phase-1 best-save decision: `if (attemptListener != null) attemptListener.onAttemptFinished(attemptOrdinal, attempt.finalTimeFrames(), attempt.firstInputFrame(), attempt.finishFrame(), inputRecording.sha256());`.
-4. Re-route the EXISTING internal void paths (retry request, 36 000-frame cap, debug-taint) through `voidCurrentAttempt()` so the listener hears every abandonment exactly once. Guard against double-fire: `voidCurrentAttempt` must be a no-op when no attempt is running.
+4. Re-route the EXISTING internal void paths (retry request and the 36,000-frame cap — the only two `attempt.voidAttempt()` call sites; debug taint does NOT void, it only blocks best-save) through `voidCurrentAttempt()` so the listener hears every abandonment exactly once. Guard against double-fire: `voidCurrentAttempt` must be a no-op when no attempt is running.
 5. Where the runtime assembles its `List<ActiveGhost>` for the render hook: after adding its own ghosts, `if (extraGhostSupplier != null) { for (ActiveGhost extra : extraGhostSupplier.get()) { if (ghosts.size() >= 8) break; ghosts.add(extra); } }`. Add package-visible `java.util.List<ActiveGhost> activeGhostsForTest()` returning that assembled list if phase 1 has no equivalent accessor.
 
 - [ ] **Step 4: Run the new test AND the phase-1 runtime test**
