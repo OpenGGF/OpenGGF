@@ -323,6 +323,11 @@ public enum SonicConfiguration {
 	RECORDING_RECORD_KEY,
 
 	/**
+	 * Key that instantly retries the current solo time attack from the act start.
+	 */
+	TIME_ATTACK_RETRY_KEY,
+
+	/**
 	 * Key held in visual Trace Test Mode to rewind deterministic engine state.
 	 */
 	TRACE_REWIND_KEY,

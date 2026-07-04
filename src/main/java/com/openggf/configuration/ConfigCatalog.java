@@ -233,6 +233,10 @@ public final class ConfigCatalog {
         put(CAPTURE_FPS, of("capture", "fps", INT, "Output frame rate for trace capture"));
         put(CAPTURE_CODEC, of("capture", "codec", STRING, "Capture video codec (e.g. ffv1)"));
 
+        // timeAttack
+        put(TIME_ATTACK_RETRY_KEY, of("timeAttack", "retryKey", KEY,
+                "Key that instantly retries the current time attack from the act start."));
+
         // ───────────────── DEBUG BLOCK ─────────────────
 
         // debug.flags

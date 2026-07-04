@@ -711,13 +711,12 @@ public class GameLoop {
     }
 
     /**
-     * Time-attack retry key. Hardcoded to 'R' for phase 1, mirroring how
+     * Time-attack retry key, mirroring how
      * {@code LiveUserRecordingRuntime.recordKey()} reads
-     * {@link SonicConfiguration#RECORDING_RECORD_KEY}; Task 12 replaces this
-     * body with a configured key lookup.
+     * {@link SonicConfiguration#RECORDING_RECORD_KEY}.
      */
     private int timeAttackRetryKey() {
-        return GLFW_KEY_R;
+        return configService.getInt(SonicConfiguration.TIME_ATTACK_RETRY_KEY);
     }
 
     private static boolean anyDebugOverlayTogglePressed(InputHandler input) {
@@ -751,7 +750,7 @@ public class GameLoop {
         }
         if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() == null
-                && !timeAttackRuntime.isAttemptRunning()
+                && !timeAttackRuntime.isActive()
                 && liveRewindManager.handleRealtimeRewindInput(currentGameMode, inputHandler)) {
             inputHandler.update();
             return;
@@ -785,7 +784,7 @@ public class GameLoop {
         }
 
         if (!isPaused()
-                && !timeAttackRuntime.isAttemptRunning()
+                && !timeAttackRuntime.isActive()
                 && (currentGameMode == GameMode.EDITOR
                 || (currentGameMode == GameMode.LEVEL
                 && configService.getBoolean(SonicConfiguration.EDITOR_ENABLED)))
@@ -3696,6 +3695,12 @@ public class GameLoop {
 
         if (timeAttackRuntime.isActive()) {
             timeAttackRuntime.onLevelReady();
+            // An overlay already visible before spawn is just as much an advantage as
+            // toggling one on mid-run (see the anyDebugOverlayTogglePressed() taint check
+            // below), so taint immediately rather than waiting for the next toggle press.
+            if (debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY)) {
+                timeAttackRuntime.markTainted();
+            }
         }
 
         fadeManager.startFadeFromBlack(null);

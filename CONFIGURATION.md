@@ -32,6 +32,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `crossGame` | Cross-game feature donation enable and source |
 | `launch` | Per-game master-title launch profiles |
 | `discord` | Discord Rich Presence enable, show timer, show zone |
+| `timeAttack` | Solo time attack retry key |
 
 **`debug:` block** (developer/debug tooling — safe to ignore for normal play):
 
@@ -299,6 +300,12 @@ Desync-ghost / game-HUD / debug-HUD visibility during capture is governed by the
 
 Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SMPS backend that synthesizes the music for the recording but **opens no audio device** (no speaker output; works on machines with no audio hardware). Audio is captured at the engine's 48 kHz synthesis rate and muxed as lossless FLAC, synced 1:1 with video.
 
+## Time Attack
+
+| Key | YAML path | Type | Default | Description |
+|-----|-----------|------|---------|-------------|
+| `TIME_ATTACK_RETRY_KEY` | `timeAttack.retryKey` | key | `R` | Instant retry to act start during solo time attack. |
+
 ## Debug
 
 BK2 playback controls are unbound by default and must be rebound in `debug.playback`
@@ -424,6 +431,7 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 | `LIVE_REWIND_KEY` | `rewind.liveKey` | `82` | R | Hold during live level play to rewind deterministic gameplay state when `LIVE_REWIND_ENABLED` is true, including reverse audio presentation and restored fade snapshots. The gamepad left bumper (L1/LB) on the primary connected pad also holds rewind, unconditionally (not remappable). |
 | `LIVE_REWIND_HALF_SPEED_KEY` | `rewind.liveHalfSpeedKey` | `341` | Left Ctrl | Modifier held together with the rewind key for half-speed rewind (one engine step every other frame; reverse audio plays slow-motion). The mirrored left/right variant of a modifier key also counts. Holding both speed modifiers cancels back to normal speed. |
 | `LIVE_REWIND_DOUBLE_SPEED_KEY` | `rewind.liveDoubleSpeedKey` | `340` | Left Shift | Modifier held together with the rewind key for double-speed rewind (two engine steps per frame; reverse audio pitches up, and the VHS effect shows a third tear band). The mirrored left/right variant of a modifier key also counts. |
+| `TIME_ATTACK_RETRY_KEY` | `timeAttack.retryKey` | `82` | R | Instantly retry the current solo time attack from the act start. |
 
 ### Debug Navigation
 
