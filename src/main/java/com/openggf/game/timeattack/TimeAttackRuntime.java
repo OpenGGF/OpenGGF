@@ -121,17 +121,6 @@ public final class TimeAttackRuntime {
 
     public void markTainted() { tainted = true; }
 
-    /**
-     * Void the in-flight attempt without ending the session. Used when a special/
-     * bonus stage interrupts a timed run: the player returns to the act and the
-     * retry stays available, but this run can never be replay-verified.
-     */
-    public void voidCurrentAttempt() {
-        if (attempt != null) {
-            attempt.voidAttempt();
-        }
-    }
-
     public void requestRetry() {
         if (attempt != null) attempt.voidAttempt();
         retryRequested = true;

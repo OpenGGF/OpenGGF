@@ -7,9 +7,14 @@ next touched.
 
 ## Lifecycle / gating
 
-- Move `voidCurrentAttempt()` inside `enterSpecialStage()` so the debug Tab
+- ~~Move `voidCurrentAttempt()` inside `enterSpecialStage()` so the debug Tab
   handler (GameLoop ~:1628) and level-select entry (~:3594) are covered
-  uniformly (the consume-site void covers only the star-post path).
+  uniformly (the consume-site void covers only the star-post path).~~ Resolved:
+  special/bonus stage entry is now gated directly inside `enterSpecialStage()`
+  / `enterBonusStage()` (covers request-consume, debug Tab, and level-select
+  uniformly) and swallows entry instead of voiding the attempt; the run
+  continues unharmed. `TimeAttackRuntime.voidCurrentAttempt()` had no other
+  callers and was removed.
 - Gamepad Y/Triangle free-fly toggle and `LEVEL_SELECT_KEY` (F9) bypass the
   key-based taint net (dev-config-gated; taint them like the keyboard cheats).
 - `armForLaunch` refusal (trace/test/playback active) is log-only — add a

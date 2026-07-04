@@ -1398,12 +1398,10 @@ public class GameLoop {
                 liveRewindManager.recordExternalFrame(currentGameMode, inputHandler);
             }
 
-            // Check if a checkpoint star requested a special stage
+            // Check if a checkpoint star requested a special stage. The request is
+            // always consumed here regardless of time-attack state (see
+            // enterSpecialStage(), which swallows entry uniformly for every caller).
             if (levelManager.consumeSpecialStageRequest()) {
-                // A timed run interrupted by a special stage cannot be replay-verified.
-                if (timeAttackRuntime.isActive()) {
-                    timeAttackRuntime.voidCurrentAttempt();
-                }
                 enterSpecialStage();
             }
 
@@ -1870,6 +1868,16 @@ public class GameLoop {
             return;
         }
 
+        // Special stage entry is fully disabled while a time attack is active — the
+        // request is swallowed here and the run continues unharmed (it is no longer
+        // voided; see enterBonusStage() for the bonus-stage equivalent). Gating here
+        // covers every caller uniformly: the checkpoint-star/big-ring request-consume
+        // path above, the debug Tab shortcut, and level-select "enter special stage".
+        if (timeAttackRuntime.isActive()) {
+            LOGGER.info("Special/bonus stage entry disabled during time attack");
+            return;
+        }
+
         FadeManager fadeManager = this.fadeManager;
         boolean screenAlreadyFaded = false;
         boolean fadeFromBlack = false;
@@ -1985,6 +1993,13 @@ public class GameLoop {
             return;
         }
 
+        // Bonus stage entry is fully disabled while a time attack is active — see
+        // enterSpecialStage() for the special-stage equivalent and rationale.
+        if (timeAttackRuntime.isActive()) {
+            LOGGER.info("Special/bonus stage entry disabled during time attack");
+            return;
+        }
+
         BonusStageProvider provider = GameServices.module().getBonusStageProvider();
         if (!provider.hasBonusStages()) {
             LOGGER.fine("Current game module has no bonus stages; ignoring entry request");
@@ -1999,11 +2014,6 @@ public class GameLoop {
         if (fadeManager.isActive()) {
             LOGGER.fine("Bonus stage entry ignored: fade already in progress");
             return;
-        }
-
-        // A timed run interrupted by a bonus stage cannot be replay-verified.
-        if (timeAttackRuntime.isActive()) {
-            timeAttackRuntime.voidCurrentAttempt();
         }
 
         // Capture state snapshot
