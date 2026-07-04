@@ -806,6 +806,11 @@ public class GameLoop {
                     masterScreen,
                     inputHandler,
                     this::exitMasterTitleScreen);
+            if (pendingTimeAttackLaunch != null) {
+                TimeAttackLaunchRequest deferredLaunch = pendingTimeAttackLaunch;
+                pendingTimeAttackLaunch = null;
+                timeAttackLaunchHandler.launch(deferredLaunch);
+            }
             return;
         }
 
@@ -2955,9 +2960,16 @@ public class GameLoop {
         return masterScreen;
     }
 
+    /**
+     * Time-attack launches are deferred out of MasterTitleScreen.update: the
+     * launch tears the screen down (Engine.launchTimeAttack -> cleanup()) and
+     * must not run re-entrantly while the screen is still updating itself.
+     */
+    private TimeAttackLaunchRequest pendingTimeAttackLaunch;
+
     private void installTimeAttackLaunchHandler(MasterTitleScreen masterScreen) {
         if (masterScreen != null) {
-            masterScreen.setTimeAttackLaunchStarter(timeAttackLaunchHandler);
+            masterScreen.setTimeAttackLaunchStarter(request -> pendingTimeAttackLaunch = request);
         }
     }
 

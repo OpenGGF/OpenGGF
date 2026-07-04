@@ -216,4 +216,9 @@ public final class TimeAttackMenuState {
         launchRequest = null;
         return result;
     }
+
+    /** Test-only: force a pending launch request as if GO had been confirmed. */
+    public void forceLaunchRequestForTest(TimeAttackLaunchRequest request) {
+        this.launchRequest = request;
+    }
 }

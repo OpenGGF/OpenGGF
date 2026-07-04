@@ -360,8 +360,12 @@ public class MasterTitleScreen {
         }
 
         if (timeAttackMenu != null) {
-            timeAttackMenu.update(inputHandler);
-            if (timeAttackMenu.consumeCloseRequested()) {
+            TimeAttackMenu menu = timeAttackMenu;
+            menu.update(inputHandler);
+            // The launch starter may synchronously tear this screen down
+            // (Engine.launchTimeAttack -> cleanup()), nulling timeAttackMenu
+            // mid-update; re-check the field before touching it again.
+            if (timeAttackMenu != null && menu.consumeCloseRequested()) {
                 timeAttackMenu = null;
             }
             return;
