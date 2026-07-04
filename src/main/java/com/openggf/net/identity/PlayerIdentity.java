@@ -3,6 +3,7 @@ package com.openggf.net.identity;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -47,6 +48,7 @@ public final class PlayerIdentity {
         }
         KeyPair pair = KeyPairGenerator.getInstance(ALGORITHM).generateKeyPair();
         Files.write(keyPath, pair.getPrivate().getEncoded());
+        restrictPrivateKeyPermissions(keyPath);
         Files.write(pubPath, pair.getPublic().getEncoded());
         return new PlayerIdentity(pair.getPrivate(), pair.getPublic());
     }
@@ -71,6 +73,16 @@ public final class PlayerIdentity {
             return signature.verify(sig);
         } catch (GeneralSecurityException e) {
             return false;
+        }
+    }
+
+    private static void restrictPrivateKeyPermissions(Path keyPath) {
+        try {
+            if (Files.getFileStore(keyPath).supportsFileAttributeView("posix")) {
+                Files.setPosixFilePermissions(keyPath, PosixFilePermissions.fromString("rw-------"));
+            }
+        } catch (UnsupportedOperationException | IOException e) {
+            // Best-effort: POSIX perms not supported on this filesystem (e.g., Windows NTFS)
         }
     }
 }

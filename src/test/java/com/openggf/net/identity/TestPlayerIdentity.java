@@ -32,4 +32,13 @@ class TestPlayerIdentity {
         assertNotEquals(PlayerIdentity.loadOrCreate(a).fingerprint(),
                 PlayerIdentity.loadOrCreate(b).fingerprint());
     }
+
+    @Test
+    void verifyReturnsFalseOnMalformedPublicKey(@TempDir Path dir) throws Exception {
+        PlayerIdentity id = PlayerIdentity.loadOrCreate(dir);
+        byte[] msg = "message".getBytes(StandardCharsets.UTF_8);
+        byte[] sig = id.sign(msg);
+        byte[] garbageKey = new byte[] {1, 2, 3, 4, 5};
+        assertFalse(PlayerIdentity.verify(garbageKey, msg, sig)); // must not throw
+    }
 }
