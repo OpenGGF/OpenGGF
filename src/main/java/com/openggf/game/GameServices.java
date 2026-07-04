@@ -10,6 +10,7 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
+import com.openggf.game.ghost.GhostRenderRegistry;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
@@ -154,6 +155,11 @@ public final class GameServices {
     public static SpecialRenderEffectRegistry specialRenderEffectRegistryOrNull() {
         GameplayModeContext mode = gameplayModeOrNull();
         return mode != null ? mode.getSpecialRenderEffectRegistry() : null;
+    }
+
+    public static GhostRenderRegistry ghostRenderRegistryOrNull() {
+        GameplayModeContext mode = gameplayModeOrNull();
+        return mode != null ? mode.getGhostRenderRegistry() : null;
     }
 
     public static AdvancedRenderModeController advancedRenderModeControllerOrNull() {

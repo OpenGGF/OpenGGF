@@ -12,6 +12,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsProvider;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.ghost.GhostRenderRegistry;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.render.AdvancedRenderFrameState;
@@ -997,6 +998,10 @@ public final class LevelRenderer {
     }
 
     private void renderTraceGhostsForLayer(int bucket, boolean highPriority) {
+        GhostRenderRegistry gameplayGhosts = resolveGameplayGhostRegistry();
+        if (gameplayGhosts != null && !gameplayGhosts.isEmpty()) {
+            gameplayGhosts.renderForLayer(bucket, highPriority);
+        }
         if (!currentTraceVisibility.showGhosts()) {
             return;
         }
@@ -1004,6 +1009,10 @@ public final class LevelRenderer {
         if (ghosts != null) {
             ghosts.renderGhostsForLayer(bucket, highPriority);
         }
+    }
+
+    private GhostRenderRegistry resolveGameplayGhostRegistry() {
+        return GameServices.ghostRenderRegistryOrNull();
     }
 
     private void renderSpriteObjectPassFiltered(SpriteManager spriteManager, LevelManager.LevelRenderOptions options) {

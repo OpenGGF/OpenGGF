@@ -10,6 +10,7 @@ import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
+import com.openggf.game.ghost.GhostRenderRegistry;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.palette.PaletteColorStateAdapter;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
@@ -79,6 +80,7 @@ public final class GameplayModeContext implements ModeContext {
     private SpecialRenderEffectRegistry specialRenderEffectRegistry;
     private AdvancedRenderModeController advancedRenderModeController;
     private ZoneLayoutMutationPipeline zoneLayoutMutationPipeline;
+    private final GhostRenderRegistry ghostRenderRegistry = new GhostRenderRegistry();
 
     private BonusStageProvider activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
     private boolean managersTornDown;
@@ -384,6 +386,10 @@ public final class GameplayModeContext implements ModeContext {
 
     public SpecialRenderEffectRegistry getSpecialRenderEffectRegistry() {
         return specialRenderEffectRegistry;
+    }
+
+    public GhostRenderRegistry getGhostRenderRegistry() {
+        return ghostRenderRegistry;
     }
 
     public AdvancedRenderModeController getAdvancedRenderModeController() {
