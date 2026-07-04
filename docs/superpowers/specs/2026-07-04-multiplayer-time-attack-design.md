@@ -33,7 +33,7 @@ latency can never affect a recorded time or race outcome.
 | Track definition (v1) | Full act: spawn → end-of-act signpost. Finish detection goes through a typed per-track finish provider (v1 implementation: signpost touch). Acts that terminate in a boss/capsule instead of a signpost are **excluded from the v1 track list** — camera locks are generic level-event behavior (minibosses, cutscenes, mid-act locks) and must not be treated as a finish semantic. Boss-act finish predicates are future work on the same provider |
 | Characters | Host picks per-room policy: locked (everyone plays the host-chosen character) or open (any character; standings badge the character) |
 | Transport | WebSocket (TCP) everywhere — lobby, browser, relay, ghost streams. Binary frames for ghost data, JSON text frames for control |
-| Trust model (v1) | **All v1 rooms are casual/untrusted.** Times are client-reported and unverified; the server browser and standings UI label them as such ("unverified times"). This is an explicit, surfaced limitation, not an implicit one: a modified client can report an arbitrary time, and v1 makes no ranked/competitive claim. Hooks for later verification: rewind/debug/editor disabled during timed attempts; `AttemptFinish` reserves an `inputRecordingRef` field so times are verifiable by deterministic replay. Verification cannot run on the master server by design — the master is engine-free and ROM-free — so verified/ranked play requires a separate engine+ROM-equipped verifier service (§12) |
+| Trust model (v1) | **All v1 rooms are casual/untrusted.** Times are client-reported and unverified; the server browser and standings UI label them as such ("unverified times"). This is an explicit, surfaced limitation, not an implicit one: a modified client can report an arbitrary time, and v1 makes no ranked/competitive claim. Hooks for later verification: rewind/debug/editor disabled during timed attempts; `AttemptFinish` reserves an `inputRecordingRef` field so times are verifiable by deterministic replay. Verification cannot run on the master server by design — the master is engine-free and ROM-free — so verified/ranked play requires a separate engine+ROM-equipped verifier service. The full defense posture (keypair identity, trust ladder, pacing validation, hub hardening, DDoS posture, verifier service) is designed in the companion spec `2026-07-04-time-attack-security-design.md`; its §11 table dictates which pieces land in which phase here |
 | Solo mode | First-class phase-1 feature (§3): `.ggfghost` files, star-post splits, multi-ghost racing including imported files |
 
 ## 3. Solo ghost racing (phase 1, and the foundation)
@@ -173,7 +173,7 @@ entries is trivial; full playback cursors exist only for near ghosts.
 | `GhostRenderer` | Draws near ghosts + the solo best-run ghost via `PlayerSpriteRenderer.drawFrame()` at reduced opacity with nameplates, reusing the per-character art-slot pattern from `GhostTraceRenderer` (isolated DPLC banks) but consuming resolved render frames (§7) — no visual-state hydration or animation reconstruction. Registered through a new **gameplay-owned ghost render registry** consulted by `LevelRenderer`; the existing `TraceGhostHook` global stays trace-only (it also gates trace HUD flags) and becomes one adapter of the registry rather than being reused. Ghosts never enter `ObjectManager` — they cannot touch gameplay state by construction |
 | `RaceSession` | Room/round state machine: lobby → countdown → window open → podium → track vote. Standings cache, attempt lifecycle (armed → running → finished/reset/void). Owns instant-retry via the existing session/level restart choreography (purely local; peers just see the ghost blink back to the start) |
 | `TimeAttackController` | Timer starts on first input, stops when the track's typed finish provider fires (v1 implementation: signpost touch), frame-count authoritative. Disables rewind, debug overlay, and editor entry for the duration of a timed attempt |
-| `GhostHub` | The aggregation/relevance/roster engine of §4. **Shared verbatim between the player-host path and the master server relay** — hosting mode only changes who runs it |
+| `GhostHub` | The aggregation/relevance/roster engine of §4, including the `GhostStreamValidator` (frame-index monotonicity, level-bounds and velocity sanity, rate caps, and wall-clock pacing validation — security spec §7). **Shared verbatim between the player-host path and the master server relay** — hosting mode only changes who runs it |
 
 ### 6.2 Master server — `com.openggf.net.master` (same artifact, no engine deps)
 
@@ -188,6 +188,9 @@ dependency), single process:
 - **Lobby:** room membership, chat (server-side rate limit ~1 msg/2 s/player).
 - **Relay:** rooms with capacity > 8 are relay-routed — the room's `GhostHub` runs
   on the master; each room pinned to one Netty event-loop thread.
+- **Security:** TLS (`wss://`) required; `IdentityStore` (embedded SQLite) holds
+  identities, trust tiers, and sanctions; protocol hygiene and DDoS posture per
+  security spec §7–§8.
 
 Multi-module Maven extraction is deliberately deferred; the ArchUnit fence gives
 the isolation now, the module split is mechanical later if a slim server jar is
@@ -208,10 +211,15 @@ Rooms advertise the required game/ROM; clients without a matching detected ROM
 cannot join. **No ROM-derived bytes ever cross the wire** — only positions,
 animation ids, times, and chat.
 
-Control: `Hello/Welcome` (version gate), `RoomCreate`, `RoomList`, `RoomJoin`,
-`RoomLeave`, `Chat`, `RoundConfig`, `RoundStart`, `RoundEnd`, `AttemptStart`,
-`AttemptFinish` (frame-count time + reserved `inputRecordingRef`), `AttemptReset`,
-`StandingsDelta`, `TrackVote`, `Ping/Pong`.
+Control: `Hello/Welcome` (version gate + determinism fingerprint + keypair
+identity handshake — security spec §3/§6.2), `RoomCreate`, `RoomList`,
+`RoomJoin`, `RoomLeave`, `Chat`, `RoundConfig`, `RoundStart`, `RoundEnd`,
+`AttemptStart`, `AttemptFinish` (frame-count time + `inputRecordingHash` +
+`ghostStreamHash` + reserved `inputRecordingRef`), `AttemptReset`,
+`StandingsDelta`, `TrackVote`, `Ping/Pong`. The message envelope carries a
+master-issued session token; room descriptors carry a `verified` flag (always
+false in v1). All security-reserved fields are live on the wire from phase 2 —
+see security spec §11.
 
 Binary: `GhostFrames` (client → hub, 3 × 7-byte frames + attemptId/frameIndex
 header), `GhostAggregate` (hub → client, all near ghosts' frames for one tick),
@@ -263,6 +271,10 @@ backpressure ladder) → compose one `GhostAggregate` per recipient; 1 Hz roster
   clients replaying recorded ghost files against a room; asserts hub tick budget,
   queue depths, and egress at N = 32 / 128 / 256. This is the gate for the scale
   target, runnable in CI at reduced N and on demand at full N.
+- **Security:** protocol fuzzing in CI against the frame decoder; adversarial
+  modes in `GhostLoadTestTool` (teleporting ghosts, pacing violations, floods,
+  oversized frames) asserting the violation ladder fires and healthy clients
+  are unaffected — security spec §10.
 - **Solo mode first:** phase 1 exercises the entire ghost format + renderer with
   zero sockets.
 
@@ -278,6 +290,12 @@ backpressure ladder) → compose one `GhostAggregate` per recipient; 1 Hz roster
    bucketing + roster + backpressure at full scale, `GhostLoadTestTool` gate at 256.
 4. **Polish** — podium, track vote, open-character standings badges, spectate
    pan after finishing, minimap fed by the roster channel.
+
+Each phase also lands its security content per the security spec's §11 table:
+keypair identity + attempt input recording in phase 1; full protocol hygiene,
+`GhostStreamValidator`, and all reserved wire fields in phase 2; TLS,
+`IdentityStore`, trust-ladder enforcement, and attack-mode PoW in phase 3.
+Only the verifier service and verified-room enforcement are post-v1.
 
 ## 12. Out of scope (recorded for later)
 
