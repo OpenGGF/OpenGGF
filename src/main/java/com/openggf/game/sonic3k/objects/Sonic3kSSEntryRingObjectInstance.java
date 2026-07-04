@@ -301,6 +301,17 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
                 player.getCentreX(), player.getCentreY()));
         var gameState = services().gameState();
 
+        // Special stage entry is fully disabled during a time attack (see
+        // GameLoop.enterSpecialStage()). Unlike the star-post-bonus-star path,
+        // the special-stage-entry branch below hides/control-locks the player
+        // and freezes the camera well before the GameLoop chokepoint is ever
+        // reached — swallowing the request there alone would leave the run
+        // stuck. Check here, before any state change, so the ring stays inert
+        // and the player simply passes through.
+        if (gameState != null && gameState.isTimeAttackActive()) {
+            return;
+        }
+
         // Play sfx_BigRing ($B3) — always plays on touch
         services().playSfx(Sonic3kSfx.BIG_RING.id);
 

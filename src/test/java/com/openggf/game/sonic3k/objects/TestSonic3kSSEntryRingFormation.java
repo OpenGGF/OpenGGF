@@ -217,6 +217,33 @@ public class TestSonic3kSSEntryRingFormation {
         assertTrue(ring.isDestroyed(), "Ring should be destroyed after player triggered it");
     }
 
+    /**
+     * Regression for the time-attack giant-ring softlock: touching the ring
+     * while {@code GameStateManager.isTimeAttackActive()} must leave the ring
+     * fully inert (no SFX/state change, ring not destroyed, MAIN state kept)
+     * instead of hiding/locking the player before GameLoop's chokepoint gate
+     * is ever reached.
+     */
+    @Test
+    public void timeAttackActiveSuppressesTouchEvenWithAllEmeralds() {
+        // All-emeralds path would normally destroy the ring and award rings —
+        // verifies the time-attack gate wins over every branch in onTouched().
+        gameState.configureSpecialStageProgress(7, 7);
+        for (int i = 0; i < 7; i++) {
+            gameState.markEmeraldCollected(i);
+        }
+        gameState.setTimeAttackActive(true);
+
+        Sonic3kSSEntryRingObjectInstance ring = createRing(0);
+        AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
+
+        advanceToIdleAndTouch(ring, player);
+
+        assertFalse(ring.isDestroyed(), "Ring must stay inert while a time attack is active");
+        assertTrue(ring.isMainState(), "Ring must remain in MAIN state (no Special Stage sequence started)");
+        verify(player, never()).addRings(anyInt());
+    }
+
     @Test
     public void subtypeBitSevenDoesNotRequestUnregisteredHiddenPalace() {
         Sonic3kSSEntryRingObjectInstance ring = createRing(0x80 | 3);

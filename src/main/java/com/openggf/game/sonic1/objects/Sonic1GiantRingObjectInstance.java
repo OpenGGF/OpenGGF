@@ -165,6 +165,18 @@ public class Sonic1GiantRingObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        // Special stage entry is fully disabled during a time attack (see
+        // GameLoop.enterSpecialStage()). Unlike the checkpoint-star/star-post
+        // paths, collecting the giant ring hides and control-locks the player
+        // and eventually advances the zone/act before the GameLoop chokepoint
+        // is ever reached — swallowing the request there alone would leave the
+        // run stuck. Check here, before any state change, so the ring stays
+        // inert and the player simply passes through.
+        var timeAttackGate = services().gameState();
+        if (timeAttackGate != null && timeAttackGate.isTimeAttackActive()) {
+            return;
+        }
+
         // ROM: cmpi.w #90,flashtime(a0) / bhs.w .invincible
         if (player.getInvulnerableFrames() >= INVULNERABLE_BLOCK_THRESHOLD) {
             return;

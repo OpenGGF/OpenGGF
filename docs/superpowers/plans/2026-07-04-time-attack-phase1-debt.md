@@ -15,6 +15,18 @@ next touched.
   uniformly) and swallows entry instead of voiding the attempt; the run
   continues unharmed. `TimeAttackRuntime.voidCurrentAttempt()` had no other
   callers and was removed.
+  - Follow-up (found while landing the above): the GameLoop-only gate was not
+    sufficient for the two giant-ring routes (S1 `Sonic1GiantRingObjectInstance`
+    / S3K `Sonic3kSSEntryRingObjectInstance`) — both hide/control-lock the
+    player (and S3K freezes the camera) *before* the request ever reaches the
+    chokepoint, so swallowing it there alone left the run permanently frozen
+    until a manual retry. Resolved by adding `GameStateManager.timeAttackActive`
+    (set by `TimeAttackRuntime.onLevelReady()`, cleared by `deactivate()`,
+    intentionally surviving `resetForLevel()` so a time-attack retry doesn't
+    un-suppress the gate) and checking it at the top of each ring's touch
+    reaction, before any state change — the ring stays fully inert and the
+    player passes through. S2's checkpoint star and S3K's star-post bonus star
+    needed no such change (no hide/freeze side effects).
 - Gamepad Y/Triangle free-fly toggle and `LEVEL_SELECT_KEY` (F9) bypass the
   key-based taint net (dev-config-gated; taint them like the keyboard cheats).
 - `armForLaunch` refusal (trace/test/playback active) is log-only — add a

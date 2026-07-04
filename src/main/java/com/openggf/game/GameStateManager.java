@@ -149,6 +149,22 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     private boolean actCompletionSignalActive;
 
     /**
+     * Set while a solo time-attack session is active (armed through retry/
+     * deactivate), so that objects whose behavior must be suppressed during a
+     * timed run — special/bonus stage entry portals (giant rings) — can check
+     * it directly rather than needing a plumbed reference to the time-attack
+     * runtime. Set by {@link com.openggf.game.timeattack.TimeAttackRuntime#onLevelReady()}
+     * and cleared by {@code TimeAttackRuntime.deactivate()}.
+     * <p>
+     * This is NOT a ROM flag and is deliberately NOT read by physics, camera,
+     * or collision code — it exists solely for the giant-ring gate. Unlike
+     * {@link #actCompletionSignalActive}, this must survive a time-attack
+     * retry's level reload, so it is intentionally NOT cleared by
+     * {@link #resetForLevel()} — only {@link #resetSession()} clears it.
+     */
+    private boolean timeAttackActive;
+
+    /**
      * In-game pause flag (ROM: Game_paused at $FFFFF63A for S3K, $FFFFFE5C for
      * S1, $FFFFFF7E for S2). Distinct from the loop/timing-level window-focus and
      * keyboard-toggle pauses in {@link com.openggf.GameLoop}: when this flag is
@@ -207,6 +223,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         this.endOfLevelActive = false;
         this.endOfLevelFlag = false;
         this.actCompletionSignalActive = false;
+        this.timeAttackActive = false;
         this.gamePaused = false;
     }
 
@@ -697,6 +714,20 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * (or capsule) when the end-of-act sequence begins.
      */
     public void setActCompletionSignalActive(boolean active) { this.actCompletionSignalActive = active; }
+
+    /**
+     * Whether a solo time-attack session is currently active (see
+     * {@link #timeAttackActive}). Checked by giant-ring / special-stage-portal
+     * objects to skip their touch reaction entirely; never read by physics.
+     */
+    public boolean isTimeAttackActive() { return timeAttackActive; }
+
+    /**
+     * Sets the time-attack-active flag. Set by {@code TimeAttackRuntime.onLevelReady()},
+     * cleared by {@code TimeAttackRuntime.deactivate()}. Survives {@link #resetForLevel()}
+     * (a time-attack retry reload must not un-suppress giant rings mid-session).
+     */
+    public void setTimeAttackActive(boolean active) { this.timeAttackActive = active; }
 
     /**
      * Gets the end-of-level completed flag.

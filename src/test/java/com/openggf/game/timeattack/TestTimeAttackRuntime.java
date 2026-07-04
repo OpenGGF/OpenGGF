@@ -1,5 +1,6 @@
 package com.openggf.game.timeattack;
 
+import com.openggf.game.GameStateManager;
 import com.openggf.game.ghost.GhostFrame;
 import com.openggf.game.ghost.GhostRenderRegistry;
 import org.junit.jupiter.api.Test;
@@ -140,5 +141,29 @@ class TestTimeAttackRuntime {
         assertFalse(runtime.consumeRetryRequested());
         runtime.tickForTest(0x08, false, true, -1, frame(11)); // finish after void — ignored
         assertTrue(store.loadBest("s3k", 0, 0, "sonic").isEmpty());
+    }
+
+    @Test
+    void applyTimeAttackActiveFlagSetsAndClearsGameState(@TempDir Path root) {
+        // Engine-free seam for onLevelReady()/deactivate(): GameServices isn't
+        // reachable headless, so exercise the flag lifecycle directly against
+        // a plain GameStateManager instead of faking a GameplayModeContext.
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
+                root.resolve("identity"), () -> false);
+        GameStateManager gameState = new GameStateManager();
+        assertFalse(gameState.isTimeAttackActive());
+
+        runtime.applyTimeAttackActiveFlag(gameState, true); // mirrors onLevelReady()
+        assertTrue(gameState.isTimeAttackActive());
+
+        runtime.applyTimeAttackActiveFlag(gameState, false); // mirrors deactivate()
+        assertFalse(gameState.isTimeAttackActive());
+    }
+
+    @Test
+    void applyTimeAttackActiveFlagToleratesNullGameState(@TempDir Path root) {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
+                root.resolve("identity"), () -> false);
+        assertDoesNotThrow(() -> runtime.applyTimeAttackActiveFlag(null, true));
     }
 }

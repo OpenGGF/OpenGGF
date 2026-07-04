@@ -2,6 +2,7 @@ package com.openggf.game.timeattack;
 
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.ghost.GhostCaptureBuffer;
 import com.openggf.game.ghost.GhostFrame;
 import com.openggf.game.ghost.GhostHeader;
@@ -193,6 +194,19 @@ public final class TimeAttackRuntime {
         // bases — clear them before the new level's first render.
         ghostRenderer.clearSlots();
         attachRenderer(GameServices.ghostRenderRegistryOrNull());
+        applyTimeAttackActiveFlag(GameServices.gameStateOrNull(), true);
+    }
+
+    /**
+     * Sets/clears {@link GameStateManager#setTimeAttackActive(boolean)}, tolerating a
+     * null {@code gameState} (mirrors the other GameServices-resolved wrappers in this
+     * class). Package-visible seam so the flag lifecycle is testable without
+     * GameServices/a live GameplayModeContext.
+     */
+    void applyTimeAttackActiveFlag(GameStateManager gameState, boolean active) {
+        if (gameState != null) {
+            gameState.setTimeAttackActive(active);
+        }
     }
 
     /**
@@ -286,5 +300,6 @@ public final class TimeAttackRuntime {
         opponentRecordings.clear();
         launch = null;
         attempt = null;
+        applyTimeAttackActiveFlag(GameServices.gameStateOrNull(), false);
     }
 }

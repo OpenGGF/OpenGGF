@@ -248,6 +248,24 @@ public class TestGameStateManager {
         assertEquals(4, gsm.getCurrentSpecialStageIndex(),
                 "Next S3K super special stage should advance after the selected uncollected stage");
     }
+
+    @Test
+    public void testTimeAttackActiveSurvivesResetForLevelButClearsOnResetSession() {
+        assertFalse(gsm.isTimeAttackActive(), "Precondition: no time attack active");
+
+        gsm.setTimeAttackActive(true);
+        assertTrue(gsm.isTimeAttackActive());
+
+        // A time-attack retry reloads the level via resetForLevel() — the flag
+        // must survive so giant rings stay gated across the retry.
+        gsm.resetForLevel();
+        assertTrue(gsm.isTimeAttackActive(),
+                "resetForLevel() must not clear timeAttackActive (retry reload)");
+
+        // Only a full session reset (new game / attract mode) clears it.
+        gsm.resetSession();
+        assertFalse(gsm.isTimeAttackActive(), "resetSession() must clear timeAttackActive");
+    }
 }
 
 
