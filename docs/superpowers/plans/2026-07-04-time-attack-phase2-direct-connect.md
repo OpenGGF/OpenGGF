@@ -4049,7 +4049,7 @@ Skills: n/a"
 **Interfaces:**
 - Consumes: `ClientHandshake` (Task 3), `ControlCodec`/`ControlMessage`/`GhostPackets` (Tasks 1–2), `PlayerIdentity`; test consumes `RaceHostServer` (Task 11).
 - Produces `RaceClient`:
-  - `static CompletableFuture<RaceClient> connect(URI wsUri, PlayerIdentity identity, String displayName, String determinismFingerprint)` — opens the JDK WebSocket, drives Hello→Welcome→AuthProof→JoinAccepted internally, completes with a joined client or completes exceptionally with `JoinRejectedException(String reason)` (nested class) / connect failure. **Join timeout `JOIN_TIMEOUT_MILLIS = 3000` covers the ENTIRE sequence** — TCP connect, WebSocket upgrade, AND the Hello→Welcome→AuthProof→JoinAccepted exchange (`orTimeout` on the returned future, aborting the socket on expiry). A server that accepts the socket but never answers still yields a clean failure within 3 s (main spec §9: timeout surfaces as a clean join failure; no relay fallback in phase 2). The `HttpClient` connect timeout is set to the same value as the transport-level backstop.
+  - `static CompletableFuture<RaceClient> connect(URI wsUri, PlayerIdentity identity, String displayName, String determinismFingerprint)` — opens the JDK WebSocket, drives Hello→Welcome→AuthProof→JoinAccepted internally, completes with a joined client or completes exceptionally with `JoinRejectedException(String reason)` (nested class) / connect failure. **Join timeout `JOIN_TIMEOUT_MILLIS = 3000` covers the ENTIRE sequence** — TCP connect, WebSocket upgrade, AND the Hello→Welcome→AuthProof→JoinAccepted exchange (`orTimeout` on the returned future, aborting the socket on expiry). A server that accepts the socket but never answers still yields a clean failure within 3 s (main spec §9: timeout surfaces as a clean join failure; no relay fallback in phase 2). The `HttpClient` connect timeout is set to the same value as the transport-level backstop. Late-completion race: if `buildAsync` completes AFTER the timeout already failed `joined`, the connect callback must detect `joined.isDone()` and abort the fresh socket instead of sending Hello — otherwise a socket the timeout handler never saw (it was null at expiry) stays alive.
   - `sealed interface InboundEvent`: `record Control(ControlMessage message)`, `record GhostData(GhostPackets.Aggregate aggregate)`, `record Disconnected(String reason)`. Binary frames are decoded AND validated on the network thread — the game thread only ever sees parsed, typed events, so RaceClient is the single binary validation boundary.
   - `List<InboundEvent> drainInbound()` — the ONLY consumption point; called once per frame by the game thread (main spec §6.1: all game-state mutation stays on the game thread). Listener callbacks only enqueue.
   - `void sendControl(ControlMessage message)` — encodes with the session token and queues; `void sendBinary(byte[] data)`. Sends are serialized through an internal chain of `CompletableFuture`s (the JDK WebSocket forbids overlapping sends of the same kind).
@@ -4169,8 +4169,27 @@ class TestRaceClientLoopback {
                         .get(15, TimeUnit.SECONDS));
         assertTrue(System.currentTimeMillis() - start < 15_000); // clean failure, no hang (main spec §9)
     }
+
+    @Test
+    void serverThatAcceptsButNeverAnswersFailsWithinJoinTimeout(@TempDir Path dir) throws Exception {
+        // Accepts the TCP connection but never speaks: neither the WS upgrade nor any
+        // Welcome/JoinAccepted ever arrives. Only the whole-sequence orTimeout can save
+        // this — the HttpClient connect timeout does NOT cover it.
+        try (java.net.ServerSocket silent = new java.net.ServerSocket(0)) {
+            long start = System.currentTimeMillis();
+            ExecutionException failure = assertThrows(ExecutionException.class,
+                    () -> RaceClient.connect(URI.create("ws://127.0.0.1:" + silent.getLocalPort() + "/race"),
+                            PlayerIdentity.loadOrCreate(dir.resolve("e")), "E", FP)
+                            .get(15, TimeUnit.SECONDS));
+            long elapsed = System.currentTimeMillis() - start;
+            assertTrue(elapsed < 10_000, "failed in " + elapsed + "ms — join timeout did not fire");
+            assertNotNull(failure.getCause()); // TimeoutException from orTimeout (or upgrade failure)
+        }
+    }
 }
 ```
+
+The same `orTimeout` path also covers a server that completes the WebSocket upgrade but never sends `Welcome`/`JoinAccepted` — `joined` is only completed by those messages, so post-upgrade silence times out identically (the mechanism under test is the whole-sequence budget, not any single stage). The `isDone()` guard in the connect callback (Step 3) additionally prevents a `buildAsync` that completes AFTER the timeout from resurrecting a live socket the timeout handler could not see.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -4335,7 +4354,13 @@ public final class RaceClient {
                         joined.completeExceptionally(error);
                         return;
                     }
+                    // Publish the socket BEFORE the isDone check: if the timeout fires
+                    // between the check and the send, its abort path can now see it.
                     client.webSocket = ws;
+                    if (joined.isDone()) {
+                        ws.abort(); // join already timed out/failed — no stray live socket
+                        return;
+                    }
                     client.enqueueSendText(ControlCodec.encode(null, handshake.hello()));
                 });
         // The whole join sequence — not just the TCP connect — must fail cleanly within
@@ -4423,7 +4448,7 @@ public final class RaceClient {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.net.client.TestRaceClientLoopback" test`
-Expected: PASS (3 tests). Note the dead-port test uses port 1 (nothing listens); if a sandboxed CI blocks the connect differently, any exceptional completion within the timeout is a pass.
+Expected: PASS (4 tests). Note the dead-port test uses port 1 (nothing listens); if a sandboxed CI blocks the connect differently, any exceptional completion within the timeout is a pass. The silent-server test is the one that exercises the whole-sequence `orTimeout` — do not delete it if it looks redundant with the dead-port test; they cover different stages.
 
 - [ ] **Step 5: Commit**
 
@@ -4455,7 +4480,7 @@ Skills: n/a"
      - `void onFrameSampled(int attemptOrdinal, GhostFrame frame)` — fired EVERY tick from the spawn frame (ARMED idle frames included) through the finishing tick, immediately after the runtime captures the frame into its ghost buffer and BEFORE `onAttemptFinished` fires on the finish tick. This is the network publisher's feed: every frame phase-1 ghost capture records is delivered exactly once, in order, so the wire stream stays spawn-anchored (recorded frame N = attempt frame N) and the ghost-stream hash covers spawn→finish inclusive. (A poll-style `lastSampledFrame()` accessor was rejected: it missed ARMED idle frames and the finishing frame, because `onAttemptFinished` fires inside the runtime tick before any post-tick poll runs.)
      - `void onAttemptFinished(int attemptOrdinal, int timeFrames, int firstInputFrame, int finishFrame, byte[] inputRecordingSha256)` — fired on the RUNNING→FINISHED transition, after the best-save decision, regardless of whether it was a new best — and always AFTER the finishing tick's `onFrameSampled`.
      - `void onAttemptVoided(int attemptOrdinal)` — fired when an attempt is voided (retry, cap, deadline void, taint).
-  2. `void setAttemptListener(AttemptListener listener)` (null clears). `void voidCurrentAttempt()` — public: voids the running attempt and fires `onAttemptVoided` (Task 14 calls this at the round deadline; internal retry/cap paths route through it so the listener always hears about abandoned attempts).
+  2. `void setAttemptListener(AttemptListener listener)` (null clears). `boolean isAttemptActive()` — true while the attempt phase is ARMED **or** RUNNING (phase-1's `isAttemptRunning()` is RUNNING-only, which is too narrow here: an ARMED attempt is already wire-visible via `onFrameSampled`, so multiplayer code must treat it as live). `void voidCurrentAttempt()` — public: voids any ACTIVE (ARMED or RUNNING) attempt and fires `onAttemptVoided`; FINISHED/VOID/no-attempt are no-ops (Task 14 calls this at the round deadline; internal retry/cap paths route through it so the listener always hears about abandoned attempts — including a retry pressed before first input, which abandons an ARMED attempt).
   3. `void setExtraGhostSupplier(Supplier<List<ActiveGhost>> supplier)` — extra ghosts merged into the runtime's render list each frame after its own best/import ghosts, truncated to the phase-1 renderer cap of 8 total (main spec §4.6: nearest-8 render cap; at ≤ 8 players a simple truncation is the degenerate case).
 - Reconcile-first rule: the worktree implements phase 1 concurrently. Before editing, read the as-built `TimeAttackRuntime` and adapt mechanically (field/method names may differ from the phase-1 plan text, the SEMANTICS above may not). If phase 1 shipped `tickForTest(...)`/`beginAttemptForTest(...)` seams (its plan says it must), reuse them for this task's tests.
 
@@ -4566,6 +4591,22 @@ class TestTimeAttackRuntimeMultiplayerSeams {
     }
 
     @Test
+    void armedAttemptIsActiveAndVoidable(@TempDir Path root) {
+        TimeAttackRuntime runtime = armedRuntime(root);
+        RecordingListener listener = new RecordingListener();
+        runtime.setAttemptListener(listener);
+        runtime.beginAttemptForTest("0.6:cafe");
+        runtime.tickForTest(0, false, false, -1, frame(10)); // idle only: still ARMED
+        assertFalse(runtime.isAttemptRunning()); // phase-1 semantics: RUNNING-only
+        assertTrue(runtime.isAttemptActive());   // multiplayer semantics: ARMED counts
+        runtime.voidCurrentAttempt();            // deadline/retry while waiting at spawn
+        assertEquals(new Event("voided", 1), listener.events.get(listener.events.size() - 1));
+        assertFalse(runtime.isAttemptActive());
+        runtime.voidCurrentAttempt();            // idempotent: no double-fire
+        assertEquals(1, listener.events.stream().filter(e -> e.kind().equals("voided")).count());
+    }
+
+    @Test
     void extraGhostSupplierMergesAndCapsAtEight(@TempDir Path root) {
         TimeAttackRuntime runtime = armedRuntime(root);
         List<com.openggf.sprites.ghost.ActiveGhost> extras = new ArrayList<>();
@@ -4618,9 +4659,15 @@ public void setExtraGhostSupplier(java.util.function.Supplier<java.util.List<Act
     this.extraGhostSupplier = supplier;
 }
 
+/** ARMED or RUNNING — an ARMED attempt is already wire-visible, so it counts as live. */
+public boolean isAttemptActive() {
+    return attempt != null && (attempt.phase() == TimeAttackAttempt.Phase.ARMED
+            || attempt.phase() == TimeAttackAttempt.Phase.RUNNING);
+}
+
 public void voidCurrentAttempt() {
-    if (!isAttemptRunning()) {
-        return;
+    if (!isAttemptActive()) {
+        return; // FINISHED/VOID/no-attempt: no-op — never double-fires the listener
     }
     attempt.voidAttempt();          // phase-1 TimeAttackAttempt API
     // ...existing discard-capture logic phase 1 runs on retry/void...
@@ -4676,7 +4723,7 @@ Skills: n/a"
   - `RaceTransport` — `List<RaceClient.InboundEvent> drainInbound(); void sendControl(ControlMessage m); void sendBinary(byte[] d); int playerSlot(); boolean isOpen(); void close();` (imports from `net.client`/`net.protocol` are fine — engine → net direction is allowed; only the reverse is fenced).
   - `MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session, TimeAttackRuntime runtime)` — implements `TimeAttackRuntime.AttemptListener`; constructor registers itself via `runtime.setAttemptListener(this)` and `runtime.setExtraGhostSupplier(this::remoteActiveGhosts)`; owns a `GhostStreamPublisher` over `transport::sendBinary` and a `RemoteGhostRegistry`.
     - `void beforeLevelFrame()` — drain transport: `Control` → `session.onControl` (+ `RoomState` also to `registry.onRoomState`); `GhostData` → `registry.onAggregate(ghost.aggregate())` (already decoded and validated by `RaceClient` on the network thread — Task 12); `Disconnected` → mark `connectionLost()`.
-    - `void afterLevelFrame()` — (1) deadline enforcement (main spec §5.5 hard cutoff): `if (!session.isWindowOpen() && runtime.isAttemptRunning()) runtime.voidCurrentAttempt();` (2) `remoteGhosts = registry.advanceAll(session.localSlot())` cached for the supplier; (3) ping scheduling: while `session.needsMoreClockSamples()` send a `Ping(nowMillis)` at most every 500 ms. (Frame publication does NOT live here — see the listener below; a post-tick poll would miss ARMED idle frames and the finishing frame.)
+    - `void afterLevelFrame()` — (1) deadline enforcement (main spec §5.5 hard cutoff): `if (!session.isWindowOpen() && runtime.isAttemptActive()) runtime.voidCurrentAttempt();` — `isAttemptActive` (ARMED or RUNNING, Task 13), NOT phase-1's RUNNING-only `isAttemptRunning`: a player idling at spawn past the deadline has a wire-visible ARMED attempt that must void and send `AttemptReset` like any other; (2) `remoteGhosts = registry.advanceAll(session.localSlot())` cached for the supplier; (3) ping scheduling: while `session.needsMoreClockSamples()` send a `Ping(nowMillis)` at most every 500 ms. (Frame publication does NOT live here — see the listener below; a post-tick poll would miss ARMED idle frames and the finishing frame.)
     - `AttemptListener`: `onAttemptBegan(o)` → `publisher.beginAttempt(o)` + `transport.sendControl(new AttemptStart(o))`; `onFrameSampled(o, frame)` → `publisher.onFrame(frame)` — the runtime fires this for EVERY captured frame from spawn (ARMED idle included) through the finishing tick, before `onAttemptFinished`, so the wire stream is spawn-anchored and complete; `onAttemptFinished(o, time, first, finish, hash)` → `publisher.finishAttempt()` + `transport.sendControl(new AttemptFinish(o, time, first, finish, hex(hash), hex(publisher.streamHashSha256()), null))` — the stream hash seals over the exact frame set phase-1 ghost capture recorded; `onAttemptVoided(o)` → `publisher.abandonAttempt()` + `transport.sendControl(new AttemptReset(o))`.
     - `List<ActiveGhost> remoteActiveGhosts()` — maps cached `RemoteGhost`s to phase-1 `ActiveGhost("net:" + slot, character, state.frame())`. (Opacity-by-state and nameplates are phase-4 polish; the phase-1 renderer already distance-fades.)
     - `MultiplayerHudState hudState()` — `record MultiplayerHudState(boolean active, String phase, long remainingWindowMillis, long remainingCountdownMillis, List<ControlMessage.StandingsRow> standings, List<String> chatLines, boolean connectionLost, String kickReason)`.
@@ -4788,13 +4835,31 @@ class TestMultiplayerRaceCoordinator {
         rig.runtime().beginAttemptForTest("0.6:cafe");
         rig.runtime().tickForTest(0x08, false, false, -1, frame(10));
         rig.coordinator().afterLevelFrame();
-        assertTrue(rig.runtime().isAttemptRunning());
+        assertTrue(rig.runtime().isAttemptActive());
 
         now += 10_001; // window closes
         rig.coordinator().afterLevelFrame();
-        assertFalse(rig.runtime().isAttemptRunning()); // hard cutoff: void (main spec §5.5)
+        assertFalse(rig.runtime().isAttemptActive()); // hard cutoff: void (main spec §5.5)
         assertTrue(rig.transport().sentControl.stream()
                 .anyMatch(m -> m instanceof ControlMessage.AttemptReset));
+    }
+
+    @Test
+    void deadlineVoidsArmedAttemptIdlingAtSpawn(@TempDir Path root) {
+        Rig rig = rig(root);
+        ControlMessage.RoundConfig cfg = new ControlMessage.RoundConfig("s3k", 0, 0, 10, "OPEN", null);
+        rig.session().onControl(new ControlMessage.RoundStart(cfg, now, now + 10_000));
+        rig.runtime().beginAttemptForTest("0.6:cafe");
+        rig.runtime().tickForTest(0, false, false, -1, frame(10)); // idle only: ARMED, but streaming
+        rig.coordinator().afterLevelFrame();
+        assertFalse(rig.runtime().isAttemptRunning()); // never left ARMED
+        assertTrue(rig.runtime().isAttemptActive());
+
+        now += 10_001; // window closes while the player waits at spawn
+        rig.coordinator().afterLevelFrame();
+        assertFalse(rig.runtime().isAttemptActive());
+        assertTrue(rig.transport().sentControl.stream()
+                .anyMatch(m -> m instanceof ControlMessage.AttemptReset)); // peers see the reset
     }
 
     @Test
@@ -4963,8 +5028,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     public void afterLevelFrame() {
-        if (!session.isWindowOpen() && runtime.isAttemptRunning()) {
-            runtime.voidCurrentAttempt(); // hard deadline cutoff (main spec §5.5)
+        if (!session.isWindowOpen() && runtime.isAttemptActive()) {
+            runtime.voidCurrentAttempt(); // hard deadline cutoff (main spec §5.5) — ARMED included
         }
         remoteGhosts = toActiveGhosts(registry.advanceAll(session.localSlot()));
         maybePing();
@@ -5081,7 +5146,7 @@ GameLoop wiring (after reading the as-built phase-1 block): add an optional coor
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.game.timeattack.mp.TestMultiplayerRaceCoordinator" test`
-Expected: PASS (5 tests). The clock is injected (`LongSupplier clockMillis`, production default `System::currentTimeMillis` via the 3-arg constructor) so the ping test is deterministic — the rig passes `() -> now`.
+Expected: PASS (6 tests). The clock is injected (`LongSupplier clockMillis`, production default `System::currentTimeMillis` via the 3-arg constructor) so the ping test is deterministic — the rig passes `() -> now`.
 
 - [ ] **Step 5: Commit**
 
