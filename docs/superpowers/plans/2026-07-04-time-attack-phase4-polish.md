@@ -128,7 +128,7 @@ Expected: COMPILE FAILURE (`TrackVoteOffer` not defined).
 
 - [ ] **Step 3: Implement**
 
-In `ControlMessage.java`: add the four records + `VoteCount` exactly as in Interfaces, add `voteTrackKeys` as the last component of `RoomCreate`, extend the sealed `permits` list, and register the three new messages in `@JsonSubTypes` with names `"TrackVoteOffer"`, `"TrackVoteTally"`, `"TrackVoteResult"`, `"RoomTrackUpdate"`. Fix every existing `new ControlMessage.RoomCreate(...)` call site (phase-3 broker/client/tests) by appending `List.of()`. Hygiene caps in the decode/validation layer (wherever phase 2 Task 1 put per-type checks): `voteTrackKeys.size() <= 32`, each key `length() <= 32`; `TrackVoteOffer.trackKeys.size() <= 8`.
+In `ControlMessage.java`: add the four records + `VoteCount` exactly as in Interfaces, add `voteTrackKeys` as the last component of `RoomCreate`, extend the sealed `permits` list, and register the three new messages in `@JsonSubTypes` with names `"TrackVoteOffer"`, `"TrackVoteTally"`, `"TrackVoteResult"`, `"RoomTrackUpdate"`. Call sites: TEST call sites (phase-3 broker/registry tests) append `List.of()`; the PRODUCTION path must not silently lose the pool — `MasterClient.createRoom` (phase-3 Task 13: `createRoom(RoomDescriptor descriptor, String routing, int directPort, String determinismFingerprint)`) gains a final `List<String> voteTrackKeys` parameter threaded into the `RoomCreate` message, and both production creators pass the catalog pool (Task 5: `Engine.hostTimeAttackRoom` for LAN rooms via `RoomHostConfig`, `ServerBrowserScreen` CREATE for master-brokered DIRECT and RELAY rooms via `MasterClient`). Hygiene caps in the decode/validation layer (wherever phase 2 Task 1 put per-type checks): `voteTrackKeys.size() <= 32`, each key `length() <= 32` and matching `[a-z0-9]{1,8}:[0-9]{1,3}:[0-9]{1,3}`; `TrackVoteOffer.trackKeys.size() <= 8`.
 
 - [ ] **Step 4: Run tests**
 
@@ -156,11 +156,12 @@ Trailers: `Changelog: updated` is NOT required per-commit mid-phase; the final t
 - Produces:
   - `Phase` enum gains `VOTE` (full set: `LOBBY, COUNTDOWN, RUNNING, ROUND_END, VOTE`)
   - `public static final long VOTE_WINDOW_MILLIS = 15_000;` `public static final int VOTE_OPTION_COUNT = 3;`
-  - `public void setVoteTrackPool(List<String> trackKeys)` — empty pool ⇒ voting disabled (today's ROUND_END→LOBBY behavior unchanged)
+  - `public void setVoteTrackPool(List<String> trackKeys)` — empty pool ⇒ voting disabled (today's ROUND_END→LOBBY behavior unchanged). Pool keys are re-validated per round when options are picked (`isEligibleVoteKey`): parseable `game:zone:act`, same `gameId` as the active round config, not the current track — malformed, cross-game, or stale entries are silently excluded, so `closeVote()`'s winner parse can never throw and a vote can never switch the room's game (the descriptor/registry track updates only carry zone/act)
   - `public void onTrackVote(int slot, String trackKey)` — ignored outside VOTE / for non-offered keys; last vote per slot wins; broadcasts `TrackVoteTally`
   - `public List<String> voteOptions()` — current offer ([] outside VOTE)
-  - `public ControlMessage.RoundConfig votedNextConfig()` — non-null after a vote completes, cleared by `startRound`
-  - `startRound` stays legal from `LOBBY`/`ROUND_END` **and** is NOT legal during `VOTE` (the vote must run out)
+  - `public ControlMessage.RoundConfig votedNextConfig()` — non-null after a vote completes WITH a winner, cleared by `startRound`; stays null on a zero-vote close (current track retained)
+  - `closeVote()` ALWAYS broadcasts a `TrackVoteResult` — with the winner, or with the CURRENT track key when no valid votes were cast. Clients only leave `VOTE` on `TrackVoteResult` (Task 4), so a silent zero-vote close would strand every client in the vote screen
+  - `startRound` is legal from `LOBBY` always; from `ROUND_END` only when the vote pool is empty (a vote room must let its vote run — otherwise the host can start during the linger and bypass the configured vote); never during `VOTE`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -271,8 +272,9 @@ class TestHostRoundEngineVote {
         assertEquals(options.get(0), engine.votedNextConfig().gameId() + ":"
                 + engine.votedNextConfig().zone() + ":" + engine.votedNextConfig().act());
 
-        // second round: nobody votes -> current track retained, votedNextConfig null
-        assertTrue(engine.startRound(engine.votedNextConfig()));
+        // second round: nobody votes -> current track retained, result STILL broadcast
+        ControlMessage.RoundConfig second = engine.votedNextConfig();
+        assertTrue(engine.startRound(second));
         assertNull(engine.votedNextConfig(), "startRound clears the voted config");
         now += HostRoundEngine.COUNTDOWN_MILLIS;
         engine.onTick();
@@ -284,6 +286,12 @@ class TestHostRoundEngineVote {
         engine.onTick();
         assertNull(engine.votedNextConfig());
         assertEquals(HostRoundEngine.Phase.LOBBY, engine.phase());
+        ControlMessage.TrackVoteResult retained = sent.stream()
+                .filter(m -> m instanceof ControlMessage.TrackVoteResult)
+                .map(m -> (ControlMessage.TrackVoteResult) m)
+                .reduce((a, b) -> b).orElseThrow();
+        assertEquals(second.gameId() + ":" + second.zone() + ":" + second.act(), retained.trackKey(),
+                "zero votes must still broadcast a result — clients only leave VOTE on TrackVoteResult");
     }
 
     @Test
@@ -315,6 +323,36 @@ class TestHostRoundEngineVote {
         runRoundToEnd();
         assertFalse(engine.startRound(config()));
         assertEquals(HostRoundEngine.Phase.VOTE, engine.phase());
+    }
+
+    @Test
+    void malformedAndCrossGameKeysNeverOffered() {
+        engine = new HostRoundEngine(() -> now, sent::add);
+        engine.setVoteTrackPool(List.of("bad", "s2:0:0", "s3k:9:9:9", "s3k:x:0", "s3k:0:1", "s3k:1:0"));
+        runRoundToEnd();
+        assertEquals(HostRoundEngine.Phase.VOTE, engine.phase());
+        assertEquals(List.of("s3k:0:1", "s3k:1:0"), engine.voteOptions(),
+                "only parseable same-game keys may be offered — a vote must never crash the close or switch gameId");
+    }
+
+    @Test
+    void startRoundDuringRoundEndOnlyLegalWithoutVotePool() {
+        assertTrue(engine.startRound(config()));
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        engine.onTick();
+        now += config().windowSeconds() * 1000L;
+        engine.onTick();
+        assertEquals(HostRoundEngine.Phase.ROUND_END, engine.phase());
+        assertFalse(engine.startRound(config()), "a vote room cannot skip its vote from the linger");
+
+        HostRoundEngine plain = new HostRoundEngine(() -> now, sent::add); // no pool
+        assertTrue(plain.startRound(config()));
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        plain.onTick();
+        now += config().windowSeconds() * 1000L;
+        plain.onTick();
+        assertEquals(HostRoundEngine.Phase.ROUND_END, plain.phase());
+        assertTrue(plain.startRound(config()), "no-pool rooms keep the phase-2/3 ROUND_END restart");
     }
 }
 ```
@@ -389,9 +427,26 @@ private void beginVote() {
     broadcaster.accept(new ControlMessage.TrackVoteOffer(voteOptions, voteEndsAt));
 }
 
+/** Malformed, cross-game, or current-track keys are never offered — a hostile or stale
+ *  pool entry must not crash the winner parse or switch the room's game via a vote. */
+private boolean isEligibleVoteKey(String key) {
+    if (key == null || key.equals(currentTrackKey())) {
+        return false;
+    }
+    String[] parts = key.split(":");
+    if (parts.length != 3 || currentConfig == null || !parts[0].equals(currentConfig.gameId())) {
+        return false;
+    }
+    try {
+        return Integer.parseInt(parts[1]) >= 0 && Integer.parseInt(parts[2]) >= 0;
+    } catch (NumberFormatException e) {
+        return false;
+    }
+}
+
 private List<String> pickVoteOptions() {
     List<String> candidates = voteTrackPool.stream()
-            .filter(k -> !k.equals(currentTrackKey()))
+            .filter(this::isEligibleVoteKey)
             .toList();
     List<String> picked = new ArrayList<>();
     for (int i = 0; i < candidates.size() && picked.size() < VOTE_OPTION_COUNT; i++) {
@@ -412,13 +467,16 @@ private void closeVote() {
         }
     }
     if (winner != null) {
-        String[] parts = winner.split(":");
+        String[] parts = winner.split(":"); // parseable by construction: options passed isEligibleVoteKey
         votedNextConfig = new ControlMessage.RoundConfig(parts[0],
                 Integer.parseInt(parts[1]), Integer.parseInt(parts[2]),
                 currentConfig.windowSeconds(), currentConfig.characterPolicy(),
                 currentConfig.lockedCharacter());
-        broadcaster.accept(new ControlMessage.TrackVoteResult(winner));
     }
+    // ALWAYS broadcast — clients leave VOTE only on TrackVoteResult; a zero-vote close
+    // announces the retained current track instead of stranding every client.
+    broadcaster.accept(new ControlMessage.TrackVoteResult(
+            winner != null ? winner : currentTrackKey()));
     voteOptions = List.of();
     votesBySlot.clear();
     phase = Phase.LOBBY;
@@ -427,7 +485,7 @@ private void closeVote() {
 
 Wire into the existing machine:
 - In `onTick()`, replace the `ROUND_END` → `LOBBY` transition body with: if the linger elapsed → `if (voteTrackPool.isEmpty()) { phase = Phase.LOBBY; } else { beginVote(); }`. Add a new branch: `case VOTE -> { if (clock.getAsLong() >= voteEndsAt) closeVote(); }`.
-- In `startRound(...)`: reject when `phase == Phase.VOTE` (return false); on success set `votedNextConfig = null`.
+- In `startRound(...)`: reject when `phase == Phase.VOTE`, and when `phase == Phase.ROUND_END && !voteTrackPool.isEmpty()` (vote rooms cannot skip the vote from the linger; no-pool rooms keep the phase-2/3 ROUND_END restart); on success set `votedNextConfig = null`.
 - Adjust field names (`phase`, `clock`, `broadcaster`, `currentConfig`) to the actual phase-2 field names in the file — same semantics.
 
 - [ ] **Step 4: Run tests**
@@ -516,7 +574,7 @@ private boolean trackAllowed(ControlMessage.RoundConfig config) {
 ```
 
 On acceptance with a changed track: update `roomZone`/`roomAct` (the fields backing the descriptor) so subsequent joins/lobby snapshots advertise the new track, and — when this host is master-registered (direct rooms) — send `new ControlMessage.RoomTrackUpdate(roomId, zone, act)` on the master connection next heartbeat tick.
-- `RoomBroker`: dispatch `RoomTrackUpdate` → `registry.updateTrack(msg.roomId(), senderFingerprint, msg.zone(), msg.act())`.
+- `RoomBroker`: dispatch `RoomTrackUpdate` → `registry.updateTrack(msg.roomId(), senderFingerprint, msg.zone(), msg.act())`. `RoomCreate` additionally validates the pool: every `voteTrackKeys` entry must parse as `game:zone:act` with `game.equals(descriptor.gameId())` → else `RoomCreateRejected("invalid vote track pool")` (the engine's `isEligibleVoteKey` filter is defense-in-depth, not the only gate — a cross-game or malformed pool is rejected at the door). Extend the phase-3 `TestRoomBroker` with a `roomCreateRejectsInvalidVotePool` case (`voteTrackKeys = List.of("s2:0:0")` on an `s3k` room → rejected; `List.of("bad")` → rejected; valid same-game pool → created).
 - `SessionRegistry.updateTrack`: owner check, rebuild `RoomEntry` with a descriptor copy carrying the new zone/act.
 - `RelayRoomManager`: relay rooms live master-side — after their `RoomHost` accepts a track change (expose a `Runnable onTrackChanged` hook or poll the descriptor on the room tick), call `registry.updateTrack(...)` with the room's host fingerprint.
 - Thread the pool: `RoomBroker`'s `RoomCreate` handling passes `create.voteTrackKeys()` into `SessionRegistry.create(...)` → store on `RoomEntry` (append component `List<String> voteTrackKeys`) → `RelayRoomManager.createRelayRoom` copies it into the relay room's `RoomHostConfig`.
@@ -595,6 +653,18 @@ class TestClientRaceSessionVote {
         assertEquals("ana", session.podiumTop(3).get(0).displayName());
         assertEquals(3, session.localStandingsRow().rank());
     }
+
+    @Test
+    void zeroVoteResultWithRetainedTrackStillLeavesVote() {
+        ClientRaceSession session = new ClientRaceSession(() -> 0L);
+        session.onControl(new ControlMessage.TrackVoteOffer(List.of("s3k:0:1", "s3k:1:0"), 5_000L));
+        assertEquals(ClientRaceSession.Phase.VOTE, session.phase());
+        // Zero-vote close: the hub announces the RETAINED current track — not an offered key.
+        session.onControl(new ControlMessage.TrackVoteResult("s3k:0:0"));
+        assertEquals(ClientRaceSession.Phase.LOBBY, session.phase());
+        assertEquals("s3k:0:0", session.lastVoteResultTrackKey());
+        assertTrue(session.voteOptions().isEmpty());
+    }
 }
 ```
 
@@ -623,7 +693,10 @@ git commit -m "feat(net): client vote mirror + podium accessors"
 
 **Files:**
 - Modify: `src/main/java/com/openggf/game/timeattack/mp/MultiplayerRaceCoordinator.java`
-- Modify: the engine host-room bootstrap (where `Engine.hostTimeAttackRoom` builds `RoomHostConfig`) — fill `voteTrackKeys` from `TimeAttackTrackCatalog`
+- Create: `src/main/java/com/openggf/game/timeattack/mp/VoteTrackPools.java` (shared catalog→pool helper)
+- Modify: the engine host-room bootstrap (where `Engine.hostTimeAttackRoom` builds `RoomHostConfig`) — fill `voteTrackKeys` from the helper
+- Modify: `src/main/java/com/openggf/net/client/MasterClient.java` (`createRoom` gains the pool parameter — Task 1)
+- Modify: `src/main/java/com/openggf/game/timeattack/mp/ServerBrowserScreen.java` (CREATE passes the pool)
 - Modify: `src/main/java/com/openggf/GameLoop.java` (one added call)
 - Test: `src/test/java/com/openggf/game/timeattack/mp/TestCoordinatorVoteInput.java`
 
@@ -646,7 +719,22 @@ public record MultiplayerHudState(boolean active, String phase, long remainingWi
 ```
 
   (`characterPolicy` from `session.roundConfig()` — `"OPEN"`/`"LOCKED"`/null pre-round; `podiumRows` = `session.podiumTop(3)`; `localRank` = `localStandingsRow() == null ? -1 : rank`.)
-  - Host bootstrap: `voteTrackKeys` = `TimeAttackTrackCatalog.tracksFor(gameId)` mapped to `track.gameId() + ":" + track.zone() + ":" + track.act()`.
+  - Vote pool at creation time — EVERY production room-creation path passes the same catalog pool (a missing pool silently disables voting for that room):
+
+```java
+public final class VoteTrackPools {
+    private VoteTrackPools() { }
+
+    /** Catalog tracks for the game as vote keys, e.g. "s3k:0:0". */
+    public static List<String> forGame(String gameId) {
+        return TimeAttackTrackCatalog.tracksFor(gameId).stream()
+                .map(track -> track.gameId() + ":" + track.zone() + ":" + track.act())
+                .toList();
+    }
+}
+```
+
+    Consumers: `Engine.hostTimeAttackRoom(...)` → `RoomHostConfig.voteTrackKeys` (LAN rooms); `ServerBrowserScreen` CREATE → `masterClient.createRoom(descriptor, routing, directPort, fingerprint, VoteTrackPools.forGame(gameId))` for BOTH master-brokered DIRECT and RELAY rooms (the broker threads it via `SessionRegistry.RoomEntry` into the relay `RoomHostConfig` — phase-4 Task 3 wiring).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -716,7 +804,7 @@ class TestCoordinatorVoteInput {
 - `pollLocalInput(InputHandler input)`: `for (int i = 0; i < 3; i++) if (input.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_1 + i)) castVote(i);` then `updateSpectate(input)` (no-op stub until Task 8).
 - Rebuild `hudState()` with the expanded record; update `MultiplayerHudRenderer` construction site compile errors by passing the new fields through (rendering itself is Task 6).
 - `GameLoop.updateLevelMode`: after the existing `coordinator.pump();` add `coordinator.pollLocalInput(input);` (the method already has the frame's `InputHandler`).
-- Host bootstrap: in the `Engine.hostTimeAttackRoom(...)` path, build `voteTrackKeys` from the catalog as specified and pass into `RoomHostConfig`.
+- Vote pool wiring: create `VoteTrackPools`; `Engine.hostTimeAttackRoom(...)` passes `VoteTrackPools.forGame(gameId)` into `RoomHostConfig`; `MasterClient.createRoom` gains the final `List<String> voteTrackKeys` parameter (thread into the `RoomCreate` message; update its phase-3 test call sites with `List.of()`); `ServerBrowserScreen`'s CREATE action passes `VoteTrackPools.forGame(gameId)`.
 
 - [ ] **Step 4: Run tests**
 
@@ -725,8 +813,8 @@ Run: `mvn "-Dtest=com.openggf.game.timeattack.mp.*" test` → PASS (existing coo
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/com/openggf/game/timeattack/mp/ src/main/java/com/openggf/GameLoop.java src/main/java/com/openggf/Engine.java src/test/java/com/openggf/game/timeattack/mp/TestCoordinatorVoteInput.java
-git commit -m "feat(timeattack): vote input seam, expanded HUD state, host vote pool"
+git add src/main/java/com/openggf/game/timeattack/mp/ src/main/java/com/openggf/GameLoop.java src/main/java/com/openggf/Engine.java src/main/java/com/openggf/net/client/MasterClient.java src/test/java/com/openggf/game/timeattack/mp/TestCoordinatorVoteInput.java src/test/java/com/openggf/net/client/TestMasterClient.java
+git commit -m "feat(timeattack): vote input seam, expanded HUD state, vote pool on every create path"
 ```
 
 ---
