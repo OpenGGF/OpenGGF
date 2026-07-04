@@ -49,7 +49,8 @@ permanent mode in its own right.
 - **Ghost files:** best runs persist as `.ggfghost` files under the save
   directory, keyed by (game, zone/act, character). Format: a small header
   (format version, game, zone/act, character, display name, total frames, final
-  time, split times) followed by **the same quantized 7-byte 60 Hz frame stream
+  time, split times, and the input-recording hash binding the ghost to the
+  recording that produced it — security spec §6.4) followed by **the same quantized 7-byte 60 Hz frame stream
   used on the wire** (§7). One canonical encoding — a ghost file's body and a
   network `GhostFrames` payload are byte-identical per frame, so solo mode
   validates the exact bytes multiplayer ships. No ROM-derived data is stored,
@@ -216,10 +217,14 @@ identity handshake — security spec §3/§6.2), `RoomCreate`, `RoomList`,
 `RoomJoin`, `RoomLeave`, `Chat`, `RoundConfig`, `RoundStart`, `RoundEnd`,
 `AttemptStart`, `AttemptFinish` (frame-count time + `inputRecordingHash` +
 `ghostStreamHash` + reserved `inputRecordingRef`), `AttemptReset`,
-`StandingsDelta`, `TrackVote`, `Ping/Pong`. The message envelope carries a
-master-issued session token; room descriptors carry a `verified` flag (always
-false in v1). All security-reserved fields are live on the wire from phase 2 —
-see security spec §11.
+`StandingsDelta`, `TrackVote`, `RecordingRequest` (hub → client: demand the
+input recording behind a finish; the upload itself goes out-of-band over HTTPS
+to the master, never the game WebSocket — security spec §6.4), `Ping/Pong`.
+The message envelope carries a session token issued by the room authority
+(master for brokered/relay rooms, player-host for direct-connect rooms —
+security spec §7.3); room descriptors carry a `verified` flag (always false in
+v1). All security-reserved fields are live on the wire from phase 2 — see
+security spec §11.
 
 Binary: `GhostFrames` (client → hub, 3 × 7-byte frames + attemptId/frameIndex
 header), `GhostAggregate` (hub → client, all near ghosts' frames for one tick),
@@ -311,4 +316,5 @@ Only the verifier service and verified-room enforcement are post-v1.
 - Custom track segments via the level editor (track abstraction is already
   (level, spawn, finish-trigger) shaped; the editor can emit segments later
   without protocol changes).
-- Account system / identity beyond per-session display names.
+- Account/OAuth binding beyond pseudonymous keypair identity (keypairs and the
+  trust ladder are in scope — security spec §3–§4; accounts would layer on top).

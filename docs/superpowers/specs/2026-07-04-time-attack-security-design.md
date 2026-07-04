@@ -24,7 +24,7 @@ verifier exists — main spec §2).
 | Fabricated time | Modified client sends arbitrary `AttemptFinish` | Replay verification (§6) |
 | Physics-hacked client | Altered engine plays "legitimately" faster | Replay verification — replay diverges |
 | Slow-motion / assisted play | Client runs the sim below real speed; inputs are humanly impossible but replay-perfect | **Live pacing validation** (§7.1) — replay verification alone cannot catch this |
-| Ghost-stream spoofing | Fake positions/teleporting ghosts for visual griefing | Hub sanity checks (§7.2) + replay position cross-check (§6.4) |
+| Ghost-stream spoofing | Fake positions/teleporting ghosts for visual griefing | Hub sanity checks (§7.2) + replay position cross-check (§6.5) |
 | Malformed packets | Crash/hang the hub or other clients via parser abuse | Strict framing, schema validation, fuzzing (§7.3, §10) |
 | Resource exhaustion | Oversized messages, message floods, connection floods | Pre-parse rate/byte caps, connection caps, timeouts (§7.3, §8) |
 | DDoS | Volumetric floods, join floods, fake-room pollution of the browser | Infra posture + PoW attack mode + authenticated room registry (§8) |
@@ -159,7 +159,26 @@ main class.
 - Casual rooms stay client-reported; the verifier spot-checks top times
   post-hoc when capacity allows, and a failed spot-check still sanctions.
 
-### 6.4 What replay verification covers — and doesn't
+### 6.4 Recording custody & upload lifecycle
+
+- **Client-side custody:** every attempt's input recording is captured locally
+  and keyed by its hash. Recordings for finished attempts are retained for the
+  round duration plus a grace window; the recording behind a personal best is
+  kept alongside its `.ggfghost` file. The `.ggfghost` header carries the
+  input-recording hash, binding a ghost to the recording that produced it.
+- **Upload on demand:** when a time is selected for verification (verified-room
+  finish, or post-hoc spot-check), the hub sends a `RecordingRequest`
+  (attempt ref + expected hash) over the control channel. The client uploads
+  the recording **out-of-band over HTTPS** to a master endpoint
+  (`PUT /recordings/{hash}`) — never over the game WebSocket, so a blob can't
+  head-of-line-block live ghost streams. Missing the upload deadline (config,
+  ~minutes) voids the time and records a violation.
+- **Master retention:** uploaded recordings are held for the verification job
+  plus a bounded post-verdict window (config, default days), then deleted.
+  Verdicts — hashes plus verifier signatures — are retained per §5; the hash
+  chain means a verdict stays auditable after the blob is gone.
+
+### 6.5 What replay verification covers — and doesn't
 
 Covers: fabricated times, physics hacks, and (via position cross-check of the
 submitted ghost-stream hash against replay output) ghost spoofing bundled with
@@ -188,6 +207,20 @@ per-frame position delta below a hard cap (max legitimate speed + margin);
 (+ bounded burst). Violations: drop the batch → kick on repeat → sanction
 record. Implemented as a `GhostStreamValidator` inside `GhostHub`.
 
+**Where bounds and caps come from — the ROM-free constraint.** `GhostHub`
+must run on the engine-free, ROM-free master, so it cannot load levels and
+must not trust host-supplied limits. Track checks consume a
+**`TrackValidationProfile`** (track id → level width/height, max plausible
+per-frame speed, frame-rate cap): pure numeric metadata of the same kind as
+the ROM offsets already checked into the constants files — no asset bytes.
+An engine-side build tool exports the profile table for the supported track
+list; the table is a checked-in resource bundled with the master. The
+player-host path instead builds the profile live from its loaded level.
+`GhostStreamValidator` takes a `TrackValidationProfileSource` — bundled table
+on the master, live level on a host. A track with no profile **explicitly
+degrades** to the track-independent checks only (monotonicity, frame-rate
+caps, a global speed ceiling from the repo's physics constants).
+
 ### 7.3 Protocol hygiene
 
 - Strict length-prefixed framing with hard per-type size caps; schema
@@ -198,9 +231,12 @@ record. Implemented as a `GhostStreamValidator` inside `GhostHub`.
 - **TLS (`wss://`) required on the master** — integrity, privacy, and
   front-proxy compatibility. Player-hosted direct connect may be plaintext
   (LAN/VPN context).
-- Session tokens: master issues a per-session token at handshake; the message
-  envelope reserves a token field from day 1 so relay/host can validate
-  membership cheaply.
+- Session tokens are issued by the **room authority** — whoever admits you:
+  the master for brokered/relay rooms, the player-host for direct-connect
+  rooms. The envelope carries the token from day 1 in both cases. Phase 2
+  host-issued tokens are opaque room-scoped random values (cheap membership
+  validation only); identity-bound token semantics arrive with the master in
+  phase 3. Same field, upgraded meaning — no protocol break.
 
 ## 8. DDoS posture
 
