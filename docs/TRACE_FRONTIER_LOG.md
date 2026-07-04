@@ -12,11 +12,12 @@ CNZ2 boss-lock boundary-source advance, the round 76 CNZ2 sidekick
 max-Y advance, and the round 79 CNZ2 Obj51 flee lifetime fix,
 integrated into conductor branch `bugfix/ai-s2-trace-next`: ARZ2 is green
 under `frontierOnly` and was banked into `next` as `7ef0928da`; CNZ2 is
-green under `frontierOnly` on conductor merge `3f29f2ac0`; MTZ3 round 96
-advances the normal targeted replay to f14204 / 188
-(`x_speed` expected `0x0200`, actual `0x0000`), and OOZ2 is green after the
+green under `frontierOnly` on conductor merge `3f29f2ac0`; MTZ3 is GREEN
+after round 97 (boss/orb init-frame dispatch consumes, post-movement hit/defeat
+reaction deferral, orb break tail + Ani_obj53 animation, boss persistence, and
+the S2 impatient-wait blink input gate), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
-is now MTZ3 only.
+is now EMPTY: the full S2 level-select suite passes (MSE:OK passed=48).
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -38,6 +39,79 @@ probe is required before the bounce is accepted.
 Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
+
+## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green
+
+Worktree `.worktrees/ai-s2-mtz3-round96-orbinit`, branch
+`bugfix/ai-s2-mtz3-round96-orbinit-next` off conductor `bugfix/ai-s2-trace-next`
+(`759e14802`). Baseline: MTZ3 f14204 / 188 (`x_speed` expected `0x0200`, actual
+`0x0000`).
+
+Root-cause chain (each verified against trace aux `object_near` boss/orb rows,
+which carry per-frame ROM positions -- no regen needed):
+1. **Obj54 init-frame dispatch**: ROM Obj54_Init ends `rts` (no movement); the
+   engine ran full boss logic on its first update, leaving the boss one float
+   frame ahead of ROM for the whole fight (aux slot 21 y: engine(t) == ROM(t+1)
+   from spawn). Fixed by consuming the first `updateBossLogic` dispatch.
+2. **Obj53 orb-0 init frame**: Obj53_Init reuses the spawner slot
+   (`movea.l a0,a1`), so orb 0 first orbits one frame after orbs 1-6. Engine
+   updated all seven uniformly (round-94's "one orbit update ahead" on slot 22).
+   Fixed with an RT_INIT first-dispatch consume for orb index 0.
+3. **Obj54 hit/defeat reaction deferral**: AnimateFace's hit branch and
+   CheckHit's Obj54_Defeated run AFTER the current routine's Boss_MoveObject.
+   The engine applied them from the touch pass, entering SubA/Sub10 one frame
+   early (SubA: boss y diverged from the first hit frame; Sub10: the Sub12 flee
+   `addq.w #2,Camera_Max_X_pos` opening ran one frame early, camera_x +2).
+   Replaces the round-95 partial pendingXVelocityClearAfterMove.
+4. **Obj53 break-frame tail + collision RAM semantics + bounce animation**: the
+   break path's `bra.s +` still runs OrbitBoss/SetAnimPriority the same pass
+   (rounds 92-93's rejected tail now lands because fixes 1-3 removed the
+   compensating phase lead); the round-96 `verticalAngle += 0x10` contraction
+   fudge is deleted (ROM's tilt tail never touches objoff_3B; ROM va at the
+   slot-23 break derives to $B4 from the aux y, engine now matches); an
+   attacked orb exposes collision_flags 0 immediately (Touch_Enemy_Part2
+   mutates col=$DA->$00 in RAM, so the other player's touch skips it -- the
+   f13175 Sonic-bounces-where-Tails-burst error); BounceAround only runs its
+   sine motion once mapping_frame == $B, via a faithful Ani_obj53
+   AnimateSprite port (plain/$FF/$FE/$FD/$FC) plus Obj53_CheckPlayerHit's
+   player-hurt pop. ROM's orb 5 broke at the floor line and sat at $4AC for
+   ~68 frames while the break animation reached $B; the engine bounced
+   immediately.
+5. **Obj54 persistence**: the boss has no out_of_range tail; the generic
+   off-screen cull unloaded it mid-flee at f14949, stalling the camera opening.
+6. **S2 impatient-wait blink gate (player code)**: the last 4 errors (f15309)
+   were ROM ignoring 3 frames of a right press on plain ground. BizHawk probe
+   (`tools/bizhawk/diag_s2_mtz3_ctrl_lock.lua`, window 41454-41500) showed
+   Ctrl_1/Ctrl_1_Logical fresh, Control_Locked=0, move_lock=0, obj_control=0,
+   and anim $05->$0A->$00: ROM Obj01_MdNormal_Checks (s2.asm:36444-36468) skips
+   the whole grounded update while Blink/GetUp plays. Implemented as a
+   profile-data-driven gate (blink/getUp anim ids set only for S2 Sonic) at the
+   top of modeNormal, with a resolver escape so the anim byte persists while the
+   interrupt plays, using the ROM-loaded Ani_Sonic scripts.
+
+Scope note / follow-up: the blink gate is scoped to NON-RIDING stands
+(`isOnObject()` returns false). The four existing per-object
+`staleHorizontalLogicalInputFramesWhileRiding` models (CNZ ObjD5 elevator, MTZ
+Obj65 long platform, Obj6C conveyor, SCZ Tornado; all 3 frames, tornado gated
+on >=120 ride frames) are the SAME ROM blink freeze rediscovered per-object.
+An attempt to remove all four and let the gate cover rides greened CNZ1/CNZ2
+but regressed MTZ2 f8590 / MTZ3 f9134 / SCZ f5116: the engine's ride-time WAIT
+animation frame index does not yet track ROM anim_frame exactly (wait-clock
+resets differ on carried stands). Unifying the ride cases under the gate needs
+that cadence brought to parity first; until then the carve-outs stay.
+
+Verification (all in this worktree):
+- `mvn "-Dtest=TestS2Mtz3LevelSelectTraceReplay" ... test` -> PASS (green).
+- `mvn "-Dtest=TestS2*TraceReplay" ... test` -> MSE:OK passed=48 failed=0.
+  **The full S2 level-select trace suite is green for the first time.**
+- `mvn "-Dtest=TestS1*TraceReplay" ... test` -> MSE:OK passed=48 failed=0.
+- S3K guards + unit guards (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+  `TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+  `TestS2ObjectOccupancyOracle`, `TestTopSolidRoutineProfileAdoption`,
+  `TestPhysicsProfile`, `TestSpindashGating`) -> all pass.
+  `TestArchitecturalSourceGuard` fails PRE-EXISTING on the conductor branch
+  (AbstractPlayableSprite 3130 vs 3115 ratchet; file untouched by this round).
 
 ## 2026-07-03 - S2 round 96 MTZ3 later-orb refresh predicate
 

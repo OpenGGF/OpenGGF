@@ -640,8 +640,65 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// MODE METHODS
 	// ========================================
 
+	/**
+	 * ROM S2 Obj01_MdNormal_Checks (s2.asm:36444-36468). Once the standing WAIT
+	 * animation reaches the impatient foot-tap stage (anim_frame >= $1E), the
+	 * entire grounded update (spindash/jump/move/roll/level bound/ObjectMove/
+	 * AnglePos) is skipped every frame. A held direction or jump button first
+	 * switches the animation to Blink -- or GetUp past the lying-down stage
+	 * (anim_frame >= $AC) -- and control only resumes after that animation's
+	 * $FD command switches back to walk. A fresh A/B/C press bypasses the whole
+	 * check, so jumping out of deep wait responds instantly. The gate is
+	 * data-driven: only profiles that define a blink anim (S2 Sonic) engage it;
+	 * S1 and S3K have no equivalent in their disassemblies.
+	 */
+	private boolean doWaitBlinkInterruptCheck() {
+		if (!(sprite.getAnimationProfile()
+				instanceof com.openggf.sprites.animation.ScriptedVelocityAnimationProfile velocityProfile)) {
+			return false;
+		}
+		int blinkId = velocityProfile.getBlinkAnimId();
+		if (blinkId < 0) {
+			return false;
+		}
+		// Scope: plain-terrain standing only for now. Object riders keep their
+		// existing per-object stale-logical-input models (CNZ ObjD5 elevator,
+		// MTZ Obj65/Obj6C platforms, SCZ Tornado), which encode the same ROM
+		// blink freeze as observed through each ride's own anim cadence.
+		// Unifying those under this gate needs the ride-time wait-animation
+		// cadence brought to ROM parity first (see TRACE_FRONTIER_LOG).
+		if (sprite.isOnObject()) {
+			return false;
+		}
+		// ROM: move.b (Ctrl_1_Press_Logical).w,d0 / andi #ABC / bne Obj01_MdNormal
+		if (inputJumpPress) {
+			return false;
+		}
+		int anim = sprite.getAnimationId();
+		int getUpId = velocityProfile.getGetUpAnimId();
+		if (anim == blinkId || (getUpId >= 0 && anim == getUpId)) {
+			return true; // cmpi Blink/GetUp -> Obj01_MdNormal_Skip
+		}
+		if (anim != velocityProfile.getIdleAnimId()) {
+			return false;
+		}
+		if (sprite.getAnimationFrameIndex() < 0x1E) {
+			return false; // cmpi.b #$1E,anim_frame / blo Obj01_MdNormal
+		}
+		// ROM: move.b (Ctrl_1_Held_Logical).w,d0 / andi #UDLR|ABC / beq Skip
+		if (!(inputUp || inputDown || inputLeft || inputRight || inputJump)) {
+			return true; // deep wait with nothing held still skips the frame
+		}
+		int next = (getUpId >= 0 && sprite.getAnimationFrameIndex() >= 0xAC) ? getUpId : blinkId;
+		sprite.setAnimationId(next);
+		return true;
+	}
+
+
 	/** Obj01_MdNormal: Ground walking state */
 	private void modeNormal() {
+		if (doWaitBlinkInterruptCheck()) return;
+
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 

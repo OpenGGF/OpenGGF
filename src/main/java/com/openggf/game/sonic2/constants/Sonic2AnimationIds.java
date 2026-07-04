@@ -14,6 +14,8 @@ public enum Sonic2AnimationIds implements AnimationId {
     LOOK_UP(0x07),
     DUCK(0x08),
     SPINDASH(0x09),
+    BLINK(0x0A),         // Impatient-wait interrupt: blink before resuming control
+    GET_UP(0x0B),        // Impatient-wait interrupt: stand up from lying down
     BALANCE2(0x0C),      // Balancing on edge, more precarious (closer to falling)
     SKID(0x0D),          // Braking/halt animation
     FLOAT(0x0E),         // Suspended/floating (used by Grabber)
@@ -77,6 +79,7 @@ public enum Sonic2AnimationIds implements AnimationId {
             case LOOK_UP        -> CanonicalAnimation.LOOK_UP;
             case DUCK           -> CanonicalAnimation.DUCK;
             case SPINDASH       -> CanonicalAnimation.SPINDASH;
+            case BLINK, GET_UP  -> CanonicalAnimation.WAIT;
             case BALANCE2       -> CanonicalAnimation.BALANCE2;
             case SKID           -> CanonicalAnimation.SKID;
             case FLOAT          -> CanonicalAnimation.FLOAT;

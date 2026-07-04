@@ -9,6 +9,9 @@ import com.openggf.sprites.managers.PlayableSpriteAnimation;
  */
 public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile {
     private int idleAnimId;
+    // S2 impatient-wait interrupt anims (Obj01_MdNormal_Checks); -1 = game has none.
+    private int blinkAnimId = -1;
+    private int getUpAnimId = -1;
     private int walkAnimId;
     private int runAnimId;
     private int rollAnimId;
@@ -46,6 +49,8 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
 
     public ScriptedVelocityAnimationProfile setIdleAnimId(int idleAnimId) { this.idleAnimId = idleAnimId; return this; }
     public ScriptedVelocityAnimationProfile setIdleAnimId(AnimationId id) { return setIdleAnimId(id.id()); }
+    public ScriptedVelocityAnimationProfile setBlinkAnimId(AnimationId id) { this.blinkAnimId = id.id(); return this; }
+    public ScriptedVelocityAnimationProfile setGetUpAnimId(AnimationId id) { this.getUpAnimId = id.id(); return this; }
     public ScriptedVelocityAnimationProfile setWalkAnimId(int walkAnimId) { this.walkAnimId = walkAnimId; return this; }
     public ScriptedVelocityAnimationProfile setWalkAnimId(AnimationId id) { return setWalkAnimId(id.id()); }
     public ScriptedVelocityAnimationProfile setRunAnimId(int runAnimId) { this.runAnimId = runAnimId; return this; }
@@ -115,6 +120,16 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // persist for the duration of the lock. Without this, resolveAnimationId would
         // immediately override the animation with idle/walk based on current state.
         if (sprite.getMoveLockTimer() > 0) {
+            return null;
+        }
+        // ROM S2 Obj01_MdNormal_Checks (s2.asm:36444-36468): while the
+        // impatient-wait Blink/GetUp interrupt animation plays, the whole
+        // grounded update -- including Sonic_Move's anim writes -- is skipped,
+        // so the anim byte persists until the script's $FD command switches
+        // back to walk. Mirror that by leaving the anim untouched here.
+        int interruptAnim = sprite.getAnimationId();
+        if ((blinkAnimId >= 0 && interruptAnim == blinkAnimId)
+                || (getUpAnimId >= 0 && interruptAnim == getUpAnimId)) {
             return null;
         }
         // Drowning uses its own animation (0x17) throughout both pre-death and dead phases
@@ -295,6 +310,14 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             return 0;
         }
         return Math.min(fallbackFrame, frameCount - 1);
+    }
+
+    public int getBlinkAnimId() {
+        return blinkAnimId;
+    }
+
+    public int getGetUpAnimId() {
+        return getUpAnimId;
     }
 
     public int getIdleAnimId() {
