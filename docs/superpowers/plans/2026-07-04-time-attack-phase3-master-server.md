@@ -69,7 +69,8 @@ Expected: on `feature/multiplayer-time-attack` (based on `next` — owner direct
 **Files:**
 - Modify: `src/main/java/com/openggf/net/protocol/ControlMessage.java` (new nested records + `@JsonSubTypes` entries)
 - Modify: `src/main/java/com/openggf/net/protocol/GhostPackets.java` (Roster codec for the reserved `TYPE_ROSTER = 0x03`; new `TYPE_RELAY_GUEST_BINARY = 0x04`)
-- Modify: `src/main/java/com/openggf/net/protocol/Protocol.java` (add `MAX_PLAYERS_RELAY = 256` — consumed by the roster codec cap here and the `RoomHostConfig` clamp in Task 8 — and `MAX_MASTER_FRAME_BYTES = MAX_CONTROL_BYTES + 1024` — tunnel framing headroom, see Interfaces)
+- Modify: `src/main/java/com/openggf/net/protocol/Protocol.java` (add `MAX_PLAYERS_RELAY = 256` — consumed by the roster codec cap here and the `RoomHostConfig` clamp in Task 8 — and `MAX_MASTER_FRAME_BYTES = 2 * MAX_CONTROL_BYTES + 1024` — tunnel framing headroom, see Interfaces)
+- Modify: `src/main/java/com/openggf/net/protocol/ControlCodec.java` (extract the size check into a `decode(String text, int maxBytes)` overload — see Interfaces)
 - Test: `src/test/java/com/openggf/net/protocol/TestPhase3Protocol.java`
 - Modify: `CHANGELOG.md` (Unreleased entry: "Multiplayer time attack (phase 3): master server — server browser, room brokering, relay rooms to 256 players with relevance filtering/roster/backpressure, TLS, identity store + trust ladder, sanctions, proof-of-work admission, load-test and fuzz harnesses.")
 
@@ -82,9 +83,12 @@ Expected: on `feature/multiplayer-time-attack` (based on `next` — owner direct
   - Standings at scale (main spec §6.3 — never push the full list to hundreds of clients): `StandingsPageRequest(int page)`; `StandingsPage(List<StandingsRow> rows, int page, int totalPages)`; `RankUpdate(int rank, int bestTimeFrames)` (unicast to a finisher whose row may be outside the broadcast cap).
 - Produces — `GhostPackets` additions:
   - `record RosterEntry(int playerSlot, int cellX, int cellY, int status)`; status constants `ROSTER_STATUS_IDLE = 0`, `ROSTER_STATUS_RUNNING = 1`, `ROSTER_STATUS_FINISHED = 2`.
-  - `byte[] encodeRoster(List<RosterEntry> entries)` / `List<RosterEntry> decodeRoster(byte[] packet)` — layout: `u8 type=0x03, u16 entryCount BE, then per entry u8 slot, u16 cellX BE, u8 cellY, u8 status` (position quantized to 64-px cells; 5 bytes/player, 256 players ≈ 1.3 KB at 1 Hz — within main spec §4.3's budget). Count is `u16` because a full relay room has 256 entries — a `u8` count caps at 255, one short of `MAX_PLAYERS_RELAY`. cellX is `u16` because acts wider than 16 320 px exist and the phase-4 minimap consumes this field; cellY stays `u8` (no act approaches 16 320 px tall). cellX clamps to 0..65535, cellY to 0..255. Encode rejects more than `Protocol.MAX_PLAYERS_RELAY` entries.
+  - `byte[] encodeRoster(List<RosterEntry> entries)` / `List<RosterEntry> decodeRoster(byte[] packet)` — layout: `u8 type=0x03, u16 entryCount BE, then per entry u8 slot, u16 cellX BE, u8 cellY, u8 status` (position quantized to 64-px cells; 5 bytes/player, 256 players ≈ 1.3 KB at 1 Hz — within main spec §4.3's budget). Count is `u16` because a full relay room has 256 entries — a `u8` count caps at 255, one short of `MAX_PLAYERS_RELAY`. cellX is `u16` because acts wider than 16 320 px exist and the phase-4 minimap consumes this field; cellY stays `u8` (no act approaches 16 320 px tall). Range discipline is split: the HUB's quantizer clamps into wire range (`x >>> 6` capped — Task 3); the CODEC **rejects** out-of-range fields (`slot`/`cellY`/`status` outside 0..255, `cellX` outside 0..65535, status above `ROSTER_STATUS_FINISHED`) with `ProtocolViolationException` — a bare `(byte)`/`(short)` cast would silently wrap on the wire, contradicting the hardening rules below. Encode also rejects more than `Protocol.MAX_PLAYERS_RELAY` entries.
   - `TYPE_RELAY_GUEST_BINARY = 0x04`: `byte[] encodeRelayGuestBinary(int guestId, byte[] payload)` / `record RelayGuestBinary(int guestId, byte[] payload)` + `decodeRelayGuestBinary(byte[])` — layout `u8 type, u16 guestId BE, payload` (payload itself is a normal ghost packet; total still ≤ `Protocol.MAX_BINARY_BYTES`... the tunnel adds 3 bytes, so payload cap = `MAX_BINARY_BYTES - 3`, enforced).
-  - **Tunnel framing headroom:** `RelayGuestText` nests a full control envelope (itself up to `Protocol.MAX_CONTROL_BYTES`) inside another control envelope, so host↔master tunnel frames can legitimately exceed `MAX_CONTROL_BYTES`. Add `Protocol.MAX_MASTER_FRAME_BYTES = MAX_CONTROL_BYTES + 1024` — the WS frame/aggregation cap used ONLY on the master connection's pipeline (Task 12) and the master-client/host-link assembler (Task 13). Room and direct-connect pipelines keep the tight phase-2 caps; a room-level message near the cap tunnels without truncation.
+  - **Tunnel framing headroom:** `RelayGuestText` nests a full control envelope (itself up to `Protocol.MAX_CONTROL_BYTES`) inside another control envelope AS A JSON STRING — worst-case string escaping (`"` → `\"`, `\` → `\\`) can nearly DOUBLE the inner bytes. Add `Protocol.MAX_MASTER_FRAME_BYTES = 2 * MAX_CONTROL_BYTES + 1024` (17 408) — sized for a fully-escaped near-cap inner envelope plus wrapper overhead. The raised cap applies at BOTH layers of the master connection, and only there:
+    - **Transport:** the master pipeline's WS frame/aggregation caps (Task 12) and the master-client/host-link assembler (Task 13).
+    - **Decode:** raising the frame cap alone is not enough — phase-2 `ControlCodec.decode(String)` rejects text over `MAX_CONTROL_BYTES`, so an accepted large frame would still die in the decoder. Extract the size check into `ControlCodec.decode(String text, int maxBytes)`; the existing `decode(String)` delegates with `MAX_CONTROL_BYTES` (every phase-2 call site keeps its tight cap), and the master-connection decode paths — `RoomBroker.onText` (Task 9) and `MasterClient`'s inbound routing (Task 13) — call the overload with `MAX_MASTER_FRAME_BYTES`.
+    - Per-type validation gives `RelayGuestText.text` its own cap of `MAX_CONTROL_BYTES` (it carries exactly one inner envelope, which is itself capped). Room and direct-connect pipelines keep the tight phase-2 caps everywhere; the inner envelope is re-decoded at its destination under the NORMAL cap.
   - Same hardening discipline as phase 2: exact-length checks, count/range checks, `ProtocolViolationException`, never allocate from unvalidated counts.
 
 - [ ] **Step 1: Write the failing test**
@@ -181,6 +185,37 @@ class TestPhase3Protocol {
         assertThrows(ProtocolViolationException.class,
                 () -> GhostPackets.decodeRelayGuestBinary(new byte[] {0x04, 0, 1}));
     }
+
+    @Test
+    void nearCapTunneledTextNeedsTheMasterDecodeCap() throws Exception {
+        // Worst-case inner envelope: near-cap and dominated by quotes, so JSON string
+        // escaping nearly doubles it inside the RelayGuestText wrapper.
+        String inner = "\"".repeat(Protocol.MAX_CONTROL_BYTES - 200);
+        ControlMessage wrapped = new ControlMessage.RelayGuestText(7, inner);
+        String wire = ControlCodec.encode(null, wrapped);
+        int wireBytes = wire.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+        assertTrue(wireBytes > Protocol.MAX_CONTROL_BYTES, "escaped wrapper must exceed the room cap");
+        assertTrue(wireBytes <= Protocol.MAX_MASTER_FRAME_BYTES, "must fit the master cap");
+        assertEquals(wrapped, ControlCodec.decode(wire, Protocol.MAX_MASTER_FRAME_BYTES).message());
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(wire),
+                "the phase-2 single-arg decode keeps its tight cap");
+    }
+
+    @Test
+    void rosterEncodeRejectsOutOfRangeFieldsInsteadOfWrapping() {
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.encodeRoster(
+                List.of(new GhostPackets.RosterEntry(0, -1, 0, 0))));
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.encodeRoster(
+                List.of(new GhostPackets.RosterEntry(0, 0x10000, 0, 0))));
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.encodeRoster(
+                List.of(new GhostPackets.RosterEntry(0, 0, -1, 0))));
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.encodeRoster(
+                List.of(new GhostPackets.RosterEntry(0, 0, 256, 0))));
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.encodeRoster(
+                List.of(new GhostPackets.RosterEntry(256, 0, 0, 0))));
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.encodeRoster(
+                List.of(new GhostPackets.RosterEntry(0, 0, 0, GhostPackets.ROSTER_STATUS_FINISHED + 1))));
+    }
 }
 ```
 
@@ -240,10 +275,21 @@ Expected: COMPILATION ERROR (new records absent).
         ByteBuffer out = ByteBuffer.allocate(3 + entries.size() * 5);
         out.put((byte) TYPE_ROSTER).putShort((short) entries.size());
         for (RosterEntry entry : entries) {
+            requireRange(entry.playerSlot(), 0xFF, "roster slot");
+            requireRange(entry.cellX(), 0xFFFF, "roster cellX");
+            requireRange(entry.cellY(), 0xFF, "roster cellY");
+            requireRange(entry.status(), ROSTER_STATUS_FINISHED, "roster status");
             out.put((byte) entry.playerSlot()).putShort((short) entry.cellX())
                     .put((byte) entry.cellY()).put((byte) entry.status());
         }
         return out.array();
+    }
+
+    /** Reject rather than let a narrowing cast silently wrap on the wire. */
+    private static void requireRange(int value, int maxInclusive, String field) {
+        if (value < 0 || value > maxInclusive) {
+            throw new ProtocolViolationException(field + " out of range: " + value);
+        }
     }
 
     public static List<RosterEntry> decodeRoster(byte[] packet) {
@@ -283,6 +329,29 @@ Expected: COMPILATION ERROR (new records absent).
 
 (Reuses the existing private `checked(byte[], int, int)` helper. Add the missing `java.util.List` import if absent.)
 
+`ControlCodec.java` — extract the size gate into an overload (phase-2 behavior unchanged at every existing call site):
+
+```java
+    public static DecodedControl decode(String text) {
+        return decode(text, Protocol.MAX_CONTROL_BYTES);
+    }
+
+    /** Master-connection paths pass Protocol.MAX_MASTER_FRAME_BYTES (tunnel headroom, see Interfaces). */
+    public static DecodedControl decode(String text, int maxBytes) {
+        // ...move the existing byte-length check here, comparing against maxBytes,
+        // then the existing Jackson parse + per-type validation unchanged...
+    }
+```
+
+`Protocol.java`:
+
+```java
+    public static final int MAX_PLAYERS_RELAY = 256;
+    /** Master-connection frame/decode cap: a RelayGuestText wrapper around a fully-escaped
+     *  near-cap inner envelope can approach 2x MAX_CONTROL_BYTES (JSON string escaping). */
+    public static final int MAX_MASTER_FRAME_BYTES = 2 * MAX_CONTROL_BYTES + 1024;
+```
+
 - [ ] **Step 4: Run tests to verify they pass — including phase-2 protocol tests**
 
 Run: `mvn "-Dtest=com.openggf.net.protocol.*" test`
@@ -291,7 +360,7 @@ Expected: PASS (phase-2 `TestControlCodec`/`TestGhostPackets` unaffected + 5 new
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/com/openggf/net/protocol/ControlMessage.java src/main/java/com/openggf/net/protocol/GhostPackets.java src/main/java/com/openggf/net/protocol/Protocol.java src/test/java/com/openggf/net/protocol/TestPhase3Protocol.java CHANGELOG.md
+git add src/main/java/com/openggf/net/protocol/ControlMessage.java src/main/java/com/openggf/net/protocol/GhostPackets.java src/main/java/com/openggf/net/protocol/Protocol.java src/main/java/com/openggf/net/protocol/ControlCodec.java src/test/java/com/openggf/net/protocol/TestPhase3Protocol.java CHANGELOG.md
 git commit -m "feat(timeattack): phase-3 broker/PoW/relay control messages and roster packet
 
 Changelog: updated
@@ -2131,7 +2200,7 @@ Skills: n/a"
 **Interfaces:**
 - Consumes: Tasks 5–8 + `HostHandshake`/`SessionTokenIssuer`/`HubConnection`/`ControlCodec`.
 - Produces `RoomBroker(PlayerIdentity masterIdentity, MasterConfig config, SessionRegistry registry, IdentityStore store, TrustLadder ladder, NewIdentityCache cache, LongSupplier clock, RelayRoomDirectory relays, DirectTunnelDirectory tunnels)` — one instance, broker-loop-confined. The explicit `IdentityStore` dependency is required for the identity-creation PoW gate: `TrustLadder.tierOf()` intentionally collapses both absent identities and durable NEW rows to `NEW`, but the broker must challenge only row-absent fingerprints. `RelayRoomDirectory` is a small interface implemented by Task 10's manager: `String createRelayRoom(SessionRegistry.RoomEntry entry); void noteGuestTier(String fingerprint, boolean isNew); boolean attach(HubConnection connection, String roomId, String fingerprint, String displayName); void hostLeft(String roomId);` (`attach` returns false = room gone; `noteGuestTier` feeds the room's chat gate on the broker loop before handoff so the gate never touches SQLite cross-thread — see Task 10). `DirectTunnelDirectory` is implemented by Task 11's `GuestTunnelRouter`: `void registerHost(String roomId, HubConnection hostConnection); OptionalInt openGuest(String roomId, HubConnection guestConnection); void unregisterHost(String roomId);`.
-  - Transport hooks mirroring `RoomHost`: `onConnected(HubConnection)`, `onText(HubConnection, String)`, `onDisconnected(HubConnection)`, `tick()` (admission timeouts + `registry.expireStale()` + identity GC once per hour).
+  - Transport hooks mirroring `RoomHost`: `onConnected(HubConnection)`, `onText(HubConnection, String)`, `onDisconnected(HubConnection)`, `tick()` (admission timeouts + `registry.expireStale()` + identity GC once per hour). `onText` decodes with `ControlCodec.decode(text, Protocol.MAX_MASTER_FRAME_BYTES)` — the master connection carries tunnel-wrapped envelopes that legitimately exceed the room cap (Task 1); every other decode site in the codebase keeps the single-arg tight-cap form.
   - Handshake: reuses `HostHandshake` with `requiredDeterminismFingerprint = null` (accept any — gate at join). After `Admit`:
     - banned → `JoinRejected("account sanctioned")` + close (security spec §4: rejected at handshake).
     - **Identity creation stamp** (security spec §3): if the fingerprint has no store row AND is not stamped this session, send `PowChallenge("IDENTITY", "", config.identityPowBits())`; the connection is PENDING_POW until a valid `PowSolution("IDENTITY", nonce)` verifies against the presented pubkey (`ProofOfWork.verify(publicKeyEncoded, nonce, bits)`). Failure → violation counter → close on 3.
@@ -3218,7 +3287,7 @@ Skills: n/a"
 **Interfaces:**
 - Produces `MasterServer.start(MasterConfig config, Path dataDir)` → running server; `int port()`; `void execute(Runnable task)` (broker loop); `RoomBroker broker()`; `RelayRoomManager relays()`; `void close()`. Wiring: one `NioEventLoopGroup(1)` acceptor/broker loop + one `NioEventLoopGroup(cores)` whose children become the relay `roomLoops`; `SqliteIdentityStore(dataDir.resolve(config.dbPath()))`, `NewIdentityCache`, `TrustLadder(config.thresholds())`, `SessionRegistry`, `GuestTunnelRouter`, `RelayRoomManager(..., (roomId, count) -> registry.heartbeat(roomId, count))` (the player-count sink runs on the broker loop — it keeps RELAY browser rows fresh since the registry's expiry is DIRECT-only), `RoomBroker(masterIdentity, config, registry, store, ladder, cache, clock, relays, guestTunnelRouter)` — ALL broker-loop-confined except the relay rooms; relay ticks scheduled at 50 ms per room loop; registry expiry + hourly identity GC on the broker loop.
 - TLS (security spec §7.3): `SslContextBuilder.forServer(new File(config.tlsCertPath()), new File(config.tlsKeyPath())).build()`; the `SslHandler` leads the pipeline. `config.plaintextForTest()` skips it with `LOG.warning("MASTER RUNNING WITHOUT TLS — test mode only")`. Rest of the pipeline = phase-2 hygiene with ONE deliberate cap change: `HttpServerCodec`, `HttpObjectAggregator(8192)`, `WebSocketServerProtocolHandler("/master", null, true, Protocol.MAX_MASTER_FRAME_BYTES)`, `WebSocketFrameAggregator(Protocol.MAX_MASTER_FRAME_BYTES)` — the master cap includes the Task-1 tunnel headroom, because `RelayGuestText` frames nest a full room control envelope and would exceed `MAX_CONTROL_BYTES` — `IdleStateHandler(60, 0, 0)`, `MasterChannelHandler` (per-IP connection cap + per-connection message rate bucket — copy the constants/logic from `RaceHostChannelHandler`; keep them in one place by promoting the phase-2 `ConnectionCounter` + rate-bucket into a small shared `net.host` utility class `ConnectionHygiene` used by both handlers).
-- `MasterChannelHandler` routing: connections start in BROKER mode (`broker.onText`, marshalled onto the broker loop); after a successful `RelayAttach` for a RELAY room, the handler flips to ROOM mode and routes text/binary to the attached room via `RelayRoomManager.RoomAccess` (marshalled onto the room's loop); after a successful `RelayAttach` for a DIRECT fallback, the handler flips to TUNNEL_GUEST mode with the allocated guestId and routes text/binary into `GuestTunnelRouter.guestText/guestBinary`. The broker exposes the attach outcome via a `Consumer<AttachResult>` callback parameter (`record AttachResult(Mode mode, String roomId, int guestId)`). Host connections that own DIRECT rooms stay in BROKER mode for browser/heartbeat commands, but inbound `RelayGuest*` messages and 0x04 binary from that host are intercepted and routed to `router.onHostControl/onHostBinary` before ordinary broker dispatch. **Disconnects route by mode:** BROKER → `broker.onDisconnected` on the broker loop (existing path); ROOM → the attached room's `onDisconnected` on ITS loop **and** `broker.onDisconnected` on the broker loop — the broker keeps its member record after the mode flip (it stops routing traffic, not tracking ownership) precisely so a relay-room OWNER's death still tears down their rooms via `removeByHostFingerprint` + `relays.hostLeft`; TUNNEL_GUEST → `router.guestDisconnected(guestId)` on the broker loop (which sends `RelayGuestClose` to the host) plus the same broker teardown.
+- `MasterChannelHandler` routing: connections start in BROKER mode (`broker.onText`, marshalled onto the broker loop); after a successful `RelayAttach` for a RELAY room, the handler flips to ROOM mode and routes text/binary to the attached room via `RelayRoomManager.RoomAccess` (marshalled onto the room's loop); after a successful `RelayAttach` for a DIRECT fallback, the handler flips to TUNNEL_GUEST mode with the allocated guestId and routes text/binary into `GuestTunnelRouter.guestText/guestBinary`. The broker exposes the attach outcome via a `Consumer<AttachResult>` callback parameter (`record AttachResult(Mode mode, String roomId, int guestId)`). Host connections that own DIRECT rooms stay in BROKER mode for browser/heartbeat commands, but inbound `RelayGuest*` messages and 0x04 binary from that host are intercepted and routed to `router.onHostControl/onHostBinary` before ordinary broker dispatch (the interception decode, like every decode on a master connection, uses `ControlCodec.decode(text, Protocol.MAX_MASTER_FRAME_BYTES)` — Task 1). **Disconnects route by mode:** BROKER → `broker.onDisconnected` on the broker loop (existing path); ROOM → the attached room's `onDisconnected` on ITS loop **and** `broker.onDisconnected` on the broker loop — the broker keeps its member record after the mode flip (it stops routing traffic, not tracking ownership) precisely so a relay-room OWNER's death still tears down their rooms via `removeByHostFingerprint` + `relays.hostLeft`; TUNNEL_GUEST → `router.guestDisconnected(guestId)` on the broker loop (which sends `RelayGuestClose` to the host) plus the same broker teardown.
 - `AdminEndpoint(MasterConfig config, MasterServer server)` — plain-HTTP `com.sun.net.httpserver.HttpServer` bound to `127.0.0.1:adminPort` (localhost-only by construction; operators tunnel in — security spec §9 v1 operator tooling): `POST /admin/sanction` (JSON `{fingerprint, type: BAN|TIMEOUT, reason, durationHours}` → `TrustLadder.sanction`), `POST /admin/attack-mode` (`{"enabled": true}` → `broker.setAttackMode`), `GET /admin/audit` (returns the audit log tail). Every admin action appends one JSON line to `dataDir/admin-audit.jsonl` — actor (token suffix), action, reason, timestamp (append-only audit log — security spec §5). All requests require header `Authorization: Bearer <config.adminToken()>` → else 401.
 - `MasterServerMain` — tools-style main (`com.openggf.net.master.MasterServerMain`, main spec §6.2): args `--config master.yaml --data ./master-data`; loads config, starts server + admin, blocks on shutdown hook. NO engine imports (fence-checked).
 
@@ -3571,7 +3640,7 @@ Expected: COMPILATION ERROR.
 - [ ] **Step 3: Implement**
 
 `MasterClient` implementation notes (structure mirrors `RaceClient`; ~250 lines):
-- One JDK WebSocket + `FrameAssembler` + send-chain, exactly like `RaceClient` — but the assembler/inbound cap is `Protocol.MAX_MASTER_FRAME_BYTES` (Task 1): tunnel-wrapped `RelayGuestText` frames legitimately exceed the room cap. The host's `HostMasterLink` traffic rides this same connection, so the host side inherits the raised cap for free.
+- One JDK WebSocket + `FrameAssembler` + send-chain, exactly like `RaceClient` — but the assembler/inbound cap AND the inbound decode both use `Protocol.MAX_MASTER_FRAME_BYTES` (`ControlCodec.decode(text, Protocol.MAX_MASTER_FRAME_BYTES)` — Task 1): tunnel-wrapped `RelayGuestText` frames legitimately exceed the room cap, and raising only the transport cap would still fail in the phase-2 decoder. The host's `HostMasterLink` traffic rides this same connection, so the host side inherits both raised caps for free; the inner envelope is re-decoded at the room/guest under the normal tight cap.
 - A `pendingReplies` map keyed by reply type (`Class<? extends ControlMessage>` → queue of `CompletableFuture`s); inbound routing: handshake phase first (Hello/Welcome/AuthProof/PowChallenge/JoinAccepted), then reply matching (`RoomListResult`, `RoomCreated`/`RoomCreateRejected`, `RoomJoinResult`/`RoomJoinRejected` complete the head future of their queue), then `RelayGuest*`/0x04 → bound `HostMasterLink` if any, else → inbound queue.
 - `RelayRaceConnection` (inner): after `RelayAttach` is sent, an `AtomicReference<RelayRaceConnection> attached` diverts ALL inbound text/binary to the connection's own inbound queue; its `sendControl(m)` encodes with ITS room token (`joinAccepted` captured by `completeRoomHandshake`), `sendBinary` writes raw; `close()` closes the underlying socket (leaving a relay room = leaving the master — re-connect to browse again; documented simplification).
 - `completeRoomHandshake(raw, ...)`: drain-loop on a small executor (single virtual thread — `Thread.ofVirtual()`): send Hello (token null), await Welcome → send AuthProof, await JoinAccepted → capture into the connection, complete. `orTimeout(RaceClient.JOIN_TIMEOUT_MILLIS)`.
