@@ -87,6 +87,7 @@ import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.timeattack.GhostStore;
 import com.openggf.game.timeattack.TimeAttackHudOverlay;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
+import com.openggf.game.timeattack.TimeAttackLevelEndRouting;
 import com.openggf.game.timeattack.TimeAttackMenu;
 import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.testmode.TraceCameraFocusController;
@@ -811,8 +812,21 @@ public class GameLoop {
                 pendingTimeAttackLaunch = null;
                 timeAttackLaunchHandler.launch(deferredLaunch);
             }
+            // Retried every frame because tryOpenTimeAttackMenu() is a no-op until the
+            // screen's own fade-in reaches ACTIVE (see MasterTitleScreen#state).
+            if (pendingReopenTimeAttackMenu && masterScreen != null && masterScreen.tryOpenTimeAttackMenu()) {
+                pendingReopenTimeAttackMenu = false;
+            }
+            wasMasterTitleScreenActiveLastFrame = true;
             return;
         }
+        if (wasMasterTitleScreenActiveLastFrame) {
+            // Defensive: the mode just left MASTER_TITLE_SCREEN (e.g. the user picked a
+            // normal game/menu entry) with the reopen request never consumed. Drop it so
+            // it can't fire against some unrelated, later master-title visit.
+            pendingReopenTimeAttackMenu = false;
+        }
+        wasMasterTitleScreenActiveLastFrame = false;
 
         if (!isPaused()
                 && !timeAttackRuntime.isActive()
@@ -1220,14 +1234,16 @@ public class GameLoop {
             // the HUD/ghost/retry do not bleed into the next act. Mid-act sequences
             // (MUTATE_ONLY / RELOAD_SAME_LEVEL, and any RELOAD_TARGET_LEVEL that reloads
             // the same zone/act) leave the attempt untouched.
-            if (timeAttackRuntime.isActive()
-                    && seamlessRequest.type() == SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL) {
-                TimeAttackLaunchRequest armedLaunch = timeAttackRuntime.launch();
-                if (armedLaunch != null
-                        && (seamlessRequest.targetZone() != armedLaunch.zone()
-                                || seamlessRequest.targetAct() != armedLaunch.act())) {
-                    timeAttackRuntime.deactivate();
-                }
+            if (TimeAttackLevelEndRouting.shouldSuppressSeamlessTransitionForTimeAttack(
+                    timeAttackRuntime.isActive(), seamlessRequest.type(), timeAttackRuntime.launch(),
+                    seamlessRequest.targetZone(), seamlessRequest.targetAct())) {
+                timeAttackRuntime.deactivate();
+                // Suppress the seamless cross-act reload entirely rather than half-applying
+                // it: return to the time attack menu instead of advancing into the next
+                // act's level data.
+                startTimeAttackReturnToMenuFade();
+                updateNonGameplayAudio(doFrameStep);
+                return false;
             }
             levelManager.applySeamlessTransition(seamlessRequest);
             if (levelManager.consumeInLevelTitleCardRequest()) {
@@ -1275,22 +1291,28 @@ public class GameLoop {
             }
             if (levelManager.consumeNextActRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A finished/abandoned time attack must not bleed into the auto-advanced next act.
-                if (timeAttackRuntime.isActive()) {
+                // A finished/abandoned time attack returns to the time attack menu
+                // instead of bleeding into the auto-advanced next act.
+                if (TimeAttackLevelEndRouting.returnsToMenuOnLevelEnd(timeAttackRuntime.isActive())) {
                     timeAttackRuntime.deactivate();
+                    startTimeAttackReturnToMenuFade();
+                } else {
+                    startNextActFade();
                 }
-                startNextActFade();
                 finishUserRecordingPlaybackAtLevelBoundary(false);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
             if (levelManager.consumeNextZoneRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A finished/abandoned time attack must not bleed into the auto-advanced next act.
-                if (timeAttackRuntime.isActive()) {
+                // A finished/abandoned time attack returns to the time attack menu
+                // instead of bleeding into the auto-advanced next zone.
+                if (TimeAttackLevelEndRouting.returnsToMenuOnLevelEnd(timeAttackRuntime.isActive())) {
                     timeAttackRuntime.deactivate();
+                    startTimeAttackReturnToMenuFade();
+                } else {
+                    startNextZoneFade();
                 }
-                startNextZoneFade();
                 finishUserRecordingPlaybackAtLevelBoundary(false);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
@@ -1304,11 +1326,14 @@ public class GameLoop {
             }
             if (levelManager.consumeCreditsRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A finished/abandoned time attack must not bleed into the auto-advanced next act.
-                if (timeAttackRuntime.isActive()) {
+                // A finished/abandoned time attack returns to the time attack menu
+                // instead of bleeding into the auto-advanced credits sequence.
+                if (TimeAttackLevelEndRouting.returnsToMenuOnLevelEnd(timeAttackRuntime.isActive())) {
                     timeAttackRuntime.deactivate();
+                    startTimeAttackReturnToMenuFade();
+                } else {
+                    startEndingFade();
                 }
-                startEndingFade();
                 finishUserRecordingPlaybackAtLevelBoundary(false);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
@@ -2977,6 +3002,24 @@ public class GameLoop {
      */
     private TimeAttackLaunchRequest pendingTimeAttackLaunch;
 
+    /**
+     * A finished/abandoned time attack attempt returns to the master title
+     * screen instead of advancing into the next act/zone/credits (see the
+     * consume sites in {@link #updateLevelMode}). This flag requests that,
+     * once the title screen reaches {@code ACTIVE}, it auto-reopen the time
+     * attack menu so the player lands back where they started rather than on
+     * the bare title screen. Cleared once {@link MasterTitleScreen#tryOpenTimeAttackMenu()}
+     * succeeds, or defensively if the game mode ever leaves
+     * {@code MASTER_TITLE_SCREEN} while still pending.
+     */
+    private boolean pendingReopenTimeAttackMenu;
+
+    /** Tracks the previous frame's mode so the defensive clear above only fires on an
+     * actual MASTER_TITLE_SCREEN -&gt; other-mode transition, not merely "not currently
+     * on the title screen" (which is also true for every frame of the return fade
+     * itself, before the mode has switched). */
+    private boolean wasMasterTitleScreenActiveLastFrame;
+
     private void installTimeAttackLaunchHandler(MasterTitleScreen masterScreen) {
         if (masterScreen != null) {
             masterScreen.setTimeAttackLaunchStarter(request -> pendingTimeAttackLaunch = request);
@@ -3013,6 +3056,24 @@ public class GameLoop {
         if (manager.isActive()) {
             return;
         }
+        audioManager.fadeOutMusic();
+        manager.startFadeToBlack(this::returnToMasterTitle);
+    }
+
+    /**
+     * A finished/abandoned time attack attempt does not auto-advance into the
+     * next act/zone/credits sequence like normal play does (see the consume
+     * sites in {@link #updateLevelMode}). Instead it fades to black and hands
+     * off to the same {@link #returnToMasterTitle()} choreography as the
+     * escape-to-title hold, then arms {@link #pendingReopenTimeAttackMenu} so
+     * the title screen reopens the time attack menu once it becomes active.
+     */
+    private void startTimeAttackReturnToMenuFade() {
+        FadeManager manager = resolveFadeManager();
+        if (manager.isActive()) {
+            return;
+        }
+        pendingReopenTimeAttackMenu = true;
         audioManager.fadeOutMusic();
         manager.startFadeToBlack(this::returnToMasterTitle);
     }
