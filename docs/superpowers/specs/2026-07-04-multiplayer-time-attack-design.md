@@ -34,14 +34,49 @@ latency can never affect a recorded time or race outcome.
 | Characters | Host picks per-room policy: locked (everyone plays the host-chosen character) or open (any character; standings badge the character) |
 | Transport | WebSocket (TCP) everywhere — lobby, browser, relay, ghost streams. Binary frames for ghost data, JSON text frames for control |
 | Anti-cheat (v1) | Hooks only: rewind/debug/editor disabled during timed attempts; `AttemptFinish` reserves an `inputRecordingRef` field so times are verifiable by deterministic replay later. No verification in v1 |
+| Solo mode | First-class phase-1 feature (§3): `.ggfghost` files, star-post splits, multi-ghost racing including imported files |
 
-## 3. Scale model — why hundreds of players is cheap here
+## 3. Solo ghost racing (phase 1, and the foundation)
+
+Solo mode is not a demo of the multiplayer feature — it is the strategy for
+building it. It ships first, exercises the entire ghost pipeline (format,
+persistence, playback, rendering, timing) with zero network code, and remains a
+permanent mode in its own right.
+
+- **Entry:** the same master-title "Time Attack" menu, with "Solo" alongside the
+  server browser. Identical track picker (data-select zone/act grid); character
+  is freely chosen.
+- **Ghost files:** best runs persist as `.ggfghost` files under the save
+  directory, keyed by (game, zone/act, character). Format: a small header
+  (format version, game, zone/act, character, display name, total frames, final
+  time, split times) followed by **the same quantized 7-byte 60 Hz frame stream
+  used on the wire** (§7). One canonical encoding — a ghost file's body and a
+  network `GhostFrames` payload are byte-identical per frame, so solo mode
+  validates the exact bytes multiplayer ships. No ROM-derived data is stored,
+  so ghost files are freely shareable.
+- **Delta timer and splits:** star posts are the split markers (they already
+  exist as objects with fixed track positions). The HUD shows the delta vs the
+  racing ghost at each star post and at the finish; between splits, the ghost
+  itself is the live indicator. Split times are recorded in the header for
+  standings-style comparison without replaying the file.
+- **Multi-ghost racing:** race up to the renderer cap (8) simultaneously — your
+  best run plus imported `.ggfghost` files (picked via menu from a ghosts
+  folder). Trading ghost files is a zero-infrastructure multiplayer mode for
+  free, and multi-ghost solo racing is the offline test harness for the
+  multiplayer rendering path.
+- **Improvement flow:** finishing faster than your stored best auto-saves the
+  new best (previous bests retained, last 3). Instant retry works exactly as in
+  multiplayer rounds.
+- **Anti-cheat hooks apply:** an attempt that used rewind, debug tools, or the
+  editor is never saved as a best.
+
+## 4. Scale model — why hundreds of players is cheap here
 
 Ghost-only time attack degrades gracefully because every stream is cosmetic. The
 naive star topology (hub forwards every packet to every peer) is O(N²) in packets
 and bandwidth and dies around N≈16 on residential upload. Three mechanisms fix it:
 
-### 3.1 Aggregation — one packet per tick per recipient
+### 4.1 Aggregation — one packet per tick per recipient
 
 The hub (player-host or relay) never forwards ghost packets. It ingests upstream
 frames into per-player ring buffers and, at 20 Hz, composes **one `GhostAggregate`
@@ -50,7 +85,7 @@ edge is O(1): one stream up, one aggregate down, ~20 packets/sec each way regard
 of room size. Per-packet overhead (WS framing, TCP/IP headers, syscalls) is
 amortized across all ghosts in the room.
 
-### 3.2 Relevance filtering — full fidelity only for visible ghosts
+### 4.2 Relevance filtering — full fidelity only for visible ghosts
 
 Per recipient, the hub classifies every other player:
 
@@ -63,14 +98,14 @@ hashed into 512-px buckets along x, y-checked within candidate buckets), so the
 cost is O(N + near-pairs), not O(N²) distance checks. At 256 players this is
 thousands of cheap operations per tick.
 
-### 3.3 Roster channel — coarse state for everyone else
+### 4.3 Roster channel — coarse state for everyone else
 
 A separate `Roster` packet at 1 Hz carries every player's coarse state: position
 quantized to 64-px cells (2 bytes), attempt status (1 byte), ~4 bytes/player.
 256 players ≈ 1 KB/s. This feeds the standings panel, "lagging" indicators, and a
 future minimap without per-ghost streams.
 
-### 3.4 Budget at the design point (256-player relay room)
+### 4.4 Budget at the design point (256-player relay room)
 
 Ghost frame: x,y 16-bit each + animId + animFrame + facing/status flags = **7 bytes**.
 Upstream: 60 Hz sampled, batched 3 frames/packet at 20 pkt/s ≈ **1.5 KB/s per client**.
@@ -88,21 +123,21 @@ Player-hosted rooms are capped at 8, where even naive budgets fit residential
 upload; the ≤8 cap means player-hosts skip relevance filtering entirely
 (everyone is "near").
 
-### 3.5 Backpressure
+### 4.5 Backpressure
 
 Per-connection outbound queue depth drives a degradation ladder:
 queue > 64 KB → near-cap drops to 4, roster to 0.5 Hz; > 256 KB → roster only;
 > 1 MB or sustained 30 s → disconnect with a reason message. A slow client only
 ever degrades its own view.
 
-### 3.6 Client-side rendering at scale
+### 4.6 Client-side rendering at scale
 
 The renderer draws at most the **nearest 8 ghosts** (configurable), opacity faded
 by distance, nameplates on the nearest 4. Everyone else exists only as roster
 entries in the standings panel. Playback bookkeeping for hundreds of roster
 entries is trivial; full playback cursors exist only for near ghosts.
 
-## 4. Latency model
+## 5. Latency model
 
 1. **Frame-indexed streams, not timestamps.** Every ghost snapshot carries
    `frameIndex` = frames since attempt start (60 Hz). No wall-clock sync is needed
@@ -124,9 +159,9 @@ entries is trivial; full playback cursors exist only for near ghosts.
 6. **Events are reliable messages.** `AttemptFinish` etc. ride the ordered TCP
    stream; a standings update arriving 200 ms late is imperceptible.
 
-## 5. Architecture
+## 6. Architecture
 
-### 5.1 Engine side — new `com.openggf.net` package
+### 6.1 Engine side — new `com.openggf.net` package
 
 | Class | Responsibility |
 |---|---|
@@ -136,9 +171,9 @@ entries is trivial; full playback cursors exist only for near ghosts.
 | `GhostRenderer` | Draws near ghosts + the solo best-run ghost through the existing player sprite render path at reduced opacity with nameplates. Ghosts never enter `ObjectManager` — they cannot touch gameplay state by construction |
 | `RaceSession` | Room/round state machine: lobby → countdown → window open → podium → track vote. Standings cache, attempt lifecycle (armed → running → finished/reset/void). Owns instant-retry via the existing session/level restart choreography (purely local; peers just see the ghost blink back to the start) |
 | `TimeAttackController` | Timer starts on first input, stops on the finish trigger (signpost / arena lock), frame-count authoritative. Disables rewind, debug overlay, and editor entry for the duration of a timed attempt |
-| `GhostHub` | The aggregation/relevance/roster engine of §3. **Shared verbatim between the player-host path and the master server relay** — hosting mode only changes who runs it |
+| `GhostHub` | The aggregation/relevance/roster engine of §4. **Shared verbatim between the player-host path and the master server relay** — hosting mode only changes who runs it |
 
-### 5.2 Master server — `com.openggf.net.master` (same artifact, no engine deps)
+### 6.2 Master server — `com.openggf.net.master` (same artifact, no engine deps)
 
 A separate main class (`MasterServerMain`) in the existing jar, tools-style — no
 LWJGL/engine imports, enforced by an ArchUnit rule freezing `com.openggf.net.protocol`,
@@ -156,7 +191,7 @@ Multi-module Maven extraction is deliberately deferred; the ArchUnit fence gives
 the isolation now, the module split is mechanical later if a slim server jar is
 wanted.
 
-### 5.3 UI
+### 6.3 UI
 
 Master title → "Time Attack" → server browser → lobby → in-round. Track picker
 reuses the data-select zone/act grid. In-round HUD adds the standings panel
@@ -164,7 +199,7 @@ reuses the data-select zone/act grid. In-round HUD adds the standings panel
 hundreds of clients; full list is paged on demand) and the solo/best delta timer.
 Podium shows top 3 + your rank; next-track vote offers 3 options.
 
-## 6. Protocol
+## 7. Protocol
 
 Versioned; JSON text frames for control, compact binary frames for ghost data.
 Rooms advertise the required game/ROM; clients without a matching detected ROM
@@ -182,7 +217,7 @@ header), `GhostAggregate` (hub → client, all near ghosts' frames for one tick)
 
 Stale-attempt frames (old `attemptId`) are dropped silently at every layer.
 
-## 7. Data flow (in-round)
+## 8. Data flow (in-round)
 
 Local player simulated exactly as today → `GhostStreamPublisher` samples
 post-update → upstream. Network thread enqueues inbound → drained at frame start →
@@ -191,7 +226,7 @@ post-update → upstream. Network thread enqueues inbound → drained at frame s
 buffers → 20 Hz tick: spatial re-bucket, per-recipient near-set (hysteresis, cap,
 backpressure ladder) → compose one `GhostAggregate` per recipient; 1 Hz roster.
 
-## 8. Error handling
+## 9. Error handling
 
 - Peer disconnect → ghost fades out, standings row greys out, best time kept for
   the round.
@@ -199,9 +234,9 @@ backpressure ladder) → compose one `GhostAggregate` per recipient; 1 Hz roster
 - Relay room: master restart drops rooms (acceptable v1; rooms are ephemeral).
 - Direct-connect timeout (3 s) → automatic relay fallback for that pair.
 - Malformed packets / version mismatch → rejected at `Hello` or dropped + logged.
-- Slow consumer → §3.5 ladder, never affects other clients.
+- Slow consumer → §4.5 ladder, never affects other clients.
 
-## 9. Testing
+## 10. Testing
 
 - **Unit (headless):** `RemoteGhostPlayback` jitter buffer, catch-up, and snap
   thresholds driven by synthetic packet traces with injected stalls/bursts;
@@ -217,10 +252,11 @@ backpressure ladder) → compose one `GhostAggregate` per recipient; 1 Hz roster
 - **Solo mode first:** phase 1 exercises the entire ghost format + renderer with
   zero sockets.
 
-## 10. Phases
+## 11. Phases
 
-1. **Solo ghost racing** — ghost recording format (shared with network path),
-   `GhostRenderer`, delta timer, best-run persistence per track/character.
+1. **Solo ghost racing** (§3) — `.ggfghost` format (shared with the network
+   path), `GhostRenderer`, star-post split deltas, best-run persistence and
+   improvement flow, multi-ghost racing with file import.
 2. **Race session + direct connect** — `RaceSession`, `TimeAttackController`,
    `GhostHub` (trivially degenerate at ≤8 players), host/join by address,
    LAN-testable end to end.
@@ -229,7 +265,7 @@ backpressure ladder) → compose one `GhostAggregate` per recipient; 1 Hz roster
 4. **Polish** — podium, track vote, open-character standings badges, spectate
    pan after finishing, minimap fed by the roster channel.
 
-## 11. Out of scope (recorded for later)
+## 12. Out of scope (recorded for later)
 
 - Collision netplay (would require lockstep/rollback over the deterministic core).
 - Ranked/persistent leaderboards and replay-verification service (the
