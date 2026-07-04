@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Branch: `feature/multiplayer-time-attack` (name set by the project owner — overrides the repo's default `feature/ai-*` convention), based on the phase-1 branch (phase 1 is still being implemented in `.worktrees/time-attack-phase1`; rebase onto `develop` once phase 1 merges). Never base on master. Execute in an isolated worktree (superpowers:using-git-worktrees).
+- Branch: `feature/multiplayer-time-attack`, based on **`next`** — NOT `develop`, never master (both set by the project owner; the name also overrides the repo's default `feature/ai-*` convention). Phase 1 is being implemented on this SAME branch in `.worktrees/time-attack-phase1` — phase 2 continues on it once the phase-1 tasks land there. Execute in an isolated worktree (superpowers:using-git-worktrees).
 - JUnit 5 / Jupiter only — no `org.junit.*` (JUnit 4) imports.
 - Every commit needs the trailer block (`Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`), each `updated` or `n/a`. A `feat:` commit touching `src/main/` must have `Changelog: updated` (staged CHANGELOG.md) or `Changelog: n/a: <reason>`. Task 1 adds the CHANGELOG entry; later commits use `Changelog: n/a: phase-2 entry added in c1 of this branch`.
 - PowerShell: quote Maven props — `mvn "-Dtest=com.openggf.net.protocol.TestControlCodec" test`.
@@ -53,17 +53,17 @@ These come from `docs/superpowers/plans/2026-07-04-solo-ghost-racing-phase1.md` 
 
 **Files:** none (git only)
 
-- [ ] **Step 1: Create branch from the phase-1 branch**
+- [ ] **Step 1: Check out the shared feature branch**
+
+The branch already exists — phase 1 is implemented on it (worktree `.worktrees/time-attack-phase1`). Phase 2 CONTINUES on the same branch; do not create a new one, and do not rebase it yourself while the phase-1 worktree is active (shared-repo rule: never mutate a branch another session is working on).
 
 ```bash
 git fetch origin
-# Check the actual phase-1 branch name first: git branch -a | grep time-attack
-git checkout feature/ai-time-attack-phase1 && git pull --ff-only
-git checkout -b feature/multiplayer-time-attack
+git checkout feature/multiplayer-time-attack && git pull --ff-only
 git config core.hooksPath .githooks
 ```
 
-Expected: on new branch, clean tree (`git status --porcelain` empty). If phase 1 has already merged, base on `develop` instead. The branch name `feature/multiplayer-time-attack` is the project owner's choice — do not "correct" it to the `feature/ai-*` convention.
+Expected: on `feature/multiplayer-time-attack`, clean tree (`git status --porcelain` empty), and the phase-1 task commits visible in `git log --oneline -15`. The branch is based on `next` (project owner's direction — not `develop`); its merge target is likewise decided by the owner, not this plan. The branch name is the owner's choice — do not "correct" it to the `feature/ai-*` convention.
 
 ---
 
@@ -5961,7 +5961,7 @@ Expected: PASS in well under the 120 s timeout (~20 s wall including the live 4 
 
 - `CLAUDE.md` + `AGENTS.md`: add a short section under the architecture notes: packages `net.protocol`/`net.hub`/`net.host`/`net.client` (engine-free, ArchUnit-fenced, only `GhostFrame`/`GhostFrameCodec` shared), hub single-thread contract, `RoomHost`/`GhostHub` reused verbatim by the phase-3 master, engine glue lives in `game.timeattack.mp`.
 - CHANGELOG already updated in Task 1 — extend the entry if scope shifted.
-- README release-notes line is staged when MERGING to develop (repo policy), not now.
+- README release-notes line is staged at merge time (the repo's merge-into-`develop` rule; this branch's merge target is the owner's call — apply the rule at whatever merge lands it), not now.
 
 - [ ] **Step 5: Full verification sweep**
 
@@ -5992,7 +5992,7 @@ Skills: n/a"
 
 - Tasks 1–2 (protocol) unblock everything; 3–10 are pure/headless and depend only on 1–2 (+ phase-1 pure classes already on the branch).
 - Tasks 4→5→6→7 are sequential within `net.hub`. Tasks 8, 9, 10 (`net.client` pure) are parallel to the hub chain after Task 3.
-- Task 11 needs 7; Task 12 needs 11. Tasks 13–15 need the as-built phase-1 engine code (worktree merge) and are the ONLY tasks that do; if phase 1 is still unmerged when the executor reaches them, everything through Task 12 + 16 can land first.
+- Task 11 needs 7; Task 12 needs 11. Tasks 13–15 need the as-built phase-1 engine code and are the ONLY tasks that do. Phases 1 and 2 share the branch (`feature/multiplayer-time-attack`), so "phase 1 available" simply means its task commits are on the branch; if the phase-1 worktree is still mid-implementation when the executor reaches Task 13, everything through Task 12 + 16 can land first.
 - Task 16 can run any time after Task 12. Task 17 last.
 
 ## Deferred-to-phase-3 checklist (recorded so nothing silently drops)
