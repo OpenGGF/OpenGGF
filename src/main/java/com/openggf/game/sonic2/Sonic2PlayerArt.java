@@ -98,6 +98,7 @@ public class Sonic2PlayerArt {
                 ? Sonic2AnimationIds.HURT2.id()
                 : Sonic2AnimationIds.HURT.id();
 
+        boolean isSonic = basePatternIndex != Sonic2Constants.ART_TILE_TAILS;
         SpriteAnimationProfile animationProfile = new ScriptedVelocityAnimationProfile()
                 .setIdleAnimId(Sonic2AnimationIds.WAIT)
                 .setWalkAnimId(Sonic2AnimationIds.WALK)
@@ -124,6 +125,13 @@ public class Sonic2PlayerArt {
                 .setFallbackFrame(0)
                 .setAnglePreAdjust(true)
                 .setCompactSuperRunSlope(true);
+        if (isSonic) {
+            // ROM Obj01_MdNormal_Checks (s2.asm:36444-36468) is Sonic-only:
+            // Obj02 (Tails) has no impatient-wait blink/get-up interrupt.
+            ((ScriptedVelocityAnimationProfile) animationProfile)
+                    .setBlinkAnimId(Sonic2AnimationIds.BLINK)
+                    .setGetUpAnimId(Sonic2AnimationIds.GET_UP);
+        }
 
         return new SpriteArtSet(
                 artTiles,

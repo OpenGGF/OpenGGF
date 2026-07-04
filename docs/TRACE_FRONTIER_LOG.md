@@ -12,21 +12,287 @@ CNZ2 boss-lock boundary-source advance, the round 76 CNZ2 sidekick
 max-Y advance, and the round 79 CNZ2 Obj51 flee lifetime fix,
 integrated into conductor branch `bugfix/ai-s2-trace-next`: ARZ2 is green
 under `frontierOnly` and was banked into `next` as `7ef0928da`; CNZ2 is
-green under `frontierOnly` on conductor merge `3f29f2ac0`; MTZ3 is f13477 / 4 under `frontierOnly`
-(`x_speed` expected `-03FB`, actual `0x03FB`), and OOZ2 is green after the
+green under `frontierOnly` on conductor merge `3f29f2ac0`; MTZ3 is GREEN
+after round 97 (boss/orb init-frame dispatch consumes, post-movement hit/defeat
+reaction deferral, orb break tail + Ani_obj53 animation, boss persistence, and
+the S2 impatient-wait blink input gate), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
-is now MTZ3 only.
+is now EMPTY: the full S2 level-select suite passes (MSE:OK passed=48).
 The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
 with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
-round 81 is active with mandatory Lua PC-execute plus engine-side diagnostics around the
-routine-04 Obj53 contact window.
+round 96 landed the ROM-backed later-orb refresh predicate. Rounds 90-94 used Lua PC-execute probes to rule out shared
+touch ordering as the current blocker and narrow the owner to Obj53 phase/state.
+Round 96 replaced the rejected `orbIndex >= 2` diagnostic with Obj54's ROM hit-cycle
+counter state (`objoff_3E`, engine `attackCyclesRemaining <= 4`) and kept
+the disassembly `y_pos-4` copy instead of the trace-shaped `-2` compensation.
+The active target is now the f14204 ground/orb/player transition after the
+later breakaway refresh. Preserve the ROM guard
+where slot 22 has `collision_flags=$DA` at f12818/f12819 but does not run
+`Touch_Enemy_Part2` until f12820 because vertical overlap is false before then.
 Worker bounce policy: any `no-change`, `rejected`, `blocked`, or "gated"
 return must include targeted BizHawk Lua evidence in `luaProbes`, including
 script path, output path, frame window, hooked PCs, and the ROM values observed.
 For slot, touch, subpixel, counter, or "RAM-gated" conclusions, a PC-execute
 probe is required before the bounce is accepted.
+Conductor cleanup policy: after a worker returns and its evidence has been
+summarized, remove any no-commit diagnostic/failure worktree and delete its local
+branch when it has no commits outside `bugfix/ai-s2-trace-next`.
+
+## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green
+
+Worktree `.worktrees/ai-s2-mtz3-round96-orbinit`, branch
+`bugfix/ai-s2-mtz3-round96-orbinit-next` off conductor `bugfix/ai-s2-trace-next`
+(`759e14802`). Baseline: MTZ3 f14204 / 188 (`x_speed` expected `0x0200`, actual
+`0x0000`).
+
+Root-cause chain (each verified against trace aux `object_near` boss/orb rows,
+which carry per-frame ROM positions -- no regen needed):
+1. **Obj54 init-frame dispatch**: ROM Obj54_Init ends `rts` (no movement); the
+   engine ran full boss logic on its first update, leaving the boss one float
+   frame ahead of ROM for the whole fight (aux slot 21 y: engine(t) == ROM(t+1)
+   from spawn). Fixed by consuming the first `updateBossLogic` dispatch.
+2. **Obj53 orb-0 init frame**: Obj53_Init reuses the spawner slot
+   (`movea.l a0,a1`), so orb 0 first orbits one frame after orbs 1-6. Engine
+   updated all seven uniformly (round-94's "one orbit update ahead" on slot 22).
+   Fixed with an RT_INIT first-dispatch consume for orb index 0.
+3. **Obj54 hit/defeat reaction deferral**: AnimateFace's hit branch and
+   CheckHit's Obj54_Defeated run AFTER the current routine's Boss_MoveObject.
+   The engine applied them from the touch pass, entering SubA/Sub10 one frame
+   early (SubA: boss y diverged from the first hit frame; Sub10: the Sub12 flee
+   `addq.w #2,Camera_Max_X_pos` opening ran one frame early, camera_x +2).
+   Replaces the round-95 partial pendingXVelocityClearAfterMove.
+4. **Obj53 break-frame tail + collision RAM semantics + bounce animation**: the
+   break path's `bra.s +` still runs OrbitBoss/SetAnimPriority the same pass
+   (rounds 92-93's rejected tail now lands because fixes 1-3 removed the
+   compensating phase lead); the round-96 `verticalAngle += 0x10` contraction
+   fudge is deleted (ROM's tilt tail never touches objoff_3B; ROM va at the
+   slot-23 break derives to $B4 from the aux y, engine now matches); an
+   attacked orb exposes collision_flags 0 immediately (Touch_Enemy_Part2
+   mutates col=$DA->$00 in RAM, so the other player's touch skips it -- the
+   f13175 Sonic-bounces-where-Tails-burst error); BounceAround only runs its
+   sine motion once mapping_frame == $B, via a faithful Ani_obj53
+   AnimateSprite port (plain/$FF/$FE/$FD/$FC) plus Obj53_CheckPlayerHit's
+   player-hurt pop. ROM's orb 5 broke at the floor line and sat at $4AC for
+   ~68 frames while the break animation reached $B; the engine bounced
+   immediately.
+5. **Obj54 persistence**: the boss has no out_of_range tail; the generic
+   off-screen cull unloaded it mid-flee at f14949, stalling the camera opening.
+6. **S2 impatient-wait blink gate (player code)**: the last 4 errors (f15309)
+   were ROM ignoring 3 frames of a right press on plain ground. BizHawk probe
+   (`tools/bizhawk/diag_s2_mtz3_ctrl_lock.lua`, window 41454-41500) showed
+   Ctrl_1/Ctrl_1_Logical fresh, Control_Locked=0, move_lock=0, obj_control=0,
+   and anim $05->$0A->$00: ROM Obj01_MdNormal_Checks (s2.asm:36444-36468) skips
+   the whole grounded update while Blink/GetUp plays. Implemented as a
+   profile-data-driven gate (blink/getUp anim ids set only for S2 Sonic) at the
+   top of modeNormal, with a resolver escape so the anim byte persists while the
+   interrupt plays, using the ROM-loaded Ani_Sonic scripts.
+
+Scope note / follow-up: the blink gate is scoped to NON-RIDING stands
+(`isOnObject()` returns false). The four existing per-object
+`staleHorizontalLogicalInputFramesWhileRiding` models (CNZ ObjD5 elevator, MTZ
+Obj65 long platform, Obj6C conveyor, SCZ Tornado; all 3 frames, tornado gated
+on >=120 ride frames) are the SAME ROM blink freeze rediscovered per-object.
+An attempt to remove all four and let the gate cover rides greened CNZ1/CNZ2
+but regressed MTZ2 f8590 / MTZ3 f9134 / SCZ f5116: the engine's ride-time WAIT
+animation frame index does not yet track ROM anim_frame exactly (wait-clock
+resets differ on carried stands). Unifying the ride cases under the gate needs
+that cadence brought to parity first; until then the carve-outs stay.
+
+Verification (all in this worktree):
+- `mvn "-Dtest=TestS2Mtz3LevelSelectTraceReplay" ... test` -> PASS (green).
+- `mvn "-Dtest=TestS2*TraceReplay" ... test` -> MSE:OK passed=48 failed=0.
+  **The full S2 level-select trace suite is green for the first time.**
+- `mvn "-Dtest=TestS1*TraceReplay" ... test` -> MSE:OK passed=48 failed=0.
+- S3K guards + unit guards (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+  `TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+  `TestS2ObjectOccupancyOracle`, `TestTopSolidRoutineProfileAdoption`,
+  `TestPhysicsProfile`, `TestSpindashGating`) -> all pass.
+  `TestArchitecturalSourceGuard` fails PRE-EXISTING on the conductor branch
+  (AbstractPlayableSprite 3130 vs 3115 ratchet; file untouched by this round).
+
+## 2026-07-03 - S2 round 96 MTZ3 later-orb refresh predicate
+
+Round 96 targeted `TestS2Mtz3LevelSelectTraceReplay` from conductor branch
+`bugfix/ai-s2-trace-next` at `3bc473b29`. The clean targeted baseline was
+f13477 / 381 errors: `y_speed` expected `0x0220`, actual `-0220`.
+
+Evidence:
+- Recreated the round-95 diagnostic `orbIndex >= 2` refresh locally and
+  confirmed it advanced MTZ3 to f14204 / 188, then rejected the child-index
+  predicate and the `boss.getY()-2` source as diagnostic-only.
+- Engine probes showed boss `objoff_2C` active broken-orb count and break-state
+  did not distinguish first and later breaks: `breakCount=0` and
+  `breakState=00` before each sampled break.
+- BizHawk probes used temporary scripts
+  `tools\bizhawk\diag_s2_mtz3_orb_break_round96.lua` and
+  `tools\bizhawk\diag_s2_mtz3_orb_break_sample_round96.lua`, with outputs
+  `target\s2_mtz3_orb_break_round96_rom.txt` and
+  `target\s2_mtz3_orb_break_sample_round96_rom.txt`.
+- The first break, slot `$22`/orb0, keeps the carried break position: f38758
+  slot `$22` is routine `$04` at `x=$2B57,y=$0423`.
+- The later slot `$24`/orb2 break executes the current copy/orbit path: f39524
+  slot `$24` is routine `$04` at `x=$2B1F,y=$0476`, with `objoff_2A=$0489`
+  matching boss `y_pos-4`, orbit angle `$98`, and vertical angle `$F4`.
+- The ROM-backed predicate is Obj54's hit-cycle counter. `Obj54_AnimateFace`
+  sets `objoff_38`, enters SubA, and decrements `objoff_3E`; Obj53 then copies
+  boss `y_pos-4` / `x_pos` before testing that break flag and running
+  `Obj53_OrbitBoss` (`docs/s2disasm/s2.asm:67605-67617,67832-67878`).
+
+Result:
+- Source now refreshes the break-away start only when the boss hit-cycle counter
+  is in the later-hit state (`attackCyclesRemaining <= 4`), using the ROM
+  `y_pos-4` source. No `-2` trace compensation or child-index gate was landed.
+- `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace` advances from
+  f13477 / 381 to f14204 / 188. The new frontier is `x_speed` expected
+  `0x0200`, actual `0x0000`.
+
+## 2026-07-03 - S2 round 94 MTZ3 phase-lead no-change
+
+Round 94 targeted `TestS2Mtz3LevelSelectTraceReplay` from conductor branch
+`bugfix/ai-s2-trace-next` at `b94c8490e`. The clean baseline remained MTZ3
+f13477 / 4 under `frontierOnly`: `x_speed` expected `-03FB`, actual `0x03FB`.
+
+Lua/engine evidence:
+- Read-only diagnostic worktree
+  `.worktrees/ai-s2-mtz3-round94-slot22-phase-next` produced
+  `target\diag\mtz3-round94\slot22_phase_rom.txt`,
+  `slot22_phase_engine_clean.csv`, and side-by-side summaries. ROM slot 22 at
+  f12588 is routine 02, `x=$2B41,y=$0409`, orbit/vertical `$F4/$C4`; the clean
+  engine is already one update ahead, with pre-state `x=$2B44,y=$040A` and
+  post-state `x=$2B48,y=$040C`, orbit/vertical `$FC/$D4`.
+- The same probe confirmed ROM slot 22 consumes the break at f12594 into
+  routine 04 at `x=$2B57.0000,y=$0423.0000`, `x_vel=$0080,y_vel=$FC00`,
+  `breakTimer=$3C`, then first falls at f12595. ROM still rejects the later
+  DA touch at f12818/f12819 (`yd0=$001D/$0018`, `d5=$0016`) and first accepts
+  at f12820 (`yd0=$0013 <= d5=$0016`).
+- Implementation worktree `.worktrees/ai-s2-mtz3-round94-orb-phase-next`
+  confirmed the rejected candidates with
+  `tools\bizhawk\diag_s2_mtz3_round94_orb_touch.lua` and outputs under
+  `target\lua-probes\`. Tail-only regressed to f12818; tail plus an
+  in-place-Obj53-init skip candidate only moved the regression to f12819.
+
+No source change was accepted:
+- Tail-only, tail+init-skip, and tail+init-skip without the local vertical
+  compensation were all rejected because they preserved the slot 24 same-pass
+  detach mechanism but made slot 22 touch before ROM's f12820 height gate.
+- Production source was reverted and the post-revert target run returned to the
+  clean f13477 frontier.
+
+Next target:
+- Find the object-local reason the clean engine advances Obj53 intact orbit one
+  update ahead before f12588, then combine that phase/order fix with the f13359
+  same-pass break-tail behavior. Do not touch shared touch routing or add
+  slot/frame predicates.
+- Cleanup completed after logging: removed the no-commit round 90-94 MTZ
+  diagnostic/failure worktrees and deleted their local branches after confirming
+  they had no commits outside `bugfix/ai-s2-trace-next`.
+
+## 2026-07-03 - S2 rounds 92-93 MTZ3 Obj53 detach guard
+
+Rounds 92 and 93 targeted `TestS2Mtz3LevelSelectTraceReplay` from conductor
+branch `bugfix/ai-s2-trace-next` at `27f8d8d26`. The clean baseline remained
+MTZ3 f13477 / 4 under `frontierOnly`: `x_speed` expected `-03FB`, actual
+`0x03FB`.
+
+Lua evidence:
+- Round 92 slot-24 probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round92-position-diag-next\target\diag\mtz3-round92\obj53_slot24_lua_pc.txt`.
+  It captured f13359 ROM dispatch order:
+  `Obj54_Main -> Boss_MoveObject -> Obj54_AnimateFace -> Obj54_CheckHit -> Obj53_Dispatch -> Obj53_Main -> Obj53_OrbitBoss -> Obj53_SetAnimPriority`.
+  Slot 24 starts f13359 at routine 02, `x=$2B22,y=$046F`,
+  `orbit=$94/$40/$EC/$00`; `Obj53_Main` consumes parent `objoff_38=$FF`,
+  sets routine 04, `breakTimer=$3C`, `x_vel=$FF80`, `y_vel=$FC00`, and the
+  same pass leaves `Obj53_SetAnimPriority` at `x=$2B1F,y=$0476`,
+  `orbit=$98/$40/$F4/$00`. `Obj53_BreakAway` / `ObjectMoveAndFall` first run
+  at f13360.
+- Round 93 slot-22 touch guard:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round93-slot22-lua-next\target\diag\mtz3-round93\slot22_touch_guard_lua_pc.txt`.
+  It confirmed slot 22 is already touch-scanned at f12818/f12819 with
+  `collision_flags=$DA,collision_property=$02` and horizontal overlap, but
+  `Touch_Boss_HeightCmp` rejects it: f12818 `yd0=$001D,d5=$0016`, f12819
+  `yd0=$0018,d5=$0016`. At f12820 `yd0=$0013 <= d5=$0016`, so
+  `Touch_ChkValue -> Touch_Special -> Touch_Enemy -> Touch_Enemy_Part2` fires
+  and mutates `col=$DA,prop=$02` to `col=$00,prop=$FE`.
+- Round 93 combined detach/touch probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round93-detach-next\target\diag\mtz3-round93\obj53_detach_touch.txt`.
+  It reconfirmed the slot-24 same-pass detach tail and the slot-22 f12818/f12820
+  guard in one probe.
+
+No source change was accepted:
+- A direct Java candidate that let `updateMain` continue into
+  `orbitBoss`/`setAnimPriority` after consuming the break flag reproduced the
+  ROM slot-24 detach mechanism, but regressed MTZ3 to f12818
+  (`x_speed` expected `0x0072`, actual `-0072`). The worker reverted it.
+- The rejected result means the same-pass detach tail is necessary but not
+  sufficient. The next target is to find the earlier slot-22 phase/position
+  compensation that currently masks the missing tail, then land a fix that makes
+  both slot 22 and slot 24 match ROM without slot/frame-specific predicates.
+
+## 2026-07-03 - S2 rounds 90-91 MTZ3 Lua-first no-change narrowing
+
+Rounds 90 and 91 targeted `TestS2Mtz3LevelSelectTraceReplay` from conductor
+branch `bugfix/ai-s2-trace-next` at `614be1140`. The baseline remained
+MTZ3 f13477 / 4 under `frontierOnly`: `x_speed` expected `-03FB`, actual
+`0x03FB`.
+
+Lua evidence:
+- Round 90 hit-edge probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round90-hit-edge-next\target\s2_mtz3_round90_hit_edge_probe_rerun.txt`.
+  Hooked `Obj54_AnimateFace`, `Obj54_CheckHit`, `Obj53_Main`,
+  `Obj53_OrbitBoss`, `Obj53_SetAnimPriority`, `Obj53_BreakAway`,
+  `Touch_ChkValue`, `Touch_Enemy_Part2`, and `BossCollision_MTZ`.
+- Round 90 ROM-order probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round90-rom-order-next\target\s2_mtz3_round90_rom_order.txt`.
+  It confirmed f12593 `Touch_ChkValue` hits Obj54 slot 20 before
+  `Obj54_AnimateFace`/`Obj54_CheckHit`, and that f13478
+  `Touch_ChkValue` -> `Touch_Enemy_Part2` hits Obj53 raw slot `$18`
+  before later Obj54/Obj53 update dispatch.
+- Round 90 slot-22 touch guard:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round90-slot22-touch-next\target\s2_mtz3_round90_slot22_touch.txt`.
+  ROM slot 22 has `collision_flags=$DA` at f12818/f12819, but the touch
+  box has `yOk=false`, so no `Touch_Enemy_Part2` runs until f12820 when
+  `yOk=true` and overlap becomes true.
+- Round 91 touch/state probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round91-touch-model-next\target\diag\mtz3_round91_touch_probe.txt`.
+  It confirmed f13478 `Touch_ChkValue` sees Obj53 slot 24 at
+  `x=$2AE4,y=$0482,collision_flags=$DA,collision_property=$02`, and
+  `Touch_Enemy_Part2` mutates the property before later object dispatch.
+- Round 91 subword probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round91-touch-model-next\target\diag\mtz3_round91_touch_probe_subwords.txt`.
+  It captured slot 24 ROM samples: f13476 `x=$2AE5.0000,y=$047F.E800`,
+  f13477 `x=$2AE4.8000,y=$0481.6800`, f13478
+  `x=$2AE4.0000,y=$0482.E800`, all routine 04 with
+  `collision_flags=$DA,collision_property=$02`.
+- Round 91 detach probe:
+  `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\ai-s2-mtz3-round91-touch-model-next\target\diag\mtz3_round91_detach_probe.txt`.
+  It confirmed slot 24 is already in breakaway by f13361
+  (`x=$2B1E.8000,y=$0472.0000,x_vel=$FF80,y_vel=$FC18`), so the f13476
+  mismatch is inherited before the touch window.
+
+No source change was accepted:
+- Round 90 tested MTZ-local deferred/direct hit-edge candidates, but each either
+  regressed earlier f12818/f12909/f13358-style guards or failed to advance f13477.
+- Round 91 tested a local mutable Obj53 `collision_flags` /
+  `collision_property` candidate. It matched the ROM mutation idea but did not
+  advance f13477, so it was reverted.
+
+Current diagnosis:
+- The engine's high-level touch ordering is not the active blocker. The clean
+  conductor code evaluates the relevant Obj53 through the pre-update touch
+  snapshot before object execution.
+- The f13477 miss is positional: engine scans the corresponding slot 24 Obj53
+  as BOSS-sized at approximately `x=$2AE7,y=$047A`, overlap false, while ROM is
+  already at `x=$2AE4.8000,y=$0481.6800` / then `x=$2AE4,y=$0482` and overlaps.
+- Next target: trace the upstream Obj53 slot 24 detach/breakaway transition before
+  f13476, not shared touch ordering or route/frame compensation.
+
+Operational note:
+- C: briefly reached near-zero free space during round 91. Generated `target`
+  directories from older `ai-s2-*` worktrees were removed, restoring about
+  24.8 GB free. The conductor and round 90/91 evidence targets were preserved.
 
 ## 2026-07-03 - S2 round 79 CNZ2 Obj51 flee lifetime
 
