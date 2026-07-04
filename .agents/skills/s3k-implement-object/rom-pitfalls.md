@@ -8,11 +8,11 @@ Each entry is a class of bug where the *naive* engine port diverges from ROM
 in a way that survives unit tests but breaks trace replay parity. The
 catalogue grows when a trace-replay-bug-fixing iteration commits an object
 fix whose root cause could occur in any not-yet-implemented object — see
-`.agents/skills/trace-replay-bug-fixing/SKILL.md` Phase 5 for the update
+the `trace-replay-bug-fixing` skill Phase 5 for the update
 loop.
 
 The patterns below were first surfaced during S2 frontier advancement (see
-`.agents/skills/s2-implement-object/rom-pitfalls.md` for the narrative
+the `s2-implement-object` skill's `rom-pitfalls.md` for the narrative
 origin) but are cross-game: each applies to S3K objects unless the entry
 explicitly says otherwise.
 
@@ -968,10 +968,10 @@ cause is a class of bug (not a one-off):
 2. Append a new entry following the template above.
 3. Reference the originating commit hash so future readers can see the full
    diff and test cases.
-4. Mirror to `.claude/skills/s3k-implement-object/rom-pitfalls.md` in the
+4. Mirror to the other skill tree's copy of `s3k-implement-object/rom-pitfalls.md` in the
    same commit. Use the commit trailer `Skills: updated`.
 5. If the pattern is cross-game, copy the entry into
-   `.agents/skills/s2-implement-object/rom-pitfalls.md` with the analogous
+   the `s2-implement-object` skill's `rom-pitfalls.md` with the analogous
    S2 disasm citation.
 
 S3K-specific considerations: many patterns surface differently in S3K

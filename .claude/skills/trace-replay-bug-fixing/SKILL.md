@@ -1,11 +1,11 @@
 ---
 name: trace-replay-bug-fixing
-description: Use when investigating or fixing any *TraceReplay test failure across the engine. Covers the comparison-only invariant (trace data is read-only diagnostic input, never written back into engine state), the recorder/parser/comparator pipeline, the diagnose-fix-regen-loop workflow, cross-game parity rules, and how to extend the recorder when more diagnostic data is needed.
+description: Use when investigating or fixing any *TraceReplay test failure across the engine.
 ---
 
 # Trace Replay Bug Fixing
 
-> Mirrored at `.claude/skills/trace-replay-bug-fixing/skill.md` (Claude Code, lowercase) and `.agents/skills/trace-replay-bug-fixing/SKILL.md` (other agent harnesses, uppercase). When editing, update both files.
+> Mirrored in both skill trees (Claude Code and other agent harnesses); when editing, update both copies.
 
 Recorded BizHawk traces verify that the engine plays back ROM behaviour pixel-for-pixel given the same controller input. When a `*TraceReplay` test diverges, this skill describes how to diagnose, fix, and (when needed) regenerate traces — without taking shortcuts that mask engine bugs.
 
@@ -52,11 +52,11 @@ If a trace replay test passes only because engine state is snapped back to ROM-c
 - If the engine has no equivalent path, port the ROM logic with disassembly citations and route any game-divergent behavior through the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`.
 - If the trace lacks the diagnostic data needed to pinpoint the bug, extend the recorder. New fields are comparison context, not write-back targets.
 
-### Frame-0 bootstrap comparator (post-2026-05-15)
+### Frame-0 bootstrap comparator
 
 For traces recorded at `lua_script_version >= 9.2-s2`, `TraceBinder.compareBootstrapFrame0(trace, EngineSnapshot)` runs once at the start of each test and asserts engine state at frame 0 against the recorder's `player_history_snapshot`, `cpu_state_snapshot`, and `object_state_snapshot` events. Mismatches become `BootstrapDivergence` entries rendered ahead of per-frame divergences in `target/trace-reports/<game>_<zone>_report.json`. Legacy traces (older recorder versions) are skipped — their frame-0 state was captured under the pre-ADR-1 freeze-during-title-card engine and is no longer valid for comparison; re-record at v9.2-s2 to opt in.
 
-### Engine title-card behaviour (post-2026-05-15)
+### Engine title-card behaviour
 
 `GameLoop` ticks `ObjectManager` + player physics every frame during the title-card phase, matching ROM `TitleCard_Main` for S1/S2/S3K. Player input is locked via the same path the ROM uses (`Sonic_ControlsLock` / `Ctrl_locked`). This means `Sonic_Pos_Record_Buf` fills naturally during the prelude — previously the engine froze object updates during the card, leaving the position-history ring empty at frame 0 and triggering sidekick AI divergences in the first ~300 frames of every level-select trace.
 
@@ -218,7 +218,7 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
     (objects, badniks, lifts, springs, monitors, etc.), evaluate
     whether the root cause is a class of bug that could recur in any
     not-yet-implemented object of the same game:
-      - Read the existing `.agents/skills/s{1,2,3k}-implement-object/rom-pitfalls.md`
+      - Read the existing `.claude/skills/s{1,2,3k}-implement-object/rom-pitfalls.md`
         for that game. Does the fix match an existing pattern? If yes,
         consider adding the fresh commit hash + a one-line example to
         the existing entry's "Originating commit" list.
@@ -415,9 +415,11 @@ column does not match what BK2 plays for that frame. Two common root causes:
    (notably SCZ Tornado handoffs, OOZ tunnel exits, ARZ end-of-act
    transitions), `$FFF604` can lag the BK2 logical input by one game frame.
    The Lua recorder used to read `$FFF604` for the CSV `input` column;
-   modern recorders (S2 v9.3-s2+, S1 v3.1+, S3K v6.19-s3k+) read
-   `movie.getinput()` directly via the `bk2_input_mask` helper, so the CSV
-   column matches BK2 by construction.
+   modern recorders read `movie.getinput()` directly via the
+   `bk2_input_mask` helper, so the CSV column matches BK2 by construction.
+   The version floor at which each game's recorder made this switch evolves
+   over time — check the recorder script's own header comment for the
+   current per-game floor rather than trusting a hardcoded version here.
 
 2. **`bk2_frame_offset` actually wrong** in `metadata.json`. Rare — happens
    when the recorder armed at an unexpected `emu.framecount()` boundary or
@@ -436,7 +438,7 @@ For S1 / S3K, the same logic exists in their respective Lua recorders
 (`bk2_input_mask` helper) but no PowerShell normalize wrapper has been built
 yet. If an S1/S3K trace fails alignment, port the S2 normalize script.
 
-### Engine-side standing/ride diagnostic (post-2026-05-16)
+### Engine-side standing/ride diagnostic
 
 `EngineDiagnostics` exposes the engine's tri-state truth for:
 

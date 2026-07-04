@@ -13,7 +13,7 @@ Prefer a caller-supplied failing list. Each item should include:
 
 ```json
 {
-  "testClass": "TestSonic3kAiz1TraceReplay",
+  "testClass": "TestS3kAizTraceReplay",
   "game": "s3k",
   "zone": "aiz",
   "firstErrorFrame": 12345,
@@ -26,8 +26,8 @@ Optional `greenByGame` may provide same-game passing trace classes:
 ```json
 {
   "greenByGame": {
-    "s1": ["TestSonic1Ghz1TraceReplay"],
-    "s2": ["TestSonic2Ehz1TraceReplay"],
+    "s1": ["TestS1Ghz1TraceReplay"],
+    "s2": ["TestS2Ehz1TraceReplay"],
     "s3k": ["TestS3kAiz1SkipHeadless"]
   }
 }
@@ -330,7 +330,7 @@ Verify output:
 
 ```json
 {
-  "trace": "TestSonic3kAiz1TraceReplay",
+  "trace": "TestS3kAizTraceReplay",
   "game": "s3k",
   "zone": "aiz",
   "status": "advanced",
@@ -358,9 +358,9 @@ Return:
   "rejectedNotGenuine": 0,
   "regressionQueue": [
     {
-      "causedBy": "TestSonic3kAiz1TraceReplay",
+      "causedBy": "TestS3kAizTraceReplay",
       "commit": "abcdef1",
-      "regression": "TestSonic3kHcz1TraceReplay: green -> frame 100/x_pos"
+      "regression": "TestS3kHczCompleteRunTraceReplay: green -> frame 100/x_pos"
     }
   ],
   "results": []

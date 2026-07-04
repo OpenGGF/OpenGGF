@@ -1,6 +1,6 @@
 ---
 name: s3k-implement-object
-description: Guide for implementing Sonic 3 and Knuckles objects and badniks with ROM-accurate art, behavior, and disassembly validation.
+description: Use when implementing a Sonic 3 & Knuckles object or badnik — ports object logic from skdisasm, art loading, zone-set IDs, collision, movement patterns.
 ---
 
 # Implement Sonic 3&K Object/Badnik
@@ -88,7 +88,7 @@ The same ID can mean different objects depending on the zone set. For example, 0
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s3k-disasm-guide skill (`.claude/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 Agents should:
 
@@ -274,7 +274,7 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 ```
 
 ##### Pattern 3: Boss
-**Use the dedicated `/s3k-implement-boss` skill** (`.agents/skills/s3k-implement-boss/SKILL.md`) for boss implementations.
+**Use the dedicated `/s3k-implement-boss` skill** (`.claude/skills/s3k-implement-boss/SKILL.md`) for boss implementations.
 
 **Detect a boss when:**
 - Object label contains `Miniboss` or `EndBoss`
@@ -324,6 +324,8 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 ##### Player State Manipulation
 
 **Force roll pattern** (used by AutoSpin, ForcedSpin, and tunnel triggers):
+Only apply `getRollHeightAdjustment()` when the ROM object code actually adjusts `y_pos` — see P4b in `rom-pitfalls.md` before copying this.
+
 ```java
 if (!player.getRolling()) {
     player.setRolling(true);
@@ -429,7 +431,7 @@ int behaviorBits = (subtype >> 4) & 0x0F;
 int configBits = subtype & 0x0F;
 ```
 
-**Sound effects**: Use constants from `Sonic3kAudioProfile.java` (create if needed):
+**Sound effects**: Use constants from `Sonic3kAudioProfile.java`:
 ```java
 services().audioManager().playSfx(Sonic3kAudioProfile.SFX_SPRING);
 ```
@@ -470,11 +472,11 @@ Prefer standard value forms before object-specific adapters: replace callback `R
 
 When the current branch provides shared object contracts, prefer them over new object-local booleans or direct state writes:
 
-- Use `ObjectControlState` for native object-control bits and derived movement/CPU/contact predicates. S3K has narrower bit-7-style gates in some sidekick paths; do not collapse them into one generic `isObjectControlled()` check.
-- Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` when an object chooses main player, native P1/P2, closest player, all engine players, or engine sidekicks extended from native P2 logic. Character-specific Knuckles/Tails paths still need explicit policy.
-- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
-- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
-- Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
+- Use `ObjectControlState` (`com.openggf.sprites.playable`) for native object-control bits and derived movement/CPU/contact predicates. S3K has narrower bit-7-style gates in some sidekick paths; do not collapse them into one generic `isObjectControlled()` check.
+- Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` (both `com.openggf.level.objects`) when an object chooses main player, native P1/P2, closest player, all engine players, or engine sidekicks extended from native P2 logic. Character-specific Knuckles/Tails paths still need explicit policy.
+- Use `NativePositionOps` (`com.openggf.sprites`) for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
+- Use `ObjectLifetimeOps` (`com.openggf.level.objects`) for destroy/delete/offscreen-expire semantics; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
+- Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior (canonical behavior profiles live under `com.openggf.game.profiles.*`). **Note:** `SolidRoutineProfile` and `TouchResponseProfile` each exist in two packages — `com.openggf.level.objects` and `com.openggf.game.profiles.{solidroutine,touchresponse}`. Object implementations use the `com.openggf.level.objects` versions; every currently-migrated S3K object imports from there, not from `com.openggf.game.profiles.*`. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
 - When adding or tightening guard tests, ratchet guard baselines: inventory existing violations, allowlist only historical cases with reasons, and hard-fail new direct player/object-control/lifecycle shortcuts.
 
 #### 2.8 Player/Object Participation Checks
@@ -496,7 +498,7 @@ Ensure the implementation:
 
 Delegate to a review agent to cross-validate against the disassembly. **Include this instruction in the agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
+> Use the s3k-disasm-guide skill (`.claude/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
 
 ```
 Review the implementation of [ObjectName] against the Sonic 3&K disassembly.
@@ -574,8 +576,8 @@ Once cross-validation is confirmed bug-free:
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.agents/skills/s3k-disasm-guide/SKILL.md` |
-| **Boss skill** | `.agents/skills/s3k-implement-boss/SKILL.md` |
+| **Disassembly guide** | `.claude/skills/s3k-disasm-guide/SKILL.md` |
+| **Boss skill** | `.claude/skills/s3k-implement-boss/SKILL.md` |
 | Zone set enum | `src/.../game/sonic3k/constants/S3kZoneSet.java` |
 | Object IDs | `src/.../game/sonic3k/constants/Sonic3kObjectIds.java` |
 | ROM offsets | `src/.../game/sonic3k/constants/Sonic3kConstants.java` |

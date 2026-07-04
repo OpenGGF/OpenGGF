@@ -13,19 +13,23 @@ Core rule: every stage must produce a named artifact and pass self-review before
 
 ## Team Model
 
-Use available agents conservatively, but prefer paired independent analysis when the environment supports it. Use `claude-sidecar` for Claude work: Sonnet for exploration and normal review, Opus for development help, hard architecture critique, subtle debugging, and high-risk implementation review.
+The current Claude Code session is the lead: it owns the blueprint, the artifacts, stage gating, and the final merge decision. Workers are subagents launched with the `Agent` tool. Use available agents conservatively, but prefer independent reviewers — a separate subagent that did not produce an artifact reviews it — whenever the risk warrants it.
 
-| Work | Preferred team |
+Pick the `subagent_type` that matches the stage:
+
+| Work | Preferred agent(s) |
 | --- | --- |
-| Blueprint extraction | GPT-5.5 lead plus optional Claude Sonnet sidecar |
-| Exploration | Pair one GPT-5.5 sub-agent and one Claude Sonnet sidecar on the same bounded question |
-| Architecture decisions | GPT-5.5 design agents, with Claude Sonnet exploration input |
-| Feature design | GPT-5.5 design agents |
-| Implementation plan | GPT-5.5 planner/reviewer agents |
-| Development | Parallel GPT-5.5 workers; use Claude Opus sidecar for bounded development help when available |
-| Review | Independent GPT-5.5 reviewers plus optional Claude Sonnet/Opus review depending on risk |
+| Blueprint extraction | Lead session, optionally a `general-purpose` subagent for a second read |
+| Exploration | `Explore` or `feature-dev:code-explorer` subagents; run two on the same bounded question for independent findings |
+| Architecture decisions | `Plan` or `feature-dev:code-architect` subagents, fed the exploration synthesis |
+| Feature design | `Plan` or `feature-dev:code-architect` subagents |
+| Implementation plan | `Plan` subagent to draft, a separate `feature-dev:code-reviewer` subagent to review |
+| Development | Parallel `general-purpose` (or `feature-dev:feature-dev`) workers with disjoint file ownership |
+| Review | Independent `feature-dev:code-reviewer` subagents; escalate to a fresh high-effort reviewer for high-risk implementation |
 
-If Claude is unavailable, continue with GPT-5.5 agents. If subagents are unavailable, run the same stages locally and record the reduced-parallelism constraint. If model override is unavailable, request the strongest available GPT agent and record the actual model used.
+Independence is the point: the agent that reviews an artifact should not be the one that wrote it. Where the user explicitly wants a cross-tool second opinion, an external `codex` CLI (available on this machine) can serve as an optional independent-review sidecar — but Claude Code is the primary and the lead.
+
+If subagents are unavailable, run the same stages sequentially in the lead session and record the reduced-parallelism constraint.
 
 ## Required Artifacts
 
@@ -50,7 +54,7 @@ Create or update these artifacts during the run. They may be sections in a singl
    - Self-review until green: requirements are testable, traceable to the blueprint, and free of hidden implementation guesses.
 
 2. Explore the codebase and prior art.
-   - For each major unknown, dispatch paired exploration: one GPT-5.5 sub-agent and one Claude Sonnet sidecar on the same bounded question.
+   - For each major unknown, dispatch paired exploration: two independent subagents (`Explore` and/or `feature-dev:code-explorer`) on the same bounded question.
    - Ask both for evidence: files, symbols, tests, commands, docs, and risks.
    - Compare their outputs. Keep agreements, investigate conflicts, and synthesize a recommendation with citations to local files.
    - Output: Exploration Synthesis.
@@ -86,7 +90,7 @@ Create or update these artifacts during the run. They may be sections in a singl
 
 7. Run end-to-end review.
    - Review requirements traceability, architecture consistency, code quality, tests, docs, migrations, config, performance, and operational risks.
-   - Use independent reviewers when available; include Claude Opus for high-risk implementation review if available.
+   - Use independent reviewers (a fresh `feature-dev:code-reviewer` subagent that did not write the code); escalate to a high-effort reviewer for high-risk implementation.
    - Output: End-to-End Review.
    - Fix or explicitly defer findings. Self-review until green: no known blocker remains and all deferrals are human-visible.
 

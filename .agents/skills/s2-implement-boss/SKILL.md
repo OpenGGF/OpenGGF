@@ -1,6 +1,6 @@
 ---
 name: s2-implement-boss
-description: Guide for implementing Sonic 2 bosses with ROM-accurate behavior, level-event integration, and disassembly cross-checks.
+description: Use when implementing a Sonic 2 boss — ports boss object logic from s2disasm, arena setup, hit detection, defeat sequence.
 ---
 
 # Implement Sonic 2 Boss
@@ -62,12 +62,13 @@ Bosses are spawned dynamically by zone-specific event handlers in `Sonic2LevelEv
 
 **Implementation checklist:**
 - [ ] Add zone constant if not present
-- [ ] Treat ROM `x_pos` / `y_pos` as centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
 - [ ] Add boss reference field (e.g., `private Sonic2XXXBossInstance xxxBoss`)
 - [ ] Implement `updateXXX()` method with 4-6 event routines
 - [ ] Implement `spawnXXXBoss()` method
 - [ ] Add boss spawn coordinates and arena boundaries from disassembly
 - [ ] Initialize boss reference in `initLevel()`
+
+When porting boss object positions, ROM `x_pos` / `y_pos` are centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
 
 **Example event routine pattern:**
 
@@ -92,8 +93,8 @@ private void updateZONE() {
                 camera.setMaxX((short) ARENA_MAX_X);
                 eventRoutine += 2;
                 bossSpawnDelay = 0;
-                AudioManager.getInstance().fadeOutMusic();
-                GameServices.gameState().setCurrentBossId(BOSS_ID);
+                audio().fadeOutMusic();
+                gameState().setCurrentBossId(BOSS_ID);
             }
         }
         case 4 -> {
@@ -105,7 +106,7 @@ private void updateZONE() {
             if (bossSpawnDelay >= 0x5A) {  // 90 frames
                 spawnBoss();
                 eventRoutine += 2;
-                AudioManager.getInstance().playMusic(Sonic2AudioConstants.MUS_BOSS);
+                audio().playMusic(Sonic2Music.BOSS.id);
             }
         }
         case 6 -> {
@@ -263,7 +264,7 @@ Register in `Sonic2ObjectRegistry.registerDefaultFactories()`:
 
 ```java
 registerFactory(Sonic2ObjectIds.ZONE_BOSS,
-    (spawn, registry) -> new Sonic2ZoneBossInstance(spawn, LevelManager.getInstance()));
+    (spawn, registry) -> new Sonic2ZoneBossInstance(spawn));
 ```
 
 ### Phase 7: Rewind Synchronization Fields
@@ -354,6 +355,7 @@ Once cross-validation passes:
 | Boss child base | `src/.../level/objects/boss/AbstractBossChild.java` |
 | Boss child interface | `src/.../level/objects/boss/BossChildComponent.java` |
 | Level events | `src/.../game/sonic2/Sonic2LevelEventManager.java` |
+| Per-zone event handlers | `src/.../game/sonic2/events/` (e.g. `Sonic2EHZEvents.java`), base class `Sonic2ZoneEvents.java` (`camera()`/`audio()`/`gameState()`/`spawnObject(...)` helpers) |
 | Boss implementations | `src/.../game/sonic2/objects/bosses/` |
 | Object IDs | `src/.../game/sonic2/constants/Sonic2ObjectIds.java` |
 | ROM offsets | `src/.../game/sonic2/constants/Sonic2Constants.java` |
@@ -361,6 +363,7 @@ Once cross-validation passes:
 | Art loader | `src/.../game/sonic2/Sonic2ObjectArt.java` |
 | Art provider | `src/.../game/sonic2/Sonic2ObjectArtProvider.java` |
 | Registry | `src/.../game/sonic2/objects/Sonic2ObjectRegistry.java` |
+| Music ids | `src/.../game/sonic2/audio/Sonic2Music.java` |
 | SFX constants | `src/.../game/sonic2/constants/Sonic2AudioConstants.java` |
 | Disassembly | `docs/s2disasm/` |
 | Implemented IDs | `src/.../tools/Sonic2ObjectProfile.java` (IMPLEMENTED_IDS set) |

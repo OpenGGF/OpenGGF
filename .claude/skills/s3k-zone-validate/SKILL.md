@@ -234,7 +234,7 @@ Run the engine for the same zone and capture at equivalent camera positions. The
 **Option A: Manual capture** -- Run the engine, navigate to the zone, use debug mode (D key) to position the camera, and press the screenshot key:
 
 ```bash
-java -jar target/sonic-engine-0.4.prerelease-jar-with-dependencies.jar
+java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 ```
 
 Save screenshots to `tools/retro/validate_output/{zone}/engine/`.

@@ -1,6 +1,6 @@
 ---
 name: s2disasm-guide
-description: Reference for navigating the Sonic 2 disassembly, locating assets and objects, and using RomOffsetFinder with S2 data.
+description: Use when navigating the Sonic 2 disassembly — label conventions, file structure, RomOffsetFinder commands for s2disasm.
 ---
 
 # s2disasm Navigation Guide
@@ -47,7 +47,7 @@ The disassembly is organized into these major directories:
 
 ## Finding Items with RomOffsetFinder
 
-The RomOffsetFinder tool searches the disassembly and calculates ROM offsets:
+The RomOffsetFinder tool searches the disassembly and calculates ROM offsets. S2 is the default game profile when no `--game` flag is given, but it also accepts `--game s2` / `--game sonic2` explicitly (same as S1/S3K); it additionally supports `find <label> [startOffset]` (resolve an included-file label directly) and `plc <name>` (show a PLC definition's contents) subcommands alongside `search`/`list`/`test`/`verify`/`export`.
 
 ### Search Command (Most Common)
 

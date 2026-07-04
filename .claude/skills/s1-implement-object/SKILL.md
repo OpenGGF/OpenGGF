@@ -42,7 +42,7 @@ Use these to bootstrap and de-risk the object task before/while implementing:
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s1disasm-guide skill (`.claude/skills/s1disasm-guide/skill.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s1disasm-guide skill (`.claude/skills/s1disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 Agents should:
 
@@ -55,7 +55,7 @@ Agents should:
    - Object code: `docs/s1disasm/_incObj/HEX Name.asm` (e.g., `_incObj/1F Crabmeat.asm`)
    - Animation: `docs/s1disasm/_anim/Name.asm` (e.g., `_anim/Crabmeat.asm`)
    - Mappings: `docs/s1disasm/_maps/Name.asm` (e.g., `_maps/Crabmeat.asm`)
-   - Some objects have multiple parts: `_incObj/11 Bridge (part 1).asm`, `(part 2).asm`, etc.
+   - Related object IDs often share one comma-joined file: `_incObj/22, 23 Badnik - Buzz Bomber and Missile.asm`, `_incObj/3D, 48 Boss - GHZ Main and Wrecking Ball.asm`
 
 3. **Analyze the disassembly** to understand:
    - All routines (indexed by `obRoutine` values: 0, 2, 4, ...)
@@ -170,7 +170,7 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 ```
 
 ##### Pattern 3: Boss
-**Use the dedicated `/s1-implement-boss` skill** (`.claude/skills/s1-implement-boss/skill.md`) for boss implementations.
+**Use the dedicated `/s1-implement-boss` skill** (`.claude/skills/s1-implement-boss/SKILL.md`) for boss implementations.
 
 **Detect a boss when:**
 - Object file is named `Boss - Zone Name.asm`
@@ -340,7 +340,7 @@ Ensure the implementation:
 
 Delegate to a review agent to cross-validate against the disassembly. **Include this instruction in the agent prompt:**
 
-> Use the s1disasm-guide skill (`.claude/skills/s1disasm-guide/skill.md`) for reference on disassembly structure, label conventions, and object system patterns.
+> Use the s1disasm-guide skill (`.claude/skills/s1disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
 
 ```
 Review the implementation of [ObjectName] (0xXX) against the Sonic 1 disassembly.
@@ -405,8 +405,8 @@ Once cross-validation is confirmed bug-free:
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s1disasm-guide/skill.md` |
-| **Boss skill** | `.claude/skills/s1-implement-boss/skill.md` |
+| **Disassembly guide** | `.claude/skills/s1disasm-guide/SKILL.md` |
+| **Boss skill** | `.claude/skills/s1-implement-boss/SKILL.md` |
 | Object IDs | `src/.../game/sonic1/constants/Sonic1ObjectIds.java` |
 | ROM offsets | `src/.../game/sonic1/constants/Sonic1Constants.java` |
 | Registry | `src/.../game/sonic1/objects/Sonic1ObjectRegistry.java` |

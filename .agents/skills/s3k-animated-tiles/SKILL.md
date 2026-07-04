@@ -94,10 +94,8 @@ zoneanimdecl  -1, ArtUnc_AniAIZ1_0, $2E6,  9, $C
 
 | Class | File | Purpose |
 |-------|------|---------|
-| `Sonic3kPatternAnimator` | `game/sonic3k/Sonic3kPatternAnimator.java` | Owns channel installation, fallback custom DMA logic, and graph updates |
+| `Sonic3kPatternAnimator` | `game/sonic3k/Sonic3kPatternAnimator.java` | Zone switch, gating logic, runs scripts |
 | `Sonic3kLevelAnimationManager` | `game/sonic3k/Sonic3kLevelAnimationManager.java` | Delegates `update()` to pattern animator + palette cycler |
-| `S3kAnimatedTileChannels` | `game/sonic3k/S3kAnimatedTileChannels.java` | Runtime-owned channel definitions and gating helpers |
-| `AnimatedTileChannelGraph` | `game/animation/AnimatedTileChannelGraph.java` | Runtime-owned coordinator that caches per-channel phase |
 | `AniPlcParser` | `level/animation/AniPlcParser.java` | Parses AniPLC binary scripts from ROM |
 | `AniPlcScriptState` | `level/animation/AniPlcScriptState.java` | Per-script runtime state, `tick()` applies frames |
 | `Sonic3kConstants` | `game/sonic3k/constants/Sonic3kConstants.java` | ROM address constants for AniPLC data |

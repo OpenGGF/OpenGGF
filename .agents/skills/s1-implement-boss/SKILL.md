@@ -1,6 +1,6 @@
 ---
 name: s1-implement-boss
-description: Guide for implementing Sonic 1 bosses with ROM-accurate behavior, arena setup, defeat flow, and disassembly cross-checks.
+description: Use when implementing a Sonic 1 boss — ports boss object logic from s1disasm, arena setup, hit detection, defeat sequence.
 ---
 
 # Implement Sonic 1 Boss
@@ -56,7 +56,6 @@ Delegate multiple agents to explore the disassembly. **Include this instruction 
 
 **Research checklist:**
 - [ ] Locate boss object file in `docs/s1disasm/_incObj/` (may have multiple parts)
-- [ ] Treat ROM `obX` / `obY` as centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
 - [ ] Find animation file in `docs/s1disasm/_anim/Eggman.asm` or boss-specific
 - [ ] Find mapping file in `docs/s1disasm/_maps/` (e.g., `Eggman.asm`, `Boss Items.asm`)
 - [ ] Identify sub-object spawning pattern (`ObjData` tables or inline)
@@ -81,6 +80,8 @@ Delegate multiple agents to explore the disassembly. **Include this instruction 
 - Boss palette flash via direct palette RAM writes (`v_palette+$22`)
 - Camera boundary manipulation for arena lock
 - Sub-object data tables: `BossName_ObjData` defines children with offsets and IDs
+
+When porting boss object positions, ROM `obX` / `obY` are centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
 
 ### Phase 2: Arena & Level Event Setup
 
@@ -107,7 +108,7 @@ private void updateGhzEvents() {
                 camera.setMaxX((short) GHZ_BOSS_ARENA_MAX);
                 spawnGhzBoss();
                 eventRoutine += 2;
-                AudioManager.getInstance().playMusic(Sonic1AudioProfile.MUS_BOSS);
+                audio().playMusic(Sonic1Music.BOSS.id);
             }
         }
         // ...
@@ -300,7 +301,7 @@ Register in `Sonic1ObjectRegistry`:
 
 ```java
 registerFactory(Sonic1ObjectIds.ZONE_BOSS,
-    (spawn, registry) -> new Sonic1ZoneBossInstance(spawn, LevelManager.getInstance()));
+    (spawn, registry) -> new Sonic1ZoneBossInstance(spawn));
 ```
 
 `Sonic1ObjectRegistry` already has `registerDefaultFactories()` — add your factory registration there.
@@ -396,8 +397,9 @@ Report any discrepancies with specific line references.
 | Boss child base | `src/.../level/objects/boss/AbstractBossChild.java` |
 | Object IDs | `src/.../game/sonic1/constants/Sonic1ObjectIds.java` |
 | ROM offsets | `src/.../game/sonic1/constants/Sonic1Constants.java` |
-| Audio profile | `src/.../game/sonic1/audio/Sonic1AudioProfile.java` |
+| Music / SFX ids | `src/.../game/sonic1/audio/Sonic1Music.java`, `src/.../game/sonic1/audio/Sonic1Sfx.java` |
 | Level events | `src/.../game/sonic1/events/Sonic1LevelEventManager.java` |
+| Per-zone event handlers | `src/.../game/sonic1/events/` (e.g. `Sonic1GHZEvents.java`), base class `Sonic1ZoneEvents.java` (`camera()`/`audio()`/`gameState()` helpers) |
 | Registry | `src/.../game/sonic1/objects/Sonic1ObjectRegistry.java` |
 | S2 boss examples | `src/.../game/sonic2/objects/bosses/` |
 | Disassembly bosses | `docs/s1disasm/_incObj/*Boss*.asm` |

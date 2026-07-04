@@ -21,9 +21,9 @@ $ARGUMENTS: Zone abbreviation (e.g., "HCZ", "MGZ", "CNZ1", "LBZ Act 2") and opti
 
 Zone events should be implemented to close playable S3K route slices. Prioritize event stages that gate AIZ -> HCZ continuity first, then CNZ, MGZ, and ICZ slice work: camera locks, route openings, water/chase state, boss/miniboss arenas, act transitions, palette mutations, PLC handoffs, and sidekick-sensitive state. Trivial or decorative event polish can wait until the route can be traversed coherently.
 
-## Architecture
-
 When event logic reads player or object positions, use ROM centre-coordinate semantics (`getCentreX()` / `getCentreY()` for sprites and objects). Camera words are already world coordinates, while `getX()` / `getY()` on sprites are top-left render bounds.
+
+## Architecture
 
 ### Class Hierarchy
 
@@ -63,14 +63,14 @@ These are the methods available to all zone event handlers:
 
 | Method | ROM Equivalent | Description |
 |--------|----------------|-------------|
-| `camera.getX()` / `camera.getY()` | `Camera_X_pos` / `Camera_Y_pos` | Current camera position |
-| `camera.setMinX(short)` | `Camera_Min_X_pos` | Set left camera boundary (immediate) |
-| `camera.setMaxX(short)` | `Camera_Max_X_pos` | Set right camera boundary (immediate) |
-| `camera.setMinY(short)` | `Camera_Min_Y_pos` | Set top camera boundary (immediate) |
-| `camera.setMaxY(short)` | `Camera_Max_Y_pos` | Set bottom camera boundary (immediate) |
-| `camera.setMaxYTarget(short)` | `Camera_Max_Y_pos_now` | Set bottom boundary with easing (+2px/frame) |
-| `camera.setMinXTarget(short)` | N/A | Set left boundary with easing |
-| `camera.setFrozen(true/false)` | Scroll lock | Stop/resume camera following player |
+| `camera().getX()` / `camera().getY()` | `Camera_X_pos` / `Camera_Y_pos` | Current camera position |
+| `camera().setMinX(short)` | `Camera_Min_X_pos` | Set left camera boundary (immediate) |
+| `camera().setMaxX(short)` | `Camera_Max_X_pos` | Set right camera boundary (immediate) |
+| `camera().setMinY(short)` | `Camera_Min_Y_pos` | Set top camera boundary (immediate) |
+| `camera().setMaxY(short)` | `Camera_Max_Y_pos` | Set bottom camera boundary (immediate) |
+| `camera().setMaxYTarget(short)` | `Camera_Max_Y_pos_now` | Set bottom boundary with easing (+2px/frame) |
+| `camera().setMinXTarget(short)` | N/A | Set left boundary with easing |
+| `camera().setFrozen(true/false)` | Scroll lock | Stop/resume camera following player |
 | `eventRoutine` field | `Dynamic_Resize_routine` | State machine counter (advance by assignment) |
 | `bossSpawnDelay` field | Boss countdown | Frames until boss spawn |
 | `loadPalette(line, romAddr)` | `PalLoad_Now` | Load 32-byte palette from ROM address |
@@ -219,8 +219,7 @@ public class Sonic3k{Zone}Events extends Sonic3kZoneEvents {
     // --- Mutable state ---
     private final Sonic3kLoadBootstrap bootstrap;
 
-    public Sonic3k{Zone}Events(Camera camera, Sonic3kLoadBootstrap bootstrap) {
-        super(camera);
+    public Sonic3k{Zone}Events(Sonic3kLoadBootstrap bootstrap) {
         this.bootstrap = bootstrap;
     }
 
@@ -241,7 +240,7 @@ public class Sonic3k{Zone}Events extends Sonic3kZoneEvents {
     // --- Act 1 ---
 
     private void updateAct1(int frameCounter) {
-        int cameraX = camera.getX();
+        int cameraX = camera().getX();
 
         switch (eventRoutine) {
             case 0 -> {
@@ -268,10 +267,10 @@ public class Sonic3k{Zone}Events extends Sonic3kZoneEvents {
 
 **Key patterns from Sonic3kAIZEvents:**
 
-1. **Constructor** takes `Camera` and `Sonic3kLoadBootstrap` parameters.
+1. **Constructor** takes only a `Sonic3kLoadBootstrap` parameter; the implicit no-arg `super()` reaches `Sonic3kZoneEvents`.
 2. **`init(int act)`** calls `super.init(act)` first, then resets all zone-specific mutable state.
 3. **`update(int act, int frameCounter)`** dispatches to per-act methods.
-4. **Per-act methods** read `camera.getX()` / `camera.getY()` and branch on `eventRoutine`.
+4. **Per-act methods** read `camera().getX()` / `camera().getY()` and branch on `eventRoutine`.
 5. **State tracking** uses boolean guards for one-shot operations (e.g., `paletteSwapped`, `boundariesUnlocked`).
 6. **Resize tables** are `int[][]` constants with `{maxY, triggerX}` pairs, scanned by a helper method.
 
@@ -291,7 +290,7 @@ Add a case to the zone dispatch in `onInitLevel(int zone, int act)`:
 
 ```java
 if (zone == Sonic3kZoneIds.ZONE_{ZONE}) {
-    {zone}Events = new Sonic3k{Zone}Events(camera, bootstrap);
+    {zone}Events = new Sonic3k{Zone}Events(bootstrap);
     {zone}Events.init(act);
 } else {
     {zone}Events = null;
@@ -336,13 +335,13 @@ mvn test -Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading
 
 | 68000 Assembly | Java Equivalent | Notes |
 |----------------|-----------------|-------|
-| `(Camera_X_pos).w` | `camera.getX()` | Camera X position |
-| `(Camera_Y_pos).w` | `camera.getY()` | Camera Y position |
-| `(Camera_Min_X_pos).w` | `camera.setMinX((short) val)` | Left boundary (immediate) |
-| `(Camera_Max_X_pos).w` | `camera.setMaxX((short) val)` | Right boundary (immediate) |
-| `(Camera_Min_Y_pos).w` | `camera.setMinY((short) val)` | Top boundary (immediate) |
-| `(Camera_Max_Y_pos).w` | `camera.setMaxY((short) val)` | Bottom boundary (immediate) |
-| `(Camera_Max_Y_pos_now).w` | `camera.setMaxYTarget((short) val)` | Bottom boundary (eased +2px/frame) |
+| `(Camera_X_pos).w` | `camera().getX()` | Camera X position |
+| `(Camera_Y_pos).w` | `camera().getY()` | Camera Y position |
+| `(Camera_Min_X_pos).w` | `camera().setMinX((short) val)` | Left boundary (immediate) |
+| `(Camera_Max_X_pos).w` | `camera().setMaxX((short) val)` | Right boundary (immediate) |
+| `(Camera_Min_Y_pos).w` | `camera().setMinY((short) val)` | Top boundary (immediate) |
+| `(Camera_Max_Y_pos).w` | `camera().setMaxY((short) val)` | Bottom boundary (immediate) |
+| `(Camera_Max_Y_pos_now).w` | `camera().setMaxYTarget((short) val)` | Bottom boundary (eased +2px/frame) |
 | `(Dynamic_Resize_routine).w` | `eventRoutine` field | State machine counter |
 | `addq.b #4,(Dynamic_Resize_routine).w` | `eventRoutine += 4` | Advance state (S3K stride = 4) |
 | `(Boss_flag).w` | `bossFlag` field or `bossActive` in manager | Gates FG events during boss |
@@ -355,7 +354,7 @@ mvn test -Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading
 | `jsr (PlaySfx).l` | `playSfx(sfxId)` | Play sound effect |
 | `(Events_fg_0).w` etc. | Local fields in zone events class | Per-zone scratch data |
 | `(Events_bg+$00).w` etc. | Local fields in zone events class | BG event scratch data |
-| `move.w #$xxxx,(Camera_Min_X_pos).w` | `camera.setMinX((short) 0xXXXX)` | Cast to short for signed 16-bit |
+| `move.w #$xxxx,(Camera_Min_X_pos).w` | `camera().setMinX((short) 0xXXXX)` | Cast to short for signed 16-bit |
 | `tst.b (Boss_flag).w / bne` | `if (bossFlag) return;` | Skip FG events during boss |
 
 ## Character Branching Pattern
@@ -414,7 +413,7 @@ Most ROM branches only distinguish Knuckles (`== 3`) from everyone else. A few z
 private boolean paletteSwapped;
 
 private void updateAct1(int frameCounter) {
-    if (!paletteSwapped && camera.getX() >= PALETTE_SWAP_X) {
+    if (!paletteSwapped && camera().getX() >= PALETTE_SWAP_X) {
         loadPaletteFromPalPointers(PAL_INDEX);
         paletteSwapped = true;
     }
@@ -446,12 +445,12 @@ The resize routine detects the player crossing a camera threshold and locks the 
 
 ```java
 case 0 -> {
-    if (camera.getX() >= BOSS_ARENA_LEFT_X) {
+    if (camera().getX() >= BOSS_ARENA_LEFT_X) {
         // Lock camera to boss arena
-        camera.setMinX((short) BOSS_ARENA_LEFT_X);
-        camera.setMaxX((short) (BOSS_ARENA_LEFT_X + SCREEN_WIDTH));
-        camera.setMinY((short) BOSS_ARENA_TOP_Y);
-        camera.setMaxY((short) BOSS_ARENA_BOTTOM_Y);
+        camera().setMinX((short) BOSS_ARENA_LEFT_X);
+        camera().setMaxX((short) (BOSS_ARENA_LEFT_X + SCREEN_WIDTH));
+        camera().setMinY((short) BOSS_ARENA_TOP_Y);
+        camera().setMaxY((short) BOSS_ARENA_BOTTOM_Y);
         eventRoutine += 4;
     }
 }
@@ -506,7 +505,7 @@ case 16 -> {
 ```java
 case 20 -> {
     // Unlock camera for act transition / walkoff
-    camera.setMaxX((short) LEVEL_END_X);
+    camera().setMaxX((short) LEVEL_END_X);
     // Optionally trigger act transition or seamless reload
 }
 ```
@@ -520,7 +519,7 @@ Every state that should transition must explicitly advance:
 ```java
 // WRONG: state machine stalls
 case 0 -> {
-    if (camera.getX() >= THRESHOLD) {
+    if (camera().getX() >= THRESHOLD) {
         doSomething();
         // Missing: eventRoutine += 4;
     }
@@ -528,7 +527,7 @@ case 0 -> {
 
 // CORRECT:
 case 0 -> {
-    if (camera.getX() >= THRESHOLD) {
+    if (camera().getX() >= THRESHOLD) {
         doSomething();
         eventRoutine += 4;
     }

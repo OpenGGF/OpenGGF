@@ -1,6 +1,6 @@
 ---
 name: s1-retro-trace
-description: Record Sonic 1 physics traces using stable-retro (cross-platform Python). Produces output identical to BizHawk Lua recorder for Java trace replay tests.
+description: Use when recording Sonic 1 physics traces using stable-retro for trace replay tests.
 ---
 
 # S1 Retro Trace
@@ -23,14 +23,62 @@ $ARGUMENTS: Zone name, action, or recording mode. Examples:
 - For full-run traces: a BK2 movie file (stable-retro or BizHawk format)
 - For credits demos: no movie needed (ROM provides input data)
 
-### One-time setup
+### Platform Setup
+
+stable-retro requires a compiled C extension. Pre-built wheels are available for macOS and Linux but **not Windows** — use WSL on Windows.
+
+#### macOS (native)
 
 ```bash
 pip install stable-retro numpy
 python -m stable_retro.import /path/to/directory/containing/rom/
 ```
 
+#### Windows (via WSL)
+
+stable-retro does not build natively on Windows. Use Ubuntu WSL:
+
+```bash
+# 1. Create a persistent Python venv in WSL
+wsl -d Ubuntu-24.04 -- bash -c 'python3 -m venv ~/retro-env'
+
+# 2. Install stable-retro
+wsl -d Ubuntu-24.04 -- bash -c 'source ~/retro-env/bin/activate && pip install stable-retro numpy'
+
+# 3. Copy the ROM to a WSL-local path (avoids slow /mnt/ I/O)
+wsl -d Ubuntu-24.04 -- bash -c 'mkdir -p /tmp/roms && cp "/mnt/c/Users/farre/IdeaProjects/sonic-engine/Sonic The Hedgehog (W) (REV01) [!].gen" /tmp/roms/'
+
+# 4. Import the ROM
+wsl -d Ubuntu-24.04 -- bash -c 'cd /home && source ~/retro-env/bin/activate && PYTHONPATH="" python3 -m stable_retro.import /tmp/roms'
+```
+
+**Critical WSL notes:**
+- Always `cd /home` (or any non-project dir) before activating the venv. The project root contains `stable-retro-0.9.9/stable_retro/` which shadows the installed package.
+- Always set `PYTHONPATH=""` to prevent the Windows source tree from being picked up.
+- Use `~/retro-env` (not `/tmp/retro-env`) — WSL `/tmp` is volatile.
+- The recorder scripts need `render_mode=None` (already set) since WSL has no display server.
+
+#### Running recorder scripts on Windows (WSL wrapper)
+
+All `python` commands in this skill should be run through WSL on Windows:
+
+```bash
+wsl -d Ubuntu-24.04 -- bash -c 'cd /home && source ~/retro-env/bin/activate && PYTHONPATH="" python3 -u "/mnt/c/Users/farre/IdeaProjects/sonic-engine/tools/retro/SCRIPT.py" ARGS'
+```
+
+#### ROM SHA-1
+
 The ROM's SHA-1 must match `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` (Sonic 1 REV01 World). Run `shasum` on your ROM if import fails.
+
+### RAM byte ordering
+
+stable-retro's genesis_plus_gx core exposes 68K work RAM with **bytes swapped within each 16-bit word** (little-endian x86 order). The `GenesisRAM` class in `trace_core.py` handles this transparently. If reading RAM directly, remember: byte at 68K address `$FFxxxx` (even) is at `ram[xxxx ^ 1]`.
+
+### Coordinate semantics
+
+Recorded `x_pos` / `y_pos` values are ROM centre coordinates. Engine comparisons must use `getCentreX()` / `getCentreY()`, not debug HUD `Pos:` values or `getX()` / `getY()` top-left bounds.
+
+For object/contact/frontier work, keep the recorder comparison-only. New stable-retro diagnostics may expose fields that help classify `ObjectControlState`, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy`, `ObjectLifetimeOps`, and canonical profile decisions, but they must not hydrate engine state. If a generic guard is added around these patterns, ratchet its baseline from current violations rather than broadening the rule.
 
 ## Step 1: Record Trace with stable-retro
 
@@ -61,19 +109,26 @@ python tools/retro/s1_trace_recorder.py \
 
 ### Credits demo recording
 
-Records the ROM's built-in ending demo replays (no external input needed):
+Records the ROM's built-in ending demo replays (no external input needed).
+Uses `redirect_level` mode: boots ROM -> presses Start -> redirects to credits.
 
 **All 8 credits demos:**
 ```bash
 python tools/retro/s1_credits_trace_recorder.py \
+  --target all --force-mode redirect_level \
   --output-dir tools/retro/trace_output/credits_demos/
 ```
 
 **Single demo (e.g. LZ3 = index 3):**
 ```bash
 python tools/retro/s1_credits_trace_recorder.py \
-  --target 3 \
+  --target 3 --force-mode redirect_level \
   --output-dir tools/retro/trace_output/credits_demos/
+```
+
+**Windows WSL example (all 8):**
+```bash
+wsl -d Ubuntu-24.04 -- bash -c 'cd /home && source ~/retro-env/bin/activate && PYTHONPATH="" python3 -u "/mnt/c/Users/farre/IdeaProjects/sonic-engine/tools/retro/s1_credits_trace_recorder.py" --target all --force-mode redirect_level --output-dir /tmp/credits_traces'
 ```
 
 ### Verify recording succeeded
@@ -91,43 +146,47 @@ Verify:
 
 ## Step 2: Copy Trace to Test Resources
 
-After recording, copy the three output files to the correct test resource directory:
+After recording, copy the three output files to the correct test resource directory.
 
-**GHZ1:**
+**Full-run traces (GHZ1/MZ1):**
 ```bash
 SRC="tools/retro/trace_output"
-DST="src/test/resources/traces/s1/ghz1_fullrun"
-cp "$SRC/physics.csv" "$DST/physics.csv"
-cp "$SRC/aux_state.jsonl" "$DST/aux_state.jsonl"
-cp "$SRC/metadata.json" "$DST/metadata.json"
+DST="src/test/resources/traces/s1/ghz1_fullrun"  # or mz1_fullrun
+cp "$SRC"/{physics.csv,aux_state.jsonl,metadata.json} "$DST/"
 ```
 
-**MZ1:**
+**Credits demos (from WSL output to Windows test resources):**
 ```bash
-SRC="tools/retro/trace_output"
-DST="src/test/resources/traces/s1/mz1_fullrun"
-cp "$SRC/physics.csv" "$DST/physics.csv"
-cp "$SRC/aux_state.jsonl" "$DST/aux_state.jsonl"
-cp "$SRC/metadata.json" "$DST/metadata.json"
+DEST="src/test/resources/traces/s1"
+for pair in \
+  "00_ghz1_credits_demo_1:credits_00_ghz1" \
+  "01_mz2_credits_demo:credits_01_mz2" \
+  "02_syz3_credits_demo:credits_02_syz3" \
+  "03_lz3_credits_demo:credits_03_lz3" \
+  "04_slz3_credits_demo:credits_04_slz3" \
+  "05_sbz1_credits_demo:credits_05_sbz1" \
+  "06_sbz2_credits_demo:credits_06_sbz2" \
+  "07_ghz1_credits_demo_2:credits_07_ghz1b"; do
+    src_dir="${pair%%:*}"; dest_dir="${pair##*:}"
+    mkdir -p "$DEST/$dest_dir"
+    wsl -d Ubuntu-24.04 -- bash -c "cp /tmp/credits_traces/$src_dir/{metadata.json,physics.csv,aux_state.jsonl} '/mnt/c/Users/farre/IdeaProjects/sonic-engine/$DEST/$dest_dir/'"
+done
 ```
 
 ## Step 3: Run Trace Replay Tests
 
 ```bash
-mvn test -Dtest="*Trace*"
+mvn test -Dtest="*TraceReplay"
 ```
 
 Expected output:
 - GHZ1 (`TestS1Ghz1TraceReplay`) should PASS
-- MZ1 (`TestS1Mz1TraceReplay`) current baseline: **224 errors, 329 warnings**
+- Credits demo 6 / SBZ2 (`TestS1Credits06Sbz2TraceReplay`) should PASS
+- MZ1 (`TestS1Mz1TraceReplay`) and the other credits demos (Credits00–Credits05, Credits07): current per-trace error/warning counts live in `docs/TRACE_FRONTIER_LOG.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
 
 ## Step 4: Interpret Results
 
 See the `s1-trace-replay` skill for full divergence report interpretation, aux_state.jsonl cross-referencing, and common divergence patterns. The output format is identical between BizHawk and stable-retro recorders.
-
-Recorded `x_pos` / `y_pos` values are ROM centre coordinates. Engine comparisons must use `getCentreX()` / `getCentreY()`, not debug HUD `Pos:` values or `getX()` / `getY()` top-left bounds.
-
-For object/contact/frontier work, keep the recorder comparison-only. New stable-retro diagnostics may expose fields that help classify `ObjectControlState`, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy`, `ObjectLifetimeOps`, and canonical profile decisions, but they must not hydrate engine state. If a generic guard is added around these patterns, ratchet its baseline from current violations rather than broadening the rule.
 
 ## Available Savestates
 
@@ -167,6 +226,8 @@ stable-retro ships with savestates for every Sonic 1 zone/act:
 | BizHawk credits (Lua) | `tools/bizhawk/s1_credits_trace_recorder.lua` |
 | GHZ1 test traces | `src/test/resources/traces/s1/ghz1_fullrun/` |
 | MZ1 test traces | `src/test/resources/traces/s1/mz1_fullrun/` |
+| Credits test traces | `src/test/resources/traces/s1/credits_00_ghz1/` through `credits_07_ghz1b/` |
+| Credits test base class | `src/test/java/com/openggf/tests/trace/AbstractCreditsDemoTraceReplayTest.java` |
 | BizHawk trace skill | `s1-trace-replay` skill |
 
 ## BizHawk vs stable-retro
