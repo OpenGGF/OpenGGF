@@ -140,6 +140,23 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
      - Player physics (x, y, x_speed, ...): inspect physics CSV row K.
      - Aux state (objects, checkpoints, CPU state): inspect aux_state.jsonl events at frame K.
 
+3a. For object, boss, badnik, hazard, platform, and sidekick-contact
+    frontiers, mine existing aux data BEFORE writing new Lua:
+      - `object_near`, `slot_dump`, `state_snapshot`, and per-frame object
+        extras often already contain ROM slot, routine, position, collision,
+        and object-off bytes.
+      - Build a small timeline table over the suspected window:
+        `frame | slot | id | routine | x/y | collision | key objoffs`.
+      - Diff that table against engine diagnostics for the owning object and
+        every relevant child. If the owner is globally one frame ahead/behind,
+        fix cadence before local object math.
+
+3b. Audit compensations before adding another one. Local offsets such as
+    `bossY - 2`, manual angle nudges, child-index predicates, and per-object
+    stale-input windows are suspect until the upstream ROM cadence is proven.
+    Repeated same-length exceptions (especially 2-3 frame input windows) are a
+    signal to hunt the shared ROM mechanic, not to add one more carve-out.
+
 4. Find the matching ROM routine in the relevant disassembly:
      - docs/s1disasm/, docs/s2disasm/, docs/skdisasm/
      - Use the s1disasm-guide / s2disasm-guide / s3k-disasm-guide skills
@@ -223,6 +240,37 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
 ## Trace Triage Notes
 
 Classify sidekick failures by phase before changing AI: native route-start/title-card/object/scroll preludes, spawn/approach setup, normal following history, object contact/riding, and release/respawn recovery produce different signatures. A Tails mismatch at the first controllable frame usually points to bootstrap/prelude state; a later mismatch after object contact usually points to standing-bit or carry timing.
+
+For boss/object fights, make an aux-backed object timeline before new Lua or code
+changes. Compare the owner and all child objects frame-by-frame against ROM:
+slot, id, routine/subroutine, center position, collision byte/category, render
+eligibility, key counters/objoffs, and parent-visible state. `object_near`
+events often carry enough per-frame ROM object positions to prove whether the
+engine is globally one update ahead/behind. If the whole object graph is phase
+shifted, fix init/update cadence first; local hitboxes, sine math, or per-child
+offsets are usually downstream symptoms.
+
+Object cadence checklist:
+- Does ROM routine 0/init consume the object's first execution frame and `rts`
+  before real logic starts?
+- Does child 0 reuse the maker/spawner's own slot (`movea.l a0,a1`) while later
+  children are allocated separately, causing child 0 to start later or in a
+  different slot order?
+- Does the parent update before children in engine while ROM children execute in
+  their SST slots, or vice versa?
+- Does a touch pass merely set a flag/counter, while the object's own later
+  animation or routine tail applies movement, velocity, collision, or defeat
+  changes?
+- Does `AnimateSprite` gate motion/collision on the displayed animation frame?
+- Does ROM touch handling mutate the object's RAM (`collision_flags`,
+  `collision_property`, routine, status bits) immediately, making same-frame
+  later scans see a changed object?
+
+Compensation red flags: manual phase nudges, `-2/+2` position sources, child
+index predicates, route/frame gates, and one-off stale-input windows. If two or
+more compensations interact, stop and prove the earliest owner cadence against
+aux/disassembly before trying another fix. A compensation that prevents one
+window from regressing can still be masking a missing ROM tail elsewhere.
 
 For object-contact divergences, add or inspect fields that explain the contact edge: object id/subtype/routine, object centre position, piece index, player and sidekick standing bits, collision side, carried delta, release reason, and whether contact was persisted from the previous frame or freshly detected. These fields are diagnostic context only; they must not drive engine state.
 
@@ -536,6 +584,25 @@ object becomes touch-eligible, not its position:
   `obRender` bit 4 is set; `ReactToItem` honors it. A fixed ~32px Y touch band
   misses a tall hazard (256px lavafall column, `obHeight=$80`) whose anchor is
   above the camera top — model the object's real render height (S1 MZ2 column).
+- **Hit detection and hit reaction may be different phases.** Some ROM touch
+  paths set an invulnerability/collision/defeat flag, but the boss/object applies
+  the reaction from its own later routine or animation tail after the current
+  movement copy. Do not apply velocity writes, break flags, routine changes, or
+  defeat flow directly in the engine touch callback until a PC probe or aux
+  timeline proves ROM mutates that state in the touch pass. MTZ3 Obj54/Obj53 is
+  the cautionary pattern: early touch-pass reaction masked a missing same-pass
+  break tail and created several false phase "fixes."
+
+### Repeated input-staleness windows are a shared-mechanic alarm
+
+If several unrelated objects need identical stale logical-input windows, stop
+adding per-object exceptions. Search the player disassembly for a shared gate
+that skips or suppresses grounded movement/input consumption (wait animation,
+blink/impatient-idle, move lock, control lock, object control, etc.). For S2,
+the impatient-wait blink path in `Obj01_MdNormal_Checks` can ignore held input
+for a short grounded window without using a conventional control lock; per-ride
+three-frame stale-input patches should be treated as temporary evidence until
+the common player mechanic and ride-time wait-animation cadence are modeled.
 
 ### ROM-revision (REV01 vs REV00) divergences are real — model, don't carve
 
