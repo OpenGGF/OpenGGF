@@ -74,13 +74,14 @@ public final class VerdictCodec {
     public static final String RESULT_FAIL_DIVERGENT = "FAIL_DIVERGENT";
     public static final String RESULT_FAIL_TIME_MISMATCH = "FAIL_TIME_MISMATCH";
     public static final String RESULT_FAIL_GHOST_HASH = "FAIL_GHOST_HASH";
+    public static final String RESULT_FAIL_TRACK_MISMATCH = "FAIL_TRACK_MISMATCH"; // recording is for another track/character/build
     public static final String RESULT_VOID_NO_UPLOAD = "VOID_NO_UPLOAD"; // master-issued, unsigned
 
     /** Canonical signed bytes: UTF-8 of jobId + "\n" + attemptRef + "\n" + recordingHashHex + "\n" + result. */
     public static byte[] canonicalBytes(String jobId, String attemptRef,
             String recordingHashHex, String result);
     public static boolean isPass(String result);   // RESULT_PASS only
-    public static boolean isFail(String result);   // the three FAIL_* values
+    public static boolean isFail(String result);   // the four FAIL_* values
 }
 ```
 
@@ -111,6 +112,7 @@ class TestVerdictCodec {
         assertTrue(VerdictCodec.isFail(VerdictCodec.RESULT_FAIL_DIVERGENT));
         assertTrue(VerdictCodec.isFail(VerdictCodec.RESULT_FAIL_TIME_MISMATCH));
         assertTrue(VerdictCodec.isFail(VerdictCodec.RESULT_FAIL_GHOST_HASH));
+        assertTrue(VerdictCodec.isFail(VerdictCodec.RESULT_FAIL_TRACK_MISMATCH));
         assertFalse(VerdictCodec.isFail(VerdictCodec.RESULT_VOID_NO_UPLOAD));
         assertFalse(VerdictCodec.isPass(VerdictCodec.RESULT_VOID_NO_UPLOAD));
     }
@@ -238,14 +240,22 @@ git commit -m "feat(timeattack): attempt-recording custody vault + listener reco
 ```java
 public final class RecordingUploader implements AutoCloseable {
     public RecordingUploader(String sessionToken, boolean trustInsecure);  // trustInsecure reuses the phase-3 masterTrustInsecure config semantics
-    /** PUT uploadUrl, body = recording bytes, headers: Authorization: Bearer <token>, Content-Type: application/octet-stream.
+    /** PUT uploadUrl (ABSOLUTE http/https — resolve first, see below), body = recording bytes,
+     *  headers: Authorization: Bearer <token>, Content-Type: application/octet-stream.
      *  Runs on an internal single-thread executor; never blocks the caller. One retry after 2 s on IO failure. */
     public void upload(String uploadUrl, byte[] recording, java.util.function.Consumer<Boolean> onDone);
+
+    /** The master's DEFAULT RecordingRequest carries a path-only uploadUrl ("/recordings/" + hash,
+     *  because a blank publicBaseUrl means the master cannot know its own public address — Task 6).
+     *  HttpClient cannot send a relative URI, so the caller resolves against the configured master
+     *  URL first: wss://host:port/master + "/recordings/ab" -> "https://host:port/recordings/ab"
+     *  (ws:// -> http://; the /master path is dropped). Absolute http(s) URLs pass through unchanged. */
+    public static String resolveUploadUrl(String uploadUrlOrPath, String configuredMasterUrl);
     @Override public void close();
 }
 ```
 
-- Coordinator: on inbound `ControlMessage.RecordingRequest(attemptId, expectedHashHex, uploadUrl)` → `vault.get(expectedHashHex)` → present: `uploader.upload(...)`; absent: also check the `GhostStore` best-run sidecar (`.ggfinputs` whose `AttemptInputRecording.decode(...).sha256()` hex matches) for spot-checks that arrive after eviction; still absent: log and ignore (the master voids on deadline). `shutdown()` closes the uploader.
+- Coordinator: on inbound `ControlMessage.RecordingRequest(attemptId, expectedHashHex, uploadUrl)` → `vault.get(expectedHashHex)` → present: `uploader.upload(RecordingUploader.resolveUploadUrl(request.uploadUrl(), configuredMasterUrl), ...)` where `configuredMasterUrl` is the `timeAttack.net.masterUrl` config value (path-only default URLs are unusable without this resolution); absent: also check the `GhostStore` best-run sidecar (`.ggfinputs` whose `AttemptInputRecording.decode(...).sha256()` hex matches) for spot-checks that arrive after eviction; still absent: log and ignore (the master voids on deadline). `shutdown()` closes the uploader.
 
 - [ ] **Step 1: Failing test** — spin a throwaway `com.sun.net.httpserver.HttpServer` on port 0 inside the test:
 
@@ -287,6 +297,16 @@ class TestRecordingUploader {
         } finally {
             server.stop(0);
         }
+    }
+
+    @Test
+    void resolvesPathOnlyUploadUrlsAgainstTheConfiguredMasterUrl() {
+        assertEquals("https://m.example:27900/recordings/ab",
+                RecordingUploader.resolveUploadUrl("/recordings/ab", "wss://m.example:27900/master"));
+        assertEquals("http://127.0.0.1:1234/recordings/ab",
+                RecordingUploader.resolveUploadUrl("/recordings/ab", "ws://127.0.0.1:1234/master"));
+        assertEquals("https://cdn.example/recordings/ab",
+                RecordingUploader.resolveUploadUrl("https://cdn.example/recordings/ab", "wss://m.example/master"));
     }
 }
 ```
@@ -336,14 +356,19 @@ public final class VerificationJobQueue {
                       int finishFrame, String inputRecordingHashHex, String ghostStreamHashHex,
                       boolean spotCheck, long createdAtMillis) {}
 
-    public VerificationJobQueue(java.util.function.LongSupplier clock,
-            long uploadDeadlineMillis, long leaseMillis);
-    public String submit(Job job);                                    // -> AWAITING_UPLOAD; returns jobId ("vj-" + counter)
+    public VerificationJobQueue(java.util.function.LongSupplier clock, long leaseMillis);
+    /** -> AWAITING_UPLOAD; returns jobId ("vj-" + counter). Per-job deadline: verified-room
+     *  finishes use the SHORT verifiedUploadDeadlineSeconds window, spot-checks the long
+     *  uploadDeadlineSeconds one (Task 7/11 wiring). */
+    public String submit(Job job, long uploadDeadlineAtMillis);
     public void onRecordingUploaded(String recordingHashHex);         // all AWAITING_UPLOAD jobs with that hash -> QUEUED
-    public java.util.Optional<Job> lease(String workerId, java.util.Set<String> supportedFingerprints);
-    public java.util.Optional<Job> complete(String jobId);            // LEASED/QUEUED -> DONE; returns the job for consequence routing
-    public java.util.List<Job> voidExpiredUploads();                  // AWAITING_UPLOAD past deadline -> VOID; returned for consequence routing
-    public int requeueExpiredLeases();                                // LEASED past lease -> QUEUED
+    public java.util.Optional<Job> lease(String workerId, java.util.Set<String> supportedFingerprints); // records the leaseholder
+    /** DONE only when the job is LEASED by THAT worker; empty for never-leased jobs or a
+     *  foreign workerId — an authenticated verifier must not be able to close another
+     *  worker's job (the verdict signature proves authorship, not lease ownership). */
+    public java.util.Optional<Job> complete(String jobId, String workerId);
+    public java.util.List<Job> voidExpiredUploads();                  // AWAITING_UPLOAD past ITS deadline -> VOID; returned for consequence routing
+    public int requeueExpiredLeases();                                // LEASED past lease -> QUEUED, leaseholder cleared
     public State stateOf(String jobId);
 }
 ```
@@ -358,8 +383,16 @@ public final class VerificationJobQueue {
     // matching worker gets it exactly once (second lease -> empty)
 }
 @Test void uploadDeadlineVoidsAndReturnsJobOnce() { ... }
-@Test void expiredLeaseRequeuesAndCanBeLeasedAgain() { ... }
-@Test void completeReturnsJobAndIsIdempotent() { ... }
+@Test void perJobUploadDeadlinesVoidIndependently() {
+    // two jobs submitted with different uploadDeadlineAtMillis: advancing past the earlier
+    // deadline voids only that job; the later one stays AWAITING_UPLOAD
+}
+@Test void expiredLeaseRequeuesAndCanBeLeasedAgain() { ... } // and the requeued job is completable by its NEW leaseholder only
+@Test void completeRequiresTheLeaseholder() {
+    // never-leased QUEUED job -> complete(jobId, "w1") empty, state unchanged;
+    // leased by "w1" -> complete(jobId, "w2") empty and still LEASED;
+    // complete(jobId, "w1") -> job returned, DONE; second complete -> empty (idempotent)
+}
 
 // TestVerifierRegistry
 @Test void registerComputesWorkerIdFromPubkeyAndIssuesToken() {
@@ -464,14 +497,14 @@ git commit -m "feat(net): verdict persistence + cheat-verdict sanction consequen
 - Test: `src/test/java/com/openggf/net/master/TestMasterHttpRoutes.java`
 
 **Interfaces:**
-- `MasterConfig` new fields (compact-ctor defaults in parens): `int maxRecordingBytes` (65_536), `long uploadDeadlineSeconds` (180), `long recordingRetentionDays` (3), `long verdictGraceMillis` (10_000), `int spotCheckTopTimes` (1), `long cheatBanDays` (0 = permanent), `String verifierRegistrationToken` (null = verifier API disabled), `long verifierStaleSeconds` (120), `long verifierLeaseSeconds` (300), `String publicBaseUrl` ("" = derive `https://<host>` is impossible server-side; when blank, `RecordingRequest.uploadUrl` is sent as a path-only `"/recordings/" + hash` and clients resolve it against their configured master URL).
+- `MasterConfig` new fields (compact-ctor defaults in parens): `int maxRecordingBytes` (65_536), `long uploadDeadlineSeconds` (180 — SPOT-CHECK jobs only; the player may have left the post-round screen), `long verifiedUploadDeadlineSeconds` (15 — verified-room finish jobs; short because the `RecordingRequest` fires at finish time while the client is still connected, and the podium hold must OUTLAST this window — Task 7), `long recordingRetentionDays` (3), `long verdictGraceMillis` (10_000), `int spotCheckTopTimes` (1), `long cheatBanDays` (0 = permanent), `String verifierRegistrationToken` (null = verifier API disabled), `long verifierStaleSeconds` (120), `long verifierLeaseSeconds` (300), `String publicBaseUrl` ("" = derive `https://<host>` is impossible server-side; when blank, `RecordingRequest.uploadUrl` is sent as a path-only `"/recordings/" + hash` and clients resolve it against their configured master URL).
 - `RecordingBlobStore(Path dir)`: `void put(String hashHex, byte[] bytes)` (writes `dir/<hashHex>`), `Optional<byte[]> get(String hashHex)`, `int deleteOlderThan(long cutoffMillis)`; hash-shaped-name validation (`[0-9a-f]{64}`) — never trust path input.
 - `MasterHttpRoutes` — inserted in the pipeline after the (now enlarged) `HttpObjectAggregator(config.maxRecordingBytes() + 8192)` and **before** `WebSocketServerProtocolHandler`; passes WebSocket-upgrade requests and `/master` through untouched (`ctx.fireChannelRead`). Routes:
   - `PUT /recordings/{hash}` — `Authorization: Bearer <sessionToken>` valid per `SessionTokenIssuer.isValid` else 401; body ≤ `maxRecordingBytes` else 413; SHA-256(body) hex == `{hash}` else 400; store + `jobQueue.onRecordingUploaded(hash)`; 204.
   - `POST /verifier/register` — 404 unless `verifierRegistrationToken` configured; `Authorization: Bearer <verifierRegistrationToken>` else 401; JSON body `{"pubKeyBase64": "...", "fingerprints": ["0.6:cafe1234"]}` → `{"workerId": "...", "workerToken": "..."}`.
   - `GET /verifier/jobs` — headers `X-Worker-Id` + `Authorization: Bearer <workerToken>` via `VerifierRegistry.authenticate` else 401; lease → 200 JSON of the `Job` record, or 204.
   - `GET /recordings/{hash}` — worker auth (same headers) else 401; blob or 404.
-  - `POST /verifier/verdicts` — worker auth; JSON `{"jobId": "...", "result": "PASS", "signatureBase64": "..."}`; `PlayerIdentity.verify(worker.publicKeyEncoded(), VerdictCodec.canonicalBytes(jobId, job.attemptRef(), job.inputRecordingHashHex(), result), sig)` else 400; `jobQueue.complete` + `VerdictConsequences.apply` + room routing callback (Task 7); 204.
+  - `POST /verifier/verdicts` — worker auth; JSON `{"jobId": "...", "result": "PASS", "signatureBase64": "..."}`; `PlayerIdentity.verify(worker.publicKeyEncoded(), VerdictCodec.canonicalBytes(jobId, job.attemptRef(), job.inputRecordingHashHex(), result), sig)` else 400; `jobQueue.complete(jobId, workerId)` — empty (never leased, or leased by a DIFFERENT worker) → 409 rejected, nothing applied: the signature proves who wrote the verdict, only the lease proves the master assigned this job to them; then `VerdictConsequences.apply` + room routing callback (Task 7); 204. Test both rejection cases in `TestMasterHttpRoutes` (verdict for an unleased job; verdict from worker B for worker A's lease).
   - Anything else under `/recordings` or `/verifier` → 404. All handlers run on the broker loop via `server.execute(...)` for queue/registry access (single-thread discipline of `net.master`).
 
 - [ ] **Step 1: Failing test** — drive `MasterHttpRoutes` with Netty `EmbeddedChannel` (no sockets): upload happy path + wrong hash 400 + oversized 413 + bad token 401; register→lease→verdict happy path with a real `PlayerIdentity` signing; bad signature 400. Write each as its own `@Test` with `FullHttpRequest` construction (`Unpooled.wrappedBuffer`, headers as specified).
@@ -503,7 +536,10 @@ git commit -m "feat(net): master HTTPS recording uploads + verifier job/verdict 
 
 ```java
 public void setVerifiedRoom(boolean verified);            // default false
-public void setVerdictGraceMillis(long millis);           // default 10_000
+public void setPendingHoldMillis(long millis);            // default 10_000; the master wires
+        // verifiedUploadDeadlineSeconds * 1000 + verdictGraceMillis — the hold MUST outlast the
+        // verified upload window, or legitimate pending rows get dropped (~20 s) while the
+        // client is still allowed to upload
 public int pendingVerdictCount();
 /** In a verified room a finish enters standings with verifyState="PENDING" (casual: "NONE").
  *  FinishOutcome gains the attemptRef data the hooks need: */
@@ -512,7 +548,7 @@ public record FinishOutcome(int slot, int rank, boolean outsideBroadcastCap, int
 public void onVerdict(int slot, int attemptId, boolean pass);
 ```
 
-  ROUND_END→(VOTE|LOBBY) transition is deferred while `pendingVerdictCount() > 0`, up to `ROUND_END_LINGER_MILLIS + verdictGraceMillis`; on grace expiry remaining PENDING rows are removed (unproven times don't podium — spec §6.3 "podium waits for pending verdicts").
+  ROUND_END→(VOTE|LOBBY) transition is deferred while `pendingVerdictCount() > 0`, up to `ROUND_END_LINGER_MILLIS + pendingHoldMillis`. Pending rows are removed ONLY by a verdict or an upload void inside the hold; because the hold outlasts `verifiedUploadDeadlineSeconds`, every pending row resolves (verdict or `VOID_NO_UPLOAD`) before the hold can expire in normal operation. If the hold DOES expire with rows still pending (verifier stalled), the remaining PENDING rows are removed AND the master voids their jobs via the normal `onVerdict(slot, attemptId, false)` routing — queue and standings must never disagree about an attempt's fate (unproven times don't podium — spec §6.3 "podium waits for pending verdicts").
 - `RoomHost` gains an optional hook interface (null for player-hosted rooms):
 
 ```java
@@ -524,7 +560,7 @@ public interface VerificationHooks {
 }
 ```
 
-- Master wiring (`RelayRoomManager` implements the hook): build `VerificationJobQueue.Job` (attemptRef = `roomId + "#" + slot + "#" + finish.attemptId()`), `jobQueue.submit`, send `RecordingRequest(finish.attemptId(), finish.inputRecordingHashHex(), uploadUrlFor(hash))` to that member. Keep `Map<String jobId, RoomRef(roomId, slot, attemptId)>`; on verdict completion or `voidExpiredUploads()` route `engine.onVerdict(slot, attemptId, pass)` on the room's event loop (VOID/FAIL ⇒ `pass=false`).
+- Master wiring (`RelayRoomManager` implements the hook): build `VerificationJobQueue.Job` (attemptRef = `roomId + "#" + slot + "#" + finish.attemptId()`), `jobQueue.submit(job, now + (spotCheck ? config.uploadDeadlineSeconds() : config.verifiedUploadDeadlineSeconds()) * 1000)`, send `RecordingRequest(finish.attemptId(), finish.inputRecordingHashHex(), uploadUrlFor(hash))` to that member. Keep `Map<String jobId, RoomRef(roomId, slot, attemptId)>`; on verdict completion or `voidExpiredUploads()` route `engine.onVerdict(slot, attemptId, pass)` on the room's event loop (VOID/FAIL ⇒ `pass=false`).
 
 - [ ] **Step 1: Failing tests**
 
@@ -533,7 +569,11 @@ public interface VerificationHooks {
 ```java
 @Test void verifiedFinishEntersPendingAndFlipsVerifiedOnPassVerdict() { ... }
 @Test void failVerdictRemovesRowAndRecomputesRanks() { ... }      // 3 finishers, middle fails -> ranks 1,2
-@Test void roundEndHoldsForPendingUpToGraceThenDropsPending() { ... }
+@Test void roundEndHoldsForPendingThroughTheFullHoldWindow() {
+    // pending row at ROUND_END: linger expiry does NOT release while pendingHoldMillis remains;
+    // a PASS verdict inside the hold flips it VERIFIED and releases; a second scenario lets the
+    // hold expire -> row removed (the master voids the job via onVerdict(false) — Task 7 wiring)
+}
 @Test void casualRoomRowsStayNoneAndNothingHolds() { ... }
 ```
 
@@ -663,8 +703,13 @@ public final class VerifierWorker {
 
     public VerifierWorker(MasterApi api, Replayer replayer, PlayerIdentity identity);
 
-    /** One poll cycle; returns true if a job was processed. Decision table:
+    /** One poll cycle; returns true if a job was processed. Decision table (in order):
      *  recording bytes' sha256 hex != job.inputRecordingHashHex -> FAIL_DIVERGENT (tampered blob)
+     *  recording.start() doesn't match the job — trackKey != start gameId:zone:act, or
+     *      character/determinism fingerprint differ              -> FAIL_TRACK_MISMATCH, WITHOUT replaying
+     *      (the recording is otherwise valid, so replay alone cannot catch this: a client could
+     *      upload a genuine run from a DIFFERENT same-build track or character and have it
+     *      "verify" this room's claim — the job's track/character bind the claim, not the blob)
      *  result.failureReason != null || !result.finished        -> FAIL_DIVERGENT
      *  finalTimeFrames != claimed || firstInputFrame/finishFrame mismatch -> FAIL_TIME_MISMATCH
      *  ghostStreamHashHex != job.ghostStreamHashHex             -> FAIL_GHOST_HASH (§6.5 position cross-check)
@@ -674,7 +719,7 @@ public final class VerifierWorker {
 }
 ```
 
-- [ ] **Step 1: Failing test** — fake `MasterApi` + fake `Replayer`; one `@Test` per decision-table row asserting the posted result string and that the posted signature verifies via `PlayerIdentity.verify` against the worker's own pubkey; plus `pollOnce()` false on 204.
+- [ ] **Step 1: Failing test** — fake `MasterApi` + fake `Replayer`; one `@Test` per decision-table row asserting the posted result string and that the posted signature verifies via `PlayerIdentity.verify` against the worker's own pubkey; plus `pollOnce()` false on 204. The track-mismatch rows get explicit cases: a recording whose `AttemptStartDescriptor` is `("s3k", 1, 0, ...)` against a job with `trackKey = "s3k:0:0"` → `FAIL_TRACK_MISMATCH` and the fake `Replayer` must NOT have been invoked; same for a character mismatch (`"tails"` vs job `"sonic"`) and a fingerprint mismatch.
 
 - [ ] **Step 2: Verify failure**, **Step 3: Implement** (`VerifierMain`: register, then loop `pollOnce()` with 2 s idle sleep; `--once` processes one job and exits — CI hook), **Step 4: Run** `mvn "-Dtest=com.openggf.tools.verifier.TestVerifierWorker" test` → PASS.
 
@@ -695,7 +740,7 @@ git commit -m "feat(tools): openggf-verifier worker - poll, replay, signed verdi
 - Test: `src/test/java/com/openggf/net/master/TestSpotCheck.java`
 
 **Interfaces:**
-- Spot-check rule (security spec §6.3): when a **casual** relay room's round reaches ROUND_END, and `verifierRegistry.verifierAvailable(room fingerprint)`, select the top `config.spotCheckTopTimes()` standings rows and invoke the Task-7 hook with `spotCheck=true`. Spot-check jobs skip standings routing entirely — a FAIL still sanctions via `VerdictConsequences` (post-hoc), a VOID (no upload) records the verdict row only. Per-identity throttle: at most one spot-check per fingerprint per hour (in-memory map, clock-injected) so repeat winners aren't re-verified every round.
+- Spot-check rule (security spec §6.3): when a **casual** relay room's round reaches ROUND_END, and `verifierRegistry.verifierAvailable(room fingerprint)`, select the top `config.spotCheckTopTimes()` standings rows and invoke the Task-7 hook with `spotCheck=true` (spot-check jobs are submitted with the LONG `uploadDeadlineSeconds` window — the player may have left the post-round screen; verified finishes use the short `verifiedUploadDeadlineSeconds` window, Task 7). Spot-check jobs skip standings routing entirely — a FAIL still sanctions via `VerdictConsequences` (post-hoc), a VOID (no upload) records the verdict row only. Per-identity throttle: at most one spot-check per fingerprint per hour (in-memory map, clock-injected) so repeat winners aren't re-verified every round.
 
 - [ ] **Step 1: Failing test** — drive the relay round-outcome path with a fake hook recorder: casual room + verifier available → top-1 selected with `spotCheck=true`; verified room → NOT selected (already verified per-finish); no verifier available → nothing; same fingerprint twice within an hour → second skipped.
 
@@ -728,7 +773,7 @@ Scenario (all in one JVM, `MasterServer.start` with `plaintextForTest`, Embedded
 3. Member finishes (`AttemptFinish` with recording hash H, stream hash G) → standings row `PENDING`; member receives `RecordingRequest(attemptId, H, url)`.
 4. `PUT /recordings/H` with matching bytes → job leased by the worker; worker (fake `Replayer` returning a matching Result) posts signed `PASS` → row flips `VERIFIED`; `verdicts` table has the signed row.
 5. Second finisher posts a claim whose fake replay mismatches time → `FAIL_TIME_MISMATCH` → row removed, identity SANCTIONED, verdict row persisted.
-6. Third finisher never uploads → clock past `uploadDeadlineSeconds` → `VOID_NO_UPLOAD`, row removed, no sanction.
+6. Third finisher never uploads → clock past `verifiedUploadDeadlineSeconds` (the SHORT verified-room window) → `VOID_NO_UPLOAD`, row removed, no sanction — and the removal happens via the upload void INSIDE the podium hold, not by the hold expiring.
 7. Round end: podium (ROUND_END) held while a verdict was pending, released after; casual sibling room round → top time spot-check job created.
 
 - [ ] **Step 2: Run** — `mvn "-Dtest=com.openggf.net.TestVerifiedRoomEndToEnd" test` → PASS (integration of green tasks; failures = wiring gaps).
