@@ -53,8 +53,8 @@ permanent mode in its own right.
   recording that produced it — security spec §6.4) followed by **the same quantized 7-byte 60 Hz frame stream
   used on the wire** (§7). One canonical encoding — a ghost file's body and a
   network `GhostFrames` payload are byte-identical per frame, so solo mode
-  validates the exact bytes multiplayer ships. No ROM-derived data is stored,
-  so ghost files are freely shareable.
+  validates the exact bytes multiplayer ships. No ROM asset/content bytes are
+  stored, so ghost files are freely shareable.
 - **Delta timer and splits:** star posts are the split markers (they already
   exist as objects with fixed track positions). The HUD shows the delta vs the
   racing ghost at each star post and at the finish; between splits, the ghost
@@ -209,8 +209,10 @@ Podium shows top 3 + your rank; next-track vote offers 3 options.
 
 Versioned; JSON text frames for control, compact binary frames for ghost data.
 Rooms advertise the required game/ROM; clients without a matching detected ROM
-cannot join. **No ROM-derived bytes ever cross the wire** — only positions,
-animation ids, times, and chat.
+cannot join. **No ROM asset/content bytes ever cross the wire; only
+checksums/fingerprints may** (the determinism fingerprint includes a ROM
+checksum — security spec §6.2). Wire data is limited to positions, resolved
+render frames and flip/status flags, times, and chat.
 
 Control: `Hello/Welcome` (version gate + determinism fingerprint + keypair
 identity handshake — security spec §3/§6.2), `RoomCreate`, `RoomList`,
