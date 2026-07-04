@@ -1195,7 +1195,7 @@ Skills: n/a"
 - Consumes: `GhostRecording`, `GhostHeader`, `GhostFileCodec` (Task 2), `AttemptInputRecording` (Task 4).
 - Produces: `GhostStore(Path root)` (production root = `Path.of(System.getProperty("user.dir"), "ghosts")` — wired in Task 10, injected for tests):
   - `Optional<GhostRecording> loadBest(String gameId, int zone, int act, String character)`
-  - `boolean saveIfBest(GhostRecording candidate, AttemptInputRecording inputs)` — true when new best (no existing best, or `candidate.header().finalTimeFrames()` strictly lower). Rotates existing best → `-prev1`, prev1 → `-prev2` (keep last 3, spec §3). Writes inputs beside the ghost as `<stem>.ggfinputs` (raw `encode()` bytes).
+  - `boolean saveIfBest(GhostRecording candidate, AttemptInputRecording inputs)` — true when new best (no existing best, or `candidate.header().finalTimeFrames()` strictly lower). **Enforces the hash binding at the persistence boundary:** throws `IllegalArgumentException` unless `candidate.header().inputRecordingHash()` equals `inputs.sha256()` — the store is what creates the persisted ghost/inputs pair, so the binding is checked here, not just trusted from the caller. Rotates existing best → `-prev1`, prev1 → `-prev2` (keep last 3, spec §3). Writes inputs beside the ghost as `<stem>.ggfinputs` (raw `encode()` bytes).
   - `List<Path> listImports(String gameId)` — `.ggfghost` files in `<root>/<gameId>/import/`, sorted by filename; empty list when the folder is absent.
   - Layout: `<root>/<gameId>/<zone>-<act>-<character>.ggfghost` (+`-prev1`/`-prev2` stems, `.ggfinputs` sidecars).
 
@@ -1217,17 +1217,18 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestGhostStore {
-    private static GhostRecording ghost(int firstInput, int finish) {
-        byte[] frames = new byte[7];
-        return new GhostRecording(new GhostHeader(1, "s3k", 0, 0, "sonic", "p",
-                firstInput, finish, new int[0], new byte[32]), frames);
-    }
-
     private static AttemptInputRecording inputs() {
         AttemptInputRecording rec = new AttemptInputRecording(
                 new AttemptStartDescriptor("s3k", 0, 0, "sonic", "fp"));
         rec.appendFrame(0x08, false);
         return rec;
+    }
+
+    private static GhostRecording ghost(int firstInput, int finish) {
+        byte[] frames = new byte[7];
+        // Header hash must match the inputs the store persists alongside (binding enforced).
+        return new GhostRecording(new GhostHeader(1, "s3k", 0, 0, "sonic", "p",
+                firstInput, finish, new int[0], inputs().sha256()), frames);
     }
 
     @Test
@@ -1259,6 +1260,14 @@ class TestGhostStore {
         assertEquals(3600, GhostFileCodec.read(dir.resolve("0-0-sonic.ggfghost")).header().finalTimeFrames());
         assertEquals(3800, GhostFileCodec.read(dir.resolve("0-0-sonic-prev1.ggfghost")).header().finalTimeFrames());
         assertEquals(4000, GhostFileCodec.read(dir.resolve("0-0-sonic-prev2.ggfghost")).header().finalTimeFrames());
+    }
+
+    @Test
+    void rejectsGhostWhoseHashDoesNotMatchInputs(@TempDir Path root) {
+        GhostStore store = new GhostStore(root);
+        GhostRecording mismatched = new GhostRecording(new GhostHeader(1, "s3k", 0, 0, "sonic", "p",
+                0, 3600, new int[0], new byte[32]), new byte[7]); // zero hash != inputs().sha256()
+        assertThrows(IllegalArgumentException.class, () -> store.saveIfBest(mismatched, inputs()));
     }
 
     @Test
@@ -1318,6 +1327,10 @@ public final class GhostStore {
 
     public boolean saveIfBest(GhostRecording candidate, AttemptInputRecording inputs) throws IOException {
         GhostHeader h = candidate.header();
+        if (!java.util.Arrays.equals(h.inputRecordingHash(), inputs.sha256())) {
+            throw new IllegalArgumentException(
+                    "ghost header inputRecordingHash does not match the supplied input recording");
+        }
         Path best = bestPath(h.gameId(), h.zone(), h.act(), h.character());
         if (Files.exists(best)
                 && GhostFileCodec.read(best).header().finalTimeFrames() <= h.finalTimeFrames()) {
@@ -1380,7 +1393,7 @@ public final class GhostStore {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.game.timeattack.TestGhostStore" test`
-Expected: PASS (4 tests).
+Expected: PASS (5 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -1743,7 +1756,7 @@ Skills: n/a"
 - Consumes: everything from Tasks 4-9; `PlayerInputState` (`com.openggf.control`, record with `heldMask()`/`startHeld()`); `InputHandler.logical().player1()`; `GameServices.gameState().isEndOfLevelActive()`; checkpoint index; `AbstractPlayableSprite`/`AbstractSprite` accessors (Task 5 list); `AppVersion.get()`; `RomManager.getInstance().getRom().calculateChecksum()`; `GhostRenderRegistry` (Task 8); `LevelManager.getTransitions().requestZoneAndAct(int, int)`.
 - Produces (used by Tasks 11-13):
   - `TimeAttackLaunchRequest(String gameId, int zone, int act, String character, java.util.List<java.nio.file.Path> extraGhosts)` (record).
-  - `TimeAttackRuntime(GhostStore store)` with: `void armForLaunch(TimeAttackLaunchRequest request)`; `boolean isActive()`; `boolean isAttemptRunning()`; `void onLevelReady()` (called when the level for an armed/retried run is loaded — begins the attempt at spawn, loads best + extra ghosts, registers its `GhostRenderRegistry.GhostLayerRenderer`; imported ghosts whose header gameId/zone/act doesn't match the launch are SKIPPED with a warning — wrong-track ghosts must never render — and each import loads in its own try/catch so one corrupt file can't block the rest); `void beforeLevelFrame(com.openggf.control.InputHandler input)`; `void afterLevelFrame()`; `boolean consumeRetryRequested()`; `void requestRetry()`; `void deactivate()` (unregister renderer, clear slots, drop state); `TimeAttackHudState hudState()`.
+  - `TimeAttackRuntime(GhostStore store, java.nio.file.Path identityDir)` (production: `new TimeAttackRuntime(new GhostStore(Path.of("ghosts")), Path.of("identity"))`, constructed once by `Engine`/`GameLoop`). `armForLaunch` lazily calls `PlayerIdentity.loadOrCreate(identityDir)` on first use (log the fingerprint at INFO; on failure log WARNING and continue with `null` identity — solo play must not break); saved ghost headers use `displayName` = first 8 hex chars of the fingerprint (`""` when identity is unavailable), which is what makes phase-1 identity load-bearing rather than dead code. With: `void armForLaunch(TimeAttackLaunchRequest request)`; `boolean isActive()`; `boolean isAttemptRunning()`; `void onLevelReady()` (called when the level for an armed/retried run is loaded — begins the attempt at spawn, loads best + extra ghosts, registers its `GhostRenderRegistry.GhostLayerRenderer`; imported ghosts whose header gameId/zone/act doesn't match the launch are SKIPPED with a warning — wrong-track ghosts must never render — and each import loads in its own try/catch so one corrupt file can't block the rest); `void beforeLevelFrame(com.openggf.control.InputHandler input)`; `void afterLevelFrame()`; `boolean consumeRetryRequested()`; `void requestRetry()`; `void deactivate()` (unregister renderer, clear slots, drop state); `TimeAttackHudState hudState()`.
   - `TimeAttackHudState(boolean active, int elapsedDisplayFrames, int bestTimeFrames, int lastSplitDelta, boolean finished, boolean newBest)` (record; `bestTimeFrames == -1` when none, `lastSplitDelta == Integer.MIN_VALUE` when none).
 - Core loop semantics (all pure logic delegated to `TimeAttackAttempt`):
   - `beforeLevelFrame`: snapshot `PlayerInputState p1 = input.logical().player1()`.
@@ -1775,8 +1788,10 @@ class TestTimeAttackRuntime {
     @Test
     void armTickFinishSavesBestGhostAndInputs(@TempDir Path root) throws Exception {
         GhostStore store = new GhostStore(root);
-        TimeAttackRuntime runtime = new TimeAttackRuntime(store);
+        Path identityDir = root.resolve("identity");
+        TimeAttackRuntime runtime = new TimeAttackRuntime(store, identityDir);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        assertTrue(java.nio.file.Files.exists(identityDir.resolve("player-identity.key"))); // identity wired at arm
         runtime.beginAttemptForTest("0.6:cafe");   // package-visible spawn hook used by onLevelReady
         runtime.tickForTest(0, false, false, -1, frame(10));      // spawn idle
         runtime.tickForTest(0x08, false, false, -1, frame(11));   // first input
@@ -1791,12 +1806,15 @@ class TestTimeAttackRuntime {
         assertEquals(2, best.header().finalTimeFrames());
         assertArrayEquals(new int[] {2}, best.header().splitFrames());
         assertEquals(32, best.header().inputRecordingHash().length);
+        assertEquals(8, best.header().displayName().length()); // fingerprint prefix from PlayerIdentity
+        assertEquals(com.openggf.net.identity.PlayerIdentity.loadOrCreate(identityDir)
+                .fingerprint().substring(0, 8), best.header().displayName());
     }
 
     @Test
     void taintedAttemptIsNeverSaved(@TempDir Path root) throws Exception {
         GhostStore store = new GhostStore(root);
-        TimeAttackRuntime runtime = new TimeAttackRuntime(store);
+        TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"));
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
         runtime.beginAttemptForTest("0.6:cafe");
         runtime.markTainted();
@@ -1820,7 +1838,7 @@ class TestTimeAttackRuntime {
         com.openggf.game.ghost.GhostFileCodec.write(wrongTrack, wrong);
         com.openggf.game.ghost.GhostFileCodec.write(rightTrack, right);
 
-        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root));
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"));
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic",
                 java.util.List.of(wrong, right)));
         runtime.beginAttemptForTest("0.6:cafe");
@@ -1830,7 +1848,7 @@ class TestTimeAttackRuntime {
     @Test
     void retryVoidsAttemptWithoutSaving(@TempDir Path root) throws Exception {
         GhostStore store = new GhostStore(root);
-        TimeAttackRuntime runtime = new TimeAttackRuntime(store);
+        TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"));
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
         runtime.beginAttemptForTest("0.6:cafe");
         runtime.tickForTest(0x08, false, false, -1, frame(10));
@@ -1896,6 +1914,8 @@ public final class TimeAttackRuntime {
     private static final Logger LOGGER = Logger.getLogger(TimeAttackRuntime.class.getName());
 
     private final GhostStore store;
+    private final java.nio.file.Path identityDir;
+    private com.openggf.net.identity.PlayerIdentity identity;
     private TimeAttackLaunchRequest launch;
     private TimeAttackAttempt attempt;
     private AttemptInputRecording inputRecording;
@@ -1908,12 +1928,21 @@ public final class TimeAttackRuntime {
     private int pendingHeldMask;
     private boolean pendingStartHeld;
 
-    public TimeAttackRuntime(GhostStore store) {
+    public TimeAttackRuntime(GhostStore store, java.nio.file.Path identityDir) {
         this.store = store;
+        this.identityDir = identityDir;
     }
 
     public void armForLaunch(TimeAttackLaunchRequest request) {
         this.launch = request;
+        if (identity == null) {
+            try {
+                identity = com.openggf.net.identity.PlayerIdentity.loadOrCreate(identityDir);
+                LOGGER.info("Time attack identity " + identity.fingerprint());
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Player identity unavailable; continuing without", e);
+            }
+        }
     }
 
     public boolean isActive() { return launch != null; }
@@ -1985,8 +2014,9 @@ public final class TimeAttackRuntime {
     }
 
     private void persistIfBest() {
+        String displayName = identity != null ? identity.fingerprint().substring(0, 8) : "";
         GhostHeader header = new GhostHeader(GhostFileCodec.FORMAT_VERSION, launch.gameId(),
-                launch.zone(), launch.act(), launch.character(), "",
+                launch.zone(), launch.act(), launch.character(), displayName,
                 attempt.firstInputFrame(), attempt.finishFrame(), attempt.splitFrames(),
                 inputRecording.sha256());
         try {
@@ -2200,6 +2230,7 @@ Skills: n/a"
 - Modify: `src/main/java/com/openggf/game/MasterTitleScreen.java` (new menu entry + sub-mode, modeled EXACTLY on its existing `UserRecordingMenu` integration)
 - Modify: `src/main/java/com/openggf/Engine.java` (launch handler modeled on `launchGameplayFromDataSelect`, Engine.java:1021)
 - Test: `src/test/java/com/openggf/game/timeattack/TestTimeAttackTrackCatalog.java`
+- Test: `src/test/java/com/openggf/game/timeattack/TestTimeAttackTrackCatalogRomValidation.java` (ROM-gated)
 
 **Interfaces:**
 - Produces:
@@ -2256,6 +2287,13 @@ class TestTimeAttackTrackCatalog {
 
 Run: `mvn "-Dtest=com.openggf.game.timeattack.TestTimeAttackTrackCatalog" test`
 
+- [ ] **Step 2b: ROM-gated catalog validation — every curated (zone, act) must actually load**
+
+The label/character checks in Step 1 cannot catch a wrong zone id (the flagged risk for the S2 ROM-zone-id list). Add `TestTimeAttackTrackCatalogRomValidation`: for each game in the catalog, skip via `org.junit.jupiter.api.Assumptions.assumeTrue(...)` when that game's ROM is not present (same ROM-availability check `TestSonic3kLevelLoading` / `TestRomLogic` use), then for each `Track` load the level headless and assert it loads without throwing. Model the per-game level-load harness on `TestSonic3kLevelLoading` (S3K, exists today — reuse its setup verbatim) and on the equivalent existing S1/S2 headless level-loading tests (grep `src/test/java` for tests calling `loadZoneAndAct` or loading `Sonic1Level`/`Sonic2Level` headless; mirror the closest one per game). One `@Test` per game so a missing ROM skips only that game's validation. This test is the gate that makes the catalog's zone ints trustworthy — a wrong S2 zone id must FAIL here, not at menu launch.
+
+Run: `mvn "-Dtest=com.openggf.game.timeattack.TestTimeAttackTrackCatalogRomValidation" test` (with ROMs present per CLAUDE.md, including `-Ds3k.rom.path` for S3K)
+Expected: PASS; each catalog entry loads.
+
 - [ ] **Step 3: Build TimeAttackMenu + MasterTitleScreen entry**
 
 Copy the `UserRecordingMenu` integration verbatim as the structural template: how `MasterTitleScreen.update(InputHandler)` enters/leaves the sub-mode, how `draw()` delegates, how selection state is held. Menu columns: game (ROM-present games only) → track (from catalog) → character → ghost count summary (best found? N imports?) → GO/BACK.
@@ -2267,7 +2305,7 @@ Implement per Interfaces. Manual smoke test: `java -jar target/OpenGGF-0.6.prere
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/com/openggf/game/timeattack/TimeAttackTrackCatalog.java src/main/java/com/openggf/game/timeattack/TimeAttackMenu.java src/test/java/com/openggf/game/timeattack/TestTimeAttackTrackCatalog.java src/main/java/com/openggf/game/MasterTitleScreen.java src/main/java/com/openggf/Engine.java
+git add src/main/java/com/openggf/game/timeattack/TimeAttackTrackCatalog.java src/main/java/com/openggf/game/timeattack/TimeAttackMenu.java src/test/java/com/openggf/game/timeattack/TestTimeAttackTrackCatalog.java src/test/java/com/openggf/game/timeattack/TestTimeAttackTrackCatalogRomValidation.java src/main/java/com/openggf/game/MasterTitleScreen.java src/main/java/com/openggf/Engine.java
 git commit -m "feat(timeattack): track catalog, master-title menu, and launch path
 
 Changelog: n/a: phase-1 entry added in c1 of this branch
@@ -2306,7 +2344,7 @@ Expected: ALL PASS (ROM-dependent tests need the S3K ROM present per CLAUDE.md).
 6. Beat the best → rotation: `-prev1` file appears.
 7. Hold the live-rewind key during an attempt → nothing happens (suppressed).
 8. Drop a copied `.ggfghost` into `ghosts/s3k/import/` → menu shows 1 import → race two ghosts at once.
-9. Identity: `identity/player-identity.key` + `.pub` created on first launch (Task 10 `onLevelReady` path calls `PlayerIdentity.loadOrCreate(Path.of("identity"))` once at first arm — verify file exists and fingerprint logs stable across restarts).
+9. Identity: `identity/player-identity.key` + `.pub` created the first time a run is armed (`TimeAttackRuntime.armForLaunch` calls `PlayerIdentity.loadOrCreate(identityDir)`); the INFO log shows the fingerprint, stable across restarts, and the saved best ghost's `displayName` is its first 8 hex chars (visible via the menu's ghost summary).
 
 - [ ] **Step 4: Final commit + branch note**
 
