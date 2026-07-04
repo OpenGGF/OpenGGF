@@ -69,6 +69,8 @@ Expected: on `feature/multiplayer-time-attack` (based on `next` — owner direct
 **Files:**
 - Modify: `src/main/java/com/openggf/net/protocol/ControlMessage.java` (new nested records + `@JsonSubTypes` entries)
 - Modify: `src/main/java/com/openggf/net/protocol/GhostPackets.java` (Roster codec for the reserved `TYPE_ROSTER = 0x03`; new `TYPE_RELAY_GUEST_BINARY = 0x04`)
+- Modify: `src/main/java/com/openggf/net/protocol/Protocol.java` (add `MAX_PLAYERS_RELAY = 256` — consumed by the roster codec cap here and the `RoomHostConfig` clamp in Task 8 — and `MAX_MASTER_FRAME_BYTES = 2 * MAX_CONTROL_BYTES + 1024` — tunnel framing headroom, see Interfaces)
+- Modify: `src/main/java/com/openggf/net/protocol/ControlCodec.java` (extract the size check into a `decode(String text, int maxBytes)` overload — see Interfaces)
 - Test: `src/test/java/com/openggf/net/protocol/TestPhase3Protocol.java`
 - Modify: `CHANGELOG.md` (Unreleased entry: "Multiplayer time attack (phase 3): master server — server browser, room brokering, relay rooms to 256 players with relevance filtering/roster/backpressure, TLS, identity store + trust ladder, sanctions, proof-of-work admission, load-test and fuzz harnesses.")
 
@@ -81,8 +83,12 @@ Expected: on `feature/multiplayer-time-attack` (based on `next` — owner direct
   - Standings at scale (main spec §6.3 — never push the full list to hundreds of clients): `StandingsPageRequest(int page)`; `StandingsPage(List<StandingsRow> rows, int page, int totalPages)`; `RankUpdate(int rank, int bestTimeFrames)` (unicast to a finisher whose row may be outside the broadcast cap).
 - Produces — `GhostPackets` additions:
   - `record RosterEntry(int playerSlot, int cellX, int cellY, int status)`; status constants `ROSTER_STATUS_IDLE = 0`, `ROSTER_STATUS_RUNNING = 1`, `ROSTER_STATUS_FINISHED = 2`.
-  - `byte[] encodeRoster(List<RosterEntry> entries)` / `List<RosterEntry> decodeRoster(byte[] packet)` — layout: `u8 type=0x03, u8 entryCount, then per entry u8 slot, u8 cellX, u8 cellY, u8 status` (position quantized to 64-px cells; ~4 bytes/player, 256 players ≈ 1 KB — main spec §4.3). Cells clamp to 0..255 (`x >>> 6`, capped) — roster is coarse UI data, clamping at 16 320 px is acceptable and documented.
+  - `byte[] encodeRoster(List<RosterEntry> entries)` / `List<RosterEntry> decodeRoster(byte[] packet)` — layout: `u8 type=0x03, u16 entryCount BE, then per entry u8 slot, u16 cellX BE, u8 cellY, u8 status` (position quantized to 64-px cells; 5 bytes/player, 256 players ≈ 1.3 KB at 1 Hz — within main spec §4.3's budget). Count is `u16` because a full relay room has 256 entries — a `u8` count caps at 255, one short of `MAX_PLAYERS_RELAY`. cellX is `u16` because acts wider than 16 320 px exist and the phase-4 minimap consumes this field; cellY stays `u8` (no act approaches 16 320 px tall). Range discipline is split: the HUB's quantizer clamps into wire range (`x >>> 6` capped — Task 3); the CODEC **rejects** out-of-range fields with `ProtocolViolationException` on BOTH sides — encode refuses `slot`/`cellY` outside 0..255, `cellX` outside 0..65535, and `status` above `ROSTER_STATUS_FINISHED` before any narrowing cast (a bare cast would silently wrap on the wire), and decode refuses status bytes above `ROSTER_STATUS_FINISHED` (the other fields are width-bounded by the wire format; status is the one semantically constrained byte a hostile packet could smuggle through). Encode also rejects more than `Protocol.MAX_PLAYERS_RELAY` entries.
   - `TYPE_RELAY_GUEST_BINARY = 0x04`: `byte[] encodeRelayGuestBinary(int guestId, byte[] payload)` / `record RelayGuestBinary(int guestId, byte[] payload)` + `decodeRelayGuestBinary(byte[])` — layout `u8 type, u16 guestId BE, payload` (payload itself is a normal ghost packet; total still ≤ `Protocol.MAX_BINARY_BYTES`... the tunnel adds 3 bytes, so payload cap = `MAX_BINARY_BYTES - 3`, enforced).
+  - **Tunnel framing headroom:** `RelayGuestText` nests a full control envelope (itself up to `Protocol.MAX_CONTROL_BYTES`) inside another control envelope AS A JSON STRING — worst-case string escaping (`"` → `\"`, `\` → `\\`) can nearly DOUBLE the inner bytes. Add `Protocol.MAX_MASTER_FRAME_BYTES = 2 * MAX_CONTROL_BYTES + 1024` (17 408) — sized for a fully-escaped near-cap inner envelope plus wrapper overhead. The raised cap applies at BOTH layers of the master connection, and only there:
+    - **Transport:** the master pipeline's WS frame/aggregation caps (Task 12) and the master-client/host-link assembler (Task 13).
+    - **Decode:** raising the frame cap alone is not enough — phase-2 `ControlCodec.decode(String)` rejects text over `MAX_CONTROL_BYTES`, so an accepted large frame would still die in the decoder. Extract the size check into `ControlCodec.decode(String text, int maxBytes)`; the existing `decode(String)` delegates with `MAX_CONTROL_BYTES` (every phase-2 call site keeps its tight cap), and the master-connection decode paths — `RoomBroker.onText` (Task 9) and `MasterClient`'s inbound routing (Task 13) — call the overload with `MAX_MASTER_FRAME_BYTES`.
+    - Per-type validation gives `RelayGuestText.text` its own cap of `MAX_CONTROL_BYTES` (it carries exactly one inner envelope, which is itself capped). Room and direct-connect pipelines keep the tight phase-2 caps everywhere; the inner envelope is re-decoded at its destination under the NORMAL cap.
   - Same hardening discipline as phase 2: exact-length checks, count/range checks, `ProtocolViolationException`, never allocate from unvalidated counts.
 
 - [ ] **Step 1: Write the failing test**
@@ -133,12 +139,19 @@ class TestPhase3Protocol {
     @Test
     void rosterRoundTripsAndQuantizes() {
         List<GhostPackets.RosterEntry> entries = List.of(
-                new GhostPackets.RosterEntry(0, 100, 8, GhostPackets.ROSTER_STATUS_RUNNING),
-                new GhostPackets.RosterEntry(255, 0, 255, GhostPackets.ROSTER_STATUS_FINISHED));
+                new GhostPackets.RosterEntry(0, 300, 8, GhostPackets.ROSTER_STATUS_RUNNING),   // cellX > 255: needs u16
+                new GhostPackets.RosterEntry(255, 40_000, 255, GhostPackets.ROSTER_STATUS_FINISHED));
         byte[] packet = GhostPackets.encodeRoster(entries);
         assertEquals(GhostPackets.TYPE_ROSTER, packet[0] & 0xFF);
-        assertEquals(2 + 2 * 4, packet.length); // header + 4 bytes/player (main spec §4.3)
+        assertEquals(3 + 2 * 5, packet.length); // u16 count header + 5 bytes/player (u16 cellX)
         assertEquals(entries, GhostPackets.decodeRoster(packet));
+
+        // A FULL relay room (256 entries) must round-trip — a u8 count would cap at 255.
+        List<GhostPackets.RosterEntry> full = new java.util.ArrayList<>();
+        for (int slot = 0; slot < 256; slot++) {
+            full.add(new GhostPackets.RosterEntry(slot, slot * 64, 4, GhostPackets.ROSTER_STATUS_RUNNING));
+        }
+        assertEquals(256, GhostPackets.decodeRoster(GhostPackets.encodeRoster(full)).size());
     }
 
     @Test
@@ -152,6 +165,9 @@ class TestPhase3Protocol {
         byte[] wrongType = good.clone();
         wrongType[0] = 0x01;
         assertThrows(ProtocolViolationException.class, () -> GhostPackets.decodeRoster(wrongType));
+        byte[] badStatus = good.clone();
+        badStatus[badStatus.length - 1] = (byte) 255; // status is the last byte of the single entry
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.decodeRoster(badStatus));
     }
 
     @Test
@@ -171,6 +187,37 @@ class TestPhase3Protocol {
                 () -> GhostPackets.encodeRelayGuestBinary(1, oversized));
         assertThrows(ProtocolViolationException.class,
                 () -> GhostPackets.decodeRelayGuestBinary(new byte[] {0x04, 0, 1}));
+    }
+
+    @Test
+    void nearCapTunneledTextNeedsTheMasterDecodeCap() throws Exception {
+        // Worst-case inner envelope: near-cap and dominated by quotes, so JSON string
+        // escaping nearly doubles it inside the RelayGuestText wrapper.
+        String inner = "\"".repeat(Protocol.MAX_CONTROL_BYTES - 200);
+        ControlMessage wrapped = new ControlMessage.RelayGuestText(7, inner);
+        String wire = ControlCodec.encode(null, wrapped);
+        int wireBytes = wire.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+        assertTrue(wireBytes > Protocol.MAX_CONTROL_BYTES, "escaped wrapper must exceed the room cap");
+        assertTrue(wireBytes <= Protocol.MAX_MASTER_FRAME_BYTES, "must fit the master cap");
+        assertEquals(wrapped, ControlCodec.decode(wire, Protocol.MAX_MASTER_FRAME_BYTES).message());
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(wire),
+                "the phase-2 single-arg decode keeps its tight cap");
+    }
+
+    @Test
+    void rosterEncodeRejectsOutOfRangeFieldsInsteadOfWrapping() {
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.encodeRoster(
+                List.of(new GhostPackets.RosterEntry(0, -1, 0, 0))));
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.encodeRoster(
+                List.of(new GhostPackets.RosterEntry(0, 0x10000, 0, 0))));
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.encodeRoster(
+                List.of(new GhostPackets.RosterEntry(0, 0, -1, 0))));
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.encodeRoster(
+                List.of(new GhostPackets.RosterEntry(0, 0, 256, 0))));
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.encodeRoster(
+                List.of(new GhostPackets.RosterEntry(256, 0, 0, 0))));
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.encodeRoster(
+                List.of(new GhostPackets.RosterEntry(0, 0, 0, GhostPackets.ROSTER_STATUS_FINISHED + 1))));
     }
 }
 ```
@@ -225,27 +272,46 @@ Expected: COMPILATION ERROR (new records absent).
     }
 
     public static byte[] encodeRoster(List<RosterEntry> entries) {
-        if (entries.size() > 255) {
+        if (entries.size() > Protocol.MAX_PLAYERS_RELAY) {
             throw new ProtocolViolationException("roster has " + entries.size() + " entries");
         }
-        ByteBuffer out = ByteBuffer.allocate(2 + entries.size() * 4);
-        out.put((byte) TYPE_ROSTER).put((byte) entries.size());
+        ByteBuffer out = ByteBuffer.allocate(3 + entries.size() * 5);
+        out.put((byte) TYPE_ROSTER).putShort((short) entries.size());
         for (RosterEntry entry : entries) {
-            out.put((byte) entry.playerSlot()).put((byte) entry.cellX())
+            requireRange(entry.playerSlot(), 0xFF, "roster slot");
+            requireRange(entry.cellX(), 0xFFFF, "roster cellX");
+            requireRange(entry.cellY(), 0xFF, "roster cellY");
+            requireRange(entry.status(), ROSTER_STATUS_FINISHED, "roster status");
+            out.put((byte) entry.playerSlot()).putShort((short) entry.cellX())
                     .put((byte) entry.cellY()).put((byte) entry.status());
         }
         return out.array();
     }
 
+    /** Reject rather than let a narrowing cast silently wrap on the wire. */
+    private static void requireRange(int value, int maxInclusive, String field) {
+        if (value < 0 || value > maxInclusive) {
+            throw new ProtocolViolationException(field + " out of range: " + value);
+        }
+    }
+
     public static List<RosterEntry> decodeRoster(byte[] packet) {
-        ByteBuffer in = checked(packet, TYPE_ROSTER, 2);
-        int count = in.get() & 0xFF;
-        if (in.remaining() != count * 4) {
+        ByteBuffer in = checked(packet, TYPE_ROSTER, 3);
+        int count = in.getShort() & 0xFFFF;
+        if (count > Protocol.MAX_PLAYERS_RELAY || in.remaining() != count * 5) {
             throw new ProtocolViolationException("roster length mismatch for " + count + " entries");
         }
         List<RosterEntry> entries = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            entries.add(new RosterEntry(in.get() & 0xFF, in.get() & 0xFF, in.get() & 0xFF, in.get() & 0xFF));
+            int slot = in.get() & 0xFF;
+            int cellX = in.getShort() & 0xFFFF;
+            int cellY = in.get() & 0xFF;
+            int status = in.get() & 0xFF;
+            if (status > ROSTER_STATUS_FINISHED) {
+                // slot/cellX/cellY are width-bounded by the wire format; status is semantic
+                throw new ProtocolViolationException("roster status out of range: " + status);
+            }
+            entries.add(new RosterEntry(slot, cellX, cellY, status));
         }
         return entries;
     }
@@ -273,6 +339,29 @@ Expected: COMPILATION ERROR (new records absent).
 
 (Reuses the existing private `checked(byte[], int, int)` helper. Add the missing `java.util.List` import if absent.)
 
+`ControlCodec.java` — extract the size gate into an overload (phase-2 behavior unchanged at every existing call site):
+
+```java
+    public static DecodedControl decode(String text) {
+        return decode(text, Protocol.MAX_CONTROL_BYTES);
+    }
+
+    /** Master-connection paths pass Protocol.MAX_MASTER_FRAME_BYTES (tunnel headroom, see Interfaces). */
+    public static DecodedControl decode(String text, int maxBytes) {
+        // ...move the existing byte-length check here, comparing against maxBytes,
+        // then the existing Jackson parse + per-type validation unchanged...
+    }
+```
+
+`Protocol.java`:
+
+```java
+    public static final int MAX_PLAYERS_RELAY = 256;
+    /** Master-connection frame/decode cap: a RelayGuestText wrapper around a fully-escaped
+     *  near-cap inner envelope can approach 2x MAX_CONTROL_BYTES (JSON string escaping). */
+    public static final int MAX_MASTER_FRAME_BYTES = 2 * MAX_CONTROL_BYTES + 1024;
+```
+
 - [ ] **Step 4: Run tests to verify they pass — including phase-2 protocol tests**
 
 Run: `mvn "-Dtest=com.openggf.net.protocol.*" test`
@@ -281,7 +370,7 @@ Expected: PASS (phase-2 `TestControlCodec`/`TestGhostPackets` unaffected + 5 new
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/com/openggf/net/protocol/ControlMessage.java src/main/java/com/openggf/net/protocol/GhostPackets.java src/test/java/com/openggf/net/protocol/TestPhase3Protocol.java CHANGELOG.md
+git add src/main/java/com/openggf/net/protocol/ControlMessage.java src/main/java/com/openggf/net/protocol/GhostPackets.java src/main/java/com/openggf/net/protocol/Protocol.java src/main/java/com/openggf/net/protocol/ControlCodec.java src/test/java/com/openggf/net/protocol/TestPhase3Protocol.java CHANGELOG.md
 git commit -m "feat(timeattack): phase-3 broker/PoW/relay control messages and roster packet
 
 Changelog: updated
@@ -518,7 +607,7 @@ Skills: n/a"
   - New constructor `GhostHub(LongSupplier wallClockMillis, TrackValidationProfileSource profiles, HubViolationRecorder recorder, boolean relevanceFiltering)`; the existing 3-arg constructor delegates with `false`.
   - Position tracking: on every ACCEPTED batch, the hub decodes the LAST frame and records `(x, y)` into the classifier plus a per-player `lastStatus` (`ROSTER_STATUS_RUNNING`, or `ROSTER_STATUS_FINISHED` once a frame with the finished bit arrives; `IDLE` before any frame of the current attempt).
   - `tick()` with filtering on: `classifier.rebucket()`, then each recipient's aggregate contains only senders in `nearSetFor(recipient)` (still excluding self). With filtering off: phase-2 behavior byte-for-byte.
-  - Roster: `ROSTER_INTERVAL_TICKS = 20` (1 Hz at the 20 Hz tick — main spec §4.3): every 20th tick, every player receives one `Roster` packet listing ALL players (including far ones — that is its purpose), positions quantized `x >>> 6`/`y >>> 6` clamped to 255. Only when filtering is on (small rooms have no far players).
+  - Roster: `ROSTER_INTERVAL_TICKS = 20` (1 Hz at the 20 Hz tick — main spec §4.3): every 20th tick, every player receives one `Roster` packet listing ALL players — including far ones AND players who have not streamed a frame yet (no tracked position → `cellX`/`cellY` 0, status `ROSTER_STATUS_IDLE`; the roster is the standings panel's presence feed, so idle players must appear). Positions quantized `x >>> 6` (clamped to 65535) / `y >>> 6` (clamped to 255). Only when filtering is on (small rooms have no far players).
   - `removePlayer` also removes from the classifier.
 
 - [ ] **Step 1: Write the failing test**
@@ -543,6 +632,7 @@ class TestGhostHubScaleMode {
     private final FakeHubConnection near = new FakeHubConnection();
     private final FakeHubConnection me = new FakeHubConnection();
     private final FakeHubConnection far = new FakeHubConnection();
+    private final FakeHubConnection idle = new FakeHubConnection();
 
     @BeforeEach
     void setUp() {
@@ -552,6 +642,7 @@ class TestGhostHubScaleMode {
         hub.addPlayer(0, "fp-me", me);
         hub.addPlayer(1, "fp-near", near);
         hub.addPlayer(2, "fp-far", far);
+        hub.addPlayer(3, "fp-idle", idle); // never streams a frame
     }
 
     private static byte[] frames(int x, int count, boolean finishedLast) {
@@ -598,11 +689,15 @@ class TestGhostHubScaleMode {
                 roster = GhostPackets.decodeRoster(packet);
             }
         }
-        assertEquals(3, roster.size()); // ALL players, including far ones
+        assertEquals(4, roster.size()); // ALL players — far AND idle ones
         GhostPackets.RosterEntry farEntry = roster.stream()
                 .filter(e -> e.playerSlot() == 2).findFirst().orElseThrow();
         assertEquals(9002 >>> 6, farEntry.cellX()); // last frame x quantized to 64-px cells
         assertEquals(GhostPackets.ROSTER_STATUS_RUNNING, farEntry.status());
+        GhostPackets.RosterEntry idleEntry = roster.stream()
+                .filter(e -> e.playerSlot() == 3).findFirst().orElseThrow();
+        assertEquals(GhostPackets.ROSTER_STATUS_IDLE, idleEntry.status()); // listed despite never streaming
+        assertEquals(0, idleEntry.cellX());
     }
 
     @Test
@@ -692,11 +787,10 @@ Roster emission at the end of `tick()`:
             List<GhostPackets.RosterEntry> roster = new ArrayList<>();
             for (Map.Entry<Integer, Player> entry : players.entrySet()) {
                 var position = classifier.positionOf(entry.getKey()); // add this tiny accessor to RelevanceClassifier: record Pos(int x, int y); Pos positionOf(int slot) — null before any frame
-                if (position != null) {
-                    roster.add(new GhostPackets.RosterEntry(entry.getKey(),
-                            Math.min(position.x() >>> 6, 255), Math.min(position.y() >>> 6, 255),
-                            lastStatus.getOrDefault(entry.getKey(), GhostPackets.ROSTER_STATUS_IDLE)));
-                }
+                roster.add(new GhostPackets.RosterEntry(entry.getKey(),
+                        position == null ? 0 : Math.min(position.x() >>> 6, 0xFFFF),
+                        position == null ? 0 : Math.min(position.y() >>> 6, 255),
+                        lastStatus.getOrDefault(entry.getKey(), GhostPackets.ROSTER_STATUS_IDLE)));
             }
             if (!roster.isEmpty()) {
                 byte[] packet = GhostPackets.encodeRoster(roster);
@@ -1519,7 +1613,7 @@ Skills: n/a"
   - `enum Tier { NEW, ESTABLISHED, TRUSTED, SANCTIONED }`.
   - `record Thresholds(long establishedAgeMillis, int establishedCleanRounds, long trustedAgeMillis, int trustedCleanRounds)` with `static Thresholds defaults()` = 48 h / 10 rounds / 14 days / 50 rounds (master-config-tunable — Task 8 wires config values in).
   - `Tier tierOf(String fingerprint)` — an active `BAN` sanction → `SANCTIONED` (rejected at handshake); no store row → `NEW` (age tracked in the cache); with a row → computed from BOTH server-observed age AND clean rounds (age alone never grants trust — clean rounds are the gating resource, security spec §5.1). Tier stored back via `setTier` when it changes (promotions are durable).
-  - `void onCleanRound(String fingerprint)` — the durable event: `cache.firstSeenOf` (for the age origin) → `persistOnDurableEvent` → `recordCleanRound` → recompute/store tier. "Clean round" = completed round with no hub violations (Task 8's RoomHost outcome hook decides cleanliness; the ladder just counts).
+  - `void onCleanRound(String fingerprint)` — the durable event: `cache.firstSeenOf` (for the age origin) → `persistOnDurableEvent` → `recordCleanRound` → recompute/store tier. "Clean round" = completed round with no hub violations (Task 8's RoomHost outcome hook decides cleanliness; the ladder just counts). **Accrual pacing:** `ACCRUAL_MIN_INTERVAL_MILLIS = 5 * 60_000` — a clean round arriving within the interval of the same identity's previous accrual is silently ignored (in-memory map, broker-loop-confined). This is the "playing rounds is rate-limited per identity" control of security spec §5.1: without it, a creator looping 10-second round windows farms clean rounds arbitrarily fast (wall-clock age still gates tiers, but the rounds resource must not be free).
   - `void onDisplayNameClaim(String fingerprint, String displayName)` — the other durable event.
   - `void sanction(IdentityStore.SanctionRecord record)` — persists the identity row if absent (a sanction is durable by definition), adds the sanction; demotion is instant and destroys accrued standing (`setTier("NEW")` on BAN — burning a trusted identity costs days to rebuild, security spec §4).
   - Convenience gates: `boolean isBanned(String fingerprint)`; `boolean canCreateRoom(String fingerprint)` (tier != NEW && !banned — security spec §4/§8: NEW cannot create rooms); `boolean canChatYet(String fingerprint, long memberSinceMillis)` (non-NEW always; NEW read-only for `NEW_CHAT_MUTE_MILLIS = 5 * 60_000` per room).
@@ -1562,6 +1656,7 @@ class TestTrustLadder {
         assertEquals(TrustLadder.Tier.NEW, ladder.tierOf("fp")); // old enough, too few rounds
 
         for (int i = 0; i < 9; i++) {
+            now += TrustLadder.ACCRUAL_MIN_INTERVAL_MILLIS + 1;
             ladder.onCleanRound("fp"); // now 10 rounds AND old enough
         }
         assertEquals(TrustLadder.Tier.ESTABLISHED, ladder.tierOf("fp"));
@@ -1569,7 +1664,8 @@ class TestTrustLadder {
 
         TrustLadder fastFarm = ladder(dir.resolve("sub"));
         for (int i = 0; i < 60; i++) {
-            fastFarm.onCleanRound("farmer"); // 60 rounds in zero wall-clock time
+            now += TrustLadder.ACCRUAL_MIN_INTERVAL_MILLIS + 1;
+            fastFarm.onCleanRound("farmer"); // 60 rounds in ~5 hours of wall clock
         }
         assertEquals(TrustLadder.Tier.NEW, fastFarm.tierOf("farmer")); // rounds alone never promote
     }
@@ -1580,6 +1676,7 @@ class TestTrustLadder {
         ladder.onCleanRound("fp");
         now += TrustLadder.Thresholds.defaults().trustedAgeMillis() + 1;
         for (int i = 0; i < 49; i++) {
+            now += TrustLadder.ACCRUAL_MIN_INTERVAL_MILLIS + 1;
             ladder.onCleanRound("fp");
         }
         assertEquals(TrustLadder.Tier.TRUSTED, ladder.tierOf("fp")); // 50 rounds + 14 days
@@ -1591,6 +1688,7 @@ class TestTrustLadder {
         ladder.onCleanRound("fp");
         now += TrustLadder.Thresholds.defaults().establishedAgeMillis() + 1;
         for (int i = 0; i < 9; i++) {
+            now += TrustLadder.ACCRUAL_MIN_INTERVAL_MILLIS + 1;
             ladder.onCleanRound("fp");
         }
         assertEquals(TrustLadder.Tier.ESTABLISHED, ladder.tierOf("fp"));
@@ -1612,6 +1710,23 @@ class TestTrustLadder {
         assertFalse(ladder.isBanned("fp"));
         assertEquals(TrustLadder.Tier.NEW, ladder.tierOf("fp")); // standing was destroyed
     }
+
+    @Test
+    void accrualPacingIgnoresBackToBackRounds(@TempDir Path dir) {
+        TrustLadder ladder = ladder(dir);
+        ladder.onCleanRound("fp");
+        ladder.onCleanRound("fp"); // within the pacing interval: ignored (10-second-window farming)
+        now += TrustLadder.Thresholds.defaults().establishedAgeMillis() + 1;
+        for (int i = 0; i < 8; i++) {
+            now += TrustLadder.ACCRUAL_MIN_INTERVAL_MILLIS + 1;
+            ladder.onCleanRound("fp");
+        }
+        // 1 + 8 counted (the back-to-back second round was ignored) = 9 rounds < 10
+        assertEquals(TrustLadder.Tier.NEW, ladder.tierOf("fp"));
+        now += TrustLadder.ACCRUAL_MIN_INTERVAL_MILLIS + 1;
+        ladder.onCleanRound("fp");
+        assertEquals(TrustLadder.Tier.ESTABLISHED, ladder.tierOf("fp"));
+    }
 }
 ```
 
@@ -1625,6 +1740,8 @@ Expected: COMPILATION ERROR.
 ```java
 package com.openggf.net.master;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.LongSupplier;
 
 /**
@@ -1636,6 +1753,8 @@ public final class TrustLadder {
     public enum Tier { NEW, ESTABLISHED, TRUSTED, SANCTIONED }
 
     public static final long NEW_CHAT_MUTE_MILLIS = 5 * 60_000;
+    /** Accrual pacing (security spec §5.1): at most one clean round counted per identity per interval. */
+    public static final long ACCRUAL_MIN_INTERVAL_MILLIS = 5 * 60_000;
 
     public record Thresholds(long establishedAgeMillis, int establishedCleanRounds,
                              long trustedAgeMillis, int trustedCleanRounds) {
@@ -1648,6 +1767,7 @@ public final class TrustLadder {
     private final NewIdentityCache cache;
     private final Thresholds thresholds;
     private final LongSupplier clock;
+    private final Map<String, Long> lastAccrualMillis = new HashMap<>();
 
     public TrustLadder(IdentityStore store, NewIdentityCache cache, Thresholds thresholds,
                        LongSupplier clock) {
@@ -1684,6 +1804,11 @@ public final class TrustLadder {
 
     public void onCleanRound(String fingerprint) {
         long now = clock.getAsLong();
+        Long previous = lastAccrualMillis.get(fingerprint);
+        if (previous != null && now - previous < ACCRUAL_MIN_INTERVAL_MILLIS) {
+            return; // accrual pacing — security spec §5.1
+        }
+        lastAccrualMillis.put(fingerprint, now);
         long firstSeen = store.find(fingerprint)
                 .map(IdentityStore.IdentityRecord::firstSeenMillis)
                 .orElseGet(() -> cache.firstSeenOf(fingerprint));
@@ -1736,7 +1861,7 @@ Add `void resetCleanRounds(String fingerprint)` to `IdentityStore` + `SqliteIden
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.net.master.TestTrustLadder+com.openggf.net.master.TestSqliteIdentityStore" test`
-Expected: PASS (5 + 5 tests).
+Expected: PASS (6 + 5 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -1760,8 +1885,7 @@ Skills: n/a"
 **Files:**
 - Create: `src/main/java/com/openggf/net/master/MasterConfig.java`
 - Create: `src/main/java/com/openggf/net/master/SessionRegistry.java`
-- Modify: `src/main/java/com/openggf/net/protocol/Protocol.java` (add `MAX_PLAYERS_RELAY = 256`)
-- Modify: `src/main/java/com/openggf/net/hub/RoomHostConfig.java` (clamp to `MAX_PLAYERS_RELAY`, not `MAX_PLAYERS_DIRECT`)
+- Modify: `src/main/java/com/openggf/net/hub/RoomHostConfig.java` (clamp to `MAX_PLAYERS_RELAY` — the constant landed in Task 1; player-hosted DIRECT rooms stay ≤ 8 via the broker gate in Task 9)
 - Modify: `src/main/java/com/openggf/net/hub/RoomHost.java` (three optional hooks — see Interfaces)
 - Test: `src/test/java/com/openggf/net/master/TestSessionRegistry.java`
 
@@ -1770,12 +1894,12 @@ Skills: n/a"
 
 ```java
 public record MasterConfig(
-        int port,                     // default 27900
+        Integer port,                 // null → 27900; explicit 0 → ephemeral bind (tests)
         String tlsCertPath,           // PEM chain; REQUIRED unless plaintextForTest
         String tlsKeyPath,            // PKCS#8 PEM key
         boolean plaintextForTest,     // default false; true logs a loud warning (tests only)
         String dbPath,                // default "master-identities.db"
-        int adminPort,                // default 27901, binds 127.0.0.1 ONLY
+        Integer adminPort,            // null → 27901; explicit 0 → ephemeral; binds 127.0.0.1 ONLY
         String adminToken,            // required for admin calls
         long establishedAgeHours,     // default 48   (security spec §4 — config, not protocol)
         int establishedCleanRounds,   // default 10
@@ -1793,27 +1917,32 @@ public record MasterConfig(
         long newIdentityCacheTtlMinutes) // default 60
 ```
 
-  with a compact constructor applying defaults for zero/null fields and `TrustLadder.Thresholds thresholds()` derived from the four trust values.
+  with a compact constructor applying defaults for zero/null fields — EXCEPT `port` and `adminPort`, which are `Integer` precisely so that `null` (absent in YAML) means "use the default" while an explicit `0` survives and means "bind an ephemeral port" (loopback tests depend on this; a zero-means-default rule would silently rebind tests to 27900/27901). `TrustLadder.Thresholds thresholds()` derived from the four trust values.
 - Produces `SessionRegistry(LongSupplier clock, MasterConfig config)` — the room directory (main spec §6.2; fake-room defenses per security spec §8):
   - `record RoomEntry(String roomId, ControlMessage.RoomDescriptor descriptor, String routing, String hostFingerprint, String hostAddress, int directPort, String determinismFingerprint, int playerCount, long lastHeartbeatMillis)`.
   - `RoomEntry create(ControlMessage.RoomDescriptor descriptor, String routing, String hostFingerprint, String hostAddress, int directPort, String determinismFingerprint)` — throws `RoomCreateException(String reason)` (nested checked exception) on: per-identity cap, per-IP cap (`hostAddress` keyed), duplicate room by same identity counted toward the cap. Room ids are `"r-" + monotonic counter` (registry-scoped). **Rooms exist only while their host holds a live authenticated connection** — the broker calls `removeByHostFingerprint` on disconnect (Task 9); heartbeats only refresh direct rooms between polls.
-  - `void heartbeat(String roomId, int playerCount)`; `int expireStale()` (lastHeartbeat older than the config timeout → removed); `void remove(String roomId)`; `List<RoomEntry> removeByHostFingerprint(String hostFingerprint)`.
-  - `List<RoomEntry> list(String gameFilterOrNull)` — newest first; `Optional<RoomEntry> find(String roomId)`; `int totalPages(String gameFilterOrNull)` / paging happens in the broker with `config.browserPageSize()`.
+  - `void heartbeat(String roomId, int playerCount)`; `int expireStale()` — removes **DIRECT rooms only** whose lastHeartbeat is older than the config timeout. **RELAY rooms are exempt from heartbeat expiry:** their creator's master connection flips to ROOM mode at `RelayAttach` and can no longer send broker `Heartbeat`s — a relay room's liveness IS the relay room itself. Relay entries are refreshed (playerCount + lastHeartbeat) by `RelayRoomManager`'s periodic count publish (Task 10, marshalled onto the broker loop into `heartbeat(...)`) and removed via `hostLeft`/owner-disconnect teardown. `void remove(String roomId)`; `List<RoomEntry> removeByHostFingerprint(String hostFingerprint)`.
+  - `List<RoomEntry> list(String gameFilterOrNull)` — newest first; `Optional<RoomEntry> find(String roomId)`; `int totalPages(String gameFilterOrNull)` using `config.browserPageSize()` and returning `0` when the filtered list is empty. The broker slices `list(...)` for the requested page and sends this `totalPages` in `RoomListResult`.
 - Produces — `RoomHost` additive hooks (defaults preserve phase-2 behavior byte-for-byte; set via a new `RoomHostHooks` parameter object to avoid constructor explosion):
 
 ```java
 public record RoomHostHooks(
         boolean relevanceFiltering,                                   // → GhostHub 4-arg ctor
         ChatGate chatGate,                                            // null = everyone may chat
-        RoundOutcomeListener roundOutcomeListener) {                  // null = no accrual
+        RoundOutcomeListener roundOutcomeListener,                    // null = no accrual
+        String roundOwnerFingerprint,                                 // null = server identity owns round config
+        java.util.function.Predicate<String> isNewPlayer) {           // null = nobody flagged; feeds the NEW badge (security spec §4)
     public interface ChatGate { boolean mayChat(String fingerprint, long memberSinceMillis); }
     public interface RoundOutcomeListener { void onRoundComplete(String fingerprint, boolean clean); }
-    public static RoomHostHooks none() { return new RoomHostHooks(false, null, null); }
+    public static RoomHostHooks none() { return new RoomHostHooks(false, null, null, null, null); }
 }
 ```
 
   - New constructor `RoomHost(RoomHostConfig config, PlayerIdentity hostIdentity, LongSupplier wallClockMillis, TrackValidationProfileSource profiles, RoomHostHooks hooks)`; the phase-2 4-arg constructor delegates with `RoomHostHooks.none()`.
+  - `roundOwnerFingerprint` fixes relay authority without changing the phase-2 player-host path: when null, `RoundConfigure` remains host-identity-only exactly as phase 2; when set (relay rooms), `RoundConfigure` is authorized for that member fingerprint while `hostIdentity` remains the room server identity used for the signed `Welcome.serverId`.
+  - `void expectFingerprint(HubConnection connection, String fingerprint)` — optional pre-admission binding used only by the master relay path. If present for a connection, the post-signature `HostHandshake.Admit.fingerprint()` MUST match or the room sends `JoinRejected("identity mismatch")` and closes. Remove the expectation on successful admit, rejection, admission timeout, or `onDisconnected`, so abandoned relay attaches do not leak map entries. Player-host/direct rooms never call this method.
   - `chatGate` consulted in the Chat dispatch (member records its admission time — add `long memberSinceMillis` to the Member state); gated messages are silently dropped (NEW-tier read-only window — security spec §4/§9).
+  - `isNewPlayer` feeds the NEW badge (security spec §4 tier effects): `ControlMessage.PlayerInfo` gains a final `boolean newPlayer` component (append it; update phase-2 construction sites and tests mechanically — always `false` on player-hosted rooms), populated from the predicate when `RoomHost` builds `RoomState` broadcasts. Clients render the badge and disambiguate duplicate display names with a fingerprint-suffix tag (Task 16 — security spec §9: "disambiguate duplicate names by badge/fingerprint suffix"; `PlayerInfo` already carries the fingerprint).
   - `roundOutcomeListener` fired once per admitted member when the round transitions RUNNING→ROUND_END: `clean` = the member finished at least one attempt this round AND accumulated zero hub violations during it (track a per-member violation counter fed from the hub recorder + a finished-this-round flag set in the AttemptFinish dispatch; both reset at RoundStart). Trust accrues ONLY from master-observed relay rounds — player-hosted rooms pass `none()` and never accrue (v1-conservative: host-reported outcomes would be forgeable).
   - `RoomHostConfig` clamp change: `maxPlayers` now clamps to `1..Protocol.MAX_PLAYERS_RELAY` (256). Player-host UI keeps passing 8; the phase-2 test asserting the clamp updates its expectation only if it pinned the old bound (check `TestRoomHost`).
 
@@ -1849,6 +1978,7 @@ class TestSessionRegistry {
         assertTrue(a.roomId().startsWith("r-"));
         assertEquals(2, registry.list(null).size());
         assertEquals(1, registry.list("s3k").size());
+        assertEquals(1, registry.totalPages(null));
         assertTrue(registry.find(a.roomId()).isPresent());
     }
 
@@ -1891,6 +2021,14 @@ class TestSessionRegistry {
     }
 
     @Test
+    void relayRoomsAreExemptFromHeartbeatExpiry() throws Exception {
+        SessionRegistry.RoomEntry relay = registry.create(desc("R"), "RELAY", "fp-r", "3.3.3.3", 0, "f");
+        now += MasterConfig.defaults().roomHeartbeatTimeoutSeconds() * 1000 + 1;
+        assertEquals(0, registry.expireStale());
+        assertTrue(registry.find(relay.roomId()).isPresent()); // relay liveness = the room itself
+    }
+
+    @Test
     void configLoadsFromYamlWithDefaults(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir)
             throws Exception {
         java.nio.file.Path yaml = dir.resolve("master.yaml");
@@ -1906,6 +2044,9 @@ class TestSessionRegistry {
         assertEquals(20, MasterConfig.defaults().identityPowBits());
         assertEquals(2, config.maxRoomsPerIdentity()); // unset → default
         assertEquals(48, config.establishedAgeHours());
+        assertEquals(27900, MasterConfig.defaults().port()); // null → default...
+        assertEquals(0, new MasterConfig(0, null, null, true, null, 0, "t",
+                0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0, 0, 0, 0).port()); // ...but explicit 0 = ephemeral
     }
 }
 ```
@@ -1917,7 +2058,7 @@ Expected: COMPILATION ERROR.
 
 - [ ] **Step 3: Implement**
 
-`MasterConfig` — record as specified; compact constructor replaces `0`/`null`/`false-where-defaulted` with defaults (only `attackMode`/`plaintextForTest` stay literal booleans); `load` uses `new ObjectMapper(new YAMLFactory()).readValue(Files.readAllBytes(yamlFile), MasterConfig.class)` with `DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES` disabled; `thresholds()` converts hours/days to millis.
+`MasterConfig` — record as specified; compact constructor replaces `0`/`null`/`false-where-defaulted` with defaults, EXCEPT `port`/`adminPort` (`Integer`: only `null` defaults — explicit `0` stays for ephemeral test binds; only `attackMode`/`plaintextForTest` stay literal booleans); `load` uses `new ObjectMapper(new YAMLFactory()).readValue(Files.readAllBytes(yamlFile), MasterConfig.class)` with `DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES` disabled; `thresholds()` converts hours/days to millis.
 
 `SessionRegistry`:
 
@@ -1992,7 +2133,9 @@ public final class SessionRegistry {
     public int expireStale() {
         long cutoff = clock.getAsLong() - config.roomHeartbeatTimeoutSeconds() * 1000;
         int before = rooms.size();
-        rooms.values().removeIf(r -> r.lastHeartbeatMillis() < cutoff);
+        // DIRECT rooms only: relay rooms cannot heartbeat (their owner's connection is in
+        // ROOM mode) — their liveness is the relay room itself (RelayRoomManager refreshes them).
+        rooms.values().removeIf(r -> "DIRECT".equals(r.routing()) && r.lastHeartbeatMillis() < cutoff);
         return before - rooms.size();
     }
 
@@ -2022,10 +2165,18 @@ public final class SessionRegistry {
                 .sorted(Comparator.comparing(RoomEntry::roomId).reversed())
                 .toList();
     }
+
+    public int totalPages(String gameFilterOrNull) {
+        int count = list(gameFilterOrNull).size();
+        if (count == 0) {
+            return 0;
+        }
+        return (count + config.browserPageSize() - 1) / config.browserPageSize();
+    }
 }
 ```
 
-`Protocol`: `public static final int MAX_PLAYERS_RELAY = 256;`. `RoomHostConfig` compact constructor: `maxPlayers = Math.min(Math.max(maxPlayers, 1), Protocol.MAX_PLAYERS_RELAY);`. `RoomHost`: add `RoomHostHooks` (new file `src/main/java/com/openggf/net/hub/RoomHostHooks.java` with the record above), 5-arg constructor storing hooks and passing `hooks.relevanceFiltering()` to the `GhostHub` 4-arg constructor; `Member` gains `long memberSinceMillis` (set at admit) and `int violationsThisRound` / `boolean finishedThisRound` (reset when a `RoundStart` broadcast fires — hook into `startRound` success); Chat dispatch prepends `if (hooks.chatGate() != null && !hooks.chatGate().mayChat(member.fingerprint, member.memberSinceMillis)) return;`; wire the hub violation recorder wrapper to also bump the member's `violationsThisRound`; on the round engine's RUNNING→ROUND_END transition (observe via `round.phase()` change across `tick()` — cache previous phase), fire `roundOutcomeListener.onRoundComplete(member.fingerprint, member.finishedThisRound && member.violationsThisRound == 0)` for every admitted member.
+`RoomHostConfig` compact constructor: `maxPlayers = Math.min(Math.max(maxPlayers, 1), Protocol.MAX_PLAYERS_RELAY);` (the constant landed in Task 1; the ≤ 8 DIRECT-room limit is enforced at the broker — Task 9 — not here, because relay rooms legitimately reuse this record at 256). `RoomHost`: add `RoomHostHooks` (new file `src/main/java/com/openggf/net/hub/RoomHostHooks.java` with the record above), 5-arg constructor storing hooks and passing `hooks.relevanceFiltering()` to the `GhostHub` 4-arg constructor; add a package-private/ordinary `Map<HubConnection, String> expectedFingerprints` plus public `expectFingerprint(...)` and enforce it immediately after `HostHandshake.Admit` before assigning a slot; `Member` gains `long memberSinceMillis` (set at admit) and `int violationsThisRound` / `boolean finishedThisRound` (reset when a `RoundStart` broadcast fires — hook into `startRound` success); Chat dispatch prepends `if (hooks.chatGate() != null && !hooks.chatGate().mayChat(member.fingerprint, member.memberSinceMillis)) return;`; `RoundConfigure` authorization checks `String owner = hooks.roundOwnerFingerprint() != null ? hooks.roundOwnerFingerprint() : hostIdentity.fingerprint(); if (member.fingerprint.equals(owner)) ...`; wire the hub violation recorder wrapper to also bump the member's `violationsThisRound`; on the round engine's RUNNING→ROUND_END transition (observe via `round.phase()` change across `tick()` — cache previous phase), fire `roundOutcomeListener.onRoundComplete(member.fingerprint, member.finishedThisRound && member.violationsThisRound == 0)` for every admitted member.
 
 - [ ] **Step 4: Run new + phase-2 room tests**
 
@@ -2058,18 +2209,18 @@ Skills: n/a"
 
 **Interfaces:**
 - Consumes: Tasks 5–8 + `HostHandshake`/`SessionTokenIssuer`/`HubConnection`/`ControlCodec`.
-- Produces `RoomBroker(PlayerIdentity masterIdentity, MasterConfig config, SessionRegistry registry, TrustLadder ladder, NewIdentityCache cache, LongSupplier clock, RelayRoomDirectory relays)` — one instance, broker-loop-confined. `RelayRoomDirectory` is a small interface implemented by Task 10's manager: `String createRelayRoom(SessionRegistry.RoomEntry entry); void noteGuestTier(String fingerprint, boolean isNew); boolean attach(HubConnection connection, String roomId, String fingerprint, String displayName); void hostLeft(String roomId);` (`attach` returns false = room gone; `noteGuestTier` feeds the room's chat gate on the broker loop before handoff so the gate never touches SQLite cross-thread — see Task 10).
-  - Transport hooks mirroring `RoomHost`: `onConnected(HubConnection)`, `onText(HubConnection, String)`, `onDisconnected(HubConnection)`, `tick()` (admission timeouts + `registry.expireStale()` + identity GC once per hour).
+- Produces `RoomBroker(PlayerIdentity masterIdentity, MasterConfig config, SessionRegistry registry, IdentityStore store, TrustLadder ladder, NewIdentityCache cache, LongSupplier clock, RelayRoomDirectory relays, DirectTunnelDirectory tunnels)` — one instance, broker-loop-confined. The explicit `IdentityStore` dependency is required for the identity-creation PoW gate: `TrustLadder.tierOf()` intentionally collapses both absent identities and durable NEW rows to `NEW`, but the broker must challenge only row-absent fingerprints. `RelayRoomDirectory` is a small interface implemented by Task 10's manager: `String createRelayRoom(SessionRegistry.RoomEntry entry); void noteGuestTier(String fingerprint, boolean isNew); boolean attach(HubConnection connection, String roomId, String fingerprint, String displayName); void hostLeft(String roomId);` (`attach` returns false = room gone; `noteGuestTier` feeds the room's chat gate on the broker loop before handoff so the gate never touches SQLite cross-thread — see Task 10). `DirectTunnelDirectory` is implemented by Task 11's `GuestTunnelRouter`: `void registerHost(String roomId, HubConnection hostConnection); OptionalInt openGuest(String roomId, HubConnection guestConnection); void unregisterHost(String roomId);`.
+  - Transport hooks mirroring `RoomHost`: `onConnected(HubConnection)`, `onText(HubConnection, String)`, `onDisconnected(HubConnection)`, `tick()` (admission timeouts + `registry.expireStale()` + identity GC once per hour). `onText` decodes with `ControlCodec.decode(text, Protocol.MAX_MASTER_FRAME_BYTES)` — the master connection carries tunnel-wrapped envelopes that legitimately exceed the room cap (Task 1); every other decode site in the codebase keeps the single-arg tight-cap form.
   - Handshake: reuses `HostHandshake` with `requiredDeterminismFingerprint = null` (accept any — gate at join). After `Admit`:
     - banned → `JoinRejected("account sanctioned")` + close (security spec §4: rejected at handshake).
     - **Identity creation stamp** (security spec §3): if the fingerprint has no store row AND is not stamped this session, send `PowChallenge("IDENTITY", "", config.identityPowBits())`; the connection is PENDING_POW until a valid `PowSolution("IDENTITY", nonce)` verifies against the presented pubkey (`ProofOfWork.verify(publicKeyEncoded, nonce, bits)`). Failure → violation counter → close on 3.
-    - **Attack mode** (security spec §8): when `config.attackMode()`, ALSO send `PowChallenge("JOIN", randomPrefixBase64, config.attackModePowBits())` — single-use payload = the random prefix bytes; must be solved before any broker command is accepted.
+    - **Attack mode** (security spec §8): when `config.attackMode()`, ALSO send `PowChallenge("JOIN", randomPrefixBase64, config.attackModePowBits())` — single-use payload = the random prefix bytes; must be solved before any broker command is accepted. (v1 simplification, documented: difficulty is the fixed `attackModePowBits` config value; §8's "difficulty scales with load" is operator-driven — raise the config and toggle attack mode via the admin endpoint under attack.)
     - Then issue an identity-bound session token (`SessionTokenIssuer.issue()`, recorded token→fingerprint; every later envelope must match BOTH the token and the connection's admitted fingerprint — the phase-2 field carries upgraded semantics with no protocol break, security spec §7.3), and send `JoinAccepted(token, -1 /* no room slot at the master */, null, null)`.
-  - Commands (post-admission, token-checked): `RoomCreate` → `ladder.canCreateRoom` gate (NEW cannot create — security spec §8) + `registry.create` (host address = connection remoteHost) → `RELAY` routing also `relays.createRelayRoom(entry)` → reply `RoomCreated(roomId)` / `RoomCreateRejected(reason)`; `RoomListRequest` → paginate `registry.list(filter)` by `config.browserPageSize()` → `RoomListResult` (list responses are the largest reply the master sends; page size caps them — security spec §8) with a per-connection list rate limit (1 request / 2 s, silently dropped beyond); `RoomJoinRequest` → find room, **determinism fingerprint gate** (client's Hello fingerprint must equal the room's advertised one → else `RoomJoinRejected("determinism fingerprint mismatch")`), NEW-tier pressure rule (room ≥ 80% full and tier == NEW → `RoomJoinRejected("room under pressure")` — the v1 simplification of §8's join queue, documented), then `DIRECT` → `RoomJoinResult` with host address/port/serverId; `RELAY` → `RoomJoinResult(routing="RELAY")` and the client follows with `RelayAttach(roomId)` → the broker first calls `relays.noteGuestTier(fingerprint, ladder.tierOf(fingerprint) == Tier.NEW)` (on the broker loop, feeding the room's chat gate) THEN `relays.attach(...)` hands the connection to the relay room (from then on the broker stops routing this connection's traffic — Task 10/11 rewires the pipeline); `Heartbeat` → `registry.heartbeat` (only for rooms owned by this fingerprint); `RoomLeave` → registry removal if owner.
-  - `onDisconnected` → `registry.removeByHostFingerprint(fingerprint)` (rooms die with the host connection) and relay-room teardown for owned relay rooms via `relays` (add `void hostLeft(String roomId)` to the directory interface).
+  - Commands (post-admission, token-checked): `RoomCreate` → routing must be `"DIRECT"` or `"RELAY"` (else strike); **DIRECT rooms additionally require `descriptor.maxPlayers() <= Protocol.MAX_PLAYERS_DIRECT` (8) → else `RoomCreateRejected("direct rooms are capped at 8 players - use relay routing")`** (main spec §2/§4.4: larger rooms are ALWAYS relay-routed; without this gate the Task-8 clamp raise would let a player host advertise a 256-player direct room with no relevance filtering) + `ladder.canCreateRoom` gate (NEW cannot create — security spec §8) + `registry.create` (host address = connection remoteHost) → `RELAY` routing also `relays.createRelayRoom(entry)`, `DIRECT` routing also `tunnels.registerHost(entry.roomId(), member.connection)` so later direct-fallback guests have a host sink → reply `RoomCreated(roomId)` / `RoomCreateRejected(reason)`; `RoomListRequest` → paginate `registry.list(filter)` by `config.browserPageSize()` and use `registry.totalPages(filter)` → `RoomListResult` (list responses are the largest reply the master sends; page size caps them — security spec §8) with a per-connection list rate limit (1 request / 2 s, silently dropped beyond); `RoomJoinRequest` → per-identity join rate limit first (max 5 requests / 10 s / fingerprint → `RoomJoinRejected("join rate limited")` — security spec §8 join floods), find room, **determinism fingerprint gate** (client's Hello fingerprint must equal the room's advertised one → else `RoomJoinRejected("determinism fingerprint mismatch")`), NEW-tier pressure rule (room ≥ 80% full and tier == NEW → `RoomJoinRejected("room under pressure")` — the v1 simplification of §8's join queue, documented), then record the grant in the member's `joinGrantedRooms` set and `DIRECT` → `RoomJoinResult` with host address/port/serverId; `RELAY` → `RoomJoinResult(routing="RELAY")` and the client follows with `RelayAttach(roomId)`. `RelayAttach` **requires `joinGrantedRooms.contains(roomId)`** → else `RoomJoinRejected("join not granted")` (attaching without a prior `RoomJoinRequest` would skip the fingerprint and pressure gates), then dispatches by room routing: RELAY rooms call `relays.noteGuestTier(...)` then `relays.attach(...)` and flip the channel to ROOM; DIRECT rooms call `tunnels.openGuest(roomId, member.connection)` and flip the channel to TUNNEL_GUEST with the returned guestId, or send `RoomJoinRejected("relay unavailable")` if the host sink is gone. `Heartbeat` → `registry.heartbeat` (only for rooms owned by this fingerprint); `RoomLeave` → registry removal if owner + `tunnels.unregisterHost(roomId)` for DIRECT rooms.
+  - `onDisconnected` → `registry.removeByHostFingerprint(fingerprint)` (rooms die with the host connection), relay-room teardown for owned relay rooms via `relays.hostLeft(roomId)`, and DIRECT fallback teardown via `tunnels.unregisterHost(roomId)`.
   - Chat does NOT exist at the master browser level (chat is per-room) — a `Chat` message here is a violation.
 
-- [ ] **Step 1: Write the failing test** (fake `HubConnection`s + fake `RelayRoomDirectory`; drives full handshakes with real `PlayerIdentity`s exactly like phase-2's `TestRoomHost` — reuse its `admit` helper shape)
+- [ ] **Step 1: Write the failing test** (fake `HubConnection`s + fake `RelayRoomDirectory`/`DirectTunnelDirectory`; drives full handshakes with real `PlayerIdentity`s exactly like phase-2's `TestRoomHost` — reuse its `admit` helper shape)
 
 ```java
 package com.openggf.net.master;
@@ -2121,6 +2272,24 @@ class TestRoomBroker {
         @Override public void hostLeft(String roomId) { }
     }
 
+    static final class FakeTunnels implements RoomBroker.DirectTunnelDirectory {
+        final List<String> registered = new ArrayList<>();
+        final List<String> opened = new ArrayList<>();
+
+        @Override public void registerHost(String roomId, HubConnection hostConnection) {
+            registered.add(roomId);
+        }
+
+        @Override public java.util.OptionalInt openGuest(String roomId, HubConnection guestConnection) {
+            opened.add(roomId);
+            return java.util.OptionalInt.of(7);
+        }
+
+        @Override public void unregisterHost(String roomId) {
+            registered.remove(roomId);
+        }
+    }
+
     @TempDir
     Path dir;
     private long now = 1_000_000;
@@ -2128,6 +2297,7 @@ class TestRoomBroker {
     private FakeRelays relays;
     private SqliteIdentityStore store;
     private TrustLadder ladder;
+    private FakeTunnels tunnels;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -2136,9 +2306,10 @@ class TestRoomBroker {
         NewIdentityCache cache = new NewIdentityCache(1000, 3_600_000, () -> now);
         ladder = new TrustLadder(store, cache, config.thresholds(), () -> now);
         relays = new FakeRelays();
+        tunnels = new FakeTunnels();
         SessionRegistry registry = new SessionRegistry(() -> now, config);
         broker = new RoomBroker(PlayerIdentity.loadOrCreate(dir.resolve("master")), config,
-                registry, ladder, cache, () -> now, relays);
+                registry, store, ladder, cache, () -> now, relays, tunnels);
     }
 
     private static ControlMessage lastMessage(FakeConnection c) {
@@ -2162,11 +2333,12 @@ class TestRoomBroker {
         return ((ControlMessage.JoinAccepted) lastMessage(conn)).sessionToken();
     }
 
-    /** Promote a fingerprint past NEW so it may create rooms. */
+    /** Promote a fingerprint past NEW so it may create rooms (clock advances satisfy accrual pacing). */
     private void establish(String fingerprint) {
         ladder.onCleanRound(fingerprint);
         now += TrustLadder.Thresholds.defaults().establishedAgeMillis() + 1;
         for (int i = 0; i < 9; i++) {
+            now += TrustLadder.ACCRUAL_MIN_INTERVAL_MILLIS + 1;
             ladder.onCleanRound(fingerprint);
         }
     }
@@ -2196,6 +2368,7 @@ class TestRoomBroker {
         broker.onText(conn, ControlCodec.encode(token,
                 new ControlMessage.RoomCreate(desc, "DIRECT", 27888, "0.6:cafe")));
         assertInstanceOf(ControlMessage.RoomCreated.class, lastMessage(conn));
+        assertEquals(1, tunnels.registered.size()); // DIRECT rooms register host sink for fallback
     }
 
     @Test
@@ -2257,12 +2430,46 @@ class TestRoomBroker {
                 new ControlMessage.RoomDescriptor("R", "s3k", 0, 0, "OPEN", null, 8, false),
                 "DIRECT", 27888, "0.6:cafe")));
         broker.onDisconnected(host);
+        assertTrue(tunnels.registered.isEmpty());
 
         FakeConnection browser = new FakeConnection();
         String browserToken = admit(browser, hostDir.resolve("other"), "B");
         broker.onText(browser, ControlCodec.encode(browserToken,
                 new ControlMessage.RoomListRequest(null, 0)));
         assertTrue(((ControlMessage.RoomListResult) lastMessage(browser)).rooms().isEmpty());
+    }
+
+    @Test
+    void directRoomsAreCappedAtEightPlayers(@TempDir Path idDir) throws Exception {
+        FakeConnection conn = new FakeConnection();
+        String token = admit(conn, idDir, "HOST");
+        establish(PlayerIdentity.loadOrCreate(idDir).fingerprint());
+        broker.onText(conn, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("Huge", "s3k", 0, 0, "OPEN", null, 64, false),
+                "DIRECT", 27888, "0.6:cafe")));
+        assertInstanceOf(ControlMessage.RoomCreateRejected.class, lastMessage(conn)); // main spec §2: > 8 ⇒ relay only
+        broker.onText(conn, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("Huge", "s3k", 0, 0, "OPEN", null, 64, false),
+                "RELAY", 0, "0.6:cafe")));
+        assertInstanceOf(ControlMessage.RoomCreated.class, lastMessage(conn));
+    }
+
+    @Test
+    void relayAttachWithoutGrantedJoinIsRejected(@TempDir Path hostDir, @TempDir Path guestDir)
+            throws Exception {
+        FakeConnection host = new FakeConnection();
+        String hostToken = admit(host, hostDir, "HOST");
+        establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
+        broker.onText(host, ControlCodec.encode(hostToken, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("Big", "s3k", 0, 0, "OPEN", null, 64, false),
+                "RELAY", 0, "0.6:cafe")));
+        String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+
+        FakeConnection guest = new FakeConnection();
+        String guestToken = admit(guest, guestDir, "GUEST");
+        broker.onText(guest, ControlCodec.encode(guestToken, new ControlMessage.RelayAttach(roomId)));
+        assertInstanceOf(ControlMessage.RoomJoinRejected.class, lastMessage(guest)); // skipped the join gates
+        assertTrue(relays.attached.isEmpty());
     }
 }
 ```
@@ -2287,7 +2494,7 @@ Structure mirrors phase-2's `RoomHost` (Member map keyed by connection, admissio
             reject(member, "account sanctioned"); // security spec §4: rejected at handshake
             return;
         }
-        if (store rowAbsent(member.fingerprint)) { // ladder.tierOf == NEW && registry has no row
+        if (store.find(member.fingerprint).isEmpty()) { // absent durable row, not just NEW tier
             member.state = State.PENDING_IDENTITY_POW;
             member.connection.sendText(ControlCodec.encode(null,
                     new ControlMessage.PowChallenge("IDENTITY", "", config.identityPowBits())));
@@ -2337,7 +2544,7 @@ Structure mirrors phase-2's `RoomHost` (Member map keyed by connection, admissio
     }
 ```
 
-Dispatch for admitted members implements the command list from Interfaces verbatim (RoomCreate/RoomListRequest with rate limit + paging/RoomJoinRequest with fingerprint + pressure gates/RelayAttach/Heartbeat/RoomLeave; anything else → strike). `RelayRoomDirectory` is a nested interface on `RoomBroker` exactly as consumed by the test. `attackMode` is read from a mutable `AtomicBoolean` seeded from config so the admin endpoint (Task 11) can flip it at runtime — expose `void setAttackMode(boolean)`.
+Dispatch for admitted members implements the command list from Interfaces verbatim (RoomCreate/RoomListRequest with rate limit + paging/RoomJoinRequest with fingerprint + pressure gates/RelayAttach split by RELAY vs DIRECT fallback/Heartbeat/RoomLeave; anything else → strike). `RelayRoomDirectory` and `DirectTunnelDirectory` are nested interfaces on `RoomBroker` exactly as consumed above. `attackMode` is read from a mutable `AtomicBoolean` seeded from config so the admin endpoint (Task 12) can flip it at runtime — expose `void setAttackMode(boolean)`.
 
 `HostHandshake` change: `if (requiredDeterminismFingerprint != null && !requiredDeterminismFingerprint.equals(hello.determinismFingerprint()))` — null accepts any; record the client's claimed fingerprint in `Admit` (add a `String determinismFingerprint` component to `Admit` so the broker can gate joins). Update phase-2 `RoomHost.admitMember` for the extra component (ignored there).
 
@@ -2372,11 +2579,11 @@ Skills: n/a"
 **Interfaces:**
 - Consumes: `RoomHost`/`RoomHostConfig`/`RoomHostHooks` (Task 8), `TrustLadder` (Task 7), `RoomBroker.RelayRoomDirectory` (Task 9), `TrackValidationProfileSource` (Task 14's bundled source; `none()` in tests).
 - Produces `RelayRoomManager implements RoomBroker.RelayRoomDirectory`:
-  - Constructor `RelayRoomManager(PlayerIdentity masterIdentity, TrustLadder ladder, TrackValidationProfileSource profiles, List<Executor> roomLoops, LongSupplier clock)` — `roomLoops` are the Netty event-loop executors (Task 12 passes `EventLoopGroup` children; tests pass `Runnable::run` direct executors). Rooms are assigned round-robin and EVERY interaction with a room marshals onto its loop (main spec §6.2: each room pinned to one event-loop thread, no cross-room state).
-  - `String createRelayRoom(SessionRegistry.RoomEntry entry)` — builds `RoomHost` with `RoomHostConfig(entry name/track/policy, maxPlayers = entry.descriptor().maxPlayers(), requiredDeterminismFingerprint = entry.determinismFingerprint())` and `RoomHostHooks(relevanceFiltering = maxPlayers > 8, chatGate = ladder-backed NEW read-only window, roundOutcomeListener = clean-round accrual into the ladder — the ONLY accrual source in v1: master-observed relay rounds; player-hosted rounds are host-reported and forgeable, so they do not accrue (documented v1-conservative choice))`. **The accrual listener marshals back onto the broker loop** (the ladder/SQLite are broker-loop-confined) — constructor also takes an `Executor brokerLoop`.
-  - `boolean attach(HubConnection connection, String roomId, String fingerprint, String displayName)` — marshals `room.onConnected(connection)` onto the room's loop; the caller (master channel handler, Task 12) reroutes all subsequent text/binary from that connection to `room.onText/onBinary` (also marshalled). Returns false when the room is gone. The guest then performs the NORMAL phase-2 room handshake (Hello→Welcome→AuthProof) against the relay `RoomHost` over the same socket — the room issues its own room-scoped token; hosting mode only changed who runs the hub (main spec §6.1).
+  - Constructor `RelayRoomManager(PlayerIdentity masterIdentity, TrustLadder ladder, TrackValidationProfileSource profiles, List<Executor> roomLoops, Executor brokerLoop, LongSupplier clock, PlayerCountSink playerCounts)` — `roomLoops` are the Netty event-loop executors (Task 12 passes `EventLoopGroup` children; tests pass `Runnable::run` direct executors), while `brokerLoop` receives relay trust accrual callbacks and player-count publishes. Nested `@FunctionalInterface interface PlayerCountSink { void accept(String roomId, int playerCount); }` — Task 12 wires `(roomId, count) -> registry.heartbeat(roomId, count)` so relay-room browser rows stay fresh and the registry's DIRECT-only expiry (Task 8) never orphans them; tests pass `(roomId, count) -> { }`. Rooms are assigned round-robin and EVERY interaction with a room marshals onto its loop (main spec §6.2: each room pinned to one event-loop thread, no cross-room state).
+  - `String createRelayRoom(SessionRegistry.RoomEntry entry)` — builds `RoomHost` with `RoomHostConfig(entry name/track/policy, maxPlayers = entry.descriptor().maxPlayers(), requiredDeterminismFingerprint = entry.determinismFingerprint())` and `RoomHostHooks(relevanceFiltering = maxPlayers > 8, chatGate = ladder-backed NEW read-only window, roundOutcomeListener = clean-round accrual into the ladder — the ONLY accrual source in v1: master-observed relay rounds; player-hosted rounds are host-reported and forgeable, so they do not accrue (documented v1-conservative choice), roundOwnerFingerprint = entry.hostFingerprint())`. **The accrual listener marshals back onto the broker loop** (the ladder/SQLite are broker-loop-confined). The relay room's `hostIdentity` remains the master identity for `Welcome.serverId`; `roundOwnerFingerprint` is the creating player's fingerprint, so only that player can send `RoundConfigure`.
+  - `boolean attach(HubConnection connection, String roomId, String fingerprint, String displayName)` — marshals `room.expectFingerprint(connection, fingerprint)` and then `room.onConnected(connection)` onto the room's loop; the caller (master channel handler, Task 12) reroutes all subsequent text/binary from that connection to `room.onText/onBinary` (also marshalled). Returns false when the room is gone. The guest then performs the NORMAL phase-2 room handshake (Hello→Welcome→AuthProof) against the relay `RoomHost` over the same socket, but the room rejects the handshake if the signed key's fingerprint differs from the broker-authenticated master identity. The room issues its own room-scoped token; hosting mode only changed who runs the hub (main spec §6.1).
   - `void hostLeft(String roomId)` — closes and removes the room (relay rooms are ephemeral; master restart drops rooms, acceptable v1 — main spec §9).
-  - `void tickAll()` — schedules each room's `tick()` on its own loop every `TICK_MILLIS = 50` (Task 12 wires the scheduler; tests call it directly); `int roomCount()`; `Optional<RoomAccess> find(String roomId)` where `record RoomAccess(RoomHost room, Executor loop)`.
+  - `void tickAll()` — schedules each room's `tick()` on its own loop every `TICK_MILLIS = 50` (Task 12 wires the scheduler; tests call it directly). Every `PLAYER_COUNT_INTERVAL_TICKS = 20` invocations (1 Hz), each room's loop task also snapshots `room.players().size()` and marshals it to the broker loop via `playerCounts` (the room map is read on the room's loop; the sink runs on the broker loop — no cross-thread registry touch). `int roomCount()`; `Optional<RoomAccess> find(String roomId)` where `record RoomAccess(RoomHost room, Executor loop)`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2422,7 +2629,7 @@ class TestRelayRoomManager {
         var ladder = new TrustLadder(store, cache, TrustLadder.Thresholds.defaults(), () -> now[0]);
         RelayRoomManager manager = new RelayRoomManager(PlayerIdentity.loadOrCreate(dir.resolve("m")),
                 ladder, TrackValidationProfileSource.none(),
-                List.of(Runnable::run), Runnable::run, () -> now[0]);
+                List.of(Runnable::run), Runnable::run, () -> now[0], (roomId, count) -> { });
 
         var registry = new SessionRegistry(() -> now[0], MasterConfig.defaults());
         SessionRegistry.RoomEntry entry = registry.create(
@@ -2433,8 +2640,10 @@ class TestRelayRoomManager {
 
         // A guest attaches and completes the NORMAL room handshake against the relay RoomHost.
         FakeConnection guest = new FakeConnection();
-        assertTrue(manager.attach(guest, entry.roomId(), "guest-fp", "GUEST"));
         PlayerIdentity guestIdentity = PlayerIdentity.loadOrCreate(dir.resolve("guest"));
+        // The attach binds the guest's REAL broker-authenticated fingerprint — the room
+        // rejects any handshake that signs with a different key (see the tests below).
+        assertTrue(manager.attach(guest, entry.roomId(), guestIdentity.fingerprint(), "GUEST"));
         ClientHandshake handshake = new ClientHandshake(guestIdentity, "GUEST", "0.6:cafe");
         var access = manager.find(entry.roomId()).orElseThrow();
         access.room().onText(guest, ControlCodec.encode(null, handshake.hello()));
@@ -2455,20 +2664,61 @@ class TestRelayRoomManager {
                 TrustLadder.Thresholds.defaults(), () -> now[0]);
         RelayRoomManager manager = new RelayRoomManager(PlayerIdentity.loadOrCreate(dir.resolve("m")),
                 ladder, TrackValidationProfileSource.none(),
-                List.of(Runnable::run), Runnable::run, () -> now[0]);
+                List.of(Runnable::run), Runnable::run, () -> now[0], (roomId, count) -> { });
         var registry = new SessionRegistry(() -> now[0], MasterConfig.defaults());
         SessionRegistry.RoomEntry entry = registry.create(
                 new ControlMessage.RoomDescriptor("Big", "s3k", 0, 0, "OPEN", null, 64, false),
-                "RELAY", "host-fp", "1.1.1.1", 0, "0.6:AAAA");
+                "RELAY", "host-fp", "1.1.1.1", 0, "0.6:cafe"); // determinism matches: only the IDENTITY differs
         manager.createRelayRoom(entry);
 
         FakeConnection guest = new FakeConnection();
-        manager.attach(guest, entry.roomId(), "guest-fp", "GUEST");
+        manager.attach(guest, entry.roomId(), "guest-fp", "GUEST"); // expectation bound to "guest-fp"
         ClientHandshake handshake = new ClientHandshake(
-                PlayerIdentity.loadOrCreate(dir.resolve("guest")), "GUEST", "0.6:cafe"); // mismatched
+                PlayerIdentity.loadOrCreate(dir.resolve("guest")), "GUEST", "0.6:cafe"); // signs a DIFFERENT key
         var access = manager.find(entry.roomId()).orElseThrow();
         access.room().onText(guest, ControlCodec.encode(null, handshake.hello()));
-        assertInstanceOf(ControlMessage.JoinRejected.class, lastMessage(guest));
+        access.room().onText(guest, ControlCodec.encode(null,
+                handshake.onWelcome((ControlMessage.Welcome) lastMessage(guest))));
+        assertInstanceOf(ControlMessage.JoinRejected.class, lastMessage(guest)); // mismatch proven at AuthProof
+    }
+
+    @Test
+    void relayAttachBindsBrokerIdentityAndCreatorCanStartRound(@TempDir Path dir) throws Exception {
+        long[] now = {1_000_000};
+        var store = new SqliteIdentityStore(dir.resolve("ids.db"));
+        var ladder = new TrustLadder(store, new NewIdentityCache(100, 3_600_000, () -> now[0]),
+                TrustLadder.Thresholds.defaults(), () -> now[0]);
+        RelayRoomManager manager = new RelayRoomManager(PlayerIdentity.loadOrCreate(dir.resolve("m")),
+                ladder, TrackValidationProfileSource.none(),
+                List.of(Runnable::run), Runnable::run, () -> now[0], (roomId, count) -> { });
+        PlayerIdentity creatorIdentity = PlayerIdentity.loadOrCreate(dir.resolve("creator"));
+        var registry = new SessionRegistry(() -> now[0], MasterConfig.defaults());
+        SessionRegistry.RoomEntry entry = registry.create(
+                new ControlMessage.RoomDescriptor("Big", "s3k", 0, 0, "OPEN", null, 64, false),
+                "RELAY", creatorIdentity.fingerprint(), "1.1.1.1", 0, "0.6:cafe");
+        manager.createRelayRoom(entry);
+        var access = manager.find(entry.roomId()).orElseThrow();
+
+        FakeConnection creator = new FakeConnection();
+        manager.attach(creator, entry.roomId(), creatorIdentity.fingerprint(), "HOST");
+        ClientHandshake creatorHandshake = new ClientHandshake(creatorIdentity, "HOST", "0.6:cafe");
+        access.room().onText(creator, ControlCodec.encode(null, creatorHandshake.hello()));
+        access.room().onText(creator, ControlCodec.encode(null,
+                creatorHandshake.onWelcome((ControlMessage.Welcome) lastMessage(creator))));
+        String token = ((ControlMessage.JoinAccepted) lastMessage(creator)).sessionToken();
+        access.room().onText(creator, ControlCodec.encode(token, new ControlMessage.RoundConfigure(
+                new ControlMessage.RoundConfig("s3k", 0, 0, 60, "OPEN", null))));
+        assertTrue(creator.text.stream().map(t -> ControlCodec.decode(t).message())
+                .anyMatch(m -> m instanceof ControlMessage.RoundStart));
+
+        FakeConnection impostor = new FakeConnection();
+        manager.attach(impostor, entry.roomId(), creatorIdentity.fingerprint(), "BAD");
+        ClientHandshake wrongHandshake = new ClientHandshake(
+                PlayerIdentity.loadOrCreate(dir.resolve("wrong-key")), "BAD", "0.6:cafe");
+        access.room().onText(impostor, ControlCodec.encode(null, wrongHandshake.hello()));
+        access.room().onText(impostor, ControlCodec.encode(null,
+                wrongHandshake.onWelcome((ControlMessage.Welcome) lastMessage(impostor))));
+        assertInstanceOf(ControlMessage.JoinRejected.class, lastMessage(impostor)); // identity mismatch
     }
 }
 ```
@@ -2508,25 +2758,35 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
     public record RoomAccess(RoomHost room, Executor loop) {
     }
 
+    @FunctionalInterface
+    public interface PlayerCountSink {
+        void accept(String roomId, int playerCount);
+    }
+
+    public static final int PLAYER_COUNT_INTERVAL_TICKS = 20; // 1 Hz at the 50 ms tick
+
     private final PlayerIdentity masterIdentity;
     private final TrustLadder ladder;
     private final TrackValidationProfileSource profiles;
     private final List<Executor> roomLoops;
     private final Executor brokerLoop;
     private final LongSupplier clock;
+    private final PlayerCountSink playerCounts;
     private final Map<String, RoomAccess> rooms = new ConcurrentHashMap<>();
     private final Map<String, Boolean> newTierByFingerprint = new ConcurrentHashMap<>();
     private final AtomicInteger nextLoop = new AtomicInteger();
+    private int tickCounter;
 
     public RelayRoomManager(PlayerIdentity masterIdentity, TrustLadder ladder,
                             TrackValidationProfileSource profiles, List<Executor> roomLoops,
-                            Executor brokerLoop, LongSupplier clock) {
+                            Executor brokerLoop, LongSupplier clock, PlayerCountSink playerCounts) {
         this.masterIdentity = masterIdentity;
         this.ladder = ladder;
         this.profiles = profiles;
         this.roomLoops = roomLoops;
         this.brokerLoop = brokerLoop;
         this.clock = clock;
+        this.playerCounts = playerCounts;
     }
 
     @Override
@@ -2550,7 +2810,9 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                     if (clean) {
                         ladder.onCleanRound(fingerprint); // the only trust-accrual source in v1
                     }
-                }));
+                }),
+                entry.hostFingerprint(), // room creator, not the master server identity, starts rounds
+                fingerprint -> newTierByFingerprint.getOrDefault(fingerprint, false)); // NEW badge feed (§4)
         RoomHost room = new RoomHost(config, masterIdentity, clock, profiles, hooks);
         Executor loop = roomLoops.get(Math.floorMod(nextLoop.getAndIncrement(), roomLoops.size()));
         rooms.put(entry.roomId(), new RoomAccess(room, loop));
@@ -2564,7 +2826,10 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
         if (access == null) {
             return false;
         }
-        access.loop().execute(() -> access.room().onConnected(connection));
+        access.loop().execute(() -> {
+            access.room().expectFingerprint(connection, fingerprint);
+            access.room().onConnected(connection);
+        });
         return true;
     }
 
@@ -2582,19 +2847,30 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
     }
 
     public void tickAll() {
-        for (RoomAccess access : rooms.values()) {
-            access.loop().execute(() -> access.room().tick());
+        boolean publishCounts = (++tickCounter % PLAYER_COUNT_INTERVAL_TICKS) == 0;
+        for (Map.Entry<String, RoomAccess> entry : rooms.entrySet()) {
+            String roomId = entry.getKey();
+            RoomAccess access = entry.getValue();
+            access.loop().execute(() -> {
+                access.room().tick();
+                if (publishCounts) {
+                    // players() is read on the room's own loop; the sink runs broker-side —
+                    // keeps relay browser rows fresh (the registry never heartbeat-expires RELAY).
+                    int count = access.room().players().size();
+                    brokerLoop.execute(() -> playerCounts.accept(roomId, count));
+                }
+            });
         }
     }
 }
 ```
 
-Note: the ladder's chat gate runs on the ROOM loop but reads SQLite (broker-confined), so it must not call the ladder cross-thread. Instead the manager keeps a `ConcurrentHashMap<String, Boolean> newTierByFingerprint` and the chatGate lambda reads THAT (same semantics as `ladder.canChatYet` — NEW-tier members are read-only for `NEW_CHAT_MUTE_MILLIS`, everyone else may chat — with no SQLite touch). The broker populates it on the broker loop right before handing the connection over, via a new directory method `void noteGuestTier(String fingerprint, boolean isNew)` (added to `RoomBroker.RelayRoomDirectory` in Task 9 and called there just before `attach`). The `attach(HubConnection, String roomId, String fingerprint, String displayName)` signature stays 4-arg — the test snippets above are correct as written; only add the `noteGuestTier` method to the `RelayRoomDirectory` interface and a void no-op override to the Task 9/10 fakes.
+Note: the ladder's chat gate runs on the ROOM loop but reads SQLite (broker-confined), so it must not call the ladder cross-thread. Instead the manager keeps a `ConcurrentHashMap<String, Boolean> newTierByFingerprint` and the chatGate lambda reads THAT (same semantics as `ladder.canChatYet` — NEW-tier members are read-only for `NEW_CHAT_MUTE_MILLIS`, everyone else may chat — with no SQLite touch). The broker populates it on the broker loop right before handing the connection over, via a new directory method `void noteGuestTier(String fingerprint, boolean isNew)` (added to `RoomBroker.RelayRoomDirectory` in Task 9 and called there just before `attach`). The `attach(HubConnection, String roomId, String fingerprint, String displayName)` signature stays 4-arg and now binds that fingerprint into `RoomHost.expectFingerprint(...)`; add a test case where the relay attach is for fingerprint A but the subsequent room `Hello/AuthProof` signs with identity B and assert `JoinRejected("identity mismatch")`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `mvn "-Dtest=com.openggf.net.master.TestRelayRoomManager" test`
-Expected: PASS (2 tests).
+Expected: PASS (3 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -2627,10 +2903,11 @@ Skills: n/a"
   - `RelayGuestOpen(guestId)` → creates a `TunnelHubConnection` (implements `HubConnection`: `sendText(t)` → `sink.sendControl(new RelayGuestText(guestId, t))`; `sendBinary(d)` → `sink.sendBinary(GhostPackets.encodeRelayGuestBinary(guestId, d))`; `close(reason)` → `sink.sendControl(new RelayGuestClose(guestId, reason))`; `remoteHost()` = `"relay:" + guestId`) and calls `server.execute(() -> server.room().onConnected(conn))`.
   - `RelayGuestText(guestId, text)` → `server.execute(() -> room.onText(conn, text))`; wrapped binary (type 0x04) → unwrap → `room.onBinary(conn, payload)`; `RelayGuestClose` → `room.onDisconnected(conn)` + forget.
   - Guest ids are master-assigned; unknown guestId on any frame → ignore (stale after close).
-- Produces `GuestTunnelRouter` (net.master — broker-loop resident):
-  - `int openTunnel(HubConnection guestConnection, MessageSink hostSink)` — allocates a guestId (u16 counter), sends `RelayGuestOpen` to the host, returns id; wires the pair.
+- Produces `GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory` (net.master — broker-loop resident):
+  - `void registerHost(String roomId, HubConnection hostConnection)` — called by the broker when a DIRECT room is created. The host connection is the already-authenticated master socket owned by the room creator; server→host tunnel controls are sent over it as normal master control frames (`ControlCodec.encode(null, RelayGuestOpen/Text/Close)`), and 0x04-wrapped binary is sent raw.
+  - `OptionalInt openGuest(String roomId, HubConnection guestConnection)` — allocates a guestId (u16 counter), sends `RelayGuestOpen` to the registered host, returns the id; empty means the host is gone/no longer registered, so fallback fails cleanly.
   - Guest→host: the master channel handler (Task 12) calls `void guestText(int guestId, String text)` / `void guestBinary(int guestId, byte[] packet)` → forwarded as `RelayGuestText` / 0x04-wrapped to the host sink. Host→guest: `void onHostControl(ControlMessage m)` (`RelayGuestText` → `guestConnection.sendText(text)`; `RelayGuestClose` → `guestConnection.close(reason)`) and `void onHostBinary(byte[] wrapped)` (unwrap 0x04 → `guestConnection.sendBinary(payload)`).
-  - `void guestDisconnected(int guestId)` → `RelayGuestClose` to the host + forget; `int activeTunnels()`.
+  - `void guestDisconnected(int guestId)` → `RelayGuestClose` to the host + forget; `void unregisterHost(String roomId)` closes all active tunnels for that room and forgets the host sink; `int activeTunnels()`.
 - The tunneled traffic is EXACTLY the phase-2 room protocol: the guest performs Hello→Welcome→AuthProof against the HOST's `RoomHost` through the tunnel and streams ghost frames normally; latency-wise the pair pays guest↔master↔host, which is the §9 trade.
 
 - [ ] **Step 1: Write the failing test** (pure — fake sinks both sides, a real `RaceHostServer`-less `RoomHost` via `Runnable::run` executors is overkill here; use a real `RoomHost` directly)
@@ -2694,7 +2971,15 @@ class TestRelayFallbackTunnel {
         FakeGuestConnection guest = new FakeGuestConnection();
         QueueSink masterToHost = new QueueSink();
         GuestTunnelRouter router = new GuestTunnelRouter();
-        int guestId = router.openTunnel(guest, masterToHost);
+        router.registerHost("room-1", new HubConnection() {
+            @Override public void sendText(String t) {
+                masterToHost.control.add((ControlMessage) ControlCodec.decode(t).message());
+            }
+            @Override public void sendBinary(byte[] d) { masterToHost.binary.add(d); }
+            @Override public void close(String reason) { }
+            @Override public String remoteHost() { return "host"; }
+        });
+        int guestId = router.openGuest("room-1", guest).orElseThrow();
 
         // Pump loop: master→host then host→master until both quiet.
         Runnable pump = () -> {
@@ -2872,48 +3157,61 @@ public final class HostMasterLink {
 ```java
 package com.openggf.net.master;
 
-import com.openggf.net.host.HostMasterLink;
 import com.openggf.net.hub.HubConnection;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.ControlCodec;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.ProtocolViolationException;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.OptionalInt;
 
 /** Master side of the fallback tunnel: pairs a guest connection with a host sink. */
-public final class GuestTunnelRouter {
-    private record Tunnel(HubConnection guest, HostMasterLink.MessageSink hostSink) {
+public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory {
+    private record Tunnel(String roomId, HubConnection guest, HubConnection host) {
     }
 
+    private final Map<String, HubConnection> hostsByRoom = new HashMap<>();
     private final Map<Integer, Tunnel> tunnels = new HashMap<>();
     private int nextGuestId;
 
-    public int openTunnel(HubConnection guestConnection, HostMasterLink.MessageSink hostSink) {
+    @Override
+    public void registerHost(String roomId, HubConnection hostConnection) {
+        hostsByRoom.put(roomId, hostConnection);
+    }
+
+    @Override
+    public OptionalInt openGuest(String roomId, HubConnection guestConnection) {
+        HubConnection host = hostsByRoom.get(roomId);
+        if (host == null) {
+            return OptionalInt.empty();
+        }
         int guestId = (++nextGuestId) & 0xFFFF;
-        tunnels.put(guestId, new Tunnel(guestConnection, hostSink));
-        hostSink.sendControl(new ControlMessage.RelayGuestOpen(guestId));
-        return guestId;
+        tunnels.put(guestId, new Tunnel(roomId, guestConnection, host));
+        host.sendText(ControlCodec.encode(null, new ControlMessage.RelayGuestOpen(guestId)));
+        return OptionalInt.of(guestId);
     }
 
     public void guestText(int guestId, String text) {
         Tunnel tunnel = tunnels.get(guestId);
         if (tunnel != null) {
-            tunnel.hostSink().sendControl(new ControlMessage.RelayGuestText(guestId, text));
+            tunnel.host().sendText(ControlCodec.encode(null, new ControlMessage.RelayGuestText(guestId, text)));
         }
     }
 
     public void guestBinary(int guestId, byte[] packet) {
         Tunnel tunnel = tunnels.get(guestId);
         if (tunnel != null) {
-            tunnel.hostSink().sendBinary(GhostPackets.encodeRelayGuestBinary(guestId, packet));
+            tunnel.host().sendBinary(GhostPackets.encodeRelayGuestBinary(guestId, packet));
         }
     }
 
     public void guestDisconnected(int guestId) {
         Tunnel tunnel = tunnels.remove(guestId);
         if (tunnel != null) {
-            tunnel.hostSink().sendControl(new ControlMessage.RelayGuestClose(guestId, "guest disconnected"));
+            tunnel.host().sendText(ControlCodec.encode(null,
+                    new ControlMessage.RelayGuestClose(guestId, "guest disconnected")));
         }
     }
 
@@ -2950,6 +3248,18 @@ public final class GuestTunnelRouter {
     public int activeTunnels() {
         return tunnels.size();
     }
+
+    @Override
+    public void unregisterHost(String roomId) {
+        hostsByRoom.remove(roomId);
+        tunnels.entrySet().removeIf(entry -> {
+            if (entry.getValue().roomId().equals(roomId)) {
+                entry.getValue().guest().close("host disconnected");
+                return true;
+            }
+            return false;
+        });
+    }
 }
 ```
 
@@ -2985,9 +3295,9 @@ Skills: n/a"
 - Test: `src/test/java/com/openggf/net/master/TestMasterServer.java`
 
 **Interfaces:**
-- Produces `MasterServer.start(MasterConfig config, Path dataDir)` → running server; `int port()`; `void execute(Runnable task)` (broker loop); `RoomBroker broker()`; `RelayRoomManager relays()`; `void close()`. Wiring: one `NioEventLoopGroup(1)` acceptor/broker loop + one `NioEventLoopGroup(cores)` whose children become the relay `roomLoops`; `SqliteIdentityStore(dataDir.resolve(config.dbPath()))`, `NewIdentityCache`, `TrustLadder(config.thresholds())`, `SessionRegistry`, `GuestTunnelRouter`, `RelayRoomManager`, `RoomBroker` — ALL broker-loop-confined except the relay rooms; relay ticks scheduled at 50 ms per room loop; registry expiry + hourly identity GC on the broker loop.
-- TLS (security spec §7.3): `SslContextBuilder.forServer(new File(config.tlsCertPath()), new File(config.tlsKeyPath())).build()`; the `SslHandler` leads the pipeline. `config.plaintextForTest()` skips it with `LOG.warning("MASTER RUNNING WITHOUT TLS — test mode only")`. Rest of the pipeline = phase-2 hygiene verbatim: `HttpServerCodec`, `HttpObjectAggregator(8192)`, `WebSocketServerProtocolHandler("/master", null, true, Protocol.MAX_CONTROL_BYTES)`, `WebSocketFrameAggregator(Protocol.MAX_CONTROL_BYTES)`, `IdleStateHandler(60, 0, 0)`, `MasterChannelHandler` (per-IP connection cap + per-connection message rate bucket — copy the constants/logic from `RaceHostChannelHandler`; keep them in one place by promoting the phase-2 `ConnectionCounter` + rate-bucket into a small shared `net.host` utility class `ConnectionHygiene` used by both handlers).
-- `MasterChannelHandler` routing: connections start in BROKER mode (`broker.onText`, marshalled onto the broker loop); after a successful `RelayAttach`, the handler flips to ROOM mode and routes text/binary to the attached room via `RelayRoomManager.RoomAccess` (marshalled onto the room's loop) — the broker exposes the attach outcome via a `Consumer<AttachResult>` callback parameter (`record AttachResult(String roomId)`); guest-of-tunnel traffic (a DIRECT-room fallback guest) similarly flips to TUNNEL mode routing into `GuestTunnelRouter.guestText/guestBinary`. Host connections that own tunneled guests route inbound `RelayGuest*` messages to `router.onHostControl/onHostBinary`.
+- Produces `MasterServer.start(MasterConfig config, Path dataDir)` → running server; `int port()`; `void execute(Runnable task)` (broker loop); `RoomBroker broker()`; `RelayRoomManager relays()`; `void close()`. Wiring: one `NioEventLoopGroup(1)` acceptor/broker loop + one `NioEventLoopGroup(cores)` whose children become the relay `roomLoops`; `SqliteIdentityStore(dataDir.resolve(config.dbPath()))`, `NewIdentityCache`, `TrustLadder(config.thresholds())`, `SessionRegistry`, `GuestTunnelRouter`, `RelayRoomManager(..., (roomId, count) -> registry.heartbeat(roomId, count))` (the player-count sink runs on the broker loop — it keeps RELAY browser rows fresh since the registry's expiry is DIRECT-only), `RoomBroker(masterIdentity, config, registry, store, ladder, cache, clock, relays, guestTunnelRouter)` — ALL broker-loop-confined except the relay rooms; relay ticks scheduled at 50 ms per room loop; registry expiry + hourly identity GC on the broker loop.
+- TLS (security spec §7.3): `SslContextBuilder.forServer(new File(config.tlsCertPath()), new File(config.tlsKeyPath())).build()`; the `SslHandler` leads the pipeline. `config.plaintextForTest()` skips it with `LOG.warning("MASTER RUNNING WITHOUT TLS — test mode only")`. Rest of the pipeline = phase-2 hygiene with ONE deliberate cap change: `HttpServerCodec`, `HttpObjectAggregator(8192)`, `WebSocketServerProtocolHandler("/master", null, true, Protocol.MAX_MASTER_FRAME_BYTES)`, `WebSocketFrameAggregator(Protocol.MAX_MASTER_FRAME_BYTES)` — the master cap includes the Task-1 tunnel headroom, because `RelayGuestText` frames nest a full room control envelope and would exceed `MAX_CONTROL_BYTES` — `IdleStateHandler(60, 0, 0)`, `MasterChannelHandler` (per-IP connection cap + per-connection message rate bucket — copy the constants/logic from `RaceHostChannelHandler`; keep them in one place by promoting the phase-2 `ConnectionCounter` + rate-bucket into a small shared `net.host` utility class `ConnectionHygiene` used by both handlers).
+- `MasterChannelHandler` routing: connections start in BROKER mode (`broker.onText`, marshalled onto the broker loop); after a successful `RelayAttach` for a RELAY room, the handler flips to ROOM mode and routes text/binary to the attached room via `RelayRoomManager.RoomAccess` (marshalled onto the room's loop); after a successful `RelayAttach` for a DIRECT fallback, the handler flips to TUNNEL_GUEST mode with the allocated guestId and routes text/binary into `GuestTunnelRouter.guestText/guestBinary`. The broker exposes the attach outcome via a `Consumer<AttachResult>` callback parameter (`record AttachResult(Mode mode, String roomId, int guestId)`). Host connections that own DIRECT rooms stay in BROKER mode for browser/heartbeat commands, but inbound `RelayGuest*` messages and 0x04 binary from that host are intercepted and routed to `router.onHostControl/onHostBinary` before ordinary broker dispatch (the interception decode, like every decode on a master connection, uses `ControlCodec.decode(text, Protocol.MAX_MASTER_FRAME_BYTES)` — Task 1). **Disconnects route by mode:** BROKER → `broker.onDisconnected` on the broker loop (existing path); ROOM → the attached room's `onDisconnected` on ITS loop **and** `broker.onDisconnected` on the broker loop — the broker keeps its member record after the mode flip (it stops routing traffic, not tracking ownership) precisely so a relay-room OWNER's death still tears down their rooms via `removeByHostFingerprint` + `relays.hostLeft`; TUNNEL_GUEST → `router.guestDisconnected(guestId)` on the broker loop (which sends `RelayGuestClose` to the host) plus the same broker teardown.
 - `AdminEndpoint(MasterConfig config, MasterServer server)` — plain-HTTP `com.sun.net.httpserver.HttpServer` bound to `127.0.0.1:adminPort` (localhost-only by construction; operators tunnel in — security spec §9 v1 operator tooling): `POST /admin/sanction` (JSON `{fingerprint, type: BAN|TIMEOUT, reason, durationHours}` → `TrustLadder.sanction`), `POST /admin/attack-mode` (`{"enabled": true}` → `broker.setAttackMode`), `GET /admin/audit` (returns the audit log tail). Every admin action appends one JSON line to `dataDir/admin-audit.jsonl` — actor (token suffix), action, reason, timestamp (append-only audit log — security spec §5). All requests require header `Authorization: Bearer <config.adminToken()>` → else 401.
 - `MasterServerMain` — tools-style main (`com.openggf.net.master.MasterServerMain`, main spec §6.2): args `--config master.yaml --data ./master-data`; loads config, starts server + admin, blocks on shutdown hook. NO engine imports (fence-checked).
 
@@ -3330,7 +3640,7 @@ class TestMasterClient {
 }
 ```
 
-Test support additions this test legitimizes: `MasterServer.establishForTest(String fingerprint)` (test-only hook, package-visible is fine since the test lives in `net.master`... it does not — make it public and clearly named; it backdates first-seen and adds 10 clean rounds via the ladder), and public `MasterClient.sendControl/sendBinary` passthroughs (needed by the host link binding anyway). `TestMasterServer.testConfig()` becomes public static (already written that way).
+Test support additions this test legitimizes: `MasterServer.establishForTest(String fingerprint)` (test-only hook, package-visible is fine since the test lives in `net.master`... it does not — make it public and clearly named; it writes the store directly — backdated first-seen plus 10 clean rounds — deliberately bypassing the ladder's `ACCRUAL_MIN_INTERVAL_MILLIS` pacing, which would otherwise make the fast-forward impossible), and public `MasterClient.sendControl/sendBinary` passthroughs (needed by the host link binding anyway). `TestMasterServer.testConfig()` becomes public static (already written that way).
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -3340,7 +3650,7 @@ Expected: COMPILATION ERROR.
 - [ ] **Step 3: Implement**
 
 `MasterClient` implementation notes (structure mirrors `RaceClient`; ~250 lines):
-- One JDK WebSocket + `FrameAssembler` + send-chain, exactly like `RaceClient`.
+- One JDK WebSocket + `FrameAssembler` + send-chain, exactly like `RaceClient` — but the assembler/inbound cap AND the inbound decode both use `Protocol.MAX_MASTER_FRAME_BYTES` (`ControlCodec.decode(text, Protocol.MAX_MASTER_FRAME_BYTES)` — Task 1): tunnel-wrapped `RelayGuestText` frames legitimately exceed the room cap, and raising only the transport cap would still fail in the phase-2 decoder. The host's `HostMasterLink` traffic rides this same connection, so the host side inherits both raised caps for free; the inner envelope is re-decoded at the room/guest under the normal tight cap.
 - A `pendingReplies` map keyed by reply type (`Class<? extends ControlMessage>` → queue of `CompletableFuture`s); inbound routing: handshake phase first (Hello/Welcome/AuthProof/PowChallenge/JoinAccepted), then reply matching (`RoomListResult`, `RoomCreated`/`RoomCreateRejected`, `RoomJoinResult`/`RoomJoinRejected` complete the head future of their queue), then `RelayGuest*`/0x04 → bound `HostMasterLink` if any, else → inbound queue.
 - `RelayRaceConnection` (inner): after `RelayAttach` is sent, an `AtomicReference<RelayRaceConnection> attached` diverts ALL inbound text/binary to the connection's own inbound queue; its `sendControl(m)` encodes with ITS room token (`joinAccepted` captured by `completeRoomHandshake`), `sendBinary` writes raw; `close()` closes the underlying socket (leaving a relay room = leaving the master — re-connect to browse again; documented simplification).
 - `completeRoomHandshake(raw, ...)`: drain-loop on a small executor (single virtual thread — `Thread.ofVirtual()`): send Hello (token null), await Welcome → send AuthProof, await JoinAccepted → capture into the connection, complete. `orTimeout(RaceClient.JOIN_TIMEOUT_MILLIS)`.
@@ -3499,7 +3809,7 @@ Skills: n/a"
 - Produces:
   - `RaceClient.InboundEvent` gains `record Roster(List<GhostPackets.RosterEntry> entries)` — the network thread decodes 0x03 frames (dispatch on the type byte before `decodeAggregate`; undecodable → protocol-violation close as usual).
   - `RemoteGhostRegistry`: `record FarPlayer(int slot, String displayName, String character, int cellX, int cellY, int status)`; `void onRoster(List<GhostPackets.RosterEntry> entries)` (stores latest coarse state per slot); `List<FarPlayer> farPlayers(int excludeSlot)` — roster slots that currently have NO live near playback (near players render as ghosts; far ones exist only as roster entries — main spec §4.6), names/characters joined from the RoomState roster; `reset()` also clears roster state.
-  - Coordinator `pump()`: `case RaceClient.Roster roster -> registry.onRoster(roster.entries());`; `hudState()` carries `session.players().size()` as `totalPlayers` and `registry.farPlayers(session.localSlot())` — the standings panel's "N racing" line and a future minimap feed (rendering beyond the count line is phase-4 polish).
+  - Coordinator `pump()`: `case RaceClient.InboundEvent.Roster roster -> registry.onRoster(roster.entries());` (the record is nested in `InboundEvent` like `Control`/`GhostData` — use the qualified name everywhere; do NOT introduce a second top-level `RaceClient.Roster` type); `hudState()` carries `session.players().size()` as `totalPlayers` and `registry.farPlayers(session.localSlot())` — the standings panel's "N racing" line and a future minimap feed (rendering beyond the count line is phase-4 polish).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -3519,9 +3829,9 @@ class TestRosterConsumption {
     void farPlayersComeFromRosterMinusNearPlaybacks() {
         RemoteGhostRegistry registry = new RemoteGhostRegistry();
         registry.onRoomState(List.of(
-                new ControlMessage.PlayerInfo(0, "fp0", "ME", "sonic"),
-                new ControlMessage.PlayerInfo(1, "fp1", "NEAR", "tails"),
-                new ControlMessage.PlayerInfo(2, "fp2", "FAR", "knuckles")));
+                new ControlMessage.PlayerInfo(0, "fp0", "ME", "sonic", false),
+                new ControlMessage.PlayerInfo(1, "fp1", "NEAR", "tails", false),
+                new ControlMessage.PlayerInfo(2, "fp2", "FAR", "knuckles", false)));
 
         // slot 1 streams (near: has a playback); slot 2 appears only in the roster
         byte[] frames = new byte[3 * com.openggf.game.ghost.GhostFrameCodec.BYTES];
@@ -3544,7 +3854,7 @@ class TestRosterConsumption {
     @Test
     void resetClearsRosterToo() {
         RemoteGhostRegistry registry = new RemoteGhostRegistry();
-        registry.onRoomState(List.of(new ControlMessage.PlayerInfo(2, "fp2", "FAR", "knuckles")));
+        registry.onRoomState(List.of(new ControlMessage.PlayerInfo(2, "fp2", "FAR", "knuckles", false)));
         registry.onRoster(List.of(new GhostPackets.RosterEntry(2, 1, 1, 0)));
         assertEquals(1, registry.farPlayers(0).size());
         registry.reset();
@@ -3620,6 +3930,7 @@ Skills: n/a"
 - Modify: `src/main/java/com/openggf/net/hub/HostRoundEngine.java` (broadcast only top-N + paging support)
 - Modify: `src/main/java/com/openggf/net/hub/RoomHost.java` (StandingsPageRequest / RankUpdate handling)
 - Modify: `src/main/java/com/openggf/game/timeattack/mp/RaceTransport.java` + adapter (wrap `RaceConnection`)
+- Modify: `src/main/java/com/openggf/game/timeattack/mp/MultiplayerRaceCoordinator.java` (around-you page auto-request + splice)
 - Create: `src/main/java/com/openggf/game/timeattack/mp/ServerBrowserScreen.java`
 - Modify: `src/main/java/com/openggf/game/timeattack/TimeAttackMenu.java` (BROWSE entry → server browser)
 - Modify: `src/main/java/com/openggf/Engine.java` (master connect/browse/join/host-announce flow)
@@ -3631,8 +3942,9 @@ Skills: n/a"
 - Produces:
   - `HostRoundEngine`: `STANDINGS_BROADCAST_CAP = 10`; `StandingsDelta` broadcasts carry only the top `STANDINGS_BROADCAST_CAP` rows. New `List<ControlMessage.StandingsRow> page(int page, int pageSize)` and `int totalPages(int pageSize)` for on-demand paging. On an accepted finish whose rank exceeds the broadcast cap, the room UNICASTS `RankUpdate(rank, timeFrames)` to that finisher (so a 40th-place player still sees their standing) in addition to the capped `StandingsDelta` — expose the finisher's slot + rank from `onAttemptFinish` so `RoomHost` can unicast.
   - `RoomHost`: dispatch `StandingsPageRequest` → `round.page(...)` → unicast `StandingsPage`; forward the round engine's `RankUpdate` to the owning member. Rate-limit page requests (1 / 2 s / member).
+  - **Around-you rows (the "5 rows around you" of main spec §6.3):** when a `RankUpdate` (or a capped `StandingsDelta`) leaves the local player's rank outside the broadcast cap, `MultiplayerRaceCoordinator` auto-sends `StandingsPageRequest(localRank / pageSize)` at most once per 2 s (matching the room's rate limit) and splices the returned `StandingsPage` rows into the standings list exposed by `hudState()`: the top-10 broadcast rows, then the ≤ 5 rows around the local rank (deduped by slot). No new HUD-state field — the HUD renders the single list, and the rank discontinuity between row 10 and the spliced block reads as the separator. Without this, a 40th-place player sees only their bare rank number, dropping a spec'd panel element.
   - Config keys (enum + `ConfigCatalog` meta + CONFIGURATION.md row each — `TestConfigCatalog` gates this): `TIME_ATTACK_NET_MASTER_URL` → `timeAttack.net.masterUrl`, STRING, default `""` (e.g. `wss://master.example:27900/master`); `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` → `timeAttack.net.masterTrustInsecure`, BOOL, default `false` (dev-only; when true the client builds a trust-all `SSLContext` — logs a loud warning; production stays false and uses the JDK trust store).
-  - `ServerBrowserScreen` (game.timeattack.mp): master-title sub-mode; on entry `MasterClient.connect(configuredMasterUrl, identity, displayName, fingerprint, insecureContextOrNull)`; lists rooms via `listRooms(gameFilter=selectedGame, page)` refreshed every ~2 s and on input; rows show name, game, players/max, routing badge, "unverified" label (main spec §2). Actions: CREATE (→ RoomCreate with the phase-2 host config UI, then for RELAY the coordinator attaches to the returned room via `MasterClient`; for DIRECT it also starts a local `RaceHostServer` + binds `HostMasterLink` for fallback and sends heartbeats), JOIN (→ `masterClient.joinRoom(...)` → wraps the `RaceConnection` in the `RaceTransport` adapter → into the existing phase-2 `MultiplayerRaceCoordinator` + `RaceLobbyScreen`), REFRESH, BACK. Connection failures toast and return to the menu (main spec §9).
+  - `ServerBrowserScreen` (game.timeattack.mp): master-title sub-mode; on entry `MasterClient.connect(configuredMasterUrl, identity, displayName, fingerprint, insecureContextOrNull)`; lists rooms via `listRooms(gameFilter=selectedGame, page)` refreshed every ~2 s and on input; rows show name, game, players/max, routing badge, "unverified" label (main spec §2). Lobby and standings render the `(new)` badge from `PlayerInfo.newPlayer()` (Task 8's hook) and disambiguate duplicate display names with a fingerprint-suffix tag — `name#` + the first 4 hex chars of the fingerprint — security spec §4/§9. Actions: CREATE (→ RoomCreate with the phase-2 host config UI, then for RELAY the coordinator attaches to the returned room via `MasterClient`; for DIRECT it also starts a local `RaceHostServer` + binds `HostMasterLink` for fallback and sends heartbeats), JOIN (→ `masterClient.joinRoom(...)` → wraps the `RaceConnection` in the `RaceTransport` adapter → into the existing phase-2 `MultiplayerRaceCoordinator` + `RaceLobbyScreen`), REFRESH, BACK. Connection failures toast and return to the menu (main spec §9).
   - `RaceTransport` adapter change: wrap `RaceConnection` (Task 13) instead of `RaceClient` concretely — one-line generalization; relay and direct rooms are then identical to the coordinator.
 - `TimeAttackMenu` mode row gains `BROWSE` (master server) beside the phase-2 `SOLO`/`HOST LAN`/`JOIN LAN` (those stay for zero-infrastructure LAN play).
 
@@ -3742,7 +4054,7 @@ Skills: n/a"
 **Interfaces:**
 - Main spec §10 (Load): "spawns N headless bot clients replaying recorded ghost files against a room; asserts hub tick budget, queue depths, and egress at N = 32 / 128 / 256 — the gate for the scale target, runnable in CI at reduced N and on demand at full N." Security spec §10: adversarial modes.
 - Produces:
-  - `BotClient` — a headless `MasterClient`+`RaceConnection` driver (or, for pure-hub benchmarks, a direct in-JVM `RoomHost` attachment bypassing sockets — the tool supports both; the in-JVM mode is what CI runs for determinism/speed): joins a room, completes the handshake, and each simulated frame publishes a ghost frame from a synthetic path (a bot needs no ROM — it replays a numeric path or a loaded `.ggfghost` file, positions only). Modes (`enum Behavior`): `NORMAL`, `TELEPORT` (jumps > speed cap — must trip `speed`), `PACING_SLOW` (advances frameIndex below 60/s — must trip `pacing`), `OVERSIZED` (attempts a > cap binary — rejected pre-parse), `FLOOD` (exceeds the message rate — connection closed), `HANDSHAKE_ABANDON` (connects, never completes handshake — admission-timeout closed).
+  - `BotClient` — a headless `MasterClient`+`RaceConnection` driver (or, for pure-hub benchmarks, a direct in-JVM `RoomHost` attachment bypassing sockets — the tool supports both; the in-JVM mode is what CI runs for determinism/speed): joins a room, completes the handshake, and each simulated frame publishes a ghost frame from a synthetic path (a bot needs no ROM — it replays a numeric path or a loaded `.ggfghost` file, positions only). Modes (`enum Behavior`): `NORMAL`, `TELEPORT` (jumps > speed cap — must trip `speed`), `PACING_SLOW` (advances frameIndex below 60/s — must trip `pacing`), `OVERSIZED` (attempts a > cap binary — rejected pre-parse), `FLOOD` (exceeds the message rate — connection closed), `HANDSHAKE_ABANDON` (connects, never completes handshake — admission-timeout closed), `ADVERSARIAL_MIX` (a mixed room: majority `NORMAL` plus one bot of each adversarial mode — the composition the CI test drives).
   - `GhostLoadTestTool` (tools-style main): `run(int n, Behavior mix, Duration)` spins N `BotClient`s against one in-JVM `MasterServer` relay room, drives ~M simulated hub ticks, and returns a `LoadReport(double meanTickMillis, double p99TickMillis, long maxQueuedBytesAnyClient, long healthyClientsFinished, long adversariesSanctioned)`. Asserts (the SCALE GATE): mean hub tick < 50 ms (keeps up with 20 Hz) and p99 < the tick interval at the target N; healthy clients unaffected by adversaries (security spec §10). CLI: `--n 256 --duration 30 --mix normal|adversarial`.
 - CI runs `TestGhostLoadTest` at N=32 (fast, deterministic, in-JVM ticks driven synchronously); the full N=128/256 runs are on-demand (documented in the test's Javadoc and AGENTS.md). The test asserts the budget at N=32 and that every adversarial behavior fires its expected violation while healthy bots keep finishing.
 
@@ -3887,7 +4199,8 @@ class TestProtocolFuzzing {
         byte[] frames = GhostPackets.encodeFrames(1, 0, new byte[GhostFrameCodec.BYTES]);
         byte[] roster = GhostPackets.encodeRoster(java.util.List.of(
                 new GhostPackets.RosterEntry(0, 1, 2, 0)));
-        for (byte[] valid : new byte[][] {frames, roster}) {
+        byte[] wrapped = GhostPackets.encodeRelayGuestBinary(7, frames);
+        for (byte[] valid : new byte[][] {frames, roster, wrapped}) {
             for (int index = 0; index < valid.length; index++) {
                 for (int value = 0; value < 256; value++) {
                     byte[] mutated = valid.clone();
@@ -3895,6 +4208,7 @@ class TestProtocolFuzzing {
                     assertSafe(() -> GhostPackets.decodeFrames(mutated));
                     assertSafe(() -> GhostPackets.decodeAggregate(mutated));
                     assertSafe(() -> GhostPackets.decodeRoster(mutated));
+                    assertSafe(() -> GhostPackets.decodeRelayGuestBinary(mutated));
                 }
             }
         }
@@ -3953,7 +4267,7 @@ Skills: n/a"
 
 - Task 1 (protocol) unblocks everything. Tasks 2, 5 are independent leaves.
 - Hub scale chain: 2 → 3 → 4 (sequential, all in `net.hub`).
-- Security chain: 5 → 6 → 7 (identity/store/ladder), then 8 (config+registry+RoomHost hooks) → 9 (broker) → 10 (relay manager) → 12 (master server). Task 11 (tunnel) needs 1 only and can land any time before 13.
+- Security chain: 5 → 6 → 7 (identity/store/ladder), then 8 (config+registry+RoomHost hooks) → 9 (broker) → 10 (relay manager). Task 11 (tunnel) needs 1 + 9 because it implements `RoomBroker.DirectTunnelDirectory`. Task 12 (master server) needs 10 + 11 because it wires both relay rooms and direct-fallback tunnels.
 - Task 13 (MasterClient) needs 9–12. Task 14 (profiles) needs 1 + the engine catalog (phase 1). Task 15 (roster client) needs 1 + phase-2 client. Task 16 (browser UI + paging) needs 13. Task 17 (load test) needs 12–13. Task 18 last.
 - Engine-touching tasks (14 export tool, 15/16 glue, 17 bot) need the phase-1/2 code on the branch; the pure `net.*` tasks (1–13, 18 fuzzer/fence) do not and can proceed even if phase-1/2 engine glue is still settling.
 
