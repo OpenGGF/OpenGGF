@@ -38,9 +38,15 @@ verifier exists — main spec §2).
 - Client generates an **Ed25519 keypair** on first run (JDK built-in EdDSA),
   stored under the save directory. The public-key fingerprint is the player's
   stable identity.
-- Connect handshake: master sends a nonce in its `Hello` response; client
-  proves identity by returning `sign(nonce ‖ serverId)`. No passwords, no
-  accounts, no PII.
+- Connect handshake: the **room authority** (master for brokered/relay
+  connections, the player-host for direct connect — same authority that issues
+  session tokens, §7.3) sends a nonce in its `Welcome`; the client proves
+  identity by returning `sign(nonce ‖ serverId)`. `serverId` is the
+  authority's **own keypair fingerprint** — masters and player-hosts hold
+  identities too — carried in `Welcome` alongside the nonce. Binding the
+  signature to the authority's identity prevents replaying a handshake
+  captured on one server against another, and identifies the authority to the
+  client for free. No passwords, no accounts, no PII.
 - **Identity creation PoW stamp:** a new identity includes a one-time
   proof-of-work over its own pubkey (difficulty a master-side config; target
   a few seconds of client compute). Unnoticeable for a real player creating
@@ -133,9 +139,18 @@ main class.
 ### 6.2 Mechanics
 
 - Clients always record the input stream of every attempt (cheap: a few KB per
-  run — the existing recording infrastructure). `AttemptFinish` carries the
-  claimed frame count, the **input-recording hash**, and the **ghost-stream
-  hash** from day 1; the recording itself is uploaded on demand.
+  run). `AttemptFinish` carries the claimed frame count, the
+  **input-recording hash**, and the **ghost-stream hash** from day 1; the
+  recording itself is uploaded on demand.
+- **Input-only attempt recording mode is an explicit contract.** An attempt
+  recording contains exactly: per-frame input masks, the track's canonical
+  start-state descriptor, and the determinism fingerprint — nothing else.
+  The existing trace/recording stack's rich per-frame sidecar capture
+  (desync-lite physics frames and aux fields) is **excluded from the attempt
+  path** — at hundreds of retries per round window it would silently turn
+  "a few KB" into megabytes. Sidecar capture stays reserved for the verifier
+  (which may emit it while replaying, for divergence diagnostics) and for
+  explicit debug tooling.
 - Verifier workers pull jobs from a master-side queue over HTTP(S): (track
   descriptor, character, physics/determinism fingerprint, input recording,
   claimed frames, ghost hash). A job replays from the track's canonical start
@@ -213,6 +228,11 @@ must not trust host-supplied limits. Track checks consume a
 **`TrackValidationProfile`** (track id → level width/height, max plausible
 per-frame speed, frame-rate cap): pure numeric metadata of the same kind as
 the ROM offsets already checked into the constants files — no asset bytes.
+The speed cap is **intentionally a conservative global ceiling per track**
+(maximum across all characters, rules profiles, and legitimate boosts —
+springs, speed shoes — plus margin), not keyed by character: the validator is
+a gross-spoofing filter and must never false-positive a legitimate run;
+character-precise judgment belongs to replay verification (§6).
 An engine-side build tool exports the profile table for the supported track
 list; the table is a checked-in resource bundled with the master. The
 player-host path instead builds the profile live from its loaded level.
