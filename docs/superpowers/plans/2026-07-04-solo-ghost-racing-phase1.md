@@ -182,7 +182,7 @@ Skills: n/a"
 - Produces:
   - `GhostHeader(int formatVersion, String gameId, int zone, int act, String character, String displayName, int firstInputFrame, int finishFrame, int[] splitFrames, byte[] inputRecordingHash)` (record) with `int finalTimeFrames()` = `finishFrame - firstInputFrame`.
   - `GhostRecording` with `GhostHeader header()`, `int frameCount()`, `GhostFrame frameAt(int index)` (clamps: `index >= frameCount()` returns last frame — playback hold), `byte[] frameData()`, constructor `GhostRecording(GhostHeader header, byte[] frameData)`.
-  - `GhostFileCodec.write(GhostRecording r, Path path)`, `GhostFileCodec.read(Path path)`; `GhostFileCodec.FORMAT_VERSION == 1`; `GhostFileCodec.MAX_FRAMES == 216_000` (one hour at 60fps).
+  - `GhostFileCodec.write(GhostRecording r, Path path)`, `GhostFileCodec.read(Path path)`; `GhostFileCodec.FORMAT_VERSION == 1`; `GhostFileCodec.MAX_FRAMES == 36_000` (ten minutes at 60fps — the classic Sonic act time-over cap).
   - **Untrusted-input hardening** (imported ghost files are arbitrary user files): `read` throws a friendly `IOException` on bad magic (message contains `"not a .ggfghost"`), on `version != FORMAT_VERSION`, on hash length != 32, and on `frameCount < 1 || frameCount > MAX_FRAMES` — it must never allocate from an unvalidated count (no OutOfMemory/NegativeArraySize from hostile files).
   - **Immutability:** `GhostHeader` clones its `int[]`/`byte[]` in the compact constructor and returns clones from `splitFrames()`/`inputRecordingHash()`; `GhostRecording` clones `frameData` on construction and from `frameData()`, and rejects empty or non-multiple-of-7 frame data (`IllegalArgumentException` — at least one frame required, so `frameAt` clamping can never index negatively).
 
@@ -387,8 +387,8 @@ import java.nio.file.Path;
 /** Reader/writer for .ggfghost files: header + 7-byte frame stream (main spec §3/§7). */
 public final class GhostFileCodec {
     public static final int FORMAT_VERSION = 1;
-    /** One hour at 60fps — hard cap so hostile files can never force huge allocations. */
-    public static final int MAX_FRAMES = 216_000;
+    /** Ten minutes at 60fps — the ROM act time-over cap; also bounds hostile-file allocations. */
+    public static final int MAX_FRAMES = 36_000;
     private static final int HASH_LENGTH = 32;
     private static final byte[] MAGIC = "GGFGHOST".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
 
@@ -764,8 +764,8 @@ import java.security.NoSuchAlgorithmException;
  */
 public final class AttemptInputRecording {
     public static final int START_HELD_BIT = 0x20;
-    /** One hour at 60fps — decode cap against hostile/corrupt data. */
-    public static final int MAX_FRAMES = 216_000;
+    /** Ten minutes at 60fps — matches GhostFileCodec.MAX_FRAMES and the ROM time-over cap. */
+    public static final int MAX_FRAMES = 36_000;
 
     private final AttemptStartDescriptor start;
     private final ByteArrayOutputStream masks;
@@ -1750,6 +1750,7 @@ Skills: n/a"
   - `afterLevelFrame` (the spawn-anchored per-frame tick): call `attempt.onFrame(p1.heldMask(), GameServices.gameState().isEndOfLevelActive(), currentCheckpointIndex())`; append to `AttemptInputRecording` (`p1.heldMask()`, `p1.startHeld()`); capture ghost frame from the main player sprite; advance ghost playback cursors; on FINISHED transition → build `GhostRecording` (header from attempt + `AttemptStartDescriptor`; `inputRecordingHash = inputRecording.sha256()`) and `store.saveIfBest(...)` unless debug tools were used.
   - `currentCheckpointIndex()`: read the same `CheckpointState` object services expose (`services().checkpointState().getLastCheckpointIndex()` — objects reach it via `DefaultObjectServices`; grep `DefaultObjectServices` for `checkpointState()` to find the owning source and consume it identically, adding a `GameplayModeContext` getter only if none exists).
   - Retry (`requestRetry()`): void attempt, discard capture, then GameLoop clears checkpoint state and calls `levelManager.getTransitions().requestZoneAndAct(zone, act)`; when that load completes GameLoop calls `onLevelReady()` again.
+  - Length cap: when `attempt.frameCount()` reaches `GhostFileCodec.MAX_FRAMES` (36,000 = the ROM's 10:00 time-over), void the attempt and stop capture — the ROM's own time-over will end the run anyway; this guarantees no attempt can produce an unsaveable over-cap ghost.
   - Guards (security spec §11 phase 1 + spec §6.1): refuse `armForLaunch` when trace/test mode active — same predicate as `UserRecordingSessionLauncher.LiveTraceModeGuard` (`TraceSessionLauncher.active() != null || config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED) || GameServices.playbackDebug().isDriving(GameMode.LEVEL)`); while `isAttemptRunning()`, GameLoop skips `liveRewindManager.handleRealtimeRewindInput(...)` and blocks editor-mode entry; if the debug overlay was toggled on during an attempt, mark the attempt tainted → best not saved.
 - Testability: keep ALL decision logic in `TimeAttackAttempt`/pure helpers; `TimeAttackRuntime` methods that touch `GameServices` must null-tolerate (use `*OrNull()` accessors) so the class constructs in plain unit tests. The unit test below covers arm→frame-tick→finish→save via a seam: extract the per-frame sampling into package-visible `void tickForTest(int heldMask, boolean startHeld, boolean endOfLevel, int checkpointIndex, GhostFrame sampledFrame)` that `afterLevelFrame` delegates to after doing the live sampling.
 
