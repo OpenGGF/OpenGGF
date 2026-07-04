@@ -30,10 +30,10 @@ latency can never affect a recorded time or race outcome.
 | Discovery | Master server: server browser + lobby system |
 | Master server role | Directory + relay. Player-hosted direct-connect only for small rooms (≤8); larger rooms are always relay-routed |
 | Race format | Trackmania rounds: host sets a time window on a track, unlimited instant retries, best time in window counts |
-| Track definition (v1) | Full act: spawn → end-of-act signpost; boss/capsule acts end at the arena camera-lock trigger or are excluded from the v1 track list |
+| Track definition (v1) | Full act: spawn → end-of-act signpost. Finish detection goes through a typed per-track finish provider (v1 implementation: signpost touch). Acts that terminate in a boss/capsule instead of a signpost are **excluded from the v1 track list** — camera locks are generic level-event behavior (minibosses, cutscenes, mid-act locks) and must not be treated as a finish semantic. Boss-act finish predicates are future work on the same provider |
 | Characters | Host picks per-room policy: locked (everyone plays the host-chosen character) or open (any character; standings badge the character) |
 | Transport | WebSocket (TCP) everywhere — lobby, browser, relay, ghost streams. Binary frames for ghost data, JSON text frames for control |
-| Anti-cheat (v1) | Hooks only: rewind/debug/editor disabled during timed attempts; `AttemptFinish` reserves an `inputRecordingRef` field so times are verifiable by deterministic replay later. No verification in v1 |
+| Trust model (v1) | **All v1 rooms are casual/untrusted.** Times are client-reported and unverified; the server browser and standings UI label them as such ("unverified times"). This is an explicit, surfaced limitation, not an implicit one: a modified client can report an arbitrary time, and v1 makes no ranked/competitive claim. Hooks for later verification: rewind/debug/editor disabled during timed attempts; `AttemptFinish` reserves an `inputRecordingRef` field so times are verifiable by deterministic replay. Verification cannot run on the master server by design — the master is engine-free and ROM-free — so verified/ranked play requires a separate engine+ROM-equipped verifier service (§12) |
 | Solo mode | First-class phase-1 feature (§3): `.ggfghost` files, star-post splits, multi-ghost racing including imported files |
 
 ## 3. Solo ghost racing (phase 1, and the foundation)
@@ -107,7 +107,9 @@ future minimap without per-ghost streams.
 
 ### 4.4 Budget at the design point (256-player relay room)
 
-Ghost frame: x,y 16-bit each + animId + animFrame + facing/status flags = **7 bytes**.
+Ghost frame: x,y 16-bit each + resolved mapping frame + flip/status flags + 1
+reserved byte = **7 bytes** (see §7 for why this is final render state, not
+animation state).
 Upstream: 60 Hz sampled, batched 3 frames/packet at 20 pkt/s ≈ **1.5 KB/s per client**.
 
 | Path | Rate |
@@ -168,9 +170,9 @@ entries is trivial; full playback cursors exist only for near ghosts.
 | `RaceClient` | Connection lifecycle (master, host, or relay), message pump on a dedicated network thread, single thread-safe queue drained once per frame by the game loop. All game-state mutation stays on the game thread |
 | `GhostStreamPublisher` | Samples the local player each frame during an attempt (reusing the user-recording capture path), quantizes, batches 3 frames/packet, sends |
 | `RemoteGhostRegistry` / `RemoteGhostPlayback` | Per-near-ghost jitter buffer, catch-up policy, playback cursor; roster state for far players |
-| `GhostRenderer` | Draws near ghosts + the solo best-run ghost through the existing player sprite render path at reduced opacity with nameplates. Ghosts never enter `ObjectManager` — they cannot touch gameplay state by construction |
+| `GhostRenderer` | Draws near ghosts + the solo best-run ghost via `PlayerSpriteRenderer.drawFrame()` at reduced opacity with nameplates, reusing the per-character art-slot pattern from `GhostTraceRenderer` (isolated DPLC banks) but consuming resolved render frames (§7) — no visual-state hydration or animation reconstruction. Registered through a new **gameplay-owned ghost render registry** consulted by `LevelRenderer`; the existing `TraceGhostHook` global stays trace-only (it also gates trace HUD flags) and becomes one adapter of the registry rather than being reused. Ghosts never enter `ObjectManager` — they cannot touch gameplay state by construction |
 | `RaceSession` | Room/round state machine: lobby → countdown → window open → podium → track vote. Standings cache, attempt lifecycle (armed → running → finished/reset/void). Owns instant-retry via the existing session/level restart choreography (purely local; peers just see the ghost blink back to the start) |
-| `TimeAttackController` | Timer starts on first input, stops on the finish trigger (signpost / arena lock), frame-count authoritative. Disables rewind, debug overlay, and editor entry for the duration of a timed attempt |
+| `TimeAttackController` | Timer starts on first input, stops when the track's typed finish provider fires (v1 implementation: signpost touch), frame-count authoritative. Disables rewind, debug overlay, and editor entry for the duration of a timed attempt |
 | `GhostHub` | The aggregation/relevance/roster engine of §4. **Shared verbatim between the player-host path and the master server relay** — hosting mode only changes who runs it |
 
 ### 6.2 Master server — `com.openggf.net.master` (same artifact, no engine deps)
@@ -214,6 +216,18 @@ Control: `Hello/Welcome` (version gate), `RoomCreate`, `RoomList`, `RoomJoin`,
 Binary: `GhostFrames` (client → hub, 3 × 7-byte frames + attemptId/frameIndex
 header), `GhostAggregate` (hub → client, all near ghosts' frames for one tick),
 `Roster` (hub → client, 1 Hz coarse state for all players).
+
+**Ghost frames carry final render state, not animation state.** Frame layout:
+x (16-bit), y (16-bit), resolved sprite mapping frame (8-bit), flip/status
+flags (h-flip, v-flip, attempt status), 1 reserved byte (spare for a 16-bit
+mapping-frame extension if any character's mapping table exceeds 255 frames).
+The sender samples its sprite *after* animation resolution — the same
+`mappingFrame`/`renderHFlip`/`renderVFlip` values its own renderer draws — and
+the receiver feeds them straight to `PlayerSpriteRenderer.drawFrame()`. There
+is **no animation-state reconstruction on the receive side**: unlike the trace
+ghost path (which hydrates physics state — subpixel, speeds, angle, ground
+mode — and re-runs the animation manager, because trace frames record physics
+rather than visuals), network ghosts never carry or need physics state.
 
 Stale-attempt frames (old `attemptId`) are dropped silently at every layer.
 
@@ -268,9 +282,14 @@ backpressure ladder) → compose one `GhostAggregate` per recipient; 1 Hz roster
 ## 12. Out of scope (recorded for later)
 
 - Collision netplay (would require lockstep/rollback over the deterministic core).
-- Ranked/persistent leaderboards and replay-verification service (the
-  `inputRecordingRef` hook plus determinism makes times verifiable by replay when
-  this arrives).
+- Ranked/persistent leaderboards and the replay-verification service. The
+  `inputRecordingRef` hook plus determinism makes times verifiable by replay,
+  but verification requires an engine+ROM-equipped verifier process (the
+  operator supplies their own ROM) — it cannot run on the deliberately
+  engine-free, ROM-free master. Until it exists, all rooms remain labeled
+  casual/unverified (§2).
+- Boss/capsule-act finish predicates (additional implementations of the typed
+  per-track finish provider; v1 track list is signpost acts only).
 - Custom track segments via the level editor (track abstraction is already
   (level, spawn, finish-trigger) shaped; the editor can emit segments later
   without protocol changes).
