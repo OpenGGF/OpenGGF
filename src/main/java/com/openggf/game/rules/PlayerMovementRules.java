@@ -21,5 +21,6 @@ public record PlayerMovementRules(
         boolean hurtRoutineLatchesLogicalInput,
         boolean waterExitBoostSkipsFastUpwardVelocity,
         boolean slopeResistAppliesAtZeroInertia,
-        boolean levelBoundaryLockUsesScreenLockFlag) {
+        boolean levelBoundaryLockUsesScreenLockFlag,
+        boolean levelBoundaryUsesPreEasedMaxXDuringBossLock) {
 }

@@ -2471,13 +2471,17 @@ public class LevelManager {
             verticalWrapEnabled = camera.isVerticalWrapEnabled();
             camera.updatePosition(true);
             if (objectManager != null
-                    && (objectManager.usesTwoAxisCursorPlacement() || camera.getX() != preSnapCameraX)) {
+                    && (objectManager.usesTwoAxisCursorPlacement()
+                            || (camera.getX() != preSnapCameraX
+                                    && !objectManager.usesCounterBasedRespawn()))) {
                 // The object manager is constructed before the level-start
                 // camera snap. Rebuild its initial window once Camera_X_pos
                 // matches the new start, otherwise cross-zone loads can seed
                 // objects from the previous level's camera band (e.g. SCZ ->
-                // WFZ missing ObjB2 at x=$0060). S3K also needs this for its
-                // separate Y-camera placement pass.
+                // WFZ missing ObjB2 at x=$0060). S1 counter-based ObjPosLoad
+                // is initialized before the snap; replaying OPL_Main from the
+                // snapped camera drops early route objects from the SST window.
+                // S3K also needs this for its separate Y-camera placement pass.
                 objectManager.reset(camera.getX());
             }
             // ROM parity: only when Get_LevelSizeStart had to clamp the camera

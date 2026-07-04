@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -152,6 +153,35 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     @Override
+    protected boolean usesBaseHitHandler() {
+        // Obj89 handles boss_invulnerable_time inside Obj89_Main_HandleHoveringAndHits
+        // after writing the current-frame hover position, not through Boss_HandleHits.
+        // docs/s2disasm/s2.asm:65079-65112
+        return false;
+    }
+
+    @Override
+    public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+        if (state.invulnerable || state.defeated || state.hitCount <= 0) {
+            return;
+        }
+
+        // ROM Touch_Enemy_Part2 only decrements boss_hitcount2/collision state here.
+        // Obj89_Main_HandleHoveringAndHits observes the zero hit count later in this
+        // object's own routine and selects the defeat routine after the hover write.
+        // docs/s2disasm/s2.asm:85266-85275,65079-65124
+        state.hitCount--;
+        if (state.hitCount == 0) {
+            return;
+        }
+
+        state.invulnerable = true;
+        state.invulnerabilityTimer = getInvulnerabilityDuration();
+        services().playSfx(getBossHitSfxId());
+        paletteFlasher.startFlash();
+    }
+
+    @Override
     protected void onHitTaken(int remainingHits) {
         bossAnim[3] = 0xC0; // Hurt animation
     }
@@ -178,6 +208,10 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
                 return;
             }
             finishInitialization();
+            // ROM Obj89_Init initializes the boss/pillars and returns; Obj89_Main_Sub0
+            // starts moving the boss on the next object dispatch.
+            // docs/s2disasm/s2.asm:64778-64870,64905-64918
+            return;
         }
 
         if (bossCollisionRoutine != 0) {
@@ -198,15 +232,48 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     private boolean checkInitConditions(AbstractPlayableSprite player) {
         var participants = services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
-        if (participants.size() > 1) {
-            for (PlayableEntity participant : participants) {
-                int x = participant.getCentreX();
-                if (x < PLAYER_CHECK_LEFT_X || x > PLAYER_CHECK_RIGHT_X) {
-                    return false;
-                }
+        if (participants.size() <= 1) {
+            return true;
+        }
+
+        if (!isInPillarRaiseWindow(player)) {
+            return false;
+        }
+
+        for (PlayableEntity participant : participants) {
+            if (participant == player || hasArzBossSidekickFlightBypass(participant)) {
+                continue;
+            }
+            if (!isInPillarRaiseWindow(participant)) {
+                return false;
             }
         }
         return true;
+    }
+
+    private static boolean isInPillarRaiseWindow(PlayableEntity participant) {
+        int x = participant.getCentreX();
+        return x >= PLAYER_CHECK_LEFT_X && x <= PLAYER_CHECK_RIGHT_X;
+    }
+
+    private static boolean hasArzBossSidekickFlightBypass(PlayableEntity participant) {
+        if (!(participant instanceof AbstractPlayableSprite sprite)) {
+            return false;
+        }
+
+        int objectControl = 0;
+        if (sprite.isObjectControlled()) {
+            objectControl |= 0x80;
+        }
+        if (sprite.isObjectControlAllowsCpu()) {
+            objectControl |= 0x40;
+        }
+        if (sprite.isObjectControlSuppressesMovement()) {
+            objectControl |= 0x01;
+        }
+        // Obj89_Init skips the Tails X check when Sidekick+obj_control is $81.
+        // docs/s2disasm/s2.asm:64791-64792
+        return objectControl == 0x81;
     }
 
     private void finishInitialization() {
@@ -402,6 +469,26 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
             state.defeated = true;
             services().gameState().addScore(1000);
             onDefeatStarted();
+            return;
+        }
+
+        if (state.invulnerable) {
+            updateArzInvulnerability();
+        }
+    }
+
+    private void updateArzInvulnerability() {
+        if (state.invulnerabilityTimer <= 0) {
+            state.invulnerable = false;
+            paletteFlasher.stopFlash();
+            return;
+        }
+
+        paletteFlasher.update();
+        state.invulnerabilityTimer--;
+        if (state.invulnerabilityTimer <= 0) {
+            state.invulnerable = false;
+            paletteFlasher.stopFlash();
         }
     }
 
@@ -665,6 +752,14 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     @Override
+    public boolean isPersistent() {
+        // Obj89_Main_SubC owns the post-defeat camera release: it increments
+        // Camera_Max_X_pos to $2C00 before testing the on-screen bit and deleting.
+        // docs/s2disasm/s2.asm:65267-65278
+        return true;
+    }
+
+    @Override
     protected boolean isOnScreen() {
         Camera camera = services().camera();
         int screenX = state.x - camera.getX();
@@ -686,5 +781,10 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     @Override
     protected int getBossExplosionSfxId() {
         return Sonic2Sfx.BOSS_EXPLOSION.id;
+    }
+
+    @Override
+    protected int getBossExplosionObjectId() {
+        return com.openggf.game.sonic2.constants.Sonic2ObjectIds.BOSS_EXPLOSION;
     }
 }

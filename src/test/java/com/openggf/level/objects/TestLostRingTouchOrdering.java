@@ -6,6 +6,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.rings.LostRingObjectInstance;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -32,7 +33,7 @@ import static org.mockito.Mockito.when;
  * Models ROM {@code Touch_ChkValue} ring branch (docs/s2disasm/s2.asm:85196-85219):
  * a spilled ring ({@link LostRingObjectInstance}) in slot order collects when the toucher
  * is not invulnerable ({@code invulnerable_time < 90}) and, either way, breaks the touch
- * loop — so a lower-slot ring suppresses a later hazard exactly as ROM does. The branch is
+ * loop - so a lower-slot ring suppresses a later hazard exactly as ROM does. The branch is
  * keyed on the {@code LostRingObjectInstance} type marker, NOT the {@code 0x47} byte shape,
  * so other SPECIAL objects sharing the byte shape keep their own listener path.
  */
@@ -41,6 +42,7 @@ public class TestLostRingTouchOrdering {
     private ObjectManager objectManager;
     private TouchResponseTable table;
     private AbstractPlayableSprite player;
+    private TestObjectServices services;
 
     @BeforeEach
     public void setUp() {
@@ -57,7 +59,7 @@ public class TestLostRingTouchOrdering {
         when(camera.getWidth()).thenReturn((short) 320);
         when(camera.getHeight()).thenReturn((short) 224);
         when(camera.isVerticalWrapEnabled()).thenReturn(false);
-        ObjectServices services = new TestObjectServices()
+        services = new TestObjectServices()
                 .withDebugOverlay(debugOverlay)
                 .withCamera(camera);
         objectManager = new ObjectManager(List.of(), new ObjectRegistry() {
@@ -127,6 +129,36 @@ public class TestLostRingTouchOrdering {
 
         assertTrue(ring.isCollected(), "Lower-slot ring should be collected");
         verify(player, never()).applyHurtOrDeath(anyInt(), any(), anyBoolean());
+    }
+
+    @Test
+    public void cpuSidekickCollectsLostRingThroughObj37Branch() {
+        when(player.isCpuControlled()).thenReturn(true);
+        LostRingObjectInstance ring = ringAtSlot(20);
+
+        objectManager.runTouchResponsesForPlayer(player, 1);
+
+        assertTrue(ring.isCollected(), "S2 Touch_ChkValue lets Tails collect Obj37 lost rings in 1P");
+        verify(player).addRings(1);
+    }
+
+    @Test
+    public void cpuSidekickLostRingUsesMainInvulnerabilityGate() {
+        AbstractPlayableSprite mainPlayer = mock(AbstractPlayableSprite.class);
+        when(mainPlayer.isCpuControlled()).thenReturn(false);
+        when(mainPlayer.getInvulnerableFrames()).thenReturn(120);
+        SpriteManager spriteManager = mock(SpriteManager.class);
+        when(spriteManager.getAllSprites()).thenReturn(List.of(mainPlayer));
+        services.withSpriteManager(spriteManager);
+        when(player.isCpuControlled()).thenReturn(true);
+        when(player.getInvulnerableFrames()).thenReturn(0);
+        LostRingObjectInstance ring = ringAtSlot(20);
+
+        objectManager.runTouchResponsesForPlayer(player, 1);
+
+        assertFalse(ring.isCollected(),
+                "S2 Touch_ChkValue gates sidekick Obj37 collection on MainCharacter invulnerable_time");
+        verify(player, never()).addRings(1);
     }
 
     @Test

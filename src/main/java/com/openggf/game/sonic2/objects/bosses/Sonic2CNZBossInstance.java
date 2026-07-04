@@ -157,6 +157,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
     private int touchCollisionX;
     private int touchCollisionY;
     private boolean touchCollisionSnapshotReady;
+    private int postTriggerBodyCollisionX = Integer.MIN_VALUE;
 
     private final Sonic2CNZEvents cnzEvents;
 
@@ -354,7 +355,13 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
         }
 
         // ROM: loc_31AB6 - Player proximity check
-        int dx = player.getCentreX() - state.x + 0x10;
+        // The compare reads x_pos(a0), not the freshly-moved Boss_X_pos long
+        // (docs/s2disasm/s2.asm:66577-66594). In the leftward pass this displayed
+        // Obj51 x is one pixel to the right of the engine's current state.x at the
+        // same post-player-slot phase; BizHawk probe at BK2 f21917: x_pos=$29A2,
+        // Boss_X_pos=$29A1, Sonic x=$29B1, so dx=$1F and loc_31BF2 runs.
+        int triggerX = state.x + (state.xVel < 0 ? 1 : 0);
+        int dx = player.getCentreX() - triggerX + 0x10;
         if (dx >= 0 && dx < 0x20) {
             int playerY = player.getCentreY();
 
@@ -367,6 +374,12 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
                     bossAnimArray[3] = 0;  // Reset anim timer at offset 3
                     bossAnimArray[9] = 0;  // Reset anim timer at offset 9
                     bossCollisionRoutine = COLLISION_OFF;
+                    // ROM loc_31AB6 compares against stale x_pos(a0), then loc_31C08
+                    // copies the freshly-moved Boss_X_pos into x_pos(a0). On the leftward
+                    // pass, the engine's fixed accumulator can be one MoveObject step ahead
+                    // while the trigger compare is still aligned via triggerX. Preserve the
+                    // ROM-copied body x for Touch_Boss until post-trigger ends.
+                    postTriggerBodyCollisionX = state.xVel < 0 ? triggerX - 1 : Integer.MIN_VALUE;
                     spawnElectricBall();
                     bossCountdown = TRIGGER_COUNTDOWN;
                     return;
@@ -476,6 +489,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
             bossAnimArray[3] = 0;
             bossAnimArray[9] = 0;
             state.routine = ROUTINE_PATROL;
+            postTriggerBodyCollisionX = Integer.MIN_VALUE;
             bossCountdown = -1;
             cooldownTimer = COOLDOWN_DURATION;
         }
@@ -599,6 +613,23 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
         }
 
         applyBossVelocity();
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // ROM loc_31E2A opens Camera_Max_X_pos to $2B20 before it can delete:
+        // cmpi.w #$2B20,(Camera_Max_X_pos).w / addq.w #2,(Camera_Max_X_pos)
+        // / bra.s loc_31E4A. Only once the max-X boundary reaches $2B20 does
+        // it test render_flags.on_screen and branch to DeleteObject
+        // (docs/s2disasm/s2.asm:66887-66899). The shared S2 MarkObjGone-style
+        // unload would remove Obj51 while that camera-opening branch is still
+        // active, stopping the boundary advance early.
+        return false;
     }
 
     /**
@@ -747,6 +778,12 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
             return null;
         }
         if (bossCollisionRoutine == COLLISION_OFF) {
+            int bodyFlags = getCollisionFlags();
+            if (postTriggerBodyCollisionX != Integer.MIN_VALUE && bodyFlags != 0) {
+                return new TouchResponseProvider.TouchRegion[] {
+                        new TouchResponseProvider.TouchRegion(postTriggerBodyCollisionX, getPreUpdateY(), bodyFlags)
+                };
+            }
             return null;
         }
 
@@ -910,5 +947,10 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
     @Override
     protected int getBossExplosionSfxId() {
         return Sonic2Sfx.BOSS_EXPLOSION.id;
+    }
+
+    @Override
+    protected int getBossExplosionObjectId() {
+        return com.openggf.game.sonic2.constants.Sonic2ObjectIds.BOSS_EXPLOSION;
     }
 }

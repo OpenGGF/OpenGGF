@@ -901,8 +901,9 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
             // ROM clamps x at 0x868, engine kept x_speed). Leave it set; the
             // ending walk (Camera_Max_X=0x1000) is well within 0x1000+$128.
             services().playMusic(Sonic2Music.DEATH_EGG.id);
-            // Spawn Eggman transition object (ObjC6 State2) before self-destructing
-            spawnEggmanTransition();
+            // ROM loc_39BA4 only unlocks the camera, advances the dynamic-resize
+            // event, resumes music, and deletes ObjAF; the ObjC6 transition
+            // object is already present from the DEZ layout.
             setDestroyed(true);
             return;
         }
@@ -995,38 +996,6 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
     }
 
     // ========================================================================
-    // Eggman Transition Spawning
-    // ========================================================================
-
-    /**
-     * Spawn the ObjC6 State2 Eggman transition object.
-     * ROM: ObjC6 is placed in the DEZ object layout at ($440, $168) with subtype $A6.
-     * We spawn it dynamically after Silver Sonic's defeat to match the gameplay flow.
-     * Position ($440, $168) from DEZ_1.bin object layout.
-     * Note: ($3F8, $160) is the solid wall child position, NOT Eggman's own position.
-     */
-    private void spawnEggmanTransition() {
-        var objectManager = services().objectManager();
-        Sonic2DeathEggRobotInstance deathEggRobot = null;
-        if (objectManager != null) {
-            for (var obj : objectManager.getActiveObjects()) {
-                if (obj instanceof Sonic2DeathEggRobotInstance der) {
-                    deathEggRobot = der;
-                    break;
-                }
-            }
-        }
-        Sonic2DeathEggRobotInstance targetRobot = deathEggRobot;
-        spawnFreeChild(() -> {
-            Sonic2DEZEggmanInstance eggman = new Sonic2DEZEggmanInstance(0x440, 0x168);
-            if (targetRobot != null) {
-                eggman.setDeathEggRobot(targetRobot);
-            }
-            return eggman;
-        });
-    }
-
-    // ========================================================================
     // Accessors for tests
     // ========================================================================
 
@@ -1046,6 +1015,11 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
     @Override
     protected int getBossExplosionSfxId() {
         return Sonic2Sfx.BOSS_EXPLOSION.id;
+    }
+
+    @Override
+    protected int getBossExplosionObjectId() {
+        return com.openggf.game.sonic2.constants.Sonic2ObjectIds.BOSS_EXPLOSION;
     }
 
     private static Sonic2MechaSonicInstance nearestLiveBossForRewind(RewindRecreateContext ctx) {

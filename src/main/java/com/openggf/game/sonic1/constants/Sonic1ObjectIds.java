@@ -49,6 +49,7 @@ public final class Sonic1ObjectIds {
     public static final int BREAKABLE_WALL  = 0x3C;
     public static final int GHZ_BOSS        = 0x3D;
     public static final int EGG_PRISON      = 0x3E;
+    public static final int EXPLOSION       = 0x3F;
     public static final int MOTOBUG         = 0x40;
     public static final int SPRING          = 0x41;
     public static final int EDGE_WALLS      = 0x44;

@@ -14,6 +14,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SkidDustObjectInstance;
+import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
@@ -574,6 +576,10 @@ public class TestS2ObjectOccupancyOracle {
     private record RideCheck(int expectedY, int actualY, boolean actualAir, boolean actualOnObject) {
     }
 
+    private record PushStatusCheck(boolean expectedPushing, boolean actualPushing, int expectedStatus,
+                                   int actualStatus) {
+    }
+
     private record DeadRideReleaseCheck(
             boolean onObject,
             boolean air,
@@ -731,6 +737,18 @@ public class TestS2ObjectOccupancyOracle {
         Assertions.assertEquals(check.expectedY(), check.actualY(),
                 "S2 Obj28_Walk uses the prior DisplaySprite render flag for deletion "
                         + "(docs/s2disasm/s2.asm:24670-24688); slots " + check.summary());
+    }
+
+    @Test
+    public void arz2EggPrisonAnimalDoesNotWalkOnLandingTransitionFrame() throws Exception {
+        AnimalPositionCheck check = animalPositionAtArz2Frame(7064, 0x1C);
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj28_Main must switch the prison animal to its walking/flying routine "
+                        + "without running Obj28_Walk/Fly until the next object pass; slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj28_Main accepts only negative ObjCheckFloorDist (tst.w d1 / bpl.s DisplaySprite) "
+                        + "for prison animals too; slots " + check.summary());
     }
 
     @Test
@@ -1123,6 +1141,10 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     private AnimalPositionCheck animalPositionAtArz2Frame(int targetFrame) throws Exception {
+        return animalPositionAtArz2Frame(targetFrame, 24);
+    }
+
+    private AnimalPositionCheck animalPositionAtArz2Frame(int targetFrame, int expectedSlot) throws Exception {
         return driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {
                     if (frame != targetFrame) {
@@ -1131,22 +1153,30 @@ public class TestS2ObjectOccupancyOracle {
                     TraceEvent.ObjectNear expectedAnimal = trace.getEventsForFrame(frame).stream()
                             .filter(TraceEvent.ObjectNear.class::isInstance)
                             .map(TraceEvent.ObjectNear.class::cast)
-                            .filter(near -> near.slot() == 24)
+                            .filter(near -> near.slot() == expectedSlot)
                             .filter(near -> parseObjectType(near.objectType()) == 0x28)
                             .findFirst()
                             .orElse(null);
                     Assertions.assertNotNull(expectedAnimal,
-                            "ARZ2 ROM fixture should report the first ChopChop animal in slot 24 at f"
-                                    + targetFrame);
+                            () -> String.format(
+                                    "ARZ2 ROM fixture should report an Obj28 animal in slot %d at f%d",
+                                    expectedSlot, targetFrame));
 
-                    AnimalObjectInstance actualAnimal = om.activeObjectsOfType(AnimalObjectInstance.class).stream()
-                            .filter(animal -> animal.getSlotIndex() == 24)
+                    AbstractObjectInstance actualAnimal = om.getActiveObjects().stream()
+                            .filter(AbstractObjectInstance.class::isInstance)
+                            .map(AbstractObjectInstance.class::cast)
+                            .filter(animal -> animal.getSlotIndex() == expectedSlot)
+                            .filter(animal -> {
+                                ObjectSpawn spawn = animal.getSpawn();
+                                return spawn != null && spawn.objectId() == 0x28;
+                            })
                             .findFirst()
                             .orElse(null);
                     return new AnimalPositionCheck(expectedAnimal.x() & 0xFFFF, expectedAnimal.y() & 0xFFFF,
                             actualAnimal == null ? -1 : actualAnimal.getX(),
                             actualAnimal == null ? -1 : actualAnimal.getY(),
-                            describeSlots(om.occupiedDynamicSlotIds(), 19, 25));
+                            describeSlots(om.occupiedDynamicSlotIds(),
+                                    Math.max(FIRST_DYNAMIC_SLOT, expectedSlot - 5), expectedSlot + 5));
                 });
     }
 
@@ -1405,6 +1435,43 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void arz2TailsSkidDustAppliesRomShorterSpriteYOffsetAtFrame4920() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 4920) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedDust = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 0x14)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x08)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedDust,
+                            "ARZ2 ROM fixture should report Obj08 skid dust slot 0x14 at f4920");
+                    SkidDustObjectInstance actualDust = om.activeObjectsOfType(SkidDustObjectInstance.class)
+                            .stream()
+                            .filter(dust -> dust.getSlotIndex() == 0x14)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(
+                            expectedDust.x() & 0xFFFF,
+                            expectedDust.y() & 0xFFFF,
+                            actualDust == null ? -1 : actualDust.getX(),
+                            actualDust == null ? -1 : actualDust.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 0x10, 0x18));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj08 skid dust X should still use the parent x_pos; slots " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj08_SkidDust adds $10 to parent y_pos, then subtracts 4 for Tails' shorter "
+                        + "sprite before allocating the child dust "
+                        + "(docs/s2disasm/s2.asm:42821-42841); slots " + check.summary());
+    }
+
+    @Test
     public void arz2GrounderWallWaitsOneFrameAfterActivationBeforeMoving() throws Exception {
         AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
                 (trace, om, frame) -> {
@@ -1537,6 +1604,444 @@ public class TestS2ObjectOccupancyOracle {
                 "S2 Obj08 skid dust must use the lowest free ROM slot after Obj82 unloads at f1993; "
                         + "actual slots "
                         + slotCheck.summary());
+    }
+
+    @Test
+    public void arz2BossRoomSkidDustReusesFreedArrowSlotsAfterRelease() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 6313) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    ObjectOccupancyOracle.Divergence first =
+                            ObjectOccupancyOracle.firstDivergence(trace, om, frame, FIRST_DYNAMIC_SLOT);
+                    Assertions.assertNull(first,
+                            "ARZ2 boss-room Obj08 skid dust should reuse the lowest slots freed by "
+                                    + "the Obj89 arrow release before ObjectsManager loads later objects; "
+                                    + "Obj08_CheckSkid calls AllocateObject every fourth Stop-animation tick "
+                                    + "(docs/s2disasm/s2.asm:42813-42841) after Obj89 clears riders "
+                                    + "(docs/s2disasm/s2.asm:65689-65704). Expected slots "
+                                    + describeSlots(expected, 16, 36) + " actual "
+                                    + describeSlots(actual, 16, 36) + " live "
+                                    + describeLiveSlots(om, 16, 36));
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 36));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x08, slotCheck.idAt(0x13),
+                "ROM has Sonic's first boss-room Obj08 skid dust in slot 0x13 by ARZ2 f6313; "
+                        + slotCheck.summary());
+        Assertions.assertEquals(0x08, slotCheck.idAt(0x14),
+                "ROM has Sonic's second boss-room Obj08 skid dust in slot 0x14 at ARZ2 f6313; "
+                        + slotCheck.summary());
+        Assertions.assertEquals(0x08, slotCheck.idAt(0x15),
+                "ROM has Sonic's third boss-room Obj08 skid dust in slot 0x15 at ARZ2 f6313; "
+                        + slotCheck.summary());
+    }
+
+    @Test
+    public void arz2LostRingOwnerRunsObjectStepAtRomFrame2016() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 2016) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedRing = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 33)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x37)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedRing,
+                            "ARZ2 ROM fixture should report the first new Obj37 lost ring in slot 33 at f2016");
+                    LostRingObjectInstance actualRing = om.activeObjectsOfType(LostRingObjectInstance.class)
+                            .stream()
+                            .filter(ring -> ring.getSlotIndex() == 33)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(
+                            expectedRing.x() & 0xFFFF,
+                            expectedRing.y() & 0xFFFF,
+                            actualRing == null ? -1 : actualRing.getX(),
+                            actualRing == null ? -1 : actualRing.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 33, 43));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 HurtCharacter allocates Obj37 with AllocateObject, then Obj37_Init falls through "
+                        + "to Obj37_Main when ExecuteObjects reaches the new slot "
+                        + "(docs/s2disasm/s2.asm:85444-85461,25125-25209); slots "
+                        + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "The first new lost ring must receive its same-pass ObjectMove/gravity step at f2016; "
+                        + "slots " + check.summary());
+    }
+
+    @Test
+    public void arz2ChopChopSecondPatrolBubbleUsesRomByteTimerAtFrame2348() throws Exception {
+        SlotWindowCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 2348) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    ObjectOccupancyOracle.Divergence divergence =
+                            ObjectOccupancyOracle.firstDivergence(trace, om, frame, FIRST_DYNAMIC_SLOT);
+                    Assertions.assertNull(divergence,
+                            "ARZ2 slot-21 Obj91 must not emit an extra second patrol bubble at f2348; "
+                                    + "Obj91_MakeBubble writes move.w #$50 to objoff_2C, but Obj91_Main "
+                                    + "decrements the byte at objoff_2C, so the reset byte observed by "
+                                    + "subq.b is 0 rather than 0x50 "
+                                    + "(docs/s2disasm/s2.asm:73676-73688,73753-73754). Expected slots "
+                                    + describeSlots(expected, 16, 41) + " actual "
+                                    + describeSlots(actual, 16, 41) + " live "
+                                    + describeLiveSlots(om, 16, 41));
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 41));
+                });
+        Assertions.assertNotNull(check);
+    }
+
+    @Test
+    public void arz2WhispUsesClosestPlayerForChaseAtRomFrame4284() throws Exception {
+        AnimalPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 4284) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedWhisp = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 29)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x8C)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedWhisp,
+                            "ARZ2 ROM fixture should report Obj8C Whisp slot 0x1D at f4284");
+                    WhispBadnikInstance actualWhisp = om.activeObjectsOfType(WhispBadnikInstance.class)
+                            .stream()
+                            .filter(whisp -> whisp.getSlotIndex() == 29)
+                            .findFirst()
+                            .orElse(null);
+                    return new AnimalPositionCheck(
+                            expectedWhisp.x() & 0xFFFF,
+                            expectedWhisp.y() & 0xFFFF,
+                            actualWhisp == null ? -1 : actualWhisp.getX(),
+                            actualWhisp == null ? -1 : actualWhisp.getY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 23, 31));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj8C_ChasePlayer must use Obj_GetOrientationToPlayer's closest-of-Sonic/Tails "
+                        + "horizontal target before applying x acceleration "
+                        + "(docs/s2disasm/s2.asm:72812-72834,73231-73249); slots "
+                        + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj8C vertical acceleration should target the same closest player chosen by "
+                        + "Obj_GetOrientationToPlayer; slots " + check.summary());
+    }
+
+    @Test
+    public void arz2RotatingPlatformAssemblyConsumesRomChildSlotsAtFrame2855() throws Exception {
+        SlotWindowCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 2855) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    ObjectOccupancyOracle.Divergence first =
+                            ObjectOccupancyOracle.firstDivergence(trace, om, frame, FIRST_DYNAMIC_SLOT);
+                    Assertions.assertNull(first,
+                            "ARZ2 Obj83 must allocate its chain object plus platform 2/3 children "
+                                    + "with AllocateObjectAfterCurrent before later FindFreeObj calls "
+                                    + "observe the SST landscape (docs/s2disasm/s2.asm:57437-57466); "
+                                    + "expected " + describeSlots(expected, 16, 60)
+                                    + " actual " + describeSlots(actual, 16, 60)
+                                    + " live " + describeLiveSlots(om, 16, 60));
+                    return new SlotWindowCheck(actual, describeSlots(actual, 16, 60));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(0x83, check.idAt(17), "Obj83 parent should occupy slot 0x11; " + check.summary());
+        Assertions.assertEquals(0x83, check.idAt(26), "Obj83 chain child should occupy slot 0x1A; " + check.summary());
+        Assertions.assertEquals(0x83, check.idAt(30), "Obj83 platform-2 child should occupy slot 0x1E; " + check.summary());
+        Assertions.assertEquals(0x83, check.idAt(35), "Obj83 platform-3 child should occupy slot 0x23; " + check.summary());
+    }
+
+    @Test
+    public void arz2RisingPillarParentDebrisMovesOnBreakFrame4046() throws Exception {
+        PlatformPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 4046) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedPillar = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 25)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x2B)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedPillar,
+                            "ARZ2 ROM fixture should report Obj2B parent debris in slot 25 at f4046");
+                    AbstractObjectInstance actualPillar = om.getActiveObjects().stream()
+                            .filter(AbstractObjectInstance.class::isInstance)
+                            .map(AbstractObjectInstance.class::cast)
+                            .filter(instance -> instance.getSlotIndex() == 25)
+                            .findFirst()
+                            .orElse(null);
+                    return new PlatformPositionCheck(
+                            expectedPillar.x() & 0xFFFF,
+                            expectedPillar.y() & 0xFFFF,
+                            actualPillar == null ? -1 : actualPillar.getX(),
+                            actualPillar == null ? -1 : actualPillar.getY(),
+                            actualPillar == null ? "slot 25 missing"
+                                    : String.format("slot25=%02X %s @%04X,%04X slots %s",
+                                    actualPillar.getSpawn().objectId() & 0xFF,
+                                    actualPillar.getName(),
+                                    actualPillar.getX() & 0xFFFF,
+                                    actualPillar.getY() & 0xFFFF,
+                                    describeSlots(om.occupiedDynamicSlotIds(), 25, 51)));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "S2 Obj2B parent debris must run loc_25B8E on the same frame as the standing break "
+                        + "(docs/s2disasm/s2.asm:51840-51855,51875-51888,51909-51949); "
+                        + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj2B parent debris must move with the pre-gravity y_vel on the break frame; "
+                        + check.summary());
+    }
+
+    @Test
+    public void arz2RisingPillarDebrisKeepsSlotsForSecondBreakFrame4120() throws Exception {
+        SlotWindowCheck slotCheck = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 4120) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x2B, expected.get(52),
+                            "ARZ2 ROM fixture should allocate the second Obj2B debris cluster into slot 52");
+                    Assertions.assertEquals(0x2B, expected.get(60),
+                            "ARZ2 ROM fixture should allocate the second Obj2B debris cluster through slot 60");
+                    return new SlotWindowCheck(actual,
+                            "expected " + describeSlots(expected, 41, 60)
+                                    + " actual " + describeSlots(actual, 41, 60)
+                                    + " live " + describeLiveSlots(om, 41, 60));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x2B, slotCheck.idAt(52),
+                "S2 Obj2B debris must remain live until loc_25BA4 observes the previous "
+                        + "BuildSprites render_flags.on_screen bit; deleting from a fresh update-time "
+                        + "bounds check frees first-pillar slots too early and moves the second debris "
+                        + "cluster down (docs/s2disasm/s2.asm:30569-30588,51885-51888); "
+                        + slotCheck.summary());
+        Assertions.assertEquals(0x2B, slotCheck.idAt(60),
+                "S2 Obj2B second debris cluster should still reach the ROM high slot window at f4120; "
+                        + slotCheck.summary());
+    }
+
+    @Test
+    public void arz2BossPillarsUseLowestFreeSlotsAtFrame4692() throws Exception {
+        PlatformPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 4692) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedPillar = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 0x12)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x89)
+                            .findFirst()
+                            .orElse(null);
+                    Assertions.assertNotNull(expectedPillar,
+                            "ARZ2 ROM fixture should report the right Obj89 pillar in slot 0x12 at f4692");
+                    AbstractObjectInstance actualPillar = om.getActiveObjects().stream()
+                            .filter(AbstractObjectInstance.class::isInstance)
+                            .map(AbstractObjectInstance.class::cast)
+                            .filter(instance -> instance.getSlotIndex() == 0x12)
+                            .findFirst()
+                            .orElse(null);
+                    return new PlatformPositionCheck(
+                            expectedPillar.x() & 0xFFFF,
+                            expectedPillar.y() & 0xFFFF,
+                            actualPillar == null ? -1 : actualPillar.getX(),
+                            actualPillar == null ? -1 : actualPillar.getY(),
+                            "live " + describeLiveSlots(om, 0x10, 0x12));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedX(), check.actualX(),
+                "Obj89_Init allocates ARZ boss pillars with AllocateObject/AllocateObjectAfterCurrent; "
+                        + "the slot 0x12 pillar must exist immediately at the ROM X "
+                        + "(docs/s2disasm/s2.asm:64836-64861); " + check.summary());
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "A higher-slot Obj89 pillar is processed later in the same ExecuteObjects pass, "
+                        + "so Obj89_Pillar_Sub0 has already raised it one pixel at f4692 "
+                        + "(docs/s2disasm/s2.asm:64836-64861,65330-65341); " + check.summary());
+    }
+
+    @Test
+    public void arz2BossArrowTimerDecayDoesNotReseatSonicAtFrame5174() throws Exception {
+        PlatformPositionCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 5174) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    AbstractPlayableSprite sonic =
+                            (AbstractPlayableSprite) GameServices.sprites().getSprite("sonic");
+                    return new PlatformPositionCheck(
+                            expected.x() & 0xFFFF,
+                            expected.y() & 0xFFFF,
+                            sonic == null ? -1 : sonic.getCentreX() & 0xFFFF,
+                            sonic == null ? -1 : sonic.getCentreY() & 0xFFFF,
+                            "live " + describeLiveSlots(om, 0x12, 0x15));
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj89_Arrow_Platform branches directly to timer decay when obj89_arrow_timer "
+                        + "is nonzero, skipping PlatformObject/MvSonicOnPtfm and preserving the "
+                        + "landing y_pos through f5174 (docs/s2disasm/s2.asm:65658-65683); "
+                        + check.summary());
+    }
+
+    @Test
+    public void arz2BossArrowUsesPlatformObjectD3ForTailsLandingAtFrame5928() throws Exception {
+        RideCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 5928) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have Tails at ARZ2 f5928");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    Assertions.assertNotNull(expected.sidekick(), "Trace frame must include recorded Tails state");
+                    Assertions.assertEquals(0x14, expected.sidekick().standOnObj(),
+                            "ROM fixture should have Tails standing on Obj89 arrow slot 0x14 at ARZ2 f5928");
+                    return new RideCheck(expected.sidekick().y() & 0xFFFF,
+                            tails.getCentreY() & 0xFFFF,
+                            tails.getAir(),
+                            tails.isOnObject());
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj89_Arrow_Platform passes d1=$1B,d2=1,d3=2 to PlatformObject; "
+                        + "d3 is the landing surface height, so Tails must land on the "
+                        + "arrow at f5928 (docs/s2disasm/s2.asm:65658-65665)");
+        Assertions.assertFalse(check.actualAir());
+        Assertions.assertTrue(check.actualOnObject());
+    }
+
+    @Test
+    public void arz2BossArrowTimerDecayKeepsCpuTailsRidingAtFrame5968() throws Exception {
+        RideCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 5968) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have Tails at ARZ2 f5968");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    Assertions.assertNotNull(expected.sidekick(), "Trace frame must include recorded Tails state");
+                    Assertions.assertEquals(0x14, expected.sidekick().standOnObj(),
+                            "ROM fixture should still have Tails standing on Obj89 arrow slot 0x14 at ARZ2 f5968");
+                    return new RideCheck(expected.sidekick().y() & 0xFFFF,
+                            tails.getCentreY() & 0xFFFF,
+                            tails.getAir(),
+                            tails.isOnObject());
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedY(), check.actualY(),
+                "S2 Obj89_Arrow_Platform branches to timer decay when obj89_arrow_timer "
+                        + "is nonzero, but that path only decrements the timer; it does not "
+                        + "drop riders until Obj89_Arrow_Sub6 (docs/s2disasm/s2.asm:65658-65702)");
+        Assertions.assertFalse(check.actualAir());
+        Assertions.assertTrue(check.actualOnObject());
+    }
+
+    @Test
+    public void arz2BossArrowTimerDecayDoesNotRestoreTailsPushAfterAnimationClear() throws Exception {
+        PushStatusCheck check = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame != 6487) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    Assertions.assertNotNull(expected.sidekick(), "Trace frame must include recorded Tails state");
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have Tails at ARZ2 f6487");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    int expectedStatus = expected.sidekick().statusByte() & 0xFF;
+                    int actualStatus = TraceCharacterState.statusByteFromSprite(tails);
+                    return new PushStatusCheck(
+                            (expectedStatus & AbstractPlayableSprite.STATUS_PUSHING) != 0,
+                            tails.getPushing(),
+                            expectedStatus,
+                            actualStatus);
+                });
+        Assertions.assertNotNull(check);
+        Assertions.assertEquals(check.expectedPushing(), check.actualPushing(),
+                "S2 Tails_Animate clears Status_Push when anim changes, and Obj89_Arrow_Platform_Decay "
+                        + "skips PlatformObject, so the arrow must not re-set Tails' push bit at f6487 "
+                        + "(docs/s2disasm/s2.asm:41272-41279,65658-65683); expected status=0x"
+                        + Integer.toHexString(check.expectedStatus()) + " actual status=0x"
+                        + Integer.toHexString(check.actualStatus()));
+    }
+
+    @Test
+    public void arz2BossMainHoverPhaseMatchesRomAfterArrowRelease() throws Exception {
+        PlatformPositionCheck firstMismatch = driveTrace("arz2", Sonic2ZoneConstants.ZONE_ARZ, 1,
+                (trace, om, frame) -> {
+                    if (frame < 6300 || frame > 6507) {
+                        return null;
+                    }
+                    TraceEvent.ObjectNear expectedBoss = trace.getEventsForFrame(frame).stream()
+                            .filter(TraceEvent.ObjectNear.class::isInstance)
+                            .map(TraceEvent.ObjectNear.class::cast)
+                            .filter(near -> near.slot() == 0x10)
+                            .filter(near -> parseObjectType(near.objectType()) == 0x89)
+                            .findFirst()
+                            .orElse(null);
+                    if (expectedBoss == null) {
+                        return null;
+                    }
+                    AbstractObjectInstance actualBoss = om.getActiveObjects().stream()
+                            .filter(AbstractObjectInstance.class::isInstance)
+                            .map(AbstractObjectInstance.class::cast)
+                            .filter(instance -> instance.getSlotIndex() == 0x10)
+                            .findFirst()
+                            .orElse(null);
+                    int actualX = actualBoss == null ? -1 : actualBoss.getX();
+                    int actualY = actualBoss == null ? -1 : actualBoss.getY();
+                    int expectedX = expectedBoss.x() & 0xFFFF;
+                    int expectedY = expectedBoss.y() & 0xFFFF;
+                    if (expectedX == actualX && expectedY == actualY) {
+                        return null;
+                    }
+                    return new PlatformPositionCheck(expectedX, expectedY, actualX, actualY,
+                            "frame=" + frame + " live " + describeLiveSlots(om, 0x10, 0x15));
+                });
+        Assertions.assertNull(firstMismatch,
+                () -> firstMismatch == null ? "" :
+                        "S2 Obj89_Main_HandleHoveringAndHits writes the sine-derived y_pos "
+                                + "before incrementing boss_sine_count; slot 0x10 must stay in "
+                                + "the ROM hover phase through the post-arrow-release window "
+                                + "(docs/s2disasm/s2.asm:65079-65091). Expected @"
+                                + String.format("%04X,%04X", firstMismatch.expectedX(), firstMismatch.expectedY())
+                                + " actual @"
+                                + String.format("%04X,%04X", firstMismatch.actualX(), firstMismatch.actualY())
+                                + "; " + firstMismatch.summary());
     }
 
     /**

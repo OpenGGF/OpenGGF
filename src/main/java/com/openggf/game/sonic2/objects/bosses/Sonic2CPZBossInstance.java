@@ -588,4 +588,9 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
     protected int getBossExplosionSfxId() {
         return Sonic2Sfx.BOSS_EXPLOSION.id;
     }
+
+    @Override
+    protected int getBossExplosionObjectId() {
+        return com.openggf.game.sonic2.constants.Sonic2ObjectIds.BOSS_EXPLOSION;
+    }
 }

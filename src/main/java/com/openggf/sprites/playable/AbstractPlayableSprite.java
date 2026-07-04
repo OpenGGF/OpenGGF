@@ -387,6 +387,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Decrements each frame; when < 0, spawn dust and reset to 3.
          */
         protected int skidDustTimer = 0;
+        protected boolean fixedSkidDustActive = false;
 
         /**
          * Frames remaining for post-hit invulnerability.
@@ -827,6 +828,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.pushing = false;
                 this.skidding = false;
                 this.skidDustTimer = 0;
+                this.fixedSkidDustActive = false;
                 this.crouching = false;
                 this.lookingUp = false;
                 this.balanceState = 0;
@@ -927,7 +929,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         hurtRecoveryCompletedThisFrame,
                         latchedSolidObjectId, interactSlotIndex, slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
-                        skidding, skidDustTimer,
+                        skidding, skidDustTimer, fixedSkidDustActive,
                         wallClimbX, rightWallPenetrationTimer,
                         balanceState,
                         springing, springingFrames,
@@ -1066,6 +1068,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.pushing = extra.pushing();
                 this.skidding = extra.skidding();
                 this.skidDustTimer = extra.skidDustTimer();
+                this.fixedSkidDustActive = extra.fixedSkidDustActive();
                 this.wallClimbX = extra.wallClimbX();
                 this.rightWallPenetrationTimer = extra.rightWallPenetrationTimer();
                 this.balanceState = extra.balanceState();
@@ -2274,9 +2277,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setSkidding(boolean skidding) {
                 this.skidding = skidding;
-                if (!skidding) {
-                        // Reset dust timer when skidding ends
+                if (!skidding
+                                && (gameRules == null
+                                                || gameRules.powerUp() == null
+                                                || !gameRules.powerUp().fixedSkidDustAllocatesAfterDynamicObjectPass())) {
                         this.skidDustTimer = 0;
+                        this.fixedSkidDustActive = false;
                 }
         }
 
@@ -2286,6 +2292,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setSkidDustTimer(int timer) {
                 this.skidDustTimer = timer;
+        }
+
+        public boolean isFixedSkidDustActive() {
+                return fixedSkidDustActive;
+        }
+
+        public void setFixedSkidDustActive(boolean active) {
+                this.fixedSkidDustActive = active;
         }
 
         public boolean getInvulnerable() {
@@ -2551,9 +2565,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
 
                 setCrouching(false);
-                // S2 Hurt_Sidekick calls ResetOnFloor_Part2 before setting InAir;
-                // that reset clears Status_Push while leaving Status_OnObj to solids.
+                // HurtCharacter calls the reset-on-floor tail before setting InAir;
+                // that reset clears Status_Push, Status_RollJump, and jumping
+                // while leaving Status_OnObj to solids (S1 Sonic ReactToItem.asm:390-392;
+                // S2 s2.asm:85468-85471, 41033-41037; S3K sonic3k.asm:21090-21093,
+                // 24365-24369).
                 setPushing(false);
+                setRollingJump(false);
+                setJumping(false);
                 setAir(true);
                 setGSpeed((short) 0);
                 int dir = (getCentreX() >= sourceX) ? 1 : -1;

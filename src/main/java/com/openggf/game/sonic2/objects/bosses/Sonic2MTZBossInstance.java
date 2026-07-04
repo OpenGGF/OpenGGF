@@ -199,6 +199,17 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
      */
     private boolean pendingOrbBreak;
 
+    /** Defer the whole Obj54_AnimateFace hit reaction until after this frame's movement. */
+    private boolean pendingHitReaction;
+
+    /**
+     * Defer the Obj54_Defeated transition the same way: ROM Obj54_CheckHit sets
+     * boss_routine = $10 and Boss_Countdown = $EF AFTER the current routine's
+     * movement ran this frame, so Sub10's first dispatch (and first countdown
+     * decrement) lands one frame after the killing touch.
+     */
+    private boolean pendingDefeatReaction;
+
     /** objoff_3E: remaining attack cycles before laser dive */
     private int attackCyclesRemaining;
 
@@ -213,6 +224,18 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     /** Whether boss has been initialized */
     private boolean initialized;
+
+    /**
+     * ROM Obj54's first execution frame dispatches Obj54_Init (boss_subtype 0),
+     * which sets up state, spawns the laser shooter and the Obj53 orb spawner,
+     * and ends with rts — no Boss_MoveObject, no CheckHit (s2.asm:32298-323B8,
+     * Obj54_Init ends `rts` before Obj54_Main). The engine performs that setup
+     * in the constructor, so its first updateBossLogic dispatch must be consumed
+     * as the init routine or the boss floats one frame ahead of ROM for the
+     * whole fight. Children DO update on the init frame (ROM's freshly allocated
+     * higher-slot orbs run Obj53_Main the same pass).
+     */
+    private boolean initDispatchPending = true;
 
     /**
      * Boss_defeated_flag. ROM Obj54_MainSub12 @s2.asm:67197-67200 sets it once
@@ -254,6 +277,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         bossCountdown = 0;
         faceFrame = FRAME_FACE;
         pendingOrbBreak = false;
+        pendingHitReaction = false;
+        pendingDefeatReaction = false;
         bossDefeatedFlag = false;
 
         initialized = true;
@@ -399,6 +424,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         if (!initialized) {
             return;
         }
+        if (initDispatchPending) {
+            // ROM Obj54_Init dispatch frame: setup only, no movement/hit check.
+            initDispatchPending = false;
+            return;
+        }
 
         switch (state.routine) {
             case 0x00 -> updateSub0Descend(player);
@@ -413,10 +443,57 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             case 0x12 -> updateSub12Flee();
         }
 
+        applyPendingHitReactionAfterMove();
+
         // Check hits (except during defeat sequence)
         if (state.routine < 0x10) {
             checkHit(player);
         }
+
+    }
+
+    /**
+     * ROM Obj54_AnimateFace's hit branch runs AFTER the current routine's
+     * Boss_MoveObject within the same Obj54 pass (round-92 PC-probe dispatch
+     * order: Obj54_Main -> Boss_MoveObject -> Obj54_AnimateFace -> Obj54_CheckHit
+     * -> Obj53 dispatch; s2.asm:32690-326A5). Touch_Enemy reaches onHitTaken()
+     * before Obj54's own update in the engine's player-slot-first order, so the
+     * whole reaction (orb-break flag, angry face, SubA entry, velocity writes)
+     * is latched there and applied here, after this frame's old-routine movement
+     * and before the orbs update (they consume objoff_38 in the same pass).
+     */
+    private void applyPendingHitReactionAfterMove() {
+        if (pendingDefeatReaction) {
+            // ROM Obj54_CheckHit killing-hit branch: Obj54_Defeated replaces the
+            // AnimateFace break reaction entirely (the invulnerable-time == $3F
+            // branch never runs because CheckHit branched out before setting it).
+            pendingDefeatReaction = false;
+            pendingHitReaction = false;
+            bossCountdown = DEFEAT_COUNTDOWN; // move.w #$EF,(Boss_Countdown).w
+            state.routine = 0x10;             // move.b #$10,boss_routine => Sub10
+            return;
+        }
+        if (!pendingHitReaction) {
+            return;
+        }
+        pendingHitReaction = false;
+        if (state.routine >= 0x10 || state.defeated) {
+            // ROM's killing hit branches Obj54_CheckHit -> Obj54_Defeated before
+            // the invulnerable-time == $3F break branch can run.
+            return;
+        }
+        // ROM: st.b objoff_38(a0) — flag exactly one orb to break away this hit.
+        pendingOrbBreak = true;
+        // ROM: andi.b #$F0 / ori.b #5 to the anim byte — angry face.
+        faceFrame = FRAME_FACE_ANGRY;
+        // ROM: tst.b objoff_3E(a0) / beq.s + — only enter SubA when attack cycles remain.
+        if (attackCyclesRemaining != 0) {
+            state.routine = 0x0A;    // move.b #$A,boss_routine => Obj54_MainSubA
+            state.yVel = -VEL_DIVE;  // move.w #-$180,(Boss_Y_vel)
+            attackCyclesRemaining--; // subq.b #1,objoff_3E
+        }
+        // ROM: move.w #0,(Boss_X_vel).w — cleared on both AnimateFace hit paths.
+        state.xVel = 0;
     }
 
     // =========================================================================
@@ -912,24 +989,13 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     protected void onHitTaken(int remainingHits) {
-        // ROM: Obj54_AnimateFace hit reaction at the invuln edge (boss_invulnerable_time
-        // == $3F, i.e. one frame after the hit set it to $40), s2.asm:67115-67128.
-        // The base BossHitHandler fires onHitTaken() exactly once per hit, the same edge.
-        //
-        // ROM: st.b objoff_38(a0) — flag exactly one orb to break away this hit.
-        pendingOrbBreak = true;
-
-        // ROM: andi.b #$F0 / ori.b #5 to the anim byte — angry face.
-        faceFrame = FRAME_FACE_ANGRY;
-
-        // ROM: tst.b objoff_3E(a0) / beq.s + — only enter SubA when attack cycles remain.
-        if (attackCyclesRemaining != 0) {
-            state.routine = 0x0A;    // move.b #$A,boss_routine => Obj54_MainSubA
-            state.yVel = -VEL_DIVE;  // move.w #-$180,(Boss_Y_vel)
-            attackCyclesRemaining--; // subq.b #1,objoff_3E
-        }
-        // ROM: move.w #0,(Boss_X_vel) executes in BOTH branches.
-        state.xVel = 0;
+        // ROM's hit reaction lives in Obj54_AnimateFace, which runs AFTER the
+        // current routine's Boss_MoveObject in the same Obj54 pass. This method
+        // is reached from the player's touch pass, before Obj54's own update, so
+        // latch the whole reaction and apply it post-movement in
+        // applyPendingHitReactionAfterMove(). Applying any of it here makes the
+        // boss enter SubA (and move the orbs' break centre) one frame ahead of ROM.
+        pendingHitReaction = true;
 
         // NOTE: ROM Obj54_CheckHit also flashes $EEE -> Normal_palette_line2+2
         // (s2.asm:67247-67253). The base AbstractBossInstance.BossPaletteFlasher already
@@ -938,10 +1004,23 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     @Override
+    public boolean isPersistent() {
+        // ROM Obj54 has no out_of_range/RememberState tail: it lives until its
+        // own Sub12 flee path deletes it via the on_screen render bit once
+        // Camera_Max_X has opened to $2BF0 (Obj54_MainSub12). The engine's
+        // generic off-screen cull must not unload it mid-flee, or the +2/frame
+        // camera opening stalls when the boss crosses the cull threshold.
+        return true;
+    }
+
+    @Override
     protected void onDefeatStarted() {
-        // ROM: Obj54_Defeated (s2.asm:67258-67265)
-        bossCountdown = DEFEAT_COUNTDOWN;
-        state.routine = 0x10; // → Sub10
+        // ROM: Obj54_Defeated (s2.asm:67258-67265) runs from Obj54_CheckHit,
+        // after this frame's old-routine movement. Latch and apply post-move in
+        // applyPendingHitReactionAfterMove(); dispatching Sub10 on the killing
+        // touch frame starts the defeat countdown (and later the Sub12 flee
+        // camera opening) one frame ahead of ROM.
+        pendingDefeatReaction = true;
     }
 
     @Override
@@ -1064,6 +1143,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         return Sonic2Sfx.BOSS_EXPLOSION.id;
     }
 
+    @Override
+    protected int getBossExplosionObjectId() {
+        return com.openggf.game.sonic2.constants.Sonic2ObjectIds.BOSS_EXPLOSION;
+    }
+
     // =========================================================================
     // Inner class: MTZ Boss Orb (Obj53)
     // ROM: s2.asm:67271-67467
@@ -1078,6 +1162,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             implements TouchResponseProvider, TouchResponseAttackable, TouchResponseListener, RewindRecreatable {
 
         /** Obj53 routine states (Obj53_Index, s2.asm:67282-67287). */
+        private static final int RT_INIT = 0;
         private static final int RT_MAIN = 2;
         private static final int RT_BREAK_AWAY = 4;
         private static final int RT_BOUNCE_AROUND = 6;
@@ -1133,6 +1218,15 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         private int mappingFrame = 5; // ROM: move.b #5,mapping_frame (s2.asm:67307)
         private int orbPriority = 3;
 
+        // ROM anim / prev_anim / anim_frame / anim_frame_duration driving
+        // mapping_frame through Ani_obj53 via AnimateSprite. Only the break
+        // path (anim 2) and burst pop (anim 6, whose $FC command advances the
+        // routine) run post-break.
+        private int animId;
+        private int prevAnimId;
+        private int animFrame;
+        private int animFrameTimer;
+
         public MTZBossOrb(Sonic2MTZBossInstance parent, int index, int phaseOffset, int tilt) {
             super(parent, "MTZ Orb " + index, 3, Sonic2ObjectIds.MTZ_BOSS_ORB);
             this.orbIndex = index;
@@ -1142,6 +1236,14 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             this.tiltFlag = tilt;
             this.flattenAngle = 0; // ROM: move.b #0,objoff_3C
             this.breakTimer = -1;  // objoff_32 starts unset (negative => no timer)
+            // ROM Obj53_Init reuses the initializer's own slot for orb 0
+            // (movea.l a0,a1 before the AllocateObject loop, s2.asm:67782-67798):
+            // that slot's dispatch on the spawn frame is Obj53_Init itself, so
+            // orb 0 first runs Obj53_Main (and orbits) one frame after orbs 1-6,
+            // which are AllocateObject'd into higher slots mid-pass and run their
+            // first Obj53_Main the same frame. Model that by starting orb 0 in
+            // routine 0 and consuming its first dispatch as the init pass.
+            this.routine = (index == 0) ? RT_INIT : RT_MAIN;
         }
 
         @Override
@@ -1156,6 +1258,17 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         }
 
         @Override
+        protected boolean skipsSameFrameUpdateAfterSpawn() {
+            // ROM Obj53_Init reuses the initializer's own slot for orb 0
+            // (movea.l a0,a1 before the AllocateObject loop, s2.asm:67782-67798):
+            // that slot's dispatch this frame was already spent on Obj53_Init, so
+            // orb 0 first runs Obj53_Main (and orbits) on the NEXT frame. Orbs 1-6
+            // are AllocateObject'd into higher slots mid-pass and run their first
+            // Obj53_Main/orbit the same frame.
+            return orbIndex == 0;
+        }
+
+        @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (!shouldUpdate(frameCounter)) {
@@ -1165,12 +1278,16 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             Sonic2MTZBossInstance boss = (Sonic2MTZBossInstance) parent;
 
             switch (routine) {
+                // ROM Obj53_Init (s2.asm:67782-67798): orb 0's spawn-frame
+                // dispatch is the init pass itself — no orbit, no display.
+                case RT_INIT -> routine = RT_MAIN;
                 case RT_MAIN -> updateMain(boss, player);
                 case RT_BREAK_AWAY -> updateBreakAway(player);
                 case RT_BOUNCE_AROUND -> updateBounceAround(player);
                 case RT_BURST -> finishBurst();
                 default -> { }
             }
+
 
             updateDynamicSpawn();
         }
@@ -1190,7 +1307,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 boss.incrementOrbBreakCount();
                 routine = RT_BREAK_AWAY;     // addq.b #2,routine
                 breakTimer = 60;             // move.b #60,objoff_32
-                mappingFrame = 2;            // move.b #2,anim (kept as visible frame)
+                animId = 2;                  // move.b #2,anim (break-away script)
                 yVel = -0x400;               // move.w #-$400,y_vel
 
                 // ROM: d1 = -$80; if (MainCharacter x - x_pos) >= 0 keep, else neg.
@@ -1214,6 +1331,14 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 xVel = d1;
                 xSub = 0;
                 ySub = 0;
+                // ROM: the break path ends with `bra.s +` into the tail of
+                // Obj53_ClearBossCollision (s2.asm:67865-67875), so the orb still
+                // runs Obj53_OrbitBoss + Obj53_SetAnimPriority on the same pass:
+                // the launch velocities above are computed from the pre-orbit
+                // x_pos, then the orbit overwrites x_pos/y_pos so BreakAway
+                // starts falling from the freshly orbited position next frame.
+                orbitBoss(boss);
+                setAnimPriority();
                 return;
             }
 
@@ -1289,10 +1414,83 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 // ROM: subq.b #2,objoff_3C / bpl return / clr objoff_3C; objoff_3A(boss)=0
                 flattenAngle -= 2;
                 if (flattenAngle < 0) {
+                    // ROM: clr.b objoff_3C then move.b #0,objoff_3A(boss) — nothing
+                    // else. objoff_3B is NOT touched on the contraction-complete
+                    // frame; the clearing orb resumes its +8 increments the next
+                    // frame, while orbs running later in the same pass already see
+                    // objoff_3A == 0 and increment immediately (s2.asm Obj53_OrbitBoss
+                    // tilt tail).
                     flattenAngle = 0;
                     boss.setOrbBreakState(0); // move.b #0,objoff_3A(boss)
                 }
             }
+        }
+
+        /** Ani_obj53 (s2.asm Obj53 animation table): delay byte then frame/command codes. */
+        private static final int[][] ANI_OBJ53 = {
+            {0x0F, 2, 0xFF},
+            {1, 0, 1, 0xFF},
+            {3, 5, 5, 5, 5, 5, 5, 5, 5, 6, 7, 6, 7, 6, 7, 8, 9, 0x0A, 0x0B, 0xFE, 1},
+            {7, 0x0C, 0x0D, 0xFF},
+            {7, 0x0E, 0x0F, 0x0E, 0x0F, 0x0E, 0x0F, 0x0E, 0x0F, 0xFD, 3},
+            {7, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0xFD, 3},
+            {1, 0x14, 0xFC},
+            {7, 0x11, 0xFF},
+        };
+
+        /**
+         * ROM: AnimateSprite (s2.asm:30422-30490) against Ani_obj53. Faithful
+         * port of the commands Obj53 reaches: plain frames, $FF restart,
+         * $FE,n jump-back, $FD,n switch-anim, $FC routine advance.
+         */
+        private void animateSprite() {
+            int[] script = ANI_OBJ53[animId & 7];
+            if (animId != prevAnimId) {
+                prevAnimId = animId;
+                animFrame = 0;
+                animFrameTimer = 0;
+            }
+            animFrameTimer--;
+            if (animFrameTimer >= 0) {
+                return;
+            }
+            animFrameTimer = script[0];
+            int code = script[1 + animFrame];
+            if (code < 0x80) {
+                mappingFrame = code & 0x7F;
+                animFrame++;
+                return;
+            }
+            switch (code) {
+                case 0xFF -> {
+                    mappingFrame = script[1] & 0x7F;
+                    animFrame = 1;
+                }
+                case 0xFE -> {
+                    int back = script[2 + animFrame];
+                    animFrame -= back;
+                    mappingFrame = script[1 + animFrame] & 0x7F;
+                    animFrame++;
+                }
+                case 0xFD -> animId = script[2 + animFrame];
+                case 0xFC -> routine += 2; // addq.b #2,routine (Anim_End_FC)
+                default -> { }
+            }
+        }
+
+        /**
+         * ROM: Obj53_Animate prologue + AnimateSprite (no-fixBugs). While
+         * collision_property is at or below -2, EVERY call re-latches the burst
+         * frame and advances the routine by 2, so an attacked orb steps
+         * 4 -> 6 -> 8 on consecutive frames before Obj53_Burst deletes it.
+         */
+        private void animateWithBurstLatch() {
+            if (burstCollisionProperty) {
+                mappingFrame = FRAME_BURST; // move.b #$14,mapping_frame
+                animId = 6;                 // move.b #6,anim
+                routine += 2;               // addq.b #2,routine
+            }
+            animateSprite();
         }
 
         /**
@@ -1356,13 +1554,10 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 faceLeader(player);             // bsr Obj53_FaceLeader
             }
 
-            // ROM Obj53_Animate checks collision_property after BreakAway motion.
-            // A hit while in routine 4 only advances to routine 6; Obj53_Burst
-            // is not reached until the later routine-8 dispatch.
-            if (burstCollisionProperty) {
-                mappingFrame = FRAME_BURST;
-                routine = RT_BOUNCE_AROUND;
-            }
+            // ROM: both the still-falling and just-landed paths end in
+            // Obj53_Animate (property latch + AnimateSprite), advancing the
+            // break animation toward the settled frame $B during the fall.
+            animateWithBurstLatch();
         }
 
         /**
@@ -1376,12 +1571,28 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 breakTimer--;
             }
 
-            // ROM: bsr Obj53_CheckPlayerHit, then Obj53_Animate's local hit check
-            // can advance routine 6 -> routine 8. The actual parent count
-            // decrement happens only when routine 8 dispatches Obj53_Burst.
-            if (burstCollisionProperty) {
-                mappingFrame = FRAME_BURST;
-                routine = RT_BURST;
+            // ROM: bsr Obj53_CheckPlayerHit: the bouncing orb pops (burst frame
+            // + anim 6, NO routine change here) when either player is in the
+            // hurt routine, or when this orb has been attacked
+            // (collision_property <= -2). The routine advance happens in
+            // Obj53_Animate's prologue (attacked) or via anim 6's $FC command.
+            boolean anyPlayerHurt = player != null && player.isHurt();
+            if (!anyPlayerHurt
+                    && services().playerQuery().nativeP2OrNull()
+                            instanceof AbstractPlayableSprite sidekick
+                    && sidekick.isHurt()) {
+                anyPlayerHurt = true;
+            }
+            if (anyPlayerHurt || burstCollisionProperty) {
+                mappingFrame = FRAME_BURST; // move.b #$14,mapping_frame
+                animId = 6;                 // move.b #6,anim
+            }
+
+            // ROM: cmpi.b #$B,mapping_frame / bne.s Obj53_Animate: the sine
+            // bounce only runs once the break animation settles on frame $B;
+            // until then the orb holds its landing position and animates.
+            if (mappingFrame != 0x0B) {
+                animateWithBurstLatch();
                 return;
             }
 
@@ -1441,6 +1652,14 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         @Override
         public int getCollisionFlags() {
             if (routine == RT_BURST) {
+                return 0;
+            }
+            // ROM Touch_Enemy_Part2 clears the attacked orb's collision_flags in
+            // RAM the moment the hit lands (col=$DA,prop=$02 -> col=$00,prop=$FE,
+            // round-93 PC probe). The other player's touch pass in the same or the
+            // following frame must therefore skip this orb even though its routine
+            // only advances to Obj53_Burst on its own next update.
+            if (burstCollisionProperty) {
                 return 0;
             }
             // ROM: $DA once objoff_32 has expired during break/bounce; $87 otherwise.

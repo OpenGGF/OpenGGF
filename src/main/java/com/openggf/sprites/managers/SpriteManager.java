@@ -605,7 +605,7 @@ public class SpriteManager {
 			if (!(playable.getMovementManager() instanceof PlayableSpriteMovement movement)) {
 				continue;
 			}
-			movement.advanceFixedSkidDustWhileStopAnimPersists();
+			movement.advanceFixedSkidDustWhileStopAnimPersists(frameCounter);
 		}
 	}
 

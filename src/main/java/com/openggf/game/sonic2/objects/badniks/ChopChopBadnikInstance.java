@@ -44,7 +44,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
     // Movement constants from disassembly
     private static final int PATROL_SPEED = 0x40;           // 64 subpixels/frame (move.w #$40,x_vel(a0))
     private static final int MOVE_TIMER_INIT = 0x200;       // 512 frames (move.w #$200,objoff_36(a0))
-    private static final int BUBBLE_TIMER_RESET = 0x50;     // 80 frames (move.w #$50,Obj91_bubble_timer(a0))
+    private static final int BUBBLE_TIMER_BYTE_AFTER_WORD_RESET = 0x00;
     private static final int WAIT_TIME = 0x10;              // 16 frames (move.b #$10,anim_frame_duration(a0))
     private static final int CHARGE_SPEED_X = 2;            // 2 pixels/frame
     private static final int CHARGE_SPEED_Y_SUBPIXEL = 0x80; // 0.5 pixels/frame (addi.w #$80,y_pos(a0))
@@ -133,7 +133,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
         // discard it entirely and the badnik would never advance.
         applyXVelocitySubpixel();
 
-        // ROM Obj91_Main pre-decrements the low byte of Obj91_bubble_timer and
+        // ROM Obj91_Main pre-decrements the byte at Obj91_bubble_timer and
         // calls Obj91_MakeBubble when it reaches zero (s2.asm:73687-73769).
         bubbleTimer = (bubbleTimer - 1) & 0xFF;
         if (bubbleTimer == 0) {
@@ -161,7 +161,10 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
     }
 
     private void spawnPatrolBubble() {
-        bubbleTimer = BUBBLE_TIMER_RESET;
+        // Obj91_MakeBubble resets the word at objoff_2C with move.w #$50, but
+        // Obj91_Main decrements the byte at objoff_2C. On 68K that byte is the
+        // word's high byte, so the next byte countdown starts from 0, not 0x50.
+        bubbleTimer = BUBBLE_TIMER_BYTE_AFTER_WORD_RESET;
         int bubbleX = currentX + (facingLeft ? 0x14 : -0x14);
         int bubbleY = currentY + 6;
         spawnFreeChild(() -> new BreathingBubbleInstance(

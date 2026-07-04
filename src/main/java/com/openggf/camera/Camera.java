@@ -20,6 +20,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private short minY;
 	private short maxX;
 	private short maxY;
+	private short maxXBeforeBoundaryEasing;
 
 	// Screen shake offsets (ROM: applied to Camera_X_pos_copy and Camera_Y_pos_copy)
 	// These offsets affect both FG tiles and sprites to create unified screen shake.
@@ -644,6 +645,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * - Sets maxYChanging flag while boundary is transitioning
 	 */
 	public void updateBoundaryEasing() {
+		maxXBeforeBoundaryEasing = maxX;
 		maxYChanging = false;
 
 		// Ease maxY toward target (ROM: s2.asm:20303-20332)
@@ -1002,6 +1004,10 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		return maxX;
 	}
 
+	public short getMaxXBeforeBoundaryEasing() {
+		return maxXBeforeBoundaryEasing;
+	}
+
 	/**
 	 * Sets maxX immediately (both current and target).
 	 * Use setMaxXTarget() for smooth easing.
@@ -1009,6 +1015,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void setMaxX(short maxX) {
 		this.maxX = maxX;
 		this.maxXTarget = maxX;
+		this.maxXBeforeBoundaryEasing = maxX;
 	}
 
 	/**
@@ -1218,6 +1225,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		minX = 0;
 		minY = 0;
 		maxX = 0;
+		maxXBeforeBoundaryEasing = 0;
 		maxY = 0;
 		shakeOffsetX = 0;
 		shakeOffsetY = 0;
@@ -1309,7 +1317,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		return new CameraSnapshot(
 				x, y, minX, minY, maxX, maxY,
 				shakeOffsetX, shakeOffsetY,
-				minXTarget, minYTarget, maxXTarget, maxYTarget,
+				minXTarget, minYTarget, maxXTarget, maxYTarget, maxXBeforeBoundaryEasing,
 				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce,
 				deferMaxYWriteUntilAfterUpdate, deferredMaxYValue, levelStarted,
 				verticalWrapEnabled, verticalWrapRange, verticalWrapMask,
@@ -1324,6 +1332,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		minY = snapshot.minY();
 		maxX = snapshot.maxX();
 		maxY = snapshot.maxY();
+		maxXBeforeBoundaryEasing = snapshot.maxXBeforeBoundaryEasing();
 		shakeOffsetX = snapshot.shakeOffsetX();
 		shakeOffsetY = snapshot.shakeOffsetY();
 		minXTarget = snapshot.minXTarget();

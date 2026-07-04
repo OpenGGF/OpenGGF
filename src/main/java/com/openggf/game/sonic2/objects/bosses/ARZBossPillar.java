@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.util.List;
 
@@ -35,6 +36,8 @@ public class ARZBossPillar extends AbstractObjectInstance
     private static final int PILLAR_SUB_IDLE = 2;
     private static final int PILLAR_SUB_LOWERING = 4;
 
+    private static final int LEFT_PILLAR_X = 0x2A50;
+    private static final int RIGHT_PILLAR_X = 0x2B70;
     private static final int PILLAR_TARGET_Y = 0x488;
     private static final int PILLAR_START_Y = 0x510;
 
@@ -189,14 +192,14 @@ public class ARZBossPillar extends AbstractObjectInstance
             resetPillarBasePosition();
             return;
         }
-        int baseX = isRightPillar() ? 0x2B70 : 0x2A50;
+        int baseX = isRightPillar() ? RIGHT_PILLAR_X : LEFT_PILLAR_X;
         int offset = ((frameCounter & 1) == 0) ? 1 : -1;
         x = baseX + offset;
         y = PILLAR_TARGET_Y + offset;
     }
 
     private void resetPillarBasePosition() {
-        x = isRightPillar() ? 0x2B70 : 0x2A50;
+        x = isRightPillar() ? RIGHT_PILLAR_X : LEFT_PILLAR_X;
         y = PILLAR_TARGET_Y;
     }
 
@@ -236,6 +239,17 @@ public class ARZBossPillar extends AbstractObjectInstance
     }
 
     @Override
+    public int getOnScreenHalfHeight() {
+        // Obj89 leaves render_flags.explicit_height clear, so S2 BuildSprites
+        // uses the approximate-Y path with a 32 px radius (docs/s2disasm/s2.asm:
+        // 30603-30611). The engine recomputes the bit as a live proxy for
+        // SolidObject_OnScreenTest instead of retaining the prior BuildSprites
+        // render_flags bit; the one-pixel lower-edge slack keeps Obj89's edge
+        // SolidObject frame visible without widening the preceding offscreen row.
+        return 0x21;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         return PILLAR_SOLID_PARAMS;
     }
@@ -249,6 +263,83 @@ public class ARZBossPillar extends AbstractObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         return false;
+    }
+
+    @Override
+    public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
+        // Obj89_Pillar_Sub0/Sub2 call Obj89_Pillar_SolidObject before raise/shake movement.
+        // docs/s2disasm/s2.asm:65330-65345,65348-65374,65531-65539
+        return true;
+    }
+
+    @Override
+    public boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
+        // MvSonicOnPtfm inherits the same pre-motion y_pos used by Obj89_Pillar_SolidObject.
+        // docs/s2disasm/s2.asm:65330-65345,65348-65374,65531-65539
+        return true;
+    }
+
+    @Override
+    public boolean preservesMovingSideContactVelocity(PlayableEntity player) {
+        // Obj89_Pillar_Sub0/Sub2 run Obj89_Pillar_SolidObject before the pillar
+        // body update, and the helper calls ordinary SolidObject at the temporary
+        // y_pos+4 anchor. In the ROM object-slot order, that side contact can set
+        // Status_Push before Tails' later CPU/movement path writes the frame's
+        // x_vel/inertia when this contact is newly setting Status_Push after
+        // Tails' CPU/movement slot. The main player has no later sidekick
+        // CPU/movement slot to overwrite the stop, so Sonic follows the normal
+        // SolidObject_StopCharacter path and clears x_vel/inertia. The engine's
+        // inline post-physics checkpoint sees the new-push side contact after
+        // movement, so preserve only the CPU sidekick handoff while retaining
+        // the side correction and push bits.
+        // A one-pixel-inside contact is still part of that handoff only when
+        // TailsCPU_Normal_FollowLeft applied the same-frame -1 x_pos nudge
+        // before Tails movement; without that nudge, the later Obj89
+        // SolidObject call reaches SolidObject_StopCharacter.
+        // docs/s2disasm/s2.asm:35413-35436,38952-38975,65330-65374,65531-65539
+        int anchorX = isRightPillar() ? RIGHT_PILLAR_X : LEFT_PILLAR_X;
+        int rightEdgeX = anchorX + PILLAR_SOLID_PARAMS.halfWidth();
+        return player != null && player.isCpuControlled() && !player.getAir() && player.getGSpeed() < 0
+                && (!(player instanceof AbstractPlayableSprite sprite) || !sprite.getPushing())
+                && (player.getCentreX() >= rightEdgeX
+                || (player.getCentreX() == rightEdgeX - 1 && hasSameFrameLeftFollowNudge(player)));
+    }
+
+    @Override
+    public boolean preservesSidekickCpuPushGraceAfterRideClears(PlayableEntity player) {
+        // Obj89_Pillar_SolidObject temporarily tests at y_pos+4 and calls
+        // SolidObject before TailsCPU_Normal. A side contact sets Status_Push
+        // for Tails, and the CPU's push-bypass branch can then jump directly to
+        // the $3F auto-jump gate before Tails_InputAcceleration clears it.
+        // docs/s2disasm/s2.asm:39287-39300,39369-39378,65330-65339,65531-65539
+        if (!(player instanceof AbstractPlayableSprite sprite)
+                || !sprite.isCpuControlled()
+                || player.getAir()
+                || player.isOnObject()
+                || player.getRolling()) {
+            return false;
+        }
+        int sideEdgeX = isRightPillar()
+                ? x - PILLAR_SOLID_PARAMS.halfWidth()
+                : x + PILLAR_SOLID_PARAMS.halfWidth();
+        if (Math.abs(player.getCentreX() - sideEdgeX) > 1) {
+            return false;
+        }
+        int solidAnchorY = y + PILLAR_SOLID_PARAMS.offsetY() + 4;
+        int verticalBand = PILLAR_SOLID_PARAMS.airHalfHeight() + player.getYRadius() + 4;
+        return Math.abs(player.getCentreY() - solidAnchorY) <= verticalBand;
+    }
+
+    private boolean hasSameFrameLeftFollowNudge(PlayableEntity player) {
+        if (!(player instanceof AbstractPlayableSprite sprite)) {
+            return false;
+        }
+        SidekickCpuController controller = sprite.getCpuController();
+        if (controller == null) {
+            return false;
+        }
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        return diagnostics != null && diagnostics.appliedFollowNudge() < 0;
     }
 
     @Override

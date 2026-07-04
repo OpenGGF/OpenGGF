@@ -2159,6 +2159,14 @@ public class SidekickCpuController {
                 && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
+        boolean releasedObjectAutoJumpGrace = !sidekick.getAir()
+                && !sidekick.isOnObject()
+                && !sidekick.getRolling()
+                && normalPushingGraceFrames > 0
+                && (pushBypassLeaderStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
+                && preservesSidekickCpuPushGraceAfterRideClears();
         int followSnapThreshold = resolveFollowSnapThreshold();
         boolean localBelowTargetFacingIntoFollowSide =
                 (dx > 0 && sidekick.getDirection() == Direction.RIGHT)
@@ -2457,13 +2465,16 @@ public class SidekickCpuController {
             if (sidekick.getAir()
                     && delayedJumpOnly
                     && normalPushingGraceFrames <= 2
-                    && !delayedLeaderJumpTakeoff) {
+                    && !recordedJumpPress) {
                 // ROM loc_13E64 carries Tails_CPU_auto_jump_flag by ORing the
                 // high-byte A/B/C held bits into Ctrl_2_Logical, then branches
                 // directly to the final write while airborne. It does not
                 // manufacture another low-byte press for the engine's jump-only
                 // held-history shape after the fresh push-grace handoff has
-                // decayed, until loc_13E9C's cadence gate runs again.
+                // decayed, until loc_13E9C's cadence gate runs again. If the
+                // delayed history already carries a real low-byte press, the
+                // ROM keeps it in d1; the auto-jump carry only ORs high-byte
+                // held bits.
                 inputJumpPress = false;
                 diagnosticGeneratedPressedInput &= ~AbstractPlayableSprite.INPUT_JUMP;
             }
@@ -2526,7 +2537,7 @@ public class SidekickCpuController {
             // stale delayed jump hold below; it must not block the push-bypass
             // jump that launches Tails out of the stopper chamber.
             boolean pushingBypass = currentPushBypass || objectOrderGrace || ridingObjectPushGrace
-                    || interactObjectPushGrace;
+                    || interactObjectPushGrace || releasedObjectAutoJumpGrace;
             // resolveCpuFrameCounter() already yields the ROM-visible
             // Level_frame_counter: the per-frame sprite cadence is the
             // post-increment value, and bootstrap paths preload LevelManager with
@@ -2908,6 +2919,23 @@ public class SidekickCpuController {
         }
         if (interactObject instanceof SolidObjectProvider provider) {
             return provider.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sidekick);
+        }
+        return false;
+    }
+
+    private boolean preservesSidekickCpuPushGraceAfterRideClears() {
+        LevelManager levelManager = sidekick.currentLevelManager();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return false;
+        }
+        for (ObjectInstance instance : levelManager.getObjectManager().getActiveObjects()) {
+            if (instance == null || instance.isDestroyed()) {
+                continue;
+            }
+            if (instance instanceof SolidObjectProvider provider
+                    && provider.preservesSidekickCpuPushGraceAfterRideClears(sidekick)) {
+                return true;
+            }
         }
         return false;
     }

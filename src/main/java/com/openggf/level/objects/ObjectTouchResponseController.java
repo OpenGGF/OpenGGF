@@ -489,15 +489,17 @@ final class ObjectTouchResponseController {
             // (docs/s2disasm/s2.asm:85196-85219). Evaluated EVERY frame on overlap
             // (NOT edge-triggered) so the ring collects the frame invulnerable_time
             // drops below 90 while the player is still continuously overlapping.
-            // Keyed on the LostRingObjectInstance marker, NOT the 0x47 byte shape —
+            // Keyed on the LostRingObjectInstance marker, NOT the 0x47 byte shape -
             // so other SPECIAL objects sharing $47 (e.g. S1 placed rings) keep their
-            // own listener path. Crediting gate (ROM Touch_ChkValue): only the main
-            // character collects/credits (sidekick Tails does not pick up rings);
-            // BOTH players still break the loop (ROM rts on the first overlap). This is
-            // now the sole lost-ring collection path — the legacy RingManager scan is gone.
+            // own listener path. ROM tests MainCharacter+invulnerable_time even
+            // on the sidekick pass, then stores the touching player in parent(a1).
+            // CollectRing_Tails falls through to the 1P shared counter/sound path
+            // outside two-player mode (docs/s2disasm/s2.asm:85201-85219,
+            // 25023-25075). This is now the sole lost-ring collection path - the
+            // legacy RingManager scan is gone.
             if (instance instanceof LostRingObjectInstance lostRing && lostRing.isLostRingCollectible()) {
-                if (!isSidekick && player instanceof AbstractPlayableSprite aps) {
-                    int invuln = aps.getInvulnerableFrames(); // AbstractPlayableSprite.java:2117
+                if (player instanceof AbstractPlayableSprite aps) {
+                    int invuln = lostRingCollectionInvulnerableFrames(aps, isSidekick);
                     if (invuln < LOST_RING_INVULNERABLE_THRESHOLD && !lostRing.isCollected()) {
                         lostRing.markCollected(currentFrameCounter);
                         aps.addRings(1); // AbstractPlayableSprite.java:1427
@@ -552,6 +554,16 @@ final class ObjectTouchResponseController {
             // entire ReactToItem subroutine.
             break;
         }
+    }
+
+    private int lostRingCollectionInvulnerableFrames(AbstractPlayableSprite toucher, boolean isSidekick) {
+        if (isSidekick) {
+            PlayableEntity mainPlayer = objectManager.services().playerQuery().mainPlayerOrNull();
+            if (mainPlayer instanceof AbstractPlayableSprite mainPlayable) {
+                return mainPlayable.getInvulnerableFrames();
+            }
+        }
+        return toucher.getInvulnerableFrames(); // AbstractPlayableSprite.java:2117
     }
 
     private static boolean usesCurrentTouchState(ObjectInstance instance) {

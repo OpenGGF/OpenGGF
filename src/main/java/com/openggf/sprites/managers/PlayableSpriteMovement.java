@@ -117,6 +117,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean fixedSkidDustTickPending;
 	private boolean processingFixedSkidDustTick;
 	private boolean skidAnimationRefreshedThisFrame;
+	private int lastFixedSkidDustTickFrame = Integer.MIN_VALUE;
 	private int staleHorizontalInputRideSlotIndex;
 	private int staleHorizontalInputSuppressFrames;
 	private int staleHorizontalInputRideFrames;
@@ -639,8 +640,65 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// MODE METHODS
 	// ========================================
 
+	/**
+	 * ROM S2 Obj01_MdNormal_Checks (s2.asm:36444-36468). Once the standing WAIT
+	 * animation reaches the impatient foot-tap stage (anim_frame >= $1E), the
+	 * entire grounded update (spindash/jump/move/roll/level bound/ObjectMove/
+	 * AnglePos) is skipped every frame. A held direction or jump button first
+	 * switches the animation to Blink -- or GetUp past the lying-down stage
+	 * (anim_frame >= $AC) -- and control only resumes after that animation's
+	 * $FD command switches back to walk. A fresh A/B/C press bypasses the whole
+	 * check, so jumping out of deep wait responds instantly. The gate is
+	 * data-driven: only profiles that define a blink anim (S2 Sonic) engage it;
+	 * S1 and S3K have no equivalent in their disassemblies.
+	 */
+	private boolean doWaitBlinkInterruptCheck() {
+		if (!(sprite.getAnimationProfile()
+				instanceof com.openggf.sprites.animation.ScriptedVelocityAnimationProfile velocityProfile)) {
+			return false;
+		}
+		int blinkId = velocityProfile.getBlinkAnimId();
+		if (blinkId < 0) {
+			return false;
+		}
+		// Scope: plain-terrain standing only for now. Object riders keep their
+		// existing per-object stale-logical-input models (CNZ ObjD5 elevator,
+		// MTZ Obj65/Obj6C platforms, SCZ Tornado), which encode the same ROM
+		// blink freeze as observed through each ride's own anim cadence.
+		// Unifying those under this gate needs the ride-time wait-animation
+		// cadence brought to ROM parity first (see TRACE_FRONTIER_LOG).
+		if (sprite.isOnObject()) {
+			return false;
+		}
+		// ROM: move.b (Ctrl_1_Press_Logical).w,d0 / andi #ABC / bne Obj01_MdNormal
+		if (inputJumpPress) {
+			return false;
+		}
+		int anim = sprite.getAnimationId();
+		int getUpId = velocityProfile.getGetUpAnimId();
+		if (anim == blinkId || (getUpId >= 0 && anim == getUpId)) {
+			return true; // cmpi Blink/GetUp -> Obj01_MdNormal_Skip
+		}
+		if (anim != velocityProfile.getIdleAnimId()) {
+			return false;
+		}
+		if (sprite.getAnimationFrameIndex() < 0x1E) {
+			return false; // cmpi.b #$1E,anim_frame / blo Obj01_MdNormal
+		}
+		// ROM: move.b (Ctrl_1_Held_Logical).w,d0 / andi #UDLR|ABC / beq Skip
+		if (!(inputUp || inputDown || inputLeft || inputRight || inputJump)) {
+			return true; // deep wait with nothing held still skips the frame
+		}
+		int next = (getUpId >= 0 && sprite.getAnimationFrameIndex() >= 0xAC) ? getUpId : blinkId;
+		sprite.setAnimationId(next);
+		return true;
+	}
+
+
 	/** Obj01_MdNormal: Ground walking state */
 	private void modeNormal() {
+		if (doWaitBlinkInterruptCheck()) return;
+
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 
@@ -711,6 +769,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
+
+		SidekickCpuController sidekickCpu = sprite.getCpuController();
+		if (sidekickCpu != null && sidekickCpu.isDeferredDespawnDeadFallContinuingThisFrame()) {
+			// S2 Obj02_Dead (s2.asm:41131-41137) does not call Tails_LevelBound;
+			// it only runs ObjectMoveAndFall before recording/displaying Tails.
+			// Running the live airborne boundary path here clamps x_pos to
+			// Tails_Min_X_pos+$10 when the falling corpse re-enters from the left.
+			doObjectMoveAndFall();
+			return;
+		}
 
 		// Knuckles glide states 1-2 use custom physics
 		int glideState = sprite.getDoubleJumpFlag();
@@ -801,7 +869,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// dead Tails on the CollapsingPlatform below (y_speed snapped to
 			// 0, position frozen), but ROM kept Tails falling through it.
 			doObjectMoveAndFall();
-			SidekickCpuController kc = sprite.getCpuController();
+			SidekickCpuController kc = sidekickCpu;
 			boolean deferredContinuation =
 					kc != null && kc.isDeferredDespawnDeadFallContinuingThisFrame();
 			if (!deferredContinuation) {
@@ -2584,6 +2652,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				: gameState().isBossFightActive();
 		boolean strict = (movementRules != null && movementRules.levelBoundaryRightStrict())
 				|| lockActive || gameState().isEndOfLevelActive();
+		if (lockActive && movementRules != null
+				&& movementRules.levelBoundaryUsesPreEasedMaxXDuringBossLock()) {
+			// S2 player slots run before later object/boundary-release writes reach Sonic_LevelBound.
+			maxX = camera.getMaxXBeforeBoundaryEasing();
+		}
 		int rightBoundary = RightBoundary.compute(maxX, LEVEL_DESIGN_WIDTH, SONIC_WIDTH, RIGHT_EXTRA, strict);
 
 		// ROM comparison: left is always bhi.s (<). S1/S2 right uses bls.s
@@ -3394,6 +3467,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	void advanceFixedSkidDustWhileStopAnimPersists() {
+		advanceFixedSkidDustWhileStopAnimPersists(Integer.MIN_VALUE);
+	}
+
+	void advanceFixedSkidDustWhileStopAnimPersists(int frameCounter) {
 		PowerUpRules rules = powerUpRulesOrNull();
 		if (rules == null || !rules.fixedSkidDustAllocatesAfterDynamicObjectPass()) {
 			return;
@@ -3402,16 +3479,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 		if (sprite.isHurt() || sprite.getDead()) {
+			sprite.setFixedSkidDustActive(false);
 			return;
 		}
 		int skidAnimId = profile.getSkidAnimId();
 		if (skidAnimId < 0 || sprite.getAnimationId() != skidAnimId) {
 			fixedSkidDustTickPending = false;
+			sprite.setSkidDustTimer(0);
+			sprite.setFixedSkidDustActive(false);
 			return;
 		}
-		if (!fixedSkidDustTickPending && !sprite.getAir()) {
+		if (frameCounter != Integer.MIN_VALUE && lastFixedSkidDustTickFrame == frameCounter) {
 			return;
 		}
+		lastFixedSkidDustTickFrame = frameCounter;
 		fixedSkidDustTickPending = false;
 		processingFixedSkidDustTick = true;
 		try {
@@ -3428,6 +3509,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// and seeds mapping_frame=$15 (docs/s2disasm/s2.asm:36927-36929,
 		// 36988-36990, 42759-42797).
 		PowerUpRules rules = powerUpRulesOrNull();
+		sprite.setFixedSkidDustActive(true);
 		if (!processingFixedSkidDustTick
 				&& rules != null
 				&& rules.fixedSkidDustAllocatesAfterDynamicObjectPass()) {

@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.game.PhysicsProfile;
+import com.openggf.game.rules.GameRules;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -99,6 +100,34 @@ public class WaterPhysicsTest {
         assertFalse(sprite.isInWater(), "Player should be out of water");
         // Upward velocity should be doubled (-300 * 2 = -600)
         assertEquals(-600, sprite.getYSpeed(), "YSpeed should be doubled when exiting upward");
+    }
+
+    @Test
+    public void s2WaterExitBoostsFastUpwardVelocityAndCaps() {
+        sprite.setGameRulesForTest(GameRules.SONIC_2);
+        sprite.setInWater(true);
+        sprite.setYSpeed((short) -0x990);
+
+        sprite.setTestY((short) 300);
+        sprite.updateWaterState(400);
+
+        assertFalse(sprite.isInWater(), "Player should be out of water");
+        assertEquals(-0x1000, sprite.getYSpeed(),
+                "S2 Sonic_Water doubles fast upward exits before applying the -$1000 cap");
+    }
+
+    @Test
+    public void s3kWaterExitSkipsFastUpwardBoost() {
+        sprite.setGameRulesForTest(GameRules.SONIC_3K);
+        sprite.setInWater(true);
+        sprite.setYSpeed((short) -0x990);
+
+        sprite.setTestY((short) 300);
+        sprite.updateWaterState(400);
+
+        assertFalse(sprite.isInWater(), "Player should be out of water");
+        assertEquals(-0x990, sprite.getYSpeed(),
+                "S3K Sonic_Water skips the exit boost when upward speed is already below -$400");
     }
 
     @Test
@@ -271,6 +300,21 @@ public class WaterPhysicsTest {
     }
 
     @Test
+    public void hurtResetClearsRollJumpAndJumpingBeforeAirborneRecoil() {
+        sprite.setAir(true);
+        sprite.setRollingJump(true);
+        sprite.setJumping(true);
+        sprite.setPushing(true);
+
+        sprite.applyHurt(0);
+
+        assertTrue(sprite.getAir(), "HurtCharacter sets Status_InAir after reset-on-floor cleanup");
+        assertFalse(sprite.getRollingJump(), "Reset-on-floor tail clears Status_RollJump before hurt recoil");
+        assertFalse(sprite.isJumping(), "Reset-on-floor tail clears the jumping latch before hurt recoil");
+        assertFalse(sprite.getPushing(), "Reset-on-floor tail clears Status_Push before hurt recoil");
+    }
+
+    @Test
     public void testHurtKnockback_UnderwaterHalvedVelocities() {
         // Player is underwater (ROM s2.asm lines 84936-84941)
         sprite.setInWater(true);
@@ -299,5 +343,3 @@ public class WaterPhysicsTest {
     }
 
 }
-
-
