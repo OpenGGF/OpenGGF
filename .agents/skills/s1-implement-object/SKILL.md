@@ -1,6 +1,6 @@
 ---
 name: s1-implement-object
-description: Guide for implementing Sonic 1 objects and badniks with ROM-accurate art, behavior, subtypes, and disassembly validation.
+description: Use when implementing a Sonic 1 object or badnik — ports object logic from s1disasm, art loading, collision, movement patterns.
 ---
 
 # Implement Sonic 1 Object/Badnik
@@ -55,7 +55,7 @@ Agents should:
    - Object code: `docs/s1disasm/_incObj/HEX Name.asm` (e.g., `_incObj/1F Crabmeat.asm`)
    - Animation: `docs/s1disasm/_anim/Name.asm` (e.g., `_anim/Crabmeat.asm`)
    - Mappings: `docs/s1disasm/_maps/Name.asm` (e.g., `_maps/Crabmeat.asm`)
-   - Some objects have multiple parts: `_incObj/11 Bridge (part 1).asm`, `(part 2).asm`, etc.
+   - Related object IDs often share one comma-joined file: `_incObj/22, 23 Badnik - Buzz Bomber and Missile.asm`, `_incObj/3D, 48 Boss - GHZ Main and Wrecking Ball.asm`
 
 3. **Analyze the disassembly** to understand:
    - All routines (indexed by `obRoutine` values: 0, 2, 4, ...)
@@ -232,16 +232,6 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 | `isOnScreen(margin)` | Inherited from `AbstractObjectInstance`. Off-screen visibility check. |
 | `DebugRenderContext` | `com.openggf.debug.DebugRenderContext` — use for `appendDebugRenderCommands()`. |
 
-##### Standard Object Contracts
-
-When the current branch provides shared object contracts, prefer them over new object-local booleans or direct state writes:
-
-- Use `ObjectControlState` for native object-control bits and derived movement/CPU/contact predicates. Do not infer all meanings from `isObjectControlled()` alone.
-- Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` when an object chooses main player, native P1/P2, closest player, or all engine participants. S1 native behavior is main-only, but OpenGGF sidekicks are engine participants and must be handled deliberately.
-- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
-- Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
-- When adding or tightening guard tests, ratchet guard baselines: inventory existing violations, allowlist only historical cases with reasons, and hard-fail new direct player/object-control/lifecycle shortcuts.
-
 #### 2.5 Implementation Requirements
 
 **Engine Extensions**: If the ROM uses functionality that the engine doesn't expose, **you MUST extend the engine** rather than working around it or documenting it as a limitation.
@@ -320,6 +310,16 @@ Before finalizing a new object or badnik, classify every instance field for rewi
 Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable `ObjectSpawn` identity, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Dynamic spawn coordinates are gameplay state; capture them explicitly rather than treating the live `ObjectSpawn` reference as structural.
 
 Prefer standard value forms before object-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+##### Standard Object Contracts
+
+When the current branch provides shared object contracts, prefer them over new object-local booleans or direct state writes:
+
+- Use `ObjectControlState` for native object-control bits and derived movement/CPU/contact predicates. Do not infer all meanings from `isObjectControlled()` alone.
+- Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` when an object chooses main player, native P1/P2, closest player, or all engine participants. S1 native behavior is main-only, but OpenGGF sidekicks are engine participants and must be handled deliberately.
+- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
+- Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
+- When adding or tightening guard tests, ratchet guard baselines: inventory existing violations, allowlist only historical cases with reasons, and hard-fail new direct player/object-control/lifecycle shortcuts.
 
 #### 2.8 Player/Object Participation Checks
 

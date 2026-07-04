@@ -72,17 +72,19 @@ When route blockers involve objects or bosses, make the object contract decision
 
 Zones listed in recommended bring-up order. This order favors playable route closure over global checklist coverage. AIZ is already implemented and serves as the reference.
 
+**Existing Features is a dated snapshot (as of 2026-07).** Before dispatching any feature agent, check the live ground truth instead of trusting this table: `ls src/main/java/com/openggf/game/sonic3k/scroll/` + `Sonic3kScrollHandlerProvider` registrations for parallax, and `ls src/main/java/com/openggf/game/sonic3k/events/` for per-zone event handler classes (`Sonic3k{ZONE}Events`).
+
 | Priority | Zone | Full Name | Existing Features | Complexity Notes |
 |----------|------|-----------|-------------------|------------------|
 | -- | AIZ | Angel Island Zone | Events, parallax, animated tiles, palette cycling | **Reference zone** -- fully implemented |
-| 1 | HCZ | Hydrocity Zone | Palette cycling exists | First AIZ continuation slice; water, chase, transitions, and boss/event parity |
-| 2 | CNZ | Carnival Night Zone | Palette cycling exists | Existing trace/object work; bumpers, cylinders, miniboss, lighting, and sidekick-sensitive interactions |
-| 3 | MGZ | Marble Garden Zone | Parallax done | Existing runtime-state/parallax base; events, animated tiles, miniboss/boss flow |
-| 4 | ICZ | IceCap Zone | Palette cycling exists | Active object work; snowboarding, ice objects, Freezer, validation of palette/PLC state |
-| 5 | LBZ | Launch Base Zone | Palette cycling exists | Complex events (rising water, dual acts), validate existing palette cycling |
-| 6 | LRZ | Lava Reef Zone | Palette cycling exists | Lava mechanics, visual payoff, validate existing palette cycling |
-| 7 | FBZ | Flying Battery Zone | Palette cycling placeholder | Flying Battery mechanics, palette cycling may be stub |
-| 8 | MHZ | Mushroom Hill Zone | None | Time-of-season (act color changes), no existing features |
+| 1 | HCZ | Hydrocity Zone | Events, parallax, palette cycling exist | First AIZ continuation slice; water, chase, transitions, and boss/event parity |
+| 2 | CNZ | Carnival Night Zone | Events, parallax, palette cycling exist | Existing trace/object work; bumpers, cylinders, miniboss, lighting, and sidekick-sensitive interactions |
+| 3 | MGZ | Marble Garden Zone | Events, parallax exist | Existing runtime-state/parallax base; animated tiles, miniboss/boss flow |
+| 4 | ICZ | IceCap Zone | Events, parallax, palette cycling exist | Active object work; snowboarding, ice objects, Freezer, validation of palette/PLC state |
+| 5 | LBZ | Launch Base Zone | Events, parallax, palette cycling exist | Complex events (rising water, dual acts), validate existing palette cycling |
+| 6 | LRZ | Lava Reef Zone | Palette cycling exists | Lava mechanics, visual payoff, validate existing palette cycling; no dedicated event handler or scroll handler yet |
+| 7 | FBZ | Flying Battery Zone | Palette cycling placeholder | Flying Battery mechanics, palette cycling may be stub; no dedicated event handler or scroll handler yet |
+| 8 | MHZ | Mushroom Hill Zone | Events, parallax exist | Time-of-season (act color changes); no palette cycling yet |
 | 9 | SOZ | Sandopolis Zone | None | Time-of-day system, ghosts, complex zone |
 | 10 | SSZ | Sky Sanctuary Zone | None | Short zone, unique sky mechanics |
 | 11 | DEZ | Death Egg Zone | None | Death Egg mechanics, complex bosses |
@@ -264,7 +266,7 @@ Five files are touched by multiple feature agents. All changes are additive (new
 
 3. **Merging without building.** After merging worktree branches, always run `mvn package` before proceeding to validation. Shared file conflicts that silently produce invalid Java (duplicate switch cases, missing imports) will only surface at compile time.
 
-4. **Forgetting palette cycling validation for already-implemented zones.** Zones with priority 1-5 (HCZ, LBZ, LRZ, CNZ, ICZ) already have palette cycling implemented. The palette cycling agent should run in `--validate-only` mode for these zones, verifying the existing code against the disassembly rather than reimplementing from scratch. Skipping this validation misses opportunities to catch discrepancies in the existing implementation.
+4. **Forgetting palette cycling validation for already-implemented zones.** HCZ, CNZ, ICZ, LBZ, and LRZ already have palette cycling implemented (check `Sonic3kPaletteCycler` for the current set). The palette cycling agent should run in `--validate-only` mode for these zones, verifying the existing code against the disassembly rather than reimplementing from scratch. Skipping this validation misses opportunities to catch discrepancies in the existing implementation.
 
 5. **Dispatching all 4 feature agents unconditionally.** The decision flowchart in Step 3 exists for a reason. MGZ already has parallax implemented -- dispatching a parallax agent will create a conflicting second implementation. FBZ may have an `rts` stub for AniPLC -- dispatching an animated tiles agent will produce a no-op handler that clutters the codebase.
 

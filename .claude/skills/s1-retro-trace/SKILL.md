@@ -176,27 +176,13 @@ done
 ## Step 3: Run Trace Replay Tests
 
 ```bash
-mvn test -Dtest="*Trace*"
+mvn test -Dtest="*TraceReplay"
 ```
 
 Expected output:
 - GHZ1 (`TestS1Ghz1TraceReplay`) should PASS
-- MZ1 (`TestS1Mz1TraceReplay`) current baseline: **57 errors, 27 warnings**
 - Credits demo 6 / SBZ2 (`TestS1Credits06Sbz2TraceReplay`) should PASS
-- Other credits demos: various error counts (see Credits Demo Baseline below)
-
-### Credits Demo Baseline
-
-| Test | Zone | Errors | Warnings | First Error |
-|------|------|--------|----------|-------------|
-| Credits00 | GHZ1 | 5 | 7 | f526: y_speed |
-| Credits01 | MZ2 | 28 | 131 | f51: x_speed |
-| Credits02 | SYZ3 | 26 | 17 | f155: g_speed |
-| Credits03 | LZ3 | 28 | 31 | f23: x_speed |
-| Credits04 | SLZ3 | 54 | 48 | f286: angle |
-| Credits05 | SBZ1 | 38 | 74 | f69: air |
-| **Credits06** | **SBZ2** | **0** | **0** | **PASS** |
-| Credits07 | GHZ1b | 1 | 7 | f516: y_speed |
+- MZ1 (`TestS1Mz1TraceReplay`) and the other credits demos (Credits00–Credits05, Credits07): current per-trace error/warning counts live in `docs/TRACE_FRONTIER_LOG.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
 
 ## Step 4: Interpret Results
 

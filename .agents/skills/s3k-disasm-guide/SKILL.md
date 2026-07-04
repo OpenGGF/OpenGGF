@@ -1,6 +1,6 @@
 ---
 name: s3k-disasm-guide
-description: Reference for navigating the Sonic 3 and Knuckles disassembly, choosing S&K-side addresses, and using RomOffsetFinder with S3K data.
+description: Use when navigating the Sonic 3&K disassembly — label conventions, file structure, RomOffsetFinder commands, zone-set system for skdisasm.
 ---
 
 # s3k-disasm Navigation Guide
@@ -245,8 +245,8 @@ ls "docs/skdisasm/Levels/AIZ/Misc Object Data/"
 | Shared sprite maps | `General/Sprites/{Name}/Map` | `General/Sprites/Rhinobot/Map - Rhinobot.asm` |
 | Shared sprite DPLC | `General/Sprites/{Name}/DPLC` | `General/Sprites/Rhinobot/DPLC - Rhinobot.asm` |
 | Shared sprite anim | `General/Sprites/{Name}/Anim` | `General/Sprites/Rhinobot/Anim - Rhinobot.asm` |
-| Zone-specific maps | `Levels/{ZONE}/Misc Object Data/` | `Levels/AIZ/Misc Object Data/Map - Zipline.asm` |
-| Zone-specific anim | `Levels/{ZONE}/Misc Object Data/` | `Levels/AIZ/Misc Object Data/Anim - Zipline.asm` |
+| Zone-specific maps | `Levels/{ZONE}/Misc Object Data/` | `Levels/AIZ/Misc Object Data/Map - Act 1 Zipline Peg.asm` |
+| Zone-specific anim | `Levels/{ZONE}/Misc Object Data/` | `Levels/AIZ/Misc Object Data/Anim - Disappearing Floor.asm` |
 
 ## Object System Reference
 
@@ -266,7 +266,6 @@ S3K uses **S2-style field names** (same as S2, different from S1):
 | `x_vel` | 0x18 | word | X velocity |
 | `y_vel` | 0x1A | word | Y velocity |
 | `mapping_frame` | 0x22 | byte | Current frame |
-| `routine` | 0x24 | byte | Current routine (alternate ref) |
 | `collision_flags` | 0x28 | byte | TT SSSSSS (type + size) |
 | `collision_property` | 0x29 | byte | Hit count for bosses |
 | `shield_reaction` | 0x2B | byte | Shield-specific reactions (S3K-only) |

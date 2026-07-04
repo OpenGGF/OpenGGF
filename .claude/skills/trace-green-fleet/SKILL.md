@@ -5,7 +5,7 @@ description: Use when driving multiple failing Sonic-engine *TraceReplay tests t
 
 # Trace Green Fleet
 
-Coordinate failing `*TraceReplay` tests through isolated worktrees and strict trace-parity gates. This is the Codex facsimile of `.claude/workflows/trace-green-fleet.js`: the workflow is native Codex skill guidance, not a standalone JavaScript runner.
+Coordinate failing `*TraceReplay` tests through isolated worktrees and strict trace-parity gates. If a `trace-green-fleet` Workflow script is available in this session (an untracked `.claude/workflows/trace-green-fleet.js` exists on some machines), prefer invoking that. Otherwise this skill is the executable contract: run it from a Claude Code session using the `Agent` tool to fan out one subagent per trace stage. The phase order, tunables (Constants), and structured JSON handoffs below are authoritative — follow them directly.
 
 ## Inputs
 
@@ -13,7 +13,7 @@ Prefer a caller-supplied failing list. Each item should include:
 
 ```json
 {
-  "testClass": "TestSonic3kAiz1TraceReplay",
+  "testClass": "TestS3kAizTraceReplay",
   "game": "s3k",
   "zone": "aiz",
   "firstErrorFrame": 12345,
@@ -26,8 +26,8 @@ Optional `greenByGame` may provide same-game passing trace classes:
 ```json
 {
   "greenByGame": {
-    "s1": ["TestSonic1Ghz1TraceReplay"],
-    "s2": ["TestSonic2Ehz1TraceReplay"],
+    "s1": ["TestS1Ghz1TraceReplay"],
+    "s2": ["TestS2Ehz1TraceReplay"],
     "s3k": ["TestS3kAiz1SkipHeadless"]
   }
 }
@@ -69,14 +69,14 @@ Always use `trace-replay-bug-fixing` for actual trace investigation or fixes.
 - Never use `git stash`; stash is shared across worktrees. For clean-HEAD A/B checks, copy changed files aside, restore with `git checkout -- <path>`, run the baseline, then restore the copies, or create a throwaway worktree.
 - Do not delete other sessions' `.claude/worktrees/*` or `.worktrees/*`.
 
-## Codex Orchestration Contract
+## Orchestration Contract
 
-This skill is a conductor workflow. Do not collapse it into "main agent does each phase in a loop" when the user explicitly asks for a fleet, parallel agents, subagents, one agent per trace, or worktree threads.
+This skill is a conductor workflow. Do not collapse it into "main session does each phase in a loop" when the user explicitly asks for a fleet, parallel agents, subagents, one agent per trace, or worktree threads.
 
 Two layers:
 
-- **Conductor:** the current Codex thread. Owns discovery, queueing, worker prompts, stage handoffs, result validation, final summary, and any later integration into `develop`. The conductor never edits a trace worktree while a worker owns it.
-- **Workers:** bounded Codex worker agents or worktree threads. They do the noisy trace-specific work and return structured summaries. Each worker owns exactly one trace stage and one worktree.
+- **Conductor:** the current Claude Code session. Owns discovery, queueing, worker prompts, stage handoffs, result validation, final summary, and any later integration into `develop`. The conductor never edits a trace worktree while a worker owns it.
+- **Workers:** bounded subagents launched with the `Agent` tool (`subagent_type: "general-purpose"`), one per trace stage. They do the noisy trace-specific work and return a structured JSON summary as their final message. Each worker owns exactly one trace stage and one worktree.
 
 Control flow is the point. The conductor must preserve this structure:
 
@@ -86,7 +86,7 @@ Discover -> [ Triage -> Fix -> Verify ] per failing trace, max 4 active trace pi
 
 ### Authorization
 
-Use subagents only when explicitly authorized by the prompt. Explicit authorization includes the user asking for a fleet, parallel run, subagents, workers, one agent per trace, or invoking this skill specifically to run the fleet. If not authorized, run the same controller serially and say that parallel workers were not used.
+Use subagents only when explicitly authorized by the prompt. Explicit authorization includes the user asking for a fleet, parallel run, subagents, workers, one agent per trace, or invoking this skill specifically to run the fleet. If not authorized, run the same controller serially in the main session and say that parallel workers were not used.
 
 ### Slot Scheduler
 
@@ -98,15 +98,15 @@ Maintain a queue of failing trace items and at most 4 active trace pipelines.
 4. When a verify worker returns, free that trace's pipeline slot and start triage for the next queued trace.
 5. Continue until every trace has a verify result or a recorded stage failure.
 
-This simulates the Claude `pipeline(group, stageTriage, stageFix, stageVerify)` behavior: traces flow independently, so one trace may be in Fix while another is still in Triage. Do not insert a global barrier unless a shared-machine failure requires backing off.
+Traces flow independently: one trace may be in Fix while another is still in Triage. Do not insert a global barrier unless a shared-machine failure requires backing off.
 
-With Codex subagent tools, use this pattern:
+With the `Agent` tool, use this pattern:
 
-- `spawn_agent` a `worker` for each stage task. Do not fork broad context unless the worker needs it; pass the failing/triage/fix JSON and the rules instead.
-- Keep a conductor-side table keyed by `<game>/<zone>` with `stage`, `agentId`, `worktreePath`, `branch`, and prior stage output.
-- `wait_agent` on the active agent IDs as a set. When one completes, validate its JSON, update the table, and immediately spawn the next stage for that trace if eligible.
+- Launch one `Agent` (`subagent_type: "general-purpose"`) per stage task. Subagents run in the background by default, so the conductor keeps control while they work; you are notified as each completes. Do not pass broad context — hand the worker only the failing/triage/fix JSON plus the rules.
+- Because each trace needs a persistent named worktree that survives across all three stages and is later integrated, create the worktree explicitly with `git worktree add` (see Phase 1) and tell each worker its absolute worktree path. Do not use the `Agent` tool's `isolation: "worktree"` here — that creates a throwaway worktree that is auto-cleaned and cannot be handed to the next stage.
+- Keep a conductor-side table keyed by `<game>/<zone>` with `stage`, agent name/id, `worktreePath`, `branch`, and prior stage output.
+- When a worker completes, validate its JSON, update the table, and immediately launch the next stage for that trace if eligible. Use `SendMessage` to a still-running worker only to steer it; a new stage always starts as a fresh `Agent`.
 - While workers run, the conductor should do non-overlapping work: classify discovery output, prepare the next prompts, inspect summaries, or update the result table. Do not duplicate a worker's trace investigation locally.
-- Close completed workers once their output has been consumed and recorded.
 
 ### Worker Rules
 
@@ -114,11 +114,10 @@ Every worker prompt must include:
 
 - the relevant input object from the prior stage,
 - the Non-Negotiable Rules section,
+- the absolute worktree path the worker must operate in,
 - "You are not alone in the codebase; do not revert others' edits. Stage only specific files you changed. Never use `git add -A` or `git stash`.",
-- "Return exactly the requested JSON object, followed by a short human-readable note if needed.",
+- "Return exactly the requested JSON object as your final message, followed by a short human-readable note if needed.",
 - "Do not touch other trace worktrees."
-
-Use `worker` agents for stage work when the subagent tool is available. Use local worktree threads only when that is the available orchestration surface.
 
 ### Structured Handoff
 
@@ -330,7 +329,7 @@ Verify output:
 
 ```json
 {
-  "trace": "TestSonic3kAiz1TraceReplay",
+  "trace": "TestS3kAizTraceReplay",
   "game": "s3k",
   "zone": "aiz",
   "status": "advanced",
@@ -358,9 +357,9 @@ Return:
   "rejectedNotGenuine": 0,
   "regressionQueue": [
     {
-      "causedBy": "TestSonic3kAiz1TraceReplay",
+      "causedBy": "TestS3kAizTraceReplay",
       "commit": "abcdef1",
-      "regression": "TestSonic3kHcz1TraceReplay: green -> frame 100/x_pos"
+      "regression": "TestS3kHczCompleteRunTraceReplay: green -> frame 100/x_pos"
     }
   ],
   "results": []

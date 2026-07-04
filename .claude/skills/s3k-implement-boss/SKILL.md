@@ -13,8 +13,8 @@ $ARGUMENTS: Boss name or zone (e.g., "AIZ mini-boss", "Angel Island end boss", "
 
 ## Related Skills
 
-- **s3k-disasm-guide** (`.claude/skills/s3k-disasm-guide/skill.md`) - Disassembly navigation, label conventions, RomOffsetFinder
-- **s3k-implement-object** (`.claude/skills/s3k-implement-object/skill.md`) - For non-boss Sonic 3&K objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
+- **s3k-disasm-guide** (`.claude/skills/s3k-disasm-guide/SKILL.md`) - Disassembly navigation, label conventions, RomOffsetFinder
+- **s3k-implement-object** (`.claude/skills/s3k-implement-object/SKILL.md`) - For non-boss Sonic 3&K objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
 
 ## Zone-Set-Aware Boss IDs
 
@@ -93,7 +93,7 @@ Rules for finding S3K pointers:
 - Always run `RomOffsetFinder` with `--game s3k`. Never default or `--game s2`; never read values out of a Sonic 3 disassembly or ROM map.
 - When the tool returns both `sonic3k.asm` and `s3.asm` results, **pick the `sonic3k.asm` one**.
 - When reading boss disassembly, always use the `sonic3k.asm` version (S3KL code path); it may contain zone-specific overrides or Knuckles variants absent from the S3 standalone version.
-- If you cannot find an S&K-side equivalent, stop and ask — do not substitute an S3 address.
+- If, after exhausting S&K-side variants, there is genuinely no S&K equivalent, the `s3.asm` reference is legitimate — some S3K objects reference S3-half assets directly. Use it after verifying the object's code points there. This is a rare edge case; don't loop forever or block on a non-existent S&K variant.
 
 ## Mandatory Art Corruption Guard Tests
 
@@ -111,7 +111,7 @@ If the boss or child sprite has a known mapping shape from the disassembly, add 
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.claude/skills/s3k-disasm-guide/skill.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s3k-disasm-guide skill (`.claude/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 **Research checklist:**
 - [ ] Locate boss object in `docs/skdisasm/sonic3k.asm` (search for `Obj_ZONEMiniboss` or `Obj_ZONEEndBoss`)
@@ -148,29 +148,29 @@ When porting boss object positions, ROM `x_pos` / `y_pos` are centre coordinates
 
 ### Phase 2: Arena & Level Event Setup
 
-S3K bosses use `Sonic3kLevelEventManager` (at `game/sonic3k/Sonic3kLevelEventManager.java`) for arena setup and boss spawning. This manager extends `AbstractLevelEventManager`, though per-zone event handlers are still pending implementation.
+S3K bosses use `Sonic3kLevelEventManager` (at `game/sonic3k/Sonic3kLevelEventManager.java`) for arena setup and boss spawning. This manager extends `AbstractLevelEventManager` and delegates to per-zone handler classes in `game/sonic3k/events/` (e.g. `Sonic3kAIZEvents`, `Sonic3kCNZEvents`, `Sonic3kHCZEvents`) — see `Sonic3kZoneEvents` for the shared `camera()`/`audio()`/`gameState()`/`spawnObject(...)` helpers. Zones without a handler class yet fall back to default/no-op behavior; add one following the existing pattern if the target zone doesn't have one.
 
-Add zone-specific event handling in a zone handler method or class:
+Add zone-specific event handling in the zone's handler class:
 
 ```java
-// In Sonic3kLevelEventManager or a delegated zone handler class
+// In the zone's event handler class (extends Sonic3kZoneEvents, called from Sonic3kLevelEventManager)
 private void updateAizAct1Events() {
     switch (eventRoutine) {
         case 0 -> {
             // Wait for approach trigger
-            if (camera.getX() >= AIZ_MINIBOSS_TRIGGER_X) {
-                camera.setMinX(camera.getX());
+            if (camera().getX() >= AIZ_MINIBOSS_TRIGGER_X) {
+                camera().setMinX(camera().getX());
                 eventRoutine += 2;
             }
         }
         case 2 -> {
             // Lock arena and spawn boss
-            if (camera.getX() >= AIZ_MINIBOSS_ARENA_X) {
-                camera.setMinX((short) AIZ_MINIBOSS_ARENA_MIN);
-                camera.setMaxX((short) AIZ_MINIBOSS_ARENA_MAX);
+            if (camera().getX() >= AIZ_MINIBOSS_ARENA_X) {
+                camera().setMinX((short) AIZ_MINIBOSS_ARENA_MIN);
+                camera().setMaxX((short) AIZ_MINIBOSS_ARENA_MAX);
                 spawnAizMiniboss();
                 eventRoutine += 2;
-                AudioManager.getInstance().playMusic(Sonic3kAudioProfile.MUS_MINIBOSS);
+                audio().playMusic(Sonic3kMusic.MINIBOSS.id);
             }
         }
         // ...
@@ -384,10 +384,10 @@ Register in `Sonic3kObjectRegistry` (create if needed):
 
 ```java
 registerFactory(Sonic3kObjectIds.ZONE_MINIBOSS,
-    (spawn, registry) -> new Sonic3kZoneMinibossInstance(spawn, LevelManager.getInstance()));
+    (spawn, registry) -> new Sonic3kZoneMinibossInstance(spawn));
 
 registerFactory(Sonic3kObjectIds.ZONE_ENDBOSS,
-    (spawn, registry) -> new Sonic3kZoneEndBossInstance(spawn, LevelManager.getInstance()));
+    (spawn, registry) -> new Sonic3kZoneEndBossInstance(spawn));
 ```
 
 Register your factory in existing `Sonic3kObjectRegistry.registerDefaultFactories()`.
@@ -483,17 +483,18 @@ Report any discrepancies with specific line references.
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s3k-disasm-guide/skill.md` |
-| **Object skill** | `.claude/skills/s3k-implement-object/skill.md` |
+| **Disassembly guide** | `.claude/skills/s3k-disasm-guide/SKILL.md` |
+| **Object skill** | `.claude/skills/s3k-implement-object/SKILL.md` |
 | Base boss | `src/.../level/objects/boss/AbstractBossInstance.java` |
 | Boss state context | `src/.../level/objects/boss/BossStateContext.java` |
 | Boss child base | `src/.../level/objects/boss/AbstractBossChild.java` |
 | Level events | `src/.../game/sonic3k/Sonic3kLevelEventManager.java` |
+| Per-zone event handlers | `src/.../game/sonic3k/events/` (e.g. `Sonic3kAIZEvents.java`, `Sonic3kCNZEvents.java`), base class `Sonic3kZoneEvents.java` (`camera()`/`audio()`/`gameState()`/`spawnObject(...)` helpers) |
 | Zone set enum | `src/.../game/sonic3k/constants/S3kZoneSet.java` |
 | Object IDs | `src/.../game/sonic3k/constants/Sonic3kObjectIds.java` |
 | ROM offsets | `src/.../game/sonic3k/constants/Sonic3kConstants.java` |
 | Registry | `src/.../game/sonic3k/objects/Sonic3kObjectRegistry.java` |
-| Audio profile | `src/.../game/sonic3k/audio/Sonic3kAudioProfile.java` |
+| Music / SFX ids | `src/.../game/sonic3k/audio/Sonic3kMusic.java`, `src/.../game/sonic3k/audio/Sonic3kSfx.java` |
 | S2 boss examples | `src/.../game/sonic2/objects/bosses/` |
 | Disassembly main | `docs/skdisasm/sonic3k.asm` |
 | Shared sprites | `docs/skdisasm/General/Sprites/` |

@@ -21,13 +21,13 @@ If a zone analysis spec exists at `docs/s3k-zones/{zone}-analysis.md`, read it f
 
 This saves time on Phase 1 (finding the deform routine) but the disassembly remains the source of truth for implementation details.
 
-This spec is produced by the **s3k-zone-analysis** skill (`.claude/skills/s3k-zone-analysis/skill.md`).
+This spec is produced by the **s3k-zone-analysis** skill (`.claude/skills/s3k-zone-analysis/SKILL.md`).
 
 ## Related Skills
 
-- **s3k-disasm-guide** (`.claude/skills/s3k-disasm-guide/skill.md`) for disassembly navigation, label conventions, RomOffsetFinder commands, and zone abbreviations.
-- **s3k-plc-system** (`.claude/skills/s3k-plc-system/skill.md`) for PLC-driven art loading during act transitions and boss arenas (PLCs can trigger mid-level background art changes).
-- **s3k-zone-analysis** (`.claude/skills/s3k-zone-analysis/skill.md`) for producing a zone analysis spec that pre-identifies deform routine locations and band counts.
+- **s3k-disasm-guide** (`.claude/skills/s3k-disasm-guide/SKILL.md`) for disassembly navigation, label conventions, RomOffsetFinder commands, and zone abbreviations.
+- **s3k-plc-system** (`.claude/skills/s3k-plc-system/SKILL.md`) for PLC-driven art loading during act transitions and boss arenas (PLCs can trigger mid-level background art changes).
+- **s3k-zone-analysis** (`.claude/skills/s3k-zone-analysis/SKILL.md`) for producing a zone analysis spec that pre-identifies deform routine locations and band counts.
 
 ## Architecture Overview
 
@@ -90,7 +90,7 @@ Known deform routines in the S3K disassembly:
 | `MHZ_Deform` | 112317 | Mushroom Hill |
 | `LRZ1_Deform` | 115384 | Lava Reef Act 1 |
 
-AIZ and MGZ are already implemented. If a zone is not listed, search more broadly:
+AIZ, CNZ, HCZ, ICZ, LBZ, MGZ, and MHZ already have dedicated scroll handlers (see `Sonic3kScrollHandlerProvider` and the `SwScrl*` classes in `game/sonic3k/scroll/` for the authoritative, current list — this table is a dated snapshot as of 2026-07). If a zone is not listed, search more broadly:
 ```bash
 grep -n "Deform\|BGDeform\|BG_Deform" docs/skdisasm/sonic3k.asm | grep -i "{zone}"
 ```
@@ -921,7 +921,7 @@ Add extra tests when the zone depends on more than deform math:
 
 Run the engine and navigate to the zone:
 ```bash
-java -jar target/sonic-engine-0.4.prerelease-jar-with-dependencies.jar
+java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 ```
 
 Check:
@@ -1005,14 +1005,18 @@ Methods that every scroll handler inherits or can override:
 
 ## Existing Implementations (Reference)
 
-Study these for working patterns:
+Study these for working patterns. This list reflects the `game/sonic3k/scroll/` package as of 2026-07 — check `Sonic3kScrollHandlerProvider` and the directory listing for the current authoritative set before assuming a zone is unimplemented.
 
 | File | Zone | Complexity | Key Features |
 |------|------|------------|--------------|
 | `SwScrlAiz.java` | Angel Island | High | 3 modes (intro/main/act2), fire transition, per-column VScroll, wave accumulator, waterline split, fine deformation deltas, screen shake |
 | `SwScrlHcz.java` | Hydrocity | High | 2 acts with entirely different routines, water equilibrium system (Y=$610), 192-line per-scanline section, waterline binary data (9312 bytes), mirrored cave bands, scatter-fill (act 2) |
 | `SwScrlMgz.java` | Marble Garden | Medium | 2 acts with different deform arrays, cloud accumulator, scatter-fill offset table, act transition |
-| `SwScrlS3kDefault.java` | Fallback | Low | Flat 1/4 speed parallax (placeholder for unimplemented zones) |
+| `SwScrlCnz.java` | Carnival Night | Medium | 5-band cascaded speed, boss scroll mode |
+| `SwScrlIcz.java` | Ice Cap | Medium | Half/quarter speed layers |
+| `SwScrlLbz.java` | Launch Base | High | Waterline scroll data (binary), dual-act deform |
+| `SwScrlMhz.java` | Mushroom Hill | Medium | Mushroom parallax |
+| `SwScrlS3kDefault.java` | Fallback | Low | Flat 1/4 speed parallax (placeholder for zones without a dedicated handler: FBZ, SOZ, LRZ, SSZ, DEZ, DDZ) |
 
 For S2 reference (similar architecture, simpler zones):
 
@@ -1051,23 +1055,23 @@ For S2 reference (similar architecture, simpler zones):
 
 ## S3K Zone Deform Summary
 
-Quick reference for all 13 S3K zones:
+Quick reference for all 13 S3K zones. **Snapshot as of 2026-07** — the authoritative source is the live `game/sonic3k/scroll/` package plus `Sonic3kScrollHandlerProvider`'s registrations, not this table.
 
 | Zone | Abbr | Deform Label | Act-Split | Notable Features |
 |------|------|-------------|-----------|------------------|
 | Angel Island | AIZ | (implemented) | Yes (1/2) | 3 modes, fire transition, waterline, shake |
 | Hydrocity | HCZ | (implemented) | Yes (1/2) | Water equilibrium, waterline binary data, scatter-fill, palette cycling, wave splash sprites |
 | Marble Garden | MGZ | (implemented) | Yes (1/2) | Cloud accumulator, scatter-fill offsets |
-| Carnival Night | CNZ | CNZ1_Deform | Shared | 5-band cascaded speed, boss scroll mode |
-| Flying Battery | FBZ | FBZ_Deform | Shared | Indoor/outdoor switch, scatter-fill index |
-| Ice Cap | ICZ | ICZ1_Deform | Act 1 only? | Half/quarter speed layers |
-| Launch Base | LBZ | LBZ2_Deform | Act 2 | Waterline scroll data (binary) |
-| Mushroom Hill | MHZ | MHZ_Deform | Shared | Mushroom parallax |
-| Sandopolis | SOZ | (none found) | Unknown | May use simple parallax or be in Screen Events |
-| Lava Reef | LRZ | LRZ1_Deform | Act 1 | 8 strips + 5 extra layers, complex |
-| Sky Sanctuary | SSZ | (none found) | Unknown | Check Screen Events for cloud scrolling |
-| Death Egg | DEZ | (none found) | Unknown | May be in Screen Events |
-| Doomsday | DDZ | (none found) | N/A | Special stage, likely unique |
+| Carnival Night | CNZ | (implemented) | Shared | 5-band cascaded speed, boss scroll mode |
+| Flying Battery | FBZ | FBZ_Deform | Shared | Indoor/outdoor switch, scatter-fill index; not yet implemented, uses `SwScrlS3kDefault` fallback |
+| Ice Cap | ICZ | (implemented) | Act 1 only? | Half/quarter speed layers |
+| Launch Base | LBZ | (implemented) | Act 2 | Waterline scroll data (binary) |
+| Mushroom Hill | MHZ | (implemented) | Shared | Mushroom parallax |
+| Sandopolis | SOZ | (none found) | Unknown | May use simple parallax or be in Screen Events; not yet implemented, uses `SwScrlS3kDefault` fallback |
+| Lava Reef | LRZ | LRZ1_Deform | Act 1 | 8 strips + 5 extra layers, complex; not yet implemented, uses `SwScrlS3kDefault` fallback |
+| Sky Sanctuary | SSZ | (none found) | Unknown | Check Screen Events for cloud scrolling; not yet implemented, uses `SwScrlS3kDefault` fallback |
+| Death Egg | DEZ | (none found) | Unknown | May be in Screen Events; not yet implemented, uses `SwScrlS3kDefault` fallback |
+| Doomsday | DDZ | (none found) | N/A | Special stage, likely unique; not yet implemented, uses `SwScrlS3kDefault` fallback |
 
 Zones without explicit `_Deform` labels may have their scroll logic in `{ZONE}_BackgroundEvent` or use the generic `ApplyDeformation` with just a height array and no custom HScroll_table fill. Search more broadly:
 

@@ -13,8 +13,8 @@ $ARGUMENTS: Boss name or zone (e.g., "EHZ boss", "Chemical Plant boss", "0x56")
 
 ## Related Skills
 
-- **s2disasm-guide** (`.claude/skills/s2disasm-guide/skill.md`) - Disassembly navigation, label conventions, RomOffsetFinder
-- **s2-implement-object** (`.claude/skills/s2-implement-object/skill.md`) - For non-boss Sonic 2 objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
+- **s2disasm-guide** (`.claude/skills/s2disasm-guide/SKILL.md`) - Disassembly navigation, label conventions, RomOffsetFinder
+- **s2-implement-object** (`.claude/skills/s2-implement-object/SKILL.md`) - For non-boss Sonic 2 objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
 
 ## Key Differences: Bosses vs Regular Objects
 
@@ -35,7 +35,7 @@ $ARGUMENTS: Boss name or zone (e.g., "EHZ boss", "Chemical Plant boss", "0x56")
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s2disasm-guide skill (`.claude/skills/s2disasm-guide/skill.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s2disasm-guide skill (`.claude/skills/s2disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 **Research checklist:**
 - [ ] Locate boss object in disassembly (e.g., `Obj56`, `Obj5D`, `Obj51`, `Obj89`)
@@ -93,8 +93,8 @@ private void updateZONE() {
                 camera.setMaxX((short) ARENA_MAX_X);
                 eventRoutine += 2;
                 bossSpawnDelay = 0;
-                AudioManager.getInstance().fadeOutMusic();
-                GameServices.gameState().setCurrentBossId(BOSS_ID);
+                audio().fadeOutMusic();
+                gameState().setCurrentBossId(BOSS_ID);
             }
         }
         case 4 -> {
@@ -106,7 +106,7 @@ private void updateZONE() {
             if (bossSpawnDelay >= 0x5A) {  // 90 frames
                 spawnBoss();
                 eventRoutine += 2;
-                AudioManager.getInstance().playMusic(Sonic2AudioConstants.MUS_BOSS);
+                audio().playMusic(Sonic2Music.BOSS.id);
             }
         }
         case 6 -> {
@@ -264,7 +264,7 @@ Register in `Sonic2ObjectRegistry.registerDefaultFactories()`:
 
 ```java
 registerFactory(Sonic2ObjectIds.ZONE_BOSS,
-    (spawn, registry) -> new Sonic2ZoneBossInstance(spawn, LevelManager.getInstance()));
+    (spawn, registry) -> new Sonic2ZoneBossInstance(spawn));
 ```
 
 ### Phase 7: Rewind Synchronization Fields
@@ -349,12 +349,13 @@ Once cross-validation passes:
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s2disasm-guide/skill.md` |
+| **Disassembly guide** | `.claude/skills/s2disasm-guide/SKILL.md` |
 | Base boss | `src/.../level/objects/boss/AbstractBossInstance.java` |
 | Boss state context | `src/.../level/objects/boss/BossStateContext.java` |
 | Boss child base | `src/.../level/objects/boss/AbstractBossChild.java` |
 | Boss child interface | `src/.../level/objects/boss/BossChildComponent.java` |
 | Level events | `src/.../game/sonic2/Sonic2LevelEventManager.java` |
+| Per-zone event handlers | `src/.../game/sonic2/events/` (e.g. `Sonic2EHZEvents.java`), base class `Sonic2ZoneEvents.java` (`camera()`/`audio()`/`gameState()`/`spawnObject(...)` helpers) |
 | Boss implementations | `src/.../game/sonic2/objects/bosses/` |
 | Object IDs | `src/.../game/sonic2/constants/Sonic2ObjectIds.java` |
 | ROM offsets | `src/.../game/sonic2/constants/Sonic2Constants.java` |
@@ -362,6 +363,7 @@ Once cross-validation passes:
 | Art loader | `src/.../game/sonic2/Sonic2ObjectArt.java` |
 | Art provider | `src/.../game/sonic2/Sonic2ObjectArtProvider.java` |
 | Registry | `src/.../game/sonic2/objects/Sonic2ObjectRegistry.java` |
+| Music ids | `src/.../game/sonic2/audio/Sonic2Music.java` |
 | SFX constants | `src/.../game/sonic2/constants/Sonic2AudioConstants.java` |
 | Disassembly | `docs/s2disasm/` |
 | Implemented IDs | `src/.../tools/Sonic2ObjectProfile.java` (IMPLEMENTED_IDS set) |

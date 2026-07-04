@@ -1,6 +1,6 @@
 ---
 name: s2-implement-object
-description: Guide for implementing Sonic 2 objects and badniks with ROM-accurate art, behavior, subtypes, and disassembly validation.
+description: Use when implementing a Sonic 2 object or badnik — ports object logic from s2disasm, art loading, subtypes, collision, movement patterns.
 ---
 
 # Implement Sonic 2 Object/Badnik
@@ -344,11 +344,11 @@ Bosses differ significantly from regular objects:
 
 When the current branch provides shared object contracts, prefer them over new object-local booleans or direct state writes:
 
-- Use `ObjectControlState` for native object-control bits and derived movement/CPU/contact predicates. Distinguish bit-0, bit-6, and bit-7 style gates instead of treating every controlled player as the same state.
-- Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` when an object chooses main player, native P1/P2, closest player, all engine players, or engine sidekicks extended from native P2 logic. This is required for S2 Tails parity and OpenGGF multi-sidekick coherence.
-- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
-- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
-- Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
+- Use `ObjectControlState` (`com.openggf.sprites.playable`) for native object-control bits and derived movement/CPU/contact predicates. Distinguish bit-0, bit-6, and bit-7 style gates instead of treating every controlled player as the same state.
+- Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` (both `com.openggf.level.objects`) when an object chooses main player, native P1/P2, closest player, all engine players, or engine sidekicks extended from native P2 logic. This is required for S2 Tails parity and OpenGGF multi-sidekick coherence.
+- Use `NativePositionOps` (`com.openggf.sprites`) for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
+- Use `ObjectLifetimeOps` (`com.openggf.level.objects`) for destroy/delete/offscreen-expire semantics; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
+- Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior (canonical behavior profiles live under `com.openggf.game.profiles.*`). **Note:** `SolidRoutineProfile` and `TouchResponseProfile` each exist in two packages — `com.openggf.level.objects` and `com.openggf.game.profiles.{solidroutine,touchresponse}`. Object implementations use the `com.openggf.level.objects` versions; every currently-migrated object imports from there, not from `com.openggf.game.profiles.*`. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
 - When adding or tightening guard tests, ratchet guard baselines: inventory existing violations, allowlist only historical cases with reasons, and hard-fail new direct player/object-control/lifecycle shortcuts.
 
 #### 2.5 Implementation Requirements

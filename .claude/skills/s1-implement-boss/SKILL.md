@@ -13,8 +13,8 @@ $ARGUMENTS: Boss name or zone (e.g., "GHZ boss", "Green Hill boss", "0x3D", "Fin
 
 ## Related Skills
 
-- **s1disasm-guide** (`.claude/skills/s1disasm-guide/skill.md`) - Disassembly navigation, label conventions, RomOffsetFinder
-- **s1-implement-object** (`.claude/skills/s1-implement-object/skill.md`) - For non-boss Sonic 1 objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
+- **s1disasm-guide** (`.claude/skills/s1disasm-guide/SKILL.md`) - Disassembly navigation, label conventions, RomOffsetFinder
+- **s1-implement-object** (`.claude/skills/s1-implement-object/SKILL.md`) - For non-boss Sonic 1 objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
 
 ## Sonic 1 Boss List
 
@@ -52,7 +52,7 @@ $ARGUMENTS: Boss name or zone (e.g., "GHZ boss", "Green Hill boss", "0x3D", "Fin
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s1disasm-guide skill (`.claude/skills/s1disasm-guide/skill.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s1disasm-guide skill (`.claude/skills/s1disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 **Research checklist:**
 - [ ] Locate boss object file in `docs/s1disasm/_incObj/` (may have multiple parts)
@@ -108,7 +108,7 @@ private void updateGhzEvents() {
                 camera.setMaxX((short) GHZ_BOSS_ARENA_MAX);
                 spawnGhzBoss();
                 eventRoutine += 2;
-                AudioManager.getInstance().playMusic(Sonic1AudioProfile.MUS_BOSS);
+                audio().playMusic(Sonic1Music.BOSS.id);
             }
         }
         // ...
@@ -301,7 +301,7 @@ Register in `Sonic1ObjectRegistry`:
 
 ```java
 registerFactory(Sonic1ObjectIds.ZONE_BOSS,
-    (spawn, registry) -> new Sonic1ZoneBossInstance(spawn, LevelManager.getInstance()));
+    (spawn, registry) -> new Sonic1ZoneBossInstance(spawn));
 ```
 
 `Sonic1ObjectRegistry` already has `registerDefaultFactories()` — add your factory registration there.
@@ -390,15 +390,16 @@ Report any discrepancies with specific line references.
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s1disasm-guide/skill.md` |
-| **Object skill** | `.claude/skills/s1-implement-object/skill.md` |
+| **Disassembly guide** | `.claude/skills/s1disasm-guide/SKILL.md` |
+| **Object skill** | `.claude/skills/s1-implement-object/SKILL.md` |
 | Base boss | `src/.../level/objects/boss/AbstractBossInstance.java` |
 | Boss state context | `src/.../level/objects/boss/BossStateContext.java` |
 | Boss child base | `src/.../level/objects/boss/AbstractBossChild.java` |
 | Object IDs | `src/.../game/sonic1/constants/Sonic1ObjectIds.java` |
 | ROM offsets | `src/.../game/sonic1/constants/Sonic1Constants.java` |
-| Audio profile | `src/.../game/sonic1/audio/Sonic1AudioProfile.java` |
+| Music / SFX ids | `src/.../game/sonic1/audio/Sonic1Music.java`, `src/.../game/sonic1/audio/Sonic1Sfx.java` |
 | Level events | `src/.../game/sonic1/events/Sonic1LevelEventManager.java` |
+| Per-zone event handlers | `src/.../game/sonic1/events/` (e.g. `Sonic1GHZEvents.java`), base class `Sonic1ZoneEvents.java` (`camera()`/`audio()`/`gameState()` helpers) |
 | Registry | `src/.../game/sonic1/objects/Sonic1ObjectRegistry.java` |
 | S2 boss examples | `src/.../game/sonic2/objects/bosses/` |
 | Disassembly bosses | `docs/s1disasm/_incObj/*Boss*.asm` |

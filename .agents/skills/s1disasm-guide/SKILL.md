@@ -1,6 +1,6 @@
 ---
 name: s1disasm-guide
-description: Reference for navigating the Sonic 1 disassembly, locating assets and objects, and using RomOffsetFinder with S1 data.
+description: Use when navigating the Sonic 1 disassembly — label conventions, file structure, RomOffsetFinder commands for s1disasm.
 ---
 
 # s1disasm Navigation Guide
@@ -13,7 +13,7 @@ The disassembly is organized into these major directories:
 
 | Directory | Contents | Notes |
 |-----------|----------|-------|
-| `_incObj/` | Object code | One file per object: `HEX Name.asm` (e.g., `1F Crabmeat.asm`) |
+| `_incObj/` | Object code | One file per object (or comma-joined group of related object IDs): `HEX[, HEX2, ...] Category - Name.asm` (e.g., `1F Badnik - Crabmeat.asm`) |
 | `_anim/` | Animation scripts | Per-object animation data (e.g., `Crabmeat.asm`) |
 | `_maps/` | Sprite mappings | Per-object frame definitions (e.g., `Crabmeat.asm`) |
 | `artnem/` | Nemesis-compressed art | Sprite and tile art (`.nem` extension or `.bin`) |
@@ -142,20 +142,22 @@ Unlike Sonic 2 where objects are defined inline in `s2.asm`, Sonic 1 has **separ
 
 ### File Naming Pattern
 ```
-_incObj/HEX Name.asm
+_incObj/HEX[, HEX2, ...] Category - Name.asm
 ```
-Where `HEX` is the 2-digit hexadecimal object ID.
+Where `HEX` is the 2-digit hexadecimal object ID. A single file can cover more than one object ID when the objects are implemented together (e.g., a boss and its projectile, or a badnik and its sub-object) — the IDs are comma-joined in the filename rather than split into separate files.
 
 Examples:
-- `_incObj/1F Crabmeat.asm` - Crabmeat badnik (ID 0x1F)
-- `_incObj/22 Buzz Bomber.asm` - Buzz Bomber badnik (ID 0x22)
+- `_incObj/1F Badnik - Crabmeat.asm` - Crabmeat badnik (ID 0x1F)
+- `_incObj/22, 23 Badnik - Buzz Bomber and Missile.asm` - Buzz Bomber badnik (ID 0x22) and its missile (ID 0x23)
 - `_incObj/41 Springs.asm` - Springs (ID 0x41)
-- `_incObj/3D Boss - Green Hill (part 1).asm` - GHZ Boss
+- `_incObj/3D, 48 Boss - GHZ Main and Wrecking Ball.asm` - GHZ Boss (ID 0x3D) and its wrecking ball (ID 0x48)
 
-### Multi-Part Objects
-Some objects span multiple files:
-- `_incObj/11 Bridge (part 1).asm`, `_incObj/11 Bridge (part 2).asm`, etc.
-- `_incObj/3D Boss - Green Hill (part 1).asm`, `_incObj/3D Boss - Green Hill (part 2).asm`
+### Multi-ID Objects
+Related object IDs that are implemented together share one file, named with comma-joined hex IDs rather than a `(part 1)/(part 2)` suffix:
+- `_incObj/22, 23 Badnik - Buzz Bomber and Missile.asm`
+- `_incObj/3D, 48 Boss - GHZ Main and Wrecking Ball.asm`
+- `_incObj/73, 74 Boss - MZ Main and Fire.asm`
+- `_incObj/85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm`
 
 ### Related Files
 
@@ -167,7 +169,7 @@ Each object typically has corresponding files in:
 
 ### Object RAM Layout
 
-S1 uses `$FFFFCF00` as `Object_RAM` base (vs S2's `$FFB000`).
+S1's object variable space is `v_objspace` (`_Variables.asm`), not a fixed hex constant like S2's `Object_RAM` ($FFB000). `_Variables.asm` builds RAM addresses as a running `ds.b` allocation from `v_ram_start` (`$FFFF0000`), so `v_objspace`'s absolute address is whatever the assembler computes from everything allocated before it — grep `_Variables.asm` for the label rather than assuming a fixed offset.
 
 ### Object Status Table Offsets
 
@@ -280,7 +282,7 @@ mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" -Dexec
 Look directly in the disassembly files:
 ```bash
 # Crabmeat object code
-cat docs/s1disasm/_incObj/"1F Crabmeat.asm"
+cat docs/s1disasm/_incObj/"1F Badnik - Crabmeat.asm"
 
 # Crabmeat animation
 cat docs/s1disasm/_anim/Crabmeat.asm
@@ -291,17 +293,16 @@ cat docs/s1disasm/_maps/Crabmeat.asm
 
 ## RAM Address Reference
 
-Key RAM addresses for understanding Sonic 1 disassembly:
+S1's RAM variables are declared in `_Variables.asm` as a running `ds.b` allocation from `v_ram_start` (`$FFFF0000`), not as fixed hex equates — there is no `Object_RAM`/`Camera_X_pos`/`v_palette`-style label in this disasm. Grep `_Variables.asm` for the label name to see its declaration and cumulative context instead of assuming an absolute address. Key labels:
 
-| Address | Name | Description |
-|---------|------|-------------|
-| $FFFFCF00 | Object_RAM | Object status table base |
-| $FFFFF700 | Camera_X_pos | Camera X position |
-| $FFFFF704 | Camera_Y_pos | Camera Y position |
-| $FFFFFB00 | v_lvllayout | Level layout pointer |
-| $FFFFF600 | v_gamemode | Current game mode |
-| $FFFFF628 | v_rings | Ring count |
-| $FE00 | v_palette | Palette RAM |
+| Label | Description |
+|-------|-------------|
+| `v_objspace` | Object status table base ($40 bytes per object) |
+| `v_lvllayout` | Level layout pointer (FG/BG rows interlaced) |
+| `v_gamemode` | Current game mode |
+| `v_rings` | Ring count |
+| `v_pal_buffer` | Palette data buffer (used for palette cycling) |
+| `v_screenposx` / `v_screenposy` | Screen (camera) position — S1 has no `Camera_X_pos`/`Camera_Y_pos` labels like S2/S3K |
 
 ## Quick Reference Card
 

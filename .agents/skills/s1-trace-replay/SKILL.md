@@ -1,6 +1,6 @@
 ---
 name: s1-trace-replay
-description: Workflow for recording Sonic 1 BizHawk traces, replaying them in tests, and interpreting divergence reports.
+description: Use when running or creating Sonic 1 trace replay tests that compare engine physics against recorded reference data.
 ---
 
 # S1 Trace Replay
@@ -94,13 +94,13 @@ cp "$SRC/metadata.json" "$DST/metadata.json"
 ## Step 3: Run Trace Replay Tests
 
 ```bash
-cd "C:/Users/farre/IdeaProjects/sonic-engine" && mvn test -Dtest="*Trace*"
+cd "C:/Users/farre/IdeaProjects/sonic-engine" && mvn test -Dtest="*TraceReplay"
 ```
 
 Expected output pattern:
 - `MSE:TESTS total=15 passed=N failed=M errors=0 skipped=0`
 - GHZ1 (`TestS1Ghz1TraceReplay`) should PASS
-- MZ1 (`TestS1Mz1TraceReplay`) current baseline: **224 errors, 329 warnings**
+- MZ1 (`TestS1Mz1TraceReplay`): current per-trace error/warning counts live in `docs/TRACE_FRONTIER_LOG.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
 
 ### Test class mapping
 
@@ -132,8 +132,6 @@ Key fields in each divergence group:
 
 ### Interpreting with auxiliary trace data
 
-Object positions in trace rows and aux events are ROM centre coordinates. Do not compare them directly to debug HUD `Pos:` values or `getX()` / `getY()` top-left bounds; use `getCentreX()` / `getCentreY()` when tracing engine state.
-
 The `aux_state.jsonl` file contains rich event data for debugging divergences. Key event types:
 
 **`slot_dump`** — Full snapshot of all occupied SST slots when any object appears:
@@ -153,6 +151,10 @@ S1 routines: 0=init, 2=control, **4=hurt**, 6=death, 8=reset. NOT the same as S2
 grep '"slot":75' src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl | grep "appeared\|removed"
 ```
 
+Object positions in trace rows and aux events are ROM centre coordinates. Do not compare them directly to debug HUD `Pos:` values or `getX()` / `getY()` top-left bounds; use `getCentreX()` / `getCentreY()` when tracing engine state.
+
+**Object/player participation mismatch** — If the first error involves object contact, standing state, sidekick state, or object removal, classify it with the standard object contracts when present: `ObjectControlState` for controlled-player gates, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy` for which player(s) the object should inspect, and `ObjectLifetimeOps` for delete/despawn/remembered-object behavior. Prefer canonical profile compatibility wrappers over object-local fixes when the issue is generic, but prove wrapper equivalence before changing behavior.
+
 **`object_near`** — Per-frame proximity log of objects within 160px of Sonic:
 ```bash
 grep '"frame":3193' src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl | grep "object_near"
@@ -168,9 +170,9 @@ grep '"frame":3193' src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl | g
 
 4. **Warning-only 1px Y differences**: Often terrain collision rounding. Usually not actionable unless they precede errors.
 
-5. **Object/player participation mismatch**: If the first error involves object contact, standing state, sidekick state, or object removal, classify it with the standard object contracts when present: `ObjectControlState` for controlled-player gates, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy` for which player(s) the object should inspect, and `ObjectLifetimeOps` for delete/despawn/remembered-object behavior. Prefer canonical profile compatibility wrappers over object-local fixes when the issue is generic, but prove wrapper equivalence before changing behavior.
-
 ### CSV column reference (v2.2, csv_version=4)
+
+Recorder schemas have advanced since this table was written (the S1 complete-run recorder is at v3.x). Treat the table below as a starting reference only — the recorder script's CSV header function and the trace's own `metadata.json` are the authoritative source for current column layout.
 
 | Column | Index | Description |
 |---|---|---|
@@ -219,6 +221,6 @@ For a full re-record and test cycle:
 2. Verify metadata.json has correct date/zone/csv_version
 3. Copy 3 files to test resources
 4. Repeat for second zone if doing both
-5. Run `mvn test -Dtest="*Trace*"`
-6. Compare error count against baseline (GHZ1=0, MZ1=224)
+5. Run `mvn test -Dtest="*TraceReplay"`
+6. Compare error count against the current baseline in `docs/TRACE_FRONTIER_LOG.md` (GHZ1 should stay 0)
 7. If errors changed: read report JSON and cross-reference aux events at first error frame

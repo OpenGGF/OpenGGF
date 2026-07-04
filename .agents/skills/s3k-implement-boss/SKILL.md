@@ -1,6 +1,6 @@
 ---
 name: s3k-implement-boss
-description: Guide for implementing Sonic 3 and Knuckles bosses with ROM-accurate behavior, arena setup, and disassembly cross-checks.
+description: Use when implementing a Sonic 3&K boss — ports boss object logic from skdisasm, arena setup, multi-phase patterns, character variants.
 ---
 
 # Implement Sonic 3&K Boss
@@ -93,7 +93,7 @@ Rules for finding S3K pointers:
 - Always run `RomOffsetFinder` with `--game s3k`. Never default or `--game s2`; never read values out of a Sonic 3 disassembly or ROM map.
 - When the tool returns both `sonic3k.asm` and `s3.asm` results, **pick the `sonic3k.asm` one**.
 - When reading boss disassembly, always use the `sonic3k.asm` version (S3KL code path); it may contain zone-specific overrides or Knuckles variants absent from the S3 standalone version.
-- If you cannot find an S&K-side equivalent, stop and ask — do not substitute an S3 address.
+- If, after exhausting S&K-side variants, there is genuinely no S&K equivalent, the `s3.asm` reference is legitimate — some S3K objects reference S3-half assets directly. Use it after verifying the object's code points there. This is a rare edge case; don't loop forever or block on a non-existent S&K variant.
 
 ## Mandatory Art Corruption Guard Tests
 
@@ -137,7 +137,6 @@ Delegate multiple agents to explore the disassembly. **Include this instruction 
 
 **Key disassembly patterns to identify:**
 - `collision_flags` set to boss collision category
-- ROM `x_pos` / `y_pos` as centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
 - `collision_property` used for hit count (starts at 8, decremented)
 - Boss palette flash via palette RAM writes
 - Camera boundary manipulation for arena lock
@@ -145,31 +144,33 @@ Delegate multiple agents to explore the disassembly. **Include this instruction 
 - `character_id` checks for Knuckles-specific behavior
 - Child sprite setup via `mainspr_childsprites` (inline children at offset +$16)
 
+When porting boss object positions, ROM `x_pos` / `y_pos` are centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
+
 ### Phase 2: Arena & Level Event Setup
 
-S3K bosses use `Sonic3kLevelEventManager` (at `game/sonic3k/Sonic3kLevelEventManager.java`) for arena setup and boss spawning. This manager extends `AbstractLevelEventManager`, though per-zone event handlers are still pending implementation.
+S3K bosses use `Sonic3kLevelEventManager` (at `game/sonic3k/Sonic3kLevelEventManager.java`) for arena setup and boss spawning. This manager extends `AbstractLevelEventManager` and delegates to per-zone handler classes in `game/sonic3k/events/` (e.g. `Sonic3kAIZEvents`, `Sonic3kCNZEvents`, `Sonic3kHCZEvents`) — see `Sonic3kZoneEvents` for the shared `camera()`/`audio()`/`gameState()`/`spawnObject(...)` helpers. Zones without a handler class yet fall back to default/no-op behavior; add one following the existing pattern if the target zone doesn't have one.
 
-Add zone-specific event handling in a zone handler method or class:
+Add zone-specific event handling in the zone's handler class:
 
 ```java
-// In Sonic3kLevelEventManager or a delegated zone handler class
+// In the zone's event handler class (extends Sonic3kZoneEvents, called from Sonic3kLevelEventManager)
 private void updateAizAct1Events() {
     switch (eventRoutine) {
         case 0 -> {
             // Wait for approach trigger
-            if (camera.getX() >= AIZ_MINIBOSS_TRIGGER_X) {
-                camera.setMinX(camera.getX());
+            if (camera().getX() >= AIZ_MINIBOSS_TRIGGER_X) {
+                camera().setMinX(camera().getX());
                 eventRoutine += 2;
             }
         }
         case 2 -> {
             // Lock arena and spawn boss
-            if (camera.getX() >= AIZ_MINIBOSS_ARENA_X) {
-                camera.setMinX((short) AIZ_MINIBOSS_ARENA_MIN);
-                camera.setMaxX((short) AIZ_MINIBOSS_ARENA_MAX);
+            if (camera().getX() >= AIZ_MINIBOSS_ARENA_X) {
+                camera().setMinX((short) AIZ_MINIBOSS_ARENA_MIN);
+                camera().setMaxX((short) AIZ_MINIBOSS_ARENA_MAX);
                 spawnAizMiniboss();
                 eventRoutine += 2;
-                AudioManager.getInstance().playMusic(Sonic3kAudioProfile.MUS_MINIBOSS);
+                audio().playMusic(Sonic3kMusic.MINIBOSS.id);
             }
         }
         // ...
@@ -383,10 +384,10 @@ Register in `Sonic3kObjectRegistry` (create if needed):
 
 ```java
 registerFactory(Sonic3kObjectIds.ZONE_MINIBOSS,
-    (spawn, registry) -> new Sonic3kZoneMinibossInstance(spawn, LevelManager.getInstance()));
+    (spawn, registry) -> new Sonic3kZoneMinibossInstance(spawn));
 
 registerFactory(Sonic3kObjectIds.ZONE_ENDBOSS,
-    (spawn, registry) -> new Sonic3kZoneEndBossInstance(spawn, LevelManager.getInstance()));
+    (spawn, registry) -> new Sonic3kZoneEndBossInstance(spawn));
 ```
 
 Register your factory in existing `Sonic3kObjectRegistry.registerDefaultFactories()`.
@@ -488,11 +489,12 @@ Report any discrepancies with specific line references.
 | Boss state context | `src/.../level/objects/boss/BossStateContext.java` |
 | Boss child base | `src/.../level/objects/boss/AbstractBossChild.java` |
 | Level events | `src/.../game/sonic3k/Sonic3kLevelEventManager.java` |
+| Per-zone event handlers | `src/.../game/sonic3k/events/` (e.g. `Sonic3kAIZEvents.java`, `Sonic3kCNZEvents.java`), base class `Sonic3kZoneEvents.java` (`camera()`/`audio()`/`gameState()`/`spawnObject(...)` helpers) |
 | Zone set enum | `src/.../game/sonic3k/constants/S3kZoneSet.java` |
 | Object IDs | `src/.../game/sonic3k/constants/Sonic3kObjectIds.java` |
 | ROM offsets | `src/.../game/sonic3k/constants/Sonic3kConstants.java` |
 | Registry | `src/.../game/sonic3k/objects/Sonic3kObjectRegistry.java` |
-| Audio profile | `src/.../game/sonic3k/audio/Sonic3kAudioProfile.java` |
+| Music / SFX ids | `src/.../game/sonic3k/audio/Sonic3kMusic.java`, `src/.../game/sonic3k/audio/Sonic3kSfx.java` |
 | S2 boss examples | `src/.../game/sonic2/objects/bosses/` |
 | Disassembly main | `docs/skdisasm/sonic3k.asm` |
 | Shared sprites | `docs/skdisasm/General/Sprites/` |

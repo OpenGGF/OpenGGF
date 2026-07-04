@@ -13,7 +13,7 @@ $ARGUMENTS: Zone abbreviation (e.g., "AIZ", "HCZ", "CNZ", "LRZ1") + mode: `imple
 
 ## Related Skills
 
-- **s3k-disasm-guide** (`.claude/skills/s3k-disasm-guide/skill.md`) -- disassembly navigation, label conventions, RomOffsetFinder commands, S&K vs S3 address selection.
+- **s3k-disasm-guide** (`.claude/skills/s3k-disasm-guide/SKILL.md`) -- disassembly navigation, label conventions, RomOffsetFinder commands, S&K vs S3 address selection.
 - **s3k-zone-analysis** -- zone-level analysis spec generation (the palette cycling section of a zone analysis spec feeds directly into this skill).
 
 ## Architecture
@@ -51,10 +51,11 @@ PaletteOwnershipRegistry resolves writes and commits the frame's composed palett
 | `Sonic3kPaletteCycler` | `game/sonic3k/Sonic3kPaletteCycler.java` | Zone dispatch (`loadCycles` switch), ROM data loading, hosts all `PaletteCycle` inner classes |
 | `PaletteOwnershipRegistry` | `game/palette/PaletteOwnershipRegistry.java` | Runtime-owned palette composition and underwater mirroring |
 | `S3kPaletteWriteSupport` | `game/sonic3k/S3kPaletteWriteSupport.java` | Helpers for submitting contiguous/color writes into the registry |
-| `PaletteCycle` | Inner abstract class in `Sonic3kPaletteCycler` | Base for all zone cycles; single method: `abstract void tick(Level level, GraphicsManager gm)` |
+| `PaletteCycle` | Inner abstract class in `Sonic3kPaletteCycler` | Base for all zone cycles; single method: `abstract void tick(Level level, PaletteOwnershipRegistry registry)` |
 | `Sonic3kConstants` | `game/sonic3k/constants/Sonic3kConstants.java` | ROM addresses and sizes: `ANPAL_{ZONE}_{N}_ADDR`, `ANPAL_{ZONE}_{N}_SIZE` |
 | `Palette` | `level/Palette.java` | 16-color palette line; `getColor(index).fromSegaFormat(byte[], offset)` writes a Mega Drive color word |
 | `GraphicsManager` | `graphics/GraphicsManager.java` | Used when the registry commits composed palettes to GPU textures |
+| `S3kPaletteOwners` | `game/sonic3k/S3kPaletteOwners.java` | Owner-id constants (e.g. `LBZ_ZONE_CYCLE`) and priority constants (e.g. `PRIORITY_ZONE_CYCLE`) passed to every registry write |
 
 ## The Counter/Step/Limit Pattern
 
@@ -82,7 +83,7 @@ Every AnPal channel in the ROM follows the same structure. Understanding this pa
 ### Java Equivalent
 
 ```java
-// Inside a PaletteCycle.tick() method:
+// Inside a PaletteCycle.tick(Level level, PaletteOwnershipRegistry registry) method:
 if (timer > 0) {
     timer--;
 } else {
@@ -94,11 +95,16 @@ if (timer > 0) {
         counter = 0;
     }
 
-    Palette pal2 = level.getPalette(2);   // palette line 3 = engine index 2
-    pal2.getColor(12).fromSegaFormat(data, d0);      // +$18 = color 12
-    pal2.getColor(13).fromSegaFormat(data, d0 + 2);  // +$1A = color 13
-    pal2.getColor(14).fromSegaFormat(data, d0 + 4);  // +$1C = color 14
-    dirty2 = true;
+    // palette line 3 = engine index 2; +$18 = color 12 (writes colors 12-14)
+    S3kPaletteWriteSupport.applyContiguousPatch(
+            registry,
+            level,
+            GameServices.graphics(),
+            S3kPaletteOwners.ZONE_ANPAL,
+            S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+            2,
+            12,
+            slice(data, d0, 6));
 }
 ```
 
@@ -154,7 +160,7 @@ Some zones have BOTH systems active simultaneously (e.g., AIZ has cycling for wa
 
 ### Phase 1: Read the Analysis Spec
 
-If a zone analysis spec exists (in `docs/superpowers/specs/`), read the palette cycling section first. It will list:
+If a zone analysis spec exists (in `docs/s3k-zones/{zone}-analysis.md`), read the palette cycling section first. It will list:
 - Number of channels
 - Timer periods
 - Counter step/limit values
@@ -285,7 +291,8 @@ private static class ZoneCycle extends PaletteCycle {
     // private int timer2;
     // private int counter2;
 
-    // Dirty flags -- one per palette line modified
+    // Dirty flags -- one per palette line modified (drive the registry-null
+    // test fallback below; see S3kPaletteOwners / Common Mistake #7)
     private boolean dirty2;  // palette line 3 (engine index 2)
     private boolean dirty3;  // palette line 4 (engine index 3)
 
@@ -295,37 +302,46 @@ private static class ZoneCycle extends PaletteCycle {
     }
 
     @Override
-    void tick(Level level, GraphicsManager gm) {
+    void tick(Level level, PaletteOwnershipRegistry registry) {
+        GraphicsManager gm = GameServices.graphics();
+
         // Timer check
         if (timer > 0) {
             timer--;
         } else {
             timer = N - 1;  // ROM reload value
 
-            // Channel 1: read counter, advance, wrap, write colors
+            // Channel 1: read counter, advance, wrap, submit colors into the registry
             int d0 = counter0;
             counter0 += S;
             if (counter0 >= LIMIT) {
                 counter0 = 0;
             }
 
-            Palette palX = level.getPalette(X);  // X = palette line index (0-based)
-            palX.getColor(A).fromSegaFormat(data1, d0);
-            palX.getColor(A + 1).fromSegaFormat(data1, d0 + 2);
-            // ... for each color in the step ...
+            S3kPaletteWriteSupport.applyContiguousPatch(
+                    registry,
+                    level,
+                    gm,
+                    S3kPaletteOwners.ZONE_ANPAL,          // this zone's owner id in S3kPaletteOwners
+                    S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                    X,  // X = palette line index (0-based)
+                    A,  // A = first color index in the step
+                    slice(data1, d0, S));
             dirtyX = true;
         }
 
-        // GPU upload (always at end of tick, guarded by isGlInitialized)
-        if (gm.isGlInitialized()) {
-            if (dirty2) {
-                gm.cachePaletteTexture(level.getPalette(2), 2);
-                dirty2 = false;
-            }
-            if (dirty3) {
-                gm.cachePaletteTexture(level.getPalette(3), 3);
-                dirty3 = false;
-            }
+        // Fallback GPU cache path for direct (registry == null) construction, e.g. a unit
+        // test driving a cycle without a PaletteOwnershipRegistry. In production the
+        // registry is never null: Sonic3kPaletteCycler.update() calls
+        // paletteRegistry.resolveInto(...) once per frame after all cycles tick, and that
+        // resolve step is what actually composes and uploads the palette to the GPU.
+        if (dirty2) {
+            cacheFallbackPaletteTexture(registry, gm, level, 2);
+            dirty2 = false;
+        }
+        if (dirty3) {
+            cacheFallbackPaletteTexture(registry, gm, level, 3);
+            dirty3 = false;
         }
     }
 }
@@ -431,7 +447,7 @@ Examples:
 
 6. **Implementing palette mutations in the cycler.** Camera-threshold writes from `_Resize` routines belong in the zone event handler (e.g., `Sonic3kAIZEvents`), not in `Sonic3kPaletteCycler`. The cycler is exclusively for `AnPal_*` timer-based cycling. The one exception is `HczCycle`, which embeds cave-lighting mutations because they share state with the water cycle.
 
-7. **Forgetting the GPU upload.** Every `tick()` must end with the `if (gm.isGlInitialized()) { if (dirtyN) { gm.cachePaletteTexture(...); dirtyN = false; } }` block. Without it, palette changes are computed but never rendered.
+7. **Calling `gm.cachePaletteTexture(...)` directly from a cycle.** Cycles do not upload to the GPU themselves. Every color write goes through `S3kPaletteWriteSupport` (e.g. `applyContiguousPatch`, `applyColors`) or `registry.submit(PaletteWrite...)`, which submits into the `PaletteOwnershipRegistry`. The actual composition and GPU upload happens centrally, once per frame, in `Sonic3kPaletteCycler.update()` via `paletteRegistry.resolveInto(...)` -- after all cycles have ticked. Do NOT add a per-cycle `gm.cachePaletteTexture(...)` call; it would race with (or duplicate) the registry's resolve step. The `cacheFallbackPaletteTexture(...)` helper some cycles call at the end of `tick()` is a no-op whenever `registry != null`, so it only matters for direct registry-less construction (e.g. isolated unit tests).
 
 8. **Using `Camera.getInstance()` instead of `GameServices.camera()`.** The main repo implementations use `GameServices.camera()` for camera access. Be consistent with the existing pattern.
 

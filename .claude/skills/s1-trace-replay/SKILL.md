@@ -94,13 +94,13 @@ cp "$SRC/metadata.json" "$DST/metadata.json"
 ## Step 3: Run Trace Replay Tests
 
 ```bash
-cd "C:/Users/farre/IdeaProjects/sonic-engine" && mvn test -Dtest="*Trace*"
+cd "C:/Users/farre/IdeaProjects/sonic-engine" && mvn test -Dtest="*TraceReplay"
 ```
 
 Expected output pattern:
 - `MSE:TESTS total=15 passed=N failed=M errors=0 skipped=0`
 - GHZ1 (`TestS1Ghz1TraceReplay`) should PASS
-- MZ1 (`TestS1Mz1TraceReplay`) current baseline: **224 errors, 329 warnings**
+- MZ1 (`TestS1Mz1TraceReplay`): current per-trace error/warning counts live in `docs/TRACE_FRONTIER_LOG.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
 
 ### Test class mapping
 
@@ -172,6 +172,8 @@ grep '"frame":3193' src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl | g
 
 ### CSV column reference (v2.2, csv_version=4)
 
+Recorder schemas have advanced since this table was written (the S1 complete-run recorder is at v3.x). Treat the table below as a starting reference only — the recorder script's CSV header function and the trace's own `metadata.json` are the authoritative source for current column layout.
+
 | Column | Index | Description |
 |---|---|---|
 | frame | 0 | Trace frame number (hex) |
@@ -219,6 +221,6 @@ For a full re-record and test cycle:
 2. Verify metadata.json has correct date/zone/csv_version
 3. Copy 3 files to test resources
 4. Repeat for second zone if doing both
-5. Run `mvn test -Dtest="*Trace*"`
-6. Compare error count against baseline (GHZ1=0, MZ1=224)
+5. Run `mvn test -Dtest="*TraceReplay"`
+6. Compare error count against the current baseline in `docs/TRACE_FRONTIER_LOG.md` (GHZ1 should stay 0)
 7. If errors changed: read report JSON and cross-reference aux events at first error frame
