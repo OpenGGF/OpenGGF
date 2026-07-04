@@ -108,9 +108,9 @@ future minimap without per-ghost streams.
 
 ### 4.4 Budget at the design point (256-player relay room)
 
-Ghost frame: x,y 16-bit each + resolved mapping frame + flip/status flags + 1
-reserved byte = **7 bytes** (see §7 for why this is final render state, not
-animation state).
+Ghost frame: x,y 16-bit each + resolved mapping frame + flip/status flags +
+render-layer byte (priority bucket + high-priority flag, 4 bits reserved) =
+**7 bytes** (see §7 for why this is final render state, not animation state).
 Upstream: 60 Hz sampled, batched 3 frames/packet at 20 pkt/s ≈ **1.5 KB/s per client**.
 
 | Path | Rate |
