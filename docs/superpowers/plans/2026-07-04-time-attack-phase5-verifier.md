@@ -82,6 +82,10 @@ public final class VerdictCodec {
             String recordingHashHex, String result);
     public static boolean isPass(String result);   // RESULT_PASS only
     public static boolean isFail(String result);   // the four FAIL_* values
+    /** The ONLY results a worker may post: PASS or FAIL_*. VOID_NO_UPLOAD is master-issued
+     *  (unsigned, timeout code only) — a leased verifier must not be able to sign it (or any
+     *  unknown string) to clear a pending row WITHOUT triggering the cheat sanction. */
+    public static boolean isWorkerResult(String result);   // isPass(result) || isFail(result)
 }
 ```
 
@@ -115,6 +119,11 @@ class TestVerdictCodec {
         assertTrue(VerdictCodec.isFail(VerdictCodec.RESULT_FAIL_TRACK_MISMATCH));
         assertFalse(VerdictCodec.isFail(VerdictCodec.RESULT_VOID_NO_UPLOAD));
         assertFalse(VerdictCodec.isPass(VerdictCodec.RESULT_VOID_NO_UPLOAD));
+        assertTrue(VerdictCodec.isWorkerResult(VerdictCodec.RESULT_PASS));
+        assertTrue(VerdictCodec.isWorkerResult(VerdictCodec.RESULT_FAIL_DIVERGENT));
+        assertFalse(VerdictCodec.isWorkerResult(VerdictCodec.RESULT_VOID_NO_UPLOAD)); // master-only
+        assertFalse(VerdictCodec.isWorkerResult("BOGUS"));
+        assertFalse(VerdictCodec.isWorkerResult(null));
     }
 
     @Test
@@ -504,7 +513,7 @@ git commit -m "feat(net): verdict persistence + cheat-verdict sanction consequen
   - `POST /verifier/register` — 404 unless `verifierRegistrationToken` configured; `Authorization: Bearer <verifierRegistrationToken>` else 401; JSON body `{"pubKeyBase64": "...", "fingerprints": ["0.6:cafe1234"]}` → `{"workerId": "...", "workerToken": "..."}`.
   - `GET /verifier/jobs` — headers `X-Worker-Id` + `Authorization: Bearer <workerToken>` via `VerifierRegistry.authenticate` else 401; lease → 200 JSON of the `Job` record, or 204.
   - `GET /recordings/{hash}` — worker auth (same headers) else 401; blob or 404.
-  - `POST /verifier/verdicts` — worker auth; JSON `{"jobId": "...", "result": "PASS", "signatureBase64": "..."}`; `PlayerIdentity.verify(worker.publicKeyEncoded(), VerdictCodec.canonicalBytes(jobId, job.attemptRef(), job.inputRecordingHashHex(), result), sig)` else 400; `jobQueue.complete(jobId, workerId)` — empty (never leased, or leased by a DIFFERENT worker) → 409 rejected, nothing applied: the signature proves who wrote the verdict, only the lease proves the master assigned this job to them; then `VerdictConsequences.apply` + room routing callback (Task 7); 204. Test both rejection cases in `TestMasterHttpRoutes` (verdict for an unleased job; verdict from worker B for worker A's lease).
+  - `POST /verifier/verdicts` — worker auth; JSON `{"jobId": "...", "result": "PASS", "signatureBase64": "..."}`; FIRST `VerdictCodec.isWorkerResult(result)` else 400 with nothing applied (a signature makes a result authentic, not legitimate: a leased verifier posting a signed `VOID_NO_UPLOAD` or `"BOGUS"` would otherwise remove a pending row while dodging the FAIL_* cheat sanction — `VOID_NO_UPLOAD` may only ever originate from the master's own upload-timeout code); then `PlayerIdentity.verify(worker.publicKeyEncoded(), VerdictCodec.canonicalBytes(jobId, job.attemptRef(), job.inputRecordingHashHex(), result), sig)` else 400; `jobQueue.complete(jobId, workerId)` — empty (never leased, or leased by a DIFFERENT worker) → 409 rejected, nothing applied: the signature proves who wrote the verdict, only the lease proves the master assigned this job to them; then `VerdictConsequences.apply` + room routing callback (Task 7); 204. Test all four rejection cases in `TestMasterHttpRoutes`: verdict for an unleased job; verdict from worker B for worker A's lease; a correctly-signed `VOID_NO_UPLOAD` from the leaseholder → 400, job stays LEASED, no verdict row, no room routing; a correctly-signed `"BOGUS"` result → same.
   - Anything else under `/recordings` or `/verifier` → 404. All handlers run on the broker loop via `server.execute(...)` for queue/registry access (single-thread discipline of `net.master`).
 
 - [ ] **Step 1: Failing test** — drive `MasterHttpRoutes` with Netty `EmbeddedChannel` (no sockets): upload happy path + wrong hash 400 + oversized 413 + bad token 401; register→lease→verdict happy path with a real `PlayerIdentity` signing; bad signature 400. Write each as its own `@Test` with `FullHttpRequest` construction (`Unpooled.wrappedBuffer`, headers as specified).
@@ -546,6 +555,12 @@ public int pendingVerdictCount();
 public record FinishOutcome(int slot, int rank, boolean outsideBroadcastCap, int attemptId) {}
 /** pass -> row flips to "VERIFIED"; fail -> row removed, ranks recomputed; both rebroadcast StandingsDelta. Unknown slot/attempt ignored. */
 public void onVerdict(int slot, int attemptId, boolean pass);
+/** The accepted AttemptFinish backing the slot's CURRENT standings row (null when none) —
+ *  stored on every accepted improving finish, cleared by startRound. Spot-checking (Task 11)
+ *  needs the ORIGINAL recording/ghost hashes and frame fields to build a verification job;
+ *  StandingsRow carries only display data (name, time, rank), so without this retention a
+ *  round-end spot-check has nothing to verify against. Applies to casual AND verified rooms. */
+public ControlMessage.AttemptFinish bestFinish(int slot);
 ```
 
   ROUND_END→(VOTE|LOBBY) transition is deferred while `pendingVerdictCount() > 0`, up to `ROUND_END_LINGER_MILLIS + pendingHoldMillis`. Pending rows are removed ONLY by a verdict or an upload void inside the hold; because the hold outlasts `verifiedUploadDeadlineSeconds`, every pending row resolves (verdict or `VOID_NO_UPLOAD`) before the hold can expire in normal operation. If the hold DOES expire with rows still pending (verifier stalled), the remaining PENDING rows are removed AND the master voids their jobs via the normal `onVerdict(slot, attemptId, false)` routing — queue and standings must never disagree about an attempt's fate (unproven times don't podium — spec §6.3 "podium waits for pending verdicts").
@@ -575,6 +590,11 @@ public interface VerificationHooks {
     // hold expire -> row removed (the master voids the job via onVerdict(false) — Task 7 wiring)
 }
 @Test void casualRoomRowsStayNoneAndNothingHolds() { ... }
+@Test void bestFinishRetainsTheAcceptedOriginalPerSlot() {
+    // accepted finish -> bestFinish(slot) returns THAT AttemptFinish (same hashes/frames);
+    // a slower later finish does not replace it; a faster one does; startRound clears it;
+    // bestFinish(unknownSlot) == null
+}
 ```
 
 Broker test additions: the three creation rejections + the TRUSTED join gate (reuse the existing broker test fixture; put the creator at TRUSTED via the ladder helpers).
@@ -740,9 +760,9 @@ git commit -m "feat(tools): openggf-verifier worker - poll, replay, signed verdi
 - Test: `src/test/java/com/openggf/net/master/TestSpotCheck.java`
 
 **Interfaces:**
-- Spot-check rule (security spec §6.3): when a **casual** relay room's round reaches ROUND_END, and `verifierRegistry.verifierAvailable(room fingerprint)`, select the top `config.spotCheckTopTimes()` standings rows and invoke the Task-7 hook with `spotCheck=true` (spot-check jobs are submitted with the LONG `uploadDeadlineSeconds` window — the player may have left the post-round screen; verified finishes use the short `verifiedUploadDeadlineSeconds` window, Task 7). Spot-check jobs skip standings routing entirely — a FAIL still sanctions via `VerdictConsequences` (post-hoc), a VOID (no upload) records the verdict row only. Per-identity throttle: at most one spot-check per fingerprint per hour (in-memory map, clock-injected) so repeat winners aren't re-verified every round.
+- Spot-check rule (security spec §6.3): when a **casual** relay room's round reaches ROUND_END, and `verifierRegistry.verifierAvailable(room fingerprint)`, select the top `config.spotCheckTopTimes()` standings rows and, FOR EACH, read `engine.bestFinish(row.slot())` on the room's loop — the retained original `AttemptFinish` (Task 7) — then invoke the Task-7 hook with `spotCheck=true` and that ORIGINAL message (a `StandingsRow` has no attemptId, hashes, or frame fields; a job built from anything but the original finish would verify fabricated data). `bestFinish` null (defensive — a row without a retained finish) → skip that row. Spot-check jobs are submitted with the LONG `uploadDeadlineSeconds` window — the player may have left the post-round screen; verified finishes use the short `verifiedUploadDeadlineSeconds` window (Task 7). Spot-check jobs skip standings routing entirely — a FAIL still sanctions via `VerdictConsequences` (post-hoc), a VOID (no upload) records the verdict row only. Per-identity throttle: at most one spot-check per fingerprint per hour (in-memory map, clock-injected) so repeat winners aren't re-verified every round.
 
-- [ ] **Step 1: Failing test** — drive the relay round-outcome path with a fake hook recorder: casual room + verifier available → top-1 selected with `spotCheck=true`; verified room → NOT selected (already verified per-finish); no verifier available → nothing; same fingerprint twice within an hour → second skipped.
+- [ ] **Step 1: Failing test** — drive the relay round-outcome path with a fake hook recorder: casual room + verifier available → top-1 selected with `spotCheck=true` AND the hook's `AttemptFinish` is the finisher's ORIGINAL message (assert `inputRecordingHashHex`/`ghostStreamHashHex`/`timeFrames`/`firstInputFrame`/`finishFrame` all equal what was submitted — a synthesized finish would make the verifier check fabricated data); verified room → NOT selected (already verified per-finish); no verifier available → nothing; same fingerprint twice within an hour → second skipped.
 
 - [ ] **Step 2: Verify failure**, **Step 3: Implement**, **Step 4: Run** — `mvn "-Dtest=com.openggf.net.master.TestSpotCheck" test` → PASS.
 
