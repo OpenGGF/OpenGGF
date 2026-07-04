@@ -273,7 +273,10 @@ public final class TimeAttackRuntime {
         } catch (IllegalStateException e) {
             return;
         }
-        boolean endOfLevel = gameState.isEndOfLevelActive();
+        // S3K raises the ROM Level_end_flag (endOfLevelActive); S1/S2 raise the
+        // game-agnostic act-completion signal (their ROMs never set Level_end_flag,
+        // and shared physics reads it for the strict right-boundary clamp).
+        boolean endOfLevel = gameState.isEndOfLevelActive() || gameState.isActCompletionSignalActive();
         var checkpointState = level.getCheckpointState();
         int checkpointIndex = checkpointState != null ? checkpointState.getLastCheckpointIndex() : -1;
         GhostFrame sampledFrame = new GhostFrame(player.getCentreX(), player.getCentreY(),

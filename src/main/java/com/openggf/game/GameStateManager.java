@@ -134,6 +134,21 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     private boolean endOfLevelFlag;
 
     /**
+     * Game-agnostic act-completion notification. Set when the act's end-of-level
+     * sequence begins (signpost passed / capsule opened), regardless of game.
+     * <p>
+     * This is NOT a ROM flag and is deliberately NOT consumed by any physics,
+     * camera, or level-boundary code. S3K's {@link #endOfLevelActive} is a real
+     * ROM flag ({@code Level_end_flag}) that shared physics reads (e.g. the strict
+     * right-boundary clamp), so S1/S2 must not set it — their ROMs keep the player
+     * running past the signpost with no such clamp. This separate signal lets
+     * game-agnostic consumers such as time attack observe act completion across all
+     * three games without perturbing physics. Cleared on level load via
+     * {@link #resetForLevel()}.
+     */
+    private boolean actCompletionSignalActive;
+
+    /**
      * In-game pause flag (ROM: Game_paused at $FFFFF63A for S3K, $FFFFFE5C for
      * S1, $FFFFFF7E for S2). Distinct from the loop/timing-level window-focus and
      * keyboard-toggle pauses in {@link com.openggf.GameLoop}: when this flag is
@@ -191,6 +206,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         this.collectedSpecialRings = 0;
         this.endOfLevelActive = false;
         this.endOfLevelFlag = false;
+        this.actCompletionSignalActive = false;
         this.gamePaused = false;
     }
 
@@ -211,6 +227,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     public void resetForLevel() {
         endOfLevelActive = false;
         endOfLevelFlag = false;
+        actCompletionSignalActive = false;
         gamePaused = false;
         // ROM clears f_lockscreen at level load; the per-act boss DLE re-sets it
         // when the boss spawns. Resetting here prevents a prior act's screen lock
@@ -667,6 +684,19 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * ROM: move.b #1,(Level_end_flag).w
      */
     public void setEndOfLevelActive(boolean active) { this.endOfLevelActive = active; }
+
+    /**
+     * Whether the game-agnostic act-completion signal is set (see
+     * {@link #actCompletionSignalActive}). Consumed by act-completion observers
+     * such as time attack; never read by physics/boundary code.
+     */
+    public boolean isActCompletionSignalActive() { return actCompletionSignalActive; }
+
+    /**
+     * Sets the game-agnostic act-completion signal. Set by the S1/S2/S3K signpost
+     * (or capsule) when the end-of-act sequence begins.
+     */
+    public void setActCompletionSignalActive(boolean active) { this.actCompletionSignalActive = active; }
 
     /**
      * Gets the end-of-level completed flag.

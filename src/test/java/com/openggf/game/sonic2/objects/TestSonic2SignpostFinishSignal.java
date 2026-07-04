@@ -14,14 +14,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * The S2 signpost (Obj0D) must flag the end-of-level sequence ({@code Level_end_flag})
- * when the player passes it, the same way S3K signposts/capsules do. Shared runtime
- * code keys off that flag (strict right level boundary, and the time-attack finish
- * signal), so S2 leaving it unset stalled timed attempts.
+ * The S2 signpost (Obj0D) must raise the game-agnostic act-completion signal when
+ * the player passes it, so observers such as time attack can detect act completion.
+ * It must NOT set the ROM {@code Level_end_flag} ({@code endOfLevelActive}): shared
+ * physics reads that flag for the strict right-boundary clamp, but the S2 ROM keeps
+ * the player running past the signpost with no such clamp.
  */
 class TestSonic2SignpostFinishSignal {
     @Test
-    void passingSignpostFlagsEndOfLevel() {
+    void passingSignpostRaisesActCompletionSignal() {
         GameStateManager gameState = new GameStateManager();
         SonicConfigurationService config = mock(SonicConfigurationService.class);
         when(config.getString(SonicConfiguration.MAIN_CHARACTER_CODE)).thenReturn("sonic");
@@ -43,9 +44,11 @@ class TestSonic2SignpostFinishSignal {
             }
         });
 
-        assertFalse(gameState.isEndOfLevelActive());
+        assertFalse(gameState.isActCompletionSignalActive());
         signpost.update(0, player); // player centred on the signpost -> Obj0D_Main activation
-        assertTrue(gameState.isEndOfLevelActive(),
-                "S2 signpost must flag the end-of-level sequence when the player passes it");
+        assertTrue(gameState.isActCompletionSignalActive(),
+                "S2 signpost must raise the act-completion signal when the player passes it");
+        assertFalse(gameState.isEndOfLevelActive(),
+                "S2 signpost must NOT set the ROM Level_end_flag (physics reads it)");
     }
 }
