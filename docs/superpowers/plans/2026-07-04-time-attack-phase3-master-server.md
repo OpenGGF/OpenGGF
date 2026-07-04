@@ -83,7 +83,7 @@ Expected: on `feature/multiplayer-time-attack` (based on `next` — owner direct
   - Standings at scale (main spec §6.3 — never push the full list to hundreds of clients): `StandingsPageRequest(int page)`; `StandingsPage(List<StandingsRow> rows, int page, int totalPages)`; `RankUpdate(int rank, int bestTimeFrames)` (unicast to a finisher whose row may be outside the broadcast cap).
 - Produces — `GhostPackets` additions:
   - `record RosterEntry(int playerSlot, int cellX, int cellY, int status)`; status constants `ROSTER_STATUS_IDLE = 0`, `ROSTER_STATUS_RUNNING = 1`, `ROSTER_STATUS_FINISHED = 2`.
-  - `byte[] encodeRoster(List<RosterEntry> entries)` / `List<RosterEntry> decodeRoster(byte[] packet)` — layout: `u8 type=0x03, u16 entryCount BE, then per entry u8 slot, u16 cellX BE, u8 cellY, u8 status` (position quantized to 64-px cells; 5 bytes/player, 256 players ≈ 1.3 KB at 1 Hz — within main spec §4.3's budget). Count is `u16` because a full relay room has 256 entries — a `u8` count caps at 255, one short of `MAX_PLAYERS_RELAY`. cellX is `u16` because acts wider than 16 320 px exist and the phase-4 minimap consumes this field; cellY stays `u8` (no act approaches 16 320 px tall). Range discipline is split: the HUB's quantizer clamps into wire range (`x >>> 6` capped — Task 3); the CODEC **rejects** out-of-range fields (`slot`/`cellY`/`status` outside 0..255, `cellX` outside 0..65535, status above `ROSTER_STATUS_FINISHED`) with `ProtocolViolationException` — a bare `(byte)`/`(short)` cast would silently wrap on the wire, contradicting the hardening rules below. Encode also rejects more than `Protocol.MAX_PLAYERS_RELAY` entries.
+  - `byte[] encodeRoster(List<RosterEntry> entries)` / `List<RosterEntry> decodeRoster(byte[] packet)` — layout: `u8 type=0x03, u16 entryCount BE, then per entry u8 slot, u16 cellX BE, u8 cellY, u8 status` (position quantized to 64-px cells; 5 bytes/player, 256 players ≈ 1.3 KB at 1 Hz — within main spec §4.3's budget). Count is `u16` because a full relay room has 256 entries — a `u8` count caps at 255, one short of `MAX_PLAYERS_RELAY`. cellX is `u16` because acts wider than 16 320 px exist and the phase-4 minimap consumes this field; cellY stays `u8` (no act approaches 16 320 px tall). Range discipline is split: the HUB's quantizer clamps into wire range (`x >>> 6` capped — Task 3); the CODEC **rejects** out-of-range fields with `ProtocolViolationException` on BOTH sides — encode refuses `slot`/`cellY` outside 0..255, `cellX` outside 0..65535, and `status` above `ROSTER_STATUS_FINISHED` before any narrowing cast (a bare cast would silently wrap on the wire), and decode refuses status bytes above `ROSTER_STATUS_FINISHED` (the other fields are width-bounded by the wire format; status is the one semantically constrained byte a hostile packet could smuggle through). Encode also rejects more than `Protocol.MAX_PLAYERS_RELAY` entries.
   - `TYPE_RELAY_GUEST_BINARY = 0x04`: `byte[] encodeRelayGuestBinary(int guestId, byte[] payload)` / `record RelayGuestBinary(int guestId, byte[] payload)` + `decodeRelayGuestBinary(byte[])` — layout `u8 type, u16 guestId BE, payload` (payload itself is a normal ghost packet; total still ≤ `Protocol.MAX_BINARY_BYTES`... the tunnel adds 3 bytes, so payload cap = `MAX_BINARY_BYTES - 3`, enforced).
   - **Tunnel framing headroom:** `RelayGuestText` nests a full control envelope (itself up to `Protocol.MAX_CONTROL_BYTES`) inside another control envelope AS A JSON STRING — worst-case string escaping (`"` → `\"`, `\` → `\\`) can nearly DOUBLE the inner bytes. Add `Protocol.MAX_MASTER_FRAME_BYTES = 2 * MAX_CONTROL_BYTES + 1024` (17 408) — sized for a fully-escaped near-cap inner envelope plus wrapper overhead. The raised cap applies at BOTH layers of the master connection, and only there:
     - **Transport:** the master pipeline's WS frame/aggregation caps (Task 12) and the master-client/host-link assembler (Task 13).
@@ -165,6 +165,9 @@ class TestPhase3Protocol {
         byte[] wrongType = good.clone();
         wrongType[0] = 0x01;
         assertThrows(ProtocolViolationException.class, () -> GhostPackets.decodeRoster(wrongType));
+        byte[] badStatus = good.clone();
+        badStatus[badStatus.length - 1] = (byte) 255; // status is the last byte of the single entry
+        assertThrows(ProtocolViolationException.class, () -> GhostPackets.decodeRoster(badStatus));
     }
 
     @Test
@@ -300,8 +303,15 @@ Expected: COMPILATION ERROR (new records absent).
         }
         List<RosterEntry> entries = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            entries.add(new RosterEntry(in.get() & 0xFF, in.getShort() & 0xFFFF,
-                    in.get() & 0xFF, in.get() & 0xFF));
+            int slot = in.get() & 0xFF;
+            int cellX = in.getShort() & 0xFFFF;
+            int cellY = in.get() & 0xFF;
+            int status = in.get() & 0xFF;
+            if (status > ROSTER_STATUS_FINISHED) {
+                // slot/cellX/cellY are width-bounded by the wire format; status is semantic
+                throw new ProtocolViolationException("roster status out of range: " + status);
+            }
+            entries.add(new RosterEntry(slot, cellX, cellY, status));
         }
         return entries;
     }
