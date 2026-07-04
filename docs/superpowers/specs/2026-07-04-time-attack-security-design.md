@@ -116,8 +116,15 @@ sanction. Consequences:
   display-name claim, tier, clean-round count), `sanctions` (identity, type,
   reason, issuer, issued-at, expiry), `verdicts` (identity, attempt ref,
   input-recording hash, result, verifier signature, timestamp).
-- Verdicts are **signed by the verifier** (§6), so trust history is auditable
-  and a compromised master cannot silently fabricate cheat findings.
+- Verdicts are **signed by the verifier** (§6), so *verifier-attributed*
+  findings are unforgeable — a compromised master cannot fabricate a cheat
+  verdict. This deliberately does **not** extend to master-issued moderation:
+  sanctions and demotions the master applies itself are trusted-master
+  operations, mitigated by an append-only audit log of all moderation events
+  (actor, action, reason, timestamp). Defending against a fully compromised
+  master is out of scope (§12) — the signing boundary just keeps "the
+  verifier proved cheating" and "an operator decided" distinguishable and
+  separately auditable.
 - Ops: the DB is small (KBs per identity); nightly file copy is the backup
   story. A federated or multi-master future graduates to Postgres behind the
   same `IdentityStore` interface — mechanical swap, designed for now, not
@@ -143,8 +150,14 @@ main class.
   **input-recording hash**, and the **ghost-stream hash** from day 1; the
   recording itself is uploaded on demand.
 - **Input-only attempt recording mode is an explicit contract.** An attempt
-  recording contains exactly: per-frame input masks, the track's canonical
+  recording contains exactly: per-frame input masks **from the spawn frame
+  onward — idle frames recorded as empty masks**, the track's canonical
   start-state descriptor, and the determinism fingerprint — nothing else.
+  Recording from spawn (not first input) is what makes the claim verifiable:
+  the verifier replays from the canonical start state, derives
+  `firstInputFrame` and `finishFrame` itself, and checks the claimed time
+  `finishFrame − firstInputFrame` — pre-input idling legitimately advances
+  world state and is fully covered by the recorded masks.
   The existing trace/recording stack's rich per-frame sidecar capture
   (desync-lite physics frames and aux fields) is **excluded from the attempt
   path** — at hundreds of retries per round window it would silently turn
@@ -161,8 +174,12 @@ main class.
   reproduce the claimed frame count and the finish trigger actually fired.
 - **Determinism fingerprint:** `Hello` and `AttemptFinish` carry a physics
   build fingerprint (engine version + physics-relevant constant hash + ROM
-  checksum). The verifier only accepts jobs whose fingerprint matches its own
-  build; mismatches are unverifiable, not failures.
+  checksum). Verification jobs are **routed by fingerprint**: each verifier
+  worker registers the fingerprints it supports (its build + the ROMs its
+  operator supplies), and the master queues a job only to a matching worker.
+  A fingerprint with no registered worker is unverifiable, not a failure —
+  and a room can only carry the `verified` flag (§6.3) if a matching
+  verifier is currently registered for the room's fingerprint.
 
 ### 6.3 Verified rooms flow
 
@@ -316,6 +333,10 @@ enforcement flip are deferred.** Nothing post-v1 requires a protocol break.
 ## 12. Out of scope
 
 - Community moderation workflows (reports, reviewer queues).
+- Defending against a fully compromised master (it terminates TLS, brokers
+  rooms, and applies sanctions; §5's signing boundary limits what it can
+  *forge*, not what it can *do*). Operators who cannot trust their master
+  host have no room hosting either.
 - Account/OAuth binding on top of keypairs.
 - Anti-cheat beyond replay + pacing (input-entropy heuristics, anomaly
   detection) — possible later analytics over stored recordings, no protocol

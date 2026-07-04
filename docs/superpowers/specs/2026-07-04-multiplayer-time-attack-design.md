@@ -173,7 +173,7 @@ entries is trivial; full playback cursors exist only for near ghosts.
 | `RemoteGhostRegistry` / `RemoteGhostPlayback` | Per-near-ghost jitter buffer, catch-up policy, playback cursor; roster state for far players |
 | `GhostRenderer` | Draws near ghosts + the solo best-run ghost via `PlayerSpriteRenderer.drawFrame()` at reduced opacity with nameplates, reusing the per-character art-slot pattern from `GhostTraceRenderer` (isolated DPLC banks) but consuming resolved render frames (§7) — no visual-state hydration or animation reconstruction. Registered through a new **gameplay-owned ghost render registry** consulted by `LevelRenderer`; the existing `TraceGhostHook` global stays trace-only (it also gates trace HUD flags) and becomes one adapter of the registry rather than being reused. Ghosts never enter `ObjectManager` — they cannot touch gameplay state by construction |
 | `RaceSession` | Room/round state machine: lobby → countdown → window open → podium → track vote. Standings cache, attempt lifecycle (armed → running → finished/reset/void). Owns instant-retry via the existing session/level restart choreography (purely local; peers just see the ghost blink back to the start) |
-| `TimeAttackController` | Timer starts on first input, stops when the track's typed finish provider fires (v1 implementation: signpost touch), frame-count authoritative. Disables rewind, debug overlay, and editor entry for the duration of a timed attempt |
+| `TimeAttackController` | Attempt frame counting and the input recording both begin **at spawn** (the canonical start state); the displayed timer starts on first input, and the authoritative time is `finishFrame − firstInputFrame` — both derivable by a verifier replaying the recording from spawn, since idle frames are recorded as empty input masks (security spec §6.2). Finish = the track's typed finish provider firing (v1: signpost touch). Disables rewind, debug overlay, and editor entry for the duration of a timed attempt |
 | `GhostHub` | The aggregation/relevance/roster engine of §4, including the `GhostStreamValidator` (frame-index monotonicity, level-bounds and velocity sanity, rate caps, and wall-clock pacing validation — security spec §7). **Shared verbatim between the player-host path and the master server relay** — hosting mode only changes who runs it |
 
 ### 6.2 Master server — `com.openggf.net.master` (same artifact, no engine deps)
@@ -234,8 +234,11 @@ header), `GhostAggregate` (hub → client, all near ghosts' frames for one tick)
 
 **Ghost frames carry final render state, not animation state.** Frame layout:
 x (16-bit), y (16-bit), resolved sprite mapping frame (8-bit), flip/status
-flags (h-flip, v-flip, attempt status), 1 reserved byte (spare for a 16-bit
-mapping-frame extension if any character's mapping table exceeds 255 frames).
+flags (h-flip, v-flip, attempt status), and a render-layer byte: priority
+bucket (3 bits) + high-priority flag (1 bit) — required by the layered sprite
+render pass so ghosts sort correctly against loops and foreground — with the
+remaining 4 bits reserved (spare for a mapping-frame extension if any
+character's mapping table exceeds 255 frames).
 The sender samples its sprite *after* animation resolution — the same
 `mappingFrame`/`renderHFlip`/`renderVFlip` values its own renderer draws — and
 the receiver feeds them straight to `PlayerSpriteRenderer.drawFrame()`. There
@@ -243,6 +246,14 @@ is **no animation-state reconstruction on the receive side**: unlike the trace
 ghost path (which hydrates physics state — subpixel, speeds, angle, ground
 mode — and re-runs the animation manager, because trace frames record physics
 rather than visuals), network ghosts never carry or need physics state.
+
+**DPLC random access is a hard requirement on the ghost render path.** Each
+ghost slot's isolated pattern bank must upload the art for whichever mapping
+frame is requested, on demand — snaps (§5), far→near transitions, and
+mid-stream joins mean a ghost's next drawn frame is arbitrary, never reliably
+the successor of the last one. If any part of the current playable-sprite
+DPLC path assumes sequential animation advance, phase 1 extends it for the
+ghost slots.
 
 Stale-attempt frames (old `attemptId`) are dropped silently at every layer.
 
@@ -261,7 +272,9 @@ backpressure ladder) → compose one `GhostAggregate` per recipient; 1 Hz roster
   the round.
 - Host disconnect (player-hosted) → room dissolves, toast, return to browser.
 - Relay room: master restart drops rooms (acceptable v1; rooms are ephemeral).
-- Direct-connect timeout (3 s) → automatic relay fallback for that pair.
+- Direct-connect timeout (3 s) → automatic relay fallback for that pair —
+  **from phase 3 onward** (the relay is the master's). In phase 2 there is no
+  relay: the timeout surfaces as a clean join failure with the reason shown.
 - Malformed packets / version mismatch → rejected at `Hello` or dropped + logged.
 - Slow consumer → §4.5 ladder, never affects other clients.
 
