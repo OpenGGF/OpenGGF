@@ -205,6 +205,15 @@ public class CheckpointObjectInstance extends BoxObjectInstance implements Rewin
     }
 
     private boolean shouldSpawnStars(AbstractPlayableSprite player) {
+        // Time attack: the star circle requests special stage entry, which is
+        // already swallowed at GameLoop's chokepoint (see GameLoop.enterSpecialStage()).
+        // Suppress the spawn itself so the player never sees stars circling with
+        // nothing to jump into. Checkpoint save/SFX/dongle above are unaffected.
+        var timeAttackGate = services().gameState();
+        if (timeAttackGate != null && timeAttackGate.isTimeAttackActive()) {
+            return false;
+        }
+
         // ROM: not 2P, emeralds < 7, rings >= 50, AND not already used for SS entry
         var checkpointState = services().checkpointState();
         if (checkpointState instanceof CheckpointState cs && cs.isUsedForSpecialStage()) {
