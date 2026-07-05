@@ -379,7 +379,12 @@ public record PerObjectRewindSnapshot(
             int doubleJumpFlag, byte doubleJumpProperty,
             boolean shield, com.openggf.game.ShieldType shieldType,
             boolean instaShieldRegistered,
-            boolean speedShoes, boolean superSonic,
+            // speedShoesRemainingTicks is captured directly (not read back from
+            // TimerManager at restore time) because TimerManager's own generic
+            // snapshot only preserves (code, ticks) pairs, not timer type --
+            // restoring the SpeedShoesTimer's remaining duration must not
+            // depend on RewindRegistry's cross-subsystem restore ordering.
+            boolean speedShoes, int speedShoesRemainingTicks, boolean superSonic,
             // Input gating / control
             boolean forceInputRight, int forcedInputMask,
             boolean forcedJumpPress, boolean suppressNextJumpPress,
