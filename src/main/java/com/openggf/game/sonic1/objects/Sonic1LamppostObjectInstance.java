@@ -197,14 +197,27 @@ public class Sonic1LamppostObjectInstance extends AbstractObjectInstance impleme
 
     /**
      * Called by the twirl child when its animation completes.
-     * Switches from "pole only" (frame 1) to "red" (frame 3).
-     * In the original ROM, the twirl child persists at its last position until off-screen,
-     * and the lamppost re-creates as red on re-entry. Since our engine destroys the twirl
-     * immediately, we switch to red here to match the intended visual result.
+     * <p>
+     * ROM Lamp_Finish (79 Lamppost.asm:122-123, routine 4) is a plain {@code rts}
+     * -- the pole object's own mapping frame is never touched again this act.
+     * The twirl child (Lamp_Twirl) is likewise never deleted here: the top-level
+     * {@code Lamppost:} dispatcher has no {@code out_of_range} check at all
+     * (79 Lamppost.asm:6-11), so both the pole and its twirl child persist and
+     * keep rendering for the rest of the act, matching {@link Sonic1LamppostTwirlInstance}
+     * freezing at (and continuing to render) its last computed orbit position.
+     * <p>
+     * A previous version of this method switched the pole to {@code FRAME_RED}
+     * here, on the theory that the engine "destroys the twirl immediately" --
+     * it doesn't (see {@link Sonic1LamppostTwirlInstance#update}, which freezes
+     * rather than self-destructing). With both objects alive, that fabricated
+     * frame swap produced a second, exactly-centered ball stacked next to the
+     * twirl's own frozen (slightly X-offset, see the twirl's angle-accumulation
+     * math) resting ball -- the "lamppost head sometimes stops duplicated and
+     * X-offset" bug. Only clear the bookkeeping flag; leave the pole's mapping
+     * frame at {@code FRAME_POLE_ONLY}, matching ROM.
      */
     public void onTwirlComplete() {
         twirlActive = false;
-        mappingFrame = FRAME_RED;
     }
 
     public int getCenterX() {
