@@ -121,42 +121,11 @@ sound driver.
 
 | Game | Status |
 |------|--------|
-| Sonic the Hedgehog (S1) | Broadly playable. All 7 zones, 6 bosses, special stages, title screen, ending/credits. When S3K is the donor, S1 can also use the donated S3K data select screen with runtime-generated zone previews and cross-game team launch support. |
-| Sonic the Hedgehog 2 (S2) | Most complete. All zones, 9 bosses (including both DEZ bosses), special stages, Tails AI, credits/ending. When S3K is the donor, S2 can also use the donated S3K data select screen with runtime-generated zone previews and cross-game team launch support. |
-| Sonic 3 & Knuckles (S3K) | Near-complete vertical-slice coverage and now the main parity/release focus. AIZ, HCZ, CNZ, MGZ, ICZ, MHZ, and parts of LBZ have substantial route object, event, boss/miniboss, scroll, palette/PLC, and trace coverage; FBZ and later zones remain the largest content frontier. S3K also includes title screen, level select, data select with save/load support, Knuckles glide/climb, Blue Ball special stages (WIP), bonus-stage parity work, palette cycling, and broad object/badnik coverage. Data select can also be donated to S1/S2 via cross-game donation. |
+| Sonic the Hedgehog (S1) | Most complete. Includes all zones, bosses, special stages, title screen, ending, and credits. |
+| Sonic the Hedgehog 2 (S2) | Broadly playable. Includes all zones, bosses, special stages, Tails AI, ending, and credits. |
+| Sonic 3 & Knuckles (S3K) | Work in progress. The Sonic/Tails path has completed AIZ through LBZ coverage, but S3K remains the main active development area. |
 
-Recent engine work has also moved shared zone behavior onto runtime-owned frameworks: `ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`, `ZoneLayoutMutationPipeline`, `ScrollEffectComposer`, `SpecialRenderEffectRegistry`, and `AdvancedRenderModeController`. The current roadmap priority is to use those systems to close playable S3K vertical slices rather than to run broad architecture migrations for their own sake. S1/S2 uplift remains valuable when it removes duplication or active risk in code already being touched, but S3K route completeness now leads work selection.
-
-Current migration status is intentionally partial rather than universal. Sonic 2 already uses the runtime-owned stack for HTZ/CNZ runtime state, palette ownership, animated tile orchestration, CNZ staged overlay rendering, and CNZ layout mutations via `ZoneLayoutMutationPipeline`. Sonic 3&K uses the same stack for AIZ/HCZ/CNZ runtime-state adapters, AIZ staged render effects and advanced render modes, HCZ/SOZ animated tile channels, CNZ runtime-state-backed scroll behavior, and seamless terrain-swap/mutation paths routed through the mutation pipeline. The shared scroll-composition helpers are live in AIZ, HCZ, and MGZ. Other S1/S2/S3K zones still mix these frameworks with older zone-local paths and should be treated as follow-up migration work rather than implied complete adoption.
-
-Near-term S3K work should be planned as playable route slices with explicit gates: required traversal objects and badniks, event/camera behavior, scroll/parallax, animated tiles, palette and PLC state, bosses or transitions, rewind coverage where state is gameplay-relevant, trace replay for known blockers, and visual validation against stable-retro where practical. AIZ through HCZ remains the primary release slice, but CNZ, MGZ, ICZ, MHZ, and LBZ now have enough coverage that work should be prioritized by route blockers and complete-run trace frontiers rather than by first-pass zone bring-up.
-
-Work is ongoing across all three games. Recent branch work spans S3K route
-stabilization (AIZ, HCZ, CNZ, MGZ, ICZ, Mushroom Hill, and Launch Base), an S3K complete-run per-zone
-trace suite (one Sonic+Tails AIZ->Doomsday movie segmented per zone, each trace
-spanning the act1->act2 transition through the zone-exit handoff) with
-ROM-accurate in-game pause modelling, explicit trace-entry capability metadata,
-and a frontier-only replay mode that bounds failing trace sweeps to the first
-divergence plus diagnostic context, animated ROM-derived master-title game previews that replace the
-bundled title emblem resource, S2 trace-frontier closures (Sky Chase and Casino
-Night
-level-select replays), object-physics standardization onto shared contracts,
-Oil Ocean object parity work covering Obj55 boss/event spawning, launcher and
-launcher-ball capture behavior, Obj15 bit-7 split/falling-child state, OOZ
-badnik projectile/floor-snap fixes, pressure-spring and oil-surface polish,
-Casino Night slot-machine reward/display alignment,
-expanded rewind coverage, and architecture-guard hardening across runtime
-ownership, trace/rewind invariants, and object-service boundaries. A recent
-test-suite quality pass (driven by a multi-agent audit) replaced assertion-free
-diagnostic, tautological, and source-text-grep tests with real behavioral
-oracles, and added a guard that fails the build on assertion-free `@Test`
-methods, plus order-dependence hardening (an S3K AIZ replay-probe crash fix, a
-fork-mate state-leak fix flagged by the singleton-lifecycle guard, and the MZ1
-lost-ring regression test rerouted through the production replay bootstrap so it
-is deterministic rather than fork-order dependent). Source-budget architecture
-guards now count effective source lines so comments and blank lines do not
-consume budget or incentivize deleting ROM-parity documentation. See CHANGELOG.md for the
-detailed, per-merge history.
+Work is ongoing across all three games. See `CHANGELOG.md` for detailed, per-merge history.
 
 ### Where do I get ROMs?
 
