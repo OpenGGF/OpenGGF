@@ -281,6 +281,16 @@ public final class TraceSessionLauncher {
         return false;
     }
 
+    /**
+     * Cleanly disengages any in-progress held realtime rewind when the level
+     * enters a non-rewindable sub-state (special/bonus-stage or ending
+     * transition pending) that {@code GameMode} alone cannot express, mirroring
+     * {@link #handleRealtimeRewindInput}'s own invalid-state cleanup path.
+     */
+    public void cancelRealtimeRewindForPendingTransition() {
+        cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+    }
+
     /** Records a normal visual replay frame after {@link GameLoop} has advanced it. */
     public void recordExternalRewindFrame() {
         if (realtimeRewinding || rewindController == null || fadeStarted) {

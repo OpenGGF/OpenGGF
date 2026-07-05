@@ -130,6 +130,23 @@ public final class LiveRewindManager {
         };
     }
 
+    /**
+     * Cleanly disengages any in-progress held rewind when the level enters a
+     * non-rewindable sub-state that {@code GameMode} itself cannot see yet --
+     * e.g. a special/bonus-stage or ending transition fade in flight, where
+     * {@code currentGameMode} stays {@code GameMode.LEVEL} until the fade's
+     * completion callback runs. Reuses the same teardown {@link #clear()} uses
+     * for the {@code mode != GameMode.LEVEL} case, so a rewind that was already
+     * held when the transition fired stops walking backward through
+     * pre-transition history instead of restoring fade/audio state whose
+     * completion callback (the only thing that would clear the transition's
+     * pending flag) is not itself rewind-restorable.
+     */
+    public void cancelForPendingTransition() {
+        activeInputHandler = null;
+        clear();
+    }
+
     public void recordExternalFrame(GameMode mode, InputHandler input) {
         if (mode != GameMode.LEVEL || input == null || !enabled()) {
             activeInputHandler = null;

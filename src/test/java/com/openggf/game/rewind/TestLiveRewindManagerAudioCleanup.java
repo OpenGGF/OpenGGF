@@ -211,6 +211,31 @@ class TestLiveRewindManagerAudioCleanup {
         assertEquals(java.util.List.of("stopAllSfx", "stopPlayback"), backend.calls);
     }
 
+    @Test
+    void cancelForPendingTransitionStopsPresentationAudioLikeModeExit() throws Exception {
+        LiveRewindManager manager = new LiveRewindManager(config);
+        RewindController controller = new RewindController(
+                new RewindRegistry(),
+                new InMemoryKeyframeStore(),
+                new FakeInputSource(4),
+                in -> {},
+                2,
+                audio);
+        setField(manager, "rewindController", controller);
+        setField(manager, "rewinding", true);
+
+        manager.cancelForPendingTransition();
+
+        assertEquals(java.util.List.of("stopAllSfx", "stopPlayback"), backend.calls);
+        assertFalse((boolean) getField(manager, "rewinding"));
+    }
+
+    private static Object getField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);

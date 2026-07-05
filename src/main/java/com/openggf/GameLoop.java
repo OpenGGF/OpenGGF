@@ -691,6 +691,25 @@ public class GameLoop {
         presenceManager.close();
     }
 
+    /**
+     * True only while the level is genuinely eligible for live rewind
+     * engagement/capture: {@code GameMode.LEVEL} AND none of the
+     * transition-pending sub-states that keep {@code currentGameMode == LEVEL}
+     * while gameplay is actually frozen and a fade/completion-callback handoff
+     * is in flight (special-stage entry, bonus-stage entry, ending transition,
+     * or a pending zone/act transition). Mirrors the {@code freezeFor*} flags
+     * this method's caller already computes for the gameplay tick itself
+     * (see the special/bonus/ending/zone-act freeze block below), so rewind's
+     * mode-based gate can see the same sub-state gap.
+     */
+    private boolean isLevelRewindable() {
+        return currentGameMode == GameMode.LEVEL
+                && !specialStageTransitionPending
+                && !bonusStageTransitionPending
+                && !endingTransitionPending
+                && !levelManager.isLevelInactiveForTransition();
+    }
+
     private void stepInternal() {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
@@ -705,13 +724,25 @@ public class GameLoop {
         playbackDebugManager.handleInput(inputHandler);
         playbackDebugManager.setObservedMode(currentGameMode);
 
-        if (currentGameMode == GameMode.LEVEL
+        boolean levelRewindable = isLevelRewindable();
+        if (currentGameMode == GameMode.LEVEL && !levelRewindable) {
+            // A special/bonus-stage or ending transition is pending, or the level
+            // is mid zone/act transition fade -- currentGameMode is still LEVEL
+            // throughout this window, so the two engagement checks below (which
+            // used to gate on mode alone) could still let an already-held rewind
+            // keep walking backward through pre-transition history. Cleanly
+            // disengage instead: see ssentry-rewind-report.md.
+            if (TraceSessionLauncher.active() != null) {
+                TraceSessionLauncher.active().cancelRealtimeRewindForPendingTransition();
+            } else {
+                liveRewindManager.cancelForPendingTransition();
+            }
+        } else if (levelRewindable
                 && TraceSessionLauncher.active() != null
                 && TraceSessionLauncher.active().handleRealtimeRewindInput(inputHandler)) {
             inputHandler.update();
             return;
-        }
-        if (currentGameMode == GameMode.LEVEL
+        } else if (levelRewindable
                 && TraceSessionLauncher.active() == null
                 && liveRewindManager.handleRealtimeRewindInput(currentGameMode, inputHandler)) {
             inputHandler.update();
