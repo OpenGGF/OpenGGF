@@ -77,6 +77,9 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
         if (isDestroyed() || !shouldUpdate(frameCounter)) {
             return;
         }
+        // Defensive same-frame destroy sync (belt-and-suspenders alongside
+        // AbstractBossChild.isDestroyed()'s own lazy parent-destroyed check below);
+        // matches the EHZBossSpike precedent's identical guard.
         if (!(parent instanceof Sonic1SYZBossInstance boss) || parent.isDestroyed()) {
             setDestroyed(true);
             return;
@@ -87,12 +90,19 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
         bossTimer = boss.getGenericTimer();
 
         // ROM: BossSpringYard_SpikeMain — cmpi.b #$A,ob2ndRout(a1) / tst.b obRender(a0) /
-        // bpl.s BossSpringYard_SpikeDelete. Once the boss is fleeing (ob2ndRout==$A,
-        // STATE_ESCAPE) the spike self-deletes off its OWN on-screen status, the same
-        // shape as the ship's own escape self-delete (BSYZ_Escape.checkOffScreen).
-        // X-only, matching Sonic1SYZBossInstance.isBossOnScreen()'s own X-only window --
-        // the boss arena's Y placement is not near screen-Y=0, so a Y-inclusive check
-        // (isOnScreen()) would flag the spike off-screen long before the ship ever does.
+        // bpl.s BossSpringYard_SpikeDelete (lines 656-659). Once the boss is fleeing
+        // (ob2ndRout==$A, STATE_ESCAPE) the spike self-deletes off its OWN on-screen
+        // status, the same shape as the ship's own escape self-delete
+        // (BSYZ_Escape.checkOffScreen). X-only, matching
+        // Sonic1SYZBossInstance.isBossOnScreen()'s own X-only window -- the boss arena's
+        // Y placement is not near screen-Y=0, so a Y-inclusive check (isOnScreen())
+        // would flag the spike off-screen long before the ship ever does.
+        // Currently redundant in practice: getX() is a live pass-through to
+        // parent.getX(), so this branch and the boss's own isBossOnScreen() destroy
+        // check always agree (spike X == boss X every frame) and
+        // AbstractBossChild.isDestroyed() already lazily destroys the spike the moment
+        // the boss is destroyed. Kept anyway to model the ROM's own independent check
+        // literally, in case a future change decouples spike X from the boss's.
         if (bossRoutineSecondary == Sonic1SYZBossInstance.STATE_ESCAPE && !isOnScreenX(OFF_SCREEN_MARGIN)) {
             setDestroyed(true);
             return;
