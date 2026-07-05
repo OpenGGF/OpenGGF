@@ -984,6 +984,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         controller.getAnimation() != null
                                 ? controller.getAnimation().captureRewindState()
                                 : null,
+                        controller.getDrowning() != null
+                                ? controller.getDrowning().captureRewindState()
+                                : null,
                         sidekickCpuExtra,
                         includeFollowHistory ? xHistory : null,
                         includeFollowHistory ? yHistory : null,
@@ -1161,6 +1164,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 if (controller.getAnimation() != null) {
                         controller.getAnimation().restoreRewindState(extra.animationState());
+                }
+                if (controller.getDrowning() != null) {
+                        controller.getDrowning().restoreRewindState(extra.drowningState());
                 }
                 if (extra.sidekickCpuExtra() != null) {
                         if (cpuController == null) {
