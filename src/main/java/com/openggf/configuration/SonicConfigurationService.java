@@ -662,9 +662,9 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
 		putDefault(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
 		putDefault(SonicConfiguration.DATA_SELECT_EXTRA_PLAYER_COMBOS, "");
-		putDefault(SonicConfiguration.SONIC_1_ROM, "Sonic The Hedgehog (W) (REV01) [!].gen");
-		putDefault(SonicConfiguration.SONIC_2_ROM, "Sonic The Hedgehog 2 (W) (REV01) [!].gen");
-		putDefault(SonicConfiguration.SONIC_3K_ROM, "Sonic and Knuckles & Sonic 3 (W) [!].gen");
+		putDefault(SonicConfiguration.SONIC_1_ROM, "s1.gen");
+		putDefault(SonicConfiguration.SONIC_2_ROM, "s2.gen");
+		putDefault(SonicConfiguration.SONIC_3K_ROM, "s3k.gen");
 		// Migrate renamed config key: S3K_SKIP_AIZ1_INTRO → S3K_SKIP_INTROS
 		if (config.containsKey("S3K_SKIP_AIZ1_INTRO")) {
 			if (!config.containsKey(SonicConfiguration.S3K_SKIP_INTROS.name())) {

@@ -5,10 +5,10 @@
 
 ## Introduction
 
-OpenGGF is an open-source, Java-based game engine for research and preservation of classic Mega
-Drive / Genesis platform games, specifically the mainline Sonic the Hedgehog series. It aims to
-faithfully reimplement the physics and rendering behaviour of the original hardware using data
-loaded from user-supplied ROM images. The project's primary goal
+OpenGGF is a community-made, fan-made, open-source Java game engine for research and preservation
+of classic Mega Drive / Genesis platform games, specifically the mainline Sonic the Hedgehog
+series. It aims to faithfully reimplement the physics and rendering behaviour of the original
+hardware using data loaded from user-supplied ROM images. The project's primary goal
 is accuracy: physics, collision, and audio are all verified against community-maintained
 disassemblies of titles in the Sonic the Hedgehog series. No copyrighted assets are included in
 this repository; a legally obtained ROM is required to run the engine.
@@ -16,10 +16,11 @@ this repository; a legally obtained ROM is required to run the engine.
 The engine also aims to provide modern tooling such as a level editor and an open framework for
 modding and customisation.
 
-> **Disclaimer:** This project is not affiliated with or endorsed by Sega. Sonic the Hedgehog and
-> all related characters, names, and trademarks are the property of Sega Corporation. No ROM images
-> or other copyrighted game data are included in this repository. Users must supply their own
-> legally obtained ROM files to use this software.
+> **Disclaimer:** OpenGGF is a community-made fan project. It is not affiliated with, sponsored by,
+> approved by, or endorsed by Sega. Sonic the Hedgehog and all related characters, names, and
+> trademarks are the property of Sega Corporation. No ROM images or other copyrighted game data are
+> included in this repository. Users must supply their own legally obtained ROM files to use this
+> software.
 >
 > The disclaimer is also shown in-engine on startup; it can be disabled by setting
 > `startup.legalDisclaimer: false` in `config.yaml`.
@@ -162,11 +163,11 @@ detailed, per-merge history.
 We do not supply ROM images. You must provide your own legally obtained copies. The engine expects
 these specific revisions, placed in the working directory:
 
-| Game | Expected filename | Revision |
-|------|-------------------|----------|
-| Sonic 1 | `Sonic The Hedgehog (W) (REV01) [!].gen` | World, Revision 01 |
-| Sonic 2 | `Sonic The Hedgehog 2 (W) (REV01) [!].gen` | World, Revision 01 |
-| Sonic 3&K | `Sonic and Knuckles & Sonic 3 (W) [!].gen` | World (lock-on combined ROM) |
+| Game | Expected filename | Expected revision and hash |
+|------|-------------------|----------------------------|
+| Sonic 1 | `s1.gen` | World, Revision 01; CRC32 `AFE05EEE`; SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| Sonic 2 | `s2.gen` | World, Revision 01; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| Sonic 3&K | `s3k.gen` | World lock-on combined ROM; CRC32 `63522553`; SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
 Other revisions (REV00, etc.) are untested and will likely produce incorrect results, as
 ROM addresses are verified against these specific builds. ROM filenames are configurable via

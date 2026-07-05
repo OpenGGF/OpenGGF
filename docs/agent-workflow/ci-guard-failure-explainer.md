@@ -23,7 +23,7 @@ mvn "-Dtest=com.openggf.tests.TestNoServicesInObjectConstructors" test
 S3K guards that touch ROM data also need the ROM path:
 
 ```powershell
-mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry" "-Ds3k.rom.path=s3k.gen" test
 ```
 
 > ## DO NOT EXPAND BASELINES TO GO GREEN

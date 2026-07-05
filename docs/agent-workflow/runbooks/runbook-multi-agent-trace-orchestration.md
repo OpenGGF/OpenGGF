@@ -116,12 +116,11 @@ never hydrate engine state from the trace per-frame (frame-0 bootstrap only).
 
 ## BizHawk tooling traps (hand these to every agent)
 
-- **ROM name:** use the simple-named byte-identical copies `s1.gen` / `s2.gen` /
-  `s3k.gen` (repo root) for the EmuHawk `--movie … <rom>` arg. The full
-  `Sonic The Hedgehog (W) (REV01) [!].gen` has spaces/parens/`[!]` that don't pass
-  to EmuHawk → it loads no ROM and hangs (~316MB, frames never advance). This was
-  the single biggest time-sink; mandate the simple names. (mvn trace tests are
-  unaffected — they use `-D<game>.rom.path=…`.)
+- **ROM name:** use `s1.gen` / `s2.gen` / `s3k.gen` (repo root) for the EmuHawk
+  `--movie ... <rom>` arg. Paths with spaces/parens/`[!]` have caused EmuHawk to
+  load no ROM and hang (~316MB, frames never advance). This was the single biggest
+  time-sink; mandate the simple names. (mvn trace tests are unaffected - they use
+  `-D<game>.rom.path=...`.)
 - **Fast headless trio** (≈100x faster, ~475MB vs ~3.4GB): at the top of the lua,
   `emu.limitframerate(false)` + `client.speedmode(6400)` + `client.invisibleemulation(true)`.
   `--chromeless` alone does NOT do this.

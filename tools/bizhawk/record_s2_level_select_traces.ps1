@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$RomPath = "Sonic The Hedgehog 2 (W) (REV01) [!].gen",
+    [string]$RomPath = "s2.gen",
     [string]$MoviesDir = "docs/BizHawk-2.11-win-x64/Movies",
     [string]$OutputRoot = "src/test/resources/traces/s2",
     [string]$Only,

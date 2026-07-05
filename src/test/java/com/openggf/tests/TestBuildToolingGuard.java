@@ -937,7 +937,7 @@ class TestBuildToolingGuard {
         String source = Files.readString(Path.of(file));
         List<String> violations = new ArrayList<>();
 
-        if (source.contains("rom.open(\"Sonic and Knuckles & Sonic 3 (W) [!].gen\")")) {
+        if (source.contains("rom.open(\"s3k.gen\")")) {
             violations.add(file + " opens the default S3K ROM filename instead of the @RequiresRom resolved path");
         }
         if (!source.contains("RomTestUtils.ensureSonic3kRomAvailable()")) {

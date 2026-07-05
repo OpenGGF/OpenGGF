@@ -20,7 +20,7 @@ public class DebugArtViewer {
 
     public static void main(String[] args) {
         try {
-            File romFile = new File("Sonic The Hedgehog 2 (W) (REV01) [!].gen");
+            File romFile = new File("s2.gen");
             if (!romFile.exists()) {
                 System.err.println("ROM not found");
                 return;

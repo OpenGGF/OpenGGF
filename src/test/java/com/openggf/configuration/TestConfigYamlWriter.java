@@ -24,8 +24,8 @@ class TestConfigYamlWriter {
             };
             flat.put(key.name(), v);
         }
-        // a value that must be quoted (spaces, brackets, '!')
-        flat.put(SonicConfiguration.SONIC_2_ROM.name(), "Sonic The Hedgehog 2 (W) (REV01) [!].gen");
+        // a value that must be quoted (spaces and punctuation)
+        flat.put(SonicConfiguration.SONIC_2_ROM.name(), "custom rom path!.gen");
         flat.put(SonicConfiguration.PLAYBACK_MOVIE_PATH.name(), "");
         return flat;
     }
@@ -42,7 +42,7 @@ class TestConfigYamlWriter {
         Map<String, Object> parsed = mapper.readValue(yaml, Map.class);
         ConfigFlattener.Result r = ConfigFlattener.flatten(parsed);
         assertTrue(r.unknownKeys().isEmpty(), "unexpected unknown keys: " + r.unknownKeys());
-        assertEquals("Sonic The Hedgehog 2 (W) (REV01) [!].gen",
+        assertEquals("custom rom path!.gen",
                 r.flat().get(SonicConfiguration.SONIC_2_ROM.name()));
     }
 

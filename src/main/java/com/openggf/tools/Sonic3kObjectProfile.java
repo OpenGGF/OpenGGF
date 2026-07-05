@@ -383,7 +383,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
 
     @Override public String gameName() { return "Sonic 3&K"; }
     @Override public String gameId() { return "s3k"; }
-    @Override public String defaultRomPath() { return "Sonic and Knuckles & Sonic 3 (W) [!].gen"; }
+    @Override public String defaultRomPath() { return "s3k.gen"; }
     @Override public String outputFilename() { return "S3K_OBJECT_CHECKLIST.md"; }
     @Override public List<ObjectDiscoveryTool.LevelConfig> getLevels() { return LEVELS; }
     @Override public Set<Integer> getImplementedIds() { return S3KL_IMPLEMENTED_IDS; }

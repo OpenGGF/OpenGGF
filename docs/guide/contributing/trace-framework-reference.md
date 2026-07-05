@@ -598,7 +598,7 @@ wsl -d Ubuntu-24.04 -- bash -c 'python3 -m venv ~/retro-env'
 wsl -d Ubuntu-24.04 -- bash -c 'source ~/retro-env/bin/activate && pip install stable-retro numpy'
 
 # Copy ROM to WSL-local path (avoid slow /mnt/ I/O)
-wsl -d Ubuntu-24.04 -- bash -c 'mkdir -p /tmp/roms && cp "/mnt/c/.../Sonic The Hedgehog (W) (REV01) [!].gen" /tmp/roms/'
+wsl -d Ubuntu-24.04 -- bash -c 'mkdir -p /tmp/roms && cp "/mnt/c/.../s1.gen" /tmp/roms/'
 
 # Import ROM
 wsl -d Ubuntu-24.04 -- bash -c 'cd /home && source ~/retro-env/bin/activate && PYTHONPATH="" python3 -m stable_retro.import /tmp/roms'

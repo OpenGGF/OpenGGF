@@ -161,7 +161,7 @@ for service doubles). Keep these green: TestSonic3kPlcArtRegistry, TestS3kAiz1Sk
 TestSonic3kLevelLoading. Build/test commands (PowerShell, quote -D props):
   mvn package
   mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry" test
-  mvn "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+  mvn "-Ds3k.rom.path=s3k.gen" test
 
 OUTPUT FORMAT (Markdown):
 ## Implementation Report: <OBJECT>

@@ -42,7 +42,7 @@ Objects receive `ObjectServices` at construction via `ObjectManager` (ThreadLoca
 
 ## 1. Discovery commands
 
-`RomOffsetFinder` lives at `src/main/java/com/openggf/tools/disasm/RomOffsetFinder.java`. **Always** pass `--game s3k`. The S3K ROM path is `-Ds3k.rom.path="Sonic and Knuckles & Sonic 3 (W) [!].gen"` for tests; the tool reads the ROM from the working directory.
+`RomOffsetFinder` lives at `src/main/java/com/openggf/tools/disasm/RomOffsetFinder.java`. **Always** pass `--game s3k`. The S3K ROM path is `-Ds3k.rom.path=s3k.gen` for tests; the tool reads the ROM from the working directory.
 
 ```powershell
 # Find the object's code routine / label
@@ -137,7 +137,7 @@ mvn "-Dtest=TestSonic3kBootstrapResolver" test
 mvn "-Dtest=TestSonic3kDecodingUtils" test
 
 # Your new focused test:
-mvn "-Dtest=Test<Name>..." test "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen"
+mvn "-Dtest=Test<Name>..." test "-Ds3k.rom.path=s3k.gen"
 ```
 
 Tests must be JUnit 5 / Jupiter only (no `org.junit.*`). Prefer `@ExtendWith(SingletonResetExtension.class)` / `@FullReset` and `HeadlessTestRunner`. `StubObjectServices` is the test double for `ObjectServices`.
