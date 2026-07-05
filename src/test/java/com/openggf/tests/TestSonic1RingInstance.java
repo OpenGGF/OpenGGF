@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.rings.RingManager;
@@ -16,6 +17,7 @@ import com.openggf.level.rings.RingFrame;
 import com.openggf.level.rings.RingFramePiece;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.level.spawn.AbstractPlacementManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
@@ -23,11 +25,16 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -242,6 +249,73 @@ public class TestSonic1RingInstance {
         objectManager.addDynamicObject(next);
         assertEquals(ObjectSlotLayout.SONIC_1.firstDynamicSlot() + 1, next.getSlotIndex(),
                 "No phantom reservation should block the next dynamic object slot");
+    }
+
+    /**
+     * ROM-parity regression for the MZ3 "getSpawnIndex: identity miss" log spam:
+     * {@code recreateForRewind} used to build a fresh {@code new RingSpawn(x, y)}
+     * on every rewind/checkpoint restore, which is structurally equal to the
+     * canonical spawn RingManager tracks but never identity-equal. Since
+     * {@link AbstractPlacementManager#getSpawnIndex} keys its fast path on an
+     * {@code IdentityHashMap}, every restored ring instance would permanently
+     * fall back to the equals-based linear scan (and log a warning) for the
+     * rest of its lifetime. The fix resolves the canonical instance from the
+     * restore-time RingManager instead of reconstructing one.
+     */
+    @Test
+    public void testRecreateForRewindResolvesCanonicalRingSpawnAvoidingIdentityMissWarning() {
+        TestEnvironment.resetAll();
+
+        RingSpawn canonical = new RingSpawn(4076, 1696);
+        RingManager ringManager = new RingManager(List.of(canonical), null, null, null);
+
+        ObjectServices svc = new StubObjectServices() {
+            @Override public RingManager ringManager() { return ringManager; }
+        };
+
+        ObjectSpawn rewindSpawn = new ObjectSpawn(4076, 1696, 0x25, 0, 0, false, 0);
+        Sonic1RingInstance template = buildParentRingFromSpawns(4076, 1696, List.of(canonical));
+
+        Logger placementLogger = Logger.getLogger(AbstractPlacementManager.class.getName());
+        List<String> warnings = new ArrayList<>();
+        Handler captureHandler = new Handler() {
+            @Override public void publish(LogRecord record) {
+                warnings.add(record.getMessage());
+            }
+            @Override public void flush() { }
+            @Override public void close() { }
+        };
+        placementLogger.addHandler(captureHandler);
+        try {
+            RewindRecreateContext ctx = new RewindRecreateContext(rewindSpawn, null, svc);
+            AbstractObjectInstance recreated = template.recreateForRewind(ctx);
+
+            assertTrue(recreated instanceof Sonic1RingInstance,
+                    "recreateForRewind should return a Sonic1RingInstance");
+            RingSpawn recreatedRingSpawn = getRingSpawnField((Sonic1RingInstance) recreated);
+            assertSame(canonical, recreatedRingSpawn,
+                    "recreateForRewind must reuse the canonical RingSpawn instance from "
+                            + "RingManager instead of constructing a new one");
+
+            // Exercise the restored instance's own lookup path (Ring_Sparkle uses this
+            // overload) - it must hit the identity fast path with no fallback warning.
+            ringManager.isCollectedAndSparkleDone(recreatedRingSpawn, 0);
+            assertTrue(warnings.stream().noneMatch(m -> m != null && m.contains("identity miss")),
+                    "recreateForRewind must not force an equals-based getSpawnIndex "
+                            + "fallback warning: " + warnings);
+        } finally {
+            placementLogger.removeHandler(captureHandler);
+        }
+    }
+
+    private static RingSpawn getRingSpawnField(Sonic1RingInstance ring) {
+        try {
+            Field field = Sonic1RingInstance.class.getDeclaredField("ringSpawn");
+            field.setAccessible(true);
+            return (RingSpawn) field.get(ring);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     // ── Helper methods ─────────────────────────────────────────────────────
