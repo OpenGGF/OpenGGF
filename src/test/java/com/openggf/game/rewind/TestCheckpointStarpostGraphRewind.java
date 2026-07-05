@@ -166,10 +166,11 @@ class TestCheckpointStarpostGraphRewind {
         com.openggf.tests.TestablePlayableSprite player =
                 new com.openggf.tests.TestablePlayableSprite("sonic", (short) lampSpawn.x(), (short) lampSpawn.y());
 
-        // Drive well past the twirl's full lifetime (34 frames of motion --
-        // INITIAL_LIFETIME=0x21 decrements plus the one extra "still falls
-        // through .twirl" frame, 79 Lamppost.asm:126-134) so it reaches
-        // Lamp_Finish and freezes.
+        // Drive well past the twirl's full lifetime (33 invocations of the
+        // .twirl position code -- lamp_time starts at 32 and counts down to
+        // -1 with a bpl check, and the transition invocation itself still
+        // falls through into .twirl, 79 Lamppost.asm:105,126-134) so it
+        // reaches Lamp_Finish and freezes.
         for (int frame = 0; frame < 50; frame++) {
             objectManager.update(0, player, List.of(), frame, false);
         }
@@ -180,9 +181,21 @@ class TestCheckpointStarpostGraphRewind {
         assertEquals(1, twirls.size(), "exactly one twirl/ball visual must exist for a single activated lamppost");
         Sonic1LamppostTwirlInstance twirl = twirls.getFirst();
         assertTrue((Boolean) readObjectField(twirl, "finished"), "twirl must have completed its orbit by frame 50");
-        int dx = Math.abs(readIntField(twirl, "currentX") - lamppost.getCenterX());
-        assertTrue(dx <= 12,
-                "terminal twirl ball must rest within its orbit swing radius of the parent's X, got dx=" + dx);
+        // ROM's 33rd (final) Lamp_Twirl invocation is phase-identical to its 1st
+        // (obAngle steps by -0x10 each call and 32 is an exact multiple of the
+        // 16-step/revolution cycle), so CalcSine's input lands on the exact
+        // 0xC0 LUT boundary: cos(0xC0)=0, sin(0xC0)=-1 -> offset (0, -12) from
+        // the twirl center (79 Lamppost.asm:126-144). Assert the exact ROM
+        // terminal offset, not just "within the swing radius" -- that looser
+        // bound previously masked a one-step-too-many off-by-one that left the
+        // ball resting ~4.6px left and ~0.9px short of directly overhead.
+        int centerX = readIntField(twirl, "centerX");
+        int centerY = readIntField(twirl, "centerY");
+        assertEquals(centerX, readIntField(twirl, "currentX"),
+                "terminal twirl ball must land with zero X offset from the twirl center (ROM CalcSine input 0xC0 -> cos=0)");
+        assertEquals(centerY - 12, readIntField(twirl, "currentY"),
+                "terminal twirl ball must rest exactly 12px above the twirl center (ROM CalcSine input 0xC0 -> sin=-1, "
+                        + "offset = 0x0C00*sin>>16 = -12)");
     }
 
     @Test
