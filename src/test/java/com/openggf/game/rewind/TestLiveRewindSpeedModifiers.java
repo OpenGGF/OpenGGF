@@ -1,11 +1,6 @@
 package com.openggf.game.rewind;
 
-import com.openggf.game.GameModule;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.sprites.playable.Sonic;
@@ -24,25 +19,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestLiveRewindSpeedModifiers {
 
-    private GameModule previousBootstrapDefault;
-
     @BeforeEach
     void setUp() {
-        previousBootstrapDefault = GameModuleRegistry.getBootstrapDefault();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
     }
 
     @AfterEach
     void tearDown() {
-        SessionManager.clear();
-        // Restore the pre-test bootstrap default rather than a hardcoded
-        // reset(): other suites in this JVM (e.g. S1-only tests that never
-        // create a WorldSession) resolve GameModuleRegistry.getCurrent() from
-        // this shared static default, so leaving it pinned to Sonic2 here
-        // would leak across test classes run in the same fork.
-        GameModuleRegistry.setCurrent(previousBootstrapDefault);
+        TestEnvironment.resetAll();
     }
 
     @Test

@@ -1,10 +1,6 @@
 package com.openggf.game.sonic1;
 
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.SessionManager;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,9 +33,7 @@ class TestSonic1ConveyorStateRewindAdapter {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic1GameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
         state = GameServices.module().getGameService(Sonic1ConveyorState.class);
         state.reset();
         adapter = new Sonic1ConveyorStateRewindAdapter();
@@ -47,8 +41,7 @@ class TestSonic1ConveyorStateRewindAdapter {
 
     @AfterEach
     void tearDown() {
-        SessionManager.clear();
-        GameModuleRegistry.reset();
+        TestEnvironment.resetAll();
     }
 
     @Test
