@@ -30,13 +30,16 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
         implements SpawnConstructionContextRewindRecreatable {
 
-    // State machine constants (routineSecondary, even-numbered to match ROM)
+    // State machine constants (routineSecondary, even-numbered to match ROM).
+    // STATE_DEFEAT_WAIT/STATE_ESCAPE are package-private: SYZBossSpike reads the boss's
+    // routineSecondary directly (ROM: BossSpringYard_SpikeMain dispatches independently
+    // every frame off the boss's ob2ndRout) and needs the same named thresholds.
     private static final int STATE_APPROACH = 0;
     private static final int STATE_PATROL = 2;
     private static final int STATE_BLOCK_DROP = 4;
-    private static final int STATE_DEFEAT_WAIT = 6;
+    static final int STATE_DEFEAT_WAIT = 6;
     private static final int STATE_ASCENT = 8;
-    private static final int STATE_ESCAPE = 10;
+    static final int STATE_ESCAPE = 10;
 
     // Arena constants from DynamicLevelEvents.asm / Constants.asm
     private static final int BOSS_SYZ_X = 0x2C00;
@@ -197,9 +200,6 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
         // Update face/flame animations
         updateFaceAnimation(player);
         updateFlameAnimation();
-
-        // Update spike child position tracking
-        updateSpikeState();
     }
 
     // ========================================================================
@@ -596,22 +596,28 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
     }
 
     /**
-     * Update spike tracking state. The spike extends during drop and retracts during rise.
+     * ROM: {@code BossSpringYard_SpikeMain} (routine 8) is a fully independent SST object
+     * that reads {@code ob2ndRout}/{@code obSubtype}/{@code BossSpringYard_GenericTimer} off
+     * the boss every frame via its own dispatch — it is never driven by the boss's own
+     * routine handler. {@link SYZBossSpike#update} now mirrors that by pulling this state
+     * directly (see the accessors below) instead of the boss pushing it in from
+     * {@code updateBossLogic()}, which is skipped for one frame during the post-hit defeat
+     * dispatch deferral ({@link #defeatDeferralAppliesToThisBoss()}). Pushing from there left
+     * the spike's collision/extension frozen at their pre-defeat values for that one frame —
+     * a real, if narrow, divergence from ROM's independently-dispatched spike. Pulling from
+     * the spike's own {@code update()} (called unconditionally every frame via
+     * {@code AbstractBossInstance.updateChildren()}) removes that dependency entirely.
      */
-    private void updateSpikeState() {
-        if (spikeChild == null || spikeChild.isDestroyed()) {
-            return;
-        }
+    int getDropSubPhase() {
+        return dropSubPhase;
+    }
 
-        // ROM: BossSpringYard_SpikeMain logic
-        // Spike is harmful when boss isn't holding a block and isn't invulnerable
-        boolean spikeActive = !state.invulnerable && holdingFlag == 0
-                && state.routineSecondary < STATE_DEFEAT_WAIT;
-        spikeChild.setSpikeActive(spikeActive);
+    int getHoldingFlag() {
+        return holdingFlag;
+    }
 
-        // Pass current boss state to spike for Y extension tracking
-        spikeChild.setBossState(state.routineSecondary, dropSubPhase, timer);
-        spikeChild.updateExtension();
+    int getGenericTimer() {
+        return timer;
     }
 
     /**
