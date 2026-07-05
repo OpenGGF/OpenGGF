@@ -48,6 +48,15 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     protected final List<BossChildComponent> childComponents;
     protected final Map<Integer, Integer> customMemory;
     private ObjectSpawn dynamicSpawn;
+    /**
+     * Per-runtime-class construction counters used to assign each
+     * {@link AbstractBossChild} a stable 0-based ordinal among this boss's
+     * SAME-CLASS siblings (see {@link #nextChildOrdinal}). Fresh per boss
+     * instance, so both the original live spawn and every rewind
+     * reconstruction (which re-runs the boss's fixed child-spawn sequence
+     * from a new instance) produce identical ordinals in identical order.
+     */
+    private final Map<Class<?>, Integer> childSpawnOrdinalCounters = new HashMap<>();
 
     /**
      * Set when {@link BossHitHandler#triggerDefeat()} flips the boss to defeated and
@@ -646,6 +655,23 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
     public List<BossChildComponent> getChildComponents() {
         return childComponents;
+    }
+
+    /**
+     * Returns the next 0-based construction ordinal for {@code childClass}, i.e. how
+     * many children of that EXACT runtime class this boss has already spawned.
+     * Called by {@link AbstractBossChild}'s constructor so indistinguishable
+     * same-class siblings (e.g. EHZ's 3 {@code EHZBossWheel} instances) can carry a
+     * stable per-position identity through {@link ObjectSpawn#subtype()} -- otherwise
+     * unused by boss children -- for {@code ObjectManager.adoptRewindReconstructionChild}
+     * to match against after a rewind restore, instead of falling back to a plain
+     * FIFO-by-class-name match that silently shifts captured state onto the wrong
+     * sibling once an earlier one has been destroyed and pruned before capture.
+     */
+    final int nextChildOrdinal(Class<?> childClass) {
+        int ordinal = childSpawnOrdinalCounters.getOrDefault(childClass, 0);
+        childSpawnOrdinalCounters.put(childClass, ordinal + 1);
+        return ordinal;
     }
 
     private void updateDynamicSpawn() {

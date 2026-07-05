@@ -160,3 +160,59 @@ fix can be verified.
   Y sweeps exactly `[baseline-46, baseline+16]` (both extremes reached, never exceeded) so a
   future "fix" attempting to address the original user report cannot silently dampen or remove
   this ROM-verified motion without a fresh disasm citation overriding this evidence.
+- **New tracked row (outside original 25-row S1 scope), FIXED — S2 special/bonus-stage entry
+  held-rewind softlock:** `GameLoop.specialStageTransitionPending`/`bonusStageTransitionPending`/
+  `endingTransitionPending`/`LevelManager.isLevelInactiveForTransition()` keep `currentGameMode`
+  at `LEVEL` for the whole fade-to-white/black window before a special/bonus-stage/ending
+  transition's completion callback flips the mode, but `GameLoop.stepInternal()`'s live/trace
+  rewind engagement gate only checked `currentGameMode == GameMode.LEVEL`. A rewind already held
+  when the transition fired could keep walking backward through pre-transition history and
+  restore a `FadeManager` snapshot whose `onFadeComplete` callback — the only thing that clears
+  the pending flag — is intentionally not rewind-restorable, permanently orphaning the flag
+  (symptom: everything frozen except the music). Root-caused in
+  `.superpowers/sdd/ssentry-rewind-report.md`. Fixed via `GameLoop.isLevelRewindable()` (folds in
+  all four pending/transition predicates) at both `stepInternal()` rewind call sites, plus
+  `LiveRewindManager.cancelForPendingTransition()` /
+  `TraceSessionLauncher.cancelRealtimeRewindForPendingTransition()` so an already-held rewind
+  cleanly disengages instead of continuing through the freeze window. Commit
+  `fix: block rewind while a special stage transition is pending`. New RED-before/GREEN-after
+  coverage: `TestGameLoopSpecialStageRewindGate` (special-stage AND the S3K-shared
+  bonus-stage-flag companion case), plus unit-level `TestLiveRewindManagerAudioCleanup
+  #cancelForPendingTransitionStopsPresentationAudioLikeModeExit` and
+  `TestTraceSessionLauncherRewindPresentation#cancelRealtimeRewindForPendingTransitionStopsPresentationLikeRelease`.
+- **New tracked row (outside original 25-row S1 scope), FIXED — EHZ boss rewind child adoption
+  identity + orphan reconciliation (shared boss framework):** `ObjectManager
+  .adoptRewindReconstructionChild` matched pending rewind-reconstruction children to captured
+  `DynamicObjectEntry` records by runtime class name alone, FIFO. EHZ's 3 indistinguishable
+  `EHZBossWheel` children (and any other boss's same-class sibling group, e.g. DEZ's 6
+  `ArticulatedChild`/2 `ForearmChild` instances) broke once any sibling was destroyed and pruned
+  from `dynamicObjects` before the frame being captured: the fixed-order re-spawn still produced
+  as many candidates as the class originally had, so FIFO silently shifted captured state onto
+  the wrong sibling position — invisible to the generic scalar-field restore that follows, but
+  fatal to `EHZBossWheel.animationState`, a `final` field the constructor derives from the
+  position's ORIGINAL subtype. Separately, the one unmatched fresh reconstruction child per
+  restore was dropped from `ObjectManager.dynamicObjects` but never removed from
+  `AbstractBossInstance.childComponents`, leaking a live, still-`update()`-ing orphan that
+  corrupts shared parent state (e.g. EHZ's `wheelYAccumulator`). Root-caused in
+  `.superpowers/sdd/ehzboss-rewind-report.md`. Fixed by threading a stable per-(parent,
+  runtime-class) construction ordinal (`AbstractBossInstance.nextChildOrdinal`) through
+  `AbstractBossChild`'s `ObjectSpawn.subtype()` (a field boss children don't otherwise use), then
+  preferring an exact `subtype()` match over FIFO in `adoptRewindReconstructionChild` (falling
+  back to today's FIFO when no exact match exists, so every OTHER `spawnChild` caller — e.g.
+  `SidewaysPformObjectInstance`, `ConveyorObjectInstance` — is unaffected); and adding a generic
+  `AbstractObjectInstance#onDroppedAsUnmatchedRewindReconstructionChild()` hook (default no-op,
+  overridden by `AbstractBossChild` to remove itself from `parent.childComponents`) that
+  `ObjectManager` calls for every unmatched reconstruction child before dropping it, so the
+  mechanism covers any current or future boss without per-boss code changes. Commit
+  `fix: adopt boss rewind children by identity and reconcile orphans`. New RED-before/GREEN-after
+  coverage: `TestEHZBossWheelOrphanAfterSiblingDestroy`. Cross-game boss-rewind sanity
+  (`TestBossChildExactStateRewind`, `TestS1SlzBossSpikeballGraphRewind`,
+  `TestS1SyzBossBlockGraphRewind`, `TestS1Slz3CompleteRunTraceReplay`,
+  `TestS1Syz3CompleteRunTraceReplay`, `TestS2Ehz1TraceReplay`, `TestS3kAizTraceReplay`) ran
+  identical before/after (`TestS3kAizTraceReplay`'s pre-existing frame-8941 `camera_y`
+  1160-error signature unchanged) — see `rewind-fixes-report.md` for verbatim output.
+  **DEZ follow-up disposition:** the fix covers DEZ's `ArticulatedChild`/`ForearmChild` families
+  BY CONSTRUCTION (same shared `AbstractBossChild`/`ObjectManager` mechanism, no DEZ-specific
+  code), but this session did NOT add a DEZ-specific destroy-before-capture regression test to
+  verify it empirically — flagging as unverified-likely-fixed for a future session to add a
+  parallel `TestDEZArticulatedChildOrphanAfterSiblingDestroy` alongside this one.

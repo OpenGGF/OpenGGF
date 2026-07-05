@@ -250,6 +250,20 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return false;
     }
 
+    /**
+     * Called by {@code ObjectManager.restore()} when this instance was constructed as
+     * a pending rewind-reconstruction child (registered via
+     * {@code ObjectManager.registerRewindReconstructionChild}, see {@link #spawnChild})
+     * but no captured {@code DynamicObjectEntry} matched it during the step-4
+     * dynamic-object reconciliation, so it is being dropped rather than adopted.
+     * Default no-op. Owners that keep their own reference list of such children
+     * (e.g. {@code AbstractBossChild} removing itself from its parent's
+     * {@code childComponents}) must override this so the drop does not leave a live,
+     * still-updating orphan referenced nowhere but that list.
+     */
+    protected void onDroppedAsUnmatchedRewindReconstructionChild() {
+    }
+
     public String getName() {
         return name;
     }
