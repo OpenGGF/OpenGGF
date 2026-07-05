@@ -713,6 +713,7 @@ public class AudioManager {
                 backend.stopAllSfx();
                 backend.restoreMusic();
             }
+            case STOP_TRANSIENT_SFX -> backend.stopAllSfx();
             case STOP_ALL_PRESENTATION -> {
                 backend.stopAllSfx();
                 backend.stopPlayback();

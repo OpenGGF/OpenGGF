@@ -143,6 +143,18 @@ class TestAudioManagerRewindSuppression {
     }
 
     @Test
+    void stopTransientSfxPolicyDoesNotForcePopAnAlreadyCorrectlyRestoredOverride() {
+        // Unlike STOP_TRANSIENT_SFX_RESYNC_MUSIC, this policy must not call
+        // restoreMusic(): its callers already landed a committed logical
+        // restore (via commitDeferredAudioRestore()) that rebuilt the correct
+        // override state for the committed frame, so an unconditional
+        // restoreMusic() here would end an override (e.g. invincibility) that
+        // is legitimately still active per that just-restored state.
+        audio.afterRewindRestore(7, AudioPresentationPolicy.STOP_TRANSIENT_SFX);
+        assertEquals(java.util.List.of("stopAllSfx"), backend.calls);
+    }
+
+    @Test
     void pausedFrameStepHookDoesNotPollPresentationBackend() {
         audio.advancePausedFrameStepAudio();
 

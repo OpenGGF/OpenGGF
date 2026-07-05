@@ -2,6 +2,12 @@ package com.openggf.game.rewind;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioTestFixtures;
+import com.openggf.audio.HeadlessSmpsAudioBackend;
+import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
+import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.runtime.DeterministicAudioRuntime;
+import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
+import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -17,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
@@ -111,6 +118,79 @@ class TestLiveRewindManagerAudioCleanup {
         }
         assertTrue(backend.calls.contains("stopAllSfx"),
                 "transient cleanup should run after the coast has fully ended");
+    }
+
+    @Test
+    void releasingHeldRewindWhileAnOverrideIsStillActiveDoesNotEndItEarly() throws Exception {
+        // Real backend (not the call-recording fake): the bug only surfaces
+        // through the actual music-override-stack pop/restore state machine,
+        // which NullAudioBackend/RecordingAudioBackend don't implement. Always
+        // restore the class's shared fake backend afterward so this AudioManager
+        // singleton doesn't leak a heavier real backend into other test classes
+        // sharing the same JVM/fork.
+        HeadlessSmpsAudioBackend realBackend = new HeadlessSmpsAudioBackend(config, null);
+        realBackend.init();
+        audio.setBackend(realBackend);
+        // setBackend() auto-installs a real StreamBackedDeterministicAudioRuntime
+        // for backends that support presentation PCM (HeadlessSmpsAudioBackend
+        // does, for PCM rewind-history capture). That runtime pumps its own
+        // submitted-command queue independently of this test's frame script and
+        // is unrelated to what this test exercises (the STOP_TRANSIENT_SFX
+        // policy's music-override-stack behavior); force it back to a no-op so
+        // only RewindController/AudioManager's own logical-restore path runs.
+        installDeterministicAudioRuntime(audio, NoOpDeterministicAudioRuntime.INSTANCE);
+        try {
+            int zoneMusicId = 0x82;
+            int invincibilityMusicId = 0x2A;
+            AudioTestFixtures.StubSmpsData zone = new AudioTestFixtures.StubSmpsData("zone");
+            zone.setId(zoneMusicId);
+            realBackend.prepareLogicalMusicSource(AudioSourceDescriptor.baseMusic(zoneMusicId));
+            realBackend.playSmps(zone, AudioTestFixtures.EMPTY_DAC, smpsConfig(), false);
+
+            AudioTestFixtures.StubSmpsData invincibility = new AudioTestFixtures.StubSmpsData("invincibility");
+            invincibility.setId(invincibilityMusicId);
+            realBackend.prepareLogicalMusicSource(AudioSourceDescriptor.baseMusic(invincibilityMusicId));
+            realBackend.playSmps(invincibility, AudioTestFixtures.EMPTY_DAC, smpsConfig(), true);
+
+            TestEnvironment.activeGameplayMode();
+            LiveRewindManager manager = new LiveRewindManager(config);
+            RewindController controller = new TestControllerBuilder().atFrame(8);
+            installTestController(manager, controller);
+
+            InputHandler input = new InputHandler();
+            int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
+            input.handleKeyEvent(rewindKey, GLFW_PRESS);
+            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+
+            input.handleKeyEvent(rewindKey, GLFW_RELEASE);
+            assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+
+            AudioBackendLogicalSnapshot after = realBackend.captureLogicalSnapshot();
+            assertEquals(invincibilityMusicId, after.currentMusic().id(),
+                    "releasing a held rewind while still invincible must not end the invincibility override");
+            assertFalse(after.overrideStack().isEmpty(),
+                    "the saved zone music must remain on the override stack while the override is still active");
+            // restoreMusic() only queues a deferred pop (doRestoreMusic() applies
+            // it on the backend's own next real update() cycle); the bug is
+            // calling restoreMusic() at all here, which this observes directly
+            // rather than depending on when that next cycle happens to run.
+            assertFalse(after.pendingRestore(),
+                    "release cleanup must not queue a music-stack pop while the override is still legitimately active");
+        } finally {
+            audio.setBackend(backend);
+        }
+    }
+
+    private static SmpsSequencerConfig smpsConfig() {
+        return new SmpsSequencerConfig.Builder().build();
+    }
+
+    /** setDeterministicAudioRuntime is package-private on AudioManager (com.openggf.audio). */
+    private static void installDeterministicAudioRuntime(AudioManager audio, DeterministicAudioRuntime runtime)
+            throws Exception {
+        Method method = AudioManager.class.getDeclaredMethod("setDeterministicAudioRuntime", DeterministicAudioRuntime.class);
+        method.setAccessible(true);
+        method.invoke(audio, runtime);
     }
 
     @Test
