@@ -190,6 +190,28 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
         this.parentGeyser = parentHead;
         this.makerParent = maker;
         this.behindPriority = behindPriority;
+
+        // ROM Geyser_Main (routine 0, "4C, 4D MZ Lava Geyser and Maker.asm":157-172)
+        // captures geyser_origY BEFORE applying the lavafall start-height offset,
+        // then falls straight through into Geyser_Action's own SpeedToPos +
+        // DisplaySprite in the SAME pass that GMake_MakeLava's FindNextFreeObj
+        // creates this object -- ROM never displays a lavafall head at its
+        // un-shifted (eventual landing) Y. Apply that shift here, eagerly, in
+        // the constructor (pure position arithmetic; needs no services()),
+        // rather than relying on this newly spawned dynamic object's own first
+        // update() landing in the same frame as its parent's spawnFreeChild call.
+        // When the object manager's FindNextFreeObj-equivalent can't place the
+        // child at a slot the current exec pass hasn't reached yet (dynamic
+        // pool pressure), that first update() is deferred to the next frame,
+        // and the head would otherwise render one frame at the maker's own Y --
+        // the "single-frame flicker where a vertical lavafall will land when it
+        // starts" bug. The lavafall THIRD piece (behindPriority=true) is
+        // constructed with an already-final Y from its sibling head and must
+        // not be shifted again.
+        if (role == Role.HEAD && !behindPriority && this.subtype != 0) {
+            this.originY = spawn.y();
+            this.currentY -= LAVAFALL_START_Y_OFFSET;
+        }
     }
 
     @Override
@@ -300,17 +322,18 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
     private void initializeHead() {
         // Geyser_Main: Routine 0
         // move.w obY(a0),objoff_30(a0)
-        this.originY = currentY;
+        // For the lavafall case (subtype != 0) the constructor already captured
+        // originY and applied the "subi.w #$250,obY(a0)" start-height shift
+        // eagerly (see the constructor's comment) so the position is correct
+        // from the very first render, not just from the first update(). Only
+        // the geyser case (subtype == 0, no shift) still needs it captured here.
+        if (subtype == 0) {
+            this.originY = currentY;
+        }
 
         // Store animation ID based on current subtype BEFORE any clearing.
         // .makelava: move.b #5,obAnim(a1) / tst.b obSubtype / beq.s .fail / move.b #2,obAnim(a1)
         this.headAnimId = (subtype != 0) ? 2 : 5;
-
-        // tst.b obSubtype(a0) / beq.s .isgeyser / subi.w #$250,obY(a0)
-        if (subtype != 0) {
-            // Lavafall: start high above
-            currentY -= LAVAFALL_START_Y_OFFSET;
-        }
 
         // moveq #0,d0 / move.b obSubtype(a0),d0 / add.w d0,d0
         // move.w Geyser_Speeds(pc,d0.w),obVelY(a0)
