@@ -297,6 +297,16 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance
             animRoutineTriggered = false;
             visible = true;
         }
+
+        // ROM: both branches of GMake_MakeLava end with bra.s GMake_Display, which
+        // falls straight into routine 8's own AnimateSprite call in the SAME dispatch
+        // pass the new obAnim was just written (docs/s1disasm/_incObj/"4C, 4D MZ Lava
+        // Geyser and Maker.asm":64-87). Without this, displayFrame keeps whatever the
+        // PREVIOUS cycle's ending animation (.bubble3) last wrote until the next
+        // update() call, so a repeating lavafall/geyser maker renders one frame of the
+        // prior eruption's ending bubble at the instant the new eruption becomes
+        // visible.
+        updateAnimation();
     }
 
     /**

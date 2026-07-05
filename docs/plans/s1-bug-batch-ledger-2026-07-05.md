@@ -108,3 +108,17 @@ fix can be verified.
   live at restore time (matching `missingS1LamppostDropsTwirlCleanly`'s "always exactly correct or
   absent" behavior), or add a distance/threshold guard so a "nearest" match farther than the
   twirl's own `SWING_RADIUS`-scale distance from its captured position is treated as "no match."
+- **Post-merge finding, now fixed (row 6, S1 lavafall flicker):** row 6's original fix (applying
+  the lavafall's `-0x250` start-height shift eagerly in `Sonic1LavaGeyserObjectInstance`'s
+  constructor) closed the "lands at the wrong Y for one frame" half of the symptom, but a
+  follow-up investigation (`.superpowers/sdd/geyser-anim-report.md`) found a second, distinct gap
+  in the *maker* itself: `Sonic1LavaGeyserMakerObjectInstance.updateMakeLava()` (routine 6) set
+  `currentAnim`/`animFrameIndex`/`animTimer` for the new eruption but never recomputed
+  `displayFrame` in the same pass, so a repeating lavafall/geyser maker rendered one leftover
+  frame of the *previous* cycle's `.bubble3` "ending" animation at the instant the next eruption
+  became visible — matching the reported "ending animation shown at the start" symptom exactly
+  (ROM's `GMake_MakeLava` falls through into `GMake_Display`'s own `AnimateSprite` call in the
+  SAME dispatch pass, docs/s1disasm/_incObj/"4C, 4D MZ Lava Geyser and Maker.asm":64-87). Fixed by
+  calling `updateAnimation()` once after setting the new anim state in both branches of
+  `updateMakeLava()`. New RED-before/GREEN-after coverage:
+  `TestSonic1LavaGeyserOutOfRange#lavafallMakerNeverRendersPreviousCycleEndingFrameAtNextEruption`.
