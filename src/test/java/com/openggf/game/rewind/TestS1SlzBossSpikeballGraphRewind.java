@@ -115,6 +115,39 @@ class TestS1SlzBossSpikeballGraphRewind {
     }
 
     @Test
+    void restoreRebuildsTheBossSeesawScanCacheSoAlignmentCanStillMatch() {
+        Harness harness = Harness.create(List.of(BOSS_SPAWN, TARGET_SEESAW));
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+
+        Sonic1SLZBossInstance boss = only(objectManager, Sonic1SLZBossInstance.class);
+        Sonic1SeesawObjectInstance seesaw = liveSeesawAt(objectManager, TARGET_SEESAW.x(), TARGET_SEESAW.y());
+
+        // Seed the boss's lazily-populated seesaw cache as it would be mid-fight,
+        // after a real update() has already run scanForSeesaws() once.
+        seedScannedSeesaws(boss, seesaw);
+        assertEquals(1, seesawCacheSize(boss), "harness setup sanity: cache seeded before capture");
+
+        RewindRegistry registry = registryFor(objectManager);
+        CompositeSnapshot snapshot = registry.capture();
+        registry.restore(snapshot);
+
+        Sonic1SLZBossInstance restored = only(objectManager, Sonic1SLZBossInstance.class);
+        assertNotSame(boss, restored, "test harness disables in-place restore so recreate is exercised");
+
+        // The list itself is not part of the default rewind field capture, so
+        // recreate legitimately starts it empty. What must NOT happen is a
+        // stale "already scanned" flag permanently blocking the lazy re-scan:
+        // drive one real update() frame (as gameplay would every frame after
+        // a rewind) and confirm the cache actually repopulates.
+        restored.update(1, null);
+        assertEquals(1, seesawCacheSize(restored),
+                "a restored SLZ boss must re-scan for seesaws on its next update() frame; if a "
+                        + "restored 'already scanned' flag blocks that re-scan the cache stays "
+                        + "permanently empty and Robotnik never drops another spikeball");
+    }
+
+    @Test
     void directGenericRecreateDropsNonFragmentWhenBossOrMatchingSeesawIsMissing() {
         PerObjectRewindSnapshot state = capturedNonFragmentState();
 
@@ -245,6 +278,30 @@ class TestS1SlzBossSpikeballGraphRewind {
         writeInt(spikeball, "frameToggleTimer", 3);
         writeInt(spikeball, "frameToggleDuration", 2);
         writeInt(spikeball, "fragmentAnimCounter", 9);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void seedScannedSeesaws(Sonic1SLZBossInstance boss, Sonic1SeesawObjectInstance... seesawsToAdd) {
+        List<Sonic1SeesawObjectInstance> cache = (List<Sonic1SeesawObjectInstance>) readObject(boss, "seesaws");
+        for (Sonic1SeesawObjectInstance seesaw : seesawsToAdd) {
+            cache.add(seesaw);
+        }
+        // Mirrors the pre-fix "already scanned" latch so a captured snapshot
+        // matches a real mid-fight state (scan already ran once). Tolerant of
+        // the field's removal by the fix — the cache-emptiness gate no longer
+        // needs it, but the fixture must still reproduce the pre-fix state
+        // when run against the pre-fix code.
+        try {
+            findField(boss.getClass(), "seesawsScanned").setBoolean(boss, true);
+        } catch (NoSuchFieldException ignored) {
+            // Fix removed the flag; the isEmpty()-gated cache makes it moot.
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to seed seesawsScanned", e);
+        }
+    }
+
+    private static int seesawCacheSize(Sonic1SLZBossInstance boss) {
+        return ((List<?>) readObject(boss, "seesaws")).size();
     }
 
     private static RewindRegistry registryFor(ObjectManager objectManager) {
