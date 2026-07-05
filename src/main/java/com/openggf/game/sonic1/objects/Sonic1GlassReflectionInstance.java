@@ -27,7 +27,8 @@ import java.util.List;
  * Routine 4 (Glass_Reflect012, tall variant):
  *   Copies parent's glass_dist, then applies Glass_Types movement.
  * Routine 8 (Glass_Reflect34, short variant):
- *   Copies parent's glass_dist AND parent's baseY (objoff_30), then applies Glass_Types.
+ *   Copies parent's glass_dist AND parent's LIVE current obY (via parent.getY(), per ROM
+ *   Glass_Reflect34's move.w obY(a1) copy), then applies Glass_Types.
  * <p>
  * The reflection's subtype has bit 3 set (from the addq.b #8 / andi.b #$F in Glass_Main),
  * which modifies the behavior in Glass_Types:
