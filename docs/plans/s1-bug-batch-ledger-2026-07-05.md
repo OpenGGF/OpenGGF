@@ -138,3 +138,25 @@ fix can be verified.
   coverage: `TestSonic1RollerBadnikInstance#dormantRollerEmitsNoRenderCommands` and
   `#dormantRollerDoesNotAnimate` (plus `#activatedRollerStillRenders` locking in the unaffected
   active-state path).
+- **Post-merge finding, disposition unchanged (row 4, glass reflection oscillation):** a third
+  investigation round (`.superpowers/sdd/glass-oscillator-report.md`) verified the exact byte/
+  target/amplitude of the reflection's oscillator term at the opcode level
+  (`sonic.lst:42561-42592`, `Glass_Type04`'s bit-3-set path): entry index 4 of the shared
+  oscillator table (`v_oscillate+$12`, speed=4, limit=$20, start value $0080/direction "up" —
+  matching `OscillationManager`'s `S1_SPEEDS[4]`/`S1_LIMITS[4]`/`S1_INITIAL_VALUES[4]`/
+  `S1_INITIAL_DELTAS[4]` exactly) sweeps a continuous **62px peak-to-peak** vertical range
+  (46px up / 16px down from baseline) on a ~252-frame (~4.2s) cycle, unconditionally, regardless
+  of the parent block's trigger/`glass_dist` state — confirming the row's earlier
+  `rom-confirmed-intentional` disposition rather than overturning it, but correcting the earlier
+  round's undercounted amplitude guess (`±0x10..+0x30`, ~48px) with the ROM-computed real range
+  (−16..+46, 62px). This was independently cross-checked by a fourth round
+  (`.superpowers/sdd/glass-visual-diff-report.md`) via BOTH a BizHawk hardware RAM+screenshot
+  capture and the engine's own headless `TraceCaptureTool` pixel diff of the same MZ2 block,
+  both confirming the engine reproduces real hardware frame-for-frame. No code fix landed — this
+  is deliberate ROM behavior, not an engine defect. Added a pinning test,
+  `TestSonic1GlassReflectionGraphRewind#type4ReflectionSwings62PxWhileParentStationary`, driving
+  a real Type04 (switch-activated, subtype `0x14`) block + its spawned reflection child through
+  260 real `ObjectManager` update cycles with the switch never pressed, asserting the reflection's
+  Y sweeps exactly `[baseline-46, baseline+16]` (both extremes reached, never exceeded) so a
+  future "fix" attempting to address the original user report cannot silently dampen or remove
+  this ROM-verified motion without a fresh disasm citation overriding this evidence.
