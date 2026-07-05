@@ -119,7 +119,10 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
         super(spawn, "Yadrin");
         this.currentX = spawn.x();
         this.currentY = spawn.y();
-        // S1: obStatus bit 0 set = facing right (xFlip)
+        // S1: obStatus bit 0 set = facing right (xFlip). See isSpikeRegionHit()'s
+        // Javadoc for the Yad_Action_Wait bchg/bne/neg derivation proving this
+        // polarity -- it is not in conflict with "50 Badnik - Yadrin.asm:75"'s
+        // one-shot spawn-time toggle comment.
         boolean xFlip = (spawn.renderFlags() & 0x01) != 0;
         this.facingLeft = !xFlip;
         this.secondaryState = STATE_MOVE;
@@ -352,11 +355,31 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
      * (~30+px, not &lt;8px), that comparison almost never matched on first
      * contact -- so a rolling Sonic landing on the spikes fell through to the
      * attacking-badnik branch and safely destroyed Yadrin instead of getting hurt.
+     * <p>
+     * Facing-bit polarity (obStatus bit 0): {@code 50 Badnik - Yadrin.asm:101-103}'s
+     * {@code bchg #0,obStatus(a0) / bne.s .return / neg.w obVelX(a0)} in
+     * Yad_Action_Wait proves the bit's live meaning -- {@code bchg} sets Z from
+     * the bit's value BEFORE the toggle, so Z=0 (bne taken, keep the just-set
+     * leftward {@code -$100} velocity) only when the OLD bit was 1, and Z=1
+     * (fall through to negate into rightward velocity) when the OLD bit was 0.
+     * Since the toggle flips old-1-moving-left into new-0, and old-0-moving-right
+     * into new-1, the settled (post-toggle) bit is 1 while moving/facing RIGHT
+     * and 0 while moving/facing LEFT -- exactly matching this class's
+     * {@code facingLeft = !xFlip} convention and independently confirmed by
+     * {@code Sonic ReactToItem.asm:541-543}'s own {@code btst #0,obStatus(a1) /
+     * beq.s .checkSpikedSection} (bit clear -&gt; facing left -&gt; no mirror).
+     * {@code 50 Badnik - Yadrin.asm:75}'s one-shot spawn-time {@code bchg}
+     * ("make Yadrin face to the left on spawn") is not a competing polarity
+     * claim -- it just describes the empirical outcome of toggling this
+     * particular Yadrin's spawn-data-supplied initial bit, not the bit's
+     * general meaning.
      */
     private boolean isSpikeRegionHit(AbstractPlayableSprite player, TouchResponseResult result) {
         // ReactToItem.asm:20-21: Sonic's react-hitbox half-height is
-        // (obHeight - 3), not the raw obHeight/getYRadius() value.
-        int baseYRadius = Math.max(1, player.getYRadius() - 3);
+        // (obHeight - 3), not the raw obHeight/getYRadius() value. ROM's
+        // `subq.b #3,d5` has no floor; real physics profiles never bring
+        // getYRadius() near 3, so this is left unclamped to match ROM exactly.
+        int baseYRadius = player.getYRadius() - 3;
         int sonicBottom = player.getCentreY() + baseYRadius;
         int yadrinTop = currentY - result.heightRadius();
         int penetration = sonicBottom - yadrinTop;
@@ -371,7 +394,17 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
         int spikeLeft = currentX - SPIKE_REGION_X_OFFSET
                 - (facingLeft ? 0 : SPIKE_REGION_FACING_RIGHT_MIRROR);
         int spikeRight = spikeLeft + SPIKE_REGION_WIDTH;
-        return sonicRight >= spikeLeft && sonicLeft < spikeRight;
+        // ReactToItem.asm:546-554 is the same carry/borrow "bhs/blo/bhi" AABB
+        // idiom as the general React_CheckHitboxOverlap (lines 141-175): both
+        // edges are INCLUSIVE. Working through the 68k arithmetic exactly:
+        // - .sonicLeft branch (sonicLeft <= spikeLeft): "cmp.w d4,d0 / bhi
+        //   .normalBadnik" only excludes strictly-greater-than-16, so
+        //   sonicLeft == spikeLeft - 16 (the sonicRight == spikeLeft edge) hits.
+        // - Other branch (sonicLeft > spikeLeft): "addi.w #24,d0 / blo
+        //   .damaging" carries (unsigned overflow) exactly when
+        //   (spikeLeft - sonicLeft) + 24 >= 0, i.e. sonicLeft <= spikeLeft + 24
+        //   inclusive, so sonicLeft == spikeRight hits too.
+        return sonicRight >= spikeLeft && sonicLeft <= spikeRight;
     }
 
     private boolean isPlayerAttacking(AbstractPlayableSprite player) {

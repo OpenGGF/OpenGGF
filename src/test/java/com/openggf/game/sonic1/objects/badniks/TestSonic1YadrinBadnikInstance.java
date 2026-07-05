@@ -88,6 +88,85 @@ public class TestSonic1YadrinBadnikInstance {
     }
 
     @Test
+    public void spikeRegionUpperXBoundaryIsInclusive() {
+        // Facing-left spike region is [156,180] (currentX=160, offset 4, width
+        // 24). Sonic's react-hitbox is X in [172,188) when centreX=180, so
+        // sonicLeft(172) sits exactly ON spikeRight(180)... use centreX=188 so
+        // sonicLeft == spikeRight == 180 exactly (the reviewer-identified edge:
+        // ReactToItem.asm:552-554's `cmp.w d4,d0 / bhi .normalBadnik` only
+        // excludes strictly-greater-than-16, so this exact edge still hits).
+        Sonic1YadrinBadnikInstance yadrin = new Sonic1YadrinBadnikInstance(
+                new ObjectSpawn(160, 100, 0x50, 0, 0, false, 0));
+        yadrin.setServices(destroyCapableServices());
+        YadrinTestPlayableSprite player = new YadrinTestPlayableSprite();
+        player.setRolling(true);
+        player.setCentreX((short) 188); // sonicLeft = 180 == spikeRight
+        player.setCentreY((short) 77);
+
+        yadrin.onTouchResponse(player, ROM_ACCURATE_RESULT, 12);
+
+        assertTrue(player.hurtOrDeathCalled, "sonicLeft == spikeRight is an inclusive spike-region hit");
+        assertFalse(yadrin.isDestroyed());
+    }
+
+    @Test
+    public void spikeRegionLowerXBoundaryIsInclusive() {
+        // Facing-left spike region is [156,180]. Sonic's react-hitbox with
+        // centreX=148 gives sonicRight == 156 == spikeLeft exactly.
+        Sonic1YadrinBadnikInstance yadrin = new Sonic1YadrinBadnikInstance(
+                new ObjectSpawn(160, 100, 0x50, 0, 0, false, 0));
+        yadrin.setServices(destroyCapableServices());
+        YadrinTestPlayableSprite player = new YadrinTestPlayableSprite();
+        player.setRolling(true);
+        player.setCentreX((short) 148); // sonicRight = 156 == spikeLeft
+        player.setCentreY((short) 77);
+
+        yadrin.onTouchResponse(player, ROM_ACCURATE_RESULT, 12);
+
+        assertTrue(player.hurtOrDeathCalled, "sonicRight == spikeLeft is an inclusive spike-region hit");
+        assertFalse(yadrin.isDestroyed());
+    }
+
+    @Test
+    public void mirroredSpikeRegionUpperXBoundaryIsInclusiveWhenFacingRight() {
+        // renderFlags=1 -> xFlip -> facingLeft=false -> facing right, mirroring
+        // the spike region 16px further left: [140,164] instead of [156,180].
+        // This exercises SPIKE_REGION_FACING_RIGHT_MIRROR, which no prior test
+        // covered (every other test uses renderFlags=0/facing left).
+        Sonic1YadrinBadnikInstance yadrin = new Sonic1YadrinBadnikInstance(
+                new ObjectSpawn(160, 100, 0x50, 0, 1, false, 0));
+        yadrin.setServices(destroyCapableServices());
+        YadrinTestPlayableSprite player = new YadrinTestPlayableSprite();
+        player.setRolling(true);
+        player.setCentreX((short) 172); // sonicLeft = 164 == mirrored spikeRight
+        player.setCentreY((short) 77);
+
+        yadrin.onTouchResponse(player, ROM_ACCURATE_RESULT, 12);
+
+        assertTrue(player.hurtOrDeathCalled,
+                "Mirrored (facing-right) spike region upper edge (sonicLeft == spikeRight) must be an inclusive hit");
+        assertFalse(yadrin.isDestroyed());
+    }
+
+    @Test
+    public void mirroredSpikeRegionLowerXBoundaryIsInclusiveWhenFacingRight() {
+        // Mirrored spike region [140,164]: sonicRight == 140 == spikeLeft exactly.
+        Sonic1YadrinBadnikInstance yadrin = new Sonic1YadrinBadnikInstance(
+                new ObjectSpawn(160, 100, 0x50, 0, 1, false, 0));
+        yadrin.setServices(destroyCapableServices());
+        YadrinTestPlayableSprite player = new YadrinTestPlayableSprite();
+        player.setRolling(true);
+        player.setCentreX((short) 132); // sonicRight = 140 == mirrored spikeLeft
+        player.setCentreY((short) 77);
+
+        yadrin.onTouchResponse(player, ROM_ACCURATE_RESULT, 12);
+
+        assertTrue(player.hurtOrDeathCalled,
+                "Mirrored (facing-right) spike region lower edge (sonicRight == spikeLeft) must be an inclusive hit");
+        assertFalse(yadrin.isDestroyed());
+    }
+
+    @Test
     public void nonAttackingDeepOverlapStillHurtsViaNormalEnemyRules() {
         // Deep vertical overlap (penetration=32, far outside the <8 graze
         // window) is not a spike-region touch at all -- but a non-attacking
