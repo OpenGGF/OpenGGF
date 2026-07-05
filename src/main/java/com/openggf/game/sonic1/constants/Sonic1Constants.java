@@ -953,4 +953,5 @@ public final class Sonic1Constants {
     public static final int SS_BUMPER_FORCE    = 0x700;  // bumper bounce force
     public static final int SS_INIT_ROTATION   = 0x40;   // initial rotation speed
     public static final int SS_UP_DOWN_COOLDOWN = 0x1E;  // UP/DOWN/R block cooldown frames
+    public static final int SS_JUMP_BUTTONS     = 0x70;  // btnABC: A/B/C bits SonicSS_Jump tests (v_jpadpress2)
 }

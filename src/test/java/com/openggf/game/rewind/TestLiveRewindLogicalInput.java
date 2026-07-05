@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 
 class TestLiveRewindLogicalInput {
 
@@ -91,5 +92,28 @@ class TestLiveRewindLogicalInput {
         assertEquals(InputActionMasks.ACTION_B, snapshot.player1().actionPressedMask());
         assertTrue(snapshot.player1().startHeld());
         assertFalse(snapshot.player1().startPressed());
+    }
+
+    @Test
+    void heldDirectionNeverReplaysAsZeroedAcrossOneHundredTwentyAppendedLiveRewindFrames() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        int rightKey = config.getInt(SonicConfiguration.RIGHT);
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        input.handleKeyEvent(rightKey, GLFW_PRESS);
+        LiveRewindInputSource source = new LiveRewindInputSource();
+
+        for (int i = 0; i < 120; i++) {
+            input.refreshLogicalSnapshot();
+            source.appendFrame(input, config);
+            input.update();
+        }
+
+        for (int frame = source.earliestFrame() + 1; frame < source.frameCount(); frame++) {
+            Bk2FrameInput current = source.read(frame);
+            Bk2FrameInput previous = source.read(frame - 1);
+            LogicalInputSnapshot snapshot = RecordedInputSnapshots.fromBk2(current, previous);
+            assertTrue((snapshot.player1().heldMask() & AbstractPlayableSprite.INPUT_RIGHT) != 0,
+                    "Replayed held-right on recorded frame " + frame + " should not read as released");
+        }
     }
 }
