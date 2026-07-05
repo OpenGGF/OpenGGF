@@ -158,6 +158,7 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
      * - bset #1,obStatus(a1) — set airborne
      * - bclr #3,obStatus(a1) — clear standing on object
      * - move.b #id_Spring,obAnim(a1) — set Sonic animation to Spring (0x10)
+     * - move.b #2,obRoutine(a1) — force Sonic's OWN routine to Sonic_Control (2)
      * Note: ROM does NOT touch obInertia (g_speed) — it preserves the value
      * set by Solid_ResetFloor (g_speed = x_speed at landing time).
      */
@@ -178,6 +179,14 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         // Up spring sets Sonic's animation to Spring (id_Spring = 0x10)
         player.setAnimationId(Sonic1AnimationIds.SPRING);
 
+        // ROM: move.b #2,obRoutine(a1) (s1disasm/_incObj/41 Springs.asm:96) forces
+        // Sonic's object routine to Sonic_Control (2) unconditionally, even if he
+        // was in routine 4 (hurt/knockback — see AbstractPlayableSprite.hurt).
+        // A hurt Sonic bounced by an up spring must regain control (D-pad/jump)
+        // the same frame the spring fires, not wait for a normal grounded
+        // Sonic_HurtStop landing.
+        player.setHurt(false);
+
         triggerSpring();
     }
 
@@ -187,6 +196,7 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
      * - move.w spring_pow(a0),obVelY(a1) then neg.w — positive = downward
      * - bset #1,obStatus(a1) — set airborne
      * - bclr #3,obStatus(a1) — clear standing on object
+     * - move.b #2,obRoutine(a1) — force Sonic's OWN routine to Sonic_Control (2)
      * - Does NOT set Sonic's animation (unlike up spring)
      * - Does NOT touch obInertia (g_speed)
      */
@@ -202,6 +212,9 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         player.setOnObject(false);
         // ROM does NOT zero g_speed
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
+        // ROM: move.b #2,obRoutine(a1) (s1disasm/_incObj/41 Springs.asm:203) — same
+        // unconditional routine override as Spring_BounceUp; see applyUpSpring().
+        player.setHurt(false);
 
         // Down spring does NOT change Sonic's animation
         triggerSpring();

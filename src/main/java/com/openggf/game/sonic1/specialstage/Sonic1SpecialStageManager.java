@@ -340,9 +340,13 @@ public final class Sonic1SpecialStageManager {
 
     /**
      * Obj09_Jump: check for jump button press while on ground.
+     * ROM tests {@code andi.b #btnABC,d0} on {@code v_jpadpress2} — any of the
+     * A, B, or C buttons triggers the jump, not the engine's internal
+     * INPUT_JUMP bit (which GameLoop does not set for special-stage input;
+     * it forwards Mega Drive A/B/C button bits directly instead).
      */
     private void processJump() {
-        if ((pressedButtons & INPUT_JUMP) == 0) {
+        if ((pressedButtons & SS_JUMP_BUTTONS) == 0) {
             return;
         }
 

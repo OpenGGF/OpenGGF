@@ -223,7 +223,13 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
             currentFrame = FRAME_BROKEN;
 
             // ROM: move.b #$C,obRoutine(a0) — switch to animal spawning
-            // ROM: move.b #6,obFrame(a0) — blank frame for explosion sub-object
+            // ROM: move.b #6,obFrame(a0) — blank frame for explosion sub-object.
+            // The switch/explosion driver is the SAME ROM object slot as the
+            // button, so this is the button going invisible for the rest of
+            // the act (3E Prison Capsule.asm:134-137) — not a destroy.
+            if (buttonObject != null) {
+                buttonObject.goBlank();
+            }
             spawnInitialAnimals();
             state = State.ANIMAL_SPAWN;
             timer = SPAWN_PHASE_DURATION;

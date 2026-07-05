@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchCategory;
@@ -87,8 +88,27 @@ public class Sonic1RingInstance extends AbstractObjectInstance
         ObjectSpawn rewindSpawn = ctx.spawn();
         return new Sonic1RingInstance(
                 rewindSpawn,
-                new RingSpawn(rewindSpawn.x(), rewindSpawn.y()),
+                resolveCanonicalRingSpawn(ctx, rewindSpawn.x(), rewindSpawn.y()),
                 rewindSpawn.x());
+    }
+
+    /**
+     * Resolves the canonical {@link RingSpawn} reference for this ring's position
+     * from the restore-time {@link RingManager}, rather than constructing a fresh
+     * instance. A freshly-built {@code RingSpawn} is structurally equal to the
+     * canonical one RingManager tracks but never identity-equal, which permanently
+     * routes every subsequent lookup for this restored ring through the equals-based
+     * {@code getSpawnIndex} fallback (and its per-call warning log — the MZ3
+     * "identity miss" spam after a rewind/checkpoint restore). Falls back to a fresh
+     * {@code RingSpawn} only when the canonical reference cannot be resolved (no live
+     * RingManager, or the coordinates aren't a registered ring spawn), matching the
+     * pre-fix behavior.
+     */
+    private static RingSpawn resolveCanonicalRingSpawn(RewindRecreateContext ctx, int x, int y) {
+        ObjectServices services = ctx.objectServices();
+        RingManager ringManager = services != null ? services.ringManager() : null;
+        RingSpawn canonical = ringManager != null ? ringManager.resolveCanonicalSpawn(x, y) : null;
+        return canonical != null ? canonical : new RingSpawn(x, y);
     }
 
     @Override

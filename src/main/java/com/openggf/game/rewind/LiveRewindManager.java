@@ -76,7 +76,15 @@ public final class LiveRewindManager {
             speedController.reset();
         }
         if (rewinding) {
-            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+            // Release lands a committed logical restore via
+            // cleanupAudioAfterRealtimeRewind's commitDeferredAudioRestore()
+            // before this cleanup runs, so the RESYNC_MUSIC variant's extra
+            // music-stack pop is not needed here and would incorrectly end an
+            // override (e.g. invincibility) the just-restored state says
+            // should still be active. See markBoundary handlers below for the
+            // boundary cases that DO need the pop (their deferred restore was
+            // dropped, not committed).
+            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX);
         }
         rewinding = false;
         effectEnvelope.frameInactive();

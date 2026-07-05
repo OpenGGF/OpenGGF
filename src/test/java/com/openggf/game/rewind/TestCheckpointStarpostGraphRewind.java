@@ -98,11 +98,91 @@ class TestCheckpointStarpostGraphRewind {
         assertScalarFieldsEqual(before, restored,
                 "centerX", "centerY", "lifetime", "angle", "currentX", "currentY", "finished");
 
+        int mappingFrameBeforeCompletion = readIntField(restoredNearParent, "mappingFrame");
         restored.update(0, null);
         assertTrue((Boolean) readObjectField(restored, "finished"),
                 "near-expiry restored S1 twirl must continue to completion");
-        assertEquals(3, readIntField(restoredNearParent, "mappingFrame"),
+        // ROM Lamp_Finish (79 Lamppost.asm:122-123) is a plain rts: the pole's own
+        // mapping frame is never touched by the twirl completing, so it must be
+        // unchanged here too -- only the twirlActive bookkeeping flag changes.
+        // (A prior version of onTwirlComplete() forced mappingFrame to FRAME_RED,
+        // which produced a second, wrongly-centered ball stacked next to the
+        // twirl's own frozen orbit ball -- the "lamppost head duplicated and
+        // X-offset" bug; see Sonic1LamppostObjectInstance.onTwirlComplete().)
+        assertFalse((Boolean) readObjectField(restoredNearParent, "twirlActive"),
                 "restored S1 twirl must call back into the relinked lamppost on expiry");
+        assertEquals(mappingFrameBeforeCompletion, readIntField(restoredNearParent, "mappingFrame"),
+                "relinked lamppost pole's mapping frame must be untouched by twirl completion, matching ROM's Lamp_Finish no-op");
+    }
+
+    /**
+     * Bug repro (S1 bug-triage row 5, docs/plans/s1-bug-batch-ledger-2026-07-05.md):
+     * "Lamppost head sometimes stops duplicated and X-offset." Drives a real
+     * activation through {@link Sonic1LamppostObjectInstance#update} (not direct
+     * field pokes) so the twirl child spawns exactly as gameplay would trigger
+     * it, then runs it all the way through completion and asserts there is
+     * exactly one visible ball -- the twirl's own, resting near (within its
+     * {@code SWING_RADIUS}) the parent's X -- rather than a second, exactly
+     * centered ball from the pole itself re-showing a ball frame.
+     */
+    @Test
+    void sonic1LamppostTwirlEndsAsOneCenteredBallNotADuplicate() {
+        // CheckpointState.saveCheckpoint() (invoked by Sonic1LamppostObjectInstance.activate())
+        // reads GameServices.camera() directly, so a real gameplay-mode session must be
+        // active -- the mockCameraAtOrigin()-based Harness the other tests in this class
+        // use doesn't wire up GameServices at all.
+        com.openggf.game.session.EngineServices.configure(
+                com.openggf.game.session.EngineContext.fromLegacySingletonsForBootstrap());
+        com.openggf.tests.TestEnvironment.activeGameplayMode();
+        try {
+            ObjectSpawn lampSpawn = new ObjectSpawn(0x0100, 0x0180, Sonic1ObjectIds.LAMPPOST, 1, 0, false, 40);
+            ObjectManager[] holder = new ObjectManager[1];
+            Camera camera = com.openggf.game.GameServices.camera();
+            ObjectServices services = new StubObjectServices() {
+                @Override public ObjectManager objectManager() { return holder[0]; }
+                @Override public Camera camera() { return camera; }
+                @Override public com.openggf.game.RespawnState checkpointState() { return new com.openggf.game.CheckpointState(); }
+                @Override public com.openggf.level.WaterSystem waterSystem() { return new com.openggf.level.WaterSystem(); }
+            };
+            ObjectManager objectManager = new ObjectManager(
+                    List.of(lampSpawn), new Sonic1ObjectRegistry(), 0, null, null,
+                    GraphicsManager.getInstance(), camera, services);
+            holder[0] = objectManager;
+            objectManager.reset(0);
+
+            runLamppostTwirlToCompletionAndAssertNoDuplicateBall(objectManager, lampSpawn);
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+        }
+    }
+
+    private void runLamppostTwirlToCompletionAndAssertNoDuplicateBall(
+            ObjectManager objectManager, ObjectSpawn lampSpawn) {
+
+        Sonic1LamppostObjectInstance lamppost =
+                liveParentAt(objectManager, Sonic1LamppostObjectInstance.class, lampSpawn.x());
+        // Player centered exactly on the lamppost: dx=0, dy=0 satisfies both
+        // ROM activation-zone checks (79 Lamppost.asm:76-86).
+        com.openggf.tests.TestablePlayableSprite player =
+                new com.openggf.tests.TestablePlayableSprite("sonic", (short) lampSpawn.x(), (short) lampSpawn.y());
+
+        // Drive well past the twirl's full lifetime (34 frames of motion --
+        // INITIAL_LIFETIME=0x21 decrements plus the one extra "still falls
+        // through .twirl" frame, 79 Lamppost.asm:126-134) so it reaches
+        // Lamp_Finish and freezes.
+        for (int frame = 0; frame < 50; frame++) {
+            objectManager.update(0, player, List.of(), frame, false);
+        }
+
+        assertEquals(1, readIntField(lamppost, "mappingFrame"),
+                "activated lamppost pole must stay pole-only (frame 1) -- ROM never re-shows a ball on the pole itself");
+        List<Sonic1LamppostTwirlInstance> twirls = liveObjects(objectManager, Sonic1LamppostTwirlInstance.class);
+        assertEquals(1, twirls.size(), "exactly one twirl/ball visual must exist for a single activated lamppost");
+        Sonic1LamppostTwirlInstance twirl = twirls.getFirst();
+        assertTrue((Boolean) readObjectField(twirl, "finished"), "twirl must have completed its orbit by frame 50");
+        int dx = Math.abs(readIntField(twirl, "currentX") - lamppost.getCenterX());
+        assertTrue(dx <= 12,
+                "terminal twirl ball must rest within its orbit swing radius of the parent's X, got dx=" + dx);
     }
 
     @Test

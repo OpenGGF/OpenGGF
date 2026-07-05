@@ -270,7 +270,13 @@ public final class TraceSessionLauncher {
         if (realtimeRewinding) {
             rewindPlaybackController.play();
             syncVisualRewindCursors(true);
-            cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+            // Release lands a committed logical restore via
+            // cleanupRealtimeRewindPresentation's commitDeferredAudioRestore()
+            // before this cleanup runs, so the RESYNC_MUSIC variant's extra
+            // music-stack pop is not needed and would incorrectly end an
+            // override (e.g. invincibility) the just-restored state says
+            // should still be active.
+            cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_TRANSIENT_SFX);
         }
         return false;
     }

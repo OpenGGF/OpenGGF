@@ -465,4 +465,42 @@ public class DrowningController {
     public boolean isDrowningMusicPlaying() {
         return drowningMusicStarted;
     }
+
+    /**
+     * Captures the mutable breath-timer/countdown/audio-cue state for rewind
+     * restore. Without this, a rewind seek leaves the underwater breath timer,
+     * countdown-bubble cadence, and drowning-music cue phase unrestored even
+     * though the player's own physics fields roll back correctly.
+     */
+    public RewindState captureRewindState() {
+        return new RewindState(remainingAir, frameTimer, drowningMusicStarted,
+                bubbleFlags, bubblesRemainingInBurst, nextBubbleTimer,
+                numberBubbleTimer, numberBubbleFrequency);
+    }
+
+    public void restoreRewindState(RewindState state) {
+        if (state == null) {
+            reset();
+            return;
+        }
+        remainingAir = state.remainingAir();
+        frameTimer = state.frameTimer();
+        drowningMusicStarted = state.drowningMusicStarted();
+        bubbleFlags = state.bubbleFlags();
+        bubblesRemainingInBurst = state.bubblesRemainingInBurst();
+        nextBubbleTimer = state.nextBubbleTimer();
+        numberBubbleTimer = state.numberBubbleTimer();
+        numberBubbleFrequency = state.numberBubbleFrequency();
+    }
+
+    public record RewindState(
+            int remainingAir,
+            int frameTimer,
+            boolean drowningMusicStarted,
+            int bubbleFlags,
+            int bubblesRemainingInBurst,
+            int nextBubbleTimer,
+            int numberBubbleTimer,
+            int numberBubbleFrequency
+    ) {}
 }

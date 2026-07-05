@@ -632,6 +632,47 @@ class TestAbstractPlayableSpriteRewindCapture {
     }
 
     @Test
+    void roundTripRestoresDrowningControllerState() throws Exception {
+        Sonic sonic = new Sonic("sonic", (short) 100, (short) 200);
+        DrowningController drowning = sonic.getDrowningController();
+        assertNotNull(drowning, "playable sprite must have a DrowningController");
+
+        setIntField(drowning, "remainingAir", 11);
+        setIntField(drowning, "frameTimer", 37);
+        setBooleanField(drowning, "drowningMusicStarted", true);
+        setIntField(drowning, "bubbleFlags", 0xC1);
+        setIntField(drowning, "bubblesRemainingInBurst", 1);
+        setIntField(drowning, "nextBubbleTimer", 9);
+        setIntField(drowning, "numberBubbleTimer", 3);
+        setIntField(drowning, "numberBubbleFrequency", 2);
+
+        PerObjectRewindSnapshot snapshot = sonic.captureRewindState();
+
+        // Mutate away from the captured sentinels (simulating frames advancing
+        // past the rewind target before the seek/restore is applied).
+        setIntField(drowning, "remainingAir", 30);
+        setIntField(drowning, "frameTimer", 60);
+        setBooleanField(drowning, "drowningMusicStarted", false);
+        setIntField(drowning, "bubbleFlags", 0);
+        setIntField(drowning, "bubblesRemainingInBurst", -1);
+        setIntField(drowning, "nextBubbleTimer", 0);
+        setIntField(drowning, "numberBubbleTimer", 0);
+        setIntField(drowning, "numberBubbleFrequency", 1);
+
+        sonic.restoreRewindState(snapshot);
+
+        assertEquals(11, getIntField(drowning, "remainingAir"), "remainingAir (breath timer) not restored");
+        assertEquals(37, getIntField(drowning, "frameTimer"), "per-second frame timer not restored");
+        assertTrue(getBooleanField(drowning, "drowningMusicStarted"),
+                "drowning music audio-cue phase not restored");
+        assertEquals(0xC1, getIntField(drowning, "bubbleFlags"), "bubbleFlags not restored");
+        assertEquals(1, getIntField(drowning, "bubblesRemainingInBurst"), "bubblesRemainingInBurst not restored");
+        assertEquals(9, getIntField(drowning, "nextBubbleTimer"), "nextBubbleTimer not restored");
+        assertEquals(3, getIntField(drowning, "numberBubbleTimer"), "numberBubbleTimer (countdown) not restored");
+        assertEquals(2, getIntField(drowning, "numberBubbleFrequency"), "numberBubbleFrequency not restored");
+    }
+
+    @Test
     void roundTripRestoresShieldTypeAndRebindsShieldObject() {
         Sonic sonic = new Sonic("sonic", (short) 100, (short) 200);
         RecordingPowerUpSpawner spawner = new RecordingPowerUpSpawner();
