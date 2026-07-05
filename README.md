@@ -5,10 +5,10 @@
 
 ## Introduction
 
-OpenGGF is an open-source, Java-based game engine for research and preservation of classic Mega
-Drive / Genesis platform games, specifically the mainline Sonic the Hedgehog series. It aims to
-faithfully reimplement the physics and rendering behaviour of the original hardware using data
-loaded from user-supplied ROM images. The project's primary goal
+OpenGGF is a community-made, fan-made, open-source Java game engine for research and preservation
+of classic Mega Drive / Genesis platform games, specifically the mainline Sonic the Hedgehog
+series. It aims to faithfully reimplement the physics and rendering behaviour of the original
+hardware using data loaded from user-supplied ROM images. The project's primary goal
 is accuracy: physics, collision, and audio are all verified against community-maintained
 disassemblies of titles in the Sonic the Hedgehog series. No copyrighted assets are included in
 this repository; a legally obtained ROM is required to run the engine.
@@ -16,10 +16,11 @@ this repository; a legally obtained ROM is required to run the engine.
 The engine also aims to provide modern tooling such as a level editor and an open framework for
 modding and customisation.
 
-> **Disclaimer:** This project is not affiliated with or endorsed by Sega. Sonic the Hedgehog and
-> all related characters, names, and trademarks are the property of Sega Corporation. No ROM images
-> or other copyrighted game data are included in this repository. Users must supply their own
-> legally obtained ROM files to use this software.
+> **Disclaimer:** OpenGGF is a community-made fan project. It is not affiliated with, sponsored by,
+> approved by, or endorsed by Sega. Sonic the Hedgehog and all related characters, names, and
+> trademarks are the property of Sega Corporation. No ROM images or other copyrighted game data are
+> included in this repository. Users must supply their own legally obtained ROM files to use this
+> software.
 >
 > The disclaimer is also shown in-engine on startup; it can be disabled by setting
 > `startup.legalDisclaimer: false` in `config.yaml`.

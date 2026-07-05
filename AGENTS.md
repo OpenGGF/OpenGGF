@@ -1,7 +1,7 @@
 # Guidance for future AI agents
 
 ## Project Mission
-OpenGGF is an open-source, Java-based game engine for research and preservation of classic Mega Drive / Genesis platform games, specifically the mainline Sonic the Hedgehog series. It faithfully reimplements the physics and rendering behaviour of the original hardware using data loaded from user-supplied ROM images. No copyrighted assets are included in this repository. It aims to:
+OpenGGF is a community-made, fan-made, open-source Java game engine for research and preservation of classic Mega Drive / Genesis platform games, specifically the mainline Sonic the Hedgehog series. It is not affiliated with, sponsored by, approved by, or endorsed by Sega. It faithfully reimplements the physics and rendering behaviour of the original hardware using data loaded from user-supplied ROM images. No copyrighted assets are included in this repository. It aims to:
 1.  Use the original ROM data to render levels.
 2.  Perfectly and precisely replicate the original physics. (This is IMPORTANT. The engine must recreate the original pixel-for-pixel)
 3.  Provide modern tooling such as a level editor and an open framework for modding and customisation.
