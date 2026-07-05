@@ -191,23 +191,23 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
         this.makerParent = maker;
         this.behindPriority = behindPriority;
 
-        // ROM Geyser_Main (routine 0, "4C, 4D MZ Lava Geyser and Maker.asm":157-172)
+        // ROM Geyser_Main, routine 0, "4C, 4D MZ Lava Geyser and Maker.asm":157-172
         // captures geyser_origY BEFORE applying the lavafall start-height offset,
         // then falls straight through into Geyser_Action's own SpeedToPos +
         // DisplaySprite in the SAME pass that GMake_MakeLava's FindNextFreeObj
         // creates this object -- ROM never displays a lavafall head at its
-        // un-shifted (eventual landing) Y. Apply that shift here, eagerly, in
-        // the constructor (pure position arithmetic; needs no services()),
+        // un-shifted, eventual landing, Y. Apply that shift here, eagerly, in
+        // the constructor (pure position arithmetic; no service lookups needed),
         // rather than relying on this newly spawned dynamic object's own first
-        // update() landing in the same frame as its parent's spawnFreeChild call.
+        // per-frame refresh landing in the same frame as its parent's spawn call.
         // When the object manager's FindNextFreeObj-equivalent can't place the
-        // child at a slot the current exec pass hasn't reached yet (dynamic
-        // pool pressure), that first update() is deferred to the next frame,
-        // and the head would otherwise render one frame at the maker's own Y --
-        // the "single-frame flicker where a vertical lavafall will land when it
-        // starts" bug. The lavafall THIRD piece (behindPriority=true) is
-        // constructed with an already-final Y from its sibling head and must
-        // not be shifted again.
+        // child at a slot the current exec pass hasn't reached yet, dynamic
+        // pool pressure, that first per-frame refresh is deferred to the next
+        // frame, and the head would otherwise render one frame at the maker's
+        // own Y -- the "single-frame flicker where a vertical lavafall will
+        // land when it starts" bug. The lavafall THIRD piece, behindPriority
+        // true, is constructed with an already-final Y from its sibling head
+        // and must not be shifted again.
         if (role == Role.HEAD && !behindPriority && this.subtype != 0) {
             this.originY = spawn.y();
             this.currentY -= LAVAFALL_START_Y_OFFSET;
