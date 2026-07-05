@@ -67,6 +67,10 @@ docs/screenshots/
 saves/
 dist/
 
+# Local runtime identity/ghost data
+/ghosts/
+/identity/
+
 # Reference docs (keep locally, never commit)
 docs/clownacy/
 docs/gensplusgx/
