@@ -122,3 +122,19 @@ fix can be verified.
   calling `updateAnimation()` once after setting the new anim state in both branches of
   `updateMakeLava()`. New RED-before/GREEN-after coverage:
   `TestSonic1LavaGeyserOutOfRange#lavafallMakerNeverRendersPreviousCycleEndingFrameAtNextEruption`.
+- **Post-merge finding, now fixed (row 7, S1 Roller standing-state defeat):** row 7's collision
+  investigation was correct and remains unchanged — a dormant, not-yet-activated Roller
+  (`ob2ndRout=0`) genuinely has `obColType=0` and cannot be touched, hurt Sonic, or be defeated.
+  A follow-up investigation (`.superpowers/sdd/roller-activation-report.md`) found that the
+  engine additionally rendered and idle-animated the curled pose for the object's entire dormant
+  lifetime, while ROM never calls `DisplaySprite`/`AnimateSprite` for it at all in that window —
+  `Roll_Main` (routine 0) is entered via `jmp` and its own `rts` never reaches either call, and
+  `Roll_Action_FromLeft` (`ob2ndRout=0`) pops its own return address (`addq.l #4,sp`) on every
+  call specifically to skip them (docs/s1disasm/_incObj/"43 Badnik - Roller.asm":36-39,99). So the
+  player was seeing a static, hitbox-less sprite ROM never draws — not just an untouchable one.
+  Fixed by gating `Sonic1RollerBadnikInstance.appendRenderCommands()` and `updateAnimation()` on
+  `!initialized || secondaryState == STATE_ROLL_CHK`, matching ROM's skip exactly without
+  affecting the activated (rolling/unfolded) render or animation paths. New RED-before/GREEN-after
+  coverage: `TestSonic1RollerBadnikInstance#dormantRollerEmitsNoRenderCommands` and
+  `#dormantRollerDoesNotAnimate` (plus `#activatedRollerStillRenders` locking in the unaffected
+  active-state path).
