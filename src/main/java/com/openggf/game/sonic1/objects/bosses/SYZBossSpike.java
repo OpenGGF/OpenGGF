@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
@@ -81,7 +82,7 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
         // AbstractBossChild.isDestroyed()'s own lazy parent-destroyed check below);
         // matches the EHZBossSpike precedent's identical guard.
         if (!(parent instanceof Sonic1SYZBossInstance boss) || parent.isDestroyed()) {
-            setDestroyed(true);
+            ObjectLifetimeOps.destroyBossChildLatched(this);
             return;
         }
 
@@ -104,7 +105,7 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
         // the boss is destroyed. Kept anyway to model the ROM's own independent check
         // literally, in case a future change decouples spike X from the boss's.
         if (bossRoutineSecondary == Sonic1SYZBossInstance.STATE_ESCAPE && !isOnScreenX(OFF_SCREEN_MARGIN)) {
-            setDestroyed(true);
+            ObjectLifetimeOps.destroyBossChildLatched(this);
             return;
         }
 
