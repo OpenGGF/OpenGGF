@@ -35,7 +35,7 @@ recorded ROM counters/markers for correct movie playback is fine; copying record
 ## Procedure
 
 1. **Inputs** (in the working dir, gitignored):
-   - ROM: `Sonic The Hedgehog (W) (REV01) [!].gen`
+   - ROM: `s1.gen`
    - BK2: the shared `s1-complete-run.bk2` (the multi-segment recorder plays this
      and auto-detects zone/act, emitting one per-act output subdir).
 2. **Run the recorder** (headless EmuHawk, mirrors the s3k complete-run pattern):
@@ -43,7 +43,7 @@ recorded ROM counters/markers for correct movie playback is fine; copying record
    docs/BizHawk-2.11-win-x64/EmuHawk.exe --chromeless \
      --lua=tools/bizhawk/s1_complete_run_recorder.lua \
      --movie=s1-complete-run.bk2 \
-     "Sonic The Hedgehog (W) (REV01) [!].gen"
+     "s1.gen"
    ```
    (Override the emulator path with `BIZHAWK_EXE` if needed. The v3.6+ recorder
    self-exits at movie end and pre-creates all per-act output subdirs in one

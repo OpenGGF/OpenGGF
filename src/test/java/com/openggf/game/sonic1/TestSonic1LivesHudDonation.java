@@ -36,7 +36,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 class TestSonic1LivesHudDonation {
-    private static final Path S2_ROM = Path.of("Sonic The Hedgehog 2 (W) (REV01) [!].gen");
+    private static final Path S2_ROM = Path.of("s2.gen");
 
     @BeforeEach
     void setUp() {

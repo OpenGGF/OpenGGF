@@ -3,7 +3,7 @@ REM Record a BizHawk trace for any Sonic 1 zone/act.
 REM The Lua script auto-detects zone and act from RAM.
 REM
 REM Usage:  record_trace.bat <rom_path> <bk2_path>
-REM Example: record_trace.bat "Sonic The Hedgehog (W) (REV01) [!].gen" "Movies\s1-mz1.bk2"
+REM Example: record_trace.bat "s1.gen" "Movies\s1-mz1.bk2"
 REM
 REM Output goes to: <repo>\tools\bizhawk\trace_output\
 REM   (BizHawk resolves the script's relative trace_output folder from the

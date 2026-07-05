@@ -275,7 +275,7 @@ public class AudioReferenceGenerator {
      * Requires ROM file in working directory or via -Dsonic.rom.path
      */
     public static void main(String[] args) {
-        String romPath = System.getProperty("sonic.rom.path", "Sonic The Hedgehog 2 (W) (REV01) [!].gen");
+        String romPath = System.getProperty("sonic.rom.path", "s2.gen");
         File romFile = new File(romPath);
 
         if (!romFile.exists()) {
@@ -300,5 +300,4 @@ public class AudioReferenceGenerator {
         }
     }
 }
-
 

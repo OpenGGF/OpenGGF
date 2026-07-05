@@ -71,7 +71,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 class TestEditorToggleIntegration {
-    private static final Path S2_ROM = Path.of("Sonic The Hedgehog 2 (W) (REV01) [!].gen");
+    private static final Path S2_ROM = Path.of("s2.gen");
 
     @TempDir
     Path tempSaves;

@@ -54,11 +54,11 @@ Tracked Git hooks live in `.githooks/`. A Maven build (`mvn`, `mvn test`, etc.) 
 ## ROM Requirement
 
 Keep ROMs in the working directory (gitignored):
-- `Sonic The Hedgehog (W) (REV01) [!].gen`
-- `Sonic The Hedgehog 2 (W) (REV01) [!].gen`
-- `Sonic and Knuckles & Sonic 3 (W) [!].gen`
+- `s1.gen` - Sonic 1 World REV01, CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`
+- `s2.gen` - Sonic 2 World REV01, CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`
+- `s3k.gen` - Sonic 3&K locked-on combined ROM, CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`
 
-For S3K tests: `-Ds3k.rom.path="Sonic and Knuckles & Sonic 3 (W) [!].gen"`. `TestRomLogic` is skipped when ROM is absent.
+For S3K tests: `-Ds3k.rom.path=s3k.gen`. `TestRomLogic` is skipped when ROM is absent.
 
 ## Reference Materials
 

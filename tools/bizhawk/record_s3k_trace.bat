@@ -3,8 +3,8 @@ REM Record a BizHawk trace for any Sonic 3&K zone/act.
 REM The Lua script auto-detects zone and act from RAM.
 REM
 REM Usage:  record_s3k_trace.bat <rom_path> <bk2_path> [trace_profile]
-REM Example: record_s3k_trace.bat "Sonic and Knuckles & Sonic 3 (W) [!].gen" "Movies\s3k-aiz1.bk2"
-REM Example: record_s3k_trace.bat "Sonic and Knuckles & Sonic 3 (W) [!].gen" "src\test\resources\traces\s3k\aiz1_to_hcz_fullrun\s3k-aiz1-aiz2-sonictails.bk2" aiz_end_to_end
+REM Example: record_s3k_trace.bat "s3k.gen" "Movies\s3k-aiz1.bk2"
+REM Example: record_s3k_trace.bat "s3k.gen" "src\test\resources\traces\s3k\aiz1_to_hcz_fullrun\s3k-aiz1-aiz2-sonictails.bk2" aiz_end_to_end
 REM
 REM Output goes to: <repo>\tools\bizhawk\trace_output\
 REM   (BizHawk resolves the script's relative trace_output folder from the

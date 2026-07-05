@@ -78,7 +78,7 @@ mvn "-Dtest=TestS3kAiz1SkipHeadless" test
 mvn "-Dtest=TestSonic3kLevelLoading" test
 mvn "-Dtest=TestSonic3kBootstrapResolver" test
 mvn "-Dtest=TestSonic3kDecodingUtils" test
-mvn "-Dtest=Test<Zone><Feature>..." test "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen"
+mvn "-Dtest=Test<Zone><Feature>..." test "-Ds3k.rom.path=s3k.gen"
 ```
 
 Zone-state guards to keep green where relevant: `S3kRuntimeStateReadGuard`, `S3kAizWriteBridgeGuard`, `S3kTransitionBridgeGuard`, `S3kHczPaletteOwnershipMigrationGuard`, `TestZoneEventRuntimeAccessGuard`. Visual validation via the `s3k-zone-validate` skill.

@@ -68,11 +68,11 @@ public class MasterTitleScreen {
 
     public enum GameEntry {
         SONIC_1("Sonic The Hedgehog", "s1", SonicConfiguration.SONIC_1_ROM,
-                "Sonic The Hedgehog (W) (REV01) [!].gen"),
+                "s1.gen"),
         SONIC_2("Sonic The Hedgehog 2", "s2", SonicConfiguration.SONIC_2_ROM,
-                "Sonic The Hedgehog 2 (W) (REV01) [!].gen"),
+                "s2.gen"),
         SONIC_3K("Sonic 3 & Knuckles", "s3k", SonicConfiguration.SONIC_3K_ROM,
-                "Sonic and Knuckles & Sonic 3 (W) [!].gen");
+                "s3k.gen");
 
         public final String displayName;
         public final String gameId;

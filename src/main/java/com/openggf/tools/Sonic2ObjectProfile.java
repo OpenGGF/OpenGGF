@@ -208,7 +208,7 @@ public class Sonic2ObjectProfile implements GameObjectProfile {
 
     @Override public String gameName() { return "Sonic 2"; }
     @Override public String gameId() { return "s2"; }
-    @Override public String defaultRomPath() { return "Sonic The Hedgehog 2 (W) (REV01) [!].gen"; }
+    @Override public String defaultRomPath() { return "s2.gen"; }
     @Override public String outputFilename() { return "OBJECT_CHECKLIST.md"; }
     @Override public List<ObjectDiscoveryTool.LevelConfig> getLevels() { return LEVELS; }
     @Override public Set<Integer> getImplementedIds() { return IMPLEMENTED_IDS; }

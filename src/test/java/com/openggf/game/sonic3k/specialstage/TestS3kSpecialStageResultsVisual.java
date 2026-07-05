@@ -66,7 +66,7 @@ public class TestS3kSpecialStageResultsVisual {
 
             // Check for S3K ROM
             String romPath = System.getProperty("s3k.rom.path",
-                    "Sonic and Knuckles & Sonic 3 (W) [!].gen");
+                    "s3k.gen");
             File romFile = new File(romPath);
             if (!romFile.exists()) {
                 System.err.println("S3K ROM not available Ã¢â‚¬â€ visual tests skipped");
@@ -350,5 +350,4 @@ public class TestS3kSpecialStageResultsVisual {
         assertTrue(nonWhitePixels > 10, message + " (found " + nonWhitePixels + " non-white pixels in region)");
     }
 }
-
 

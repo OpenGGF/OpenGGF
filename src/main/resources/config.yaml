@@ -60,9 +60,9 @@ characters:
 
 # ── ROMs ──
 roms:
-  sonic1: "Sonic The Hedgehog (W) (REV01) [!].gen"   # Filename of the Sonic 1 ROM
-  sonic2: "Sonic The Hedgehog 2 (W) (REV01) [!].gen"   # Filename of the Sonic 2 ROM
-  sonic3k: "Sonic and Knuckles & Sonic 3 (W) [!].gen"   # Filename of the Sonic 3&K ROM
+  sonic1: "s1.gen"   # Filename of the Sonic 1 ROM
+  sonic2: "s2.gen"   # Filename of the Sonic 2 ROM
+  sonic3k: "s3k.gen"   # Filename of the Sonic 3&K ROM
   default: "s2"   # Which game to load by default
 
 # ── Startup ──

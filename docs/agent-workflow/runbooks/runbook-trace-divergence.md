@@ -25,7 +25,7 @@ Trace report artifacts are produced under `target/trace-reports/`:
 
 ```powershell
 # Run the failing replay (JUnit 5; quote selector). Example for an S2 zone:
-mvn "-Dtest=*Mtz1TraceReplay" test "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen"
+mvn "-Dtest=*Mtz1TraceReplay" test "-Ds3k.rom.path=s3k.gen"
 
 # Full sweep to pick the next target:
 mvn "-Dtest=*TraceReplay" test
