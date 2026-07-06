@@ -2061,6 +2061,7 @@ public class GameLoop {
             activeBonusStageProvider = null;
             if (gameplayMode != null) {
                 gameplayMode.setActiveBonusStageProvider(null);
+                gameplayMode.deregisterBonusStageAdapter();
             }
             changeGameModeForBoundary(GameMode.LEVEL);
             return;
