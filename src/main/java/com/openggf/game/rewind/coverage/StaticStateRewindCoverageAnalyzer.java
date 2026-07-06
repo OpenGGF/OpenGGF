@@ -6,8 +6,10 @@ import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -49,10 +51,32 @@ import java.util.stream.Stream;
  *       ButtonVineTriggerStaticAdapter}).</li>
  * </ul>
  *
- * <p>Uncovered candidates are reported with a stable gap key of the form
- * {@code <fully.qualified.Outer[.Inner]>#missingRewindAdapter}, consumed by
- * {@code TestStaticStateRewindCoverageGuard} via a committed baseline file,
- * exactly like {@link RewindCoverageAnalyzer}'s object-field gap keys.
+ * <p><b>A second candidate source: per-{@code GameModule} registered
+ * services.</b> The {@code public static void reset()} heuristic above only
+ * catches the older "global static fields" shape (e.g. {@code
+ * ButtonVineTriggerManager}). A newer shape has the identical bug potential
+ * but sits invisibly outside that regex: a per-{@code GameModule} service
+ * object (mutable instance fields + an instance {@code reset()}, one
+ * instance per active game module) exposed to gameplay/object code via
+ * {@link com.openggf.game.GameModule#getGameService(Class)} /
+ * {@code ObjectServices#gameService(Class)} -- e.g. {@code
+ * Sonic1ConveyorState}, found manually (not by this guard) when it caused
+ * exactly the same rewind-desync shape as the static-field managers above.
+ * Every {@code type == X.class} reference inside a {@code getGameService(...)}
+ * method body (scanned brace-matched so unrelated {@code type ==} idioms
+ * elsewhere in the codebase, e.g. {@code GenericFieldCapturer}'s type
+ * dispatch, are never mistaken for a service registration) names a second
+ * candidate source; a referenced class is a candidate under this path when
+ * its own body directly declares an instance {@code public void reset(...)}
+ * (mirroring the static heuristic's shape, just without the {@code static}
+ * keyword this registration style implies). Coverage is judged by the exact
+ * same rule as the static-field candidates above.
+ *
+ * <p>Uncovered candidates (either source) are reported with a stable gap key
+ * of the form {@code <fully.qualified.Outer[.Inner]>#missingRewindAdapter},
+ * consumed by {@code TestStaticStateRewindCoverageGuard} via a committed
+ * baseline file, exactly like {@link RewindCoverageAnalyzer}'s object-field
+ * gap keys.
  */
 public final class StaticStateRewindCoverageAnalyzer {
 
@@ -61,8 +85,12 @@ public final class StaticStateRewindCoverageAnalyzer {
 
     private static final Pattern CLASS_DECL = Pattern.compile("\\bclass\\s+(\\w+)");
     private static final Pattern RESET_SIG = Pattern.compile("public\\s+static\\s+void\\s+reset\\s*\\(");
+    private static final Pattern INSTANCE_RESET_SIG = Pattern.compile("public\\s+void\\s+reset\\s*\\(");
     private static final Pattern IMPLEMENTS_SNAPSHOTTABLE =
             Pattern.compile("implements\\s+[^{;]*\\bRewindSnapshottable\\b");
+    private static final Pattern GET_GAME_SERVICE_DECL = Pattern.compile("\\bgetGameService\\s*\\(");
+    private static final Pattern SERVICE_TYPE_REFERENCE =
+            Pattern.compile("\\btype\\s*==\\s*([\\w.]+)\\.class");
 
     private StaticStateRewindCoverageAnalyzer() {
     }
@@ -103,6 +131,12 @@ public final class StaticStateRewindCoverageAnalyzer {
         for (SourceFile file : files) {
             for (String simpleOrNestedName : findClassesWithOwnStaticReset(file.content())) {
                 candidates.add(new QualifiedClass(file.packageName() + "." + simpleOrNestedName, lastSegment(simpleOrNestedName)));
+            }
+        }
+        // Second candidate source: per-GameModule registered services (see class javadoc).
+        for (QualifiedClass serviceCandidate : resolveGameServiceCandidates(files)) {
+            if (candidates.stream().noneMatch(c -> c.qualifiedName().equals(serviceCandidate.qualifiedName()))) {
+                candidates.add(serviceCandidate);
             }
         }
 
@@ -174,7 +208,9 @@ public final class StaticStateRewindCoverageAnalyzer {
                 String content = Files.readString(path);
                 String relative = srcMain.relativize(path).toString().replace('\\', '/');
                 String pkg = relative.substring(0, relative.lastIndexOf('/')).replace('/', '.');
-                result.add(new SourceFile(pkg, content));
+                String fileName = path.getFileName().toString();
+                String fileSimpleName = fileName.substring(0, fileName.length() - ".java".length());
+                result.add(new SourceFile(pkg, content, fileSimpleName));
             }
         }
         return result;
@@ -188,8 +224,18 @@ public final class StaticStateRewindCoverageAnalyzer {
      * enclosing outer class.
      */
     private static List<String> findClassesWithOwnStaticReset(String content) {
+        return findClassesWithOwnReset(content, RESET_SIG);
+    }
+
+    /**
+     * Same attribution as {@link #findClassesWithOwnStaticReset}, but for an
+     * arbitrary {@code reset(...)}-shaped signature pattern -- used to detect
+     * per-{@code GameModule} service candidates, whose {@code reset()} is an
+     * instance method (see {@link #INSTANCE_RESET_SIG}), not a static one.
+     */
+    private static List<String> findClassesWithOwnReset(String content, Pattern resetPattern) {
         Set<String> found = new LinkedHashSet<>();
-        Matcher resetMatcher = RESET_SIG.matcher(content);
+        Matcher resetMatcher = resetPattern.matcher(content);
         while (resetMatcher.find()) {
             Deque<String> stack = classStackAt(content, resetMatcher.start());
             String owner = stack.peek();
@@ -198,6 +244,111 @@ public final class StaticStateRewindCoverageAnalyzer {
             }
         }
         return new ArrayList<>(found);
+    }
+
+    /**
+     * Extracts every {@code type == X.class} reference from inside {@code
+     * getGameService(...)} method bodies in {@code content} (brace-matched,
+     * so the identical {@code type ==} idiom used by unrelated dispatch code
+     * elsewhere -- e.g. {@code GenericFieldCapturer}'s reflective type
+     * switch -- is never mistaken for a service registration). {@code X} may
+     * be a bare simple name (resolved against the file-name index in {@link
+     * #resolveGameServiceCandidates}) or an inline fully-qualified reference.
+     */
+    private static List<String> findGameServiceTypeReferences(String content) {
+        List<String> refs = new ArrayList<>();
+        Matcher declMatcher = GET_GAME_SERVICE_DECL.matcher(content);
+        while (declMatcher.find()) {
+            int braceStart = content.indexOf('{', declMatcher.end());
+            if (braceStart < 0) {
+                continue;
+            }
+            int depth = 0;
+            int end = -1;
+            for (int i = braceStart; i < content.length(); i++) {
+                char c = content.charAt(i);
+                if (c == '{') {
+                    depth++;
+                } else if (c == '}') {
+                    depth--;
+                    if (depth == 0) {
+                        end = i;
+                        break;
+                    }
+                }
+            }
+            if (end < 0) {
+                continue; // unterminated method body (shouldn't happen in valid source); skip
+            }
+            String body = content.substring(braceStart + 1, end);
+            Matcher typeMatcher = SERVICE_TYPE_REFERENCE.matcher(body);
+            while (typeMatcher.find()) {
+                refs.add(typeMatcher.group(1));
+            }
+        }
+        return refs;
+    }
+
+    /**
+     * Resolves every {@code getGameService(...)}-registered type across
+     * {@code files} to a {@link QualifiedClass} candidate, keeping only
+     * those whose own declaring file directly declares an instance {@code
+     * reset(...)} (the per-{@code GameModule} service analog of {@link
+     * #findClassesWithOwnStaticReset}). Fully-qualified references (contain
+     * a {@code .}) resolve directly; bare simple names resolve via each
+     * file's own top-level class name (package + file name, the Java
+     * convention every file in this codebase follows), preferring a match in
+     * the same package as the referencing file when a simple name is
+     * ambiguous, and silently skipping references this scan cannot resolve
+     * (e.g. a type outside {@link #SCAN_ROOT}).
+     */
+    private static List<QualifiedClass> resolveGameServiceCandidates(List<SourceFile> files) {
+        Map<String, List<SourceFile>> byTopLevelSimpleName = new LinkedHashMap<>();
+        Map<String, SourceFile> byFqn = new LinkedHashMap<>();
+        for (SourceFile file : files) {
+            byTopLevelSimpleName.computeIfAbsent(file.fileSimpleName(), k -> new ArrayList<>()).add(file);
+            byFqn.put(file.packageName() + "." + file.fileSimpleName(), file);
+        }
+
+        List<QualifiedClass> result = new ArrayList<>();
+        for (SourceFile referencingFile : files) {
+            for (String ref : findGameServiceTypeReferences(referencingFile.content())) {
+                SourceFile owner;
+                String simpleName;
+                if (ref.contains(".")) {
+                    owner = byFqn.get(ref);
+                    simpleName = lastSegment(ref);
+                } else {
+                    List<SourceFile> matches = byTopLevelSimpleName.get(ref);
+                    owner = pickOwner(matches, referencingFile.packageName());
+                    simpleName = ref;
+                }
+                if (owner == null) {
+                    continue; // outside this scan's source root, or genuinely ambiguous
+                }
+                boolean hasOwnReset = findClassesWithOwnReset(owner.content(), RESET_SIG).contains(simpleName)
+                        || findClassesWithOwnReset(owner.content(), INSTANCE_RESET_SIG).contains(simpleName);
+                if (hasOwnReset) {
+                    result.add(new QualifiedClass(owner.packageName() + "." + simpleName, simpleName));
+                }
+            }
+        }
+        return result;
+    }
+
+    private static SourceFile pickOwner(List<SourceFile> matches, String referencingPackage) {
+        if (matches == null || matches.isEmpty()) {
+            return null;
+        }
+        if (matches.size() == 1) {
+            return matches.get(0);
+        }
+        for (SourceFile candidate : matches) {
+            if (candidate.packageName().equals(referencingPackage)) {
+                return candidate;
+            }
+        }
+        return null; // ambiguous across packages with no same-package tie-break; skip rather than guess
     }
 
     private static String dottedPath(Deque<String> stack) {
@@ -255,7 +406,7 @@ public final class StaticStateRewindCoverageAnalyzer {
         return cleaned;
     }
 
-    private record SourceFile(String packageName, String content) {
+    private record SourceFile(String packageName, String content, String fileSimpleName) {
     }
 
     private record QualifiedClass(String qualifiedName, String simpleName) {
