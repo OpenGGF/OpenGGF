@@ -217,13 +217,12 @@ fix can be verified.
   rewound point) rather than permanently freezing the level. Root-caused in the addendum section
   of `.superpowers/sdd/ssentry-rewind-report.md` ("Game-agnostic scope: S1 and S3K checked").
   **Implemented as originally proposed, not narrowed:** added `FadeManager.hasPendingCompletion()`
-  (`return state != FadeState.NONE && onFadeComplete != null;`) and folded it into `GameLoop
-  .isNonRewindableTransitionPending()` alongside the existing four flags. Before implementing, ran
-  the REQUIRED design-risk inventory (grep every `startFadeTo*(callback)` call site reachable
-  during `GameMode.LEVEL` across `GameLoop`/objects/credits/results-screen code) rather than
-  assuming the earlier note's "most already covered, fine" framing: found the four flags do NOT
-  already cover `Sonic1ResultsScreenObjectInstance.triggerFadeToBlack()` (the ordinary,
-  non-special-stage act-complete path — same object, same root cause, previously unnoticed),
+  (`return state != FadeState.NONE && onFadeComplete != null;`). Before implementing, ran the
+  REQUIRED design-risk inventory (grep every `startFadeTo*(callback)` call site reachable during
+  `GameMode.LEVEL` across `GameLoop`/objects/credits/results-screen code) rather than assuming the
+  earlier note's "most already covered, fine" framing: found the four flags do NOT already cover
+  `Sonic1ResultsScreenObjectInstance.triggerFadeToBlack()` (the ordinary, non-special-stage
+  act-complete path — same object, same root cause, previously unnoticed),
   `GameLoop.startRespawnFade()`/`startNextActFade()`/`startNextZoneFade()` (death respawn and
   act/zone advance — `LevelTransitionCoordinator.requestRespawn()`/`requestNextAct()`/
   `requestNextZone()` never touch `levelInactiveForTransition`), or `startZoneActFade()` when its
@@ -232,16 +231,42 @@ fix can be verified.
   `true` overload most boss/cutscene callers use. Judged every one of these (plus the S2
   `ResultsScreenObjectInstance` equivalent, ESC-to-quit-to-title, and Trace Test Mode's own
   teardown fade) as a one-shot, transition-like event — not a recurring/cosmetic fade during
-  normal play a player would legitimately want to rewind through — so blocking rewind during any
-  of them is safe/correct, same as the four already-flagged cases; no dangerous site was found, so
-  no narrowing was needed. New RED-before/GREEN-after coverage: `TestGameLoopSpecialStageRewindGate
+  normal play a player would legitimately want to rewind through — so blocking REWIND ENGAGEMENT
+  during any of them is safe/correct, same as the four already-flagged cases.
+  **Reviewer follow-up, same day — split the predicate (do not freeze gameplay for this term):**
+  the first implementation wrongly folded `hasPendingCompletion()` directly into `GameLoop
+  .isNonRewindableTransitionPending()`, which ALSO drives the gameplay-tick freeze block — this
+  would have frozen ordinary gameplay (object ticking, physics) during every callback-bearing
+  fade, including death respawn and ordinary act-complete, neither of which freezes real ROM
+  gameplay (only the four already-flagged transition cases legitimately do). Fixed by splitting
+  the consumers: `isNonRewindableTransitionPending()` reverts to EXACTLY the original four flags
+  (restoring the pre-Fix-3 gameplay-freeze behavior bit-for-bit — confirmed by direct source diff
+  against the prior commit), consumed only by the freeze block as before. A new
+  `GameLoop.isRewindBlocked()` (`isNonRewindableTransitionPending() ||
+  fadeManager.hasPendingCompletion()`) is a rewind-only superset — derived from, not duplicating,
+  the original predicate — consumed exclusively by the two rewind-engagement call sites
+  (`LiveRewindManager`/`TraceSessionLauncher`'s `handleRealtimeRewindInput`), never by the freeze
+  block. New RED-before/GREEN-after coverage for the split itself:
+  `TestGameLoopSpecialStageRewindGate#fadeWithPendingCompletionDoesNotFreezeGameplayButDoesBlockRewind`
+  (reflectively asserts `isNonRewindableTransitionPending()==false` while
+  `isRewindBlocked()==true` during a pending-completion fade with none of the four flags set; RED
+  against the pre-split commit — direct source inspection confirmed
+  `isNonRewindableTransitionPending()` literally included the fade term there, and the test itself
+  failed with `NoSuchMethodException: isRewindBlocked()` since that method didn't exist yet).
+  Original coverage: `TestGameLoopSpecialStageRewindGate
   #heldRewindDisengagesWhileAFadeHasAPendingCompletionCallback`, which (per this class's existing
   documented fixture limitation — no real zone/act/player load available here) drives a REAL
   `FadeManager.startFadeToWhite(callback)` rather than reflectively flipping a `GameLoop` field
   (unlike the other two cases in this file, which fake `specialStageTransitionPending`/
   `bonusStageTransitionPending` directly, since this bug's whole point is that NO such field is
-  ever set for this path). See `wave3-fixes-report.md` for the commit SHA and the shared
-  before/after matrix run with Fix 2.
+  ever set for this path); this test was ALSO updated post-split, since gameplay correctly no
+  longer freezes during its fade window, so its second assertion now calls
+  `LiveRewindManager.handleRealtimeRewindInput(...)` directly with the real, reflectively-read
+  `isRewindBlocked()` value instead of a second `loop.step()` (which would otherwise fall through
+  into a real, now-unfrozen gameplay tick this lightweight fixture cannot support — no level/player
+  loaded, same NPE class this file's top javadoc already documents for a full `enterSpecialStage()`
+  drive). See `wave3-fixes-report.md` for the commit SHAs and the shared before/after matrix run
+  with Fix 2, re-run again after this split.
 - **New tracked row (outside original 25-row S1 scope), FIXED — EHZ boss rewind child adoption
   identity + orphan reconciliation (shared boss framework):** `ObjectManager
   .adoptRewindReconstructionChild` matched pending rewind-reconstruction children to captured
