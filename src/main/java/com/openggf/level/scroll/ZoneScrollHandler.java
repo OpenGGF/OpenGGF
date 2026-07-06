@@ -175,4 +175,32 @@ public interface ZoneScrollHandler {
     default void init(int actId, int cameraX, int cameraY) {
         // no-op by default
     }
+
+    /**
+     * Capture per-frame LOGICAL scroll state that is not derivable from the
+     * frame counter or the restored camera, for the rewind snapshot.
+     * <p>
+     * Most handlers return {@code null}: their scroll output is either a pure
+     * function of the camera/frame (recomputed after a rewind restore) or a
+     * frame-counter-derived accumulator (see {@link FrameScrollAccumulator}).
+     * Handlers that own genuinely stateful logic — notably
+     * {@link CameraDrivenScrollHandler}s that drive the camera from an internal
+     * level-event routine and accumulate a background position each frame — must
+     * override this so a rewind restores that state instead of re-simulating it
+     * forward from stale values.
+     *
+     * @return an opaque, value-equal snapshot object, or {@code null} if the
+     *         handler has no such state
+     */
+    default Object captureRewindState() {
+        return null;
+    }
+
+    /**
+     * Restore state previously produced by {@link #captureRewindState()}.
+     * A {@code null} argument (no state was captured) is a no-op.
+     */
+    default void restoreRewindState(Object state) {
+        // no-op by default
+    }
 }
