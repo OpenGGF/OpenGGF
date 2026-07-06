@@ -190,14 +190,39 @@ fix can be verified.
   companion case, reflectively driving the real `GameLoop.stepInternal()` gate — still valid
   unchanged after the rework) plus unit-level
   `TestLiveRewindManagerAudioCleanup#pendingNonRewindableTransitionStopsPresentationAudioLikeModeExit`.
-  **Known gap, explicitly out of scope (not fixed):** S1's giant-ring → special-stage entry
-  (`Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage`) shares the same
-  `FadeManager.restore()`-nulls-callback root cause but is NOT guarded by any of the four
-  composite-predicate flags, so it is not covered by this fix. It manifests as a silently
-  DROPPED special-stage transition (not a freeze) when rewind is engaged during that specific
-  window — lower severity, tracked as a recommended follow-up (a `FadeManager
-  .hasPendingCompletion()` accessor would close it game-agnostically for all fade-driven
-  callback-completed transitions, not just the four already-flagged ones).
+  **Known test-coverage gap (documented in the test's javadoc, not silently left):**
+  `TestGameLoopSpecialStageRewindGate` proves the gate itself by reflectively flipping the
+  pending flags, not by driving a real `enterSpecialStage()` end-to-end to a
+  `GameMode.SPECIAL_STAGE` landing with the flag cleared. That end-to-end shape was attempted
+  (a `@RequiresRom(SonicGame.SONIC_2)` spike calling `loop.step()` once to prime bindings, then
+  `loop.enterSpecialStage()`, then holding/releasing rewind across ~50 frames) and found
+  infeasible in this lightweight fixture: the very first priming `loop.step()` NPEs in
+  `Camera.updatePosition()` (`this.focusedSprite` is null) because
+  `TestEnvironment.configureGameModuleFixture`/`configureRomFixture` attach managers but never
+  load an actual zone/act or spawn a player sprite, and `GameLoop`'s gameplay tick unconditionally
+  drives camera focus tracking. Closing this gap needs the heavier level-loading machinery used by
+  trace-replay/`HeadlessTestFixture`-style tests (real ROM + real zone/act + spawned player) —
+  tracked here as an open follow-up, not attempted in this session.
+- **New tracked row (outside original 25-row S1 scope), NOT FIXED — S1 giant-ring special-stage
+  entry drops the transition under held rewind (lower-severity sibling of the row above):**
+  `Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage()` (~line 391) calls
+  `fadeManager().startFadeToWhite(callback)` directly from object code with its OWN callback
+  closure (which calls `advanceZoneActOnly()`/`requestSpecialStageFromCheckpoint()`) — it never
+  touches `specialStageTransitionPending` or any other flag `GameLoop
+  .isNonRewindableTransitionPending()` folds in, so the fix above does NOT cover this path.
+  Same root cause as the fixed bug (`FadeManager.restore()` explicitly not restoring a live
+  `onFadeComplete`, `FadeManager.java:715-731`), but a DIFFERENT, lower-severity symptom:
+  engaging rewind during this specific fade-to-white window silently drops the special-stage
+  entry (the results-screen object survives un-destroyed, gameplay resumes normally from the
+  rewound point) rather than permanently freezing the level. Root-caused in the addendum section
+  of `.superpowers/sdd/ssentry-rewind-report.md` ("Game-agnostic scope: S1 and S3K checked").
+  Recommended follow-up fix shape (not implemented): a `FadeManager.hasPendingCompletion()`
+  accessor (`return state != FadeState.NONE && onFadeComplete != null;`) added to the composite
+  predicate would close this game-agnostically for every fade-driven, callback-completed
+  transition — not just the four already-flagged ones — but was deliberately left out of the
+  current fix since the user's decision was scoped to blocking rewind during a pending special
+  stage, and touching `FadeManager` risks behavior changes across the dozens of other
+  `startFadeTo*` call sites in `GameLoop`. No test added (not fixed).
 - **New tracked row (outside original 25-row S1 scope), FIXED — EHZ boss rewind child adoption
   identity + orphan reconciliation (shared boss framework):** `ObjectManager
   .adoptRewindReconstructionChild` matched pending rewind-reconstruction children to captured
