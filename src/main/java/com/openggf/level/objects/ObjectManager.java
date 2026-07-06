@@ -3647,69 +3647,136 @@ public class ObjectManager {
 
                 // 5. PHASE 1 (dynamic objects): recreate each captured dynamic object and register
                 //    its captured id, still deferring field-blob application to phase 2.
-                // Stop routing further child spawns into the reconstruction-children scratch:
-                // any spawns triggered below (e.g. by a recreate hook) are normal restore
-                // wiring, not reconstruction side effects to be adopted.
-                rewindReconstructionChildCapture = false;
-                for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry
-                        : s.dynamicObjects()) {
+                //
+                // A captured entry can depend on a LATER entry in this same list finishing its
+                // own reconstruction first: a dynamically-spawned parent (e.g. a boss spawned by
+                // a zone event rather than the zone's static object layout table -- see
+                // Sonic1SYZBossInstance, GHZBossWreckingBall's owner, Sonic3kAIZ/MHZEvents
+                // minibosses) is itself a captured DynamicObjectEntry processed in this loop, and
+                // its OWN construction-spawned children were captured as EARLIER entries (inserted
+                // into dynamicObjects during the parent's constructor, before the parent itself was
+                // appended -- see registerRewindReconstructionChild). A first-pass attempt for such
+                // a child entry therefore used to run before the parent had been reconstructed at
+                // all: adoptRewindReconstructionChild found an empty pool (the parent hadn't run
+                // its constructor yet to populate it), and any RewindRecreatable#recreateForRewind()
+                // sibling-search fallback (e.g. nearestLiveBossForRewind) also failed (no live
+                // parent to find) -- silently discarding the child's entire captured state. A
+                // STATIC layout-spawned boss never hits this: it reconstructs in the Phase-1 ACTIVE
+                // loop above (step 3), before this dynamic loop starts, so its children's pool
+                // entries are already populated by the time this loop's adoption attempts run.
+                //
+                // reconstructDynamicEntry keeps the reconstruction-child pool active (via
+                // withRewindActiveRestore) across a dynamically-spawned parent's OWN
+                // reconstruction below, not just the pre-Phase-1 static case, so its fresh
+                // construction-spawned children land in the pool instead of live-spawning as
+                // unrelated new dynamic objects. Unresolved entries are parked and retried in a
+                // fixed-point loop (not just once): a single retry pass is not enough for a
+                // 3+-level captured chain (e.g. a grandchild whose intermediate parent entry
+                // ITSELF only resolves during the retry pass) -- the grandchild's one retry
+                // attempt would run before that intermediate parent's own retry has populated
+                // the pool with the grandchild's real captured sibling, dropping it exactly like
+                // the bug this loop exists to fix. Looping until a pass makes zero progress
+                // resolves any finite dependency depth; the parked count strictly decreases on
+                // every productive pass, so the loop terminates, and whatever remains unresolved
+                // once a pass resolves nothing has a permanently missing dependency (its owning
+                // parent could not itself reconstruct at all) and falls through to the existing
+                // clean unmatched-drop path below.
+                List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
+                        parkedDynamicEntries = new ArrayList<>();
+                java.util.function.Predicate<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
+                        reconstructDynamicEntry = entry -> {
                     // Prefer adopting the construction-spawned child the reconstructed parent
                     // already created and back-references. Adopting it in place gives exact
                     // captured state AND keeps the parent's child reference valid, with no
                     // double-spawn. Routine-spawned children (no construction counterpart) fall
                     // back to the generic recreate path.
                     AbstractObjectInstance adopted = adoptRewindReconstructionChild(entry);
-                    ObjectInstance inst = adopted != null ? adopted : recreateDynamicObject(entry);
-                    if (inst instanceof AbstractObjectInstance aoi) {
-                        aoi.setServices(objectServices);
-                        if (adopted != null) {
-                            // Adopt at the captured slot; the construction spawn did not allocate
-                            // one (the slot allocator is already restored from the snapshot).
-                            int slot = entry.slotIndex();
-                            if (slot >= 0) {
-                                aoi.setSlotIndex(slot);
-                            }
-                        } else {
-                            // Went through the generic recreateForRewind() path, not adoption --
-                            // give owners that keep their own back-reference list (e.g.
-                            // AbstractBossChild -> parent.childComponents) a chance to re-register
-                            // this instance. Adopted candidates were already registered by the
-                            // owning parent's own construction-time spawn, so this is skipped for
-                            // them (see onRecreatedForRewind()'s javadoc).
-                            aoi.onRecreatedForRewind();
+                    ObjectInstance inst = adopted != null
+                            ? adopted
+                            : ObjectConstructionContext.withRewindActiveRestore(
+                                    () -> recreateDynamicObject(entry));
+                    if (!(inst instanceof AbstractObjectInstance aoi)) {
+                        return false;
+                    }
+                    aoi.setServices(objectServices);
+                    if (adopted != null) {
+                        // Adopt at the captured slot; the construction spawn did not allocate
+                        // one (the slot allocator is already restored from the snapshot).
+                        int slot = entry.slotIndex();
+                        if (slot >= 0) {
+                            aoi.setSlotIndex(slot);
                         }
-                        // Restore the captured rewind id so the identity table built from
-                        // the next rewindCaptureContext() re-uses the pre-restore id, and
-                        // register it in the restore table so phase-2 refs resolve here.
-                        // A null captured id means the object had no identity at capture, so no
-                        // captured ref points at it — minting a fresh id is enough (and it is not
-                        // added to the restore table because nothing resolves against it).
-                        if (entry.objectId() != null) {
-                            rewindObjectIds.put(aoi, entry.objectId());
-                            restoreTable.registerObject(aoi, entry.objectId());
-                        } else {
-                            assignRewindObjectId(aoi, aoi.getSpawn());
-                        }
-                        dynamicObjects.add(aoi);
-                        activeObjectsCacheDirty = true;
-                        int execIdx = execIndexForSlot(aoi.getSlotIndex());
-                        if (execIdx >= 0 && execIdx < execOrder.length) {
-                            execOrder[execIdx] = aoi;
-                        }
-                        // Defer per-instance field-blob application to phase 2.
-                        dynamicStateWork.add(new RestoreStatePair<>(aoi, entry));
+                    } else {
+                        // Went through the generic recreateForRewind() path, not adoption --
+                        // give owners that keep their own back-reference list (e.g.
+                        // AbstractBossChild -> parent.childComponents) a chance to re-register
+                        // this instance. Adopted candidates were already registered by the
+                        // owning parent's own construction-time spawn, so this is skipped for
+                        // them (see onRecreatedForRewind()'s javadoc).
+                        aoi.onRecreatedForRewind();
+                    }
+                    // Restore the captured rewind id so the identity table built from
+                    // the next rewindCaptureContext() re-uses the pre-restore id, and
+                    // register it in the restore table so phase-2 refs resolve here.
+                    // A null captured id means the object had no identity at capture, so no
+                    // captured ref points at it — minting a fresh id is enough (and it is not
+                    // added to the restore table because nothing resolves against it).
+                    if (entry.objectId() != null) {
+                        rewindObjectIds.put(aoi, entry.objectId());
+                        restoreTable.registerObject(aoi, entry.objectId());
+                    } else {
+                        assignRewindObjectId(aoi, aoi.getSpawn());
+                    }
+                    dynamicObjects.add(aoi);
+                    activeObjectsCacheDirty = true;
+                    int execIdx = execIndexForSlot(aoi.getSlotIndex());
+                    if (execIdx >= 0 && execIdx < execOrder.length) {
+                        execOrder[execIdx] = aoi;
+                    }
+                    // Defer per-instance field-blob application to phase 2.
+                    dynamicStateWork.add(new RestoreStatePair<>(aoi, entry));
+                    return true;
+                };
+                for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry
+                        : s.dynamicObjects()) {
+                    if (!reconstructDynamicEntry.test(entry)) {
+                        parkedDynamicEntries.add(entry);
                     }
                 }
-                // Any reconstruction children NOT matched by a captured entry were spawned by a
-                // parent whose child was not in dynamicObjects at capture (e.g. a same-class
-                // sibling destroyed and pruned before capture -- see
-                // adoptRewindReconstructionChild). They are unregistered here (never added to
-                // dynamicObjects/activeObjects), but the parent's OWN back-reference to them
-                // (e.g. AbstractBossInstance.childComponents) was already set unconditionally at
-                // construction time and is otherwise never told about the drop -- notify each so
-                // an owner tracking its own child-reference list can drop it too, or it remains a
-                // live orphan that still receives update() every frame. Clearing the scratch
-                // afterward guarantees no instances leak across restore passes.
+                boolean parkedPassMadeProgress = true;
+                while (parkedPassMadeProgress && !parkedDynamicEntries.isEmpty()) {
+                    parkedPassMadeProgress = false;
+                    List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
+                            stillParked = new ArrayList<>();
+                    for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry
+                            : parkedDynamicEntries) {
+                        if (reconstructDynamicEntry.test(entry)) {
+                            parkedPassMadeProgress = true;
+                        } else {
+                            stillParked.add(entry);
+                        }
+                    }
+                    parkedDynamicEntries = stillParked;
+                }
+                // Stop routing further child spawns into the reconstruction-children scratch:
+                // any spawns triggered from here on (Phase 2 state restore,
+                // afterRewindRestoreSettled, or later gameplay) are normal wiring, not
+                // reconstruction side effects to adopt.
+                rewindReconstructionChildCapture = false;
+                // Any reconstruction children NOT matched by a captured entry after BOTH passes
+                // were spawned by a parent whose child was not in dynamicObjects at capture (e.g.
+                // a same-class sibling destroyed and pruned before capture -- see
+                // adoptRewindReconstructionChild), or by a parent that could not itself
+                // reconstruct at all (its own captured entry above also returned false from both
+                // passes, so it is dropped the very same way, and the orphaned pool children it
+                // already spawned are dropped cleanly here rather than left dangling). They are
+                // unregistered here (never added to dynamicObjects/activeObjects), but the
+                // parent's OWN back-reference to them (e.g. AbstractBossInstance.childComponents)
+                // was already set unconditionally at construction time and is otherwise never told
+                // about the drop -- notify each so an owner tracking its own child-reference list
+                // can drop it too, or it remains a live orphan that still receives update() every
+                // frame. Clearing the scratch afterward guarantees no instances leak across
+                // restore passes.
                 for (AbstractObjectInstance unmatched : rewindReconstructionChildren) {
                     unmatched.onDroppedAsUnmatchedRewindReconstructionChild();
                 }

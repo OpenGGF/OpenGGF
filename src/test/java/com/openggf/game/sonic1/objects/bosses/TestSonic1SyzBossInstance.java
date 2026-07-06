@@ -2,6 +2,8 @@ package com.openggf.game.sonic1.objects.bosses;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
@@ -18,6 +20,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -160,8 +163,118 @@ class TestSonic1SyzBossInstance {
                         + "boss's frozen last position, i.e. \"hanging in the air\" after Robotnik flees");
     }
 
+    /**
+     * Shipped-content reachability repro for the "dynamically-spawned boss loses all
+     * child rewind state" bug (see {@code TestS2DeathEggRobotGraphRewind
+     * #survivingArticulatedChildrenAreExactAfterASiblingIsDestroyedBeforeCapture}):
+     * {@link Sonic1SYZEvents#updateAct3Boss()} spawns {@code Sonic1SYZBossInstance}
+     * DYNAMICALLY (via {@code AbstractLevelEventManager#spawnObject}, which routes to
+     * {@code ObjectManager.createDynamicObject}), NOT through the zone's static object
+     * layout table -- unlike every other currently known boss (e.g. {@code
+     * Sonic2EHZBossInstance}, spawned from the layout table and reconstructed in
+     * {@code ObjectManager.restore()}'s Phase-1 ACTIVE-object pass). The boss's
+     * constructor unconditionally spawns {@link SYZBossSpike} ({@code
+     * initializeBossState() -> spawnSpikeChild()}), exactly the DEZ articulated-child
+     * shape.
+     *
+     * <p>This test spawns the boss the SAME way ({@code createDynamicObject}, no
+     * static layout entry), mutates the spike's captured mutable state, forces a full
+     * rewind reconstruction (dynamic objects always fully reconstruct on restore --
+     * there is no in-place-reuse path for them), and asserts the spike's mutable state
+     * survives with no duplicate spike and the correct restored parent link.
+     */
+    @Test
+    void spikeCapturedStateSurvivesFullReconstructionWhenBossIsSpawnedDynamically() {
+        createDynamicHarness();
+        Sonic1SYZBossInstance boss =
+                objectManager.createDynamicObject(() -> new Sonic1SYZBossInstance(BOSS_SPAWN));
+        SYZBossSpike spike = only(SYZBossSpike.class);
+
+        // Seed distinguishing captured mutable state on the spike (extension/collision
+        // fields), matching the DEZ repro's approach of seeding state a fresh
+        // reconstruction's defaults could never coincidentally match.
+        writeInt(spike, "extensionDepth", 0x123);
+        writeBoolean(spike, "spikeActive", true);
+
+        RewindRegistry registry = registryFor(objectManager);
+        CompositeSnapshot snapshot = registry.capture();
+        registry.restore(snapshot);
+
+        Sonic1SYZBossInstance restoredBoss = only(Sonic1SYZBossInstance.class);
+        SYZBossSpike restoredSpike = only(SYZBossSpike.class); // fails if a duplicate spike exists
+        assertEquals(0x123, readInt(restoredSpike, "extensionDepth"),
+                "spike's captured extension state must survive a full rewind reconstruction of "
+                        + "its dynamically-spawned parent, not reset to the fresh-construction default");
+        assertTrue(readBoolean(restoredSpike, "spikeActive"),
+                "spike's captured collision-active state must survive the same restore");
+        assertSame(restoredBoss, readObjectField(restoredSpike, "parent"),
+                "restored spike must point at the SAME restored boss instance, not a stale or "
+                        + "duplicate one");
+    }
+
     private void stepFrame() {
         objectManager.update(0, null, List.of(), 0);
+    }
+
+    /**
+     * Like {@link #createHarness()} but with NO static layout entry -- the boss is
+     * spawned dynamically by the test itself via {@code createDynamicObject}, matching
+     * {@link Sonic1SYZEvents#updateAct3Boss()}'s real spawn route instead of the zone
+     * layout table every other current boss test uses.
+     */
+    private void createDynamicHarness() {
+        Camera[] cameraHolder = new Camera[1];
+        cameraHolder[0] = mockCameraCenteredOnBossArena();
+        camera = cameraHolder[0];
+        ObjectManager[] holder = new ObjectManager[1];
+        GameStateManager gameStateManager = new GameStateManager();
+        ObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return cameraHolder[0]; }
+            @Override public GameStateManager gameState() { return gameStateManager; }
+        };
+        objectManager = new ObjectManager(
+                List.of(),
+                new Sonic1ObjectRegistry(),
+                0,
+                null,
+                null,
+                GraphicsManager.getInstance(),
+                camera,
+                services);
+        holder[0] = objectManager;
+        objectManager.reset(0);
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+    }
+
+    private static RewindRegistry registryFor(ObjectManager objectManager) {
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objectManager.rewindSnapshottable());
+        return registry;
+    }
+
+    private static Object readObjectField(Object target, String fieldName) {
+        try {
+            return findField(target.getClass(), fieldName).get(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
+        }
+    }
+
+    private static int readInt(Object target, String fieldName) {
+        try {
+            return findField(target.getClass(), fieldName).getInt(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
+        }
+    }
+
+    private static void writeBoolean(Object target, String fieldName, boolean value) {
+        try {
+            findField(target.getClass(), fieldName).setBoolean(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
     }
 
     private Harness createHarness() {
