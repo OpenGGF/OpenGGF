@@ -39,6 +39,20 @@ public final class SegmentCache {
     }
 
     /**
+     * True when {@code frame} (in segment {@code keyframeFrame}) is already
+     * expanded in the cached strip, i.e. the next {@link #snapshotAt} call
+     * for it will be a pure array read with no {@code restoreKeyframe}/
+     * {@code stepper} side effects on live engine state. Callers that need
+     * to undo a {@code snapshotAt} result (e.g. rejecting a poisoned target
+     * frame) use this to know whether any live-state rollback is needed.
+     */
+    public boolean containsFrame(int frame, int keyframeFrame) {
+        return currentBaseFrame == keyframeFrame
+                && strip != null
+                && (frame - keyframeFrame) <= validUpTo;
+    }
+
+    /**
      * Returns the snapshot at frame F, expanding segment [K, K+interval)
      * (where K = (F / interval) * interval) if necessary. If F lies in a
      * different segment than the currently-cached one, the cache is
