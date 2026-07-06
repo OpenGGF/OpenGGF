@@ -23,6 +23,12 @@ public abstract class AbstractBonusStageCoordinator implements BonusStageProvide
     public boolean hasBonusStages() { return true; }
 
     @Override
+    public boolean supportsRewind() {
+        return activeType == BonusStageType.GUMBALL
+                || activeType == BonusStageType.GLOWING_SPHERE;
+    }
+
+    @Override
     public void onEnter(BonusStageType type, BonusStageState savedState) {
         this.savedState = savedState;
         this.activeType = type;
