@@ -166,4 +166,34 @@ public class SwScrlScz extends AbstractZoneScrollHandler implements CameraDriven
     public int getTornadoVelocityY() {
         return tornadoVelocityY;
     }
+
+    /**
+     * SCZ scroll state advances in {@link #advanceCameraForFrame} (the logical
+     * frame step), not render-time {@code update()}, and is not a pure function
+     * of the frame counter — {@link #bgXPos32} integrates the tornado velocity,
+     * and {@link #routineIndex} is a monotonic level-event routine. It must be
+     * snapshotted for rewind so a restore reproduces it exactly rather than
+     * re-simulating it forward from stale values (which left the Sky Chase
+     * background drifting after a rewind).
+     */
+    private record SczScrollState(int tornadoVelocityX,
+                                  int tornadoVelocityY,
+                                  int bgXPos32,
+                                  int routineIndex) {
+    }
+
+    @Override
+    public Object captureRewindState() {
+        return new SczScrollState(tornadoVelocityX, tornadoVelocityY, bgXPos32, routineIndex);
+    }
+
+    @Override
+    public void restoreRewindState(Object state) {
+        if (state instanceof SczScrollState s) {
+            tornadoVelocityX = s.tornadoVelocityX();
+            tornadoVelocityY = s.tornadoVelocityY();
+            bgXPos32 = s.bgXPos32();
+            routineIndex = s.routineIndex();
+        }
+    }
 }

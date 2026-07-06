@@ -1,6 +1,9 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.camera.Camera;
+import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.sonic1.Sonic1SwitchManager;
+import com.openggf.game.sonic1.Sonic1ZoneFeatureProvider;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,6 +13,7 @@ import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSonic1FloatingBlockObjectInstance {
@@ -79,6 +83,96 @@ public class TestSonic1FloatingBlockObjectInstance {
         door.update(3, null);
         assertEquals(ORIG_X + 0x7E, door.getX());
         assertTrue(door.getX() < ORIG_X + 0x80);
+    }
+
+    @Test
+    public void lz1SwitchThreeDoorDisablesWindTunnelWhilePlayerIsLeftOfClosedDoor() throws java.io.IOException {
+        // ROM: "56 SYZ, SLZ Floating Blocks and LZ Doors.asm" type05 (lines 219-243) -
+        // for the LZ1 switch-3 door specifically, f_wtunnelallow is cleared every
+        // frame, then re-disabled while the door hasn't been triggered and Sonic
+        // is still to the left of it. Without this the LZ1 water current pushes
+        // Sonic into the closed door and never lets go (softlock).
+        Sonic1ZoneFeatureProvider zoneFeatures = new Sonic1ZoneFeatureProvider();
+        zoneFeatures.initZoneFeatures(null, Sonic1Constants.ZONE_LZ, 0, 0);
+
+        Camera camera = new Camera();
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) (ORIG_X - 0x40)); // left of the door
+        player.setCentreY((short) ORIG_Y);
+        camera.setFocusedSprite(player);
+
+        Sonic1FloatingBlockObjectInstance door = createLz1SwitchThreeDoor(zoneFeatures, camera);
+
+        door.update(1, player);
+
+        assertTrue(zoneFeatures.isWindTunnelDisabled(),
+                "Water current must stay disabled while the LZ1 door is closed and Sonic hasn't passed it");
+    }
+
+    @Test
+    public void lz1SwitchThreeDoorReenablesWindTunnelOnceSwitchIsPressed() throws java.io.IOException {
+        Sonic1ZoneFeatureProvider zoneFeatures = new Sonic1ZoneFeatureProvider();
+        zoneFeatures.initZoneFeatures(null, Sonic1Constants.ZONE_LZ, 0, 0);
+
+        Camera camera = new Camera();
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) (ORIG_X - 0x40)); // still left of the door
+        player.setCentreY((short) ORIG_Y);
+        camera.setFocusedSprite(player);
+
+        Sonic1FloatingBlockObjectInstance door = createLz1SwitchThreeDoor(zoneFeatures, camera);
+
+        door.update(1, player);
+        assertTrue(zoneFeatures.isWindTunnelDisabled());
+
+        // Pressing switch 3 begins opening the door and, per ROM, unconditionally
+        // re-enables the current the same frame (Step B overrides Step A).
+        switchManager.setBit(3, 0);
+        door.update(2, player);
+
+        assertFalse(zoneFeatures.isWindTunnelDisabled(),
+                "Once the door starts opening, the water current must be allowed again");
+    }
+
+    private Sonic1FloatingBlockObjectInstance createLz1SwitchThreeDoor(
+            Sonic1ZoneFeatureProvider zoneFeatures, Camera camera) {
+        // subtype 0xE3: bit7 set (switch-activated door), high nybble 0xE ->
+        // varIndex 6 (LZ small vertical door, stays type05), low nybble 3 -> fb_type=3.
+        ObjectSpawn spawn = new ObjectSpawn(
+                ORIG_X,
+                ORIG_Y,
+                Sonic1ObjectIds.FLOATING_BLOCK,
+                0xE3,
+                0,
+                false,
+                0
+        );
+        Sonic1FloatingBlockObjectInstance door = new Sonic1FloatingBlockObjectInstance(spawn, Sonic1Constants.ZONE_LZ);
+        ObjectServices services = new StubObjectServices() {
+            @SuppressWarnings("unchecked")
+            @Override
+            public <T> T gameService(Class<T> type) {
+                if (type == Sonic1SwitchManager.class) return (T) switchManager;
+                return null;
+            }
+
+            @Override
+            public ZoneFeatureProvider zoneFeatureProvider() {
+                return zoneFeatures;
+            }
+
+            @Override
+            public int currentAct() {
+                return 0;
+            }
+
+            @Override
+            public Camera camera() {
+                return camera;
+            }
+        };
+        door.setServices(services);
+        return door;
     }
 
     private Sonic1FloatingBlockObjectInstance createLzDoor(int subtype, boolean respawnTracked) {

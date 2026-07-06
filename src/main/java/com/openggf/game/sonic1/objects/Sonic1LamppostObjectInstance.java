@@ -197,14 +197,31 @@ public class Sonic1LamppostObjectInstance extends AbstractObjectInstance impleme
 
     /**
      * Called by the twirl child when its animation completes.
-     * Switches from "pole only" (frame 1) to "red" (frame 3).
-     * In the original ROM, the twirl child persists at its last position until off-screen,
-     * and the lamppost re-creates as red on re-entry. Since our engine destroys the twirl
-     * immediately, we switch to red here to match the intended visual result.
+     * <p>
+     * ROM Lamp_Finish (79 Lamppost.asm:122-123, routine 4) is a plain {@code rts}
+     * -- the pole object's own mapping frame is never touched again this act.
+     * Lamp_Finish itself does not delete the twirl child either. That does
+     * <b>not</b> mean the twirl (or the pole) persists forever, though: every
+     * routine dispatched through {@code Lamppost:} -- pole and twirl alike --
+     * falls through to {@code jmp (RememberState).l} (79 Lamppost.asm:6-11),
+     * and {@code RememberState} (sub RememberState.asm:8-10) runs the standard
+     * ROM {@code out_of_range} check and deletes the object once it scrolls
+     * off-screen, exactly like any other object. So both the pole and its
+     * twirl child are deleted together once the camera moves far enough away,
+     * matching the engine's generic per-frame out-of-range eviction.
+     * <p>
+     * A previous version of this method switched the pole to {@code FRAME_RED}
+     * here, on the theory that the engine "destroys the twirl immediately" --
+     * it doesn't (see {@link Sonic1LamppostTwirlInstance#update}, which freezes
+     * rather than self-destructing once its orbit completes). With both objects
+     * alive, that fabricated frame swap produced a second, exactly-centered ball
+     * stacked next to the twirl's own frozen resting ball -- the "lamppost head
+     * sometimes stops duplicated and X-offset" bug. Only clear the bookkeeping
+     * flag; leave the pole's mapping frame at {@code FRAME_POLE_ONLY}, matching
+     * ROM.
      */
     public void onTwirlComplete() {
         twirlActive = false;
-        mappingFrame = FRAME_RED;
     }
 
     public int getCenterX() {

@@ -526,6 +526,16 @@ public class CogObjectInstance extends AbstractObjectInstance
     }
 
     private static final class CogSlotChildInstance extends AbstractObjectInstance implements RewindRecreatable {
+
+        // This child's captured spawn is frozen at whichever tooth position it was
+        // spawned at (buildCogChildSpawn(toothX, toothY), never refreshed -- update()
+        // only checks the parent's destroyed state, it never repositions itself). The
+        // cog's own center (baseX/baseY) never moves, and every POSITIONS table entry
+        // (the tooth offsets from center) has a signed-byte magnitude of at most 0x48
+        // (72) on each axis, so the max possible radial distance from a tooth position
+        // to the true cog's center is sqrt(72^2+72^2) =~ 102px. Round up for headroom.
+        private static final int MAX_PARENT_RELINK_DISTANCE = 128;
+
         private final CogObjectInstance parent;
 
         CogSlotChildInstance(ObjectSpawn spawn, CogObjectInstance parent) {
@@ -539,7 +549,10 @@ public class CogObjectInstance extends AbstractObjectInstance
             // there is nothing to relink to, so drop the child (its live update
             // self-expires with a dead parent) rather than throw. acceptDestroyed
             // relinks to a restored-but-destroyed Cog when that is the captured parent.
-            return RewindRecreateObjectLinks.nearestObject(ctx, CogObjectInstance.class, true)
+            // Bounded (see MAX_PARENT_RELINK_DISTANCE) since a live tooth position can
+            // only ever be within the fixed POSITIONS table's radius of its true cog.
+            return RewindRecreateObjectLinks.nearestObject(
+                            ctx, CogObjectInstance.class, true, MAX_PARENT_RELINK_DISTANCE)
                     .map(parent -> {
                         CogSlotChildInstance child = new CogSlotChildInstance(ctx.spawn(), parent);
                         parent.attachSlotChildForRewind(child);

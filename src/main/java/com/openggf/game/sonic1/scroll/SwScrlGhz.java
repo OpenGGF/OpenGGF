@@ -36,9 +36,26 @@ public class SwScrlGhz extends AbstractZoneScrollHandler {
 
     // GHZ cloud auto-scroll accumulators (16.16 fixed point).
     // High word is added to BG3 X to create layered cloud drift at idle.
+    //
+    // These are pure per-frame accumulators in the ROM (Deform_GHZ adds a fixed
+    // increment every frame), so they are re-derived from the frame counter each
+    // update() rather than free-accumulated. Free-accumulating on the update
+    // call count breaks rewind: rewind restores an earlier frameCounter and
+    // recomputes parallax by calling update() again, but a call-count accumulator
+    // keeps climbing, leaving the clouds drifting between keyframes and only
+    // snapping back at keyframe boundaries. Deriving from the (rewind-restored)
+    // frameCounter makes update() idempotent per frame, so the clouds rewind
+    // exactly like the camera-linear mountain/hill bands already do.
     protected int cloudLayer1Counter;
     protected int cloudLayer2Counter;
     protected int cloudLayer3Counter;
+
+    // Frame the cloud counters are anchored to. Captured on the first update()
+    // after init() so that (frameCounter - cloudBaseFrame) counts frames since
+    // the counters were last zeroed — matching the ROM's clear-at-zone-init +
+    // add-every-frame behaviour regardless of the frameCounter's absolute value.
+    protected int cloudBaseFrame;
+    protected boolean cloudBaseFrameSet = false;
 
     protected int lastCameraX;
     protected boolean initialized = false;
@@ -60,6 +77,7 @@ public class SwScrlGhz extends AbstractZoneScrollHandler {
         cloudLayer1Counter = 0;
         cloudLayer2Counter = 0;
         cloudLayer3Counter = 0;
+        cloudBaseFrameSet = false;
         lastCameraX = cameraX;
         initialized = true;
         LOG.info("SwScrlGhz.init: cameraX=" + cameraX +
@@ -93,10 +111,22 @@ public class SwScrlGhz extends AbstractZoneScrollHandler {
         bg2XPos += (long) deltaX * 32768;
 
         // GHZ auto-scroll clouds (JP1 Deform_GHZ behavior):
-        // +0x10000/frame, +0xC000/frame, +0x8000/frame.
-        cloudLayer1Counter += 0x00010000;
-        cloudLayer2Counter += 0x0000C000;
-        cloudLayer3Counter += 0x00008000;
+        // +0x10000/frame, +0xC000/frame, +0x8000/frame since zone init.
+        // Derived from the frame counter (not accumulated on the update call
+        // count) so the offsets are a deterministic, rewind-safe function of
+        // the current frame. See the field docs above.
+        if (!cloudBaseFrameSet) {
+            // Anchor so the first update() after init reproduces one frame of
+            // drift, exactly as a single "+= increment" would have.
+            cloudBaseFrame = frameCounter - 1;
+            cloudBaseFrameSet = true;
+        }
+        int cloudFrames = frameCounter - cloudBaseFrame;
+        // int multiply wraps mod 2^32 identically to repeated addition, so the
+        // 16.16 sub-pixel accumulation matches the original behaviour bit-for-bit.
+        cloudLayer1Counter = cloudFrames * 0x00010000;
+        cloudLayer2Counter = cloudFrames * 0x0000C000;
+        cloudLayer3Counter = cloudFrames * 0x00008000;
 
         // Extract integer pixel positions (high word of 16.16)
         int bg3X = (int) (bg3XPos >> 16);

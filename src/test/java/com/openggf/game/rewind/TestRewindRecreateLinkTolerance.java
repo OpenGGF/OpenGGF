@@ -75,7 +75,7 @@ class TestRewindRecreateLinkTolerance {
             Sonic1SYZBossInstance boss = construct(om,
                     () -> new Sonic1SYZBossInstance(SPAWN));
             return newInstance("com.openggf.game.sonic1.objects.bosses.SYZBossSpike",
-                    new Class<?>[]{forName("com.openggf.level.objects.boss.AbstractBossInstance")},
+                    new Class<?>[]{Sonic1SYZBossInstance.class},
                     boss);
         });
     }

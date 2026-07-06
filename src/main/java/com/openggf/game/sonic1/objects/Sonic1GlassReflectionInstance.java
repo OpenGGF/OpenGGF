@@ -27,7 +27,8 @@ import java.util.List;
  * Routine 4 (Glass_Reflect012, tall variant):
  *   Copies parent's glass_dist, then applies Glass_Types movement.
  * Routine 8 (Glass_Reflect34, short variant):
- *   Copies parent's glass_dist AND parent's baseY (objoff_30), then applies Glass_Types.
+ *   Copies parent's glass_dist AND parent's LIVE current obY (via parent.getY(), per ROM
+ *   Glass_Reflect34's move.w obY(a1) copy), then applies Glass_Types.
  * <p>
  * The reflection's subtype has bit 3 set (from the addq.b #8 / andi.b #$F in Glass_Main),
  * which modifies the behavior in Glass_Types:
@@ -131,10 +132,13 @@ public class Sonic1GlassReflectionInstance extends AbstractObjectInstance implem
         // Sync glass_dist from parent
         glassDist = parent.getGlassDist();
 
-        // Short variant (routine 8) also syncs baseY from parent
-        // Glass_Reflect34: move.w obY(a1),objoff_30(a0)
+        // Short variant (routine 8) also syncs baseY from parent's CURRENT obY.
+        // Glass_Reflect34 (sonic.lst BB5E: 3169 000C 0030): move.w obY(a1),objoff_30(a0)
+        // -- source displacement $0C is obY (live position), not objoff_30 ($30,
+        // the static spawn baseline); using getBaseY() here displaced the
+        // reflection by up to glass_dist (0x90/144px) from the parent.
         if (!isTall) {
-            baseY = parent.getBaseY();
+            baseY = parent.getY();
         }
 
         // Apply Glass_Types movement using reflection subtype

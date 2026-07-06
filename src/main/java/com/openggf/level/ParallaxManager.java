@@ -514,12 +514,31 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
 
     @Override
     public ParallaxSnapshot capture() {
-        return new ParallaxSnapshot();
+        // Dense/scalar parallax is derived from the restored camera/frame/zone
+        // and recomputed after the registry restore. The only state that must be
+        // carried is the active handler's genuinely-stateful logical scroll
+        // state (e.g. SCZ's camera-driven BG accumulator + level-event routine),
+        // which is not recomputable from the camera/frame.
+        return new ParallaxSnapshot(captureActiveHandlerRewindState());
     }
 
     @Override
     public void restore(ParallaxSnapshot s) {
-        // Parallax is derived from restored camera, frame, zone and handler
-        // state. GameplayModeContext recomputes it after the registry restore.
+        // Dense/scalar parallax is recomputed by GameplayModeContext after the
+        // registry restore; only the active handler's logical state is restored
+        // here so re-simulation continues from the correct values.
+        ZoneScrollHandler handler = activeHandler();
+        if (handler != null) {
+            handler.restoreRewindState(s.handlerRewindState());
+        }
+    }
+
+    private Object captureActiveHandlerRewindState() {
+        ZoneScrollHandler handler = activeHandler();
+        return handler != null ? handler.captureRewindState() : null;
+    }
+
+    private ZoneScrollHandler activeHandler() {
+        return scrollProvider != null ? scrollProvider.getHandler(currentZone) : null;
     }
 }

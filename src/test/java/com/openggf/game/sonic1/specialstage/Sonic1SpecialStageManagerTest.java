@@ -1,6 +1,8 @@
 package com.openggf.game.sonic1.specialstage;
 
+import com.openggf.control.InputActionMasks;
 import com.openggf.graphics.WaterShaderProgram;
+import com.openggf.physics.TrigLookupTable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,9 +18,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static com.openggf.game.sonic1.constants.Sonic1Constants.SS_BLOCK_SIZE_PX;
+import static com.openggf.game.sonic1.constants.Sonic1Constants.SS_JUMP_FORCE;
 import static com.openggf.game.sonic1.constants.Sonic1Constants.SS_LAYOUT_STRIDE;
 
 @RequiresRom(SonicGame.SONIC_1)
@@ -277,6 +281,64 @@ public class Sonic1SpecialStageManagerTest {
         }
 
         assertEquals(0x2E, layout[layoutIndex] & 0xFF, "After one full glass animation, block should advance by one hit state");
+    }
+
+    @Test
+    public void testHeldJumpActionMakesGroundedSonicAirborneWithJumpForceVelocity() throws Exception {
+        manager.initialize(0);
+
+        Field ssAngleField = Sonic1SpecialStageManager.class.getDeclaredField("ssAngle");
+        Field sonicAirborneField = Sonic1SpecialStageManager.class.getDeclaredField("sonicAirborne");
+        Field sonicVelXField = Sonic1SpecialStageManager.class.getDeclaredField("sonicVelX");
+        Field sonicVelYField = Sonic1SpecialStageManager.class.getDeclaredField("sonicVelY");
+        Field pressedButtonsField = Sonic1SpecialStageManager.class.getDeclaredField("pressedButtons");
+        Method processJumpMethod = Sonic1SpecialStageManager.class.getDeclaredMethod("processJump");
+        ssAngleField.setAccessible(true);
+        sonicAirborneField.setAccessible(true);
+        sonicVelXField.setAccessible(true);
+        sonicVelYField.setAccessible(true);
+        pressedButtonsField.setAccessible(true);
+        processJumpMethod.setAccessible(true);
+
+        // Force a known grounded/angle/velocity baseline so this test exercises
+        // only Obj09_Jump's own formula, not processFall()'s per-frame gravity
+        // and collision probing (which also mutates sonicVelX/Y every update()).
+        sonicAirborneField.setBoolean(manager, false);
+        ssAngleField.setInt(manager, 0);
+        sonicVelXField.setInt(manager, 0);
+        sonicVelYField.setInt(manager, 0);
+
+        // GameLoop forwards the logical action-pressed edge through
+        // InputActionMasks.toMegaDriveButtonBits(...), i.e. Mega Drive A/B/C
+        // button bits (0x40/0x10/0x20), not the AbstractPlayableSprite
+        // INPUT_JUMP bit (0x10). A held jump bound to the A action produces
+        // 0x40, which must still register as a special-stage jump per ROM
+        // SonicSS_Jump's "andi.b #btnABC,d0" (any of A, B, or C).
+        int pressedFromActionA = InputActionMasks.toMegaDriveButtonBits(InputActionMasks.ACTION_A);
+        manager.handleInput(pressedFromActionA, pressedFromActionA);
+        assertEquals(pressedFromActionA, pressedButtonsField.getInt(manager),
+                "handleInput should record the pressed edge exactly as received");
+
+        processJumpMethod.invoke(manager);
+
+        assertTrue(sonicAirborneField.getBoolean(manager), "Holding jump on the ground should make Sonic airborne");
+
+        int angle = (-(0 >> 8) & 0xFC) - 0x40;
+        int sinVal = TrigLookupTable.sinHex(angle & 0xFF);
+        int cosVal = TrigLookupTable.cosHex(angle & 0xFF);
+        int expectedVelX = (short) ((cosVal * SS_JUMP_FORCE) >> 8);
+        int expectedVelY = (short) ((sinVal * SS_JUMP_FORCE) >> 8);
+        assertEquals(expectedVelX, sonicVelXField.getInt(manager), "Jump X velocity should derive from SS_JUMP_FORCE");
+        assertEquals(expectedVelY, sonicVelYField.getInt(manager), "Jump Y velocity should derive from SS_JUMP_FORCE");
+
+        // The pressed edge must be consumed exactly once per frame: update()
+        // clears pressedButtons at its end (ROM's v_jpadpress2 is a
+        // hardware-refreshed once-per-frame edge register), so residual
+        // state cannot re-trigger SonicSS_Jump on a later frame without a
+        // fresh handleInput() edge.
+        manager.update();
+        assertEquals(0, pressedButtonsField.getInt(manager),
+                "The pressed edge should be cleared after being consumed by a single update()");
     }
 }
 

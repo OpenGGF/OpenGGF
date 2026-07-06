@@ -750,11 +750,68 @@ public class GameLoop {
     private boolean anyTimeAttackDebugCheatKeyPressed(InputHandler input) {
         return input.isKeyPressed(configService.getInt(SonicConfiguration.DEBUG_MODE_KEY))
                 || input.isKeyPressedWithoutModifiers(
-                        configService.getInt(SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY))
+                configService.getInt(SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY))
                 || input.isKeyPressed(configService.getInt(SonicConfiguration.SUPER_SONIC_DEBUG_KEY))
                 || input.isKeyPressed(configService.getInt(SonicConfiguration.GIVE_EMERALDS_KEY));
     }
 
+    /**
+     * True while the level is mid a special-stage/bonus-stage/ending transition
+     * or a pending zone/act transition -- the exact same composite condition
+     * the gameplay-tick freeze block below computes (special/bonus/ending/
+     * zone-act freeze). {@code currentGameMode} stays {@code GameMode.LEVEL}
+     * throughout this whole window (the fade only flips the mode once its
+     * completion callback runs), so this is exposed for
+     * {@link LiveRewindManager}'s mode-based "not applicable" gate to consult
+     * -- a sub-state {@code GameMode} alone cannot express. See
+     * ssentry-rewind-report.md.
+     * <p>
+     * <strong>This predicate freezes ordinary gameplay ticks</strong> (via the
+     * freeze block below) whenever it is true -- it must stay scoped to
+     * exactly the four flags that legitimately warrant that freeze (this was
+     * pre-existing behavior). Do NOT fold {@link FadeManager#hasPendingCompletion()}
+     * in here: unlike a special/bonus/ending/zone-act transition, an ordinary
+     * callback-bearing fade (e.g. death respawn, act-complete) does not freeze
+     * ROM gameplay -- objects keep ticking underneath a cosmetic fade overlay.
+     * See {@link #isRewindBlocked()} for the rewind-only superset that adds the
+     * fade term.
+     */
+    private boolean isNonRewindableTransitionPending() {
+        // Called unconditionally near the top of stepInternal(), before any
+        // currentGameMode-specific dispatch -- levelManager can be null in
+        // non-gameplay modes (e.g. MASTER_TITLE_SCREEN with no active session).
+        return specialStageTransitionPending
+                || bonusStageTransitionPending
+                || endingTransitionPending
+                || (levelManager != null && levelManager.isLevelInactiveForTransition());
+    }
+
+    /**
+     * True whenever rewind engagement must be rejected: either
+     * {@link #isNonRewindableTransitionPending()} (the four transition flags,
+     * which ALSO freeze gameplay), or a fade is in flight with a completion
+     * callback that has not yet run ({@link FadeManager#hasPendingCompletion()}).
+     * <p>
+     * The fade term is intentionally NOT folded into
+     * {@link #isNonRewindableTransitionPending()} itself, because that method
+     * also drives the gameplay-tick freeze block -- ROM gameplay keeps ticking
+     * during an ordinary callback-bearing fade (death respawn, act-complete,
+     * the S1 giant-ring special-stage entry, etc.), it is only REWIND
+     * engagement that must be rejected there: {@link FadeManager#restore()}
+     * deliberately does not restore the transient {@code onFadeComplete}
+     * callback, so a rewind restore landing inside such a fade's window
+     * orphans whatever the callback was going to do (dropping or freezing the
+     * transition), independent of whether gameplay itself is frozen. This
+     * composite is consumed ONLY by the two rewind-engagement call sites
+     * below ({@link LiveRewindManager}/{@link TraceSessionLauncher}), never by
+     * the gameplay freeze block. See ssentry-rewind-report.md.
+     */
+    private boolean isRewindBlocked() {
+        // fadeManager can be null in non-gameplay modes (e.g.
+        // MASTER_TITLE_SCREEN with no active session).
+        return isNonRewindableTransitionPending()
+                || (fadeManager != null && fadeManager.hasPendingCompletion());
+    }
     private void stepInternal() {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
@@ -769,16 +826,19 @@ public class GameLoop {
         playbackDebugManager.handleInput(inputHandler);
         playbackDebugManager.setObservedMode(currentGameMode);
 
+        boolean rewindBlocked = isRewindBlocked();
         if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() != null
-                && TraceSessionLauncher.active().handleRealtimeRewindInput(inputHandler)) {
+                && TraceSessionLauncher.active().handleRealtimeRewindInput(
+                        rewindBlocked, inputHandler)) {
             inputHandler.update();
             return;
         }
         if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() == null
                 && !timeAttackRuntime.isActive()
-                && liveRewindManager.handleRealtimeRewindInput(currentGameMode, inputHandler)) {
+                && liveRewindManager.handleRealtimeRewindInput(
+                        currentGameMode, rewindBlocked, inputHandler)) {
             inputHandler.update();
             return;
         }
@@ -1365,14 +1425,10 @@ public class GameLoop {
 
         boolean freezeForArtViewer = debugShortcutsEnabled()
                 && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER);
-        // Freeze level updates during special/bonus stage entry transitions
-        boolean freezeForSpecialStage = specialStageTransitionPending;
-        boolean freezeForBonusStage = bonusStageTransitionPending;
-        boolean freezeForEndingTransition = endingTransitionPending;
-        // ObjB2 transition parity: freeze gameplay during pending zone-act fade.
-        boolean freezeForZoneActTransition = levelManager.isLevelInactiveForTransition();
-        if (!freezeForArtViewer && !freezeForSpecialStage && !freezeForBonusStage
-                && !freezeForEndingTransition && !freezeForZoneActTransition) {
+        // Freeze level updates during special/bonus stage entry transitions, an
+        // ending transition, or a pending zone/act fade (ObjB2 transition parity).
+        boolean freezeForNonRewindableTransition = isNonRewindableTransitionPending();
+        if (!freezeForArtViewer && !freezeForNonRewindableTransition) {
             beginGameplayAudioFrameForTick();
             // LiveTraceComparator (or any PlaybackFrameObserver) may ask
             // us to skip the gameplay tick on ROM lag frames so the
@@ -1435,7 +1491,9 @@ public class GameLoop {
             if (traceSession != null) {
                 traceSession.recordExternalRewindFrame();
             } else {
-                liveRewindManager.recordExternalFrame(currentGameMode, inputHandler);
+                // Reached only inside the !freezeForNonRewindableTransition branch,
+                // so the transition-pending predicate is guaranteed false here.
+                liveRewindManager.recordExternalFrame(currentGameMode, freezeForNonRewindableTransition, inputHandler);
             }
 
             // Check if a checkpoint star requested a special stage. The request is

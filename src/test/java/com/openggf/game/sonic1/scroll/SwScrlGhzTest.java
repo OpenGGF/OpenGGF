@@ -63,6 +63,52 @@ public class SwScrlGhzTest {
         assertEquals(hills, unpackBG(hScroll[151]));
     }
 
+    /**
+     * The cloud auto-scroll bands are pure per-frame accumulators (ROM
+     * Deform_GHZ adds a fixed increment every frame). Their on-screen position
+     * must therefore be a deterministic function of the frame counter, not of
+     * how many times {@link SwScrlGhz#update} happens to have run.
+     *
+     * <p>Rewind restores an earlier {@code frameCounter} and re-derives parallax
+     * by calling {@code update()} again (see
+     * {@code LevelManager.recomputeParallaxAfterRewindRestore}). If the cloud
+     * counters instead free-run on the update call count, they keep drifting
+     * during a rewind and only line up at keyframe boundaries. Re-running
+     * {@code update()} at a past frame must reproduce that frame's cloud
+     * positions exactly.
+     */
+    @Test
+    public void cloudOffsetsAreADeterministicFunctionOfFrameCounter() {
+        SwScrlGhz handler = new SwScrlGhz();
+        int[] hScroll = new int[224];
+
+        int cameraX = 0x400;
+        int cameraY = 0x400; // d4=0 => all three cloud bands visible
+
+        // Normal forward play up to frame 10.
+        for (int frame = 0; frame <= 10; frame++) {
+            handler.update(hScroll, cameraX, cameraY, frame, 0);
+        }
+        short cloud1AtFrame10 = unpackBG(hScroll[0]);
+        short cloud2AtFrame10 = unpackBG(hScroll[40]);
+        short cloud3AtFrame10 = unpackBG(hScroll[56]);
+
+        // Keep playing forward well past a would-be keyframe.
+        for (int frame = 11; frame <= 60; frame++) {
+            handler.update(hScroll, cameraX, cameraY, frame, 0);
+        }
+
+        // Rewind recompute-after-restore: re-derive parallax at frame 10.
+        handler.update(hScroll, cameraX, cameraY, 10, 0);
+
+        assertEquals(cloud1AtFrame10, unpackBG(hScroll[0]),
+                "cloud layer 1 must return to its frame-10 position when frame 10 is re-derived");
+        assertEquals(cloud2AtFrame10, unpackBG(hScroll[40]),
+                "cloud layer 2 must return to its frame-10 position when frame 10 is re-derived");
+        assertEquals(cloud3AtFrame10, unpackBG(hScroll[56]),
+                "cloud layer 3 must return to its frame-10 position when frame 10 is re-derived");
+    }
+
     private short unpackBG(int packed) {
         return (short) (packed & 0xFFFF);
     }

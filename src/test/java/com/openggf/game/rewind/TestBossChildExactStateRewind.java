@@ -295,9 +295,15 @@ public class TestBossChildExactStateRewind {
         assertTrue(RewindRecreatable.class.isAssignableFrom(spike.getClass()),
                 "SYZBossSpike must restore through RewindRecreatable generic recreate");
 
-        invoke(spike, "setSpikeActive", new Class<?>[]{boolean.class}, new Object[]{true});
-        invoke(spike, "setBossState", new Class<?>[]{int.class, int.class, int.class},
-                new Object[]{4, 0, 0});
+        // SYZBossSpike now pulls its state cache from the parent boss every
+        // frame in its own update() rather than accepting pushed setters (see
+        // SYZBossSpike#update). Prime the cache fields directly to reach the
+        // same "mid block-drop, descending" non-init state the old
+        // setSpikeActive/setBossState calls drove.
+        writeBoolean(spike, "spikeActive", true);
+        writeInt(spike, "bossRoutineSecondary", 4);
+        writeInt(spike, "bossDropSubPhase", 0);
+        writeInt(spike, "bossTimer", 0);
         for (int i = 0; i < 5; i++) {
             invoke(spike, "updateExtension", new Class<?>[]{}, new Object[]{});
         }
@@ -408,6 +414,18 @@ public class TestBossChildExactStateRewind {
         Field f = findField(target.getClass(), field);
         f.setAccessible(true);
         return f.getInt(target);
+    }
+
+    private static void writeBoolean(Object target, String field, boolean value) throws Exception {
+        Field f = findField(target.getClass(), field);
+        f.setAccessible(true);
+        f.setBoolean(target, value);
+    }
+
+    private static void writeInt(Object target, String field, int value) throws Exception {
+        Field f = findField(target.getClass(), field);
+        f.setAccessible(true);
+        f.setInt(target, value);
     }
 
     private static <T> T readObject(Object target, String field, Class<T> fieldType) throws Exception {

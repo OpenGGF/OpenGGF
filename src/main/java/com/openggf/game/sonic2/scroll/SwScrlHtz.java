@@ -38,9 +38,11 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
     private int shakeOffsetX = 0;
     private int shakeOffsetY = 0;
 
-    // Cloud animation counter (TempArray_LayerDef+$22 equivalent)
-    // Incremented by 4 each frame
-    private int cloudCounter = 0;
+    // Cloud animation counter (TempArray_LayerDef+$22 equivalent), +4 each frame.
+    // Derived from the frame counter (not the update-call count) so it rewinds
+    // correctly — see FrameScrollAccumulator. Offset 0 = read-then-increment.
+    private final com.openggf.level.scroll.FrameScrollAccumulator cloudCounter =
+            new com.openggf.level.scroll.FrameScrollAccumulator(4, 0);
 
     // TempArray_LayerDef values for Dynamic_HTZ cloud art streaming
     // 16 word values at offsets 0-30 (indices 0-15)
@@ -67,7 +69,7 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
      * Called when entering HTZ to reset the cloud counter.
      */
     public void init() {
-        cloudCounter = 0;
+        cloudCounter.reset();
         for (int i = 0; i < 16; i++) {
             tempArrayLayerDef[i] = 0;
         }
@@ -147,8 +149,7 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
 
         // Line 15809-15810: Read cloud counter and increment by 4
         // move.w (TempArray_LayerDef+$22).w,d0 / addq.w #4,(TempArray_LayerDef+$22).w
-        short cloudScrollValue = (short) cloudCounter;
-        cloudCounter = (cloudCounter + 4) & 0xFFFF;
+        short cloudScrollValue = (short) cloudCounter.valueAt(frameCounter);
 
         // Line 15813: sub.w d0,d2 (delta = -cameraX - cloudScrollValue)
         d2 = (short) (d2 - cloudScrollValue);

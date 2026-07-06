@@ -28,9 +28,15 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
 
     private final ParallaxTables tables;
 
-    // Persistent TempArray (36 words, accumulate each frame)
-    // In the original, this is TempArray_LayerDef in RAM
+    // Persistent TempArray (36 words). The star/edge/transition words accumulate
+    // a fixed amount each frame (ROM TempArray_LayerDef). They are derived from
+    // the frame counter rather than accumulated on the update-call count so they
+    // rewind correctly — a call-count accumulator drifts, snapping back only at
+    // keyframe boundaries. See FrameScrollAccumulator for the same fix on cloud
+    // layers; DEZ uses one shared anchor for all star words.
     private final int[] tempArray = new int[36];
+    private int starBaseFrame;
+    private boolean starBaseFrameSet = false;
 
     // Row heights from ROM ($D48A)
     // Default values matching the disassembly
@@ -107,7 +113,7 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
         // The disassembly writes Camera_BG_Y_pos to Vscroll_Factor_BG directly
 
         // ==================== Step 2: Update TempArray ====================
-        updateTempArray(cameraX);
+        updateTempArray(cameraX, frameCounter);
 
         // ==================== Step 3: Fill hscroll buffer ====================
         fillScrollBuffer(horizScrollBuf, cameraX, effectiveBgY);
@@ -126,13 +132,24 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
      * 6. Word 32: addq.w #1
      * 7. Words 33-35: Camera_X_pos (sky, static)
      */
-    private void updateTempArray(int cameraX) {
+    private void updateTempArray(int cameraX, int frameCounter) {
+        // Anchor the star accumulators on the first frame so their value counts
+        // frames since the counters were zeroed (ROM clears TempArray at load),
+        // independent of the update-call count. frames-1 offset reproduces the
+        // "one increment on the first sampled frame" (increment-then-read).
+        if (!starBaseFrameSet) {
+            starBaseFrame = frameCounter - 1;
+            starBaseFrameSet = true;
+        }
+        int frames = frameCounter - starBaseFrame;
+
         // Word 0: static with camera
         tempArray[0] = cameraX & 0xFFFF;
 
-        // Words 1-24: accumulate star speeds (wrapping at 16 bits)
+        // Words 1-24: star speeds accumulated over `frames` (wrapping at 16 bits).
+        // int multiply wraps mod 2^32 identically to repeated addition.
         for (int i = 0; i < STAR_SPEEDS.length; i++) {
-            tempArray[1 + i] = (tempArray[1 + i] + STAR_SPEEDS[i]) & 0xFFFF;
+            tempArray[1 + i] = (frames * STAR_SPEEDS[i]) & 0xFFFF;
         }
 
         // Word 24 (index 24) was the last star row just accumulated above
@@ -148,9 +165,9 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
         tempArray[25] = d0Half;
 
         // Words 26-28: more star speeds
-        tempArray[26] = (tempArray[26] + 3) & 0xFFFF;
-        tempArray[27] = (tempArray[27] + 2) & 0xFFFF;
-        tempArray[28] = (tempArray[28] + 4) & 0xFFFF;
+        tempArray[26] = (frames * 3) & 0xFFFF;
+        tempArray[27] = (frames * 2) & 0xFFFF;
+        tempArray[28] = (frames * 4) & 0xFFFF;
 
         // Earth computation (words 29-31):
         // swap d1 -> d1 = word24Value << 16 (low word becomes high word, high word was 0)
@@ -179,7 +196,7 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
         tempArray[29] = (int) ((d0_32 >> 16) & 0xFFFF);
 
         // Word 32: transition row, accumulates at +1
-        tempArray[32] = (tempArray[32] + 1) & 0xFFFF;
+        tempArray[32] = (frames * 1) & 0xFFFF;
 
         // Words 33-35: sky (static with camera)
         tempArray[33] = cameraX & 0xFFFF;

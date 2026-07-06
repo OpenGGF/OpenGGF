@@ -8,6 +8,7 @@ import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.SectionProfiler;
+import com.openggf.game.rewind.snapshot.FadeManagerSnapshot;
 
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -77,6 +78,17 @@ public final class RewindController {
     }
 
     public int currentFrame() { return currentFrame; }
+
+    /**
+     * Consults the (possibly-absent) {@code "fademanager"} entry of a
+     * candidate {@link CompositeSnapshot} for {@link FadeManagerSnapshot#isPoisoned()}.
+     * A missing entry (no FadeManager registered, e.g. bare test registries)
+     * is never poisoned.
+     */
+    private static boolean isPoisonedFadeSnapshot(CompositeSnapshot snapshot) {
+        Object raw = snapshot.get("fademanager");
+        return raw instanceof FadeManagerSnapshot fade && fade.isPoisoned();
+    }
 
     public void setDeterminismAuditor(RewindDeterminismAuditor auditor) {
         this.determinismAuditor = auditor;
@@ -324,6 +336,16 @@ public final class RewindController {
         if (profiler != null) profiler.beginSection("rewind.step");
         try (AudioReplayScope ignored = beginAudioReplay(
                 originalFrame, target, AudioReplayReason.STEP_BACKWARD)) {
+            // A cache miss below expands the segment by actually driving
+            // engineStepper.step() forward from the segment's keyframe, which
+            // mutates live registry state as a side effect of computing
+            // `snap` -- unlike a cache hit, which is a pure array read with
+            // no live mutation. Capture a rollback point ONLY when a miss is
+            // about to happen (steady-state stepBackward() stays O(1)); it is
+            // used to undo that mutation if `target` turns out to be a
+            // poisoned frame we must refuse to land on.
+            boolean expansionNeeded = !segmentCache.containsFrame(target, keyframeSnapshot);
+            CompositeSnapshot preExpansionSnapshot = expansionNeeded ? registry.capture() : null;
             CompositeSnapshot snap = segmentCache.snapshotAt(
                     target,
                     restoreSnapshot,
@@ -351,6 +373,23 @@ public final class RewindController {
                             if (profiler != null) profiler.endSection("rewind.tick");
                         }
                     });
+            if (isPoisonedFadeSnapshot(snap)) {
+                // Committing here would leave a still-in-flight, callback-
+                // bearing fade resting as the live state -- FadeManager.restore()
+                // never restores the transient onFadeComplete callback, so the
+                // fade would be stuck faded forever with nothing left to un-fade
+                // it (see FadeManagerSnapshot.isPoisoned()). Refuse exactly like
+                // hitting earliestAvailableFrame(): clamp here rather than
+                // stepping onto (or skipping past) the poisoned frame.
+                if (preExpansionSnapshot != null) {
+                    registry.restore(preExpansionSnapshot);
+                    // registry.restore closed rewind.restore in its finally; re-open
+                    // rewind.step to bracket the re-priming below.
+                    if (profiler != null) profiler.beginSection("rewind.step");
+                    primeStepperAtFrame(currentFrame);
+                }
+                return false;
+            }
             registry.restore(snap);
             // registry.restore closed its rewind.restore in its own finally,
             // leaving no active section. Re-open rewind.step so the audio

@@ -22,6 +22,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.timer.Timer;
 import com.openggf.timer.TimerManager;
 
 import com.openggf.audio.GameAudioProfile;
@@ -940,7 +941,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         crouching, lookingUp, lookDelayCounter,
                         doubleJumpFlag, doubleJumpProperty,
                         shield, shieldType, instaShieldRegistered,
-                        speedShoes, superSonic,
+                        speedShoes, currentSpeedShoesRemainingTicks(), superSonic,
                         forceInputRight, forcedInputMask,
                         forcedJumpPress, suppressNextJumpPress,
                         deferredObjectControlRelease,
@@ -983,6 +984,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 : null,
                         controller.getAnimation() != null
                                 ? controller.getAnimation().captureRewindState()
+                                : null,
+                        controller.getDrowning() != null
+                                ? controller.getDrowning().captureRewindState()
                                 : null,
                         sidekickCpuExtra,
                         includeFollowHistory ? xHistory : null,
@@ -1093,6 +1097,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.shieldType = extra.shieldType();
                 this.instaShieldRegistered = extra.instaShieldRegistered();
                 this.speedShoes = extra.speedShoes();
+                restoreSpeedShoesTimer(extra.speedShoesRemainingTicks());
                 this.superSonic = extra.superSonic();
                 this.forceInputRight = extra.forceInputRight();
                 this.forcedInputMask = extra.forcedInputMask();
@@ -1161,6 +1166,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 if (controller.getAnimation() != null) {
                         controller.getAnimation().restoreRewindState(extra.animationState());
+                }
+                if (controller.getDrowning() != null) {
+                        controller.getDrowning().restoreRewindState(extra.drowningState());
                 }
                 if (extra.sidekickCpuExtra() != null) {
                         if (cpuController == null) {
@@ -1448,6 +1456,43 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void deactivateSpeedShoes() {
                 clearInitOverride();
                 this.speedShoes = false;
+        }
+
+        /**
+         * Reads the current remaining duration of this sprite's speed-shoes
+         * timer, for capture into {@link PlayerRewindExtra#speedShoesRemainingTicks()}.
+         * Zero when speed shoes are not active.
+         */
+        private int currentSpeedShoesRemainingTicks() {
+                if (!speedShoes) {
+                        return 0;
+                }
+                Timer timer = currentTimerManager().getTimerForCode("SpeedShoes-" + getCode());
+                return timer != null ? timer.getTicks() : 0;
+        }
+
+        /**
+         * Re-establishes a fully behavioral speed-shoes timer after a rewind
+         * restore. {@link TimerManager}'s own generic snapshot only preserves
+         * (code, ticks) pairs, not timer type or the sprite reference a
+         * {@link SpeedShoesTimer}'s expiry callback needs — restoring through
+         * that path alone leaves the countdown as a behavior-inert placeholder
+         * whose expiry never calls back into this sprite, so speed shoes never
+         * turn off (they last indefinitely). {@code remainingTicks} comes from
+         * this sprite's own captured {@link PlayerRewindExtra} rather than
+         * TimerManager's live state, so this is correct regardless of
+         * RewindRegistry's cross-subsystem restore ordering.
+         */
+        private void restoreSpeedShoesTimer(int remainingTicks) {
+                TimerManager timerManager = currentTimerManager();
+                String code = "SpeedShoes-" + getCode();
+                if (!speedShoes) {
+                        timerManager.removeTimerForCode(code);
+                        return;
+                }
+                SpeedShoesTimer replacement = new SpeedShoesTimer(code, this);
+                replacement.setTicks(remainingTicks > 0 ? remainingTicks : SpeedShoesTimer.ROM_DURATION_FRAMES);
+                timerManager.registerTimer(replacement);
         }
 
         public void giveInvincibility() {

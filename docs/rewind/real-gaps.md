@@ -1,13 +1,13 @@
 # Rewind Round-Trip Probe
 
-Generated: 2026-07-03
+Generated: 2026-07-06
 
 ## Summary
 
 | Metric | Value |
 |--------|-------|
-| Total classes discovered | 833 |
-| Probed: | 722 |
+| Total classes discovered | 836 |
+| Probed: | 725 |
 | Skipped/Unprobed: | 111 |
 | Probe coverage | 86.7% |
 | REAL gaps found | 0 |
@@ -24,10 +24,10 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 |-------|-------------|
 | FZPlasmaBall | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic1.objects.bosses.FZPlasmaBall (tri... |
 | GHZBossWreckingBall | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBa... |
-| SYZBossSpike | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic1.objects.bosses.SYZBossSpike (tri... |
 | Sonic1EggPrisonObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | Sonic1PointsObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic1.objects.Sonic1PointsObjectInstan... |
 | Sonic1TeleporterObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| ARZRotPformsObjectInstance$Obj83SlotChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic2.objects.ARZRotPformsObjectInstan... |
 | CrawlBadnikInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | GrabberBadnikInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | Sonic2DeathEggRobotInstance$ArticulatedChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRob... |

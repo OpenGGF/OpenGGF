@@ -20,9 +20,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -73,6 +76,100 @@ class TestS2DeathEggRobotGraphRewind {
         assertAllReferencesPointAtRestoredGraph(restored);
         assertRestoredObjectsAreFresh(source, divergent, restored);
         assertSourceScalarsRestored(restored);
+    }
+
+    /**
+     * EHZ-style scenario (see {@code TestEHZBossWheelOrphanAfterSiblingDestroy
+     * #survivingWheelsAreExactAfterASiblingIsDestroyedBeforeCapture}) applied to
+     * DEZ's 6 {@code ArticulatedChild} siblings (shoulder, frontLowerLeg, upperArm,
+     * frontThigh, backLowerLeg, backThigh -- all the SAME runtime class, distinguished
+     * only by construction-time name/frame/priority args and captured mutable state):
+     * destroy + prune one BEFORE capture, restore, and assert the 5 survivors are
+     * exactly right (present once each in childComponents and getActiveObjects(),
+     * captured mutable state intact).
+     *
+     * <p>Root cause (see {@code ObjectManager.restore()}'s Phase-1 dynamic-object loop):
+     * DEZ's boss is a captured {@code DynamicObjectEntry} processed inside the SAME
+     * loop as its own 10 construction-spawned children -- and those children were
+     * inserted into {@code dynamicObjects} DURING the boss's constructor, before the
+     * boss itself was appended, so their captured entries sort BEFORE the boss's own
+     * entry. A restore attempt for a child entry therefore used to run before the boss
+     * had been reconstructed at all: the reconstruction-child pool was empty (the boss
+     * hadn't run its constructor yet to populate it) and the boss itself wasn't live for
+     * any relink fallback either -- every one of the 10 children's captured mutable
+     * state was silently discarded, and the destroyed sibling's slot was never pruned.
+     * Fixed by keeping the reconstruction-child pool active across a dynamically-spawned
+     * parent's OWN Phase-1 reconstruction and retrying parked child entries once after
+     * the full first pass (see {@code ObjectManager.restore()}).
+     */
+    @Test
+    void survivingArticulatedChildrenAreExactAfterASiblingIsDestroyedBeforeCapture() throws Exception {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        RobotGraph source = RobotGraph.spawn(objectManager, ROBOT_SPAWN, 0x0868, 0x0108);
+
+        // Seed distinguishing mutable state on two DIFFERENT surviving siblings so a
+        // wrong ordinal-adoption pairing would show up as swapped falling/velocity
+        // state between them, not just a frame/priority value that construction-time
+        // wiring alone could coincidentally still get right.
+        source.frontThigh().startFalling(0x111, -0x222);
+        source.frontThigh().update(2, null);
+        source.backLowerLeg().startFalling(0x333, -0x444);
+        source.backLowerLeg().update(3, null);
+
+        List<Sonic2DeathEggRobotInstance.ArticulatedChild> survivingSource =
+                exactArticulatedChildrenOf(source.boss()).stream()
+                        .filter(child -> child != source.frontLowerLeg())
+                        .toList();
+        assertEquals(5, survivingSource.size(), "precondition: 5 siblings other than the destroyed one");
+        Set<ArticulatedChildSnapshot> expectedSurvivors = snapshotAll(survivingSource);
+
+        // Destroy + prune ONE of the 6 indistinguishable-by-runtime-class
+        // ArticulatedChild siblings before capture (matching
+        // Sonic2EHZBossInstance's per-frame wheel-bounce-off-screen cleanup shape).
+        source.frontLowerLeg().setDestroyed(true);
+        invokePrivate(objectManager, "cleanupDestroyedDynamicObjects");
+        // cleanupDestroyedDynamicObjects prunes ObjectManager.dynamicObjects (matching
+        // EHZ's own precondition check), but does NOT itself touch childComponents --
+        // that pruning is a rewind-restore-only reconciliation step (see
+        // AbstractBossChild#onDroppedAsUnmatchedRewindReconstructionChild()), so the
+        // destroyed sibling still shows up in childComponents (marked isDestroyed())
+        // until then.
+        assertEquals(5, objectManager.getActiveObjects().stream()
+                        .filter(o -> o.getClass() == Sonic2DeathEggRobotInstance.ArticulatedChild.class
+                                && !o.isDestroyed())
+                        .count(),
+                "precondition: exactly 5 ArticulatedChild-exact-class siblings should remain "
+                        + "tracked after the destroy+prune");
+
+        RewindRegistry registry = registryFor(objectManager);
+        CompositeSnapshot snapshot = registry.capture();
+        registry.restore(snapshot);
+
+        Sonic2DeathEggRobotInstance restoredBoss = only(objectManager, Sonic2DeathEggRobotInstance.class);
+        List<Sonic2DeathEggRobotInstance.ArticulatedChild> restoredSurvivors =
+                exactArticulatedChildrenOf(restoredBoss);
+
+        assertEquals(5, restoredSurvivors.size(),
+                "childComponents must contain EXACTLY the 5 surviving ArticulatedChild siblings "
+                        + "after restore -- no orphan left by the unmatched fresh reconstruction "
+                        + "candidate, and no duplicate");
+        assertEquals(5, new HashSet<>(restoredSurvivors).size(),
+                "no duplicate object references among the surviving siblings");
+
+        List<ObjectInstance> active = new ArrayList<>(objectManager.getActiveObjects());
+        for (Sonic2DeathEggRobotInstance.ArticulatedChild child : restoredSurvivors) {
+            assertTrue(active.contains(child),
+                    "every childComponents ArticulatedChild entry must also be tracked by the "
+                            + "manager (no untracked live orphan)");
+        }
+
+        assertEquals(expectedSurvivors, snapshotAll(restoredSurvivors),
+                "each surviving sibling's captured name/frame/priority/falling/velocity state must "
+                        + "match its OWN original self, not another survivor's -- a wrong "
+                        + "ordinal-based adoption pairing would silently swap this "
+                        + "generically-restored state between positions, exactly like the EHZ "
+                        + "wheel bug's shape");
     }
 
     @Test
@@ -249,6 +346,54 @@ class TestS2DeathEggRobotGraphRewind {
                     head, jet, backLowerLeg, backForearm, backThigh);
         }
 
+    }
+
+    /**
+     * Value snapshot of an {@code ArticulatedChild}'s identity-and-mutable-state
+     * signature, used to detect a wrong ordinal-adoption pairing after restore
+     * (see {@code survivingArticulatedChildrenAreExactAfterASiblingIsDestroyedBeforeCapture}).
+     * {@code name} is read via the (same-package-accessible) field directly rather
+     * than a probing getter, matching this file's existing reflection-light style.
+     */
+    private record ArticulatedChildSnapshot(
+            String name, int frame, int priority, boolean falling, int xVel, int yVel) {
+    }
+
+    private static ArticulatedChildSnapshot snapshotOf(Sonic2DeathEggRobotInstance.ArticulatedChild child) {
+        return new ArticulatedChildSnapshot(
+                child.getName(), child.frame, child.getPriority(), child.falling,
+                readIntField(child, "xVel"), readIntField(child, "yVel"));
+    }
+
+    private static Set<ArticulatedChildSnapshot> snapshotAll(
+            List<Sonic2DeathEggRobotInstance.ArticulatedChild> children) {
+        Set<ArticulatedChildSnapshot> snapshots = new HashSet<>();
+        for (Sonic2DeathEggRobotInstance.ArticulatedChild child : children) {
+            snapshots.add(snapshotOf(child));
+        }
+        return snapshots;
+    }
+
+    /**
+     * {@code childComponents} filtered to EXACT-class {@code ArticulatedChild}
+     * instances (excluding the {@code ForearmChild} subclass, which shares the
+     * same base fields but is a distinct runtime class for adoption purposes).
+     */
+    private static List<Sonic2DeathEggRobotInstance.ArticulatedChild> exactArticulatedChildrenOf(
+            Sonic2DeathEggRobotInstance boss) {
+        List<Sonic2DeathEggRobotInstance.ArticulatedChild> result = new ArrayList<>();
+        for (var child : boss.getChildComponents()) {
+            if (child.getClass() == Sonic2DeathEggRobotInstance.ArticulatedChild.class) {
+                result.add((Sonic2DeathEggRobotInstance.ArticulatedChild) child);
+            }
+        }
+        return result;
+    }
+
+    private static void invokePrivate(Object target, String methodName) throws Exception {
+        java.lang.reflect.Method m = target.getClass().getDeclaredMethod(methodName);
+        m.setAccessible(true);
+        m.invoke(target);
     }
 
     private static <T extends ObjectInstance> T only(ObjectManager objectManager, Class<T> type) {

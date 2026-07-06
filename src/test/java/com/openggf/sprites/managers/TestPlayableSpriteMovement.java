@@ -32,6 +32,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import com.openggf.physics.Direction;
+import com.openggf.physics.GroundSensor;
+import com.openggf.physics.Sensor;
 import com.openggf.physics.SensorResult;
 import com.openggf.game.GroundMode;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
@@ -830,6 +832,120 @@ public class TestPlayableSpriteMovement {
                 assertEquals((short) 0x0110, mockSprite.getGSpeed(),
                                 "Quadrant 0xC0 direct floor touch should copy xSpeed into gSpeed");
                 assertTrue(!mockSprite.getAir(), "Floor touch should clear airborne state");
+        }
+
+        /**
+         * Reproduction attempt for the reported "Sonic sometimes does not enter
+         * hurt animation when injured while climbing a slope" (S1 bug batch
+         * ledger row 9).
+         * <p>
+         * {@code modeAirborne()} deliberately skips {@code returnAngleToZero()}
+         * while hurt ("the ground angle is preserved through recoil" -- S1 "01
+         * Sonic.asm:1410", S2 "s2.asm:37806", above in this file), so a hurt
+         * knockback launched from a steep slope keeps a nonzero {@code angle}
+         * for as long as the knockback lasts. This test drives {@code
+         * applyHurt()} from two starting ground angles -- flat (0x00) and a
+         * steep 45-degree slope (0x20) -- through several airborne-hurt ticks
+         * with a {@link LandingProbeCollisionSystem} that never reports ground
+         * contact (isolating the {@code hurt}/{@code air}/velocity state
+         * machine from real terrain sensor probing, which this lightweight
+         * fixture has no sloped {@code SolidTile} data to drive faithfully).
+         * <p>
+         * Result: {@code hurt}, {@code air}, and the knockback velocities
+         * evolve identically regardless of the starting angle -- only the
+         * (correctly preserved) angle value itself differs. This rules out a
+         * defect in the pure hurt/air dispatch and mode-selection logic
+         * ({@code handleMovement}'s {@code isHurt() && !getAir()} /
+         * {@code getAir()} branch order, {@code modeAirborne()}'s hurt
+         * short-circuits). It does NOT rule out the real terrain-collision
+         * sensor path incorrectly detecting ground contact one frame early on
+         * steep terrain (e.g. a rotated/steep-ground-mode sensor snapping
+         * Sonic back to the slope's surface before a flat floor's sensor
+         * would) -- reproducing that needs a real sloped-terrain
+         * {@code HeadlessTestRunner} level fixture, which does not exist in
+         * this suite yet. Per the task brief, row 9 is reported
+         * blocked-needs-capture rather than landing a speculative fix.
+         */
+        @Test
+        public void hurtStatePersistsIdenticallyRegardlessOfGroundAngleAtImpact() throws Exception {
+                CollisionSystem noLandingCollisionSystem =
+                                new LandingProbeCollisionSystem((sprite, landingHandler, forceFloorCheck) -> {
+                                        // Never invoke landingHandler: simulates open air under Sonic
+                                        // for every airborne tick, so no real terrain sensor logic runs.
+                                });
+
+                boolean flatHurt = driveHurtFromAngleAndReturnFinalHurtState((byte) 0x00, noLandingCollisionSystem);
+                boolean slopeHurt = driveHurtFromAngleAndReturnFinalHurtState((byte) 0x20, noLandingCollisionSystem);
+
+                assertEquals(flatHurt, slopeHurt,
+                                "Hurt state after several airborne-hurt ticks should not depend on the ground angle at impact");
+                assertTrue(flatHurt, "Hurt should still be active after a few airborne ticks with no ground contact");
+        }
+
+        private boolean driveHurtFromAngleAndReturnFinalHurtState(byte startingAngle,
+                        CollisionSystem collisionSystem) throws Exception {
+                // A dedicated sprite (not the shared mockSprite) with real, if
+                // unscanned, sensor lines -- handleMovement()'s airborne path calls
+                // updateSensors(), which NPEs against the shared mockSprite's
+                // no-op createSensorLines(). The LandingProbeCollisionSystem below
+                // replaces resolveAirCollision() entirely, so these sensors are
+                // never actually scanned against terrain.
+                AbstractPlayableSprite hurtSprite = new AbstractPlayableSprite("sonic", (short) 200, (short) 200) {
+                        @Override
+                        protected void defineSpeeds() {
+                                this.max = 1536;
+                                this.runAccel = 12;
+                                this.runDecel = 128;
+                                this.friction = 12;
+                                this.jump = 1664;
+                                this.slopeRunning = 32;
+                                this.slopeRollingDown = 80;
+                                this.slopeRollingUp = 20;
+                        }
+
+                        @Override
+                        protected void createSensorLines() {
+                                groundSensors = new Sensor[]{
+                                                new GroundSensor(this, Direction.DOWN, (byte) -9, (byte) 19, true),
+                                                new GroundSensor(this, Direction.DOWN, (byte) 9, (byte) 19, true)};
+                                ceilingSensors = new Sensor[]{
+                                                new GroundSensor(this, Direction.UP, (byte) -9, (byte) -19, false),
+                                                new GroundSensor(this, Direction.UP, (byte) 9, (byte) -19, false)};
+                                pushSensors = new Sensor[]{
+                                                new GroundSensor(this, Direction.LEFT, (byte) -10, (byte) 0, false),
+                                                new GroundSensor(this, Direction.RIGHT, (byte) 10, (byte) 0, false)};
+                        }
+
+                        @Override
+                        public void draw() {
+                        }
+                };
+
+                hurtSprite.setAir(false);
+                hurtSprite.setHurt(false);
+                hurtSprite.setAngle(startingAngle);
+                hurtSprite.setXSpeed((short) 0);
+                hurtSprite.setYSpeed((short) 0);
+                hurtSprite.setGSpeed((short) 0);
+
+                boolean applied = hurtSprite.applyHurt(hurtSprite.getCentreX() - 16);
+                assertTrue(applied, "applyHurt should succeed from a plain grounded, non-invincible state");
+                assertTrue(hurtSprite.isHurt(), "applyHurt must set hurt=true immediately");
+                assertTrue(hurtSprite.getAir(), "applyHurt must set air=true immediately");
+                assertEquals(startingAngle, hurtSprite.getAngle(),
+                                "applyHurt itself must not touch the ground angle");
+
+                PlayableSpriteMovement hurtManager =
+                                new PlayableSpriteMovement(hurtSprite, collisionSystem, GameServices.gameState());
+                installRuntimeCollisionSystem(collisionSystem);
+
+                for (int i = 0; i < 5; i++) {
+                        hurtManager.handleMovement(false, false, false, false, false, false, false, false);
+                        assertEquals(startingAngle, hurtSprite.getAngle(),
+                                        "Angle must stay preserved through recoil on every hurt tick (frame " + i + ")");
+                }
+
+                return hurtSprite.isHurt();
         }
 
         @Test

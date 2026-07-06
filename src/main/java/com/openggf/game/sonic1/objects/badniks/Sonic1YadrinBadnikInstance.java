@@ -57,8 +57,24 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
     // Upper 2 bits ($C0) = collision category, lower 6 bits ($0C) = size index
     private static final int COLLISION_SIZE_INDEX = 0x0C;
 
-    /** Vertical overlap threshold for spiky-top hurt (s1disasm: cmpi.w #8,d5) */
+    /**
+     * Vertical penetration threshold for spiky-top hurt: Sonic's react-hitbox
+     * bottom edge must clip no more than this many pixels into Yadrin's top
+     * edge (s1disasm: {@code cmpi.w #8,d5}, React_Yadrin).
+     */
     private static final int SPIKY_TOP_THRESHOLD = 8;
+
+    /** Sonic's touch-collision half-width is a fixed constant, not obWidth (s1disasm: sonic_react_width = 16/2). */
+    private static final int SONIC_REACT_HALF_WIDTH = 8;
+
+    /** React_Yadrin's spiked section is 24px wide (s1disasm: addi.w #24,d0). */
+    private static final int SPIKE_REGION_WIDTH = 24;
+
+    /** React_Yadrin's spiked section starts 4px in from Yadrin's leading edge (s1disasm: subq.w #4,d0). */
+    private static final int SPIKE_REGION_X_OFFSET = 4;
+
+    /** Facing-right mirrors the spiked section 16px further left (s1disasm: subi.w #16,d0). */
+    private static final int SPIKE_REGION_FACING_RIGHT_MIRROR = 16;
 
     // From disassembly: obHeight = $11, obWidth = 8
     private static final int Y_RADIUS = 0x11;
@@ -103,7 +119,10 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
         super(spawn, "Yadrin");
         this.currentX = spawn.x();
         this.currentY = spawn.y();
-        // S1: obStatus bit 0 set = facing right (xFlip)
+        // S1: obStatus bit 0 set = facing right (xFlip). See isSpikeRegionHit()'s
+        // Javadoc for the Yad_Action_Wait bchg/bne/neg derivation proving this
+        // polarity -- it is not in conflict with "50 Badnik - Yadrin.asm:75"'s
+        // one-shot spawn-time toggle comment.
         boolean xFlip = (spawn.renderFlags() & 0x01) != 0;
         this.facingLeft = !xFlip;
         this.secondaryState = STATE_MOVE;
@@ -305,16 +324,10 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
     @Override
     public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // React_Special Yadrin check (s1disasm: sub ReactToItem.asm:393-420):
-        // Compute vertical overlap between player center and Yadrin center.
-        // If overlap < 8 pixels, Sonic is on the spiky top -> hurt.
-        // Otherwise, standard enemy destruction.
-        int playerCentreY = player.getCentreY();
-        int yadrinCentreY = this.currentY;
-        int verticalOverlap = yadrinCentreY - playerCentreY;
-
-        if (verticalOverlap >= 0 && verticalOverlap < SPIKY_TOP_THRESHOLD) {
-            // Sonic is above Yadrin within the spiky-top zone: hurt Sonic even while rolling.
+        if (isSpikeRegionHit(player, result)) {
+            // React_Yadrin's .damaging path (s1disasm/_incObj/Sonic ReactToItem.asm:557-558):
+            // touching the spiked head region always hurts, even while Sonic is
+            // rolling/invincible -- it never reaches the badnik-defeat check.
             applyTouchHurt(player, frameCounter);
             return;
         }
@@ -325,6 +338,73 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
         } else {
             applyTouchHurt(player, frameCounter);
         }
+    }
+
+    /**
+     * React_Yadrin (s1disasm/_incObj/Sonic ReactToItem.asm:532-561): the Yadrin's
+     * spiked section is an imaginary, 24px-wide hitbox at its top, offset 4px in
+     * from its leading edge (mirrored 16px further when facing right). It only
+     * applies when Sonic's react-hitbox bottom edge clips no more than
+     * {@link #SPIKY_TOP_THRESHOLD}-1 pixels into Yadrin's top edge -- a shallow
+     * graze from directly above, not a deep side/below overlap (which falls
+     * through to normal badnik rules, React_Enemy).
+     * <p>
+     * The previous implementation compared Sonic's and Yadrin's CENTRE Y values
+     * against the same threshold. Since a real top-graze touch has a
+     * centre-to-centre distance close to the sum of both hitbox half-heights
+     * (~30+px, not &lt;8px), that comparison almost never matched on first
+     * contact -- so a rolling Sonic landing on the spikes fell through to the
+     * attacking-badnik branch and safely destroyed Yadrin instead of getting hurt.
+     * <p>
+     * Facing-bit polarity (obStatus bit 0): {@code 50 Badnik - Yadrin.asm:101-103}'s
+     * {@code bchg #0,obStatus(a0) / bne.s .return / neg.w obVelX(a0)} in
+     * Yad_Action_Wait proves the bit's live meaning -- {@code bchg} sets Z from
+     * the bit's value BEFORE the toggle, so Z=0 (bne taken, keep the just-set
+     * leftward {@code -$100} velocity) only when the OLD bit was 1, and Z=1
+     * (fall through to negate into rightward velocity) when the OLD bit was 0.
+     * Since the toggle flips old-1-moving-left into new-0, and old-0-moving-right
+     * into new-1, the settled (post-toggle) bit is 1 while moving/facing RIGHT
+     * and 0 while moving/facing LEFT -- exactly matching this class's
+     * {@code facingLeft = !xFlip} convention and independently confirmed by
+     * {@code Sonic ReactToItem.asm:541-543}'s own {@code btst #0,obStatus(a1) /
+     * beq.s .checkSpikedSection} (bit clear -&gt; facing left -&gt; no mirror).
+     * {@code 50 Badnik - Yadrin.asm:75}'s one-shot spawn-time {@code bchg}
+     * ("make Yadrin face to the left on spawn") is not a competing polarity
+     * claim -- it just describes the empirical outcome of toggling this
+     * particular Yadrin's spawn-data-supplied initial bit, not the bit's
+     * general meaning.
+     */
+    private boolean isSpikeRegionHit(AbstractPlayableSprite player, TouchResponseResult result) {
+        // ReactToItem.asm:20-21: Sonic's react-hitbox half-height is
+        // (obHeight - 3), not the raw obHeight/getYRadius() value. ROM's
+        // `subq.b #3,d5` has no floor; real physics profiles never bring
+        // getYRadius() near 3, so this is left unclamped to match ROM exactly.
+        int baseYRadius = player.getYRadius() - 3;
+        int sonicBottom = player.getCentreY() + baseYRadius;
+        int yadrinTop = currentY - result.heightRadius();
+        int penetration = sonicBottom - yadrinTop;
+        if (penetration < 0 || penetration >= SPIKY_TOP_THRESHOLD) {
+            return false;
+        }
+
+        int sonicLeft = player.getCentreX() - SONIC_REACT_HALF_WIDTH;
+        int sonicRight = sonicLeft + SONIC_REACT_HALF_WIDTH * 2;
+        // s1disasm: subq.w #4,d0 then, only when facing right (obStatus bit 0
+        // set), subi.w #16,d0 mirrors the region horizontally.
+        int spikeLeft = currentX - SPIKE_REGION_X_OFFSET
+                - (facingLeft ? 0 : SPIKE_REGION_FACING_RIGHT_MIRROR);
+        int spikeRight = spikeLeft + SPIKE_REGION_WIDTH;
+        // ReactToItem.asm:546-554 is the same carry/borrow "bhs/blo/bhi" AABB
+        // idiom as the general React_CheckHitboxOverlap (lines 141-175): both
+        // edges are INCLUSIVE. Working through the 68k arithmetic exactly:
+        // - .sonicLeft branch (sonicLeft <= spikeLeft): "cmp.w d4,d0 / bhi
+        //   .normalBadnik" only excludes strictly-greater-than-16, so
+        //   sonicLeft == spikeLeft - 16 (the sonicRight == spikeLeft edge) hits.
+        // - Other branch (sonicLeft > spikeLeft): "addi.w #24,d0 / blo
+        //   .damaging" carries (unsigned overflow) exactly when
+        //   (spikeLeft - sonicLeft) + 24 >= 0, i.e. sonicLeft <= spikeLeft + 24
+        //   inclusive, so sonicLeft == spikeRight hits too.
+        return sonicRight >= spikeLeft && sonicLeft <= spikeRight;
     }
 
     private boolean isPlayerAttacking(AbstractPlayableSprite player) {

@@ -212,6 +212,17 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     private static final int CONTAINER_OFFSET_X = 0;
     private static final int CONTAINER_OFFSET_Y = 0x24;
 
+    // ContainerDisplayChild's own captured spawn (px+CONTAINER_OFFSET_X,
+    // py+CONTAINER_OFFSET_Y where py = spawn.y()+MACHINE_Y_OFFSET) is never refreshed
+    // after construction, and the machine candidate's own getX()/getY() (no override,
+    // so the ObjectInstance default: getSpawn().x()/y()) is likewise always the raw,
+    // undrifted placement spawn -- both sides derive from the SAME spawn.x()/y()
+    // reference, so the difference is the EXACT fixed constant
+    // |MACHINE_Y_OFFSET(-0x100) + CONTAINER_OFFSET_Y(0x24)| = 0xDC (220px) in Y, 0 in X,
+    // regardless of where the ROM actually places this machine. 0x100 (256px) rounds
+    // that up with headroom.
+    private static final int CONTAINER_TO_MACHINE_MAX_DISTANCE = 0x100;
+
     // Exit trigger: (0, +0x2A0)
     private static final int EXIT_TRIGGER_OFFSET_X = 0;
     private static final int EXIT_TRIGGER_OFFSET_Y = 0x2A0;
@@ -239,6 +250,16 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     // Y offset from machine-adjusted Y: dispenser_y - machine_y - $18 = 0 - 0x18 = -$18
     private static final int[] SPRING_X_OFFSETS = { -0x30, -0x10, 0x10, 0x30 };
     private static final int SPRING_Y_OFFSET = -0x18;
+
+    // A spring's own captured spawn (sx,sy = DISPENSER_ABSOLUTE_X/Y + the spring's own
+    // fixed offset above) and DispenserChild's own captured spawn
+    // (buildSpawnAt(DISPENSER_ABSOLUTE_X, DISPENSER_ABSOLUTE_Y), likewise never
+    // refreshed after construction) are BOTH hardcoded absolute constants -- neither
+    // side depends on the machine's actual placement spawn -- so the true distance
+    // between any spring and the dispenser is the EXACT, fixed
+    // sqrt(springX^2 + SPRING_Y_OFFSET^2), at most sqrt(0x30^2+0x18^2) =~ 54px (the
+    // outermost spring). 0x40 (64px) rounds that up with headroom.
+    private static final int SPRING_TO_DISPENSER_MAX_DISTANCE = 0x40;
 
     // ===== Machine Y drift / slot tracking =====
     //
@@ -927,8 +948,11 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
             // Display child of the gumball machine. If the machine was swept before
             // capture there is no anchor to read position from, so drop the child
             // rather than throw. acceptDestroyed relinks to a restored-but-destroyed
-            // machine when that is the captured parent.
-            return RewindRecreateObjectLinks.nearestObject(ctx, GumballMachineObjectInstance.class, true)
+            // machine when that is the captured parent. Bounded (see
+            // CONTAINER_TO_MACHINE_MAX_DISTANCE) since this child's captured spawn is an
+            // exact fixed offset from the machine's own spawn reference.
+            return RewindRecreateObjectLinks.nearestObject(
+                            ctx, GumballMachineObjectInstance.class, true, CONTAINER_TO_MACHINE_MAX_DISTANCE)
                     .map(machine -> new ContainerDisplayChild(ctx.spawn(), machine, CONTAINER_OFFSET_Y))
                     .orElse(null);
         }
@@ -1320,9 +1344,23 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
             // the spring's update already null-checks it — so a missing dispenser
             // still yields a coherent spring. acceptDestroyed relinks to restored-but-
             // destroyed parts when those are the captured targets.
-            return RewindRecreateObjectLinks.nearestObject(ctx, GumballMachineObjectInstance.class, true)
+            //
+            // Machine lookup is UNBOUNDED by design: this spring's own captured spawn
+            // is a ROM-hardcoded absolute position (DISPENSER_ABSOLUTE_X/Y + a fixed
+            // offset) with no relation to the machine's own spawn.x()/y() reference, so
+            // no distance bound between the two is derivable without knowing this
+            // specific ROM's ObjectSpawn placement value for the machine. Safe because
+            // GumballMachineObjectInstance.current() already assumes exactly one live
+            // machine per level (a bonus-stage singleton, like a boss) -- there is no
+            // wrong-instance risk to bound against here.
+            //
+            // Dispenser lookup IS bounded (see SPRING_TO_DISPENSER_MAX_DISTANCE): both
+            // sides are fixed ROM-hardcoded absolute constants, so the true distance is
+            // exact and derivable regardless of the machine's placement.
+            return RewindRecreateObjectLinks.nearestObjectUnbounded(ctx, GumballMachineObjectInstance.class, true)
                     .map(machine -> new GumballSpringChild(ctx.spawn(), machine,
-                            RewindRecreateObjectLinks.nearestObject(ctx, DispenserChild.class, true)
+                            RewindRecreateObjectLinks.nearestObject(
+                                            ctx, DispenserChild.class, true, SPRING_TO_DISPENSER_MAX_DISTANCE)
                                     .orElse(null)))
                     .orElse(null);
         }

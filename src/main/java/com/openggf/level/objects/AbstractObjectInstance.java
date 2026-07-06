@@ -250,6 +250,54 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return false;
     }
 
+    /**
+     * Called by {@code ObjectManager.restore()} when this instance was constructed as
+     * a pending rewind-reconstruction child (registered via
+     * {@code ObjectManager.registerRewindReconstructionChild}, see {@link #spawnChild})
+     * but no captured {@code DynamicObjectEntry} matched it during the step-4
+     * dynamic-object reconciliation, so it is being dropped rather than adopted.
+     * Default no-op. Owners that keep their own reference list of such children
+     * (e.g. {@code AbstractBossChild} removing itself from its parent's
+     * {@code childComponents}) must override this so the drop does not leave a live,
+     * still-updating orphan referenced nowhere but that list.
+     */
+    protected void onDroppedAsUnmatchedRewindReconstructionChild() {
+    }
+
+    /**
+     * Called by {@code ObjectManager.restore()} immediately after this instance was
+     * produced by the generic {@code recreateForRewind()} dynamic-object recreate path
+     * (i.e. NOT adopted from a pending rewind-reconstruction candidate --
+     * {@link #onDroppedAsUnmatchedRewindReconstructionChild()} is this hook's symmetric
+     * counterpart for the candidate side of that same fork). Default no-op. Owners that
+     * keep their own back-reference list of same-lifetime children (e.g.
+     * {@code AbstractBossChild} adding itself to its parent's {@code childComponents})
+     * must override this so a {@code recreateForRewind()} implementation that only
+     * constructs the instance -- without separately re-registering it -- does not leave
+     * a live object the manager tracks but the owner no longer drives or reads. Centralizing
+     * the re-registration here (rather than requiring every {@code recreateForRewind()}
+     * override to remember it, as {@code Sonic2DeathEggRobotInstance}'s per-subclass
+     * {@code addChildComponentOnce()} calls do) covers every current and future
+     * {@code AbstractBossChild} subclass by construction.
+     */
+    protected void onRecreatedForRewind() {
+    }
+
+    /**
+     * Called by {@code ObjectManager.restore()} once EVERY object's phase-2 field-blob
+     * restore has completed (so any of this instance's own children have their final,
+     * captured scalar state settled) but before the restored snapshot resumes ticking.
+     * Default no-op. Owners that derive some of their own state FROM their children's
+     * settled state (e.g. {@code AbstractBossInstance} re-deriving
+     * {@code childSpawnOrdinalCounters} from each live child's restored
+     * {@code AbstractBossChild#getChildOrdinal()}) must override this, since that
+     * derivation is only correct once every child's own restore has already run --
+     * restore order between a parent and its children is not guaranteed, so doing it
+     * inline in this instance's own {@code restoreRewindState()} would race.
+     */
+    protected void afterRewindRestoreSettled() {
+    }
+
     public String getName() {
         return name;
     }
@@ -981,6 +1029,12 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         try {
             ObjectManager om = services().objectManager();
             if (om != null) {
+                // A throwaway RewindRecreatable probe instance's construction must never leak a
+                // live or pooled side-effect object under its own (about-to-be-discarded)
+                // identity -- see ObjectConstructionContext.isProbeConstruction().
+                if (ObjectConstructionContext.isProbeConstruction()) {
+                    return;
+                }
                 // During an active-object rewind restore, route construction children to the
                 // reconstruction-child scratch so the step-4 reconciliation loop adopts them in
                 // place with exact captured state (no double-spawn, parent reference preserved).
@@ -1021,15 +1075,18 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return ObjectConstructionContext.construct(svc, () -> {
             T child = factory.get();
             ObjectManager om = svc.objectManager();
-            // During an active-object rewind restore the parent is reconstructed to re-derive
-            // its non-captured structural state (including its back-references to these
-            // children). The children themselves are registered and given their EXACT captured
-            // state by the step-4 dynamic-object reconciliation loop, which reuses the
-            // instances spawned here. We still register the construction child (so the boss
-            // back-reference points at a managed instance the reconciliation can adopt), but
-            // mark it as a restore-reconstruction child so the restore loop adopts it in place
-            // instead of recreating a duplicate. See ObjectManager.restore() step 4.
-            if (om != null) {
+            // A throwaway RewindRecreatable probe instance's construction must never leak a
+            // live or pooled side-effect object under its own (about-to-be-discarded)
+            // identity -- see ObjectConstructionContext.isProbeConstruction().
+            if (om != null && !ObjectConstructionContext.isProbeConstruction()) {
+                // During an active-object rewind restore the parent is reconstructed to re-derive
+                // its non-captured structural state (including its back-references to these
+                // children). The children themselves are registered and given their EXACT captured
+                // state by the step-4 dynamic-object reconciliation loop, which reuses the
+                // instances spawned here. We still register the construction child (so the boss
+                // back-reference points at a managed instance the reconciliation can adopt), but
+                // mark it as a restore-reconstruction child so the restore loop adopts it in place
+                // instead of recreating a duplicate. See ObjectManager.restore() step 4.
                 if (ObjectConstructionContext.isRewindActiveRestore()) {
                     om.registerRewindReconstructionChild(child);
                 } else if (child.skipsSameFrameUpdateAfterSpawn()) {
@@ -1059,11 +1116,14 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return ObjectConstructionContext.construct(svc, () -> {
             T child = factory.get();
             ObjectManager om = svc.objectManager();
-            // See spawnChild: during an active-object rewind restore register the construction
-            // child as a reconstruction child (no fresh slot allocation) so the step-4
-            // reconciliation loop adopts it in place with exact captured state, keeping the
-            // boss back-reference valid and avoiding a double-spawn.
-            if (om != null) {
+            // A throwaway RewindRecreatable probe instance's construction must never leak a
+            // live or pooled side-effect object under its own (about-to-be-discarded)
+            // identity -- see ObjectConstructionContext.isProbeConstruction().
+            if (om != null && !ObjectConstructionContext.isProbeConstruction()) {
+                // See spawnChild: during an active-object rewind restore register the construction
+                // child as a reconstruction child (no fresh slot allocation) so the step-4
+                // reconciliation loop adopts it in place with exact captured state, keeping the
+                // boss back-reference valid and avoiding a double-spawn.
                 if (ObjectConstructionContext.isRewindActiveRestore()) {
                     om.registerRewindReconstructionChild(child);
                 } else if (child.skipsSameFrameUpdateAfterSpawn()) {

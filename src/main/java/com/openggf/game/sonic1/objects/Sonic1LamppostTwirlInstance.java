@@ -5,11 +5,10 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -31,10 +30,12 @@ import java.util.List;
  */
 public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance implements RewindRecreatable {
 
-    // From disassembly: move.w #$20,lamp_time(a1)
+    // From disassembly: move.w #$20,lamp_time(a1) (79 Lamppost.asm:105)
     // Timer counts $20 → 0 (positive, bpl branches), then 0 → -1 (negative, falls through
-    // to set routine 4 but still computes motion) = 33 frames total
-    private static final int INITIAL_LIFETIME = 0x21; // 33 frames of motion
+    // to set routine 4 but still computes motion) = 33 frames total. (Previously 0x21,
+    // an off-by-one that ran a 34th invocation and left the terminal orbit angle one
+    // 22.5-degree step past ROM's -- the ball rested ~4.6px left of its correct spot.)
+    private static final int INITIAL_LIFETIME = 0x20; // 33 frames of motion
 
     // From disassembly: subi.b #$10,obAngle(a0)
     private static final int ANGLE_DECREMENT = 0x10;
@@ -45,6 +46,17 @@ public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance implemen
 
     // Mapping frame for red ball only
     private static final int TWIRL_FRAME = 2;
+
+    // ROM lampposts never move, and this instance's own captured spawn (built once in
+    // createDummySpawn(), never refreshed afterward -- the twirl has no
+    // updateDynamicSpawn() call) is set EXACTLY to the true parent's
+    // getCenterX()/getCenterY() at construction, so the true parent's live position is
+    // always exactly 0px from this twirl's captured spawn. A few px of headroom covers
+    // int-arithmetic slack only; anything farther away (e.g. a different lamppost still
+    // loaded elsewhere in the act, docs/plans/s1-bug-batch-ledger-2026-07-05.md row 5's
+    // "wrong lamppost" follow-up) is not a legitimate match and must drop instead of
+    // silently adopting the wrong post.
+    private static final int MAX_PARENT_RELINK_DISTANCE = 8;
     @RewindTransient(reason = "Structural parent link; relinked to the nearest live "
             + "S1 lamppost on rewind recreate. Scalar orbit state is reapplied by "
             + "the generic field capturer.")
@@ -78,32 +90,13 @@ public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance implemen
         if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null) {
             return null;
         }
-        Sonic1LamppostObjectInstance liveParent =
-                findNearestLiveParentForRewind(ctx.objectServices().objectManager(), ctx.spawn());
-        return liveParent == null ? null : new Sonic1LamppostTwirlInstance(liveParent);
-    }
-
-    private static Sonic1LamppostObjectInstance findNearestLiveParentForRewind(
-            ObjectManager objectManager,
-            ObjectSpawn spawn) {
-        if (objectManager == null || spawn == null) {
-            return null;
-        }
-        Sonic1LamppostObjectInstance best = null;
-        long bestDistance = Long.MAX_VALUE;
-        for (ObjectInstance instance : objectManager.getActiveObjects()) {
-            if (!(instance instanceof Sonic1LamppostObjectInstance parent) || parent.isDestroyed()) {
-                continue;
-            }
-            long dx = parent.getCenterX() - spawn.x();
-            long dy = parent.getCenterY() - spawn.y();
-            long distance = dx * dx + dy * dy;
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = parent;
-            }
-        }
-        return best;
+        // Bounded relink: a live lamppost farther than MAX_PARENT_RELINK_DISTANCE from
+        // this twirl's captured spawn cannot be the true parent (see the constant's
+        // javadoc) -- drop the twirl rather than silently reattaching to the wrong post.
+        return RewindRecreateObjectLinks.nearestObject(
+                        ctx, Sonic1LamppostObjectInstance.class, false, MAX_PARENT_RELINK_DISTANCE)
+                .<AbstractObjectInstance>map(Sonic1LamppostTwirlInstance::new)
+                .orElse(null);
     }
 
     @Override

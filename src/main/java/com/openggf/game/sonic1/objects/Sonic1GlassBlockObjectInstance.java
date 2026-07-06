@@ -299,8 +299,10 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * Returns the current base Y. Used by the short-block reflection child
-     * (routine 8) which copies parent's baseY each frame.
+     * Returns the current base Y. Only remaining caller is the reflection's
+     * rewind relink distance heuristic (findLiveGlassBlockParentForRewind);
+     * the reflection's per-frame sync reads the parent's live getY() instead
+     * (ROM Glass_Reflect34 copies the parent's current obY, not the spawn baseline).
      */
     int getBaseY() {
         return baseY;

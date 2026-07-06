@@ -5,7 +5,6 @@ import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.DeformationPlan;
-import com.openggf.level.scroll.compose.PersistentAccumulator;
 import com.openggf.level.scroll.compose.ScatterFillPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
@@ -61,7 +60,6 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
 
     public void setBgRiseState(int routine, int offset) {
         if (this.bgRiseRoutine != BG_RISE_AFTER_MOVE_STATE && routine == BG_RISE_AFTER_MOVE_STATE) {
-            mgz2CloudAccumulator.set(0);
             mgz2CloudsFrozen = true;
         }
         this.bgRiseRoutine = routine;
@@ -88,7 +86,6 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         }
         int newRoutine = runtimeState.bgRiseRoutine();
         if (this.bgRiseRoutine != BG_RISE_AFTER_MOVE_STATE && newRoutine == BG_RISE_AFTER_MOVE_STATE) {
-            mgz2CloudAccumulator.set(0);
             mgz2CloudsFrozen = true;
         }
         this.bgRiseRoutine = newRoutine;
@@ -132,8 +129,8 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         bossBgScrollOffset = Integer.MIN_VALUE;
         lastBgCameraX = actId == 0 ? Integer.MIN_VALUE : cameraX;
         vscrollFactorBG = actId == 0 ? 0 : (short) computeMgz2BgY(cameraY);
-        mgz1CloudAccumulator.set(0);
-        mgz2CloudAccumulator.set(0);
+        mgz1CloudAccumulator.reset();
+        mgz2CloudAccumulator.reset();
         mgz2CloudsFrozen = false;
         lastActId = -1;
         MgzZoneRuntimeState runtimeState = currentRuntimeState();
@@ -190,8 +187,16 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
     private final ScrollValueTable mgz1HScrollTable = ScrollValueTable.ofLength(HSCROLL_WORD_COUNT);
     private final ScrollValueTable mgz2HScrollTable = ScrollValueTable.ofLength(HSCROLL_WORD_COUNT);
     private final ScrollValueTable mgz2ScatterSource = ScrollValueTable.ofLength(MGZ2_BG_DEFORM_INDEX.length);
-    private final PersistentAccumulator mgz1CloudAccumulator = new PersistentAccumulator(0);
-    private final PersistentAccumulator mgz2CloudAccumulator = new PersistentAccumulator(0);
+    // Cloud auto-scroll accumulators, derived from the frame counter (not the
+    // update-call count) so they rewind correctly. MGZ1 advances every act-1
+    // frame (offset 0, read-then-increment). MGZ2 advances only while the clouds
+    // auto-move (offset 1, increment-then-read); on the BG-rise "after move"
+    // freeze the ROM zeroes it, so the frozen value is 0 (handled at the call
+    // site), not a held last value.
+    private final com.openggf.level.scroll.FrameScrollAccumulator mgz1CloudAccumulator =
+            new com.openggf.level.scroll.FrameScrollAccumulator(0x500, 0);
+    private final com.openggf.level.scroll.FrameScrollAccumulator mgz2CloudAccumulator =
+            new com.openggf.level.scroll.FrameScrollAccumulator(0x800, 1);
 
     private int lastActId = -1;
     private boolean mgz2CloudsFrozen;
@@ -227,7 +232,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             bossBgScrollOffset = Integer.MIN_VALUE;
             lastBgCameraX = Integer.MIN_VALUE;
             composer.setVscrollFactorBG((short) 0);
-            buildMgz1HScrollTable(cameraX, mgz1HScrollTable);
+            buildMgz1HScrollTable(cameraX, frameCounter, mgz1HScrollTable);
             DeformationPlan.applyTableBands(
                     composer,
                     0,
@@ -250,7 +255,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             lastBgCameraX = bgScrollBaseX;
             composer.setVscrollFactorBG((short) bgY);
             buildMgz2StateEightHScrollTable(parallaxCameraX, bgScrollBaseX, shouldAutoMoveMgz2Clouds(),
-                    mgz2HScrollTable, mgz2ScatterSource);
+                    frameCounter, mgz2HScrollTable, mgz2ScatterSource);
             DeformationPlan.applyTableBands(
                     composer,
                     bgY,
@@ -269,7 +274,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             lastBgCameraX = getMgz2ParallaxCameraX(cameraX);
             composer.setVscrollFactorBG((short) bgY);
             buildMgz2HScrollTable(getMgz2ParallaxCameraX(cameraX), shouldAutoMoveMgz2Clouds(),
-                    mgz2HScrollTable, mgz2ScatterSource);
+                    frameCounter, mgz2HScrollTable, mgz2ScatterSource);
             DeformationPlan.applyTableBands(
                     composer,
                     bgY,
@@ -296,9 +301,9 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
 
     private void resetActState(int actId) {
         if (actId == 0) {
-            mgz1CloudAccumulator.set(0);
+            mgz1CloudAccumulator.reset();
         } else {
-            mgz2CloudAccumulator.set(0);
+            mgz2CloudAccumulator.reset();
             mgz2CloudsFrozen = bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE;
         }
         lastActId = actId;
@@ -322,7 +327,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
     /**
      * Port of MGZ1_Deform's HScroll_table generation.
      */
-    private void buildMgz1HScrollTable(int cameraX, ScrollValueTable table) {
+    private void buildMgz1HScrollTable(int cameraX, int frameCounter, ScrollValueTable table) {
         table.clear();
         int d0 = ((short) cameraX) << 16;
         d0 >>= 2;
@@ -335,8 +340,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             d0 -= d1;
         }
 
-        int d2 = mgz1CloudAccumulator.get();
-        mgz1CloudAccumulator.add(0x500);
+        int d2 = mgz1CloudAccumulator.valueAt(frameCounter);
 
         d0 >>= 1;
         a1 = 0;
@@ -358,6 +362,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
      */
     private void buildMgz2HScrollTable(int cameraX,
                                        boolean autoMoveClouds,
+                                       int frameCounter,
                                        ScrollValueTable table,
                                        ScrollValueTable scatterSource) {
         table.clear();
@@ -374,11 +379,9 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             d0 -= d1;
         }
 
-        if (autoMoveClouds) {
-            mgz2CloudAccumulator.add(0x800);
-        }
-
-        int cloudAcc = mgz2CloudAccumulator.get();
+        // While auto-moving, the accumulator advances with the frame counter;
+        // on the BG-rise freeze the ROM zeroes it, so the frozen value is 0.
+        int cloudAcc = autoMoveClouds ? mgz2CloudAccumulator.valueAt(frameCounter) : 0;
         int d0Cloud = d2;
         int d2Step = d2 >> 1;
         for (int i = 0; i < MGZ2_BG_DEFORM_INDEX.length; i++) {
@@ -406,9 +409,10 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
     private void buildMgz2StateEightHScrollTable(int cameraX,
                                                  int bgScrollBaseX,
                                                  boolean autoMoveClouds,
+                                                 int frameCounter,
                                                  ScrollValueTable table,
                                                  ScrollValueTable scatterSource) {
-        buildMgz2HScrollTable(cameraX, autoMoveClouds, table, scatterSource);
+        buildMgz2HScrollTable(cameraX, autoMoveClouds, frameCounter, table, scatterSource);
         table.set(27, (short) bgScrollBaseX);
     }
 

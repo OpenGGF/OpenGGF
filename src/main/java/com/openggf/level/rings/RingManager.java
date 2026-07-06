@@ -652,6 +652,26 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         return placement.getActiveSpawns();
     }
 
+    /**
+     * Resolves the canonical {@link RingSpawn} reference tracked by this manager for
+     * the given coordinates, or {@code null} if no ring spawn exists there.
+     * <p>
+     * Recreate paths (e.g. rewind/checkpoint restore) must reuse this reference
+     * rather than constructing a fresh {@code new RingSpawn(x, y)}: {@link
+     * AbstractPlacementManager#getSpawnIndex} keys spawns by identity ({@code
+     * IdentityHashMap}), so an equal-but-different instance always misses that
+     * fast path and permanently falls back to the equals-based linear scan
+     * (logging a warning on every lookup for the rest of the ring's lifetime).
+     */
+    public RingSpawn resolveCanonicalSpawn(int x, int y) {
+        for (RingSpawn candidate : placement.getAllSpawns()) {
+            if (candidate.x() == x && candidate.y() == y) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
     private boolean addAttractedRing(int sourceIndex, int x, int y) {
         for (AttractedRing ar : attractedRings) {
             if (!ar.active) {

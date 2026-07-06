@@ -50,9 +50,21 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
     private static final int FRAME_SWITCH_1 = 1;
     private static final int FRAME_SWITCH_2 = 3;
 
+    // Map_Pri frame index 6 (".blank", 3E Prison Capsule.asm _maps: zero sprite
+    // pieces). ROM sets this on the switch object itself in Pri_Explosion's
+    // .makeanimal (3E Prison Capsule.asm:137): "move.b #6,obFrame(a0) ; 'delete'
+    // switch by turning it invisible". Since the switch and the explosion/animal
+    // spawner are the SAME ROM object slot (Pri_Switch transitions its own
+    // obRoutine 4->$A->$C->$E), the switch visual is never destroyed -- it is
+    // just blanked once the capsule leaves the explosion phase, and stays blank
+    // for the rest of the act (Pri_EndAct/DeleteObject only free the slot at
+    // GotThroughAct). The button sub-object here models that same lifecycle.
+    private static final int FRAME_BLANK = 6;
+
     private int baseY;
     private int currentY;
     private boolean triggered;
+    private boolean blanked;
     private Sonic1EggPrisonObjectInstance parent;
     private boolean parentResolved;
     private int animTimer;
@@ -92,12 +104,36 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
             resolveParent();
         }
 
-        // Animate switch flash (always runs)
+        // ROM: once the capsule leaves Pri_Switch (routine 4) for Pri_Explosion
+        // (routine $A), AnimateSprite is no longer called against this object, so
+        // the switch-flash animation freezes at whatever frame it last showed.
+        // Model that by no longer toggling once triggered.
+        if (triggered) {
+            return;
+        }
+
+        // Animate switch flash (always runs pre-trigger)
         animTimer--;
         if (animTimer < 0) {
             animTimer = ANIM_DELAY;
             currentFrame = (currentFrame == FRAME_SWITCH_1) ? FRAME_SWITCH_2 : FRAME_SWITCH_1;
         }
+    }
+
+    /**
+     * ROM Pri_Explosion .makeanimal (3E Prison Capsule.asm:134-137): fired when
+     * the capsule's explosion timer expires and it advances from Pri_Explosion
+     * to Pri_Animals. Blanks the switch visual (frame 6) for the rest of the
+     * act, matching the ROM's "'delete' switch by turning it invisible" comment.
+     * Called by the parent {@link Sonic1EggPrisonObjectInstance} at that exact
+     * transition.
+     */
+    void goBlank() {
+        if (blanked) {
+            return;
+        }
+        blanked = true;
+        currentFrame = FRAME_BLANK;
     }
 
     /**
