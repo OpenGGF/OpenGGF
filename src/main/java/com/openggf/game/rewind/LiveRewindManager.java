@@ -153,11 +153,11 @@ public final class LiveRewindManager {
      *     transition (see {@code GameLoop.isNonRewindableTransitionPending()}).
      *     Unlike {@link #handleRealtimeRewindInput(GameMode, boolean, InputHandler)}'s
      *     {@code rewindBlocked} parameter, this one intentionally does NOT
-     *     also cover a pending fade completion: this method is only reached
-     *     from {@code GameLoop} while the gameplay-tick freeze block's own
-     *     four-flag predicate is already false, so passing anything wider
-     *     here would be redundant (the fade-pending case never reaches this
-     *     call site to begin with, since gameplay itself is not frozen then).
+     *     also cover a pending fade completion: gameplay is deliberately NOT
+     *     frozen during a completion-bearing fade, so this call site DOES run
+     *     during such fades (with this flag false) and must keep recording
+     *     rewind history through them. Only rewind ENGAGEMENT is blocked
+     *     during those windows, via {@code GameLoop.isRewindBlocked()}.
      */
     public void recordExternalFrame(GameMode mode, boolean nonRewindableTransitionPending, InputHandler input) {
         if (mode != GameMode.LEVEL || nonRewindableTransitionPending || input == null || !enabled()) {
