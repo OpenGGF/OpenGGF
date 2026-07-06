@@ -38,7 +38,12 @@ class TestArchitecturalSourceGuard {
             "com/openggf/level/LevelManager.java", 2500,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
-            GAME_LOOP_PATH, 2890
+            // 2026-07-06: 2890 -> 2909 for the Gumball/Pachinko bonus-stage live-rewind
+            // integration (isBonusStageRewindable + the updateBonusStageMode capture hook
+            // + coordinator-adapter register/deregister on bonus entry/exit). The five
+            // edits are scattered across stepInternal/updateBonusStageMode/doEnter/doExit
+            // and do not form an extractable collaborator.
+            GAME_LOOP_PATH, 2909
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
