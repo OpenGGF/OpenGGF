@@ -692,24 +692,41 @@ public class GameLoop {
     }
 
     /**
-     * True while the level is mid a special-stage/bonus-stage/ending transition
-     * or a pending zone/act transition -- the exact same composite condition
-     * the gameplay-tick freeze block below computes (special/bonus/ending/
-     * zone-act freeze). {@code currentGameMode} stays {@code GameMode.LEVEL}
-     * throughout this whole window (the fade only flips the mode once its
-     * completion callback runs), so this is exposed for
+     * True while the level is mid a special-stage/bonus-stage/ending transition,
+     * a pending zone/act transition, or ANY fade with a completion callback that
+     * has not yet run -- the exact same composite condition the gameplay-tick
+     * freeze block below computes (special/bonus/ending/zone-act/fade freeze).
+     * {@code currentGameMode} stays {@code GameMode.LEVEL} throughout this whole
+     * window (a fade only flips the mode -- or otherwise acts on its result --
+     * once its completion callback runs), so this is exposed for
      * {@link LiveRewindManager}'s mode-based "not applicable" gate to consult
      * -- a sub-state {@code GameMode} alone cannot express. See
      * ssentry-rewind-report.md.
+     * <p>
+     * The {@link FadeManager#hasPendingCompletion()} term closes this
+     * game-agnostically for every callback-completed fade, not just the four
+     * flags above (which only cover the specific callers that separately set
+     * them): object-owned fades that transition the game outside those four
+     * paths -- e.g. the S1 giant-ring special-stage entry
+     * ({@code Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage()})
+     * and the ordinary act-complete/respawn/next-act/next-zone fades below --
+     * never set any of the four narrower flags, so without this term a rewind
+     * held during THEIR fade windows could restore a {@link FadeManager}
+     * snapshot whose completion callback is not rewind-restorable, silently
+     * dropping (or, for a fade that reaches full black/white and stays there
+     * forever with no callback ever firing, freezing) the transition the same
+     * way the four-flag cases could before they were fixed.
      */
     private boolean isNonRewindableTransitionPending() {
         // Called unconditionally near the top of stepInternal(), before any
-        // currentGameMode-specific dispatch -- levelManager can be null in
-        // non-gameplay modes (e.g. MASTER_TITLE_SCREEN with no active session).
+        // currentGameMode-specific dispatch -- levelManager/fadeManager can be
+        // null in non-gameplay modes (e.g. MASTER_TITLE_SCREEN with no active
+        // session; see refreshRuntimeBindings()'s no-session branch).
         return specialStageTransitionPending
                 || bonusStageTransitionPending
                 || endingTransitionPending
-                || (levelManager != null && levelManager.isLevelInactiveForTransition());
+                || (levelManager != null && levelManager.isLevelInactiveForTransition())
+                || (fadeManager != null && fadeManager.hasPendingCompletion());
     }
 
     private void stepInternal() {

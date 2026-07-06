@@ -203,26 +203,45 @@ fix can be verified.
   drives camera focus tracking. Closing this gap needs the heavier level-loading machinery used by
   trace-replay/`HeadlessTestFixture`-style tests (real ROM + real zone/act + spawned player) —
   tracked here as an open follow-up, not attempted in this session.
-- **New tracked row (outside original 25-row S1 scope), NOT FIXED — S1 giant-ring special-stage
-  entry drops the transition under held rewind (lower-severity sibling of the row above):**
-  `Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage()` (~line 391) calls
-  `fadeManager().startFadeToWhite(callback)` directly from object code with its OWN callback
+- **New tracked row (outside original 25-row S1 scope), FIXED (Wave 3, Fix 3) — S1 giant-ring
+  special-stage entry drops the transition under held rewind (lower-severity sibling of the row
+  above):** `Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage()` (~line 391)
+  calls `fadeManager().startFadeToWhite(callback)` directly from object code with its OWN callback
   closure (which calls `advanceZoneActOnly()`/`requestSpecialStageFromCheckpoint()`) — it never
-  touches `specialStageTransitionPending` or any other flag `GameLoop
-  .isNonRewindableTransitionPending()` folds in, so the fix above does NOT cover this path.
-  Same root cause as the fixed bug (`FadeManager.restore()` explicitly not restoring a live
+  touched `specialStageTransitionPending` or any other flag `GameLoop
+  .isNonRewindableTransitionPending()` folded in, so the earlier fix above did NOT cover this path.
+  Same root cause as that fixed bug (`FadeManager.restore()` explicitly not restoring a live
   `onFadeComplete`, `FadeManager.java:715-731`), but a DIFFERENT, lower-severity symptom:
-  engaging rewind during this specific fade-to-white window silently drops the special-stage
+  engaging rewind during this specific fade-to-white window silently dropped the special-stage
   entry (the results-screen object survives un-destroyed, gameplay resumes normally from the
   rewound point) rather than permanently freezing the level. Root-caused in the addendum section
   of `.superpowers/sdd/ssentry-rewind-report.md` ("Game-agnostic scope: S1 and S3K checked").
-  Recommended follow-up fix shape (not implemented): a `FadeManager.hasPendingCompletion()`
-  accessor (`return state != FadeState.NONE && onFadeComplete != null;`) added to the composite
-  predicate would close this game-agnostically for every fade-driven, callback-completed
-  transition — not just the four already-flagged ones — but was deliberately left out of the
-  current fix since the user's decision was scoped to blocking rewind during a pending special
-  stage, and touching `FadeManager` risks behavior changes across the dozens of other
-  `startFadeTo*` call sites in `GameLoop`. No test added (not fixed).
+  **Implemented as originally proposed, not narrowed:** added `FadeManager.hasPendingCompletion()`
+  (`return state != FadeState.NONE && onFadeComplete != null;`) and folded it into `GameLoop
+  .isNonRewindableTransitionPending()` alongside the existing four flags. Before implementing, ran
+  the REQUIRED design-risk inventory (grep every `startFadeTo*(callback)` call site reachable
+  during `GameMode.LEVEL` across `GameLoop`/objects/credits/results-screen code) rather than
+  assuming the earlier note's "most already covered, fine" framing: found the four flags do NOT
+  already cover `Sonic1ResultsScreenObjectInstance.triggerFadeToBlack()` (the ordinary,
+  non-special-stage act-complete path — same object, same root cause, previously unnoticed),
+  `GameLoop.startRespawnFade()`/`startNextActFade()`/`startNextZoneFade()` (death respawn and
+  act/zone advance — `LevelTransitionCoordinator.requestRespawn()`/`requestNextAct()`/
+  `requestNextZone()` never touch `levelInactiveForTransition`), or `startZoneActFade()` when its
+  request was populated via the 2-arg `requestZoneAndAct(zone, act)` overload (defaults
+  `deactivateLevelNow=false`, e.g. `CutsceneKnucklesSkIntroInstance`) rather than the 3-arg
+  `true` overload most boss/cutscene callers use. Judged every one of these (plus the S2
+  `ResultsScreenObjectInstance` equivalent, ESC-to-quit-to-title, and Trace Test Mode's own
+  teardown fade) as a one-shot, transition-like event — not a recurring/cosmetic fade during
+  normal play a player would legitimately want to rewind through — so blocking rewind during any
+  of them is safe/correct, same as the four already-flagged cases; no dangerous site was found, so
+  no narrowing was needed. New RED-before/GREEN-after coverage: `TestGameLoopSpecialStageRewindGate
+  #heldRewindDisengagesWhileAFadeHasAPendingCompletionCallback`, which (per this class's existing
+  documented fixture limitation — no real zone/act/player load available here) drives a REAL
+  `FadeManager.startFadeToWhite(callback)` rather than reflectively flipping a `GameLoop` field
+  (unlike the other two cases in this file, which fake `specialStageTransitionPending`/
+  `bonusStageTransitionPending` directly, since this bug's whole point is that NO such field is
+  ever set for this path). See `wave3-fixes-report.md` for the commit SHA and the shared
+  before/after matrix run with Fix 2.
 - **New tracked row (outside original 25-row S1 scope), FIXED — EHZ boss rewind child adoption
   identity + orphan reconciliation (shared boss framework):** `ObjectManager
   .adoptRewindReconstructionChild` matched pending rewind-reconstruction children to captured

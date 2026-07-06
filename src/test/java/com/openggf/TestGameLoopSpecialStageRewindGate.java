@@ -92,6 +92,60 @@ class TestGameLoopSpecialStageRewindGate {
         assertHeldRewindDisengagesWhenPending("bonusStageTransitionPending");
     }
 
+    /**
+     * Wave 3, Fix 3: the S1 giant-ring special-stage entry
+     * ({@code Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage()}) starts its
+     * fade-to-white directly from object code with its OWN completion callback --
+     * {@code specialStageTransitionPending} is never set for this path (it is only set by
+     * {@code GameLoop.enterSpecialStage()}'s NORMAL, non-big-ring branch, which this path reaches
+     * only AFTER the callback below has already run). So unlike the two cases above, this gap is
+     * NOT reproducible by flipping a {@code GameLoop} field -- it requires a real
+     * {@link FadeManager} fade with a live completion callback in flight, which is exactly what
+     * {@link FadeManager#hasPendingCompletion()} (folded into
+     * {@code GameLoop.isNonRewindableTransitionPending()}) now detects game-agnostically instead
+     * of requiring every such object-owned fade to separately thread a dedicated pending flag
+     * through {@code GameLoop}. Per the same fixture limitation documented in this class's
+     * javadoc, this drives a real {@code FadeManager} fade rather than the full
+     * {@code Sonic1ResultsScreenObjectInstance} object/results-screen machinery.
+     */
+    @Test
+    void heldRewindDisengagesWhileAFadeHasAPendingCompletionCallback() throws Exception {
+        LiveRewindManager liveRewindManager = (LiveRewindManager) getField(loop, "liveRewindManager");
+        RewindController controller = new RewindController(
+                new RewindRegistry(), new InMemoryKeyframeStore(), new FakeInputSource(20), in -> { }, 2);
+        for (int i = 0; i < 5; i++) {
+            controller.recordExternalStep();
+        }
+        installTestController(liveRewindManager, controller);
+
+        int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
+        input.handleKeyEvent(rewindKey, GLFW_PRESS);
+
+        loop.step();
+        assertEquals(4, controller.currentFrame(),
+                "rewind should engage normally while genuinely rewindable (no fade pending)");
+        assertTrue((boolean) getField(liveRewindManager, "rewinding"));
+        assertTrue(fadeManager.isReversePresentationActive());
+
+        // Mirrors Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage(): object
+        // code starts a fade with its OWN completion callback, with no GameLoop pending flag set.
+        fadeManager.startFadeToWhite(() -> { });
+        assertTrue(fadeManager.hasPendingCompletion(),
+                "precondition: the fade must have a live, not-yet-run completion callback");
+
+        loop.step();
+
+        assertFalse((boolean) getField(liveRewindManager, "rewinding"),
+                "held rewind must cleanly disengage while a fade has a pending completion "
+                        + "callback, not keep walking backward through pre-fade history and "
+                        + "risk restoring a FadeManager snapshot whose callback is not "
+                        + "rewind-restorable");
+        assertEquals(4, controller.currentFrame(),
+                "no further backward stepping should happen once the pending fade preempts rewind");
+        assertFalse(fadeManager.isReversePresentationActive(),
+                "the reverse-presentation fade overlay must end when rewind is preempted mid-hold");
+    }
+
     private void assertHeldRewindDisengagesWhenPending(String pendingFlagField) throws Exception {
         LiveRewindManager liveRewindManager = (LiveRewindManager) getField(loop, "liveRewindManager");
         RewindController controller = new RewindController(
