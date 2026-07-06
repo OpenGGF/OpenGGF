@@ -3669,9 +3669,18 @@ public class ObjectManager {
                 // withRewindActiveRestore) across a dynamically-spawned parent's OWN
                 // reconstruction below, not just the pre-Phase-1 static case, so its fresh
                 // construction-spawned children land in the pool instead of live-spawning as
-                // unrelated new dynamic objects. Unresolved entries are parked and retried once
-                // after the full first pass, by which point every entry that COULD reconstruct in
-                // this list (including such a parent) has done so.
+                // unrelated new dynamic objects. Unresolved entries are parked and retried in a
+                // fixed-point loop (not just once): a single retry pass is not enough for a
+                // 3+-level captured chain (e.g. a grandchild whose intermediate parent entry
+                // ITSELF only resolves during the retry pass) -- the grandchild's one retry
+                // attempt would run before that intermediate parent's own retry has populated
+                // the pool with the grandchild's real captured sibling, dropping it exactly like
+                // the bug this loop exists to fix. Looping until a pass makes zero progress
+                // resolves any finite dependency depth; the parked count strictly decreases on
+                // every productive pass, so the loop terminates, and whatever remains unresolved
+                // once a pass resolves nothing has a permanently missing dependency (its owning
+                // parent could not itself reconstruct at all) and falls through to the existing
+                // clean unmatched-drop path below.
                 List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
                         parkedDynamicEntries = new ArrayList<>();
                 java.util.function.Predicate<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
@@ -3734,9 +3743,20 @@ public class ObjectManager {
                         parkedDynamicEntries.add(entry);
                     }
                 }
-                for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry
-                        : parkedDynamicEntries) {
-                    reconstructDynamicEntry.test(entry);
+                boolean parkedPassMadeProgress = true;
+                while (parkedPassMadeProgress && !parkedDynamicEntries.isEmpty()) {
+                    parkedPassMadeProgress = false;
+                    List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
+                            stillParked = new ArrayList<>();
+                    for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry
+                            : parkedDynamicEntries) {
+                        if (reconstructDynamicEntry.test(entry)) {
+                            parkedPassMadeProgress = true;
+                        } else {
+                            stillParked.add(entry);
+                        }
+                    }
+                    parkedDynamicEntries = stillParked;
                 }
                 // Stop routing further child spawns into the reconstruction-children scratch:
                 // any spawns triggered from here on (Phase 2 state restore,
