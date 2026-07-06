@@ -377,6 +377,22 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private static final class AquisWingChild extends AbstractObjectInstance implements RewindRecreatable {
+
+        // The wing's own captured spawn is frozen where it was first spawned (Aquis's
+        // WAIT_FOR_SCREEN position) and is never refreshed afterward (syncToParent()
+        // updates the render-only wingX/wingY fields, not the captured spawn/
+        // dynamicSpawn). The true parent Aquis then legitimately chases the player for
+        // up to CHASE_TIMER (0x80 = 128) frames per cycle, across up to
+        // INITIAL_SHOTS (3) chase/shoot cycles, at up to MAX_CHASE_SPEED (0x100 = 1px/
+        // frame) on each axis independently -- worst case (naive, ignoring the gradual
+        // CHASE_ACCEL ramp-up) 3 * 128 = 384px per axis, sqrt(384^2+384^2) =~ 543px
+        // diagonal -- before ESCAPE (another ~a screen's width off-screen at
+        // ESCAPE_X_VEL). Unlike a boss, multiple Aquis badniks CAN legitimately coexist
+        // in the same act, so an unbounded search really can mis-relink to a different,
+        // wrong Aquis; bound generously (0x400 = 1024px) to still reject anything
+        // clearly unrelated while never rejecting the true, still-chasing parent.
+        private static final int MAX_PARENT_RELINK_DISTANCE = 0x400;
+
         @RewindTransient(reason = "ROM Obj50 wing keeps a parent SST pointer; object graph recreates it live")
         private final AquisBadnikInstance parent;
         private final ObjectAnimationState animationState;
@@ -399,7 +415,11 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
             // capture there is no body to bind the wing to, so drop the wing (its live
             // update expires with a dead parent) rather than throw. acceptDestroyed
             // relinks to a restored-but-destroyed Aquis when that is the captured parent.
-            return RewindRecreateObjectLinks.nearestObject(ctx, AquisBadnikInstance.class, true)
+            // Bounded (see MAX_PARENT_RELINK_DISTANCE) since multiple Aquis badniks can
+            // coexist in the same act -- an unbounded search could mis-relink to a
+            // different, wrong Aquis.
+            return RewindRecreateObjectLinks.nearestObject(
+                            ctx, AquisBadnikInstance.class, true, MAX_PARENT_RELINK_DISTANCE)
                     .<AbstractObjectInstance>map(parent -> {
                         AquisWingChild wing = new AquisWingChild(ctx.spawn(), parent);
                         parent.attachWingForRewind(wing);

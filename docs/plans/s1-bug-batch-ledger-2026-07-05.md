@@ -94,21 +94,44 @@ fix can be verified.
   own status line is now superseded by row 25's — the located SYZ1 spring+bumper cluster
   (x=5136-5360,y=1024-1474) has a byte-for-byte GREEN `TestS1Syz1CompleteRunTraceReplay` pass
   straight through it.
-- **Tracked follow-up, not yet fixed (row 5, S1 lamppost twirl):** `Sonic1LamppostTwirlInstance
-  .recreateForRewind()` / `findNearestLiveParentForRewind()` relinks a rewind-restored twirl to
-  whichever live `Sonic1LamppostObjectInstance` is geometrically NEAREST at restore time, not
-  necessarily the lamppost that actually spawned it. Repro sketch: two lampposts close enough to
-  both stay loaded at once (e.g. the existing `S1_FAR_LAMP`/`S1_NEAR_LAMP` test fixtures, 0xC0
-  apart); activate the near one so it spawns a twirl; capture a rewind snapshot mid-orbit; tear
-  down the true (near) parent without also tearing down the twirl (off-screen unload /
-  act-transition object-table rebuild / editor teardown race); restore the snapshot with only the
-  far lamppost still live — the twirl silently reattaches to the far post even though its own
-  captured `currentX`/`currentY` still reflect the near post's location. This needs a design call
-  before fixing, not a one-line patch: either capture the parent's identity (via the existing
-  `RewindIdentityTable`/`ObjectRefId` machinery) and drop the twirl when that exact parent isn't
-  live at restore time (matching `missingS1LamppostDropsTwirlCleanly`'s "always exactly correct or
-  absent" behavior), or add a distance/threshold guard so a "nearest" match farther than the
-  twirl's own `SWING_RADIUS`-scale distance from its captured position is treated as "no match."
+- **Resolved (row 5, S1 lamppost twirl wrong-relink, wave 4):** the design call this note
+  originally left open is settled — bounded-radius rejection, not identity capture. Added
+  `RewindRecreateObjectLinks.nearestObject(ctx, type, acceptDestroyed, maxDistance[, filter])`
+  (shared helper, `src/main/java/com/openggf/level/objects/RewindRecreateObjectLinks.java`): a
+  candidate farther than `maxDistance` pixels from the recreating object's captured spawn is
+  rejected outright, degrading to `Optional.empty()` (drop) exactly like "no candidate found."
+  `Sonic1LamppostTwirlInstance.recreateForRewind()` now calls it with an 8px bound (the twirl's
+  own captured spawn is fixed exactly at its true parent's center at construction and never
+  drifts, so any live match farther than a few px of int-arithmetic slack cannot be the true
+  parent). New RED-before/GREEN-after test
+  `TestCheckpointStarpostGraphRewind#s1LamppostTwirlDropsWhenTrueParentAbsentEvenWithADifferentLamppostStillLive`
+  reproduces exactly the repro sketch this note described (far lamppost live, true/near parent
+  torn down before capture) and confirms the twirl now drops instead of silently adopting the far
+  post. The same bounded helper (plus a paired, explicitly-named
+  `nearestObjectUnbounded(...)` opt-out for call sites where a distance bound truly can't be
+  derived safely) was also applied across the other same-shaped relink call sites audited in the
+  same pass: `SYZBossSpike` (kept unbounded — captured spawn frozen at boss-construction while
+  the boss legitimately patrols/escapes; safe because exactly one live SYZ boss exists per level),
+  `AquisBadnikInstance$AquisWingChild` (bounded ~1024px, derived from the chase/shoot state
+  machine's worst-case travel — multiple Aquis CAN coexist in one act, so this one has a real
+  wrong-instance risk unlike the boss cases), `HTZBossFlamethrower`/`HTZBossLavaBall` (bounded
+  ~448px/512px from their own live-tracked flight range), `CogObjectInstance$CogSlotChildInstance`
+  (bounded 128px from the fixed tooth-position table), and
+  `GumballMachineObjectInstance`'s `ContainerDisplayChild` (bounded 256px, exact fixed offset) and
+  `GumballSpringChild` (bounded 64px to its dispenser sibling; left unbounded to the machine itself
+  since the spring's ROM-hardcoded absolute position has no derivable relation to the machine's
+  own placement spawn, and the machine is a per-level singleton). Full derivation table in
+  `.superpowers/sdd/wave4-relink-report.md`.
+- **Row 26 addendum (wave 4):** the same pass audited `SYZBossSpike.recreateForRewind()`'s
+  `RewindRecreateObjectLinks.nearestObject(ctx, Sonic1SYZBossInstance.class, true)` call named in
+  row 26's candidate hypothesis 3. Verdict: kept intentionally UNBOUNDED (via the new, explicitly-
+  named `nearestObjectUnbounded(...)` opt-out), not bounded — the spike's own captured spawn is
+  frozen at boss-construction time and never refreshed, while the boss legitimately patrols,
+  drops/rises, and escapes off-screen afterward, so no distance bound between the two is provably
+  safe without risking a false-negative drop of a still-correct relink. This is a hardening-only
+  change (the relink mechanism is now visibly, deliberately unbounded rather than incidentally so)
+  — it does not touch the reported "hangs in the air" symptom, which still needs the capture recipe
+  above before further triage.
 - **Post-merge finding, now fixed (row 6, S1 lavafall flicker):** row 6's original fix (applying
   the lavafall's `-0x250` start-height shift eagerly in `Sonic1LavaGeyserObjectInstance`'s
   constructor) closed the "lands at the wrong Y for one frame" half of the symptom, but a
