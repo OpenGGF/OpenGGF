@@ -103,4 +103,27 @@ public abstract class AbstractBonusStageCoordinator implements BonusStageProvide
     public void setAwardedShield(ShieldType type) {
         this.awardedShield = type;
     }
+
+    /**
+     * Immutable capture of the reward accumulators that objects mutate across
+     * frames during a bonus stage. Held rewind restores these so a backward
+     * seek that un-collects a gumball item rolls the pending reward totals back
+     * in lockstep with the item objects' own restored state.
+     */
+    public record BonusStageAccumulatorSnapshot(int rings, int lives, ShieldType shield) {}
+
+    /** Snapshots the live reward accumulators for rewind capture. */
+    public BonusStageAccumulatorSnapshot captureAccumulators() {
+        return new BonusStageAccumulatorSnapshot(ringsCollected, livesAwarded, awardedShield);
+    }
+
+    /** Restores reward accumulators from a rewind snapshot. */
+    public void restoreAccumulators(BonusStageAccumulatorSnapshot snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+        this.ringsCollected = snapshot.rings();
+        this.livesAwarded = snapshot.lives();
+        this.awardedShield = snapshot.shield();
+    }
 }
