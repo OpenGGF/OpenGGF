@@ -35,6 +35,22 @@ import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
  * restoring a {@link FadeManager} snapshot whose completion callback is not
  * rewind-restorable -- orphaning the pending flag forever (softlock: everything
  * frozen except the music). See ssentry-rewind-report.md.
+ *
+ * <p><strong>Known coverage gap:</strong> these tests prove the gate itself
+ * (held rewind cleanly disengages once the pending flag is set) by reflectively
+ * flipping {@code specialStageTransitionPending}/{@code bonusStageTransitionPending}
+ * directly, rather than driving a real {@link GameLoop#enterSpecialStage()} all the
+ * way through its fade-to-white completion callback to an actual
+ * {@code GameMode.SPECIAL_STAGE} landing. That end-to-end path was attempted and
+ * found infeasible in this lightweight fixture: {@code GameLoop.step()} reaches
+ * {@code Camera.updatePosition()} inside the normal (non-frozen) gameplay tick,
+ * which NPEs on a null focused sprite because no level/player is loaded here (this
+ * fixture only calls {@code TestEnvironment.configureGameModuleFixture}, not a real
+ * zone/act load). Verifying "the transition still completes once rewind is
+ * correctly blocked" end-to-end would require the heavier level-loading machinery
+ * used by trace-replay/{@code HeadlessTestFixture}-style tests (real ROM, real
+ * zone/act, spawned player sprite) -- tracked as an open follow-up in
+ * {@code docs/plans/s1-bug-batch-ledger-2026-07-05.md}, not attempted here.
  */
 class TestGameLoopSpecialStageRewindGate {
 
