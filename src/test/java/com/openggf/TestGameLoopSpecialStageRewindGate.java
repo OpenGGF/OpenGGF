@@ -92,6 +92,118 @@ class TestGameLoopSpecialStageRewindGate {
         assertHeldRewindDisengagesWhenPending("bonusStageTransitionPending");
     }
 
+    /**
+     * Wave 3, Fix 3: the S1 giant-ring special-stage entry
+     * ({@code Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage()}) starts its
+     * fade-to-white directly from object code with its OWN completion callback --
+     * {@code specialStageTransitionPending} is never set for this path (it is only set by
+     * {@code GameLoop.enterSpecialStage()}'s NORMAL, non-big-ring branch, which this path reaches
+     * only AFTER the callback below has already run). So unlike the two cases above, this gap is
+     * NOT reproducible by flipping a {@code GameLoop} field -- it requires a real
+     * {@link FadeManager} fade with a live completion callback in flight, which is exactly what
+     * {@link FadeManager#hasPendingCompletion()} (folded into
+     * {@code GameLoop.isRewindBlocked()}, NOT into {@code isNonRewindableTransitionPending()} --
+     * see the companion test below) now detects game-agnostically instead of requiring every such
+     * object-owned fade to separately thread a dedicated pending flag through {@code GameLoop}.
+     * Per the same fixture limitation documented in this class's javadoc, this drives a real
+     * {@code FadeManager} fade rather than the full {@code Sonic1ResultsScreenObjectInstance}
+     * object/results-screen machinery.
+     *
+     * <p><strong>Additional fixture limitation (post-review split):</strong> unlike the two
+     * cases above, a pending-completion fade correctly does NOT freeze the gameplay-tick block
+     * (see the companion test below and {@code isRewindBlocked()}'s javadoc) -- so once rewind
+     * is rejected on the second frame, {@code stepInternal()} now falls through into a REAL,
+     * unfrozen gameplay tick, which this lightweight fixture cannot support (no level/player
+     * loaded; same {@code Camera.updatePosition()} NPE this class's top javadoc documents for a
+     * full {@code enterSpecialStage()} drive). So the disengagement check below calls
+     * {@code LiveRewindManager.handleRealtimeRewindInput(...)} directly with the real,
+     * reflectively-read {@code GameLoop.isRewindBlocked()} value, rather than a second
+     * {@code loop.step()} -- still exercising the real gate method with the real composite
+     * predicate, just without driving {@code GameLoop}'s own orchestration around it.
+     */
+    @Test
+    void heldRewindDisengagesWhileAFadeHasAPendingCompletionCallback() throws Exception {
+        LiveRewindManager liveRewindManager = (LiveRewindManager) getField(loop, "liveRewindManager");
+        RewindController controller = new RewindController(
+                new RewindRegistry(), new InMemoryKeyframeStore(), new FakeInputSource(20), in -> { }, 2);
+        for (int i = 0; i < 5; i++) {
+            controller.recordExternalStep();
+        }
+        installTestController(liveRewindManager, controller);
+
+        int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
+        input.handleKeyEvent(rewindKey, GLFW_PRESS);
+
+        loop.step();
+        assertEquals(4, controller.currentFrame(),
+                "rewind should engage normally while genuinely rewindable (no fade pending)");
+        assertTrue((boolean) getField(liveRewindManager, "rewinding"));
+        assertTrue(fadeManager.isReversePresentationActive());
+
+        // Mirrors Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage(): object
+        // code starts a fade with its OWN completion callback, with no GameLoop pending flag set.
+        fadeManager.startFadeToWhite(() -> { });
+        assertTrue(fadeManager.hasPendingCompletion(),
+                "precondition: the fade must have a live, not-yet-run completion callback");
+
+        boolean rewindBlocked = (boolean) invokeNoArg(loop, "isRewindBlocked");
+        assertTrue(rewindBlocked, "precondition: the pending-completion fade must block rewind");
+        boolean engaged = liveRewindManager.handleRealtimeRewindInput(
+                com.openggf.game.GameMode.LEVEL, rewindBlocked, input);
+
+        assertFalse(engaged, "rewind must reject engagement while a fade has a pending completion "
+                + "callback, not keep walking backward through pre-fade history and risk restoring "
+                + "a FadeManager snapshot whose callback is not rewind-restorable");
+        assertFalse((boolean) getField(liveRewindManager, "rewinding"));
+        assertEquals(4, controller.currentFrame(),
+                "no further backward stepping should happen once the pending fade preempts rewind");
+        assertFalse(fadeManager.isReversePresentationActive(),
+                "the reverse-presentation fade overlay must end when rewind is preempted mid-hold");
+    }
+
+    /**
+     * Reviewer follow-up (post-Wave-3): {@code hasPendingCompletion()} must NEVER be folded into
+     * {@code GameLoop.isNonRewindableTransitionPending()} itself, because that predicate ALSO
+     * drives the gameplay-tick freeze block -- unlike a special/bonus/ending/zone-act transition,
+     * an ordinary callback-bearing fade (death respawn, act-complete, the giant-ring entry here)
+     * does not freeze ROM gameplay; objects keep ticking underneath the cosmetic fade overlay.
+     * Only rewind ENGAGEMENT may be rejected during such a fade, via the separate
+     * {@code isRewindBlocked()} superset. This asserts both predicates directly (reflectively,
+     * since both are private and this fixture cannot drive a real gameplay tick to observe the
+     * freeze block's effect end-to-end -- see this class's documented NPE limitation) while a
+     * pending-completion fade is active and none of the four transition flags are set: the
+     * four-flag predicate must read {@code false} (gameplay not frozen) while the rewind-block
+     * superset reads {@code true} (rewind still rejected).
+     */
+    @Test
+    void fadeWithPendingCompletionDoesNotFreezeGameplayButDoesBlockRewind() throws Exception {
+        assertFalse((boolean) invokeNoArg(loop, "isNonRewindableTransitionPending"),
+                "precondition: no transition flag should be pending yet");
+        assertFalse((boolean) invokeNoArg(loop, "isRewindBlocked"),
+                "precondition: rewind should not be blocked yet (no fade, no transition)");
+
+        // Mirrors Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage() /
+        // GameLoop.startRespawnFade(): a fade with a live completion callback and NONE of the
+        // four GameLoop transition flags set.
+        fadeManager.startFadeToWhite(() -> { });
+        assertTrue(fadeManager.hasPendingCompletion(), "precondition: fade must have a pending callback");
+
+        assertFalse((boolean) invokeNoArg(loop, "isNonRewindableTransitionPending"),
+                "a pending-completion fade must NOT freeze ordinary gameplay ticks -- ROM keeps "
+                        + "ticking objects underneath a cosmetic fade overlay (this predicate also "
+                        + "drives the gameplay-tick freeze block, so it must stay scoped to only "
+                        + "the four legitimate transition flags)");
+        assertTrue((boolean) invokeNoArg(loop, "isRewindBlocked"),
+                "rewind engagement must still be rejected while the fade has a pending completion "
+                        + "callback, via the separate rewind-only superset predicate");
+    }
+
+    private static Object invokeNoArg(Object target, String methodName) throws Exception {
+        Method m = target.getClass().getDeclaredMethod(methodName);
+        m.setAccessible(true);
+        return m.invoke(target);
+    }
+
     private void assertHeldRewindDisengagesWhenPending(String pendingFlagField) throws Exception {
         LiveRewindManager liveRewindManager = (LiveRewindManager) getField(loop, "liveRewindManager");
         RewindController controller = new RewindController(

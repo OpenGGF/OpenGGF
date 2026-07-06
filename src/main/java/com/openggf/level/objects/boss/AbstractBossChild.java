@@ -99,6 +99,49 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
         parent.childComponents.remove(this);
     }
 
+    /**
+     * True (the default) for boss children whose ONLY back-reference from the parent is
+     * {@link AbstractBossInstance#childComponents} -- i.e. {@code update()} dispatch and
+     * lifecycle for this child depend entirely on that list, so
+     * {@link #onRecreatedForRewind()} must add a recreated instance to it.
+     * <p>
+     * Override to return {@code false} for a child the parent instead tracks via its OWN
+     * dedicated field (e.g. {@code Sonic2DeathEggRobotInstance.sensorChild}) and
+     * deliberately does NOT also list in {@code childComponents} -- for such a child,
+     * {@code recreateForRewind()} re-wiring that dedicated field is the correct, complete,
+     * and ONLY registration step; auto-adding it to {@code childComponents} as well would
+     * be a spurious duplicate entry the parent's own design never produces on a fresh
+     * construction (confirmed regression: {@code SensorChild} is a real dynamic object
+     * with no construction-time reconstruction-pending candidate, so it always falls
+     * through to {@code recreateForRewind()} on restore; before this predicate existed,
+     * every restore silently grew {@code childComponents} by one stale sensor entry).
+     */
+    protected boolean tracksViaChildComponents() {
+        return true;
+    }
+
+    /**
+     * Re-registers a {@code recreateForRewind()}-produced instance into the parent's
+     * {@link AbstractBossInstance#childComponents} list -- the ONLY list
+     * {@link AbstractBossInstance#update} consults to dispatch {@code child.update(...)}
+     * every frame -- unless {@link #tracksViaChildComponents()} says this child is tracked
+     * some other way instead. Without this, a subclass whose {@code recreateForRewind()}
+     * only constructs the instance (e.g. {@code EHZBossWheel}, prior to this fix) leaves a
+     * live object {@code ObjectManager} tracks but the boss never again drives or reads --
+     * present in {@code getActiveObjects()}, absent from the list that actually matters.
+     * Centralized here (rather than per-subclass -- {@code Sonic2DeathEggRobotInstance}'s
+     * and {@code Sonic2MTZBossInstance}'s per-subclass {@code addChildComponentOnce()}
+     * calls have been removed as redundant now that this is the single registration
+     * mechanism) so every current and future {@code AbstractBossChild} subclass is
+     * covered automatically, with exactly one owner per child.
+     */
+    @Override
+    protected void onRecreatedForRewind() {
+        if (tracksViaChildComponents() && parent != null && !parent.childComponents.contains(this)) {
+            parent.childComponents.add(this);
+        }
+    }
+
     @Override
     public int getX() {
         return currentX;

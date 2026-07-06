@@ -265,6 +265,25 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Called by {@code ObjectManager.restore()} immediately after this instance was
+     * produced by the generic {@code recreateForRewind()} dynamic-object recreate path
+     * (i.e. NOT adopted from a pending rewind-reconstruction candidate --
+     * {@link #onDroppedAsUnmatchedRewindReconstructionChild()} is this hook's symmetric
+     * counterpart for the candidate side of that same fork). Default no-op. Owners that
+     * keep their own back-reference list of same-lifetime children (e.g.
+     * {@code AbstractBossChild} adding itself to its parent's {@code childComponents})
+     * must override this so a {@code recreateForRewind()} implementation that only
+     * constructs the instance -- without separately re-registering it -- does not leave
+     * a live object the manager tracks but the owner no longer drives or reads. Centralizing
+     * the re-registration here (rather than requiring every {@code recreateForRewind()}
+     * override to remember it, as {@code Sonic2DeathEggRobotInstance}'s per-subclass
+     * {@code addChildComponentOnce()} calls do) covers every current and future
+     * {@code AbstractBossChild} subclass by construction.
+     */
+    protected void onRecreatedForRewind() {
+    }
+
+    /**
      * Called by {@code ObjectManager.restore()} once EVERY object's phase-2 field-blob
      * restore has completed (so any of this instance's own children have their final,
      * captured scalar state settled) but before the restored snapshot resumes ticking.

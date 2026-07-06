@@ -701,6 +701,16 @@ public class GameLoop {
      * {@link LiveRewindManager}'s mode-based "not applicable" gate to consult
      * -- a sub-state {@code GameMode} alone cannot express. See
      * ssentry-rewind-report.md.
+     * <p>
+     * <strong>This predicate freezes ordinary gameplay ticks</strong> (via the
+     * freeze block below) whenever it is true -- it must stay scoped to
+     * exactly the four flags that legitimately warrant that freeze (this was
+     * pre-existing behavior). Do NOT fold {@link FadeManager#hasPendingCompletion()}
+     * in here: unlike a special/bonus/ending/zone-act transition, an ordinary
+     * callback-bearing fade (e.g. death respawn, act-complete) does not freeze
+     * ROM gameplay -- objects keep ticking underneath a cosmetic fade overlay.
+     * See {@link #isRewindBlocked()} for the rewind-only superset that adds the
+     * fade term.
      */
     private boolean isNonRewindableTransitionPending() {
         // Called unconditionally near the top of stepInternal(), before any
@@ -710,6 +720,33 @@ public class GameLoop {
                 || bonusStageTransitionPending
                 || endingTransitionPending
                 || (levelManager != null && levelManager.isLevelInactiveForTransition());
+    }
+
+    /**
+     * True whenever rewind engagement must be rejected: either
+     * {@link #isNonRewindableTransitionPending()} (the four transition flags,
+     * which ALSO freeze gameplay), or a fade is in flight with a completion
+     * callback that has not yet run ({@link FadeManager#hasPendingCompletion()}).
+     * <p>
+     * The fade term is intentionally NOT folded into
+     * {@link #isNonRewindableTransitionPending()} itself, because that method
+     * also drives the gameplay-tick freeze block -- ROM gameplay keeps ticking
+     * during an ordinary callback-bearing fade (death respawn, act-complete,
+     * the S1 giant-ring special-stage entry, etc.), it is only REWIND
+     * engagement that must be rejected there: {@link FadeManager#restore()}
+     * deliberately does not restore the transient {@code onFadeComplete}
+     * callback, so a rewind restore landing inside such a fade's window
+     * orphans whatever the callback was going to do (dropping or freezing the
+     * transition), independent of whether gameplay itself is frozen. This
+     * composite is consumed ONLY by the two rewind-engagement call sites
+     * below ({@link LiveRewindManager}/{@link TraceSessionLauncher}), never by
+     * the gameplay freeze block. See ssentry-rewind-report.md.
+     */
+    private boolean isRewindBlocked() {
+        // fadeManager can be null in non-gameplay modes (e.g.
+        // MASTER_TITLE_SCREEN with no active session).
+        return isNonRewindableTransitionPending()
+                || (fadeManager != null && fadeManager.hasPendingCompletion());
     }
 
     private void stepInternal() {
@@ -726,17 +763,18 @@ public class GameLoop {
         playbackDebugManager.handleInput(inputHandler);
         playbackDebugManager.setObservedMode(currentGameMode);
 
-        boolean nonRewindableTransitionPending = isNonRewindableTransitionPending();
+        boolean rewindBlocked = isRewindBlocked();
         if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() != null
-                && TraceSessionLauncher.active().handleRealtimeRewindInput(inputHandler)) {
+                && TraceSessionLauncher.active().handleRealtimeRewindInput(
+                        rewindBlocked, inputHandler)) {
             inputHandler.update();
             return;
         }
         if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() == null
                 && liveRewindManager.handleRealtimeRewindInput(
-                        currentGameMode, nonRewindableTransitionPending, inputHandler)) {
+                        currentGameMode, rewindBlocked, inputHandler)) {
             inputHandler.update();
             return;
         }

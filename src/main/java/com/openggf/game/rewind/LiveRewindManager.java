@@ -40,18 +40,24 @@ public final class LiveRewindManager {
     }
 
     /**
-     * @param nonRewindableTransitionPending true while the level is mid a
-     *     special/bonus-stage/ending transition or a pending zone/act
-     *     transition (see {@code GameLoop.isNonRewindableTransitionPending()}).
-     *     {@code currentGameMode} stays {@code GameMode.LEVEL} throughout that
-     *     whole window -- the fade only flips the mode once its completion
-     *     callback runs -- so this widens the same "not applicable this frame"
-     *     gate {@code mode != GameMode.LEVEL} already uses, reusing its
-     *     {@link #clear()} teardown rather than needing a separate mid-hold
-     *     cancel path. See ssentry-rewind-report.md.
+     * @param rewindBlocked true while rewind engagement must be rejected: either
+     *     the level is mid a special/bonus-stage/ending transition or a pending
+     *     zone/act transition, OR a fade is in flight with a completion
+     *     callback that has not yet run (see {@code GameLoop.isRewindBlocked()}).
+     *     {@code currentGameMode} stays {@code GameMode.LEVEL} throughout both
+     *     kinds of window -- the fade only flips the mode (or otherwise acts on
+     *     its result) once its completion callback runs -- so this widens the
+     *     same "not applicable this frame" gate {@code mode != GameMode.LEVEL}
+     *     already uses, reusing its {@link #clear()} teardown rather than
+     *     needing a separate mid-hold cancel path. Note this is a STRICT
+     *     SUPERSET of {@code GameLoop.isNonRewindableTransitionPending()} (the
+     *     predicate that also freezes gameplay) -- the fade term must never be
+     *     folded into that narrower predicate, since ROM gameplay keeps
+     *     ticking during an ordinary callback-bearing fade even though rewind
+     *     must still be rejected. See ssentry-rewind-report.md.
      */
-    public boolean handleRealtimeRewindInput(GameMode mode, boolean nonRewindableTransitionPending, InputHandler input) {
-        if (mode != GameMode.LEVEL || nonRewindableTransitionPending || input == null || !enabled()) {
+    public boolean handleRealtimeRewindInput(GameMode mode, boolean rewindBlocked, InputHandler input) {
+        if (mode != GameMode.LEVEL || rewindBlocked || input == null || !enabled()) {
             activeInputHandler = null;
             clear();
             return false;
@@ -142,8 +148,16 @@ public final class LiveRewindManager {
     }
 
     /**
-     * @param nonRewindableTransitionPending see
-     *     {@link #handleRealtimeRewindInput(GameMode, boolean, InputHandler)}.
+     * @param nonRewindableTransitionPending true while the level is mid a
+     *     special/bonus-stage/ending transition or a pending zone/act
+     *     transition (see {@code GameLoop.isNonRewindableTransitionPending()}).
+     *     Unlike {@link #handleRealtimeRewindInput(GameMode, boolean, InputHandler)}'s
+     *     {@code rewindBlocked} parameter, this one intentionally does NOT
+     *     also cover a pending fade completion: gameplay is deliberately NOT
+     *     frozen during a completion-bearing fade, so this call site DOES run
+     *     during such fades (with this flag false) and must keep recording
+     *     rewind history through them. Only rewind ENGAGEMENT is blocked
+     *     during those windows, via {@code GameLoop.isRewindBlocked()}.
      */
     public void recordExternalFrame(GameMode mode, boolean nonRewindableTransitionPending, InputHandler input) {
         if (mode != GameMode.LEVEL || nonRewindableTransitionPending || input == null || !enabled()) {

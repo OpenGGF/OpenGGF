@@ -83,17 +83,66 @@ class TestTraceSessionLauncherRewindPresentation {
         InputHandler input = new InputHandler();
         input.handleKeyEvent(config.getInt(SonicConfiguration.TRACE_REWIND_KEY), GLFW_PRESS);
 
-        assertTrue(launcher.handleRealtimeRewindInput(input));
+        assertTrue(launcher.handleRealtimeRewindInput(false, input));
 
         assertTrue(fadeManager.isReversePresentationActive());
         assertTrue(backend.calls.contains("beginReversePresentation"));
         assertTrue(backend.calls.contains("update"));
 
         input.handleKeyEvent(config.getInt(SonicConfiguration.TRACE_REWIND_KEY), GLFW_RELEASE);
-        assertFalse(launcher.handleRealtimeRewindInput(input));
+        assertFalse(launcher.handleRealtimeRewindInput(false, input));
 
         assertFalse(fadeManager.isReversePresentationActive());
         assertTrue(backend.calls.contains("endReversePresentation"));
+    }
+
+    /**
+     * Wave 3, Fix 2: the same softlock {@code LiveRewindManager} was gated against
+     * (commit {@code 26fb7debd}) also reaches Trace Test Mode's realtime rewind, which
+     * that commit deliberately left untouched ("its own realtime-rewind path was not
+     * covered by this investigation"). A held rewind in Trace Test Mode during a
+     * special/bonus-stage/ending/zone-act transition window (still {@code GameMode.LEVEL}
+     * throughout) could keep walking backward through pre-transition history and desync
+     * the trace comparator the same way. Mirrors
+     * {@code TestLiveRewindManagerAudioCleanup}'s equivalent pending-transition case.
+     */
+    @Test
+    void pendingNonRewindableTransitionRejectsRealtimeRewindAndTearsDownPresentation() throws Exception {
+        TraceSessionLauncher launcher = newLauncher();
+        RewindController rewindController = new RewindController(
+                new RewindRegistry(),
+                new InMemoryKeyframeStore(),
+                new FakeInputSource(10),
+                in -> {},
+                2,
+                AudioManager.getInstance());
+        for (int i = 0; i < 5; i++) {
+            rewindController.recordExternalStep();
+        }
+        setField(launcher, "rewindController", rewindController);
+        setField(launcher, "rewindPlaybackController", new PlaybackController(rewindController));
+        setField(launcher, "comparator", mock(LiveTraceComparator.class));
+        setField(launcher, "rewindMovieBaseFrame", 0);
+        setField(launcher, "rewindTraceBaseFrame", 0);
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
+        FadeManager fadeManager = gameplayMode.getFadeManager();
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(config.getInt(SonicConfiguration.TRACE_REWIND_KEY), GLFW_PRESS);
+
+        // pending=false: engage normally first, matching the report's "already held
+        // when the transition fires" worst case.
+        assertTrue(launcher.handleRealtimeRewindInput(false, input));
+        assertTrue(fadeManager.isReversePresentationActive());
+
+        // pending=true (still held): must reject and tear down, not keep walking
+        // backward through pre-transition history.
+        assertFalse(launcher.handleRealtimeRewindInput(true, input));
+        assertFalse(fadeManager.isReversePresentationActive(),
+                "a pending non-rewindable transition must tear down the reverse fade "
+                        + "presentation, not leave it active while the frame is rejected");
+        assertTrue(backend.calls.contains("endReversePresentation"),
+                "rejecting on a pending transition must run the same cleanup as a normal "
+                        + "release, not silently leave the audio reverse-presentation stuck");
     }
 
     @Test

@@ -63,6 +63,7 @@ fix can be verified.
 | 27 | Object collision (Task 9) | SLZ2 staircase has a single blocking pixel — Sonic running across it gets stopped by a 1px obstruction that shouldn't block him | Sonic 1 Scrap Brain Zone Act 2 (SLZ2), reported coordinate X5611/Y58 (approximate/likely top-left); located the real ROM placement via `ObjectManager.getAllSpawns()`: Object 0x5B (Staircase) placement index 104, x=5648 y=112, subtype=0x00, flags=0x01 (xFlip) | Reproduced headlessly with a real `HeadlessTestFixture` against the actual SLZ2 level (`SharedLevel.load(SONIC_1, zone=4, act=1)`): approaching the staircase's leftmost piece from the left at ground level and holding only right traps Sonic in a bounded x oscillation (never advances past the piece's left collision edge, `pieceX(0)-halfWidth = 5648-27 = 5621`) — engine `ObjectSolidContactController.resolveContactInternal`'s ROM-cited "SolidObject_SideAir barely-poking" `absDistY<=4` vs `>4` boundary (citing `docs/s1disasm/_incObj/sub SolidObject.asm:181-184,211-214`) flip-flops frame to frame because the ground's own natural 1px height quantization on approach sits exactly on that threshold. **Cross-checked against the real ROM S1 REV01 complete-run trace for SLZ2** (`src/test/resources/traces/s1/slz2_completerun/physics.csv.gz`): the SAME trap appears in the recorded ROM run, frames 0x05D4-0x063E (~106 frames, input=0x0008 right-only), x oscillating in [5621,5624], y toggling 77/78/82 — byte-identical shape to the engine reproduction — and the real route only escapes by adding a jump at frame 0x063F (input=0x0018, y_speed goes negative, air=1). **Verdict: rom-confirmed-intentional.** This is a genuine ROM design quirk (the piece's left edge sits close enough above the approach ground that only a jump clears it; walking alone traps in place in both ROM and the engine) — not an engine defect. No production code was changed. | `ObjectSolidContactController` (investigated only, confirmed already ROM-accurate; no change) | New `TestSonic1Slz2StaircaseLeftEdgeThreshold` (2 tests) GREEN: locks in the ROM-matching bounded-oscillation trap when holding only right, and confirms a jump clears the same edge (matching the trace's frame-0x063F escape). `TestSonic1StaircaseWallCollision`/`TestSonic1StaircaseActivation`/`TestS1Slz2CompleteRunTraceReplay` unchanged and GREEN. | `mvn "-Dtest=TestSonic1StaircaseWallCollision,TestSonic1StaircaseActivation,TestS1Slz2CompleteRunTraceReplay,TestSonic1Slz2StaircaseLeftEdgeThreshold" "-DfailIfNoTests=false" -Dsurefire.forkCount=1 -Dmse=off test` (GREEN both before and after — no engine change was needed; the new tests characterize existing, already-ROM-accurate behavior) | rom-confirmed-intentional |
 
 ## Notes for the next session
+- **Scrub-through-history gap for completion-bearing fades (wave-3 review finding, pre-existing design limitation):** the rewind block is engagement-time only; an already-engaged rewind can still scrub backward through a historical completion-bearing-fade window and land on a keyframe captured mid-fade, whose restored FadeManager has a nulled callback (same latent softlock shape the four-flag transitions always had). Candidate fix: reject continued rewind stepping when the scrubbed-to frame's restored FadeManager state is non-NONE with a nulled callback. Wave-3 commits for reference: e9c7bf448 (child re-registration), 664e96f77 (trace-session gate), a0bfff758+04c451d00 (completion-fade rewind block + predicate split).
 
 - Rows 14/19 (breath timer/countdown rewind) were confirmed as the same underlying bug and
   fixed together by Task 6 (`DrowningController` rewind capture/restore, see row 14). Rows
@@ -203,26 +204,70 @@ fix can be verified.
   drives camera focus tracking. Closing this gap needs the heavier level-loading machinery used by
   trace-replay/`HeadlessTestFixture`-style tests (real ROM + real zone/act + spawned player) —
   tracked here as an open follow-up, not attempted in this session.
-- **New tracked row (outside original 25-row S1 scope), NOT FIXED — S1 giant-ring special-stage
-  entry drops the transition under held rewind (lower-severity sibling of the row above):**
-  `Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage()` (~line 391) calls
-  `fadeManager().startFadeToWhite(callback)` directly from object code with its OWN callback
+- **New tracked row (outside original 25-row S1 scope), FIXED (Wave 3, Fix 3) — S1 giant-ring
+  special-stage entry drops the transition under held rewind (lower-severity sibling of the row
+  above):** `Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage()` (~line 391)
+  calls `fadeManager().startFadeToWhite(callback)` directly from object code with its OWN callback
   closure (which calls `advanceZoneActOnly()`/`requestSpecialStageFromCheckpoint()`) — it never
-  touches `specialStageTransitionPending` or any other flag `GameLoop
-  .isNonRewindableTransitionPending()` folds in, so the fix above does NOT cover this path.
-  Same root cause as the fixed bug (`FadeManager.restore()` explicitly not restoring a live
+  touched `specialStageTransitionPending` or any other flag `GameLoop
+  .isNonRewindableTransitionPending()` folded in, so the earlier fix above did NOT cover this path.
+  Same root cause as that fixed bug (`FadeManager.restore()` explicitly not restoring a live
   `onFadeComplete`, `FadeManager.java:715-731`), but a DIFFERENT, lower-severity symptom:
-  engaging rewind during this specific fade-to-white window silently drops the special-stage
+  engaging rewind during this specific fade-to-white window silently dropped the special-stage
   entry (the results-screen object survives un-destroyed, gameplay resumes normally from the
   rewound point) rather than permanently freezing the level. Root-caused in the addendum section
   of `.superpowers/sdd/ssentry-rewind-report.md` ("Game-agnostic scope: S1 and S3K checked").
-  Recommended follow-up fix shape (not implemented): a `FadeManager.hasPendingCompletion()`
-  accessor (`return state != FadeState.NONE && onFadeComplete != null;`) added to the composite
-  predicate would close this game-agnostically for every fade-driven, callback-completed
-  transition — not just the four already-flagged ones — but was deliberately left out of the
-  current fix since the user's decision was scoped to blocking rewind during a pending special
-  stage, and touching `FadeManager` risks behavior changes across the dozens of other
-  `startFadeTo*` call sites in `GameLoop`. No test added (not fixed).
+  **Implemented as originally proposed, not narrowed:** added `FadeManager.hasPendingCompletion()`
+  (`return state != FadeState.NONE && onFadeComplete != null;`). Before implementing, ran the
+  REQUIRED design-risk inventory (grep every `startFadeTo*(callback)` call site reachable during
+  `GameMode.LEVEL` across `GameLoop`/objects/credits/results-screen code) rather than assuming the
+  earlier note's "most already covered, fine" framing: found the four flags do NOT already cover
+  `Sonic1ResultsScreenObjectInstance.triggerFadeToBlack()` (the ordinary, non-special-stage
+  act-complete path — same object, same root cause, previously unnoticed),
+  `GameLoop.startRespawnFade()`/`startNextActFade()`/`startNextZoneFade()` (death respawn and
+  act/zone advance — `LevelTransitionCoordinator.requestRespawn()`/`requestNextAct()`/
+  `requestNextZone()` never touch `levelInactiveForTransition`), or `startZoneActFade()` when its
+  request was populated via the 2-arg `requestZoneAndAct(zone, act)` overload (defaults
+  `deactivateLevelNow=false`, e.g. `CutsceneKnucklesSkIntroInstance`) rather than the 3-arg
+  `true` overload most boss/cutscene callers use. Judged every one of these (plus the S2
+  `ResultsScreenObjectInstance` equivalent, ESC-to-quit-to-title, and Trace Test Mode's own
+  teardown fade) as a one-shot, transition-like event — not a recurring/cosmetic fade during
+  normal play a player would legitimately want to rewind through — so blocking REWIND ENGAGEMENT
+  during any of them is safe/correct, same as the four already-flagged cases.
+  **Reviewer follow-up, same day — split the predicate (do not freeze gameplay for this term):**
+  the first implementation wrongly folded `hasPendingCompletion()` directly into `GameLoop
+  .isNonRewindableTransitionPending()`, which ALSO drives the gameplay-tick freeze block — this
+  would have frozen ordinary gameplay (object ticking, physics) during every callback-bearing
+  fade, including death respawn and ordinary act-complete, neither of which freezes real ROM
+  gameplay (only the four already-flagged transition cases legitimately do). Fixed by splitting
+  the consumers: `isNonRewindableTransitionPending()` reverts to EXACTLY the original four flags
+  (restoring the pre-Fix-3 gameplay-freeze behavior bit-for-bit — confirmed by direct source diff
+  against the prior commit), consumed only by the freeze block as before. A new
+  `GameLoop.isRewindBlocked()` (`isNonRewindableTransitionPending() ||
+  fadeManager.hasPendingCompletion()`) is a rewind-only superset — derived from, not duplicating,
+  the original predicate — consumed exclusively by the two rewind-engagement call sites
+  (`LiveRewindManager`/`TraceSessionLauncher`'s `handleRealtimeRewindInput`), never by the freeze
+  block. New RED-before/GREEN-after coverage for the split itself:
+  `TestGameLoopSpecialStageRewindGate#fadeWithPendingCompletionDoesNotFreezeGameplayButDoesBlockRewind`
+  (reflectively asserts `isNonRewindableTransitionPending()==false` while
+  `isRewindBlocked()==true` during a pending-completion fade with none of the four flags set; RED
+  against the pre-split commit — direct source inspection confirmed
+  `isNonRewindableTransitionPending()` literally included the fade term there, and the test itself
+  failed with `NoSuchMethodException: isRewindBlocked()` since that method didn't exist yet).
+  Original coverage: `TestGameLoopSpecialStageRewindGate
+  #heldRewindDisengagesWhileAFadeHasAPendingCompletionCallback`, which (per this class's existing
+  documented fixture limitation — no real zone/act/player load available here) drives a REAL
+  `FadeManager.startFadeToWhite(callback)` rather than reflectively flipping a `GameLoop` field
+  (unlike the other two cases in this file, which fake `specialStageTransitionPending`/
+  `bonusStageTransitionPending` directly, since this bug's whole point is that NO such field is
+  ever set for this path); this test was ALSO updated post-split, since gameplay correctly no
+  longer freezes during its fade window, so its second assertion now calls
+  `LiveRewindManager.handleRealtimeRewindInput(...)` directly with the real, reflectively-read
+  `isRewindBlocked()` value instead of a second `loop.step()` (which would otherwise fall through
+  into a real, now-unfrozen gameplay tick this lightweight fixture cannot support — no level/player
+  loaded, same NPE class this file's top javadoc already documents for a full `enterSpecialStage()`
+  drive). See `wave3-fixes-report.md` for the commit SHAs and the shared before/after matrix run
+  with Fix 2, re-run again after this split.
 - **New tracked row (outside original 25-row S1 scope), FIXED — EHZ boss rewind child adoption
   identity + orphan reconciliation (shared boss framework):** `ObjectManager
   .adoptRewindReconstructionChild` matched pending rewind-reconstruction children to captured
@@ -305,3 +350,83 @@ fix can be verified.
   `AbstractBossChild`/`AbstractBossInstance` (replacing each boss's private duplicate) or an
   audit of every `recreateForRewind()` override across all `AbstractBossChild` subclasses for the
   same omission. Not implemented this session — tracked here as a confirmed-reachable follow-up.
+  **RESOLVED (Wave 3, Fix 1):** fixed centrally rather than as an `EHZBossWheel`-only patch or a
+  promoted-but-still-per-subclass `addChildComponentOnce()` helper. Added a new generic
+  `AbstractObjectInstance#onRecreatedForRewind()` hook (default no-op, symmetric counterpart to
+  `onDroppedAsUnmatchedRewindReconstructionChild()`), called by `ObjectManager.restore()`
+  immediately after the phase-1 dynamic-object loop's `recreateDynamicObject(entry)` path (i.e.
+  only on the "not adopted from a pending reconstruction candidate" branch — adopted candidates
+  were already registered by the parent's own construction-time spawn). `AbstractBossChild`
+  overrides it to re-add itself to `parent.childComponents` if absent. This covers `EHZBossWheel`
+  with ZERO changes to that file, and covers every OTHER current and future `AbstractBossChild`
+  subclass automatically. New RED-before/GREEN-after coverage:
+  `TestEHZBossWheelOrphanAfterSiblingDestroy#recreatedWheelBeyondTheFixedSetIsReRegisteredIntoChildComponents`,
+  which reproduces the gap on a SINGLE restore (a 4th wheel beyond EHZ's fixed 3-wheel
+  reconstruction-time spawn count has no matching candidate and falls straight to
+  `recreateForRewind()`) — simpler than the originally-suspected double-restore requirement, since
+  the count-mismatch condition (more live same-class children than the boss's fixed spawn count)
+  is sufficient on its own. See `wave3-fixes-report.md` for the exact commit SHA and the full
+  before/after 7-class cross-game boss-rewind matrix (identical both times; only the pre-existing
+  `TestS3kAizTraceReplay` frame-8941 `camera_y` signature present).
+  **Full-suite-gate follow-up, same day — a real DOUBLE-REGISTRATION regression, not the harmless
+  redundancy assumed above:** a full `mvn test` run caught `TestS2DeathEggRobotGraphRewind
+  #deathEggRobotGraphRestoresWithoutDropsDoublesOrStaleReferences` failing (`childComponents`
+  expected 10, got 11) — confirmed via a clean throwaway worktree at `ead92df3e` (pre-Wave-3
+  baseline) that this test PASSED before Fix 1, i.e. a genuine regression, not pre-existing debt.
+  Root cause: `Sonic2DeathEggRobotInstance.SensorChild` is a real dynamic object with NO
+  construction-time reconstruction-pending candidate (its normal spawn calls `spawnChild()` from a
+  routine transition, not from the boss's own constructor the way the 10 body-part children do),
+  so it always falls through to the generic `recreateForRewind()` path on restore -- but
+  `SensorChild` is DELIBERATELY never added to `childComponents` at all (ROM/engine design: it is
+  driven by a direct `boss.sensorChild.update(...)` call inside the boss's own update dispatch, not
+  by `AbstractBossInstance#updateChildren()`'s list iteration -- confirmed by grep, no other call
+  site ever adds it). The central hook's unconditional "every recreated boss child belongs in
+  childComponents" assumption was simply wrong for this one class, silently growing the list by one
+  stale sensor entry every restore. Fixed by adding `AbstractBossChild#tracksViaChildComponents()`
+  (a semantic predicate, default `true`), overridden to `false` by `SensorChild`, consulted by
+  `onRecreatedForRewind()` before adding. Also, per the review's "exactly ONE registration mechanism
+  owns each child" requirement, removed the now-redundant per-subclass `addChildComponentOnce()`
+  local calls (confirmed compatible with the central hook — each belongs in `childComponents` at
+  construction) from DEZ's `ArticulatedChild`/`ForearmChild`/`HeadChild`/`JetChild`/`BombChild` and
+  MTZ's `MTZBossOrb`/`MTZLaserShooter`, deleting both now-unused private `addChildComponentOnce()`
+  helpers. Audited every `AbstractBossChild` subclass in the codebase (~60 across S1/S2/S3K) for
+  the same "field-only, deliberately excluded from childComponents" pattern; `SensorChild` is the
+  only one — every other class either already adds itself to `childComponents` at construction
+  (grepped per owning boss file) or (LBZ's family) implements a bespoke `LbzEndBossGraphChild`
+  restore path never reached by the generic hook at all. New RED-before/GREEN-after coverage:
+  the existing `TestS2DeathEggRobotGraphRewind` test IS the RED/GREEN evidence (RED confirmed both
+  live against the pre-fix tree and independently via the `ead92df3e` clean-baseline check; GREEN
+  after adding the predicate). Full required re-verification:
+  `TestS2DeathEggRobotGraphRewind` + `TestEHZBossWheelOrphanAfterSiblingDestroy` (incl. the
+  double-restore-adjacent test) + `TestS2MTZBossGraphRewind` all GREEN; 7-class matrix re-run
+  identical (only the same pre-existing `TestS3kAizTraceReplay` signature); full `mvn
+  -Dsurefire.forkCount=1 test` (11106 tests) failed EXACTLY the 10 pre-existing classes named by
+  review (`TestCanonicalAnimationMapping`, `TestRemainingRewindTailInventory`,
+  `TestRewindArchitectureGuard`, `TestRewindRecreateLinkToleranceGuard`, `TestRewindTorture`,
+  `TestObjectPhysicsStandardizationGuard`, `TestSidekickCpuFollowParity`,
+  `TestArchitecturalSourceGuard`, `TestSingletonLifecycleGuard`,
+  `TestPerGameRuleArchitectureGuard`) — no extras, no `TestS2DeathEggRobotGraphRewind`. See
+  `wave3-fixes-report.md` for the commit SHA.
+- **New tracked row (outside original 25-row S1 scope), FIXED (Wave 3, Fix 2) — Trace Test Mode's
+  realtime rewind was never gated against a pending special/bonus-stage or zone/act transition:**
+  the `LiveRewindManager` fix above (commit `26fb7debd`) deliberately left `TraceSessionLauncher`
+  untouched ("its own realtime-rewind path was not covered by this investigation" — see that
+  commit message), so a held rewind key in Trace Test Mode during the same still-`GameMode.LEVEL`
+  transition window (special/bonus-stage entry, ending transition, or a pending zone/act fade)
+  could still walk backward through pre-transition history the identical way. Fixed with the exact
+  same widened-signature treatment: `TraceSessionLauncher.handleRealtimeRewindInput(InputHandler)`
+  is now `handleRealtimeRewindInput(boolean nonRewindableTransitionPending, InputHandler)`,
+  rejecting (reusing its existing `cleanupRealtimeRewindPresentation(STOP_ALL_PRESENTATION)`
+  teardown) whenever the new parameter is true, exactly mirroring `LiveRewindManager`'s own
+  widened rejection. `GameLoop`'s call site now passes its existing
+  `isNonRewindableTransitionPending()` predicate to both the trace-launcher and live-rewind
+  engagement checks. No new predicate, no per-manager duplication of the freeze logic. Also
+  updated a pre-existing literal-source-scan test
+  (`TestGameLoop#traceRealtimeRewindRunsBeforePlaybackInputBridge`) whose string match on the old
+  `handleRealtimeRewindInput(inputHandler)` call text no longer matched after the widened call
+  site's line wrap — text-only update, no behavior change to that test's assertion intent. New
+  RED-before/GREEN-after coverage:
+  `TestTraceSessionLauncherRewindPresentation#pendingNonRewindableTransitionRejectsRealtimeRewindAndTearsDownPresentation`
+  (RED was a compile failure against the old 1-arg signature, matching the same precedent the
+  original `LiveRewindManager` fix's round-1 companion tests hit). See `wave3-fixes-report.md` for
+  the commit SHA and the shared before/after matrix run with Fix 3.

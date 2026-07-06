@@ -1541,12 +1541,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         return nearest;
     }
 
-    private static void addChildComponentOnce(Sonic2DeathEggRobotInstance boss, AbstractBossChild child) {
-        if (boss != null && child != null && !boss.childComponents.contains(child)) {
-            boss.childComponents.add(child);
-        }
-    }
-
     /** Eggman boarding flag, set by Sonic2DEZEggmanInstance when jump starts */
     private boolean eggmanBoardedFlag = false;
 
@@ -1647,9 +1641,9 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             if (boss == null) {
                 return null;
             }
-            ArticulatedChild child = new ArticulatedChild(boss, "RewindArticulated", 4, FRAME_SHOULDER);
-            addChildComponentOnce(boss, child);
-            return child;
+            // Re-registration into boss.childComponents is handled generically by
+            // AbstractBossChild#onRecreatedForRewind() -- single mechanism, no local duplicate.
+            return new ArticulatedChild(boss, "RewindArticulated", 4, FRAME_SHOULDER);
         }
 
         void startFalling(int xVel, int yVel) {
@@ -1739,9 +1733,9 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             if (boss == null) {
                 return null;
             }
-            ForearmChild child = new ForearmChild(boss, "RewindForearm", 4, false);
-            addChildComponentOnce(boss, child);
-            return child;
+            // Re-registration into boss.childComponents is handled generically by
+            // AbstractBossChild#onRecreatedForRewind() -- single mechanism, no local duplicate.
+            return new ForearmChild(boss, "RewindForearm", 4, false);
         }
 
         boolean isPunching() {
@@ -1880,9 +1874,9 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             if (boss == null) {
                 return null;
             }
-            HeadChild child = new HeadChild(boss, 4);
-            addChildComponentOnce(boss, child);
-            return child;
+            // Re-registration into boss.childComponents is handled generically by
+            // AbstractBossChild#onRecreatedForRewind() -- single mechanism, no local duplicate.
+            return new HeadChild(boss, 4);
         }
 
         /**
@@ -2035,9 +2029,9 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             if (boss == null) {
                 return null;
             }
-            JetChild child = new JetChild(boss, 4);
-            addChildComponentOnce(boss, child);
-            return child;
+            // Re-registration into boss.childComponents is handled generically by
+            // AbstractBossChild#onRecreatedForRewind() -- single mechanism, no local duplicate.
+            return new JetChild(boss, 4);
         }
 
         void setJetRoutine(int routine) {
@@ -2185,6 +2179,22 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             // the manager's spawn-frame update prevents the same managed child
             // from consuming its init frame outside that parent-owned ordering.
             return true;
+        }
+
+        /**
+         * The sensor is driven directly by {@code boss.sensorChild.update(...)} (see the
+         * boss's own update dispatch), NOT by {@code AbstractBossInstance#updateChildren()}
+         * iterating {@code childComponents} -- so unlike the body-part children, it is
+         * deliberately never added to {@code childComponents} on construction
+         * ({@code spawnSensorChild()} only assigns the dedicated {@code sensorChild}
+         * field). {@code recreateForRewind()} re-wiring that same field is therefore the
+         * complete registration step; opting out here prevents
+         * {@code AbstractBossChild#onRecreatedForRewind()}'s generic re-registration from
+         * adding a spurious duplicate entry a fresh construction never produces.
+         */
+        @Override
+        protected boolean tracksViaChildComponents() {
+            return false;
         }
 
         @Override
@@ -2372,11 +2382,9 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             if (boss == null) {
                 return null;
             }
-            BombChild bomb = new BombChild(boss, spawn.x(), spawn.y(), 0, 0);
-            if (!boss.childComponents.contains(bomb)) {
-                boss.childComponents.add(bomb);
-            }
-            return bomb;
+            // Re-registration into boss.childComponents is handled generically by
+            // AbstractBossChild#onRecreatedForRewind() -- single mechanism, no local duplicate.
+            return new BombChild(boss, spawn.x(), spawn.y(), 0, 0);
         }
 
         private static Sonic2DeathEggRobotInstance nearestLiveBoss(ObjectManager objectManager, int x, int y) {
