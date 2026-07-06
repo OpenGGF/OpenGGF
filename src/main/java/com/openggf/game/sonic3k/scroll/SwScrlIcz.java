@@ -49,7 +49,11 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
     private int lastActId = -1;
     private int introPreviousCameraY;
     private int introBgCameraYSource;
-    private int introAutoAccumulator;
+    // ICZ1 intro auto-scroll longword (ROM +$800/frame). Derived from the frame
+    // counter (not the update-call count) so it rewinds correctly. Anchored at
+    // the first intro frame after resetActState; offset 0 = read-then-increment.
+    private int introAutoBaseFrame;
+    private boolean introAutoBaseFrameSet;
     private boolean act2Indoor;
     private int lastBgCameraX = Integer.MIN_VALUE;
 
@@ -75,7 +79,7 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
             if (((short) cameraX & 0xFFFF) >= ICZ1_INDOOR_X_THRESHOLD) {
                 updateAct1Indoor(cameraX, cameraY, fgScroll);
             } else {
-                updateAct1Intro(cameraX, cameraY, fgScroll);
+                updateAct1Intro(cameraX, cameraY, fgScroll, frameCounter);
             }
         } else if (isAct2Indoor(cameraX, cameraY)) {
             act2Indoor = true;
@@ -104,16 +108,16 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
         if (actId == 0 && x >= 0x3580 && x < ICZ1_INDOOR_X_THRESHOLD) {
             introBgCameraYSource = (short) (introBgCameraYSource + 0x2800);
         }
-        introAutoAccumulator = 0;
+        introAutoBaseFrameSet = false;
         act2Indoor = shouldAct2StartIndoors(cameraX, cameraY);
         lastBgCameraX = Integer.MIN_VALUE;
     }
 
-    private void updateAct1Intro(int cameraX, int cameraY, short fgScroll) {
+    private void updateAct1Intro(int cameraX, int cameraY, short fgScroll, int frameCounter) {
         adjustIntroBgDuringLoop(cameraY);
         int bgY = asrWord(introBgCameraYSource, 7);
         composer.setVscrollFactorBG((short) bgY);
-        buildIcz1IntroTable(cameraX);
+        buildIcz1IntroTable(cameraX, frameCounter);
         DeformationPlan.applyTableBands(
                 composer,
                 bgY,
@@ -189,7 +193,7 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
      * ROM: ICZ1_IntroDeform, including the persistent auto-scroll longword
      * stored just after the 14 visible deformation entries in HScroll_table.
      */
-    private void buildIcz1IntroTable(int cameraX) {
+    private void buildIcz1IntroTable(int cameraX, int frameCounter) {
         icz1IntroTable.clear();
         int d0 = ((short) cameraX) << 16;
         d0 >>= 5;
@@ -206,8 +210,11 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
 
         d0 += d1;
         d1 += d1 >> 1;
-        d3 = introAutoAccumulator;
-        introAutoAccumulator += 0x800;
+        if (!introAutoBaseFrameSet) {
+            introAutoBaseFrame = frameCounter;
+            introAutoBaseFrameSet = true;
+        }
+        d3 = (frameCounter - introAutoBaseFrame) * 0x800;
 
         for (int i = 0; i < 9; i++) {
             icz1IntroTable.set(index++, (short) (d0 >> 16));

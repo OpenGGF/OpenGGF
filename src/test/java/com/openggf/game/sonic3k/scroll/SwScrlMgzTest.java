@@ -15,11 +15,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -104,21 +105,57 @@ public class SwScrlMgzTest {
     }
 
     @Test
-    public void actStateResetsCloudAccumulatorsOnFrameZeroAndActChange() {
+    public void mgz1CloudDriftIsFrameDerivedAndRewindSafe() {
         SwScrlMgz handler = new SwScrlMgz();
-        int[] hScroll = new int[224];
+        int[] frame2 = new int[224];
+        int[] frameLater = new int[224];
+        int[] frame2Again = new int[224];
 
-        handler.update(hScroll, 0x1200, 0x0400, 1, 0);
-        assertEquals(0x500, accumulatorValue(handler, "mgz1CloudAccumulator"));
+        // Prime so the initial resetActState (lastActId -1 -> 0) has already run;
+        // subsequent same-act frames differ only by the frame-derived cloud phase.
+        handler.update(new int[224], 0x1200, 0x0400, 1, 0);
 
-        handler.update(hScroll, 0x1200, 0x0400, 2, 0);
-        assertEquals(0xA00, accumulatorValue(handler, "mgz1CloudAccumulator"));
+        // MGZ1 clouds drift ~0x500 (sub-pixel) per frame, so drift only shows in
+        // the integer scroll words after enough frames to cross a pixel boundary.
+        handler.update(frame2, 0x1200, 0x0400, 2, 0);
+        handler.update(frameLater, 0x1200, 0x0400, 200, 0);
+        assertFalse(java.util.Arrays.equals(frame2, frameLater),
+                "MGZ1 clouds should auto-scroll across a wide frame span");
 
-        handler.update(hScroll, 0x1200, 0x0200, 1, 1);
-        assertEquals(0x800, accumulatorValue(handler, "mgz2CloudAccumulator"));
+        // Drive further forward, then re-derive frame 2: the cloud scroll must
+        // return to its frame-2 value, not keep drifting off the call count.
+        for (int frame = 201; frame <= 260; frame++) {
+            handler.update(new int[224], 0x1200, 0x0400, frame, 0);
+        }
+        handler.update(frame2Again, 0x1200, 0x0400, 2, 0);
+        assertArrayEquals(frame2, frame2Again,
+                "Re-deriving frame 2 must reproduce its cloud scroll exactly (rewind-safe)");
+    }
 
-        handler.update(hScroll, 0x1200, 0x0400, 0, 0);
-        assertEquals(0x500, accumulatorValue(handler, "mgz1CloudAccumulator"));
+    @Test
+    public void actStateReArmsCloudAnchorOnFrameZeroAndActChange() {
+        SwScrlMgz handler = new SwScrlMgz();
+        int[] warm = new int[224];
+        int[] afterReset = new int[224];
+        int[] fresh = new int[224];
+
+        // A fresh handler's very first act-1 frame.
+        handler.update(fresh, 0x1200, 0x0400, 1, 0);
+
+        // Warm the anchor with several frames, switch act, then return to act 1
+        // at frameCounter 0 — resetActState must re-arm so the cloud phase
+        // restarts from the new anchor instead of carrying the old drift.
+        for (int frame = 2; frame <= 20; frame++) {
+            handler.update(warm, 0x1200, 0x0400, frame, 0);
+        }
+        handler.update(new int[224], 0x1200, 0x0200, 5, 1);   // act change
+        handler.update(afterReset, 0x1200, 0x0400, 0, 0);     // frameCounter 0 re-entry
+
+        // Frame-0 act-1 render re-anchors; its cloud phase matches a first frame.
+        int[] freshFrameZero = new int[224];
+        new SwScrlMgz().update(freshFrameZero, 0x1200, 0x0400, 0, 0);
+        assertArrayEquals(freshFrameZero, afterReset,
+                "resetActState at frameCounter 0 should re-anchor the cloud phase");
     }
 
     @Test
@@ -240,8 +277,6 @@ public class SwScrlMgzTest {
         handler.update(reenteredStateEight, 0x3A40, 0x0800, 2, 1);
         handler.update(reenteredStateEightNextFrame, 0x3A40, 0x0800, 3, 1);
 
-        assertEquals(0, accumulatorValue(handler, "mgz2CloudAccumulator"),
-                "Once MGZ2 reaches after-move, the cloud auto-scroll latch should remain off even if state 8 is re-entered");
         assertEquals(unpackBgScroll(reenteredStateEight[0]), unpackBgScroll(reenteredStateEightNextFrame[0]),
                 "Re-entering MGZ2 state 8 after after-move should keep the cloud band frozen instead of restarting drift on subsequent frames");
     }
@@ -268,17 +303,6 @@ public class SwScrlMgzTest {
         ZoneScrollHandler handler = provider.getHandler(Sonic3kZoneConstants.ZONE_MGZ);
         assertNotNull(handler);
         assertTrue(handler instanceof SwScrlMgz);
-    }
-
-    private int accumulatorValue(SwScrlMgz handler, String fieldName) {
-        try {
-            Field field = SwScrlMgz.class.getDeclaredField(fieldName);
-            field.setAccessible(true);
-            Object accumulator = field.get(handler);
-            return (int) accumulator.getClass().getMethod("get").invoke(accumulator);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Unable to inspect MGZ cloud accumulator", e);
-        }
     }
 
     private short unpackBgScroll(int packedScrollWord) {
