@@ -161,6 +161,73 @@ class TestSonic1GlassReflectionGraphRewind {
                 "switch-activated block must fully lower for this test to exercise a moving parent Y");
     }
 
+    /**
+     * S1 bug-triage row 4, third investigation round (post-merge; see
+     * {@code .superpowers/sdd/glass-oscillator-report.md} and
+     * {@code .superpowers/sdd/glass-visual-diff-report.md}): {@code Glass_Type04}'s
+     * reflection Y write ({@code obY = objoff_30 - (v_oscillate+$12 - $10)},
+     * {@code sonic.lst:42561-42592}, opcodes BC3A-BC82) runs EVERY frame the
+     * reflection updates, unconditionally -- it never reads the parent's
+     * {@code glass_dist}/switch state at all. Independently simulating ROM's
+     * {@code OscillateNumDo} loop for this table entry (index 4: speed=4,
+     * limit=$20, start value $0080, start direction "up" -- the exact
+     * {@code S1_SPEEDS[4]}/{@code S1_LIMITS[4]}/{@code S1_INITIAL_VALUES[4]}/
+     * {@code S1_INITIAL_DELTAS[4]} constants in {@link OscillationManager})
+     * gives a continuous ~252-frame cycle where the oscillator value's high
+     * byte sweeps [0, 62]:
+     * <ul>
+     *   <li>byte=0 (trough): d0 = 0-$10 = -16 -&gt; obY = baseline+16 (16px DOWN)</li>
+     *   <li>byte=62 (peak): d0 = 62-$10 = +46 -&gt; obY = baseline-46 (46px UP)</li>
+     * </ul>
+     * This 62px peak-to-peak swing was cross-checked against a BizHawk hardware
+     * RAM+screenshot capture AND the engine's own headless TraceCaptureTool
+     * pixel diff, both confirming the engine reproduces real hardware
+     * frame-for-frame -- this is deliberate, verified ROM behavior, not an
+     * engine defect (ledger row 4, docs/plans/s1-bug-batch-ledger-2026-07-05.md,
+     * disposition {@code rom-confirmed-intentional}).
+     * <p>
+     * <b>This is a PINNING test, not a regression repro: it passes unmodified
+     * on current code.</b> Its purpose is to lock in the exact ROM-derived
+     * envelope so a future "fix" attempting to address the original user
+     * report cannot silently dampen or remove this verified motion without a
+     * fresh disasm citation overriding the evidence above.
+     */
+    @Test
+    void type4ReflectionSwings62PxWhileParentStationary() {
+        Sonic1SwitchManager switchManager = new Sonic1SwitchManager();
+        ObjectSpawn blockSpawn = new ObjectSpawn(0x0100, 0x0300, Sonic1ObjectIds.MZ_GLASS_BLOCK, 0x14, 0, false, 80);
+        Harness harness = Harness.createWithSwitchManager(List.of(blockSpawn), switchManager);
+        ObjectManager objectManager = harness.objectManager();
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x4000, (short) 0x4000);
+
+        // Frame 0 establishes the parent (switch never pressed, so it never
+        // lowers) and spawns the reflection child; the reflection's baseY
+        // then tracks the parent's live Y every frame (Glass_Reflect34).
+        OscillationManager.update(0);
+        objectManager.update(0, player, List.of(), 0, false, true, false);
+        Sonic1GlassBlockObjectInstance block = liveGlassBlocks(objectManager).getFirst();
+        int baseline = block.getY();
+
+        int minY = Integer.MAX_VALUE;
+        int maxY = Integer.MIN_VALUE;
+        for (int frame = 1; frame < 260; frame++) {
+            OscillationManager.update(frame);
+            objectManager.update(0, player, List.of(), frame, false, true, false);
+            Sonic1GlassReflectionInstance reflection = onlyReflection(objectManager);
+            minY = Math.min(minY, reflection.getY());
+            maxY = Math.max(maxY, reflection.getY());
+        }
+
+        assertEquals(0x90, readInt(block, "glassDist"),
+                "parent must stay untriggered/stationary (switch never pressed) for this pinning test to "
+                        + "isolate the reflection's own independent oscillator motion");
+        assertEquals(baseline, block.getY(),
+                "parent's live Y must never move for this pinning test's baseline to stay valid");
+        assertEquals(baseline - 46, minY, "peak: reflection must rise exactly 46px above baseline");
+        assertEquals(baseline + 16, maxY, "trough: reflection must sit exactly 16px below baseline");
+        assertEquals(62, maxY - minY, "full ROM-computed peak-to-peak swing must stay exactly 62px");
+    }
+
     private static void assertReflectionWithinShimmerOfBlock(ObjectManager objectManager, String context) {
         Sonic1GlassBlockObjectInstance block = liveGlassBlocks(objectManager).getFirst();
         Sonic1GlassReflectionInstance reflection = onlyReflection(objectManager);

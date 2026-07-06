@@ -327,6 +327,77 @@ public class TestSonic1LavaGeyserOutOfRange {
 
         assertFalse(body.isPersistent(), "Body piece should become non-persistent when X leaves out_of_range window");
     }
+
+    /**
+     * Bug repro (S1 bug-triage row 6, post-merge finding -- see
+     * .superpowers/sdd/geyser-anim-report.md): "lavafall maker shows previous
+     * cycle's ending animation frame at eruption start". Per
+     * docs/s1disasm/_incObj/"4C, 4D MZ Lava Geyser and Maker.asm":64-87, ROM's
+     * GMake_MakeLava (routine 6) falls straight through into GMake_Display's own
+     * AnimateSprite call in the SAME dispatch pass the new obAnim is written --
+     * so a repeating lavafall/geyser maker's rendered frame always reflects the
+     * NEW eruption's first frame the instant it becomes visible again, never the
+     * tail frame of the previous cycle's anim 3 (.bubble3) "ending" animation.
+     * <p>
+     * This drives a real lavafall maker (subtype 1) inside a live
+     * {@link ObjectManager} exec loop, seeds {@code displayFrame} to the exact
+     * stale value {@code updateDelete()} would have left behind at the end of a
+     * prior cycle (1, .bubble3's last frame) and jumps {@code routine} straight
+     * to 6 (MakeLava, as if Sonic has re-entered proximity range after the
+     * Wait/ChkType span), then asserts the very same {@code update()} call that
+     * fires {@code GMake_MakeLava} already shows the new eruption's real first
+     * frame (19, .blank) -- not the leftover 1.
+     */
+    @Test
+    public void lavafallMakerNeverRendersPreviousCycleEndingFrameAtNextEruption() throws Exception {
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setY((short) 0);
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+
+        ObjectSpawn makerSpawn = new ObjectSpawn(0x180, 0x400, 0x4C, 1, 0, false, 0);
+        CountingMakerRegistry registry = new CountingMakerRegistry();
+        final ObjectManager[] managerRef = new ObjectManager[1];
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return managerRef[0];
+            }
+        };
+        services.withCamera(GameServices.camera());
+        ObjectManager manager = new ObjectManager(
+                List.of(makerSpawn), registry, 0, null, null,
+                null, GameServices.camera(), services);
+        managerRef[0] = manager;
+        manager.reset(0);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        manager.update(0, player, List.of(), 1, false);
+        Sonic1LavaGeyserMakerObjectInstance maker = onlyMaker(manager);
+
+        // Seed the exact end-of-previous-cycle state GMake_Delete leaves behind
+        // (displayFrame=1, .bubble3's last frame; dark through Wait/ChkType), then
+        // jump straight to routine 6 as if Sonic re-entered proximity range.
+        Field displayFrameField = Sonic1LavaGeyserMakerObjectInstance.class.getDeclaredField("displayFrame");
+        displayFrameField.setAccessible(true);
+        displayFrameField.setInt(maker, 1);
+        Field visibleField = Sonic1LavaGeyserMakerObjectInstance.class.getDeclaredField("visible");
+        visibleField.setAccessible(true);
+        visibleField.setBoolean(maker, false);
+        Field routineField = Sonic1LavaGeyserMakerObjectInstance.class.getDeclaredField("routine");
+        routineField.setAccessible(true);
+        routineField.setInt(maker, 6);
+
+        // This single update() call is where ROM's GMake_MakeLava fires and, in
+        // the SAME pass, falls through into GMake_Display's AnimateSprite -- the
+        // frame it renders here must already be the new eruption's first frame.
+        manager.update(0, player, List.of(), 2, false);
+
+        int displayFrame = displayFrameField.getInt(maker);
+        assertEquals(19, displayFrame,
+                "Lavafall maker must show .blank's frame (19) the instant GMake_MakeLava "
+                        + "fires, not the previous cycle's .bubble3 tail frame (1) -- got "
+                        + displayFrame);
+    }
 }
 
 

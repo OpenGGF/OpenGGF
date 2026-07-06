@@ -67,7 +67,7 @@ class TestLiveRewindManagerAudioCleanup {
 
         input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
 
-        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
 
         assertEquals(4, controller.currentFrame());
     }
@@ -81,12 +81,12 @@ class TestLiveRewindManagerAudioCleanup {
         InputHandler input = new InputHandler();
         input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
 
-        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
 
         assertTrue(fadeManager.isReversePresentationActive());
 
         input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_RELEASE);
-        assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+        assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
 
         assertFalse(fadeManager.isReversePresentationActive());
     }
@@ -104,16 +104,16 @@ class TestLiveRewindManagerAudioCleanup {
         installTestController(manager, controller);
         InputHandler input = new InputHandler();
         input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
-        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
 
         backend.clear();
         input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_RELEASE);
 
-        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
         assertFalse(backend.calls.contains("stopAllSfx"),
                 "release should keep reverse presentation active while coast still has rewind steps");
 
-        while (manager.handleRealtimeRewindInput(GameMode.LEVEL, input)) {
+        while (manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input)) {
             // drain coast
         }
         assertTrue(backend.calls.contains("stopAllSfx"),
@@ -160,10 +160,10 @@ class TestLiveRewindManagerAudioCleanup {
             InputHandler input = new InputHandler();
             int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
             input.handleKeyEvent(rewindKey, GLFW_PRESS);
-            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
 
             input.handleKeyEvent(rewindKey, GLFW_RELEASE);
-            assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+            assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
 
             AudioBackendLogicalSnapshot after = realBackend.captureLogicalSnapshot();
             assertEquals(invincibilityMusicId, after.currentMusic().id(),
@@ -206,9 +206,39 @@ class TestLiveRewindManagerAudioCleanup {
         setField(manager, "rewindController", controller);
         setField(manager, "rewinding", true);
 
-        manager.handleRealtimeRewindInput(GameMode.TITLE_SCREEN, new InputHandler());
+        manager.handleRealtimeRewindInput(GameMode.TITLE_SCREEN, false, new InputHandler());
 
         assertEquals(java.util.List.of("stopAllSfx", "stopPlayback"), backend.calls);
+    }
+
+    @Test
+    void pendingNonRewindableTransitionStopsPresentationAudioLikeModeExit() throws Exception {
+        LiveRewindManager manager = new LiveRewindManager(config);
+        RewindController controller = new RewindController(
+                new RewindRegistry(),
+                new InMemoryKeyframeStore(),
+                new FakeInputSource(4),
+                in -> {},
+                2,
+                audio);
+        setField(manager, "rewindController", controller);
+        setField(manager, "rewinding", true);
+
+        // currentGameMode is still LEVEL (e.g. a special-stage entry fade is in
+        // flight) but the composite freeze predicate the GameLoop caller computes
+        // has flipped true -- the widened gate must reject exactly like the
+        // mode != LEVEL case above, reusing the same clear() teardown.
+        boolean engaged = manager.handleRealtimeRewindInput(GameMode.LEVEL, true, new InputHandler());
+
+        assertFalse(engaged, "engagement must be rejected while a transition is pending");
+        assertEquals(java.util.List.of("stopAllSfx", "stopPlayback"), backend.calls);
+        assertFalse((boolean) getField(manager, "rewinding"));
+    }
+
+    private static Object getField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(target);
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

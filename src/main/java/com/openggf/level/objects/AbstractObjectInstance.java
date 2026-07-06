@@ -250,6 +250,35 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return false;
     }
 
+    /**
+     * Called by {@code ObjectManager.restore()} when this instance was constructed as
+     * a pending rewind-reconstruction child (registered via
+     * {@code ObjectManager.registerRewindReconstructionChild}, see {@link #spawnChild})
+     * but no captured {@code DynamicObjectEntry} matched it during the step-4
+     * dynamic-object reconciliation, so it is being dropped rather than adopted.
+     * Default no-op. Owners that keep their own reference list of such children
+     * (e.g. {@code AbstractBossChild} removing itself from its parent's
+     * {@code childComponents}) must override this so the drop does not leave a live,
+     * still-updating orphan referenced nowhere but that list.
+     */
+    protected void onDroppedAsUnmatchedRewindReconstructionChild() {
+    }
+
+    /**
+     * Called by {@code ObjectManager.restore()} once EVERY object's phase-2 field-blob
+     * restore has completed (so any of this instance's own children have their final,
+     * captured scalar state settled) but before the restored snapshot resumes ticking.
+     * Default no-op. Owners that derive some of their own state FROM their children's
+     * settled state (e.g. {@code AbstractBossInstance} re-deriving
+     * {@code childSpawnOrdinalCounters} from each live child's restored
+     * {@code AbstractBossChild#getChildOrdinal()}) must override this, since that
+     * derivation is only correct once every child's own restore has already run --
+     * restore order between a parent and its children is not guaranteed, so doing it
+     * inline in this instance's own {@code restoreRewindState()} would race.
+     */
+    protected void afterRewindRestoreSettled() {
+    }
+
     public String getName() {
         return name;
     }

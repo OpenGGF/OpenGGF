@@ -39,8 +39,19 @@ public final class LiveRewindManager {
         this.hudOverlay = new LiveRewindHudOverlay(this::statusLabel);
     }
 
-    public boolean handleRealtimeRewindInput(GameMode mode, InputHandler input) {
-        if (mode != GameMode.LEVEL || input == null || !enabled()) {
+    /**
+     * @param nonRewindableTransitionPending true while the level is mid a
+     *     special/bonus-stage/ending transition or a pending zone/act
+     *     transition (see {@code GameLoop.isNonRewindableTransitionPending()}).
+     *     {@code currentGameMode} stays {@code GameMode.LEVEL} throughout that
+     *     whole window -- the fade only flips the mode once its completion
+     *     callback runs -- so this widens the same "not applicable this frame"
+     *     gate {@code mode != GameMode.LEVEL} already uses, reusing its
+     *     {@link #clear()} teardown rather than needing a separate mid-hold
+     *     cancel path. See ssentry-rewind-report.md.
+     */
+    public boolean handleRealtimeRewindInput(GameMode mode, boolean nonRewindableTransitionPending, InputHandler input) {
+        if (mode != GameMode.LEVEL || nonRewindableTransitionPending || input == null || !enabled()) {
             activeInputHandler = null;
             clear();
             return false;
@@ -130,8 +141,12 @@ public final class LiveRewindManager {
         };
     }
 
-    public void recordExternalFrame(GameMode mode, InputHandler input) {
-        if (mode != GameMode.LEVEL || input == null || !enabled()) {
+    /**
+     * @param nonRewindableTransitionPending see
+     *     {@link #handleRealtimeRewindInput(GameMode, boolean, InputHandler)}.
+     */
+    public void recordExternalFrame(GameMode mode, boolean nonRewindableTransitionPending, InputHandler input) {
+        if (mode != GameMode.LEVEL || nonRewindableTransitionPending || input == null || !enabled()) {
             activeInputHandler = null;
             clear();
             return;

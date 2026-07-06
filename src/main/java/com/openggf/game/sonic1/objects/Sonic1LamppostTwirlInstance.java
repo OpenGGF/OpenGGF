@@ -31,10 +31,12 @@ import java.util.List;
  */
 public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance implements RewindRecreatable {
 
-    // From disassembly: move.w #$20,lamp_time(a1)
+    // From disassembly: move.w #$20,lamp_time(a1) (79 Lamppost.asm:105)
     // Timer counts $20 → 0 (positive, bpl branches), then 0 → -1 (negative, falls through
-    // to set routine 4 but still computes motion) = 33 frames total
-    private static final int INITIAL_LIFETIME = 0x21; // 33 frames of motion
+    // to set routine 4 but still computes motion) = 33 frames total. (Previously 0x21,
+    // an off-by-one that ran a 34th invocation and left the terminal orbit angle one
+    // 22.5-degree step past ROM's -- the ball rested ~4.6px left of its correct spot.)
+    private static final int INITIAL_LIFETIME = 0x20; // 33 frames of motion
 
     // From disassembly: subi.b #$10,obAngle(a0)
     private static final int ANGLE_DECREMENT = 0x10;

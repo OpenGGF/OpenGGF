@@ -3658,7 +3658,7 @@ public class ObjectManager {
                     // captured state AND keeps the parent's child reference valid, with no
                     // double-spawn. Routine-spawned children (no construction counterpart) fall
                     // back to the generic recreate path.
-                    AbstractObjectInstance adopted = adoptRewindReconstructionChild(entry.className());
+                    AbstractObjectInstance adopted = adoptRewindReconstructionChild(entry);
                     ObjectInstance inst = adopted != null ? adopted : recreateDynamicObject(entry);
                     if (inst instanceof AbstractObjectInstance aoi) {
                         aoi.setServices(objectServices);
@@ -3693,10 +3693,18 @@ public class ObjectManager {
                     }
                 }
                 // Any reconstruction children NOT matched by a captured entry were spawned by a
-                // parent whose child was not in dynamicObjects at capture (should not happen for
-                // current bosses, but drop them rather than leak: they are unregistered and the
-                // parent's reference to them is replaced by the next live restore). Clearing the
-                // scratch guarantees no instances leak across restore passes.
+                // parent whose child was not in dynamicObjects at capture (e.g. a same-class
+                // sibling destroyed and pruned before capture -- see
+                // adoptRewindReconstructionChild). They are unregistered here (never added to
+                // dynamicObjects/activeObjects), but the parent's OWN back-reference to them
+                // (e.g. AbstractBossInstance.childComponents) was already set unconditionally at
+                // construction time and is otherwise never told about the drop -- notify each so
+                // an owner tracking its own child-reference list can drop it too, or it remains a
+                // live orphan that still receives update() every frame. Clearing the scratch
+                // afterward guarantees no instances leak across restore passes.
+                for (AbstractObjectInstance unmatched : rewindReconstructionChildren) {
+                    unmatched.onDroppedAsUnmatchedRewindReconstructionChild();
+                }
                 rewindReconstructionChildren.clear();
 
                 // 6. PHASE 2: every captured id is now registered in restoreTable, so applying
@@ -3709,6 +3717,21 @@ public class ObjectManager {
                 for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
                         work : dynamicStateWork) {
                     restoreObjectRewindState(work.instance(), work.entry().state(), rewindContext);
+                }
+
+                // 6b. Every object's own field-blob restore (including any of its children's)
+                // is now settled, so owners that derive state FROM their children (e.g.
+                // AbstractBossInstance re-deriving its child-spawn ordinal counters from each
+                // live child's restored identity) can safely do so now -- doing it inline
+                // during phase 2 above would race, since restore order between a parent and
+                // its own children is not guaranteed.
+                for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry>
+                        work : activeStateWork) {
+                    work.instance().afterRewindRestoreSettled();
+                }
+                for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
+                        work : dynamicStateWork) {
+                    work.instance().afterRewindRestoreSettled();
                 }
 
                 if (s.placement() != null) {
@@ -4148,27 +4171,54 @@ public class ObjectManager {
     }
 
     /**
-     * Finds and removes the earliest pending reconstruction child whose runtime class matches
-     * {@code className}. Construction order is deterministic and equals the dynamic-object
-     * capture order, so consuming the matching class in first-in order pairs each captured
-     * {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry} with
-     * the same logical child the parent re-spawned. Returns {@code null} when no construction
-     * child of that class is pending (e.g. routine-spawned children, which fall back to the
-     * generic recreate path).
+     * Finds and removes the pending reconstruction child whose runtime class matches
+     * {@code entry.className()}, preferring an EXACT match on {@code entry.spawn().subtype()}
+     * over plain construction-order FIFO.
+     *
+     * <p>Construction order is deterministic and normally equals the dynamic-object capture
+     * order, so first-in-order FIFO alone pairs each captured
+     * {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry} with the
+     * same logical child the parent re-spawned -- UNLESS the parent has multiple indistinguishable
+     * same-class siblings (e.g. EHZ's 3 {@code EHZBossWheel} children) and one of them was
+     * destroyed and pruned before the frame being captured: the fixed-order re-spawn still
+     * produces as many candidates as the class originally had, but there are now fewer captured
+     * entries, so FIFO silently shifts captured state onto the wrong sibling position (a mismatch
+     * invisible to the generic scalar-field restore that follows, but fatal to any {@code final}
+     * field the constructor derived from the ORIGINAL position's identity, e.g.
+     * {@code EHZBossWheel.animationState}).
+     *
+     * <p>{@link com.openggf.level.objects.boss.AbstractBossChild} threads a stable per-(parent,
+     * runtime-class) construction ordinal through {@code ObjectSpawn.subtype()} (a field it does
+     * not otherwise use) specifically so this can discriminate exactly. Object types that don't
+     * participate in that convention report {@code subtype 0} for every instance, so the "no exact
+     * match" branch below falls back to today's plain FIFO, preserving existing behavior for every
+     * other {@code spawnChild} caller (e.g. {@code SidewaysPformObjectInstance}, {@code ConveyorObjectInstance}).
+     *
+     * <p>Returns {@code null} when no construction child of that class is pending (e.g.
+     * routine-spawned children, which fall back to the generic recreate path).
      */
-    private AbstractObjectInstance adoptRewindReconstructionChild(String className) {
+    private AbstractObjectInstance adoptRewindReconstructionChild(
+            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+        String className = entry.className();
         if (className == null) {
             return null;
         }
-        for (java.util.Iterator<AbstractObjectInstance> it = rewindReconstructionChildren.iterator();
-                it.hasNext();) {
-            AbstractObjectInstance child = it.next();
-            if (child.getClass().getName().equals(className)) {
-                it.remove();
-                return child;
+        int capturedSubtype = entry.spawn() != null ? entry.spawn().subtype() : 0;
+        int fifoFallbackIndex = -1;
+        for (int i = 0; i < rewindReconstructionChildren.size(); i++) {
+            AbstractObjectInstance child = rewindReconstructionChildren.get(i);
+            if (!child.getClass().getName().equals(className)) {
+                continue;
+            }
+            if (fifoFallbackIndex < 0) {
+                fifoFallbackIndex = i;
+            }
+            ObjectSpawn childSpawn = child.getSpawn();
+            if (childSpawn != null && childSpawn.subtype() == capturedSubtype) {
+                return rewindReconstructionChildren.remove(i);
             }
         }
-        return null;
+        return fifoFallbackIndex >= 0 ? rewindReconstructionChildren.remove(fifoFallbackIndex) : null;
     }
 
     ObjectInstance findRestoredRidingObject(ObjectSpawn spawn, int slotIndex) {

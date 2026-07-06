@@ -38,7 +38,7 @@ fix can be verified.
 | 2 | Input and special stage | Held direction feels intermittently weak | General gameplay / special stage, input-timing dependent, no fixed coordinates | Investigated per Task 2's brief: added `TestInputHandlerLogicalSnapshot#holdingDirectionForOneHundredTwentyFramesNeverReadsZeroedWhileKeyboardKeyStaysDown` (keyboard-only), `#...WhileGamepadDpadStaysHeld` (gamepad-only via `FakeGamepadStateSource`), and `TestLiveRewindLogicalInput#heldDirectionNeverReplaysAsZeroedAcrossOneHundredTwentyAppendedLiveRewindFrames` (records 120 held-right frames through `LiveRewindInputSource.appendFrame()` and replays each via `RecordedInputSnapshots.fromBk2()`). All three pass immediately on the unmodified tree — no frame ever reads a zeroed `heldMask()` while the physical source stays held, in the keyboard path, the gamepad-poll path, or the live-rewind record/replay path. Also reviewed `LiveRewindManager`/`LiveRewindStepper`: rewind coasting after a key release causes `stepInternal()` to skip the normal gameplay update entirely for those frames (by design — the game is stepping backward, not reading live held input), but does not zero the live `InputHandler` snapshot itself. No reproducible zeroing found at the `InputHandler`/`LogicalInputSnapshot`/`GamepadInputManager`/`LiveRewindInputSource` layer; per the brief, no speculative fix was landed. | `InputHandler`, `LogicalInputSnapshot`, `GamepadInputManager`, `LiveRewindInputSource` (all investigated, none changed) | `TestInputHandlerLogicalSnapshot` (+2 new tests) and `TestLiveRewindLogicalInput` (+1 new test), all GREEN without any production change — the added coverage did not reproduce the symptom. | `mvn "-Dtest=TestInputHandlerLogicalSnapshot,TestLiveRewindLogicalInput" -Dsurefire.forkCount=1 test` (GREEN both before and after; no RED reproduction found) | blocked-needs-capture |
 | 3 | S1 object visuals | Egg prison button persists | End-of-act boss arena (Act 3 of any zone with an Egg Prison capsule, e.g. GHZ3) | Reproduced with new `TestSonic1EggPrisonButtonGraphRewind#s1EggPrisonButtonGoesBlankAfterExplosionPhaseAndStaysBlank`: triggers `onSolidContact`, drives the capsule through its 60-frame explosion phase, and asserts the button's mapping frame. Root cause: `docs/s1disasm/_incObj/3E Prison Capsule.asm` Pri_Switch/Pri_Explosion are the SAME ROM object slot — the switch and the explosion/animal-spawn driver are one object, so ROM freezes the switch's flash animation the frame it leaves Pri_Switch, then explicitly blanks it (`move.b #6,obFrame(a0)`, line 137) at `.makeanimal`. The engine modeled the button/body as two cooperating objects but never blanked the button, so it kept toggling its two flash frames and rendering forever. Fixed by adding `Sonic1EggPrisonButtonObjectInstance.goBlank()` (freezes on trigger, blanks at the parent's explosion→animal-spawn transition) called from `Sonic1EggPrisonObjectInstance.updateExploding()`. | `Sonic1EggPrisonButtonObjectInstance`, `Sonic1EggPrisonObjectInstance` (fixed) | `TestSonic1EggPrisonButtonGraphRewind` (+1 new test) GREEN after the fix. | `mvn "-Dtest=TestSonic1EggPrisonButtonGraphRewind" -Dsurefire.forkCount=1 test` (GREEN after fix) | fixed |
 | 4 | S1 object visuals | Glass reflection oscillates incorrectly | Marble Zone (MZ), glass block pillar reflections (originally reported against LZ; the object is MZ's `Obj30`/`MZ Large Green Glass Blocks`) | Re-investigated after a user-reported real-gameplay observation (a type-4 switch-activated pillar sits stationary while its reflection floats up to 144px away in mid-air) appeared to contradict the first investigation's "already ROM-accurate" verdict. Byte-level re-verification against the assembled `docs/s1disasm/sonic.lst` (not just the `_incObj` transcription) confirmed the original branch-sense reading (`Glass_Type03`/`Glass_Type04`'s `btst #3,obSubtype(a0)` / `beq.s`) was correct and NOT the bug: the reflection's bit-3-set path genuinely falls straight into the `(v_oscillate+$12) - $10` oscillator formula unconditionally, ignoring `glass_dist`, exactly as the first investigation and the existing characterization test describe. The **actual** defect is a separate, previously-mischaracterized bug: `Sonic1GlassReflectionInstance.java` (short-variant sync, was line 137) read `parent.getBaseY()` (the block's static spawn-time baseline) instead of `parent.getY()` (the block's current, live Y). `Glass_Reflect34` (`sonic.lst` `BB5E: 3169 000C 0030`) is byte-verified to execute `move.w obY(a1),objoff_30(a0)` — source displacement `$0C` is `obY` (live position), not `$30` (`objoff_30`, the static baseline) — so the reflection must resync its Y-reference from the parent's CURRENT position every frame, not its spawn baseline. This single anchor bug fully explains both halves of the user's report: while untriggered, `glass_dist` sits at its ROM-mandated initial `$90` (144px) for the whole time the block stays raised, so the buggy static-baseline reflection floats 144px away from the block continuously (the "floating in mid-air" symptom); once triggered, the block's Y coincidentally approaches its own spawn baseline as `glass_dist` empties toward 0, making the previously-mispositioned reflection appear to "snap into" the glass and read as static. Fixed by anchoring `baseY = parent.getY()` instead of `parent.getBaseY()` in the short-variant (subtypes 3-4) sync; the oscillator formula itself (`applyReflectionMovement()` case 3/4) is untouched — it was already byte-accurate. A new test (`TestSonic1GlassReflectionGraphRewind#reflectionTracksParentsCurrentYThroughRealUpdatesIncludingAfterTriggeredLowering`) drives a real Type04 block + its spawned reflection child through actual `ObjectManager` update cycles, both before and after a real switch press lowers the block, and asserts `\|reflection.getY() - block.getY()\| <= 0x40` (the ROM shimmer swing) throughout; it was RED (delta=160px) against unmodified code and GREEN after the fix. The existing `type4ReflectionOscillatesIndependentlyOfParentGlassDistPerRom` characterization test's independence claim (reflection Y does not depend on `glass_dist`) remains correct and was kept, with its formula assertion's anchor updated from the parent's raw spawn Y to the parent's actual constructed Y (since that test never calls `parent.update()`, so `parent.getY()` differs from `spawn.y()` by the constructor's initial `glass_dist`). | `Sonic1GlassReflectionInstance` (fixed) | `TestSonic1GlassReflectionGraphRewind` (+1 new test, 1 existing test's formula-anchor assertion corrected) and `TestSonic1GlassBlockObjectInstance` GREEN after the fix. | `mvn "-Dtest=TestSonic1GlassReflectionGraphRewind" -Dsurefire.forkCount=1 test` (RED — delta=160px — against unmodified code; GREEN after the one-line anchor fix) | fixed |
-| 5 | S1 object visuals | Lamppost head duplicate | General (any zone with a lamppost checkpoint object) | Reproduced with new `TestCheckpointStarpostGraphRewind#sonic1LamppostTwirlEndsAsOneCenteredBallNotADuplicate`: drives a real activation through `Sonic1LamppostObjectInstance.update()`, runs the twirl through completion, and asserts exactly one ball visual near the parent's X. Root cause: `docs/s1disasm/_incObj/79 Lamppost.asm` Lamp_Finish (routine 4, lines 122-123) is a plain `rts` — the pole's own mapping frame is never touched again, and the top-level `Lamppost:` dispatcher (lines 6-11) has no `out_of_range` check at all, so both the pole and its twirl child persist and keep rendering for the rest of the act. `Sonic1LamppostObjectInstance.onTwirlComplete()` incorrectly forced the pole to `FRAME_RED` on the (false) theory that the engine destroys the twirl immediately; since the twirl is never destroyed, this produced a second, exactly-centered ball stacked next to the twirl's own frozen (slightly X-offset, per its angle-accumulation math) resting ball. Fixed by removing the frame reassignment — `onTwirlComplete()` now only clears the `twirlActive` bookkeeping flag, matching ROM's no-op `Lamp_Finish`. | `Sonic1LamppostObjectInstance` (fixed) | `TestCheckpointStarpostGraphRewind` (+1 new test; 1 existing assertion updated to stop asserting the old buggy `FRAME_RED` transition) GREEN after the fix. | `mvn "-Dtest=TestCheckpointStarpostGraphRewind" -Dsurefire.forkCount=1 test` (GREEN after fix) | fixed |
+| 5 | S1 object visuals | Lamppost head duplicate | General (any zone with a lamppost checkpoint object) | Reproduced with new `TestCheckpointStarpostGraphRewind#sonic1LamppostTwirlEndsAsOneCenteredBallNotADuplicate`: drives a real activation through `Sonic1LamppostObjectInstance.update()`, runs the twirl through completion, and asserts exactly one ball visual near the parent's X. Root cause: `docs/s1disasm/_incObj/79 Lamppost.asm` Lamp_Finish (routine 4, lines 122-123) is a plain `rts` — the pole's own mapping frame is never touched again this act (both pole and twirl child ARE still subject to the standard per-frame `out_of_range` delete via `RememberState`, `79 Lamppost.asm:6-11`; a prior version of this row's narrative and the code's own javadoc incorrectly claimed no such check exists at all — corrected post-merge, see below). `Sonic1LamppostObjectInstance.onTwirlComplete()` incorrectly forced the pole to `FRAME_RED` on the (false) theory that the engine destroys the twirl immediately; since the twirl is never destroyed by `Lamp_Finish`, this produced a second, exactly-centered ball stacked next to the twirl's own frozen resting ball. Fixed by removing the frame reassignment — `onTwirlComplete()` now only clears the `twirlActive` bookkeeping flag, matching ROM's no-op `Lamp_Finish`. **Post-merge follow-up (found during re-investigation of a related "resting spot sometimes wrong" report):** the twirl's own resting position was ALSO off by one frame — `Sonic1LamppostTwirlInstance.INITIAL_LIFETIME` was `0x21` (33) instead of ROM's `move.w #32,lamp_time(a1)` (`79 Lamppost.asm:105`, i.e. `0x20`), running one extra 22.5-degree orbit step and landing the ball at `(-4.6, -11.1)` from the twirl center instead of ROM's exact `(0, -12)`. Fixed by correcting the constant to `0x20`; the surrounding comment already documented the correct `0x20`/33-frame value, so only the field's numeric literal was wrong. The regression test's resting-position assertion was tightened from a loose `dx <= 12` (swing-radius) bound to the exact ROM-derived `(0, -12)` terminal offset, which is RED against `0x21` and GREEN against `0x20`. | `Sonic1LamppostObjectInstance`, `Sonic1LamppostTwirlInstance` (fixed) | `TestCheckpointStarpostGraphRewind` (+1 new test from the original fix; the same test's terminal-position assertion tightened to an exact ROM-derived value for the post-merge off-by-one fix) GREEN after both fixes. | `mvn "-Dtest=TestCheckpointStarpostGraphRewind" -Dsurefire.forkCount=1 test` (GREEN after fix) | fixed |
 | 6 | S1 object visuals | Lavafall landing flicker | Marble Zone (MZ), lava geyser landing platform | Reproduced with two new `TestSonic1LavaGeyserOutOfRange` tests that drive a `Sonic1LavaGeyserMakerObjectInstance` through `GMake_MakeLava` inside a real `ObjectManager` exec loop. The simple same-slot-ordering case (`lavafallHeadNeverRendersAtLandingYOnItsSpawnFrame`) passed immediately (the object manager's `FindNextFreeObj`-equivalent usually schedules the new head into the same exec pass), so per the brief's "dig deeper before concluding not-reproducible" guidance, a second test placed the maker at the LAST dynamic slot (`lavafallHeadNeverRendersAtLandingYWhenNoSlotIsFreeAfterMaker`) to force `allocateSlotAfter` to fail and `spawnFreeChild`'s generic fallback to grab an already-passed slot — deferring the new head's own first `update()` to the next frame. That test was RED before the fix (head rendered at Y=1024, the maker's own landing Y) confirmed by temporarily reverting the production change. Root cause: `docs/s1disasm/_incObj/"4C, 4D MZ Lava Geyser and Maker.asm"` Geyser_Main (lines 157-172) falls straight through into Geyser_Action + DisplaySprite in the SAME pass GMake_MakeLava creates the object, so ROM never displays a lavafall head at its un-shifted landing Y — but the engine deferred the `-0x250` start-height shift to `ensureInitialized()` on the head's own first `update()`, which is only guaranteed same-frame when slot allocation happens to cooperate. Fixed by applying the shift eagerly in `Sonic1LavaGeyserObjectInstance`'s constructor (pure position arithmetic, no `services()` needed) instead of waiting for the first `update()`. | `Sonic1LavaGeyserObjectInstance` (fixed) | `TestSonic1LavaGeyserOutOfRange` (+2 new tests) and `TestSonic1LavaGeyserGraphRewind` (unchanged, still GREEN) after the fix. | `mvn "-Dtest=TestSonic1LavaGeyserOutOfRange,TestSonic1LavaGeyserGraphRewind" -Dsurefire.forkCount=1 test` (RED on the slot-exhaustion test before the fix, GREEN after) | fixed |
 | 7 | Badnik and touch responses | Roller standing-state defeat | Spring Yard Zone (SYZ), Roller badnik spawn (any act) | `TestSonic1RollerBadnikInstance` (3 new tests) drives the private `secondaryState`/`invincible` fields to each of the Roller's three ROM lifecycle states and asserts `getCollisionFlags()`. Investigated against `docs/s1disasm/_incObj/43 Badnik - Roller.asm`: Roll_Main/Roll_Action_FromLeft (ob2ndRout=0, the initial curled/waiting state) never write `obColType` — it stays 0 (col_none) from the zeroed spawn RAM, so ReactToItem's `move.b obColType(a1),d0 / bne` skip (Sonic ReactToItem.asm:52-53) applies: a dormant, not-yet-activated Roller genuinely cannot be touched, hurt Sonic, OR be defeated. This is pre-existing, already-correct ROM-accurate behavior (landed in an earlier, unrelated fix citing S1 SYZ1 trace f2338 — commit `4e3f93780`, already on this branch before Task 4 started) and is NOT a code defect: once the Roller activates it is destroyable ($0E, ENEMY category) while stopped/unfolded and damaging-but-not-destroyable ($8E, HURT category) while rolling, both of which the current code already implements correctly and the new tests now lock in. No production change needed. | `Sonic1RollerBadnikInstance` (investigated, not changed — already ROM-accurate) | `TestSonic1RollerBadnikInstance` (+3 new tests) GREEN, confirming current behavior already matches ROM. | `mvn "-Dtest=TestSonic1RollerBadnikInstance" -Dsurefire.forkCount=1 test` (GREEN; no RED reproduction of a code defect found — the reported symptom describes the ROM's intentional "ambush enemy is untouchable until it activates" design) | rom-confirmed-intentional (no fix landed; ROM evidence disproves the "fix" framing — see Task 4 report) |
 | 8 | Badnik and touch responses | Yadrin top spikes | Zone hosting the Yadrin badnik (Spring Yard Zone); exact act not yet confirmed this session | Reproduced with 2 new `TestSonic1YadrinBadnikInstance` tests driving a realistic ROM-accurate top-graze touch. Root cause, `docs/s1disasm/_incObj/Sonic ReactToItem.asm:532-561` (React_Yadrin): the spiked head is a real 24px-wide sub-hitbox offset 4px from Yadrin's leading edge (mirrored 16px further when facing right), gated on Sonic's react-hitbox bottom edge clipping <8px into Yadrin's top edge (a shallow graze, not a deep overlap). The prior implementation compared Sonic's and Yadrin's CENTRE Y values against that same <8 threshold; since a genuine top-graze touch has a centre-to-centre distance close to the sum of both hitbox half-heights (~30+px), that check almost never matched on first contact, so a rolling Sonic landing on the spikes fell through to the attacking-badnik branch and safely destroyed Yadrin instead of getting hurt — exactly the reported "spikes can be jumped on safely" symptom. It also never checked the spike's horizontal (X) window at all. Fixed `Sonic1YadrinBadnikInstance.isSpikeRegionHit()` to compute the ROM's edge-based vertical penetration (`sonicBottom - yadrinTop`, using `player.getYRadius() - 3` per ReactToItem.asm:20-21 and the real touch-hitbox `heightRadius` from `TouchResponseResult`) plus the mirrored 24px X-window check, matching React_Yadrin exactly. | `Sonic1YadrinBadnikInstance` (fixed) | `TestSonic1YadrinBadnikInstance` (2 existing tests recalibrated to ROM-accurate coordinates + 2 new tests) GREEN after the fix; RED before it (`attackingDeepOverlapDestroysBadnikNormally` failed its `assertFalse(isDestroyed)`/services-crash before the fix — see Task 4 report for the isolated RED capture). | `mvn "-Dtest=TestSonic1YadrinBadnikInstance" -Dsurefire.forkCount=1 test` (RED before fix, GREEN after) | fixed |
@@ -93,3 +93,215 @@ fix can be verified.
   own status line is now superseded by row 25's — the located SYZ1 spring+bumper cluster
   (x=5136-5360,y=1024-1474) has a byte-for-byte GREEN `TestS1Syz1CompleteRunTraceReplay` pass
   straight through it.
+- **Tracked follow-up, not yet fixed (row 5, S1 lamppost twirl):** `Sonic1LamppostTwirlInstance
+  .recreateForRewind()` / `findNearestLiveParentForRewind()` relinks a rewind-restored twirl to
+  whichever live `Sonic1LamppostObjectInstance` is geometrically NEAREST at restore time, not
+  necessarily the lamppost that actually spawned it. Repro sketch: two lampposts close enough to
+  both stay loaded at once (e.g. the existing `S1_FAR_LAMP`/`S1_NEAR_LAMP` test fixtures, 0xC0
+  apart); activate the near one so it spawns a twirl; capture a rewind snapshot mid-orbit; tear
+  down the true (near) parent without also tearing down the twirl (off-screen unload /
+  act-transition object-table rebuild / editor teardown race); restore the snapshot with only the
+  far lamppost still live — the twirl silently reattaches to the far post even though its own
+  captured `currentX`/`currentY` still reflect the near post's location. This needs a design call
+  before fixing, not a one-line patch: either capture the parent's identity (via the existing
+  `RewindIdentityTable`/`ObjectRefId` machinery) and drop the twirl when that exact parent isn't
+  live at restore time (matching `missingS1LamppostDropsTwirlCleanly`'s "always exactly correct or
+  absent" behavior), or add a distance/threshold guard so a "nearest" match farther than the
+  twirl's own `SWING_RADIUS`-scale distance from its captured position is treated as "no match."
+- **Post-merge finding, now fixed (row 6, S1 lavafall flicker):** row 6's original fix (applying
+  the lavafall's `-0x250` start-height shift eagerly in `Sonic1LavaGeyserObjectInstance`'s
+  constructor) closed the "lands at the wrong Y for one frame" half of the symptom, but a
+  follow-up investigation (`.superpowers/sdd/geyser-anim-report.md`) found a second, distinct gap
+  in the *maker* itself: `Sonic1LavaGeyserMakerObjectInstance.updateMakeLava()` (routine 6) set
+  `currentAnim`/`animFrameIndex`/`animTimer` for the new eruption but never recomputed
+  `displayFrame` in the same pass, so a repeating lavafall/geyser maker rendered one leftover
+  frame of the *previous* cycle's `.bubble3` "ending" animation at the instant the next eruption
+  became visible — matching the reported "ending animation shown at the start" symptom exactly
+  (ROM's `GMake_MakeLava` falls through into `GMake_Display`'s own `AnimateSprite` call in the
+  SAME dispatch pass, docs/s1disasm/_incObj/"4C, 4D MZ Lava Geyser and Maker.asm":64-87). Fixed by
+  calling `updateAnimation()` once after setting the new anim state in both branches of
+  `updateMakeLava()`. New RED-before/GREEN-after coverage:
+  `TestSonic1LavaGeyserOutOfRange#lavafallMakerNeverRendersPreviousCycleEndingFrameAtNextEruption`.
+- **Post-merge finding, now fixed (row 7, S1 Roller standing-state defeat):** row 7's collision
+  investigation was correct and remains unchanged — a dormant, not-yet-activated Roller
+  (`ob2ndRout=0`) genuinely has `obColType=0` and cannot be touched, hurt Sonic, or be defeated.
+  A follow-up investigation (`.superpowers/sdd/roller-activation-report.md`) found that the
+  engine additionally rendered and idle-animated the curled pose for the object's entire dormant
+  lifetime, while ROM never calls `DisplaySprite`/`AnimateSprite` for it at all in that window —
+  `Roll_Main` (routine 0) is entered via `jmp` and its own `rts` never reaches either call, and
+  `Roll_Action_FromLeft` (`ob2ndRout=0`) pops its own return address (`addq.l #4,sp`) on every
+  call specifically to skip them (docs/s1disasm/_incObj/"43 Badnik - Roller.asm":36-39,99). So the
+  player was seeing a static, hitbox-less sprite ROM never draws — not just an untouchable one.
+  Fixed by gating `Sonic1RollerBadnikInstance.appendRenderCommands()` and `updateAnimation()` on
+  `!initialized || secondaryState == STATE_ROLL_CHK`, matching ROM's skip exactly without
+  affecting the activated (rolling/unfolded) render or animation paths. New RED-before/GREEN-after
+  coverage: `TestSonic1RollerBadnikInstance#dormantRollerEmitsNoRenderCommands` and
+  `#dormantRollerDoesNotAnimate` (plus `#activatedRollerStillRenders` locking in the unaffected
+  active-state path).
+- **Post-merge finding, disposition unchanged (row 4, glass reflection oscillation):** a third
+  investigation round (`.superpowers/sdd/glass-oscillator-report.md`) verified the exact byte/
+  target/amplitude of the reflection's oscillator term at the opcode level
+  (`sonic.lst:42561-42592`, `Glass_Type04`'s bit-3-set path): entry index 4 of the shared
+  oscillator table (`v_oscillate+$12`, speed=4, limit=$20, start value $0080/direction "up" —
+  matching `OscillationManager`'s `S1_SPEEDS[4]`/`S1_LIMITS[4]`/`S1_INITIAL_VALUES[4]`/
+  `S1_INITIAL_DELTAS[4]` exactly) sweeps a continuous **62px peak-to-peak** vertical range
+  (46px up / 16px down from baseline) on a ~252-frame (~4.2s) cycle, unconditionally, regardless
+  of the parent block's trigger/`glass_dist` state — confirming the row's earlier
+  `rom-confirmed-intentional` disposition rather than overturning it, but correcting the earlier
+  round's undercounted amplitude guess (`±0x10..+0x30`, ~48px) with the ROM-computed real range
+  (−16..+46, 62px). This was independently cross-checked by a fourth round
+  (`.superpowers/sdd/glass-visual-diff-report.md`) via BOTH a BizHawk hardware RAM+screenshot
+  capture and the engine's own headless `TraceCaptureTool` pixel diff of the same MZ2 block,
+  both confirming the engine reproduces real hardware frame-for-frame. No code fix landed — this
+  is deliberate ROM behavior, not an engine defect. Added a pinning test,
+  `TestSonic1GlassReflectionGraphRewind#type4ReflectionSwings62PxWhileParentStationary`, driving
+  a real Type04 (switch-activated, subtype `0x14`) block + its spawned reflection child through
+  260 real `ObjectManager` update cycles with the switch never pressed, asserting the reflection's
+  Y sweeps exactly `[baseline-46, baseline+16]` (both extremes reached, never exceeded) so a
+  future "fix" attempting to address the original user report cannot silently dampen or remove
+  this ROM-verified motion without a fresh disasm citation overriding this evidence.
+- **New tracked row (outside original 25-row S1 scope), FIXED — S2 special/bonus-stage entry
+  held-rewind softlock:** `GameLoop.specialStageTransitionPending`/`bonusStageTransitionPending`/
+  `endingTransitionPending`/`LevelManager.isLevelInactiveForTransition()` keep `currentGameMode`
+  at `LEVEL` for the whole fade-to-white/black window before a special/bonus-stage/ending
+  transition's completion callback flips the mode, but `LiveRewindManager`'s own engagement gate
+  only rejected on `mode != GameMode.LEVEL`. A rewind held during that window could keep walking
+  backward through pre-transition history and restore a `FadeManager` snapshot whose
+  `onFadeComplete` callback — the only thing that clears the pending flag — is intentionally not
+  rewind-restorable, permanently orphaning the flag (symptom: everything frozen except the
+  music). Root-caused (with a design addendum after an authoritative user decision to BLOCK, not
+  restore-through) in `.superpowers/sdd/ssentry-rewind-report.md`. **Design supersedes an initial
+  external-gate implementation** (an earlier `GameLoop.isLevelRewindable()`/cancel-branch
+  approach was reworked per the addendum's explicit "gate inside `LiveRewindManager`, not an
+  external skip" requirement, since an external skip would bypass `LiveRewindManager`'s own
+  `clear()`/audio-teardown path). Final fix: `GameLoop.isNonRewindableTransitionPending()` (the
+  same composite freeze predicate the gameplay tick already computes, now the single source of
+  truth for both) is passed into widened `LiveRewindManager.handleRealtimeRewindInput(GameMode,
+  boolean, InputHandler)` / `recordExternalFrame(GameMode, boolean, InputHandler)`, which reject
+  exactly like the existing `mode != GameMode.LEVEL` case (reusing its `clear()` teardown). No
+  separate mid-hold cancel path is needed: the addendum proved the pending flag can only rise
+  from a frame where `handleRealtimeRewindInput` already ran and returned false that same tick,
+  so the persistent post-rise gate covers press-hold, release-then-repress, and coast-through.
+  Scoped to `LiveRewindManager` per the addendum (not `TraceSessionLauncher`, which the
+  investigation did not cover for this specific race). Commit
+  `fix: block rewind while a special stage transition is pending` plus a same-day follow-up
+  rework commit on the same branch. New RED-before/GREEN-after coverage:
+  `TestGameLoopSpecialStageRewindGate` (special-stage AND the S3K-shared bonus-stage-flag
+  companion case, reflectively driving the real `GameLoop.stepInternal()` gate — still valid
+  unchanged after the rework) plus unit-level
+  `TestLiveRewindManagerAudioCleanup#pendingNonRewindableTransitionStopsPresentationAudioLikeModeExit`.
+  **Known test-coverage gap (documented in the test's javadoc, not silently left):**
+  `TestGameLoopSpecialStageRewindGate` proves the gate itself by reflectively flipping the
+  pending flags, not by driving a real `enterSpecialStage()` end-to-end to a
+  `GameMode.SPECIAL_STAGE` landing with the flag cleared. That end-to-end shape was attempted
+  (a `@RequiresRom(SonicGame.SONIC_2)` spike calling `loop.step()` once to prime bindings, then
+  `loop.enterSpecialStage()`, then holding/releasing rewind across ~50 frames) and found
+  infeasible in this lightweight fixture: the very first priming `loop.step()` NPEs in
+  `Camera.updatePosition()` (`this.focusedSprite` is null) because
+  `TestEnvironment.configureGameModuleFixture`/`configureRomFixture` attach managers but never
+  load an actual zone/act or spawn a player sprite, and `GameLoop`'s gameplay tick unconditionally
+  drives camera focus tracking. Closing this gap needs the heavier level-loading machinery used by
+  trace-replay/`HeadlessTestFixture`-style tests (real ROM + real zone/act + spawned player) —
+  tracked here as an open follow-up, not attempted in this session.
+- **New tracked row (outside original 25-row S1 scope), NOT FIXED — S1 giant-ring special-stage
+  entry drops the transition under held rewind (lower-severity sibling of the row above):**
+  `Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage()` (~line 391) calls
+  `fadeManager().startFadeToWhite(callback)` directly from object code with its OWN callback
+  closure (which calls `advanceZoneActOnly()`/`requestSpecialStageFromCheckpoint()`) — it never
+  touches `specialStageTransitionPending` or any other flag `GameLoop
+  .isNonRewindableTransitionPending()` folds in, so the fix above does NOT cover this path.
+  Same root cause as the fixed bug (`FadeManager.restore()` explicitly not restoring a live
+  `onFadeComplete`, `FadeManager.java:715-731`), but a DIFFERENT, lower-severity symptom:
+  engaging rewind during this specific fade-to-white window silently drops the special-stage
+  entry (the results-screen object survives un-destroyed, gameplay resumes normally from the
+  rewound point) rather than permanently freezing the level. Root-caused in the addendum section
+  of `.superpowers/sdd/ssentry-rewind-report.md` ("Game-agnostic scope: S1 and S3K checked").
+  Recommended follow-up fix shape (not implemented): a `FadeManager.hasPendingCompletion()`
+  accessor (`return state != FadeState.NONE && onFadeComplete != null;`) added to the composite
+  predicate would close this game-agnostically for every fade-driven, callback-completed
+  transition — not just the four already-flagged ones — but was deliberately left out of the
+  current fix since the user's decision was scoped to blocking rewind during a pending special
+  stage, and touching `FadeManager` risks behavior changes across the dozens of other
+  `startFadeTo*` call sites in `GameLoop`. No test added (not fixed).
+- **New tracked row (outside original 25-row S1 scope), FIXED — EHZ boss rewind child adoption
+  identity + orphan reconciliation (shared boss framework):** `ObjectManager
+  .adoptRewindReconstructionChild` matched pending rewind-reconstruction children to captured
+  `DynamicObjectEntry` records by runtime class name alone, FIFO. EHZ's 3 indistinguishable
+  `EHZBossWheel` children (and any other boss's same-class sibling group, e.g. DEZ's 6
+  `ArticulatedChild`/2 `ForearmChild` instances) broke once any sibling was destroyed and pruned
+  from `dynamicObjects` before the frame being captured: the fixed-order re-spawn still produced
+  as many candidates as the class originally had, so FIFO silently shifted captured state onto
+  the wrong sibling position — invisible to the generic scalar-field restore that follows, but
+  fatal to `EHZBossWheel.animationState`, a `final` field the constructor derives from the
+  position's ORIGINAL subtype. Separately, the one unmatched fresh reconstruction child per
+  restore was dropped from `ObjectManager.dynamicObjects` but never removed from
+  `AbstractBossInstance.childComponents`, leaking a live, still-`update()`-ing orphan that
+  corrupts shared parent state (e.g. EHZ's `wheelYAccumulator`). Root-caused in
+  `.superpowers/sdd/ehzboss-rewind-report.md`. Fixed by threading a stable per-(parent,
+  runtime-class) construction ordinal (`AbstractBossInstance.nextChildOrdinal`) through
+  `AbstractBossChild`'s `ObjectSpawn.subtype()` (a field boss children don't otherwise use), then
+  preferring an exact `subtype()` match over FIFO in `adoptRewindReconstructionChild` (falling
+  back to today's FIFO when no exact match exists, so every OTHER `spawnChild` caller — e.g.
+  `SidewaysPformObjectInstance`, `ConveyorObjectInstance` — is unaffected); and adding a generic
+  `AbstractObjectInstance#onDroppedAsUnmatchedRewindReconstructionChild()` hook (default no-op,
+  overridden by `AbstractBossChild` to remove itself from `parent.childComponents`) that
+  `ObjectManager` calls for every unmatched reconstruction child before dropping it, so the
+  mechanism covers any current or future boss without per-boss code changes. Commit
+  `fix: adopt boss rewind children by identity and reconcile orphans`. New RED-before/GREEN-after
+  coverage: `TestEHZBossWheelOrphanAfterSiblingDestroy`. Cross-game boss-rewind sanity
+  (`TestBossChildExactStateRewind`, `TestS1SlzBossSpikeballGraphRewind`,
+  `TestS1SyzBossBlockGraphRewind`, `TestS1Slz3CompleteRunTraceReplay`,
+  `TestS1Syz3CompleteRunTraceReplay`, `TestS2Ehz1TraceReplay`, `TestS3kAizTraceReplay`) ran
+  identical before/after (`TestS3kAizTraceReplay`'s pre-existing frame-8941 `camera_y`
+  1160-error signature unchanged) — see `rewind-fixes-report.md` for verbatim output.
+  **DEZ follow-up disposition:** the fix covers DEZ's `ArticulatedChild`/`ForearmChild` families
+  BY CONSTRUCTION (same shared `AbstractBossChild`/`ObjectManager` mechanism, no DEZ-specific
+  code), but this session did NOT add a DEZ-specific destroy-before-capture regression test to
+  verify it empirically — flagging as unverified-likely-fixed for a future session to add a
+  parallel `TestDEZArticulatedChildOrphanAfterSiblingDestroy` alongside this one.
+- **New tracked row (outside original 25-row S1 scope), FIXED — boss child-spawn ordinal counter
+  (`AbstractBossInstance#childSpawnOrdinalCounters`) went uncaptured and could go stale across a
+  restore, reopening the identity ambiguity the row above fixed:** flagged by
+  `TestRewindFieldDispositionGuard` (a clean full-suite run caught this — the Map had no rewind
+  disposition across all 23 boss subclasses). Root cause: a boss that spawns an
+  `AbstractBossChild` beyond its fixed construction-time set (any boss with a same-class part
+  spawned mid-fight, not just once at `initializeBossState()`) can end up with a live survivor
+  whose captured `getChildOrdinal()` exceeds the reconstruction-time spawn count for that class
+  (its ordinal was corrected to the true captured value by the generic phase-2 scalar restore,
+  but the counter itself only reflects how many temporary reconstruction-time constructions ran).
+  Left uncorrected, the counter could be LOWER than `max(live ordinal)+1`, so the next post-restore
+  spawn of that class could return an ordinal that collides with a still-live survivor — silently
+  reopening the exact-match adoption ambiguity `adoptRewindReconstructionChild` exists to prevent.
+  Fixed per the reviewer's exact prescribed design: the Map keeps `RewindFieldPolicy.DEFERRED`
+  (central entry in `DefaultObjectRewindPolicies`, not a bare `@RewindTransient` — deliberately
+  NOT baselined) PLUS a new generic `AbstractObjectInstance#afterRewindRestoreSettled()` hook
+  (default no-op; called by `ObjectManager.restore()` for every active/dynamic object strictly
+  AFTER phase 2's field-blob restore completes, since a parent's restore is not guaranteed to run
+  before or after its children's) that `AbstractBossInstance` overrides to recompute
+  `childSpawnOrdinalCounters` as `max(live child's getChildOrdinal() per class) + 1` from the
+  now-settled `childComponents`. New RED-before/GREEN-after coverage:
+  `TestEHZBossWheelOrphanAfterSiblingDestroy#childSpawnOrdinalCounterStaysConsistentAcrossRepeatedRewindWithExtraSpawns`
+  (manually spawns a 4th `EHZBossWheel` beyond EHZ's fixed 3, destroys an original sibling,
+  restores, asserts the counter is correctly re-derived to 4 — RED showed 3 with the fix
+  disabled — then spawns a 5th and asserts no ordinal collision with the just-restored survivor).
+  Commit: see report for SHA.
+  **New adjacent gap CONFIRMED reachable by an earlier draft of this test, NOT fixed (separate from
+  the counter fix above):** `EHZBossWheel.recreateForRewind()` (and, by the same shared
+  `AbstractBossChild` pattern, presumably other boss children whose `recreateForRewind()` doesn't
+  follow DEZ's convention) returns `new EHZBossWheel(boss)` without re-registering the recreated
+  instance into `parent.childComponents` — unlike DEZ's `ArticulatedChild.recreateForRewind()` /
+  `ForearmChild.recreateForRewind()`, which call a local `addChildComponentOnce(boss, child)`
+  helper for exactly this reason. The original EHZ investigation report flagged this recreate path
+  as "effectively dead code... latent trap for whenever it does become reachable" (since a boss
+  with a FIXED construction-time child count always has enough reconstruction-pending candidates
+  to adopt every survivor without ever falling through to `recreateForRewind()`). This session's
+  test draft PROVED it IS reachable once a boss has a live child beyond its fixed construction-time
+  set (e.g. a mid-fight repeat-spawn survivor) undergoing a SECOND successive restore: that child
+  falls through to `recreateForRewind()`, which drops it from `childComponents` — the same orphan
+  class the row above fixed for the "unmatched, never even a real child" case, but for "a real,
+  correctly-captured live child that the recreate path forgets to re-list." The test was
+  simplified to a single restore to avoid this unrelated failure (see the test's own comment) —
+  fixing it needs either a shared `addChildComponentOnce`-style helper promoted onto
+  `AbstractBossChild`/`AbstractBossInstance` (replacing each boss's private duplicate) or an
+  audit of every `recreateForRewind()` override across all `AbstractBossChild` subclasses for the
+  same omission. Not implemented this session — tracked here as a confirmed-reachable follow-up.

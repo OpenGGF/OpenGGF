@@ -22,14 +22,45 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
     protected boolean flipX;
     private ObjectSpawn dynamicSpawn;
     private int lastUpdatedFrame = -1;
+    /**
+     * Stable 0-based construction ordinal among this parent's SAME-RUNTIME-CLASS
+     * siblings (see {@link AbstractBossInstance#nextChildOrdinal}), carried through
+     * every {@link #dynamicSpawn} rebuild via {@link ObjectSpawn#subtype()} --
+     * otherwise unused by boss children -- so rewind's dynamic-object adoption can
+     * tell indistinguishable same-class siblings (e.g. EHZ's 3 {@code EHZBossWheel}
+     * instances) apart even after an earlier sibling was destroyed and pruned
+     * before capture. See {@code ObjectManager.adoptRewindReconstructionChild}.
+     * Not {@code final}: purely deterministic (recomputed identically by
+     * construction order on every reconstruction) so it doesn't strictly need
+     * round-trip capture, but a non-final scalar rides the existing generic
+     * compact-schema capture for free instead of tripping the rewind-coverage
+     * guard's "uncapturable final field" check across every boss-child subclass.
+     */
+    private int childOrdinal;
+
+    /** See {@link #childOrdinal}. */
+    public int getChildOrdinal() {
+        return childOrdinal;
+    }
 
     public AbstractBossChild(AbstractBossInstance parent, String name, int priority, int objectId) {
         super(new ObjectSpawn(parent.getX(), parent.getY(), objectId, 0, 0, false, 0), name);
         this.parent = parent;
         this.priority = priority;
+        this.childOrdinal = parent.nextChildOrdinal(getClass());
         syncPositionWithParent();
-        this.dynamicSpawn = super.getSpawn();
-        updateDynamicSpawn();
+        this.dynamicSpawn = buildDynamicSpawn();
+    }
+
+    private ObjectSpawn buildDynamicSpawn() {
+        return new ObjectSpawn(
+                currentX,
+                currentY,
+                spawn.objectId(),
+                childOrdinal,
+                spawn.renderFlags(),
+                spawn.respawnTracked(),
+                spawn.rawYWord());
     }
 
     protected boolean beginUpdate(int frameCounter) {
@@ -44,19 +75,28 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
         if (dynamicSpawn.x() == currentX && dynamicSpawn.y() == currentY) {
             return;
         }
-        dynamicSpawn = new ObjectSpawn(
-                currentX,
-                currentY,
-                spawn.objectId(),
-                spawn.subtype(),
-                spawn.renderFlags(),
-                spawn.respawnTracked(),
-                spawn.rawYWord());
+        dynamicSpawn = buildDynamicSpawn();
     }
 
     @Override
     public ObjectSpawn getSpawn() {
         return dynamicSpawn;
+    }
+
+    /**
+     * Drops this instance from the parent's {@link AbstractBossInstance#childComponents}
+     * when {@code ObjectManager} determines, after a rewind restore, that this
+     * instance was a freshly-constructed reconstruction child left unmatched by any
+     * captured {@code DynamicObjectEntry} (e.g. a sibling position the destroyed
+     * original no longer has captured state for). Without this, the boss's own
+     * unconditional re-spawn of all children on every reconstruction leaves the
+     * orphan live in {@code childComponents} -- not destroyed, never registered with
+     * {@code ObjectManager} -- so it keeps receiving {@code update()} forever and can
+     * corrupt shared parent state (e.g. EHZ's {@code wheelYAccumulator}).
+     */
+    @Override
+    protected void onDroppedAsUnmatchedRewindReconstructionChild() {
+        parent.childComponents.remove(this);
     }
 
     @Override

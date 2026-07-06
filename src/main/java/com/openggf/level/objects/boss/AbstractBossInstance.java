@@ -48,6 +48,15 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     protected final List<BossChildComponent> childComponents;
     protected final Map<Integer, Integer> customMemory;
     private ObjectSpawn dynamicSpawn;
+    /**
+     * Per-runtime-class construction counters used to assign each
+     * {@link AbstractBossChild} a stable 0-based ordinal among this boss's
+     * SAME-CLASS siblings (see {@link #nextChildOrdinal}). Fresh per boss
+     * instance, so both the original live spawn and every rewind
+     * reconstruction (which re-runs the boss's fixed child-spawn sequence
+     * from a new instance) produce identical ordinals in identical order.
+     */
+    private final Map<Class<?>, Integer> childSpawnOrdinalCounters = new HashMap<>();
 
     /**
      * Set when {@link BossHitHandler#triggerDefeat()} flips the boss to defeated and
@@ -646,6 +655,56 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
     public List<BossChildComponent> getChildComponents() {
         return childComponents;
+    }
+
+    /**
+     * Returns the next 0-based construction ordinal for {@code childClass}, i.e. how
+     * many children of that EXACT runtime class this boss has already spawned.
+     * Called by {@link AbstractBossChild}'s constructor so indistinguishable
+     * same-class siblings (e.g. EHZ's 3 {@code EHZBossWheel} instances) can carry a
+     * stable per-position identity through {@link ObjectSpawn#subtype()} -- otherwise
+     * unused by boss children -- for {@code ObjectManager.adoptRewindReconstructionChild}
+     * to match against after a rewind restore, instead of falling back to a plain
+     * FIFO-by-class-name match that silently shifts captured state onto the wrong
+     * sibling once an earlier one has been destroyed and pruned before capture.
+     */
+    final int nextChildOrdinal(Class<?> childClass) {
+        int ordinal = childSpawnOrdinalCounters.getOrDefault(childClass, 0);
+        childSpawnOrdinalCounters.put(childClass, ordinal + 1);
+        return ordinal;
+    }
+
+    /**
+     * Re-derives {@link #childSpawnOrdinalCounters} from the settled, post-restore
+     * {@link #childComponents} rather than trusting whatever value reconstruction
+     * happened to leave it at.
+     *
+     * <p>{@code childSpawnOrdinalCounters} is intentionally not captured by rewind
+     * (see the {@code DEFERRED} policy entry in {@code DefaultObjectRewindPolicies})
+     * because it is fully derivable from live children -- but it is NOT safe to just
+     * leave it at whatever count reconstruction's fixed always-re-spawn-N-children
+     * sequence produced. A boss that spawns additional same-class
+     * {@link AbstractBossChild} instances mid-fight (beyond its construction-time
+     * set) can have live children whose captured {@link AbstractBossChild#getChildOrdinal()}
+     * exceeds the reconstruction-time spawn count for that class (e.g. one survivor
+     * was adopted onto a reconstruction-pending slot whose OWN construction ordinal
+     * was lower than the survivor's true captured ordinal). Leaving the counter at
+     * the raw reconstruction count would let the NEXT post-restore spawn of that
+     * class collide with that survivor's ordinal, reopening the exact-match adoption
+     * ambiguity this framework exists to prevent. Recomputing as
+     * {@code max(live ordinal for that class) + 1} after every child's own restore
+     * has settled keeps the counter consistent with reality regardless of how it got
+     * there.
+     */
+    @Override
+    protected void afterRewindRestoreSettled() {
+        childSpawnOrdinalCounters.clear();
+        for (BossChildComponent child : childComponents) {
+            if (child instanceof AbstractBossChild bossChild) {
+                childSpawnOrdinalCounters.merge(
+                        bossChild.getClass(), bossChild.getChildOrdinal() + 1, Math::max);
+            }
+        }
     }
 
     private void updateDynamicSpawn() {
