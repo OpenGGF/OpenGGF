@@ -305,3 +305,23 @@ fix can be verified.
   `AbstractBossChild`/`AbstractBossInstance` (replacing each boss's private duplicate) or an
   audit of every `recreateForRewind()` override across all `AbstractBossChild` subclasses for the
   same omission. Not implemented this session — tracked here as a confirmed-reachable follow-up.
+  **RESOLVED (Wave 3, Fix 1):** fixed centrally rather than as an `EHZBossWheel`-only patch or a
+  promoted-but-still-per-subclass `addChildComponentOnce()` helper. Added a new generic
+  `AbstractObjectInstance#onRecreatedForRewind()` hook (default no-op, symmetric counterpart to
+  `onDroppedAsUnmatchedRewindReconstructionChild()`), called by `ObjectManager.restore()`
+  immediately after the phase-1 dynamic-object loop's `recreateDynamicObject(entry)` path (i.e.
+  only on the "not adopted from a pending reconstruction candidate" branch — adopted candidates
+  were already registered by the parent's own construction-time spawn). `AbstractBossChild`
+  overrides it to re-add itself to `parent.childComponents` if absent. This covers `EHZBossWheel`
+  with ZERO changes to that file, and covers every OTHER current and future `AbstractBossChild`
+  subclass automatically (including DEZ's family, whose existing `addChildComponentOnce()` calls
+  become redundant-but-harmless no-ops rather than needing removal — left untouched to avoid
+  unrelated churn). New RED-before/GREEN-after coverage:
+  `TestEHZBossWheelOrphanAfterSiblingDestroy#recreatedWheelBeyondTheFixedSetIsReRegisteredIntoChildComponents`,
+  which reproduces the gap on a SINGLE restore (a 4th wheel beyond EHZ's fixed 3-wheel
+  reconstruction-time spawn count has no matching candidate and falls straight to
+  `recreateForRewind()`) — simpler than the originally-suspected double-restore requirement, since
+  the count-mismatch condition (more live same-class children than the boss's fixed spawn count)
+  is sufficient on its own. See `wave3-fixes-report.md` for the exact commit SHA and the full
+  before/after 7-class cross-game boss-rewind matrix (identical both times; only the pre-existing
+  `TestS3kAizTraceReplay` frame-8941 `camera_y` signature present).

@@ -99,6 +99,25 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
         parent.childComponents.remove(this);
     }
 
+    /**
+     * Re-registers a {@code recreateForRewind()}-produced instance into the parent's
+     * {@link AbstractBossInstance#childComponents} list -- the ONLY list
+     * {@link AbstractBossInstance#update} consults to dispatch {@code child.update(...)}
+     * every frame. Without this, a subclass whose {@code recreateForRewind()} only
+     * constructs the instance (e.g. {@code EHZBossWheel}, prior to this fix) leaves a
+     * live object {@code ObjectManager} tracks but the boss never again drives or reads --
+     * present in {@code getActiveObjects()}, absent from the list that actually matters.
+     * Centralized here (rather than per-subclass, see the class-level javadoc reference to
+     * {@code Sonic2DeathEggRobotInstance}'s {@code addChildComponentOnce()}) so every
+     * current and future {@code AbstractBossChild} subclass is covered automatically.
+     */
+    @Override
+    protected void onRecreatedForRewind() {
+        if (parent != null && !parent.childComponents.contains(this)) {
+            parent.childComponents.add(this);
+        }
+    }
+
     @Override
     public int getX() {
         return currentX;

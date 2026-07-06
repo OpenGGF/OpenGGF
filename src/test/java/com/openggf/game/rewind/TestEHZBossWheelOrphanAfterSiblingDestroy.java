@@ -224,6 +224,91 @@ class TestEHZBossWheelOrphanAfterSiblingDestroy {
         // docs/plans/s1-bug-batch-ledger-2026-07-05.md rather than silently left.
     }
 
+    /**
+     * Follow-up fix (Wave 3, Fix 1): {@code EHZBossWheel.recreateForRewind()} (unlike DEZ's
+     * {@code ArticulatedChild}/{@code ForearmChild}, which call a local
+     * {@code addChildComponentOnce()} for exactly this reason) returned a fresh instance
+     * WITHOUT re-registering it into {@code parent.childComponents}. This is reachable
+     * on a SINGLE restore -- no destroy/prune or double-restore needed -- whenever a boss
+     * has more live same-class children than its fixed construction-time spawn count: EHZ's
+     * boss always re-spawns exactly 3 {@code EHZBossWheel} reconstruction-pending candidates
+     * on every reconstruction, so a 4th (mid-fight repeat-spawn-style) wheel captured at
+     * restore time has no matching candidate and falls straight through to
+     * {@code recreateDynamicObject()} -> {@code EHZBossWheel.recreateForRewind()}.
+     *
+     * <p>The recreated wheel IS correctly added to {@code ObjectManager.dynamicObjects} (so
+     * it appears in {@code getActiveObjects()}), but is absent from
+     * {@code Sonic2EHZBossInstance.childComponents} -- the ONLY list
+     * {@code AbstractBossInstance#updateChildren()} iterates to dispatch
+     * {@code child.update(...)} -- so the boss stops driving it: a live object the manager
+     * still tracks, but the boss no longer updates or reads (a desync that "returns via a
+     * different door" rather than the more visible one where the object is untracked
+     * entirely).
+     */
+    @Test
+    void recreatedWheelBeyondTheFixedSetIsReRegisteredIntoChildComponents() throws Exception {
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        ObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+        };
+
+        ObjectSpawn bossSpawn = new ObjectSpawn(160, 240,
+                Sonic2ObjectIds.EHZ_BOSS, 0, 0, false, 0);
+        Sonic2ObjectRegistry registry = new Sonic2ObjectRegistry();
+        ObjectManager om = new ObjectManager(
+                List.of(bossSpawn), registry,
+                0, null, null,
+                GraphicsManager.getInstance(), camera, services);
+        holder[0] = om;
+        om.reset(0);
+
+        ObjectInstance boss = findActiveByClass(om, EHZ_BOSS_CLASS);
+        assertNotNull(boss, "EHZ boss must be materialised as an active object");
+        assertEquals(3, wheelsOf(boss).size(), "precondition: 3 construction-time wheels");
+
+        // A 4th wheel beyond EHZ's fixed 3-wheel construction-time set (mid-fight
+        // repeat-spawn pattern). The boss's reconstruction always re-spawns exactly 3
+        // candidates, so with 4 live wheels captured the surplus entry has no matching
+        // candidate and falls through to EHZBossWheel.recreateForRewind() on this single
+        // restore (no destroy/prune or second restore round needed).
+        AbstractBossChild extraWheel = spawnExtraWheel(boss, -0x50, 4);
+        assertEquals(3, extraWheel.getChildOrdinal(),
+                "the 4th wheel must get the next ordinal after the construction-time set");
+        assertEquals(4, wheelsOf(boss).size());
+
+        RewindRegistry rr = new RewindRegistry();
+        rr.register(om.rewindSnapshottable());
+        CompositeSnapshot snap = rr.capture();
+        rr.restore(snap);
+
+        ObjectInstance restoredBoss = findActiveByClass(om, EHZ_BOSS_CLASS);
+        assertNotNull(restoredBoss, "EHZ boss must remain active after restore");
+
+        List<ObjectInstance> active = new ArrayList<>(om.getActiveObjects());
+        long activeWheelCount = active.stream()
+                .filter(o -> o.getClass().getName().equals(EHZ_WHEEL_CLASS) && !o.isDestroyed())
+                .count();
+        assertEquals(4, activeWheelCount,
+                "the recreated 4th wheel must still be tracked by ObjectManager after restore "
+                        + "(this half already worked pre-fix -- the bug is childComponents, not "
+                        + "ObjectManager tracking)");
+
+        List<AbstractBossChild> restoredWheels = wheelsOf(restoredBoss);
+        assertEquals(4, restoredWheels.size(),
+                "the recreated wheel must be re-registered into the boss's childComponents "
+                        + "(the ONLY list AbstractBossInstance#updateChildren() iterates) -- not "
+                        + "just tracked in ObjectManager.getActiveObjects() with the boss no "
+                        + "longer driving/reading it");
+
+        for (AbstractBossChild wheel : restoredWheels) {
+            assertTrue(active.contains(wheel),
+                    "every childComponents wheel entry must also be tracked by the manager "
+                            + "(no untracked live orphan)");
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

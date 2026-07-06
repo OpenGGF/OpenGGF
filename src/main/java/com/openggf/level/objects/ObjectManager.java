@@ -3669,6 +3669,14 @@ public class ObjectManager {
                             if (slot >= 0) {
                                 aoi.setSlotIndex(slot);
                             }
+                        } else {
+                            // Went through the generic recreateForRewind() path, not adoption --
+                            // give owners that keep their own back-reference list (e.g.
+                            // AbstractBossChild -> parent.childComponents) a chance to re-register
+                            // this instance. Adopted candidates were already registered by the
+                            // owning parent's own construction-time spawn, so this is skipped for
+                            // them (see onRecreatedForRewind()'s javadoc).
+                            aoi.onRecreatedForRewind();
                         }
                         // Restore the captured rewind id so the identity table built from
                         // the next rewindCaptureContext() re-uses the pre-restore id, and
