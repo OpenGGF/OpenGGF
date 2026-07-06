@@ -97,48 +97,6 @@ class TestTraceSessionLauncherRewindPresentation {
     }
 
     @Test
-    void cancelRealtimeRewindForPendingTransitionStopsPresentationLikeRelease() throws Exception {
-        TraceSessionLauncher launcher = newLauncher();
-        RewindController rewindController = new RewindController(
-                new RewindRegistry(),
-                new InMemoryKeyframeStore(),
-                new FakeInputSource(10),
-                in -> {},
-                2,
-                AudioManager.getInstance());
-        for (int i = 0; i < 5; i++) {
-            rewindController.recordExternalStep();
-        }
-        setField(launcher, "rewindController", rewindController);
-        setField(launcher, "rewindPlaybackController", new PlaybackController(rewindController));
-        setField(launcher, "comparator", mock(LiveTraceComparator.class));
-        setField(launcher, "rewindMovieBaseFrame", 0);
-        setField(launcher, "rewindTraceBaseFrame", 0);
-        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
-        FadeManager fadeManager = gameplayMode.getFadeManager();
-        InputHandler input = new InputHandler();
-        input.handleKeyEvent(config.getInt(SonicConfiguration.TRACE_REWIND_KEY), GLFW_PRESS);
-
-        assertTrue(launcher.handleRealtimeRewindInput(input));
-        assertTrue(fadeManager.isReversePresentationActive());
-        int frameAfterEngage = rewindController.currentFrame();
-
-        // Held key never released -- a pending transition preempts it instead.
-        launcher.cancelRealtimeRewindForPendingTransition();
-
-        assertFalse(fadeManager.isReversePresentationActive());
-        assertTrue(backend.calls.contains("endReversePresentation"));
-        assertEquals(frameAfterEngage, rewindController.currentFrame(),
-                "cancelling must not itself step the rewind buffer");
-
-        // Still holding the key: the next call must re-engage cleanly rather
-        // than treat the session as already rewinding.
-        backend.calls.clear();
-        assertTrue(launcher.handleRealtimeRewindInput(input));
-        assertTrue(backend.calls.contains("beginReversePresentation"));
-    }
-
-    @Test
     void traceBoundaryExternalFrameRerootsRewindBuffer() throws Exception {
         TraceSessionLauncher launcher = newLauncher();
         RewindController rewindController = new RewindController(

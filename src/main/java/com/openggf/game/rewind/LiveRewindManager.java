@@ -39,8 +39,19 @@ public final class LiveRewindManager {
         this.hudOverlay = new LiveRewindHudOverlay(this::statusLabel);
     }
 
-    public boolean handleRealtimeRewindInput(GameMode mode, InputHandler input) {
-        if (mode != GameMode.LEVEL || input == null || !enabled()) {
+    /**
+     * @param nonRewindableTransitionPending true while the level is mid a
+     *     special/bonus-stage/ending transition or a pending zone/act
+     *     transition (see {@code GameLoop.isNonRewindableTransitionPending()}).
+     *     {@code currentGameMode} stays {@code GameMode.LEVEL} throughout that
+     *     whole window -- the fade only flips the mode once its completion
+     *     callback runs -- so this widens the same "not applicable this frame"
+     *     gate {@code mode != GameMode.LEVEL} already uses, reusing its
+     *     {@link #clear()} teardown rather than needing a separate mid-hold
+     *     cancel path. See ssentry-rewind-report.md.
+     */
+    public boolean handleRealtimeRewindInput(GameMode mode, boolean nonRewindableTransitionPending, InputHandler input) {
+        if (mode != GameMode.LEVEL || nonRewindableTransitionPending || input == null || !enabled()) {
             activeInputHandler = null;
             clear();
             return false;
@@ -131,24 +142,11 @@ public final class LiveRewindManager {
     }
 
     /**
-     * Cleanly disengages any in-progress held rewind when the level enters a
-     * non-rewindable sub-state that {@code GameMode} itself cannot see yet --
-     * e.g. a special/bonus-stage or ending transition fade in flight, where
-     * {@code currentGameMode} stays {@code GameMode.LEVEL} until the fade's
-     * completion callback runs. Reuses the same teardown {@link #clear()} uses
-     * for the {@code mode != GameMode.LEVEL} case, so a rewind that was already
-     * held when the transition fired stops walking backward through
-     * pre-transition history instead of restoring fade/audio state whose
-     * completion callback (the only thing that would clear the transition's
-     * pending flag) is not itself rewind-restorable.
+     * @param nonRewindableTransitionPending see
+     *     {@link #handleRealtimeRewindInput(GameMode, boolean, InputHandler)}.
      */
-    public void cancelForPendingTransition() {
-        activeInputHandler = null;
-        clear();
-    }
-
-    public void recordExternalFrame(GameMode mode, InputHandler input) {
-        if (mode != GameMode.LEVEL || input == null || !enabled()) {
+    public void recordExternalFrame(GameMode mode, boolean nonRewindableTransitionPending, InputHandler input) {
+        if (mode != GameMode.LEVEL || nonRewindableTransitionPending || input == null || !enabled()) {
             activeInputHandler = null;
             clear();
             return;

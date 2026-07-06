@@ -692,22 +692,24 @@ public class GameLoop {
     }
 
     /**
-     * True only while the level is genuinely eligible for live rewind
-     * engagement/capture: {@code GameMode.LEVEL} AND none of the
-     * transition-pending sub-states that keep {@code currentGameMode == LEVEL}
-     * while gameplay is actually frozen and a fade/completion-callback handoff
-     * is in flight (special-stage entry, bonus-stage entry, ending transition,
-     * or a pending zone/act transition). Mirrors the {@code freezeFor*} flags
-     * this method's caller already computes for the gameplay tick itself
-     * (see the special/bonus/ending/zone-act freeze block below), so rewind's
-     * mode-based gate can see the same sub-state gap.
+     * True while the level is mid a special-stage/bonus-stage/ending transition
+     * or a pending zone/act transition -- the exact same composite condition
+     * the gameplay-tick freeze block below computes (special/bonus/ending/
+     * zone-act freeze). {@code currentGameMode} stays {@code GameMode.LEVEL}
+     * throughout this whole window (the fade only flips the mode once its
+     * completion callback runs), so this is exposed for
+     * {@link LiveRewindManager}'s mode-based "not applicable" gate to consult
+     * -- a sub-state {@code GameMode} alone cannot express. See
+     * ssentry-rewind-report.md.
      */
-    private boolean isLevelRewindable() {
-        return currentGameMode == GameMode.LEVEL
-                && !specialStageTransitionPending
-                && !bonusStageTransitionPending
-                && !endingTransitionPending
-                && !levelManager.isLevelInactiveForTransition();
+    private boolean isNonRewindableTransitionPending() {
+        // Called unconditionally near the top of stepInternal(), before any
+        // currentGameMode-specific dispatch -- levelManager can be null in
+        // non-gameplay modes (e.g. MASTER_TITLE_SCREEN with no active session).
+        return specialStageTransitionPending
+                || bonusStageTransitionPending
+                || endingTransitionPending
+                || (levelManager != null && levelManager.isLevelInactiveForTransition());
     }
 
     private void stepInternal() {
@@ -724,27 +726,17 @@ public class GameLoop {
         playbackDebugManager.handleInput(inputHandler);
         playbackDebugManager.setObservedMode(currentGameMode);
 
-        boolean levelRewindable = isLevelRewindable();
-        if (currentGameMode == GameMode.LEVEL && !levelRewindable) {
-            // A special/bonus-stage or ending transition is pending, or the level
-            // is mid zone/act transition fade -- currentGameMode is still LEVEL
-            // throughout this window, so the two engagement checks below (which
-            // used to gate on mode alone) could still let an already-held rewind
-            // keep walking backward through pre-transition history. Cleanly
-            // disengage instead: see ssentry-rewind-report.md.
-            if (TraceSessionLauncher.active() != null) {
-                TraceSessionLauncher.active().cancelRealtimeRewindForPendingTransition();
-            } else {
-                liveRewindManager.cancelForPendingTransition();
-            }
-        } else if (levelRewindable
+        boolean nonRewindableTransitionPending = isNonRewindableTransitionPending();
+        if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() != null
                 && TraceSessionLauncher.active().handleRealtimeRewindInput(inputHandler)) {
             inputHandler.update();
             return;
-        } else if (levelRewindable
+        }
+        if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() == null
-                && liveRewindManager.handleRealtimeRewindInput(currentGameMode, inputHandler)) {
+                && liveRewindManager.handleRealtimeRewindInput(
+                        currentGameMode, nonRewindableTransitionPending, inputHandler)) {
             inputHandler.update();
             return;
         }
@@ -1239,14 +1231,10 @@ public class GameLoop {
 
         boolean freezeForArtViewer = debugShortcutsEnabled()
                 && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER);
-        // Freeze level updates during special/bonus stage entry transitions
-        boolean freezeForSpecialStage = specialStageTransitionPending;
-        boolean freezeForBonusStage = bonusStageTransitionPending;
-        boolean freezeForEndingTransition = endingTransitionPending;
-        // ObjB2 transition parity: freeze gameplay during pending zone-act fade.
-        boolean freezeForZoneActTransition = levelManager.isLevelInactiveForTransition();
-        if (!freezeForArtViewer && !freezeForSpecialStage && !freezeForBonusStage
-                && !freezeForEndingTransition && !freezeForZoneActTransition) {
+        // Freeze level updates during special/bonus stage entry transitions, an
+        // ending transition, or a pending zone/act fade (ObjB2 transition parity).
+        boolean freezeForNonRewindableTransition = isNonRewindableTransitionPending();
+        if (!freezeForArtViewer && !freezeForNonRewindableTransition) {
             beginGameplayAudioFrameForTick();
             // LiveTraceComparator (or any PlaybackFrameObserver) may ask
             // us to skip the gameplay tick on ROM lag frames so the
@@ -1303,7 +1291,9 @@ public class GameLoop {
             if (traceSession != null) {
                 traceSession.recordExternalRewindFrame();
             } else {
-                liveRewindManager.recordExternalFrame(currentGameMode, inputHandler);
+                // Reached only inside the !freezeForNonRewindableTransition branch,
+                // so the transition-pending predicate is guaranteed false here.
+                liveRewindManager.recordExternalFrame(currentGameMode, freezeForNonRewindableTransition, inputHandler);
             }
 
             // Check if a checkpoint star requested a special stage

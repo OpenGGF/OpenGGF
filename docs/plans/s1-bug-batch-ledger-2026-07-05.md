@@ -164,22 +164,40 @@ fix can be verified.
   held-rewind softlock:** `GameLoop.specialStageTransitionPending`/`bonusStageTransitionPending`/
   `endingTransitionPending`/`LevelManager.isLevelInactiveForTransition()` keep `currentGameMode`
   at `LEVEL` for the whole fade-to-white/black window before a special/bonus-stage/ending
-  transition's completion callback flips the mode, but `GameLoop.stepInternal()`'s live/trace
-  rewind engagement gate only checked `currentGameMode == GameMode.LEVEL`. A rewind already held
-  when the transition fired could keep walking backward through pre-transition history and
-  restore a `FadeManager` snapshot whose `onFadeComplete` callback — the only thing that clears
-  the pending flag — is intentionally not rewind-restorable, permanently orphaning the flag
-  (symptom: everything frozen except the music). Root-caused in
-  `.superpowers/sdd/ssentry-rewind-report.md`. Fixed via `GameLoop.isLevelRewindable()` (folds in
-  all four pending/transition predicates) at both `stepInternal()` rewind call sites, plus
-  `LiveRewindManager.cancelForPendingTransition()` /
-  `TraceSessionLauncher.cancelRealtimeRewindForPendingTransition()` so an already-held rewind
-  cleanly disengages instead of continuing through the freeze window. Commit
-  `fix: block rewind while a special stage transition is pending`. New RED-before/GREEN-after
-  coverage: `TestGameLoopSpecialStageRewindGate` (special-stage AND the S3K-shared
-  bonus-stage-flag companion case), plus unit-level `TestLiveRewindManagerAudioCleanup
-  #cancelForPendingTransitionStopsPresentationAudioLikeModeExit` and
-  `TestTraceSessionLauncherRewindPresentation#cancelRealtimeRewindForPendingTransitionStopsPresentationLikeRelease`.
+  transition's completion callback flips the mode, but `LiveRewindManager`'s own engagement gate
+  only rejected on `mode != GameMode.LEVEL`. A rewind held during that window could keep walking
+  backward through pre-transition history and restore a `FadeManager` snapshot whose
+  `onFadeComplete` callback — the only thing that clears the pending flag — is intentionally not
+  rewind-restorable, permanently orphaning the flag (symptom: everything frozen except the
+  music). Root-caused (with a design addendum after an authoritative user decision to BLOCK, not
+  restore-through) in `.superpowers/sdd/ssentry-rewind-report.md`. **Design supersedes an initial
+  external-gate implementation** (an earlier `GameLoop.isLevelRewindable()`/cancel-branch
+  approach was reworked per the addendum's explicit "gate inside `LiveRewindManager`, not an
+  external skip" requirement, since an external skip would bypass `LiveRewindManager`'s own
+  `clear()`/audio-teardown path). Final fix: `GameLoop.isNonRewindableTransitionPending()` (the
+  same composite freeze predicate the gameplay tick already computes, now the single source of
+  truth for both) is passed into widened `LiveRewindManager.handleRealtimeRewindInput(GameMode,
+  boolean, InputHandler)` / `recordExternalFrame(GameMode, boolean, InputHandler)`, which reject
+  exactly like the existing `mode != GameMode.LEVEL` case (reusing its `clear()` teardown). No
+  separate mid-hold cancel path is needed: the addendum proved the pending flag can only rise
+  from a frame where `handleRealtimeRewindInput` already ran and returned false that same tick,
+  so the persistent post-rise gate covers press-hold, release-then-repress, and coast-through.
+  Scoped to `LiveRewindManager` per the addendum (not `TraceSessionLauncher`, which the
+  investigation did not cover for this specific race). Commit
+  `fix: block rewind while a special stage transition is pending` plus a same-day follow-up
+  rework commit on the same branch. New RED-before/GREEN-after coverage:
+  `TestGameLoopSpecialStageRewindGate` (special-stage AND the S3K-shared bonus-stage-flag
+  companion case, reflectively driving the real `GameLoop.stepInternal()` gate — still valid
+  unchanged after the rework) plus unit-level
+  `TestLiveRewindManagerAudioCleanup#pendingNonRewindableTransitionStopsPresentationAudioLikeModeExit`.
+  **Known gap, explicitly out of scope (not fixed):** S1's giant-ring → special-stage entry
+  (`Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage`) shares the same
+  `FadeManager.restore()`-nulls-callback root cause but is NOT guarded by any of the four
+  composite-predicate flags, so it is not covered by this fix. It manifests as a silently
+  DROPPED special-stage transition (not a freeze) when rewind is engaged during that specific
+  window — lower severity, tracked as a recommended follow-up (a `FadeManager
+  .hasPendingCompletion()` accessor would close it game-agnostically for all fade-driven
+  callback-completed transitions, not just the four already-flagged ones).
 - **New tracked row (outside original 25-row S1 scope), FIXED — EHZ boss rewind child adoption
   identity + orphan reconciliation (shared boss framework):** `ObjectManager
   .adoptRewindReconstructionChild` matched pending rewind-reconstruction children to captured

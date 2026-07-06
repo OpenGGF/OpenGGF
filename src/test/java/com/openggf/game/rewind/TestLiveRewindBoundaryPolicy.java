@@ -134,7 +134,7 @@ class TestLiveRewindBoundaryPolicy {
         context.initializeFreshGameplayState();
 
         LiveRewindManager manager = new LiveRewindManager(config);
-        manager.handleRealtimeRewindInput(GameMode.LEVEL, new InputHandler());
+        manager.handleRealtimeRewindInput(GameMode.LEVEL, false, new InputHandler());
 
         LiveRewindInputSource inputSource = readPrivateField(manager, "inputSource");
         RewindController controller = readPrivateField(manager, "rewindController");

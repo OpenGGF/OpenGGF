@@ -380,13 +380,25 @@ public class TestGameLoop {
         assertTrue(source.contains("private boolean endingTransitionPending"),
                 "Ending fade must have a pending flag so LEVEL mode does not keep simulating under the white fade");
 
+        int nonRewindablePredicate = source.indexOf("private boolean isNonRewindableTransitionPending()");
+        int nonRewindablePredicateEnd = source.indexOf("private void stepInternal(", nonRewindablePredicate);
+        assertTrue(nonRewindablePredicate >= 0 && nonRewindablePredicateEnd > nonRewindablePredicate,
+                "isNonRewindableTransitionPending() shared predicate must exist");
+        String nonRewindablePredicateBody =
+                source.substring(nonRewindablePredicate, nonRewindablePredicateEnd);
+        assertTrue(nonRewindablePredicateBody.contains("|| endingTransitionPending"),
+                "the shared transition-freeze predicate (also consulted by LiveRewindManager) must "
+                        + "fold in the ending fade's pending flag");
+
         int updateLevel = source.indexOf("private boolean updateLevelMode(");
         int updateLevelEnd = source.indexOf("private void updateBonusStageMode(", updateLevel);
         assertTrue(updateLevel >= 0 && updateLevelEnd > updateLevel, "updateLevelMode method must exist");
         String levelBody = source.substring(updateLevel, updateLevelEnd);
-        assertTrue(levelBody.contains("boolean freezeForEndingTransition = endingTransitionPending;"),
-                "LEVEL mode should include ending fade in its gameplay-freeze flags");
-        assertTrue(levelBody.contains("&& !freezeForEndingTransition"),
+        assertTrue(levelBody.contains(
+                        "boolean freezeForNonRewindableTransition = isNonRewindableTransitionPending();"),
+                "LEVEL mode should include ending fade (via the shared transition-freeze predicate) "
+                        + "in its gameplay-freeze flags");
+        assertTrue(levelBody.contains("&& !freezeForNonRewindableTransition"),
                 "LEVEL mode must skip LevelFrameStep while the ending fade callback is pending");
 
         int startEnding = source.indexOf("private void startEndingFade()");
