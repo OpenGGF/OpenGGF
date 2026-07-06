@@ -326,6 +326,40 @@ class TestCheckpointStarpostGraphRewind {
                 "restored S3K star must call back into the relinked starpost on expiry");
     }
 
+    /**
+     * Bug repro (docs/plans/s1-bug-batch-ledger-2026-07-05.md row 5's tracked
+     * follow-up): before the bounded relink fix, {@code recreateForRewind} picked
+     * whichever live lamppost was geometrically NEAREST at restore time with no
+     * distance check, so a twirl whose true parent was torn down before capture (e.g.
+     * an off-screen unload or act-transition object-table rebuild) could silently
+     * reattach to a completely different, unrelated lamppost still loaded elsewhere in
+     * the act -- exactly the "wrong lamppost" scenario the follow-up note describes.
+     */
+    @Test
+    void s1LamppostTwirlDropsWhenTrueParentAbsentEvenWithADifferentLamppostStillLive() {
+        // Only the far lamppost is registered with this ObjectManager -- it survives
+        // the restore. The true (near) parent is constructed but deliberately never
+        // added to the manager, modeling it having been torn down before the twirl's
+        // own rewind capture (mirroring missingS1LamppostDropsTwirlCleanly's "gone
+        // entirely" case, but with a different, genuinely-live lamppost also present).
+        Harness harness = Harness.create(new Sonic1ObjectRegistry(), List.of(S1_FAR_LAMP));
+        ObjectManager objectManager = harness.objectManager();
+        Sonic1LamppostObjectInstance trueParent = new Sonic1LamppostObjectInstance(S1_NEAR_LAMP);
+        Sonic1LamppostTwirlInstance before = objectManager.createDynamicObject(
+                () -> new Sonic1LamppostTwirlInstance(trueParent));
+
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+        objectManager.removeDynamicObject(before);
+
+        rewindRegistry.restore(snapshot);
+
+        assertEquals(0, liveObjects(objectManager, Sonic1LamppostTwirlInstance.class).size(),
+                "S1 twirl must drop, not silently adopt the far lamppost, when its true "
+                        + "parent is absent at restore -- even though a different lamppost "
+                        + "is genuinely live and would otherwise win an unbounded nearest search");
+    }
+
     @Test
     void missingS1LamppostDropsTwirlCleanly() {
         Harness harness = Harness.create(new Sonic1ObjectRegistry(), List.of());

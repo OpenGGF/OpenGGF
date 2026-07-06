@@ -68,7 +68,20 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
         // before capture, the spike has no parent to attach to; drop it (its live
         // update self-expires with a dead parent). acceptDestroyed relinks to a
         // restored-but-destroyed boss whose captured state the spike still tracks.
-        return RewindRecreateObjectLinks.nearestObject(ctx, Sonic1SYZBossInstance.class, true)
+        //
+        // Unbounded by design (not just left over): this spike's own captured spawn
+        // (AbstractBossChild's dynamicSpawn) is built once in the constructor from the
+        // boss's position AT THAT MOMENT and never refreshed afterward -- update() pulls
+        // live position via getX()/getY() -> parent.getX()/getY() instead. The boss then
+        // legitimately patrols, drops/rises, and finally escapes off-screen (see
+        // Sonic1SYZBossInstance's APPROACH/PATROL/DROP/RISE/ESCAPE state machine), so its
+        // live position can end up an arbitrary distance from where the spike's captured
+        // spawn was frozen. A tight bound here would wrongly drop a still-correct relink
+        // to a boss that has simply moved since the spike was built. This is safe because
+        // exactly one live Sonic1SYZBossInstance ever exists per level (bosses are unique
+        // per zone/act) -- unlike a same-class sibling search where two live instances can
+        // genuinely coexist, there is no wrong-instance risk to bound against here.
+        return RewindRecreateObjectLinks.nearestObjectUnbounded(ctx, Sonic1SYZBossInstance.class, true)
                 .map(SYZBossSpike::new)
                 .orElse(null);
     }
