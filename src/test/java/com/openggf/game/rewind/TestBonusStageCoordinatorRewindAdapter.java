@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class TestBonusStageCoordinatorRewindAdapter {
 
@@ -41,6 +42,24 @@ class TestBonusStageCoordinatorRewindAdapter {
 
         // Restore rolls the accumulators back to the captured floor.
         adapter.restore(floor);
+        assertEquals(0, coordinator.getRewards().rings());
+        assertEquals(0, coordinator.getRewards().lives());
+        assertNull(coordinator.captureAccumulators().shield());
+    }
+
+    @Test
+    void resetForMissingSnapshotZeroesAccumulators() {
+        FakeCoordinator coordinator = new FakeCoordinator();
+        coordinator.onEnter(BonusStageType.GUMBALL, null);
+        BonusStageCoordinatorRewindAdapter adapter = new BonusStageCoordinatorRewindAdapter(coordinator);
+
+        coordinator.addRings(7);
+        coordinator.addLife();
+        coordinator.setAwardedShield(ShieldType.FIRE);
+        assertNotNull(coordinator.captureAccumulators().shield());
+
+        adapter.resetForMissingSnapshot();
+
         assertEquals(0, coordinator.getRewards().rings());
         assertEquals(0, coordinator.getRewards().lives());
         assertNull(coordinator.captureAccumulators().shield());

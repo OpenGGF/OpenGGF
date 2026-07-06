@@ -38,4 +38,10 @@ public final class BonusStageCoordinatorRewindAdapter
     public void restore(BonusStageAccumulatorSnapshot snapshot) {
         coordinator.restoreAccumulators(snapshot);
     }
+
+    @Override
+    public void resetForMissingSnapshot() {
+        coordinator.restoreAccumulators(
+                new AbstractBonusStageCoordinator.BonusStageAccumulatorSnapshot(0, 0, null));
+    }
 }
