@@ -3719,6 +3719,21 @@ public class ObjectManager {
                     restoreObjectRewindState(work.instance(), work.entry().state(), rewindContext);
                 }
 
+                // 6b. Every object's own field-blob restore (including any of its children's)
+                // is now settled, so owners that derive state FROM their children (e.g.
+                // AbstractBossInstance re-deriving its child-spawn ordinal counters from each
+                // live child's restored identity) can safely do so now -- doing it inline
+                // during phase 2 above would race, since restore order between a parent and
+                // its own children is not guaranteed.
+                for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry>
+                        work : activeStateWork) {
+                    work.instance().afterRewindRestoreSettled();
+                }
+                for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
+                        work : dynamicStateWork) {
+                    work.instance().afterRewindRestoreSettled();
+                }
+
                 if (s.placement() != null) {
                     twoAxisCameraYCoarse = placement.restoreRewindState(s.placement());
                     // The S2 post-camera coarse-X unload latch must rewind with the

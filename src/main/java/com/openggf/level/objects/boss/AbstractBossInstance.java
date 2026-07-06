@@ -674,6 +674,39 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         return ordinal;
     }
 
+    /**
+     * Re-derives {@link #childSpawnOrdinalCounters} from the settled, post-restore
+     * {@link #childComponents} rather than trusting whatever value reconstruction
+     * happened to leave it at.
+     *
+     * <p>{@code childSpawnOrdinalCounters} is intentionally not captured by rewind
+     * (see the {@code DEFERRED} policy entry in {@code DefaultObjectRewindPolicies})
+     * because it is fully derivable from live children -- but it is NOT safe to just
+     * leave it at whatever count reconstruction's fixed always-re-spawn-N-children
+     * sequence produced. A boss that spawns additional same-class
+     * {@link AbstractBossChild} instances mid-fight (beyond its construction-time
+     * set) can have live children whose captured {@link AbstractBossChild#getChildOrdinal()}
+     * exceeds the reconstruction-time spawn count for that class (e.g. one survivor
+     * was adopted onto a reconstruction-pending slot whose OWN construction ordinal
+     * was lower than the survivor's true captured ordinal). Leaving the counter at
+     * the raw reconstruction count would let the NEXT post-restore spawn of that
+     * class collide with that survivor's ordinal, reopening the exact-match adoption
+     * ambiguity this framework exists to prevent. Recomputing as
+     * {@code max(live ordinal for that class) + 1} after every child's own restore
+     * has settled keeps the counter consistent with reality regardless of how it got
+     * there.
+     */
+    @Override
+    protected void afterRewindRestoreSettled() {
+        childSpawnOrdinalCounters.clear();
+        for (BossChildComponent child : childComponents) {
+            if (child instanceof AbstractBossChild bossChild) {
+                childSpawnOrdinalCounters.merge(
+                        bossChild.getClass(), bossChild.getChildOrdinal() + 1, Math::max);
+            }
+        }
+    }
+
     private void updateDynamicSpawn() {
         if (dynamicSpawn.x() == state.x && dynamicSpawn.y() == state.y) {
             return;

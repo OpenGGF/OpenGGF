@@ -38,6 +38,11 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
      */
     private int childOrdinal;
 
+    /** See {@link #childOrdinal}. */
+    public int getChildOrdinal() {
+        return childOrdinal;
+    }
+
     public AbstractBossChild(AbstractBossInstance parent, String name, int priority, int objectId) {
         super(new ObjectSpawn(parent.getX(), parent.getY(), objectId, 0, 0, false, 0), name);
         this.parent = parent;
