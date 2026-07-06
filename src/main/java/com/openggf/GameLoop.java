@@ -729,7 +729,8 @@ public class GameLoop {
         boolean nonRewindableTransitionPending = isNonRewindableTransitionPending();
         if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() != null
-                && TraceSessionLauncher.active().handleRealtimeRewindInput(inputHandler)) {
+                && TraceSessionLauncher.active().handleRealtimeRewindInput(
+                        nonRewindableTransitionPending, inputHandler)) {
             inputHandler.update();
             return;
         }

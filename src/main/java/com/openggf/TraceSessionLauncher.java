@@ -240,11 +240,23 @@ public final class TraceSessionLauncher {
     /**
      * Handles the held real-time rewind key in visual Trace Test Mode.
      *
+     * @param nonRewindableTransitionPending true while the level is mid a
+     *     special/bonus-stage/ending transition or a pending zone/act
+     *     transition (see {@code GameLoop.isNonRewindableTransitionPending()}).
+     *     {@code currentGameMode} stays {@code GameMode.LEVEL} throughout that
+     *     whole window -- the fade only flips the mode once its completion
+     *     callback runs -- so a held Trace Test Mode rewind could otherwise
+     *     keep walking backward through pre-transition history the same way
+     *     {@link com.openggf.game.rewind.LiveRewindManager} could before it was
+     *     gated on this same predicate (commit {@code 26fb7debd}). Widens this
+     *     method's existing "not applicable this frame" rejection, reusing its
+     *     {@link #cleanupRealtimeRewindPresentation} teardown rather than
+     *     needing a separate mid-hold cancel path. See ssentry-rewind-report.md.
      * @return true when the frame was consumed by rewind and normal gameplay
      *         should not advance
      */
-    public boolean handleRealtimeRewindInput(InputHandler input) {
-        if (input == null || rewindPlaybackController == null
+    public boolean handleRealtimeRewindInput(boolean nonRewindableTransitionPending, InputHandler input) {
+        if (nonRewindableTransitionPending || input == null || rewindPlaybackController == null
                 || rewindController == null || comparator == null || fadeStarted) {
             cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
             return false;

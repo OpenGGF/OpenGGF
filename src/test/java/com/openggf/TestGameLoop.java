@@ -279,7 +279,7 @@ public class TestGameLoop {
     @Test
     public void traceRealtimeRewindRunsBeforePlaybackInputBridge() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
-        int rewind = source.indexOf("handleRealtimeRewindInput(inputHandler)");
+        int rewind = source.indexOf("TraceSessionLauncher.active().handleRealtimeRewindInput(");
         int bridge = source.indexOf("syncPlaybackInputBridge();");
         assertTrue(rewind >= 0, "GameLoop must handle trace realtime rewind");
         assertTrue(bridge >= 0, "GameLoop must bridge playback input");

@@ -325,3 +325,26 @@ fix can be verified.
   is sufficient on its own. See `wave3-fixes-report.md` for the exact commit SHA and the full
   before/after 7-class cross-game boss-rewind matrix (identical both times; only the pre-existing
   `TestS3kAizTraceReplay` frame-8941 `camera_y` signature present).
+- **New tracked row (outside original 25-row S1 scope), FIXED (Wave 3, Fix 2) — Trace Test Mode's
+  realtime rewind was never gated against a pending special/bonus-stage or zone/act transition:**
+  the `LiveRewindManager` fix above (commit `26fb7debd`) deliberately left `TraceSessionLauncher`
+  untouched ("its own realtime-rewind path was not covered by this investigation" — see that
+  commit message), so a held rewind key in Trace Test Mode during the same still-`GameMode.LEVEL`
+  transition window (special/bonus-stage entry, ending transition, or a pending zone/act fade)
+  could still walk backward through pre-transition history the identical way. Fixed with the exact
+  same widened-signature treatment: `TraceSessionLauncher.handleRealtimeRewindInput(InputHandler)`
+  is now `handleRealtimeRewindInput(boolean nonRewindableTransitionPending, InputHandler)`,
+  rejecting (reusing its existing `cleanupRealtimeRewindPresentation(STOP_ALL_PRESENTATION)`
+  teardown) whenever the new parameter is true, exactly mirroring `LiveRewindManager`'s own
+  widened rejection. `GameLoop`'s call site now passes its existing
+  `isNonRewindableTransitionPending()` predicate to both the trace-launcher and live-rewind
+  engagement checks. No new predicate, no per-manager duplication of the freeze logic. Also
+  updated a pre-existing literal-source-scan test
+  (`TestGameLoop#traceRealtimeRewindRunsBeforePlaybackInputBridge`) whose string match on the old
+  `handleRealtimeRewindInput(inputHandler)` call text no longer matched after the widened call
+  site's line wrap — text-only update, no behavior change to that test's assertion intent. New
+  RED-before/GREEN-after coverage:
+  `TestTraceSessionLauncherRewindPresentation#pendingNonRewindableTransitionRejectsRealtimeRewindAndTearsDownPresentation`
+  (RED was a compile failure against the old 1-arg signature, matching the same precedent the
+  original `LiveRewindManager` fix's round-1 companion tests hit). See `wave3-fixes-report.md` for
+  the commit SHA and the shared before/after matrix run with Fix 3.
