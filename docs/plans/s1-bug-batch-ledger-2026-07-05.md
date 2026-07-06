@@ -359,9 +359,7 @@ fix can be verified.
   were already registered by the parent's own construction-time spawn). `AbstractBossChild`
   overrides it to re-add itself to `parent.childComponents` if absent. This covers `EHZBossWheel`
   with ZERO changes to that file, and covers every OTHER current and future `AbstractBossChild`
-  subclass automatically (including DEZ's family, whose existing `addChildComponentOnce()` calls
-  become redundant-but-harmless no-ops rather than needing removal — left untouched to avoid
-  unrelated churn). New RED-before/GREEN-after coverage:
+  subclass automatically. New RED-before/GREEN-after coverage:
   `TestEHZBossWheelOrphanAfterSiblingDestroy#recreatedWheelBeyondTheFixedSetIsReRegisteredIntoChildComponents`,
   which reproduces the gap on a SINGLE restore (a 4th wheel beyond EHZ's fixed 3-wheel
   reconstruction-time spawn count has no matching candidate and falls straight to
@@ -370,6 +368,45 @@ fix can be verified.
   is sufficient on its own. See `wave3-fixes-report.md` for the exact commit SHA and the full
   before/after 7-class cross-game boss-rewind matrix (identical both times; only the pre-existing
   `TestS3kAizTraceReplay` frame-8941 `camera_y` signature present).
+  **Full-suite-gate follow-up, same day — a real DOUBLE-REGISTRATION regression, not the harmless
+  redundancy assumed above:** a full `mvn test` run caught `TestS2DeathEggRobotGraphRewind
+  #deathEggRobotGraphRestoresWithoutDropsDoublesOrStaleReferences` failing (`childComponents`
+  expected 10, got 11) — confirmed via a clean throwaway worktree at `ead92df3e` (pre-Wave-3
+  baseline) that this test PASSED before Fix 1, i.e. a genuine regression, not pre-existing debt.
+  Root cause: `Sonic2DeathEggRobotInstance.SensorChild` is a real dynamic object with NO
+  construction-time reconstruction-pending candidate (its normal spawn calls `spawnChild()` from a
+  routine transition, not from the boss's own constructor the way the 10 body-part children do),
+  so it always falls through to the generic `recreateForRewind()` path on restore -- but
+  `SensorChild` is DELIBERATELY never added to `childComponents` at all (ROM/engine design: it is
+  driven by a direct `boss.sensorChild.update(...)` call inside the boss's own update dispatch, not
+  by `AbstractBossInstance#updateChildren()`'s list iteration -- confirmed by grep, no other call
+  site ever adds it). The central hook's unconditional "every recreated boss child belongs in
+  childComponents" assumption was simply wrong for this one class, silently growing the list by one
+  stale sensor entry every restore. Fixed by adding `AbstractBossChild#tracksViaChildComponents()`
+  (a semantic predicate, default `true`), overridden to `false` by `SensorChild`, consulted by
+  `onRecreatedForRewind()` before adding. Also, per the review's "exactly ONE registration mechanism
+  owns each child" requirement, removed the now-redundant per-subclass `addChildComponentOnce()`
+  local calls (confirmed compatible with the central hook — each belongs in `childComponents` at
+  construction) from DEZ's `ArticulatedChild`/`ForearmChild`/`HeadChild`/`JetChild`/`BombChild` and
+  MTZ's `MTZBossOrb`/`MTZLaserShooter`, deleting both now-unused private `addChildComponentOnce()`
+  helpers. Audited every `AbstractBossChild` subclass in the codebase (~60 across S1/S2/S3K) for
+  the same "field-only, deliberately excluded from childComponents" pattern; `SensorChild` is the
+  only one — every other class either already adds itself to `childComponents` at construction
+  (grepped per owning boss file) or (LBZ's family) implements a bespoke `LbzEndBossGraphChild`
+  restore path never reached by the generic hook at all. New RED-before/GREEN-after coverage:
+  the existing `TestS2DeathEggRobotGraphRewind` test IS the RED/GREEN evidence (RED confirmed both
+  live against the pre-fix tree and independently via the `ead92df3e` clean-baseline check; GREEN
+  after adding the predicate). Full required re-verification:
+  `TestS2DeathEggRobotGraphRewind` + `TestEHZBossWheelOrphanAfterSiblingDestroy` (incl. the
+  double-restore-adjacent test) + `TestS2MTZBossGraphRewind` all GREEN; 7-class matrix re-run
+  identical (only the same pre-existing `TestS3kAizTraceReplay` signature); full `mvn
+  -Dsurefire.forkCount=1 test` (11106 tests) failed EXACTLY the 10 pre-existing classes named by
+  review (`TestCanonicalAnimationMapping`, `TestRemainingRewindTailInventory`,
+  `TestRewindArchitectureGuard`, `TestRewindRecreateLinkToleranceGuard`, `TestRewindTorture`,
+  `TestObjectPhysicsStandardizationGuard`, `TestSidekickCpuFollowParity`,
+  `TestArchitecturalSourceGuard`, `TestSingletonLifecycleGuard`,
+  `TestPerGameRuleArchitectureGuard`) — no extras, no `TestS2DeathEggRobotGraphRewind`. See
+  `wave3-fixes-report.md` for the commit SHA.
 - **New tracked row (outside original 25-row S1 scope), FIXED (Wave 3, Fix 2) — Trace Test Mode's
   realtime rewind was never gated against a pending special/bonus-stage or zone/act transition:**
   the `LiveRewindManager` fix above (commit `26fb7debd`) deliberately left `TraceSessionLauncher`
