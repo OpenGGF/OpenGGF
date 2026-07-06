@@ -51,7 +51,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
 
     @Override
     protected boolean isValidSfxId(int id) {
-        return (id >= Sonic1Sfx.ID_BASE && id <= Sonic1Sfx.ID_MAX)
+        return (id >= Sonic1Sfx.ID_BASE && id <= Sonic1Sfx.NORMAL_ID_MAX)
                 || (id >= Sonic1SmpsConstants.SPECIAL_SFX_ID_BASE
                     && id < Sonic1SmpsConstants.SPECIAL_SFX_ID_BASE + Sonic1SmpsConstants.SPECIAL_SFX_COUNT);
     }
@@ -97,7 +97,15 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
 
     @Override
     public AbstractSmpsData loadSfx(int sfxId) {
-        if (sfxId < Sonic1Sfx.ID_BASE || sfxId > Sonic1Sfx.ID_MAX) {
+        // Normal-table upper bound is Sonic1Sfx.NORMAL_ID_MAX (0xCF), NOT
+        // ID_MAX (0xD0): ROM's PlaySoundID dispatches the normal and special
+        // SFX pointer tables as disjoint ranges (see NORMAL_ID_MAX's javadoc).
+        // Using ID_MAX here previously let 0xD0 fall through to the normal
+        // table -- it only "worked" because this ROM's SFX_PTR_TABLE_ADDR +
+        // SFX_COUNT*4 happens to equal SPECIAL_SFX_PTR_TABLE_ADDR by
+        // coincidence, reading the same pointer via a less-precise fallback
+        // blob-size calculation than the special path uses.
+        if (sfxId < Sonic1Sfx.ID_BASE || sfxId > Sonic1Sfx.NORMAL_ID_MAX) {
             // Check special SFX range
             if (sfxId >= Sonic1SmpsConstants.SPECIAL_SFX_ID_BASE
                     && sfxId < Sonic1SmpsConstants.SPECIAL_SFX_ID_BASE + Sonic1SmpsConstants.SPECIAL_SFX_COUNT) {
