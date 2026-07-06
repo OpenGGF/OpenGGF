@@ -2246,7 +2246,8 @@ public class TestGameLoop {
                 0,
                 1,
                 0.0f,
-                0));
+                0,
+                false));
         when(spriteManager.rewindSnapshottable()).thenReturn(
                 new com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot>() {
             @Override

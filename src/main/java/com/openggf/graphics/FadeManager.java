@@ -726,7 +726,8 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         return new FadeManagerSnapshot(
                 state, frameCount, fadeR, fadeG, fadeB, fadeAlpha,
                 fadeType, holdDuration, holdFrameCount,
-                effectiveFPC, effectiveIncrement, effectiveDuration);
+                effectiveFPC, effectiveIncrement, effectiveDuration,
+                onFadeComplete != null);
     }
 
     @Override
