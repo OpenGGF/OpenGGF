@@ -3,6 +3,7 @@ package com.openggf.game.session;
 import com.openggf.camera.Camera;
 import com.openggf.audio.AudioManager;
 import com.openggf.debug.PerformanceProfiler;
+import com.openggf.game.AbstractBonusStageCoordinator;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameMode;
@@ -23,6 +24,7 @@ import com.openggf.game.rewind.PlaybackController;
 import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.rewind.RewindBoundaryReporter;
 import com.openggf.game.rewind.RewindController;
+import com.openggf.game.rewind.BonusStageCoordinatorRewindAdapter;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.LevelEventProvider;
@@ -531,6 +533,30 @@ public final class GameplayModeContext implements ModeContext {
         if (mgr instanceof com.openggf.game.rewind.RewindSnapshottable<?> snap) {
             rewindRegistry.deregister(snap.key());
             rewindRegistry.register(snap);
+        }
+    }
+
+    /**
+     * Registers a rewind adapter capturing the active bonus-stage coordinator's
+     * reward accumulators, but only for a rewind-supported stage
+     * (Gumball/Pachinko). No-op for the Slot Machine or when rewind is
+     * unavailable. Idempotent -- deregisters any prior adapter first.
+     */
+    public void registerBonusStageAdapter(BonusStageProvider provider) {
+        if (rewindRegistry == null) {
+            return;
+        }
+        rewindRegistry.deregister(BonusStageCoordinatorRewindAdapter.KEY);
+        if (provider instanceof AbstractBonusStageCoordinator coordinator
+                && provider.supportsRewind()) {
+            rewindRegistry.register(new BonusStageCoordinatorRewindAdapter(coordinator));
+        }
+    }
+
+    /** Removes the bonus-stage coordinator rewind adapter on stage exit. */
+    public void deregisterBonusStageAdapter() {
+        if (rewindRegistry != null) {
+            rewindRegistry.deregister(BonusStageCoordinatorRewindAdapter.KEY);
         }
     }
 

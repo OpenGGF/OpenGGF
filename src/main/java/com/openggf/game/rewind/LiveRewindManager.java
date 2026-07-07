@@ -57,7 +57,7 @@ public final class LiveRewindManager {
      *     must still be rejected. See ssentry-rewind-report.md.
      */
     public boolean handleRealtimeRewindInput(GameMode mode, boolean rewindBlocked, InputHandler input) {
-        if (mode != GameMode.LEVEL || rewindBlocked || input == null || !enabled()) {
+        if (!isRewindableMode(mode) || rewindBlocked || input == null || !enabled()) {
             activeInputHandler = null;
             clear();
             return false;
@@ -160,7 +160,7 @@ public final class LiveRewindManager {
      *     during those windows, via {@code GameLoop.isRewindBlocked()}.
      */
     public void recordExternalFrame(GameMode mode, boolean nonRewindableTransitionPending, InputHandler input) {
-        if (mode != GameMode.LEVEL || nonRewindableTransitionPending || input == null || !enabled()) {
+        if (!isRewindableMode(mode) || nonRewindableTransitionPending || input == null || !enabled()) {
             activeInputHandler = null;
             clear();
             return;
@@ -192,17 +192,30 @@ public final class LiveRewindManager {
     }
 
     public void resetBufferAtCurrentFrame(GameMode mode) {
-        if (mode != GameMode.LEVEL) {
+        if (!isRewindableMode(mode)) {
             return;
         }
         markBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
     }
 
     public void renderHud(GameMode mode, PixelFontTextRenderer text) {
-        if (mode != GameMode.LEVEL || text == null || !enabled()) {
+        if (!isRewindableMode(mode) || text == null || !enabled()) {
             return;
         }
         hudOverlay.render(text);
+    }
+
+    /**
+     * Modes in which held live rewind may run. LEVEL is normal gameplay;
+     * BONUS_STAGE covers the rewind-supported bonus stages (Gumball/Pachinko),
+     * which run the same LevelFrameStep pipeline the re-simulation stepper
+     * replays. The GameLoop only drives the record/engage hooks for a
+     * BONUS_STAGE whose provider reports supportsRewind(), so this predicate can
+     * accept BONUS_STAGE unconditionally without enabling rewind for the Slot
+     * Machine (whose hooks are never called).
+     */
+    private static boolean isRewindableMode(GameMode mode) {
+        return mode == GameMode.LEVEL || mode == GameMode.BONUS_STAGE;
     }
 
     /** Current VHS rewind presentation intensity, 0..1. */

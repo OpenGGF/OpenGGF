@@ -9,6 +9,19 @@ package com.openggf.game;
  */
 public interface BonusStageProvider {
     boolean hasBonusStages();
+
+    /**
+     * Whether held-key live rewind is supported while this bonus stage is
+     * active. True only for stages whose per-frame simulation is fully
+     * captured by the standard rewind adapters and faithfully reproduced by
+     * the LevelFrameStep re-simulation stepper (Gumball / Pachinko). Stages
+     * with a dedicated, not-yet-snapshotted runtime (Slot Machine) return
+     * false so rewind stays disengaged for them.
+     */
+    default boolean supportsRewind() {
+        return false;
+    }
+
     BonusStageType selectBonusStage(int ringCount);
     void onEnter(BonusStageType type, BonusStageState savedState);
     void onExit();

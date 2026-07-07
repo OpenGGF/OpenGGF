@@ -933,3 +933,49 @@ The defeat-fragment velocity fix is covered by
 `TestMhzBossObjects#mhzEndBossFadeWaitUnderflowSpawnsRomDefeatFragments`. The remaining items in
 this section are documentation-only; no test coverage is expected or claimed for the unfixed
 divergences themselves.
+
+## S3K Bonus Stage Rewind: Gumball/Pachinko Live, Slot Machine Deferred
+
+**Location:** `S3kSlotBonusStageRuntime`, `S3kSlotStageState`, `GameLoop.isBonusStageRewindable()`
+**ROM Reference:** n/a (engine-only feature)
+
+Live rewind was extended to the Gumball and Pachinko bonus stages via
+`BonusStageProvider.supportsRewind()`, but the Slot Machine bonus stage intentionally continues to
+report `supportsRewind()==false` and is excluded from rewind entirely (held rewind input is ignored
+while it is active; no keyframes are recorded for it).
+
+Slot Machine rewind is deferred rather than fixed here because `S3kSlotBonusStageRuntime` holds
+live cross-references and bespoke mutable state that the standard object/level rewind adapters do
+not capture:
+
+- `S3kSlotStageState` — roughly 35 scalar fields, six `int[3]` arrays, and two `Deque<int[]>`
+  reward queues.
+- Runtime bookkeeping outside that state object: `continueAwarded`, `exitFadeStarted`,
+  `exitTriggered`, `lastFrameCounter`, and the coordinator's own `slotFrameCounter`.
+- A swapped-in player sprite (`slotPlayer`) driven by a custom `slotPlayerRuntime` (fixed-point
+  `slotOriginX/Y`, exit-sequence phase), with CPU sidekicks suppressed for the duration.
+- Parallel `List`s (`slotRingRewards` / `slotSpikeRewards`) of `ObjectManager`-tracked dynamic
+  reward objects that would need to be reconciled back to their rewind-recreated instances
+  (extending the `S3kSlotRewindSupport` re-resolution pattern already used elsewhere).
+- Mutable render buffers (`S3kSlotRenderBuffers`); `pointGrid`/`visibleCells` are derived and
+  could be rebuilt, but the animation state feeding them is not currently captured.
+
+Because the Slot Machine's `updateDuringLevelFrame()` is `true`, the held-rewind re-simulation
+stepper *would* drive `slotRuntime.update(...)` if rewind were enabled for it, so a faithful
+snapshot/restore of all of the above is mandatory for deterministic re-simulation — this is
+materially more work than the Gumball/Pachinko adapter (a single `BonusStageAccumulatorSnapshot`
+covering rings/lives/shield) and was scoped out as its own follow-up.
+
+**Decision:** Slot Machine rewind will be tackled together with Sonic 1's Special Stage in a
+dedicated follow-up, because both need the same shape of fix — snapshotting a self-contained
+minigame runtime with its own mutable state that bypasses the standard object/level snapshot model
+(S1's special stage is a monolithic manager with a mutated layout array, custom player
+physics/camera, and its own scroll accumulators; Slots has its runtime plus `S3kSlotStageState`). A
+shared "self-contained runtime snapshot" approach should be designed once and applied to both,
+after an investigation spike.
+
+### Impact
+
+None on the shipped Gumball/Pachinko rewind support. The Slot Machine bonus stage keeps its
+pre-existing (non-rewindable) behavior; holding rewind while it is active is a no-op, matching its
+behavior before this change.

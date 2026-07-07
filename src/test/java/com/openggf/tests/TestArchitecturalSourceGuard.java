@@ -29,12 +29,18 @@ class TestArchitecturalSourceGuard {
     // (8766a6889..0f7794de8) grew reserved-slot spawn and placement handling,
     // then 2821 -> 2823 for the rewind capture of the S2 post-camera unload
     // latch (PlacementSnapshot restore path).
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2823;
+    // 2026-07-07: 2823 -> 2869 re-ratchet during the develop->next merge. This
+    // overage pre-existed on next (the time-attack line grew ObjectManager without
+    // re-ratcheting); the file is unchanged by the merge itself.
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2869;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule
             // refactor (d9b727925) settled the sprite at 3115 effective lines.
-            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3115,
+            // 2026-07-07: 3115 -> 3156 re-ratchet during the develop->next merge. This
+            // overage pre-existed on next (time-attack sprite hooks grew the file without
+            // re-ratcheting); the file is unchanged by the merge itself.
+            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3156,
             "com/openggf/level/LevelManager.java", 2500,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
@@ -45,7 +51,12 @@ class TestArchitecturalSourceGuard {
             // (setTimeAttackLaunchHandler/installTimeAttackLaunchHandler/
             // getTimeAttackRuntime()) and the deactivate() call in
             // returnToMasterTitle().
-            GAME_LOOP_PATH, 2962
+            // 2026-07-07: 2962 -> 3058 when merging develop into next, which folds the
+            // Gumball/Pachinko bonus-stage live-rewind integration (isBonusStageRewindable
+            // + the updateBonusStageMode capture hook + coordinator-adapter
+            // register/deregister on bonus entry/exit, incl. the failed-load error-path
+            // deregister) on top of the time-attack growth above.
+            GAME_LOOP_PATH, 3058
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
@@ -70,12 +81,16 @@ class TestArchitecturalSourceGuard {
             // (gameLoop.renderTimeAttackHud) added by the solo-ghost-racing
             // phase-1 HUD-overlay task; not re-ratcheted at the time.
             new MethodBudget(ENGINE_PATH, "display", 228),
-            new MethodBudget(GAME_LOOP_PATH, "stepInternal", 213),
+            // 2026-07-07: stepInternal 213 -> 235 in the develop->next merge (develop's
+            // bonus-stage rewind capture/engage hooks stack onto next's time-attack hooks).
+            new MethodBudget(GAME_LOOP_PATH, "stepInternal", 235),
             new MethodBudget(GAME_LOOP_PATH, "doExitBonusStage", 142),
             new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 105),
             new MethodBudget(GAME_LOOP_PATH, "loadEndingDemoZone", 95),
             new MethodBudget(GAME_LOOP_PATH, "enterTitleCardFromResults", 91),
-            new MethodBudget(GAME_LOOP_PATH, "enterBonusStage", 86)
+            // 2026-07-07: enterBonusStage 86 -> 93 in the develop->next merge (bonus-stage
+            // coordinator rewind-adapter register on bonus entry).
+            new MethodBudget(GAME_LOOP_PATH, "enterBonusStage", 93)
     );
     private static final List<String> LOW_LEVEL_SERVICE_SCAN_ROOTS = List.of(
             "com/openggf/graphics",
