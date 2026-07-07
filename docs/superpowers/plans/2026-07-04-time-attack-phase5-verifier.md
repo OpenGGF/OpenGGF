@@ -8,6 +8,20 @@
 
 **Tech Stack:** Java 21, Netty HTTP routes on the existing master pipeline, `java.net.http.HttpClient` (client + verifier), JDK Ed25519, SQLite `IdentityStore` (verdicts table exists since phase 3), JUnit 5.
 
+**Empirical basis (measured — read before sizing the verifier/pool):** the
+verifier's replay-cost, memory, and warm-pool assumptions are validated by two
+reproducible benchmarks committed under `src/test/java/com/openggf/tests/trace/`:
+`s1/TestVerifierCostBenchmark` (pure input-replay cost + per-level footprint) and
+`TestVerifierPoolBenchmark` (decode-all-levels-once, service N random jobs warm).
+Measured on S1+S2 (S3K pending green traces): a full run replays in ~0.1–2 s
+single-core; all 36 S1+S2 levels held resident = ~64 MB (~1.8 MB/level); warm
+per-job cost is dominated by replay, not the ~125–140 ms/level decode. Model
+`AttemptReplayHarness` on this warm-level path and reuse `HeadlessTestFixture`'s
+`withSharedLevel` reuse (no per-job `loadZoneAndAct`). **Do not** reset a warm
+worker via lightweight session-reuse without confirming the palette drain fix is
+present (`LevelFrameStep.beginFrame()`, CHANGELOG) — without it, palette-cycling
+zones degrade ~11× across reused sessions. See security spec §6.6.
+
 ## Global Constraints
 
 - Branch: `feature/multiplayer-time-attack` (based on `next`). Doc-trailer commit policy applies to every commit.
