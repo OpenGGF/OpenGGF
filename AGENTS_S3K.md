@@ -226,3 +226,7 @@ ChildObject child = spawnChild(() -> new ChildObject(spawn, params));
 ```
 
 Legacy pattern (still works): `services().objectManager().addDynamicObject(childInstance)`. If called during the update loop, additions are queued and flushed after the frame.
+
+## Bonus Stage Rewind
+
+Live rewind works within the Gumball and Pachinko bonus stages (`BonusStageProvider.supportsRewind()`). The Slot Machine bonus stage is intentionally excluded (`supportsRewind()==false`) and deferred — its `S3kSlotBonusStageRuntime` holds live cross-references (a swapped-in player sprite + custom runtime, `ObjectManager` reward objects tracked in parallel `List`s, and a ~35-field `S3kSlotStageState`) that need a dedicated snapshot design, planned together with Sonic 1's Special Stage rewind (same "self-contained runtime snapshot" shape). See `docs/S3K_KNOWN_DISCREPANCIES.md` ("S3K Bonus Stage Rewind: Gumball/Pachinko Live, Slot Machine Deferred") for the full breakdown.

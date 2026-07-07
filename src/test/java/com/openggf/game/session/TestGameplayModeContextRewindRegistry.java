@@ -278,6 +278,29 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
+    void registersBonusCoordinatorAdapterOnlyForRewindSupportedStage() {
+        GameplayModeContext ctx = buildAttachedContext();
+
+        var slots = new com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator();
+        slots.onEnter(com.openggf.game.BonusStageType.SLOT_MACHINE, null);
+        ctx.registerBonusStageAdapter(slots);
+        assertFalse(ctx.getRewindRegistry().capture().entries().containsKey(
+                com.openggf.game.rewind.BonusStageCoordinatorRewindAdapter.KEY),
+                "Slots is not rewind-supported; no adapter should register");
+
+        var gumball = new com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator();
+        gumball.onEnter(com.openggf.game.BonusStageType.GUMBALL, null);
+        ctx.registerBonusStageAdapter(gumball);
+        assertTrue(ctx.getRewindRegistry().capture().entries().containsKey(
+                com.openggf.game.rewind.BonusStageCoordinatorRewindAdapter.KEY),
+                "Gumball is rewind-supported; adapter must register");
+
+        ctx.deregisterBonusStageAdapter();
+        assertFalse(ctx.getRewindRegistry().capture().entries().containsKey(
+                com.openggf.game.rewind.BonusStageCoordinatorRewindAdapter.KEY));
+    }
+
+    @Test
     void nullPatternAnimatorAdapterRemovesPreviouslyRegisteredOptionalAnimator() {
         GameplayModeContext ctx = buildAttachedContext();
         ctx.registerPatternAnimatorAdapter(new SnapPatternAnimator());

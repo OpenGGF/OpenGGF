@@ -749,6 +749,17 @@ public class GameLoop {
                 || (fadeManager != null && fadeManager.hasPendingCompletion());
     }
 
+    /**
+     * True while the current bonus stage supports held rewind (Gumball /
+     * Pachinko). The Slot Machine's provider reports supportsRewind()==false,
+     * so its rewind hooks are never driven and it keeps its no-rewind behavior.
+     */
+    private boolean isBonusStageRewindable() {
+        return currentGameMode == GameMode.BONUS_STAGE
+                && activeBonusStageProvider != null
+                && activeBonusStageProvider.supportsRewind();
+    }
+
     private void stepInternal() {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
@@ -771,7 +782,7 @@ public class GameLoop {
             inputHandler.update();
             return;
         }
-        if (currentGameMode == GameMode.LEVEL
+        if ((currentGameMode == GameMode.LEVEL || isBonusStageRewindable())
                 && TraceSessionLauncher.active() == null
                 && liveRewindManager.handleRealtimeRewindInput(
                         currentGameMode, rewindBlocked, inputHandler)) {
@@ -1426,6 +1437,16 @@ public class GameLoop {
                 activeBonusStageProvider.onFrameUpdate();
             }
 
+            // Record a rewind keyframe/step for rewind-supported bonus stages
+            // (Gumball/Pachinko). Placed before the completion check so the
+            // exit frame — which sets bonusStageTransitionPending — is not
+            // recorded. The LEVEL path is unchanged; the Slot Machine is
+            // excluded via supportsRewind().
+            if (isBonusStageRewindable() && TraceSessionLauncher.active() == null) {
+                liveRewindManager.recordExternalFrame(
+                        currentGameMode, bonusStageTransitionPending, inputHandler);
+            }
+
             // Check bonus stage completion
             if (activeBonusStageProvider != null && activeBonusStageProvider.isStageComplete()) {
                 exitBonusStage();
@@ -2019,6 +2040,10 @@ public class GameLoop {
 
         provider.onEnter(type, savedState);
 
+        if (gameplayMode != null) {
+            gameplayMode.registerBonusStageAdapter(provider);
+        }
+
         // Load the bonus zone through the normal level loading path
         int zoneId = provider.getZoneId(type);
         int zone = (zoneId >> 8) & 0xFF;
@@ -2036,6 +2061,7 @@ public class GameLoop {
             activeBonusStageProvider = null;
             if (gameplayMode != null) {
                 gameplayMode.setActiveBonusStageProvider(null);
+                gameplayMode.deregisterBonusStageAdapter();
             }
             changeGameModeForBoundary(GameMode.LEVEL);
             return;
@@ -2190,6 +2216,7 @@ public class GameLoop {
         var gameplayMode = SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null) {
             gameplayMode.setActiveBonusStageProvider(null);
+            gameplayMode.deregisterBonusStageAdapter();
         }
 
         if (savedState == null) {
