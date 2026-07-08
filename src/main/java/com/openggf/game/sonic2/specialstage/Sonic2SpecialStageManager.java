@@ -2076,6 +2076,21 @@ public class Sonic2SpecialStageManager {
         return resultState;
     }
 
+    Sonic2SpecialStageSnapshot captureRewindSnapshot() {
+        return new Sonic2SpecialStageSnapshot(
+                initialized,
+                currentStage,
+                resultState,
+                emeraldCollected);
+    }
+
+    void restoreRewindSnapshot(Sonic2SpecialStageSnapshot snapshot) {
+        initialized = snapshot.initialized;
+        currentStage = snapshot.currentStage;
+        resultState = snapshot.resultState;
+        emeraldCollected = snapshot.emeraldCollected;
+    }
+
     /**
      * Checks if the special stage has finished (completed or failed).
      */
