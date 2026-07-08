@@ -240,6 +240,7 @@ class TestGameLoopSpecialStageRewindGate {
 
     private static void installTestController(LiveRewindManager manager, RewindController controller) throws Exception {
         setField(manager, "installedGameplayMode", SessionManager.getCurrentGameplayMode());
+        setInstalledStepperKind(manager, "LEVEL_FRAME");
         setField(manager, "inputSource", new com.openggf.game.rewind.LiveRewindInputSource());
         setField(manager, "rewindController", controller);
         // RewindSpeedController is package-private (com.openggf.game.rewind); reach its
@@ -248,6 +249,13 @@ class TestGameLoopSpecialStageRewindGate {
         Method fromConfig = speedControllerClass.getDeclaredMethod("fromConfig", SonicConfigurationService.class);
         fromConfig.setAccessible(true);
         setField(manager, "speedController", fromConfig.invoke(null, SonicConfigurationService.getInstance()));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void setInstalledStepperKind(LiveRewindManager manager, String kindName) throws Exception {
+        Class<?> kindClass = Class.forName("com.openggf.game.rewind.LiveRewindManager$StepperKind");
+        Object kind = Enum.valueOf((Class<? extends Enum>) kindClass.asSubclass(Enum.class), kindName);
+        setField(manager, "installedStepperKind", kind);
     }
 
     private static Object getField(Object target, String fieldName) throws Exception {

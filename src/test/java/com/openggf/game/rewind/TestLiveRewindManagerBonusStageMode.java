@@ -39,7 +39,7 @@ class TestLiveRewindManagerBonusStageMode {
     @Test
     void nonGameplayModesAreNotRewindable() throws Exception {
         assertFalse(isRewindableMode(GameMode.TITLE_SCREEN));
-        assertFalse(isRewindableMode(GameMode.SPECIAL_STAGE));
         assertFalse(isRewindableMode(GameMode.SPECIAL_STAGE_RESULTS));
+        assertTrue(isRewindableMode(GameMode.SPECIAL_STAGE));
     }
 }
