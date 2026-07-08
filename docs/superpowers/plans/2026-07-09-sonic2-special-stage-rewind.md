@@ -2497,7 +2497,21 @@ Configuration-Docs: n/a
 Skills: n/a"
 ```
 
-Then commit provider/test enablement with the same trailer block.
+Then commit provider/test enablement with:
+
+```powershell
+git add src/main/java/com/openggf/game/sonic2/Sonic2SpecialStageProvider.java `
+        src/test/java/com/openggf/game/TestSpecialStageRewindCapability.java `
+        src/test/java/com/openggf/game/session/TestGameplayModeContextSpecialStageRewindAdapter.java `
+        CHANGELOG.md
+git commit -m "feat: enable Sonic 2 special stage rewind" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: n/a
+S3K-Known-Discrepancies: n/a
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
+```
 
 ## Task 7: Regression Verification And Guardrails
 
@@ -2627,7 +2641,7 @@ Expected: positions, track frame, objects, rings, checkpoint UI, palette colors,
 If manual acceptance passes and no files changed, do not commit. If documentation must be updated, edit the relevant doc and commit:
 
 ```powershell
-git add CHANGELOG.md KNOWN_DISCREPANCIES.md S3K_KNOWN_DISCREPANCIES.md
+git add CHANGELOG.md docs/KNOWN_DISCREPANCIES.md docs/S3K_KNOWN_DISCREPANCIES.md
 git commit -m "docs: record Sonic 2 special stage rewind acceptance" -m "Changelog: updated
 Guide: n/a
 Known-Discrepancies: updated
