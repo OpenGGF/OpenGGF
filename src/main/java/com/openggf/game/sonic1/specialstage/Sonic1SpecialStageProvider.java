@@ -44,6 +44,11 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
+    public boolean supportsRewind() {
+        return true;
+    }
+
+    @Override
     public SpecialStageAccessType getAccessType() {
         return SpecialStageAccessType.GIANT_RING;
     }

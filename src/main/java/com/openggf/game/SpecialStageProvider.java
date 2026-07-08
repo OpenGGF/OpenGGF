@@ -3,8 +3,10 @@ package com.openggf.game;
 import static org.lwjgl.opengl.GL11.glClearColor;
 
 import com.openggf.audio.GameMusic;
+import com.openggf.game.rewind.RewindSnapshottable;
 
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * Interface for special stage implementations that award Chaos Emeralds.
@@ -19,6 +21,8 @@ import java.io.IOException;
  * </ul>
  */
 public interface SpecialStageProvider extends MiniGameProvider {
+    String SPECIAL_STAGE_REWIND_KEY = "special-stage-runtime";
+
     /**
      * Selects the special-stage index for a new entry and advances any
      * game-owned cursor state. The default matches the S1/S2 sequential
@@ -71,6 +75,14 @@ public interface SpecialStageProvider extends MiniGameProvider {
      */
     default GameMusic getResultsMusic() {
         return null;
+    }
+
+    default boolean supportsRewind() {
+        return false;
+    }
+
+    default Optional<RewindSnapshottable<?>> rewindAdapter() {
+        return Optional.empty();
     }
 
     /**
