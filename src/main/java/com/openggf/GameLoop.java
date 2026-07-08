@@ -8,9 +8,7 @@ import com.openggf.debug.DebugColor;
 import com.openggf.editor.EditorInputHandler;
 import com.openggf.game.*;
 
-import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
-import com.openggf.control.PlayerInputState;
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -3838,54 +3836,10 @@ public class GameLoop {
             return;
         }
 
-        int heldButtons = 0;
-        int pressedButtons = 0;
-        int p2HeldButtons = 0;
-        int p2LogicalButtons = 0;
-
-        PlayerInputState p1 = inputHandler.logical().player1();
-        PlayerInputState p2 = inputHandler.logical().player2();
-
-        heldButtons |= directionBits(p1.heldMask());
-        pressedButtons |= directionBits(p1.pressedMask());
-        heldButtons |= InputActionMasks.toMegaDriveButtonBits(p1.actionHeldMask());
-        pressedButtons |= InputActionMasks.toMegaDriveButtonBits(p1.actionPressedMask());
-        if (p1.startHeld()) {
-            heldButtons |= 0x80;
-        }
-        if (p1.startPressed()) {
-            pressedButtons |= 0x80;
-        }
-
-        p2HeldButtons |= directionBits(p2.heldMask());
-        p2LogicalButtons = p2HeldButtons;
-        int p2ActionHeld = InputActionMasks.toMegaDriveButtonBits(p2.actionHeldMask());
-        p2HeldButtons |= p2ActionHeld;
-        p2LogicalButtons |= p2ActionHeld;
-        if (p2.startHeld()) {
-            p2HeldButtons |= 0x80;
-            p2LogicalButtons |= 0x80;
-        }
-
-        ssProvider.handleInput(heldButtons, pressedButtons);
-        ssProvider.handlePlayer2Input(p2HeldButtons, p2LogicalButtons);
-    }
-
-    private static int directionBits(int logicalMask) {
-        int bits = 0;
-        if ((logicalMask & AbstractPlayableSprite.INPUT_UP) != 0) {
-            bits |= 0x01;
-        }
-        if ((logicalMask & AbstractPlayableSprite.INPUT_DOWN) != 0) {
-            bits |= 0x02;
-        }
-        if ((logicalMask & AbstractPlayableSprite.INPUT_LEFT) != 0) {
-            bits |= 0x04;
-        }
-        if ((logicalMask & AbstractPlayableSprite.INPUT_RIGHT) != 0) {
-            bits |= 0x08;
-        }
-        return bits;
+        SpecialStageInputMapper.MappedInput mapped =
+                SpecialStageInputMapper.map(inputHandler.logical());
+        ssProvider.handleInput(mapped.p1Held(), mapped.p1Pressed());
+        ssProvider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
     }
 
     /**
