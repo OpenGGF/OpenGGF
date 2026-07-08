@@ -218,6 +218,42 @@ a real claim. Does **not** cover TAS-style inputs played below real speed —
 inputs crafted slowly replay perfectly. That gap is closed by live pacing
 validation (§7.1), which is why pacing must exist at the hub from v1.
 
+### 6.6 Empirical cost basis (measured, S1+S2)
+
+The performance assumptions above are no longer estimates. Two reproducible,
+non-gating JUnit benchmarks under `src/test/java/com/openggf/tests/trace/`
+measure the actual headless-replay cost of the verifier's hot loop against the
+real trace corpus (the same headless engine + ROM path the verifier uses):
+
+- `s1/TestVerifierCostBenchmark` — pure input-replay cost (no per-frame trace
+  validation) and per-level memory footprint.
+- `TestVerifierPoolBenchmark` — the pooled warm-level architecture: decode every
+  level once, hold them all resident, then service N random verification jobs
+  warm (fingerprint/level routing modelled by grouping).
+
+Headline measurements (single core, Opus dev box, S1 complete-run + S2
+level-select traces; S3K deferred until its traces are green):
+
+- **Per-run CPU:** a full multi-minute run replays in ~0.1–2 s. Light zones hit
+  ~37k–76k frames/sec (~600–1300× real time); the pure input replay is ~10×
+  cheaper than a validating trace-replay because it drops the per-frame field
+  diff. So a verified-room finish can be verified inline in well under a second.
+- **Memory:** all 36 S1+S2 levels held resident simultaneously = **~64 MB**
+  (~1.8 MB/level). A worker can keep every level of its fingerprint warm; size
+  the pool for throughput, not memory.
+- **Warm reuse:** decode-once is ~125–140 ms/level; subsequent jobs on a warm
+  level skip the ROM decode entirely. For full runs the decode is a small
+  fraction of replay, so warm-holding is a startup/latency win more than a
+  throughput one — the throughput lever is parallel workers.
+
+**Prerequisite fix (shipped):** the headless frame path (`LevelFrameStep`) was
+missing the per-frame palette-write drain that `GameLoop` owns, so palette-cycling
+zones (MTZ/CPZ/CNZ/OOZ/WFZ) were quadratic per run and degraded ~11× across
+reused warm sessions. Draining in `LevelFrameStep` fixed it (~6× faster on those
+zones, flat across reuse); without it the pooled-worker model is not viable.
+See the CHANGELOG entry and these benchmarks before revisiting verifier sizing
+(phase-5 plan §Architecture).
+
 ## 7. Live hub defenses (built in v1)
 
 These run in `GhostHub`/master regardless of room type and cost almost nothing.
