@@ -1052,7 +1052,8 @@ class TestSonic2SpecialStageCheckpointSnapshot {
         AtomicInteger resolved = new AtomicInteger();
         Runnable musicCallback = resolved::incrementAndGet;
         Sonic2SpecialStageCheckpoint.CheckpointResolvedCallback checkpointCallback =
-                (result, checkpointNumber, finalCheckpoint) -> resolved.addAndGet(checkpointNumber);
+                (result, checkpointNumber, ringRequirement, ringsCollected, finalCheckpoint) ->
+                        resolved.addAndGet(checkpointNumber);
         checkpoint.setOnMusicFadeRequested(musicCallback);
         checkpoint.setOnCheckpointResolved(checkpointCallback);
         checkpoint.beginCheckpoint(2, 80, 64, false);
