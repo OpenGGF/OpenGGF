@@ -10,6 +10,8 @@ import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.rewind.snapshot.CameraSnapshot;
+import com.openggf.game.rewind.snapshot.FadeManagerSnapshot;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.KeyframeStore;
 import com.openggf.game.rewind.LiveRewindManager;
@@ -21,6 +23,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
+import com.openggf.graphics.FadeManager;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,16 +74,25 @@ class TestGameLoopSpecialStageRewindBoundary {
     }
 
     @Test
-    void supportedEntryEmitsExitEnterAndFrameZeroSnapshotContainsSpecialStageRuntime() throws Exception {
+    void supportedEntryFrameZeroCapturesSpecialStageSetupAndRuntimeAdapter() throws Exception {
         RewindableProvider provider = new RewindableProvider();
+        context.getCamera().setX((short) 320);
+        context.getCamera().setY((short) 224);
 
         doEnterSpecialStage(provider);
 
         assertEquals(List.of(
                 RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE,
                 RewindBoundary.MODE_ENTER_REWINDABLE), boundaries);
-        assertTrue(frameZeroSnapshot().containsKey(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY),
+        CompositeSnapshot snapshot = frameZeroSnapshot();
+        assertTrue(snapshot.containsKey(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY),
                 "supported special-stage entry must install the provider-owned adapter before the frame-zero rewind snapshot");
+        CameraSnapshot camera = (CameraSnapshot) snapshot.get("camera");
+        assertEquals(0, camera.x(), "special-stage frame zero must capture camera reset to screen-space origin");
+        assertEquals(0, camera.y(), "special-stage frame zero must capture camera reset to screen-space origin");
+        FadeManagerSnapshot fade = (FadeManagerSnapshot) snapshot.get("fademanager");
+        assertEquals(FadeManager.FadeState.FADING_FROM_WHITE, fade.state(),
+                "special-stage frame zero must capture the reveal fade after entry setup, not the pre-entry level fade");
     }
 
     @Test

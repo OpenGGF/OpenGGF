@@ -2006,24 +2006,24 @@ public class GameLoop {
                 context.registerSpecialStageAdapter(ssProvider);
             }
 
-            GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE);
-
             // Set camera to origin for special stage rendering (uses screen coordinates)
             camera.setX((short) 0);
             camera.setY((short) 0);
 
             playSpecialStageStageMusic(ssProvider);
 
-            // Notify listener of mode change
-            if (gameModeChangeListener != null) {
-                gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-            }
-
             // Reveal the special stage
             if (fadeFromBlack) {
                 fadeManager.startFadeFromBlack(null);
             } else {
                 fadeManager.startFadeFromWhite(null);
+            }
+
+            GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE);
+
+            // Notify listener of mode change
+            if (gameModeChangeListener != null) {
+                gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
             }
 
             LOGGER.info("Entered Special Stage " + (stageIndex + 1) + " (H32 mode: 256x224)");
