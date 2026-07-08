@@ -158,10 +158,14 @@ Add `Sonic2SpecialStagePlayerSnapshot` and package-local
 capture/restore methods on `Sonic2SpecialStagePlayer`. Capture:
 
 - Routine state: `routine`, `routineSecondary`.
-- Position, velocity, inertia, angle, slide/hurt/DPLC counters.
-- Animation fields, mapping frame, radii, priority, status/render flags, and
-  `collisionProperty`.
-- `globalAnimFrameTimer`.
+- Position and subpixel state: `ssXPos`, `ssXSub`, `ssYPos`, `ssYSub`,
+  `ssZPos`, render-facing `xPos`/`yPos`, `xVel`, `yVel`, `inertia`, and
+  `angle`.
+- Player timers and counters: `ssSlideTimer`, `ssHurtTimer`, `ssDplcTimer`,
+  `ssInitFlipTimer`, `ssFlipTimer`, and `ssLastAngleIndex`.
+- Animation state: `anim`, `prevAnim`, `animFrame`, `animFrameDuration`,
+  `mappingFrame`, `globalAnimFrameTimer`.
+- Radii, priority, status flags, render flags, and `collisionProperty`.
 - Control-record buffer clone, `ctrlRecordIndex`, `swapPositionsFlag`.
 - A player-owned invulnerability countdown for this player.
 
@@ -169,15 +173,12 @@ The current S2 player uses `TimerManager` and `SSInvulnerabilityTimer` for
 post-bomb invulnerability. That is not safe for special-stage rewind: the
 special-stage replay stepper does not tick shared timers, and
 `TimerManager.restore()` recreates generic timers without the callback to the
-player. The implementation should migrate S2 special-stage invulnerability to a
+player. The implementation must migrate S2 special-stage invulnerability to a
 player-owned countdown that is decremented from the special-stage update path and
-captured in the player snapshot. This keeps the behavior inside the same runtime
-graph as the rest of the special stage.
-
-If the implementation chooses to keep `SSInvulnerabilityTimer`, restore must
-remove stale timer entries and recreate exact callback timers for both players
-from the captured countdown. The spec recommendation is the player-owned
-countdown because it is smaller and easier to prove.
+captured in the player snapshot. `SSInvulnerabilityTimer` must no longer own S2
+special-stage invulnerability because the shared timer manager does not tick
+during special-stage rewind replay. Keeping the countdown inside the player
+runtime graph makes keyframe restore plus frame replay deterministic.
 
 ### Intro Snapshot
 
@@ -348,9 +349,9 @@ With `s2.gen` available:
 
 ## Risks
 
-1. **Timer migration risk.** Moving S2 special-stage invulnerability out of
-   `TimerManager` must preserve live gameplay behavior. Pin it with focused
-   player tests before enabling provider rewind.
+1. **Timer migration risk.** The required move of S2 special-stage
+   invulnerability out of `TimerManager` must preserve live gameplay behavior.
+   Pin it with focused player tests before enabling provider rewind.
 2. **Object list reconstruction risk.** Active object ordering and concrete type
    reconstruction are load-bearing for collision/render parity. Snapshot tests
    must assert list order and type-specific fields.
