@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class TestSonic1SpecialStageRewindSnapshot {
     private static final int[] EXPECTED_SCROLL_BAND_WIDTHS = {6, 0x30, 0x30, 0x30, 0x28, 0x18, 0x18, 0x18};
+    private static final int[] EXPECTED_SINE_BAND_WIDTHS = {9, 0x28, 0x18, 0x10, 0x28, 0x18, 0x10, 0x30, 0x18, 8, 0x10};
 
     @Test
     void snapshotRoundTripDeepCopiesSpecialStageRuntimeState() throws Exception {
@@ -19,6 +20,7 @@ class TestSonic1SpecialStageRewindSnapshot {
         seedSnapshotState(manager);
 
         Sonic1SpecialStageSnapshot snapshot = manager.captureRewindSnapshot();
+        assertSnapshotPrimitiveSeedValues(snapshot);
         Sonic1SpecialStageSnapshot secondSnapshot = manager.captureRewindSnapshot();
         assertSnapshotPayloadsAreEqualButNotSame(snapshot, secondSnapshot);
 
@@ -34,6 +36,38 @@ class TestSonic1SpecialStageRewindSnapshot {
         assertRestoredState(manager, snapshot);
         assertRestoredPayloadsAreNotSnapshotAliases(manager, snapshot);
         assertExpectedBandHScroll(manager);
+    }
+
+    @Test
+    void restoreRebuildsSineHScrollWithoutAdvancingBgAnimationState() throws Exception {
+        Sonic1SpecialStageManager manager = new Sonic1SpecialStageManager();
+        seedSnapshotState(manager);
+        int[] sineBuffer = new int[] {
+                11, 101, 22, 102, 33, 103, 44, 104, 55, 105,
+                66, 106, 77, 107, 88, 108, 99, 109, 111, 110
+        };
+        set(manager, "bgAnimState", 6);
+        set(manager, "bgYScroll", 17);
+        set(manager, "bgExtraScrollX", 31);
+        set(manager, "bgSineBuffer", sineBuffer.clone());
+        set(manager, "bgHScrollData", filledArray(224, -1234));
+
+        Sonic1SpecialStageSnapshot snapshot = manager.captureRewindSnapshot();
+
+        set(manager, "bgAnimState", 12);
+        set(manager, "bgYScroll", 99);
+        set(manager, "bgExtraScrollX", 99);
+        set(manager, "bgSineBuffer", filledArray(sineBuffer.length, 99));
+        set(manager, "bgHScrollData", filledArray(224, 99));
+
+        manager.restoreRewindSnapshot(snapshot);
+
+        assertEquals(6, get(manager, "bgAnimState"));
+        assertEquals(17, get(manager, "bgYScroll"));
+        assertEquals(31, get(manager, "bgExtraScrollX"));
+        assertArrayEquals(sineBuffer, (int[]) get(manager, "bgSineBuffer"),
+                "Restore must not advance sine scroll or phase entries");
+        assertArrayEquals(expectedSineHScroll(17, sineBuffer), (int[]) get(manager, "bgHScrollData"));
     }
 
     private static void seedSnapshotState(Sonic1SpecialStageManager manager) throws Exception {
@@ -100,6 +134,59 @@ class TestSonic1SpecialStageRewindSnapshot {
         set(manager, "bgBandBuffer", new int[] {101, 1, 202, 2, 303, 3, 404, 4, 505, 5, 606, 6, 707, 7});
         set(manager, "bgHScrollData", filledArray(224, -777));
         set(manager, "ssPalettes", palettes());
+    }
+
+    private static void assertSnapshotPrimitiveSeedValues(Sonic1SpecialStageSnapshot snapshot) {
+        assertEquals(true, snapshot.initialized);
+        assertEquals(true, snapshot.finished);
+        assertEquals(true, snapshot.emeraldCollected);
+        assertEquals(true, snapshot.debugMode);
+        assertEquals(3, snapshot.currentStage);
+        assertEquals(47, snapshot.ringsCollected);
+        assertEquals(0xA123, snapshot.ssAngle);
+        assertEquals(-0x0234, snapshot.ssRotate);
+        assertEquals(0x3456, snapshot.debugSavedAngle);
+        assertEquals(0x0789, snapshot.debugSavedRotate);
+        assertEquals(0x12345678L, snapshot.sonicPosX);
+        assertEquals(0x23456789L, snapshot.sonicPosY);
+        assertEquals(-321, snapshot.sonicVelX);
+        assertEquals(654, snapshot.sonicVelY);
+        assertEquals(-987, snapshot.sonicInertia);
+        assertEquals(true, snapshot.sonicAirborne);
+        assertEquals(true, snapshot.sonicFacingLeft);
+        assertEquals(111, snapshot.cameraX);
+        assertEquals(222, snapshot.cameraY);
+        assertEquals(2, snapshot.ghostState);
+        assertEquals(9, snapshot.upDownCooldown);
+        assertEquals(11, snapshot.reverseCooldown);
+        assertEquals(3, snapshot.ringAnimFrame);
+        assertEquals(4, snapshot.ringAnimTimer);
+        assertEquals(5, snapshot.wallVramAnimFrame);
+        assertEquals(6, snapshot.wallVramAnimTimer);
+        assertEquals(7, snapshot.sonicAnimId);
+        assertEquals(8, snapshot.sonicAnimFrameIndex);
+        assertEquals(9, snapshot.sonicAnimFrameTimer);
+        assertEquals(10, snapshot.palSsTime);
+        assertEquals(11, snapshot.palSsNum);
+        assertEquals(12, snapshot.palSsIndex);
+        assertEquals(1, snapshot.ani2Frame);
+        assertEquals(13, snapshot.ani2Timer);
+        assertEquals(3, snapshot.ani3Frame);
+        assertEquals(14, snapshot.ani3Timer);
+        assertEquals(15, snapshot.sonicSpriteFrame);
+        assertEquals(true, snapshot.exitTriggered);
+        assertEquals(16, snapshot.exitPhase);
+        assertEquals(17, snapshot.exitTimer);
+        assertEquals(true, snapshot.exitFadeStarted);
+        assertEquals(18, snapshot.exitFadeTimer);
+        assertEquals(0x5A, snapshot.heldButtons);
+        assertEquals(0xA5, snapshot.pressedButtons);
+        assertEquals(12, snapshot.bgAnimState);
+        assertEquals(false, snapshot.bgUsingPlane6);
+        assertEquals(3, snapshot.fgAnimPlaneIndex);
+        assertEquals(0x100, snapshot.fgYScroll);
+        assertEquals(5, snapshot.bgYScroll);
+        assertEquals(-19, snapshot.bgExtraScrollX);
     }
 
     private static void mutateLiveState(Sonic1SpecialStageManager manager) throws Exception {
@@ -275,12 +362,20 @@ class TestSonic1SpecialStageRewindSnapshot {
     }
 
     private static int[] expectedBandHScroll(int bgYScroll, int[] bgBandBuffer) {
+        return expectedHScroll(bgYScroll, bgBandBuffer, EXPECTED_SCROLL_BAND_WIDTHS);
+    }
+
+    private static int[] expectedSineHScroll(int bgYScroll, int[] bgSineBuffer) {
+        return expectedHScroll(bgYScroll, bgSineBuffer, EXPECTED_SINE_BAND_WIDTHS);
+    }
+
+    private static int[] expectedHScroll(int bgYScroll, int[] scrollBuffer, int[] bandWidths) {
         int[] expected = new int[224];
         int scanline = (-bgYScroll) & 0xFF;
-        int bandCount = EXPECTED_SCROLL_BAND_WIDTHS[0] + 1;
+        int bandCount = bandWidths[0] + 1;
         for (int band = 0; band < bandCount; band++) {
-            int scroll = bgBandBuffer[band * 2];
-            int height = EXPECTED_SCROLL_BAND_WIDTHS[band + 1];
+            int scroll = scrollBuffer[band * 2];
+            int height = bandWidths[band + 1];
             for (int j = 0; j < height; j++) {
                 int idx = scanline & 0xFF;
                 if (idx < 224) {
