@@ -1853,6 +1853,27 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertThrows(IllegalStateException.class, () -> manager.restoreRewindSnapshot(snapshot));
     }
 
+    @Test
+    void restoreBindsRendererToAlignmentCheckpointWhenAlignmentModeIsActive() throws Exception {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        seedMinimalInitializedGraph(manager);
+        Sonic2SpecialStageRenderer renderer = new Sonic2SpecialStageRenderer(null);
+        Sonic2SpecialStageCheckpoint normalCheckpoint = new Sonic2SpecialStageCheckpoint();
+        Sonic2SpecialStageCheckpoint alignmentCheckpoint = new Sonic2SpecialStageCheckpoint();
+        set(manager, "renderer", renderer);
+        set(manager, "checkpoint", normalCheckpoint);
+        set(manager, "alignmentCheckpoint", alignmentCheckpoint);
+        set(manager, "alignmentTestMode", true);
+        renderer.setCheckpoint(normalCheckpoint);
+
+        Sonic2SpecialStageSnapshot snapshot = manager.captureRewindSnapshot();
+        renderer.setCheckpoint(normalCheckpoint);
+
+        manager.restoreRewindSnapshot(snapshot);
+
+        assertSame(alignmentCheckpoint, get(renderer, "checkpoint"));
+    }
+
     private static void seedMinimalInitializedGraph(Sonic2SpecialStageManager manager) throws Exception {
         Sonic2TrackAnimator animator = new Sonic2TrackAnimator(null);
         animator.initializeWithMockLayout();
@@ -2309,7 +2330,9 @@ void restoreRewindSnapshot(Sonic2SpecialStageSnapshot snapshot) {
     if (renderer != null) {
         renderer.setPlayers(players);
         renderer.setIntro(intro);
-        renderer.setCheckpoint(checkpoint);
+        renderer.setCheckpoint(alignmentTestMode && alignmentCheckpoint != null
+                ? alignmentCheckpoint
+                : checkpoint);
     }
 }
 ```
@@ -2638,7 +2661,48 @@ Expected: positions, track frame, objects, rings, checkpoint UI, palette colors,
 
 - [ ] **Step 5: Record acceptance result**
 
-If manual acceptance passes and no files changed, do not commit. If documentation must be updated, edit the relevant doc and commit:
+If manual acceptance passes and no files changed, do not commit.
+
+If only `CHANGELOG.md` changes, commit:
+
+```powershell
+git add CHANGELOG.md
+git commit -m "docs: record Sonic 2 special stage rewind acceptance" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: n/a
+S3K-Known-Discrepancies: n/a
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
+```
+
+If `docs/KNOWN_DISCREPANCIES.md` also changes, commit:
+
+```powershell
+git add CHANGELOG.md docs/KNOWN_DISCREPANCIES.md
+git commit -m "docs: record Sonic 2 special stage rewind acceptance" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: updated
+S3K-Known-Discrepancies: n/a
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
+```
+
+If `docs/S3K_KNOWN_DISCREPANCIES.md` also changes, commit:
+
+```powershell
+git add CHANGELOG.md docs/S3K_KNOWN_DISCREPANCIES.md
+git commit -m "docs: record Sonic 2 special stage rewind acceptance" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: n/a
+S3K-Known-Discrepancies: updated
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
+```
+
+If both discrepancy docs change, commit:
 
 ```powershell
 git add CHANGELOG.md docs/KNOWN_DISCREPANCIES.md docs/S3K_KNOWN_DISCREPANCIES.md
@@ -2650,8 +2714,6 @@ Agent-Docs: n/a
 Configuration-Docs: n/a
 Skills: n/a"
 ```
-
-Use trailers matching the files staged.
 
 ## Final Verification
 
