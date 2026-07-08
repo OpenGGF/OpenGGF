@@ -27,6 +27,8 @@ Create:
   - Holds manager, track animator, player topology/player state, intro, objects, checkpoint, alignment checkpoint, and mutable palette state.
 - `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageRewindAdapter.java`
   - Public adapter implementing `RewindSnapshottable<Sonic2SpecialStageSnapshot>` so `Sonic2SpecialStageProvider` in the sibling `com.openggf.game.sonic2` package can instantiate it.
+- `src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStageRewindAdapter.java`
+  - Direct adapter key/default-missing-snapshot/capture-restore shell tests. Sonic 2 provider capability stays disabled until Task 6.
 - `src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStagePlayerSnapshot.java`
   - Player state, topology, and mandatory player-owned invulnerability countdown tests.
 - `src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStageObjectSnapshot.java`
@@ -39,8 +41,8 @@ Create:
 Modify:
 
 - `src/main/java/com/openggf/game/sonic2/Sonic2SpecialStageProvider.java`
-  - Return `supportsRewind() == true`.
-  - Return `Optional.of(new Sonic2SpecialStageRewindAdapter(manager))`.
+  - In Task 6 only, after full snapshot tests pass, return `supportsRewind() == true`.
+  - In Task 6 only, return `Optional.of(new Sonic2SpecialStageRewindAdapter(manager))`.
 - `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageManager.java`
   - Add package-local `captureRewindSnapshot()` and `restoreRewindSnapshot(...)`.
   - Add package-local test hooks only where needed to build initialized headless state without ROM/GL.
@@ -75,87 +77,66 @@ Do not modify:
 - `src/main/java/com/openggf/game/sonic3k/specialstage/*`
 - Level rewind, trace replay, bonus-stage rewind.
 
-## Task 1: Snapshot Container And Adapter
+## Task 1: Snapshot Container And Adapter Shell
 
 **Files:**
 
 - Create: `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageSnapshot.java`
 - Create: `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageRewindAdapter.java`
-- Modify: `src/main/java/com/openggf/game/sonic2/Sonic2SpecialStageProvider.java`
-- Modify: `src/test/java/com/openggf/game/TestSpecialStageRewindCapability.java`
-- Modify: `src/test/java/com/openggf/game/session/TestGameplayModeContextSpecialStageRewindAdapter.java`
+- Create: `src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStageRewindAdapter.java`
 
-- [ ] **Step 1: Write the failing provider capability test**
+- [ ] **Step 1: Write the failing direct adapter shell test**
 
-Edit `src/test/java/com/openggf/game/TestSpecialStageRewindCapability.java`.
+Create `src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStageRewindAdapter.java`.
 
-Replace the Sonic 1-only test with:
+Use direct adapter tests here. Do not change `Sonic2SpecialStageProvider.supportsRewind()` yet; the provider must stay non-rewindable until the full runtime graph is snapshotted in Task 6.
 
 ```java
-@Test
-void sonic1AndSonic2ProvidersSupportRewindButS3kDoesNotYet() {
-    assertTrue(new Sonic1SpecialStageProvider().supportsRewind());
-    assertTrue(new Sonic2SpecialStageProvider().supportsRewind());
-    assertTrue(new Sonic1SpecialStageProvider().rewindAdapter().isPresent());
-    assertTrue(new Sonic2SpecialStageProvider().rewindAdapter().isPresent());
-    assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY,
-            new Sonic2SpecialStageProvider().rewindAdapter().orElseThrow().key());
-    assertFalse(new Sonic3kSpecialStageProvider().supportsRewind());
-    assertTrue(new Sonic3kSpecialStageProvider().rewindAdapter().isEmpty());
+package com.openggf.game.sonic2.specialstage;
+
+import com.openggf.game.SpecialStageProvider;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+class TestSonic2SpecialStageRewindAdapter {
+    @Test
+    void adapterUsesGenericSpecialStageKeyAndKeepsMissingSnapshotDefault() {
+        Sonic2SpecialStageRewindAdapter adapter =
+                new Sonic2SpecialStageRewindAdapter(new Sonic2SpecialStageManager());
+
+        assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY, adapter.key());
+        assertThrows(IllegalStateException.class, adapter::resetForMissingSnapshot);
+    }
+
+    @Test
+    void adapterDelegatesCaptureAndRestoreToManager() {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        manager.markCompleted(true);
+        Sonic2SpecialStageRewindAdapter adapter = new Sonic2SpecialStageRewindAdapter(manager);
+
+        Sonic2SpecialStageSnapshot snapshot = adapter.capture();
+        manager.markFailed();
+
+        adapter.restore(snapshot);
+
+        assertEquals(Sonic2SpecialStageManager.ResultState.COMPLETED, manager.getResultState());
+    }
 }
 ```
 
-- [ ] **Step 2: Write the failing GameplayModeContext Sonic 2 registration test**
-
-Edit `src/test/java/com/openggf/game/session/TestGameplayModeContextSpecialStageRewindAdapter.java`.
-
-Add imports:
-
-```java
-import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
-```
-
-Add this test:
-
-```java
-@Test
-void registersSonic2ProviderOwnedSpecialStageRuntimeUnderGenericKey() {
-    GameplayModeContext context = buildAttachedContext();
-    Sonic2SpecialStageProvider provider = new Sonic2SpecialStageProvider();
-
-    context.registerSpecialStageAdapter(provider);
-
-    CompositeSnapshot snapshot = context.getRewindRegistry().capture();
-    assertTrue(snapshot.containsKey(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY),
-            "Sonic 2 should register its provider-owned special-stage rewind runtime");
-
-    context.deregisterSpecialStageAdapter();
-    assertFalse(context.getRewindRegistry().capture()
-            .containsKey(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY));
-}
-```
-
-Add this assertion to `sonic1AdapterUsesGenericKeyAndKeepsThrowingMissingSnapshotDefault()` or create a sibling test:
-
-```java
-RewindSnapshottable<?> sonic2Adapter = new Sonic2SpecialStageProvider()
-        .rewindAdapter()
-        .orElseThrow();
-assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY, sonic2Adapter.key());
-assertThrows(IllegalStateException.class, sonic2Adapter::resetForMissingSnapshot);
-```
-
-- [ ] **Step 3: Run the failing capability tests**
+- [ ] **Step 2: Run the failing direct adapter test**
 
 Run:
 
 ```powershell
-mvn "-Dtest=com.openggf.game.TestSpecialStageRewindCapability,com.openggf.game.session.TestGameplayModeContextSpecialStageRewindAdapter" test
+mvn "-Dtest=com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageRewindAdapter" test
 ```
 
-Expected: fail because Sonic 2 still reports `supportsRewind() == false` and has no adapter.
+Expected: compile failure because the Sonic 2 snapshot and adapter do not exist.
 
-- [ ] **Step 4: Add `Sonic2SpecialStageSnapshot` shell**
+- [ ] **Step 3: Add `Sonic2SpecialStageSnapshot` shell**
 
 Create `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageSnapshot.java` with this initial content. Later tasks add the full field list.
 
@@ -208,7 +189,7 @@ final class Sonic2SpecialStageSnapshot {
 }
 ```
 
-- [ ] **Step 5: Add `Sonic2SpecialStageRewindAdapter`**
+- [ ] **Step 4: Add `Sonic2SpecialStageRewindAdapter`**
 
 Create `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageRewindAdapter.java`:
 
@@ -245,7 +226,7 @@ public final class Sonic2SpecialStageRewindAdapter
 }
 ```
 
-- [ ] **Step 6: Add minimal manager capture/restore hooks**
+- [ ] **Step 5: Add minimal manager capture/restore hooks**
 
 Edit `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageManager.java`.
 
@@ -268,67 +249,33 @@ void restoreRewindSnapshot(Sonic2SpecialStageSnapshot snapshot) {
 }
 ```
 
-- [ ] **Step 7: Enable Sonic 2 provider rewind**
-
-Edit `src/main/java/com/openggf/game/sonic2/Sonic2SpecialStageProvider.java`.
-
-Add imports:
-
-```java
-import com.openggf.game.rewind.RewindSnapshottable;
-import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRewindAdapter;
-import java.util.Optional;
-```
-
-Add methods after `hasSpecialStages()`:
-
-```java
-@Override
-public boolean supportsRewind() {
-    return true;
-}
-
-@Override
-public Optional<RewindSnapshottable<?>> rewindAdapter() {
-    return Optional.of(new Sonic2SpecialStageRewindAdapter(manager));
-}
-```
-
-Keep `Sonic2SpecialStageSnapshot` package-private; callers only receive the adapter through `Optional<RewindSnapshottable<?>>`.
-
-- [ ] **Step 8: Run the capability tests**
+- [ ] **Step 6: Run the direct adapter test**
 
 Run:
 
 ```powershell
-mvn "-Dtest=com.openggf.game.TestSpecialStageRewindCapability,com.openggf.game.session.TestGameplayModeContextSpecialStageRewindAdapter" test
+mvn "-Dtest=com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageRewindAdapter" test
 ```
 
 Expected: pass.
 
-- [ ] **Step 9: Commit Task 1**
+- [ ] **Step 7: Commit Task 1**
 
 Run:
 
 ```powershell
-git add src/main/java/com/openggf/game/sonic2/Sonic2SpecialStageProvider.java `
-        src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageSnapshot.java `
+git add src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageSnapshot.java `
         src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageRewindAdapter.java `
-        src/test/java/com/openggf/game/TestSpecialStageRewindCapability.java `
-        src/test/java/com/openggf/game/session/TestGameplayModeContextSpecialStageRewindAdapter.java
-git commit -m "feat: enable Sonic 2 special stage rewind adapter"
-```
-
-Fill trailers:
-
-```text
-Changelog: updated
+        src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageManager.java `
+        src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStageRewindAdapter.java `
+        CHANGELOG.md
+git commit -m "feat: add Sonic 2 special stage rewind adapter shell" -m "Changelog: updated
 Guide: n/a
 Known-Discrepancies: n/a
 S3K-Known-Discrepancies: n/a
 Agent-Docs: n/a
 Configuration-Docs: n/a
-Skills: n/a
+Skills: n/a"
 ```
 
 Also stage `CHANGELOG.md` with a short entry under Unreleased before committing because this task touches `src/main`.
@@ -502,7 +449,13 @@ git add src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageSna
         src/main/java/com/openggf/game/sonic2/specialstage/Sonic2TrackAnimator.java `
         src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStageTrackAnimatorSnapshot.java `
         CHANGELOG.md
-git commit -m "feat: snapshot Sonic 2 special stage track animator"
+git commit -m "feat: snapshot Sonic 2 special stage track animator" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: n/a
+S3K-Known-Discrepancies: n/a
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
 ```
 
 Use `Changelog: updated` because `src/main` changed.
@@ -529,6 +482,7 @@ import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -608,6 +562,78 @@ class TestSonic2SpecialStagePlayerSnapshot {
         assertTrue(topology.playersLinked());
     }
 
+    @Test
+    void restoreTopologyCoversSonicSoloTailsSoloAndTeamRelinking() throws Exception {
+        assertSoloTopology(
+                new Sonic2SpecialStagePlayer(Sonic2SpecialStagePlayer.PlayerType.SONIC, true),
+                "sonicPlayer",
+                "tailsPlayer");
+        assertSoloTopology(
+                new Sonic2SpecialStagePlayer(Sonic2SpecialStagePlayer.PlayerType.TAILS, true),
+                "tailsPlayer",
+                "sonicPlayer");
+
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        Sonic2SpecialStageRenderer renderer = new Sonic2SpecialStageRenderer(null);
+        java.util.ArrayList<Sonic2SpecialStagePlayer> players = new java.util.ArrayList<>();
+        Sonic2SpecialStagePlayer sonic = new Sonic2SpecialStagePlayer(
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+        Sonic2SpecialStagePlayer tails = new Sonic2SpecialStagePlayer(
+                Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
+        sonic.setOtherPlayer(tails);
+        tails.setOtherPlayer(sonic);
+        players.add(sonic);
+        players.add(tails);
+        set(manager, "players", players);
+        set(manager, "sonicPlayer", sonic);
+        set(manager, "tailsPlayer", tails);
+        set(manager, "renderer", renderer);
+        renderer.setPlayers(new java.util.ArrayList<>());
+
+        Sonic2SpecialStageSnapshot.PlayerTopologySnapshot topology =
+                Sonic2SpecialStageSnapshot.PlayerTopologySnapshot.capture(players, sonic, tails);
+        java.util.List<Sonic2SpecialStageSnapshot.PlayerSnapshot> playerSnapshots =
+                java.util.List.of(sonic.captureRewindSnapshot(), tails.captureRewindSnapshot());
+        sonic.setOtherPlayer(null);
+        tails.setOtherPlayer(null);
+
+        manager.restorePlayerTopologyForRewind(topology, playerSnapshots);
+
+        assertSame(sonic, get(manager, "sonicPlayer"));
+        assertSame(tails, get(manager, "tailsPlayer"));
+        assertSame(tails, sonic.getOtherPlayerForRewind());
+        assertSame(sonic, tails.getOtherPlayerForRewind());
+        assertSame(players, get(renderer, "players"));
+    }
+
+    private static void assertSoloTopology(Sonic2SpecialStagePlayer player,
+                                           String presentField,
+                                           String absentField) throws Exception {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        Sonic2SpecialStageRenderer renderer = new Sonic2SpecialStageRenderer(null);
+        java.util.ArrayList<Sonic2SpecialStagePlayer> players = new java.util.ArrayList<>();
+        players.add(player);
+        set(manager, "players", players);
+        set(manager, presentField, player);
+        set(manager, absentField, null);
+        set(manager, "renderer", renderer);
+
+        Sonic2SpecialStageSnapshot.PlayerTopologySnapshot topology =
+                Sonic2SpecialStageSnapshot.PlayerTopologySnapshot.capture(
+                        players,
+                        "sonicPlayer".equals(presentField) ? player : null,
+                        "tailsPlayer".equals(presentField) ? player : null);
+
+        manager.restorePlayerTopologyForRewind(
+                topology,
+                java.util.List.of(player.captureRewindSnapshot()));
+
+        assertSame(player, get(manager, presentField));
+        assertNull(get(manager, absentField));
+        assertNull(player.getOtherPlayerForRewind());
+        assertSame(players, get(renderer, "players"));
+    }
+
     private static void seedPlayer(Sonic2SpecialStagePlayer player) throws Exception {
         set(player, "ssXPos", 0x1234);
         set(player, "ssXSub", 0x56);
@@ -671,10 +697,11 @@ Edit `Sonic2SpecialStagePlayer.java`.
 Remove imports:
 
 ```java
-import com.openggf.game.GameServices;
 import com.openggf.timer.Timer;
 import com.openggf.timer.timers.SSInvulnerabilityTimer;
 ```
+
+Keep `import com.openggf.game.GameServices;` because the class still uses `GameServices.audio().playSfx(...)` in the jump path.
 
 Add field near `swapPositionsFlag`:
 
@@ -983,7 +1010,13 @@ git add src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageSna
         src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageManager.java `
         src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStagePlayerSnapshot.java `
         CHANGELOG.md
-git commit -m "feat: snapshot Sonic 2 special stage players"
+git commit -m "feat: snapshot Sonic 2 special stage players" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: n/a
+S3K-Known-Discrepancies: n/a
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
 ```
 
 Use `Changelog: updated`.
@@ -1307,7 +1340,13 @@ git add src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageSna
         src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageCheckpoint.java `
         src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStageCheckpointSnapshot.java `
         CHANGELOG.md
-git commit -m "feat: snapshot Sonic 2 special stage messages"
+git commit -m "feat: snapshot Sonic 2 special stage messages" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: n/a
+S3K-Known-Discrepancies: n/a
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
 ```
 
 Use `Changelog: updated`.
@@ -1676,7 +1715,13 @@ git add src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageSna
         src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageManager.java `
         src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStageObjectSnapshot.java `
         CHANGELOG.md
-git commit -m "feat: snapshot Sonic 2 special stage objects"
+git commit -m "feat: snapshot Sonic 2 special stage objects" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: n/a
+S3K-Known-Discrepancies: n/a
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
 ```
 
 Use `Changelog: updated`.
@@ -1687,6 +1732,9 @@ Use `Changelog: updated`.
 
 - Modify: `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageSnapshot.java`
 - Modify: `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageManager.java`
+- Modify: `src/main/java/com/openggf/game/sonic2/Sonic2SpecialStageProvider.java`
+- Modify: `src/test/java/com/openggf/game/TestSpecialStageRewindCapability.java`
+- Modify: `src/test/java/com/openggf/game/session/TestGameplayModeContextSpecialStageRewindAdapter.java`
 - Create: `src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStageRewindSnapshot.java`
 
 - [ ] **Step 1: Write failing manager snapshot tests**
@@ -1745,6 +1793,54 @@ class TestSonic2SpecialStageRewindSnapshot {
         Palette[] restoredPalettes = (Palette[]) get(manager, "palettes");
         assertEquals(10, restoredPalettes[3].getColor(11).r);
         assertNotSame(snapshot.palettes, restoredPalettes);
+    }
+
+    @Test
+    void managerSnapshotRestoresEmeraldAndCheckpointPalettePhases() throws Exception {
+        assertPalettePhaseRoundTrips(false, 0, new int[] { 0x0EE, 0x044, 0x000 },
+                "emerald baseline before checkpoint rainbow");
+        assertPalettePhaseRoundTrips(false, 0, new int[] { 0x0EE, 0x088, 0x044 },
+                "checkpoint rainbow cleared");
+        assertPalettePhaseRoundTrips(true, 0, new int[] { 0x0EE, 0x0CC, 0x088 },
+                "checkpoint rainbow enabled");
+        assertPalettePhaseRoundTrips(true, 2, new int[] { 0x0EE, 0x044, 0x088 },
+                "checkpoint rainbow cycle phase");
+    }
+
+    private static void assertPalettePhaseRoundTrips(boolean rainbowActive,
+                                                     int rainbowCycleIndex,
+                                                     int[] genesisColors,
+                                                     String phaseName) throws Exception {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        seedMinimalInitializedGraph(manager);
+        Palette[] palettes = createPalettes(0);
+        for (int i = 0; i < genesisColors.length; i++) {
+            palettes[3].setColor(11 + i,
+                    Sonic2SpecialStagePalette.genesisColorToPaletteColor(genesisColors[i]));
+        }
+        set(manager, "palettes", palettes);
+        set(manager, "checkpointRainbowPaletteActive", rainbowActive);
+        set(manager, "rainbowPaletteCycleIndex", rainbowCycleIndex);
+
+        Sonic2SpecialStageSnapshot snapshot = manager.captureRewindSnapshot();
+        palettes[3].setColor(11, new Palette.Color((byte) 1, (byte) 2, (byte) 3));
+        palettes[3].setColor(12, new Palette.Color((byte) 4, (byte) 5, (byte) 6));
+        palettes[3].setColor(13, new Palette.Color((byte) 7, (byte) 8, (byte) 9));
+        set(manager, "checkpointRainbowPaletteActive", !rainbowActive);
+        set(manager, "rainbowPaletteCycleIndex", 99);
+
+        manager.restoreRewindSnapshot(snapshot);
+
+        Palette[] restored = (Palette[]) get(manager, "palettes");
+        for (int i = 0; i < genesisColors.length; i++) {
+            Palette.Color expected = Sonic2SpecialStagePalette.genesisColorToPaletteColor(genesisColors[i]);
+            Palette.Color actual = restored[3].getColor(11 + i);
+            assertEquals(expected.r, actual.r, phaseName + " red " + i);
+            assertEquals(expected.g, actual.g, phaseName + " green " + i);
+            assertEquals(expected.b, actual.b, phaseName + " blue " + i);
+        }
+        assertEquals(rainbowActive, get(manager, "checkpointRainbowPaletteActive"));
+        assertEquals(rainbowCycleIndex, get(manager, "rainbowPaletteCycleIndex"));
     }
 
     @Test
@@ -1895,6 +1991,141 @@ final CheckpointSnapshot alignmentCheckpoint;
 ```
 
 Use a constructor that assigns each scalar and clones arrays/palettes/lists:
+
+```java
+Sonic2SpecialStageSnapshot(
+        boolean initialized,
+        int currentStage,
+        Sonic2SpecialStageManager.ResultState resultState,
+        boolean emeraldCollected,
+        int frameCounter,
+        int heldButtons,
+        int pressedButtons,
+        int p2HeldButtons,
+        int p2LogicalButtons,
+        int tailsControlCounter,
+        int[] tailsCtrlRecordBuf,
+        int lastDrawingIndex,
+        boolean checkpointRainbowPaletteActive,
+        int rainbowPaletteCycleIndex,
+        boolean pendingCheckpoint,
+        int pendingCheckpointNumber,
+        int pendingRingRequirement,
+        int pendingRingsCollected,
+        boolean pendingFinalCheckpoint,
+        int currentRingRequirement,
+        boolean spriteDebugMode,
+        Object planeDebugMode,
+        boolean alignmentTestMode,
+        boolean alignmentTestSavedRainbowPalette,
+        boolean alignmentPendingCheckpoint,
+        int alignmentFrameIndex,
+        int alignmentFrameTimer,
+        int alignmentTrackFrameIndex,
+        int alignmentLastDecodedFrameIndex,
+        int[] alignmentDecodedTrackFrame,
+        int alignmentDrawingIndex,
+        int alignmentTriggerOffsetFrames,
+        double alignmentRainbowSpeedScale,
+        double alignmentRainbowSpeedAccumulator,
+        boolean alignmentStepByTrackFrame,
+        double lagCompensation,
+        double lagAccumulator,
+        boolean lagCompensationDisplayEnabled,
+        long diagnosticWallStartTime,
+        int diagnosticUpdateCount,
+        int diagnosticTrackAdvances,
+        long lastFrameTime,
+        int frameSampleCount,
+        long frameSampleSum,
+        int skydomeScrollX,
+        boolean alternateScrollBuffer,
+        boolean lastAlternateScrollBuffer,
+        int drawingIndex,
+        int lastAnimFrame,
+        int vScrollBG,
+        int hScrollDebugTotal,
+        int hScrollDebugFrames,
+        int lastDebugSegmentIndex,
+        int[] decodedTrackFrame,
+        int lastDecodedFrameIndex,
+        boolean lastDecodedFlipped,
+        Palette[] palettes,
+        TrackAnimatorSnapshot trackAnimator,
+        PlayerTopologySnapshot playerTopology,
+        List<PlayerSnapshot> players,
+        IntroSnapshot intro,
+        ObjectManagerSnapshot objectManager,
+        CheckpointSnapshot checkpoint,
+        CheckpointSnapshot alignmentCheckpoint) {
+    this.initialized = initialized;
+    this.currentStage = currentStage;
+    this.resultState = resultState;
+    this.emeraldCollected = emeraldCollected;
+    this.frameCounter = frameCounter;
+    this.heldButtons = heldButtons;
+    this.pressedButtons = pressedButtons;
+    this.p2HeldButtons = p2HeldButtons;
+    this.p2LogicalButtons = p2LogicalButtons;
+    this.tailsControlCounter = tailsControlCounter;
+    this.tailsCtrlRecordBuf = cloneIntArray(tailsCtrlRecordBuf);
+    this.lastDrawingIndex = lastDrawingIndex;
+    this.checkpointRainbowPaletteActive = checkpointRainbowPaletteActive;
+    this.rainbowPaletteCycleIndex = rainbowPaletteCycleIndex;
+    this.pendingCheckpoint = pendingCheckpoint;
+    this.pendingCheckpointNumber = pendingCheckpointNumber;
+    this.pendingRingRequirement = pendingRingRequirement;
+    this.pendingRingsCollected = pendingRingsCollected;
+    this.pendingFinalCheckpoint = pendingFinalCheckpoint;
+    this.currentRingRequirement = currentRingRequirement;
+    this.spriteDebugMode = spriteDebugMode;
+    this.planeDebugMode = planeDebugMode;
+    this.alignmentTestMode = alignmentTestMode;
+    this.alignmentTestSavedRainbowPalette = alignmentTestSavedRainbowPalette;
+    this.alignmentPendingCheckpoint = alignmentPendingCheckpoint;
+    this.alignmentFrameIndex = alignmentFrameIndex;
+    this.alignmentFrameTimer = alignmentFrameTimer;
+    this.alignmentTrackFrameIndex = alignmentTrackFrameIndex;
+    this.alignmentLastDecodedFrameIndex = alignmentLastDecodedFrameIndex;
+    this.alignmentDecodedTrackFrame = cloneIntArray(alignmentDecodedTrackFrame);
+    this.alignmentDrawingIndex = alignmentDrawingIndex;
+    this.alignmentTriggerOffsetFrames = alignmentTriggerOffsetFrames;
+    this.alignmentRainbowSpeedScale = alignmentRainbowSpeedScale;
+    this.alignmentRainbowSpeedAccumulator = alignmentRainbowSpeedAccumulator;
+    this.alignmentStepByTrackFrame = alignmentStepByTrackFrame;
+    this.lagCompensation = lagCompensation;
+    this.lagAccumulator = lagAccumulator;
+    this.lagCompensationDisplayEnabled = lagCompensationDisplayEnabled;
+    this.diagnosticWallStartTime = diagnosticWallStartTime;
+    this.diagnosticUpdateCount = diagnosticUpdateCount;
+    this.diagnosticTrackAdvances = diagnosticTrackAdvances;
+    this.lastFrameTime = lastFrameTime;
+    this.frameSampleCount = frameSampleCount;
+    this.frameSampleSum = frameSampleSum;
+    this.skydomeScrollX = skydomeScrollX;
+    this.alternateScrollBuffer = alternateScrollBuffer;
+    this.lastAlternateScrollBuffer = lastAlternateScrollBuffer;
+    this.drawingIndex = drawingIndex;
+    this.lastAnimFrame = lastAnimFrame;
+    this.vScrollBG = vScrollBG;
+    this.hScrollDebugTotal = hScrollDebugTotal;
+    this.hScrollDebugFrames = hScrollDebugFrames;
+    this.lastDebugSegmentIndex = lastDebugSegmentIndex;
+    this.decodedTrackFrame = cloneIntArray(decodedTrackFrame);
+    this.lastDecodedFrameIndex = lastDecodedFrameIndex;
+    this.lastDecodedFlipped = lastDecodedFlipped;
+    this.palettes = clonePalettes(palettes);
+    this.trackAnimator = trackAnimator;
+    this.playerTopology = playerTopology;
+    this.players = List.copyOf(players);
+    this.intro = intro;
+    this.objectManager = objectManager;
+    this.checkpoint = checkpoint;
+    this.alignmentCheckpoint = alignmentCheckpoint;
+}
+```
+
+The constructor above must be kept in the same order as the `new Sonic2SpecialStageSnapshot(...)` call in `Sonic2SpecialStageManager.captureRewindSnapshot()`. These clone assignments are load-bearing:
 
 ```java
 this.tailsCtrlRecordBuf = cloneIntArray(tailsCtrlRecordBuf);
@@ -2119,19 +2350,154 @@ mvn "-Dtest=com.openggf.game.sonic2.specialstage.TestSonic2SpecialStage*Snapshot
 
 Expected: pass.
 
-- [ ] **Step 8: Commit Task 6**
+- [ ] **Step 8: Write the failing final provider capability test**
+
+Edit `src/test/java/com/openggf/game/TestSpecialStageRewindCapability.java`.
+
+Replace the Sonic 1-only rollout test with:
+
+```java
+@Test
+void sonic1AndSonic2ProvidersSupportRewindButS3kDoesNotYet() {
+    assertTrue(new Sonic1SpecialStageProvider().supportsRewind());
+    assertTrue(new Sonic2SpecialStageProvider().supportsRewind());
+    assertTrue(new Sonic1SpecialStageProvider().rewindAdapter().isPresent());
+    assertTrue(new Sonic2SpecialStageProvider().rewindAdapter().isPresent());
+    assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY,
+            new Sonic2SpecialStageProvider().rewindAdapter().orElseThrow().key());
+    assertFalse(new Sonic3kSpecialStageProvider().supportsRewind());
+    assertTrue(new Sonic3kSpecialStageProvider().rewindAdapter().isEmpty());
+}
+```
+
+- [ ] **Step 9: Write the failing final GameplayModeContext Sonic 2 registration test**
+
+Edit `src/test/java/com/openggf/game/session/TestGameplayModeContextSpecialStageRewindAdapter.java`.
+
+Add import:
+
+```java
+import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
+```
+
+Add this test:
+
+```java
+@Test
+void registersSonic2ProviderOwnedSpecialStageRuntimeUnderGenericKey() {
+    GameplayModeContext context = buildAttachedContext();
+    Sonic2SpecialStageProvider provider = new Sonic2SpecialStageProvider();
+
+    context.registerSpecialStageAdapter(provider);
+
+    CompositeSnapshot snapshot = context.getRewindRegistry().capture();
+    assertTrue(snapshot.containsKey(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY),
+            "Sonic 2 should register its provider-owned special-stage rewind runtime");
+
+    context.deregisterSpecialStageAdapter();
+    assertFalse(context.getRewindRegistry().capture()
+            .containsKey(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY));
+}
+```
+
+Add this assertion to `sonic1AdapterUsesGenericKeyAndKeepsThrowingMissingSnapshotDefault()`:
+
+```java
+RewindSnapshottable<?> sonic2Adapter = new Sonic2SpecialStageProvider()
+        .rewindAdapter()
+        .orElseThrow();
+assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY, sonic2Adapter.key());
+assertThrows(IllegalStateException.class, sonic2Adapter::resetForMissingSnapshot);
+```
+
+- [ ] **Step 10: Run the failing final provider tests**
 
 Run:
+
+```powershell
+mvn "-Dtest=com.openggf.game.TestSpecialStageRewindCapability,com.openggf.game.session.TestGameplayModeContextSpecialStageRewindAdapter" test
+```
+
+Expected: fail because Sonic 2 still reports `supportsRewind() == false`.
+
+- [ ] **Step 11: Enable Sonic 2 provider rewind**
+
+Edit `src/main/java/com/openggf/game/sonic2/Sonic2SpecialStageProvider.java`.
+
+Add imports:
+
+```java
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRewindAdapter;
+import java.util.Optional;
+```
+
+Add methods after `hasSpecialStages()`:
+
+```java
+@Override
+public boolean supportsRewind() {
+    return true;
+}
+
+@Override
+public Optional<RewindSnapshottable<?>> rewindAdapter() {
+    return Optional.of(new Sonic2SpecialStageRewindAdapter(manager));
+}
+```
+
+This provider flip happens only after the full snapshot graph and focused snapshot tests pass.
+
+- [ ] **Step 12: Run final provider tests**
+
+Run:
+
+```powershell
+mvn "-Dtest=com.openggf.game.TestSpecialStageRewindCapability,com.openggf.game.session.TestGameplayModeContextSpecialStageRewindAdapter" test
+```
+
+Expected: pass.
+
+- [ ] **Step 13: Commit Task 6**
+
+Run:
+
+```powershell
+git add src/main/java/com/openggf/game/sonic2/Sonic2SpecialStageProvider.java `
+        src/test/java/com/openggf/game/TestSpecialStageRewindCapability.java `
+        src/test/java/com/openggf/game/session/TestGameplayModeContextSpecialStageRewindAdapter.java `
+        src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageSnapshot.java `
+        src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageManager.java `
+        src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStageRewindSnapshot.java `
+        CHANGELOG.md
+git commit -m "feat: snapshot Sonic 2 special stage manager" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: n/a
+S3K-Known-Discrepancies: n/a
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
+```
+
+Use `Changelog: updated`.
+
+If you split the provider enablement into a separate commit, use:
 
 ```powershell
 git add src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageSnapshot.java `
         src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageManager.java `
         src/test/java/com/openggf/game/sonic2/specialstage/TestSonic2SpecialStageRewindSnapshot.java `
         CHANGELOG.md
-git commit -m "feat: snapshot Sonic 2 special stage manager"
+git commit -m "feat: snapshot Sonic 2 special stage manager" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: n/a
+S3K-Known-Discrepancies: n/a
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
 ```
 
-Use `Changelog: updated`.
+Then commit provider/test enablement with the same trailer block.
 
 ## Task 7: Regression Verification And Guardrails
 
@@ -2193,7 +2559,13 @@ If any verification step required code or test fixes, commit:
 
 ```powershell
 git add src/main/java/com/openggf/game/sonic2 src/test/java/com/openggf CHANGELOG.md
-git commit -m "fix: stabilize Sonic 2 special stage rewind tests"
+git commit -m "fix: stabilize Sonic 2 special stage rewind tests" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: n/a
+S3K-Known-Discrepancies: n/a
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
 ```
 
 Use `Changelog: updated` if `src/main` changed. Skip this commit if no files changed.
@@ -2256,7 +2628,13 @@ If manual acceptance passes and no files changed, do not commit. If documentatio
 
 ```powershell
 git add CHANGELOG.md KNOWN_DISCREPANCIES.md S3K_KNOWN_DISCREPANCIES.md
-git commit -m "docs: record Sonic 2 special stage rewind acceptance"
+git commit -m "docs: record Sonic 2 special stage rewind acceptance" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: updated
+S3K-Known-Discrepancies: updated
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
 ```
 
 Use trailers matching the files staged.
