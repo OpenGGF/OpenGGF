@@ -29,6 +29,7 @@ public final class LiveRewindManager {
     private final SonicConfigurationService config;
     private final Supplier<GameMode> modeSupplier;
     private final Supplier<SpecialStageProvider> specialStageProviderSupplier;
+    private final boolean useModeSupplierForPublicEntries;
     private final LiveRewindHudOverlay hudOverlay;
 
     private GameplayModeContext installedGameplayMode;
@@ -41,22 +42,33 @@ public final class LiveRewindManager {
     private final RewindEffectEnvelope effectEnvelope = new RewindEffectEnvelope();
 
     public LiveRewindManager(SonicConfigurationService config) {
-        this(config, () -> GameMode.LEVEL, () -> NoOpSpecialStageProvider.INSTANCE);
+        this(config, () -> GameMode.LEVEL, () -> NoOpSpecialStageProvider.INSTANCE, false);
     }
 
     public LiveRewindManager(SonicConfigurationService config,
                              Supplier<GameMode> modeSupplier,
                              Supplier<SpecialStageProvider> specialStageProviderSupplier) {
+        this(config, modeSupplier, specialStageProviderSupplier, true);
+    }
+
+    private LiveRewindManager(SonicConfigurationService config,
+                              Supplier<GameMode> modeSupplier,
+                              Supplier<SpecialStageProvider> specialStageProviderSupplier,
+                              boolean useModeSupplierForPublicEntries) {
         this.config = Objects.requireNonNull(config, "config");
         this.modeSupplier = Objects.requireNonNull(modeSupplier, "modeSupplier");
         this.specialStageProviderSupplier = Objects.requireNonNull(
                 specialStageProviderSupplier, "specialStageProviderSupplier");
+        this.useModeSupplierForPublicEntries = useModeSupplierForPublicEntries;
         this.hudOverlay = new LiveRewindHudOverlay(this::statusLabel);
     }
 
     private enum StepperKind {
         LEVEL_FRAME,
         SPECIAL_STAGE
+    }
+
+    private record RewindContext(boolean supported, StepperKind stepperKind) {
     }
 
     /**
@@ -77,13 +89,14 @@ public final class LiveRewindManager {
      *     must still be rejected. See ssentry-rewind-report.md.
      */
     public boolean handleRealtimeRewindInput(GameMode mode, boolean rewindBlocked, InputHandler input) {
-        if (!supportsCurrentRewindContext(mode) || rewindBlocked || input == null || !enabled()) {
+        RewindContext context = rewindContextForPublicEntry(mode);
+        if (!context.supported() || rewindBlocked || input == null || !enabled()) {
             activeInputHandler = null;
             clear();
             return false;
         }
         activeInputHandler = input;
-        if (!ensureInstalled()) {
+        if (!ensureInstalled(context)) {
             effectEnvelope.frameInactive();
             return false;
         }
@@ -180,7 +193,8 @@ public final class LiveRewindManager {
      *     during those windows, via {@code GameLoop.isRewindBlocked()}.
      */
     public void recordExternalFrame(GameMode mode, boolean nonRewindableTransitionPending, InputHandler input) {
-        if (!supportsCurrentRewindContext(mode) || nonRewindableTransitionPending || input == null || !enabled()) {
+        RewindContext context = rewindContextForPublicEntry(mode);
+        if (!context.supported() || nonRewindableTransitionPending || input == null || !enabled()) {
             activeInputHandler = null;
             clear();
             return;
@@ -189,7 +203,7 @@ public final class LiveRewindManager {
         if (rewinding) {
             return;
         }
-        if (!ensureInstalled()) {
+        if (!ensureInstalled(context)) {
             return;
         }
         inputSource.discardAfter(rewindController.currentFrame());
@@ -204,22 +218,24 @@ public final class LiveRewindManager {
             return;
         }
         switch (boundary) {
-            case LEVEL_LOAD -> handleLevelLoadBoundary();
-            case SEAMLESS_LEVEL_TRANSITION -> handleSeamlessLevelTransitionBoundary();
+            case LEVEL_LOAD -> handleLevelLoadBoundary(rewindContextFromSupplier());
+            case SEAMLESS_LEVEL_TRANSITION -> handleSeamlessLevelTransitionBoundary(rewindContextFromSupplier());
             case MODE_EXIT_TO_NON_REWINDABLE -> clear();
             case MODE_ENTER_REWINDABLE -> handleModeEnterRewindableBoundary();
         }
     }
 
     public void resetBufferAtCurrentFrame(GameMode mode) {
-        if (!supportsCurrentRewindContext(mode)) {
+        RewindContext context = rewindContextForPublicEntry(mode);
+        if (!context.supported()) {
             return;
         }
-        markBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
+        handleSeamlessLevelTransitionBoundary(context);
     }
 
     public void renderHud(GameMode mode, PixelFontTextRenderer text) {
-        if (!supportsCurrentRewindContext(mode) || text == null || !enabled()) {
+        RewindContext context = rewindContextForPublicEntry(mode);
+        if (!context.supported() || text == null || !enabled()) {
             return;
         }
         hudOverlay.render(text);
@@ -255,13 +271,13 @@ public final class LiveRewindManager {
         return "REWIND " + rewindController.currentFrame();
     }
 
-    private boolean ensureInstalled() {
+    private boolean ensureInstalled(RewindContext context) {
         GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
         if (gameplayMode == null) {
             clear();
             return false;
         }
-        StepperKind requiredKind = requiredStepperKind();
+        StepperKind requiredKind = context.stepperKind();
         if (gameplayMode == installedGameplayMode
                 && installedStepperKind == requiredKind
                 && rewindController != null
@@ -299,12 +315,12 @@ public final class LiveRewindManager {
         return rewindController != null;
     }
 
-    private void handleLevelLoadBoundary() {
-        if (!enabled()) {
+    private void handleLevelLoadBoundary(RewindContext context) {
+        if (!enabled() || !context.supported()) {
             clear();
             return;
         }
-        if (!ensureInstalled()) {
+        if (!ensureInstalled(context)) {
             return;
         }
         boolean wasRewinding = rewinding;
@@ -324,12 +340,12 @@ public final class LiveRewindManager {
         effectEnvelope.reset();
     }
 
-    private void handleSeamlessLevelTransitionBoundary() {
-        if (!enabled()) {
+    private void handleSeamlessLevelTransitionBoundary(RewindContext context) {
+        if (!enabled() || !context.supported()) {
             clear();
             return;
         }
-        if (!ensureInstalled()) {
+        if (!ensureInstalled(context)) {
             return;
         }
         boolean wasRewinding = rewinding;
@@ -344,30 +360,31 @@ public final class LiveRewindManager {
     }
 
     private void handleModeEnterRewindableBoundary() {
-        if (!enabled() || !supportsCurrentRewindContext(modeSupplier.get())) {
+        RewindContext context = rewindContextFromSupplier();
+        if (!enabled() || !context.supported()) {
             clear();
             return;
         }
-        ensureInstalled();
+        ensureInstalled(context);
     }
 
-    private boolean supportsCurrentRewindContext(GameMode mode) {
-        if (mode == GameMode.SPECIAL_STAGE) {
-            SpecialStageProvider provider = specialStageProviderSupplier.get();
-            return provider != null && provider.supportsRewind();
-        }
-        return isRewindableMode(mode);
+    private RewindContext rewindContextForPublicEntry(GameMode mode) {
+        return rewindContext(useModeSupplierForPublicEntries ? modeSupplier.get() : mode);
     }
 
-    private StepperKind requiredStepperKind() {
-        GameMode mode = modeSupplier.get();
-        if (mode == GameMode.SPECIAL_STAGE) {
-            SpecialStageProvider provider = specialStageProviderSupplier.get();
-            if (provider != null && provider.supportsRewind()) {
-                return StepperKind.SPECIAL_STAGE;
-            }
+    private RewindContext rewindContextFromSupplier() {
+        return rewindContext(modeSupplier.get());
+    }
+
+    private RewindContext rewindContext(GameMode mode) {
+        if (mode != GameMode.SPECIAL_STAGE) {
+            return new RewindContext(isRewindableMode(mode), StepperKind.LEVEL_FRAME);
         }
-        return StepperKind.LEVEL_FRAME;
+        SpecialStageProvider provider = specialStageProviderSupplier.get();
+        if (provider != null && provider.supportsRewind()) {
+            return new RewindContext(true, StepperKind.SPECIAL_STAGE);
+        }
+        return new RewindContext(false, StepperKind.LEVEL_FRAME);
     }
 
     private int stepBackward(int steps) {

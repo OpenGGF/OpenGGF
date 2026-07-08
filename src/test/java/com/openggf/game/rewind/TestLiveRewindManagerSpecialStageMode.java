@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -57,6 +58,34 @@ class TestLiveRewindManagerSpecialStageMode {
     }
 
     @Test
+    void unsupportedSpecialStageBoundariesDoNotInstallController() {
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
+        LiveRewindManager manager = new LiveRewindManager(
+                config,
+                () -> GameMode.SPECIAL_STAGE,
+                () -> NoOpSpecialStageProvider.INSTANCE);
+
+        manager.markBoundary(RewindBoundary.LEVEL_LOAD);
+        assertNull(gameplayMode.getRewindController());
+
+        manager.markBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
+        assertNull(gameplayMode.getRewindController());
+    }
+
+    @Test
+    void suppliedModeControlsActivationWhenPassedModeDisagrees() {
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
+        LiveRewindManager manager = new LiveRewindManager(
+                config,
+                () -> GameMode.SPECIAL_STAGE,
+                () -> NoOpSpecialStageProvider.INSTANCE);
+
+        manager.recordExternalFrame(GameMode.LEVEL, false, new InputHandler());
+
+        assertNull(gameplayMode.getRewindController());
+    }
+
+    @Test
     void supportedSpecialStageModeInstallsController() {
         GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
         LiveRewindManager manager = new LiveRewindManager(
@@ -67,6 +96,27 @@ class TestLiveRewindManagerSpecialStageMode {
         manager.recordExternalFrame(GameMode.SPECIAL_STAGE, false, new InputHandler());
 
         assertNotNull(gameplayMode.getRewindController());
+    }
+
+    @Test
+    void supportedSpecialStageReplayUsesSpecialStageStepper() {
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
+        RewindableProvider provider = new RewindableProvider();
+        InputHandler input = new InputHandler();
+        LiveRewindManager manager = new LiveRewindManager(
+                config,
+                () -> GameMode.SPECIAL_STAGE,
+                () -> provider);
+
+        manager.recordExternalFrame(GameMode.SPECIAL_STAGE, false, input);
+        RewindController controller = gameplayMode.getRewindController();
+        assertNotNull(controller);
+
+        controller.seekTo(0);
+        gameplayMode.getPlaybackController().stepForwardOnce();
+
+        assertEquals(1, provider.handleInputCalls);
+        assertEquals(1, provider.updateCalls);
     }
 
     @Test
@@ -92,6 +142,9 @@ class TestLiveRewindManagerSpecialStageMode {
     }
 
     private static final class RewindableProvider implements SpecialStageProvider {
+        private int handleInputCalls;
+        private int updateCalls;
+
         @Override
         public boolean supportsRewind() {
             return true;
@@ -208,6 +261,7 @@ class TestLiveRewindManagerSpecialStageMode {
 
         @Override
         public void update() {
+            updateCalls++;
         }
 
         @Override
@@ -216,6 +270,7 @@ class TestLiveRewindManagerSpecialStageMode {
 
         @Override
         public void handleInput(int heldButtons, int pressedButtons) {
+            handleInputCalls++;
         }
 
         @Override
