@@ -183,6 +183,7 @@ public class GameLoop {
 
     // Flag to freeze level updates during special stage entry transition
     private boolean specialStageTransitionPending = false;
+    private boolean specialStageRewindBoundaryThisFrame;
 
     // Bonus stage entry/exit state
     private boolean bonusStageTransitionPending;
@@ -329,7 +330,10 @@ public class GameLoop {
         this.debugOverlayManager = this.engineServices.debugOverlay();
         this.profiler = this.engineServices.profiler();
         this.playbackDebugManager = this.engineServices.playbackDebug();
-        this.liveRewindManager = new LiveRewindManager(configService);
+        this.liveRewindManager = new LiveRewindManager(
+                configService,
+                () -> currentGameMode,
+                this::getActiveSpecialStageProvider);
         this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
         this.userRecordingControls = new UserRecordingRuntimeControls(new LiveUserRecordingRuntime());
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
@@ -590,8 +594,25 @@ public class GameLoop {
         }
         if (oldMode == GameMode.LEVEL && newMode != GameMode.LEVEL) {
             context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
-        } else if (oldMode != GameMode.LEVEL && newMode == GameMode.LEVEL) {
+        }
+        if (oldMode == GameMode.SPECIAL_STAGE && isActiveSpecialStageProviderRewindable()) {
+            deregisterSpecialStageAdapter();
+            if (!specialStageRewindBoundaryThisFrame) {
+                context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
+            }
+        }
+        if (newMode == GameMode.SPECIAL_STAGE && isActiveSpecialStageProviderRewindable()) {
             context.markRewindBoundary(RewindBoundary.MODE_ENTER_REWINDABLE);
+        }
+        if (oldMode != GameMode.LEVEL && newMode == GameMode.LEVEL) {
+            context.markRewindBoundary(RewindBoundary.MODE_ENTER_REWINDABLE);
+        }
+    }
+
+    private void deregisterSpecialStageAdapter() {
+        GameplayModeContext context = resolveGameplayModeContext();
+        if (context != null) {
+            context.deregisterSpecialStageAdapter();
         }
     }
 
@@ -758,6 +779,28 @@ public class GameLoop {
                 && activeBonusStageProvider.supportsRewind();
     }
 
+    private boolean isSpecialStageRewindable() {
+        return currentGameMode == GameMode.SPECIAL_STAGE
+                && !specialStageRewindBoundaryThisFrame
+                && isActiveSpecialStageProviderRewindable();
+    }
+
+    private boolean isActiveSpecialStageProviderRewindable() {
+        return activeSpecialStageProvider != null
+                && activeSpecialStageProvider.supportsRewind();
+    }
+
+    private void severSpecialStageRewindForLiveOnlyShortcut() {
+        if (currentGameMode != GameMode.SPECIAL_STAGE || specialStageRewindBoundaryThisFrame) {
+            return;
+        }
+        specialStageRewindBoundaryThisFrame = true;
+        GameplayModeContext context = resolveGameplayModeContext();
+        if (context != null) {
+            context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
+        }
+    }
+
     private void stepInternal() {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
@@ -765,6 +808,12 @@ public class GameLoop {
         inputHandler.refreshLogicalSnapshot();
         audioUpdatedThisStep = false;
         refreshRuntimeBindings();
+        if (currentGameMode == GameMode.SPECIAL_STAGE) {
+            specialStageRewindBoundaryThisFrame = false;
+            detectSpecialStageLiveOnlyShortcutBoundary();
+        } else {
+            specialStageRewindBoundaryThisFrame = false;
+        }
         PaletteOwnershipRegistry paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
@@ -780,7 +829,7 @@ public class GameLoop {
             inputHandler.update();
             return;
         }
-        if ((currentGameMode == GameMode.LEVEL || isBonusStageRewindable())
+        if ((currentGameMode == GameMode.LEVEL || isBonusStageRewindable() || isSpecialStageRewindable())
                 && TraceSessionLauncher.active() == null
                 && liveRewindManager.handleRealtimeRewindInput(
                         currentGameMode, rewindBlocked, inputHandler)) {
@@ -903,6 +952,9 @@ public class GameLoop {
         }
 
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))) {
+            if (currentGameMode == GameMode.SPECIAL_STAGE) {
+                severSpecialStageRewindForLiveOnlyShortcut();
+            }
             handleSpecialStageDebugKey();
         }
 
@@ -1049,6 +1101,10 @@ public class GameLoop {
 
         updateSpecialStageInput();
         ssProvider.update();
+
+        if (isSpecialStageRewindable() && TraceSessionLauncher.active() == null) {
+            liveRewindManager.recordExternalFrame(currentGameMode, false, inputHandler);
+        }
 
         // Check for special stage completion or failure
         if (ssProvider.isFinished()) {
@@ -1589,6 +1645,53 @@ public class GameLoop {
         }
     }
 
+    private void detectSpecialStageLiveOnlyShortcutBoundary() {
+        if (currentGameMode != GameMode.SPECIAL_STAGE || !debugShortcutsEnabled()) {
+            return;
+        }
+
+        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
+        int leftKey = configService.getInt(SonicConfiguration.LEFT);
+        int rightKey = configService.getInt(SonicConfiguration.RIGHT);
+        int upKey = configService.getInt(SonicConfiguration.UP);
+        int downKey = configService.getInt(SonicConfiguration.DOWN);
+
+        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_X)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_Z)
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY))
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_FAIL_KEY))
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY))
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DEBUG_MODE_KEY))
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F4)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F6)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F7)) {
+            severSpecialStageRewindForLiveOnlyShortcut();
+            return;
+        }
+
+        if (ssProvider.isSpriteDebugMode()
+                && ssProvider.getDebugProvider() != null
+                && (isUnmodifiedDebugKeyPressed(leftKey)
+                || isUnmodifiedDebugKeyPressed(rightKey)
+                || isUnmodifiedDebugKeyPressed(upKey)
+                || isUnmodifiedDebugKeyPressed(downKey))) {
+            severSpecialStageRewindForLiveOnlyShortcut();
+            return;
+        }
+
+        if (ssProvider.isAlignmentTestMode()
+                && (isUnmodifiedDebugKeyPressed(leftKey)
+                || isUnmodifiedDebugKeyPressed(rightKey)
+                || isUnmodifiedDebugKeyPressed(upKey)
+                || isUnmodifiedDebugKeyPressed(downKey)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_SPACE))) {
+            severSpecialStageRewindForLiveOnlyShortcut();
+        }
+    }
+
     private boolean isUnmodifiedDebugKeyPressed(int keyCode) {
         return debugShortcutsEnabled() && inputHandler.isKeyPressedWithoutModifiers(keyCode);
     }
@@ -1898,6 +2001,10 @@ public class GameLoop {
             ssProvider.reset();
             ssProvider.initializeStage(stageIndex);
             activeSpecialStageProvider = ssProvider;
+            GameplayModeContext context = resolveGameplayModeContext();
+            if (context != null) {
+                context.registerSpecialStageAdapter(ssProvider);
+            }
 
             GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE);
 
@@ -1921,7 +2028,13 @@ public class GameLoop {
 
             LOGGER.info("Entered Special Stage " + (stageIndex + 1) + " (H32 mode: 256x224)");
         } catch (IOException e) {
+            deregisterSpecialStageAdapter();
+            activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
             throw new RuntimeException("Failed to initialize Special Stage " + (stageIndex + 1), e);
+        } catch (RuntimeException e) {
+            deregisterSpecialStageAdapter();
+            activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
+            throw e;
         }
     }
 
@@ -2550,6 +2663,7 @@ public class GameLoop {
     private void doExitResultsScreen() {
         // Clean up results screen
         resultsScreen = null;
+        deregisterSpecialStageAdapter();
         activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
 
         if (levelManager.getCurrentLevel() == null) {
