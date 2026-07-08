@@ -1410,7 +1410,7 @@ public final class Sonic1SpecialStageManager {
     }
 
     private void recacheTouchedPalettes(boolean[] touchedLines) {
-        if (touchedLines == null || ssPalettes == null) {
+        if (touchedLines == null || ssPalettes == null || graphicsManager == null) {
             return;
         }
         for (int i = 0; i < touchedLines.length && i < ssPalettes.length; i++) {
@@ -1698,6 +1698,164 @@ public final class Sonic1SpecialStageManager {
 
     public boolean isFinished() {
         return finished;
+    }
+
+    Sonic1SpecialStageSnapshot captureRewindSnapshot() {
+        return new Sonic1SpecialStageSnapshot(
+                initialized,
+                finished,
+                emeraldCollected,
+                debugMode,
+                currentStage,
+                ringsCollected,
+                ssAngle,
+                ssRotate,
+                debugSavedAngle,
+                debugSavedRotate,
+                sonicPosX,
+                sonicPosY,
+                sonicVelX,
+                sonicVelY,
+                sonicInertia,
+                sonicAirborne,
+                sonicFacingLeft,
+                cameraX,
+                cameraY,
+                ghostState,
+                upDownCooldown,
+                reverseCooldown,
+                ringAnimFrame,
+                ringAnimTimer,
+                wallVramAnimFrame,
+                wallVramAnimTimer,
+                sonicAnimId,
+                sonicAnimFrameIndex,
+                sonicAnimFrameTimer,
+                palSsTime,
+                palSsNum,
+                palSsIndex,
+                ani2Frame,
+                ani2Timer,
+                ani3Frame,
+                ani3Timer,
+                sonicSpriteFrame,
+                exitTriggered,
+                exitPhase,
+                exitTimer,
+                exitFadeStarted,
+                exitFadeTimer,
+                heldButtons,
+                pressedButtons,
+                bgAnimState,
+                bgUsingPlane6,
+                fgAnimPlaneIndex,
+                fgYScroll,
+                bgYScroll,
+                bgExtraScrollX,
+                layout,
+                ssAnimBuffer,
+                ssAnimGlassFinalBlock,
+                bgSineBuffer,
+                bgBandBuffer,
+                ssPalettes);
+    }
+
+    void restoreRewindSnapshot(Sonic1SpecialStageSnapshot snapshot) {
+        initialized = snapshot.initialized;
+        finished = snapshot.finished;
+        emeraldCollected = snapshot.emeraldCollected;
+        debugMode = snapshot.debugMode;
+        currentStage = snapshot.currentStage;
+        ringsCollected = snapshot.ringsCollected;
+        ssAngle = snapshot.ssAngle;
+        ssRotate = snapshot.ssRotate;
+        debugSavedAngle = snapshot.debugSavedAngle;
+        debugSavedRotate = snapshot.debugSavedRotate;
+        sonicPosX = snapshot.sonicPosX;
+        sonicPosY = snapshot.sonicPosY;
+        sonicVelX = snapshot.sonicVelX;
+        sonicVelY = snapshot.sonicVelY;
+        sonicInertia = snapshot.sonicInertia;
+        sonicAirborne = snapshot.sonicAirborne;
+        sonicFacingLeft = snapshot.sonicFacingLeft;
+        cameraX = snapshot.cameraX;
+        cameraY = snapshot.cameraY;
+        ghostState = snapshot.ghostState;
+        upDownCooldown = snapshot.upDownCooldown;
+        reverseCooldown = snapshot.reverseCooldown;
+        ringAnimFrame = snapshot.ringAnimFrame;
+        ringAnimTimer = snapshot.ringAnimTimer;
+        wallVramAnimFrame = snapshot.wallVramAnimFrame;
+        wallVramAnimTimer = snapshot.wallVramAnimTimer;
+        sonicAnimId = snapshot.sonicAnimId;
+        sonicAnimFrameIndex = snapshot.sonicAnimFrameIndex;
+        sonicAnimFrameTimer = snapshot.sonicAnimFrameTimer;
+        palSsTime = snapshot.palSsTime;
+        palSsNum = snapshot.palSsNum;
+        palSsIndex = snapshot.palSsIndex;
+        ani2Frame = snapshot.ani2Frame;
+        ani2Timer = snapshot.ani2Timer;
+        ani3Frame = snapshot.ani3Frame;
+        ani3Timer = snapshot.ani3Timer;
+        sonicSpriteFrame = snapshot.sonicSpriteFrame;
+        exitTriggered = snapshot.exitTriggered;
+        exitPhase = snapshot.exitPhase;
+        exitTimer = snapshot.exitTimer;
+        exitFadeStarted = snapshot.exitFadeStarted;
+        exitFadeTimer = snapshot.exitFadeTimer;
+        heldButtons = snapshot.heldButtons;
+        pressedButtons = snapshot.pressedButtons;
+        bgAnimState = snapshot.bgAnimState;
+        bgUsingPlane6 = snapshot.bgUsingPlane6;
+        fgAnimPlaneIndex = snapshot.fgAnimPlaneIndex;
+        fgYScroll = snapshot.fgYScroll;
+        bgYScroll = snapshot.bgYScroll;
+        bgExtraScrollX = snapshot.bgExtraScrollX;
+        layout = Sonic1SpecialStageSnapshot.cloneByteArray(snapshot.layout);
+        ssAnimBuffer = Sonic1SpecialStageSnapshot.cloneIntMatrix(snapshot.ssAnimBuffer);
+        ssAnimGlassFinalBlock = Sonic1SpecialStageSnapshot.cloneIntArray(snapshot.ssAnimGlassFinalBlock);
+        bgSineBuffer = Sonic1SpecialStageSnapshot.cloneIntArray(snapshot.bgSineBuffer);
+        bgBandBuffer = Sonic1SpecialStageSnapshot.cloneIntArray(snapshot.bgBandBuffer);
+        ssPalettes = Sonic1SpecialStageSnapshot.clonePalettes(snapshot.ssPalettes);
+
+        reestablishRewindRenderState();
+    }
+
+    private void reestablishRewindRenderState() {
+        wallRotFrame = Sonic1SpecialStageBlockType.getWallRotationFrame(ssAngle);
+
+        if (bgSineBuffer != null || bgBandBuffer != null) {
+            bgHScrollData = new int[224];
+            if (bgAnimState < 8 && bgSineBuffer != null) {
+                fillHScrollFromBands(bgSineBuffer, SS_SINE_BAND_WIDTHS);
+            } else if (bgBandBuffer != null) {
+                fillHScrollFromBands(bgBandBuffer, SS_SCROLL_BAND_WIDTHS);
+            }
+        } else {
+            bgHScrollData = null;
+        }
+
+        if (graphicsManager != null && ssPalettes != null) {
+            boolean[] touched = new boolean[ssPalettes.length];
+            java.util.Arrays.fill(touched, true);
+            recacheTouchedPalettes(touched);
+        }
+
+        if (bgRenderer != null) {
+            bgRenderer.setTilemap(bgUsingPlane6 ? bgPlane6Tilemap : bgPlane5Tilemap);
+            if (bgHScrollData != null) {
+                bgRenderer.setHScrollData(bgHScrollData);
+            }
+            bgRenderer.markDirty();
+        }
+
+        if (fgRenderer != null) {
+            if (fgPlaneTilemaps != null && fgAnimPlaneIndex >= 0 && fgAnimPlaneIndex < fgPlaneTilemaps.length) {
+                fgRenderer.setTilemap(fgPlaneTilemaps[fgAnimPlaneIndex]);
+            }
+            fgRenderer.setUniformHScroll(-bgExtraScrollX);
+            fgRenderer.markDirty();
+        }
     }
 
     public void reset() {
