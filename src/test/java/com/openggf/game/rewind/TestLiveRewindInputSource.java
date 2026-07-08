@@ -82,7 +82,7 @@ class TestLiveRewindInputSource {
     }
 
     @Test
-    void appendFrameRecordsP2HeldButtonsAndStartPressEdge() {
+    void appendFrameRecordsP2HeldButtonsAndStartHeldState() {
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
         LiveRewindInputSource source = new LiveRewindInputSource();
 
@@ -103,7 +103,8 @@ class TestLiveRewindInputSource {
                         InputActionMasks.ACTION_A, 0, true, false)));
         source.appendFrame(input, config);
 
-        assertEquals(false, source.read(2).p2StartPressed());
+        assertTrue(source.read(2).p2StartPressed(),
+                "Live rewind stores Start held state; replay derives the press edge from adjacent rows");
     }
 
     @Test

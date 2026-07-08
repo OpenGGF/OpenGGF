@@ -11,10 +11,10 @@ package com.openggf.debug.playback;
  * @param frameIndex     zero-based movie frame index
  * @param p1InputMask    OpenGGF input mask for P1 (direction + jump)
  * @param p1ActionMask   per-button action mask for P1 (A=0x01, B=0x02, C=0x04)
- * @param p1StartPressed whether P1 Start is pressed on this frame
+ * @param p1StartPressed historical name; stores whether P1 Start is held on this frame
  * @param p2InputMask    OpenGGF input mask for P2 (direction + jump)
  * @param p2ActionMask   per-button action mask for P2 (A=0x01, B=0x02, C=0x04)
- * @param p2StartPressed whether P2 Start is pressed on this frame
+ * @param p2StartPressed historical name; stores whether P2 Start is held on this frame
  * @param debugModeTogglePressed whether the level debug-mode toggle key was pressed
  * @param debugShiftDown whether a debug-movement speed-up modifier was held
  * @param debugControlDown whether a debug-movement slow modifier was held
