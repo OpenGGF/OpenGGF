@@ -101,13 +101,17 @@ Create `Sonic2SpecialStageSnapshot` in
   `vScrollBG`, `hScrollDebugTotal`, `hScrollDebugFrames`,
   `lastDebugSegmentIndex`, cloned `decodedTrackFrame`,
   `lastDecodedFrameIndex`, `lastDecodedFlipped`.
-- Nested snapshots for the track animator, Sonic/Tails players, intro,
-  object manager, checkpoint, and any active alignment checkpoint.
+- Mutable palette state: deep copies of all initialized `Palette` lines, or at
+  minimum a value snapshot for palette line 3 colors 11-13 plus enough baseline
+  state to distinguish emerald colors from checkpoint rainbow colors.
+- Nested snapshots for the track animator, player topology and player state,
+  intro, object manager, checkpoint, and any active alignment checkpoint.
 
 Do not capture ROM/art/cache arrays such as `trackFrames`, `backgroundArt`,
-`palettes`, mapping data, or renderer instances. Those remain structural for
-the initialized stage. Restore should only re-prime render-facing decoded state
-that is a pure cache of captured fields.
+mapping data, or renderer instances. ROM-loaded palette source data remains
+structural, but the live `Palette[]` is mutable gameplay/render state and must
+be captured. Restore should only re-prime render-facing decoded state and
+palette texture caches that are pure products of captured fields.
 
 ### Track Animator Snapshot
 
@@ -121,6 +125,32 @@ Add package-local capture/restore on `Sonic2TrackAnimator` for:
 
 Capturing the layout clone avoids needing to re-read ROM data during restore and
 preserves mock-layout tests.
+
+### Player Topology Snapshot
+
+S2 player topology is initialized from the active team configuration and is
+structural for the lifetime of one special-stage session, but it is still part
+of the rewind contract because collision and render order iterate the manager's
+`players` list.
+
+Capture a compact player-topology value:
+
+- Ordered active slots: `PlayerType.SONIC` and/or `PlayerType.TAILS`.
+- The `isMainCharacter` role for each slot.
+- Which slot is `sonicPlayer`, which slot is `tailsPlayer`, and whether the
+  players are linked as each other's `otherPlayer`.
+
+Restore should preserve the existing player objects created during
+initialization when the captured topology matches the live topology, then
+restore each player's nested state in list order and re-apply `otherPlayer`
+links. If the topology does not match, restore should fail fast with a clear
+exception instead of rebuilding players silently. A topology mismatch means a
+configuration/team boundary happened without a fresh special-stage rewind
+session.
+
+After restore, the renderer must still reference the manager's ordered
+`players` list. If implementation ever replaces the list instance, it must call
+`renderer.setPlayers(players)` immediately after reconstruction.
 
 ### Player Snapshot
 
@@ -202,11 +232,22 @@ Callbacks are structural. Restore must not null or replace
 
 ### Palette And Renderer State
 
-S2 checkpoint rainbow palette state is gameplay-visible and should restore.
+S2 palette state is gameplay-visible and mutable. Stage initialization creates
+four palette lines from ROM, then `applyEmeraldPalette()` mutates palette line 3
+colors 11-13. Checkpoint rainbow and rainbow cycling mutate the same three
+colors later. A rewind that crosses either mutation must restore the exact live
+colors, not recompute from only the current checkpoint flag.
+
+The recommended implementation is to deep-copy all four initialized `Palette`
+lines in the manager snapshot. If implementation narrows this to line 3 colors
+11-13, it must also capture enough state to restore both the emerald baseline
+and the current checkpoint rainbow color phase exactly.
+
 Capture manager-level `checkpointRainbowPaletteActive` and
-`rainbowPaletteCycleIndex`. On restore, re-apply the checkpoint palette state to
-`palettes` and graphics if graphics services are available; null-guard graphics
-for headless tests.
+`rainbowPaletteCycleIndex` as control state, but do not rely on those two fields
+as the only source of palette truth. On restore, write the captured palette
+colors back to `palettes` and recache touched palette lines through graphics if
+graphics services are available; null-guard graphics for headless tests.
 
 Renderer, FBO, shader, and debug text renderer instances are structural and not
 captured. Restore must not allocate GL resources in headless tests.
@@ -248,13 +289,16 @@ End-to-end visual rewind remains a manual ROM + GL gate.
 
 Required tests:
 
-- `TestSonic2SpecialStageRewindCapability`
+- Extend `TestSpecialStageRewindCapability`
   - Assert `Sonic2SpecialStageProvider.supportsRewind()` is true after the
     adapter exists.
   - Assert the provider returns a present adapter whose key is
     `SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY`.
   - Assert Sonic 3 and Knuckles remains non-rewindable.
 - `TestSonic2SpecialStagePlayerSnapshot`
+  - Cover Sonic-alone, Tails-alone, and Sonic+Tails topology, including
+    `isMainCharacter`, list order, `sonicPlayer`/`tailsPlayer` references,
+    `otherPlayer` relinking, and renderer player-list binding.
   - Mutate Sonic and Tails player state including control-record buffers,
     routine states, animation fields, hurt state, and invulnerability countdown.
   - Capture, mutate, restore, assert exact value equality.
@@ -267,10 +311,13 @@ Required tests:
 - `TestSonic2SpecialStageRewindSnapshot`
   - Build a manager with initialized nested components or focused test hooks.
   - Mutate manager, track animator, players, intro, object manager, checkpoint,
-    palette flags, lag state, and decoded track cache.
+    mutable palette colors, palette flags, lag state, and decoded track cache.
   - Capture, mutate further, restore, assert the captured state returns.
   - Assert structural fields such as renderer and callbacks remain usable and
     are not replaced with snapshot data.
+  - Round-trip snapshots before and after emerald palette application, before
+    checkpoint rainbow, during checkpoint rainbow, and after checkpoint rainbow
+    clears.
 - Extend `TestGameplayModeContextSpecialStageRewindAdapter`
   - Register a Sonic 2 provider and assert the generic special-stage key is
     captured.
