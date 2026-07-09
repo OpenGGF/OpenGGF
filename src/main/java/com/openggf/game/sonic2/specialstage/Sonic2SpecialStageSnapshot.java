@@ -53,6 +53,7 @@ final class Sonic2SpecialStageSnapshot {
     final boolean alternateScrollBuffer;
     final boolean lastAlternateScrollBuffer;
     final int drawingIndex;
+    final boolean initialSpeedPromotionPending;
     final int lastAnimFrame;
     final int vScrollBG;
     final int hScrollDebugTotal;
@@ -119,6 +120,7 @@ final class Sonic2SpecialStageSnapshot {
             boolean alternateScrollBuffer,
             boolean lastAlternateScrollBuffer,
             int drawingIndex,
+            boolean initialSpeedPromotionPending,
             int lastAnimFrame,
             int vScrollBG,
             int hScrollDebugTotal,
@@ -183,6 +185,7 @@ final class Sonic2SpecialStageSnapshot {
         this.alternateScrollBuffer = alternateScrollBuffer;
         this.lastAlternateScrollBuffer = lastAlternateScrollBuffer;
         this.drawingIndex = drawingIndex;
+        this.initialSpeedPromotionPending = initialSpeedPromotionPending;
         this.lastAnimFrame = lastAnimFrame;
         this.vScrollBG = vScrollBG;
         this.hScrollDebugTotal = hScrollDebugTotal;

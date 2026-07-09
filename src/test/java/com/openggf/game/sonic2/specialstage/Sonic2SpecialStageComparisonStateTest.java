@@ -35,7 +35,8 @@ class Sonic2SpecialStageComparisonStateTest {
 
         assertNotNull(state, "captureComparisonState() should never return null");
         assertFalse(state.finished(), "Freshly constructed manager should not be finished");
-        assertEquals(12, state.speedFactor(), "Default speed factor should be 12 (track animator not yet initialized)");
+        assertEquals(0, state.speedFactor(),
+                "SS_Cur_Speed_Factor is zero before the ROM promotes the new factor (s2.asm:6640, 960-975)");
         assertNull(state.sonic(), "Sonic sub-record should be null before setupPlayers() runs");
         assertNull(state.tails(), "Tails sub-record should be null before setupPlayers() runs");
     }

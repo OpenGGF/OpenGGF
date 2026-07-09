@@ -38,16 +38,18 @@ public class Sonic2TrackAnimator {
     private int currentSegmentType;
     private boolean currentSegmentFlipped;
 
-    // Original game uses speedFactor = 12 ($C0000 >> 16), giving index 6 -> 5 frames per track step.
-    // At 60fps this is 12 track frames/sec.
+    // The ROM's current factor starts at zero. SpecialStage writes 12 to
+    // SS_New_Speed_Factor, then the first Vint_S2SS promotes it to the current
+    // factor (s2.asm:6640, 960-975).
     //
     // Previous investigation found bugs where:
     // 1. drawingIndex was calculated incorrectly using segment frame instead of per-frame counter
     // 2. Depth decrement was incorrectly scaled by speedFactor
     //
-    // With those bugs fixed, ROM-accurate speedFactor=12 should now work correctly.
+    // With those bugs fixed, the manager promotes speedFactor=12 at the modeled
+    // pre-roll boundary.
     // Objects approach at ~48 depth/second regardless of speed factor.
-    private int speedFactor = 12;
+    private int speedFactor = 0;
 
     private boolean stageComplete = false;
 
@@ -76,9 +78,9 @@ public class Sonic2TrackAnimator {
         currentFrameInSegment = 0;
         frameDelayCounter = 0;
         stageComplete = false;
-        // Reset speed factor to ROM-accurate initial value
-        // Original game uses 0xC (12) from SS_New_Speed_Factor ($C0000)
-        speedFactor = 12;
+        // SS_Cur_Speed_Factor remains zero until Vint_S2SS promotes the new
+        // factor written by SpecialStage (s2.asm:6640, 960-975).
+        speedFactor = 0;
         resetOrientation();
 
         if (layoutLength > 0) {

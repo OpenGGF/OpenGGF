@@ -69,6 +69,10 @@ public class Sonic2SpecialStageManager {
     public static final int H32_HEIGHT = 224;
 
     private Sonic2TrackAnimator trackAnimator;
+    // One-shot promotion of SS_New_Speed_Factor at the first post-pre-roll
+    // Vint_S2SS boundary. Speed 0 is not a sentinel: ROM writes it again later
+    // (s2.asm:72418).
+    private boolean initialSpeedPromotionPending;
 
     private byte[] levelLayouts;
     private byte[][] trackFrames;
@@ -909,6 +913,7 @@ public class Sonic2SpecialStageManager {
 
         // Use the real stage layout data from ROM
         trackAnimator.initialize(currentStage);
+        initialSpeedPromotionPending = true;
 
         lastDecodedFrameIndex = -1;
         decodedTrackFrame = null;
@@ -980,6 +985,10 @@ public class Sonic2SpecialStageManager {
             return;
         }
 
+        // Capture once: intro.update() transitions PRE_ROLL -> DROP mid-frame,
+        // but ROM state remains suppressed for that whole final pre-roll tick.
+        boolean preRoll = intro != null && intro.isPreRollActive();
+
         if (alignmentTestMode) {
             updateAlignmentTest();
             return;
@@ -1019,15 +1028,24 @@ public class Sonic2SpecialStageManager {
         }
         diagnosticUpdateCount++;
 
-        // Increment drawing index, cycling based on current frame duration.
-        // In ROM: drawing_index increments each VBlank, resets when >= frame_timer
-        // (duration).
-        // At speedFactor=12, duration=5, so drawing_index cycles 0-4.
-        // At speedFactor=6, duration=10, so drawing_index cycles 0-9.
-        // drawingIndex==4 is special: it's when $CCCC is used instead of $CCCD for
-        // depth decrement.
-        int duration = getAlignmentFrameDuration();
-        drawingIndex = (drawingIndex + 1) % Math.max(1, duration);
+        if (!preRoll) {
+            // SpecialStage writes SS_New_Speed_Factor=$000C0000 and the first
+            // Vint_S2SS promotes it (s2.asm:6640, 960-975).
+            if (initialSpeedPromotionPending) {
+                trackAnimator.setSpeedFactor(12);
+                initialSpeedPromotionPending = false;
+            }
+
+            // Increment drawing index, cycling based on current frame duration.
+            // In ROM: drawing_index increments each VBlank, resets when >= frame_timer
+            // (duration).
+            // At speedFactor=12, duration=5, so drawing_index cycles 0-4.
+            // At speedFactor=6, duration=10, so drawing_index cycles 0-9.
+            // drawingIndex==4 is special: it's when $CCCC is used instead of $CCCD for
+            // depth decrement.
+            int duration = getAlignmentFrameDuration();
+            drawingIndex = (drawingIndex + 1) % Math.max(1, duration);
+        }
 
         // Update skydome scroll based on current track animation state
         updateSkydomeScroll();
@@ -1040,8 +1058,7 @@ public class Sonic2SpecialStageManager {
             intro.update();
         }
 
-        // Track animation always runs (even during intro)
-        boolean frameChanged = trackAnimator.update();
+        boolean frameChanged = !preRoll && trackAnimator.update();
 
         // Track advances for diagnostic
         if (frameChanged) {
@@ -1965,6 +1982,7 @@ public class Sonic2SpecialStageManager {
         lagCompensationDisplayEnabled = false;
 
         trackAnimator = null;
+        initialSpeedPromotionPending = false;
         decodedTrackFrame = null;
         lastDecodedFrameIndex = -1;
         lastDecodedFlipped = false;
@@ -2134,6 +2152,7 @@ public class Sonic2SpecialStageManager {
                 alternateScrollBuffer,
                 lastAlternateScrollBuffer,
                 drawingIndex,
+                initialSpeedPromotionPending,
                 lastAnimFrame,
                 vScrollBG,
                 hScrollDebugTotal,
@@ -2205,6 +2224,7 @@ public class Sonic2SpecialStageManager {
         alternateScrollBuffer = snapshot.alternateScrollBuffer;
         lastAlternateScrollBuffer = snapshot.lastAlternateScrollBuffer;
         drawingIndex = snapshot.drawingIndex;
+        initialSpeedPromotionPending = snapshot.initialSpeedPromotionPending;
         lastAnimFrame = snapshot.lastAnimFrame;
         vScrollBG = snapshot.vScrollBG;
         hScrollDebugTotal = snapshot.hScrollDebugTotal;
@@ -2404,8 +2424,8 @@ public class Sonic2SpecialStageManager {
      * Assembles a read-only snapshot of manager/animator/player state for a trace
      * replay harness to compare against a recorded ROM trace. Pure read — no
      * mutation, no caching. {@code trackAnimator} is null until the stage is fully
-     * loaded, so its fields fall back to the animator's own construction defaults
-     * (speed factor 12, segment/frame/delay counters 0).
+     * loaded, so its fields fall back to the ROM's pre-initialization state
+     * (speed factor 0, segment/frame/delay counters 0; s2.asm:6640, 960-975).
      */
     public Sonic2SpecialStageComparisonState captureComparisonState() {
         int speedFactorValue;
@@ -2418,7 +2438,7 @@ public class Sonic2SpecialStageManager {
             trackAnimFrameValue = trackAnimator.getCurrentFrameInSegment();
             trackFrameDelayCounterValue = trackAnimator.getFrameDelayCounter();
         } else {
-            speedFactorValue = 12;
+            speedFactorValue = 0;
             currentSegmentIndexValue = 0;
             trackAnimFrameValue = 0;
             trackFrameDelayCounterValue = 0;

@@ -10,16 +10,17 @@ import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.*
  * Manages the intro sequence for Sonic 2 Special Stage.
  *
  * The intro sequence matches the original game's Obj5F (START banner) behavior:
- * 1. DROP phase: Banner drops from y=-64 to y=72 (136 frames at 1 pixel/frame)
- * 2. WAIT1 phase: Pause while letters "explode" off banner (15 frames)
- * 3. WAIT2 phase: Display ring requirement message (31 frames)
- * 4. GAMEPLAY: Normal gameplay begins (SpecialStage_Started is set)
+ * 1. PRE_ROLL phase: Current speed/track/banner remain idle during ROM initialization
+ * 2. DROP phase: Banner drops from y=-64 to y=72 (136 frames at 1 pixel/frame)
+ * 3. WAIT1 phase: Pause while letters "explode" off banner (15 frames)
+ * 4. WAIT2 phase: Display ring requirement message (31 frames)
+ * 5. GAMEPLAY: Normal gameplay begins (SpecialStage_Started is set)
  *
  * The "GET X RINGS" message appears at the start of GAMEPLAY and displays
  * for 70 frames before flying off screen.
  *
  * During the intro sequence:
- * - Track animation runs normally
+ * - Track animation starts after PRE_ROLL and then runs normally
  * - Player input is ignored
  * - Banner and message sprites are rendered on top
  */
@@ -27,9 +28,18 @@ public class Sonic2SpecialStageIntro {
     private static final Logger LOGGER = Logger.getLogger(Sonic2SpecialStageIntro.class.getName());
 
     /**
+     * One mode-entry observation plus the 22 {@code Pal_FadeToWhite} VInts
+     * before the ROM exposes initialized special-stage state (s2.asm:3570-3582,
+     * 6546-6547).
+     */
+    public static final int PRE_ROLL_FRAMES = 23;
+
+    /**
      * Intro sequence phases.
      */
     public enum Phase {
+        /** Initial empty-player/zero-speed observation window */
+        PRE_ROLL,
         /** Banner dropping from top of screen */
         DROP,
         /** Pause after banner lands, letters fly off */
@@ -73,7 +83,7 @@ public class Sonic2SpecialStageIntro {
     private static final int TILE_N = 0x0C;
     private static final int TILE_S = 0x12;
 
-    private Phase currentPhase = Phase.DROP;
+    private Phase currentPhase = Phase.PRE_ROLL;
     private int phaseTimer = 0;
     private int frameCounter = 0;
 
@@ -131,7 +141,7 @@ public class Sonic2SpecialStageIntro {
      */
     public void initialize(int stageIndex, int ringRequirement) {
         this.ringRequirement = ringRequirement;
-        currentPhase = Phase.DROP;
+        currentPhase = Phase.PRE_ROLL;
         phaseTimer = 0;
         frameCounter = 0;
 
@@ -165,6 +175,9 @@ public class Sonic2SpecialStageIntro {
         frameCounter++;
 
         switch (currentPhase) {
+            case PRE_ROLL:
+                updatePreRollPhase();
+                break;
             case DROP:
                 updateDropPhase();
                 break;
@@ -183,6 +196,14 @@ public class Sonic2SpecialStageIntro {
         }
 
         return currentPhase == Phase.GAMEPLAY;
+    }
+
+    private void updatePreRollPhase() {
+        phaseTimer++;
+        if (phaseTimer >= PRE_ROLL_FRAMES) {
+            currentPhase = Phase.DROP;
+            phaseTimer = 0;
+        }
     }
 
     private void updateDropPhase() {
@@ -499,6 +520,13 @@ public class Sonic2SpecialStageIntro {
      */
     public Phase getCurrentPhase() {
         return currentPhase;
+    }
+
+    /**
+     * Returns whether the ROM's empty-player/zero-speed pre-roll is active.
+     */
+    public boolean isPreRollActive() {
+        return currentPhase == Phase.PRE_ROLL;
     }
 
     /**
