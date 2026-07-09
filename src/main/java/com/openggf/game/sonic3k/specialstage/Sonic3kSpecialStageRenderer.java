@@ -673,17 +673,19 @@ public class Sonic3kSpecialStageRenderer {
         long swapped = player.getJumpHeight() >> 16;
         int jumpYOffset = (int)(swapped * 32 / 0x58);
 
-        // Render main player character
-        renderPlayerSprite(player, PLAYER_SCREEN_CENTER_X, 160 + jumpYOffset);
+        // Render main player character.
+        // ROM: Obj_SStage_8FAA uses palette 1 when Player_mode == 2 (Tails alone).
+        PlayerCharacter playerCharacter = manager.getPlayerCharacter();
+        renderPlayerSprite(player, playerCharacter, PLAYER_SCREEN_CENTER_X, 160 + jumpYOffset);
 
         // Render tails appendage on main player when Tails is the main character
-        if (manager.getPlayerCharacter() == PlayerCharacter.TAILS_ALONE
+        if (playerCharacter == PlayerCharacter.TAILS_ALONE
                 && tailsTailsPatternBase > 0 && tailsTailsMappingData != null) {
             int ttFrame = manager.getTailsTailsMappingFrame();
             if (ttFrame >= 0 && ttFrame < tailsTailsMappingFrameCount
                     && ttFrame * 2 + 1 < tailsTailsMappingData.length) {
                 renderCharacterSprite(tailsTailsMappingData, tailsTailsMappingFrameCount,
-                        tailsTailsPatternBase, 0, ttFrame,
+                        tailsTailsPatternBase, 1, ttFrame,
                         PLAYER_SCREEN_CENTER_X, 160 + jumpYOffset);
             }
         }
@@ -897,10 +899,13 @@ public class Sonic3kSpecialStageRenderer {
         }
     }
 
-    private void renderPlayerSprite(Sonic3kSpecialStagePlayer player, int centerX, int centerY) {
+    private void renderPlayerSprite(Sonic3kSpecialStagePlayer player,
+                                    PlayerCharacter playerCharacter,
+                                    int centerX, int centerY) {
         if (!artLoaded || playerPatternBase <= 0 || sonicMappingData == null) return;
+        int paletteIndex = playerCharacter == PlayerCharacter.TAILS_ALONE ? 1 : 0;
         renderCharacterSprite(sonicMappingData, sonicMappingFrameCount,
-                playerPatternBase, 0, player.getMappingFrame(), centerX, centerY);
+                playerPatternBase, paletteIndex, player.getMappingFrame(), centerX, centerY);
     }
 
     /**

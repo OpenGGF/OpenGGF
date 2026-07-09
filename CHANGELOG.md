@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix(s3k): render solo Tails with the correct Blue Spheres palette.** Solo Tails in Sonic 3&K special stages now renders his body and tail appendage on the ROM's player-2 palette line instead of Sonic's line, matching the disassembly's `Player_mode == 2` art tile setup.
 - **fix(rewind): tolerate stale S3K Gumball child references during capture.** The Gumball Machine's live dispenser and spring links are now treated as transient structural references and rebuilt from the restored child graph, preventing `RewindIdentityTable` crashes when a removed child remains referenced by the machine during rewind capture.
 - **feat(rewind): introduce S3K Blue Spheres special-stage rewind support.** The branch adds provider-owned Sonic 3&K Blue Spheres snapshots and a generic special-stage rewind adapter path so the special-stage runtime can participate in rewind capture and restore.
 - **feat(rewind): snapshot and enable Sonic 2 special-stage rewind.** Sonic 2 special-stage rewind now captures and restores the full manager surface, including input counters, player topology, nested intro/object/checkpoint state, decoded track caches, lag/alignment state, and exact mutable palette phases before exposing the provider-owned rewind adapter under the generic special-stage key.
