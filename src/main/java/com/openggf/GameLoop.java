@@ -1099,15 +1099,34 @@ public class GameLoop {
             }
         }
 
-        updateSpecialStageInput();
-        ssProvider.update();
+        // Visual SS trace session: feed the recorded row's input and skip the
+        // engine tick on a lag row (mirrors the LEVEL-mode playback skip gate).
+        // The trace cursor advances one row per engine frame regardless of lag,
+        // so lag rows render as authentic no-motion frames.
+        TraceSessionLauncher ssSession = TraceSessionLauncher.active();
+        if (ssSession != null) {
+            ssSession.applySpecialStageTraceInputIfActive(inputHandler);
+        }
+        boolean skipSsTick = ssSession != null
+                && ssSession.shouldSkipCurrentSpecialStageTick();
+        if (!skipSsTick) {
+            updateSpecialStageInput();
+            ssProvider.update();
+        }
+        if (ssSession != null) {
+            ssSession.advanceSpecialStageTraceCursorIfActive(inputHandler);
+        }
 
-        if (isSpecialStageRewindable() && TraceSessionLauncher.active() == null) {
+        if (isSpecialStageRewindable() && ssSession == null) {
             liveRewindManager.recordExternalFrame(currentGameMode, false, inputHandler);
         }
 
-        // Check for special stage completion or failure
-        if (ssProvider.isFinished()) {
+        // Check for special stage completion or failure. A visual SS trace
+        // session owns its own end (fade-out at the recorded stage-finished
+        // frame), so an early engine isFinished() must not hijack it into the
+        // results screen.
+        if (ssProvider.isFinished()
+                && (ssSession == null || !ssSession.isSpecialStageSession())) {
             boolean gotEmerald = ssProvider.isEmeraldCollected();
             enterResultsScreen(gotEmerald);
         }
@@ -1992,7 +2011,7 @@ public class GameLoop {
      * @param fadeFromBlack true if the screen is already black and should fade from black;
      *                      false for the normal fade-from-white reveal
      */
-    private void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
+    void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                                      boolean fadeFromBlack) {
         // Clear the transition freeze flag (now we're in special stage mode)
         specialStageTransitionPending = false;
