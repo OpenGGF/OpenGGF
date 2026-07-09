@@ -10,6 +10,7 @@ import com.openggf.game.GameMode;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.NoOpBonusStageProvider;
+import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.palette.PaletteColorStateAdapter;
@@ -551,6 +552,22 @@ public final class GameplayModeContext implements ModeContext {
     public void deregisterBonusStageAdapter() {
         if (rewindRegistry != null) {
             rewindRegistry.deregister(BonusStageCoordinatorRewindAdapter.KEY);
+        }
+    }
+
+    public void registerSpecialStageAdapter(SpecialStageProvider provider) {
+        if (rewindRegistry == null) {
+            return;
+        }
+        rewindRegistry.deregister(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY);
+        if (provider != null && provider.supportsRewind()) {
+            provider.rewindAdapter().ifPresent(rewindRegistry::register);
+        }
+    }
+
+    public void deregisterSpecialStageAdapter() {
+        if (rewindRegistry != null) {
+            rewindRegistry.deregister(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY);
         }
     }
 

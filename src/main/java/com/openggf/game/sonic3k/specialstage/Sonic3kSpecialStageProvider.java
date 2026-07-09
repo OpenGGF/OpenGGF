@@ -7,9 +7,11 @@ import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * Sonic 3&K special stage provider implementation.
@@ -59,6 +61,16 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
     @Override
     public boolean hasSpecialStages() {
         return true;
+    }
+
+    @Override
+    public boolean supportsRewind() {
+        return true;
+    }
+
+    @Override
+    public Optional<RewindSnapshottable<?>> rewindAdapter() {
+        return Optional.of(new Sonic3kSpecialStageRewindAdapter(manager));
     }
 
     @Override

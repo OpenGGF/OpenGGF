@@ -150,4 +150,24 @@ public class Sonic2SpecialStageRing extends Sonic2SpecialStageObject {
     public boolean isSparkle() {
         return state == State.COLLECTED;
     }
+
+    @Override
+    Sonic2SpecialStageSnapshot.ObjectSnapshot captureRewindSnapshot() {
+        return new Sonic2SpecialStageSnapshot.ObjectSnapshot(
+                Sonic2SpecialStageSnapshot.SpecialStageObjectType.RING,
+                captureBaseRewindSnapshot(),
+                spinFrame,
+                null,
+                0,
+                0,
+                0,
+                0,
+                false,
+                false);
+    }
+
+    void restoreRewindSnapshot(Sonic2SpecialStageSnapshot.ObjectSnapshot snapshot) {
+        restoreBaseRewindSnapshot(snapshot.base());
+        spinFrame = snapshot.ringSpinFrame() != null ? snapshot.ringSpinFrame() : 0;
+    }
 }

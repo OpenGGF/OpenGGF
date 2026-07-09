@@ -32,6 +32,13 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 19. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt)
 20. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
 21. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
+22. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
+
+---
+
+## Special-stage Live Rewind Scope
+
+Held live rewind is supported only inside rewind-capable special-stage providers. It does not rewind across the LEVEL -> SPECIAL_STAGE or SPECIAL_STAGE -> results/LEVEL boundaries; those transitions intentionally start fresh rewind timelines.
 
 ---
 
