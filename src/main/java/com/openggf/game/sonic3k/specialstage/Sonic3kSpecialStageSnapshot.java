@@ -105,9 +105,47 @@ record Sonic3kSpecialStageSnapshot(
         }
     }
 
-    record PlayerSnapshot() { }
-    record TailsAiSnapshot() { }
-    record CollisionQueueSnapshot() { }
+    record PlayerSnapshot(
+            int xPos,
+            int yPos,
+            int angle,
+            int velocity,
+            int rate,
+            int rateTimer,
+            int turning,
+            boolean turnLock,
+            boolean advancing,
+            boolean started,
+            boolean bumperLock,
+            int bumperInteractIndex,
+            int jumping,
+            long jumpHeight,
+            long jumpVelocity,
+            int animFrameTimer,
+            int mappingFrame,
+            int prevMappingFrame,
+            boolean failed,
+            boolean clearRoutineActive,
+            int fadeTimer,
+            boolean blueSphereMode,
+            boolean rateJustIncreased) { }
+
+    record TailsAiSnapshot(int[] posTableInput, int[] posTableJump,
+                           int posTableIndex, int cpuIdleTimer, int lastP2Input) {
+        TailsAiSnapshot {
+            posTableInput = Sonic3kSpecialStageSnapshot.cloneIntArray(posTableInput);
+            posTableJump = Sonic3kSpecialStageSnapshot.cloneIntArray(posTableJump);
+        }
+    }
+
+    record CollisionQueueSnapshot(int[] types, int[] timers, int[] frames, int[] gridIndices) {
+        CollisionQueueSnapshot {
+            types = Sonic3kSpecialStageSnapshot.cloneIntArray(types);
+            timers = Sonic3kSpecialStageSnapshot.cloneIntArray(timers);
+            frames = Sonic3kSpecialStageSnapshot.cloneIntArray(frames);
+            gridIndices = Sonic3kSpecialStageSnapshot.cloneIntArray(gridIndices);
+        }
+    }
     record RingConverterSnapshot(int seedBlueConverted) { }
     record PerspectiveSnapshot(int animFrame, int paletteFrame) { }
     record BackgroundSnapshot(int vScroll, int hScroll, int prevXPos, int prevYPos) { }

@@ -214,4 +214,16 @@ public class Sonic3kSpecialStageCollisionQueue {
         frames[slot] = 0;
         gridIndices[slot] = 0;
     }
+
+    Sonic3kSpecialStageSnapshot.CollisionQueueSnapshot captureRewindSnapshot() {
+        return new Sonic3kSpecialStageSnapshot.CollisionQueueSnapshot(
+                types, timers, frames, gridIndices);
+    }
+
+    void restoreRewindSnapshot(Sonic3kSpecialStageSnapshot.CollisionQueueSnapshot snapshot) {
+        Sonic3kSpecialStageSnapshot.copyInto(snapshot.types(), types);
+        Sonic3kSpecialStageSnapshot.copyInto(snapshot.timers(), timers);
+        Sonic3kSpecialStageSnapshot.copyInto(snapshot.frames(), frames);
+        Sonic3kSpecialStageSnapshot.copyInto(snapshot.gridIndices(), gridIndices);
+    }
 }

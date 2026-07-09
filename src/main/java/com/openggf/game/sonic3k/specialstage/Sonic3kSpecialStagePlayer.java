@@ -547,6 +547,41 @@ public class Sonic3kSpecialStagePlayer {
     public boolean isFailed() { return failed; }
     public int getFadeTimer() { return fadeTimer; }
 
+    Sonic3kSpecialStageSnapshot.PlayerSnapshot captureRewindSnapshot() {
+        return new Sonic3kSpecialStageSnapshot.PlayerSnapshot(
+                xPos, yPos, angle, velocity, rate, rateTimer,
+                turning, turnLock, advancing, started, bumperLock, bumperInteractIndex,
+                jumping, jumpHeight, jumpVelocity,
+                animFrameTimer, mappingFrame, prevMappingFrame,
+                failed, clearRoutineActive, fadeTimer, blueSphereMode, rateJustIncreased);
+    }
+
+    void restoreRewindSnapshot(Sonic3kSpecialStageSnapshot.PlayerSnapshot snapshot) {
+        xPos = snapshot.xPos();
+        yPos = snapshot.yPos();
+        angle = snapshot.angle();
+        velocity = snapshot.velocity();
+        rate = snapshot.rate();
+        rateTimer = snapshot.rateTimer();
+        turning = snapshot.turning();
+        turnLock = snapshot.turnLock();
+        advancing = snapshot.advancing();
+        started = snapshot.started();
+        bumperLock = snapshot.bumperLock();
+        bumperInteractIndex = snapshot.bumperInteractIndex();
+        jumping = snapshot.jumping();
+        jumpHeight = snapshot.jumpHeight();
+        jumpVelocity = snapshot.jumpVelocity();
+        animFrameTimer = snapshot.animFrameTimer();
+        mappingFrame = snapshot.mappingFrame();
+        prevMappingFrame = snapshot.prevMappingFrame();
+        failed = snapshot.failed();
+        clearRoutineActive = snapshot.clearRoutineActive();
+        fadeTimer = snapshot.fadeTimer();
+        blueSphereMode = snapshot.blueSphereMode();
+        rateJustIncreased = snapshot.rateJustIncreased();
+    }
+
     // ==================== Setters ====================
 
     public void setAdvancing(boolean advancing) { this.advancing = advancing; }
