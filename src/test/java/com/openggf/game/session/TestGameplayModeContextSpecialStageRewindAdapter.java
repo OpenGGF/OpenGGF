@@ -11,6 +11,7 @@ import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
+import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
 import com.openggf.graphics.FadeManager;
 import com.openggf.timer.TimerManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,6 +68,16 @@ class TestGameplayModeContextSpecialStageRewindAdapter {
                 .orElseThrow();
         assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY, sonic2Adapter.key());
         assertThrows(IllegalStateException.class, sonic2Adapter::resetForMissingSnapshot);
+    }
+
+    @Test
+    void sonic3kAdapterUsesGenericKeyWithoutCapturingUninitializedManager() {
+        RewindSnapshottable<?> adapter = new Sonic3kSpecialStageProvider()
+                .rewindAdapter()
+                .orElseThrow();
+
+        assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY, adapter.key());
+        assertThrows(IllegalStateException.class, adapter::resetForMissingSnapshot);
     }
 
     @Test

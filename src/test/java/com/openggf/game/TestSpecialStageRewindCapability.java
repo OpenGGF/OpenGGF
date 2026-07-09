@@ -24,15 +24,23 @@ class TestSpecialStageRewindCapability {
     }
 
     @Test
-    void sonic1AndSonic2ProvidersSupportRewindButS3kDoesNotYet() {
-        assertTrue(new Sonic1SpecialStageProvider().supportsRewind());
-        assertTrue(new Sonic2SpecialStageProvider().supportsRewind());
-        assertTrue(new Sonic1SpecialStageProvider().rewindAdapter().isPresent());
-        assertTrue(new Sonic2SpecialStageProvider().rewindAdapter().isPresent());
+    void sonic1Sonic2AndS3kProvidersSupportRewind() {
+        Sonic1SpecialStageProvider sonic1 = new Sonic1SpecialStageProvider();
+        Sonic2SpecialStageProvider sonic2 = new Sonic2SpecialStageProvider();
+        Sonic3kSpecialStageProvider sonic3k = new Sonic3kSpecialStageProvider();
+
+        assertTrue(sonic1.supportsRewind());
+        assertTrue(sonic2.supportsRewind());
+        assertTrue(sonic3k.supportsRewind());
+        assertTrue(sonic1.rewindAdapter().isPresent());
+        assertTrue(sonic2.rewindAdapter().isPresent());
+        assertTrue(sonic3k.rewindAdapter().isPresent());
         assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY,
-                new Sonic2SpecialStageProvider().rewindAdapter().orElseThrow().key());
-        assertFalse(new Sonic3kSpecialStageProvider().supportsRewind());
-        assertTrue(new Sonic3kSpecialStageProvider().rewindAdapter().isEmpty());
+                sonic1.rewindAdapter().orElseThrow().key());
+        assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY,
+                sonic2.rewindAdapter().orElseThrow().key());
+        assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY,
+                sonic3k.rewindAdapter().orElseThrow().key());
     }
 
     private static final class MinimalSpecialStageProvider implements SpecialStageProvider {
