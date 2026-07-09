@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **fix(s2ss): resolve special-stage team from standard two-key config.** Sonic 2 special-stage `setupPlayers()` now resolves the active team via `ActiveGameplayTeamResolver` (`MAIN_CHARACTER_CODE` + `SIDEKICK_CHARACTER_CODE`) instead of an unreachable `"sonic_and_tails"` config literal, so Sonic+Tails team play now spawns correctly in special stages.
 - **fix(s3k): render solo Tails with the correct Blue Spheres palette.** Solo Tails in Sonic 3&K special stages now renders his body and tail appendage on the ROM's player-2 palette line instead of Sonic's line, matching the disassembly's `Player_mode == 2` art tile setup.
 - **fix(rewind): tolerate stale S3K Gumball child references during capture.** The Gumball Machine's live dispenser and spring links are now treated as transient structural references and rebuilt from the restored child graph, preventing `RewindIdentityTable` crashes when a removed child remains referenced by the machine during rewind capture.
 - **feat(rewind): introduce S3K Blue Spheres special-stage rewind support.** The branch adds provider-owned Sonic 3&K Blue Spheres snapshots and a generic special-stage rewind adapter path so the special-stage runtime can participate in rewind capture and restore.

@@ -916,6 +916,14 @@ public class Sonic2SpecialStageManager {
         LOGGER.fine("Track animator initialized");
     }
 
+    /**
+     * Test-only seam exposing {@link #setupPlayers()} to same-package tests
+     * that construct the manager without a renderer.
+     */
+    void setupPlayersForTest() {
+        setupPlayers();
+    }
+
     private void setupPlayers() {
         players.clear();
         sonicPlayer = null;
@@ -926,39 +934,36 @@ public class Sonic2SpecialStageManager {
             characterCode = "sonic";
         }
         characterCode = characterCode.toLowerCase();
+        boolean tailsSidekick = ActiveGameplayTeamResolver.resolveSidekicks(configuration())
+                .stream().map(String::toLowerCase).anyMatch("tails"::equals);
 
-        switch (characterCode) {
-            case "tails":
-                tailsPlayer = new Sonic2SpecialStagePlayer(
-                        Sonic2SpecialStagePlayer.PlayerType.TAILS, true);
-                players.add(tailsPlayer);
-                LOGGER.fine("Special Stage: Tails alone");
-                break;
+        if ("tails".equals(characterCode)) {
+            tailsPlayer = new Sonic2SpecialStagePlayer(
+                    Sonic2SpecialStagePlayer.PlayerType.TAILS, true);
+            players.add(tailsPlayer);
+            LOGGER.fine("Special Stage: Tails alone");
+        } else if (tailsSidekick) {
+            sonicPlayer = new Sonic2SpecialStagePlayer(
+                    Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+            players.add(sonicPlayer);
 
-            case "sonic_and_tails":
-                sonicPlayer = new Sonic2SpecialStagePlayer(
-                        Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
-                players.add(sonicPlayer);
+            tailsPlayer = new Sonic2SpecialStagePlayer(
+                    Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
+            players.add(tailsPlayer);
 
-                tailsPlayer = new Sonic2SpecialStagePlayer(
-                        Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
-                players.add(tailsPlayer);
-
-                sonicPlayer.setOtherPlayer(tailsPlayer);
-                tailsPlayer.setOtherPlayer(sonicPlayer);
-                LOGGER.fine("Special Stage: Sonic and Tails");
-                break;
-
-            case "sonic":
-            default:
-                sonicPlayer = new Sonic2SpecialStagePlayer(
-                        Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
-                players.add(sonicPlayer);
-                LOGGER.fine("Special Stage: Sonic alone");
-                break;
+            sonicPlayer.setOtherPlayer(tailsPlayer);
+            tailsPlayer.setOtherPlayer(sonicPlayer);
+            LOGGER.fine("Special Stage: Sonic and Tails");
+        } else {
+            sonicPlayer = new Sonic2SpecialStagePlayer(
+                    Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+            players.add(sonicPlayer);
+            LOGGER.fine("Special Stage: Sonic alone");
         }
 
-        renderer.setPlayers(players);
+        if (renderer != null) {
+            renderer.setPlayers(players);
+        }
     }
 
     /**
