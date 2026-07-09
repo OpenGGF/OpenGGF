@@ -24,10 +24,15 @@ class TestSpecialStageRewindCapability {
     }
 
     @Test
-    void onlySonic1ProviderSupportsRewindInThisRollout() {
+    void sonic1AndSonic2ProvidersSupportRewindButS3kDoesNotYet() {
         assertTrue(new Sonic1SpecialStageProvider().supportsRewind());
-        assertFalse(new Sonic2SpecialStageProvider().supportsRewind());
+        assertTrue(new Sonic2SpecialStageProvider().supportsRewind());
+        assertTrue(new Sonic1SpecialStageProvider().rewindAdapter().isPresent());
+        assertTrue(new Sonic2SpecialStageProvider().rewindAdapter().isPresent());
+        assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY,
+                new Sonic2SpecialStageProvider().rewindAdapter().orElseThrow().key());
         assertFalse(new Sonic3kSpecialStageProvider().supportsRewind());
+        assertTrue(new Sonic3kSpecialStageProvider().rewindAdapter().isEmpty());
     }
 
     private static final class MinimalSpecialStageProvider implements SpecialStageProvider {

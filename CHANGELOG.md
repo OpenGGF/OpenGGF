@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **feat(rewind): snapshot and enable Sonic 2 special-stage rewind.** Sonic 2 special-stage rewind now captures and restores the full manager surface, including input counters, player topology, nested intro/object/checkpoint state, decoded track caches, lag/alignment state, and exact mutable palette phases before exposing the provider-owned rewind adapter under the generic special-stage key.
 - **feat(rewind): snapshot Sonic 2 special-stage objects.** Sonic 2 special-stage rings, bombs, emeralds, and the object manager can now capture and restore ordered active-object state, object-stream cursors, counters, flags, and cloned location/offset arrays while reconnecting restored emeralds to their owning manager.
 - **feat(rewind): snapshot Sonic 2 special-stage intro and checkpoint messages.** The Sonic 2 special-stage intro banner/message state and checkpoint message/rainbow/hand state now capture and restore through value snapshots while preserving structural checkpoint callbacks for future special-stage rewind integration.
 - **feat(rewind): snapshot Sonic 2 special-stage player state.** Sonic 2 special-stage players now own rewind-capturable invulnerability countdown state, clone deterministic player control buffers, and can restore Sonic/Tails solo or linked topology while keeping renderer player bindings intact.

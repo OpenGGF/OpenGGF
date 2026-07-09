@@ -333,14 +333,13 @@ public class Sonic2SpecialStageManager {
     }
 
     private GraphicsManager graphicsManagerOrNull() {
-        if (graphicsManager != null) {
-            return graphicsManager;
-        }
+        GraphicsManager resolved;
         try {
-            return GameServices.graphics();
+            resolved = graphicsManager != null ? graphicsManager : GameServices.graphics();
         } catch (IllegalStateException ignored) {
             return null;
         }
+        return (resolved.isHeadlessMode() || resolved.isGlInitialized()) ? resolved : null;
     }
 
     /**
@@ -2077,11 +2076,75 @@ public class Sonic2SpecialStageManager {
     }
 
     Sonic2SpecialStageSnapshot captureRewindSnapshot() {
+        ArrayList<Sonic2SpecialStageSnapshot.PlayerSnapshot> playerSnapshots = new ArrayList<>();
+        for (Sonic2SpecialStagePlayer player : players) {
+            playerSnapshots.add(player.captureRewindSnapshot());
+        }
         return new Sonic2SpecialStageSnapshot(
                 initialized,
                 currentStage,
                 resultState,
-                emeraldCollected);
+                emeraldCollected,
+                frameCounter,
+                heldButtons,
+                pressedButtons,
+                p2HeldButtons,
+                p2LogicalButtons,
+                tailsControlCounter,
+                tailsCtrlRecordBuf,
+                lastDrawingIndex,
+                checkpointRainbowPaletteActive,
+                rainbowPaletteCycleIndex,
+                pendingCheckpoint,
+                pendingCheckpointNumber,
+                pendingRingRequirement,
+                pendingRingsCollected,
+                pendingFinalCheckpoint,
+                currentRingRequirement,
+                spriteDebugMode,
+                planeDebugMode,
+                alignmentTestMode,
+                alignmentTestSavedRainbowPalette,
+                alignmentPendingCheckpoint,
+                alignmentFrameIndex,
+                alignmentFrameTimer,
+                alignmentTrackFrameIndex,
+                alignmentLastDecodedFrameIndex,
+                alignmentDecodedTrackFrame,
+                alignmentDrawingIndex,
+                alignmentTriggerOffsetFrames,
+                alignmentRainbowSpeedScale,
+                alignmentRainbowSpeedAccumulator,
+                alignmentStepByTrackFrame,
+                lagCompensation,
+                lagAccumulator,
+                lagCompensationDisplayEnabled,
+                diagnosticWallStartTime,
+                diagnosticUpdateCount,
+                diagnosticTrackAdvances,
+                lastFrameTime,
+                frameSampleCount,
+                frameSampleSum,
+                skydomeScrollX,
+                alternateScrollBuffer,
+                lastAlternateScrollBuffer,
+                drawingIndex,
+                lastAnimFrame,
+                vScrollBG,
+                hScrollDebugTotal,
+                hScrollDebugFrames,
+                lastDebugSegmentIndex,
+                decodedTrackFrame,
+                lastDecodedFrameIndex,
+                lastDecodedFlipped,
+                palettes,
+                trackAnimator != null ? trackAnimator.captureRewindSnapshot() : null,
+                Sonic2SpecialStageSnapshot.PlayerTopologySnapshot.capture(players, sonicPlayer, tailsPlayer),
+                playerSnapshots,
+                intro != null ? intro.captureRewindSnapshot() : null,
+                objectManager != null ? objectManager.captureRewindSnapshot() : null,
+                checkpoint != null ? checkpoint.captureRewindSnapshot() : null,
+                alignmentCheckpoint != null ? alignmentCheckpoint.captureRewindSnapshot() : null);
     }
 
     void restoreRewindSnapshot(Sonic2SpecialStageSnapshot snapshot) {
@@ -2089,6 +2152,104 @@ public class Sonic2SpecialStageManager {
         currentStage = snapshot.currentStage;
         resultState = snapshot.resultState;
         emeraldCollected = snapshot.emeraldCollected;
+        frameCounter = snapshot.frameCounter;
+        heldButtons = snapshot.heldButtons;
+        pressedButtons = snapshot.pressedButtons;
+        p2HeldButtons = snapshot.p2HeldButtons;
+        p2LogicalButtons = snapshot.p2LogicalButtons;
+        tailsControlCounter = snapshot.tailsControlCounter;
+        System.arraycopy(snapshot.tailsCtrlRecordBuf, 0, tailsCtrlRecordBuf, 0,
+                Math.min(tailsCtrlRecordBuf.length, snapshot.tailsCtrlRecordBuf.length));
+        lastDrawingIndex = snapshot.lastDrawingIndex;
+        checkpointRainbowPaletteActive = snapshot.checkpointRainbowPaletteActive;
+        rainbowPaletteCycleIndex = snapshot.rainbowPaletteCycleIndex;
+        pendingCheckpoint = snapshot.pendingCheckpoint;
+        pendingCheckpointNumber = snapshot.pendingCheckpointNumber;
+        pendingRingRequirement = snapshot.pendingRingRequirement;
+        pendingRingsCollected = snapshot.pendingRingsCollected;
+        pendingFinalCheckpoint = snapshot.pendingFinalCheckpoint;
+        currentRingRequirement = snapshot.currentRingRequirement;
+        spriteDebugMode = snapshot.spriteDebugMode;
+        if (debugSprites != null) {
+            debugSprites.setEnabled(spriteDebugMode);
+        }
+        planeDebugMode = (PlaneDebugMode) snapshot.planeDebugMode;
+        alignmentTestMode = snapshot.alignmentTestMode;
+        alignmentTestSavedRainbowPalette = snapshot.alignmentTestSavedRainbowPalette;
+        alignmentPendingCheckpoint = snapshot.alignmentPendingCheckpoint;
+        alignmentFrameIndex = snapshot.alignmentFrameIndex;
+        alignmentFrameTimer = snapshot.alignmentFrameTimer;
+        alignmentTrackFrameIndex = snapshot.alignmentTrackFrameIndex;
+        alignmentLastDecodedFrameIndex = snapshot.alignmentLastDecodedFrameIndex;
+        alignmentDecodedTrackFrame = Sonic2SpecialStageSnapshot.cloneIntArray(snapshot.alignmentDecodedTrackFrame);
+        alignmentDrawingIndex = snapshot.alignmentDrawingIndex;
+        alignmentTriggerOffsetFrames = snapshot.alignmentTriggerOffsetFrames;
+        alignmentRainbowSpeedScale = snapshot.alignmentRainbowSpeedScale;
+        alignmentRainbowSpeedAccumulator = snapshot.alignmentRainbowSpeedAccumulator;
+        alignmentStepByTrackFrame = snapshot.alignmentStepByTrackFrame;
+        lagCompensation = snapshot.lagCompensation;
+        lagAccumulator = snapshot.lagAccumulator;
+        lagCompensationDisplayEnabled = snapshot.lagCompensationDisplayEnabled;
+        diagnosticWallStartTime = snapshot.diagnosticWallStartTime;
+        diagnosticUpdateCount = snapshot.diagnosticUpdateCount;
+        diagnosticTrackAdvances = snapshot.diagnosticTrackAdvances;
+        lastFrameTime = snapshot.lastFrameTime;
+        frameSampleCount = snapshot.frameSampleCount;
+        frameSampleSum = snapshot.frameSampleSum;
+        skydomeScrollX = snapshot.skydomeScrollX;
+        alternateScrollBuffer = snapshot.alternateScrollBuffer;
+        lastAlternateScrollBuffer = snapshot.lastAlternateScrollBuffer;
+        drawingIndex = snapshot.drawingIndex;
+        lastAnimFrame = snapshot.lastAnimFrame;
+        vScrollBG = snapshot.vScrollBG;
+        hScrollDebugTotal = snapshot.hScrollDebugTotal;
+        hScrollDebugFrames = snapshot.hScrollDebugFrames;
+        lastDebugSegmentIndex = snapshot.lastDebugSegmentIndex;
+        decodedTrackFrame = Sonic2SpecialStageSnapshot.cloneIntArray(snapshot.decodedTrackFrame);
+        lastDecodedFrameIndex = snapshot.lastDecodedFrameIndex;
+        lastDecodedFlipped = snapshot.lastDecodedFlipped;
+        palettes = Sonic2SpecialStageSnapshot.clonePalettes(snapshot.palettes);
+        recacheRestoredPalettes();
+        if (trackAnimator != null && snapshot.trackAnimator != null) {
+            trackAnimator.restoreRewindSnapshot(snapshot.trackAnimator);
+        }
+        restorePlayerTopologyForRewind(snapshot.playerTopology, snapshot.players);
+        if (intro != null && snapshot.intro != null) {
+            intro.restoreRewindSnapshot(snapshot.intro);
+        }
+        if (objectManager != null && snapshot.objectManager != null) {
+            objectManager.restoreRewindSnapshot(snapshot.objectManager, this);
+        }
+        if (checkpoint != null && snapshot.checkpoint != null) {
+            checkpoint.restoreRewindSnapshot(snapshot.checkpoint);
+        }
+        if (snapshot.alignmentCheckpoint != null) {
+            if (alignmentCheckpoint == null) {
+                alignmentCheckpoint = new Sonic2SpecialStageCheckpoint();
+            }
+            alignmentCheckpoint.restoreRewindSnapshot(snapshot.alignmentCheckpoint);
+        } else {
+            alignmentCheckpoint = null;
+        }
+        if (renderer != null) {
+            renderer.setPlayers(players);
+            renderer.setIntro(intro);
+            renderer.setCheckpoint(alignmentTestMode && alignmentCheckpoint != null
+                    ? alignmentCheckpoint
+                    : checkpoint);
+        }
+    }
+
+    private void recacheRestoredPalettes() {
+        GraphicsManager graphics = graphicsManagerOrNull();
+        if (graphics == null || palettes == null) {
+            return;
+        }
+        for (int i = 0; i < palettes.length; i++) {
+            if (palettes[i] != null) {
+                graphics.cachePaletteTexture(palettes[i], i);
+            }
+        }
     }
 
     void restorePlayerTopologyForRewind(
