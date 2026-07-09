@@ -161,6 +161,16 @@ Manager classes consolidated for reduced complexity:
 - **`CollisionSystem`** orchestrates collision in phases: terrain probes (`TerrainCollisionManager`) → solid object resolution (`ObjectManager.SolidContacts`) → post-resolution (ground mode, headroom). Supports trace recording via `CollisionTrace` (`RecordingCollisionTrace` / `NoOpCollisionTrace`).
 - **`UiRenderPipeline`** (`graphics.pipeline`) enforces render order: Scene → HUD overlay → Fade pass. `Engine.display()` drives screen transitions through it. `RenderOrderRecorder` is available for tests.
 
+## Multiplayer time attack networking
+
+The direct-connect and master-server networking core lives under
+`com.openggf.net.protocol`, `com.openggf.net.hub`, `com.openggf.net.host`, and
+`com.openggf.net.client`. These packages are engine-free and may share only the
+canonical `GhostFrame` / `GhostFrameCodec`; `TestNetIsolationRules` enforces the
+boundary. Each `RoomHost` and `GhostHub` is single-event-loop-thread confined.
+Phase 3 reuses those room classes unchanged inside the master server. Engine and
+UI adapters belong in `com.openggf.game.timeattack.mp`.
+
 ## Multi-Sidekick System
 
 The engine extends the ROM's single CPU-controlled sidekick (Tails at `$FFFFB040`) to support an arbitrary number of sidekick characters configured via comma-separated `characters.sidekick` in `config.yaml` (e.g. `"tails,knuckles,sonic,sonic"`). This is a novelty feature — not present in any official Sonic game.

@@ -223,6 +223,16 @@ To add overlay support for other zones: add ROM offsets to `Sonic2Constants`, cr
 
 - **PLC system:** `PlcParser` in `level.resources` provides game-agnostic PLC parsing. See `plc-system` skill for cross-game reference, `s3k-plc-system` for S3K-specific details.
 
+## Multiplayer time attack networking
+
+The direct-connect and master-server networking core lives under
+`com.openggf.net.protocol`, `com.openggf.net.hub`, `com.openggf.net.host`, and
+`com.openggf.net.client`. These packages are engine-free and may share only the
+canonical `GhostFrame` / `GhostFrameCodec`; `TestNetIsolationRules` enforces the
+boundary. Each `RoomHost` and `GhostHub` is single-event-loop-thread confined.
+Phase 3 reuses those room classes unchanged inside the master server. Engine and
+UI adapters belong in `com.openggf.game.timeattack.mp`.
+
 ## Multi-Game Support Architecture
 
 Game-specific behavior is isolated behind the `GameModule` interface. `GameModuleRegistry` holds the current module, `RomDetectionService` auto-detects ROM type.
