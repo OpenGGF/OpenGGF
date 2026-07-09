@@ -24,12 +24,16 @@ public final class PlayerIdentity {
     private static final String ALGORITHM = "Ed25519";
     private static final String KEY_FILE = "player-identity.key";
     private static final String PUB_FILE = "player-identity.pub";
+    private static final String POW_FILE = "player-identity.pow";
 
+    private final Path identityDir;
     private final PrivateKey privateKey;
     private final PublicKey publicKey;
     private final String fingerprint;
 
-    private PlayerIdentity(PrivateKey privateKey, PublicKey publicKey) throws GeneralSecurityException {
+    private PlayerIdentity(Path identityDir, PrivateKey privateKey, PublicKey publicKey)
+            throws GeneralSecurityException {
+        this.identityDir = identityDir;
         this.privateKey = privateKey;
         this.publicKey = publicKey;
         this.fingerprint = HexFormat.of().formatHex(
@@ -44,13 +48,13 @@ public final class PlayerIdentity {
         if (Files.exists(keyPath) && Files.exists(pubPath)) {
             PrivateKey priv = factory.generatePrivate(new PKCS8EncodedKeySpec(Files.readAllBytes(keyPath)));
             PublicKey pub = factory.generatePublic(new X509EncodedKeySpec(Files.readAllBytes(pubPath)));
-            return new PlayerIdentity(priv, pub);
+            return new PlayerIdentity(dir, priv, pub);
         }
         KeyPair pair = KeyPairGenerator.getInstance(ALGORITHM).generateKeyPair();
         Files.write(keyPath, pair.getPrivate().getEncoded());
         restrictPrivateKeyPermissions(keyPath);
         Files.write(pubPath, pair.getPublic().getEncoded());
-        return new PlayerIdentity(pair.getPrivate(), pair.getPublic());
+        return new PlayerIdentity(dir, pair.getPrivate(), pair.getPublic());
     }
 
     public String fingerprint() { return fingerprint; }
@@ -74,6 +78,33 @@ public final class PlayerIdentity {
         } catch (GeneralSecurityException e) {
             return false;
         }
+    }
+
+    /** Returns the persisted reusable creation stamp for at least this difficulty. */
+    public synchronized long creationPowNonce(int difficultyBits) throws IOException {
+        if (difficultyBits < 0 || difficultyBits > 256) {
+            throw new IllegalArgumentException("difficulty must be between 0 and 256 bits");
+        }
+        Path powPath = identityDir.resolve(POW_FILE);
+        if (Files.exists(powPath)) {
+            try {
+                String[] parts = Files.readString(powPath).trim().split("\\R");
+                if (parts.length == 2) {
+                    int storedBits = Integer.parseInt(parts[0]);
+                    long storedNonce = Long.parseLong(parts[1]);
+                    if (storedBits >= difficultyBits
+                            && ProofOfWork.verify(publicKeyEncoded(), storedNonce,
+                            difficultyBits)) {
+                        return storedNonce;
+                    }
+                }
+            } catch (NumberFormatException ignored) {
+                // A truncated or malformed stamp is safely replaced below.
+            }
+        }
+        long nonce = ProofOfWork.solve(publicKeyEncoded(), difficultyBits);
+        Files.writeString(powPath, difficultyBits + System.lineSeparator() + nonce);
+        return nonce;
     }
 
     private static void restrictPrivateKeyPermissions(Path keyPath) {
