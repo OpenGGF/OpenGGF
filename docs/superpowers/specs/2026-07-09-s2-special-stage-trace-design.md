@@ -102,7 +102,7 @@ Derived from `s2_trace_recorder.lua` (v9.10). Behavior:
 | `player_anim_frame_timer` | `SS_player_anim_frame_timer` |
 | `rings_togo_bcd`, `check_rings_flag` | `SS_RingsToGoBCD`, `SS_Check_Rings_flag` |
 | `tails_control_counter` | `Tails_control_counter` |
-| `swap_positions_flag` | `SS_Swap_Positions_Flag` |
+| `swap_positions_flag` | `SS_Swap_Positions_Flag` (see comparison caveats) |
 
 Per character (`sonic_*` block then `tails_*` block), read from the standard object
 slots (MainCharacter `$FFFFB000`, Sidekick `$FFFFB040`) using the SS field offsets
@@ -189,7 +189,10 @@ value equality.
   global `speed_factor`, `current_segment`, `track_anim_frame`.
 - Tier 2 (warnings initially, ratcheted to errors as fixes land): per-player rings,
   intro/message timing, `rings_togo_bcd`, checkpoint flags, `tails_control_counter`,
-  `track_drawing_index`, hurt/slide timers.
+  `track_drawing_index`, `track_duration_timer` (via mapping), `swap_positions_flag`,
+  hurt/slide timers.
+- Recorded but not compared (engine counterpart missing/constant — see caveats):
+  `player_anim_frame_timer`.
 
 **Per-player rings caveat:** the ROM tracks each player's ring pickups separately
 on their object slots (`ss_rings_*` at `objoff_3C..3E`; incremented per touching
@@ -201,8 +204,31 @@ follow-up fix plan adds per-player ring tracking to the engine (a real ROM-parit
 gap — the results screen tallies each player's rings separately). BCD fields are
 decoded to binary before comparison.
 
-Report JSON to `target/trace-reports/s2_special_stage_report.json` in the existing
-format (first-divergence brief compatible with `TraceTriageTool`).
+**Further field-comparability caveats** (same class as rings — recorded now,
+faithfully comparable only after small engine parity fixes; all are follow-up-plan
+worklist items, not MVP blockers):
+
+- `swap_positions_flag`: ROM has one global cell toggled by whichever player jumps
+  (`s2.asm:69058`, `s2.asm:69253`); the engine keeps a *per-player copy* on each
+  `Sonic2SpecialStagePlayer` (`swapPositionsFlag`, line 142) with no cross-instance
+  sync, so the copies diverge from a ROM-faithful single flag whenever only one
+  player acts. Tier-2 diagnostic only until reconciled.
+- `player_anim_frame_timer`: the engine's only counterpart,
+  `Sonic2TrackAnimator.getPlayerAnimFrameTimer()`, returns a constant
+  (`getFrameDuration() - 1`) by its own admission, not a live decrementing counter.
+  Recorded, **not compared**, until a real counter exists — wiring it in now would
+  be permanently-noisy diagnostics.
+- `track_duration_timer`: no engine accessor exists, and the closest analog
+  (`frameDelayCounter`) counts *up* 0→duration while the ROM counts *down* to 0
+  (`s2.asm:967`). Needs a new getter plus the same explicit ROM↔engine mapping
+  treatment as `routine` — never raw value equality.
+
+Report JSON to
+`target/trace-reports/s2_special_stage_<special_stage_index>_report.json` —
+per-trace prefix derived from metadata, matching the existing dynamic-naming
+convention (`AbstractTraceReplayTest.java:1249-1250`) so future multi-stage traces
+don't overwrite each other. Existing format (first-divergence brief compatible
+with `TraceTriageTool`).
 
 **Engine-side additions (src/main), enumerated:** `Sonic2SpecialStageSnapshot` is
 package-private, so the fixture cannot read it from the test tree. Add a *public*
@@ -212,13 +238,27 @@ and per-player state — no behavior change, no new mutators.
 
 ## Component 4 — Visual test mode
 
+Sized honestly: this is a **parallel live SS trace driver** modeled on the level
+`TraceSessionLauncher` stack, not a small in-place branch — the existing launcher
+is level-shaped end-to-end (`TraceReplayDriver.start(zone, act)`, level camera
+focus, `LevelFrameStep`-based stepping).
+
 - `TraceCatalog` validation gains a profile switch so SS trace dirs validate
-  against the SS artifact set.
-- `TraceSessionLauncher` gains a special-stage branch: instead of zone/act load it
-  drives special-stage entry and feeds BK2 inputs through
-  `SpecialStageInputMapper` with the same trace-paced skips. Note:
-  `GameLoop.doEnterSpecialStage(...)` is `private` (`GameLoop.java:1995`; the one
-  existing test caller uses reflection). Loosen it to package-private —
+  against the SS artifact set. SS metadata carries no `zone_id`/`act` (they default
+  to 0 in `TraceCatalog.tryLoad`); catalog labeling/sorting for SS entries derives
+  from `trace_profile` + `special_stage_index` instead — a `TraceEntry` display
+  change, called out so multiple SS traces don't all render as "zone 0 act 0".
+- **`GameLoop.updateSpecialStageMode()` needs a new skip-gate**: unlike LEVEL mode
+  (which has `shouldSkipCurrentGameplayTick()` at `GameLoop.java:1346` to suppress
+  a gameplay tick on a lag row while advancing the BK2 cursor/VBlank counter),
+  the SS path unconditionally calls `ssProvider.update()` every engine frame
+  (`GameLoop.java:1049-1114`). A mirroring gate is a prerequisite for live
+  trace-paced skips: on a skipped row the BK2 cursor and frame bookkeeping advance
+  but `ssProvider.update()` does not run.
+- The SS live driver drives special-stage entry and feeds BK2 inputs through
+  `SpecialStageInputMapper` with the same trace-paced skips as headless replay.
+  Note: `GameLoop.doEnterSpecialStage(...)` is `private` (`GameLoop.java:1995`; the
+  one existing test caller uses reflection). Loosen it to package-private —
   `TraceSessionLauncher` lives in the same `com.openggf` package — rather than
   adding reflection in production code.
 - Side benefit: paced skips reproduce the ROM's authentic perceived speed on screen,
