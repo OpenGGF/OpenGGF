@@ -332,8 +332,10 @@ local function record_frame()
     local input_p2_mask = joypad_mask_from_frame(frame_index, 2)
     local lag = emu.islagged() and 1 or 0
 
+    -- frame is decimal and lag is 0/1; every other column (including the
+    -- *_present flags) is lowercase hex per the ss_csv_version 1 schema.
     physics_file:write(string.format(
-        "%d,%x,%x,%d,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%d,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%d,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n",
+        "%d,%x,%x,%d,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n",
         trace_frame, input_mask, input_p2_mask, lag,
         speed_factor, track_anim, track_anim_frame, track_drawing_index,
         track_orientation, track_duration_timer, current_segment,

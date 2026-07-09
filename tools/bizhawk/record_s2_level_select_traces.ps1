@@ -128,19 +128,29 @@ function Get-AuxEvents([string]$TraceDir) {
     return @($text -split "`r?`n" | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
 }
 
-function Convert-Bk2P1FieldToMask([string]$P1) {
-    if ($P1.Length -lt 8) {
-        throw "Unexpected P1 input field '$P1'"
+# Convert one BK2 pad field ("UDLRABCS", 8 chars) to the engine input mask.
+# Level traces use the Start-less mask (UP=0x01 DOWN=0x02 LEFT=0x04 RIGHT=0x08
+# JUMP=0x10); the special-stage schema additionally maps Start to 0x80.
+function Convert-Bk2PadFieldToMask([string]$Field, [switch]$IncludeStart) {
+    if ($Field.Length -lt 8) {
+        throw "Unexpected pad input field '$Field'"
     }
     $mask = 0
-    if ($P1[0] -ne '.') { $mask = $mask -bor 0x01 } # Up
-    if ($P1[1] -ne '.') { $mask = $mask -bor 0x02 } # Down
-    if ($P1[2] -ne '.') { $mask = $mask -bor 0x04 } # Left
-    if ($P1[3] -ne '.') { $mask = $mask -bor 0x08 } # Right
-    if ($P1[4] -ne '.' -or $P1[5] -ne '.' -or $P1[6] -ne '.') {
-        $mask = $mask -bor 0x10
+    if ($Field[0] -ne '.') { $mask = $mask -bor 0x01 } # Up
+    if ($Field[1] -ne '.') { $mask = $mask -bor 0x02 } # Down
+    if ($Field[2] -ne '.') { $mask = $mask -bor 0x04 } # Left
+    if ($Field[3] -ne '.') { $mask = $mask -bor 0x08 } # Right
+    if ($Field[4] -ne '.' -or $Field[5] -ne '.' -or $Field[6] -ne '.') {
+        $mask = $mask -bor 0x10                        # A/B/C -> JUMP
+    }
+    if ($IncludeStart -and $Field[7] -ne '.') {
+        $mask = $mask -bor 0x80                        # Start
     }
     return $mask
+}
+
+function Convert-Bk2P1FieldToMask([string]$P1) {
+    return Convert-Bk2PadFieldToMask $P1
 }
 
 function Get-Bk2InputMasks([string]$Bk2Path) {
@@ -164,6 +174,41 @@ function Get-Bk2InputMasks([string]$Bk2Path) {
                 $masks.Add((Convert-Bk2P1FieldToMask $parts[2]))
             }
             return $masks.ToArray()
+        } finally {
+            $reader.Dispose()
+        }
+    } finally {
+        $zip.Dispose()
+    }
+}
+
+# Returns per-frame @{ P1 = mask; P2 = mask } objects (Start-aware masks) from
+# the BK2 Input Log for the special-stage input-alignment check. P2 is parsed
+# from field index 3; a movie with no recorded P2 input yields all-zero P2 masks.
+function Get-Bk2SsInputMaskPairs([string]$Bk2Path) {
+    $zip = [System.IO.Compression.ZipFile]::OpenRead($Bk2Path)
+    try {
+        $entry = $zip.Entries | Where-Object { $_.FullName -eq "Input Log.txt" }
+        if ($null -eq $entry) {
+            throw "Input Log.txt not found in $Bk2Path"
+        }
+        $reader = [System.IO.StreamReader]::new($entry.Open())
+        try {
+            $pairs = New-Object System.Collections.Generic.List[object]
+            while (($line = $reader.ReadLine()) -ne $null) {
+                if (-not $line.StartsWith("|")) {
+                    continue
+                }
+                $parts = $line.Split("|")
+                if ($parts.Length -lt 5) {
+                    throw "Unexpected BK2 input line (no P2 field): $line"
+                }
+                $pairs.Add([pscustomobject]@{
+                    P1 = (Convert-Bk2PadFieldToMask $parts[2] -IncludeStart)
+                    P2 = (Convert-Bk2PadFieldToMask $parts[3] -IncludeStart)
+                })
+            }
+            return $pairs.ToArray()
         } finally {
             $reader.Dispose()
         }
@@ -327,9 +372,42 @@ function Assert-SsMetadata([object]$Route, [string]$TraceDir) {
     }
 }
 
-function Assert-SsTraceOutput([object]$Route, [string]$TraceDir) {
+# Special-stage analog of Assert-Bk2InputAlignment: verifies BOTH the csv
+# `input` (column 1) and `input_p2` (column 2) values against the BK2's
+# Input Log P1/P2 fields (Start-aware masks) for every recorded frame from
+# bk2_frame_offset onward.
+function Assert-SsBk2InputAlignment([string]$Bk2Path, [string]$TraceDir) {
+    $metadata = Get-Content -LiteralPath (Join-Path $TraceDir "metadata.json") -Raw | ConvertFrom-Json
+    $offset = [int]$metadata.bk2_frame_offset
+    $rows = Get-PhysicsRows $TraceDir
+    $pairs = Get-Bk2SsInputMaskPairs $Bk2Path
+    for ($i = 0; $i -lt $rows.Count; $i++) {
+        $bk2Index = $offset + $i
+        if ($bk2Index -ge $pairs.Length) {
+            throw "SS trace row $i needs BK2 input index $bk2Index, but movie has $($pairs.Length) input rows"
+        }
+        $columns = $rows[$i].Split(",")
+        if ($columns.Length -lt 3) {
+            throw "SS trace row $i has no input/input_p2 columns: $($rows[$i])"
+        }
+        $traceInput = [Convert]::ToInt32($columns[1], 16)
+        $traceInputP2 = [Convert]::ToInt32($columns[2], 16)
+        if ($traceInput -ne $pairs[$bk2Index].P1) {
+            throw ("SS input mismatch at trace row {0}, BK2 index {1}: trace=0x{2:X2} bk2=0x{3:X2}" -f `
+                $i, $bk2Index, $traceInput, $pairs[$bk2Index].P1)
+        }
+        if ($traceInputP2 -ne $pairs[$bk2Index].P2) {
+            throw ("SS input_p2 mismatch at trace row {0}, BK2 index {1}: trace=0x{2:X2} bk2=0x{3:X2}" -f `
+                $i, $bk2Index, $traceInputP2, $pairs[$bk2Index].P2)
+        }
+    }
+    Write-Host "SS BK2 input alignment verified for $($rows.Count) frames (P1 + P2)"
+}
+
+function Assert-SsTraceOutput([object]$Route, [string]$TraceDir, [string]$Bk2Path) {
     Assert-CompressedPayloads $TraceDir
     Assert-SsMetadata $Route $TraceDir
+    Assert-SsBk2InputAlignment $Bk2Path $TraceDir
 }
 
 function Assert-ZoneActCoverage([object]$Route, [string]$TraceDir) {
@@ -450,6 +528,8 @@ foreach ($route in $selectedRoutes) {
         $env:OGGF_BK2_BASENAME = $route.Bk2
         $env:OGGF_BK2_FRAME_COUNT = [string]$frameCount
 
+        # Invoke run_bizhawk_lua.bat directly (not record_s2_trace.bat, which
+        # hardcodes the level recorder script s2_trace_recorder.lua).
         & $runBizhawkLuaBat $ssLuaScript $bk2Path $romFullPath
         if ($LASTEXITCODE -ne 0) {
             throw "run_bizhawk_lua.bat failed for $($route.Route) with exit code $LASTEXITCODE"
@@ -479,7 +559,7 @@ foreach ($route in $selectedRoutes) {
     Copy-Item -LiteralPath $bk2Path -Destination $targetDir -Force
 
     if ($route.Profile -eq "s2_special_stage") {
-        Assert-SsTraceOutput $route $targetDir
+        Assert-SsTraceOutput $route $targetDir (Join-Path $targetDir $route.Bk2)
     } else {
         Normalize-PhysicsInputFromBk2 (Join-Path $targetDir $route.Bk2) $targetDir
         Assert-TraceOutput $route $targetDir (Join-Path $targetDir $route.Bk2)
