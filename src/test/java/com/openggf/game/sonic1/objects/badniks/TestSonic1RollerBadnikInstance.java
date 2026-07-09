@@ -1,7 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
 
 import com.openggf.game.ObjectArtProvider;
-import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
@@ -60,12 +59,13 @@ public class TestSonic1RollerBadnikInstance {
         // Needed only by the render-gate tests below: PatternSpriteRenderer's
         // single-arg constructor resolves GameServices.graphics(), which
         // requires an active gameplay mode.
+        TestEnvironment.resetAll();
         TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     public void tearDown() {
-        SessionManager.clear();
+        TestEnvironment.resetAll();
     }
 
     private Sonic1RollerBadnikInstance newRoller() {

@@ -28,6 +28,7 @@ import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +51,7 @@ class TestSonic3kSpecialStageManagerSnapshot {
 
     @BeforeEach
     void configureServices() {
-        SessionManager.clear();
+        TestEnvironment.resetAll();
         AudioManager.getInstance().resetState();
         audioBackend = new AudioTestFixtures.RecordingAudioBackend();
         AudioManager.getInstance().setBackend(audioBackend);
@@ -59,7 +60,7 @@ class TestSonic3kSpecialStageManagerSnapshot {
 
     @AfterEach
     void clearServices() {
-        SessionManager.clear();
+        TestEnvironment.resetAll();
         AudioManager.getInstance().resetState();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }

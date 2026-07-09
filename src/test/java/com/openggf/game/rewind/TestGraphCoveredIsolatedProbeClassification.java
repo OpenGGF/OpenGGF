@@ -52,6 +52,8 @@ class TestGraphCoveredIsolatedProbeClassification {
             "com.openggf.game.sonic2.objects.TestS2SwingingPlatformGraphRewind";
     private static final String S2_ARZ_ARROW_GRAPH_TEST =
             "TestS2ArzArrowGraphRewind";
+    private static final String S2_ARZ_ROT_PFORMS_GRAPH_TEST =
+            "TestS2ArzRotPformsGraphRewind";
     private static final String S2_CPZ_BOSS_GRAPH_TEST =
             "TestS2CpzBossGraphRewind";
     private static final String S1_SYZ_BOSS_BLOCK_GRAPH_TEST =
@@ -297,6 +299,8 @@ class TestGraphCoveredIsolatedProbeClassification {
     @Test
     void smallCoveredParentDependentRowsAreReportedAsGraphCovered() {
         Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance$Obj83SlotChild",
+                S2_ARZ_ROT_PFORMS_GRAPH_TEST,
                 "com.openggf.game.sonic2.objects.bosses.ARZBossArrow",
                 S2_ARZ_ARROW_GRAPH_TEST,
                 "com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance",

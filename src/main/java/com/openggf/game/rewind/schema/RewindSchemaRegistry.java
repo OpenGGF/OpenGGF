@@ -129,15 +129,17 @@ public final class RewindSchemaRegistry {
      * {@link RewindFieldPolicy#UNSUPPORTED} (final — {@code ObjectReferenceCodec} does not
      * capture finals).
      *
-     * <p>Fields marked explicitly TRANSIENT (e.g. the entries in
-     * {@link DefaultObjectRewindPolicies#STRUCTURAL_OBJECT_FIELD_NAMES}) and fields marked
-     * explicitly DEFERRED are <em>not</em> allowed through by this predicate — the caller's
-     * outer skip-gate already returns {@code false} for those.
+     * <p>Fields excluded by the policy table (e.g. entries in
+     * {@link DefaultObjectRewindPolicies#STRUCTURAL_OBJECT_FIELD_NAMES}) are rejected by the
+     * caller's outer gate. Annotation-only exclusions are checked here as well, because they do
+     * not appear in {@code configuredPolicy} and must not be re-admitted by the object-ref path.
      */
     private static boolean isObjectRefFieldAllowedInSchema(Field field, RewindFieldPolicy configuredPolicy) {
         // Explicit TRANSIENT or DEFERRED: respect the policy and skip.
         if (configuredPolicy == RewindFieldPolicy.TRANSIENT
-                || configuredPolicy == RewindFieldPolicy.DEFERRED) {
+                || configuredPolicy == RewindFieldPolicy.DEFERRED
+                || field.isAnnotationPresent(RewindTransient.class)
+                || field.isAnnotationPresent(RewindDeferred.class)) {
             return false;
         }
         // Structural/synthetic fields are never captured.

@@ -79,7 +79,8 @@ public enum Sonic2AnimationIds implements AnimationId {
             case LOOK_UP        -> CanonicalAnimation.LOOK_UP;
             case DUCK           -> CanonicalAnimation.DUCK;
             case SPINDASH       -> CanonicalAnimation.SPINDASH;
-            case BLINK, GET_UP  -> CanonicalAnimation.WAIT;
+            case BLINK          -> CanonicalAnimation.BLINK;
+            case GET_UP         -> CanonicalAnimation.GET_UP;
             case BALANCE2       -> CanonicalAnimation.BALANCE2;
             case SKID           -> CanonicalAnimation.SKID;
             case FLOAT          -> CanonicalAnimation.FLOAT;

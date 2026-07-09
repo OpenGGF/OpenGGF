@@ -2,7 +2,6 @@ package com.openggf;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
-import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
@@ -124,7 +123,7 @@ public final class LevelFrameStep {
         //     re-sorts an ever-larger list every frame (O(n^2) within a run) and
         //     the list compounds across warm reset-to-snapshot sessions. Owning the
         //     drain in the shared frame step fixes the headless leak.
-        PaletteOwnershipRegistry paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
+        PaletteOwnershipRegistry paletteRegistry = context.paletteOwnershipRegistry();
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
         }

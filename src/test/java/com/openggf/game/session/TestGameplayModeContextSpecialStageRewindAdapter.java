@@ -15,7 +15,9 @@ import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
 import com.openggf.graphics.FadeManager;
 import com.openggf.timer.TimerManager;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import com.openggf.tests.TestEnvironment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,7 +28,13 @@ class TestGameplayModeContextSpecialStageRewindAdapter {
 
     @BeforeEach
     void configureServices() {
+        TestEnvironment.resetAll();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+    }
+
+    @AfterEach
+    void resetServices() {
+        TestEnvironment.resetAll();
     }
 
     @Test
