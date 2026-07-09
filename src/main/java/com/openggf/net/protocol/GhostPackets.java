@@ -10,7 +10,12 @@ import java.util.List;
 public final class GhostPackets {
     public static final int TYPE_GHOST_FRAMES = 0x01;
     public static final int TYPE_GHOST_AGGREGATE = 0x02;
-    public static final int TYPE_ROSTER_RESERVED = 0x03;
+    public static final int TYPE_ROSTER = 0x03;
+    public static final int TYPE_RELAY_GUEST_BINARY = 0x04;
+
+    public static final int ROSTER_STATUS_IDLE = 0;
+    public static final int ROSTER_STATUS_RUNNING = 1;
+    public static final int ROSTER_STATUS_FINISHED = 2;
 
     public static final int MAX_UPSTREAM_FRAMES_PER_PACKET = 3;
     public static final int MAX_AGGREGATE_FRAMES_PER_ENTRY = 30;
@@ -47,6 +52,20 @@ public final class GhostPackets {
     public record Aggregate(int hubTick, List<AggregateEntry> entries) {
         public Aggregate {
             entries = List.copyOf(entries);
+        }
+    }
+
+    public record RosterEntry(int playerSlot, int cellX, int cellY, int status) {
+    }
+
+    public record RelayGuestBinary(int guestId, byte[] payload) {
+        public RelayGuestBinary {
+            payload = payload.clone();
+        }
+
+        @Override
+        public byte[] payload() {
+            return payload.clone();
         }
     }
 
@@ -129,6 +148,74 @@ public final class GhostPackets {
         }
         requireExhausted(in, "aggregate");
         return new Aggregate(hubTick, entries);
+    }
+
+    public static byte[] encodeRoster(List<RosterEntry> entries) {
+        if (entries == null || entries.size() > Protocol.MAX_PLAYERS_RELAY) {
+            throw new ProtocolViolationException("roster entry count");
+        }
+        ByteBuffer out = ByteBuffer.allocate(3 + entries.size() * 5);
+        out.put((byte) TYPE_ROSTER).putShort((short) entries.size());
+        for (RosterEntry entry : entries) {
+            requireRange(entry.playerSlot(), 0xFF, "roster slot");
+            requireRange(entry.cellX(), 0xFFFF, "roster cellX");
+            requireRange(entry.cellY(), 0xFF, "roster cellY");
+            requireRange(entry.status(), ROSTER_STATUS_FINISHED, "roster status");
+            out.put((byte) entry.playerSlot()).putShort((short) entry.cellX())
+                    .put((byte) entry.cellY()).put((byte) entry.status());
+        }
+        return out.array();
+    }
+
+    public static List<RosterEntry> decodeRoster(byte[] packet) {
+        ByteBuffer in = checked(packet, TYPE_ROSTER, 3);
+        int count = in.getShort() & 0xFFFF;
+        if (count > Protocol.MAX_PLAYERS_RELAY || in.remaining() != count * 5) {
+            throw new ProtocolViolationException(
+                    "roster length mismatch for " + count + " entries");
+        }
+        List<RosterEntry> entries = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            int slot = in.get() & 0xFF;
+            int cellX = in.getShort() & 0xFFFF;
+            int cellY = in.get() & 0xFF;
+            int status = in.get() & 0xFF;
+            if (status > ROSTER_STATUS_FINISHED) {
+                throw new ProtocolViolationException(
+                        "roster status out of range: " + status);
+            }
+            entries.add(new RosterEntry(slot, cellX, cellY, status));
+        }
+        return List.copyOf(entries);
+    }
+
+    public static byte[] encodeRelayGuestBinary(int guestId, byte[] payload) {
+        requireRange(guestId, 0xFFFF, "relay guest id");
+        if (payload == null || payload.length == 0
+                || payload.length > Protocol.MAX_BINARY_BYTES - 3) {
+            throw new ProtocolViolationException(
+                    "relay payload length " + (payload == null ? -1 : payload.length));
+        }
+        ByteBuffer out = ByteBuffer.allocate(3 + payload.length);
+        out.put((byte) TYPE_RELAY_GUEST_BINARY).putShort((short) guestId).put(payload);
+        return out.array();
+    }
+
+    public static RelayGuestBinary decodeRelayGuestBinary(byte[] packet) {
+        ByteBuffer in = checked(packet, TYPE_RELAY_GUEST_BINARY, 3);
+        int guestId = in.getShort() & 0xFFFF;
+        if (!in.hasRemaining()) {
+            throw new ProtocolViolationException("relay wrapper has empty payload");
+        }
+        byte[] payload = new byte[in.remaining()];
+        in.get(payload);
+        return new RelayGuestBinary(guestId, payload);
+    }
+
+    private static void requireRange(int value, int maxInclusive, String field) {
+        if (value < 0 || value > maxInclusive) {
+            throw new ProtocolViolationException(field + " out of range: " + value);
+        }
     }
 
     private static int validFrameCount(byte[] frameData, int max) {

@@ -36,12 +36,20 @@ public final class ControlCodec {
     }
 
     public static DecodedControl decode(String text) {
+        return decode(text, Protocol.MAX_CONTROL_BYTES);
+    }
+
+    /** Decodes under an explicit transport cap; master tunnel wrappers use the larger cap. */
+    public static DecodedControl decode(String text, int maxBytes) {
         if (text == null) {
             throw new ProtocolViolationException("control frame is null");
         }
-        if (text.getBytes(StandardCharsets.UTF_8).length > Protocol.MAX_CONTROL_BYTES) {
+        if (maxBytes < 1 || maxBytes > Protocol.MAX_MASTER_FRAME_BYTES) {
+            throw new IllegalArgumentException("invalid control frame cap " + maxBytes);
+        }
+        if (text.getBytes(StandardCharsets.UTF_8).length > maxBytes) {
             throw new ProtocolViolationException(
-                    "control frame exceeds " + Protocol.MAX_CONTROL_BYTES + " bytes");
+                    "control frame exceeds " + maxBytes + " bytes");
         }
         try {
             JsonNode root = MAPPER.readTree(text);
@@ -59,7 +67,13 @@ public final class ControlCodec {
             }
             JsonNode token = root.get("token");
             String tokenValue = token == null || token.isNull() ? null : token.asText();
-            return new DecodedControl(tokenValue, MAPPER.treeToValue(msg, ControlMessage.class));
+            ControlMessage message = MAPPER.treeToValue(msg, ControlMessage.class);
+            if (message instanceof ControlMessage.RelayGuestText relay
+                    && relay.text().getBytes(StandardCharsets.UTF_8).length
+                    > Protocol.MAX_CONTROL_BYTES) {
+                throw new ProtocolViolationException("relay guest text exceeds inner frame cap");
+            }
+            return new DecodedControl(tokenValue, message);
         } catch (ProtocolViolationException e) {
             throw e;
         } catch (Exception e) {

@@ -28,7 +28,26 @@ import java.util.List;
         @JsonSubTypes.Type(value = ControlMessage.AttemptFinish.class, name = "AttemptFinish"),
         @JsonSubTypes.Type(value = ControlMessage.AttemptReset.class, name = "AttemptReset"),
         @JsonSubTypes.Type(value = ControlMessage.TrackVote.class, name = "TrackVote"),
-        @JsonSubTypes.Type(value = ControlMessage.RecordingRequest.class, name = "RecordingRequest")
+        @JsonSubTypes.Type(value = ControlMessage.RecordingRequest.class, name = "RecordingRequest"),
+        @JsonSubTypes.Type(value = ControlMessage.RoomCreate.class, name = "RoomCreate"),
+        @JsonSubTypes.Type(value = ControlMessage.RoomCreated.class, name = "RoomCreated"),
+        @JsonSubTypes.Type(value = ControlMessage.RoomCreateRejected.class, name = "RoomCreateRejected"),
+        @JsonSubTypes.Type(value = ControlMessage.RoomListRequest.class, name = "RoomListRequest"),
+        @JsonSubTypes.Type(value = ControlMessage.RoomListResult.class, name = "RoomListResult"),
+        @JsonSubTypes.Type(value = ControlMessage.RoomJoinRequest.class, name = "RoomJoinRequest"),
+        @JsonSubTypes.Type(value = ControlMessage.RoomJoinResult.class, name = "RoomJoinResult"),
+        @JsonSubTypes.Type(value = ControlMessage.RoomJoinRejected.class, name = "RoomJoinRejected"),
+        @JsonSubTypes.Type(value = ControlMessage.RoomLeave.class, name = "RoomLeave"),
+        @JsonSubTypes.Type(value = ControlMessage.Heartbeat.class, name = "Heartbeat"),
+        @JsonSubTypes.Type(value = ControlMessage.PowChallenge.class, name = "PowChallenge"),
+        @JsonSubTypes.Type(value = ControlMessage.PowSolution.class, name = "PowSolution"),
+        @JsonSubTypes.Type(value = ControlMessage.RelayAttach.class, name = "RelayAttach"),
+        @JsonSubTypes.Type(value = ControlMessage.RelayGuestOpen.class, name = "RelayGuestOpen"),
+        @JsonSubTypes.Type(value = ControlMessage.RelayGuestClose.class, name = "RelayGuestClose"),
+        @JsonSubTypes.Type(value = ControlMessage.RelayGuestText.class, name = "RelayGuestText"),
+        @JsonSubTypes.Type(value = ControlMessage.StandingsPageRequest.class, name = "StandingsPageRequest"),
+        @JsonSubTypes.Type(value = ControlMessage.StandingsPage.class, name = "StandingsPage"),
+        @JsonSubTypes.Type(value = ControlMessage.RankUpdate.class, name = "RankUpdate")
 })
 public sealed interface ControlMessage {
     record RoomDescriptor(String name, String gameId, int zone, int act, String characterPolicy,
@@ -48,6 +67,11 @@ public sealed interface ControlMessage {
 
     record StandingsRow(int slot, String displayName, String character,
                         int bestTimeFrames, int rank) {
+    }
+
+    record RoomSummary(String roomId, String name, String gameId, int zone, int act,
+                       String characterPolicy, int playerCount, int maxPlayers,
+                       String routing, boolean verified) {
     }
 
     record Hello(int protocolVersion, String pubKeyBase64, String displayName,
@@ -118,5 +142,74 @@ public sealed interface ControlMessage {
 
     record RecordingRequest(int attemptId, String expectedHashHex, String uploadUrl)
             implements ControlMessage {
+    }
+
+    record RoomCreate(RoomDescriptor room, String routing, int directPort,
+                      String determinismFingerprint) implements ControlMessage {
+    }
+
+    record RoomCreated(String roomId) implements ControlMessage {
+    }
+
+    record RoomCreateRejected(String reason) implements ControlMessage {
+    }
+
+    record RoomListRequest(String gameFilter, int page) implements ControlMessage {
+    }
+
+    record RoomListResult(List<RoomSummary> rooms, int page, int totalPages)
+            implements ControlMessage {
+        public RoomListResult {
+            rooms = List.copyOf(rooms);
+        }
+    }
+
+    record RoomJoinRequest(String roomId) implements ControlMessage {
+    }
+
+    record RoomJoinResult(String roomId, String routing, String directHost,
+                          int directPort, String hostServerId,
+                          String determinismFingerprint) implements ControlMessage {
+    }
+
+    record RoomJoinRejected(String reason) implements ControlMessage {
+    }
+
+    record RoomLeave(String roomId) implements ControlMessage {
+    }
+
+    record Heartbeat(String roomId, int playerCount) implements ControlMessage {
+    }
+
+    record PowChallenge(String kind, String prefixBase64, int difficultyBits)
+            implements ControlMessage {
+    }
+
+    record PowSolution(String kind, long nonce) implements ControlMessage {
+    }
+
+    record RelayAttach(String roomId) implements ControlMessage {
+    }
+
+    record RelayGuestOpen(int guestId) implements ControlMessage {
+    }
+
+    record RelayGuestClose(int guestId, String reason) implements ControlMessage {
+    }
+
+    record RelayGuestText(int guestId, String text) implements ControlMessage {
+    }
+
+    record StandingsPageRequest(int page) implements ControlMessage {
+    }
+
+    record StandingsPage(List<StandingsRow> rows, int page, int totalPages)
+            implements ControlMessage {
+        public StandingsPage {
+            rows = List.copyOf(rows);
+        }
+    }
+
+    record RankUpdate(int rank, int bestTimeFrames) implements ControlMessage {
     }
 }
