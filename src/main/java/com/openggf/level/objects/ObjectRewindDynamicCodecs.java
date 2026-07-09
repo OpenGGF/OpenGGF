@@ -707,14 +707,15 @@ public final class ObjectRewindDynamicCodecs {
             DynamicObjectRecreateContext ctx,
             Object... args) {
         try {
-            return ObjectConstructionContext.construct(ctx.objectServices(),
+            return ObjectConstructionContext.withProbeConstruction(() -> ObjectConstructionContext.construct(
+                    ctx.objectServices(),
                     () -> {
                         try {
                             return ctor.newInstance(args);
                         } catch (ReflectiveOperationException e) {
                             throw new RuntimeException(e);
                         }
-                    });
+                    }));
         } catch (RuntimeException e) {
             LOG.log(java.util.logging.Level.WARNING,
                     "genericRecreate: RewindRecreatable probe constructor threw for "

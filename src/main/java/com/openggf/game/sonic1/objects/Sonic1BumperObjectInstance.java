@@ -115,6 +115,8 @@ public class Sonic1BumperObjectInstance extends AbstractObjectInstance
     private int hitAnimTimer = 0;
     private int collisionProperty = 0;
     private transient AbstractPlayableSprite pendingTouchedPlayer;
+    private int pendingTouchCentreX;
+    private int pendingTouchCentreY;
     private int hitCount = 0;
 
     public Sonic1BumperObjectInstance(ObjectSpawn spawn) {
@@ -129,9 +131,11 @@ public class Sonic1BumperObjectInstance extends AbstractObjectInstance
         if (collisionProperty != 0 && pendingTouchedPlayer != null) {
             collisionProperty = 0;
             AbstractPlayableSprite touchedPlayer = pendingTouchedPlayer;
+            int touchCentreX = pendingTouchCentreX;
+            int touchCentreY = pendingTouchCentreY;
             pendingTouchedPlayer = null;
             if (!touchedPlayer.isHurt() && !touchedPlayer.getDead()) {
-                applyBounce(touchedPlayer);
+                applyBounce(touchedPlayer, touchCentreX, touchCentreY);
             }
         }
 
@@ -179,12 +183,29 @@ public class Sonic1BumperObjectInstance extends AbstractObjectInstance
      * Note: CalcAngle takes (dx, dy) and returns angle.
      * CalcSine returns (sin, cos) in (d0, d1).
      * The negation pushes Sonic AWAY from the bumper.
+     * <p>
+     * ROM's ReactToItem (Sonic's own slot) and Bump_Hit (the bumper's slot) both
+     * run within the SAME frame's ExecuteObjects pass — Bump_Hit reads obX/obY
+     * of the position Sonic was AT WHEN THE TOUCH WAS DETECTED, docs/s1disasm/
+     * _incObj/47 Bumper.asm:29-30 (docs/s1disasm/_incObj/sub ReactToItem.asm:
+     * 377-427 sets obColProp that same frame). Our engine defers the bumper's
+     * own consuming update() to the FOLLOWING frame (ObjectManager runs every
+     * object's update() before the touch-response pass, so a touch armed this
+     * frame is only consumed on the object's NEXT update() call). A fast-moving
+     * player (e.g. one just launched by a spring) can cross clean through the
+     * bumper's position during that single deferred frame, so re-reading the
+     * player's LIVE position at consumption time can sample him already on the
+     * opposite side of the bumper and compute a bounce in the wrong direction
+     * entirely (observed: a player approaching from below gets launched further
+     * UP instead of reflected back down). Use the position captured at the
+     * moment of the actual touch (onTouchResponse) instead of the live,
+     * one-frame-stale player position.
      */
-    private void applyBounce(AbstractPlayableSprite player) {
+    private void applyBounce(AbstractPlayableSprite player, int touchCentreX, int touchCentreY) {
         // ROM: sub.w obX(a1),d1 / sub.w obY(a1),d2 (d1=bumper.X - sonic.X, d2=bumper.Y - sonic.Y)
         // Then CalcAngle (d1, d2) and CalcSine to get sin/cos as 8-bit fixed-point.
-        int dx = spawn.x() - player.getCentreX();
-        int dy = spawn.y() - player.getCentreY();
+        int dx = spawn.x() - touchCentreX;
+        int dy = spawn.y() - touchCentreY;
 
         // ROM CalcAngle takes raw (dx, dy) — not speed. We reuse the same logic
         // since it's just atan2 over the 256-entry lookup table.
@@ -308,6 +329,12 @@ public class Sonic1BumperObjectInstance extends AbstractObjectInstance
             // consumes the property from the object's own slot later this frame.
             collisionProperty = (collisionProperty + 1) & 0xFF;
             pendingTouchedPlayer = player;
+            // Capture position at the moment of the touch (see applyBounce's
+            // Javadoc): our update() defers consumption to the object's NEXT
+            // update() call, one frame after ROM's same-frame Bump_Hit would
+            // have read it, so the live position must not be re-sampled then.
+            pendingTouchCentreX = player.getCentreX();
+            pendingTouchCentreY = player.getCentreY();
         }
     }
 

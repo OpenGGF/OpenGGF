@@ -261,13 +261,13 @@ class TestHeldRewindAudioRestoreDeferral {
 
             backend.logicalRestores = 0;
             input.handleKeyEvent(rewindKey, GLFW_PRESS);
-            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
-            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
+            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
             assertEquals(0, backend.logicalRestores,
                     "held live rewind must defer logical restores while reverse presentation runs");
 
             input.handleKeyEvent(rewindKey, GLFW_RELEASE);
-            assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+            assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
 
             assertEquals(1, backend.logicalRestores,
                     "live rewind release must land exactly one committed logical restore");
@@ -292,7 +292,7 @@ class TestHeldRewindAudioRestoreDeferral {
             LiveRewindManager manager = liveManagerWithControllerAtFrame(config, 8);
             InputHandler input = new InputHandler();
             input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
-            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
             assertEquals(0, backend.logicalRestores);
             audio.resetRingSound();
             backend.logicalRestores = 0;
@@ -358,20 +358,20 @@ class TestHeldRewindAudioRestoreDeferral {
             LiveRewindManager manager = new LiveRewindManager(config);
             InputHandler input = new InputHandler();
 
-            manager.handleRealtimeRewindInput(GameMode.LEVEL, input);
+            manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input);
             assertEquals(Boolean.TRUE, backend.lastRewindHistoryArmed,
                     "a usable held-rewind session must arm PCM history recording");
 
-            manager.handleRealtimeRewindInput(GameMode.TITLE_SCREEN, input);
+            manager.handleRealtimeRewindInput(GameMode.TITLE_SCREEN, false, input);
             assertEquals(Boolean.FALSE, backend.lastRewindHistoryArmed,
                     "leaving GameMode.LEVEL must disarm PCM history recording");
 
-            manager.handleRealtimeRewindInput(GameMode.LEVEL, input);
+            manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input);
             assertEquals(Boolean.TRUE, backend.lastRewindHistoryArmed,
                     "re-entering GameMode.LEVEL must re-arm PCM history recording");
 
             config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
-            manager.handleRealtimeRewindInput(GameMode.LEVEL, input);
+            manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input);
             assertEquals(Boolean.FALSE, backend.lastRewindHistoryArmed,
                     "disabling live rewind must disarm PCM history recording even in GameMode.LEVEL");
         } finally {
@@ -391,7 +391,7 @@ class TestHeldRewindAudioRestoreDeferral {
             LiveRewindManager manager = liveManagerWithControllerAtFrame(config, 8);
             InputHandler input = new InputHandler();
             input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
-            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
             assertEquals(0, backend.logicalRestores);
             audio.resetRingSound();
             backend.logicalRestores = 0;
@@ -443,10 +443,18 @@ class TestHeldRewindAudioRestoreDeferral {
     private static void installTestController(LiveRewindManager manager, RewindController controller)
             throws Exception {
         setField(manager, "installedGameplayMode", TestEnvironment.activeGameplayMode());
+        setInstalledStepperKind(manager, "LEVEL_FRAME");
         setField(manager, "inputSource", new LiveRewindInputSource());
         setField(manager, "rewindController", controller);
         setField(manager, "speedController",
                 RewindSpeedController.fromConfig(SonicConfigurationService.getInstance()));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void setInstalledStepperKind(LiveRewindManager manager, String kindName) throws Exception {
+        Class<?> kindClass = Class.forName("com.openggf.game.rewind.LiveRewindManager$StepperKind");
+        Object kind = Enum.valueOf((Class<? extends Enum>) kindClass.asSubclass(Enum.class), kindName);
+        setField(manager, "installedStepperKind", kind);
     }
 
     private LiveRewindManager liveManagerWithControllerAtFrame(

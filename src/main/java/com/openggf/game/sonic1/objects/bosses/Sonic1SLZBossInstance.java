@@ -77,9 +77,18 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
     // General-purpose timer — objoff_3C
     private int timer;
 
-    // Seesaw references (objoff_2A array, up to 3 seesaws)
+    // Seesaw references (objoff_2A array, up to 3 seesaws). This cache is an
+    // engine-side implementation detail (the ROM caches the same addresses
+    // once, in BossStarLight_ShipInit, not lazily); the object-reference list
+    // is not covered by the default rewind field capture, so a rewind
+    // restore always recreates this instance from its spawn (see
+    // ObjectManager.isRewindInPlaceReuseSafeClass) with an empty list. Gating
+    // the (re-)scan on emptiness rather than a separate "already scanned"
+    // flag makes the cache self-healing across a restore instead of leaving
+    // it permanently empty (Robotnik would never drop another spikeball
+    // after any rewind: the alignment loop in updateScanning() has nothing
+    // to iterate).
     private final List<Sonic1SeesawObjectInstance> seesaws = new ArrayList<>();
-    private boolean seesawsScanned;
 
     // Target seesaw index for ball spawn (obSubtype stores seesaw index 0-2)
     private int targetSeesawIndex;
@@ -170,8 +179,11 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Lazy seesaw scanning — ensures seesaws are loaded before scanning
-        if (!seesawsScanned) {
+        // Lazy seesaw scanning — ensures seesaws are loaded before scanning.
+        // Re-scan whenever the cache is empty (not a separate "already
+        // scanned" flag) so a rewind-recreated instance repopulates it
+        // instead of staying permanently unaligned.
+        if (seesaws.isEmpty()) {
             scanForSeesaws();
         }
 
@@ -470,7 +482,6 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
      * Stores up to 3 seesaw references in objoff_2A array.
      */
     private void scanForSeesaws() {
-        seesawsScanned = true;
         seesaws.clear();
 
         if (services().objectManager() == null) {

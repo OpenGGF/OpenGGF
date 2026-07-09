@@ -549,6 +549,93 @@ public class Sonic2SpecialStageCheckpoint {
         return true;
     }
 
+    Sonic2SpecialStageSnapshot.CheckpointSnapshot captureRewindSnapshot() {
+        ArrayList<Sonic2SpecialStageSnapshot.CheckpointMessageLetterSnapshot> letters =
+                new ArrayList<>();
+        for (MessageLetter letter : messageLetters) {
+            letters.add(new Sonic2SpecialStageSnapshot.CheckpointMessageLetterSnapshot(
+                    letter.x,
+                    letter.y,
+                    letter.tileOffset,
+                    letter.flyoutAngle,
+                    letter.flyoutSpeed,
+                    letter.visible));
+        }
+
+        ArrayList<Sonic2SpecialStageSnapshot.CheckpointRainbowRingSnapshot> rings =
+                new ArrayList<>();
+        for (RainbowRing ring : rainbowRings) {
+            rings.add(new Sonic2SpecialStageSnapshot.CheckpointRainbowRingSnapshot(
+                    ring.baseIndex,
+                    ring.frameIndex,
+                    ring.positionOffset,
+                    ring.mappingFrame,
+                    ring.x,
+                    ring.y,
+                    ring.active));
+        }
+
+        return new Sonic2SpecialStageSnapshot.CheckpointSnapshot(
+                phase,
+                phaseTimer,
+                lastResult,
+                currentCheckpoint,
+                ringRequirement,
+                ringsCollected,
+                letters,
+                showCheckpointHand,
+                handX,
+                handY,
+                handTargetY,
+                handThumbsUp,
+                handMovingDown,
+                rings,
+                pendingRingRequirement,
+                pendingRingsCollected,
+                pendingFinalCheckpoint,
+                rainbowOnly);
+    }
+
+    void restoreRewindSnapshot(Sonic2SpecialStageSnapshot.CheckpointSnapshot snapshot) {
+        phase = snapshot.phase();
+        phaseTimer = snapshot.phaseTimer();
+        lastResult = snapshot.lastResult();
+        currentCheckpoint = snapshot.currentCheckpoint();
+        ringRequirement = snapshot.ringRequirement();
+        ringsCollected = snapshot.ringsCollected();
+        showCheckpointHand = snapshot.showCheckpointHand();
+        handX = snapshot.handX();
+        handY = snapshot.handY();
+        handTargetY = snapshot.handTargetY();
+        handThumbsUp = snapshot.handThumbsUp();
+        handMovingDown = snapshot.handMovingDown();
+        pendingRingRequirement = snapshot.pendingRingRequirement();
+        pendingRingsCollected = snapshot.pendingRingsCollected();
+        pendingFinalCheckpoint = snapshot.pendingFinalCheckpoint();
+        rainbowOnly = snapshot.rainbowOnly();
+
+        messageLetters.clear();
+        for (Sonic2SpecialStageSnapshot.CheckpointMessageLetterSnapshot letter : snapshot.messageLetters()) {
+            MessageLetter restored = new MessageLetter(letter.x(), letter.y(), letter.tileOffset());
+            restored.flyoutAngle = letter.flyoutAngle();
+            restored.flyoutSpeed = letter.flyoutSpeed();
+            restored.visible = letter.visible();
+            messageLetters.add(restored);
+        }
+
+        rainbowRings.clear();
+        for (Sonic2SpecialStageSnapshot.CheckpointRainbowRingSnapshot ring : snapshot.rainbowRings()) {
+            RainbowRing restored = new RainbowRing(ring.baseIndex());
+            restored.frameIndex = ring.frameIndex();
+            restored.positionOffset = ring.positionOffset();
+            restored.mappingFrame = ring.mappingFrame();
+            restored.x = ring.x();
+            restored.y = ring.y();
+            restored.active = ring.active();
+            rainbowRings.add(restored);
+        }
+    }
+
     /**
      * Resets the checkpoint state.
      */

@@ -132,11 +132,11 @@ class TestMasterTitleScreenLayout {
 
     @Test
     void expectedRomFilename_usesProjectRootDefaultsForEachGame() {
-        assertEquals("Sonic The Hedgehog (W) (REV01) [!].gen",
+        assertEquals("s1.gen",
                 MasterTitleScreen.expectedRomFilename(MasterTitleScreen.GameEntry.SONIC_1));
-        assertEquals("Sonic The Hedgehog 2 (W) (REV01) [!].gen",
+        assertEquals("s2.gen",
                 MasterTitleScreen.expectedRomFilename(MasterTitleScreen.GameEntry.SONIC_2));
-        assertEquals("Sonic and Knuckles & Sonic 3 (W) [!].gen",
+        assertEquals("s3k.gen",
                 MasterTitleScreen.expectedRomFilename(MasterTitleScreen.GameEntry.SONIC_3K));
     }
 
@@ -144,7 +144,7 @@ class TestMasterTitleScreenLayout {
     void missingRomPrompt_showsRequiredRomLineAndSelectedFilename() {
         assertEquals("Requires the following ROM:",
                 MasterTitleScreen.missingRomPromptLine());
-        assertEquals("Sonic The Hedgehog 2 (W) (REV01) [!].gen",
+        assertEquals("s2.gen",
                 MasterTitleScreen.missingRomFilenameLine(MasterTitleScreen.GameEntry.SONIC_2));
     }
 

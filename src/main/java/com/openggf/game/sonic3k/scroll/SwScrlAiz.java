@@ -117,8 +117,22 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
     private final ScrollValueTable deformValues = ScrollValueTable.ofLength(FLAT_VALUE_COUNT);
     private final short[] aiz2SpeedValues = new short[AIZ2_SPEED_LEVELS];
 
-    /** Persistent wave accumulator (ROM: HScroll_table+$03C, advances $2000/frame). */
-    private long waveAccum;
+    /**
+     * Persistent wave accumulator (ROM: HScroll_table+$03C, advances $2000/frame).
+     * Derived from the frame counter (not the update-call count) so it rewinds
+     * correctly — a call-count accumulator drifts, snapping back only at keyframe
+     * boundaries. The AIZ1 deform path runs continuously once the main level is
+     * active, so anchoring at its first frame reproduces the ROM value exactly.
+     */
+    private int waveBaseFrame;
+    private boolean waveBaseFrameSet;
+
+    @Override
+    public void init(int actId, int cameraX, int cameraY) {
+        // Re-arm the wave anchor on zone/act (re)entry so a reused handler
+        // re-derives the canopy wave from the new start frame.
+        waveBaseFrameSet = false;
+    }
 
     @Override
     public void update(int[] horizScrollBuf,
@@ -187,7 +201,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
                 // AIZ1_Deform: multi-band BG parallax with per-band speeds.
                 // BG vertical scroll = camera Y / 2.
                 composer.setVscrollFactorBG(asrWord(cameraY, 1));
-                computeAiz1Deform(fgScroll, bgSourceX);
+                computeAiz1Deform(fgScroll, bgSourceX, frameCounter);
             }
         }
 
@@ -230,7 +244,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
      *   <li>Bands 8-12 (5 words): mountain/sky at base*14, 16, 18, 20, 18</li>
      * </ul>
      */
-    private void computeAiz1Deform(short fgScroll, int cameraX) {
+    private void computeAiz1Deform(short fgScroll, int cameraX, int frameCounter) {
         // base = (cameraX - $1300) << 11 in 16.16 fixed-point
         int relative = (short) (cameraX - DEFORM_ORIGIN_X);
         long base = ((long) relative << 16) >> 5; // = relative << 11
@@ -238,9 +252,15 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
         deformValues.clear();
 
         // --- Bands 0-5: tree canopy with wave (HScroll_table+$008...$012) ---
-        // Wave accumulator persists across frames (ROM: HScroll_table+$03C += $2000)
-        long d3 = waveAccum;
-        waveAccum += 0x2000;
+        // Wave accumulator persists across frames (ROM: HScroll_table+$03C += $2000),
+        // derived from the frame counter for rewind-safety. Anchored (offset 0,
+        // read-then-increment) on the first AIZ1 deform frame; computed as long to
+        // preserve the ROM's unbounded 32-bit accumulation.
+        if (!waveBaseFrameSet) {
+            waveBaseFrame = frameCounter;
+            waveBaseFrameSet = true;
+        }
+        long d3 = (long) (frameCounter - waveBaseFrame) * 0x2000;
 
         // ROM: d0 starts at base/2, each iteration adds d3 (wave) before write,
         //      then adds base (d2) after write.

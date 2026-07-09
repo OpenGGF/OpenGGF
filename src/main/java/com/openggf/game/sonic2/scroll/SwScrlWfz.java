@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.scroll;
 
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.FrameScrollAccumulator;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -49,9 +50,17 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
     // Layer 2: large clouds (accumulator)
     // Layer 3: medium clouds (accumulator)
     // Layer 4: small clouds (accumulator)
-    private int largeCloudAccum;   // Offset 0x08: accumulates +0x8000/frame
-    private int mediumCloudAccum;  // Offset 0x0C: accumulates +0x4000/frame
-    private int smallCloudAccum;   // Offset 0x10: accumulates +0x2000/frame
+    //
+    // The three cloud accumulators are pure per-frame accumulators (ROM adds a
+    // fixed amount to each every frame). They are derived from the frame counter
+    // rather than free-accumulated on the update-call count so they rewind
+    // correctly — see FrameScrollAccumulator. Offset 1 = increment-then-read.
+    private final FrameScrollAccumulator largeCloudAccum =
+            new FrameScrollAccumulator(0x8000, 1);  // Offset 0x08: +0x8000/frame
+    private final FrameScrollAccumulator mediumCloudAccum =
+            new FrameScrollAccumulator(0x4000, 1);  // Offset 0x0C: +0x4000/frame
+    private final FrameScrollAccumulator smallCloudAccum =
+            new FrameScrollAccumulator(0x2000, 1);  // Offset 0x10: +0x2000/frame
 
     // Byte offset to layer index mapping (byteOffset / 4)
     private static final int LAYER_STATIC_BG = 0;    // byte offset 0x00
@@ -97,12 +106,10 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
         // move.l d0,(a2)+  ; offset 0x04 (originally d1 = d0)
 
         // Layer 2-4: Cloud accumulators (bugged: only accumulate, don't subtract camera)
-        // addi.l #$8000,(a2)+
-        largeCloudAccum += 0x8000;
-        // addi.l #$4000,(a2)+
-        mediumCloudAccum += 0x4000;
-        // addi.l #$2000,(a2)+
-        smallCloudAccum += 0x2000;
+        // addi.l #$8000,(a2)+ / #$4000 / #$2000 — derived from the frame counter.
+        int largeCloud = largeCloudAccum.valueAt(frameCounter);
+        int mediumCloud = mediumCloudAccum.valueAt(frameCounter);
+        int smallCloud = smallCloudAccum.valueAt(frameCounter);
 
         // Build the 5 scroll word values (high word of each 32-bit longword)
         // The original reads with: move.w (a2,d3.w),d0 where d3 is the byte offset
@@ -110,9 +117,9 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
         Arrays.fill(layerScrollWord, 0);
         layerScrollWord[LAYER_STATIC_BG] = (bgXPosLong >> 16) & 0xFFFF;
         layerScrollWord[LAYER_SHIP] = (bgXPosLong >> 16) & 0xFFFF;
-        layerScrollWord[LAYER_LARGE_CLOUD] = (largeCloudAccum >> 16) & 0xFFFF;
-        layerScrollWord[LAYER_MEDIUM_CLOUD] = (mediumCloudAccum >> 16) & 0xFFFF;
-        layerScrollWord[LAYER_SMALL_CLOUD] = (smallCloudAccum >> 16) & 0xFFFF;
+        layerScrollWord[LAYER_LARGE_CLOUD] = (largeCloud >> 16) & 0xFFFF;
+        layerScrollWord[LAYER_MEDIUM_CLOUD] = (mediumCloud >> 16) & 0xFFFF;
+        layerScrollWord[LAYER_SMALL_CLOUD] = (smallCloud >> 16) & 0xFFFF;
 
         // ==================== Step 3: Select array ====================
         // cmpi.w #$2700,(Camera_X_pos).w; bhs.s .got_array

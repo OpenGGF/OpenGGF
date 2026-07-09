@@ -344,12 +344,6 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         return nearest;
     }
 
-    private static void addChildComponentOnce(Sonic2MTZBossInstance boss, AbstractBossChild child) {
-        if (boss != null && child != null && !boss.childComponents.contains(child)) {
-            boss.childComponents.add(child);
-        }
-    }
-
     // =========================================================================
     // Boss_MoveObject equivalent
     // =========================================================================
@@ -1252,9 +1246,9 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             if (boss == null) {
                 return null;
             }
-            MTZBossOrb orb = new MTZBossOrb(boss, 0, 0, 0);
-            addChildComponentOnce(boss, orb);
-            return orb;
+            // Re-registration into boss.childComponents is handled generically by
+            // AbstractBossChild#onRecreatedForRewind() -- single mechanism, no local duplicate.
+            return new MTZBossOrb(boss, 0, 0, 0);
         }
 
         @Override
@@ -1757,7 +1751,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             }
             MTZLaserShooter shooter = new MTZLaserShooter(boss);
             boss.laserShooter = shooter;
-            addChildComponentOnce(boss, shooter);
+            // Re-registration into boss.childComponents is handled generically by
+            // AbstractBossChild#onRecreatedForRewind() -- single mechanism, no local duplicate.
             return shooter;
         }
 

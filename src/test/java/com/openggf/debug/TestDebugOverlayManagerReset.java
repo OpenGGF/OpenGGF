@@ -70,6 +70,20 @@ public class TestDebugOverlayManagerReset {
     }
 
     @Test
+    public void updateInputAllowsPerformanceToggleWhenDebugShortcutsAreDisabled() {
+        DebugOverlayManager manager = DebugOverlayManager.getInstance();
+        manager.resetState();
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW.GLFW_KEY_P, GLFW.GLFW_PRESS);
+
+        manager.updateInput(input, false);
+
+        assertTrue(manager.isEnabled(DebugOverlayToggle.PERFORMANCE),
+                "P must toggle the performance panel even when normal debug shortcuts are disabled");
+        manager.resetState();
+    }
+
+    @Test
     public void ringBoundsToggleDoesNotShareTheLevelSelectShortcut() {
         int levelSelectKey = SonicConfigurationService.getInstance().getInt(SonicConfiguration.LEVEL_SELECT_KEY);
 
@@ -77,5 +91,4 @@ public class TestDebugOverlayManagerReset {
                 "Ring-bounds overlay must not share the runtime level-select debug shortcut");
     }
 }
-
 

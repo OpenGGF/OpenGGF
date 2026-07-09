@@ -366,6 +366,7 @@ public record PerObjectRewindSnapshot(
             int latchedSolidObjectId, int interactSlotIndex, boolean slopeRepelJustSlipped,
             boolean stickToConvex, boolean sliding, boolean pushing,
             boolean skidding, int skidDustTimer, boolean fixedSkidDustActive,
+            int lastFixedSkidDustTickFrame,
             short wallClimbX, int rightWallPenetrationTimer,
             int balanceState,
             // Special states / hazards
@@ -379,7 +380,12 @@ public record PerObjectRewindSnapshot(
             int doubleJumpFlag, byte doubleJumpProperty,
             boolean shield, com.openggf.game.ShieldType shieldType,
             boolean instaShieldRegistered,
-            boolean speedShoes, boolean superSonic,
+            // speedShoesRemainingTicks is captured directly (not read back from
+            // TimerManager at restore time) because TimerManager's own generic
+            // snapshot only preserves (code, ticks) pairs, not timer type --
+            // restoring the SpeedShoesTimer's remaining duration must not
+            // depend on RewindRegistry's cross-subsystem restore ordering.
+            boolean speedShoes, int speedShoesRemainingTicks, boolean superSonic,
             // Input gating / control
             boolean forceInputRight, int forcedInputMask,
             boolean forcedJumpPress, boolean suppressNextJumpPress,
@@ -425,6 +431,7 @@ public record PerObjectRewindSnapshot(
             com.openggf.sprites.managers.PlayableSpriteMovement.RewindState movementState,
             com.openggf.sprites.managers.SpindashDustController.RewindState spindashDustState,
             com.openggf.sprites.managers.PlayableSpriteAnimation.RewindState animationState,
+            com.openggf.sprites.playable.DrowningController.RewindState drowningState,
             SidekickCpuRewindExtra sidekickCpuExtra,
             // Sidekick follow-history circular buffers (read by SidekickCpuController
             // each frame to position the follower; the leader writes new entries every

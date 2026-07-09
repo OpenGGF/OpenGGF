@@ -7,6 +7,8 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.NoOpSpecialStageProvider;
+import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.FadeManager;
@@ -15,6 +17,7 @@ import com.openggf.graphics.PixelFontTextRenderer;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * Runtime glue for optional held-key rewind during ordinary live level play.
@@ -24,9 +27,13 @@ public final class LiveRewindManager {
     private static final int KEYFRAME_INTERVAL = 60;
 
     private final SonicConfigurationService config;
+    private final Supplier<GameMode> modeSupplier;
+    private final Supplier<SpecialStageProvider> specialStageProviderSupplier;
+    private final boolean useModeSupplierForPublicEntries;
     private final LiveRewindHudOverlay hudOverlay;
 
     private GameplayModeContext installedGameplayMode;
+    private StepperKind installedStepperKind;
     private LiveRewindInputSource inputSource;
     private RewindController rewindController;
     private RewindSpeedController speedController = RewindSpeedController.disabled();
@@ -35,18 +42,61 @@ public final class LiveRewindManager {
     private final RewindEffectEnvelope effectEnvelope = new RewindEffectEnvelope();
 
     public LiveRewindManager(SonicConfigurationService config) {
+        this(config, () -> GameMode.LEVEL, () -> NoOpSpecialStageProvider.INSTANCE, false);
+    }
+
+    public LiveRewindManager(SonicConfigurationService config,
+                             Supplier<GameMode> modeSupplier,
+                             Supplier<SpecialStageProvider> specialStageProviderSupplier) {
+        this(config, modeSupplier, specialStageProviderSupplier, true);
+    }
+
+    private LiveRewindManager(SonicConfigurationService config,
+                              Supplier<GameMode> modeSupplier,
+                              Supplier<SpecialStageProvider> specialStageProviderSupplier,
+                              boolean useModeSupplierForPublicEntries) {
         this.config = Objects.requireNonNull(config, "config");
+        this.modeSupplier = Objects.requireNonNull(modeSupplier, "modeSupplier");
+        this.specialStageProviderSupplier = Objects.requireNonNull(
+                specialStageProviderSupplier, "specialStageProviderSupplier");
+        this.useModeSupplierForPublicEntries = useModeSupplierForPublicEntries;
         this.hudOverlay = new LiveRewindHudOverlay(this::statusLabel);
     }
 
-    public boolean handleRealtimeRewindInput(GameMode mode, InputHandler input) {
-        if (mode != GameMode.LEVEL || input == null || !enabled()) {
+    private enum StepperKind {
+        LEVEL_FRAME,
+        SPECIAL_STAGE
+    }
+
+    private record RewindContext(boolean supported, StepperKind stepperKind) {
+    }
+
+    /**
+     * @param rewindBlocked true while rewind engagement must be rejected: either
+     *     the level is mid a special/bonus-stage/ending transition or a pending
+     *     zone/act transition, OR a fade is in flight with a completion
+     *     callback that has not yet run (see {@code GameLoop.isRewindBlocked()}).
+     *     {@code currentGameMode} stays {@code GameMode.LEVEL} throughout both
+     *     kinds of window -- the fade only flips the mode (or otherwise acts on
+     *     its result) once its completion callback runs -- so this widens the
+     *     same "not applicable this frame" gate {@code mode != GameMode.LEVEL}
+     *     already uses, reusing its {@link #clear()} teardown rather than
+     *     needing a separate mid-hold cancel path. Note this is a STRICT
+     *     SUPERSET of {@code GameLoop.isNonRewindableTransitionPending()} (the
+     *     predicate that also freezes gameplay) -- the fade term must never be
+     *     folded into that narrower predicate, since ROM gameplay keeps
+     *     ticking during an ordinary callback-bearing fade even though rewind
+     *     must still be rejected. See ssentry-rewind-report.md.
+     */
+    public boolean handleRealtimeRewindInput(GameMode mode, boolean rewindBlocked, InputHandler input) {
+        RewindContext context = rewindContextForPublicEntry(mode);
+        if (!context.supported() || rewindBlocked || input == null || !enabled()) {
             activeInputHandler = null;
             clear();
             return false;
         }
         activeInputHandler = input;
-        if (!ensureInstalled()) {
+        if (!ensureInstalled(context)) {
             effectEnvelope.frameInactive();
             return false;
         }
@@ -76,7 +126,15 @@ public final class LiveRewindManager {
             speedController.reset();
         }
         if (rewinding) {
-            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+            // Release lands a committed logical restore via
+            // cleanupAudioAfterRealtimeRewind's commitDeferredAudioRestore()
+            // before this cleanup runs, so the RESYNC_MUSIC variant's extra
+            // music-stack pop is not needed here and would incorrectly end an
+            // override (e.g. invincibility) the just-restored state says
+            // should still be active. See markBoundary handlers below for the
+            // boundary cases that DO need the pop (their deferred restore was
+            // dropped, not committed).
+            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX);
         }
         rewinding = false;
         effectEnvelope.frameInactive();
@@ -122,8 +180,21 @@ public final class LiveRewindManager {
         };
     }
 
-    public void recordExternalFrame(GameMode mode, InputHandler input) {
-        if (mode != GameMode.LEVEL || input == null || !enabled()) {
+    /**
+     * @param nonRewindableTransitionPending true while the level is mid a
+     *     special/bonus-stage/ending transition or a pending zone/act
+     *     transition (see {@code GameLoop.isNonRewindableTransitionPending()}).
+     *     Unlike {@link #handleRealtimeRewindInput(GameMode, boolean, InputHandler)}'s
+     *     {@code rewindBlocked} parameter, this one intentionally does NOT
+     *     also cover a pending fade completion: gameplay is deliberately NOT
+     *     frozen during a completion-bearing fade, so this call site DOES run
+     *     during such fades (with this flag false) and must keep recording
+     *     rewind history through them. Only rewind ENGAGEMENT is blocked
+     *     during those windows, via {@code GameLoop.isRewindBlocked()}.
+     */
+    public void recordExternalFrame(GameMode mode, boolean nonRewindableTransitionPending, InputHandler input) {
+        RewindContext context = rewindContextForPublicEntry(mode);
+        if (!context.supported() || nonRewindableTransitionPending || input == null || !enabled()) {
             activeInputHandler = null;
             clear();
             return;
@@ -132,7 +203,7 @@ public final class LiveRewindManager {
         if (rewinding) {
             return;
         }
-        if (!ensureInstalled()) {
+        if (!ensureInstalled(context)) {
             return;
         }
         inputSource.discardAfter(rewindController.currentFrame());
@@ -147,25 +218,40 @@ public final class LiveRewindManager {
             return;
         }
         switch (boundary) {
-            case LEVEL_LOAD -> handleLevelLoadBoundary();
-            case SEAMLESS_LEVEL_TRANSITION -> handleSeamlessLevelTransitionBoundary();
+            case LEVEL_LOAD -> handleLevelLoadBoundary(rewindContextFromSupplier());
+            case SEAMLESS_LEVEL_TRANSITION -> handleSeamlessLevelTransitionBoundary(rewindContextFromSupplier());
             case MODE_EXIT_TO_NON_REWINDABLE -> clear();
             case MODE_ENTER_REWINDABLE -> handleModeEnterRewindableBoundary();
         }
     }
 
     public void resetBufferAtCurrentFrame(GameMode mode) {
-        if (mode != GameMode.LEVEL) {
+        RewindContext context = rewindContextForPublicEntry(mode);
+        if (!context.supported()) {
             return;
         }
-        markBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
+        handleSeamlessLevelTransitionBoundary(context);
     }
 
     public void renderHud(GameMode mode, PixelFontTextRenderer text) {
-        if (mode != GameMode.LEVEL || text == null || !enabled()) {
+        RewindContext context = rewindContextForPublicEntry(mode);
+        if (!context.supported() || text == null || !enabled()) {
             return;
         }
         hudOverlay.render(text);
+    }
+
+    /**
+     * Modes in which held live rewind may structurally run. LEVEL is normal
+     * gameplay; BONUS_STAGE covers the rewind-supported bonus stages
+     * (Gumball/Pachinko), which run the same LevelFrameStep pipeline the
+     * re-simulation stepper replays. SPECIAL_STAGE uses a dedicated stepper and
+     * is additionally filtered by provider capability before activation.
+     */
+    private static boolean isRewindableMode(GameMode mode) {
+        return mode == GameMode.LEVEL
+                || mode == GameMode.BONUS_STAGE
+                || mode == GameMode.SPECIAL_STAGE;
     }
 
     /** Current VHS rewind presentation intensity, 0..1. */
@@ -185,24 +271,34 @@ public final class LiveRewindManager {
         return "REWIND " + rewindController.currentFrame();
     }
 
-    private boolean ensureInstalled() {
+    private boolean ensureInstalled(RewindContext context) {
         GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
         if (gameplayMode == null) {
             clear();
             return false;
         }
-        if (gameplayMode == installedGameplayMode && rewindController != null && inputSource != null) {
-            // A caller already confirmed GameMode.LEVEL and the feature is
-            // enabled this frame, so live rewind could be used — arm PCM
+        StepperKind requiredKind = context.stepperKind();
+        if (gameplayMode == installedGameplayMode
+                && installedStepperKind == requiredKind
+                && rewindController != null
+                && inputSource != null) {
+            // A caller already confirmed this rewind context and the feature
+            // is enabled this frame, so live rewind could be used — arm PCM
             // recording (via the controller's own AudioManager collaborator,
             // not GameServices) so held rewind has history to play back.
             rewindController.setRewindHistoryArmed(true);
             return true;
         }
         inputSource = new LiveRewindInputSource();
+        EngineStepper stepper = requiredKind == StepperKind.SPECIAL_STAGE
+                ? new SpecialStageStepper(inputSource, () -> activeInputHandler, specialStageProviderSupplier)
+                : new LiveRewindStepper(
+                        inputSource,
+                        () -> activeInputHandler,
+                        () -> LevelFrameContext.from(gameplayMode));
         gameplayMode.installPlaybackController(
                 inputSource,
-                new LiveRewindStepper(inputSource, () -> activeInputHandler, () -> LevelFrameContext.from(gameplayMode)),
+                stepper,
                 KEYFRAME_INTERVAL);
         rewindController = gameplayMode.getRewindController();
         if (rewindController != null
@@ -210,6 +306,7 @@ public final class LiveRewindManager {
             rewindController.setDeterminismAuditor(new RewindDeterminismAuditor());
         }
         installedGameplayMode = gameplayMode;
+        installedStepperKind = requiredKind;
         speedController = RewindSpeedController.fromConfig(config);
         rewinding = false;
         if (rewindController != null) {
@@ -218,12 +315,12 @@ public final class LiveRewindManager {
         return rewindController != null;
     }
 
-    private void handleLevelLoadBoundary() {
-        if (!enabled()) {
+    private void handleLevelLoadBoundary(RewindContext context) {
+        if (!enabled() || !context.supported()) {
             clear();
             return;
         }
-        if (!ensureInstalled()) {
+        if (!ensureInstalled(context)) {
             return;
         }
         boolean wasRewinding = rewinding;
@@ -243,12 +340,12 @@ public final class LiveRewindManager {
         effectEnvelope.reset();
     }
 
-    private void handleSeamlessLevelTransitionBoundary() {
-        if (!enabled()) {
+    private void handleSeamlessLevelTransitionBoundary(RewindContext context) {
+        if (!enabled() || !context.supported()) {
             clear();
             return;
         }
-        if (!ensureInstalled()) {
+        if (!ensureInstalled(context)) {
             return;
         }
         boolean wasRewinding = rewinding;
@@ -263,11 +360,31 @@ public final class LiveRewindManager {
     }
 
     private void handleModeEnterRewindableBoundary() {
-        if (!enabled()) {
+        RewindContext context = rewindContextFromSupplier();
+        if (!enabled() || !context.supported()) {
             clear();
             return;
         }
-        ensureInstalled();
+        ensureInstalled(context);
+    }
+
+    private RewindContext rewindContextForPublicEntry(GameMode mode) {
+        return rewindContext(useModeSupplierForPublicEntries ? modeSupplier.get() : mode);
+    }
+
+    private RewindContext rewindContextFromSupplier() {
+        return rewindContext(modeSupplier.get());
+    }
+
+    private RewindContext rewindContext(GameMode mode) {
+        if (mode != GameMode.SPECIAL_STAGE) {
+            return new RewindContext(isRewindableMode(mode), StepperKind.LEVEL_FRAME);
+        }
+        SpecialStageProvider provider = specialStageProviderSupplier.get();
+        if (provider != null && provider.supportsRewind()) {
+            return new RewindContext(true, StepperKind.SPECIAL_STAGE);
+        }
+        return new RewindContext(false, StepperKind.LEVEL_FRAME);
     }
 
     private int stepBackward(int steps) {
@@ -329,6 +446,7 @@ public final class LiveRewindManager {
             rewindController.setRewindHistoryArmed(false);
         }
         installedGameplayMode = null;
+        installedStepperKind = null;
         inputSource = null;
         rewindController = null;
         activeInputHandler = null;

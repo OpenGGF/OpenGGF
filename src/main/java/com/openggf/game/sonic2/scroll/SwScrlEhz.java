@@ -32,9 +32,6 @@ public class SwScrlEhz extends AbstractZoneScrollHandler {
 
     private final ParallaxTables tables;
 
-    // Persistent ripple counter, decrements every 8 frames (matches TempArray_LayerDef)
-    private int ripplePhase = 0;
-
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
 
     public SwScrlEhz(ParallaxTables tables) {
@@ -76,10 +73,11 @@ public class SwScrlEhz extends AbstractZoneScrollHandler {
             short baseBgScroll = asrWord(d2, 6);
             int limit = Math.min(VISIBLE_LINES, lineIndex + 21);
 
-            // Ripple counter decrements every 8 frames (matches subq.w #1,(TempArray_LayerDef))
-            if ((frameCounter & 7) == 0) {
-                ripplePhase--;
-            }
+            // Ripple counter decrements every 8 frames (matches subq.w #1,(TempArray_LayerDef)).
+            // Derived from the frame counter (= -floor(frameCounter/8)) rather than a
+            // running per-call decrement, so held-rewind re-derivation reproduces the
+            // exact phase for any frame instead of drifting off the update-call count.
+            int ripplePhase = -(frameCounter / 8);
             int rippleIndex = ripplePhase & 0x1F;
 
             for (; lineIndex < limit; lineIndex++) {

@@ -150,6 +150,9 @@ public class DebugRenderer {
                                 renderOverlayShortcuts(true);
                         }
                         glyphBatch.end();
+                        if (overlayManager.isEnabled(DebugOverlayToggle.PERFORMANCE)) {
+                                renderPerformancePanel();
+                        }
                         return;
                 }
 
@@ -203,6 +206,10 @@ public class DebugRenderer {
                 if (overlayManager.isEnabled(DebugOverlayToggle.PERFORMANCE)) {
                         renderPerformancePanel();
                 }
+        }
+
+        public void renderPerformanceOverlay() {
+                renderPerformancePanel();
         }
 
         private void renderObjectLabels() {

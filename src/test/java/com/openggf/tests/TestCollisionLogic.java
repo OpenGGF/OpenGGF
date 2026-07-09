@@ -25,7 +25,7 @@ public class TestCollisionLogic {
             }
         } else {
             // Fallback: Try to read from ROM
-            Path romPath = Path.of("Sonic The Hedgehog 2 (W) (REV01) [!].gen");
+            Path romPath = Path.of("s2.gen");
             Assumptions.assumeTrue(romPath.toFile().exists(), "Test data not available (neither .kos file nor ROM found)");
 
             try (FileChannel romChannel = FileChannel.open(romPath, StandardOpenOption.READ)) {
@@ -61,5 +61,4 @@ public class TestCollisionLogic {
     }
 
 }
-
 

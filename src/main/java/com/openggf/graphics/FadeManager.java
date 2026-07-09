@@ -640,6 +640,24 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
     }
 
     /**
+     * True while a fade is in flight AND has a completion callback that has not
+     * yet run. {@link #restore(FadeManagerSnapshot)} deliberately does not restore
+     * {@link #onFadeComplete} (a transient callback closure, not restorable
+     * state), so a rewind restore landing inside this window silently orphans
+     * whatever the callback was going to do -- e.g. advancing zone/act counters,
+     * requesting a special stage, or loading the next level -- with no other
+     * flag observing it. Object/GameLoop code that starts a fade whose callback
+     * performs a level/mode transition should be covered by
+     * {@code GameLoop.isNonRewindableTransitionPending()}, which folds this in
+     * game-agnostically rather than requiring every such call site to also set
+     * one of the existing narrower transition-pending flags. See
+     * ssentry-rewind-report.md.
+     */
+    public boolean hasPendingCompletion() {
+        return state != FadeState.NONE && onFadeComplete != null;
+    }
+
+    /**
      * Get the current fade state.
      */
     public FadeState getState() {
@@ -708,7 +726,8 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         return new FadeManagerSnapshot(
                 state, frameCount, fadeR, fadeG, fadeB, fadeAlpha,
                 fadeType, holdDuration, holdFrameCount,
-                effectiveFPC, effectiveIncrement, effectiveDuration);
+                effectiveFPC, effectiveIncrement, effectiveDuration,
+                onFadeComplete != null);
     }
 
     @Override

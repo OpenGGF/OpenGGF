@@ -62,7 +62,7 @@ public class RomOffsetFinder {
 
             return new GameProfile(
                     "s1", "Sonic 1", "Sonic 1 (REV01)",
-                    "Sonic The Hedgehog (W) (REV01) [!].gen",
+                    "s1.gen",
                     "docs/s1disasm",
                     "sonic.asm",
                     null, // S1 uses bincludePalette, not the palette macro
@@ -101,7 +101,7 @@ public class RomOffsetFinder {
 
             return new GameProfile(
                     "s2", "Sonic 2", "Sonic 2 (REV01)",
-                    "Sonic The Hedgehog 2 (W) (REV01) [!].gen",
+                    "s2.gen",
                     "docs/s2disasm",
                     "s2.asm",
                     "art/palettes/", // S2 uses the palette macro
@@ -127,7 +127,7 @@ public class RomOffsetFinder {
 
             return new GameProfile(
                     "s3k", "Sonic 3 & Knuckles", "Sonic 3 & Knuckles",
-                    "Sonic and Knuckles & Sonic 3 (W) [!].gen",
+                    "s3k.gen",
                     "docs/skdisasm",
                     "sonic3k.asm",
                     null, // S3K does NOT use palette macro

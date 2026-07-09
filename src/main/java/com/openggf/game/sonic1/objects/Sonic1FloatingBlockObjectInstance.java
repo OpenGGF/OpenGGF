@@ -3,8 +3,10 @@ import com.openggf.game.PlayableEntity;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.Sonic1SwitchManager;
+import com.openggf.game.sonic1.Sonic1ZoneFeatureProvider;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -388,6 +390,12 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
             Sonic1SwitchManager switches = services().gameService(Sonic1SwitchManager.class);
             // ROM: btst #0,(f_switch+fb_type)
             if ((switches.getRaw(fbType) & 0x01) != 0) {
+                // ROM (lines 239-243): once the switch is pressed, the LZ1
+                // switch-3 door unconditionally re-enables the water current
+                // this same frame, overriding the disable above.
+                if (isLz1WaterTunnelDoor()) {
+                    setWindTunnelDisabled(false);
+                }
                 // Switch pressed - begin activation
                 activated = true;
             }
@@ -640,15 +648,51 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * Handle LZ1 water tunnel allow flag logic.
-     * In LZ act 1, switch 3 controls whether the water tunnel is allowed.
-     * When the player is to the left of this door, the tunnel is allowed;
-     * when the switch activates, the tunnel is disallowed.
+     * Handle LZ1 water tunnel allow flag logic (ROM: f_wtunnelallow).
+     * <p>
+     * ROM: "56 SYZ, SLZ Floating Blocks and LZ Doors.asm" type05, lines 219-232.
+     * Only the LZ1 (zone LZ, act 1) door with {@code fb_type == 3} gates the
+     * tunnel: every frame before the door is triggered, the flag is cleared
+     * (tunnel allowed), then re-disabled if Sonic hasn't yet passed the door's
+     * X position. Without this gate the water current pushes Sonic into the
+     * still-closed door with no way out.
      */
     private void handleLz1WaterTunnel() {
-        // cmpi.w #(id_LZ<<8)+0,(v_zone).w — only in LZ act 1
-        // We skip this as the engine doesn't implement water tunnels yet.
-        // The flag f_wtunnelallow is LZ-specific and not critical for object behavior.
+        // cmpi.w #(id_LZ<<8)+0,(v_zone_act).w — only in LZ act 1, fb_type==3
+        if (!isLz1WaterTunnelDoor()) {
+            return;
+        }
+
+        // clr.b (f_wtunnelallow).w — enable by default
+        setWindTunnelDisabled(false);
+
+        AbstractPlayableSprite player = services().camera() != null
+                ? services().camera().getFocusedSprite() : null;
+        if (player == null) {
+            return;
+        }
+
+        // move.w (v_player+obX).w,d0 / cmp.w obX(a0),d0 / bhs.s .aaa
+        // If player X >= door X (passed the door), leave the tunnel enabled.
+        if (player.getCentreX() < x) {
+            // move.b #1,(f_wtunnelallow).w — disable until Sonic passes the door
+            setWindTunnelDisabled(true);
+        }
+    }
+
+    /**
+     * Whether this door is the specific LZ1 (act 1) switch-3 door that gates
+     * the water tunnel's {@code f_wtunnelallow} flag.
+     */
+    private boolean isLz1WaterTunnelDoor() {
+        return isLZ && fbType == 3 && services().currentAct() == 0;
+    }
+
+    private void setWindTunnelDisabled(boolean disabled) {
+        ZoneFeatureProvider provider = services().zoneFeatureProvider();
+        if (provider instanceof Sonic1ZoneFeatureProvider sonic1) {
+            sonic1.setWindTunnelDisabled(disabled);
+        }
     }
 
     /**

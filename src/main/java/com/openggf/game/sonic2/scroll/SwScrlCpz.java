@@ -49,9 +49,11 @@ public class SwScrlCpz extends AbstractZoneScrollHandler {
     private boolean initialized;
 
     // Ripple phase counter - decrements once every 8 frames
-    // Equivalent to TempArray_LayerDef ripple counter in original
+    // Equivalent to TempArray_LayerDef ripple counter in original.
+    // Derived from the frame counter each update() (see update()) rather than a
+    // running per-call decrement, so it rewinds correctly. Retained as a field
+    // only to back getRipplePhase().
     private int ripplePhase;
-    private int frameCounterForRipple; // Tracks frames for 8-frame decrement
 
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
 
@@ -59,7 +61,6 @@ public class SwScrlCpz extends AbstractZoneScrollHandler {
         this.tables = tables;
         this.initialized = false;
         this.ripplePhase = 0;
-        this.frameCounterForRipple = 0;
     }
 
     /**
@@ -85,7 +86,6 @@ public class SwScrlCpz extends AbstractZoneScrollHandler {
         initialized = true;
 
         ripplePhase = 0;
-        frameCounterForRipple = 0;
     }
 
     @Override
@@ -132,13 +132,12 @@ public class SwScrlCpz extends AbstractZoneScrollHandler {
         // Note: BG2 Y is same as BG1 Y (bgY_16_16), no separate tracking needed
 
         // ==================== Step 3: Update Ripple Phase ====================
-        // Ripple phase advances (decrements) once every 8 frames
-        // This matches EHZ behavior and fixes the "too fast" bug
-        frameCounterForRipple++;
-        if (frameCounterForRipple >= 8) {
-            frameCounterForRipple = 0;
-            ripplePhase--; // Decrement (wraps naturally with & 0x1F mask)
-        }
+        // Ripple phase advances (decrements) once every 8 frames. Derived from
+        // the frame counter (= -floor((frameCounter+1)/8)) instead of a running
+        // per-call decrement, so held-rewind re-derivation reproduces the exact
+        // phase for any frame instead of drifting off the update-call count. The
+        // +1 keeps the historical cadence (decrements at frames 7, 15, 23, ...).
+        ripplePhase = -((frameCounter + 1) / 8);
 
         // ==================== Step 4: Extract Integer Pixel Values
         // ====================
@@ -225,7 +224,6 @@ public class SwScrlCpz extends AbstractZoneScrollHandler {
         lastCameraX = 0;
         lastCameraY = 0;
         ripplePhase = 0;
-        frameCounterForRipple = 0;
     }
 
     // ==================== Test Access Methods ====================

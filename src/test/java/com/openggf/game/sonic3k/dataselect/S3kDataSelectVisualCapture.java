@@ -80,7 +80,7 @@ public final class S3kDataSelectVisualCapture {
         long window = NULL;
         try {
             String romPath = System.getProperty("s3k.rom.path",
-                    "Sonic and Knuckles & Sonic 3 (W) [!].gen");
+                    "s3k.gen");
             File romFile = new File(romPath);
             if (!romFile.exists()) {
                 throw new IllegalStateException("S3K ROM not available: " + romFile.getAbsolutePath());

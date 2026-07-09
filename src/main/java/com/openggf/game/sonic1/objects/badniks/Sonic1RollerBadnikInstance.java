@@ -382,8 +382,14 @@ public class Sonic1RollerBadnikInstance extends AbstractBadnikInstance implement
             return;
         }
 
-        // Roll_RollChk (state 0) skips animation on activation frame (addq.l #4,sp)
-        // But we still run animation for the waiting state
+        // Roll_Action_FromLeft (ob2ndRout=0) pops its own return address
+        // (addq.l #4,sp) on every call while dormant, so AnimateSprite is never
+        // reached until the Roller activates (docs/s1disasm/_incObj/"43 Badnik -
+        // Roller.asm":36-39). Skip animating the curled pose during that window.
+        if (secondaryState == STATE_ROLL_CHK) {
+            return;
+        }
+
         switch (currentAnim) {
             case ANIM_UNFOLD -> animateUnfold();
             case ANIM_FOLD -> animateFold();
@@ -499,6 +505,16 @@ public class Sonic1RollerBadnikInstance extends AbstractBadnikInstance implement
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) {
+            return;
+        }
+
+        // ROM never calls DisplaySprite for a still-falling (routine 0, Roll_Main
+        // is entered via jmp and its own rts never reaches AnimateSprite/
+        // DisplaySprite) or still-dormant (ob2ndRout=0, Roll_Action_FromLeft's
+        // addq.l #4,sp skip, docs/s1disasm/_incObj/"43 Badnik - Roller.asm":36-39,
+        // 99) Roller -- both windows are invisible on real hardware, not just
+        // hitbox-less.
+        if (!initialized || secondaryState == STATE_ROLL_CHK) {
             return;
         }
 

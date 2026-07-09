@@ -78,9 +78,9 @@ between multiple systems is the thing under test.
 Trace replay tests require:
 
 - the matching ROM for the game(s) you want to replay, in the repo root or via system property:
-  - Sonic 1: `Sonic The Hedgehog (W) (REV01) [!].gen` (or `-Dsonic1.rom.path=...`)
-  - Sonic 2: `Sonic The Hedgehog 2 (W) (REV01) [!].gen` (or `-Dsonic2.rom.path=...`)
-  - Sonic 3 & Knuckles: `Sonic and Knuckles & Sonic 3 (W) [!].gen` (or `-Ds3k.rom.path=...`)
+  - Sonic 1: `s1.gen`, World REV01, CRC32 `AFE05EEE` (or `-Dsonic1.rom.path=...`)
+  - Sonic 2: `s2.gen`, World REV01, CRC32 `7B905383` (or `-Dsonic2.rom.path=...`)
+  - Sonic 3 & Knuckles: `s3k.gen`, World lock-on combined ROM, CRC32 `63522553` (or `-Ds3k.rom.path=...`)
 - the `.bk2` file to be present in the trace directory (except for ROM-driven credits demo
   traces)
 
@@ -169,28 +169,28 @@ Examples:
 
 ```bat
 tools\bizhawk\record_trace.bat ^
-  "Sonic The Hedgehog (W) (REV01) [!].gen" ^
+  "s1.gen" ^
   "docs\BizHawk-2.11-win-x64\Movies\s1-mz1.bk2"
 
 tools\bizhawk\record_s2_trace.bat ^
-  "Sonic The Hedgehog 2 (W) (REV01) [!].gen" ^
+  "s2.gen" ^
   "docs\BizHawk-2.11-win-x64\Movies\s2-ehz1.bk2"
 
 tools\bizhawk\record_s2_trace.bat ^
-  "Sonic The Hedgehog 2 (W) (REV01) [!].gen" ^
+  "s2.gen" ^
   "docs\BizHawk-2.11-win-x64\Movies\s2-lvl-select-CPZ.bk2" ^
   level_gated_reset_aware
 
 PowerShell -NoProfile -ExecutionPolicy Bypass -File tools\bizhawk\record_s2_level_select_traces.ps1 ^
-  -RomPath "Sonic The Hedgehog 2 (W) (REV01) [!].gen" ^
+  -RomPath "s2.gen" ^
   -Only cpz
 
 tools\bizhawk\record_s3k_trace.bat ^
-  "Sonic and Knuckles & Sonic 3 (W) [!].gen" ^
+  "s3k.gen" ^
   "docs\BizHawk-2.11-win-x64\Movies\s3k-aiz1.bk2"
 
 tools\bizhawk\record_s3k_trace.bat ^
-  "Sonic and Knuckles & Sonic 3 (W) [!].gen" ^
+  "s3k.gen" ^
   "src\test\resources\traces\s3k\aiz1_to_hcz_fullrun\s3k-aiz1-aiz2-sonictails.bk2" ^
   aiz_end_to_end
 ```
@@ -326,7 +326,7 @@ Workflow:
 
 ```bat
 tools\bizhawk\record_s3k_trace.bat ^
-  "Sonic and Knuckles & Sonic 3 (W) [!].gen" ^
+  "s3k.gen" ^
   "src\test\resources\traces\s3k\aiz1_to_hcz_fullrun\s3k-aiz1-aiz2-sonictails.bk2" ^
   aiz_end_to_end
 ```
@@ -373,7 +373,7 @@ Command:
 
 ```bat
 tools\bizhawk\record_s1_credits_traces.bat ^
-  "Sonic The Hedgehog (W) (REV01) [!].gen" ^
+  "s1.gen" ^
   all
 ```
 
@@ -381,7 +381,7 @@ Record one replay only:
 
 ```bat
 tools\bizhawk\record_s1_credits_traces.bat ^
-  "Sonic The Hedgehog (W) (REV01) [!].gen" ^
+  "s1.gen" ^
   3
 ```
 

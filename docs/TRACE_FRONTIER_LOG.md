@@ -40,6 +40,35 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-09 - S2 special-stage headless replay harness established (red-allowed MVP)
+
+Branch `feature/ai-s2-ss-trace` (commit `de6f3b95c`). First headless replay of a
+Sonic 2 half-pipe special-stage trace against the production
+`Sonic2SpecialStageProvider`.
+
+- Command: `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`
+- Trace: `src/test/resources/traces/s2/special_stage` (Special Stage 1, Sonic+Tails,
+  5299 frames, 1971 lag rows, `bk2_frame_offset` 2754, `stage_finished` frame 5219).
+- Status: PASS (pipeline green; determinism green). Divergences are recorded in
+  the report, NOT asserted -- this is the intentional red-allowed MVP. The
+  `assertNoReleaseBlockingDivergences()` ratchet is left disabled until parity.
+- Report: `target/trace-reports/s2_special_stage_0_report.json` -- 15313 errors,
+  1877 warnings across 3250 compared (non-lag) frames.
+- First error: frame 0, `sonic_ss_y` (trace `absent` vs engine `128`). Root: the
+  recorded trace opens in the ~69-frame SS load/intro (no SS player object spawned
+  until trace frame 69), while the engine's `initializeStage` spawns players
+  immediately. This is the known intro-timing frontier (not a harness misalignment;
+  frame 0 = bk2 row 2754 is correctly aligned). Top diverging fields:
+  `sonic_ss_y`, `tails_ss_y`, `sonic_ss_x`, `tails_ss_x`, `sonic_routine`,
+  `tails_routine`.
+- Next frontier: SS intro/player-spawn timing (engine skips the intro), then
+  in-gameplay control-lock timing and Tails CPU behaviour.
+
+Engine change: `SpecialStageBackgroundRenderer.init()`/`cleanup()` now short-circuit
+in headless mode (mirrors `Sonic1SpecialStageManager`'s headless renderer skip), so
+the S2 SS runtime can boot without a GL context. Display-only; no gameplay behaviour
+change.
+
 ## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green
 
 Worktree `.worktrees/ai-s2-mtz3-round96-orbinit`, branch

@@ -45,10 +45,20 @@ public class DebugOverlayManager {
     }
 
     public void updateInput(InputHandler handler, boolean debugShortcutsEnabled) {
-        if (handler == null || !debugShortcutsEnabled) {
+        if (handler == null) {
+            return;
+        }
+        if (handler.isKeyPressed(DebugOverlayToggle.PERFORMANCE.keyCode())) {
+            setEnabled(DebugOverlayToggle.PERFORMANCE,
+                    !isEnabled(DebugOverlayToggle.PERFORMANCE));
+        }
+        if (!debugShortcutsEnabled) {
             return;
         }
         for (DebugOverlayToggle toggle : DebugOverlayToggle.values()) {
+            if (toggle == DebugOverlayToggle.PERFORMANCE) {
+                continue;
+            }
             if (handler.isKeyPressed(toggle.keyCode())) {
                 setEnabled(toggle, !isEnabled(toggle));
             }

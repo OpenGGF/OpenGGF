@@ -136,6 +136,9 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild",
                     "TestS2BadnikChildGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance$Obj83SlotChild",
+                    "TestS2ArzRotPformsGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance",
                     "TestS2BadnikChildGraphRewind"),
             Map.entry(
@@ -623,9 +626,9 @@ public final class RewindRoundTripHarness {
     private static final String FORCE_ROMLESS_CI_PROPERTY =
             "openggf.rewind.harness.forceRomless";
     private static final List<String> DEFAULT_ROM_FILENAMES = List.of(
-            "Sonic The Hedgehog (W) (REV01) [!].gen",
-            "Sonic The Hedgehog 2 (W) (REV01) [!].gen",
-            "Sonic and Knuckles & Sonic 3 (W) [!].gen");
+            "s1.gen",
+            "s2.gen",
+            "s3k.gen");
     private static final Set<String> ROMLESS_CI_SURROGATE_CLASSES = Set.of(
             "com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance",
             "com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance",

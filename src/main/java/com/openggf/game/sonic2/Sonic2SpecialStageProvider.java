@@ -4,17 +4,20 @@ package com.openggf.game.sonic2;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.ResultsScreen;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRewindAdapter;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.DefaultObjectServices;
 
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * Sonic 2 special stage provider implementation.
@@ -55,6 +58,16 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     @Override
     public boolean hasSpecialStages() {
         return true;
+    }
+
+    @Override
+    public boolean supportsRewind() {
+        return true;
+    }
+
+    @Override
+    public Optional<RewindSnapshottable<?>> rewindAdapter() {
+        return Optional.of(new Sonic2SpecialStageRewindAdapter(manager));
     }
 
     @Override

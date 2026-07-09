@@ -32,6 +32,13 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 19. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt)
 20. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
 21. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
+22. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
+
+---
+
+## Special-stage Live Rewind Scope
+
+Held live rewind is supported only inside rewind-capable special-stage providers. It does not rewind across the LEVEL -> SPECIAL_STAGE or SPECIAL_STAGE -> results/LEVEL boundaries; those transitions intentionally start fresh rewind timelines.
 
 ---
 
@@ -422,6 +429,33 @@ The engine's `GameLoop` dispatches behavior based on `GameMode`. Overloading `LE
 ### Impact
 
 None on gameplay. The level pipeline (rendering, physics, objects, collision) is identical between `LEVEL` and `BONUS_STAGE` modes. The only difference is the coordinator managing transitions.
+
+---
+
+## Bonus Stage Rewind Scope (Within-Stage Only)
+
+**Location:** `LiveRewindManager`, `GameLoop.isBonusStageRewindable()`, `BonusStageCoordinatorRewindAdapter`
+**ROM Reference:** n/a (engine-only feature; bonus stages have no ROM-native rewind concept)
+
+### Original Implementation
+
+N/A — held rewind is an engine-only feature with no ROM equivalent.
+
+### Engine Implementation
+
+Live rewind now works *within* the Gumball and Pachinko bonus stages (`BonusStageProvider.supportsRewind()==true`): held rewind restores in-stage object/reward/accumulator state exactly as it does in `GameMode.LEVEL`. The timeline is intentionally severed at the bonus-stage boundary in both directions. The `GameplayModeContext` (and its `rewindRegistry`) survives bonus entry — that is precisely why the coordinator accumulator adapter can be registered/deregistered against it. What resets the rewind timeline is the `LEVEL_LOAD`-class boundary that `loadZoneAndAct` emits on the bonus-zone load: it drives `LiveRewindManager.handleLevelLoadBoundary()` → `resetToFrameZero`, and the entry transition also marks `MODE_EXIT_TO_NON_REWINDABLE` (buffer clear). So rewind cannot walk backward across that boundary into the parent level's pre-entry history; likewise the exit frame (`bonusStageTransitionPending`) is excluded from capture, so rewind never walks forward past the bonus stage back into the level. Held rewind is confined to frames strictly inside the active bonus stage.
+
+The Slot Machine bonus stage is excluded: `BonusStageProvider.supportsRewind()` reports `false` for it, so `LiveRewindManager`/`GameLoop` never engage rewind while it is active (see `docs/S3K_KNOWN_DISCREPANCIES.md` for the reason and the deferred follow-up plan).
+
+**Cosmetic caveat:** during backward re-simulation frames (replaying forward from a keyframe to reach a rewind target), the player sprite's art-tile high-priority bit is not re-forced each frame the way normal forward gameplay does. This is a minor rendering-order artifact only visible mid-scrub, and it self-corrects once rewind releases and normal per-frame updates resume; it has no effect on collision, physics, or reward-accumulator correctness.
+
+### Reason
+
+Bonus stages load through the same `LEVEL_LOAD`-class transition as ordinary level entry/exit, so severing the rewind timeline at that boundary reuses the already-correct `LEVEL_LOAD` behavior instead of teaching the rewind system to snapshot/restore across a full mode swap. The player art-tile priority bit gap is accepted as a cosmetic-only artifact rather than adding a per-frame re-force to the re-simulation stepper for a bit that only matters visually and only during the scrub itself.
+
+### Impact
+
+None on gameplay determinism or reward correctness (ring/item totals match what was actually collected at the point rewind is released). The only visible effect is the momentary art-tile priority artifact during backward scrubbing described above.
 
 ---
 

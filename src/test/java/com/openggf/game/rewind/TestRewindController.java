@@ -1,11 +1,13 @@
 package com.openggf.game.rewind;
 
 import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.graphics.FadeManager;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -191,6 +193,57 @@ class TestRewindController {
 
         RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 5);
         assertFalse(rc.stepBackward(), "should return false at earliest frame");
+    }
+
+    @Test
+    void stepBackwardClampsBeforeCommittingToAPoisonedFadeFrame() {
+        RewindRegistry reg = new RewindRegistry();
+        FadeManager fadeManager = new FadeManager();
+        reg.register(fadeManager);
+        InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
+        InputSource inputs = new FakeInputSource(100);
+        AtomicBoolean fadeStarted = new AtomicBoolean(false);
+        AtomicInteger completions = new AtomicInteger();
+        EngineStepper stepper = (in) -> {
+            if (in.frameIndex() == 10 && !fadeStarted.get()) {
+                fadeStarted.set(true);
+                // holdFrames=0, totalDuration=0 (default 21-frame fade):
+                // FADING_TO_BLACK -> auto HOLD_BLACK -> callback fires and
+                // clears onFadeComplete, all with a real completion callback
+                // still pending until it runs.
+                fadeManager.startFadeToBlack(completions::incrementAndGet, 0, 0);
+            }
+            fadeManager.update();
+        };
+
+        RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 5);
+        for (int i = 0; i < 40; i++) {
+            rc.step();
+        }
+        assertEquals(1, completions.get(),
+                "fixture assumption: the fade's completion callback has already fired by frame 40");
+
+        int stepsTaken = 0;
+        while (rc.stepBackward()) {
+            stepsTaken++;
+            assertFalse(stepsTaken > 100, "stepBackward should clamp, not loop forever");
+        }
+
+        // Frames [10, 30] are poisoned (mid fade-to-black with the completion
+        // callback still pending); frame 31 is the first frame after the
+        // callback ran. Scrubbing backward from frame 40 must clamp at 31 --
+        // the last good frame reachable without landing on a poisoned one --
+        // rather than skip over the poisoned span to reach frame 9.
+        assertEquals(31, rc.currentFrame(),
+                "held rewind must clamp at the last good frame before the poisoned fade window");
+
+        // Release resumes cleanly: stepping forward again must not throw or
+        // leave FadeManager stuck, and must not re-run the (already-fired)
+        // completion callback.
+        assertDoesNotThrow(rc::step);
+        assertEquals(32, rc.currentFrame());
+        assertEquals(1, completions.get(),
+                "resuming forward from the clamped frame must not re-fire the fade completion callback");
     }
 
     @Test

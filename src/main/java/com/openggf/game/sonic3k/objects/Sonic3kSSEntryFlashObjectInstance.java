@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -88,11 +89,14 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
                 || ctx.spawn() == null) {
             return null;
         }
-        int targetX = ctx.spawn().x();
-        int targetY = ctx.spawn().y();
+        return nearestLiveParentRing(ctx.objectServices().objectManager(), ctx.spawn().x(), ctx.spawn().y());
+    }
+
+    private static Sonic3kSSEntryRingObjectInstance nearestLiveParentRing(
+            ObjectManager objectManager, int targetX, int targetY) {
         Sonic3kSSEntryRingObjectInstance nearest = null;
         long nearestDistance = Long.MAX_VALUE;
-        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
             if (instance instanceof Sonic3kSSEntryRingObjectInstance ring && !ring.isDestroyed()) {
                 ObjectSpawn ringSpawn = ring.getSpawn();
                 long dx = (long) ringSpawn.x() - targetX;
@@ -105,6 +109,16 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
             }
         }
         return nearest;
+    }
+
+    @Override
+    protected void afterRewindRestoreSettled() {
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager == null || spawn == null) {
+            parentRing = null;
+            return;
+        }
+        parentRing = nearestLiveParentRing(objectManager, spawn.x(), spawn.y());
     }
 
     @Override

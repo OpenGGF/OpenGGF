@@ -244,4 +244,9 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
     public Sonic1LoopManager getLoopManager() {
         return loopManager;
     }
+
+    @Override
+    public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
+        return java.util.List.of(new com.openggf.game.sonic1.Sonic1ConveyorStateRewindAdapter());
+    }
 }

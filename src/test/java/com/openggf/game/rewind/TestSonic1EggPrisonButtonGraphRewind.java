@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -156,6 +157,56 @@ class TestSonic1EggPrisonButtonGraphRewind {
                 "Sonic1EggPrisonButtonObjectInstance must not keep an explicit dynamic codec");
     }
 
+    /**
+     * Bug repro (S1 bug-triage row 3, docs/plans/s1-bug-batch-ledger-2026-07-05.md):
+     * "Egg prison capsule button visual persists after destruction." Per
+     * docs/s1disasm/_incObj/3E Prison Capsule.asm:81-137, the button
+     * (Pri_Switch, routine 4) and the capsule's explosion/animal-spawn driver
+     * (Pri_Explosion/Pri_Animals, routines $A/$C) are the SAME ROM object slot
+     * -- when the button transitions from Pri_Switch into Pri_Explosion, the
+     * ROM stops calling AnimateSprite on it (freezing the last flash frame),
+     * then at ".makeanimal" (line 137) explicitly blanks it
+     * ("move.b #6,obFrame(a0) ; 'delete' switch by turning it invisible").
+     * Before this fix, the engine's button sub-object kept toggling between
+     * its two flash frames and rendering them forever after being triggered,
+     * with no path to the ROM's blank frame.
+     */
+    @Test
+    void s1EggPrisonButtonGoesBlankAfterExplosionPhaseAndStaysBlank() {
+        Harness harness = Harness.create(List.of(PRISON_BODY_SPAWN, PRISON_BUTTON_SPAWN));
+        ObjectManager objectManager = harness.objectManager();
+        resolvePlacedButtons(objectManager);
+
+        Sonic1EggPrisonButtonObjectInstance button = buttonAt(PRISON_BUTTON_SPAWN, objectManager);
+        int startFrame = readIntField(button, "currentFrame");
+        assertTrue(startFrame == 1 || startFrame == 3,
+                "precondition: button starts on one of its two flash frames");
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x180, (short) 0x160);
+        button.onSolidContact(player, new SolidContact(true, false, false, true, false), 2);
+        assertTrue(readBooleanField(button, "triggered"), "onSolidContact must trigger the button");
+        assertFalse(readBooleanField(button, "blanked"), "button must not blank on the trigger frame itself");
+
+        // ROM Pri_Explosion runs for EXPLOSION_TIMER=60 frames before .makeanimal
+        // fires and blanks the switch (3E Prison Capsule.asm:59-60,95,137).
+        for (int frame = 3; frame <= 64; frame++) {
+            objectManager.update(0, player, List.of(), frame, false);
+        }
+
+        assertTrue(readBooleanField(button, "blanked"),
+                "button must go blank once the capsule leaves the explosion phase");
+        assertEquals(6, readIntField(button, "currentFrame"),
+                "button must switch to the ROM blank mapping frame (Map_Pri .blank, index 6)");
+
+        // Keep driving the animal-spawn phase; the blanked switch must never
+        // come back (no re-animation, no reverting to a flash frame).
+        for (int frame = 65; frame <= 120; frame++) {
+            objectManager.update(0, player, List.of(), frame, false);
+        }
+        assertEquals(6, readIntField(button, "currentFrame"),
+                "blanked button must stay blank for the rest of the act, matching ROM's DeleteObject-only lifetime");
+    }
+
     private static void resolvePlacedButtons(ObjectManager objectManager) {
         objectManager.update(0, new TestablePlayableSprite("sonic", (short) 0, (short) 0),
                 List.of(), 0, false);
@@ -167,10 +218,12 @@ class TestSonic1EggPrisonButtonGraphRewind {
         static Harness create(List<ObjectSpawn> spawns) {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCamera();
+            com.openggf.game.GameStateManager gameState = new com.openggf.game.GameStateManager();
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
+                @Override public com.openggf.game.GameStateManager gameState() { return gameState; }
             };
             ObjectManager objectManager = new ObjectManager(
                     spawns,

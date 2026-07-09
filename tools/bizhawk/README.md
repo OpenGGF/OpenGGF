@@ -30,7 +30,7 @@ For the S3K end-to-end AIZ fixture, run:
 
 ```bat
 tools\bizhawk\record_s3k_trace.bat ^
-  "Sonic and Knuckles & Sonic 3 (W) [!].gen" ^
+  "s3k.gen" ^
   "src\test\resources\traces\s3k\aiz1_to_hcz_fullrun\s3k-aiz1-aiz2-sonictails.bk2" ^
   aiz_end_to_end
 ```
@@ -43,7 +43,7 @@ For the Sonic 2 level-select movies, run the generator instead of copying record
 
 ```powershell
 PowerShell -NoProfile -ExecutionPolicy Bypass -File tools\bizhawk\record_s2_level_select_traces.ps1 `
-  -RomPath "Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+  -RomPath "s2.gen"
 ```
 
 Use `-Only cpz` or another route slug for a single fixture. Long level-select BK2s can include

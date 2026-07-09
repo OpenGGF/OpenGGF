@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
 
@@ -111,6 +112,22 @@ public final class LevelFrameStep {
         if (context == null) {
             throw new NullPointerException("context");
         }
+
+        // 0a. Drain the per-frame palette-write accumulator at frame top, before
+        //     any submitter (object palette writes in steps 2-3, zone palette
+        //     cyclers in step 6) runs this frame. This is the canonical per-frame
+        //     drain for BOTH paths. GameLoop.update() also calls beginFrame() at
+        //     its own frame top (idempotent here — nothing submits between the two
+        //     calls), but the headless/replay pipeline bypasses GameLoop, which
+        //     left PaletteOwnershipRegistry.writes growing unbounded: resolveInto()
+        //     re-sorts an ever-larger list every frame (O(n^2) within a run) and
+        //     the list compounds across warm reset-to-snapshot sessions. Owning the
+        //     drain in the shared frame step fixes the headless leak.
+        PaletteOwnershipRegistry paletteRegistry = context.paletteOwnershipRegistry();
+        if (paletteRegistry != null) {
+            paletteRegistry.beginFrame();
+        }
+
         // 0. Process dirty regions from MutableLevel (editor mutations).
         //    No-op when the level is not a MutableLevel — zero impact on gameplay.
         levelManager.processDirtyRegions();

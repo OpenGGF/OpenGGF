@@ -73,6 +73,15 @@ public class SpecialStageBackgroundRenderer {
         if (initialized) {
             return;
         }
+        // Headless mode has no GL context: skip all GL resource creation and
+        // leave the renderer un-initialised. Every draw entry point below already
+        // guards on `initialized`, so the shared special-stage runtime can boot
+        // and run its game logic (physics, object state) without rendering.
+        // Mirrors Sonic1SpecialStageManager's headless renderer skip.
+        if (graphicsManager.isHeadlessMode()) {
+            LOGGER.fine("Skipping SpecialStageBackgroundRenderer GL init in headless mode");
+            return;
+        }
 
         // Create FBO for background tile rendering
         createFBO();
@@ -304,6 +313,12 @@ public class SpecialStageBackgroundRenderer {
      * Clean up OpenGL resources.
      */
     public void cleanup() {
+        // Nothing was allocated in headless mode (init() short-circuits), so
+        // there are no GL resources to release and no GL context to call into.
+        if (graphicsManager.isHeadlessMode()) {
+            initialized = false;
+            return;
+        }
         if (hScrollBuffer != null) {
             hScrollBuffer.cleanup();
             hScrollBuffer = null;

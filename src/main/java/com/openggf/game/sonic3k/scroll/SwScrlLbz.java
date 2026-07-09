@@ -69,7 +69,12 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     private final ScrollValueTable lbz2HScroll = ScrollValueTable.ofLength(242);
     private final byte[] waterlineData;
 
-    private int cloudAccumulator;
+    // LBZ2 cloud auto-scroll phase (ROM +$E00/frame). Derived from the frame
+    // counter (not the update-call count) so it rewinds correctly. Anchored at
+    // the first act-2 cloud frame; offset 0 = read-then-increment. Both the
+    // normal and Death-Egg-launch act-2 paths advance it, so it is continuous.
+    private int cloudBaseFrame;
+    private boolean cloudBaseFrameSet;
     private int lastBgCameraX = Integer.MIN_VALUE;
     private int lastLbz2ScrollArtPhaseSource;
     private int screenShakeOffset;
@@ -86,6 +91,23 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
 
     public void setScreenShakeOffset(int screenShakeOffset) {
         this.screenShakeOffset = screenShakeOffset;
+    }
+
+    @Override
+    public void init(int actId, int cameraX, int cameraY) {
+        // Re-arm the cloud anchor on zone/act (re)entry so a reused handler
+        // re-derives the LBZ2 clouds from the new start frame.
+        cloudBaseFrameSet = false;
+    }
+
+    /** LBZ2 cloud phase derived from the frame counter (read-then-increment). */
+    private int cloudPhaseAt(int frameCounter) {
+        if (!cloudBaseFrameSet) {
+            cloudBaseFrame = frameCounter;
+            cloudBaseFrameSet = true;
+        }
+        // int multiply wraps mod 2^32 identically to repeated addition.
+        return (frameCounter - cloudBaseFrame) * 0xE00;
     }
 
     @Override
@@ -223,7 +245,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         int cameraXFixed = fixedFromWord(cameraX);
         buildWaterlineGradient(cameraXFixed, equilibriumDelta);
         buildUnderwaterBands(cameraXFixed, equilibriumDelta);
-        buildCloudBands(cameraXFixed);
+        buildCloudBands(cameraXFixed, frameCounter);
         buildLowerBackgroundBands(cameraXFixed, equilibriumDelta);
         applyWaterWaves(equilibriumDelta, frameCounter);
         publishLbz2DeformOutputs(runtimeState, equilibriumDelta, lastLbz2ScrollArtPhaseSource, lastBgCameraX);
@@ -284,7 +306,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         int cameraXFixed = fixedFromWord(cameraX);
         buildDeathEggUpperGradient(cameraXFixed);
         buildDeathEggUnderwaterBands(cameraXFixed, equilibriumDelta);
-        buildDeathEggCloudBands(cameraXFixed);
+        buildDeathEggCloudBands(cameraXFixed, frameCounter);
         buildDeathEggLowerBackgroundBands(cameraXFixed);
         applyDeathEggWaterWaves(equilibriumDelta, frameCounter);
         int waterlinePhase = (runtimeState.getBgLaunchSpeed() < 0 || equilibriumDelta < 0)
@@ -338,11 +360,10 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         }
     }
 
-    private void buildDeathEggCloudBands(int cameraXFixed) {
+    private void buildDeathEggCloudBands(int cameraXFixed, int frameCounter) {
         int value = cameraXFixed >> 6;
         int step = value;
-        int cloudPhase = cloudAccumulator;
-        cloudAccumulator += 0xE00;
+        int cloudPhase = cloudPhaseAt(frameCounter);
         int baseIndex = 0x00C / 2;
 
         for (int offset : LBZ2_CLOUD_DEFORM_OFFSETS) {
@@ -496,11 +517,10 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         }
     }
 
-    private void buildCloudBands(int cameraXFixed) {
+    private void buildCloudBands(int cameraXFixed, int frameCounter) {
         int value = cameraXFixed >> 6;
         int step = value;
-        int cloudPhase = cloudAccumulator;
-        cloudAccumulator += 0xE00;
+        int cloudPhase = cloudPhaseAt(frameCounter);
 
         for (int offset : LBZ2_CLOUD_DEFORM_OFFSETS) {
             value += cloudPhase;
