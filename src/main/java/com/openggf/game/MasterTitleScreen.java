@@ -15,6 +15,10 @@ import com.openggf.game.recording.menu.UserRecordingMenuState;
 import com.openggf.game.timeattack.GhostStore;
 import com.openggf.game.timeattack.TimeAttackMenu;
 import com.openggf.game.timeattack.TimeAttackMenuState;
+import com.openggf.game.timeattack.TimeAttackLaunchRequest;
+import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
+import com.openggf.game.timeattack.mp.RaceLobbyScreen;
+import com.openggf.net.protocol.ControlMessage;
 import com.openggf.testmode.TestModeTracePicker;
 import com.openggf.trace.catalog.TraceCatalog;
 import com.openggf.trace.catalog.TraceEntry;
@@ -160,6 +164,8 @@ public class MasterTitleScreen {
     private TimeAttackMenuFactory timeAttackMenuFactory = this::createTimeAttackMenu;
     private TimeAttackMenu.LaunchStarter timeAttackLaunchStarter =
             request -> LOGGER.info("Time attack launch callback not configured.");
+    private TimeAttackMenu.NetworkStarter timeAttackNetworkStarter = TimeAttackMenu.NetworkStarter.NONE;
+    private RaceLobbyScreen raceLobbyScreen;
     private int bgTextureId;
     private int solidWhiteTextureId; // 1x1 white texture for solid color overlays
     private int titleTextId;
@@ -324,6 +330,7 @@ public class MasterTitleScreen {
         if (configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             userRecordingMenu = null;
             timeAttackMenu = null;
+            raceLobbyScreen = null;
             if (tracePicker == null) {
                 Path root = Path.of(System.getProperty("user.dir"))
                         .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR))
@@ -348,6 +355,11 @@ public class MasterTitleScreen {
                 }
                 case NONE -> { }
             }
+            return;
+        }
+
+        if (raceLobbyScreen != null) {
+            raceLobbyScreen.update(inputHandler);
             return;
         }
 
@@ -457,6 +469,13 @@ public class MasterTitleScreen {
             renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
                     0f, 0f, 0f, 1f);
             tracePicker.render();
+            return;
+        }
+
+        if (raceLobbyScreen != null) {
+            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
+                    0f, 0f, 0f, 1f);
+            raceLobbyScreen.render();
             return;
         }
 
@@ -870,6 +889,30 @@ public class MasterTitleScreen {
         this.timeAttackLaunchStarter = Objects.requireNonNull(timeAttackLaunchStarter, "timeAttackLaunchStarter");
     }
 
+    public void setTimeAttackNetworkStarter(TimeAttackMenu.NetworkStarter starter) {
+        this.timeAttackNetworkStarter = Objects.requireNonNull(starter, "starter");
+        if (timeAttackMenu != null) {
+            timeAttackMenu.setNetworkStarter(starter);
+        }
+    }
+
+    public void openRaceLobby(MultiplayerRaceCoordinator coordinator, boolean host,
+                              ControlMessage.RoundConfig roundConfig, String character,
+                              java.util.function.Consumer<TimeAttackLaunchRequest> roundLauncher,
+                              Runnable leaveHandler) {
+        timeAttackMenu = null;
+        raceLobbyScreen = new RaceLobbyScreen(coordinator, font, host, roundConfig,
+                character, roundLauncher, leaveHandler);
+    }
+
+    public boolean isRaceLobbyOpen() {
+        return raceLobbyScreen != null;
+    }
+
+    public void closeRaceLobby() {
+        raceLobbyScreen = null;
+    }
+
     public boolean isTimeAttackMenuOpenForTest() {
         return timeAttackMenu != null;
     }
@@ -974,12 +1017,15 @@ public class MasterTitleScreen {
     }
 
     private TimeAttackMenu createTimeAttackMenu(List<String> availableGameIds, String initialGameId, PixelFont font) {
-        return new TimeAttackMenu(
+        TimeAttackMenu menu = new TimeAttackMenu(
                 availableGameIds,
                 initialGameId,
                 new GhostStore(Path.of("ghosts")),
                 font,
                 timeAttackLaunchStarter);
+        menu.setNetworkStarter(timeAttackNetworkStarter);
+        menu.setJoinAddress(configService.getString(SonicConfiguration.TIME_ATTACK_NET_LAST_JOIN_ADDRESS));
+        return menu;
     }
 
     private void drawLaunchHoverLine() {
@@ -1049,6 +1095,7 @@ public class MasterTitleScreen {
         if (renderer != null) renderer.cleanup();
         userRecordingMenu = null;
         timeAttackMenu = null;
+        raceLobbyScreen = null;
         state = State.INACTIVE;
         LOGGER.info("Master title screen cleaned up");
     }

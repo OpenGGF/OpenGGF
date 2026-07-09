@@ -631,6 +631,9 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.RECORDING_RECORD_KEY, GLFW_KEY_F9);
 		putDefaultKey(SonicConfiguration.TIME_ATTACK_RETRY_KEY, GLFW_KEY_R);
 		putDefaultKey(SonicConfiguration.TIME_ATTACK_MENU_KEY, GLFW_KEY_F10);
+		putDefault(SonicConfiguration.TIME_ATTACK_NET_HOST_PORT, 27888);
+		putDefault(SonicConfiguration.TIME_ATTACK_NET_LAST_JOIN_ADDRESS, "");
+		putDefault(SonicConfiguration.TIME_ATTACK_NET_DISPLAY_NAME, "");
 		putDefaultKey(SonicConfiguration.TRACE_REWIND_KEY, GLFW_KEY_R);
 		putDefault(SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, true);
 		putDefault(SonicConfiguration.TRACE_SHOW_GAME_HUD, true);

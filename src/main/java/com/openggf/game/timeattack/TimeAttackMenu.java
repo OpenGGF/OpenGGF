@@ -2,6 +2,7 @@ package com.openggf.game.timeattack;
 
 import com.openggf.control.InputHandler;
 import com.openggf.graphics.PixelFont;
+import com.openggf.game.timeattack.mp.MenuTextField;
 
 import java.util.List;
 import java.util.Objects;
@@ -21,6 +22,8 @@ public final class TimeAttackMenu {
     private final TimeAttackMenuState state;
     private final PixelFont font;
     private final LaunchStarter launchStarter;
+    private final MenuTextField joinAddress = new MenuTextField(64, ".:-");
+    private NetworkStarter networkStarter = NetworkStarter.NONE;
 
     public TimeAttackMenu(List<String> availableGameIds, String initialGameId,
             GhostStore ghostStore, PixelFont font, LaunchStarter launchStarter) {
@@ -30,10 +33,18 @@ public final class TimeAttackMenu {
     }
 
     public void update(InputHandler input) {
+        if (state.mode() == TimeAttackMenuState.Mode.JOIN_LAN) {
+            joinAddress.poll(input);
+        }
         state.update(input);
         TimeAttackLaunchRequest request = state.consumeLaunchRequest();
         if (request != null) {
-            launchStarter.launch(request);
+            switch (state.mode()) {
+                case SOLO -> launchStarter.launch(request);
+                case HOST_LAN -> networkStarter.host(request,
+                        state.characterPolicy(), state.lockedCharacter(), state.windowSeconds());
+                case JOIN_LAN -> networkStarter.join(request, joinAddress.text());
+            }
         }
     }
 
@@ -62,6 +73,19 @@ public final class TimeAttackMenu {
         String character = state.currentCharacter();
         String characterLabel = character == null ? "(none)" : character.toUpperCase();
         y = drawRow("Character", characterLabel, TimeAttackMenuState.Row.CHARACTER, y);
+        y = drawRow("Mode", state.mode().name().replace('_', ' '),
+                TimeAttackMenuState.Row.MODE, y);
+        if (state.mode() == TimeAttackMenuState.Mode.HOST_LAN) {
+            String policy = state.characterPolicy().equals("OPEN") ? "OPEN"
+                    : "LOCKED " + characterLabel;
+            y = drawRow("Policy", policy, TimeAttackMenuState.Row.POLICY, y);
+            y = drawRow("Window", (state.windowSeconds() / 60) + " min",
+                    TimeAttackMenuState.Row.WINDOW, y);
+        } else if (state.mode() == TimeAttackMenuState.Mode.JOIN_LAN) {
+            font.drawText("  Join: " + joinAddress.text() + "_", 12, y, SCALE,
+                    1f, 1f, 1f, 1f);
+            y += LINE_HEIGHT;
+        }
 
         y += LINE_HEIGHT;
         String bestLine = state.bestExists() ? "Best: saved" : "Best: none yet";
@@ -91,8 +115,29 @@ public final class TimeAttackMenu {
         return state;
     }
 
+    public void setNetworkStarter(NetworkStarter networkStarter) {
+        this.networkStarter = Objects.requireNonNull(networkStarter, "networkStarter");
+    }
+
+    public void setJoinAddress(String address) {
+        joinAddress.setText(address == null ? "" : address);
+    }
+
     @FunctionalInterface
     public interface LaunchStarter {
         void launch(TimeAttackLaunchRequest request);
+    }
+
+    public interface NetworkStarter {
+        NetworkStarter NONE = new NetworkStarter() {
+            @Override public void host(TimeAttackLaunchRequest request, String policy,
+                                       String lockedCharacter, int windowSeconds) { }
+            @Override public void join(TimeAttackLaunchRequest request, String address) { }
+        };
+
+        void host(TimeAttackLaunchRequest request, String policy,
+                  String lockedCharacter, int windowSeconds);
+
+        void join(TimeAttackLaunchRequest request, String address);
     }
 }

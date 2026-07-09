@@ -91,6 +91,7 @@ import com.openggf.game.timeattack.TimeAttackLevelEndRouting;
 import com.openggf.game.timeattack.TimeAttackMenu;
 import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
+import com.openggf.game.timeattack.mp.MultiplayerHudRenderer;
 import com.openggf.testmode.TraceCameraFocusController;
 
 import java.io.IOException;
@@ -176,10 +177,12 @@ public class GameLoop {
     private final UserRecordingRuntimeControls userRecordingControls;
     private final TimeAttackRuntime timeAttackRuntime;
     private final TimeAttackHudOverlay timeAttackHudOverlay;
+    private final MultiplayerHudRenderer multiplayerHudRenderer;
     private MultiplayerRaceCoordinator multiplayerRaceCoordinator;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
     private TimeAttackMenu.LaunchStarter timeAttackLaunchHandler =
             request -> LOGGER.warning("Time attack launch handler not configured.");
+    private TimeAttackMenu.NetworkStarter timeAttackNetworkHandler = TimeAttackMenu.NetworkStarter.NONE;
     private int lastAppliedUserRecordingPlaybackFrame = -1;
     private long gameplayAudioFrame;
     private boolean audioUpdatedThisStep;
@@ -352,6 +355,7 @@ public class GameLoop {
                         || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
                         || playbackDebugManager.isDriving(GameMode.LEVEL));
         this.timeAttackHudOverlay = new TimeAttackHudOverlay(timeAttackRuntime::hudState, configService);
+        this.multiplayerHudRenderer = new MultiplayerHudRenderer(configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
@@ -470,6 +474,9 @@ public class GameLoop {
             return;
         }
         timeAttackHudOverlay.render(textRenderer);
+        if (multiplayerRaceCoordinator != null) {
+            multiplayerHudRenderer.render(textRenderer, multiplayerRaceCoordinator.hudState());
+        }
     }
 
     public boolean shouldSuppressUserRecordingSceneRendering() {
@@ -512,6 +519,14 @@ public class GameLoop {
     public void setTimeAttackLaunchHandler(TimeAttackMenu.LaunchStarter timeAttackLaunchHandler) {
         this.timeAttackLaunchHandler = Objects.requireNonNull(timeAttackLaunchHandler, "timeAttackLaunchHandler");
         installTimeAttackLaunchHandler(currentMasterTitleScreen());
+    }
+
+    public void setTimeAttackNetworkHandler(TimeAttackMenu.NetworkStarter handler) {
+        this.timeAttackNetworkHandler = Objects.requireNonNull(handler, "handler");
+        MasterTitleScreen screen = currentMasterTitleScreen();
+        if (screen != null) {
+            screen.setTimeAttackNetworkStarter(handler);
+        }
     }
 
     /** Exposed so tests/Engine can arm and end a launched Time Attack session. */
@@ -3024,6 +3039,7 @@ public class GameLoop {
                 ? masterTitleScreenSupplier.get() : null;
         installUserRecordingPlaybackStarter(masterScreen);
         installTimeAttackLaunchHandler(masterScreen);
+        installTimeAttackNetworkHandler(masterScreen);
         return masterScreen;
     }
 
@@ -3055,6 +3071,12 @@ public class GameLoop {
     private void installTimeAttackLaunchHandler(MasterTitleScreen masterScreen) {
         if (masterScreen != null) {
             masterScreen.setTimeAttackLaunchStarter(request -> pendingTimeAttackLaunch = request);
+        }
+    }
+
+    private void installTimeAttackNetworkHandler(MasterTitleScreen masterScreen) {
+        if (masterScreen != null) {
+            masterScreen.setTimeAttackNetworkStarter(timeAttackNetworkHandler);
         }
     }
 
@@ -3105,7 +3127,7 @@ public class GameLoop {
         if (manager.isActive()) {
             return;
         }
-        pendingReopenTimeAttackMenu = true;
+        pendingReopenTimeAttackMenu = multiplayerRaceCoordinator == null;
         audioManager.fadeOutMusic();
         manager.startFadeToBlack(this::returnToMasterTitle);
     }

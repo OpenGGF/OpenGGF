@@ -123,6 +123,10 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         transport.sendControl(new ControlMessage.Chat(text));
     }
 
+    public void sendRoundConfigure(ControlMessage.RoundConfig config) {
+        transport.sendControl(new ControlMessage.RoundConfigure(config));
+    }
+
     public void shutdown() {
         detachRuntime();
         transport.close();

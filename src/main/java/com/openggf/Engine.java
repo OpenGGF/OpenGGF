@@ -51,6 +51,18 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
 import com.openggf.game.timeattack.TimeAttackRuntime;
+import com.openggf.game.timeattack.DeterminismFingerprint;
+import com.openggf.game.timeattack.mp.LiveLevelProfileFactory;
+import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
+import com.openggf.game.timeattack.mp.RaceTransport;
+import com.openggf.net.client.ClientRaceSession;
+import com.openggf.net.client.RaceClient;
+import com.openggf.net.host.RaceHostServer;
+import com.openggf.net.hub.RoomHostConfig;
+import com.openggf.net.hub.TrackValidationProfile;
+import com.openggf.net.hub.TrackValidationProfileSource;
+import com.openggf.net.identity.PlayerIdentity;
+import com.openggf.net.protocol.ControlMessage;
 import com.openggf.data.Rom;
 import com.openggf.physics.Direction;
 import com.openggf.graphics.color.DisplayColorProfileController;
@@ -69,12 +81,14 @@ import com.openggf.util.RetroArchGlslShaderPackDownloader;
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.nio.file.Path;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import static org.lwjgl.glfw.Callbacks.*;
@@ -186,6 +200,12 @@ public class Engine {
 
 	// Master title screen (game selection before ROM loading)
 	private MasterTitleScreen masterTitleScreen;
+	private RaceHostServer raceHostServer;
+	private RaceClient raceClient;
+	private MultiplayerRaceCoordinator multiplayerRaceCoordinator;
+	private ControlMessage.RoundConfig multiplayerRoundConfig;
+	private String multiplayerCharacter;
+	private boolean hostingTimeAttackRoom;
 
 	// Legal disclaimer screen (pre-ROM disclaimer)
 	private LegalDisclaimerScreen legalDisclaimerScreen;
@@ -248,6 +268,18 @@ public class Engine {
 		this.gameLoop.setLegalDisclaimerExitHandler(this::exitLegalDisclaimer);
 		this.gameLoop.setDataSelectActionHandler(this::launchGameplayFromDataSelect);
 		this.gameLoop.setTimeAttackLaunchHandler(this::launchTimeAttack);
+		this.gameLoop.setTimeAttackNetworkHandler(new com.openggf.game.timeattack.TimeAttackMenu.NetworkStarter() {
+			@Override
+			public void host(TimeAttackLaunchRequest request, String policy,
+							 String lockedCharacter, int windowSeconds) {
+				hostTimeAttackRoom(request, policy, lockedCharacter, windowSeconds);
+			}
+
+			@Override
+			public void join(TimeAttackLaunchRequest request, String address) {
+				joinTimeAttackRoom(request, address);
+			}
+		});
 		this.gameLoop.setReturnToMasterTitleHandler(this::returnToMasterTitleScreen);
 		this.gameLoop.setMasterTitleLaunchFailureHandler(this::rollbackLaunchSessionCachedConfig);
 		this.gameLoop.setApplicationExitHandler(this::requestApplicationExit);
@@ -835,6 +867,9 @@ public class Engine {
 	 * the next frame.
 	 */
 	void returnToMasterTitleScreen() {
+		if (multiplayerRaceCoordinator != null) {
+			multiplayerRaceCoordinator.detachRuntime();
+		}
 		resetForGameplayFromMasterTitle();
 		// resetForGameplayFromMasterTitle destroyed the gameplay mode, but GameLoop
 		// still caches the old mode + its FadeManager. Drop the reference
@@ -849,6 +884,9 @@ public class Engine {
 		applyResolvedDisplayDimensions();
 		masterTitleScreen = new MasterTitleScreen(configService);
 		masterTitleScreen.initialize();
+		if (multiplayerRaceCoordinator != null && multiplayerRaceCoordinator.hudState().active()) {
+			openRaceLobbyOnCurrentTitle();
+		}
 		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 		// Counter the teardown's fade-to-black. Without this the screen
 		// stays fully black and the new master title never becomes
@@ -1093,6 +1131,170 @@ public class Engine {
 		if (timeAttackRuntime.isActive()) {
 			timeAttackRuntime.onLevelReady();
 		}
+	}
+
+	private void hostTimeAttackRoom(TimeAttackLaunchRequest request, String policy,
+			String lockedCharacter, int windowSeconds) {
+		leaveTimeAttackRoom();
+		try {
+			PlayerIdentity identity = PlayerIdentity.loadOrCreate(Path.of("identity"));
+			String displayName = multiplayerDisplayName(identity);
+			String fingerprint = fingerprintForGame(request.gameId());
+			multiplayerRoundConfig = new ControlMessage.RoundConfig(request.gameId(),
+					request.zone(), request.act(), windowSeconds, policy, lockedCharacter);
+			multiplayerCharacter = request.character();
+			hostingTimeAttackRoom = true;
+			RoomHostConfig room = new RoomHostConfig(displayName + "'s room",
+					request.gameId(), request.zone(), request.act(), policy, lockedCharacter,
+					8, fingerprint);
+			raceHostServer = RaceHostServer.start(
+					configService.getInt(SonicConfiguration.TIME_ATTACK_NET_HOST_PORT),
+					room, identity, TrackValidationProfileSource.none());
+			RaceClient client = RaceClient.connect(
+					URI.create("ws://127.0.0.1:" + raceHostServer.port() + "/race"),
+					identity, displayName, fingerprint)
+					.get(RaceClient.JOIN_TIMEOUT_MILLIS + 2000, TimeUnit.MILLISECONDS);
+			finishRoomJoin(client);
+		} catch (Exception e) {
+			LOGGER.warning("Unable to host LAN time attack: " + rootMessage(e));
+			leaveTimeAttackRoom();
+		}
+	}
+
+	private void joinTimeAttackRoom(TimeAttackLaunchRequest request, String address) {
+		leaveTimeAttackRoom();
+		try {
+			PlayerIdentity identity = PlayerIdentity.loadOrCreate(Path.of("identity"));
+			String displayName = multiplayerDisplayName(identity);
+			String fingerprint = fingerprintForGame(request.gameId());
+			URI uri = joinUri(address,
+					configService.getInt(SonicConfiguration.TIME_ATTACK_NET_HOST_PORT));
+			RaceClient client = RaceClient.connect(uri, identity, displayName, fingerprint)
+					.get(RaceClient.JOIN_TIMEOUT_MILLIS + 2000, TimeUnit.MILLISECONDS);
+			ControlMessage.RoomDescriptor room = client.joinAccepted().room();
+			multiplayerRoundConfig = new ControlMessage.RoundConfig(room.gameId(),
+					room.zone(), room.act(), 300, room.characterPolicy(), room.lockedCharacter());
+			multiplayerCharacter = room.lockedCharacter() != null
+					? room.lockedCharacter() : request.character();
+			hostingTimeAttackRoom = false;
+			configService.setConfigValue(SonicConfiguration.TIME_ATTACK_NET_LAST_JOIN_ADDRESS,
+					address == null ? "" : address.trim());
+			configService.saveConfig();
+			finishRoomJoin(client);
+		} catch (Exception e) {
+			LOGGER.warning("Unable to join LAN time attack: " + rootMessage(e));
+			leaveTimeAttackRoom();
+		}
+	}
+
+	private void finishRoomJoin(RaceClient client) {
+		raceClient = client;
+		if (multiplayerCharacter != null) {
+			client.sendControl(new ControlMessage.SelectCharacter(multiplayerCharacter));
+		}
+		ClientRaceSession session = new ClientRaceSession(System::currentTimeMillis);
+		session.applyJoin(client.joinAccepted());
+		multiplayerRaceCoordinator = new MultiplayerRaceCoordinator(
+				new ClientRaceTransport(client), session);
+		gameLoop.setMultiplayerRaceCoordinator(multiplayerRaceCoordinator);
+		openRaceLobbyOnCurrentTitle();
+	}
+
+	private void openRaceLobbyOnCurrentTitle() {
+		if (masterTitleScreen == null || multiplayerRaceCoordinator == null
+				|| multiplayerRoundConfig == null || multiplayerCharacter == null) {
+			return;
+		}
+		masterTitleScreen.openRaceLobby(multiplayerRaceCoordinator,
+				hostingTimeAttackRoom, multiplayerRoundConfig, multiplayerCharacter,
+				this::launchMultiplayerRound, this::leaveTimeAttackRoom);
+	}
+
+	private void launchMultiplayerRound(TimeAttackLaunchRequest request) {
+		launchTimeAttack(request);
+		if (multiplayerRaceCoordinator == null || !gameLoop.getTimeAttackRuntime().isActive()) {
+			return;
+		}
+		multiplayerRaceCoordinator.attachRuntime(gameLoop.getTimeAttackRuntime());
+		if (raceHostServer != null) {
+			TrackValidationProfile profile = LiveLevelProfileFactory.fromLoadedLevelOrNull();
+			if (profile != null) {
+				raceHostServer.execute(() -> raceHostServer.room()
+						.applyTrackValidationProfile(profile));
+			}
+		}
+	}
+
+	private String fingerprintForGame(String gameId) throws IOException {
+		Rom rom = romManager.getSecondaryRom(gameId);
+		return new DeterminismFingerprint(AppVersion.get(), rom.calculateChecksum()).asString();
+	}
+
+	private String multiplayerDisplayName(PlayerIdentity identity) {
+		String configured = configService.getString(SonicConfiguration.TIME_ATTACK_NET_DISPLAY_NAME);
+		return configured == null || configured.isBlank()
+				? identity.fingerprint().substring(0, 8) : configured.trim();
+	}
+
+	private static URI joinUri(String address, int defaultPort) {
+		String value = address == null ? "" : address.trim();
+		if (value.isEmpty()) {
+			throw new IllegalArgumentException("join address is empty");
+		}
+		if (value.startsWith("ws://") || value.startsWith("wss://")) {
+			URI supplied = URI.create(value);
+			return supplied.getPath() == null || supplied.getPath().isBlank()
+					? URI.create(value + "/race") : supplied;
+		}
+		String host = value;
+		int port = defaultPort;
+		int colon = value.lastIndexOf(':');
+		if (colon > 0 && value.indexOf(':') == colon) {
+			host = value.substring(0, colon);
+			port = Integer.parseInt(value.substring(colon + 1));
+		}
+		return URI.create("ws://" + host + ":" + port + "/race");
+	}
+
+	private static String rootMessage(Throwable failure) {
+		Throwable current = failure;
+		while (current.getCause() != null) {
+			current = current.getCause();
+		}
+		return current.getMessage() == null ? current.getClass().getSimpleName()
+				: current.getMessage();
+	}
+
+	private void leaveTimeAttackRoom() {
+		boolean reopenMenu = masterTitleScreen != null && masterTitleScreen.isRaceLobbyOpen();
+		if (masterTitleScreen != null) {
+			masterTitleScreen.closeRaceLobby();
+		}
+		if (multiplayerRaceCoordinator != null) {
+			multiplayerRaceCoordinator.shutdown();
+		}
+		multiplayerRaceCoordinator = null;
+		raceClient = null;
+		gameLoop.setMultiplayerRaceCoordinator(null);
+		if (raceHostServer != null) {
+			raceHostServer.close();
+			raceHostServer = null;
+		}
+		multiplayerRoundConfig = null;
+		multiplayerCharacter = null;
+		hostingTimeAttackRoom = false;
+		if (reopenMenu && masterTitleScreen != null) {
+			masterTitleScreen.tryOpenTimeAttackMenu();
+		}
+	}
+
+	private record ClientRaceTransport(RaceClient client) implements RaceTransport {
+		@Override public List<RaceClient.InboundEvent> drainInbound() { return client.drainInbound(); }
+		@Override public void sendControl(ControlMessage message) { client.sendControl(message); }
+		@Override public void sendBinary(byte[] data) { client.sendBinary(data); }
+		@Override public int playerSlot() { return client.playerSlot(); }
+		@Override public boolean isOpen() { return client.isOpen(); }
+		@Override public void close() { client.close(); }
 	}
 
 	static Optional<com.openggf.game.save.SaveReason> dataSelectLaunchSaveReason(
@@ -2403,6 +2605,7 @@ public class Engine {
 	}
 
 	private void cleanup() {
+		cleanupStep("multiplayer time attack", this::leaveTimeAttackRoom);
 		cleanupStep("session state", SessionManager::clear);
 		cleanupStep("donor audio", audioManager::clearDonorAudio);
 		cleanupStep("cross-game features", crossGameFeatureProvider::resetState);
