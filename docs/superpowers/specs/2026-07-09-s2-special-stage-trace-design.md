@@ -14,7 +14,12 @@ Motivating bug areas (to be *exposed* by this work, *fixed* by a separate follow
 
 1. Control locked/unlocked at the wrong times.
 2. Tails CPU sidekick behavior. Team support already exists in
-   `Sonic2SpecialStageManager.setupPlayers()`, and the engine's `tailsCtrlRecordBuf`
+   `Sonic2SpecialStageManager.setupPlayers()` — but it is *unreachable through the
+   standard team config*: `setupPlayers()` switches on the literal main-character
+   code `"sonic_and_tails"`, which nothing in the engine's normal team-selection
+   flow (`MAIN_CHARACTER_CODE="sonic"` + `SIDEKICK_CHARACTER_CODE="tails"`,
+   `ActiveGameplayTeamResolver`) ever produces — the likely root cause of
+   "sidekick support isn't available". Additionally, the engine's `tailsCtrlRecordBuf`
    (`int[16]`) matches the ROM's `SS_Ctrl_Record_Buf` size (16 words,
    `s2.constants.asm:2039-2041`); the 180-frame (`$B4`) `Tails_control_counter`
    P2-override window is also already implemented
@@ -166,7 +171,9 @@ New classes (test tree unless noted):
   `TestS2SpecialStageTraceReplay` in `src/test/java/com/openggf/tests/trace/s2/`.
 
 **Bootstrap contract (comparison-only invariant holds):** the engine boots the special
-stage natively — team config from metadata, then
+stage natively — team config from metadata via the same two-key pattern as
+`TraceReplaySessionBootstrap.prepareConfiguration()` (relying on the
+`setupPlayers()` alignment above), then
 `Sonic2SpecialStageProvider.initializeStage(specialStageIndex)`; lag compensation set
 to 0. No recorded player/track/object state is copied into the engine. Per frame:
 non-lag row → step fixture with that row's pad input; lag row → consume input without
@@ -184,7 +191,7 @@ value equality.
 
 **Comparator tiers:**
 
-- Tier 1 (errors): per-player `ss_x`, `ss_y`, `ss_z`, `angle`, `routine`;
+- Tier 1 (errors): per-player `present`, `ss_x`, `ss_y`, `ss_z`, `angle`, `routine`;
   **combined** ring total (sum of the two players' BCD fields, decoded to binary);
   global `speed_factor`, `current_segment`, `track_anim_frame`.
 - Tier 2 (warnings initially, ratcheted to errors as fixes land): per-player rings,
@@ -230,11 +237,23 @@ convention (`AbstractTraceReplayTest.java:1249-1250`) so future multi-stage trac
 don't overwrite each other. Existing format (first-divergence brief compatible
 with `TraceTriageTool`).
 
-**Engine-side additions (src/main), enumerated:** `Sonic2SpecialStageSnapshot` is
-package-private, so the fixture cannot read it from the test tree. Add a *public*
-read-only comparison accessor on `Sonic2SpecialStageManager` (a small comparison
-snapshot record or getters) exposing track animator state, checkpoint/intro phase,
-and per-player state — no behavior change, no new mutators.
+**Engine-side additions (src/main), enumerated:**
+
+- `Sonic2SpecialStageSnapshot` is package-private, so the fixture cannot read it
+  from the test tree. Add a *public* read-only comparison accessor on
+  `Sonic2SpecialStageManager` (a small comparison snapshot record or getters)
+  exposing track animator state, checkpoint/intro phase, and per-player state —
+  no behavior change, no new mutators.
+- **Align `setupPlayers()` with the standard team model:** resolve the team via
+  `ActiveGameplayTeamResolver` (`resolveMainCharacterCode` + sidekicks /
+  `SelectedTeam`) instead of switching on the literal `"sonic_and_tails"`
+  main-character code, so `MAIN_CHARACTER_CODE="sonic"` +
+  `SIDEKICK_CHARACTER_CODE="tails"` spawns the team — the same two-key pattern
+  `TraceReplaySessionBootstrap.prepareConfiguration()` already uses for level
+  traces. This is a deliberate small behavior change (it makes the existing team
+  code reachable in normal play) with its own focused test; without it, the
+  fixture bootstrapping the standard config would silently get solo Sonic and
+  every Tails comparison would diverge for a wiring reason, not a parity reason.
 
 ## Component 4 — Visual test mode
 
