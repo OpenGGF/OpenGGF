@@ -13,10 +13,15 @@ deterministically against the recorded trace.
 Motivating bug areas (to be *exposed* by this work, *fixed* by a separate follow-up plan):
 
 1. Control locked/unlocked at the wrong times.
-2. Tails CPU sidekick behavior (partial team support exists in
-   `Sonic2SpecialStageManager.setupPlayers()` with a 16-frame `tailsCtrlRecordBuf`;
-   the ROM uses the larger `SS_Ctrl_Record_Buf` plus a 180-frame `Tails_control_counter`
-   P2-override window — `s2.asm:70420-70449`).
+2. Tails CPU sidekick behavior. Team support already exists in
+   `Sonic2SpecialStageManager.setupPlayers()`, and the engine's `tailsCtrlRecordBuf`
+   (`int[16]`) matches the ROM's `SS_Ctrl_Record_Buf` size (16 words,
+   `s2.constants.asm:2039-2041`); the 180-frame (`$B4`) `Tails_control_counter`
+   P2-override window is also already implemented
+   (`Sonic2SpecialStageManager.java:1422-1429` vs `s2.asm:70437`). The remaining gap
+   is *semantic* parity — buffer shift order / delayed-tap index
+   (`s2.asm:70426-70436`) and the P2-vs-solo branch conditions
+   (`s2.asm:70411-70417`) — which the trace's divergence report will adjudicate.
 3. Playback speed approximated by a flat-0.35 lag compensator
    (`Sonic2SpecialStageManager.java:985-991`) instead of the ROM's real
    speed-factor/lag behavior (`SSRun_Animation_Timers`, `s2.asm:960-982`).
@@ -111,9 +116,14 @@ Extend `tools/bizhawk/record_s2_level_select_traces.ps1`:
   `s2_special_stage` dispatches the new lua).
 - New route `special_stage` → `s2-lvl-select-special-stage.bk2`.
 - Outputs land in `src/test/resources/traces/s2/special_stage/` (gzipped
-  `physics.csv.gz` + `aux_state.jsonl.gz` + metadata + bk2 copy), same normalization
-  and metadata-invariant checks. The input-column normalizer learns the `input_p2`
-  column (zero for this bk2; needed for future human-P2-override traces).
+  `physics.csv.gz` + `aux_state.jsonl.gz` + metadata + bk2 copy), same normalization.
+  The script's validation helpers (`Assert-Metadata`, `Assert-ZoneActCoverage`)
+  hard-require level/route concepts (`zone`, `zone_id`, `rom_zone_id`, `act`,
+  `gameplay_segment`, per-act `zone_act_state` coverage) that have no SS analog —
+  they gain an SS-profile validation branch (profile/stage-index/frame-count/
+  bk2-offset invariants) instead of reusing the level checks verbatim.
+  The input-column normalizer learns the `input_p2` column (zero for this bk2;
+  needed for future human-P2-override traces).
 
 ## Component 3 — Headless replay
 
@@ -121,9 +131,16 @@ New classes (test tree unless noted):
 
 - `SpecialStageTraceFrame` / profile-aware parsing in the trace loader
   (`com.openggf.trace`) keyed off `trace_profile` — existing level parsing untouched.
-- `SpecialStageTraceReplayFixture` built on the existing deterministic harness
-  `SpecialStageStepper` (`game/rewind/SpecialStageStepper.java:26`), which already
-  drives `handleInput` → `handlePlayer2Input` → `update()` from `Bk2FrameInput`.
+- `SpecialStageTraceReplayFixture` — a new purpose-built replay driver *modeled on*
+  (not delegating to) `SpecialStageStepper` (`game/rewind/SpecialStageStepper.java:26`).
+  The stepper cannot be reused directly: it is package-private, purpose-built for
+  held-rewind re-simulation, and deliberately suppresses the finish→results
+  transition (`TestSpecialStageStepperReplay.finishingDuringReplayDoesNotDispatchResults`),
+  while this fixture must drive the same
+  `handleInput` → `handlePlayer2Input` → `update()` sequence *and* own the finish
+  boundary: replay ends on the frame `SpecialStageProvider.isFinished()` fires
+  (the results screen's internals are out of MVP scope; the finish frame itself is
+  compared).
 - `AbstractS2SpecialStageTraceReplayTest` + concrete
   `TestS2SpecialStageTraceReplay` in `src/test/java/com/openggf/tests/trace/s2/`.
 
@@ -146,18 +163,23 @@ stepping. Input validation per frame (BK2 vs CSV `input`), failing fast with
 Report JSON to `target/trace-reports/s2_special_stage_report.json` in the existing
 format (first-divergence brief compatible with `TraceTriageTool`).
 
-**Engine-side additions (src/main):** read-only accessors on
-`Sonic2SpecialStageManager` (and/or a comparison snapshot reusing
-`Sonic2SpecialStageSnapshot` fields) for track animator state, checkpoint/intro
-phase, and per-player state — no behavior change.
+**Engine-side additions (src/main), enumerated:** `Sonic2SpecialStageSnapshot` is
+package-private, so the fixture cannot read it from the test tree. Add a *public*
+read-only comparison accessor on `Sonic2SpecialStageManager` (a small comparison
+snapshot record or getters) exposing track animator state, checkpoint/intro phase,
+and per-player state — no behavior change, no new mutators.
 
 ## Component 4 — Visual test mode
 
 - `TraceCatalog` validation gains a profile switch so SS trace dirs validate
   against the SS artifact set.
 - `TraceSessionLauncher` gains a special-stage branch: instead of zone/act load it
-  drives `GameLoop.doEnterSpecialStage()` and feeds BK2 inputs through
-  `SpecialStageInputMapper` with the same trace-paced skips.
+  drives special-stage entry and feeds BK2 inputs through
+  `SpecialStageInputMapper` with the same trace-paced skips. Note:
+  `GameLoop.doEnterSpecialStage(...)` is `private` (`GameLoop.java:1995`; the one
+  existing test caller uses reflection). Loosen it to package-private —
+  `TraceSessionLauncher` lives in the same `com.openggf` package — rather than
+  adding reflection in production code.
 - Side benefit: paced skips reproduce the ROM's authentic perceived speed on screen,
   making side-by-side visual comparison with a BizHawk capture meaningful.
 
