@@ -101,7 +101,10 @@ pre-roll into the intro `Phase` enum gives rewind-snapshot coverage for free
 **Boundary pinned:** the observable empty-slot window is the 23 recorded frames
 f0–f22 (the 22-iteration fade loop plus init work); the spawned flags and
 speed-factor set flip ON f23 — implement the phase length from the ROM
-mechanism, then verify against this window.
+mechanism, then verify against this window. The 23rd frame (beyond the 22 fade
+iterations) must be attributed to a specific ROM VInt between fade end
+(`s2.asm:6546`) and object creation (`s2.asm:6628`) during implementation —
+never padded to make the count fit.
 **This retiming intentionally applies to normal (non-trace) play** — that is
 the substance of issue 4 — and the plan must verify it composes with the
 engine's existing SS-entry fade presentation rather than double-counting a
@@ -119,8 +122,12 @@ gates participation (movement/collision/render) during the pre-roll exactly as
 ROM's empty slots do, (b) makes `toComparisonPlayerState`
 (`Sonic2SpecialStageManager.java:2442`) return null while unspawned so the
 comparator's `present` goes false — a small comparison-accessor change this
-stage owns — and (c) is captured in `Sonic2SpecialStageSnapshot` so rewinding
-into the pre-roll restores the unspawned state.
+stage owns; the Tier-1 comparator must treat a null player comparison-state as
+`present=false` and skip that player's positional/routine fields for the frame
+(never NPE or compare against stale values — the recorder still dumps slot
+bytes when the ROM slot is empty) — and (c) is captured in
+`Sonic2SpecialStageSnapshot` so rewinding into the pre-roll restores the
+unspawned state.
 
 Expected outcome: the f0–f22 cluster, `speed_factor` f0, `track_anim_frame` f4
 and most position/segment/ring/finish cascade collapse. Rerun, re-triage,
@@ -202,7 +209,7 @@ trace-derived state-keyed model:
   from the committed `physics.csv.gz` `lag` column — note this spans the full
   recording INCLUDING the uncompared results tail; the validation test computes
   both sides from the same artifact rather than hardcoding these counts);
-  asserted by a JUnit test against the committed trace artifacts.
+  asserted by a JUnit 5 (Jupiter) test against the committed trace artifacts.
   Perceived-speed eyeball via the visual SS session (jar test mode) at the end.
 - Keep the F1/F6/F7 lag overlay as a debug/tuning view over the new model.
 
