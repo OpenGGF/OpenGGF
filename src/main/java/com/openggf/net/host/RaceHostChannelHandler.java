@@ -149,5 +149,12 @@ final class RaceHostChannelHandler extends SimpleChannelInboundHandler<WebSocket
         public void close(String reason) {
             channel.close();
         }
+
+        @Override
+        public int queuedBytes() {
+            io.netty.channel.ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
+            return buffer == null ? 0 : (int) Math.min(
+                    Integer.MAX_VALUE, buffer.totalPendingWriteBytes());
+        }
     }
 }

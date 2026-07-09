@@ -2,6 +2,7 @@ package com.openggf.net.hub;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -80,7 +81,7 @@ public final class RelevanceClassifier {
             result.add(peer);
         }
         previousNear.put(slot, new HashSet<>(result));
-        return Set.copyOf(result);
+        return Collections.unmodifiableSet(result);
     }
 
     private static int distance(Pos left, Pos right) {

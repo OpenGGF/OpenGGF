@@ -9,4 +9,9 @@ public interface HubConnection {
     void close(String reason);
 
     String remoteHost();
+
+    /** Outbound queue depth in bytes; zero when the transport cannot report it. */
+    default int queuedBytes() {
+        return 0;
+    }
 }

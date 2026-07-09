@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Recording transport used by hub-layer tests. */
-final class FakeHubConnection implements HubConnection {
+class FakeHubConnection implements HubConnection {
     final List<String> text = new ArrayList<>();
     final List<byte[]> binary = new ArrayList<>();
     String closedReason;

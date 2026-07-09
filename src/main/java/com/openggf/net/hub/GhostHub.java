@@ -23,6 +23,11 @@ public final class GhostHub {
 
     public static final int MAX_PENDING_FRAMES = 600;
     public static final int ROSTER_INTERVAL_TICKS = 20;
+    public static final int BP_DEGRADE_BYTES = 64 * 1024;
+    public static final int BP_ROSTER_ONLY_BYTES = 256 * 1024;
+    public static final int BP_DISCONNECT_BYTES = 1024 * 1024;
+    public static final long BP_SUSTAINED_MILLIS = 30_000;
+    public static final int BP_DEGRADED_NEAR_CAP = 4;
 
     private static final class Player {
         final String fingerprint;
@@ -45,6 +50,7 @@ public final class GhostHub {
     private final RelevanceClassifier classifier = new RelevanceClassifier();
     private final Map<Integer, Player> players = new TreeMap<>();
     private final Map<Integer, Integer> lastStatus = new TreeMap<>();
+    private final Map<Integer, Long> degradedSinceMillis = new TreeMap<>();
     private TrackValidationProfile currentProfile;
     private int tickCount;
 
@@ -85,6 +91,7 @@ public final class GhostHub {
         players.remove(slot);
         classifier.remove(slot);
         lastStatus.remove(slot);
+        degradedSinceMillis.remove(slot);
     }
 
     public void onBinary(int slot, byte[] packet) {
@@ -128,15 +135,44 @@ public final class GhostHub {
                 drained.put(entry.getKey(), entries);
             }
         }
-        for (Map.Entry<Integer, Player> recipient : players.entrySet()) {
+        for (Map.Entry<Integer, Player> recipient : List.copyOf(players.entrySet())) {
+            int queued = recipient.getValue().connection.queuedBytes();
+            long nowMillis = wallClockMillis.getAsLong();
+            if (queued > BP_DISCONNECT_BYTES) {
+                dropSlowConsumer(recipient.getKey(), recipient.getValue());
+                continue;
+            }
+            if (queued > BP_DEGRADE_BYTES) {
+                long since = degradedSinceMillis.computeIfAbsent(
+                        recipient.getKey(), ignored -> nowMillis);
+                if (nowMillis - since >= BP_SUSTAINED_MILLIS) {
+                    dropSlowConsumer(recipient.getKey(), recipient.getValue());
+                    continue;
+                }
+            } else {
+                degradedSinceMillis.remove(recipient.getKey());
+            }
+            if (queued > BP_ROSTER_ONLY_BYTES) {
+                continue;
+            }
             List<GhostPackets.AggregateEntry> aggregate = new ArrayList<>();
             Set<Integer> nearSet = relevanceFiltering
                     ? classifier.nearSetFor(recipient.getKey()) : Set.of();
+            if (relevanceFiltering && queued > BP_DEGRADE_BYTES
+                    && nearSet.size() > BP_DEGRADED_NEAR_CAP) {
+                nearSet = nearSet.stream().limit(BP_DEGRADED_NEAR_CAP)
+                        .collect(java.util.stream.Collectors.toUnmodifiableSet());
+            }
+            int senderCap = queued > BP_DEGRADE_BYTES
+                    ? BP_DEGRADED_NEAR_CAP : Integer.MAX_VALUE;
+            int includedSenders = 0;
             for (Map.Entry<Integer, List<GhostPackets.AggregateEntry>> sender
                     : drained.entrySet()) {
-                if (!sender.getKey().equals(recipient.getKey())
-                        && (!relevanceFiltering || nearSet.contains(sender.getKey()))) {
+                boolean relevant = !relevanceFiltering || nearSet.contains(sender.getKey());
+                if (!sender.getKey().equals(recipient.getKey()) && relevant
+                        && includedSenders < senderCap) {
                     aggregate.addAll(sender.getValue());
+                    includedSenders++;
                 }
             }
             if (!aggregate.isEmpty()) {
@@ -254,8 +290,16 @@ public final class GhostHub {
         }
         byte[] packet = GhostPackets.encodeRoster(roster);
         for (Player player : players.values()) {
-            player.connection.sendBinary(packet);
+            boolean degraded = player.connection.queuedBytes() > BP_DEGRADE_BYTES;
+            if (!degraded || tickCount % (2 * ROSTER_INTERVAL_TICKS) == 0) {
+                player.connection.sendBinary(packet);
+            }
         }
+    }
+
+    private void dropSlowConsumer(int slot, Player player) {
+        player.connection.close("slow consumer");
+        removePlayer(slot);
     }
 
     private static int clamp(int value, int min, int max) {
