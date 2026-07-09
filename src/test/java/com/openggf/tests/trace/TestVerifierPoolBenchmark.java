@@ -310,6 +310,7 @@ public class TestVerifierPoolBenchmark {
             long r0 = System.nanoTime();
             int frames = replayInputs(trace, fixture, startIndex);
             long replayMs = (System.nanoTime() - r0) / 1_000_000L;
+            assertTrue(frames > 0, "warm reuse probe must replay at least one frame per job");
             System.out.printf("%4d %8d ms %9.0f | %s%n",
                     j, replayMs, replayMs > 0 ? frames * 1000.0 / replayMs : 0, sizesSnapshot(fixture));
         }

@@ -156,6 +156,11 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    protected void recreateConstructionChildrenForRewind() {
+        ensureSlotChildrenSpawned();
+    }
+
+    @Override
     public int getX() {
         return platformX[0];
     }
@@ -500,6 +505,7 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
 
     private static final class Obj83SlotChild extends AbstractObjectInstance
             implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        @RewindTransient(reason = "structural Obj83 parent link is restored by parent lookup")
         private final ARZRotPformsObjectInstance parent;
         @RewindTransient(reason = "Obj83 child role is constructor metadata preserved by recreateForRewind")
         private final ChildKind kind;
@@ -514,7 +520,7 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
         public Obj83SlotChild recreateForRewind(RewindRecreateContext ctx) {
             ARZRotPformsObjectInstance restoredParent = nearestParentForRewind(ctx);
             if (restoredParent == null) {
-                throw new IllegalStateException("Cannot recreate Obj83 slot child without a live Obj83 parent");
+                return null;
             }
             Obj83SlotChild child = new Obj83SlotChild(ctx.spawn(), restoredParent, kind);
             restoredParent.attachSlotChildForRewind(child);

@@ -284,6 +284,15 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Rebuilds constructor-equivalent child objects while the rewind manager's
+     * reconstruction pool is active. Objects whose ROM child slots are created
+     * on their first update rather than in their Java constructor can override
+     * this hook so captured children are adopted with their original identities.
+     */
+    protected void recreateConstructionChildrenForRewind() {
+    }
+
+    /**
      * Called by {@code ObjectManager.restore()} once EVERY object's phase-2 field-blob
      * restore has completed (so any of this instance's own children have their final,
      * captured scalar state settled) but before the restored snapshot resumes ticking.

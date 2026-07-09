@@ -1716,47 +1716,8 @@ public class Engine {
 			renderUserPauseIndicator();
 		}
 
-		profiler.beginSection("debug");
-		boolean renderedDebugRenderer = false;
-		if (!userRecordingSceneSuppressed && getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
-			SpecialStageProvider ssProvider = gameLoop.getActiveSpecialStageProvider();
-			if (ssProvider.isAlignmentTestMode()) {
-				if (postFadeRecorder != null) {
-					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
-				}
-				ssProvider.renderAlignmentOverlay(windowWidth, windowHeight);
-			} else if (ssProvider.isLagCompensationDisplayEnabled()) {
-				if (postFadeRecorder != null) {
-					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
-				}
-				ssProvider.renderLagCompensationOverlay(windowWidth, windowHeight);
-			}
-		} else if (!userRecordingSceneSuppressed && (debugViewEnabled || playbackHud)) {
-			getDebugRenderer().updateViewport(viewportWidth, viewportHeight);
-			if (postFadeRecorder != null) {
-				postFadeRecorder.recordPostFadeDiagnostic("DebugOverlay");
-			}
-			getDebugRenderer().renderDebugInfo();
-			renderedDebugRenderer = true;
-
-			// Clean up GL state after debug rendering to prevent macOS event loop issues
-			glBindVertexArray(0);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glUseProgram(0);
-		}
-		if (performanceOverlayVisible && !renderedDebugRenderer) {
-			getDebugRenderer().updateViewport(viewportWidth, viewportHeight);
-			if (postFadeRecorder != null) {
-				postFadeRecorder.recordPostFadeDiagnostic("PerformanceOverlay");
-			}
-			getDebugRenderer().renderPerformanceOverlay();
-
-			// Clean up GL state after debug rendering to prevent macOS event loop issues
-			glBindVertexArray(0);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glUseProgram(0);
-		}
-		profiler.endSection("debug");
+		renderDiagnosticOverlays(userRecordingSceneSuppressed, playbackHud,
+				performanceOverlayVisible, postFadeRecorder);
 
 		renderDisplayShaderPickerOverlay();
 		applyDisplayShaderPhase(ShaderPhase.FINAL);
@@ -1933,6 +1894,52 @@ public class Engine {
 		int y = 224 - traceHudTextRenderer.lineHeight(scale) * 2 - 4;
 		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 		traceHudTextRenderer.drawShadowedText(text, 4, y, DebugColor.YELLOW, scale);
+	}
+
+	private void renderDiagnosticOverlays(boolean userRecordingSceneSuppressed,
+			boolean playbackHud,
+			boolean performanceOverlayVisible,
+			RenderOrderRecorder postFadeRecorder) {
+		profiler.beginSection("debug");
+		boolean renderedDebugRenderer = false;
+		if (!userRecordingSceneSuppressed && getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
+			SpecialStageProvider ssProvider = gameLoop.getActiveSpecialStageProvider();
+			if (ssProvider.isAlignmentTestMode()) {
+				if (postFadeRecorder != null) {
+					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
+				}
+				ssProvider.renderAlignmentOverlay(windowWidth, windowHeight);
+			} else if (ssProvider.isLagCompensationDisplayEnabled()) {
+				if (postFadeRecorder != null) {
+					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
+				}
+				ssProvider.renderLagCompensationOverlay(windowWidth, windowHeight);
+			}
+		} else if (!userRecordingSceneSuppressed && (debugViewEnabled || playbackHud)) {
+			getDebugRenderer().updateViewport(viewportWidth, viewportHeight);
+			if (postFadeRecorder != null) {
+				postFadeRecorder.recordPostFadeDiagnostic("DebugOverlay");
+			}
+			getDebugRenderer().renderDebugInfo();
+			renderedDebugRenderer = true;
+			resetDebugRenderState();
+		}
+		if (performanceOverlayVisible && !renderedDebugRenderer) {
+			getDebugRenderer().updateViewport(viewportWidth, viewportHeight);
+			if (postFadeRecorder != null) {
+				postFadeRecorder.recordPostFadeDiagnostic("PerformanceOverlay");
+			}
+			getDebugRenderer().renderPerformanceOverlay();
+			resetDebugRenderState();
+		}
+		profiler.endSection("debug");
+	}
+
+	private static void resetDebugRenderState() {
+		// Clean up GL state after debug rendering to prevent macOS event loop issues.
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glUseProgram(0);
 	}
 
 	private void renderEscapeToMasterTitlePrompt(RenderOrderRecorder postFadeRecorder) {

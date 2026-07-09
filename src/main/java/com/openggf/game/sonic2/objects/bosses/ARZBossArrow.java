@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
@@ -242,9 +243,13 @@ public class ARZBossArrow extends AbstractObjectInstance
         if (services().objectManager() == null) {
             return;
         }
-        dropPlayerIfLatched(player, clearPush);
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sprite) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+        if (player != null && !participants.contains(player)) {
+            dropPlayerIfLatched(player, clearPush);
+        }
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite sprite) {
                 dropPlayerIfLatched(sprite, clearPush);
             }
         }
