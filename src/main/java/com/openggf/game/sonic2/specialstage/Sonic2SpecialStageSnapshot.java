@@ -123,6 +123,91 @@ final class Sonic2SpecialStageSnapshot {
         }
     }
 
+    record IntroMessageLetterSnapshot(
+            int x,
+            int y,
+            int tileOffset,
+            double flyoutAngle,
+            int flyoutSpeed,
+            boolean visible) {
+    }
+
+    record IntroBannerLetterSnapshot(
+            int x,
+            int y,
+            int frame,
+            double flyoutAngle,
+            int flyoutSpeed,
+            boolean visible) {
+    }
+
+    record IntroSnapshot(
+            Sonic2SpecialStageIntro.Phase currentPhase,
+            int phaseTimer,
+            int frameCounter,
+            int bannerX,
+            int bannerY,
+            boolean bannerVisible,
+            int messageX,
+            int messageY,
+            boolean messageVisible,
+            int ringRequirement,
+            boolean lettersFlying,
+            int letterFlyoutProgress,
+            boolean messageFlyoutInitialized,
+            boolean bannerFlyoutInitialized,
+            List<IntroMessageLetterSnapshot> messageLetters,
+            List<IntroBannerLetterSnapshot> bannerLetters) {
+        IntroSnapshot {
+            messageLetters = List.copyOf(messageLetters);
+            bannerLetters = List.copyOf(bannerLetters);
+        }
+    }
+
+    record CheckpointMessageLetterSnapshot(
+            int x,
+            int y,
+            int tileOffset,
+            int flyoutAngle,
+            int flyoutSpeed,
+            boolean visible) {
+    }
+
+    record CheckpointRainbowRingSnapshot(
+            int baseIndex,
+            int frameIndex,
+            int positionOffset,
+            int mappingFrame,
+            int x,
+            int y,
+            boolean active) {
+    }
+
+    record CheckpointSnapshot(
+            Sonic2SpecialStageCheckpoint.MessagePhase phase,
+            int phaseTimer,
+            Sonic2SpecialStageCheckpoint.Result lastResult,
+            int currentCheckpoint,
+            int ringRequirement,
+            int ringsCollected,
+            List<CheckpointMessageLetterSnapshot> messageLetters,
+            boolean showCheckpointHand,
+            int handX,
+            int handY,
+            int handTargetY,
+            boolean handThumbsUp,
+            boolean handMovingDown,
+            List<CheckpointRainbowRingSnapshot> rainbowRings,
+            int pendingRingRequirement,
+            int pendingRingsCollected,
+            boolean pendingFinalCheckpoint,
+            boolean rainbowOnly) {
+        CheckpointSnapshot {
+            messageLetters = List.copyOf(messageLetters);
+            rainbowRings = List.copyOf(rainbowRings);
+        }
+    }
+
     static byte[] cloneByteArray(byte[] source) {
         return source != null ? source.clone() : null;
     }

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **feat(rewind): snapshot Sonic 2 special-stage intro and checkpoint messages.** The Sonic 2 special-stage intro banner/message state and checkpoint message/rainbow/hand state now capture and restore through value snapshots while preserving structural checkpoint callbacks for future special-stage rewind integration.
 - **feat(rewind): snapshot Sonic 2 special-stage player state.** Sonic 2 special-stage players now own rewind-capturable invulnerability countdown state, clone deterministic player control buffers, and can restore Sonic/Tails solo or linked topology while keeping renderer player bindings intact.
 - **feat(rewind): snapshot Sonic 2 special-stage track animator state.** The Sonic 2 special-stage track animator can now capture and restore its layout, segment timing, speed, completion, and orientation fields for future rewind adapter integration.
 - **feat(rewind): add the Sonic 2 special-stage rewind adapter shell.** Added the initial snapshot container and adapter delegation point for future Sonic 2 special-stage rewind state capture while keeping the provider capability disabled.
