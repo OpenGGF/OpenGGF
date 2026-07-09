@@ -152,11 +152,8 @@ class TestGameLoopSpecialStageRewindBoundary {
         assertNull(context.getRewindController());
     }
 
-    private void doEnterSpecialStage(SpecialStageProvider provider) throws Exception {
-        Method method = GameLoop.class.getDeclaredMethod(
-                "doEnterSpecialStage", SpecialStageProvider.class, int.class, boolean.class);
-        method.setAccessible(true);
-        method.invoke(loop, provider, 0, false);
+    private void doEnterSpecialStage(SpecialStageProvider provider) {
+        loop.doEnterSpecialStage(provider, 0, false);
     }
 
     private void doExitResultsScreen() throws Exception {

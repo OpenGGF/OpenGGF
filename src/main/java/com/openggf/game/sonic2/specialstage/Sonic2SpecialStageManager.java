@@ -916,6 +916,14 @@ public class Sonic2SpecialStageManager {
         LOGGER.fine("Track animator initialized");
     }
 
+    /**
+     * Test-only seam exposing {@link #setupPlayers()} to same-package tests
+     * that construct the manager without a renderer.
+     */
+    void setupPlayersForTest() {
+        setupPlayers();
+    }
+
     private void setupPlayers() {
         players.clear();
         sonicPlayer = null;
@@ -926,39 +934,36 @@ public class Sonic2SpecialStageManager {
             characterCode = "sonic";
         }
         characterCode = characterCode.toLowerCase();
+        boolean tailsSidekick = ActiveGameplayTeamResolver.resolveSidekicks(configuration())
+                .stream().map(String::toLowerCase).anyMatch("tails"::equals);
 
-        switch (characterCode) {
-            case "tails":
-                tailsPlayer = new Sonic2SpecialStagePlayer(
-                        Sonic2SpecialStagePlayer.PlayerType.TAILS, true);
-                players.add(tailsPlayer);
-                LOGGER.fine("Special Stage: Tails alone");
-                break;
+        if ("tails".equals(characterCode)) {
+            tailsPlayer = new Sonic2SpecialStagePlayer(
+                    Sonic2SpecialStagePlayer.PlayerType.TAILS, true);
+            players.add(tailsPlayer);
+            LOGGER.fine("Special Stage: Tails alone");
+        } else if (tailsSidekick) {
+            sonicPlayer = new Sonic2SpecialStagePlayer(
+                    Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+            players.add(sonicPlayer);
 
-            case "sonic_and_tails":
-                sonicPlayer = new Sonic2SpecialStagePlayer(
-                        Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
-                players.add(sonicPlayer);
+            tailsPlayer = new Sonic2SpecialStagePlayer(
+                    Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
+            players.add(tailsPlayer);
 
-                tailsPlayer = new Sonic2SpecialStagePlayer(
-                        Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
-                players.add(tailsPlayer);
-
-                sonicPlayer.setOtherPlayer(tailsPlayer);
-                tailsPlayer.setOtherPlayer(sonicPlayer);
-                LOGGER.fine("Special Stage: Sonic and Tails");
-                break;
-
-            case "sonic":
-            default:
-                sonicPlayer = new Sonic2SpecialStagePlayer(
-                        Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
-                players.add(sonicPlayer);
-                LOGGER.fine("Special Stage: Sonic alone");
-                break;
+            sonicPlayer.setOtherPlayer(tailsPlayer);
+            tailsPlayer.setOtherPlayer(sonicPlayer);
+            LOGGER.fine("Special Stage: Sonic and Tails");
+        } else {
+            sonicPlayer = new Sonic2SpecialStagePlayer(
+                    Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+            players.add(sonicPlayer);
+            LOGGER.fine("Special Stage: Sonic alone");
         }
 
-        renderer.setPlayers(players);
+        if (renderer != null) {
+            renderer.setPlayers(players);
+        }
     }
 
     /**
@@ -2393,6 +2398,59 @@ public class Sonic2SpecialStageManager {
      */
     public int getRingsCollected() {
         return objectManager != null ? objectManager.getRingsCollected() : 0;
+    }
+
+    /**
+     * Assembles a read-only snapshot of manager/animator/player state for a trace
+     * replay harness to compare against a recorded ROM trace. Pure read — no
+     * mutation, no caching. {@code trackAnimator} is null until the stage is fully
+     * loaded, so its fields fall back to the animator's own construction defaults
+     * (speed factor 12, segment/frame/delay counters 0).
+     */
+    public Sonic2SpecialStageComparisonState captureComparisonState() {
+        int speedFactorValue;
+        int currentSegmentIndexValue;
+        int trackAnimFrameValue;
+        int trackFrameDelayCounterValue;
+        if (trackAnimator != null) {
+            speedFactorValue = trackAnimator.getSpeedFactor();
+            currentSegmentIndexValue = trackAnimator.getCurrentSegmentIndex();
+            trackAnimFrameValue = trackAnimator.getCurrentFrameInSegment();
+            trackFrameDelayCounterValue = trackAnimator.getFrameDelayCounter();
+        } else {
+            speedFactorValue = 12;
+            currentSegmentIndexValue = 0;
+            trackAnimFrameValue = 0;
+            trackFrameDelayCounterValue = 0;
+        }
+
+        return new Sonic2SpecialStageComparisonState(
+                speedFactorValue,
+                currentSegmentIndexValue,
+                trackAnimFrameValue,
+                drawingIndex,
+                trackFrameDelayCounterValue,
+                getRingsCollected(),
+                tailsControlCounter,
+                isFinished(),
+                toComparisonPlayerState(sonicPlayer),
+                toComparisonPlayerState(tailsPlayer));
+    }
+
+    private static Sonic2SpecialStageComparisonState.PlayerState toComparisonPlayerState(
+            Sonic2SpecialStagePlayer player) {
+        if (player == null) {
+            return null;
+        }
+        return new Sonic2SpecialStageComparisonState.PlayerState(
+                player.getSSXPos(),
+                player.getSSYPos(),
+                player.getSSZPos(),
+                player.getAngle(),
+                player.getRoutine().name(),
+                player.isHurt() ? 2 : 0,
+                player.getAnim(),
+                player.getAnimFrame());
     }
 
     /**

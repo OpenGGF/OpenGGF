@@ -348,6 +348,10 @@ public class Sonic2TrackAnimator {
         return speedFactor;
     }
 
+    public int getFrameDelayCounter() {
+        return frameDelayCounter;
+    }
+
     Sonic2SpecialStageSnapshot.TrackAnimatorSnapshot captureRewindSnapshot() {
         return new Sonic2SpecialStageSnapshot.TrackAnimatorSnapshot(
                 stageLayout,

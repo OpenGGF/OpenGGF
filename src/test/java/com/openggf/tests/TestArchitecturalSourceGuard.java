@@ -44,7 +44,14 @@ class TestArchitecturalSourceGuard {
             // failed-load error-path deregister for lifecycle symmetry). The edits are
             // scattered across stepInternal/updateBonusStageMode/doEnter/doExit and do
             // not form an extractable collaborator.
-            GAME_LOOP_PATH, 2910
+            // 2026-07-09: 2910 -> 2985 for the live special-stage trace visual session
+            // skip gate in updateSpecialStageMode (recorded-input override + lag-row
+            // provider.update() gate + trace-cursor advance + launcher-owned finish
+            // guard). Prior work had already grown the file to 2973 effective lines
+            // without a budget bump; this raises the ratchet to the true current count
+            // including the +12 SS-gate lines. The gate is a handful of guarded calls
+            // to TraceSessionLauncher and does not form an extractable collaborator.
+            GAME_LOOP_PATH, 2985
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
