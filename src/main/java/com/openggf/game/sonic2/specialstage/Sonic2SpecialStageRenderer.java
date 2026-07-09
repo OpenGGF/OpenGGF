@@ -569,11 +569,15 @@ public class Sonic2SpecialStageRenderer {
      * Shadows are rendered first (behind players).
      */
     public void renderPlayers() {
-        if (players.isEmpty()) {
+        List<Sonic2SpecialStagePlayer> sortedPlayers = new ArrayList<>();
+        for (Sonic2SpecialStagePlayer player : players) {
+            if (player.isSpawned()) {
+                sortedPlayers.add(player);
+            }
+        }
+        if (sortedPlayers.isEmpty()) {
             return;
         }
-
-        List<Sonic2SpecialStagePlayer> sortedPlayers = new ArrayList<>(players);
         sortedPlayers.sort(Comparator.comparingInt(Sonic2SpecialStagePlayer::getPriority));
 
         // Render shadows first using shadow batch (VDP shadow/highlight mode)

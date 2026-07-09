@@ -73,6 +73,9 @@ public class Sonic2SpecialStageManager {
     // Vint_S2SS boundary. Speed 0 is not a sentinel: ROM writes it again later
     // (s2.asm:72418).
     private boolean initialSpeedPromotionPending;
+    // One-shot exposure of the already-constructed Obj09/Obj0A instances at
+    // the ROM object-creation boundary, independent of speed promotion state.
+    private boolean initialPlayerSpawnPending;
 
     private byte[] levelLayouts;
     private byte[][] trackFrames;
@@ -923,16 +926,21 @@ public class Sonic2SpecialStageManager {
 
     /**
      * Test-only seam exposing {@link #setupPlayers()} to same-package tests
-     * that construct the manager without a renderer.
+     * that construct the manager without a renderer. The resulting test team
+     * is active/spawned immediately because there is no initialized intro
+     * timeline to advance through the ROM creation boundary.
      */
     void setupPlayersForTest() {
         setupPlayers();
+        setPlayersSpawned(true);
+        initialPlayerSpawnPending = false;
     }
 
     private void setupPlayers() {
         players.clear();
         sonicPlayer = null;
         tailsPlayer = null;
+        initialPlayerSpawnPending = true;
 
         String characterCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(configuration());
         if (characterCode == null) {
@@ -968,6 +976,12 @@ public class Sonic2SpecialStageManager {
 
         if (renderer != null) {
             renderer.setPlayers(players);
+        }
+    }
+
+    private void setPlayersSpawned(boolean spawned) {
+        for (Sonic2SpecialStagePlayer player : players) {
+            player.setSpawned(spawned);
         }
     }
 
@@ -1029,6 +1043,13 @@ public class Sonic2SpecialStageManager {
         diagnosticUpdateCount++;
 
         if (!preRoll) {
+            if (initialPlayerSpawnPending) {
+                // Obj09/Obj0A ids become observable before this first
+                // Vint_S2SS tick (s2.asm:6628-6631).
+                setPlayersSpawned(true);
+                initialPlayerSpawnPending = false;
+            }
+
             // SpecialStage writes SS_New_Speed_Factor=$000C0000 and the first
             // Vint_S2SS promotes it (s2.asm:6640, 960-975).
             if (initialSpeedPromotionPending) {
@@ -1983,6 +2004,7 @@ public class Sonic2SpecialStageManager {
 
         trackAnimator = null;
         initialSpeedPromotionPending = false;
+        initialPlayerSpawnPending = false;
         decodedTrackFrame = null;
         lastDecodedFrameIndex = -1;
         lastDecodedFlipped = false;
@@ -2153,6 +2175,7 @@ public class Sonic2SpecialStageManager {
                 lastAlternateScrollBuffer,
                 drawingIndex,
                 initialSpeedPromotionPending,
+                initialPlayerSpawnPending,
                 lastAnimFrame,
                 vScrollBG,
                 hScrollDebugTotal,
@@ -2225,6 +2248,7 @@ public class Sonic2SpecialStageManager {
         lastAlternateScrollBuffer = snapshot.lastAlternateScrollBuffer;
         drawingIndex = snapshot.drawingIndex;
         initialSpeedPromotionPending = snapshot.initialSpeedPromotionPending;
+        initialPlayerSpawnPending = snapshot.initialPlayerSpawnPending;
         lastAnimFrame = snapshot.lastAnimFrame;
         vScrollBG = snapshot.vScrollBG;
         hScrollDebugTotal = snapshot.hScrollDebugTotal;
@@ -2459,7 +2483,7 @@ public class Sonic2SpecialStageManager {
 
     private static Sonic2SpecialStageComparisonState.PlayerState toComparisonPlayerState(
             Sonic2SpecialStagePlayer player) {
-        if (player == null) {
+        if (player == null || !player.isSpawned()) {
             return null;
         }
         return new Sonic2SpecialStageComparisonState.PlayerState(

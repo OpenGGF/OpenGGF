@@ -142,6 +142,7 @@ public class Sonic2SpecialStagePlayer {
     private boolean swapPositionsFlag;
     private int invulnerabilityCountdown;
     private Sonic2SpecialStagePlayer otherPlayer;
+    private boolean spawned;
 
 
     public Sonic2SpecialStagePlayer(PlayerType type, boolean isMain) {
@@ -199,6 +200,7 @@ public class Sonic2SpecialStagePlayer {
         collisionProperty = 0;
         swapPositionsFlag = false;
         invulnerabilityCountdown = 0;
+        spawned = false;
 
         for (int i = 0; i < CTRL_RECORD_SIZE; i++) {
             ctrlRecordBuf[i] = 0;
@@ -804,6 +806,11 @@ public class Sonic2SpecialStagePlayer {
 
     public PlayerType getPlayerType() { return playerType; }
     public RoutineState getRoutine() { return routine; }
+    public boolean isSpawned() { return spawned; }
+
+    void setSpawned(boolean spawned) {
+        this.spawned = spawned;
+    }
 
     boolean isMainCharacter() {
         return isMainCharacter;
@@ -836,6 +843,7 @@ public class Sonic2SpecialStagePlayer {
         return new Sonic2SpecialStageSnapshot.PlayerSnapshot(
                 playerType,
                 isMainCharacter,
+                spawned,
                 routine,
                 routineSecondary,
                 ssXPos,
@@ -881,6 +889,7 @@ public class Sonic2SpecialStagePlayer {
         if (playerType != snapshot.playerType() || isMainCharacter != snapshot.mainCharacter()) {
             throw new IllegalStateException("Sonic 2 special-stage player topology changed during rewind restore");
         }
+        spawned = snapshot.spawned();
         routine = snapshot.routine();
         routineSecondary = snapshot.routineSecondary();
         ssXPos = snapshot.ssXPos();

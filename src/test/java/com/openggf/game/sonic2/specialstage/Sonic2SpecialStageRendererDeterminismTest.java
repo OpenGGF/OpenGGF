@@ -1,13 +1,17 @@
 package com.openggf.game.sonic2.specialstage;
 
+import com.openggf.graphics.GraphicsManager;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class Sonic2SpecialStageRendererDeterminismTest {
@@ -50,5 +54,25 @@ public class Sonic2SpecialStageRendererDeterminismTest {
         boolean readBackAtZero = (boolean) flashHidden.invoke(renderer, player);
         assertEquals(firstReadAtZero, readBackAtZero,
                 "Re-applying an earlier frame counter must reproduce the earlier flash state");
+    }
+
+    @Test
+    public void mixedSpawnStateRendersOnlySpawnedPlayer() {
+        GraphicsManager graphics = mock(GraphicsManager.class);
+        Sonic2SpecialStageRenderer renderer = new Sonic2SpecialStageRenderer(graphics);
+
+        Sonic2SpecialStagePlayer spawned = mock(Sonic2SpecialStagePlayer.class);
+        when(spawned.isSpawned()).thenReturn(true);
+        when(spawned.getPlayerType()).thenReturn(Sonic2SpecialStagePlayer.PlayerType.SONIC);
+
+        Sonic2SpecialStagePlayer unspawned = mock(Sonic2SpecialStagePlayer.class);
+        when(unspawned.isSpawned()).thenReturn(false);
+        when(unspawned.getPlayerType()).thenReturn(Sonic2SpecialStagePlayer.PlayerType.TAILS);
+
+        renderer.setPlayers(List.of(spawned, unspawned));
+        renderer.renderPlayers();
+
+        verify(spawned).getMappingFrame();
+        verify(unspawned, never()).getMappingFrame();
     }
 }
