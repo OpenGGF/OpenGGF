@@ -90,6 +90,7 @@ import com.openggf.game.timeattack.TimeAttackLaunchRequest;
 import com.openggf.game.timeattack.TimeAttackLevelEndRouting;
 import com.openggf.game.timeattack.TimeAttackMenu;
 import com.openggf.game.timeattack.TimeAttackRuntime;
+import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
 import com.openggf.testmode.TraceCameraFocusController;
 
 import java.io.IOException;
@@ -175,6 +176,7 @@ public class GameLoop {
     private final UserRecordingRuntimeControls userRecordingControls;
     private final TimeAttackRuntime timeAttackRuntime;
     private final TimeAttackHudOverlay timeAttackHudOverlay;
+    private MultiplayerRaceCoordinator multiplayerRaceCoordinator;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
     private TimeAttackMenu.LaunchStarter timeAttackLaunchHandler =
             request -> LOGGER.warning("Time attack launch handler not configured.");
@@ -515,6 +517,10 @@ public class GameLoop {
     /** Exposed so tests/Engine can arm and end a launched Time Attack session. */
     public TimeAttackRuntime getTimeAttackRuntime() {
         return timeAttackRuntime;
+    }
+
+    public void setMultiplayerRaceCoordinator(MultiplayerRaceCoordinator coordinator) {
+        this.multiplayerRaceCoordinator = coordinator;
     }
 
     private UserRecordingMenu.PlaybackStarter withPlaybackAppliedFrameReset(
@@ -1226,6 +1232,14 @@ public class GameLoop {
             tcp.update();
         }
 
+        if (multiplayerRaceCoordinator != null) {
+            multiplayerRaceCoordinator.pump();
+            if (multiplayerRaceCoordinator.holdGameplay()) {
+                updateNonGameplayAudio(doFrameStep);
+                return true;
+            }
+        }
+
         // Handle in-place seamless transitions before fade-based routes.
         SeamlessLevelTransitionRequest seamlessRequest = levelManager.consumeSeamlessTransitionRequest();
         if (seamlessRequest != null) {
@@ -1410,6 +1424,9 @@ public class GameLoop {
                 userRecordingControls.afterLevelFrame();
                 if (timeAttackRuntime.isActive()) {
                     timeAttackRuntime.afterLevelFrame();
+                }
+                if (multiplayerRaceCoordinator != null) {
+                    multiplayerRaceCoordinator.afterLevelFrame();
                 }
             } else if (levelManager.getObjectManager() != null) {
                 // ROM v_vbla_byte increments in VBlank even on rows where
