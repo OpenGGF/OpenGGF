@@ -207,6 +207,14 @@ public final class RoomBroker {
         return Optional.ofNullable(attachResults.remove(connection));
     }
 
+    /** Broker-loop authentication check for tunnel controls intercepted by transport. */
+    public boolean acceptsToken(HubConnection connection, String token) {
+        Member member = members.get(connection);
+        return member != null && member.state == State.ADMITTED
+                && member.token != null && member.token.equals(token)
+                && member.fingerprint.equals(tokenFingerprints.get(token));
+    }
+
     private void handleHandshake(Member member, ControlMessage message) {
         HostHandshake.Step step = switch (message) {
             case ControlMessage.Hello hello -> member.handshake.onHello(hello);

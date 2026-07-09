@@ -6,7 +6,6 @@ import com.openggf.net.protocol.Protocol;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -16,47 +15,18 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /** Netty adapter that keeps all room mutations on the host event-loop thread. */
 final class RaceHostChannelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
-    private static final int MSG_RATE_BURST = 120;
-    private static final int MSG_RATE_PER_SECOND = 60;
-
-    @ChannelHandler.Sharable
-    static final class ConnectionCounter {
-        private final int maxPerIp;
-        private final ConcurrentHashMap<String, AtomicInteger> counts = new ConcurrentHashMap<>();
-
-        ConnectionCounter(int maxPerIp) {
-            this.maxPerIp = maxPerIp;
-        }
-
-        boolean tryAcquire(String host) {
-            AtomicInteger count = counts.computeIfAbsent(host, ignored -> new AtomicInteger());
-            if (count.incrementAndGet() <= maxPerIp) {
-                return true;
-            }
-            release(host);
-            return false;
-        }
-
-        void release(String host) {
-            counts.computeIfPresent(host, (ignored, count) ->
-                    count.decrementAndGet() <= 0 ? null : count);
-        }
-    }
-
     private final RoomHost room;
-    private final ConnectionCounter counter;
+    private final ConnectionHygiene.ConnectionCounter counter;
+    private final ConnectionHygiene.RateBucket rateBucket =
+            new ConnectionHygiene.RateBucket();
     private HubConnection connection;
     private String remoteHost;
     private boolean acquired;
-    private double tokens = MSG_RATE_BURST;
-    private long lastRefillNanos = System.nanoTime();
 
-    RaceHostChannelHandler(RoomHost room, ConnectionCounter counter) {
+    RaceHostChannelHandler(RoomHost room, ConnectionHygiene.ConnectionCounter counter) {
         this.room = room;
         this.counter = counter;
     }
@@ -89,7 +59,7 @@ final class RaceHostChannelHandler extends SimpleChannelInboundHandler<WebSocket
 
     @Override
     protected void channelRead0(ChannelHandlerContext context, WebSocketFrame frame) {
-        if (connection == null || !consumeRateToken()) {
+        if (connection == null || !rateBucket.consume()) {
             context.close();
             return;
         }
@@ -102,18 +72,6 @@ final class RaceHostChannelHandler extends SimpleChannelInboundHandler<WebSocket
             }
             room.onBinary(connection, ByteBufUtil.getBytes(binary.content()));
         }
-    }
-
-    private boolean consumeRateToken() {
-        long now = System.nanoTime();
-        double elapsedSeconds = (now - lastRefillNanos) / 1_000_000_000.0;
-        tokens = Math.min(MSG_RATE_BURST, tokens + elapsedSeconds * MSG_RATE_PER_SECOND);
-        lastRefillNanos = now;
-        if (tokens < 1.0) {
-            return false;
-        }
-        tokens -= 1.0;
-        return true;
     }
 
     @Override

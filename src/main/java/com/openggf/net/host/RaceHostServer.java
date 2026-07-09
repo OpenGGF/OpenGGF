@@ -44,8 +44,8 @@ public final class RaceHostServer implements AutoCloseable {
                                        TrackValidationProfileSource profiles) {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         RoomHost room = new RoomHost(config, hostIdentity, System::currentTimeMillis, profiles);
-        RaceHostChannelHandler.ConnectionCounter counter =
-                new RaceHostChannelHandler.ConnectionCounter(MAX_CONNECTIONS_PER_IP);
+        ConnectionHygiene.ConnectionCounter counter =
+                new ConnectionHygiene.ConnectionCounter(MAX_CONNECTIONS_PER_IP);
         try {
             Channel serverChannel = new ServerBootstrap()
                     .group(group)
