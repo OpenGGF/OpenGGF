@@ -2401,6 +2401,59 @@ public class Sonic2SpecialStageManager {
     }
 
     /**
+     * Assembles a read-only snapshot of manager/animator/player state for a trace
+     * replay harness to compare against a recorded ROM trace. Pure read — no
+     * mutation, no caching. {@code trackAnimator} is null until the stage is fully
+     * loaded, so its fields fall back to the animator's own construction defaults
+     * (speed factor 12, segment/frame/delay counters 0).
+     */
+    public Sonic2SpecialStageComparisonState captureComparisonState() {
+        int speedFactorValue;
+        int currentSegmentIndexValue;
+        int trackAnimFrameValue;
+        int trackFrameDelayCounterValue;
+        if (trackAnimator != null) {
+            speedFactorValue = trackAnimator.getSpeedFactor();
+            currentSegmentIndexValue = trackAnimator.getCurrentSegmentIndex();
+            trackAnimFrameValue = trackAnimator.getCurrentFrameInSegment();
+            trackFrameDelayCounterValue = trackAnimator.getFrameDelayCounter();
+        } else {
+            speedFactorValue = 12;
+            currentSegmentIndexValue = 0;
+            trackAnimFrameValue = 0;
+            trackFrameDelayCounterValue = 0;
+        }
+
+        return new Sonic2SpecialStageComparisonState(
+                speedFactorValue,
+                currentSegmentIndexValue,
+                trackAnimFrameValue,
+                drawingIndex,
+                trackFrameDelayCounterValue,
+                getRingsCollected(),
+                tailsControlCounter,
+                isFinished(),
+                toComparisonPlayerState(sonicPlayer),
+                toComparisonPlayerState(tailsPlayer));
+    }
+
+    private static Sonic2SpecialStageComparisonState.PlayerState toComparisonPlayerState(
+            Sonic2SpecialStagePlayer player) {
+        if (player == null) {
+            return null;
+        }
+        return new Sonic2SpecialStageComparisonState.PlayerState(
+                player.getSSXPos(),
+                player.getSSYPos(),
+                player.getSSZPos(),
+                player.getAngle(),
+                player.getRoutine().name(),
+                player.isHurt() ? 2 : 0,
+                player.getAnim(),
+                player.getAnimFrame());
+    }
+
+    /**
      * Gets the checkpoint manager.
      */
     public Sonic2SpecialStageCheckpoint getCheckpoint() {
