@@ -55,6 +55,7 @@ final class Sonic2SpecialStageSnapshot {
     final int drawingIndex;
     final boolean initialSpeedPromotionPending;
     final boolean initialPlayerSpawnPending;
+    final Sonic2SpecialStageManager.PlayerBootstrapPhase playerBootstrapPhase;
     final int lastAnimFrame;
     final int vScrollBG;
     final int hScrollDebugTotal;
@@ -123,6 +124,7 @@ final class Sonic2SpecialStageSnapshot {
             int drawingIndex,
             boolean initialSpeedPromotionPending,
             boolean initialPlayerSpawnPending,
+            Sonic2SpecialStageManager.PlayerBootstrapPhase playerBootstrapPhase,
             int lastAnimFrame,
             int vScrollBG,
             int hScrollDebugTotal,
@@ -189,6 +191,7 @@ final class Sonic2SpecialStageSnapshot {
         this.drawingIndex = drawingIndex;
         this.initialSpeedPromotionPending = initialSpeedPromotionPending;
         this.initialPlayerSpawnPending = initialPlayerSpawnPending;
+        this.playerBootstrapPhase = playerBootstrapPhase;
         this.lastAnimFrame = lastAnimFrame;
         this.vScrollBG = vScrollBG;
         this.hScrollDebugTotal = hScrollDebugTotal;

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -60,7 +61,7 @@ class Sonic2SpecialStageSpawnGateTest {
     }
 
     @Test
-    void exposesPlayersOnFirstComparisonAfterRomObjectCreationTick() {
+    void spawnedPlayersStayInInitUntilSecondDrawingIndexWrapRunsObj09AndObj10() {
         assertEquals(2, manager.getPlayers().size(),
                 "players stay constructed while their ROM object slots are absent");
         assertTrue(manager.getPlayers().stream().noneMatch(Sonic2SpecialStagePlayer::isSpawned));
@@ -73,12 +74,46 @@ class Sonic2SpecialStageSpawnGateTest {
             assertNull(state.tails(), "Tails must be absent after suppressed update " + frame);
         }
 
+        for (int step = 23; step <= 31; step++) {
+            manager.update();
+
+            Sonic2SpecialStageComparisonState presentButUninitialized = manager.captureComparisonState();
+            assertNotNull(presentButUninitialized.sonic(), "Sonic id is present at replay step " + step);
+            assertNotNull(presentButUninitialized.tails(), "Tails id is present at replay step " + step);
+            assertEquals("INIT", presentButUninitialized.sonic().routine());
+            assertEquals("INIT", presentButUninitialized.tails().routine());
+            assertEquals(0, presentButUninitialized.sonic().ssY());
+            assertEquals(0, presentButUninitialized.tails().ssY());
+            assertEquals((step - 22) % 5, presentButUninitialized.drawingIndex());
+            assertEquals(step < 27
+                            ? Sonic2SpecialStageManager.PlayerBootstrapPhase.WAIT_FIRST_DRAWING_WRAP
+                            : Sonic2SpecialStageManager.PlayerBootstrapPhase.WAIT_SECOND_DURATION_WRAP,
+                    manager.captureRewindSnapshot().playerBootstrapPhase);
+            Sonic2SpecialStageSnapshot bootstrapSnapshot = manager.captureRewindSnapshot();
+            assertEquals(step <= 27 ? -1 : presentButUninitialized.drawingIndex(),
+                    bootstrapSnapshot.lastDrawingIndex,
+                    "only the second startup wait may run SSObjectsManager at step " + step);
+            if (step == 26) {
+                assertEquals(-1, bootstrapSnapshot.objectManager.lastProcessedSegment(),
+                        "the first drawing-index-4 wait must not allocate a segment");
+            } else if (step == 31) {
+                assertEquals(0, bootstrapSnapshot.objectManager.lastProcessedSegment(),
+                        "the second drawing-index-4 wait must allocate segment zero");
+            }
+            assertTrue(manager.getPlayers().stream().allMatch(Sonic2SpecialStagePlayer::isSpawned));
+        }
+
         manager.update();
 
-        Sonic2SpecialStageComparisonState firstPresent = manager.captureComparisonState();
-        assertNotNull(firstPresent.sonic(), "Sonic appears at the first post-pre-roll comparison");
-        assertNotNull(firstPresent.tails(), "Tails appears at the first post-pre-roll comparison");
-        assertTrue(manager.getPlayers().stream().allMatch(Sonic2SpecialStagePlayer::isSpawned));
+        Sonic2SpecialStageComparisonState initialized = manager.captureComparisonState();
+        assertEquals("NORMAL", initialized.sonic().routine());
+        assertEquals("NORMAL", initialized.tails().routine());
+        assertEquals(0x80, initialized.sonic().ssY());
+        assertEquals(0x80, initialized.tails().ssY());
+        assertEquals(0x6E, initialized.sonic().ssZ());
+        assertEquals(0x80, initialized.tails().ssZ());
+        assertEquals(Sonic2SpecialStageManager.PlayerBootstrapPhase.INITIALIZED,
+                manager.captureRewindSnapshot().playerBootstrapPhase);
     }
 
     @Test
@@ -123,6 +158,72 @@ class Sonic2SpecialStageSpawnGateTest {
         manager.update();
         assertNotNull(manager.captureComparisonState().sonic());
         assertNotNull(manager.captureComparisonState().tails());
+    }
+
+    @Test
+    void rewindRestoresSecondWrapBootstrapPhaseAndPreInitPlayerFields() {
+        for (int frame = 0; frame < Sonic2SpecialStageIntro.PRE_ROLL_FRAMES; frame++) {
+            manager.update();
+        }
+        for (int step = 23; step <= 28; step++) {
+            manager.update();
+        }
+
+        Sonic2SpecialStageSnapshot snapshot = manager.captureRewindSnapshot();
+        assertEquals(Sonic2SpecialStageManager.PlayerBootstrapPhase.WAIT_SECOND_DURATION_WRAP,
+                snapshot.playerBootstrapPhase);
+        assertEquals(Sonic2SpecialStagePlayer.RoutineState.INIT, manager.getSonicPlayer().getRoutine());
+        assertEquals(0, manager.getSonicPlayer().getSSYPos());
+
+        for (int step = 29; step <= 32; step++) {
+            manager.update();
+        }
+        assertEquals(Sonic2SpecialStagePlayer.RoutineState.NORMAL, manager.getSonicPlayer().getRoutine());
+
+        manager.restoreRewindSnapshot(snapshot);
+
+        assertEquals(Sonic2SpecialStageManager.PlayerBootstrapPhase.WAIT_SECOND_DURATION_WRAP,
+                manager.captureRewindSnapshot().playerBootstrapPhase);
+        assertEquals(Sonic2SpecialStagePlayer.RoutineState.INIT, manager.getSonicPlayer().getRoutine());
+        assertEquals(0, manager.getSonicPlayer().getSSYPos());
+        assertEquals(0, manager.getSonicPlayer().getSSZPos());
+        assertEquals(0, manager.getSonicPlayer().getAngle());
+
+        for (int step = 29; step <= 32; step++) {
+            manager.update();
+        }
+        assertEquals(Sonic2SpecialStagePlayer.RoutineState.NORMAL, manager.getSonicPlayer().getRoutine());
+        assertEquals(0x80, manager.getSonicPlayer().getSSYPos());
+    }
+
+    @Test
+    void secondWrapInitializesPlayerSlotsBeforeActiveObjectExecution() {
+        List<String> observedOrder = new ArrayList<>();
+        manager.getObjectManager().getActiveObjects().add(new Sonic2SpecialStageRing() {
+            @Override
+            public void update(
+                    int currentTrackFrame,
+                    boolean trackFlipped,
+                    int speedFactor,
+                    boolean drawingIndex4) {
+                observedOrder.add("objects:"
+                        + manager.getSonicPlayer().getRoutine() + ":"
+                        + manager.getTailsPlayer().getRoutine() + ":track="
+                        + manager.captureComparisonState().trackAnimFrame());
+            }
+        });
+
+        for (int frame = 0; frame < Sonic2SpecialStageIntro.PRE_ROLL_FRAMES; frame++) {
+            manager.update();
+        }
+        for (int step = 23; step <= 32; step++) {
+            manager.update();
+        }
+        observedOrder.add("players:" + manager.getSonicPlayer().getRoutine() + ":"
+                + manager.getTailsPlayer().getRoutine());
+
+        assertEquals(List.of("objects:NORMAL:NORMAL:track=2", "players:NORMAL:NORMAL"), observedOrder,
+                "RunObjects-equivalent ring execution must follow Obj09/Obj10 scalar initialization");
     }
 
     @Test

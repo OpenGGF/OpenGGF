@@ -53,6 +53,19 @@ public class Sonic2SpecialStageManager {
         FAILED
     }
 
+    enum PlayerBootstrapPhase {
+        WAIT_FIRST_DRAWING_WRAP,
+        WAIT_SECOND_DURATION_WRAP,
+        INITIALIZED;
+
+        PlayerBootstrapPhase afterDrawingIndexWrap() {
+            return switch (this) {
+                case WAIT_FIRST_DRAWING_WRAP -> WAIT_SECOND_DURATION_WRAP;
+                case WAIT_SECOND_DURATION_WRAP, INITIALIZED -> INITIALIZED;
+            };
+        }
+    }
+
     private final SonicConfigurationService configService;
     private final GraphicsManager graphicsManager;
     private final Sonic2SpecialStageSpriteDebug debugSprites;
@@ -73,9 +86,13 @@ public class Sonic2SpecialStageManager {
     // Vint_S2SS boundary. Speed 0 is not a sentinel: ROM writes it again later
     // (s2.asm:72418).
     private boolean initialSpeedPromotionPending;
-    // One-shot exposure of the already-constructed Obj09/Obj0A instances at
+    // One-shot exposure of the already-constructed Obj09/Obj10 instances at
     // the ROM object-creation boundary, independent of speed promotion state.
     private boolean initialPlayerSpawnPending;
+    // The ids are written before either player routine runs. RunObjects executes
+    // only after the two startup waits have observed their drawing-index wraps
+    // (s2.asm:6628-6631, 6644-6663).
+    private PlayerBootstrapPhase playerBootstrapPhase = PlayerBootstrapPhase.WAIT_FIRST_DRAWING_WRAP;
 
     private byte[] levelLayouts;
     private byte[][] trackFrames;
@@ -432,17 +449,6 @@ public class Sonic2SpecialStageManager {
         // Initialize object manager
         objectManager = new Sonic2SpecialStageObjectManager(dataLoader);
         objectManager.initialize(currentStage);
-
-        // Pre-spawn segment 0 objects immediately at stage start
-        // In the original game, objects are already in the pipeline when the stage
-        // begins.
-        // Without this, objects don't spawn until the first drawingIndex==4 transition,
-        // causing them to appear too late.
-        if (trackAnimator != null) {
-            int segmentType = trackAnimator.getCurrentSegmentType();
-            objectManager.processSegment(0, segmentType);
-            LOGGER.fine("Pre-spawned segment 0 objects at initialization");
-        }
 
         // Load ring and bomb art
         Pattern[] ringPatterns = dataLoader.getRingArtPatterns();
@@ -932,8 +938,10 @@ public class Sonic2SpecialStageManager {
      */
     void setupPlayersForTest() {
         setupPlayers();
+        initializePlayerScalarStateFromRomObjectRoutines();
         setPlayersSpawned(true);
         initialPlayerSpawnPending = false;
+        playerBootstrapPhase = PlayerBootstrapPhase.INITIALIZED;
     }
 
     private void setupPlayers() {
@@ -941,6 +949,7 @@ public class Sonic2SpecialStageManager {
         sonicPlayer = null;
         tailsPlayer = null;
         initialPlayerSpawnPending = true;
+        playerBootstrapPhase = PlayerBootstrapPhase.WAIT_FIRST_DRAWING_WRAP;
 
         String characterCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(configuration());
         if (characterCode == null) {
@@ -983,6 +992,41 @@ public class Sonic2SpecialStageManager {
         for (Sonic2SpecialStagePlayer player : players) {
             player.setSpawned(spawned);
         }
+    }
+
+    private void initializePlayerScalarStateFromRomObjectRoutines() {
+        // RunObjects scans the main-character slot before the sidekick slot
+        // (s2.asm:29805-29846).
+        if (sonicPlayer != null) {
+            sonicPlayer.initializeScalarStateFromRomObjectRoutine();
+        }
+        if (tailsPlayer != null) {
+            tailsPlayer.initializeScalarStateFromRomObjectRoutine();
+        }
+    }
+
+    /**
+     * Advances the ROM startup-wait latch on a semantic drawing-index wrap and
+     * reports when the caller must run the ordered final bootstrap pass. Package
+     * visibility permits ROM-free lifecycle/rewind tests to exercise the same
+     * field transition used by {@link #update()}.
+     */
+    boolean observePlayerBootstrapDrawingWrap(boolean drawingIndexWrapped) {
+        if (!drawingIndexWrapped || playerBootstrapPhase == PlayerBootstrapPhase.INITIALIZED) {
+            return false;
+        }
+        PlayerBootstrapPhase nextPhase = playerBootstrapPhase.afterDrawingIndexWrap();
+        if (nextPhase == PlayerBootstrapPhase.INITIALIZED) {
+            return true;
+        }
+        playerBootstrapPhase = nextPhase;
+        return false;
+    }
+
+    /** Completes the player-slot portion of the ordered final bootstrap pass. */
+    void completePlayerScalarInitializationBootstrap() {
+        initializePlayerScalarStateFromRomObjectRoutines();
+        playerBootstrapPhase = PlayerBootstrapPhase.INITIALIZED;
     }
 
     /**
@@ -1042,9 +1086,10 @@ public class Sonic2SpecialStageManager {
         }
         diagnosticUpdateCount++;
 
+        boolean drawingIndexWrapped = false;
         if (!preRoll) {
             if (initialPlayerSpawnPending) {
-                // Obj09/Obj0A ids become observable before this first
+                // Obj09/Obj10 ids become observable before this first
                 // Vint_S2SS tick (s2.asm:6628-6631).
                 setPlayersSpawned(true);
                 initialPlayerSpawnPending = false;
@@ -1065,7 +1110,9 @@ public class Sonic2SpecialStageManager {
             // drawingIndex==4 is special: it's when $CCCC is used instead of $CCCD for
             // depth decrement.
             int duration = getAlignmentFrameDuration();
+            int previousDrawingIndex = drawingIndex;
             drawingIndex = (drawingIndex + 1) % Math.max(1, duration);
+            drawingIndexWrapped = drawingIndex < previousDrawingIndex;
         }
 
         // Update skydome scroll based on current track animation state
@@ -1110,12 +1157,36 @@ public class Sonic2SpecialStageManager {
             decodeCurrentTrackFrame();
         }
 
+        boolean playerBootstrapWaitTick = !preRoll
+                && playerBootstrapPhase != PlayerBootstrapPhase.INITIALIZED;
+        boolean secondDurationWaitTick = !preRoll
+                && playerBootstrapPhase == PlayerBootstrapPhase.WAIT_SECOND_DURATION_WRAP;
+        if (secondDurationWaitTick) {
+            // Only the duration loop calls SSObjectsManager after each wait
+            // (s2.asm:6651-6658). This is stream/allocation bookkeeping only;
+            // active objects execute in the later RunObjects-equivalent pass.
+            streamSpecialStageObjects();
+        }
+
+        boolean startupPlayerInitializationTick = playerBootstrapWaitTick
+                && observePlayerBootstrapDrawingWrap(drawingIndexWrapped);
+        if (startupPlayerInitializationTick) {
+            // After the final SSObjectsManager stream pass, RunObjects scans the
+            // Obj09/Obj10 player slots before the later ring/bomb slots
+            // (s2.asm:29805-29846, 6651-6663). Apply player scalar init first,
+            // then execute/project/collide active special-stage objects once.
+            completePlayerScalarInitializationBootstrap();
+            executeActiveSpecialStageObjects();
+        }
+
         if (trackAnimator.isStageComplete()) {
             trackAnimator.resetStageComplete();
         }
 
-        // Only update players and objects when intro allows input
-        if (intro == null || intro.isInputEnabled()) {
+        // Startup RunObjects initializes the player objects but does not execute
+        // their normal movement routines. Streaming and later-slot active-object
+        // execution were already consumed once in ROM slot order on this tick.
+        if (!startupPlayerInitializationTick && (intro == null || intro.isInputEnabled())) {
             updatePlayers();
             updateObjects();
         }
@@ -1174,6 +1245,12 @@ public class Sonic2SpecialStageManager {
      * 2. Triggering segment spawning when index reaches 4
      */
     private void updateObjects() {
+        streamSpecialStageObjects();
+        executeActiveSpecialStageObjects();
+    }
+
+    /** SSObjectsManager-equivalent stream/allocation work (s2.asm:6935-7001). */
+    private void streamSpecialStageObjects() {
         if (objectManager == null || trackAnimator == null) {
             return;
         }
@@ -1190,6 +1267,13 @@ public class Sonic2SpecialStageManager {
             objectManager.processSegment(segmentIndex, segmentType);
         }
         lastDrawingIndex = this.drawingIndex;
+    }
+
+    /** Later-slot RunObjects-equivalent active object execution. */
+    private void executeActiveSpecialStageObjects() {
+        if (objectManager == null || trackAnimator == null) {
+            return;
+        }
 
         // Update all active objects
         int currentFrame = trackAnimator.getCurrentTrackFrameIndex();
@@ -1205,7 +1289,6 @@ public class Sonic2SpecialStageManager {
             }
         }
 
-        // Check collisions between players and objects
         checkObjectCollisions();
     }
 
@@ -2005,6 +2088,7 @@ public class Sonic2SpecialStageManager {
         trackAnimator = null;
         initialSpeedPromotionPending = false;
         initialPlayerSpawnPending = false;
+        playerBootstrapPhase = PlayerBootstrapPhase.WAIT_FIRST_DRAWING_WRAP;
         decodedTrackFrame = null;
         lastDecodedFrameIndex = -1;
         lastDecodedFlipped = false;
@@ -2176,6 +2260,7 @@ public class Sonic2SpecialStageManager {
                 drawingIndex,
                 initialSpeedPromotionPending,
                 initialPlayerSpawnPending,
+                playerBootstrapPhase,
                 lastAnimFrame,
                 vScrollBG,
                 hScrollDebugTotal,
@@ -2249,6 +2334,7 @@ public class Sonic2SpecialStageManager {
         drawingIndex = snapshot.drawingIndex;
         initialSpeedPromotionPending = snapshot.initialSpeedPromotionPending;
         initialPlayerSpawnPending = snapshot.initialPlayerSpawnPending;
+        playerBootstrapPhase = snapshot.playerBootstrapPhase;
         lastAnimFrame = snapshot.lastAnimFrame;
         vScrollBG = snapshot.vScrollBG;
         hScrollDebugTotal = snapshot.hScrollDebugTotal;

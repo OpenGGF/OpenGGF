@@ -63,16 +63,23 @@ public class Sonic2SpecialStageRendererDeterminismTest {
 
         Sonic2SpecialStagePlayer spawned = mock(Sonic2SpecialStagePlayer.class);
         when(spawned.isSpawned()).thenReturn(true);
+        when(spawned.getRoutine()).thenReturn(Sonic2SpecialStagePlayer.RoutineState.NORMAL);
         when(spawned.getPlayerType()).thenReturn(Sonic2SpecialStagePlayer.PlayerType.SONIC);
+
+        Sonic2SpecialStagePlayer spawnedInit = mock(Sonic2SpecialStagePlayer.class);
+        when(spawnedInit.isSpawned()).thenReturn(true);
+        when(spawnedInit.getRoutine()).thenReturn(Sonic2SpecialStagePlayer.RoutineState.INIT);
+        when(spawnedInit.getPlayerType()).thenReturn(Sonic2SpecialStagePlayer.PlayerType.SONIC);
 
         Sonic2SpecialStagePlayer unspawned = mock(Sonic2SpecialStagePlayer.class);
         when(unspawned.isSpawned()).thenReturn(false);
         when(unspawned.getPlayerType()).thenReturn(Sonic2SpecialStagePlayer.PlayerType.TAILS);
 
-        renderer.setPlayers(List.of(spawned, unspawned));
+        renderer.setPlayers(List.of(spawned, spawnedInit, unspawned));
         renderer.renderPlayers();
 
         verify(spawned).getMappingFrame();
+        verify(spawnedInit, never()).getMappingFrame();
         verify(unspawned, never()).getMappingFrame();
     }
 }

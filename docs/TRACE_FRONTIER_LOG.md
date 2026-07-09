@@ -40,6 +40,34 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage Stage 1: defer Obj09/Obj10 init to first RunObjects
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on `a9a721631`. The engine previously
+constructed Obj09/Obj10 with their routine-0 initialization already applied,
+although the ROM merely writes their ids before two startup waits and does not
+run either object until `RunObjects` at `s2.asm:6660-6663`.
+
+- Command: `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`
+- Status: PASS (comparison-only replay pipeline and determinism); report remains
+  intentionally red-allowed.
+- Before: 15,311 errors / 3,720 warnings; first error f127,
+  `sonic_ss_y` expected `0`, actual `128`.
+- After: 15,303 errors / 3,719 warnings; first error f142,
+  `track_anim_frame` expected `2`, actual `3`.
+- Frontier movement: f127-f135 now preserve present-but-routine-0 players with
+  zeroed SS/player position, depth, and angle fields. The second drawing-index
+  wait alone performs `SSObjectsManager`-equivalent streaming: the first wait
+  leaves the segment unprocessed, while the second drawing-index-4 tick allocates
+  segment 0. The final wrap follows that second-loop streaming pass by
+  initializing the player scalar subset in Sonic-then-Tails slot order, then
+  executing/projecting/colliding later-slot active objects at f136. No normal
+  player movement or duplicate object pass runs on that bootstrap tick.
+- Next independent root: the fade-from-white/object cadence beginning around
+  f142. The Stage-1 >=50% error-reduction gate remains pending; this correction
+  removes the first bootstrap mismatch but intentionally does not address that
+  later cadence.
+
 ## 2026-07-09 - S2 special-stage headless replay harness established (red-allowed MVP)
 
 Branch `feature/ai-s2-ss-trace` (commit `de6f3b95c`). First headless replay of a

@@ -571,7 +571,7 @@ public class Sonic2SpecialStageRenderer {
     public void renderPlayers() {
         List<Sonic2SpecialStagePlayer> sortedPlayers = new ArrayList<>();
         for (Sonic2SpecialStagePlayer player : players) {
-            if (player.isSpawned()) {
+            if (isPlayerRenderEligible(player)) {
                 sortedPlayers.add(player);
             }
         }
@@ -612,7 +612,7 @@ public class Sonic2SpecialStageRenderer {
      *
      * Special stage sprites are NOT simple grids - they consist of multiple
      * sprite pieces at different positions with different sizes.
-     * Data is from obj09.asm (Sonic) / obj0A.asm (Tails) mappings.
+     * Data is from Obj09 (Sonic) / Obj10 (Tails) mappings.
      *
      * @param player The player to render
      */
@@ -782,7 +782,9 @@ public class Sonic2SpecialStageRenderer {
             return;
         }
 
-        List<Sonic2SpecialStagePlayer> sortedPlayers = new ArrayList<>(players);
+        List<Sonic2SpecialStagePlayer> sortedPlayers = players.stream()
+                .filter(Sonic2SpecialStageRenderer::isPlayerRenderEligible)
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         sortedPlayers.sort(Comparator.comparingInt(Sonic2SpecialStagePlayer::getPriority));
 
         graphicsManager.beginPatternBatch();
@@ -832,6 +834,11 @@ public class Sonic2SpecialStageRenderer {
         }
 
         graphicsManager.flushPatternBatch();
+    }
+
+    private static boolean isPlayerRenderEligible(Sonic2SpecialStagePlayer player) {
+        return player.isSpawned()
+                && player.getRoutine() != Sonic2SpecialStagePlayer.RoutineState.INIT;
     }
 
     private boolean isInvulnerabilityFlashHidden(Sonic2SpecialStagePlayer player) {

@@ -80,6 +80,8 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertEquals(true, get(manager, "alternateScrollBuffer"));
         assertEquals(true, get(manager, "lastAlternateScrollBuffer"));
         assertEquals(4, get(manager, "drawingIndex"));
+        assertEquals(Sonic2SpecialStageManager.PlayerBootstrapPhase.WAIT_SECOND_DURATION_WRAP,
+                get(manager, "playerBootstrapPhase"));
         assertEquals(33, get(manager, "lastAnimFrame"));
         assertEquals(-7, get(manager, "vScrollBG"));
         assertEquals(101, get(manager, "hScrollDebugTotal"));
@@ -366,6 +368,8 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "alternateScrollBuffer", true);
         set(manager, "lastAlternateScrollBuffer", true);
         set(manager, "drawingIndex", 4);
+        set(manager, "playerBootstrapPhase",
+                Sonic2SpecialStageManager.PlayerBootstrapPhase.WAIT_SECOND_DURATION_WRAP);
         set(manager, "lastAnimFrame", 33);
         set(manager, "vScrollBG", -7);
         set(manager, "hScrollDebugTotal", 101);
@@ -429,6 +433,7 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "alternateScrollBuffer", false);
         set(manager, "lastAlternateScrollBuffer", false);
         set(manager, "drawingIndex", 99);
+        set(manager, "playerBootstrapPhase", Sonic2SpecialStageManager.PlayerBootstrapPhase.INITIALIZED);
         set(manager, "lastAnimFrame", 99);
         set(manager, "vScrollBG", 99);
         set(manager, "hScrollDebugTotal", 99);

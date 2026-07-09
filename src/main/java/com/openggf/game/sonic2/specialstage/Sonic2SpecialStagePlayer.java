@@ -19,7 +19,7 @@ import java.util.logging.Logger;
  * The player moves around the half-pipe track, and their screen position
  * is calculated by projecting track-space coordinates using SSAnglePos.
  *
- * Based on Obj09 (Sonic) and Obj0A (Tails) from s2disasm.
+ * Based on Obj09 (Sonic) and Obj10 (Tails) from s2disasm.
  */
 public class Sonic2SpecialStagePlayer {
     private static final Logger LOGGER = Logger.getLogger(Sonic2SpecialStagePlayer.class.getName());
@@ -158,36 +158,35 @@ public class Sonic2SpecialStagePlayer {
 
         ssXPos = 0;
         ssXSub = 0;
-        ssYPos = INITIAL_Y_POS;
+        ssYPos = 0;
         ssYSub = 0;
-        ssZPos = isMainCharacter ? INITIAL_Z_POS_MAIN : INITIAL_Z_POS_SIDEKICK;
+        ssZPos = 0;
 
-        xPos = SS_OFFSET_X;
-        yPos = SS_OFFSET_Y + INITIAL_Y_POS;
+        xPos = 0;
+        yPos = 0;
 
         xVel = 0;
         yVel = 0;
         inertia = 0;
 
-        angle = INITIAL_ANGLE;
+        angle = 0;
         ssSlideTimer = 0;
         ssHurtTimer = 0;
         ssDplcTimer = 0;
 
-        ssInitFlipTimer = 0x400;
-        // Original 68000: ss_init_flip_timer is at offset $32, ss_flip_timer at offset $33
-        // When move.w #$400 writes to offset $32, it puts $04 at $32 and $00 at $33
-        // So ss_flip_timer (offset $33) starts at 0, triggering flip on first frame
-        ssFlipTimer = ssInitFlipTimer & 0xFF;  // = 0 (low byte)
+        ssInitFlipTimer = 0;
+        ssFlipTimer = 0;
         ssLastAngleIndex = 0;
 
         anim = 0;
-        prevAnim = -1;  // Force animation update on first frame
+        prevAnim = 0;
         animFrame = 0;
         animFrameDuration = 0;
         mappingFrame = 0;
 
-        priority = 3;
+        yRadius = 0;
+        xRadius = 0;
+        priority = 0;
 
         statusXFlip = false;
         statusYFlip = false;
@@ -206,8 +205,63 @@ public class Sonic2SpecialStagePlayer {
             ctrlRecordBuf[i] = 0;
         }
         ctrlRecordIndex = 0;
+    }
 
+    /**
+     * Models the player scalar/state subset of the ROM's Obj09/Obj10 routine-0
+     * initialization without running a normal movement frame. Object-slot
+     * presence is owned separately by the special-stage bootstrap sequence.
+     * Dynamic-pattern loads and the ROM-created shadow / Tails-tail sidecars are
+     * separate concerns and are not created by this scalar-state method.
+     *
+     * <p>Obj09: {@code docs/s2disasm/s2.asm:69040-69076}; Obj10:
+     * {@code docs/s2disasm/s2.asm:70319-70372}.</p>
+     */
+    void initializeScalarStateFromRomObjectRoutine() {
         routine = RoutineState.NORMAL;
+        routineSecondary = 0;
+
+        ssXPos = 0;
+        ssXSub = 0;
+        ssYPos = INITIAL_Y_POS;
+        ssYSub = 0;
+        ssZPos = isMainCharacter ? INITIAL_Z_POS_MAIN : INITIAL_Z_POS_SIDEKICK;
+
+        xPos = SS_OFFSET_X;
+        yPos = SS_OFFSET_Y + INITIAL_Y_POS;
+
+        xVel = 0;
+        yVel = 0;
+        inertia = 0;
+        angle = INITIAL_ANGLE;
+        ssSlideTimer = 0;
+        ssHurtTimer = 0;
+        ssDplcTimer = 0;
+
+        ssInitFlipTimer = 0x400;
+        // The word write leaves the low byte (ss_flip_timer) zero.
+        ssFlipTimer = ssInitFlipTimer & 0xFF;
+        ssLastAngleIndex = 0;
+
+        anim = 0;
+        prevAnim = -1;
+        animFrame = 0;
+        animFrameDuration = 0;
+        mappingFrame = 0;
+
+        yRadius = 0x0E;
+        xRadius = 0x07;
+        priority = playerType == PlayerType.TAILS && !isMainCharacter ? 2 : 3;
+
+        statusXFlip = false;
+        statusYFlip = false;
+        statusJumping = false;
+        statusSlowing = false;
+        renderXFlip = false;
+        renderYFlip = false;
+        collisionProperty = 0;
+        swapPositionsFlag = false;
+        invulnerabilityCountdown = 0;
     }
 
     /**

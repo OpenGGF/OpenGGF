@@ -46,12 +46,12 @@ VInt, updates the palette, and services the PLC.
 | f0 | **No special-stage init VInt yet.** Recorder observes the `Game_Mode=$10` transition before `SpecialStage` dispatch. | Player slots empty; `SS_Cur_Speed_Factor=0`; `SSTrack_anim_frame=0`. |
 | f1-f22 | 22 `VintID_Fade` interrupts for `Pal_FadeToWhite` (`s2.asm:3573-3580`; call at `:6546`). | Players, current speed, and track frame remain zero. |
 | f23-f68 | **Disassembly-and-lag-derived inference:** post-fade synchronous initialization. After interrupts are restored at `s2.asm:6613`, the disassembly leaves `Vint_routine=0`, whose dispatch is `Vint_Lag` (`s2.asm:483-484`, `:529-543`), while buffer initialization/decompression/PLC work proceeds (`:6613-6627`). The artifact records lag state and RAM, not PC or `Vint_routine`, so it does not directly prove the handler for each row. | Rows are `lag=1`; player ids are still zero. Raw f23 is the first post-fade lag row and is skipped by replay; inferring `Vint_Lag` is consistent with the disassembly but is not direct capture evidence. |
-| f69-f126 | **Same inference, later init phase:** the player-id stores (`s2.asm:6628-6634`) have become visible, followed by background/player-art/palette setup and the `SS_New_Speed_Factor` write (`:6635-6640`). No explicit S2SS wait is armed until `:6644`. | Player ids are visible from f69, but rows remain `lag=1`; recorded `SS_Cur_Speed_Factor` stays zero. The artifact does not capture the exact PC at the f69 transition. |
-| f127-f131 | Five `VintID_S2SS` interrupts in the drawing-index wait (`s2.asm:6644-6649`). | Drawing index starts at 0; the five interrupts leave it at 1, 2, 3, 4, then back at 0. At f127 new speed is promoted to current (`s2.asm:960-975`), so `speed_factor` becomes `0xC`; `track_anim_frame` becomes 1 when the index wraps at f131. |
-| f132-f136 | Five `VintID_S2SS` interrupts in the duration wait (`s2.asm:6651-6658`). | Duration counts 5,4,3,2,1; `track_anim_frame` becomes 2 at f136. |
+| f69-f126 | **Same inference, later init phase:** the Obj09/Obj10 id stores (`s2.asm:6628-6634`) have become visible, followed by background/player-art/palette setup and the `SS_New_Speed_Factor` write (`:6635-6640`). No explicit S2SS wait is armed until `:6644`. | Player ids are visible from f69, but their routine and `ss_x_pos`/`ss_y_pos`/`ss_z_pos`/angle fields remain zero because `RunObjects` has not executed them. Rows remain `lag=1`; recorded `SS_Cur_Speed_Factor` stays zero. The artifact does not capture the exact PC at the f69 transition. |
+| f127-f131 | Five `VintID_S2SS` interrupts in the drawing-index wait (`s2.asm:6644-6649`). | Obj09/Obj10 are present but still routine 0 with zeroed special-stage fields. Drawing index starts at 0; the five interrupts leave it at 1, 2, 3, 4, then back at 0. At f127 new speed is promoted to current (`s2.asm:960-975`), so `speed_factor` becomes `0xC`; `track_anim_frame` becomes 1 when the index wraps at f131. |
+| f132-f136 | Five `VintID_S2SS` interrupts in the duration wait (`s2.asm:6651-6658`). | Obj09/Obj10 remain present and zeroed through f135. At f136 the second wrap advances `track_anim_frame` to 2, the wait exits, and the first `RunObjects` initializes Sonic then Tails (`:6660-6663`, `:69040-69076`, `:70319-70372`). |
 | f137 | The one `VintID_CtrlDMA` wait at `s2.asm:6665-6666`. | Raw row is lagged and replay skips it. |
-| f138-f159 | 22 `VintID_Fade` interrupts for `Pal_FadeFromWhite` (`s2.asm:3460-3483`, call at `:6672`). | Players/speed remain active; track animation is paused by the fade handler. |
-| f160 onward | `VintID_S2SS` intro/gameplay-gate loop (`s2.asm:6674-6690`). | Track animation resumes. The loop cannot advance past `SpecialStage_Started` test `:6689-6690` while the byte is zero. |
+| f138-f159 | 22 `VintID_Fade` interrupts for `Pal_FadeFromWhite` (`s2.asm:3460-3483`, call at `:6672`). | Obj09/Obj10 remain initialized and present, but are frozen because the fade handler does not run objects or track animation. |
+| f160 onward | `VintID_S2SS` intro/gameplay-gate loop (`s2.asm:6674-6690`). | Before the wait, the loop copies physical controls to the logical control words (`:6675-6676`); after the wait it updates the track and calls `RunObjects` (`:6681-6687`) before testing `SpecialStage_Started` (`:6689-6690`). The loop cannot enter the playable body while that byte is zero. |
 
 ## Frame-by-frame replay observations
 
@@ -83,18 +83,18 @@ result of a physical frame but is not itself synonymous with a ROM VInt.
 | 20 | f20 | Fade iteration 20 (`s2.asm:3575-3580`). | No tracked init-state change. |
 | 21 | f21 | Fade iteration 21 (`s2.asm:3575-3580`). | No tracked init-state change. |
 | 22 | f22 | Fade iteration 22; `dbf` falls through and the fade returns (`s2.asm:3575-3582`). | Last absent/zero pre-roll sample. |
-| 23 | f127 | First `VintID_S2SS` drawing-index wait (`s2.asm:6644-6647`). | Players first compared as present; `speed_factor` 0→`0xC`; drawing index 0→1, duration 0→5. |
-| 24 | f128 | Second drawing-index wait. | Drawing index 1→2; duration 5→4. |
-| 25 | f129 | Third drawing-index wait. | Drawing index 2→3; duration 4→3. |
-| 26 | f130 | Fourth drawing-index wait. | Drawing index 3→4; duration 3→2. |
-| 27 | f131 | Fifth drawing-index wait; index wraps and loop exits (`s2.asm:6644-6649`). | `track_anim_frame` 0→1; duration 2→1. |
-| 28 | f132 | First duration-loop wait (`s2.asm:6651-6658`). | Drawing index 0→1; duration reloads 1→5. |
-| 29 | f133 | Second duration-loop wait. | Drawing index 1→2; duration 5→4. |
-| 30 | f134 | Third duration-loop wait. | Drawing index 2→3; duration 4→3. |
-| 31 | f135 | Fourth duration-loop wait. | Drawing index 3→4; duration 3→2. |
-| 32 | f136 | Fifth duration-loop wait; loop exits. | `track_anim_frame` 1→2; player routines have initialized to 2. |
-| 33-54 | f138-f159 | 22 `Pal_FadeFromWhite` waits (`s2.asm:3460-3483`, call at `:6672`). | Players/speed remain active; track animation stays paused. |
-| 55 onward | f160 onward | Intro/gameplay-gate loop (`s2.asm:6674-6690`). | Track animation resumes; `SpecialStage_Started` gates entry to playable loop. |
+| 23 | f127 | First `VintID_S2SS` drawing-index wait (`s2.asm:6644-6647`). | Obj09/Obj10 first compare as present but routine 0 and zeroed; `speed_factor` 0→`0xC`; drawing index 0→1, duration 0→5. |
+| 24 | f128 | Second drawing-index wait. | Players remain present/zeroed; drawing index 1→2; duration 5→4. |
+| 25 | f129 | Third drawing-index wait. | Players remain present/zeroed; drawing index 2→3; duration 4→3. |
+| 26 | f130 | Fourth drawing-index wait. | Players remain present/zeroed; drawing index 3→4; duration 3→2. |
+| 27 | f131 | Fifth drawing-index wait; index wraps and loop exits (`s2.asm:6644-6649`). | Players remain present/zeroed; `track_anim_frame` 0→1; duration 2→1. |
+| 28 | f132 | First duration-loop wait (`s2.asm:6651-6658`). | Players remain present/zeroed; drawing index 0→1; duration reloads 1→5. |
+| 29 | f133 | Second duration-loop wait. | Players remain present/zeroed; drawing index 1→2; duration 5→4. |
+| 30 | f134 | Third duration-loop wait. | Players remain present/zeroed; drawing index 2→3; duration 4→3. |
+| 31 | f135 | Fourth duration-loop wait. | Players remain present/zeroed; drawing index 3→4; duration 3→2. |
+| 32 | f136 | Fifth duration-loop wait; loop exits and reaches the first `RunObjects`. | `track_anim_frame` 1→2; Obj09 initializes first, then Obj10; both routines become 2 with their ROM positions/depth/angle. |
+| 33-54 | f138-f159 | 22 `Pal_FadeFromWhite` waits (`s2.asm:3460-3483`, call at `:6672`). | Initialized players remain present but frozen; track animation stays paused. |
+| 55 onward | f160 onward | Intro/gameplay-gate loop (`s2.asm:6674-6690`). | Physical controls are copied to logical controls before the wait; track/object updates and `RunObjects` occur before `SpecialStage_Started` gates entry to the playable body. |
 
 ## Initialization work between fade and player creation
 
@@ -114,18 +114,26 @@ After `Pal_FadeToWhite` returns, the ROM performs the following work in order:
    `Vint_routine=0`, the disassembly implies `Vint_Lag` dispatch during this
    interval. The trace's lag rows support that reading, but do not prove it
    directly because the artifact records neither PC nor `Vint_routine`.
-4. It writes the special-stage object ids: Sonic at `s2.asm:6628`, Tails at
-   `:6631` when selected, then HUD/banner/ring-count objects at `:6632-6634`.
+4. It writes the special-stage object ids: Obj09 (Sonic) at `s2.asm:6628`,
+   Obj10 (Tails) at `:6631` when selected, then HUD/banner/ring-count objects at
+   `:6632-6634`. These stores make the players present but do not execute their
+   routine-0 initializers.
 5. It builds the background, decompresses player art, initializes palettes and
    stage data, and writes `SS_New_Speed_Factor=$000C0000`
    (`s2.asm:6635-6640`). This is the *new* factor; the recorded current factor
    remains zero until the next `Vint_S2SS` copies it.
 
-The PLC/track startup waits are therefore downstream of player creation, not
-the cause of the empty-slot window. The first loop waits five `VintID_S2SS`
+The PLC/track startup waits are therefore downstream of player-id creation, but
+upstream of player routine initialization. The first loop waits five `VintID_S2SS`
 interrupts for `SSTrack_drawing_index` to return to zero
 (`s2.asm:6644-6649`). The second waits another five interrupts for
-`SSTrack_duration_timer-1` to reach zero (`:6651-6658`). After object setup and
+`SSTrack_duration_timer-1` to reach zero (`:6651-6658`), calling
+`SSObjectsManager` after each wait (`:6655`). That routine is strictly
+streaming/allocation work: it returns unless the drawing index is 4 and the
+segment changed, then allocates ring/bomb/message slots without executing their
+object routines (`:6935-7001`). Only after the wait does the first `RunObjects`
+scan execute Obj09 and Obj10 before the later allocated slots (`:6660-6663`,
+`:29805-29846`). After object setup and
 `RunPLC_RAM`, a single `VintID_CtrlDMA` wait occurs at `:6665-6666`, followed
 by the 22-frame fade from white.
 
@@ -146,6 +154,7 @@ compressed artifact's SHA-256:
 |---|---:|---:|---|
 | Last absent/zero pre-roll sample | step 22 | f22 | End of the 23-slot pre-roll window f0-f22. |
 | Sonic/Tails first present | step 23 | ids first appear during lag at f69; first compared observation is f127 | Object-id writes at `s2.asm:6628-6631`. |
+| Sonic/Tails first initialized | step 32 | f136 | First `RunObjects` after both startup waits; Obj09 then Obj10 (`s2.asm:6660-6663`, `:29805-29846`). |
 | `speed_factor` 0→`c` | step 23 | f127 | New factor written at `s2.asm:6640`, then promoted to current by the first `Vint_S2SS` (`:960-975`). |
 | `track_anim_frame` first moves 0→1 | step 27 | f131 | Fifth VInt of the first drawing-index wait, when index 4 wraps to 0. |
 | `track_anim_frame` moves 1→2 | step 32 | f136 | Fifth VInt of the duration wait. |

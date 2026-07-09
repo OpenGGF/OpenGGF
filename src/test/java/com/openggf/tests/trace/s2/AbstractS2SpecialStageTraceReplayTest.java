@@ -241,12 +241,19 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         // Tier-2
         fields.put("track_drawing_index",
                 cmp("track_drawing_index", str(tf.trackDrawingIndex()), str(state.drawingIndex()), Severity.WARNING));
-        int duration = ANIM_BASE_DURATIONS[(tf.speedFactor() >> 1) & 7];
-        int expectedCounter = duration - tf.trackDurationTimer();
+        int expectedCounter = mapTrackDurationElapsed(tf.speedFactor(), tf.trackDurationTimer());
         fields.put("track_duration_timer",
                 cmp("track_duration_timer", str(expectedCounter), str(state.trackFrameDelayCounter()), Severity.WARNING));
         fields.put("tails_control_counter",
                 cmp("tails_control_counter", str(tf.tailsControlCounter()), str(state.tailsControlCounter()), Severity.WARNING));
+    }
+
+    static int mapTrackDurationElapsed(int speedFactor, int rawDurationTimer) {
+        if (speedFactor == 0 && rawDurationTimer == 0) {
+            return 0;
+        }
+        int duration = ANIM_BASE_DURATIONS[(speedFactor >> 1) & 7];
+        return duration - rawDurationTimer;
     }
 
     private static void addPlayerFields(Map<String, FieldComparison> fields,
