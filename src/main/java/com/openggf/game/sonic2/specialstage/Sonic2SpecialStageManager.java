@@ -2670,6 +2670,65 @@ public class Sonic2SpecialStageManager {
             ringsToGoEnabled = false;
         }
 
+        Sonic2SpecialStageSnapshot.ObjectManagerSnapshot captureRewindSnapshot() {
+            ArrayList<Sonic2SpecialStageSnapshot.ObjectSnapshot> objects = new ArrayList<>();
+            for (Sonic2SpecialStageObject object : activeObjects) {
+                objects.add(object.captureRewindSnapshot());
+            }
+            return new Sonic2SpecialStageSnapshot.ObjectManagerSnapshot(
+                    objectLocationData,
+                    stageOffsets,
+                    currentPosition,
+                    currentStage,
+                    lastProcessedSegment,
+                    ringsCollected,
+                    perfectRingsTotal,
+                    currentSpecialAct,
+                    noCheckpointFlag,
+                    noCheckpointMsgFlag,
+                    ringsToGoEnabled,
+                    emeraldSpawned,
+                    objects);
+        }
+
+        void restoreRewindSnapshot(Sonic2SpecialStageSnapshot.ObjectManagerSnapshot snapshot,
+                                   Sonic2SpecialStageManager owner) {
+            objectLocationData = Sonic2SpecialStageSnapshot.cloneByteArray(snapshot.objectLocationData());
+            stageOffsets = Sonic2SpecialStageSnapshot.cloneIntArray(snapshot.stageOffsets());
+            currentPosition = snapshot.currentPosition();
+            currentStage = snapshot.currentStage();
+            lastProcessedSegment = snapshot.lastProcessedSegment();
+            ringsCollected = snapshot.ringsCollected();
+            perfectRingsTotal = snapshot.perfectRingsTotal();
+            currentSpecialAct = snapshot.currentSpecialAct();
+            noCheckpointFlag = snapshot.noCheckpointFlag();
+            noCheckpointMsgFlag = snapshot.noCheckpointMsgFlag();
+            ringsToGoEnabled = snapshot.ringsToGoEnabled();
+            emeraldSpawned = snapshot.emeraldSpawned();
+
+            activeObjects.clear();
+            for (Sonic2SpecialStageSnapshot.ObjectSnapshot objectSnapshot : snapshot.activeObjects()) {
+                Sonic2SpecialStageObject object = switch (objectSnapshot.type()) {
+                    case RING -> {
+                        Sonic2SpecialStageRing ring = new Sonic2SpecialStageRing();
+                        ring.restoreRewindSnapshot(objectSnapshot);
+                        yield ring;
+                    }
+                    case BOMB -> {
+                        Sonic2SpecialStageBomb bomb = new Sonic2SpecialStageBomb();
+                        bomb.restoreRewindSnapshot(objectSnapshot);
+                        yield bomb;
+                    }
+                    case EMERALD -> {
+                        Sonic2SpecialStageEmerald emerald = new Sonic2SpecialStageEmerald();
+                        emerald.restoreRewindSnapshot(objectSnapshot, owner);
+                        yield emerald;
+                    }
+                };
+                activeObjects.add(object);
+            }
+        }
+
         /**
          * Resets the manager state.
          */

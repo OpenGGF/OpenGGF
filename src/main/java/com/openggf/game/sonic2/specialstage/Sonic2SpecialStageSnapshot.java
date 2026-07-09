@@ -208,6 +208,68 @@ final class Sonic2SpecialStageSnapshot {
         }
     }
 
+    enum SpecialStageObjectType {
+        RING,
+        BOMB,
+        EMERALD
+    }
+
+    record BaseObjectSnapshot(
+            Sonic2SpecialStageObject.State state,
+            int angle,
+            long depthFixed,
+            int screenX,
+            int screenY,
+            int trackFloorY,
+            int animIndex,
+            int animFrame,
+            int animTimer,
+            boolean onScreen,
+            boolean highPriority) {
+    }
+
+    record ObjectSnapshot(
+            SpecialStageObjectType type,
+            BaseObjectSnapshot base,
+            Integer ringSpinFrame,
+            Sonic2SpecialStageEmerald.EmeraldPhase emeraldPhase,
+            int emeraldPhaseTimer,
+            int emeraldBobbingOffset,
+            int emeraldBobbingCounter,
+            int emeraldRingRequirement,
+            boolean emeraldMusicFaded,
+            boolean emeraldAwarded) {
+    }
+
+    record ObjectManagerSnapshot(
+            byte[] objectLocationData,
+            int[] stageOffsets,
+            int currentPosition,
+            int currentStage,
+            int lastProcessedSegment,
+            int ringsCollected,
+            int perfectRingsTotal,
+            int currentSpecialAct,
+            boolean noCheckpointFlag,
+            boolean noCheckpointMsgFlag,
+            boolean ringsToGoEnabled,
+            boolean emeraldSpawned,
+            List<ObjectSnapshot> activeObjects) {
+        ObjectManagerSnapshot {
+            objectLocationData = Sonic2SpecialStageSnapshot.cloneByteArray(objectLocationData);
+            stageOffsets = Sonic2SpecialStageSnapshot.cloneIntArray(stageOffsets);
+            activeObjects = List.copyOf(activeObjects);
+        }
+
+        public byte[] objectLocationData() {
+            return Sonic2SpecialStageSnapshot.cloneByteArray(objectLocationData);
+        }
+
+        public int[] stageOffsets() {
+            return Sonic2SpecialStageSnapshot.cloneIntArray(stageOffsets);
+        }
+    }
+
     static byte[] cloneByteArray(byte[] source) {
         return source != null ? source.clone() : null;
     }
