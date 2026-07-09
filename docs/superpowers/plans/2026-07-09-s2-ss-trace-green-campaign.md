@@ -69,15 +69,19 @@ GameServices.configuration().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CO
 GameServices.configuration().setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
 Sonic2SpecialStageProvider provider = new Sonic2SpecialStageProvider();
 provider.initializeStage(0);
+provider.setLagCompensation(0); // CRITICAL: default 0.35 makes ~1/3 of update() calls early-return
+                                // (lag skip at Sonic2SpecialStageManager.java:990-996) — without this
+                                // the boundary assertions fail against a CORRECT implementation.
+                                // Matches S2SpecialStageReplayHarness.java:90.
 Sonic2SpecialStageManager manager = provider.getManager();
 ```
 
-Then the test bodies:
+(`SonicConfiguration` lives at `com.openggf.configuration.SonicConfiguration`.) Then the test bodies:
 
 ```java
 @Test
 void preRollSuppressesTrackAdvanceAndSpeedFactor() throws Exception {
-    // manager freshly initialized (ROM-free pattern)
+    // manager from the ROM-gated boot recipe above (lag compensation OFF)
     for (int f = 0; f < Sonic2SpecialStageIntro.PRE_ROLL_FRAMES; f++) {
         manager.update();
         Sonic2SpecialStageComparisonState s = manager.captureComparisonState();
@@ -91,7 +95,9 @@ void preRollSuppressesTrackAdvanceAndSpeedFactor() throws Exception {
 
 @Test
 void preRollPhaseIsRewindSnapshotted() throws Exception {
-    // capture during pre-roll, advance past it, restore, assert isPreRollActive() again true
+    // capture during pre-roll, advance past it, restore, assert isPreRollActive() again true.
+    // Entry points: manager.captureRewindSnapshot()/restoreRewindSnapshot() (intro path:
+    // Sonic2SpecialStageIntro.captureRewindSnapshot :420 / restoreRewindSnapshot :462).
 }
 ```
 
@@ -114,7 +120,7 @@ void preRollPhaseIsRewindSnapshotted() throws Exception {
 - Modify: `CHANGELOG.md`
 
 **Interfaces:**
-- Consumes: `intro.isPreRollActive()` and `Sonic2SpecialStageIntro.PRE_ROLL_FRAMES` (Task 2); Task 1 timeline (spawn tick = the `s2.asm:6628-6634` VInt, observed f23). Tests step `manager.update()` and therefore need the same ROM-gated provider boot as Task 2's tests (`assumeTrue(s2.gen)`, `new Sonic2SpecialStageProvider().initializeStage(0)`, `provider.getManager()`).
+- Consumes: `intro.isPreRollActive()` and `Sonic2SpecialStageIntro.PRE_ROLL_FRAMES` (Task 2); Task 1 timeline (spawn tick = the `s2.asm:6628-6634` VInt, observed f23). Tests step `manager.update()` and therefore need the same ROM-gated provider boot as Task 2's tests — the FULL recipe from Task 2 Step 1 INCLUDING `provider.setLagCompensation(0)` (without it the lag skip no-ops ~1/3 of updates and the spawn-tick assertion fails spuriously).
 - Produces: `Sonic2SpecialStagePlayer.isSpawned()` / package-private `setSpawned(boolean)`. While unspawned: player skips update/collision/render participation and `toComparisonPlayerState` returns null. Flag captured/restored in `Sonic2SpecialStageSnapshot` (player section). Players remain CONSTRUCTED at `initialize()` — the rewind topology invariant (`restorePlayerTopologyForRewind` throws on count change, `:2263-2264`) and `setupIntro()`'s team detection (`:395`) both depend on that.
 
 - [ ] **Step 1: Write the failing tests:**
