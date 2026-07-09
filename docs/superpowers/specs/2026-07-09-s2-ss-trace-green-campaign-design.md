@@ -84,7 +84,32 @@ and input enable. Rework `Sonic2SpecialStageIntro`'s phase timings
 `Sonic2SpecialStageManager.initialize()`/`update()` ordering to match — driven
 by the ROM mechanism, not by trace frame numbers.
 
-**Gating, not deferral (rewind invariant):** players stay constructed at
+**Two gates, not one.** The pre-roll has a player half and a global half, each
+needing an owning mechanism:
+
+**(a) Pre-roll phase (global half):** add a leading phase to
+`Sonic2SpecialStageIntro`'s machine (before DROP — e.g. `PRE_ROLL`) modeling the
+fade window. While active it suppresses everything the ROM hasn't started yet:
+`trackAnimator.update()` and the `drawingIndex` increment (both currently
+unconditional every frame — `Sonic2SpecialStageManager.java:1030,1043-1044`,
+commented "Track animation always runs (even during intro)"), the speed-factor
+set (engine currently constructs at 12; ROM sets it at `s2.asm:6640` —
+`captureComparisonState` reads it via `trackAnimator.getSpeedFactor()`, so the
+animator needs a pre-roll value of 0), and the banner DROP start. Folding the
+pre-roll into the intro `Phase` enum gives rewind-snapshot coverage for free
+(the intro phase machine is already captured, `Sonic2SpecialStageManager.java:2149`).
+**Boundary pinned:** the observable empty-slot window is the 23 recorded frames
+f0–f22 (the 22-iteration fade loop plus init work); the spawned flags and
+speed-factor set flip ON f23 — implement the phase length from the ROM
+mechanism, then verify against this window.
+**This retiming intentionally applies to normal (non-trace) play** — that is
+the substance of issue 4 — and the plan must verify it composes with the
+engine's existing SS-entry fade presentation rather than double-counting a
+pause. **Replay frame-0 anchor moves:** the predecessor spec's "frame 0 anchors
+to intro DROP phase start" is superseded — frame 0 now anchors to the pre-roll
+phase start immediately after `initializeStage()`.
+
+**(b) Gating, not deferral (player half; rewind invariant):** players stay constructed at
 `initialize()` — `restorePlayerTopologyForRewind`
 (`Sonic2SpecialStageManager.java:2263-2264`) throws when the player count
 changes across a rewind restore, and `setupIntro()`'s team detection reads the
@@ -106,7 +131,15 @@ record the new first root.
 Repeat the fix loop on whatever the report surfaces next. Anticipated (from the
 chain + known code): track phase residuals, ring-collection windows
 (`SS_Perfect_rings_left` / object touch), control-lock edges (jump/hurt input
-windows; `intro.isInputEnabled()` gating vs ROM's control flags), Tails CPU
+windows; `intro.isInputEnabled()` gating vs ROM's control flags), Tails CPU.
+**Control-lock adjudication:** no recorded field marks ROM control enablement
+directly — today it is inference-only through position cascade. The ROM's
+authoritative flag is `SpecialStage_Started` (RAM `0xDB23`; cleared
+`s2.asm:6585`, gates the gameplay loop `s2.asm:6689`, set when the
+ring-requirement message resolves `s2.asm:9745`). Since the recorder already
+owes a `LUA_SCRIPT_VERSION` bump, add `SpecialStage_Started` to the recorded
+stream (per-frame or aux transition events) during the first regen this stage
+needs, so control-unlock timing is compared directly. Continue with Tails CPU
 `SS_Ctrl_Record_Buf` semantics (shift order, delayed-tap index, P2-override
 branch conditions, `s2.asm:70411-70449`), bomb/hurt response, and the finish
 frame. Tier-1 green = flip the ratchet on (releases-blocking divergences fail
@@ -129,8 +162,17 @@ the test from then on).
 - **`getPlayerAnimFrameTimer()`:** replace the constant with a real decrementing
   counter (ROM `SSRun_Animation_Timers`, `s2.asm:960-982`) and START comparing
   the recorded `player_anim_frame_timer` column (currently recorded-not-compared).
-- Intro/message timing fields (`rings_togo_bcd`, message lifecycle aux events)
-  ratchet to errors once Stage 1's retiming lands.
+- **`rings_togo_bcd` mapping (defined):** the engine stores no rings-to-go
+  value — it is computed at render time as
+  `currentRingRequirement - getRingsCollected()`
+  (`Sonic2SpecialStageManager.java:1735`) — while the ROM's `SS_RingsToGoBCD`
+  is a BCD cell refreshed only on ring-check events. Comparison therefore uses
+  the same explicit-mapping treatment as `routine`/`track_duration_timer`:
+  decode BCD, and compare only at/after refresh points (gated on the recorded
+  `check_rings_flag`/`SS_TriggerRingsToGo` transitions), never raw per-frame
+  equality against the live subtraction.
+- Intro/message timing fields (message lifecycle aux events) ratchet to errors
+  once Stage 1's retiming lands.
 
 ### Stage 4 — Normal-play lag model (issue 3, non-replay half)
 
