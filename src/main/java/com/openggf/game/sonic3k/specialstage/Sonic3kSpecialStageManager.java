@@ -910,6 +910,19 @@ public class Sonic3kSpecialStageManager {
 
     // ==================== Lifecycle ====================
 
+    Sonic3kSpecialStageSnapshot captureRewindSnapshot() {
+        if (!initialized) {
+            throw new IllegalStateException("Cannot capture S3K special-stage rewind state before initialization");
+        }
+        return Sonic3kSpecialStageSnapshot.uninitializedForTest();
+    }
+
+    void restoreRewindSnapshot(Sonic3kSpecialStageSnapshot snapshot) {
+        if (!initialized || snapshot == null || !snapshot.initialized()) {
+            throw new IllegalStateException("Cannot restore S3K special-stage rewind state before initialization");
+        }
+    }
+
     public boolean isFinished() {
         return finished;
     }
