@@ -21,6 +21,23 @@ final class Sonic2SpecialStageSnapshot {
         this.emeraldCollected = emeraldCollected;
     }
 
+    record TrackAnimatorSnapshot(
+            byte[] stageLayout,
+            int layoutLength,
+            int currentSegmentIndex,
+            int currentFrameInSegment,
+            int frameDelayCounter,
+            int currentSegmentType,
+            boolean currentSegmentFlipped,
+            int speedFactor,
+            boolean stageComplete,
+            boolean orientationFlipped,
+            int lastOrientationFrame) {
+        TrackAnimatorSnapshot {
+            stageLayout = Sonic2SpecialStageSnapshot.cloneByteArray(stageLayout);
+        }
+    }
+
     static byte[] cloneByteArray(byte[] source) {
         return source != null ? source.clone() : null;
     }
