@@ -102,9 +102,10 @@ pre-roll into the intro `Phase` enum gives rewind-snapshot coverage for free
 f0–f22 (the 22-iteration fade loop plus init work); the spawned flags and
 speed-factor set flip ON f23 — implement the phase length from the ROM
 mechanism, then verify against this window. The 23rd frame (beyond the 22 fade
-iterations) must be attributed to a specific ROM VInt between fade end
-(`s2.asm:6546`) and object creation (`s2.asm:6628`) during implementation —
-never padded to make the count fit.
+iterations) must be attributed to a specific ROM VInt between the fade call's
+return (`s2.asm:6547`, immediately after the `bsr.w Pal_FadeToWhite` at
+`:6546`) and object creation (`s2.asm:6628`) during implementation — never
+padded to make the count fit.
 **This retiming intentionally applies to normal (non-trace) play** — that is
 the substance of issue 4 — and the plan must verify it composes with the
 engine's existing SS-entry fade presentation rather than double-counting a
