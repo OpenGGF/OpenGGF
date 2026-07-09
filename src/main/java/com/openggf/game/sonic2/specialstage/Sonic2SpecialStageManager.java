@@ -1177,7 +1177,7 @@ public class Sonic2SpecialStageManager {
      *
      * Invulnerability behavior:
      * - During hurt animation (routineSecondary != 0): NO collision with anything
-     * - During invulnerability (ssDplcTimer > 0, routineSecondary == 0):
+     * - During invulnerability (player countdown > 0, routineSecondary == 0):
      * - Rings CAN be collected
      * - Bombs CANNOT hit (player is invulnerable)
      * - Multiple bombs hitting same frame: Each plays sound (accurate to original)
@@ -1210,7 +1210,7 @@ public class Sonic2SpecialStageManager {
                     continue;
                 }
 
-                // For bombs only: also skip if invulnerable (ssDplcTimer > 0)
+                // For bombs only: also skip during player-owned post-hit invulnerability.
                 // Rings CAN be collected during invulnerability
                 if (obj.isBomb() && player.isInvulnerable()) {
                     continue;
@@ -2089,6 +2089,34 @@ public class Sonic2SpecialStageManager {
         currentStage = snapshot.currentStage;
         resultState = snapshot.resultState;
         emeraldCollected = snapshot.emeraldCollected;
+    }
+
+    void restorePlayerTopologyForRewind(
+            Sonic2SpecialStageSnapshot.PlayerTopologySnapshot topology,
+            java.util.List<Sonic2SpecialStageSnapshot.PlayerSnapshot> playerSnapshots) {
+        if (topology.slots().size() != players.size() || topology.slots().size() != playerSnapshots.size()) {
+            throw new IllegalStateException("Sonic 2 special-stage player count changed during rewind restore");
+        }
+        for (int i = 0; i < players.size(); i++) {
+            Sonic2SpecialStagePlayer player = players.get(i);
+            Sonic2SpecialStageSnapshot.PlayerSlotSnapshot slot = topology.slots().get(i);
+            if (player.getPlayerType() != slot.type() || player.isMainCharacter() != slot.mainCharacter()) {
+                throw new IllegalStateException("Sonic 2 special-stage player topology changed during rewind restore");
+            }
+            player.restoreRewindSnapshot(playerSnapshots.get(i));
+        }
+        sonicPlayer = topology.sonicSlotIndex() >= 0 ? players.get(topology.sonicSlotIndex()) : null;
+        tailsPlayer = topology.tailsSlotIndex() >= 0 ? players.get(topology.tailsSlotIndex()) : null;
+        if (topology.playersLinked()) {
+            sonicPlayer.setOtherPlayer(tailsPlayer);
+            tailsPlayer.setOtherPlayer(sonicPlayer);
+        } else {
+            if (sonicPlayer != null) sonicPlayer.setOtherPlayer(null);
+            if (tailsPlayer != null) tailsPlayer.setOtherPlayer(null);
+        }
+        if (renderer != null) {
+            renderer.setPlayers(players);
+        }
     }
 
     /**

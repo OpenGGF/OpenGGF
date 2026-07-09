@@ -3,9 +3,7 @@ package com.openggf.game.sonic2.specialstage;
 import com.openggf.game.GameServices;
 
 import com.openggf.audio.GameSound;
-import com.openggf.timer.Timer;
 import com.openggf.physics.TrigLookupTable;
-import com.openggf.timer.timers.SSInvulnerabilityTimer;
 
 import java.util.logging.Logger;
 
@@ -142,6 +140,7 @@ public class Sonic2SpecialStagePlayer {
     private static final int CTRL_RECORD_SIZE = 16;
 
     private boolean swapPositionsFlag;
+    private int invulnerabilityCountdown;
     private Sonic2SpecialStagePlayer otherPlayer;
 
 
@@ -199,6 +198,7 @@ public class Sonic2SpecialStagePlayer {
 
         collisionProperty = 0;
         swapPositionsFlag = false;
+        invulnerabilityCountdown = 0;
 
         for (int i = 0; i < CTRL_RECORD_SIZE; i++) {
             ctrlRecordBuf[i] = 0;
@@ -220,6 +220,10 @@ public class Sonic2SpecialStagePlayer {
     public void update(int heldButtons, int pressedButtons) {
         updateControlRecord(heldButtons);
 
+        if (invulnerabilityCountdown > 0) {
+            invulnerabilityCountdown--;
+        }
+
         switch (routine) {
             case NORMAL:
                 updateNormal(heldButtons, pressedButtons);
@@ -233,8 +237,6 @@ public class Sonic2SpecialStagePlayer {
             default:
                 break;
         }
-
-        // Invulnerability timer is now managed by TimerManager (SSInvulnerabilityTimer)
     }
 
     private void updateControlRecord(int buttons) {
@@ -721,7 +723,7 @@ public class Sonic2SpecialStagePlayer {
 
         collisionProperty = 0;
 
-        // Check invulnerability using Timer framework
+        // Check player-owned post-hit invulnerability.
         if (isInvulnerable()) {
             return;
         }
@@ -742,11 +744,7 @@ public class Sonic2SpecialStagePlayer {
         ssHurtTimer = (ssHurtTimer + 8) & 0xFF;
         if (ssHurtTimer == 0) {
             routineSecondary = 0;
-            // Register invulnerability timer (30 frames = 0x1E)
-            // Timer will call clearInvulnerability() when complete
-            String timerCode = getInvulnerabilityTimerCode();
-            GameServices.timers().registerTimer(
-                new SSInvulnerabilityTimer(timerCode, 0x1E, this));
+            invulnerabilityCountdown = 0x1E;
         }
 
         int displayAngle = (ssHurtTimer + angle - 0x10) & 0xFF;
@@ -791,41 +789,29 @@ public class Sonic2SpecialStagePlayer {
     public boolean isJumping() { return statusJumping; }
     public boolean isHurt() { return routineSecondary == 2; }
 
-    /**
-     * Checks if player is invulnerable (post-hurt invulnerability period).
-     * Uses the Timer framework - invulnerability is active while the timer exists.
-     */
     public boolean isInvulnerable() {
-        return GameServices.timers().getTimerForCode(getInvulnerabilityTimerCode()) != null;
+        return invulnerabilityCountdown > 0;
     }
 
-    /**
-     * Gets the remaining invulnerability ticks (for flashing effect).
-     * Returns 0 if not invulnerable.
-     */
     public int getInvulnerabilityTicks() {
-        Timer timer = GameServices.timers().getTimerForCode(getInvulnerabilityTimerCode());
-        return timer != null ? timer.getTicks() : 0;
+        return invulnerabilityCountdown;
     }
 
-    /**
-     * Gets the unique timer code for this player's invulnerability timer.
-     */
-    private String getInvulnerabilityTimerCode() {
-        return "SSInvulnerable-" + playerType.name();
-    }
-
-    /**
-     * Clears the invulnerability state. Called by SSInvulnerabilityTimer when complete.
-     */
     public void clearInvulnerability() {
-        // Timer is automatically removed by TimerManager when perform() returns true
-        // This method exists for any additional cleanup if needed
+        invulnerabilityCountdown = 0;
         LOGGER.fine("Invulnerability ended for " + playerType.name());
     }
 
     public PlayerType getPlayerType() { return playerType; }
     public RoutineState getRoutine() { return routine; }
+
+    boolean isMainCharacter() {
+        return isMainCharacter;
+    }
+
+    Sonic2SpecialStagePlayer getOtherPlayerForRewind() {
+        return otherPlayer;
+    }
 
     public void setOtherPlayer(Sonic2SpecialStagePlayer other) {
         this.otherPlayer = other;
@@ -845,5 +831,94 @@ public class Sonic2SpecialStagePlayer {
         }
         return ctrlRecordBuf[framesAgo];
     }
-}
 
+    Sonic2SpecialStageSnapshot.PlayerSnapshot captureRewindSnapshot() {
+        return new Sonic2SpecialStageSnapshot.PlayerSnapshot(
+                playerType,
+                isMainCharacter,
+                routine,
+                routineSecondary,
+                ssXPos,
+                ssXSub,
+                ssYPos,
+                ssYSub,
+                ssZPos,
+                xPos,
+                yPos,
+                xVel,
+                yVel,
+                inertia,
+                angle,
+                ssSlideTimer,
+                ssHurtTimer,
+                ssDplcTimer,
+                ssInitFlipTimer,
+                ssFlipTimer,
+                ssLastAngleIndex,
+                anim,
+                prevAnim,
+                animFrame,
+                animFrameDuration,
+                mappingFrame,
+                yRadius,
+                xRadius,
+                priority,
+                statusXFlip,
+                statusYFlip,
+                statusJumping,
+                statusSlowing,
+                renderXFlip,
+                renderYFlip,
+                collisionProperty,
+                globalAnimFrameTimer,
+                ctrlRecordBuf,
+                ctrlRecordIndex,
+                swapPositionsFlag,
+                invulnerabilityCountdown);
+    }
+
+    void restoreRewindSnapshot(Sonic2SpecialStageSnapshot.PlayerSnapshot snapshot) {
+        if (playerType != snapshot.playerType() || isMainCharacter != snapshot.mainCharacter()) {
+            throw new IllegalStateException("Sonic 2 special-stage player topology changed during rewind restore");
+        }
+        routine = snapshot.routine();
+        routineSecondary = snapshot.routineSecondary();
+        ssXPos = snapshot.ssXPos();
+        ssXSub = snapshot.ssXSub();
+        ssYPos = snapshot.ssYPos();
+        ssYSub = snapshot.ssYSub();
+        ssZPos = snapshot.ssZPos();
+        xPos = snapshot.xPos();
+        yPos = snapshot.yPos();
+        xVel = snapshot.xVel();
+        yVel = snapshot.yVel();
+        inertia = snapshot.inertia();
+        angle = snapshot.angle();
+        ssSlideTimer = snapshot.ssSlideTimer();
+        ssHurtTimer = snapshot.ssHurtTimer();
+        ssDplcTimer = snapshot.ssDplcTimer();
+        ssInitFlipTimer = snapshot.ssInitFlipTimer();
+        ssFlipTimer = snapshot.ssFlipTimer();
+        ssLastAngleIndex = snapshot.ssLastAngleIndex();
+        anim = snapshot.anim();
+        prevAnim = snapshot.prevAnim();
+        animFrame = snapshot.animFrame();
+        animFrameDuration = snapshot.animFrameDuration();
+        mappingFrame = snapshot.mappingFrame();
+        yRadius = snapshot.yRadius();
+        xRadius = snapshot.xRadius();
+        priority = snapshot.priority();
+        statusXFlip = snapshot.statusXFlip();
+        statusYFlip = snapshot.statusYFlip();
+        statusJumping = snapshot.statusJumping();
+        statusSlowing = snapshot.statusSlowing();
+        renderXFlip = snapshot.renderXFlip();
+        renderYFlip = snapshot.renderYFlip();
+        collisionProperty = snapshot.collisionProperty();
+        globalAnimFrameTimer = snapshot.globalAnimFrameTimer();
+        ctrlRecordBuf = Sonic2SpecialStageSnapshot.cloneIntArray(snapshot.ctrlRecordBuf());
+        ctrlRecordIndex = snapshot.ctrlRecordIndex();
+        swapPositionsFlag = snapshot.swapPositionsFlag();
+        invulnerabilityCountdown = snapshot.invulnerabilityCountdown();
+    }
+}

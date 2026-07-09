@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **feat(rewind): snapshot Sonic 2 special-stage player state.** Sonic 2 special-stage players now own rewind-capturable invulnerability countdown state, clone deterministic player control buffers, and can restore Sonic/Tails solo or linked topology while keeping renderer player bindings intact.
 - **feat(rewind): snapshot Sonic 2 special-stage track animator state.** The Sonic 2 special-stage track animator can now capture and restore its layout, segment timing, speed, completion, and orientation fields for future rewind adapter integration.
 - **feat(rewind): add the Sonic 2 special-stage rewind adapter shell.** Added the initial snapshot container and adapter delegation point for future Sonic 2 special-stage rewind state capture while keeping the provider capability disabled.
 - **feat(rewind): add held live rewind for Sonic 1 special stages.** Special-stage rewind now uses the existing keyframe-plus-input re-simulation controller with a special-stage stepper, provider capability gate, and a Sonic 1 runtime snapshot adapter. The scope is within-stage only; entering/exiting special stages still severs the level rewind timeline.
