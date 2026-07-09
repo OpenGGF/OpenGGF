@@ -33,10 +33,15 @@ Success criteria:
 `target/trace-reports/s2_special_stage_0_report.json` — 15,313 errors / 1,877
 warnings over 3,249 stepped frames — reduces to an ordered root chain:
 
+Frame numbers below are trace-frame indices from SS entry (they count every
+recorded frame including lag rows); the comparator *steps* 3,249 of them and the
+report's `total_frames` of 3,250 includes one extra finished-transition
+bookkeeping row.
+
 | First frame | Field | Root reading |
 |---|---|---|
-| f0–f22 | `*_present`, all player fields | ROM leaves player object slots empty for the first 23 frames of `GameMode_SpecialStage`; engine spawns both players immediately |
-| f0 | `speed_factor` exp 0 act 12 | ROM sets `SS_New_Speed_Factor=$C0000` later in init; engine initializes 12 at construction |
+| f0–f22 | `*_present`, all player fields | ROM's `SpecialStage:` entry runs `Pal_FadeToWhite` first (`s2.asm:6546`), a 22-iteration `WaitForVint` loop (`s2.asm:3570-3582`) executed with `Game_Mode` already `0x10` and the player object slots still empty; the engine spawns both players immediately |
+| f0 | `speed_factor` exp 0 act 12 | ROM sets player object ids only at `s2.asm:6628-6634` and `SS_New_Speed_Factor=$C0000` at `s2.asm:6640`, all after the fade; engine initializes 12 at construction. (The PLC/track wait loops at `s2.asm:6644-6658` run *after* object creation — they are not the source of this window) |
 | f4 | `track_anim_frame` +1 | track animation starts on the wrong phase relative to mode entry |
 | f195 | `current_segment` 0 vs 1 | engine track playback runs ahead (accumulated phase shift) |
 | f791 | `combined_rings` 1 vs 0 | first ring-collection timing (downstream of the shift) |
@@ -68,16 +73,29 @@ cascade. Issues 1 and 4 are largely THIS; issues 2 and 3 sit behind it.
 
 ### Stage 1 — Init/intro sequence alignment (the dominant root)
 
-Port the ROM's special-stage startup order faithfully: what runs on each of the
-first ~70 frames of `GameMode_SpecialStage` (PLC/art loads, palette, banner
-object creation, player object creation at ~f23, `SS_New_Speed_Factor` set,
-track animation start, `SS_player_anim_frame_timer` seeding, input enable).
-Rework `Sonic2SpecialStageIntro`'s phase timings (DROP/WAIT/MESSAGE_FLYOUT/
-GAMEPLAY) and `Sonic2SpecialStageManager.initialize()`/`update()` ordering to
-match — driven by the disasm's `SpecialStage` game-mode routine, not by trace
-frame numbers. The comparison snapshot's `present` semantics (player null until
-spawned) must be honored by deferring player construction or gating their
-visibility/participation exactly as ROM does.
+Port the ROM's special-stage startup order faithfully, per the disasm's
+`SpecialStage:` routine (`s2.asm:6537-6672`): the dominant pre-roll consumer is
+the 22-frame `Pal_FadeToWhite` loop (`s2.asm:3570-3582`, invoked at `:6546`),
+followed by init work, player object creation (`:6628-6634`),
+`SS_New_Speed_Factor` set (`:6640`), then the PLC/track wait loops
+(`:6644-6658`), track animation start, `SS_player_anim_frame_timer` seeding,
+and input enable. Rework `Sonic2SpecialStageIntro`'s phase timings
+(DROP/WAIT/MESSAGE_FLYOUT/GAMEPLAY) and
+`Sonic2SpecialStageManager.initialize()`/`update()` ordering to match — driven
+by the ROM mechanism, not by trace frame numbers.
+
+**Gating, not deferral (rewind invariant):** players stay constructed at
+`initialize()` — `restorePlayerTopologyForRewind`
+(`Sonic2SpecialStageManager.java:2263-2264`) throws when the player count
+changes across a rewind restore, and `setupIntro()`'s team detection reads the
+constructed players (`:395`), so deferring construction is off the table.
+Instead add a `spawned`/`active` flag on `Sonic2SpecialStagePlayer` that (a)
+gates participation (movement/collision/render) during the pre-roll exactly as
+ROM's empty slots do, (b) makes `toComparisonPlayerState`
+(`Sonic2SpecialStageManager.java:2442`) return null while unspawned so the
+comparator's `present` goes false — a small comparison-accessor change this
+stage owns — and (c) is captured in `Sonic2SpecialStageSnapshot` so rewinding
+into the pre-roll restores the unspawned state.
 
 Expected outcome: the f0–f22 cluster, `speed_factor` f0, `track_anim_frame` f4
 and most position/segment/ring/finish cascade collapse. Rerun, re-triage,
@@ -98,8 +116,12 @@ the test from then on).
 
 - **Per-player rings:** add per-player ring tracking to the engine mirroring the
   ROM's per-object `ss_rings_*` fields (`s2.asm:70771-70789`, summed for HUD
-  `s2.asm:9938-9943`); route collection through the touching player; keep the
-  combined total consistent. Then compare per-player rings as errors.
+  `s2.asm:9938-9943`). The collision path already knows the touching player
+  (`handleObjectCollision(obj, player)`,
+  `Sonic2SpecialStageManager.java:1234,1243`) — route collection through it,
+  AND convert bomb-hit ring loss (`loseRingsFromBombHit()`, `:1257`) to a
+  per-player debit on the hit player, matching ROM. Keep the combined total
+  consistent. Then compare per-player rings as errors.
 - **Snapshot extension:** add rings-to-go state, swap-positions flag (reconciled
   to a single ROM-faithful global instead of per-player copies), and hurt/slide/
   flip timers to `Sonic2SpecialStageComparisonState`; wire each into the
@@ -120,13 +142,25 @@ trace-derived state-keyed model:
   `speed_factor`, drawing index phase, live object count) and extract per-bucket
   lag ratios and burst-length patterns from the 5,299-frame schedule.
 - **Runtime:** a small `Sonic2SpecialStageLagModel` consulted once per frame in
-  the same place the accumulator lives today; deterministic (seeded by frame
-  counter/state, no RNG) so rewind/replay stay reproducible. Trace replay
-  continues to force it off (trace pacing governs there).
+  the same place the accumulator lives today. **Rewind constraint:** the model
+  must be a PURE FUNCTION of already-rewind-snapshotted inputs (`frameCounter`,
+  track animator segment/speed state, `drawingIndex`, live object count) with
+  NO carried per-frame state — `Sonic2SpecialStageSnapshot` currently restores
+  `lagCompensation`/`lagAccumulator` and `frameCounter`
+  (`Sonic2SpecialStageManager.java:2160,2195-2196`); the accumulator is removed
+  (its snapshot fields retired/repurposed in the same change), and burst
+  patterns must be expressed as arithmetic on `frameCounter` + state, never as
+  a new mutable counter — otherwise that counter must be added to the snapshot,
+  which this spec chooses to avoid. Trace replay continues to force the model
+  off (trace pacing governs there).
 - **Validation (defined):** for every (segment-type × speed-factor) bucket
   present in the trace, the model's lag ratio must be within ±5 percentage
-  points of the recorded ratio, and overall ratio within ±2 points of 1971/5299
-  (~37.2%); asserted by a JUnit test against the committed trace artifacts.
+  points of the recorded ratio, and overall ratio within ±2 points of the
+  recorded overall ratio (1971 lag rows / 5299 total rows ≈ 37.2%, computed
+  from the committed `physics.csv.gz` `lag` column — note this spans the full
+  recording INCLUDING the uncompared results tail; the validation test computes
+  both sides from the same artifact rather than hardcoding these counts);
+  asserted by a JUnit test against the committed trace artifacts.
   Perceived-speed eyeball via the visual SS session (jar test mode) at the end.
 - Keep the F1/F6/F7 lag overlay as a debug/tuning view over the new model.
 
