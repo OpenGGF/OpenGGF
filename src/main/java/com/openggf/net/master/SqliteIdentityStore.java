@@ -81,6 +81,11 @@ public final class SqliteIdentityStore implements IdentityStore {
     }
 
     @Override
+    public void resetCleanRounds(String fingerprint) {
+        execute("UPDATE identities SET clean_rounds = 0 WHERE fingerprint = ?", fingerprint);
+    }
+
+    @Override
     public void setDisplayName(String fingerprint, String displayName) {
         execute("UPDATE identities SET display_name = ? WHERE fingerprint = ?",
                 displayName, fingerprint);

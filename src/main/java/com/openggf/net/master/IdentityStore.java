@@ -19,6 +19,8 @@ public interface IdentityStore extends AutoCloseable {
 
     void recordCleanRound(String fingerprint, long nowMillis);
 
+    void resetCleanRounds(String fingerprint);
+
     void setDisplayName(String fingerprint, String displayName);
 
     void setTier(String fingerprint, String tier);
