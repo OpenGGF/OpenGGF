@@ -56,6 +56,16 @@ the corresponding BK2 input row without stepping (same precedent as
 compensator is disabled during replay (`setLagCompensation(0)`). Comparison is
 logic-frame to logic-frame, so it is exact.
 
+**Press-edge rule across lag rows:** the ROM polls controllers every V-int,
+*including lag frames* (`Vint_S2SS` → `ReadJoypads`, `s2.asm:837-840`), and
+`Joypad_Read` computes press bits as `newHeld & ~prevHeld` between consecutive
+polls (`s2.asm:1361-1387`). The fixture therefore computes press-edges against the
+previous **physical** BK2 row (not the last *stepped* row) — matching the existing
+`RecordingFrameDriver` behavior. A press that appears only on a lag row and is gone
+by the next stepped row is legitimately invisible to game logic, in both ROM and
+replay. With SS's high lag density this rule is load-bearing, so it is pinned here
+rather than inherited by assumption.
+
 Pacing and pad inputs are the only trace-derived data fed to the engine; the
 comparison-only invariant (no state hydration from trace) holds unchanged.
 
@@ -67,7 +77,15 @@ the recorded lag schedule is the data source for a future state-derived lag mode
 Derived from `s2_trace_recorder.lua` (v9.10). Behavior:
 
 - Idle until `Game_Mode` (`$FFFFF600`) `== 0x10` (`GameModeID_SpecialStage`); record
-  every emulated frame (including lag frames, flagged) until the mode exits.
+  every emulated frame (including lag frames, flagged) until `Game_Mode` changes.
+  **Note:** the ROM runs the entire results/ring-bonus tally (Obj6F) while still
+  under `Game_Mode == 0x10` — the mode only flips back to Level *after* the tally
+  and PLC wait complete (`s2.asm:6794-6813`). The recorded trace therefore includes
+  a results tail (~50-200+ frames) that the MVP fixture does **not** compare; it is
+  retained as data for future results-screen parity work.
+- Emit an aux `stage_finished` event at the frame the final checkpoint resolves
+  (the ROM-side equivalent of the engine's `isFinished()`, before
+  `Pal_FadeToWhite`/Obj6F). This marks the end of the compared range.
 - Assert SS mode is reached within a bounded frame count of movie start (guards
   against bk2 drift); record `bk2_frame_offset` at SS entry.
 
@@ -121,7 +139,9 @@ Extend `tools/bizhawk/record_s2_level_select_traces.ps1`:
   hard-require level/route concepts (`zone`, `zone_id`, `rom_zone_id`, `act`,
   `gameplay_segment`, per-act `zone_act_state` coverage) that have no SS analog —
   they gain an SS-profile validation branch (profile/stage-index/frame-count/
-  bk2-offset invariants) instead of reusing the level checks verbatim.
+  bk2-offset invariants) instead of reusing the level checks verbatim. The
+  frame-count invariant checks *total* recorded frames and must tolerate the
+  uncompared results tail (compared range ends at the `stage_finished` aux event).
   The input-column normalizer learns the `input_p2` column (zero for this bk2;
   needed for future human-P2-override traces).
 
@@ -138,9 +158,10 @@ New classes (test tree unless noted):
   transition (`TestSpecialStageStepperReplay.finishingDuringReplayDoesNotDispatchResults`),
   while this fixture must drive the same
   `handleInput` → `handlePlayer2Input` → `update()` sequence *and* own the finish
-  boundary: replay ends on the frame `SpecialStageProvider.isFinished()` fires
-  (the results screen's internals are out of MVP scope; the finish frame itself is
-  compared).
+  boundary: replay ends on the frame `SpecialStageProvider.isFinished()` fires,
+  which corresponds to the trace's `stage_finished` aux event (the recorded results
+  tail beyond it is not compared; the finish frame itself is, including that the
+  finish fires on the *matching* frame).
 - `AbstractS2SpecialStageTraceReplayTest` + concrete
   `TestS2SpecialStageTraceReplay` in `src/test/java/com/openggf/tests/trace/s2/`.
 
@@ -152,13 +173,33 @@ non-lag row → step fixture with that row's pad input; lag row → consume inpu
 stepping. Input validation per frame (BK2 vs CSV `input`), failing fast with
 `bk2_frame_offset` guidance.
 
+Frame 0 of the compared range is the first recorded frame with
+`Game_Mode == 0x10`; the fixture anchors it to a documented engine state
+immediately after `initializeStage()` (intro `DROP` phase start — the exact anchor
+frame is pinned during implementation, analogous to level traces'
+`alignFrameCountersForReplayStart`). `routine` values are compared through an
+explicit ROM↔engine mapping table (the ROM encodes hurt as a routine value; the
+engine models it as `routineSecondary == 2`), defined in the fixture, not by raw
+value equality.
+
 **Comparator tiers:**
 
-- Tier 1 (errors): per-player `ss_x`, `ss_y`, `ss_z`, `angle`, `routine`, rings;
+- Tier 1 (errors): per-player `ss_x`, `ss_y`, `ss_z`, `angle`, `routine`;
+  **combined** ring total (sum of the two players' BCD fields, decoded to binary);
   global `speed_factor`, `current_segment`, `track_anim_frame`.
-- Tier 2 (warnings initially, ratcheted to errors as fixes land): intro/message
-  timing, `rings_togo_bcd`, checkpoint flags, `tails_control_counter`,
+- Tier 2 (warnings initially, ratcheted to errors as fixes land): per-player rings,
+  intro/message timing, `rings_togo_bcd`, checkpoint flags, `tails_control_counter`,
   `track_drawing_index`, hurt/slide timers.
+
+**Per-player rings caveat:** the ROM tracks each player's ring pickups separately
+on their object slots (`ss_rings_*` at `objoff_3C..3E`; incremented per touching
+object `s2.asm:70771-70789`, summed for the HUD `s2.asm:9938-9943`). The engine has
+only a shared pool (`objectManager.collectRing()` regardless of which player
+touched; `Sonic2SpecialStagePlayer` has no rings field). Per-player rings are
+therefore *recorded* in the CSV but compared only as Tier-2 diagnostics until the
+follow-up fix plan adds per-player ring tracking to the engine (a real ROM-parity
+gap — the results screen tallies each player's rings separately). BCD fields are
+decoded to binary before comparison.
 
 Report JSON to `target/trace-reports/s2_special_stage_report.json` in the existing
 format (first-divergence brief compatible with `TraceTriageTool`).
@@ -203,6 +244,8 @@ and per-player state — no behavior change, no new mutators.
 ## Out of Scope (follow-ups)
 
 - Full round trip (level → SS → return transition validation).
+- Results/ring-bonus tally replay (recorded in the trace tail, uncompared for MVP).
+- Per-player ring tracking in the engine (follow-up fix; see comparator caveat).
 - All-7-stage complete-run traces; solo-Sonic / solo-Tails / human-P2 traces.
 - S1 special stage generalization (seams intentionally left).
 - All discrepancy fixes, including replacing the flat lag compensator for normal
