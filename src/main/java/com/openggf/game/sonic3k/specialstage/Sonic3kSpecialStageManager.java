@@ -914,12 +914,132 @@ public class Sonic3kSpecialStageManager {
         if (!initialized) {
             throw new IllegalStateException("Cannot capture S3K special-stage rewind state before initialization");
         }
-        return Sonic3kSpecialStageSnapshot.uninitializedForTest();
+        GameStateManager gameState = GameServices.gameStateOrNull();
+        return new Sonic3kSpecialStageSnapshot(
+                currentStage,
+                initialized,
+                finished,
+                emeraldCollected,
+                superEmeraldMode,
+                ringsCollected,
+                spheresLeft,
+                ringsLeft,
+                frameCounter,
+                heldButtons,
+                pressedButtons,
+                p2HeldButtons,
+                clearRoutine,
+                clearTimer,
+                emeraldTimer,
+                emeraldInteractIndex,
+                exitSpinStarted,
+                palFadeDelay,
+                musicSpedUp,
+                ringAnimTimer,
+                ringAnimFrame,
+                bannerPhase,
+                bannerTimer,
+                bannerOffset,
+                tailsAnimTimer,
+                tailsMappingFrame,
+                tailsTailsAnimTimer,
+                tailsTailsMappingFrame,
+                tailsJumping,
+                tailsJumpHeight,
+                tailsJumpVelocity,
+                tailsEnabled,
+                playerCharacter,
+                spriteDebugMode,
+                useSkLayouts,
+                gameState != null ? gameState.capture() : null,
+                grid.captureRewindSnapshot(),
+                player.captureRewindSnapshot(),
+                tailsAI.captureRewindSnapshot(),
+                collisionQueue.captureRewindSnapshot(),
+                ringConverter.captureRewindSnapshot(),
+                perspective.captureRewindSnapshot(),
+                background.captureRewindSnapshot(),
+                hud.captureRewindSnapshot(),
+                banner.captureRewindSnapshot(),
+                palette != null ? palette.captureRewindSnapshot() : null);
     }
 
     void restoreRewindSnapshot(Sonic3kSpecialStageSnapshot snapshot) {
         if (!initialized || snapshot == null || !snapshot.initialized()) {
             throw new IllegalStateException("Cannot restore S3K special-stage rewind state before initialization");
+        }
+        currentStage = snapshot.currentStage();
+        initialized = snapshot.initialized();
+        finished = snapshot.finished();
+        emeraldCollected = snapshot.emeraldCollected();
+        superEmeraldMode = snapshot.superEmeraldMode();
+        ringsCollected = snapshot.ringsCollected();
+        spheresLeft = snapshot.spheresLeft();
+        ringsLeft = snapshot.ringsLeft();
+        frameCounter = snapshot.frameCounter();
+        heldButtons = snapshot.heldButtons();
+        pressedButtons = snapshot.pressedButtons();
+        p2HeldButtons = snapshot.p2HeldButtons();
+        clearRoutine = snapshot.clearRoutine();
+        clearTimer = snapshot.clearTimer();
+        emeraldTimer = snapshot.emeraldTimer();
+        emeraldInteractIndex = snapshot.emeraldInteractIndex();
+        exitSpinStarted = snapshot.exitSpinStarted();
+        palFadeDelay = snapshot.palFadeDelay();
+        musicSpedUp = snapshot.musicSpedUp();
+        ringAnimTimer = snapshot.ringAnimTimer();
+        ringAnimFrame = snapshot.ringAnimFrame();
+        bannerPhase = snapshot.bannerPhase();
+        bannerTimer = snapshot.bannerTimer();
+        bannerOffset = snapshot.bannerOffset();
+        tailsAnimTimer = snapshot.tailsAnimTimer();
+        tailsMappingFrame = snapshot.tailsMappingFrame();
+        tailsTailsAnimTimer = snapshot.tailsTailsAnimTimer();
+        tailsTailsMappingFrame = snapshot.tailsTailsMappingFrame();
+        tailsJumping = snapshot.tailsJumping();
+        tailsJumpHeight = snapshot.tailsJumpHeight();
+        tailsJumpVelocity = snapshot.tailsJumpVelocity();
+        tailsEnabled = snapshot.tailsEnabled();
+        playerCharacter = snapshot.playerCharacter();
+        spriteDebugMode = snapshot.spriteDebugMode();
+        useSkLayouts = snapshot.useSkLayouts();
+
+        GameStateManager gameState = GameServices.gameStateOrNull();
+        if (gameState != null && snapshot.gameState() != null) {
+            gameState.restore(snapshot.gameState());
+        }
+        grid.restoreRewindSnapshot(snapshot.grid());
+        player.restoreRewindSnapshot(snapshot.player());
+        tailsAI.restoreRewindSnapshot(snapshot.tailsAi());
+        collisionQueue.restoreRewindSnapshot(snapshot.collisionQueue());
+        ringConverter.restoreRewindSnapshot(snapshot.ringConverter());
+        perspective.restoreRewindSnapshot(snapshot.perspective());
+        background.restoreRewindSnapshot(snapshot.background());
+        hud.restoreRewindSnapshot(snapshot.hud());
+        banner.restoreRewindSnapshot(snapshot.banner());
+        if (palette != null && snapshot.palette() != null) {
+            palette.restoreRewindSnapshot(snapshot.palette());
+            recacheRestoredPaletteForRewind();
+        }
+        restoreAudioSpeedForRewind();
+    }
+
+    private void recacheRestoredPaletteForRewind() {
+        if (palette == null) {
+            return;
+        }
+        try {
+            Sonic3kSpecialStagePaletteUploader.cacheAll(GameServices.graphics(), palette.getPalettes());
+        } catch (IllegalStateException ignored) {
+            // Headless unit tests can exercise snapshot restore without graphics services.
+        }
+    }
+
+    private void restoreAudioSpeedForRewind() {
+        try {
+            GameServices.audio().setSpeedMultiplier(musicSpedUp ? player.calculateMusicTempo() : 1);
+        } catch (IllegalStateException ignored) {
+            // Headless unit tests can exercise snapshot restore without audio services.
         }
     }
 
