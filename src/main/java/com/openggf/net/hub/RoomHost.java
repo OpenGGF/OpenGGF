@@ -185,6 +185,14 @@ public final class RoomHost {
         return (int) members.values().stream().filter(member -> member.admitted).count();
     }
 
+    /** Closes every transport currently owned by this ephemeral room. */
+    public void close(String reason) {
+        for (Member member : List.copyOf(members.values())) {
+            drop(member, reason);
+        }
+        expectedFingerprints.clear();
+    }
+
     public List<ControlMessage.PlayerInfo> players() {
         List<ControlMessage.PlayerInfo> result = new ArrayList<>();
         for (Member member : members.values()) {
