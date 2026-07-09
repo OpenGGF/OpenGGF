@@ -22,7 +22,7 @@
 - The trace test command used throughout:
   `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`
   Report lands at `target/trace-reports/s2_special_stage_0_report.json`.
-- Key anchors (verified during spec review): `Sonic2SpecialStageManager.java` — `drawingIndex++` `:1030`, `intro.update()` `:1040`, unconditional `trackAnimator.update()` `:1043-1044`, `updatePlayers()` gate on `intro.isInputEnabled()` `:1075`, `handleObjectCollision(obj, player)` `:1234/:1243`, `collectRing()` `:1247`, `loseRingsFromBombHit()` `:1257`, rings-to-go render calc `:1735`, intro-phase snapshot `:2149`, `restorePlayerTopologyForRewind` throw `:2263-2264`, speed-factor read via animator `:2416`, `toComparisonPlayerState` `:2442`; `Sonic2SpecialStageIntro.java` — phase machine `:76,134,188`, `isInputEnabled()` `:515`; `Sonic2TrackAnimator.java` — `speedFactor=12` default `:50,81`. Line numbers drift as tasks land — re-anchor by symbol, not number.
+- Key anchors (verified during spec review): `Sonic2SpecialStageManager.java` — `drawingIndex++` `:1030`, `intro.update()` `:1040`, unconditional `trackAnimator.update()` `:1043-1044`, `updatePlayers()` gate on `intro.isInputEnabled()` `:1080`, `handleObjectCollision(obj, player)` `:1234/:1243`, `collectRing()` `:1247`, `loseRingsFromBombHit()` `:1257`, rings-to-go render calc `:1735`, intro-phase snapshot `:2149`, `restorePlayerTopologyForRewind` throw `:2263-2264`, speed-factor read via animator `:2416`, `toComparisonPlayerState` `:2442`; `Sonic2SpecialStageIntro.java` — phase machine `:76,134,188`, `isInputEnabled()` `:515`; `Sonic2TrackAnimator.java` — `speedFactor=12` default `:50,81`. Line numbers drift as tasks land — re-anchor by symbol, not number.
 
 ---
 
@@ -32,8 +32,9 @@
 - Create: `docs/trace/s2-ss-init-timeline.md`
 
 **Interfaces:**
-- Produces: a frame-by-frame table of the ROM's `SpecialStage:` init (`s2.asm:6537-6672`) that Tasks 2–3 implement against and reviewers check fixes against. Columns: VInt # (0-based from `Game_Mode=0x10`), ROM action (with `s2.asm` line), observable RAM effects (which recorded csv/aux fields change).
+- Produces: a frame-by-frame table of the ROM's `SpecialStage:` init (`s2.asm:6537-6672`) that Tasks 2–3 implement against and reviewers check fixes against. Columns: VInt # (0-based from `Game_Mode=0x10`), ROM action (with `s2.asm` line), observable RAM effects (which recorded csv/aux fields change). The doc states the pre-roll length as a single number that Task 2 encodes as `Sonic2SpecialStageIntro.PRE_ROLL_FRAMES`.
 
+- [ ] **Step 0: Create the branch.** `git checkout develop && git checkout -b feature/ai-s2-ss-trace-green` (if the branch already exists, just check it out). All campaign work happens here.
 - [ ] **Step 1: Extract the timeline.** Read `docs/s2disasm/s2.asm:6537-6700` and the fade routine `:3570-3582`. Document: which VInts the 22 `Pal_FadeToWhite` iterations consume; the init work after the fade call's return (`:6547` onward — VDP setup, DMA fills, RAM clears, `ssInitTableBuffers`, `ssLdComprsdData`, `RunPLC_ROM`) and which of it consumes additional VInts; player object id writes (`:6628-6634`); `SS_New_Speed_Factor=$C0000` (`:6640`); `SpecialStage_Started` clear (`:6585`); the PLC/track wait loops (`:6644-6658`); the gameplay-loop gate (`:6689`). **Attribute the 23rd observed pre-roll frame (f0–f22 window, flip at f23) to a specific VInt — never pad.**
 - [ ] **Step 2: Cross-check against the committed trace.** Decompress `src/test/resources/traces/s2/special_stage/physics.csv.gz` and verify the table's predictions: `*_present` flips at f23, `speed_factor` 0→c at the predicted frame, `track_anim_frame` movement start. Note any mismatch in the doc with a resolution (the disasm wins; the trace verifies).
 - [ ] **Step 3: Commit** (`docs: S2 SS ROM init timeline reference`; trailers all `n/a`).
@@ -51,15 +52,15 @@
 
 **Interfaces:**
 - Consumes: Task 1's timeline (phase length + per-VInt actions).
-- Produces: `Sonic2SpecialStageIntro.Phase.PRE_ROLL` (first enum constant, active from `initialize()`); `intro.isPreRollActive()` (boolean); the manager suppresses, while pre-roll is active: `trackAnimator.update()`, the `drawingIndex` increment, and banner/DROP start. `Sonic2TrackAnimator` gains `void setSpeedFactorForInit(int)` used by the manager to model speed factor 0 during pre-roll and the ROM's set-to-12 at the timeline's `:6640` tick (the animator's constructed default becomes 0; 12 is applied at the modeled tick). Task 3 relies on `isPreRollActive()` for spawn timing.
+- Produces: `Sonic2SpecialStageIntro.Phase.PRE_ROLL` (first enum constant, active from `initialize()`); `public static final int Sonic2SpecialStageIntro.PRE_ROLL_FRAMES` (value from Task 1's doc); `intro.isPreRollActive()` (boolean); the manager suppresses, while pre-roll is active: `trackAnimator.update()`, the `drawingIndex` increment, and banner/DROP start. `Sonic2TrackAnimator` gains `void setSpeedFactorForInit(int)` used by the manager to model speed factor 0 during pre-roll and the ROM's set-to-12 at the timeline's `:6640` tick. **Both** speed-factor-12 writes in the animator become 0: the field initializer (`Sonic2TrackAnimator.java:50`) AND the reset inside `initialize(int)` (`:81`) — the manager's ROM boot calls the animator's `initialize()`, so missing `:81` would re-set 12 immediately on the real trace path and defeat the gate. Task 3 relies on `isPreRollActive()` + `PRE_ROLL_FRAMES` for spawn timing.
 
-- [ ] **Step 1: Write the failing tests** (mirror the ROM-free manager construction of `Sonic2SpecialStageTeamSetupTest`):
+- [ ] **Step 1: Write the failing tests.** These tests STEP `manager.update()`, which early-returns unless `initialized` (`Sonic2SpecialStageManager.java:979-981`, set only by the ROM-backed `initialize(int)` at `:376`) and needs a real `trackAnimator` (`:371`) — so unlike `Sonic2SpecialStageTeamSetupTest` they must be ROM-GATED: `Assumptions.assumeTrue(Files.exists(Path.of("s2.gen")))`, then boot via `new Sonic2SpecialStageProvider().initializeStage(0)` (mirror the ROM-backed boot in `S2SpecialStageReplayHarness` — see its bootstrap Javadoc) and use `provider.getManager()`:
 
 ```java
 @Test
 void preRollSuppressesTrackAdvanceAndSpeedFactor() throws Exception {
     // manager freshly initialized (ROM-free pattern)
-    for (int f = 0; f < PRE_ROLL_FRAMES; f++) {   // constant from Task 1 timeline
+    for (int f = 0; f < Sonic2SpecialStageIntro.PRE_ROLL_FRAMES; f++) {
         manager.update();
         Sonic2SpecialStageComparisonState s = manager.captureComparisonState();
         assertEquals(0, s.speedFactor(), "speed factor must be 0 during pre-roll, frame " + f);
@@ -95,7 +96,7 @@ void preRollPhaseIsRewindSnapshotted() throws Exception {
 - Modify: `CHANGELOG.md`
 
 **Interfaces:**
-- Consumes: `intro.isPreRollActive()` (Task 2); Task 1 timeline (spawn tick = the `s2.asm:6628-6634` VInt, observed f23).
+- Consumes: `intro.isPreRollActive()` and `Sonic2SpecialStageIntro.PRE_ROLL_FRAMES` (Task 2); Task 1 timeline (spawn tick = the `s2.asm:6628-6634` VInt, observed f23). Tests step `manager.update()` and therefore need the same ROM-gated provider boot as Task 2's tests (`assumeTrue(s2.gen)`, `new Sonic2SpecialStageProvider().initializeStage(0)`, `provider.getManager()`).
 - Produces: `Sonic2SpecialStagePlayer.isSpawned()` / package-private `setSpawned(boolean)`. While unspawned: player skips update/collision/render participation and `toComparisonPlayerState` returns null. Flag captured/restored in `Sonic2SpecialStageSnapshot` (player section). Players remain CONSTRUCTED at `initialize()` — the rewind topology invariant (`restorePlayerTopologyForRewind` throws on count change, `:2263-2264`) and `setupIntro()`'s team detection (`:395`) both depend on that.
 
 - [ ] **Step 1: Write the failing tests:**
@@ -103,7 +104,7 @@ void preRollPhaseIsRewindSnapshotted() throws Exception {
 ```java
 @Test
 void playersUnspawnedDuringPreRollAndSpawnAtRomTick() throws Exception {
-    for (int f = 0; f < PRE_ROLL_FRAMES; f++) {
+    for (int f = 0; f < Sonic2SpecialStageIntro.PRE_ROLL_FRAMES; f++) {
         manager.update();
         assertNull(manager.captureComparisonState().sonic(), "present must be false during pre-roll, frame " + f);
     }
@@ -173,12 +174,12 @@ void spawnedFlagSurvivesRewindRoundTrip() throws Exception {
 5. Frontier-log entry + commit (one commit per root; `Changelog: updated` when src/main changes).
 6. Repeat until zero Tier-1 errors.
 
-**Anticipated roots** (from the campaign spec — verify, don't assume): control-lock edges via the new `control_state` aux vs `intro.isInputEnabled()`/`SpecialStage_Started` modeling; Tails CPU `SS_Ctrl_Record_Buf` shift order / delayed-tap index / P2-override branches (`s2.asm:70411-70449`) vs `tailsCtrlRecordBuf` handling (`Sonic2SpecialStageManager.java:1419-1431`); ring-collection windows; bomb/hurt response (f2683 cluster in the baseline); track/segment residuals; the finish frame (baseline: engine finished 146 frames early — should largely close with Stage 1, remainder is course-speed parity).
+**Anticipated roots** (from the campaign spec — verify, don't assume): control-lock edges via the new `control_state` aux vs `intro.isInputEnabled()`/`SpecialStage_Started` modeling; Tails CPU `SS_Ctrl_Record_Buf` shift order / delayed-tap index / P2-override branches (`s2.asm:70411-70449`) vs `tailsCtrlRecordBuf` handling (`Sonic2SpecialStageManager.java:1424-1434` — shift `:1424`, P2 override `:1427-1434`); ring-collection windows; bomb/hurt response (f2683 cluster in the baseline); track/segment residuals; the finish frame (baseline: engine finished 146 frames early — should largely close with Stage 1, remainder is course-speed parity).
 
 **Exit steps:**
 
 - [ ] **Step A: Zero Tier-1 errors confirmed** on a clean run + determinism test byte-identical.
-- [ ] **Step B: Flip the ratchet.** In `AbstractS2SpecialStageTraceReplayTest`, enable `assertNoReleaseBlockingDivergences()` (the disabled hook from the pipeline project) so Tier-1 divergences now FAIL the test. Run twice to confirm green+green.
+- [ ] **Step B: Flip the ratchet.** In `AbstractS2SpecialStageTraceReplayTest`, the hook `assertNoReleaseBlockingDivergences()` is already INVOKED (`:134`) with an intentionally empty body (`:147-149`); replace the empty body with the exact line its own javadoc prescribes: `assertFalse(report.hasErrors(), report.toAssertionSummary());` — Tier-1 fields are `Severity.ERROR`, so `hasErrors()` gates exactly Tier-1. Run twice to confirm green+green.
 - [ ] **Step C: Commit** (`feat(trace): S2 SS trace Tier-1 green — ratchet on`; `Changelog: updated`) + frontier log.
 
 ---
@@ -251,7 +252,7 @@ void spawnedFlagSurvivesRewindRoundTrip() throws Exception {
 
 **Files:**
 - Create: `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageLagModel.java`
-- Modify: `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageManager.java` (accumulator replacement, `:985-991` region; overlay `:1838-1922`)
+- Modify: `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageManager.java` (accumulator replacement, `:990-991`; overlay `:1838-1922`)
 - Modify: `src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageSnapshot.java` (retire `lagAccumulator`)
 - Test: `src/test/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageLagModelValidationTest.java`
 - Modify: `CHANGELOG.md`
@@ -263,7 +264,7 @@ void spawnedFlagSurvivesRewindRoundTrip() throws Exception {
 - [ ] **Step 2: Run — FAIL** (model class absent).
 - [ ] **Step 3: Implement the model** (bucket table + deterministic within-bucket pattern expressed as arithmetic on `frameCounter`, e.g. threshold-accumulator computed as `(frameCounter * ratioNumerator) % denominator` — stateless equivalent of Bresenham pacing; burst shaping only if the ±5pp gate demands it).
 - [ ] **Step 4: Replace the accumulator.** In `update()` (`:985-991`): consult the model instead of `lagAccumulator`; delete the `lagCompensation`/`lagAccumulator` fields' pacing role (keep `setLagCompensation(0)` API as the replay force-off switch — semantics: any non-default value or a dedicated `setLagModelEnabled(false)` disables the model; pick the shape that keeps `S2SpecialStageReplayHarness` and `TraceSessionLauncher` working UNCHANGED, and state the choice in the commit). Retire the snapshot's `lagAccumulator` field per the snapshot's versioning conventions. Rework the F1/F6/F7 overlay (`:1838-1922`) to display the model's current bucket/ratio instead of the tunable constant.
-- [ ] **Step 5: Run — PASS** validation test + SS neighborhood + BOTH SS trace tests (replay must be unaffected — it forces the model off) + rewind tests in the package.
+- [ ] **Step 5: Run — PASS** validation test + SS neighborhood + BOTH SS trace tests (replay must be unaffected — it forces the model off via the three existing `setLagCompensation(0)` call sites: `S2SpecialStageReplayHarness.java:90`, `TraceSessionLauncher.java:269`, `TestSpecialStageVisualTraceSession.java:107`; keep that setter and gate the model off when the field is 0 so all three stay UNCHANGED) + rewind tests in the package. Run explicitly and adjust for the snapshot-arity change: `TestSonic2SpecialStageRewindSnapshot` and `Sonic2SpecialStageManagerTest` (both exercise lag fields; they reflect on field names, so keeping `lagCompensation` keeps them green — verify).
 - [ ] **Step 6: Visual eyeball.** Jar, normal SS play (not trace mode): perceived speed varies by section. Note in commit body.
 - [ ] **Step 7: Commit** (`feat(s2ss): trace-derived deterministic lag model replaces flat compensator`; `Changelog: updated`).
 
