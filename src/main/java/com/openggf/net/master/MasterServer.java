@@ -166,10 +166,8 @@ public final class MasterServer implements AutoCloseable {
     public void establishForTest(String fingerprint) {
         long now = System.currentTimeMillis();
         long firstSeen = now - config.thresholds().establishedAgeMillis() - 1;
-        store.persistOnDurableEvent(fingerprint, firstSeen, now);
-        for (int i = 0; i < config.thresholds().establishedCleanRounds(); i++) {
-            store.recordCleanRound(fingerprint, now);
-        }
+        store.establishForTest(fingerprint, firstSeen, now,
+                config.thresholds().establishedCleanRounds());
         ladder.tierOf(fingerprint);
     }
 

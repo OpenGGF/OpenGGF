@@ -158,6 +158,17 @@ public final class SqliteIdentityStore implements IdentityStore {
         }
     }
 
+    void establishForTest(String fingerprint, long firstSeenMillis, long nowMillis,
+                          int cleanRounds) {
+        execute("""
+                INSERT INTO identities
+                  (fingerprint, first_seen, last_seen, display_name, tier, clean_rounds)
+                VALUES (?, ?, ?, '', 'NEW', ?)
+                ON CONFLICT(fingerprint) DO UPDATE SET first_seen = excluded.first_seen,
+                  last_seen = excluded.last_seen, clean_rounds = excluded.clean_rounds,
+                  tier = 'NEW'""", fingerprint, firstSeenMillis, nowMillis, cleanRounds);
+    }
+
     private static IllegalStateException databaseFailure(SQLException cause) {
         return new IllegalStateException("identity store operation failed", cause);
     }

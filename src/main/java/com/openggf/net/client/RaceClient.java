@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
  * Network-thread WebSocket client. Listener callbacks only enqueue typed events;
  * the game thread owns all state mutation through {@link #drainInbound()}.
  */
-public final class RaceClient {
+public final class RaceClient implements RaceConnection {
     public static final long JOIN_TIMEOUT_MILLIS = 3000;
 
     public static final class JoinRejectedException extends RuntimeException {
@@ -55,6 +55,7 @@ public final class RaceClient {
     private volatile WebSocket webSocket;
     private volatile ControlMessage.JoinAccepted joinAccepted;
     private volatile boolean open;
+    private volatile String serverId;
     private CompletableFuture<?> sendChain = CompletableFuture.completedFuture(null);
 
     private RaceClient() {
@@ -141,8 +142,11 @@ public final class RaceClient {
                 }
                 try {
                     switch (message) {
-                        case ControlMessage.Welcome welcome -> client.enqueueSendText(
-                                ControlCodec.encode(null, handshake.onWelcome(welcome)));
+                        case ControlMessage.Welcome welcome -> {
+                            client.serverId = welcome.serverId();
+                            client.enqueueSendText(ControlCodec.encode(
+                                    null, handshake.onWelcome(welcome)));
+                        }
                         case ControlMessage.JoinAccepted accepted -> {
                             client.joinAccepted = accepted;
                             client.open = true;
@@ -243,6 +247,10 @@ public final class RaceClient {
 
     public boolean isOpen() {
         return open;
+    }
+
+    public String serverId() {
+        return serverId;
     }
 
     public void close() {

@@ -19,11 +19,15 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayDeque;
 import java.util.concurrent.Executor;
 
 /** Netty adapter routing one master socket between broker, relay room, and tunnel modes. */
 final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     private enum Mode { BROKER, ROOM, TUNNEL_GUEST }
+    private sealed interface PendingFrame { }
+    private record PendingText(String text) implements PendingFrame { }
+    private record PendingBinary(byte[] data) implements PendingFrame { }
 
     private final RoomBroker broker;
     private final RelayRoomManager relays;
@@ -39,6 +43,8 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
     private Mode mode = Mode.BROKER;
     private RelayRoomManager.RoomAccess roomAccess;
     private int guestId = -1;
+    private boolean brokerInFlight;
+    private final ArrayDeque<PendingFrame> pendingFrames = new ArrayDeque<>();
 
     MasterChannelHandler(RoomBroker broker, RelayRoomManager relays,
                          GuestTunnelRouter tunnels, Executor brokerLoop,
@@ -83,13 +89,22 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
             return;
         }
         if (frame instanceof TextWebSocketFrame text) {
+            if (brokerInFlight) {
+                pendingFrames.addLast(new PendingText(text.text()));
+                return;
+            }
             routeText(context, text.text());
         } else if (frame instanceof BinaryWebSocketFrame binary) {
             if (binary.content().readableBytes() > Protocol.MAX_MASTER_FRAME_BYTES) {
                 context.close();
                 return;
             }
-            routeBinary(context, ByteBufUtil.getBytes(binary.content()));
+            byte[] data = ByteBufUtil.getBytes(binary.content());
+            if (brokerInFlight) {
+                pendingFrames.addLast(new PendingBinary(data));
+                return;
+            }
+            routeBinary(context, data);
         }
     }
 
@@ -99,7 +114,11 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
             case ROOM -> roomAccess.loop().execute(() ->
                     roomAccess.room().onText(current, text));
             case TUNNEL_GUEST -> brokerLoop.execute(() -> tunnels.guestText(guestId, text));
-            case BROKER -> brokerLoop.execute(() -> routeBrokerText(context, current, text));
+            case BROKER -> {
+                brokerInFlight = true;
+                context.channel().config().setAutoRead(false);
+                brokerLoop.execute(() -> routeBrokerText(context, current, text));
+            }
         }
     }
 
@@ -115,10 +134,28 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
             } else {
                 broker.onText(current, text);
             }
-            broker.takeAttachResult(current).ifPresent(result ->
-                    context.executor().execute(() -> applyAttach(context, result)));
-        } catch (ProtocolViolationException e) {
+            var attach = broker.takeAttachResult(current);
+            context.executor().execute(() -> {
+                attach.ifPresent(result -> applyAttach(context, result));
+                brokerInFlight = false;
+                if (context.channel().isActive()) {
+                    context.channel().config().setAutoRead(true);
+                    context.read();
+                    drainPending(context);
+                }
+            });
+        } catch (RuntimeException e) {
             context.executor().execute(context::close);
+        }
+    }
+
+    private void drainPending(ChannelHandlerContext context) {
+        while (!brokerInFlight && !pendingFrames.isEmpty()
+                && context.channel().isActive()) {
+            switch (pendingFrames.removeFirst()) {
+                case PendingText text -> routeText(context, text.text());
+                case PendingBinary binary -> routeBinary(context, binary.data());
+            }
         }
     }
 
