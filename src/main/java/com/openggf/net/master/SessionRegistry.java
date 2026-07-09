@@ -60,7 +60,8 @@ public final class SessionRegistry {
             rooms.put(roomId, new RoomEntry(entry.roomId(), entry.descriptor(),
                     entry.routing(), entry.hostFingerprint(), entry.hostAddress(),
                     entry.directPort(), entry.determinismFingerprint(),
-                    Math.max(0, playerCount), clock.getAsLong()));
+                    Math.max(0, Math.min(playerCount, entry.descriptor().maxPlayers())),
+                    clock.getAsLong()));
         }
     }
 

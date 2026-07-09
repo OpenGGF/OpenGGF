@@ -22,7 +22,8 @@ public final class HostHandshake {
     public record Reject(String reason) implements Step {
     }
 
-    public record Admit(String fingerprint, String displayName, byte[] publicKeyEncoded)
+    public record Admit(String fingerprint, String displayName, byte[] publicKeyEncoded,
+                        String determinismFingerprint)
             implements Step {
         public Admit {
             publicKeyEncoded = publicKeyEncoded.clone();
@@ -44,6 +45,7 @@ public final class HostHandshake {
     private byte[] nonce;
     private byte[] publicKeyEncoded;
     private String displayName;
+    private String determinismFingerprint;
 
     public HostHandshake(String serverId, String requiredDeterminismFingerprint) {
         this.serverId = serverId;
@@ -57,7 +59,8 @@ public final class HostHandshake {
         if (hello.protocolVersion() != Protocol.VERSION) {
             return reject("protocol version mismatch");
         }
-        if (!requiredDeterminismFingerprint.equals(hello.determinismFingerprint())) {
+        if (requiredDeterminismFingerprint != null
+                && !requiredDeterminismFingerprint.equals(hello.determinismFingerprint())) {
             return reject("determinism fingerprint mismatch (different game build or ROM)");
         }
         try {
@@ -66,6 +69,7 @@ public final class HostHandshake {
             return reject("invalid public key");
         }
         displayName = hello.displayName() == null ? "" : hello.displayName();
+        determinismFingerprint = hello.determinismFingerprint();
         nonce = new byte[32];
         random.nextBytes(nonce);
         state = State.EXPECT_PROOF;
@@ -87,7 +91,8 @@ public final class HostHandshake {
             return reject("invalid signature");
         }
         state = State.DONE;
-        return new Admit(sha256Hex(publicKeyEncoded), displayName, publicKeyEncoded);
+        return new Admit(sha256Hex(publicKeyEncoded), displayName, publicKeyEncoded,
+                determinismFingerprint);
     }
 
     public static byte[] signedBytes(byte[] nonce, String serverId) {
