@@ -190,4 +190,17 @@ public class Sonic3kSpecialStagePalette {
     public Palette getPalette(int line) {
         return palettes[line & 3];
     }
+
+    Sonic3kSpecialStageSnapshot.PaletteSnapshot captureRewindSnapshot() {
+        return new Sonic3kSpecialStageSnapshot.PaletteSnapshot(
+                palettes,
+                stagePaletteData != null ? stagePaletteData.clone() : null,
+                fadeActive);
+    }
+
+    void restoreRewindSnapshot(Sonic3kSpecialStageSnapshot.PaletteSnapshot snapshot) {
+        Sonic3kSpecialStageSnapshot.copyPalettesInto(snapshot.palettes(), palettes);
+        stagePaletteData = snapshot.stagePaletteData() != null ? snapshot.stagePaletteData().clone() : null;
+        fadeActive = snapshot.fadeActive();
+    }
 }
