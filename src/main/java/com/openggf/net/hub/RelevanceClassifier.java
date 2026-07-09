@@ -16,15 +16,19 @@ public final class RelevanceClassifier {
     public static final int NEAR_EXIT_PX = 800;
     public static final int NEAR_CAP = 8;
 
-    private record Position(int x, int y) {
+    public record Pos(int x, int y) {
     }
 
-    private final Map<Integer, Position> positions = new HashMap<>();
+    private final Map<Integer, Pos> positions = new HashMap<>();
     private final Map<Integer, List<Integer>> buckets = new HashMap<>();
     private final Map<Integer, Set<Integer>> previousNear = new HashMap<>();
 
     public void updatePosition(int slot, int x, int y) {
-        positions.put(slot, new Position(x, y));
+        positions.put(slot, new Pos(x, y));
+    }
+
+    public Pos positionOf(int slot) {
+        return positions.get(slot);
     }
 
     public void remove(int slot) {
@@ -35,7 +39,7 @@ public final class RelevanceClassifier {
 
     public void rebucket() {
         buckets.clear();
-        for (Map.Entry<Integer, Position> entry : positions.entrySet()) {
+        for (Map.Entry<Integer, Pos> entry : positions.entrySet()) {
             int bucket = Math.floorDiv(entry.getValue().x(), BUCKET_PX);
             buckets.computeIfAbsent(bucket, ignored -> new ArrayList<>())
                     .add(entry.getKey());
@@ -43,7 +47,7 @@ public final class RelevanceClassifier {
     }
 
     public Set<Integer> nearSetFor(int slot) {
-        Position self = positions.get(slot);
+        Pos self = positions.get(slot);
         if (self == null) {
             return Set.of();
         }
@@ -57,7 +61,7 @@ public final class RelevanceClassifier {
                 if (peer == slot) {
                     continue;
                 }
-                Position other = positions.get(peer);
+                Pos other = positions.get(peer);
                 int distance = distance(self, other);
                 int threshold = wasNear.contains(peer) ? NEAR_EXIT_PX : NEAR_ENTER_PX;
                 if (distance <= threshold) {
@@ -79,7 +83,7 @@ public final class RelevanceClassifier {
         return Set.copyOf(result);
     }
 
-    private static int distance(Position left, Position right) {
+    private static int distance(Pos left, Pos right) {
         return Math.max(Math.abs(right.x() - left.x()),
                 Math.abs(right.y() - left.y()));
     }
