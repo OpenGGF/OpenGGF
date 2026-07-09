@@ -27,8 +27,11 @@ public final class RoomHost {
         String fingerprint;
         String displayName;
         String character;
+        long memberSinceMillis;
         long lastChatMillis = Long.MIN_VALUE;
         int tokenStrikes;
+        int violationsThisRound;
+        boolean finishedThisRound;
 
         Member(HubConnection connection, HostHandshake handshake, long connectedAt) {
             this.connection = connection;
@@ -43,19 +46,35 @@ public final class RoomHost {
     private final SessionTokenIssuer tokens = new SessionTokenIssuer();
     private final GhostHub hub;
     private final HostRoundEngine round;
+    private final RoomHostHooks hooks;
     private final Map<HubConnection, Member> members = new LinkedHashMap<>();
+    private final Map<HubConnection, String> expectedFingerprints = new LinkedHashMap<>();
 
     public RoomHost(RoomHostConfig config, PlayerIdentity hostIdentity,
                     LongSupplier wallClockMillis,
                     TrackValidationProfileSource profiles) {
+        this(config, hostIdentity, wallClockMillis, profiles, RoomHostHooks.none());
+    }
+
+    public RoomHost(RoomHostConfig config, PlayerIdentity hostIdentity,
+                    LongSupplier wallClockMillis,
+                    TrackValidationProfileSource profiles,
+                    RoomHostHooks hooks) {
         this.config = config;
         this.hostIdentity = hostIdentity;
         this.wallClockMillis = wallClockMillis;
+        this.hooks = hooks == null ? RoomHostHooks.none() : hooks;
         this.hub = new GhostHub(wallClockMillis, profiles,
-                (slot, fingerprint, kind, detail) -> System.getLogger(
-                        RoomHost.class.getName()).log(System.Logger.Level.WARNING,
-                        "ghost violation slot=" + slot + " fp=" + fingerprint + " "
-                                + kind + ": " + detail));
+                (slot, fingerprint, kind, detail) -> {
+                    Member member = memberForSlot(slot);
+                    if (member != null) {
+                        member.violationsThisRound++;
+                    }
+                    System.getLogger(RoomHost.class.getName()).log(
+                            System.Logger.Level.WARNING,
+                            "ghost violation slot=" + slot + " fp=" + fingerprint + " "
+                                    + kind + ": " + detail);
+                }, this.hooks.relevanceFiltering());
         this.round = new HostRoundEngine(wallClockMillis, this::broadcast);
         hub.setTrack(config.gameId(), config.zone(), config.act());
     }
@@ -65,6 +84,10 @@ public final class RoomHost {
                 new HostHandshake(hostIdentity.fingerprint(),
                         config.requiredDeterminismFingerprint()),
                 wallClockMillis.getAsLong()));
+    }
+
+    public void expectFingerprint(HubConnection connection, String fingerprint) {
+        expectedFingerprints.put(connection, fingerprint);
     }
 
     public void onText(HubConnection connection, String text) {
@@ -104,6 +127,7 @@ public final class RoomHost {
     }
 
     public void onDisconnected(HubConnection connection) {
+        expectedFingerprints.remove(connection);
         Member member = members.remove(connection);
         if (member != null && member.admitted) {
             removeAdmittedMember(member);
@@ -123,7 +147,18 @@ public final class RoomHost {
             drop(loiterer, "handshake timeout");
         }
         hub.tick();
+        HostRoundEngine.Phase previousPhase = round.phase();
         round.onTick();
+        if (previousPhase == HostRoundEngine.Phase.RUNNING
+                && round.phase() == HostRoundEngine.Phase.ROUND_END
+                && hooks.roundOutcomeListener() != null) {
+            for (Member member : List.copyOf(members.values())) {
+                if (member.admitted) {
+                    hooks.roundOutcomeListener().onRoundComplete(member.fingerprint,
+                            member.finishedThisRound && member.violationsThisRound == 0);
+                }
+            }
+        }
     }
 
     public boolean requestStartRound(ControlMessage.RoundConfig roundConfig) {
@@ -133,6 +168,10 @@ public final class RoomHost {
         }
         if (!round.startRound(roundConfig)) {
             return false;
+        }
+        for (Member member : members.values()) {
+            member.violationsThisRound = 0;
+            member.finishedThisRound = false;
         }
         hub.setTrack(roundConfig.gameId(), roundConfig.zone(), roundConfig.act());
         return true;
@@ -151,7 +190,9 @@ public final class RoomHost {
         for (Member member : members.values()) {
             if (member.admitted) {
                 result.add(new ControlMessage.PlayerInfo(member.slot, member.fingerprint,
-                        member.displayName, member.character));
+                        member.displayName, member.character,
+                        hooks.isNewPlayer() != null
+                                && hooks.isNewPlayer().test(member.fingerprint)));
             }
         }
         return List.copyOf(result);
@@ -190,6 +231,13 @@ public final class RoomHost {
     }
 
     private void admitMember(Member member, HostHandshake.Admit admit) {
+        String expected = expectedFingerprints.remove(member.connection);
+        if (expected != null && !expected.equals(admit.fingerprint())) {
+            member.connection.sendText(ControlCodec.encode(null,
+                    new ControlMessage.JoinRejected("identity mismatch")));
+            drop(member, "identity mismatch");
+            return;
+        }
         if (members.values().stream().anyMatch(existing -> existing.admitted
                 && existing.fingerprint.equals(admit.fingerprint()))) {
             member.connection.sendText(ControlCodec.encode(null,
@@ -211,6 +259,7 @@ public final class RoomHost {
                 ? admit.fingerprint().substring(0, 8) : admit.displayName();
         member.character = "LOCKED".equals(config.characterPolicy())
                 ? config.lockedCharacter() : "sonic";
+        member.memberSinceMillis = wallClockMillis.getAsLong();
         member.token = tokens.issue();
         hub.addPlayer(slot, member.fingerprint, member.connection);
         member.connection.sendText(ControlCodec.encode(null,
@@ -234,21 +283,30 @@ public final class RoomHost {
                 }
             }
             case ControlMessage.RoundConfigure configure -> {
-                if (member.fingerprint.equals(hostIdentity.fingerprint())) {
+                String owner = hooks.roundOwnerFingerprint() != null
+                        ? hooks.roundOwnerFingerprint() : hostIdentity.fingerprint();
+                if (member.fingerprint.equals(owner)) {
                     requestStartRound(configure.config());
                 }
             }
             case ControlMessage.AttemptStart ignored -> { }
             case ControlMessage.AttemptReset ignored -> { }
-            case ControlMessage.AttemptFinish finish -> round.onAttemptFinish(member.slot,
-                    member.displayName, member.character, finish,
-                    hub.isAttemptFlagged(member.slot));
+            case ControlMessage.AttemptFinish finish -> {
+                round.onAttemptFinish(member.slot, member.displayName, member.character,
+                        finish, hub.isAttemptFlagged(member.slot));
+                member.finishedThisRound = round.standings().stream()
+                        .anyMatch(row -> row.slot() == member.slot);
+            }
             default -> drop(member,
                     "illegal client message " + message.getClass().getSimpleName());
         }
     }
 
     private void handleChat(Member member, ControlMessage.Chat chat, long now) {
+        if (hooks.chatGate() != null
+                && !hooks.chatGate().mayChat(member.fingerprint, member.memberSinceMillis)) {
+            return;
+        }
         if (member.lastChatMillis != Long.MIN_VALUE
                 && now - member.lastChatMillis < Protocol.CHAT_MIN_INTERVAL_MILLIS) {
             return;
@@ -289,6 +347,7 @@ public final class RoomHost {
     }
 
     private void drop(Member member, String reason) {
+        expectedFingerprints.remove(member.connection);
         members.remove(member.connection);
         if (member.admitted) {
             removeAdmittedMember(member);
@@ -303,5 +362,14 @@ public final class RoomHost {
         tokens.revoke(member.token);
         hub.removePlayer(member.slot);
         round.onPlayerLeft(member.slot);
+    }
+
+    private Member memberForSlot(int slot) {
+        for (Member member : members.values()) {
+            if (member.admitted && member.slot == slot) {
+                return member;
+            }
+        }
+        return null;
     }
 }

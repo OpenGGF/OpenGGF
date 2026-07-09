@@ -76,7 +76,7 @@ class TestClientRaceSession {
     void standingsRoomStateChatAndKickUpdate() {
         ClientRaceSession session = session();
         session.onControl(new ControlMessage.RoomState(
-                List.of(new ControlMessage.PlayerInfo(0, "fp", "A", "sonic"))));
+                List.of(new ControlMessage.PlayerInfo(0, "fp", "A", "sonic", false))));
         assertEquals(1, session.players().size());
         session.onControl(new ControlMessage.StandingsDelta(
                 List.of(new ControlMessage.StandingsRow(0, "A", "sonic", 100, 1))));

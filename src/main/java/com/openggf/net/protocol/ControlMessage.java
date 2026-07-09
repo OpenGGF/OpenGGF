@@ -54,7 +54,11 @@ public sealed interface ControlMessage {
                           String lockedCharacter, int maxPlayers, boolean verified) {
     }
 
-    record PlayerInfo(int slot, String fingerprint, String displayName, String character) {
+    record PlayerInfo(int slot, String fingerprint, String displayName, String character,
+                      boolean newPlayer) {
+        public PlayerInfo(int slot, String fingerprint, String displayName, String character) {
+            this(slot, fingerprint, displayName, character, false);
+        }
     }
 
     record RoundConfig(String gameId, int zone, int act, int windowSeconds,

@@ -42,7 +42,7 @@ class TestControlCodec {
                 new ControlMessage.JoinRejected("room full"),
                 new ControlMessage.Kick("protocol violation"),
                 new ControlMessage.RoomState(
-                        List.of(new ControlMessage.PlayerInfo(0, "fp", "A", "sonic"))),
+                        List.of(new ControlMessage.PlayerInfo(0, "fp", "A", "sonic", false))),
                 new ControlMessage.SelectCharacter("tails"),
                 new ControlMessage.Chat("hi"),
                 new ControlMessage.ChatBroadcast(0, "A", "hi"),

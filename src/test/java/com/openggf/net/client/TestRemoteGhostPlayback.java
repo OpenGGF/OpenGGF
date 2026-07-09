@@ -103,8 +103,8 @@ class TestRemoteGhostPlayback {
     void registryRoutesAdvancesAndExcludesLocalSlot() {
         RemoteGhostRegistry registry = new RemoteGhostRegistry();
         registry.onRoomState(List.of(
-                new ControlMessage.PlayerInfo(0, "fp0", "A", "sonic"),
-                new ControlMessage.PlayerInfo(1, "fp1", "B", "tails")));
+                new ControlMessage.PlayerInfo(0, "fp0", "A", "sonic", false),
+                new ControlMessage.PlayerInfo(1, "fp1", "B", "tails", false)));
         for (int i = 0; i < 12; i += 3) {
             registry.onAggregate(new GhostPackets.Aggregate(i, List.of(
                     new GhostPackets.AggregateEntry(0, 1, i, 3, frames(i, 3)),
@@ -115,7 +115,7 @@ class TestRemoteGhostPlayback {
         assertEquals("A", ghosts.get(0).displayName());
         assertEquals("sonic", ghosts.get(0).character());
         registry.onRoomState(List.of(
-                new ControlMessage.PlayerInfo(1, "fp1", "B", "tails")));
+                new ControlMessage.PlayerInfo(1, "fp1", "B", "tails", false)));
         assertTrue(registry.advanceAll(1).isEmpty());
     }
 
@@ -123,7 +123,7 @@ class TestRemoteGhostPlayback {
     void resetDropsPlaybacksSoNextRoundAttemptIdsRestart() {
         RemoteGhostRegistry registry = new RemoteGhostRegistry();
         registry.onRoomState(List.of(
-                new ControlMessage.PlayerInfo(0, "fp0", "A", "sonic")));
+                new ControlMessage.PlayerInfo(0, "fp0", "A", "sonic", false)));
         for (int i = 0; i < 12; i += 3) {
             registry.onAggregate(new GhostPackets.Aggregate(i, List.of(
                     new GhostPackets.AggregateEntry(0, 5, i, 3, frames(i, 3)))));
