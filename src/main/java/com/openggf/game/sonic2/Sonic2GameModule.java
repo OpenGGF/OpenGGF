@@ -460,8 +460,6 @@ public class Sonic2GameModule implements GameModule {
                             java.util.Map.entry(CanonicalAnimation.WATER_SLIDE, CanonicalAnimation.SLIDE),
                             java.util.Map.entry(CanonicalAnimation.NULL_ANIM,   CanonicalAnimation.WAIT),
                             // S3K-specific animations -> nearest S2 native fallback
-                            java.util.Map.entry(CanonicalAnimation.BLINK,       CanonicalAnimation.WAIT),
-                            java.util.Map.entry(CanonicalAnimation.GET_UP,      CanonicalAnimation.WAIT),
                             java.util.Map.entry(CanonicalAnimation.VICTORY,     CanonicalAnimation.WAIT),
                             java.util.Map.entry(CanonicalAnimation.GLIDE_DROP,  CanonicalAnimation.SPRING),
                             java.util.Map.entry(CanonicalAnimation.GLIDE_LAND,  CanonicalAnimation.WAIT),

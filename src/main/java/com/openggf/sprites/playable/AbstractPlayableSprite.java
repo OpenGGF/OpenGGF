@@ -931,6 +931,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         latchedSolidObjectId, interactSlotIndex, slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
                         skidding, skidDustTimer, fixedSkidDustActive,
+                        controller.getMovement().captureLastFixedSkidDustTickFrame(),
                         wallClimbX, rightWallPenetrationTimer,
                         balanceState,
                         springing, springingFrames,
@@ -1073,6 +1074,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.skidding = extra.skidding();
                 this.skidDustTimer = extra.skidDustTimer();
                 this.fixedSkidDustActive = extra.fixedSkidDustActive();
+                controller.getMovement().restoreLastFixedSkidDustTickFrame(
+                                extra.lastFixedSkidDustTickFrame());
                 this.wallClimbX = extra.wallClimbX();
                 this.rightWallPenetrationTimer = extra.rightWallPenetrationTimer();
                 this.balanceState = extra.balanceState();

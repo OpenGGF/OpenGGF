@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -272,25 +274,10 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private PlayableEntity closestRomOrientationTarget(AbstractPlayableSprite player) {
-        PlayableEntity target = player;
-        int bestDistance = player != null ? Math.abs(currentX - player.getCentreX()) : Integer.MAX_VALUE;
-        List<PlayableEntity> sidekicks = services().sidekicks();
-        if (sidekicks == null || sidekicks.isEmpty()) {
-            return target;
-        }
-        for (PlayableEntity sidekick : sidekicks) {
-            if (sidekick == null) {
-                continue;
-            }
-            int distance = Math.abs(currentX - sidekick.getCentreX());
-            // Obj_GetOrientationToPlayer compares horizontal distance to Sonic
-            // and Tails, keeping Sonic on ties (docs/s2disasm/s2.asm:72812-72834).
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                target = sidekick;
-            }
-        }
-        return target;
+        ObjectPlayerQuery.NearestPlayerX nearest = services().playerQuery().nearestByRomX(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED,
+                currentX);
+        return nearest.player() != null ? nearest.player() : player;
     }
 
     /**

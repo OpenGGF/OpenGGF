@@ -141,7 +141,8 @@ class TestObjectPhysicsStandardizationGuard {
     // 2026-07-02: re-ratcheted 577 -> 584 for the post-45270bed9 S2 boss/prize
     // batch (bb69af121 merge); new implementations must still prefer
     // ObjectLifetimeOps.destroyLatched(...)/destroyRespawnableOffscreen(...).
-    private static final int RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET = 584;
+    // 2026-07-09: tightened 584 -> 583 after one raw call was migrated.
+    private static final int RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET = 583;
 // 2026-07-02: 10 -> 11 for the CPZ2 Obj7A trace-frontier fix (fca42ed8d),
     // whose direct addDynamicObject insert is part of the trace-validated slot
     // cadence; migrating it to spawnChild would change allocation order.
