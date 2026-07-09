@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -30,6 +31,19 @@ import java.util.logging.Logger;
  */
 public final class TimeAttackRuntime {
     private static final Logger LOGGER = Logger.getLogger(TimeAttackRuntime.class.getName());
+
+    /** Multiplayer bridge for spawn-anchored attempt lifecycle and frame streaming. */
+    public interface AttemptListener {
+        void onAttemptBegan(int attemptOrdinal);
+
+        void onFrameSampled(int attemptOrdinal, GhostFrame frame);
+
+        void onAttemptFinished(int attemptOrdinal, int timeFrames,
+                               int firstInputFrame, int finishFrame,
+                               byte[] inputRecordingSha256);
+
+        void onAttemptVoided(int attemptOrdinal);
+    }
 
     private final GhostStore store;
     private final java.nio.file.Path identityDir;
@@ -50,6 +64,9 @@ public final class TimeAttackRuntime {
     private int pendingHeldMask;
     private boolean pendingStartHeld;
     private GhostRenderRegistry registeredRegistry;
+    private AttemptListener attemptListener;
+    private int attemptOrdinal;
+    private Supplier<List<ActiveGhost>> extraGhostSupplier;
 
     public TimeAttackRuntime(GhostStore store, java.nio.file.Path identityDir,
                              java.util.function.BooleanSupplier launchBlocked) {
@@ -64,6 +81,7 @@ public final class TimeAttackRuntime {
             return;
         }
         this.launch = request;
+        this.attemptOrdinal = 0;
         if (identity == null) {
             try {
                 identity = com.openggf.net.identity.PlayerIdentity.loadOrCreate(identityDir);
@@ -77,6 +95,20 @@ public final class TimeAttackRuntime {
     public boolean isActive() { return launch != null; }
     public boolean isAttemptRunning() {
         return attempt != null && attempt.phase() == TimeAttackAttempt.Phase.RUNNING;
+    }
+
+    /** ARMED or RUNNING; spawn-idle attempts are already visible on the wire. */
+    public boolean isAttemptActive() {
+        return attempt != null && (attempt.phase() == TimeAttackAttempt.Phase.ARMED
+                || attempt.phase() == TimeAttackAttempt.Phase.RUNNING);
+    }
+
+    public void setAttemptListener(AttemptListener listener) {
+        this.attemptListener = listener;
+    }
+
+    public void setExtraGhostSupplier(Supplier<List<ActiveGhost>> supplier) {
+        this.extraGhostSupplier = supplier;
     }
 
     public TimeAttackLaunchRequest launch() { return launch; }
@@ -118,13 +150,28 @@ public final class TimeAttackRuntime {
                 LOGGER.log(Level.WARNING, "Skipping unreadable import " + extra, e);
             }
         }
+        attemptOrdinal++;
+        if (attemptListener != null) {
+            attemptListener.onAttemptBegan(attemptOrdinal);
+        }
     }
 
     public void markTainted() { tainted = true; }
 
     public void requestRetry() {
-        if (attempt != null) attempt.voidAttempt();
+        voidCurrentAttempt();
         retryRequested = true;
+    }
+
+    /** Voids an ARMED or RUNNING attempt exactly once. */
+    public void voidCurrentAttempt() {
+        if (!isAttemptActive()) {
+            return;
+        }
+        attempt.voidAttempt();
+        if (attemptListener != null) {
+            attemptListener.onAttemptVoided(attemptOrdinal);
+        }
     }
     public boolean consumeRetryRequested() {
         boolean r = retryRequested;
@@ -134,9 +181,9 @@ public final class TimeAttackRuntime {
 
     void tickForTest(int heldMask, boolean startHeld, boolean endOfLevel, int checkpointIndex,
                      GhostFrame sampledFrame) {
-        if (attempt == null) return;
+        if (!isAttemptActive()) return;
         if (capture.frameCount() >= GhostFileCodec.MAX_FRAMES) {
-            attempt.voidAttempt(); // ROM 10:00 time-over cap — over-cap ghosts can never exist
+            voidCurrentAttempt(); // ROM 10:00 time-over cap — over-cap ghosts can never exist
             return;
         }
         TimeAttackAttempt.Phase before = attempt.phase();
@@ -146,9 +193,18 @@ public final class TimeAttackRuntime {
         capture.capture(sampledFrame.x(), sampledFrame.y(), sampledFrame.mappingFrame(),
                 sampledFrame.hFlip(), sampledFrame.vFlip(), sampledFrame.priorityBucket(),
                 sampledFrame.highPriority(), attempt.phase() == TimeAttackAttempt.Phase.FINISHED);
+        if (attemptListener != null) {
+            attemptListener.onFrameSampled(attemptOrdinal, sampledFrame);
+        }
         if (before != TimeAttackAttempt.Phase.FINISHED
-                && attempt.phase() == TimeAttackAttempt.Phase.FINISHED && !tainted) {
-            persistIfBest();
+                && attempt.phase() == TimeAttackAttempt.Phase.FINISHED) {
+            if (!tainted) {
+                persistIfBest();
+            }
+            if (attemptListener != null) {
+                attemptListener.onAttemptFinished(attemptOrdinal, attempt.finalTimeFrames(),
+                        attempt.firstInputFrame(), attempt.finishFrame(), inputRecording.sha256());
+            }
         }
     }
 
@@ -238,7 +294,7 @@ public final class TimeAttackRuntime {
 
     private void renderGhostsForLayer(int bucket, boolean highPriority) {
         var sprites = GameServices.spritesOrNull();
-        if (sprites == null || opponents.isEmpty()) {
+        if (sprites == null) {
             return;
         }
         AbstractPlayableSprite player;
@@ -247,14 +303,42 @@ public final class TimeAttackRuntime {
         } catch (IllegalStateException e) {
             return;
         }
-        int cursorFrame = attemptFrameCountForPlayback();
-        List<ActiveGhost> active = new ArrayList<>(opponents.size());
-        for (int i = 0; i < opponents.size(); i++) {
-            GhostFrame frame = opponents.get(i).frameFor(cursorFrame);
-            active.add(new ActiveGhost("ghost" + i, opponentRecordings.get(i).header().character(), frame));
+        List<ActiveGhost> active = assembleActiveGhosts();
+        if (active.isEmpty()) {
+            return;
         }
         ghostRenderer.renderForLayer(active, bucket, highPriority,
                 player.getCentreX(), player.getCentreY());
+    }
+
+    private List<ActiveGhost> assembleActiveGhosts() {
+        int cursorFrame = attemptFrameCountForPlayback();
+        List<ActiveGhost> active = new ArrayList<>(Math.min(8, opponents.size() + 1));
+        for (int i = 0; i < opponents.size(); i++) {
+            if (active.size() >= 8) {
+                break;
+            }
+            GhostFrame frame = opponents.get(i).frameFor(cursorFrame);
+            active.add(new ActiveGhost("ghost" + i, opponentRecordings.get(i).header().character(), frame));
+        }
+        if (extraGhostSupplier != null && active.size() < 8) {
+            List<ActiveGhost> extras = extraGhostSupplier.get();
+            if (extras != null) {
+                for (ActiveGhost extra : extras) {
+                    if (active.size() >= 8) {
+                        break;
+                    }
+                    if (extra != null) {
+                        active.add(extra);
+                    }
+                }
+            }
+        }
+        return active;
+    }
+
+    List<ActiveGhost> activeGhostsForTest() {
+        return List.copyOf(assembleActiveGhosts());
     }
 
     public void beforeLevelFrame(InputHandler input) {
@@ -300,6 +384,8 @@ public final class TimeAttackRuntime {
         opponentRecordings.clear();
         launch = null;
         attempt = null;
+        attemptListener = null;
+        extraGhostSupplier = null;
         applyTimeAttackActiveFlag(GameServices.gameStateOrNull(), false);
     }
 }
