@@ -43,7 +43,8 @@ public record TraceMetadata(
     @JsonProperty("trace_type") String traceType,
     @JsonProperty("input_source") String inputSource,
     @JsonProperty("credits_demo_index") Integer creditsDemoIndex,
-    @JsonProperty("credits_demo_slug") String creditsDemoSlug
+    @JsonProperty("credits_demo_slug") String creditsDemoSlug,
+    @JsonProperty("special_stage_index") Integer specialStageIndex
 ) {
 
     /**
