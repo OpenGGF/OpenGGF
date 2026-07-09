@@ -12,24 +12,25 @@ $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $Routes = @(
-    [pscustomobject]@{ Route = "arz"; Zone = "arz"; Bk2 = "s2-lvl-select-ARZ.bk2"; EngineZone = 2; RomZone = 0x0F; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay" },
-    [pscustomobject]@{ Route = "arz2"; Zone = "arz"; Bk2 = "s2-lvl-select-ARZ.bk2"; EngineZone = 2; RomZone = 0x0F; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay" },
-    [pscustomobject]@{ Route = "cnz"; Zone = "cnz"; Bk2 = "s2-lvl-select-CNZ.bk2"; EngineZone = 3; RomZone = 0x0C; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay" },
-    [pscustomobject]@{ Route = "cnz2"; Zone = "cnz"; Bk2 = "s2-lvl-select-CNZ.bk2"; EngineZone = 3; RomZone = 0x0C; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay" },
-    [pscustomobject]@{ Route = "cpz"; Zone = "cpz"; Bk2 = "s2-lvl-select-CPZ.bk2"; EngineZone = 1; RomZone = 0x0D; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay" },
-    [pscustomobject]@{ Route = "cpz2"; Zone = "cpz"; Bk2 = "s2-lvl-select-CPZ.bk2"; EngineZone = 1; RomZone = 0x0D; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay" },
-    [pscustomobject]@{ Route = "dez_ending"; Zone = "dez"; Bk2 = "s2-lvl-select-DEZ-Ending.bk2"; EngineZone = 10; RomZone = 0x0E; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "parser-only" },
-    [pscustomobject]@{ Route = "htz"; Zone = "htz"; Bk2 = "s2-lvl-select-HTZ.bk2"; EngineZone = 4; RomZone = 0x07; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay" },
-    [pscustomobject]@{ Route = "htz2"; Zone = "htz"; Bk2 = "s2-lvl-select-HTZ.bk2"; EngineZone = 4; RomZone = 0x07; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay" },
-    [pscustomobject]@{ Route = "mcz"; Zone = "mcz"; Bk2 = "s2-lvl-select-MCZ.bk2"; EngineZone = 5; RomZone = 0x0B; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay" },
-    [pscustomobject]@{ Route = "mcz2"; Zone = "mcz"; Bk2 = "s2-lvl-select-MCZ.bk2"; EngineZone = 5; RomZone = 0x0B; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay" },
-    [pscustomobject]@{ Route = "mtz"; Zone = "mtz"; Bk2 = "s2-lvl-select-MTZ.bk2"; EngineZone = 7; RomZone = 0x04; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay" },
-    [pscustomobject]@{ Route = "mtz2"; Zone = "mtz"; Bk2 = "s2-lvl-select-MTZ.bk2"; EngineZone = 7; RomZone = 0x04; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay" },
-    [pscustomobject]@{ Route = "mtz3"; Zone = "mtz"; Bk2 = "s2-lvl-select-MTZ.bk2"; EngineZone = 7; RomZone = 0x05; StartAct = 3; ExpectedActs = @(0); Segment = 2; Mode = "replay" },
-    [pscustomobject]@{ Route = "ooz"; Zone = "ooz"; Bk2 = "s2-lvl-select-OOZ.bk2"; EngineZone = 6; RomZone = 0x0A; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay" },
-    [pscustomobject]@{ Route = "ooz2"; Zone = "ooz"; Bk2 = "s2-lvl-select-OOZ.bk2"; EngineZone = 6; RomZone = 0x0A; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay" },
-    [pscustomobject]@{ Route = "scz"; Zone = "scz"; Bk2 = "s2-lvl-select-SCZ.bk2"; EngineZone = 8; RomZone = 0x10; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay" },
-    [pscustomobject]@{ Route = "wfz"; Zone = "wfz"; Bk2 = "s2-lvl-select-WFZ.bk2"; EngineZone = 9; RomZone = 0x06; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay" }
+    [pscustomobject]@{ Route = "arz"; Zone = "arz"; Bk2 = "s2-lvl-select-ARZ.bk2"; EngineZone = 2; RomZone = 0x0F; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "arz2"; Zone = "arz"; Bk2 = "s2-lvl-select-ARZ.bk2"; EngineZone = 2; RomZone = 0x0F; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "cnz"; Zone = "cnz"; Bk2 = "s2-lvl-select-CNZ.bk2"; EngineZone = 3; RomZone = 0x0C; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "cnz2"; Zone = "cnz"; Bk2 = "s2-lvl-select-CNZ.bk2"; EngineZone = 3; RomZone = 0x0C; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "cpz"; Zone = "cpz"; Bk2 = "s2-lvl-select-CPZ.bk2"; EngineZone = 1; RomZone = 0x0D; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "cpz2"; Zone = "cpz"; Bk2 = "s2-lvl-select-CPZ.bk2"; EngineZone = 1; RomZone = 0x0D; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "dez_ending"; Zone = "dez"; Bk2 = "s2-lvl-select-DEZ-Ending.bk2"; EngineZone = 10; RomZone = 0x0E; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "parser-only"; Profile = "level" },
+    [pscustomobject]@{ Route = "htz"; Zone = "htz"; Bk2 = "s2-lvl-select-HTZ.bk2"; EngineZone = 4; RomZone = 0x07; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "htz2"; Zone = "htz"; Bk2 = "s2-lvl-select-HTZ.bk2"; EngineZone = 4; RomZone = 0x07; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "mcz"; Zone = "mcz"; Bk2 = "s2-lvl-select-MCZ.bk2"; EngineZone = 5; RomZone = 0x0B; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "mcz2"; Zone = "mcz"; Bk2 = "s2-lvl-select-MCZ.bk2"; EngineZone = 5; RomZone = 0x0B; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "mtz"; Zone = "mtz"; Bk2 = "s2-lvl-select-MTZ.bk2"; EngineZone = 7; RomZone = 0x04; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "mtz2"; Zone = "mtz"; Bk2 = "s2-lvl-select-MTZ.bk2"; EngineZone = 7; RomZone = 0x04; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "mtz3"; Zone = "mtz"; Bk2 = "s2-lvl-select-MTZ.bk2"; EngineZone = 7; RomZone = 0x05; StartAct = 3; ExpectedActs = @(0); Segment = 2; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "ooz"; Zone = "ooz"; Bk2 = "s2-lvl-select-OOZ.bk2"; EngineZone = 6; RomZone = 0x0A; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "ooz2"; Zone = "ooz"; Bk2 = "s2-lvl-select-OOZ.bk2"; EngineZone = 6; RomZone = 0x0A; StartAct = 2; ExpectedActs = @(1); Segment = 1; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "scz"; Zone = "scz"; Bk2 = "s2-lvl-select-SCZ.bk2"; EngineZone = 8; RomZone = 0x10; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "wfz"; Zone = "wfz"; Bk2 = "s2-lvl-select-WFZ.bk2"; EngineZone = 9; RomZone = 0x06; StartAct = 1; ExpectedActs = @(0); Segment = 0; Mode = "replay"; Profile = "level" },
+    [pscustomobject]@{ Route = "special_stage"; Zone = "special_stage"; Bk2 = "s2-lvl-select-special-stage.bk2"; EngineZone = 0; RomZone = 0; StartAct = 0; ExpectedActs = @(); Segment = 0; Mode = "replay"; Profile = "s2_special_stage" }
 )
 
 function Show-Usage {
@@ -297,6 +298,40 @@ function Assert-Metadata([object]$Route, [string]$TraceDir) {
     }
 }
 
+function Assert-SsMetadata([object]$Route, [string]$TraceDir) {
+    $metadataPath = Join-Path $TraceDir "metadata.json"
+    if (-not (Test-Path -LiteralPath $metadataPath)) {
+        throw "metadata.json missing in $TraceDir"
+    }
+    $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
+    if ($metadata.game -ne "s2") { throw "metadata.game expected s2, got $($metadata.game)" }
+    if ($metadata.trace_profile -ne "s2_special_stage") {
+        throw "metadata.trace_profile expected s2_special_stage, got $($metadata.trace_profile)"
+    }
+    if ($null -eq $metadata.special_stage_index -or [int]$metadata.special_stage_index -ne 0) {
+        throw "metadata.special_stage_index expected 0, got $($metadata.special_stage_index)"
+    }
+    if ($metadata.source_bk2 -ne $Route.Bk2) {
+        throw "metadata.source_bk2 expected $($Route.Bk2), got $($metadata.source_bk2)"
+    }
+    if ([int]$metadata.bk2_frame_offset -le 0) {
+        throw "metadata.bk2_frame_offset expected > 0, got $($metadata.bk2_frame_offset)"
+    }
+    if ([int]$metadata.trace_frame_count -le 0) {
+        throw "metadata.trace_frame_count expected > 0, got $($metadata.trace_frame_count)"
+    }
+
+    $rows = Get-PhysicsRows $TraceDir
+    if ($rows.Count -ne [int]$metadata.trace_frame_count) {
+        throw "metadata.trace_frame_count expected $($rows.Count) (gzipped physics.csv row count), got $($metadata.trace_frame_count)"
+    }
+}
+
+function Assert-SsTraceOutput([object]$Route, [string]$TraceDir) {
+    Assert-CompressedPayloads $TraceDir
+    Assert-SsMetadata $Route $TraceDir
+}
+
 function Assert-ZoneActCoverage([object]$Route, [string]$TraceDir) {
     $events = Get-AuxEvents $TraceDir
     $seenActs = New-Object System.Collections.Generic.HashSet[int]
@@ -385,6 +420,10 @@ $outputFullPath = if (Test-Path -LiteralPath $OutputRoot) {
 }
 $recordScript = Resolve-RepoPath "tools/bizhawk/record_s2_trace.bat"
 $traceOutput = Resolve-RepoPath "tools/bizhawk/trace_output"
+$runBizhawkLuaBat = Resolve-RepoPath "tools/bizhawk/run_bizhawk_lua.bat"
+$countBk2FramesScript = Resolve-RepoPath "tools/bizhawk/count_bk2_input_frames.ps1"
+$compressScript = Resolve-RepoPath "tools/traces/compress-traces.ps1"
+$ssLuaScript = Resolve-RepoPath "tools/bizhawk/s2_ss_trace_recorder.lua"
 
 foreach ($route in $selectedRoutes) {
     $bk2Path = Join-Path $moviesFullPath $route.Bk2
@@ -403,10 +442,33 @@ foreach ($route in $selectedRoutes) {
     New-Item -ItemType Directory -Path $traceOutput -Force | Out-Null
 
     Write-Host "=== Recording S2 route $($route.Route) from $($route.Bk2) ==="
-    $env:OGGF_TRACE_GAMEPLAY_SEGMENT = [string]$route.Segment
-    & $recordScript $romFullPath $bk2Path "level_gated_reset_aware"
-    if ($LASTEXITCODE -ne 0) {
-        throw "record_s2_trace.bat failed for $($route.Route) with exit code $LASTEXITCODE"
+    if ($route.Profile -eq "s2_special_stage") {
+        $frameCount = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $countBk2FramesScript -Bk2Path $bk2Path
+        if (-not $frameCount) {
+            throw "Failed to count BK2 input frames for $bk2Path"
+        }
+        $env:OGGF_BK2_BASENAME = $route.Bk2
+        $env:OGGF_BK2_FRAME_COUNT = [string]$frameCount
+
+        & $runBizhawkLuaBat $ssLuaScript $bk2Path $romFullPath
+        if ($LASTEXITCODE -ne 0) {
+            throw "run_bizhawk_lua.bat failed for $($route.Route) with exit code $LASTEXITCODE"
+        }
+
+        if (Test-Path -LiteralPath (Join-Path $traceOutput "metadata.json")) {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $compressScript $traceOutput -ThresholdBytes 0
+            if ($LASTEXITCODE -ne 0) {
+                throw "Trace compression failed for $($route.Route) with exit code $LASTEXITCODE"
+            }
+        } else {
+            throw "No trace output found in $traceOutput for route $($route.Route)"
+        }
+    } else {
+        $env:OGGF_TRACE_GAMEPLAY_SEGMENT = [string]$route.Segment
+        & $recordScript $romFullPath $bk2Path "level_gated_reset_aware"
+        if ($LASTEXITCODE -ne 0) {
+            throw "record_s2_trace.bat failed for $($route.Route) with exit code $LASTEXITCODE"
+        }
     }
 
     $targetDir = Join-Path $outputFullPath $route.Route
@@ -416,7 +478,11 @@ foreach ($route in $selectedRoutes) {
     Copy-Item -LiteralPath (Join-Path $traceOutput "aux_state.jsonl.gz") -Destination $targetDir -Force
     Copy-Item -LiteralPath $bk2Path -Destination $targetDir -Force
 
-    Normalize-PhysicsInputFromBk2 (Join-Path $targetDir $route.Bk2) $targetDir
-    Assert-TraceOutput $route $targetDir (Join-Path $targetDir $route.Bk2)
+    if ($route.Profile -eq "s2_special_stage") {
+        Assert-SsTraceOutput $route $targetDir
+    } else {
+        Normalize-PhysicsInputFromBk2 (Join-Path $targetDir $route.Bk2) $targetDir
+        Assert-TraceOutput $route $targetDir (Join-Path $targetDir $route.Bk2)
+    }
     Write-Host "Route $($route.Route) validated into $targetDir"
 }
