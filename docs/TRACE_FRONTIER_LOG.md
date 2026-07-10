@@ -40,6 +40,58 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage Stage 1: streamed Obj60/Obj61 init fallthrough
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on `c663163f69`. The f791 ring frontier
+had two independent causes. First, recurring `SSObjectsManager` added Obj60/Obj61
+to the engine list without the routine-0 fallthrough that the same ROM loop's
+later `RunObjects` scan performs. Second, the engine continued scanning both
+players after `ring.collect()` and incremented the shared counter even when the
+second call did not transition the ring. The ROM allocates before `RunObjects`,
+Obj60/Obj61 init falls through through depth/projection/animation/collision, and
+`Obj61_TestCollision` clears `collision_flags` on its first successful player
+(`s2.asm:6679-6688,6935-6967,70631-70665,70720-70752,70807-70877,70880-70923`).
+
+- PC-execute evidence: `C:\tmp\s2ss-ring-probe.txt`, SHA-256
+  `CFF5570952D0D4319E6EB0086EFBBC2F00D6392F7999B618D61CDE90B53D6DD8`.
+  At trace f674 / BizHawk f3428, streamed slot `$14` entered Obj60 init at
+  depth `$00400000`, changed routine 0→2, and fell through to drawing-index-4
+  depth `$003F3334`, projection/animation, and collision in the same object
+  scan. At trace f790 / BizHawk f3544, the ring moved `$0005999A`→`$0004CCCD`,
+  animation 7→8, cleared collision once, and incremented Sonic's ring count once;
+  the first compared observation was f791 with combined count 1. These values
+  verify the cited ROM flow; they are not engine predicates or timing constants.
+- RED command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest" test`
+- RED status: 2 failures / 0 errors. A streamed depth-$40 ring remained
+  `$00400000` instead of reaching `$003F3334`, and one anim-8 ring overlapping
+  initialized Sonic and Tails incremented the combined count to 2 instead of 1.
+- Review RED command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest" test`
+- Review RED status: 1 failure / 0 errors. With unsigned Sonic/Tails Z both
+  `$0080`, list-order collision hurt Sonic; ROM's `cmp.w`/`blo` ordering
+  requires Tails to be tested first and consume the bomb. The focused suite
+  passed after collision candidates were ordered by `ss_z_pos`, including the
+  ROM's Tails-first tie case (`s2.asm:70813-70836`).
+- GREEN/neighborhood command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageObjectSnapshot,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageRewindSnapshot,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageRewindAdapter,com.openggf.game.sonic2.specialstage.Sonic2SpecialStageSpawnGateTest,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" "-DfailIfNoTests=false" test`
+- GREEN status: PASS (focused cadence/collision, object snapshots, manager rewind,
+  spawn/bootstrap, determinism, and comparison-only target replay). No new mutable
+  latch or rewind field was introduced.
+- Before: 11,087 errors / 10 warnings; first error f791,
+  `combined_rings` expected `1`, actual `0`.
+- After (measured with the implementation and documentation uncommitted): 12,283
+  errors / 10 warnings; first error f799, `combined_rings` expected `1`, actual
+  `3`. The original Stage-1 15,313-error baseline is reduced by 19.79%, below the
+  >=50% Task-4 gate; this root-specific step increases total downstream errors by
+  10.79% while advancing the first trustworthy frontier eight frames.
+- Exact next root: paired-ring collision cadence at f799. The engine reaches
+  combined count 3 at f799 before the ROM's next compared f801 observation,
+  where the counts resynchronize; another pair is early at f808 (`expected=3`,
+  `actual=5`). This is a
+  transient timing mismatch rather than the former persistent two-player
+  double-count. Determine the later pair's allocation/update/collision timeline
+  before changing publication cadence; no lag, frame, route, or trace-data
+  predicate belongs in the fix.
+
 ## 2026-07-10 - S2 special-stage Stage 1: startup fade and pre-start RunObjects cadence
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

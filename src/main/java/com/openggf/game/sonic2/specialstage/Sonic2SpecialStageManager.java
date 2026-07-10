@@ -1340,9 +1340,46 @@ public class Sonic2SpecialStageManager {
         if (this.drawingIndex == 4 && lastDrawingIndex != 4) {
             int segmentIndex = trackAnimator.getCurrentSegmentIndex();
             int segmentType = trackAnimator.getCurrentSegmentType();
-            objectManager.processSegment(segmentIndex, segmentType);
+            List<Sonic2SpecialStageObject> streamedObjects =
+                    objectManager.processSegment(segmentIndex, segmentType);
+            if (playerBootstrapPhase == PlayerBootstrapPhase.INITIALIZED) {
+                executeStreamedObjectInitFallthrough(streamedObjects);
+            }
+            lastDrawingIndex = this.drawingIndex;
+            return;
         }
         lastDrawingIndex = this.drawingIndex;
+    }
+
+    /**
+     * Runs routine-0 fallthrough for real objects allocated by the recurring
+     * {@code SSObjectsManager -> RunObjects} pass. Obj60 and Obj61 both set
+     * routine 2 and continue through depth, projection, animation, and collision
+     * in that allocation-associated execution (s2.asm:6679-6688, 6935-6967,
+     * 70645-70665, 70731-70752). Marker-created emerald/message objects use
+     * different init routines and are intentionally left to their normal owner.
+     */
+    private void executeStreamedObjectInitFallthrough(List<Sonic2SpecialStageObject> streamedObjects) {
+        if (streamedObjects.isEmpty() || trackAnimator == null) {
+            return;
+        }
+
+        int currentFrame = trackAnimator.getCurrentTrackFrameIndex();
+        boolean flipped = trackAnimator.getEffectiveFlipState();
+        int speedFactor = trackAnimator.getSpeedFactor();
+        boolean drawingIndex4 = this.drawingIndex == 4;
+
+        for (Sonic2SpecialStageObject object : streamedObjects) {
+            if (!object.isRing() && !object.isBomb()) {
+                continue;
+            }
+            object.update(currentFrame, flipped, speedFactor, drawingIndex4);
+            if (perspectiveData != null) {
+                object.updateScreenPosition(perspectiveData, currentFrame, flipped);
+            }
+        }
+
+        checkObjectCollisions(streamedObjects);
     }
 
     /** Later-slot RunObjects-equivalent active object execution. */
@@ -1388,10 +1425,19 @@ public class Sonic2SpecialStageManager {
             return;
         }
 
+        checkObjectCollisions(objectManager.getActiveObjects());
+    }
+
+    private void checkObjectCollisions(List<Sonic2SpecialStageObject> objects) {
+        if (objectManager == null) {
+            return;
+        }
+
         // Collision threshold: ±10 angle units (0x0A), matching original game
         final int ANGLE_THRESHOLD = 10;
+        List<Sonic2SpecialStagePlayer> collisionCandidates = orderedCollisionCandidates();
 
-        for (Sonic2SpecialStageObject obj : objectManager.getActiveObjects()) {
+        for (Sonic2SpecialStageObject obj : objects) {
             // Only test collidable objects (animIndex == 8)
             if (!obj.isCollidable()) {
                 continue;
@@ -1400,7 +1446,7 @@ public class Sonic2SpecialStageManager {
             int objAngle = obj.getAngle() & 0xFF;
 
             // Test against each player
-            for (Sonic2SpecialStagePlayer player : players) {
+            for (Sonic2SpecialStagePlayer player : collisionCandidates) {
                 if (player == null) {
                     continue;
                 }
@@ -1428,25 +1474,65 @@ public class Sonic2SpecialStageManager {
                 // diff <= threshold means player is slightly ahead of object
                 // diff >= 256-threshold means player is slightly behind (wrapped)
                 if (diff <= ANGLE_THRESHOLD || diff >= (256 - ANGLE_THRESHOLD)) {
-                    handleObjectCollision(obj, player);
+                    if (handleObjectCollision(obj, player)) {
+                        break;
+                    }
                 }
             }
         }
     }
 
     /**
+     * Obj61_TestCollision compares the players' unsigned {@code ss_z_pos} words.
+     * Sonic is tested first only when his value is strictly lower; Tails wins
+     * ties and all greater-than cases (s2.asm:70813-70836).
+     */
+    private List<Sonic2SpecialStagePlayer> orderedCollisionCandidates() {
+        Sonic2SpecialStagePlayer sonic = null;
+        Sonic2SpecialStagePlayer tails = null;
+        for (Sonic2SpecialStagePlayer player : players) {
+            if (player == null) {
+                continue;
+            }
+            if (player.getPlayerType() == Sonic2SpecialStagePlayer.PlayerType.SONIC) {
+                sonic = player;
+            } else if (player.getPlayerType() == Sonic2SpecialStagePlayer.PlayerType.TAILS) {
+                tails = player;
+            }
+        }
+
+        if (sonic == null) {
+            return tails == null ? List.of() : List.of(tails);
+        }
+        if (tails == null) {
+            return List.of(sonic);
+        }
+
+        int sonicDepth = sonic.getSSZPos() & 0xFFFF;
+        int tailsDepth = tails.getSSZPos() & 0xFFFF;
+        return Integer.compareUnsigned(sonicDepth, tailsDepth) < 0
+                ? List.of(sonic, tails)
+                : List.of(tails, sonic);
+    }
+
+    /**
      * Handles a collision between a player and an object.
      */
-    private void handleObjectCollision(Sonic2SpecialStageObject obj, Sonic2SpecialStagePlayer player) {
+    private boolean handleObjectCollision(Sonic2SpecialStageObject obj, Sonic2SpecialStagePlayer player) {
         if (obj.isRing()) {
             Sonic2SpecialStageRing ring = (Sonic2SpecialStageRing) obj;
-            ring.collect();
+            if (!ring.collect()) {
+                return false;
+            }
             objectManager.collectRing();
             GameServices.audio().playSfx(GameSound.RING);
             LOGGER.fine("Collected ring! Total: " + objectManager.getRingsCollected());
+            return true;
         } else if (obj.isBomb()) {
             Sonic2SpecialStageBomb bomb = (Sonic2SpecialStageBomb) obj;
-            bomb.explode();
+            if (!bomb.explode()) {
+                return false;
+            }
             player.triggerHit();
             // Original game plays SndID_SlowSmash for bomb explosion
             GameServices.audio().playSfx(GameSound.SLOW_SMASH);
@@ -1457,7 +1543,9 @@ public class Sonic2SpecialStageManager {
             }
             LOGGER.fine("Hit bomb! Lost " + ringsLost + " rings. Remaining: " +
                     objectManager.getRingsCollected());
+            return true;
         }
+        return false;
     }
 
     /**

@@ -185,16 +185,45 @@ update, matching raw lag f161/f162. Conversely, drawing index zero at non-lag f1
 advances track frame 2→3 synchronously. Pending fixed-slot order is Sonic/Tails,
 then the START banner, then later dynamic objects/collisions.
 
-After these boundaries align, the next independent frontier is f791 ring
-collection: ROM has one ring while the engine still has zero, after which the
-engine over-collects to two and later six. That active-object/collision cadence is
-left for a separate correction rather than adding a frame, route, or trace-data
-exception here. The pipeline is therefore established through the first f791
-frontier only: downstream input onset, including the later f888 movement window,
-remains unadjudicated until the earlier ring root is corrected. The fact that CSV
-physical input precedes integer movement does not by itself prove another ROM
-logical-input latch beyond the `Ctrl_1` copy before `WaitForVint` at
-`s2.asm:6674-6680`.
+The f791 ring root confirms that recurring streaming and object execution are
+one ROM loop even though they have distinct owners. `SSObjectsManager` allocates
+the ring/bomb slots before `RunObjects` (`s2.asm:6679-6688,6935-6967`). Obj60 and
+Obj61 routine 0 both set routine 2 and fall through immediately through the
+normal depth, projection, animation, and collision paths
+(`:70631-70665,70720-70752,70880-70923`). Therefore an Obj60 allocated at depth
+`$00400000` while drawing index is 4 ends that allocation-associated object scan
+at `$003F3334`; the next scheduled active pass applies the next ordinary depth
+step. Startup duration-wait allocation remains different: the wait calls
+`SSObjectsManager` without `RunObjects`, and the already-modeled final startup
+scan owns its first execution. Marker-created emerald/message objects also keep
+their own init routines rather than inheriting Obj60/Obj61 fallthrough.
+
+`Obj61_TestCollision` orders the two players, tests the first, and returns carry
+immediately on success after clearing the object's collision byte
+(`s2.asm:70807-70877`). Its unsigned `ss_z_pos` comparison tests Sonic first only
+when Sonic Z is strictly lower; Tails is first when Sonic Z is greater or equal.
+The Obj60 caller increments exactly one player's counter and changes routine
+(`:70753-70804`). The engine consequently uses the same candidate order, treats
+collect or explode as a consumed transition, and stops the player scan after the
+first success; a ring overlapping both players can no longer add twice.
+
+The targeted PC-execute capture at `C:\tmp\s2ss-ring-probe.txt` (SHA-256
+`CFF5570952D0D4319E6EB0086EFBBC2F00D6392F7999B618D61CDE90B53D6DD8`) verifies
+those disassembly-owned transitions: trace f674 shows Obj60 routine 0→2 and
+depth `$00400000`→`$003F3334` in one allocation-associated scan, while trace
+f790 shows depth `$0005999A`→`$0004CCCD`, animation 7→8, collision clear, and a
+single Sonic count increment before compared f791. The probe values are evidence,
+not engine constants.
+
+With that correction, the first independent frontier is f799: the engine reaches
+combined count 3 while ROM remains at 1, then the counts resynchronize at f801.
+Another pair is transiently early at f808. This later paired-ring timing needs its
+own allocation/update/collision timeline; it does not justify a frame, lag,
+route, or trace-data exception. Downstream input onset, including the later f888
+movement window, remains unadjudicated until this earlier object root is resolved.
+The fact that CSV physical input precedes integer movement does not by itself
+prove another ROM logical-input latch beyond the `Ctrl_1` copy before
+`WaitForVint` at `s2.asm:6674-6680`.
 
 The raw rows explain why a direct `frame`-column lookup appears different from
 the required f23 boundary: raw f23-f126 are `lag=1` init rows and the replay
