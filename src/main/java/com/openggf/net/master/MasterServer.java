@@ -214,6 +214,19 @@ public final class MasterServer implements AutoCloseable {
         ladder.tierOf(fingerprint);
     }
 
+    /** Test-only deterministic TRUSTED promotion, invoked on the broker loop. */
+    public void trustForTest(String fingerprint) {
+        long now = System.currentTimeMillis();
+        long firstSeen = now - config.thresholds().trustedAgeMillis() - 1;
+        store.establishForTest(fingerprint, firstSeen, now,
+                config.thresholds().trustedCleanRounds());
+        ladder.tierOf(fingerprint);
+    }
+
+    public List<IdentityStore.VerdictRecord> verdictsForTest(String fingerprint) {
+        return store.verdictsFor(fingerprint);
+    }
+
     @Override
     public void close() {
         if (!closed.compareAndSet(false, true)) {

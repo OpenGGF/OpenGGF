@@ -313,6 +313,25 @@ Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SM
 | `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | bool | `false` | Development-only trust-all TLS mode for the master server. |
 | `TIME_ATTACK_HUD_MINIMAP` | `timeAttack.hud.minimap` | bool | `true` | Show the multiplayer minimap progress strip. |
 
+### Master verifier settings
+
+These keys belong in the standalone master server's YAML (`MasterServerMain
+--config`), not the engine's `config.yaml`:
+
+| YAML key | Default | Description |
+|----------|---------|-------------|
+| `verifierRegistrationToken` | disabled | Shared bootstrap token required by `openggf-verifier` workers. Keep it secret and rotate it if disclosed. |
+| `maxRecordingBytes` | `65536` | Maximum accepted input-only attempt recording size. |
+| `uploadDeadlineSeconds` | `180` | Casual spot-check upload deadline. |
+| `verifiedUploadDeadlineSeconds` | `15` | Verified-room upload deadline. |
+| `recordingRetentionDays` | `3` | Recording blob retention before scheduled deletion. |
+| `verdictGraceMillis` | `10000` | Extra verified-room result hold after the upload window. |
+| `spotCheckTopTimes` | `1` | Top casual standings entries selected for spot-checking. |
+| `cheatBanDays` | `0` | Failed-verification ban duration; `0` is permanent. |
+| `verifierStaleSeconds` | `120` | Worker heartbeat/registration age after which it is unavailable. |
+| `verifierLeaseSeconds` | `300` | Job lease duration before requeue. |
+| `publicBaseUrl` | `""` | Absolute public HTTPS base for recording requests; blank sends a relative path that clients resolve against their master URL. |
+
 ## Debug
 
 BK2 playback controls are unbound by default and must be rebound in `debug.playback`

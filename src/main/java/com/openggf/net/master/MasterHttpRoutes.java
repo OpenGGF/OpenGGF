@@ -30,6 +30,7 @@ import java.util.function.Predicate;
 /** Bounded HTTP recording and verifier API mounted ahead of the master WebSocket. */
 public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttpRequest> {
     private static final ObjectMapper JSON = new ObjectMapper();
+    private static final System.Logger LOG = System.getLogger(MasterHttpRoutes.class.getName());
 
     private record RegisterRequest(String pubKeyBase64, Set<String> fingerprints) { }
     private record RegisterResponse(String workerId, String workerToken) { }
@@ -66,7 +67,14 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
 
     @Override
     protected void channelRead0(ChannelHandlerContext context, FullHttpRequest request) {
-        String path = new QueryStringDecoder(request.uri()).path();
+        String path;
+        try {
+            path = new QueryStringDecoder(request.uri()).path();
+        } catch (IllegalArgumentException malformedUri) {
+            write(context, response(HttpResponseStatus.BAD_REQUEST),
+                    HttpUtil.isKeepAlive(request));
+            return;
+        }
         if (!path.startsWith("/recordings") && !path.startsWith("/verifier")) {
             context.fireChannelRead(request.retain());
             return;
@@ -82,9 +90,12 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
             } catch (IllegalArgumentException badRequest) {
                 response = response(HttpResponseStatus.BAD_REQUEST);
             } catch (RuntimeException serverFailure) {
+                LOG.log(System.Logger.Level.ERROR, "master HTTP route failed", serverFailure);
                 response = response(HttpResponseStatus.INTERNAL_SERVER_ERROR);
             }
-            write(context, response, data.keepAlive());
+            ResponseData completed = response;
+            context.executor().execute(() -> write(
+                    context, completed, data.keepAlive()));
         });
     }
 
@@ -250,6 +261,10 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
         if (keepAlive) {
             message.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
-        context.writeAndFlush(message);
+        context.writeAndFlush(message).addListener(future -> {
+            if (!future.isSuccess()) {
+                LOG.log(System.Logger.Level.ERROR, "master HTTP response write failed", future.cause());
+            }
+        });
     }
 }

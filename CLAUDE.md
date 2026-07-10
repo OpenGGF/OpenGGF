@@ -252,6 +252,21 @@ UI adapters belong in `com.openggf.game.timeattack.mp`.
   This deterministic mode measures hub aggregation CPU, not deployed socket
   throughput; run a separate socket-level load against the deployed TLS master.
 
+### Replay verifier (phase 5)
+
+- Enable worker registration on the master with a non-empty
+  `verifierRegistrationToken`. Verified rooms are relay-only and require a live
+  worker supporting the room's determinism fingerprint; their creator and
+  entrants must be `TRUSTED` identities.
+- Start a worker with operator-supplied ROMs:
+  `java -cp target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar com.openggf.tools.verifier.VerifierMain --master https://host:27900 --registration-token <token> --rom s3k.gen --data ./verifier-data`.
+  Repeat `--rom` for additional supported fingerprints. `--once` processes at
+  most one job; `--trust-insecure` is development-only.
+- The master stores input-only recording blobs under its data directory and
+  deletes them after `recordingRetentionDays`. ROM bytes never cross the
+  network. Worker verdicts are Ed25519-signed; failed verification sanctions
+  the submitting identity, while upload timeout voids are master-issued.
+
 ## Multi-Game Support Architecture
 
 Game-specific behavior is isolated behind the `GameModule` interface. `GameModuleRegistry` holds the current module, `RomDetectionService` auto-detects ROM type.

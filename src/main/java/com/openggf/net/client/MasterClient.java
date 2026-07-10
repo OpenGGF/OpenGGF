@@ -96,6 +96,10 @@ public final class MasterClient implements AutoCloseable {
         return future.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
 
+    public String masterSessionToken() {
+        return joinAccepted == null ? null : joinAccepted.sessionToken();
+    }
+
     public CompletableFuture<ControlMessage.RoomCreated> createRoom(
             ControlMessage.RoomDescriptor descriptor, String routing, int directPort,
             String determinismFingerprint) {

@@ -23,10 +23,12 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Random;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestMasterHttpRoutes {
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -170,6 +172,40 @@ class TestMasterHttpRoutes {
                         ownerSignature).status());
     }
 
+    @Test
+    void randomHttpRoutePermutationsStayBoundedAndKeepChannelAlive() {
+        Random random = new Random(0x51A7_E5L);
+        HttpMethod[] methods = {
+                HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT,
+                HttpMethod.DELETE, HttpMethod.PATCH
+        };
+        String[] fixedPaths = {
+                "/verifier/register", "/verifier/jobs", "/verifier/verdicts",
+                "/recordings/" + "0".repeat(64)
+        };
+        String[] authorizations = {
+                null, "Bearer session", "Bearer register-me", "Bearer invalid",
+                "Basic Zm9vOmJhcg=="
+        };
+        for (int iteration = 0; iteration < 5_000; iteration++) {
+            HttpMethod method = methods[random.nextInt(methods.length)];
+            String path = random.nextBoolean()
+                    ? fixedPaths[random.nextInt(fixedPaths.length)]
+                    : (random.nextBoolean() ? "/verifier/" : "/recordings/")
+                    + randomAscii(random, random.nextInt(96));
+            byte[] body = new byte[random.nextInt(129)];
+            random.nextBytes(body);
+            String authorization = authorizations[random.nextInt(authorizations.length)];
+            String workerId = random.nextBoolean()
+                    ? null : randomAscii(random, random.nextInt(65));
+
+            FullHttpResponse response = send(method, path, body, authorization, workerId);
+            assertTrue(response.status().code() >= 200 && response.status().code() < 600);
+            response.release();
+            assertTrue(channel.isOpen(), "route closed channel at iteration " + iteration);
+        }
+    }
+
     private WorkerAuth register(PlayerIdentity identity, Set<String> fingerprints)
             throws Exception {
         byte[] body = JSON.writeValueAsBytes(java.util.Map.of(
@@ -214,6 +250,14 @@ class TestMasterHttpRoutes {
         byte[] bytes = new byte[response.content().readableBytes()];
         response.content().getBytes(response.content().readerIndex(), bytes);
         return bytes;
+    }
+
+    private static String randomAscii(Random random, int length) {
+        StringBuilder value = new StringBuilder(length);
+        for (int index = 0; index < length; index++) {
+            value.append((char) ('!' + random.nextInt('~' - '!' + 1)));
+        }
+        return value.toString();
     }
 
     private static VerificationJobQueue.Job job(String fingerprint, String hash) {
