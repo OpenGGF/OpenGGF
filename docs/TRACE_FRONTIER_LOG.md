@@ -360,9 +360,21 @@ moves from f12910 (`y` expected `$056F`, actual `$056A`, following an incorrect
 ring spill) to f13141 (`y` expected `$04DC`, actual `$04E7`). Fresh full sweeps
 on this exact working tree pass all 29 S1 and all 48 S2 trace replays.
 
+Round 26 removes the normal collapsing log bridge's non-ROM previous-position
+landing gate. Both `loc_2AE98` and the fire path at `loc_2AF06` call
+`SolidObjectTop` after player movement and classify the current overlap. The
+extra engine gate required the prior frame to be inside the 16-pixel landing
+band, rejecting Sonic's valid fast downward 10-pixel overlap at f13141; the
+bridge now accepts that contact while retaining the next-dispatch standing-bit
+collapse arm (`sonic3k.asm:59269-59348,41793-42068`). Focused bridge, AIZ event,
+and bridge rewind suites pass. The complete-run frontier moves from f13141
+(`y` expected `$04DC`, actual `$04E7`) to f13469 (`y` expected `$022B`, actual
+`$0229`). The immediately preceding exact-tree full sweeps passed all 29 S1
+and all 48 S2 traces; this delta is confined to the S3K bridge implementation.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f13141.
+banked rounds the current stacked working-tree complete-run frontier is f13469.
 Those causes will be recorded and committed separately as their focused guards
 are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes
