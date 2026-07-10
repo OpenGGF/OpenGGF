@@ -168,7 +168,7 @@ class TestMultiplayerRaceCoordinator {
         List<ControlMessage.StandingsRow> top = new ArrayList<>();
         for (int rank = 1; rank <= 10; rank++) {
             top.add(new ControlMessage.StandingsRow(rank, "P" + rank,
-                    "sonic", 1000 + rank, rank));
+                    "sonic", 1000 + rank, rank, "NONE"));
         }
         rig.transport().inbound.add(new RaceClient.Control(
                 new ControlMessage.StandingsDelta(top)));
@@ -182,7 +182,7 @@ class TestMultiplayerRaceCoordinator {
         for (int rank = 11; rank <= 20; rank++) {
             int slot = rank == 16 ? 0 : rank;
             page.add(new ControlMessage.StandingsRow(slot, "P" + rank,
-                    "sonic", 1000 + rank, rank));
+                    "sonic", 1000 + rank, rank, "NONE"));
         }
         rig.transport().inbound.add(new RaceClient.Control(
                 new ControlMessage.StandingsPage(page, 1, 3)));

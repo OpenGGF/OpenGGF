@@ -32,10 +32,10 @@ class TestClientRaceSessionVote {
         ClientRaceSession session = new ClientRaceSession(() -> 0);
         session.applyJoin(new ControlMessage.JoinAccepted("tok", 2, null, null));
         session.onControl(new ControlMessage.RoundEnd(List.of(
-                new ControlMessage.StandingsRow(0, "ana", "sonic", 3000, 1),
-                new ControlMessage.StandingsRow(1, "bob", "tails", 3100, 2),
-                new ControlMessage.StandingsRow(2, "you", "knuckles", 3200, 3),
-                new ControlMessage.StandingsRow(3, "dan", "sonic", 3300, 4))));
+                new ControlMessage.StandingsRow(0, "ana", "sonic", 3000, 1, "NONE"),
+                new ControlMessage.StandingsRow(1, "bob", "tails", 3100, 2, "NONE"),
+                new ControlMessage.StandingsRow(2, "you", "knuckles", 3200, 3, "NONE"),
+                new ControlMessage.StandingsRow(3, "dan", "sonic", 3300, 4, "NONE"))));
         assertEquals(3, session.podiumTop(3).size());
         assertEquals(3, session.localStandingsRow().rank());
     }

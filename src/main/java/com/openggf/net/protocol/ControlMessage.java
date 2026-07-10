@@ -74,7 +74,7 @@ public sealed interface ControlMessage {
     }
 
     record StandingsRow(int slot, String displayName, String character,
-                        int bestTimeFrames, int rank) {
+                        int bestTimeFrames, int rank, String verifyState) {
     }
 
     record RoomSummary(String roomId, String name, String gameId, int zone, int act,

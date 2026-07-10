@@ -167,7 +167,7 @@ public final class HostRoundEngine {
             Map.Entry<Integer, Best> entry = sorted.get(index);
             Best best = entry.getValue();
             rows.add(new ControlMessage.StandingsRow(entry.getKey(), best.displayName(),
-                    best.character(), best.timeFrames(), index + 1));
+                    best.character(), best.timeFrames(), index + 1, "NONE"));
         }
         return List.copyOf(rows);
     }

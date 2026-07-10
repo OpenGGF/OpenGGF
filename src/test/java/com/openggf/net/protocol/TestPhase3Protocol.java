@@ -36,7 +36,7 @@ class TestPhase3Protocol {
                 new ControlMessage.RelayGuestText(7, "{\"v\":1}"),
                 new ControlMessage.StandingsPageRequest(2),
                 new ControlMessage.StandingsPage(List.of(new ControlMessage.StandingsRow(
-                        0, "A", "sonic", 3600, 41)), 2, 16),
+                        0, "A", "sonic", 3600, 41, "NONE")), 2, 16),
                 new ControlMessage.RankUpdate(41, 3600));
         for (ControlMessage message : messages) {
             assertEquals(message,

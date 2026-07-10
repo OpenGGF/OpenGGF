@@ -34,7 +34,7 @@ class TestControlCodec {
         ControlMessage.RoundConfig cfg =
                 new ControlMessage.RoundConfig("s3k", 0, 0, 300, "LOCKED", "sonic");
         List<ControlMessage.StandingsRow> rows =
-                List.of(new ControlMessage.StandingsRow(0, "A", "sonic", 3600, 1));
+                List.of(new ControlMessage.StandingsRow(0, "A", "sonic", 3600, 1, "NONE"));
         List<ControlMessage> all = List.of(
                 new ControlMessage.Hello(1, "a", "b", "c"),
                 new ControlMessage.Welcome(1, "bm9uY2U=", "serverfp"),

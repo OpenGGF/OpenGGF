@@ -21,9 +21,14 @@ public final class HudTextLayout {
     }
 
     public static String standingsLine(ControlMessage.StandingsRow row, String policy) {
-        return "%2d %-8s %s%s".formatted(row.rank(), row.displayName(),
+        String verification = switch (row.verifyState()) {
+            case "PENDING" -> " ..";
+            case "VERIFIED" -> " *";
+            default -> "";
+        };
+        return "%2d %-8s %s%s%s".formatted(row.rank(), row.displayName(),
                 characterBadge(policy, row.character()),
-                TimeAttackTimeFormat.frames(row.bestTimeFrames()));
+                TimeAttackTimeFormat.frames(row.bestTimeFrames()), verification);
     }
 
     public static List<String> podiumLines(List<ControlMessage.StandingsRow> podiumRows,

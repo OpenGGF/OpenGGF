@@ -61,7 +61,7 @@ class TestClientRaceSession {
         ControlMessage.RoundConfig config =
                 new ControlMessage.RoundConfig("s3k", 0, 0, 300, "OPEN", null);
         List<ControlMessage.StandingsRow> rows =
-                List.of(new ControlMessage.StandingsRow(0, "A", "sonic", 3600, 1));
+                List.of(new ControlMessage.StandingsRow(0, "A", "sonic", 3600, 1, "NONE"));
         session.applyJoin(new ControlMessage.JoinAccepted("tok", 2,
                 new ControlMessage.RoomDescriptor(
                         "LAN", "s3k", 0, 0, "OPEN", null, 8, false),
@@ -79,7 +79,7 @@ class TestClientRaceSession {
                 List.of(new ControlMessage.PlayerInfo(0, "fp", "A", "sonic", false))));
         assertEquals(1, session.players().size());
         session.onControl(new ControlMessage.StandingsDelta(
-                List.of(new ControlMessage.StandingsRow(0, "A", "sonic", 100, 1))));
+                List.of(new ControlMessage.StandingsRow(0, "A", "sonic", 100, 1, "NONE"))));
         assertEquals(100, session.standings().get(0).bestTimeFrames());
         for (int i = 0; i < 10; i++) {
             session.onControl(new ControlMessage.ChatBroadcast(0, "A", "msg" + i));

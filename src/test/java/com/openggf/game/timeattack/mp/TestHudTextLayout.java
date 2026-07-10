@@ -20,10 +20,12 @@ class TestHudTextLayout {
     @Test
     void podiumIncludesTopRowsAndLocalResult() {
         List<ControlMessage.StandingsRow> podium = List.of(
-                new ControlMessage.StandingsRow(0, "ana", "sonic", 1885, 1),
-                new ControlMessage.StandingsRow(1, "bob", "tails", 1990, 2));
+                new ControlMessage.StandingsRow(0, "ana", "sonic", 1885, 1, "VERIFIED"),
+                new ControlMessage.StandingsRow(1, "bob", "tails", 1990, 2, "PENDING"));
         List<String> lines = HudTextLayout.podiumLines(podium, 4, podium, 9, "OPEN");
         assertEquals("ROUND OVER", lines.getFirst());
+        assertTrue(lines.get(1).endsWith(" *"));
+        assertTrue(lines.get(2).endsWith(" .."));
         assertTrue(lines.get(1).contains("[S]"));
         assertTrue(lines.getLast().startsWith("YOU: #4"));
         assertEquals("YOU: no time",
