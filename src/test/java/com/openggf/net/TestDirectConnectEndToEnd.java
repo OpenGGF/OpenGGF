@@ -78,7 +78,8 @@ class TestDirectConnectEndToEnd {
         PlayerIdentity hostIdentity = PlayerIdentity.loadOrCreate(dir.resolve("host"));
         server = RaceHostServer.start(0,
                 new RoomHostConfig("E2E", "s3k", 0, 0,
-                        "OPEN", null, 8, FP),
+                        "OPEN", null, 8, FP,
+                        List.of("s3k:0:0", "s3k:0:1", "s3k:1:0")),
                 hostIdentity, TrackValidationProfileSource.none());
         proxy = new LatencyProxy("127.0.0.1", server.port(), 120);
 
@@ -129,6 +130,38 @@ class TestDirectConnectEndToEnd {
 
         await(host, event -> isMessage(event, ControlMessage.RoundEnd.class), 15_000);
         await(guest, event -> isMessage(event, ControlMessage.RoundEnd.class), 15_000);
+
+        ControlMessage.TrackVoteOffer offer = (ControlMessage.TrackVoteOffer)
+                ((RaceClient.Control) await(host,
+                        event -> isMessage(event, ControlMessage.TrackVoteOffer.class),
+                        15_000)).message();
+        await(guest, event -> isMessage(event, ControlMessage.TrackVoteOffer.class), 10_000);
+        String winner = offer.trackKeys().getFirst();
+        guest.sendControl(new ControlMessage.TrackVote(winner));
+        await(host, event -> event instanceof RaceClient.Control control
+                        && control.message() instanceof ControlMessage.TrackVoteTally tally
+                        && tally.counts().stream().anyMatch(count ->
+                        count.trackKey().equals(winner) && count.votes() == 1),
+                10_000);
+        await(host, event -> event instanceof RaceClient.Control control
+                        && control.message() instanceof ControlMessage.TrackVoteResult result
+                        && result.trackKey().equals(winner),
+                20_000);
+        await(guest, event -> isMessage(event, ControlMessage.TrackVoteResult.class), 10_000);
+
+        String[] winnerParts = winner.split(":");
+        ControlMessage.RoundConfig next = new ControlMessage.RoundConfig(
+                winnerParts[0], Integer.parseInt(winnerParts[1]),
+                Integer.parseInt(winnerParts[2]), 4, "OPEN", null);
+        host.sendControl(new ControlMessage.RoundConfigure(next));
+        ControlMessage.RoundStart nextStart = (ControlMessage.RoundStart)
+                ((RaceClient.Control) await(host,
+                        event -> isMessage(event, ControlMessage.RoundStart.class),
+                        10_000)).message();
+        assertEquals(winnerParts[0], nextStart.config().gameId());
+        assertEquals(Integer.parseInt(winnerParts[1]), nextStart.config().zone());
+        assertEquals(Integer.parseInt(winnerParts[2]), nextStart.config().act());
+        await(guest, event -> isMessage(event, ControlMessage.RoundStart.class), 10_000);
 
         guest.close();
         await(host, event -> event instanceof RaceClient.Control control
