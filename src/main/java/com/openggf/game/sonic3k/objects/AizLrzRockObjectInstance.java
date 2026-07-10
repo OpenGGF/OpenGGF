@@ -25,6 +25,8 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -158,6 +160,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        contactPushingActive = false;
         SolidCheckpointBatch batch = checkpointAll();
         for (PlayableEntity participant : playerQuery(playerEntity).playersFor(PLAYER_PARTICIPATION)) {
             if (breaking) {
@@ -166,6 +169,9 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
             if (participant instanceof AbstractPlayableSprite participantSprite) {
                 PlayerSolidContactResult result = batch.perPlayer().get(participant);
                 applyCheckpointContact(participantSprite, result);
+                if (!breaking && (behaviorBits & BIT_PUSHABLE) != 0) {
+                    handlePush(participantSprite, result);
+                }
                 if (!breaking
                         && (behaviorBits & BIT_BREAK_SIDE) != 0
                         && isSideBreakCandidate(result)
@@ -205,10 +211,6 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
             }
         }
 
-        if ((behaviorBits & BIT_PUSHABLE) != 0) {
-            handlePush(player);
-        }
-
         playerStandingOnRock = false;
         playerPushingSide = false;
 
@@ -216,7 +218,17 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
     }
 
     private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result) {
-        if (player == null || result == null || breaking || result.kind() == ContactKind.NONE) {
+        if (player == null || result == null || breaking) {
+            return;
+        }
+        if (!result.pushingNow() && result.pushingLastFrame()) {
+            // SolidObject_TestClearPush clears Status_Push when this rock's
+            // per-player pushing bit was set at entry but SolidObjectFull no
+            // longer reports a side push (sonic3k.asm:41503-41532). Manual
+            // checkpoint batching retains that previous bit in the result.
+            player.setPushing(false);
+        }
+        if (result.kind() == ContactKind.NONE) {
             return;
         }
 
@@ -403,11 +415,19 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void handlePush(AbstractPlayableSprite player) {
-        boolean wasPushing = contactPushingActive;
-        contactPushingActive = false;
-
-        if (!wasPushing || player == null) {
+    private void handlePush(AbstractPlayableSprite player, PlayerSolidContactResult result) {
+        // ROM sub_200A2/sub_200CC moves the concrete player whose pushing bit is
+        // set only when that player's saved pre-helper status also had
+        // Status_Push (sonic3k.asm:44446-44478). The checkpoint preserves both
+        // phases per player; using the old aggregate latch could let P2's first
+        // contact move P1 one frame early.
+        int preContactAnimation = result != null ? result.preContact().animationId() : -1;
+        boolean savedStatusKeepsPush = preContactAnimation == Sonic3kAnimationIds.PUSH.id()
+                || (preContactAnimation == Sonic3kAnimationIds.SPINDASH.id()
+                        && player.getAnimationFrameIndex() > 1);
+        if (player == null || result == null
+                || !result.pushingNow() || !result.pushingLastFrame()
+                || !savedStatusKeepsPush) {
             return;
         }
 
@@ -427,7 +447,17 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         }
         pushDistanceRemaining--;
         currentX--;
-        player.setCentreX((short) (playerX - 1));
+        // subq.w #1,x_pos(a1) changes only the ROM integer word and keeps
+        // x_sub untouched (sonic3k.asm:44472-44473).
+        player.setCentreXPreserveSubpixel((short) (playerX - 1));
+        int halfHeight = SIZE_TABLE[Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1)][1];
+        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, halfHeight);
+        if (floor.foundSurface()) {
+            // sub_200CC follows each horizontal push with ObjCheckFloorDist and
+            // adds d1 even when the adjacent floor is below the rock
+            // (sonic3k.asm:44474-44475).
+            currentY += floor.distance();
+        }
     }
 
     private boolean isKnuckles() {

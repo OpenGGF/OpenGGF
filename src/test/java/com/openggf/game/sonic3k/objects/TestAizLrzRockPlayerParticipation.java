@@ -7,6 +7,7 @@ import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAizLrzRockPlayerParticipation {
@@ -65,6 +67,67 @@ class TestAizLrzRockPlayerParticipation {
                 "Player_2 must not consume or overwrite Player_1's push-break snapshot");
     }
 
+    @Test
+    void firstSidekickPushContactDoesNotMoveMainPlayer() {
+        TestablePlayableSprite sonic = player("sonic", 0x1100, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1100, 0x1000);
+        TestableAizLrzRockObjectInstance rock = new TestableAizLrzRockObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.AIZLRZ_ROCK, 0x02, 0, false, 0));
+        rock.setCheckpointBatch(new SolidCheckpointBatch(rock, Map.of(
+                sonic, noContact(false),
+                tails, pushContact(true, false, Sonic3kAnimationIds.PUSH.id())
+        )));
+        rock.setServices(queryOnlyServices(sonic, List.of(tails)));
+
+        rock.update(1, sonic);
+
+        assertEquals(0x1000, rock.getX(),
+                "P2's first Status_Push contact must not move the rock through P1's slot");
+        assertEquals(0x1100, sonic.getCentreX() & 0xFFFF);
+        assertEquals(0x1100, tails.getCentreX() & 0xFFFF);
+    }
+
+    @Test
+    void sustainedSidekickPushMovesThatPlayerAndPreservesSubpixel() {
+        TestablePlayableSprite sonic = player("sonic", 0x0F00, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1100, 0x1000);
+        tails.setAnimationId(Sonic3kAnimationIds.PUSH.id());
+        tails.setSubpixelRaw(0x5A00, 0);
+        TestableAizLrzRockObjectInstance rock = new TestableAizLrzRockObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.AIZLRZ_ROCK, 0x02, 0, false, 0));
+        rock.setCheckpointBatch(new SolidCheckpointBatch(rock, Map.of(
+                sonic, noContact(false),
+                tails, pushContact(true, true, Sonic3kAnimationIds.PUSH.id())
+        )));
+        rock.setServices(queryOnlyServices(sonic, List.of(tails)));
+
+        rock.update(1, sonic);
+
+        assertEquals(0x0FFF, rock.getX());
+        assertEquals(0x10FF, tails.getCentreX() & 0xFFFF,
+                "sub_200CC decrements the concrete pushing player's x_pos word");
+        assertEquals(0x5A00, tails.getXSubpixelRaw(),
+                "subq.w #1,x_pos must not clear the adjacent x_sub word");
+        assertEquals(0x0F00, sonic.getCentreX() & 0xFFFF);
+    }
+
+    @Test
+    void releasedRockPushClearsPlayerStatusPush() {
+        TestablePlayableSprite sonic = player("sonic", 0x1100, 0x1000);
+        sonic.setPushing(true);
+        TestableAizLrzRockObjectInstance rock = new TestableAizLrzRockObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.AIZLRZ_ROCK, 0x02, 0, false, 0));
+        rock.setCheckpointBatch(new SolidCheckpointBatch(rock, Map.of(
+                sonic, noContact(true)
+        )));
+        rock.setServices(queryOnlyServices(sonic, List.of()));
+
+        rock.update(1, sonic);
+
+        assertFalse(sonic.getPushing(),
+                "SolidObject_TestClearPush clears a saved pushing bit when the current contact is gone");
+    }
+
     private static TestablePlayableSprite player(String code, int x, int y) {
         TestablePlayableSprite player = new TestablePlayableSprite(code, (short) x, (short) y);
         player.setCentreX((short) x);
@@ -84,6 +147,18 @@ class TestAizLrzRockPlayerParticipation {
     private static PlayerSolidContactResult sideContact(int xSpeed, boolean rolling, int animationId) {
         return new PlayerSolidContactResult(ContactKind.SIDE, false, false, true, false,
                 new PreContactState((short) xSpeed, (short) 0, rolling, animationId), null, 0);
+    }
+
+    private static PlayerSolidContactResult pushContact(
+            boolean pushingNow, boolean pushingLastFrame, int animationId) {
+        return new PlayerSolidContactResult(ContactKind.SIDE, false, false,
+                pushingNow, pushingLastFrame,
+                new PreContactState((short) 0, (short) 0, false, animationId), null, 0);
+    }
+
+    private static PlayerSolidContactResult noContact(boolean pushingLastFrame) {
+        return new PlayerSolidContactResult(ContactKind.NONE, false, false,
+                false, pushingLastFrame, PreContactState.ZERO, null, 0);
     }
 
     private static TestObjectServices queryOnlyServices(

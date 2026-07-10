@@ -96,8 +96,21 @@ cluster and exposed the later f3420 terrain contact. New focused
 `TestAizFallingLogObjectInstance` guards both the clock source and the exact
 solid dimensions.
 
+Round 5 banks the AIZ/LRZ rock push path. `SolidObjectFull` saves each player's
+entry status before its helper mutates push bits; `sub_200A2/sub_200CC` moves only
+the concrete participant whose current and saved push bits are both active
+(`sonic3k.asm:43916-43935,44446-44478`). The engine previously collapsed that
+to an aggregate latch, so P2's first contact could move P1, stale push survived
+release, and the pushed integer coordinate lost its subpixel word. The rock now
+uses each `PlayerSolidContactResult`, clears released `Status_Push`, preserves
+`x_sub`, and runs `ObjCheckFloorDist` after each successful rock step. This
+closed the f4340 false-P2 move, f4341 subpixel, f4352 stale-push, f4781 wait,
+and f4803 spindash-resume cluster, advancing the frontier to f5158. Focused
+`TestAizLrzRockPlayerParticipation` covers player ownership, saved push phase,
+release clearing, and subpixel preservation.
+
 Remaining unbanked object investigation has advanced through f2303, the
-f4340-f4803 rock-push cluster, and f5158; together with the banked rounds the current
+f5158 moving-spike contact; together with the banked rounds the current
 branch-local frontier is f6237. Those causes will be recorded and committed
 separately as their focused guards are completed. The level-select AIZ trace remains at f8941
 and is still part of the stage-green exit gate. S1/S2 full trace sweeps remain
