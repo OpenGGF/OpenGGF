@@ -132,6 +132,24 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
                 "a live-only shortcut frame must reject rewind engagement even when rewind is held");
     }
 
+    @Test
+    void deterministicLagModelHasNoF6F7RuntimeToggle() throws Exception {
+        for (int key : List.of(GLFW_KEY_F6, GLFW_KEY_F7)) {
+            resetPerShortcut();
+            RecordingProvider provider = new RecordingProvider(order);
+            provider.lagDisplay = true;
+            activateSpecialStage(provider);
+
+            input.handleKeyEvent(key, GLFW_PRESS);
+            loop.step();
+
+            assertFalse(order.contains("adjustLagCompensation"),
+                    "the fixed lag model must not expose an F6/F7 runtime toggle");
+            assertTrue(boundaries.isEmpty(),
+                    "a removed lag toggle must not sever the rewind timeline");
+        }
+    }
+
     private List<Shortcut> shortcuts() {
         int completeKey = config.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY);
         int failKey = config.getInt(SonicConfiguration.SPECIAL_STAGE_FAIL_KEY);
@@ -148,8 +166,6 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
                 new Shortcut("gameplay-debug toggle", gameplayDebugKey, p -> { }, "toggleGameplayDebugMode"),
                 new Shortcut("F4 alignment toggle", GLFW_KEY_F4, p -> { }, "toggleAlignmentTestMode"),
                 new Shortcut("F1 lag display toggle", GLFW_KEY_F1, p -> { }, "toggleLagCompensationDisplay"),
-                new Shortcut("F6 lag decrease", GLFW_KEY_F6, p -> p.lagDisplay = true, "adjustLagCompensation"),
-                new Shortcut("F7 lag increase", GLFW_KEY_F7, p -> p.lagDisplay = true, "adjustLagCompensation"),
                 new Shortcut("sprite-debug right", config.getInt(SonicConfiguration.RIGHT),
                         p -> p.spriteDebugMode = true, "nextPage"),
                 new Shortcut("sprite-debug left", config.getInt(SonicConfiguration.LEFT),
@@ -429,15 +445,6 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
         public void toggleLagCompensationDisplay() {
             order.add("toggleLagCompensationDisplay");
             lagDisplay = !lagDisplay;
-        }
-
-        @Override
-        public boolean adjustLagCompensationIfDisplayEnabled(double delta) {
-            if (!lagDisplay) {
-                return false;
-            }
-            order.add("adjustLagCompensation");
-            return true;
         }
 
         @Override

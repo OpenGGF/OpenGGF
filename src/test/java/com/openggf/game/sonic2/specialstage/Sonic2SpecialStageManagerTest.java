@@ -74,29 +74,6 @@ public class Sonic2SpecialStageManagerTest {
     }
 
     @Test
-    public void lagCompensationAdjustmentsRequireDisplayEnabled() {
-        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
-        double initial = manager.getLagCompensation();
-
-        assertFalse(manager.adjustLagCompensationIfDisplayEnabled(0.05),
-                "F6/F7-style adjustments should be ignored while the display is disabled");
-        assertEquals(initial, manager.getLagCompensation(), 0.0001);
-
-        manager.toggleLagCompensationDisplay();
-        assertTrue(manager.adjustLagCompensationIfDisplayEnabled(-0.05),
-                "F6 should disable the model after F1 enables the display");
-        assertEquals(0.0, manager.getLagCompensation(), 0.0001);
-        assertTrue(manager.adjustLagCompensationIfDisplayEnabled(0.05),
-                "F7 should re-enable the model without tuning its derived ratio");
-        assertEquals(initial, manager.getLagCompensation(), 0.0001);
-
-        manager.toggleLagCompensationDisplay();
-        assertFalse(manager.adjustLagCompensationIfDisplayEnabled(-0.05),
-                "F6/F7-style adjustments should stop applying after the display is toggled off");
-        assertEquals(initial, manager.getLagCompensation(), 0.0001);
-    }
-
-    @Test
     void lagAccumulatorIsRetiredBecauseTheModelIsStateless() {
         assertThrows(NoSuchFieldException.class,
                 () -> Sonic2SpecialStageManager.class.getDeclaredField("lagAccumulator"));

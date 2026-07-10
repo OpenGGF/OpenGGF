@@ -281,7 +281,7 @@ public interface SpecialStageProvider extends MiniGameProvider {
     /**
      * Checks whether the lag compensation debug display is enabled.
      *
-     * @return true if the lag compensation display and F6/F7 adjustments are enabled
+     * @return true if the read-only lag-model diagnostics are visible
      */
     default boolean isLagCompensationDisplayEnabled() {
         return false;
@@ -292,21 +292,6 @@ public interface SpecialStageProvider extends MiniGameProvider {
      */
     default void toggleLagCompensationDisplay() {
         // No-op by default.
-    }
-
-    /**
-     * Adjusts lag compensation only when the debug display is enabled.
-     *
-     * @param delta amount to adjust the lag compensation factor
-     * @return true if the adjustment was applied
-     */
-    default boolean adjustLagCompensationIfDisplayEnabled(double delta) {
-        if (!isLagCompensationDisplayEnabled()) {
-            return false;
-        }
-
-        setLagCompensation(getLagCompensation() + delta);
-        return true;
     }
 
     /**

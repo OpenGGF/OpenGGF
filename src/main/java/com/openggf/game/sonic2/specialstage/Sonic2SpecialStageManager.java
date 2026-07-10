@@ -2267,7 +2267,7 @@ public class Sonic2SpecialStageManager {
                 Sonic2SpecialStageLagModel.ratioForBucket(segmentType, speedFactor);
         if (lagCompensation <= 0.0) {
             return String.format(Locale.ROOT,
-                    "Lag model OFF: actual 0.0%% (~60 upd/s); target seg=%d speed=%d %.1f%% (%d/%d)  F7 ON",
+                    "Lag model OFF (trace-paced): actual 0.0%% (~60 upd/s); target seg=%d speed=%d %.1f%% (%d/%d)",
                     segmentType,
                     speedFactor,
                     bucket.fraction() * 100.0,
@@ -2276,7 +2276,7 @@ public class Sonic2SpecialStageManager {
         }
         double effectiveUpdates = 60.0 * (1.0 - bucket.fraction());
         return String.format(Locale.ROOT,
-                "Lag model ON: seg=%d speed=%d %.1f%% (%d/%d, ~%.0f upd/s)  F6 OFF",
+                "Lag model: seg=%d speed=%d %.1f%% (%d/%d, ~%.0f upd/s)",
                 segmentType,
                 speedFactor,
                 bucket.fraction() * 100.0,
@@ -2327,19 +2327,6 @@ public class Sonic2SpecialStageManager {
     public void toggleLagCompensationDisplay() {
         lagCompensationDisplayEnabled = !lagCompensationDisplayEnabled;
         LOGGER.info("Lag compensation display: " + (lagCompensationDisplayEnabled ? "ON" : "OFF"));
-    }
-
-    public boolean adjustLagCompensationIfDisplayEnabled(double delta) {
-        if (!lagCompensationDisplayEnabled) {
-            return false;
-        }
-
-        if (delta < 0.0) {
-            setLagCompensation(0.0);
-        } else if (delta > 0.0) {
-            setLagCompensation(LAG_MODEL_ENABLED_VALUE);
-        }
-        return true;
     }
 
     /**

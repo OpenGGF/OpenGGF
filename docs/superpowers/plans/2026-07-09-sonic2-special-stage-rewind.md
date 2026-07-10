@@ -2655,7 +2655,7 @@ In a Sonic 2 special stage:
 - Hit a bomb, then rewind across hurt and post-hit invulnerability.
 - Cross a checkpoint, then rewind across message/rainbow palette state.
 - Reach emerald approach, then rewind across emerald palette/object state.
-- Use F1/F6/F7 and alignment/debug controls; confirm each severs the current rewind session and starts a clean one on the next frame.
+- Use F1 and alignment/debug controls; confirm each severs the current rewind session and starts a clean one on the next frame. F6/F7 do not mutate the deterministic lag model.
 - Leave the stage to results; confirm special-stage rewind disables.
 
 Expected: positions, track frame, objects, rings, checkpoint UI, palette colors, invulnerability flash, and emerald state restore without doubled SFX or music replay.

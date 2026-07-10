@@ -1684,9 +1684,7 @@ public class GameLoop {
                 || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))
                 || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DEBUG_MODE_KEY))
                 || isUnmodifiedDebugKeyPressed(GLFW_KEY_F4)
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F6)
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F7)) {
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)) {
             severSpecialStageRewindForLiveOnlyShortcut();
             return;
         }
@@ -3942,15 +3940,6 @@ public class GameLoop {
             ssProvider.toggleLagCompensationDisplay();
         }
 
-        // The lag ratios are trace-derived rather than tunable: F6 disables the
-        // model and F7 restores it while the F1 overlay is visible.
-        if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F6)) {
-            adjustLagCompensation(-0.05);
-        }
-        if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F7)) {
-            adjustLagCompensation(0.05);
-        }
-
         if (ssProvider.isAlignmentTestMode()) {
             if (isUnmodifiedDebugKeyPressed(leftKey)) {
                 ssProvider.adjustAlignmentOffset(-1);
@@ -3974,17 +3963,6 @@ public class GameLoop {
                 SpecialStageInputMapper.map(inputHandler.logical());
         ssProvider.handleInput(mapped.p1Held(), mapped.p1Pressed());
         ssProvider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
-    }
-
-    /** Enables or disables the trace-derived special-stage lag model. */
-    private void adjustLagCompensation(double delta) {
-        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-        if (!ssProvider.isInitialized() || !ssProvider.adjustLagCompensationIfDisplayEnabled(delta)) {
-            return;
-        }
-
-        LOGGER.info("Special-stage lag model: "
-                + (ssProvider.getLagCompensation() > 0.0 ? "enabled" : "disabled"));
     }
 
     // ==================== Ending / Credits Sequence Methods ====================

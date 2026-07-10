@@ -281,7 +281,9 @@ trace-derived state-keyed model:
   both sides from the same artifact rather than hardcoding these counts);
   asserted by a JUnit 5 (Jupiter) test against the committed trace artifacts.
   Perceived-speed eyeball via the visual SS session (jar test mode) at the end.
-- Keep the F1/F6/F7 lag overlay as a debug/tuning view over the new model.
+- Keep the F1 lag overlay as a read-only view of the current model bucket and
+  ratio. The derived model has no live enable/disable or tuning control;
+  `setLagCompensation(0)` remains an internal trace-pacing bypass only.
 
 ### Stage 5 — Green gate & closeout
 
