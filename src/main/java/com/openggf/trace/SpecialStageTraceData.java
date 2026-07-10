@@ -6,6 +6,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
@@ -22,17 +23,23 @@ import java.util.OptionalInt;
  */
 public final class SpecialStageTraceData {
 
+    /** Typed view of a recorder {@code control_state} transition. */
+    public record ControlStateTransition(int frame, boolean started) {
+    }
+
     private static final String REQUIRED_TRACE_PROFILE = "s2_special_stage";
 
     private final TraceMetadata metadata;
     private final List<SpecialStageTraceFrame> frames;
     private final Map<Integer, List<TraceEvent>> eventsByFrame;
+    private final List<ControlStateTransition> controlStateTransitions;
 
     private SpecialStageTraceData(TraceMetadata metadata, List<SpecialStageTraceFrame> frames,
             Map<Integer, List<TraceEvent>> eventsByFrame) {
         this.metadata = metadata;
         this.frames = frames;
         this.eventsByFrame = eventsByFrame;
+        this.controlStateTransitions = parseControlStateTransitions(eventsByFrame);
     }
 
     public static SpecialStageTraceData load(Path traceDirectory) throws IOException {
@@ -81,6 +88,32 @@ public final class SpecialStageTraceData {
         return eventsByFrame.getOrDefault(i, Collections.emptyList());
     }
 
+    /**
+     * Selects the atomic expected state for one logical frame. This is a
+     * comparison-only mapping and does not write trace data into the engine.
+     */
+    public SpecialStageExpectedState expectedStateForFrame(int i) {
+        return SpecialStageExpectedState.from(getFrame(i), getEventsForFrame(i));
+    }
+
+    /** Returns all initial/transition samples of ROM {@code SpecialStage_Started}. */
+    public List<ControlStateTransition> controlStateTransitions() {
+        return controlStateTransitions;
+    }
+
+    private static List<ControlStateTransition> parseControlStateTransitions(
+            Map<Integer, List<TraceEvent>> eventsByFrame) {
+        return eventsByFrame.values().stream()
+                .flatMap(List::stream)
+                .filter(TraceEvent.StateSnapshot.class::isInstance)
+                .map(TraceEvent.StateSnapshot.class::cast)
+                .filter(snapshot -> "control_state".equals(snapshot.fields().get("type")))
+                .map(snapshot -> new ControlStateTransition(snapshot.frame(),
+                        numericValue(snapshot.fields().get("started")) != 0))
+                .sorted(Comparator.comparingInt(ControlStateTransition::frame))
+                .toList();
+    }
+
     /** Returns the first frame carrying a {@code stage_finished} aux event, if any. */
     public OptionalInt stageFinishedFrame() {
         return eventsByFrame.entrySet().stream()
@@ -92,6 +125,13 @@ public final class SpecialStageTraceData {
     private static boolean isStageFinished(TraceEvent event) {
         return event instanceof TraceEvent.StateSnapshot snapshot
             && "stage_finished".equals(snapshot.fields().get("type"));
+    }
+
+    private static int numericValue(Object raw) {
+        if (raw instanceof Number number) {
+            return number.intValue();
+        }
+        return Integer.parseInt(String.valueOf(raw));
     }
 
     private static List<SpecialStageTraceFrame> loadPhysicsCsv(Path csvPath) throws IOException {

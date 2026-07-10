@@ -40,6 +40,63 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage atomic RunObjects-end comparison capture
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `b76ecb2c1`. PC-execute evidence
+showed that a VBlank CSV row can bisect the recurring
+`SSObjectsManager -> RunObjects` pass: f799 recorded combined rings 1 at
+VBlank, but the ROM had collected the paired rings and reached 3 by the exact
+end of that same logical object pass. The existing comparator therefore treated
+mid-pass observations as completed-frame expectations.
+
+- Recorder/model correction: v1.1-s2ss registers a bounded S2 REV01 execute
+  hook at `RunObjects_End` ROM `$15FE4` (`docs/s2disasm/s2.asm:29805-29849`),
+  captures the full manager/player surface only while the ROM's semantic
+  `SpecialStage_Started` flag is nonzero, and associates at most one snapshot
+  with the last non-lag logical trace frame. `SpecialStageExpectedState` uses
+  this atomic snapshot for player state, ring digits/combined rings, and Tails's
+  control counter only. Track/drawing/finish/results fields remain on their CSV
+  observation, and frames without an event fall back to CSV. The mapping is
+  comparison-only and never writes trace values into engine state.
+- Task-5 capture landed in the same required regeneration: `control_state`
+  records `SpecialStage_Started` initially locked at f0 and its unlock
+  transition at f424. Required legacy families remain present: 1 checkpoint,
+  1 stage-finished event, and 1,583 message-state transitions.
+- Re-record command:
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/bizhawk/record_s2_level_select_traces.ps1 -RomPath s2.gen -MoviesDir C:\Users\farre\IdeaProjects\sonic-engine\docs\BizHawk-2.11-win-x64\Movies -OutputRoot src/test/resources/traces/s2 -Only special_stage`
+  passed the workflow's P1+P2 BK2 alignment check and validated 2,474 complete,
+  unique-frame `run_objects_end` snapshots, all keyed to non-lag rows. The workflow now
+  passes an absolute `OGGF_TRACE_OUTPUT_DIR`; EmuHawk child CWD is not stable
+  across launcher/config variants.
+- Determinism gate: old and regenerated decompressed `physics.csv` are exactly
+  byte-identical, 612,518 bytes, SHA-256
+  `418033A193690BE9DDD8BD7CA5EBAEEA48EFCE08C13B807883A318D6E415777B`.
+  CSV schema/version remains unchanged.
+- Focused RED: the new expected-state/control/recorder tests initially failed
+  for the absent mapping, control transitions, hook/version, workflow aux
+  validation, and stale v1.0 artifact.
+- Focused GREEN command:
+  `mvn -Dmse=off "-Dtest=com.openggf.trace.SpecialStageExpectedStateTest,com.openggf.trace.SpecialStageControlStateTest,com.openggf.tests.trace.s2.S2SpecialStageExpectedComparisonTest,com.openggf.tests.trace.s2.S2SpecialStageRecorderContractTest" test`
+  passed 9/9. It explicitly proves f799 engine count 3 matches pass-end 3,
+  f791 remains exact at 1, missing-event startup falls back to CSV, and the
+  artifact carries the initial/unlock control transitions plus required event
+  families.
+- Replay/neighborhood command:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest,com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest" test`
+  passed 11/11.
+- Before (`b76ecb2c1`): 12,283 errors / 10 warnings, first error f799
+  `combined_rings` expected 1, actual 3.
+- After (uncommitted implementation measurement): 12,271 errors / 10 warnings,
+  first error f890 `sonic_ss_x` expected 0, actual 2 (paired `ss_y` 110 vs 109
+  and angle 64 vs 63). The f799 ring mismatch is gone; the first combined-ring
+  mismatch is now f920 (8 vs 9). Startup/fade observations retain CSV fallback
+  because the recorder emits no pass-end snapshot until ROM
+  `SpecialStage_Started` is nonzero; this is a semantic gate, not a frame
+  carve-out. The next root is the f890 player movement/angle boundary; adjudicate
+  it against the newly recorded control transition and pass-end player state
+  before changing player math.
+
 ## 2026-07-10 - S2 special-stage Stage 1: streamed Obj60/Obj61 init fallthrough
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

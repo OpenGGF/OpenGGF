@@ -51,6 +51,34 @@ bookkeeping row.
 The intro/init misalignment is the dominant root; most of the error mass is its
 cascade. Issues 1 and 4 are largely THIS; issues 2 and 3 sit behind it.
 
+### 2026-07-10 atomic comparison correction
+
+The original table treated each VBlank CSV row as though it were the completed
+state of the ROM logic pass. A PC-execute probe disproved that assumption:
+`WaitForVint` can return before a VBlank sample and the following
+`SSObjectsManager -> RunObjects` work can finish after it, including across a
+lag row. At f799 the CSV therefore reports one ring while the exact
+`RunObjects_End` state for that same logical step reports three. Conversely,
+the first-ring f791 pass end remains one. The v1.1-s2ss recorder now hooks the
+REV01 `RunObjects_End` RTS at ROM `$15FE4` (`s2.asm:29805-29849`), keys each
+snapshot to the last non-lag logical trace frame, and records the full manager
+and player surface atomically once the ROM's semantic
+`SpecialStage_Started` gate is nonzero. Comparison uses these snapshots only for fields
+owned by `RunObjects` (player state/ring digits and Tails control counter); CSV
+remains authoritative for track, finish/results, and any frame with no pass-end
+event. This is expectation selection only, never trace-to-engine hydration.
+An emitted pass-end event is an indivisible atomic record: the parser rejects
+missing required fields or duplicate events for one logical frame rather than
+mixing VBlank and pass-end values. Whole-event absence is the only CSV fallback;
+an explicit absent-player flag remains authoritative and yields an absent player
+without requiring meaningless positional fields.
+
+The semantic gate deliberately leaves the distinct startup/fade loops on their
+VBlank CSV observations; there is no frame-number exception. The corrected
+boundary removes the f799 false mismatch and moves the first trustworthy
+frontier to f890 player position/angle, with the first combined-ring mismatch
+now f920.
+
 ## Method (binding rules)
 
 - **Fix loop:** per the `trace-replay-bug-fixing` skill — take the FIRST

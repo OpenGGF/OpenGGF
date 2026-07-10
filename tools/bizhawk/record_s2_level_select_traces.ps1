@@ -404,10 +404,88 @@ function Assert-SsBk2InputAlignment([string]$Bk2Path, [string]$TraceDir) {
     Write-Host "SS BK2 input alignment verified for $($rows.Count) frames (P1 + P2)"
 }
 
+# The SS recorder's aux stream is part of the comparison contract. In
+# particular, RunObjects-end events must be keyed to a non-lag logical frame,
+# never to the later raw VBlank that happened to observe the hook.
+function Assert-SsAuxCoverage([string]$TraceDir) {
+    $events = Get-AuxEvents $TraceDir
+    $rows = Get-PhysicsRows $TraceDir
+    $types = New-Object System.Collections.Generic.HashSet[string]
+    $controlInitial = $false
+    $controlUnlock = $false
+    $runObjectsEndCount = 0
+    $runObjectsEndFrames = New-Object System.Collections.Generic.HashSet[int]
+    $requiredRunObjectsFields = @(
+        "speed_factor", "track_anim", "track_anim_frame", "track_drawing_index",
+        "track_orientation", "track_duration_timer", "current_segment",
+        "player_anim_frame_timer", "rings_togo_bcd", "check_rings_flag",
+        "tails_control_counter", "swap_positions_flag",
+        "sonic_present", "sonic_ss_x", "sonic_ss_x_sub", "sonic_ss_y",
+        "sonic_ss_y_sub", "sonic_ss_z", "sonic_angle", "sonic_routine",
+        "sonic_routine_secondary", "sonic_status", "sonic_anim",
+        "sonic_anim_frame", "sonic_rings_bcd", "sonic_hurt_timer",
+        "sonic_slide_timer", "sonic_flip_timer",
+        "tails_present", "tails_ss_x", "tails_ss_x_sub", "tails_ss_y",
+        "tails_ss_y_sub", "tails_ss_z", "tails_angle", "tails_routine",
+        "tails_routine_secondary", "tails_status", "tails_anim",
+        "tails_anim_frame", "tails_rings_bcd", "tails_hurt_timer",
+        "tails_slide_timer", "tails_flip_timer"
+    )
+
+    foreach ($event in $events) {
+        if ($null -eq $event.type) { continue }
+        [void]$types.Add([string]$event.type)
+        if ($event.type -eq "control_state") {
+            if ([int]$event.frame -eq 0 -and [int]$event.started -eq 0) {
+                $controlInitial = $true
+            }
+            if ([int]$event.started -ne 0) {
+                $controlUnlock = $true
+            }
+        } elseif ($event.type -eq "run_objects_end") {
+            $runObjectsEndCount++
+            $frame = [int]$event.frame
+            if (-not $runObjectsEndFrames.Add($frame)) {
+                throw "duplicate run_objects_end snapshot for logical frame $frame"
+            }
+            if ($frame -lt 0 -or $frame -ge $rows.Count) {
+                throw "run_objects_end frame $frame is outside physics row range"
+            }
+            $columns = $rows[$frame].Split(",")
+            if ($columns.Length -lt 4 -or [int]$columns[3] -ne 0) {
+                throw "run_objects_end frame $frame is not associated with a non-lag logical row"
+            }
+            $propertyNames = @($event.PSObject.Properties.Name)
+            foreach ($required in $requiredRunObjectsFields) {
+                if ($propertyNames -notcontains $required) {
+                    throw "run_objects_end frame $frame is missing required field '$required'"
+                }
+            }
+        }
+    }
+
+    foreach ($required in @("control_state", "run_objects_end", "stage_finished", "checkpoint", "message_state")) {
+        if (-not $types.Contains($required)) {
+            throw "SS aux stream missing required event family '$required'"
+        }
+    }
+    if (-not $controlInitial) {
+        throw "SS aux stream missing frame-0 control_state started=0 sample"
+    }
+    if (-not $controlUnlock) {
+        throw "SS aux stream missing control_state unlock transition"
+    }
+    if ($runObjectsEndCount -le 1000) {
+        throw "SS aux stream has insufficient run_objects_end coverage: $runObjectsEndCount"
+    }
+    Write-Host "SS aux coverage verified ($runObjectsEndCount logical RunObjects-end snapshots)"
+}
+
 function Assert-SsTraceOutput([object]$Route, [string]$TraceDir, [string]$Bk2Path) {
     Assert-CompressedPayloads $TraceDir
     Assert-SsMetadata $Route $TraceDir
     Assert-SsBk2InputAlignment $Bk2Path $TraceDir
+    Assert-SsAuxCoverage $TraceDir
 }
 
 function Assert-ZoneActCoverage([object]$Route, [string]$TraceDir) {
@@ -497,7 +575,9 @@ $outputFullPath = if (Test-Path -LiteralPath $OutputRoot) {
     (Resolve-Path -LiteralPath $OutputRoot).Path
 }
 $recordScript = Resolve-RepoPath "tools/bizhawk/record_s2_trace.bat"
-$traceOutput = Resolve-RepoPath "tools/bizhawk/trace_output"
+$bizhawkToolsDir = Resolve-RepoPath "tools/bizhawk"
+$traceOutput = [System.IO.Path]::GetFullPath(
+    (Join-Path $bizhawkToolsDir "trace_output"))
 $runBizhawkLuaBat = Resolve-RepoPath "tools/bizhawk/run_bizhawk_lua.bat"
 $countBk2FramesScript = Resolve-RepoPath "tools/bizhawk/count_bk2_input_frames.ps1"
 $compressScript = Resolve-RepoPath "tools/traces/compress-traces.ps1"
@@ -510,7 +590,8 @@ foreach ($route in $selectedRoutes) {
     }
 
     $resolvedTraceOutput = [System.IO.Path]::GetFullPath($traceOutput)
-    $expectedTraceOutput = [System.IO.Path]::GetFullPath((Join-Path (Resolve-Path "tools/bizhawk").Path "trace_output"))
+    $expectedTraceOutput = [System.IO.Path]::GetFullPath(
+        (Join-Path $bizhawkToolsDir "trace_output"))
     if ($resolvedTraceOutput -ne $expectedTraceOutput) {
         throw "Refusing to clean unexpected trace output path: $resolvedTraceOutput"
     }
@@ -527,6 +608,7 @@ foreach ($route in $selectedRoutes) {
         }
         $env:OGGF_BK2_BASENAME = $route.Bk2
         $env:OGGF_BK2_FRAME_COUNT = [string]$frameCount
+        $env:OGGF_TRACE_OUTPUT_DIR = $resolvedTraceOutput
 
         # Invoke run_bizhawk_lua.bat directly (not record_s2_trace.bat, which
         # hardcodes the level recorder script s2_trace_recorder.lua).

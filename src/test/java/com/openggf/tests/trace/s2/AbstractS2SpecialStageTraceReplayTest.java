@@ -11,6 +11,7 @@ import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
 import com.openggf.trace.SpecialStageTraceData;
+import com.openggf.trace.SpecialStageExpectedState;
 import com.openggf.trace.SpecialStageTraceFrame;
 import com.openggf.trace.SpecialStageTraceFrame.CharacterState;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       rows does not corrupt edge detection.</li>
  *   <li><b>Comparison-only.</b> Trace values are read for input + expectation
  *       only; engine state is never hydrated from the trace.</li>
+ *   <li><b>Atomic object-pass expectations.</b> A VBlank CSV row can bisect
+ *       the following ROM {@code RunObjects} pass. When the recorder provides
+ *       a same-logical-frame {@code run_objects_end} event, player/ring/Tails
+ *       control fields come from that exact pass-end snapshot; track and
+ *       finish/results fields remain on their CSV observation.</li>
  *   <li><b>Finish boundary.</b> {@code compareEnd = stageFinishedFrame().orElse(
  *       frameCount())}. A Tier-1 {@code finished_transition_frame} check asserts
  *       the engine's {@code isFinished()} first becomes true exactly at the
@@ -194,9 +200,10 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             }
 
             Map<String, FieldComparison> fields = new LinkedHashMap<>();
-            addManagerFields(fields, tf, state, false);
-            addPlayerFields(fields, "sonic", tf.sonic(), state.sonic());
-            addPlayerFields(fields, "tails", tf.tails(), state.tails());
+            SpecialStageExpectedState expected = trace.expectedStateForFrame(f);
+            addManagerFields(fields, expected, state, false);
+            addPlayerFields(fields, "sonic", expected.sonic(), state.sonic());
+            addPlayerFields(fields, "tails", expected.tails(), state.tails());
             comparisons.add(new FrameComparison(f, fields));
         }
 
@@ -222,9 +229,10 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     }
 
     private static void addManagerFields(Map<String, FieldComparison> fields,
-                                         SpecialStageTraceFrame tf,
+                                         SpecialStageExpectedState expected,
                                          Sonic2SpecialStageComparisonState state,
                                          boolean finishedExpected) {
+        SpecialStageTraceFrame tf = expected.csv();
         // Tier-1
         fields.put("speed_factor",
                 cmp("speed_factor", str(tf.speedFactor()), str(state.speedFactor()), Severity.ERROR));
@@ -232,9 +240,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 cmp("current_segment", str(tf.currentSegment()), str(state.currentSegmentIndex()), Severity.ERROR));
         fields.put("track_anim_frame",
                 cmp("track_anim_frame", str(tf.trackAnimFrame()), str(state.trackAnimFrame()), Severity.ERROR));
-        int combinedTraceRings = ringsBinary(tf.sonic()) + ringsBinary(tf.tails());
         fields.put("combined_rings",
-                cmp("combined_rings", str(combinedTraceRings), str(state.combinedRings()), Severity.ERROR));
+                cmp("combined_rings", str(expected.combinedRings()), str(state.combinedRings()), Severity.ERROR));
         fields.put("finished",
                 cmp("finished", String.valueOf(finishedExpected), String.valueOf(state.finished()), Severity.ERROR));
 
@@ -245,7 +252,18 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         fields.put("track_duration_timer",
                 cmp("track_duration_timer", str(expectedCounter), str(state.trackFrameDelayCounter()), Severity.WARNING));
         fields.put("tails_control_counter",
-                cmp("tails_control_counter", str(tf.tailsControlCounter()), str(state.tailsControlCounter()), Severity.WARNING));
+                cmp("tails_control_counter", str(expected.tailsControlCounter()), str(state.tailsControlCounter()), Severity.WARNING));
+    }
+
+    /** Focused comparison seam used by atomic RunObjects-end mapping tests. */
+    static Map<String, FieldComparison> compareExpectedFrame(
+            SpecialStageExpectedState expected,
+            Sonic2SpecialStageComparisonState state) {
+        Map<String, FieldComparison> fields = new LinkedHashMap<>();
+        addManagerFields(fields, expected, state, false);
+        addPlayerFields(fields, "sonic", expected.sonic(), state.sonic());
+        addPlayerFields(fields, "tails", expected.tails(), state.tails());
+        return fields;
     }
 
     static int mapTrackDurationElapsed(int speedFactor, int rawDurationTimer) {
@@ -297,10 +315,6 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         return mapped != null
                 ? mapped
                 : String.format("ROM_0x%02X", romRoutineByte & 0xFF);
-    }
-
-    private static int ringsBinary(CharacterState c) {
-        return c != null && c.present() ? c.ringsBinary() : 0;
     }
 
     private static FieldComparison cmp(String name, String expected, String actual,

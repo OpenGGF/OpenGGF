@@ -24,12 +24,21 @@
 --- Constants ---
 -----------------
 
-local LUA_SCRIPT_VERSION = "1.0-s2ss"
+local LUA_SCRIPT_VERSION = "1.1-s2ss"
 local TRACE_PROFILE = "s2_special_stage"
 
--- Output directory (relative to BizHawk working dir, resolved by the
--- run_bizhawk_lua.bat pushd to tools/bizhawk/).
-local OUTPUT_DIR = "trace_output/"
+-- S2 REV01 RunObjects_End RTS. RunObjects spans s2.asm:29805-29849
+-- (ROM $15F9C-$15FE4); the hook observes the atomic object-pass result after
+-- every active slot has executed and before BuildSprites/result handling.
+local PC_RUN_OBJECTS_END = 0x15FE4
+local RUN_OBJECTS_HOOK_NAME = "s2ss_run_objects_end"
+
+-- The workflow passes an absolute directory because EmuHawk's child-process
+-- working directory is not stable across launcher/config variants.
+local OUTPUT_DIR = os.getenv("OGGF_TRACE_OUTPUT_DIR") or "trace_output/"
+if OUTPUT_DIR:sub(-1) ~= "/" and OUTPUT_DIR:sub(-1) ~= "\\" then
+    OUTPUT_DIR = OUTPUT_DIR .. "/"
+end
 
 -- Headless mode: run at maximum speed, auto-exit when done.
 local HEADLESS = true
@@ -63,6 +72,7 @@ local ADDR_HIDE_RINGS_TOGO          = 0xDBA6  -- SS_HideRingsToGo (u8)
 local ADDR_TRIGGER_RINGS_TOGO       = 0xDBA7  -- SS_TriggerRingsToGo (u8)
 local ADDR_TAILS_CONTROL_COUNTER    = 0xF702  -- Tails_control_counter (u16be)
 local ADDR_SWAP_POSITIONS_FLAG      = 0xF742  -- SS_Swap_Positions_Flag (u8)
+local ADDR_SPECIAL_STAGE_STARTED    = 0xDB23  -- SpecialStage_Started (u8)
 
 -- Per-player object bases (S2 SST slots reused for special-stage players).
 local SONIC_BASE = 0xB000
@@ -116,9 +126,17 @@ local prev_check_rings_flag = 0
 local prev_hide_rings_to_go = 0
 local prev_trigger_rings_to_go = 0
 local prev_no_rings_togo_lifetime = 0
+local prev_special_stage_started = nil
+-- A hook firing after VBlank belongs to the most recent logical input-poll
+-- step. Lag rows do not advance that cursor, so a pass spanning a lag VBlank
+-- remains associated with the preceding non-lag trace frame.
+local last_nonlag_trace_frame = -1
+local last_run_objects_end_frame = -1
+local run_objects_hook_registered = false
 
 local physics_file = nil
 local aux_file = nil
+local unregister_run_objects_hook
 
 -----------------
 --- Helpers   ---
@@ -181,6 +199,66 @@ local function read_ss_character(base)
     }
 end
 
+-- One reusable state reader backs both VBlank CSV rows and the execution-hook
+-- snapshot. Keeping these reads together prevents the two diagnostic views
+-- from silently drifting as the schema evolves.
+local function read_ss_state()
+    return {
+        speed_factor = mainmemory.read_u16_be(ADDR_CUR_SPEED_FACTOR),
+        track_anim = mainmemory.read_u8(ADDR_TRACK_ANIM),
+        track_anim_frame = mainmemory.read_u8(ADDR_TRACK_ANIM_FRAME),
+        track_drawing_index = mainmemory.read_u8(ADDR_TRACK_DRAWING_INDEX),
+        track_orientation = mainmemory.read_u8(ADDR_TRACK_ORIENTATION),
+        track_duration_timer = mainmemory.read_u8(ADDR_TRACK_DURATION_TIMER),
+        current_segment = mainmemory.read_u8(ADDR_CURRENT_SEGMENT),
+        player_anim_frame_timer = mainmemory.read_u8(ADDR_PLAYER_ANIM_FRAME_TIMER),
+        rings_togo_bcd = mainmemory.read_u16_be(ADDR_RINGS_TOGO_BCD),
+        check_rings_flag = mainmemory.read_u8(ADDR_CHECK_RINGS_FLAG),
+        tails_control_counter = mainmemory.read_u16_be(ADDR_TAILS_CONTROL_COUNTER),
+        swap_positions_flag = mainmemory.read_u8(ADDR_SWAP_POSITIONS_FLAG),
+        sonic = read_ss_character(SONIC_BASE),
+        tails = read_ss_character(TAILS_BASE),
+    }
+end
+
+local function character_json(prefix, character)
+    return string.format(
+        ',"%s_present":%d,"%s_ss_x":%d,"%s_ss_x_sub":%d,'
+        .. '"%s_ss_y":%d,"%s_ss_y_sub":%d,"%s_ss_z":%d,'
+        .. '"%s_angle":%d,"%s_routine":%d,"%s_routine_secondary":%d,'
+        .. '"%s_status":%d,"%s_anim":%d,"%s_anim_frame":%d,'
+        .. '"%s_rings_bcd":%d,"%s_hurt_timer":%d,"%s_slide_timer":%d,'
+        .. '"%s_flip_timer":%d',
+        prefix, character.present and 1 or 0,
+        prefix, character.ss_x, prefix, character.ss_x_sub,
+        prefix, character.ss_y, prefix, character.ss_y_sub,
+        prefix, character.ss_z, prefix, character.angle,
+        prefix, character.routine, prefix, character.routine_secondary,
+        prefix, character.status, prefix, character.anim,
+        prefix, character.anim_frame, prefix, character.rings_bcd,
+        prefix, character.hurt_timer, prefix, character.slide_timer,
+        prefix, character.flip_timer)
+end
+
+local function write_run_objects_end(frame, state)
+    write_aux(string.format(
+        '{"frame":%d,"type":"run_objects_end","speed_factor":%d,'
+        .. '"track_anim":%d,"track_anim_frame":%d,"track_drawing_index":%d,'
+        .. '"track_orientation":%d,"track_duration_timer":%d,'
+        .. '"current_segment":%d,"player_anim_frame_timer":%d,'
+        .. '"rings_togo_bcd":%d,"check_rings_flag":%d,'
+        .. '"tails_control_counter":%d,"swap_positions_flag":%d',
+        frame, state.speed_factor, state.track_anim, state.track_anim_frame,
+        state.track_drawing_index, state.track_orientation,
+        state.track_duration_timer, state.current_segment,
+        state.player_anim_frame_timer, state.rings_togo_bcd,
+        state.check_rings_flag, state.tails_control_counter,
+        state.swap_positions_flag)
+        .. character_json("sonic", state.sonic)
+        .. character_json("tails", state.tails)
+        .. '}')
+end
+
 -- Read the BK2 movie's logical input for the given absolute BK2 frame index
 -- and controller (1 or 2), converted to the engine's input bitmask. Returns
 -- 0 when no movie is loaded or the controller has no recorded input (the
@@ -221,6 +299,7 @@ local function open_files()
 end
 
 local function close_files()
+    unregister_run_objects_hook()
     if physics_file then
         physics_file:close()
         physics_file = nil
@@ -310,37 +389,74 @@ local function check_message_state()
     end
 end
 
-local function record_frame()
-    local speed_factor = mainmemory.read_u16_be(ADDR_CUR_SPEED_FACTOR)
-    local track_anim = mainmemory.read_u8(ADDR_TRACK_ANIM)
-    local track_anim_frame = mainmemory.read_u8(ADDR_TRACK_ANIM_FRAME)
-    local track_drawing_index = mainmemory.read_u8(ADDR_TRACK_DRAWING_INDEX)
-    local track_orientation = mainmemory.read_u8(ADDR_TRACK_ORIENTATION)
-    local track_duration_timer = mainmemory.read_u8(ADDR_TRACK_DURATION_TIMER)
-    local current_segment = mainmemory.read_u8(ADDR_CURRENT_SEGMENT)
-    local player_anim_frame_timer = mainmemory.read_u8(ADDR_PLAYER_ANIM_FRAME_TIMER)
-    local rings_togo_bcd = mainmemory.read_u16_be(ADDR_RINGS_TOGO_BCD)
-    local check_rings_flag = mainmemory.read_u8(ADDR_CHECK_RINGS_FLAG)
-    local tails_control_counter = mainmemory.read_u16_be(ADDR_TAILS_CONTROL_COUNTER)
-    local swap_positions_flag = mainmemory.read_u8(ADDR_SWAP_POSITIONS_FLAG)
+local function check_control_state()
+    local special_stage_started = mainmemory.read_u8(ADDR_SPECIAL_STAGE_STARTED)
+    if prev_special_stage_started == nil
+            or special_stage_started ~= prev_special_stage_started then
+        write_aux(string.format(
+            '{"frame":%d,"type":"control_state","started":%d}',
+            trace_frame, special_stage_started ~= 0 and 1 or 0))
+        prev_special_stage_started = special_stage_started
+    end
+end
 
-    local sonic = read_ss_character(SONIC_BASE)
-    local tails = read_ss_character(TAILS_BASE)
+local function on_run_objects_end()
+    if not started or finished or physics_file == nil then return end
+    if mainmemory.read_u8(ADDR_GAME_MODE) ~= GAMEMODE_SPECIAL_STAGE then return end
+    -- The startup/fade loops have different observation ownership. Atomic
+    -- pass-end comparison begins only when the ROM's recurring gameplay loop
+    -- is enabled by SpecialStage_Started (s2.asm:6689,9745).
+    if mainmemory.read_u8(ADDR_SPECIAL_STAGE_STARTED) == 0 then return end
+    if last_nonlag_trace_frame < 0
+            or last_run_objects_end_frame == last_nonlag_trace_frame then
+        return
+    end
+    write_run_objects_end(last_nonlag_trace_frame, read_ss_state())
+    last_run_objects_end_frame = last_nonlag_trace_frame
+end
+
+local function register_run_objects_hook()
+    if run_objects_hook_registered then return end
+    if not event or not event.onmemoryexecute then
+        error("BizHawk event.onmemoryexecute is required for S2 SS RunObjects-end capture")
+    end
+    event.onmemoryexecute(on_run_objects_end, PC_RUN_OBJECTS_END,
+        RUN_OBJECTS_HOOK_NAME)
+    run_objects_hook_registered = true
+end
+
+unregister_run_objects_hook = function()
+    if not run_objects_hook_registered then return end
+    if event and event.unregisterbyname then
+        pcall(event.unregisterbyname, RUN_OBJECTS_HOOK_NAME)
+    end
+    run_objects_hook_registered = false
+end
+
+local function record_frame()
+    local state = read_ss_state()
+    local sonic = state.sonic
+    local tails = state.tails
 
     local frame_index = bk2_frame_offset + trace_frame
     local input_mask = joypad_mask_from_frame(frame_index, 1)
     local input_p2_mask = joypad_mask_from_frame(frame_index, 2)
     local lag = emu.islagged() and 1 or 0
+    if lag == 0 then
+        last_nonlag_trace_frame = trace_frame
+    end
 
     -- frame is decimal and lag is 0/1; every other column (including the
     -- *_present flags) is lowercase hex per the ss_csv_version 1 schema.
     physics_file:write(string.format(
         "%d,%x,%x,%d,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n",
         trace_frame, input_mask, input_p2_mask, lag,
-        speed_factor, track_anim, track_anim_frame, track_drawing_index,
-        track_orientation, track_duration_timer, current_segment,
-        player_anim_frame_timer, rings_togo_bcd, check_rings_flag,
-        tails_control_counter, swap_positions_flag,
+        state.speed_factor, state.track_anim, state.track_anim_frame,
+        state.track_drawing_index, state.track_orientation,
+        state.track_duration_timer, state.current_segment,
+        state.player_anim_frame_timer, state.rings_togo_bcd,
+        state.check_rings_flag, state.tails_control_counter,
+        state.swap_positions_flag,
         sonic.present and 1 or 0, sonic.ss_x, sonic.ss_x_sub, sonic.ss_y,
         sonic.ss_y_sub, sonic.ss_z, sonic.angle, sonic.routine,
         sonic.routine_secondary, sonic.status, sonic.anim, sonic.anim_frame,
@@ -357,7 +473,8 @@ local function record_frame()
         write_metadata()
     end
 
-    check_checkpoint(check_rings_flag)
+    check_control_state()
+    check_checkpoint(state.check_rings_flag)
     check_message_state()
     check_stage_finished()
 
@@ -381,6 +498,7 @@ local function on_frame_end()
             -- recorded immediately as trace frame 0.
             bk2_frame_offset = emu.framecount()
             open_files()
+            register_run_objects_hook()
             prev_check_rings_flag = mainmemory.read_u8(ADDR_CHECK_RINGS_FLAG)
             prev_hide_rings_to_go = mainmemory.read_u8(ADDR_HIDE_RINGS_TOGO)
             prev_trigger_rings_to_go = mainmemory.read_u8(ADDR_TRIGGER_RINGS_TOGO)
