@@ -4,7 +4,6 @@ import org.lwjgl.openal.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
-import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.PerformanceProfiler;
 
@@ -115,13 +114,6 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
             LOGGER.info("Mono sources: " + monoSources + ", Stereo sources: " + stereoSources);
 
             LOGGER.info("LWJGL OpenAL Initialized. Device sample rate: " + deviceSampleRate + " Hz, Buffer Size: " + STREAM_BUFFER_SIZE);
-            pcmHistory = new com.openggf.audio.runtime.PcmHistoryRing(Math.max(STREAM_BUFFER_SIZE,
-                    com.openggf.audio.runtime.PcmHistoryRing.capacityFramesFor(
-                            deviceSampleRate,
-                            configService.getString(com.openggf.configuration.SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE),
-                            configService.getInt(com.openggf.configuration.SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS),
-                            configService.getInt(com.openggf.configuration.SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB))));
-
             // Preload SFX
             for (String sfxPath : sfxFallback.values()) {
                 loadWav(sfxPath);
