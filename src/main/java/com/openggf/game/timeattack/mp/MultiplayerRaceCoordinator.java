@@ -2,6 +2,7 @@ package com.openggf.game.timeattack.mp;
 
 import com.openggf.game.ghost.GhostFrame;
 import com.openggf.game.timeattack.TimeAttackRuntime;
+import com.openggf.control.InputHandler;
 import com.openggf.net.client.ClientRaceSession;
 import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.client.RaceClient;
@@ -133,12 +134,17 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     public MultiplayerHudState hudState() {
+        ControlMessage.RoundConfig config = session.roundConfig();
+        ControlMessage.StandingsRow local = session.localStandingsRow();
         return new MultiplayerHudState(transport.isOpen() || connectionLost,
                 session.phase().name(), session.remainingWindowMillis(),
                 session.remainingCountdownMillis(), combinedStandings(),
-                session.chatLines(), session.players().size(),
-                registry.farPlayers(session.localSlot()), connectionLost,
-                session.kickReason());
+                session.chatLines(), connectionLost, session.kickReason(),
+                session.players().size(), registry.farPlayers(session.localSlot()),
+                config == null ? null : config.characterPolicy(),
+                session.voteOptions(), session.voteCounts(), session.voteRemainingMillis(),
+                session.lastVoteResultTrackKey(), session.podiumTop(3),
+                local == null ? localRank : local.rank());
     }
 
     public ClientRaceSession session() {
@@ -151,6 +157,22 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 
     public void sendRoundConfigure(ControlMessage.RoundConfig config) {
         transport.sendControl(new ControlMessage.RoundConfigure(config));
+    }
+
+    public void pollLocalInput(InputHandler input) {
+        for (int option = 0; option < 3; option++) {
+            if (input.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_1 + option)) {
+                castVote(option);
+            }
+        }
+    }
+
+    void castVote(int optionIndex) {
+        List<String> options = session.voteOptions();
+        if (session.phase() == ClientRaceSession.Phase.VOTE
+                && optionIndex >= 0 && optionIndex < options.size()) {
+            transport.sendControl(new ControlMessage.TrackVote(options.get(optionIndex)));
+        }
     }
 
     public void shutdown() {

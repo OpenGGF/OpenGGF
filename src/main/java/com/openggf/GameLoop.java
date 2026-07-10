@@ -1394,6 +1394,7 @@ public class GameLoop {
 
         if (multiplayerRaceCoordinator != null) {
             multiplayerRaceCoordinator.pump();
+            multiplayerRaceCoordinator.pollLocalInput(inputHandler);
             if (multiplayerRaceCoordinator.holdGameplay()) {
                 updateNonGameplayAudio(doFrameStep);
                 return true;

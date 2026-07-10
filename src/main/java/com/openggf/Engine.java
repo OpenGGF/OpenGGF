@@ -56,6 +56,7 @@ import com.openggf.game.timeattack.mp.LiveLevelProfileFactory;
 import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
 import com.openggf.game.timeattack.mp.RaceTransport;
 import com.openggf.game.timeattack.mp.ServerBrowserScreen;
+import com.openggf.game.timeattack.mp.VoteTrackPools;
 import com.openggf.net.client.ClientRaceSession;
 import com.openggf.net.client.MasterClient;
 import com.openggf.net.client.RaceClient;
@@ -214,6 +215,8 @@ public class Engine {
 	private MasterClient masterClient;
 	private String masterRoomId;
 	private Thread masterHeartbeatThread;
+	private int masterAdvertisedZone = -1;
+	private int masterAdvertisedAct = -1;
 	private MultiplayerRaceCoordinator multiplayerRaceCoordinator;
 	private ControlMessage.RoundConfig multiplayerRoundConfig;
 	private String multiplayerCharacter;
@@ -1174,7 +1177,7 @@ public class Engine {
 			hostingTimeAttackRoom = true;
 			RoomHostConfig room = new RoomHostConfig(displayName + "'s room",
 					request.gameId(), request.zone(), request.act(), policy, lockedCharacter,
-					8, fingerprint);
+					8, fingerprint, VoteTrackPools.forGame(request.gameId()));
 			raceHostServer = RaceHostServer.start(
 					configService.getInt(SonicConfiguration.TIME_ATTACK_NET_HOST_PORT),
 					room, identity, TrackValidationProfileSource.none());
@@ -1312,7 +1315,8 @@ public class Engine {
 				RoomHostConfig room = new RoomHostConfig(displayName + "'s room",
 						multiplayerRoundConfig.gameId(), multiplayerRoundConfig.zone(),
 						multiplayerRoundConfig.act(), multiplayerRoundConfig.characterPolicy(),
-						multiplayerRoundConfig.lockedCharacter(), 8, fingerprint);
+						multiplayerRoundConfig.lockedCharacter(), 8, fingerprint,
+						VoteTrackPools.forGame(multiplayerRoundConfig.gameId()));
 				raceHostServer = RaceHostServer.start(
 						configService.getInt(SonicConfiguration.TIME_ATTACK_NET_HOST_PORT),
 						room, identity, TrackValidationProfileSource.none());
@@ -1323,9 +1327,12 @@ public class Engine {
 					multiplayerRoundConfig.characterPolicy(),
 					multiplayerRoundConfig.lockedCharacter(), 8, false);
 			ControlMessage.RoomCreated created = masterClient.createRoom(descriptor,
-					routing, direct ? raceHostServer.port() : 0, fingerprint)
+					routing, direct ? raceHostServer.port() : 0, fingerprint,
+					VoteTrackPools.forGame(multiplayerRoundConfig.gameId()))
 					.get(MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, TimeUnit.MILLISECONDS);
 			masterRoomId = created.roomId();
+			masterAdvertisedZone = descriptor.zone();
+			masterAdvertisedAct = descriptor.act();
 			if (direct) {
 				masterClient.bindHostLink(HostMasterLink.forServer(raceHostServer,
 						new HostMasterLink.MessageSink() {
@@ -1364,6 +1371,16 @@ public class Engine {
 				while (!Thread.currentThread().isInterrupted() && masterClient != null
 						&& masterClient.isOpen() && masterRoomId != null) {
 					Thread.sleep(5000);
+					if (raceHostServer != null) {
+						ControlMessage.RoomDescriptor current = raceHostServer.room().descriptor();
+						if (current.zone() != masterAdvertisedZone
+								|| current.act() != masterAdvertisedAct) {
+							masterClient.sendControl(new ControlMessage.RoomTrackUpdate(
+									masterRoomId, current.zone(), current.act()));
+							masterAdvertisedZone = current.zone();
+							masterAdvertisedAct = current.act();
+						}
+					}
 					int players = raceHostServer == null ? 1 : raceHostServer.room().playerCount();
 					masterClient.heartbeat(masterRoomId, players);
 				}
@@ -1486,6 +1503,8 @@ public class Engine {
 			masterClient = null;
 		}
 		masterRoomId = null;
+		masterAdvertisedZone = -1;
+		masterAdvertisedAct = -1;
 		if (raceHostServer != null) {
 			raceHostServer.close();
 			raceHostServer = null;

@@ -13,14 +13,24 @@ public record MultiplayerHudState(
         long remainingCountdownMillis,
         List<ControlMessage.StandingsRow> standings,
         List<String> chatLines,
+        boolean connectionLost,
+        String kickReason,
         int totalPlayers,
         List<RemoteGhostRegistry.FarPlayer> farPlayers,
-        boolean connectionLost,
-        String kickReason) {
+        String characterPolicy,
+        List<String> voteOptions,
+        List<ControlMessage.VoteCount> voteCounts,
+        long voteRemainingMillis,
+        String voteResultTrackKey,
+        List<ControlMessage.StandingsRow> podiumRows,
+        int localRank) {
 
     public MultiplayerHudState {
         standings = List.copyOf(standings);
         chatLines = List.copyOf(chatLines);
         farPlayers = List.copyOf(farPlayers);
+        voteOptions = List.copyOf(voteOptions);
+        voteCounts = List.copyOf(voteCounts);
+        podiumRows = List.copyOf(podiumRows);
     }
 }
