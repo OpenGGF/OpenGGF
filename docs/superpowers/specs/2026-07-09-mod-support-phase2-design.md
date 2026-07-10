@@ -1,5 +1,7 @@
 # Mod Support Phase 2 — Additive Content Mods Design
 
+**Branch baseline:** `next`.
+
 **Date:** 2026-07-09
 **Status:** Approved (brainstorming session)
 **Parent:** `2026-07-09-mod-support-design.md` §8 Phase 2. Siblings: Phase 0 spec
@@ -17,37 +19,59 @@ complete **new zone in an existing game** — the flagship deliverable. A
 `ggfmod` toolchain converts creator formats (PNG, editor exports) into the
 baked assets the engine loads, and validates mod jars against the contracts
 the engine's own guards enforce on first-party code.
+Patch composition, objects, and art use game-module seams shared by S1/S2/S3K. The
+new-zone acceptance is deliberately the S2 flagship because its level/progression
+walls are the concrete Phase 2 lift; S1/S3K new-zone adapters remain original-scope
+follow-ons tracked by Phase 4 rather than being implied complete here.
 
 ## Components
 
 ### A. Mod code loading (`GgfMod` + `ModContext` + classloader)
 
 - Each enabled code mod gets a classloader whose parent is the engine
-  classloader, created alongside `ModCatalog` in `Engine.init()` (the Phase 1
+  classloader, owned by an engine-scoped `AutoCloseable ModRuntime` created after the
+  effective startup catalog is frozen. Manager/trust changes require restart; there
+  is no hot load/unload. The runtime closes every loader during engine shutdown (and
+  tests verify Windows jar replacement after close). For each gameplay session it
+  instantiates fresh entrypoints and freezes a fresh transactional
+  `ModRegistrationPlan`; no entrypoint/patch instance leaks across sessions. (The Phase 1
   wiring point). Per parent §2, **inter-mod visibility uses a delegating
-  loader**: a mod's loader consults the loaders of its *declared*
-  dependencies (Phase 1's manifest `dependencies`, already
+  loader**: a mod's loader consults only the own-jar/engine-parent view of each
+  *directly declared* dependency (Phase 1's manifest `dependencies`, already
   topologically ordered by the catalog) before failing a lookup; undeclared
-  sibling mods stay invisible. Phase 1's `ModEligibility` refusal
+  siblings and a dependency's undeclared transitive dependencies stay invisible.
+  Phase 1's `ModEligibility` refusal
   `"mod code is not supported yet"` is replaced by the trust gate (§F).
 - Entry contract (parent spec §2): `class MyMod implements GgfMod
   { void register(ModContext ctx); }`, `entrypoint` named in the manifest.
 - `ModContext` registration surface (all namespaced by mod id):
-  - `registerGamePatch(GamePatch patch)` — feeds the Phase 0
-    `GamePatchRegistry`; the mod-backed `PatchEnablement` implementation
-    (Phase 0 Amendment 2's pinned contract) reports mod patches per catalog
-    enable-state/order and leaves built-ins unmanaged.
-  - `registerObject(String key, int requestedId, ObjectFactory factory)` and
+  - `registerGamePatch(GamePatch patch)` — contributes an owner-tagged, unique
+    namespaced patch to the Phase 0 `ModuleResolutionService`.
+  - `registerObject(String key, ObjectFactory factory)` and
     `registerObjectArt(String key, BakedSheetRef sheet)` — consumed by the
-    mod's own `GamePatch` when it decorates the base module's
-    `ObjectRegistry`/`ObjectArtProvider` (§B/§C). Registration outside a
-    patch is invalid — mod content always scopes to a base game via a patch.
-  - `modAssets()` — a `ModAssetSource` root for the mod's own jar
+    engine-owned `ModBackedGamePatch` built from the frozen registration plan. Creator
+    code never reads mutable pending registrations; content scopes to the manifest's
+    base game automatically.
+  - `registerZone(ModZoneContribution)` — registers an owner-tagged local zone key,
+    bounded `BakedLevelRef`, optional per-zone stock `insertAfter` anchor (falling back
+    to the manifest default), and optional owner-wrapped `ZoneEventFactory`. Task 12
+    freezes contributions in registration order into `ModRegistrationPlan`; the
+    engine backing patch decorates zone/level/progression providers atomically.
+  - `modAssets()` — a bounded `ModAssetRoot` for the mod's own jar
     (Phase 0 §B `LoadSource.ModAsset` factory access).
-- **Failure handling** (extends parent §2): `register()` throwing disables
-  the mod for the session with a manager badge; a mod registering content
-  without a patch, or against a base game that doesn't match its manifest
-  `baseGame`, is refused at registration with a logged reason.
+- **Backing patch + failure handling:** every non-empty content transaction synthesizes
+  one engine-owned decorator-only `ModBackedGamePatch`, ordered first within that
+  owner. Explicit creator patches are optional and follow registration order.
+  `register()` throwing discards the whole transaction; a base-game mismatch is a
+  structured registration error.
+- **Runtime fault boundary:** creator provider/event registrations are wrapped in
+  owner-aware proxies, and `ObjectManager` invokes mod-keyed object callbacks through
+  the same engine-owned `ModFaultBoundary`. Non-VM-fatal callback failure publishes
+  an owner finding and stack trace, atomically marks the owner and dependents disabled
+  in pending state for the next launch, and aborts the current gameplay session to the
+  title. It never hot-unloads code or resumes a partially mutated frame. The manager
+  reads the shared Phase 1 runtime-finding store. Creator patch-apply failure retains
+  the separate Phase 0 launch-abort rule.
 
 ### B. Object/badnik modding
 
@@ -55,38 +79,28 @@ the engine's own guards enforce on first-party code.
   (`AbstractObjectInstance` / `AbstractBadnikInstance`) and receive
   `ObjectServices` through the normal ThreadLocal construction path — no
   parallel object runtime (parent spec §3).
-- **Id model (recon-corrected):** `ObjectSpawn` masks `objectId & 0xFF` —
-  object ids are hard 8-bit, and the parent spec's "allocated per-mod at
-  load" must operate inside that space. Design:
+- **Identity model (recon-corrected):** stock `ObjectSpawn.objectId` remains the ROM's
+  hard 8-bit id. Mod identity does **not** share that namespace:
   - Mod-supplied spawn data (mod zones, §D) references objects by
     **namespaced string key** (`mymod:buzzer2`).
-  - At session load, the patch's decorated `ObjectRegistry` allocates each
-    key a free byte id from the base game's unused range (computed from the
-    stock registry's registered ids), deterministically ordered
-    (mod order, then key order) so the same enabled-mod set always yields
-    the same ids — rewind snapshots and respawn tables stay stable within a
-    session and across identical sessions.
-  - `requestedId` in `registerObject` is a hint honored when free (lets a
-    mod pin ids for its own cross-references); conflicts fall back to
-    allocation. Exhaustion (no free bytes) blocks the mod at load with a
-    manager badge.
+  - `ObjectSpawn` gains an optional namespaced `objectKey`/tagged reference. When set,
+    creation consults the mod-key registry; when absent, it delegates to the untouched
+    stock registry. No byte allocator, requested-id hint, or placeholder census exists,
+    so stock layouts cannot be hijacked.
+  - Dynamic children use the same key/owner context or `spawnChild` factory ownership;
+    save/editor/rewind data persists the key and owner, never a runtime number.
   - **Not in Phase 2:** injecting mod objects into *stock* zone layouts
     (that's layout mutation of base levels; revisit with demand).
 - **Rewind (two engine fixes + one rule):**
-  1. `ObjectRewindDynamicCodecs.genericRecreate` resolves the snapshot's
-     class-name string via a loader-less `Class.forName` — mod classes from
-     a child loader fail to restore. Fix: a `ModClassResolver` consulted
-     first (name → `Class` map populated at `register()` time from each
-     mod's loader), falling back to `Class.forName` for engine classes.
-  2. Registry-path recreation (`ctx.objectRegistry().create(spawn)`) works
-     for mod objects iff the allocation in the id model above is
-     deterministic — which it is by construction; a test asserts a mod
-     object survives a snapshot/restore round-trip.
+  1. Snapshots store `(ownerModId, binaryClassName)`. `ModClassResolver` asks the
+     boot-scoped owner-loader registry to load the name, so unregistered dynamic child
+     classes work and identical FQNs in two mods remain distinct.
+  2. Registry-path recreation persists and resolves the namespaced object key.
   3. Rule: mod objects wanting bespoke dynamic-recreate implement
-     `RewindRecreatable` exactly like first-party objects; `ggfmod validate`
-     (§E) checks the three coverage rules the engine's source-scan guards
-     cannot see (they are `src/main`-only and structurally blind to mod
-     jars — recon confirmed all five guards).
+     `RewindRecreatable` exactly like first-party objects. `ggfmod validate`
+     (§E) checks recreate and field coverage and rejects every static except
+     compile-time primitive/String constants. Custom mod static adapters are deferred
+     because mod gameplay state must be instance- or session-owned.
 
 ### C. Art pipeline: baked sheets, reskins, pattern budget
 
@@ -122,6 +136,9 @@ the engine's own guards enforce on first-party code.
   sparse-fallback storage tier, which is fine for mod volumes). Mods
   needing more than one window declare it in the manifest; the manager
   surfaces total budget use.
+  Window assignments live in session state and are re-registered immediately after
+  `LevelManager.initObjectArt()` clears dynamic ranges, before any mod art is cached;
+  consecutive level loads and editor session rebuilds are regression tests.
 
 ### D. New zone in an existing game (flagship)
 
@@ -145,15 +162,17 @@ addresses each:
    a `LoadSource.ModAsset` plan (patterns/chunks/blocks/collision — the
    four plan-shaped kinds, Phase 0 §B) and a **`ModLevelDefinition`**
    asset: layout map, object/ring spawn lists (object entries by
-   namespaced key, resolved through §B's allocator), 4×16-color palettes,
-   solid-tile collision data, boundaries, start positions, music id (stock
-   SMPS id or a Phase 1 streamed track id), zone display name.
+   tagged namespaced key), 4×16-color palettes,
+   solid-tile collision data, boundaries, start positions, music reference (stock
+   SMPS id or namespaced Phase 1 `TrackKey`), zone display name. Its schema and exact
+   export-directory contract are pinned by the cross-phase format/security spec.
    **Engine change required (recon):** the existing plan constructor
    (`Sonic2Level(rom, zone, characterPaletteAddr, levelPalettesAddr, …,
    LevelResourcePlan, mapAddr, solidTileHeightsAddr, …)`) still takes the
    layout map, palettes, and solid-tile data as **ROM address ints** —
    exactly the seams Phase 0 §B deferred. Phase 2 adds a constructor
-   overload (or builder) accepting in-memory layout/palette/solid-tile
+   builder accepting in-memory layout/palette, solid height/width/angle profiles,
+   and primary/secondary collision
    data alongside the plan, reusing the existing decode logic; this is the
    promised "provider-level overrides" realization, confined to
    `Sonic2Level` (S3K mod zones follow the same shape when demanded).
@@ -172,8 +191,9 @@ addresses each:
      null` / 1:1 scroll), exactly like the synthetic-ROM-id story in item 4
      covers the ROM-id-keyed paths.
    - **Reachability via a successor redirect (engine change):**
-     `advanceToNextLevel()` gains a `ZoneProgressionPlan` seam — default
-     implementation is today's linear list order, bit-identical. A patch
+     `advanceToNextLevel()` gains a `ZoneProgressionPlan` seam constructed with an
+     immutable `ZoneTopology` snapshot (zone count, act counts, terminal behavior).
+     Its default is today's linear list order, bit-identical. A patch
      overrides successors, e.g. "MTZ results → mod zone 11; mod zone 11
      results → SCZ (8)". Redirects are only valid at **results-driven**
      boundaries (S2: EHZ..MTZ; the SCZ→WFZ→DEZ tail is event/cutscene
@@ -181,13 +201,29 @@ addresses each:
      manifest declares `insertAfter: <stock zone>` and a redirect after an
      event-chained zone is refused at load with a manager badge. Default:
      after the last results-driven stock zone.
+     Multiple enabled mods may target the same stock anchor: they form one chain in
+     stable effective order (`anchor → first mod → ... → last mod → original stock
+     successor`). Dependencies therefore precede dependents in the chain; disabling a
+     member rebuilds the chain without dangling redirects. Duplicate/invalid mod-zone
+     identities are refused rather than silently shadowed.
+     One owner may register multiple zones. Synthetic indices allocate first by
+     effective owner order and then by that owner's registration order. Zones sharing
+     an anchor chain in that same order; explicit different valid anchors form
+     independent chains. Duplicate owner-local keys fail the whole registration
+     transaction. Disable/rebuild recomputes indices/chains from the frozen effective
+     contributions. Saves/data-select persist tagged `ZoneKey.mod(modId, localName)`,
+     never the recomputed synthetic index. Stock saves retain their legacy numeric
+     index. On load, a mod key resolves against the current registry; reordering or
+     disabling another owner cannot retarget it. A missing/disabled key preserves the
+     slot, reports a finding, and restarts at zone 0. A legacy numeric value at or
+     above the stock count without a key also falls back and can never bind to a
+     newly allocated mod index.
    - Data-select support is NOT automatic (recon: `S2DataSelectProfile`
      hardcodes an 11-entry `CLEAR_RESTARTS` list with bounds checks, and
      the S2 preview-image cache uses fixed zone-key sets). Phase 2 extends
      the S2 data-select host profile (module-owned, so the patch can
-     decorate it) to consult the patched registry **beyond the stock
-     count** — which is exactly where mod-zone saves land under
-     append-only indices: mod-zone slots get a **generic mod-zone preview
+     decorate it) to consult tagged saved zone identity: mod-zone slots get a
+     **generic mod-zone preview
      tile** and a registry-driven restart destination. A slot saved in a
      mod zone and later loaded with that mod disabled follows the parent
      §7 rule (preserved, not quarantined) and restarts at zone 0 with a
@@ -216,39 +252,43 @@ addresses each:
 
 ### E. `ggfmod` SDK/CLI
 
-- **Location — declared amendment of parent §5:** the parent named a
-  separate `openggf-mod-sdk` artifact; Phase 2 supersedes that with package
-  `com.openggf.tools.modsdk` inside the engine module, following the
-  `tools` CLI conventions (`main()` + pure-logic split). Rationale: mods
-  already compile against the engine jar (parent §2's `@ModApi` decision),
-  so the SDK shipping in the same jar adds no new dependency surface for
-  mod authors; a separate Maven module is deliberately rejected for now
-  (single-module repo; revisit if a GL-free toolchain jar is demanded).
+- **Location and published artifact:** sources live in
+  `com.openggf.tools.modsdk` inside the existing engine module, following the tools
+  CLI conventions (`main()` + pure-logic split), but release packaging also attaches
+  a separate `openggf-mod-sdk` classifier jar containing those converter/packager
+    classes, templates, and service resources. An attached classifier shares the main
+  POM and cannot depend on its own unclassified artifact, so distribution/build docs
+  explicitly require both engine and SDK jars. This satisfies the parent's
+  two-artifact contract without a risky multi-module source-tree move.
   CLI entry `GgfModCli` dispatching subcommands; invoked
-  `java -cp <engine-jar> com.openggf.tools.modsdk.GgfModCli <cmd>` (a thin
+  `java -cp <engine-jar><path-separator><openggf-mod-sdk-jar>
+  com.openggf.tools.modsdk.GgfModCli <cmd>` (a thin
   `ggfmod` script ships in `docs/modding/`).
 - Subcommands (parent §5, made concrete):
-  - `init` — scaffold a Maven mod project (manifest, sample badnik using
-    `ObjectScaffoldTool`'s generator style, sample sheet manifest, build
-    wiring).
+  - `init` — scaffold a Maven mod project (manifest, compilable sample badnik using
+    `ObjectScaffoldTool`'s generator style, minimal editor-export level source,
+    sample sheet manifest, and build wiring). Phase 3 extends the same template with
+    the original character stub once the character API exists.
   - `convert art` — PNG + sheet manifest → baked sheet container (§C);
     quantization report; hard errors: >16 colors/line, non-8×8-multiple
     dimensions, piece boxes outside the image.
   - `convert level` — editor full-level export (§G) → plan assets
     (pattern/chunk/block/collision binaries) + `ModLevelDefinition`.
   - `convert audio` — Phase 1's audio validation (loop metadata, wav/ogg).
-  - `validate` — manifest schema, asset integrity, id-range and pattern
+  - `validate` — manifest schema, asset integrity, object-key and pattern
     budget checks, entrypoint presence, and the checks the engine's
     source-scan guards can't do on mods: object classes extend the base
-    classes and the three rewind coverage rules' structural halves
-    (recreate path exists, `final` scalar inventory, object-ref field
-    inventory) via **reflection** over the mod jar on an isolated loader —
-    plus the method-body checks (`services()` calls in constructors,
-    ref-field capture usage) via **bytecode analysis**. **Declared new
-    dependency:** `org.ow2.asm:asm` (compile scope, small and stable) —
-    reflection cannot see method bodies and the engine's own guard for this
-    is a source scanner with nothing to reuse.
-  - `package` — assemble the jar.
+    classes, instance rewind rules, the compile-time-static-only rule,
+    recreate path, `final` scalar inventory, object-ref field inventory,
+    constructor `services()` calls, and ref-field capture usage via **ASM over jar
+    bytes before any owner loader exists**. References to reachable but non-`@ModApi`
+    engine types are supported-surface warnings, not validation errors—the trust model
+    permits them but gives no compatibility promise. **Declared new dependency:**
+    `org.ow2.asm:asm` (compile scope, small and stable), required because the engine's
+    own guard is a source scanner with nothing reusable for external compiled jars.
+  - `package` — run `validate` and fail on any error before assembling the jar. At
+    boot, the engine independently recomputes the structural validator from jar bytes
+    before loader creation; it does not trust an embedded author record.
   - `run` — dev-mode launch with the mod from build output. (Correction:
     dev mode is **built in Phase 2**, not inherited — Phase 1 ships no dev
     flag; the scanner gains exploded-directory support behind a system
@@ -262,7 +302,8 @@ addresses each:
   on first press; second press grants. The grant persists on
   `ModState.Entry` as two added fields: `trusted` (boolean) and
   `trustedJarSha256` (the jar's content hash recorded at grant time); a
-  hash mismatch at scan time revokes the grant and re-prompts (hashing
+  hash mismatch at scan time revokes the grant for the next boot and re-prompts;
+  enable/trust changes show Restart required (hashing
   happens once per scan, not per frame). Format compatibility is a
   non-issue by construction: Phase 1's `ModStateStore` parses
   `modstate.json` into a plain `Map` (not a POJO), so added fields are
@@ -271,35 +312,26 @@ addresses each:
 
 ### G. Editor mod-facing features (the Phase 2 half of parent §6)
 
-- **Chunk/block library pane** sourced from the active mod's tileset
-  (browsable palette — the piece deferred from Phase 0), plus the browsable
-  object palette for spawn placement (Phase 0 ships numeric-id entry; this
-  upgrades it, listing stock ids + the mod's namespaced keys).
+- **Chunk/block library pane** sourced from the active mod's tileset, plus an upgrade
+  of Phase 0's browsable stock object palette: append namespaced mod keys and asset
+  previews while retaining stock ids/names/subtype behavior.
 - **Full-level export** ("export to mod project"): unlike Phase 0's
   delta-envelope, serializes the complete level from `MutableLevel` —
   patterns, chunks, blocks, map, solid tiles + chunk collision indices,
   palettes, spawns, boundaries, start position — into the mod project's
   source tree where `ggfmod convert level` bakes it.
-- **Envelope spawn entries for mod objects persist the namespaced key, not
-  the byte id.** Phase 0's v2 envelope stores spawns by numeric id, which
-  is stable for stock objects but drifts for mod objects whenever the
-  enabled-mod set (or the stock id census) changes between authoring
-  sessions. Phase 2 extends the v2 `ObjectSpawnState` with an optional
-  `objectKey` field: the editor writes the key for any id inside the
-  mod-allocated range, and envelope apply resolves keys through the §B
-  allocator (a key whose mod is absent skips that spawn with a logged
-  count). Stock-object entries are unchanged; v2 files without the field
-  read as before. **Compatibility pin (amends Phase 0 §C.3):** the
-  envelope's spawn-entry parsing must be map-shaped and ignore unknown
-  fields (the `ModStateStore` idiom), so a Phase 0-vintage reader tolerates
-  Phase 2 envelopes; the version stays 2, no quarantine-threshold change. This is also the
+- **Envelope spawn entries for mod objects persist the namespaced key, never a byte
+  id.** This is envelope **v3**: v1/v2 readers quarantine it rather than interpreting a
+  drifting numeric fallback. A missing mod key skips that spawn with a structured
+  logged count. Stock v2 entries remain unchanged. Version-specific DTO/hash rules are
+  pinned by the cross-phase format/security contract. This is also the
   new-zone authoring entry point: start from a snapshot of any loaded stock
   zone (`MutableLevel.snapshot`), edit freely, export as a NEW zone (the
   export never contains ROM-copyright-relevant data beyond what the creator
   chose to keep — the docs make the licensing implication explicit: shipping
   a lightly-edited stock zone ships Sega's level data, and mod authors are
   responsible for their content).
-- **`@ModApi` surface:** annotation `com.openggf.game.ModApi` (CLASS
+- **`@ModApi` surface:** annotation `com.openggf.game.ModApi` (RUNTIME
   retention) applied to the curated set — `GgfMod`, `ModContext`,
   `GamePatch` + `PatchContext` + `GameplayLaunchRequest`, `ObjectServices`,
   `AbstractObjectInstance`, `AbstractBadnikInstance`, `ObjectSpawn`,
@@ -307,9 +339,17 @@ addresses each:
   `PhysicsProfile`, the `level.objects` utility helpers, the baked-sheet
   reader types, `ModLevelDefinition`. (The set spans four packages —
   recon-confirmed — the annotation, not a package, defines the surface.)
-  A signature-snapshot guard test freezes the annotated types' public
-  surface (additions allowed, removals/changes fail); the mod API version
-  constant bumps to major 2.
+  The guard closes the surface transitively: every non-JDK type in an annotated
+  public/protected signature must also be annotated, including creator-facing
+  provider/handler interfaces, `RewindRecreatable`, `GameModule`, `ObjectFactory`,
+  and registration handles. The exact annotated inventory drives generated Javadoc
+  published beside the engine and `openggf-mod-sdk` jars. Trusted mods may still reference internal
+  types, but validation reports only a compatibility warning for those references.
+  A signature-snapshot guard freezes public API, protected subclass hooks, generic
+  signatures, exceptions, annotations, and transitive signature types (additions
+  allowed within semver rules; removals/changes fail). Phase 2 is additive over the
+  Phase 1 format surface, so the mod API version becomes `1.1.0`, not a new major.
+  The canonical Phase 1 range `>=1.0.0 <2.0.0` remains eligible.
 
 ## Explicitly out of scope for Phase 2
 
@@ -320,7 +360,7 @@ scope note), lifting the editor's S3K runtime re-apply gate.
 
 ## Verification strategy
 
-- Unit: id allocator determinism; baked-sheet round-trip (SDK write → engine
+- Unit: stock-id/mod-key isolation; baked-sheet golden round-trip (SDK write → engine
   read → `ObjectSpriteSheet` equality); `ModClassResolver` recreate
   round-trip with a test jar + child loader; `LevelDescriptor` retrofit
   (stock zones bit-identical); synthetic-index routing.
@@ -331,12 +371,11 @@ scope note), lifting the editor's S3K runtime re-apply gate.
   the sample mod force-disabled (mods-off behavior bit-identical), and one
   sweep with it enabled but its zone unvisited (stock zones unaffected).
 
-## Open questions
+## Resolved contracts and remaining polish
 
-- **Object-id headroom per game:** S2 already occupies most of 0x00–0xDC;
-  the free-byte census per game happens at implementation. If headroom is
-  tighter than ~20 ids for any game, widening `ObjectSpawn.objectId` past
-  8 bits (mod-spawn path only) becomes a Phase 2.5 follow-up.
+Object-id headroom is no longer a question because mod objects use namespaced tagged
+references. All binary/JSON formats and hostile-input limits are authoritative in
+`docs/superpowers/specs/2026-07-10-mod-support-format-security-contracts.md`.
 - **`TitleCardManager` letter art for mod zone names:** stock title cards
   compose from ROM letter art; a mod zone name may need character coverage
   the ROM set lacks. Fallback: skip the title card for mod zones (config

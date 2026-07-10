@@ -1,10 +1,19 @@
 # GamePatch Framework + Knuckles in Sonic 2 Implementation Plan
 
+> **2026-07-10 compatibility amendment:** Phase 0 mod foundations supersede this
+> plan's static `GamePatchRegistry` Task 4 and every later static call. Do not create or
+> call that facade. Install `Kis2GamePatch` as
+> `PatchOwner.BuiltIn("kis2")` through the engine-owned
+> `ModuleResolutionService` bootstrap, obtain a fresh `ResolutionContext` per launch,
+> and adapt availability/boot/integration tests to injected contexts. This amendment
+> applies to Tasks 7–14 and is mandatory alongside the no-`PhysicsFeatureSet`
+> amendment; KiS2 content/provider/art behavior is otherwise unchanged.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a reusable `GamePatch` framework (code overlay over a base `GameModule`) and ship its first consumer: a faithful, playable Knuckles in Sonic 2 core slice driven by the s2disasm `knuckles-in-sonic-2` branch diffs.
 
-**Architecture:** A `GamePatch` wraps the base `GameModule` via an explicit `DelegatingGameModule`; `GamePatchRegistry` resolves patches at the module-construction choke points (before `SessionManager.openGameplaySession`). KiS2 overrides physics + player art + icon art, reading Knuckles data from the logical S&K ROM (first 2MB of the combined S3K image). `SessionManager` stays patch-agnostic.
+**Architecture:** A `GamePatch` wraps the base `GameModule` via `DelegatingGameModule`; the Phase 0 engine-owned `ModuleResolutionService` resolves owner-tagged patches before session open. KiS2 overrides physics + player/icon art from the logical S&K ROM. Session launch receives a resolved context rather than consulting static registry state.
 
 **Tech Stack:** Java 21, Maven, JUnit 5 (Jupiter only). Spec: `docs/superpowers/specs/2026-06-12-game-patch-kis2-design.md`.
 
@@ -12,7 +21,10 @@
 
 ## Ground rules for the executor
 
-- **Branch:** `feature/ai-game-patch-kis2` off `develop`. This repo's working tree is shared by concurrent agent sessions: NEVER `git add -A` / `git add .`; stage only the files you created/modified for the current task.
+- **Execution branch (user directive 2026-07-10):** when this adopted work executes,
+  commit directly on the existing `next` worktree. This repo's working tree is shared
+  by concurrent agent sessions: NEVER `git add -A` / `git add .`; stage only the
+  files created/modified for the current task.
 - **Hooks:** run `git config core.hooksPath .githooks` once before the first commit.
 - **Commit trailers:** every commit message must end with the 7-trailer block (see commit steps; the `prepare-commit-msg` hook appends an empty block if you forget — fill it in, don't delete it). `feat`/`fix` commits touching `src/main/` must either stage `CHANGELOG.md` with `Changelog: updated`, or give a reason: `Changelog: n/a: incremental kis2 slice step; changelog entry lands in the final docs task`. This plan uses the latter for intermediate commits and updates `CHANGELOG.md` in Task 14.
 - **Test invocation (PowerShell):** quote `-D` properties. Focused run:
@@ -1755,7 +1767,8 @@ Configuration-Docs: n/a
 Skills: n/a"
 ```
 
-- [ ] **Step 4:** When merging to `develop`, stage a `README.md` release-notes entry per the branch documentation policy.
+- [ ] **Step 4:** Before the final direct commit on `next`, stage a `README.md`
+  release-notes entry per the documentation policy; there is no merge-back step.
 
 ---
 

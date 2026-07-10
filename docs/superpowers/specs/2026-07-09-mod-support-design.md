@@ -1,5 +1,8 @@
 # OpenGGF Drop-In Mod Support — Design
 
+**Branch baseline:** `next` (per the 2026-07-10 user directive, implementation lands
+directly on `next`; there are no phase branches or merge-back steps).
+
 **Date:** 2026-07-09
 **Status:** Approved (brainstorming session)
 **Relationship to current priorities:** design-ahead document. It does not displace the
@@ -12,7 +15,7 @@ Let players drop a single mod jar into a `mods/` folder and have the engine pick
 new levels, level graphics, objects/badniks, characters, music, and sound effects —
 plus, eventually, fully standalone games built on the engine. Provide a creator
 toolchain (SDK + CLI + the in-engine level editor) that converts modern authoring
-formats (PNG, wav/ogg/mp3, editor exports) into the engine's native Mega Drive-style
+formats (PNG, wav/ogg, editor exports) into the engine's native Mega Drive-style
 data at build time.
 
 ## Decisions made during brainstorming
@@ -27,8 +30,8 @@ data at build time.
 3. **Asset conversion — build-time.** The SDK/CLI converts source formats
    (PNG tilesheets/sprite sheets, level exports, audio) into engine-native baked data
    packed in the jar. Conversion errors surface at build time with friendly messages.
-   Audio is the exception: wav/ogg/mp3 ship as-is in the jar and are decoded/streamed
-   at runtime.
+   Audio is the exception: wav/ogg ship as-is and decode/stream at runtime. MP3 is a
+   deferred codec, not an accepted initial format.
 4. **Level tooling — grow the in-engine editor** into the primary mod level tool
    (object placement, collision editing, playtest-in-place, export-to-mod-project).
    External-editor (Tiled) import is a later polish item. The editor MVP is
@@ -55,22 +58,26 @@ data at build time.
 A mod is one jar:
 
 - **`META-INF/openggf-mod.yaml`** — manifest:
+  - schema: strict `formatVersion: 1`; exact field types, requiredness, dependency
+    objects, override maps, and canonical example are authoritative in the shared
+    format/security contract's Manifest v1 section
   - identity: `id` (lowercase, `[a-z0-9-]+`, globally namespaces everything the mod
     registers), `name`, `version`, `authors`, `description`
-  - compatibility: `engineApiVersion` (semver range; see §2 for what it is checked
+  - compatibility: `engineApiRange` (semver range; see §2 for what it is checked
     against and when)
   - `type: patch | standalone`; `baseGame: s1 | s2 | s3k` when `type: patch`
   - `entrypoint:` optional fully-qualified class implementing `GgfMod`; omitted for
     pure-data mods
   - `dependencies:` other mod ids with version ranges
   - **override maps**: declarative `artOverrides:` (base art key → mod asset path) and
-    `audioOverrides:` (base track/SFX ID → mod audio ID). A reskin or music pack is
-    manifest + assets, zero code.
+    `audioOverrides:` (base music ID → mod track local name). Base-game streamed SFX
+    overrides are deferred and will require a separately typed field. A reskin or
+    music pack is manifest + assets, zero code.
 - **`assets/`** — engine-native baked data produced by the SDK: 4bpp patterns, palette
   lines, chunks/blocks, level layouts, collision data, sprite mappings/DPLCs,
   animation scripts. Stored raw or jar-deflated — no Kosinski/Nemesis compression is
   used for mod content (those exist only for reading real ROMs).
-- **`audio/`** — wav/ogg/mp3 files plus `audio-manifest.yaml`: logical track/SFX IDs,
+- **`audio/`** — wav/ogg files plus `audio/audio-manifest.yaml`: logical track/SFX IDs,
   sample-accurate loop metadata (intro length + loop region), gain, and whether a
   track participates in tempo effects.
 - **compiled classes** (optional) — object/badnik/boss/character/event code written
@@ -91,34 +98,51 @@ CompressionType, int destOffset)`) and `ResourceLoader` pulls from the ROM reade
 Phase 0 generalizes this with a **load-source abstraction**: a `LoadOp` carries either
 a ROM address (base games, unchanged behavior) or a `ModAssetSource` reference (mod
 jar path, no decompression). `LevelResourcePlan`/`ResourceLoader` composition —
-including overlay copy-on-write — then works identically for both sources. This is how
-§3's "new levels ride the existing `LevelResourcePlan` path" is made literally true;
-without it, mod level data has no loader.
+including overlay copy-on-write — then works identically for both sources. Phase 0
+applies this to the four plan-shaped resources supported by current constructors:
+patterns, chunks, blocks, and collision indices. Phase 2 adds explicit in-memory/
+provider seams for layouts, spawns, palettes, solid profiles, boundaries, and
+animation data. Together—not the Phase 0 abstraction alone—they complete §3's
+new-level loading path.
 
 ## 2. Loading & lifecycle
 
 - **`ModRepositoryScanner`** scans `mods/` at startup and parses manifests **without
-  loading any mod code**, producing immutable `ModDescriptor`s (id, version, type,
-  declared content, whether code is present, dependency edges).
-- **Mod manager screen** (reachable from the master title): list, enable/disable,
-  reorder, per-mod info. Enabling a mod whose jar contains classes triggers a one-time
+  loading any mod code**, producing immutable valid `ModDescriptor`s (id, version,
+  type, declared content, whether code is present, dependency edges) or invalid
+  catalog entries that retain jar filename + structured findings. Malformed jars stay
+  visible in the manager without nullable/fabricated manifests.
+- **Mod manager screen** (reachable from the master title by logical keyboard/gamepad
+  actions): list, enable/disable, reorder, per-mod info. Changes persist as pending
+  state and show **Restart required**; mods are never hot-loaded or hot-unloaded.
+  Enabling a mod whose jar contains classes triggers a one-time
   trust prompt: *"This mod contains code and runs with full permissions."* Java cannot
   be meaningfully sandboxed post-SecurityManager removal, so the model is informed
   consent, as in every major Java modding ecosystem. Enable/disable/order state
   persists in `mods/modstate.json` (outside the jars, not in `config.yaml`, so mod
   churn doesn't touch user config).
-- **Class loading:** each enabled code mod gets its own `URLClassLoader` whose parent
+- **Class loading:** at the next boot, each enabled code mod gets its own
+  `URLClassLoader` whose parent
   is the engine classloader. Consequence of the trust model, stated plainly: mods can
   see and call the entire engine, not just the curated API — the API defines what is
   *supported*, not what is *reachable*. Inter-mod class visibility uses a delegating
-  loader that consults the loaders of the mod's *declared* dependencies only;
+  loader that consults the loaders of the mod's *declared* dependencies only.
+  Loaders live in an engine-owned, `AutoCloseable` `ModRuntime`, close during engine
+  shutdown, and are never retained by session state. A fresh transactional
+  `ModRegistrationPlan` is produced for every gameplay session from entrypoint
+  classes; entrypoint instances and patch instances are not reused between sessions;
   undeclared sibling mods are not visible. Entry contract:
   `class MyMod implements GgfMod { void register(ModContext ctx); }`.
-- **`ModContext`** is the only supported registration door:
+- **`ModContext`** is the only supported registration door. It collects contributions
+  privately, validates them, and atomically publishes one immutable
+  `ModRegistrationPlan`; a failed registration publishes nothing:
   - `registerGamePatch(GamePatch)` — additive mods contribute `GamePatch` instances
     (the KiS2 framework's own type: `GamePatch.apply(GameModule, PatchContext)`).
-    The framework extension in Phase 0 lets `GamePatchRegistry.resolveModule(...)`
-    compose an **ordered stack** of patches over the base module. A patch applies to a
+    The framework extension in Phase 0 lets `ModuleResolutionService.resolve(...)`
+    compose an **ordered stack** of owned patches over the base module. Each
+    registration records `ownerModId`, a unique namespaced `patchId`, and registration
+    order; built-ins carry explicit built-in provenance rather than being inferred
+    from an unknown id. A patch applies to a
     session iff it is **enabled** in the mod manager **and** its **activation
     predicate** accepts the launch request (the KiS2 design's predicate model is kept,
     not replaced — enable-state is an additional gate, and mod-manager order decides
@@ -127,7 +151,9 @@ without it, mod level data has no loader.
     main character is Knuckles.
   - `registerGameModule(...)` — standalone mods provide a full `GameModule` (§3,
     Phase 3; requires the ROM-coupling seam change noted there)
-  - asset/audio/object/character registry handles, all namespaced by mod id
+  - asset/audio/object/character registry handles, all namespaced by mod id. Engine
+    code freezes these into an engine-owned `ModBackedGamePatch`; creator patches do
+    not need access to mutable pending-registration collections.
 - **Surfacing:** additive content appears inside the base game's existing flows
   (extra zones in the level flow, characters on the launch-config screen); standalone
   mods appear as new entries on the master-title game select.
@@ -139,11 +165,13 @@ without it, mod level data has no loader.
   break without notice. This deliberately avoids extracting the base classes into a
   separate Maven module — they are too coupled to engine internals to split out, and
   the trust model already grants full classpath visibility. A single engine-published
-  **mod API version** constant backs the manifest's `engineApiVersion` check. It
-  exists from Phase 1 (initially covering only the manifest + baked-asset + audio
-  formats, since no mod code runs yet) and bumps per semver as the code API arrives in
-  Phase 2 (proposal: additive-only within a major version, one-minor-release
-  deprecation window).
+  **mod API semantic version** backs the manifest's `engineApiRange` check;
+  format versions remain separate integers. It
+  exists from Phase 1 (initially covering only manifest/audio formats) and advances
+  additively as `1.0.0` (Phase 1), `1.1.0` (Phase 2), and `1.2.0` (Phase 3). The
+  canonical `<2.0.0` ranges remain eligible throughout. A future breaking surface
+  requires an explicit major-version migration plan and at least one minor-release
+  deprecation window; a phase boundary alone never forces a major bump.
 
 ### Failure handling (design-level)
 
@@ -153,12 +181,20 @@ without it, mod level data has no loader.
   the manager shows which requirement failed. Disabling a mod that others depend on
   cascades a disable prompt.
 - **Dependency cycles:** all mods in the cycle are refused with the cycle listed.
-- **`engineApiVersion` mismatch:** the mod cannot be enabled; the manager shows the
+- **`engineApiRange` mismatch:** the mod cannot be enabled; the manager shows the
   required vs available API version. No warn-and-load.
 - **Mod code throws during `register()` or later lifecycle calls:** the mod is
-  disabled for the session, the error is surfaced (manager badge + log with mod id and
-  stack trace), and the engine continues without it. A mod must never take the engine
-  down at startup.
+  disabled for the session and its transactional registration is discarded. If
+  `activatesFor` or other pre-application metadata throws, composition marks that
+  owner and its transitive dependents failed and continues with independent owners.
+  An arbitrary creator `GamePatch.apply` may have mutated its input before throwing,
+  so an apply failure aborts launch to the title and disables the owner/dependents for
+  the next launch; it does not claim a safe last-good rollback. Engine-generated
+  `ModBackedGamePatch` is decorator-only and may use last-good continuation because
+  the engine controls its non-mutating implementation. Provider/object/event exceptions after a session has opened cannot be
+  safely hot-unloaded; the engine reports the owner, aborts that gameplay session to
+  the title, and disables it for the next launch. This is the precise boundary of the
+  non-crashing guarantee.
 - **Reordering vs dependencies:** the manager enforces topological consistency —
   a mod is always ordered after its declared dependencies; the user reorders freely
   within that constraint.
@@ -167,11 +203,11 @@ without it, mod level data has no loader.
 
 | Content | Engine seam | Creator supplies |
 |---|---|---|
-| New level/zone | zone + level-resource providers on the patch, via the `LevelResourcePlan` / `ResourceLoader` path with the Phase 0 load-source abstraction (§1) | baked layout/chunks/collision from the editor export, tileset PNGs, music mapping, optional event-handler class (default no-op events otherwise) |
+| New level/zone | zone + level-resource providers on the patch; Phase 0 supplies mod sources for plan-shaped resources and Phase 2 supplies the remaining in-memory/provider seams (§1) | baked layout/chunks/collision from the editor export, tileset PNGs, music mapping, optional event-handler class (default no-op events otherwise) |
 | Level graphics | baked patterns/chunks/palettes via `ModAssetSource` | PNG tilesheets + palette definition; SDK enforces 16-color palette lines and 8×8 alignment |
 | New object/badnik | `AbstractObjectInstance` / `AbstractBadnikInstance` subclasses registered under mod-namespaced IDs (`mymod:buzzer2`) in the game's object registry | Java class + PNG sprite sheet (SDK bakes mappings/DPLCs) |
 | New character | `PhysicsProfile` + moveset hooks + launch-config roster entry | profile constants, art sheets, optional ability code — heaviest lift, phased last |
-| Music/SFX | streamed track layer (§4) | wav/ogg/mp3 + audio manifest |
+| Music/SFX | streamed track layer (§4) | wav/ogg + audio manifest (MP3 deferred) |
 | Replacements | manifest override maps, no code | assets only |
 
 Mod objects flow through the normal object pipeline: `ObjectServices` injection at
@@ -179,15 +215,20 @@ construction, touch responses, solid contacts, `DestructionEffects`, the object
 behavior contracts (`ObjectControlState`, `ObjectLifetimeOps`, ...), and rewind
 capture. There is no parallel "mod object" runtime — a mod badnik is a badnik.
 
-**Rewind:** at *runtime*, mod objects are covered by the same reflection-based
-machinery (`GenericFieldCapturer`, compact schema when codecs cover the fields) with
-no per-mod work. *Build-time* coverage validation in `ggfmod validate` is new tooling:
+**Rewind:** mod objects use the same field-capture machinery, but child-loader class
+identity requires explicit engine support. Snapshots store `(ownerModId,
+binaryClassName)` and resolve through the boot-scoped owner-loader registry, including
+dynamic child classes; a registration-time name-to-class map is insufficient and
+duplicate FQNs in different mods remain unambiguous. *Build-time* coverage validation
+in `ggfmod validate` is mandatory tooling:
 the existing coverage analyzers are source-tree scanners hardcoded to the engine repo
 (`ObjectClasspathScan` package roots, source-regex supertype resolution) and cannot be
 pointed at a mod project as-is. Phase 2 includes a reflection/bytecode-based coverage
-checker that generalizes the analyzers' *rules* (recreate path exists, no uncaptured
-`final` scalars, object refs captured as rewind ids) to compiled mod classes. Until it
-exists, mod rewind gaps surface at runtime only.
+checker that generalizes both analyzers' rules (recreate path exists, no uncaptured
+`final` scalars, object refs captured as rewind ids, and no unregistered mutable
+gameplay statics) to compiled mod classes. `ggfmod package` fails when validation
+fails, and an unvalidated code jar cannot be enabled. Engine-owned shared mod state
+must be session-scoped and registered through a `RewindSnapshottable` adapter.
 
 **Standalone mods and ROM coupling (Phase 3 seam change, not free):**
 `GameModule.createGame(Rom)` and `createTouchResponseTable(RomByteReader)` assume a
@@ -198,26 +239,31 @@ This is flagged here so Phase 3 estimates include it.
 
 ## 4. Audio: streamed track layer
 
+- A **namespaced `TrackKey` registry** distinguishes new mod tracks from numeric stock
+  music ids. `audioOverrides` may rebind an existing game-scoped numeric id; new zones
+  and standalone games reference `TrackKey(modId, localName)` and never allocate or
+  steal a stock id.
 - **`StreamedAudioBackend`** sits beside the SMPS driver behind the same
   `AudioManager` command surface — play/stop/fade by track ID. Gameplay code is
-  backend-agnostic: a **track registry** resolves IDs at registration time, mapping
-  existing int/enum music IDs and new mod-namespaced string IDs (`mymod:music/zone1`)
-  to either SMPS data or a stream. Override maps (§1) rebind an existing ID to a
-  stream; new zone content references its own IDs directly.
-- **Codecs:** ogg via stb_vorbis (already available through LWJGL), wav via
-  `javax.sound.sampled`, mp3 via a to-be-chosen decoder (license check is an open
-  question below).
-- **Tempo/priority semantics mapped onto streams:** speed shoes → rate/pitch shift;
-  jingles (invincibility, drowning, 1-up) duck/pause and resume the music stream with
-  the same priority rules the SMPS path applies; underwater filtering is optional
-  polish (simple low-pass), not required initially.
+  backend-agnostic. The presentation pump treats streamed-only playback as active,
+  starts/queues it without a SMPS `currentStream`, exposes the correct upload rate,
+  and owns stop/reset/shutdown cleanup.
+- **Codecs:** ogg via stb_vorbis (already available through LWJGL) and wav by evolving
+  the repository's native-image-compatible `WavDecoder`. MP3 is out of scope.
+- **Tempo/priority semantics mapped onto streams:** speed shoes → rate/pitch shift.
+  The live `GameAudioProfile` categories remain authoritative: invincibility and Super
+  are non-SFX-blocking overrides that stack/resume; 1-up stacks, stops/blocks SFX, and
+  fades the saved source back with the existing S1/S2 versus S3K release timing;
+  drowning replaces music, clears the stack, and does not resume it. Underwater
+  filtering is optional polish (simple low-pass), not required initially.
 - **Loop points:** sample-accurate intro + loop region from the audio manifest, so
   looping zone music behaves like SMPS loops rather than whole-file restarts.
 - **Rewind:** streamed playback is **excluded from the `AudioCommand` rewind
   timeline** (`AudioManager`'s record/replay path stays SMPS-only). Streams instead
   follow a simple pause-on-rewind-entry / resume-in-place-on-exit model, and a
-  backward seek re-issues only the *current* stream state (which track, position
-  coarse to the last keyframe) rather than replaying command history. Streamed SFX are
+  backward seek restores logical streamed state (track key/id, frame position, pause,
+  fade, and rate) from the last keyframe rather than replaying command history.
+  Streamed SFX are
   suppressed during rewind. This is deliberately simpler than SMPS rewind and is an
   accepted, documented divergence for mod audio.
 - Mods may also reference built-in SMPS tracks by their existing IDs (e.g. a new zone
@@ -256,7 +302,7 @@ The editor MVP (`com.openggf.editor`) currently covers chunk painting, undo/redo
 the save envelope — it is *not* yet a level-authoring tool. Phase 0 (§8) completes the
 foundations and Phase 2 adds the mod-facing pieces:
 
-- object-placement palette (spawn list editing, subtype parameters) — *Phase 0*
+- numeric object/ring spawn editing and subtype parameters — *Phase 0*
 - collision-path editing — *Phase 0*
 - export envelope hardening — *Phase 0*
 - playtest-in-place (the editor's teardown/rebuild mode swap already provides this) —
@@ -271,20 +317,29 @@ Creator loop: paint in-engine with real physics → playtest instantly → expor
 ## 7. Namespacing, compatibility, safety
 
 - Every registry key a mod creates is mod-id-prefixed (`mymod:objects/buzzer2`,
-  `mymod:art/tileset-main`, `mymod:music/zone1`). Numeric object IDs used by level
-  spawn data are allocated per-mod at load and mapped through the namespaced key, so
-  two mods never collide on raw IDs.
+  `mymod:art/tileset-main`, `mymod:music/zone1`). Mod-authored spawns persist a tagged
+  namespaced object key, not an allocated byte id; stock spawns retain their original
+  8-bit id. Object creation consults the key registry only when a key is present, so a
+  mod can never hijack a stock placeholder id.
 - **Virtual pattern IDs:** each enabled mod is allocated a block from a reserved mod
-  range above the existing category bases in `PatternAtlas` (existing bases top out at
-  `0x100000`; the sparse-map tier makes large ranges cheap; exact base/budget sized
-  during Phase 1 implementation).
+  range above the maximum registered `PatternAtlasRange.endExclusive()` (currently
+  `SEGA_BOOT_LOGOS` ends at `0x108000`); the sparse-map tier makes large ranges cheap.
+  Assignments are session state and are re-registered after level art clears dynamic
+  ranges.
 - **Conflicts:** load order resolves override conflicts (later wins); the mod manager
   surfaces any two mods overriding the same base key.
-- **Trace/test hygiene:** mods are force-disabled during trace replay and in headless
-  test runs (the latter trivially, since headless harnesses never run the mod scan).
+- **Trace/test hygiene:** modes known at process boot (test/headless/trace tooling)
+  decide the gate before any mod filesystem scan. Deterministic modes entered later
+  (attempt/recording replay or capture) switch an engine-owned
+  `ExternalContentPolicy` to disabled, rebuild/install empty session patch/audio
+  registries, and perform no further scan or mod callback. They may follow an earlier
+  normal boot scan; the enforceable invariant is no external-content use in the
+  deterministic session.
   `ggfmod run` dev mode is the explicit exemption (§5); running the trace picker /
   test mode with mods loaded is unsupported.
-- **Saves:** standalone-mod saves are namespaced per mod id in `SaveManager`; additive
+- **Saves:** standalone-mod saves are namespaced per mod id in `SaveManager`; no save,
+  rewind snapshot, editor envelope, or level asset persists a runtime-allocated mod
+  object/audio id. Additive
   mods that add zones extend the base game's slot metadata in a forward-compatible
   way (achievable today: quarantine triggers on wrong-game/hash/payload-missing, not
   on unknown zone values).
@@ -293,10 +348,9 @@ Creator loop: paint in-engine with real physics → playtest instantly → expor
 
 Ordering note (per review): "independently shippable" means each phase delivers
 standalone user value when it lands, not that phases can be built in any order.
-Phase 0 is a hard prerequisite for **Phase 2** only; **Phase 1 has no Phase 0
-dependency** (music packs need the scanner, manager UI, streamed backend, and track
-registry — none of the patch/loader/editor foundations) and may proceed in parallel
-with Phase 0.
+Phase 0 is a hard prerequisite for Phase 2. Phase 1 depends only on Phase 0 Task B1's
+small shared `com.openggf.io` hostile-input foundation; after that commit, Phase 1 and
+the remaining Phase 0 work may proceed in parallel.
 
 0. **Phase 0 — engine foundations (prerequisite for Phase 2).** Completes the two
    approved-but-unfinished features mod support stands on, plus the loader seam:
@@ -312,9 +366,13 @@ with Phase 0.
    `StreamedAudioBackend` + track registry, `audioOverrides` maps, trace-mode
    force-disable. Ships user-visible value (music packs) with no mod-code surface at
    all. Art reskins are *not* in Phase 1 — baked art requires the Phase 2 converter.
-2. **Phase 2 — additive content mods.** `@ModApi` surface + classloading + trust
+   The authoritative child design is
+   `docs/superpowers/specs/2026-07-09-mod-support-phase1-design.md`.
+2. **Phase 2 — additive content mods.** Cross-game patch/object/art surfaces plus an
+   S2 new-zone flagship; S1/S3K new-zone adapters remain visible original-scope
+   follow-ons. `@ModApi` surface + classloading + trust
    prompt, `ggfmod` CLI with art/level/audio converters (art reskins become possible
-   here), object/badnik modding, the reflection-based rewind-coverage checker (§3),
+   here), object/badnik modding, the compiled-bytecode rewind-coverage checker (§3),
    editor mod-facing features + export (§6), and a new zone in an existing game as the
    flagship sample.
 3. **Phase 3 — characters + standalone games.** Character roster/profile/moveset
@@ -323,13 +381,15 @@ with Phase 0.
 4. **Phase 4 — polish.** Tiled import, docs site + sample-mod gallery, possible GUI
    studio built on the same SDK libraries.
 
-## Open questions
+## Cross-phase format and security contract
 
-- **mp3 decoder licensing** — JLayer's license status vs alternatives; worst case,
-  mp3 support is dropped in favor of wav/ogg only (ogg covers the use case).
-- **Pattern-ID budget per mod** — sized during Phase 1 implementation against
-  `PatternAtlas` reserved ranges.
-- **Phase 0 scope for the editor** — "usable level-authoring baseline" needs its own
-  scoping pass against the editor's current state when Phase 0 is planned.
+All manifests, asset roots, editor envelopes, baked containers, level exports,
+playable sheets, class identity, validation gates, and TMX inputs follow
+`docs/superpowers/specs/2026-07-10-mod-support-format-security-contracts.md`.
+That document is authoritative wherever an older task body says to choose a format
+during implementation.
+
+## Remaining product question
+
 - **Scheduling** — where Phase 0/1 land relative to the S3K release slice is a
-  prioritization call outside this design.
+  prioritization call outside this design and does not block implementation.

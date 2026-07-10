@@ -4,7 +4,8 @@
 
 **Goal:** Tiled import, the creator handbook + CI-built sample gallery, the deferred-backlog triage document, and the GUI-tooling recommendation.
 
-**Spec:** `docs/superpowers/specs/2026-07-09-mod-support-phase4-design.md`.
+**Specs:** `docs/superpowers/specs/2026-07-09-mod-support-phase4-design.md` and
+`docs/superpowers/specs/2026-07-10-mod-support-format-security-contracts.md`.
 
 ## CONTINGENCY PREAMBLE
 
@@ -12,9 +13,10 @@ Authored 2026-07-09 with Phases 0–3 unlanded. Marker **[P2]/[P3]** tasks re-ve
 
 ## Global Constraints
 
-- JUnit 5 only; never `git add -A`; no new singletons; **no new Maven dependencies.** TMX parsing uses the JDK's built-in StAX (`javax.xml.stream`) — zero new dependencies. Feature floor per the spec's resolved open question: CSV layer encoding (base64 → clear error), **embedded AND external `.tsx` tilesets** (external is Tiled's default output).
+- JUnit 5 only; never `git add -A`; no new singletons; **no new Maven dependencies.** TMX parsing uses the JDK's built-in StAX (`javax.xml.stream`) — zero new dependencies. The resolved feature floor is CSV layer encoding (base64 → clear error), **embedded AND external `.tsx` tilesets** (external is Tiled's default output).
 - Commit trailers per repo policy; the docs tasks set `Guide`/`Agent-Docs` trailers on merit.
-- **Branch:** `feature/ai-mod-support-phase4` off `develop`.
+- **Execution branch (user directive 2026-07-10):** implement and commit directly on
+  the existing `next` worktree; do not create a phase branch or merge-back commit.
 
 ---
 
@@ -24,15 +26,25 @@ Authored 2026-07-09 with Phases 0–3 unlanded. Marker **[P2]/[P3]** tasks re-ve
 - Create: `src/main/java/com/openggf/tools/modsdk/TmxLevelImporter.java` (+ small value records)
 - Test: `src/test/java/com/openggf/tools/modsdk/TestTmxLevelImporter.java`
 
-**Contract (spec §A, as revised):** JDK StAX parse of `.tmx` (CSV layers; embedded + external `.tsx` tilesets); tileset image → chunk sheet (16×16, quantized against the required palette input) with the `convert art` error catalog; layers identified by name (case-insensitive `FG`/`BG`/`COLLISION`; other tile layers, base64 encoding, diagonal-flip gids, or non-block-multiple map dimensions → errors); gid H/V flip bits → `ChunkDesc` flips; **dedup identity includes collision** (chunk = pattern content + collision value; block = full cell grid incl. desc bits — no silent merges); `COLLISION` tile id assigns the primary solid-tile index, alt = same in v1; `--solid-tiles <file>` companion for the heightmap table, else the two-entry default (0 empty / 1 full-solid, `COLLISION` ids restricted to {0,1}); object layer `type` = id or namespaced key + `subtype`/`respawnTracked`, `ring` → ring spawns, point `type=start` → start position (default 128,128 + warning); boundaries from map dimensions. Output = the Phase 2 export-directory shape (Task 14's `FullLevelExporter` output) [P2 — re-verify the landed shape first].
+**Contract:** implement the exact finite orthogonal TMX domain and hardened StAX/path rules in the cross-phase format/security spec. The map's real parent is the import root. Disable DTD/entities/XInclude/external schemas. Enforce contained relative TSX/image paths; one 16×16 zero-margin/spacing tileset with exact columns/tilecount/image geometry and `firstgid=1`; zero layer offsets; exact layers; integral point-only centre-coordinate markers with zero size/rotation and map bounds; typed object properties; collision-primary/ALT identity; stable row-major first-seen dedup; and exact Phase 2 export bytes.
 
-- [ ] Steps: re-verify Phase 2 export shape → failing tests per mapping rule (chunk emission incl. collision-keyed dedup, external-tsx resolution, flips, layer/dimension/encoding errors, solid-tiles default vs companion, objects/rings/start, boundaries) → implement → PASS → commit (`feat: ggfmod Tiled tmx level import` with `Changelog: n/a: covered by final phase-4 changelog entry in this branch`).
+CLI is exactly `--from-tmx <map> --palette <GPAL file> [--solid-tiles <profile-dir>]
+--out <dir>`. Test lowest exact palette-line and duplicate-index selection, alpha
+0/255 rules, opaque-index-0 rejection, profile count equality, raw collision GIDs
+0/1 plus a custom profile GID, defaults, FG/BG H/V flips, rejection of every
+collision-layer flip bit, primary/secondary `NO_COLLISION`/`ALL_SOLID` raw descriptor
+bits (ALT absent copies primary), headless floor/wall collision, and modern-class/
+legacy-type precedence and conflict. Reserve and golden-test blank pattern/chunk/block
+0 before first-seen dedup, including first-used-nonblank, empty FG/BG, missing BG, and
+invisible-collision fixtures; limits and counts include the reservations.
+
+- [ ] Steps: re-verify Phase 2 export shape → failing tests for every accepted-domain rule plus `../`, absolute/symlink escape, XXE, oversized counts/images, duplicate layers, multiple tilesets, firstgid, offsets, and typed-property errors → implement → assert repeat conversion byte equality and pinned golden SHA-256 → PASS → commit (`feat: ggfmod Tiled tmx level import`).
 
 ---
 
 ### Task 2: `convert level --from-tmx` wiring + end-to-end fixture **[P2]**
 
-- [ ] Wire the importer into `GgfModCli convert level` behind `--from-tmx <file>`; end-to-end test: a fixture `.tmx` (checked into test resources) converts and the result loads headless through the Phase 2 `ModZoneLoader` (level non-null, spawns present, collision as authored). The docs page (Task 3) carries the collision-finishing-in-editor caveat.
+- [ ] Wire `--from-tmx`; the fixture converts twice identically, matches its golden hash, and loads headless through `ModZoneLoader` with primary/secondary collision, tagged spawns, and boundaries asserted.
 - [ ] Commit (`feat: convert level --from-tmx end to end` with `Changelog: n/a: covered by final phase-4 changelog entry in this branch`).
 
 ---
@@ -47,14 +59,29 @@ Authored 2026-07-09 with Phases 0–3 unlanded. Marker **[P2]/[P3]** tasks re-ve
 
 ### Task 4: Sample gallery CI **[P1][P2][P3]**
 
-- [ ] Promote the phase acceptance samples to `docs/modding/samples/` index entries; add a CI-runnable test (`TestSampleModsPackage`) that builds each sample source via `ggfmod package` and asserts the jars scan/validate cleanly — format drift breaks visibly. Re-verify each sample's landed location first: Phases 2/3 created source dirs under `src/test/resources/mods/*-src/`, but **Phase 1 built its music-pack jars programmatically in `@TempDir` — the music-pack sample must be AUTHORED here** (a small checked-in source dir exercising the Phase 1 manifest + audio manifest), not merely indexed.
+- [ ] Inventory exactly five checked-in sources before writing the gallery: Phase 1
+  music pack; Phase 2 data-only reskin and badnik+zone; Phase 3 character and
+  standalone game. Structural drift or a missing source is fixed in its owning sample
+  directory before this task proceeds. Promote them to `docs/modding/samples/` index
+  entries; add `TestSampleModsPackage`, which builds each via `ggfmod package` and
+  asserts scan/validation succeeds—format drift breaks visibly.
 - [ ] Commit (`test: CI-built mod sample gallery`).
 
 ---
 
 ### Task 5: Deferred-backlog triage document
 
-- [ ] Write `docs/modding/BACKLOG.md`: **first step is the sweep the spec mandates** — grep every mod-support spec/plan for defer/out-of-scope/parked/follow-on markers (the spec §C list seeds, the sweep completes; verify each item's parked-status against the landed phases — some may have been absorbed already). Then per item: demand evidence, cost-from-spec note, verdict (schedule / keep parked / drop). Items verdicted "schedule" get a one-line pointer to "needs its own plan" — nothing is implemented here.
+- [ ] Write `docs/modding/BACKLOG.md`: **first step is the sweep the spec mandates** —
+  case-insensitively inventory headings/text matching defer, out-of-scope, parked,
+  follow-on, future, revisit, when-demanded, later, optional, narrowing, non-goal,
+  unsupported, and TODO across the root spec, every phase design/plan, and the shared
+  contract. The spec §C list seeds rather than limits the sweep; reconcile duplicates
+  and verify each status against landed code. Then per item: original-spec source,
+  owning subsystem, demand evidence, cost/risk note, and verdict (schedule / keep
+  parked / drop). Mark original-scope commitments separately: base-game SFX overrides
+  and S1/S3K new-zone adapters must receive a scheduled plan or an explicit human
+  scope-change decision; triage alone cannot silently park/drop them. Scheduled items
+  get a pointer to a separately owned plan.
 - [ ] Review-gate this document with the repo's spec review loop (a reviewer subagent pass until clean), then commit (`docs: mod support deferred-backlog triage`).
 
 ---
@@ -67,11 +94,12 @@ Authored 2026-07-09 with Phases 0–3 unlanded. Marker **[P2]/[P3]** tasks re-ve
 
 ### Task 7: Changelog + wrap-up
 
-- [ ] CHANGELOG one phase-4 entry covering the Tiled import (Tasks 1/2's commits carried justified `n/a` trailers pointing here); this commit stages `CHANGELOG.md` with `Changelog: updated`; CLAUDE.md/AGENTS.md pointer updates (`Agent-Docs: updated`); full suite + S3K must-keep-green.
+- [ ] CHANGELOG one phase-4 entry; update README release notes and AGENTS/CLAUDE pointers as relevant; run `mvn "-Ds3k.rom.path=s3k.gen" "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test`, then `mvn test`.
 
 ---
 
 ## Execution notes
 
 - Tasks 1–2 are the only engine/tool code; 3–6 are documentation deliverables with review gates instead of test gates.
-- Merge flow: `superpowers:finishing-a-development-branch`; README release-log note on merge.
+- Completion flow: commit verified task slices directly on `next`; Task 7 carries the
+  README release-log note. No merge-back step exists.

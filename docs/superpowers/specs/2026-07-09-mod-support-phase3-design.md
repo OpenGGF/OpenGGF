@@ -1,5 +1,7 @@
 # Mod Support Phase 3 — Characters + Standalone Games Design
 
+**Branch baseline:** `next`.
+
 **Date:** 2026-07-09
 **Status:** Approved (brainstorming session)
 **Parent:** `2026-07-09-mod-support-design.md` §8 Phase 3. Siblings: Phase 0/2 specs,
@@ -27,26 +29,34 @@ design opens each wall with the smallest seam:
 
 `GameplayTeamBootstrap.createPlayable` hard-`new`s `Sonic`/`Tails`/`Knuckles` and
 its respawn-strategy chain is string-hardcoded. New seam:
-`PlayableCharacterRegistry` — `register(String code, CharacterDefinition def)`
-where `CharacterDefinition` carries: sprite factory
+`PlayableCharacterRegistry` — `register(CharacterKey key, CharacterDefinition def)`.
+`CharacterKey` is a tagged builtin/mod identity: builtins persist as their existing
+strings; mod keys persist/display as canonical `modId:localName` under `ModKeySyntax`.
+`ModContext.registerCharacter(localName, def)` supplies the owner id, so creator code
+cannot register another owner's key. `CharacterDefinition` carries: sprite factory
 (`(code, x, y) -> AbstractPlayableSprite`), display name, respawn-strategy
 factory (default `SonicRespawnStrategy`), and the behavior archetype (A3).
-Built-ins register at module init exactly as today's chain behaves (byte-identical
-default). Mods register through `ModContext.registerCharacter(...)`, scoped to
-their patch's base game like all Phase 2 content. `createPlayable` becomes a
+The resolved `GameModule` owns an immutable registry exposed through a default method;
+`DelegatingGameModule` forwards it and `WorldSession` provides the one session view
+used by bootstrap, physics, art, super state, and labels. Built-ins register during
+module construction exactly as today's chain behaves (byte-identical
+default). Character contributions freeze into the Phase 2 transactional
+`ModRegistrationPlan`; `ModBackedGamePatch` decorates the resolved module's immutable
+registry atomically. Mods register through `ModContext.registerCharacter(...)`,
+scoped to their patch's base game like all Phase 2 content. `createPlayable` becomes a
 registry lookup with the current fallback (unknown code → Sonic) retained and
 logged.
 
-### A2. `characterType()` virtual (wall 2 — the `instanceof` physics chain)
+### A2. `characterKey()` virtual (wall 2 — the `instanceof` physics chain)
 
 `AbstractPlayableSprite.resolvePhysicsProfile` derives charType via
 `instanceof Tails/Knuckles` — a mod character silently gets Sonic physics. New
-`public String characterType()` on `AbstractPlayableSprite`: the base
+`public CharacterKey characterKey()` on `AbstractPlayableSprite`: the base
 implementation preserves today's derivation (instanceof chain moved verbatim, so
 untouched subclasses are byte-identical); `Sonic`/`Tails`/`Knuckles` override with
-constants; a mod character overrides with its code. `resolvePhysicsProfile` and
-`getInitProfile` consume `characterType()`. The mod's patch decorates
-`PhysicsProvider.getProfile(...)` to serve the mod profile for its code (profiles
+constants; a mod character overrides with its owner-tagged key. `resolvePhysicsProfile`
+and `getInitProfile` consume `characterKey().persisted()`. The mod's patch decorates
+`PhysicsProvider.getProfile(...)` to serve the mod profile for its canonical key (profiles
 are pure records — mod-constructable by design).
 
 ### A3. Behavior archetype (wall 3 — the closed `PlayerCharacter` enum)
@@ -54,7 +64,7 @@ are pure records — mod-constructable by design).
 `PlayerCharacter` mirrors ROM `Player_mode` and is referenced in ~80 `src/main`
 files (S3K level routing, cutscenes, sidekick carry logic). **Deliberate
 decision: the enum is NOT widened.** A mod character's `CharacterDefinition`
-declares `behavesLike: SONIC_ALONE | TAILS_ALONE | KNUCKLES` — which ROM
+declares `behavesLike: SONIC_ALONE | SONIC_AND_TAILS | TAILS_ALONE | KNUCKLES` — which ROM
 routing bucket it takes. `ActiveGameplayTeamResolver.resolvePlayerCharacter`
 consults the registry for non-builtin codes and returns the declared archetype
 (builtin codes: unchanged string chain). Rationale: the enum encodes ROM-faithful
@@ -65,10 +75,9 @@ player onto Knuckles-exclusive gates/geometry that assume glide (MHZ start
 boundary, LBZ gates, AIZ boss triggers — recon-cited) — the registry REFUSES a
 `KNUCKLES` archetype unless the definition's ability is `GLIDE` (softlock
 prevention, load-time error). **Sidekick interaction is pinned:** a mod
-character's archetype is used exactly as declared and is never remapped by
-sidekick presence (the sidekick-derived `SONIC_ALONE`/`SONIC_AND_TAILS` split
-applies only to the builtin Sonic path; a mod main character with sidekicks
-keeps its declared archetype). The docs tell creators what each archetype means
+character's archetype is used exactly as declared. A mod main with configured
+sidekicks must declare `SONIC_AND_TAILS` or a non-Sonic routing archetype explicitly;
+`SONIC_ALONE` with sidekicks is rejected rather than silently remapped. The docs tell creators what each archetype means
 (level routes, carry eligibility, event branches).
 
 ### A4. Baked playable art (wall 4 — the art pipeline)
@@ -129,12 +138,12 @@ line-0 palette (`loadCharacterPalette` path). Sidekick use shares the
   mod-supplied super art on demand.
 - **HUD life icon:** recon left the art source unconfirmed (likely fixed HUD PLC
   tiles, not per-class). Implementation verifies; fallback is the base game's
-  default icon. If it turns out per-character, a baked icon slot joins the v2
-  playable container (same treatment as the data-select portrait below).
+  default icon. If it turns out per-character, a baked icon slot is deferred to
+  playable container v3 (same treatment as the data-select portrait below).
 - **Data-select portrait fallback is explicit:** the custom-team composer maps
   unknown codes to the SONIC base frame, so a mod character's composed portrait
   is Sonic's — acceptable v1 behavior, stated so nobody reads A5 as a real
-  portrait; a portrait slot joins the v2 container alongside the HUD icon if
+  portrait; a portrait slot joins a future v3 container alongside the HUD icon if
   either proves per-character.
 - **Tails-tail-style secondary sprites** (`initTailsTails` is
   `instanceof Tails`-gated): mod characters get none.
@@ -161,20 +170,23 @@ and the boot/identity plumbing.
 
 ### B1. `GameDataSource`
 
-`interface GameDataSource { Rom romOrNull(); }` with two implementations:
-`RomDataSource` (wraps the opened ROM — stock games, byte-identical) and
-`ModAssetDataSource` (jar-backed; `romOrNull() == null`). Changes:
+`GameDataSource` is a session capability with `Optional<Rom> rom()`,
+`InputStream openAsset(String normalizedPath)`, and stable source identity.
+`RomDataSource` wraps the opened ROM; `ModAssetDataSource` delegates to the boot-owned
+`ModAssetRoot`. `WorldSession` stores the source durably and
+`SessionManager.openGameplaySession` receives it; editor teardown/rebuild reuses the
+same source. Changes:
 
 - `GameModule` gains `default Game createGame(GameDataSource source)
-  { return createGame(source.romOrNull()); }` and
+  { return createGame(source.rom().orElseThrow(...)); }` and
   `default TouchResponseTable createTouchResponseTable(GameDataSource source)
-  { return createTouchResponseTable(RomByteReader.fromRom(source.romOrNull())); }`.
+  { return createTouchResponseTable(RomByteReader.fromRom(source.rom().orElseThrow(...))); }`.
   Stock modules untouched; a standalone module overrides the source-based pair
   (touch table from jar bytes via `new RomByteReader(byte[])`).
 - The **five** shared unconditional `getRom()` fetches route through the
   session's `GameDataSource`:
   `LevelManager.initGameModule` (~366: `parallaxManager.load`, `createGame`),
-  `initAudio` (~378: `audioManager.setRom(source.romOrNull())` — the audio
+  `initAudio` (~378: `audioManager.setRom(source.rom().orElse(null))` — the audio
   manager already null-tolerates via `createSmpsLoader` returning null),
   `initObjectManager` (~522), `initializeZoneFeatureProvider` (~682: fetch the
   rom lazily inside the provider-null guard), and
@@ -182,8 +194,7 @@ and the boot/identity plumbing.
   `ParallaxManager.load(Rom)` is a provider-gated *consumer* of the first
   site's rom (nullable param), not a sixth fetch. For ROM sessions every value
   is identical. **One change is NOT mechanical:** the source-based
-  `createTouchResponseTable` default delegates through
-  `RomByteReader.fromRom(romOrNull())`, which NPEs on null — the default is
+  `createTouchResponseTable` default requires a ROM capability — the default is
   stock-only by design and standalone modules MUST override it (jar bytes via
   `new RomByteReader(byte[])`); the Javadoc and a guard test say so.
 - `Game.getRom()` is documented nullable for standalone `Game` implementations
@@ -203,6 +214,8 @@ mod id. `SaveManager` is already string-namespaced (`saves/<gameCode>/`), so
 standalone saves isolate per mod id with no further work.
 `RomManager.resolveRomForGame`'s silent `default -> SONIC_2_ROM` is fixed to
 explicit `s1/s2/s3k` cases; unknown ids throw (standalone launches never call it).
+An architecture guard rejects new exhaustive `switch(GameId)` sites unless they use
+`getGameCode()` or an explicit standalone route.
 
 ### B3. Boot path: standalone launch without detection
 
@@ -221,7 +234,7 @@ with no `baseGame`), then joins the common
 not free: with a single shared `GameId.STANDALONE`, patch base-game matching by
 request gameId would apply one standalone's patches to all standalone games;
 opening it needs code-string matching + manifest vocabulary — deferred to
-demand, and noted against B2's open question.)
+demand, and seeded in Phase 4 backlog triage.)
 **`GameServices.rom()` semantics for standalone sessions are pinned:** the
 `RomManager` stays installed and `getRom()` throws `IOException` exactly as it
 does today for a missing file; Phase 3 includes an **audit task** confirming
@@ -233,12 +246,10 @@ camera-scroll load, `LazyMappingHolder`, `DefaultObjectServices.rom()`,
 
 ### B4. Master title: dynamic standalone entries
 
-`MasterTitleScreen.GameEntry` stays a closed enum for the three stock games; the
-screen additionally renders **catalog-provided standalone entries** (enabled
-standalone-type mods) after the stock three. The coupling census this touches
-(round-1 review): the positional `MENU_LABELS` array and every
-`GameEntry.values().length`-sized state array must become
-`stock + standalone`-sized; standalone entries have **no ROM preview art** —
+`MasterTitleScreen` consumes one immutable `List<MasterTitleEntry>` with stock and
+standalone variants. Every selection, clamp, drawing, ROM gate, launch panel,
+persistence, selected id, and launch result uses that model; no parallel enum array or
+`GameEntry.values()[index]` path remains. Standalone entries have **no ROM preview art** —
 they render a text tile (mod display name; mod-supplied title art is future
 polish); selection routes through a **separate standalone launch path** direct
 to `initializeStandaloneGame` (never `exitMasterTitleScreen(gameId)` →
@@ -270,9 +281,10 @@ reuse is real but **not free**; two engine changes are declared:
    correct as-is), and none of Phase 2's S2 data-select/title-card extensions
    apply (standalone profiles are the module's own or absent).
 
-Its object registry serves mod objects with the full 0x00–0xFF id space (no
-stock census to avoid), art is baked sheets, and physics is a literal
-`PhysicsProvider`/`GameRules` record set (already pure).
+Standalone mod objects use the same namespaced tagged keys as additive content; no
+numeric mod identity is persisted. `stockObjectId` is valid only for additive levels
+that deliberately reference their host game's stock registry. Art is baked sheets and
+physics is a literal `PhysicsProvider`/`GameRules` record set.
 
 **Streamed audio needs a real route (round-1 BLOCKER fix — engine change):**
 with `createSmpsLoader -> null`, `AudioManager.playMusic` falls to the
@@ -281,9 +293,9 @@ hook lives in `AbstractSmpsAudioBackend.playSmps`, unreachable without SMPS
 data; and `ModMusicResolver` is built from a base game's `audioOverrides`,
 which a standalone game doesn't have. Two additions: (1) the `FALLBACK_WAV`
 branch first attempts the streamed route via the backend's (Phase 1, public)
-`tryStartStreamedMusic(musicId)` — exposed through an `AudioBackend` default so
+`tryStartStreamedMusic(TrackKey)` — exposed through an `AudioBackend` default so
 `AudioManager` can call it; (2) `ModAudioIntegration` gains
-`buildResolverForStandalone(...)` mapping the game's OWN track ids from its
+`buildResolverForStandalone(...)` mapping the game's namespaced track keys from its
 audio manifest (not overrides of base ids). **(3) Standalone SFX get a real
 route too:** the existing `FALLBACK_NAME` path is a hardcoded four-entry
 name→working-directory-wav map — effectively no SFX for a single-jar game — so
@@ -293,24 +305,29 @@ streamed backend. This deliberately lifts a slice of Phase 1's deferred
 streamed-SFX work, scoped to standalone games (base-game SFX *overrides* remain
 deferred as before).
 
-Providers beyond the minimum default to no-op per the recon classification table
-(title cards, special stages, data select, ending, debug — all `NoOp`/null
-defaults exist today).
+The SDK provides `AbstractStandaloneGameModule` and `ModGame` bases with safe no-op
+defaults for every nonessential `GameModule`/`Game` provider. These bases and their
+minimum required overrides are `@ModApi`; creators do not implement the current large
+abstract surfaces directly.
 
 ### B6. Standalone non-goals
 
 Special/bonus stages, cross-game donation from/to standalone games, standalone
 trace recording, per-standalone launch-config persistence, and data-select
 presentation (a standalone game may return the null host profile and simply
-start at its first zone; opting into data-select uses the minimal
-`DataSelectHostProfile` surface recon identified).
+start at its first zone). Phase 3 nevertheless supplies a minimal save route: each
+standalone master-title entry reserves slot **1** and offers New Game plus Continue
+when that slot contains a valid namespaced save. New Game overwrites/uses slot 1;
+Continue launches it; corrupt/missing slot hides Continue. Full data-select
+presentation remains optional/future.
 
 ### Standalone acceptance
 
 A sample standalone game (one zone, one badnik, streamed music, literal physics):
 appears on the master title with the three stock entries, launches with **no ROM
 files present at all** (the acceptance test runs with an empty working directory),
-plays its zone, saves/loads a slot under `saves/<modid>/`, and its enablement has
+plays its zone, saves under `saves/<modid>/`, returns to title, and resumes through
+the entry's Continue action; its enablement has
 zero effect on stock-game behavior (trace spot sweep with the mod enabled but a
 stock game launched — bit-identical).
 
@@ -318,20 +335,26 @@ stock game launched — bit-identical).
 
 ## Verification strategy
 
-Unit tests per seam (registry lookup + fallback, `characterType()` byte-identical
+Unit tests per seam (owner-tagged registry lookup + fallback, `characterKey()` byte-identical
 derivation for the builtins, archetype resolution, `GameDataSource` null paths,
 gameCode switches); the two acceptance samples above as headless integration
 tests; full suite + S3K must-keep-green + trace spot sweeps (mods disabled AND
 mods enabled/stock-launched) at each workstream boundary.
 
-## Open questions
+## API and format gate
 
-- **`GameId.STANDALONE` singleton vs per-mod:** one shared constant with
-  `getGameCode()` disambiguation is the plan. One consumer IS known to need
-  finer distinction — the patch registry's base-game matching — which is why
-  patch stacking on standalone games is deferred (B3); if it is ever opened,
-  matching moves to code strings.
-- **Playable-container animation format:** the `SpriteArtSet` animation
-  profile/set structure needs its serialized form pinned at plan time (it is
-  engine-internal today; recon captured the 9-component list, not the byte
-  shape).
+Phase 3 begins with a shared foundation task that adds the module-owned character
+registry, `GameDataSource` session ownership, abstract standalone bases, and the
+initial additive `@ModApi` types. The candidate public/protected surface baseline is
+refreshed as A/B tasks land; the reviewed release gate sets semantic API version
+`1.2.0`, keeping Phase 1/2 ranges below major 2 compatible. Playable container v2 is pinned by
+`2026-07-10-mod-support-format-security-contracts.md`; golden fixtures land before
+runtime art work. Patch stacking on standalone remains deferred and is explicitly
+seeded in Phase 4 backlog triage together with the launch-request table amendment.
+
+Phase 3 extends, rather than bypasses, Phase 2's `ModFaultBoundary`. Character sprite/
+respawn/art/ability callbacks derive the owner from `CharacterKey`; standalone module,
+game, provider, level, and audio callbacks derive it from the standalone entry owner.
+A non-VM-fatal creator failure records/logs the owner, pending-disables owner and
+dependents for the next launch, and returns the current session to title. Tests cover
+each new callback family; no Phase 3 creator callback is invoked raw.

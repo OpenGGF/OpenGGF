@@ -1,13 +1,16 @@
 # Mod Support Phase 0 — Engine Foundations Design
 
+**Branch baseline:** `next`.
+
 **Date:** 2026-07-09
 **Status:** Approved (brainstorming session)
 **Parent:** `2026-07-09-mod-support-design.md` §8 Phase 0. Sibling artifacts:
 `2026-06-12-game-patch-kis2-design.md` (approved design) and
 `docs/superpowers/plans/2026-06-12-game-patch-kis2.md` (approved 14-task plan) — this
 spec **amends** those for mod composition rather than replacing them.
-**Gates:** Phase 2 (additive content mods). Phase 1 (music packs) does NOT depend on
-this phase and may proceed in parallel.
+**Gates:** all three workstreams gate Phase 2 (additive content mods). Phase 1 depends
+only on Task B1's shared `com.openggf.io` hostile-input types; after B1 lands, Phase 1
+and the remaining Phase 0 workstreams may proceed in parallel.
 
 ## Goal
 
@@ -30,7 +33,7 @@ The three workstreams are independent of each other and independently shippable.
 ### Relationship to the KiS2 plan
 
 The KiS2 plan's framework tasks (Task 2 contracts/`DelegatingGameModule`/guard test,
-Task 3 logical-ROM resolver, Task 4 `GamePatchRegistry`, Task 7 `LaunchProfile` union,
+Task 3 logical-ROM resolver, Task 4 behavior via `ModuleResolutionService`, Task 7 `LaunchProfile` union,
 Task 8 choke-point wiring, Task 9 save-context sanitization) are adopted as written
 **except where this section amends them**. The KiS2-content tasks (1, 5–6, 10–12)
 stay in that plan and are not Phase 0 scope — but executing them right after the
@@ -39,7 +42,7 @@ framework is the natural validation of it, and the Phase 0 plan sequences accord
 ### Amendment 1 — composition replaces single-patch resolution
 
 KiS2 design non-goal "no patch chaining/stacking (one patch per session)" is
-superseded (it was YAGNI before mods). `GamePatchRegistry.resolveModule(GameModule
+superseded (it was YAGNI before mods). `ModuleResolutionService.resolve(GameModule
 base, GameplayLaunchRequest request)` now:
 
 1. Collects registered patches for the base `GameId`.
@@ -50,6 +53,13 @@ base, GameplayLaunchRequest request)` now:
    each patch decorates the previous result. Zero survivors → the base module,
    unchanged.
 
+Resolution uses an immutable per-session `ResolutionContext` containing registrations,
+the owner dependency graph, enablement, and failed owners. Pre-apply metadata throws
+fail the owner + transitive dependents and independent owners continue. An arbitrary
+creator `apply` failure aborts launch (input mutation cannot be rolled back); only the
+engine's known decorator-only backing patch may retain the last-good reference.
+Registrations are transactional, so no partial owner contribution exists.
+
 Later patches in the order win where overrides collide, matching the mod-support
 spec's §7 "later wins".
 
@@ -59,22 +69,21 @@ Enablement and order come through a small interface owned by the patch package:
 
 ```java
 public interface PatchEnablement {
-    boolean isEnabled(String patchId);
-    int orderOf(String patchId);        // lower = earlier; ties by registration order
+    boolean isEnabled(PatchOwner owner);
+    int orderOf(PatchOwner owner);      // lower = earlier; ties by registration order
     PatchEnablement ALL_ENABLED = ...;  // default: everything enabled, registration order
 }
 ```
 
-**Contract for unknown ids (pinned here because Phase 2 depends on it):** an
-implementation that does not manage a patch id — built-in patches like `"kis2"`
-never appear in a mod catalog — MUST report it `isEnabled = true` and order it
-**before** all managed patches (`orderOf` returns a value lower than any managed
-patch's; among unknown ids, registration order). This keeps built-ins the base-most
-layer, active regardless of mod-manager state or force-disable, which Amendment 5's
-Knuckles-trace invariant requires. The interface Javadoc and a contract test encode
-this.
+`PatchOwner` is a tagged value: explicit `BuiltIn(id)` or `Mod(modId)`. Registered
+patches are `(owner, namespacedPatchId, patch, registrationIndex)`; ids are unique and
+duplicates are rejected. Built-ins are enabled and ordered before mod owners by
+contract. Unknown ids are never interpreted as built-ins, closing the arbitrary-id
+enablement hole.
 
-`GamePatchRegistry` holds one, defaulting to `ALL_ENABLED` — which makes built-in
+An engine-owned `ModuleResolutionService` holds the registry and enablement policy;
+there is no static mutable `GamePatchRegistry` singleton. Its default
+`ALL_ENABLED` makes built-in
 patches (KiS2) active-by-default exactly as the KiS2 design intends. Phase 2 installs
 a `ModCatalog`-backed implementation; `com.openggf.game.patch` never imports
 `com.openggf.mods` (dependency points mods → patch, same direction as mods → audio in
@@ -118,14 +127,19 @@ request component (`resolveModule` never consults it). Synthesis per choke point
 | Choke point | Source of truth |
 |---|---|
 | `Engine.initializeGame()` (master-title exit reduces to this) | `ActiveGameplayTeamResolver` inputs: config `MAIN_CHARACTER_CODE`/`SIDEKICK_CHARACTER_CODE` |
-| `Engine.launchGameplayFromDataSelect()` | `SaveSessionContext.selectedTeam()` (session team wins over config, matching `ActiveGameplayTeamResolver` precedence) |
-| `TraceSessionLauncher` → `initializeGame()` | config keys as already written by `TraceReplaySessionBootstrap.prepareConfiguration` from `TraceMetadata` (no extra plumbing — the launcher already forces the recorded characters into config before launch) |
-| `HeadlessGameBoot.boot(...)` | config keys, same as `initializeGame()` |
+| `Engine.launchGameplayFromDataSelect()` | `SaveSessionContext.selectedTeam()`; resolve from `WorldSession.rootGameModule()`, never the already decorated current module |
+| `Engine.launchTimeAttack()` | selected time-attack launch profile/team; deterministic policy disables mod owners |
+| `GameLoop.restartFromRecordingLaunchContext()` | recorded launch context/team; deterministic policy disables mod owners |
+| `AttemptReplayHarness` | attempt metadata/team; deterministic policy disables mod owners |
+| `TraceSessionLauncher` → `initializeGame()` | config keys already written by `TraceReplaySessionBootstrap.prepareConfiguration` from `TraceMetadata`; mod owners disabled before any catalog scan |
+| `HeadlessGameBoot.boot(...)` | config keys, same as `initializeGame()`; tests inject explicit enablement |
 
-Resolution happens where the module is constructed/consumed for a session
-(`initializeGame` after `detectAndCreateModule`; `launchGameplayFromDataSelect`
-before `openGameplaySession(module, saveContext)`; `HeadlessGameBoot` after
-detection). `SessionManager` signatures stay unchanged (KiS2 design requirement).
+All paths call `ModuleResolutionService.resolve(rootBase, request, policy)`.
+`WorldSession` retains the undecorated detected/root module separately from its
+resolved session module, so data-select relaunches cannot double-wrap.
+`SessionManager` accepts both identities (or one `ResolvedGameSession` value) rather
+than guessing by unwrapping decorators. Tests cover two stacked patches, repeated
+resolution, and a data-select team change.
 
 ### Amendment 5 — mods force-disable composes at the enablement seam
 
@@ -141,17 +155,19 @@ Phase 0 needs no extra gate; this paragraph exists so nobody adds one.
 `GameServices.bootstrapGameModule()` returns the pre-session default and never sees a
 patch. `AbstractPlayableSprite` re-resolves physics against the session module via
 `refreshRuntimeBoundStateIfNeeded()`, so the known consumer heals. Phase 0 includes
-an audit + guard test: no `src/main` consumer may cache a provider obtained from
-`bootstrapGameModule()`/`getBootstrapDefault()` without a session-rebind path.
-(Mechanism: scanner-based test in the `TestObjectServicesMigrationGuard` idiom
-listing allowed call sites.)
+an audit + deny-by-default guard test: no `src/main` consumer may cache a provider
+obtained from `bootstrapGameModule()`, `getBootstrapDefault()`, or
+`currentOrBootstrapGameModule()` without a session-rebind path. The guard inventories
+all bootstrap-capable calls (including split local assignments/helpers), using an
+audited allowlist rather than a narrow chained-call regex.
 
 ### Deliverables (workstream A)
 
 KiS2-plan Tasks 2, 3, 4 (amended), 7, 8, 9 + the composition extension, the
 `PatchEnablement` seam, the bootstrap audit/guard, and the
-`TestDelegatingGameModuleCoversInterface` guard. Acceptance: KiS2-plan Task 13's
-headless integration test shape (framework resolves a stacked patch correctly), plus
+`TestDelegatingGameModuleCoversInterface` guard. Acceptance: Phase 0 Task A6's fake
+stacked-patch `HeadlessGameBoot` test uses KiS2-plan Task 13's integration-test shape;
+the real KiS2 content acceptance remains on the follow-on KiS2 branch. Also require
 all existing trace suites green (patches resolve to base modules when no patch
 activates — bit-identical behavior).
 
@@ -176,20 +192,25 @@ activates — bit-identical behavior).
 
 1. **`LoadSource` sealed interface** in `com.openggf.level.resources`:
    - `record RomAddress(int addr)` — today's behavior, byte-for-byte.
-   - `record ModAsset(Path jar, String entryPath)` — reads the jar entry fully;
+   - `record ModAsset(ModAssetRoot root, String entryPath)` — opens a bounded entry
+     from a jar or sanctioned dev-directory root;
      the entry's own length replaces the missing size (this also finally makes
      `UNCOMPRESSED` executable through the normal op path for mod sources). This is
      the parent spec's "`ModAssetSource`" — parent name = `LoadSource.ModAsset` here.
    `LoadOp` becomes `record LoadOp(LoadSource source, CompressionType compressionType,
    int destOffsetBytes)`. Every existing factory static keeps its `int romAddr`
    signature and wraps in `RomAddress` — **no call-site churn**; new
-   `modAssetBase/modAssetOverlay/modAssetAppend(Path, String)` factories produce
+   `modAssetBase/modAssetOverlay/modAssetAppend(ModAssetRoot, String)` factories produce
    `UNCOMPRESSED` mod ops. A convenience accessor `int romAddr()` (throwing for mod
    sources) keeps the rare direct readers compiling, flagged deprecated-for-new-code.
 2. **`ResourceLoader` dispatch:** `decompress(op)` branches on the source type: ROM
-   sources behave exactly as today; mod sources read the jar entry
+   sources behave exactly as today; mod sources read a bounded asset entry
    (`UNCOMPRESSED` only in Phase 0 — mod assets ship raw/jar-deflated per the parent
-   spec; a compressed mod source is a validation error at plan build).
+   spec; a compressed mod source is a validation error in the `LoadOp` constructor or
+   `LevelResourcePlan.Builder.build()`, never deferred to execution). Source, path,
+   destination range, and base/overlay order are validated at build time. Paths,
+   symlinks, zip inflation, and aggregate sizes follow
+   `2026-07-10-mod-support-format-security-contracts.md`.
 3. **Determinism/equality:** `LoadOp` equality now includes the source; nothing in
    the engine relies on `LoadOp` identity semantics (verified in recon — plans are
    built fresh per load).
@@ -244,19 +265,30 @@ storage is likewise already editable and persisted (`ChunkDesc` solidity bits ri
    (+ ring equivalents), each undoable via the spawn-list mutation API above and
    flushed through the existing dirty-dispatch/resync path. Input follows the
    existing hardcoded-binding style (a placement sub-mode on TAB-cycled focus
-   regions); object identity is chosen by numeric id + subtype entry (eyedrop an
-   existing spawn to copy its id/subtype). **This refines the parent spec's §6 line
-   "object-placement palette … Phase 0":** Phase 0 delivers the spawn-list *editing*
-   (place/move/delete, subtype parameters); the *browsable* object palette moves to
-   Phase 2's mod-facing library work. Overlay rendering marks spawn positions
+   regions). A browsable stock palette lists numeric ids `0x00..0xFF` with the active
+   `ObjectRegistry.getPrimaryName(id)`, supports logical keyboard/gamepad navigation,
+   and edits subtype for the selected id; eyedrop copies an existing id/subtype.
+   Phase 2 extends the same palette with namespaced mod keys and asset previews rather
+   than replacing it. Overlay rendering marks spawn positions
    (id/subtype text at spawn coords via the existing overlay renderers).
+   Insertions preserve ROM slot cadence: order is stable within each
+   `x & 0xFF80` placement column, never fully sorted by X. Every editor-created object
+   gets a stable unique placement id retained by move, undo, duplicate placements,
+   resync, save, and reload. A module-owned `ObjectPlacementEncoding` builds and
+   validates game-specific raw words; S1 and S2/S3K encodings are not conflated.
+   The interface lives in `com.openggf.level.objects`; `GameModule` exposes
+   `getObjectPlacementEncoding()`, `DelegatingGameModule` forwards it, and each stock
+   module supplies its placement decoder's exact encoding.
 2. **Collision editing.** Two operations, both at existing depths: (a) at BLOCK
    depth, cycle the hovered cell's `ChunkDesc` primary/secondary collision mode bits
    (`0x3000`/`0xC000`); (b) at CHUNK depth, reassign `solidTileIndex`/`AltIndex` by
-   eyedrop-from-another-chunk or numeric entry. Both as undoable commands. No new
+   eyedrop-from-another-chunk or numeric entry. Both as undoable commands operating
+   on `MutableLevel` + indices and routed through tracked copy-on-write/restore APIs;
+   commands never mutate `Block`, `Chunk`, or `ChunkDesc` directly. No new
    persistence schema: both already round-trip through `BlockState`/`ChunkState`.
-   A debug-style collision overlay toggle (reusing `LevelDebugRenderer`'s collision
-   drawing against the editor camera) makes edits visible.
+   Dirty propagation, save-modified state, undo, redraw, and rewind snapshot isolation
+   are tested. A reusable collision-command builder with explicit level/camera inputs
+   supplies the editor overlay; the editor does not toggle global debug state.
 3. **Save-envelope hardening.** Payload **version 2**: adds `objectSpawns` and
    `ringSpawns` lists (full replacement lists, not deltas — spawn tables are small
    and order matters for slot cadence). **Write policy:** v2 saves write the complete
@@ -266,12 +298,18 @@ storage is likewise already editable and persisted (`ChunkDesc` solidity bits ri
    and is unavailable at save time), and adding one is not worth it for tables this
    small. **Re-apply policy:** applying a v2 payload replaces the level's spawn
    lists, then raises the `objectsDirty`/`ringsDirty` flags so the existing
-   resync path (`ObjectManager.resyncSpawnList`) fires on the next frame. Reader
-   accepts v1 (no spawn fields → spawn tables untouched) and v2; v1 files upgrade on
+   resync path (`ObjectManager.resyncSpawnList`) fires on the next frame. Replacement
+   uses atomic, identity-safe `MutableLevel` APIs that distinguish user edits from
+   persisted apply and maintain the editor modified flag. Reader accepts v1 (no spawn
+   fields → spawn tables untouched) and v2; version-specific DTOs verify the hash from
+   the raw canonical payload tree before migration, so widening the record cannot
+   invalidate a genuine v1 hash. Empty v2 tables mean replace-with-empty. V1 files upgrade on
    next save; quarantine now applies only to versions > 2. The S3K runtime re-apply
    gate (`supportsRuntimeEditApply`) stays as-is — lifting it is S3K-overlay work
    outside mod foundations — but the gate result gains a visible warning line in the
-   editor toolbar when edits exist that will not re-apply.
+   editor toolbar when edits exist that will not re-apply. The controller exposes a
+   tested persistence/apply status (including sidecar-present-but-unsupported) to the
+   renderer.
 
 **Spawn-edit safety rule (new production code, not an existing property):** object
 spawn lists feed slot cadence, which trace replay depends on. Today editor entry is
@@ -294,7 +332,8 @@ remappable editor keys, S3K runtime re-apply.
 ### Deliverables (workstream C)
 
 The three items above with focused unit tests per command (the editor test suite
-pattern: `TestEditorCommands` etc.), payload v1→v2 round-trip tests, the trace-guard
+pattern: `TestEditorCommands` etc.), a real historical v1 JSON+hash fixture, v2 empty
+replacement and duplicate-identical-placement tests, the trace-guard
 test, and a manual authoring smoke: place/move/delete a badnik and a ring in EHZ,
 toggle a cell's solidity, save, exit, re-enter, verify persistence and playtest
 behavior (badnik spawns, solidity blocks the player).
@@ -310,14 +349,13 @@ suite, S3K must-keep-green set, and — for A — a fresh `*TraceReplay` spot sw
 (S1 GHZ1, S2 EHZ1, S3K AIZ1) proving patch resolution is a no-op for unpatched
 sessions. `docs/TRACE_FRONTIER_LOG.md` is updated if any sweep is run.
 
-## Open questions
+## Remaining scheduling notes
 
 - **KiS2 content timing:** whether KiS2-plan Tasks 1, 5–6, 10–12 execute immediately
   after workstream A (recommended — first consumer validates the framework) is a
   scheduling call, not a design one.
-- **Editor object palette UX:** numeric id entry is deliberately minimal; the
-  browsable palette lands with Phase 2's library panes. Revisit if authoring smoke
-  shows id entry is unusable in practice.
+- **Editor object palette UX:** Phase 0 ships the browsable stock id/name/subtype
+  palette; Phase 2 extends it with namespaced mod objects and asset previews.
 - **`LoadOp.romAddr()` compatibility accessor:** kept in Phase 0 to avoid call-site
   churn; Phase 2 may remove it once ad-hoc S3K art loads migrate to source-typed
   factories.

@@ -355,4 +355,5 @@ All tests JUnit 5 / Jupiter only.
 6. **Launch-screen wiring + docs** — CHANGELOG, KNOWN_DISCREPANCIES, guide,
    ROADMAP tick.
 
-**Branch:** `feature/ai-game-patch-kis2` off `develop`.
+**Execution baseline:** implement directly on `next` per the 2026-07-10 user
+directive; no feature branch or merge-back step.

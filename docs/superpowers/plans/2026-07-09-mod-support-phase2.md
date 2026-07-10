@@ -12,34 +12,104 @@
 
 ## CONTINGENCY PREAMBLE — read before executing anything
 
-This plan is written against the **Phase 0 spec and Phase 1 plan interfaces, which are not implemented at plan-authoring time (2026-07-09)**. Every task consuming a Phase 0/1 type carries a **[P0]** / **[P1]** marker; its first step is always *re-verify the landed interface* (name, package, signature) and adapt mechanically — the landed code is authoritative over this plan's spelling of it. If a landed interface diverges structurally (not just in spelling), STOP and update this plan first. Do not begin this plan until Phase 0 (all three workstreams) and Phase 1 have merged to `develop`.
+This plan is written against Phase 0/1 contracts that may not yet be implemented. Every consuming task carries **[P0]** / **[P1]**; re-verify the landed interface and update this plan on structural drift. Do not begin until Phase 0 and Phase 1 have merged to `next`.
 
 **Calibration note:** tasks creating pure new classes contain complete code; tasks modifying engine files or consuming unlanded interfaces are contract-and-anchor style (the Phase 0 plan's workstream-A convention) with mandatory read-first steps. That is deliberate — full code against unlanded dependencies would be false precision.
 
 ## Global Constraints
 
 - **JUnit 5 only. Never `git add -A`. No new singletons.** Commit trailers per repo policy; intermediate `feat` commits touching `src/main/` use `Changelog: n/a: covered by final phase-2 changelog entry in this branch`.
-- **New Maven dependency:** exactly one — `org.ow2.asm:asm` (latest stable), added in Task 16 with the spec citation. Nothing else.
-- **Branch:** `feature/ai-mod-support-phase2` off `develop`.
+- **New Maven dependency:** exactly one — `org.ow2.asm:asm:9.9.1`, added in Task 0. Nothing else.
+- **Execution branch (user directive 2026-07-10):** implement and commit directly on
+  the existing `next` worktree; do not create a phase branch or merge-back commit.
 - **ArchUnit:** new engine packages in this plan (`com.openggf.mods.code`, `com.openggf.tools.modsdk`) plus new cross-slice references will trip the `CORE_RUNTIME_TOP_LEVEL_DEPENDENCY_EDGES` ratchet. The rule's failure message lists exactly the missing edges; add precisely those to the allowlist with a comment citing this plan (expected at minimum: `mods -> game` for patch registration, `game -> level` already exists — verify, don't guess).
 - **Task order:** workstreams are sequenced 1 → 2 → 3 → 5 → 4 → 6 (the CLI's `convert level` needs the editor export; the sample mod needs everything). Within a workstream, order as written.
 - **Regression gates** (every workstream-final task): full default suite, S3K must-keep-green set, and the trace spot sweep (s1_ghz1 / s2_ehz1 / s3k_aiz1) with mods force-disabled — bit-identical expectations. Log sweeps in `docs/TRACE_FRONTIER_LOG.md`.
+
+## 2026-07-10 readiness amendments (authoritative)
+
+- Tasks 1–4 build an engine-owned `AutoCloseable ModRuntime`: boot-frozen loaders,
+  restart-required state/trust changes, shutdown close/jar-unlock test, and fresh
+  transactional per-session registration plans. `ModClassResolver` uses
+  `(ownerModId,binaryClassName)` plus the owner loader, including dynamic children and
+  duplicate-FQN tests; it is not a registration-time class map. A direct dependency
+  lookup uses that dependency's own-jar/engine-parent view and cannot traverse its
+  dependency list.
+- Task 2 freezes contributions into `ModRegistrationPlan` and wraps them in an
+  engine-owned `ModBackedGamePatch`. Registration is all-or-nothing. Add callback
+  fault-boundary/session-abort tests per the parent design: provider/event proxies and
+  mod-keyed object dispatch publish runtime findings, persist next-launch disable for
+  owner/dependents, log the owner stack, and return the current session to title.
+- Task 2b uses RUNTIME `@ModApi`; snapshots public + protected subclass surface,
+  generics, exceptions, annotations, and transitive signature types; semver range
+  satisfaction is real. ASM checks mutable statics and method bodies.
+- Replace Task 5's byte allocator with a namespaced object-key registry and tagged
+  `ObjectSpawn` reference. Stock-id creation always delegates untouched; mod-key
+  creation never consults/captures a stock byte. Test stock placeholder isolation,
+  absent keys, dynamic children, duplicate FQNs, save/editor/rewind identity.
+- Tasks 6, 11, 12, 14, 16, and 17 implement the exact schemas, golden fixtures, path
+  rules, and limits in `2026-07-10-mod-support-format-security-contracts.md`. Envelope
+  mod objects are v3. `ggfmod package` validates; boot independently recomputes the
+  structural validator against jar bytes before loader creation.
+- Task 8 stores pattern-window assignments in session state and re-registers them
+  immediately after `LevelManager.initObjectArt()` clears dynamic ranges. Test
+  consecutive stock/mod loads and editor rebuilds.
+- Task 10's progression API receives immutable `ZoneTopology` (zone/act counts and
+  terminal behavior). Test variable act counts, credits, time-attack return,
+  redirects, disabled-mod fallback, and event-chain rejection.
+- Task 12 uses namespaced `TrackKey` for new music; numeric ids remain stock overrides.
+  Test two mods with same local track name, stock isolation, save/reload, and rewind.
+- All data-only parsing is bounded and path-safe. Add zip-bomb, dishonest-size,
+  `../`/absolute/case-collision, oversized count/image/audio, and malformed binary
+  tests before happy-path implementations.
+- Commands: focused tasks use `mvn "-Dtest=<exact class>" test`; workstream gates use
+  `mvn "-Ds3k.rom.path=s3k.gen" "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test`;
+  final gate uses `mvn test`. Record exact trace commands/routes and stage
+  `docs/TRACE_FRONTIER_LOG.md` when changed. Final docs update README release notes.
 
 ---
 
 ## Workstream 1 — code loading + trust
 
-### Task 1: `ModClassLoaderFactory` — delegating loaders per code mod **[P1]**
+### Task 0: reusable compiled-mod validator core **[P1]**
+
+**Files:** create `ModValidator`, `ModValidationFinding`, `ModValidationReport` under
+`com.openggf.mods.validation`; modify `pom.xml` with pinned ASM 9.9.1; test
+`TestModValidator` using generated classfile/jar fixtures without creating a loader.
+
+- [ ] Failing tests cover entrypoint/base-class checks; constructor `services()` use;
+  recreate paths; final scalars; object refs/rewind ids; rejection of every static
+  except compile-time primitive/String constants; malformed bytecode; and API
+  references, where `@ModApi` references are clean and reachable non-API engine
+  references emit compatibility warnings rather than eligibility errors;
+  and validation of an
+  untrusted code jar without executing its classes.
+- [ ] Implement one reusable ASM/jar-byte validator invoked by boot eligibility and
+  Task 16's CLI before any owner loader is created. The engine recomputes validation
+  from jar bytes; no embedded author record is trusted and structural validation does
+  not use reflection/class loading.
+- [ ] Run focused test; PASS; commit dependency + validator core together.
+
+### Task 1: engine-owned `ModRuntime` + delegating loaders **[P1]**
 
 **Files:**
-- Create: `src/main/java/com/openggf/mods/code/ModClassLoaderFactory.java`, `ModDependencyClassLoader.java`
-- Test: `src/test/java/com/openggf/mods/code/TestModClassLoaders.java`
+- Create: `ModRuntime.java`, `ModClassLoaderFactory.java`, `ModDependencyClassLoader.java`
+- Modify: `Engine`/engine-service ownership and shutdown
+- Test: `TestModRuntime`, `TestModClassLoaders`
 
 **Interfaces:**
-- Consumes: `ModDescriptor`/`ModCatalog.orderedEnabled()` [P1 — re-verify].
-- Produces: `ModClassLoaderFactory.createLoaders(List<ModDescriptor> orderedEnabled)` → `Map<String, ClassLoader>` keyed by mod id. Each `ModDependencyClassLoader extends URLClassLoader` (parent = engine loader): `findClass` first tries the mod's own jar, then consults the loaders of the mod's **declared** dependencies in manifest order; undeclared siblings invisible. (Class delegation only — mod *assets* travel via jar `Path`/`ModAssetSource`, not classpath resources; add a matching `findResource` override only if a real consumer appears, and note it in the class Javadoc.) Loaders are created in catalog order so dependency loaders exist first (topological order is a Phase 1 catalog invariant — re-verify).
+- Consumes: valid `ModDescriptor`s from
+  `ModCatalog.effective().orderedEnabled()` [P1 — re-verify]; invalid scan entries
+  never reach loader construction.
+- Produces `AutoCloseable ModRuntime`: Task 0 validates jar bytes without executing
+  them; dependency-ordered loaders are frozen by owner; `loadOwned(owner,binaryName)`
+  supports dynamic rewind children; shutdown closes all loaders. Manager changes
+  require restart. Dependency visibility remains declared-only; assets use
+  `ModAssetRoot`, not classpath resources.
 
-- [ ] **Step 1: Write the failing test.** Build two jars in `@TempDir` (Phase 1's `writeJar` helper idiom): `lib.jar` with class `libmod.LibClass` and `app.jar` with `appmod.AppClass` whose manifest declares `dependencies: [lib]`. Compile the two classes in the test via `javax.tools.JavaCompiler` (JDK is guaranteed — the repo builds with one; keep sources tiny, e.g. `public class LibClass { public static String ping() { return "lib"; } }`). Assert: app's loader loads `appmod.AppClass` and can resolve `libmod.LibClass`; a third mod without the dependency declaration cannot resolve `libmod.LibClass` (`ClassNotFoundException`); engine classes (e.g. `com.openggf.level.objects.ObjectSpawn`) resolve through the parent from any mod loader.
+- [ ] **Step 1: Write the failing test.** Build direct dependency jars plus an
+  A→B→C chain. Assert A sees B, B sees C, A cannot see C unless A also declares C,
+  an undeclared sibling remains invisible, and engine classes resolve parent-first.
 - [ ] **Step 2:** COMPILE FAILURE, then implement. Core of `ModDependencyClassLoader`:
 
 ```java
@@ -54,10 +124,10 @@ import java.util.List;
  * Undeclared sibling mods are not visible (parent spec section 2).
  */
 public final class ModDependencyClassLoader extends URLClassLoader {
-    private final List<ClassLoader> dependencyLoaders;
+    private final List<ModDependencyClassLoader> dependencyLoaders;
 
     public ModDependencyClassLoader(String modId, URL[] jarUrls, ClassLoader engineParent,
-                                    List<ClassLoader> dependencyLoaders) {
+                                    List<ModDependencyClassLoader> dependencyLoaders) {
         super("mod:" + modId, jarUrls, engineParent);
         this.dependencyLoaders = List.copyOf(dependencyLoaders);
     }
@@ -67,9 +137,9 @@ public final class ModDependencyClassLoader extends URLClassLoader {
         try {
             return super.findClass(name); // own jar
         } catch (ClassNotFoundException ownMiss) {
-            for (ClassLoader dep : dependencyLoaders) {
+            for (ModDependencyClassLoader dep : dependencyLoaders) {
                 try {
-                    return dep.loadClass(name);
+                    return dep.loadOwnOrParent(name); // never traverses dep dependencies
                 } catch (ClassNotFoundException ignored) {
                     // try next dependency
                 }
@@ -77,64 +147,105 @@ public final class ModDependencyClassLoader extends URLClassLoader {
             throw ownMiss;
         }
     }
+
+    Class<?> loadOwnOrParent(String name) throws ClassNotFoundException {
+        synchronized (getClassLoadingLock(name)) {
+            Class<?> loaded = findLoadedClass(name);
+            if (loaded != null) return loaded;
+            try {
+                return getParent().loadClass(name);
+            } catch (ClassNotFoundException parentMiss) {
+                return super.findClass(name); // URLClassLoader own jar only
+            }
+        }
+    }
 }
 ```
 
-- [ ] **Step 3:** Tests PASS. Commit (`feat: delegating mod classloaders`).
+- [ ] **Step 3:** Add identical-FQN, invalid-validation, close-idempotence, session
+  restart, Engine shutdown, and Windows jar-replace-after-close tests. PASS. Commit.
 
 ---
 
-### Task 2: `GgfMod` + `ModContext` + entrypoint lifecycle **[P0][P1]**
+### Task 2: `GgfMod` + `ModContext` + entrypoint/fault lifecycle **[P0][P1]**
 
 **Files:**
-- Create: `src/main/java/com/openggf/mods/code/GgfMod.java`, `ModContext.java`, `ModRegistrationException.java`, `ModCodeRuntime.java`, `BakedSheetRef.java`
+- Create: `GgfMod.java`, `ModContext.java`, `ModRegistrationPlan.java`, `ModBackedGamePatch.java`, `ModRegistrationException.java`, `ModFaultBoundary.java`, `BakedSheetRef.java`
+- Modify: mod provider/event registration wrappers, `ObjectManager` mod-key dispatch,
+  gameplay return-to-title handling, Phase 1 `ModRuntimeFindingStore`, and pending
+  state persistence
 - Modify: `src/main/java/com/openggf/mods/ModManifest.java`, `ModManifestParser.java` [P1]
-- Test: `src/test/java/com/openggf/mods/code/TestModCodeRuntime.java`; extend `TestModManifestParser`
+- Test: `TestModRegistrationPlan`; extend `TestModManifestParser`
 
-**Commit split (right-sizing):** this task lands as TWO commits — (1) `feat: phase-2 mod manifest schema fields` (schema + `BakedSheetRef` + parser tests; no runtime code), then (2) `feat: mod code entrypoint runtime and patch registration` (runtime + enablement). The schema commit has no dependency on the runtime and is consumed by Tasks 7/8/12 independently.
+**Commit split (right-sizing):** this task lands as TWO commits — (1) `feat: activate phase-2 mod manifest fields` (`BakedSheetRef` + validation/consumer tests; no runtime code), then (2) `feat: mod code entrypoint runtime and patch registration` (runtime + enablement). The activation commit has no dependency on the runtime and is consumed by Tasks 7/8/12 independently.
 
 **Interfaces:**
-- Consumes: `GamePatch`/`GamePatchRegistry`/`PatchEnablement` [P0 — re-verify the landed static facade], `ModCatalog`/`ModManifest` [P1], Task 1 loaders.
+- Consumes: Phase 0 `ModuleResolutionService`/owner-tagged patch contracts, Phase 1 catalog, and Task 1 loaders.
 - Produces:
-  - **Manifest schema extensions [P1 — this task owns them]:** `ModManifest` + `ModManifestParser` gain the Phase 2 fields the parser currently ignores as unknown keys: `entrypoint` (optional FQN string), `artOverrides` (typed `Map<String,String>` base-art-key → sheet asset path), `insertAfter` (optional stock-zone name, Task 12 consumes), `patternWindows` (int, default 1, Task 8 consumes). Parser tests extended; Phase 1's `ignoresUnknownKeysForForwardCompat` keeps passing for still-future keys.
+  - **Manifest field activation:** Phase 1 already strictly parses `entrypoint`, typed
+    `artOverrides`, `insertAfter`, and `patternWindows` under manifest v1 but marks
+    their owners ineligible. Phase 2 consumes those existing fields: resolve
+    `insertAfter` only against the target game's stock progression keys; allocate
+    1–16 windows per owner and at most 128 total in effective order; retain unknown-
+    field rejection. Extend eligibility/consumer tests without changing manifest v1.
   - `record BakedSheetRef(String entryPath)` in `com.openggf.mods.code` — a thin jar-entry pointer defined HERE. Task 6's engine-side reader takes raw bytes/streams; mod-side code resolves a `BakedSheetRef` to a stream before calling it (keeps the dependency direction `mods -> level`, never the reverse).
   - `public interface GgfMod { void register(ModContext ctx); }`
-  - `ModContext` (one per mod, constructed by the runtime): `registerGamePatch(GamePatch)` (validates `patch.baseGameId()` equals the manifest `baseGame`, else `ModRegistrationException`); `registerObject(String key, int requestedId, ObjectFactory factory)` and `registerObjectArt(String key, BakedSheetRef ref)` (both record into the mod's pending-content set consumed by its patch — spec §A: content registration outside a patch is invalid, enforced when the patch applies); `modAssets()` returning the mod's jar `Path` for `LoadSource.ModAsset` factory use [P0].
-  - `ModCodeRuntime.loadAll(ModCatalog, Map<String, ClassLoader>)` — for each enabled code+trusted mod with an `entrypoint`: load the class on the mod's loader, require `GgfMod`, instantiate (no-arg ctor), call `register(ctx)`. **Failure handling (spec §A):** any throw → mod disabled for the session, manager badge with the message, engine continues. The runtime also records every registered class in a plain `Map<String, Class<?>>` field — **stub now, wire later:** Task 4's `ModClassResolver` wraps that map; nothing in this task references the Task 4 type.
-  - The mod-backed `PatchEnablement` implementation (Phase 0 Amendment 2's pinned contract): managed ids = mod patch ids, enabled per catalog + trust; unknown ids (built-ins) → enabled, `UNMANAGED_ORDER`. Installed via `GamePatchRegistry.setEnablement(...)` at the Phase 1 Engine wiring point.
+  - `ModContext` (fresh per owner/session): registers an owner-tagged patch, namespaced object factory, and art reference into a private transaction; exposes bounded `ModAssetRoot`; validates base game/namespace; then freezes atomically into `ModRegistrationPlan` and engine-owned `ModBackedGamePatch`.
+  - `ModRuntime.newRegistrationPlan(request)` creates fresh entrypoints and private
+    transactions per session. Content registrations always synthesize one engine-owned
+    backing patch, ordered first within the owner; explicit creator patches are
+    optional and follow registration order. Failure publishes nothing and fails owner
+    + dependents. No class map or entrypoint/patch instance survives the session.
+  - The mod-backed enablement implementation answers by explicit `PatchOwner.Mod(modId)`; built-ins carry `PatchOwner.BuiltIn`. Unknown owner/id is a registration error. Install it in the engine-owned resolution service.
 
-- [ ] **Step 1:** Re-verify landed `GamePatch`/`GamePatchRegistry`/`PatchEnablement` signatures and Phase 1's `ModCatalog`/`ModDescriptor` shapes.
-- [ ] **Step 2:** Failing tests: entrypoint happy path (test jar with a compiled `GgfMod` impl registering a stub patch → patch visible to `GamePatchRegistry`); baseGame mismatch → `ModRegistrationException`, mod disabled with reason; entrypoint throwing → disabled, engine continues; catalog-backed enablement honors the pinned unknown-id contract (built-in id enabled + `UNMANAGED_ORDER`).
+- [ ] **Step 1:** Re-verify landed owner-tagged `ModuleResolutionService`/`PatchEnablement` and Phase 1 catalog shapes.
+- [ ] **Step 2:** Failing tests: creator calls only documented `ModContext`; successful transaction yields one `ModBackedGamePatch`; base-game/namespace/duplicate failures publish nothing; throwing entrypoint is isolated; explicit built-in/mod owners order correctly. Exercise pre-apply metadata failure (independent owners continue) and a creator patch that mutates then throws (typed launch abort, no last-good claim, persisted owner/dependent disable, manager finding/log). Then exercise throwing provider, event, and mod-object callbacks: owner/dependents are persisted pending-disabled, independent owners remain eligible next launch, manager shows the finding, the owner stack is logged, gameplay returns to title, and no partially mutated frame resumes. Do not catch `VirtualMachineError` or `ThreadDeath`.
 - [ ] **Step 3:** Implement; tests PASS; commit (`feat: mod code entrypoint runtime and patch registration`).
 
 ---
 
-### Task 2b: `@ModApi` surface + signature-snapshot guard + API version bump **[P0][P1]**
+### Task 2b: `@ModApi` surface + signature-snapshot guard + API minor version **[P0][P1]**
 
 **Files:**
-- Create: `src/main/java/com/openggf/game/ModApi.java`
+- Create: `src/main/java/com/openggf/game/ModApi.java`,
+  `src/main/java/com/openggf/tools/modsdk/ModApiJavadocTool.java`
 - Modify: apply the annotation to the spec §G curated set (`GgfMod`, `ModContext`, `GamePatch`/`PatchContext`/`GameplayLaunchRequest`, `ObjectServices`, `AbstractObjectInstance`, `AbstractBadnikInstance`, `ObjectSpawn`, `ObjectControlState`, `ObjectLifetimeOps`, `ObjectPlayerQuery`, `PhysicsProfile`, the `level.objects` utility helpers, `BakedSheetRef` (exists as of Task 2); `BakedSheetReader`/`ModLevelDefinition` once they exist — later tasks add their own annotations as they create types); `src/main/java/com/openggf/mods/ModApiVersion.java` [P1]
 - Test: `src/test/java/com/openggf/game/TestModApiSurfaceSnapshot.java`
 
 **Contract (spec §G last bullet):**
-- `@Retention(CLASS) @Target({TYPE}) public @interface ModApi {}` with Javadoc stating the compatibility promise.
-- Signature-snapshot guard: reflect over every `@ModApi`-annotated type on the classpath, serialize its public members (name, params, return, modifiers) to a sorted text form, compare against a checked-in baseline resource (`src/test/resources/modapi/surface-baseline.txt`). **Additions allowed** (the test regenerates and tells you to update the baseline); **removals/changes fail** with the diff. Follow the rewind coverage-baseline guard idiom.
-- **API version bump with backward acceptance:** `ModApiVersion.CURRENT_MAJOR` 1 → 2, and `isSatisfiedBy` widens from equality to `1 <= required <= CURRENT_MAJOR` — a Phase 1 music pack declaring `"1"` MUST keep loading (its formats are unchanged); Phase 2 code mods declare `"2"`. Update Phase 1's `apiVersionCompatibility` test accordingly (`"1"` true, `"2"` true, `"3"` false).
+- `@Retention(RUNTIME) @Target(TYPE) public @interface ModApi {}` with Javadoc stating the compatibility promise.
+- Signature-snapshot guard serializes public and protected subclass surface,
+  constructors, generics, throws, annotations, and transitive signature types to a
+  checked-in baseline. Every non-JDK type in a supported signature must itself be
+  `@ModApi` (including `RewindRecreatable`, creator-facing provider/handler
+  interfaces, `GameModule`, `ObjectFactory`, and registration-handle types) or the
+  build fails; there is no accidentally unsupported transitive type. Semver rules
+  decide compatible additions; removals/changes fail.
+- `ModApiJavadocTool` invokes the JDK `DocumentationTool` on the exact annotated type
+  inventory. A golden inventory test proves every supported root/type appears and an
+  unannotated engine internal does not; release packaging publishes the generated
+  Javadoc beside the engine and attached `openggf-mod-sdk` jars.
+- Set semantic API version `1.1.0`; this phase is additive. Assert the canonical
+  Phase 1 range `>=1.0.0 <2.0.0` remains eligible, while `>=1.2.0` does not. Do not
+  accept every lower integer major implicitly.
 
-- [ ] Steps: re-verify landed `ModApiVersion` → failing tests (snapshot guard against a seeded baseline; version acceptance triple) → implement + annotate the already-existing types → PASS → commit (`feat: @ModApi surface, signature snapshot guard, API major 2`).
+- [ ] Steps: re-verify landed `ModApiVersion` → failing tests (snapshot guard against a seeded baseline; version acceptance triple) → implement + annotate the already-existing types → PASS → commit (`feat: @ModApi surface, signature snapshot guard, API minor 1.1`).
 
 ---
 
 ### Task 3: Trust gate **[P1]**
 
 **Files:**
-- Modify: `src/main/java/com/openggf/mods/ModState.java`, `ModStateStore.java`, `ModEligibility.java`, `ModCatalog.java`, `src/main/java/com/openggf/mods/ui/ModManagerScreen.java`
+- Modify: Phase 1 `ModState`, `ModStateStore`, `PendingModStateEditor`,
+  `EffectiveCatalogBuilder`, and `ModManagerScreen`
 - Test: extend `TestModCatalog`, `TestModManagerScreen`, `TestModStateStore`
 
 **Contract (spec §F):**
 1. `ModState.Entry` gains `trusted` (boolean) + `trustedJarSha256` (nullable String). Store parsing is map-shaped [P1 fact] — added fields tolerated both directions; write both fields.
 2. `ModEligibility`'s `"mod code is not supported yet"` rule is **replaced**: `containsCode && !trustedAndHashMatches` → block reason `"contains code — trust required (press accept twice)"`. Hash computed once per scan (SHA-256 of the jar), compared to `trustedJarSha256`; mismatch clears the persisted grant.
-3. `ModManagerScreen.activateSelected()` on an untrusted code mod arms a trust confirm (reuse the cascade-confirm arm/commit mechanics and its disarm-on-cursor-move); second press records `trusted=true` + the hash and enables.
+3. The manager arms/disarms trust confirmation; second press writes trusted hash to
+   **pending** state and displays Restart required. It never loads or enables code in
+   the effective process snapshot.
 4. Tests: grant flow; hash-mismatch revocation; data-only mods unaffected; v1 `modstate.json` (no trust fields) loads with `trusted=false`.
 
 - [ ] Steps: re-verify landed Phase 1 files → failing tests → implement → PASS → commit (`feat: mod code trust gate with jar-hash revocation`).
@@ -148,7 +259,7 @@ public final class ModDependencyClassLoader extends URLClassLoader {
 - Modify: `src/main/java/com/openggf/level/objects/ObjectRewindDynamicCodecs.java` (~line 65)
 - Test: `src/test/java/com/openggf/mods/code/TestModClassResolverRecreate.java`
 
-**Contract (spec §B fix 1):** `ObjectRewindDynamicCodecs.genericRecreate` currently does loader-less `Class.forName(entry.className())` (recon: ObjectRewindDynamicCodecs.java:65). Change: consult an injected `ModClassResolver` first (a name → `Class<?>` map populated by `ModCodeRuntime` at registration; static-free — threaded through the existing recreate context or a registry seam, read the file to pick the cleanest injection point), falling back to `Class.forName` for engine classes. `ModClassResolver.EMPTY` for mod-less sessions — behavior byte-identical.
+**Contract (spec §B fix 1):** rewind entries carry optional owner mod id plus binary class name. An injected resolver asks the boot-scoped owner-loader registry to load the name; it does not require registration-time discovery. Engine entries fall back to the engine loader. Tests cover an unregistered dynamic child, identical FQNs in two owners, missing owner, closed runtime, and mod-less parity.
 
 - [ ] Steps: read `ObjectRewindDynamicCodecs` + its recreate-context plumbing → failing test (a class from a child loader recreates via resolver; an engine class still resolves via fallback; EMPTY resolver = today's behavior) → implement → PASS → run the rewind test suites (`mvn "-Dtest=com.openggf.game.rewind.*" test` adjusted to real class names) → commit (`fix: loader-aware rewind recreate for mod object classes`).
 
@@ -156,19 +267,21 @@ public final class ModDependencyClassLoader extends URLClassLoader {
 
 ## Workstream 2 — objects, art, pattern budget
 
-### Task 5: Deterministic object-id allocator + decorated registry
+### Task 5: Namespaced object-key registry + tagged spawns
 
 **Files:**
-- Create: `src/main/java/com/openggf/mods/code/ModObjectIdAllocator.java`, `ModDecoratedObjectRegistry.java`
-- Test: `src/test/java/com/openggf/mods/code/TestModObjectIdAllocator.java`
+- Create: `src/main/java/com/openggf/mods/code/ModObjectKeyRegistry.java`, `ModDecoratedObjectRegistry.java`
+- Modify: `src/main/java/com/openggf/level/objects/ObjectSpawn.java` and rewind/editor spawn codecs for the optional tagged key
+- Test: `src/test/java/com/openggf/mods/code/TestModObjectKeyRegistry.java`
 
 **Contract (spec §B):**
-- Input: the base registry's registered id set (read via a new `AbstractObjectRegistry` accessor `Set<Integer> registeredIds()` — small engine addition, read the class first) + the ordered list of (modId, objectKey, requestedId) registrations.
-- Allocation: honor `requestedId` when free; otherwise lowest free byte; iteration order = mod enable order, then key lexicographic. Same input → same output (test: shuffled registration arrival order yields identical allocation). Exhaustion → the mod is blocked with a manager badge (throw a typed exception the runtime converts).
-- `ModDecoratedObjectRegistry` wraps the base registry: `create(spawn)` consults mod factories for allocated ids first, else delegates; `getPrimaryName` returns the namespaced key for mod ids. The mod's `GamePatch` returns it from `createObjectRegistry()`.
-- Key→id lookup exposed for §D spawn resolution and §G envelope apply: `OptionalInt idFor(String namespacedKey)`.
+- Input: immutable owner-tagged registrations `(modId, namespacedKey, factory)` with duplicate-key rejection.
+- `ObjectSpawn` retains its stock byte id and gains an optional namespaced object key. If the key is absent, `ModDecoratedObjectRegistry.create` delegates directly to the base registry; if present, it resolves only the key registry. There is no numeric allocation or requested-id hint.
+- Rewind/editor/level formats persist the key and owner. Dynamic children use `spawnChild` ownership or an explicit key; no mod numeric identity enters saves.
 
-- [ ] Steps: failing tests (determinism incl. shuffle, requestedId honor + conflict fallback, exhaustion, delegation) → implement (pure logic — complete code expected here, ~80 lines) → PASS → commit (`feat: deterministic mod object id allocation and registry decoration`).
+- [ ] Steps: failing tests for stock placeholder isolation/delegation, canonical key
+  grammar/case/owner mismatch, duplicate/absent owner, dynamic child, and
+  save/editor/rewind round trip → implement → PASS → commit.
 
 ---
 
@@ -179,20 +292,10 @@ public final class ModDependencyClassLoader extends URLClassLoader {
 - Create: `src/main/java/com/openggf/tools/modsdk/BakedSheetWriter.java`
 - Test: `src/test/java/com/openggf/tools/modsdk/TestBakedSheetRoundTrip.java`
 
-**Format (spec §C, versioned container, one file per sheet):**
-
-```
-magic "GGFSHEET" (8 bytes) | u16 version=1 | u16 patternCount
-| patternCount * 32 bytes (Sega 4bpp, Pattern.fromSegaFormat layout)
-| u16 frameCount | per frame: u16 pieceCount, per piece:
-    s16 xOffset, s16 yOffset, u8 widthTiles, u8 heightTiles,
-    u16 tileIndex, u8 flags (bit0 hFlip, bit1 vFlip, bit2 priority),
-    u8 paletteIndex
-| u8 paletteLineIndex | u8 frameDelay
-| u8 hasPalette (0/1) | if 1: 16 * u16 palette entries (Mega Drive 9-bit color words)
-```
-
-All multi-byte values big-endian. Reader materializes `ObjectSpriteSheet(Pattern[] via fromSegaFormat, List<SpriteMappingFrame>, paletteLineIndex, frameDelay)`; unknown version → typed exception (mod load skips the sheet with a badge, never crashes).
+**Format:** implement baked-sheet v1 exactly as specified in
+`2026-07-10-mod-support-format-security-contracts.md`, including magic, field widths,
+ordering, bounds, trailing-byte rejection, golden fixtures, and bounded reads. The
+older inline `GGFSHEET` sketch is superseded.
 
 - [ ] Steps: failing round-trip test (writer → bytes → reader → field-equality against the source `SpriteMappingPiece` list and pattern pixels; bad magic / future version rejected) → implement both sides (complete code expected — pure serialization) → PASS → commit (`feat: baked sprite sheet container with modsdk writer`).
 
@@ -202,12 +305,17 @@ All multi-byte values big-endian. Reader materializes `ObjectSpriteSheet(Pattern
 
 **Files:**
 - Create: `src/main/java/com/openggf/mods/code/ModArtOverlayProvider.java` (decorates a base `ObjectArtProvider`)
-- Modify: `ModCodeRuntime` (synthesize an implicit patch for data-only mods with `artOverrides`)
+- Modify: `ModRegistrationPlan`/`ModBackedGamePatch` for data-only art contributions
 - Test: `src/test/java/com/openggf/mods/code/TestModArtOverrides.java`
 
-**Contract (spec §C):** the decorated provider's `getRenderer(key)`/`getSheet(key)` serve the mod sheet for overridden keys (loaded lazily via `BakedSheetReader` from the mod jar), else delegate; later mods win. A data-only mod with `artOverrides` and no entrypoint gets a synthesized minimal `GamePatch` (always-activates for its `baseGame`) that installs just the art decoration — keeping "content always scopes via a patch" (§A) without requiring code.
+**Contract (spec §C):** validated sheets decorate the base provider and later owners
+win. Content registrations always receive one engine-owned backing patch; no explicit
+creator patch is required. A missing/invalid declared asset is a structured catalog
+error that blocks the contribution; runtime I/O failure aborts the session rather than
+silently switching art.
 
-- [ ] Steps: re-verify `ObjectArtProvider` surface → failing tests (override served, later-wins, missing sheet asset → skip with logged reason + base art) → implement → PASS → commit (`feat: mod art overrides via decorated art provider`).
+- [ ] Steps: failing tests for override/later-wins, backing-patch order, structured
+  missing-asset block, and runtime failure boundary → implement → PASS → commit.
 
 ---
 
@@ -215,12 +323,14 @@ All multi-byte values big-endian. Reader materializes `ObjectSpriteSheet(Pattern
 
 **Files:**
 - Modify: `src/main/java/com/openggf/graphics/PatternAtlas.java` (`validatePatternIdGovernance` ~584-594, `registerRange(int,int,String)` ~144)
+- Modify: `src/main/java/com/openggf/level/LevelManager.java` and session-owned mod pattern-window state
+- Modify: `src/main/java/com/openggf/mods/ui/ModManagerScreen.java`
 - Create: `src/main/java/com/openggf/mods/code/ModPatternWindowAllocator.java`
-- Test: `src/test/java/com/openggf/graphics/TestPatternAtlasDynamicRanges.java`
+- Test: `src/test/java/com/openggf/graphics/TestPatternAtlasDynamicRanges.java`, extend `TestModManagerScreen`
 
-**Contract (spec §C, engine change):** governance accepts ids inside dynamically registered ranges (today: enum-only via `PatternAtlasRange.forPatternId`); `registerRange(int,int,String)` enforces block alignment like the enum tier. `ModPatternWindowAllocator`: one `0x8000` window per enabled mod from `0x108000` upward in enable order, extra windows by manifest `patternWindows` declaration (Task 2's schema field), registered as `"mod:" + id`. **Budget display (spec §C last sentence):** `ModManagerScreen` [P1] rows for code/art mods show window count (e.g. `[2 windows]`) sourced from the allocator — one extra rendered segment, logic unit-tested like the screen's other row fields.
+**Contract (spec §C, engine change):** governance accepts ids inside dynamically registered ranges and enforces alignment. `ModPatternWindowAllocator` retains deterministic assignments in session state and registers them from the first free `endExclusive`. `LevelManager.initObjectArt()` immediately re-registers those assignments after its clear and before caching/rendering. Budget display comes from the retained allocator. Tests cover 1/16-window owners, rejection of 0/17, deterministic effective-order allocation, overlap avoidance, the 128-window aggregate eligibility failure naming the blocked owner, manager per-owner/total display, consecutive level loads, and editor teardown/rebuild.
 
-- [ ] Steps: read the two PatternAtlas regions → failing tests (dynamic-range id passes governance; unregistered id above 0x108000 still fails; misaligned dynamic registerRange throws; allocator hands out sequential windows) → implement → PASS → run graphics/pattern test suites → commit (`feat: dynamic PatternAtlas ranges for per-mod pattern windows`).
+- [ ] Steps: read the two PatternAtlas regions → write the full failing budget/governance/UI matrix above → implement → PASS → run graphics/pattern and manager suites → commit (`feat: dynamic PatternAtlas ranges for per-mod pattern windows`).
 
 ---
 
@@ -246,9 +356,9 @@ All multi-byte values big-endian. Reader materializes `ObjectSpriteSheet(Pattern
 - Modify: `src/main/java/com/openggf/level/LevelManager.java` (`advanceToNextLevel` ~2717-2732)
 - Test: `src/test/java/com/openggf/game/TestZoneProgressionPlan.java`
 
-**Contract (spec §D.3):** `ZoneProgressionPlan.next(int zone, int act)` → `Successor(zone, act)` or `CREDITS`. Default `LINEAR` implementation reproduces today's `currentAct++ / currentZone++ / credits-at-end` logic bit-identically (test: exhaustive walk over an 11-zone fixture matches old behavior). `advanceToNextLevel` consults the plan (module-provided via a new `GameModule` default method `getZoneProgressionPlan()` → `LINEAR`; a patch overrides it). **Document in the seam's Javadoc:** `advanceZoneActOnly()` (S1 big-ring path, S1-only caller) bypasses the plan by design — S1 mod zones are out of scope; the plan seam is the progression authority for everything else.
+**Contract (spec §D.3):** `ZoneProgressionPlan.next(ZoneTopology topology, int zone, int act)` returns a successor or credits. `ZoneTopology` is an immutable registry snapshot containing zone count, per-zone act counts, and terminal/event-chain metadata. Default linear behavior is exhaustively compared with current logic, including variable act counts and credits. Mods sharing one stock `insertAfter` anchor chain in stable effective order, then rejoin the original successor; disabling any member rebuilds the chain without dangling redirects. Time-attack early return, redirects, dependency ordering, duplicate identity, disabled-mod fallback, and event-chain rejection have focused tests.
 
-- [ ] Steps: read `advanceToNextLevel` + `advanceZoneActOnly` → failing tests (LINEAR equivalence; a redirect plan routes MTZ→11→SCZ) → implement → PASS → trace spot sweep (progression untouched for stock) → commit (`feat: ZoneProgressionPlan seam for mod zone reachability`).
+- [ ] Steps: read `advanceToNextLevel` + `advanceZoneActOnly` → failing tests (LINEAR equivalence; MTZ→mod11→SCZ; MTZ→mod11→mod12→SCZ in effective/dependency order; disable either mod and rebuild) → implement → PASS → trace spot sweep (progression untouched for stock) → commit (`feat: ZoneProgressionPlan seam for mod zone reachability`).
 
 ---
 
@@ -258,7 +368,11 @@ All multi-byte values big-endian. Reader materializes `ObjectSpriteSheet(Pattern
 - Modify: `src/main/java/com/openggf/game/sonic2/Sonic2Level.java`
 - Test: `src/test/java/com/openggf/game/sonic2/TestSonic2LevelInMemoryConstruction.java`
 
-**Contract (spec §D.2 engine change):** a builder/overload accepting: the `LevelResourcePlan` (as today) plus **in-memory** layout bytes, 4×16 palette data, solid-tile heightmap/angle bytes, boundaries, and the spawn lists — reusing the existing decode methods' logic (extract the byte-level decode from the ROM-read wrappers where needed; the ROM-address constructors delegate to the same decode). Requires a ROM only for what the plan's ROM ops need (a mod-asset-only plan needs none — pass the nullable Rom the Phase 0 loader already tolerates).
+**Contract (spec §D.2):** builder accepts the plan plus in-memory layout, four palette
+lines, solid height/width/angle arrays, primary/secondary collision indices,
+boundaries, and tagged spawns using the exact v1 format. Extract shared decode helpers;
+ROM constructors delegate. A mod-only plan uses `ResourceLoader.forModAssetsOnly()`
+and never relies on an implicitly nullable ROM.
 
 - [ ] Steps: **re-verify the landed Phase 0 loader's null-Rom behavior first** — the "nullable Rom" claim comes from the Phase 0 plan's Task B2 contingency note, not a pinned spec guarantee; if the landed `ResourceLoader` rejects null, add its `forModAssetsOnly()` factory here → read `Sonic2Level` fully (both constructors + every load method) → failing test (construct from fixture in-memory data + a tiny ModAsset plan in `@TempDir`; assert map/palette/solid-tile/boundary getters) → implement by extraction, not duplication → PASS → HTZ trace gate (the plan-constructor zone) + S2 zone-loading tests → commit (`feat: in-memory level data construction for mod zones`).
 
@@ -267,24 +381,28 @@ All multi-byte values big-endian. Reader materializes `ObjectSpriteSheet(Pattern
 ### Task 12: `ModLevelDefinition` + `ModZoneLoader` + music routing **[P0]**
 
 **Files:**
-- Create: `src/main/java/com/openggf/mods/code/ModLevelDefinition.java` (+ parser), `ModZoneLoader.java`
+- Create: `src/main/java/com/openggf/mods/code/ModLevelDefinition.java` (+ parser),
+  `ZoneKey.java`, `BakedLevelRef.java`, `ModZoneContribution.java`, `ZoneEventFactory.java`,
+  `ModZoneLoader.java`
+- Modify: `ModContext`, `ModRegistrationPlan`, `ModBackedGamePatch`, zone/level/
+  progression provider decorators, and the `@ModApi` inventory
 - Test: `src/test/java/com/openggf/mods/code/TestModZoneLoader.java`
 
-**Contract (spec §D.2):** `ModLevelDefinition` (YAML or the baked-container idiom — pick YAML for the metadata + separate binary assets for bulk data, consistent with §C): zone name, synthetic zoneIndex (0x40+ band), acts (each: plan asset entries for the four kinds, layout asset, palette asset, solid-tile asset, boundaries, start position, music id, spawn lists with object entries by namespaced key). `ModZoneLoader` resolves keys through Task 5's allocator, builds the Task 11 level, and the mod's patch decorates `loadLevel`/`getMusicId` to route synthetic indices (≥0x400) to it. Appended registry entries (Task 9 descriptors) + a `ZoneProgressionPlan` redirect (Task 10) complete the wiring; `insertAfter` validation refuses event-chained zones at load.
+**Contract (spec §D.2):** use the exact `level.json` + binary layout in the format/security contract. `ModContext.registerZone(ModZoneContribution)` supplies the owner; local key, baked level ref, optional per-zone anchor/default, and optional event factory freeze transactionally into the registration plan. `ModBackedGamePatch` atomically decorates zone, level, event, and progression providers. Spawn entries are tagged stock ids or namespaced keys; music is stock id or namespaced `TrackKey`. Synthetic indices allocate by effective owner then registration order; same-anchor zones chain deterministically; duplicate local keys fail the owner transaction. Runtime/save surfaces translate through tagged `ZoneKey`; no synthetic mod index is persisted. Event-chain insertion is refused.
 
-- [ ] Steps: re-verify Tasks 5/9/10/11 landed shapes → failing tests (definition parse + validation errors; loader builds a playable-shape level from fixture assets; key resolution; music id routing; insertAfter refusal) → implement → PASS → commit (`feat: mod level definition and zone loader`).
+- [ ] Steps: re-verify Tasks 2/5/9/10/11 landed shapes → failing tests (definition parse + validation errors; transaction publication; loader playable fixture; key/music routing; one owner with two zones; two owners sharing an anchor; distinct anchors; duplicate key; disable/rebuild; stable ZoneKey resolution; event fault boundary; invalid insertion refusal) → implement → PASS → commit (`feat: transactional mod zone registration and loader`).
 
 ---
 
 ### Task 13: Title card fallback + data-select extension
 
 **Files:**
-- Modify: `src/main/java/com/openggf/game/sonic2/titlecard/TitleCardManager.java` (~182, ~392), `src/main/java/com/openggf/game/sonic2/dataselect/S2DataSelectProfile.java` (+ preview generator as needed)
+- Modify: `src/main/java/com/openggf/game/sonic2/titlecard/TitleCardManager.java` (~182, ~392), `src/main/java/com/openggf/game/sonic2/dataselect/S2DataSelectProfile.java` (+ preview generator as needed), `S2SaveSnapshotProvider` and its versioned slot DTO
 - Test: focused tests per file
 
-**Contract (spec §D.4 + §D.3):** title card name resolves via `ZoneRegistry.getZoneName` when the index exceeds the hardcoded array (also fixing the wrong-name `ZONE_NAMES[0]` fallback); if the ROM letter-art set can't render the name, skip the title card for that zone. The skip is a **new config flag** — full repo obligations apply: `SonicConfiguration` constant + `ConfigCatalog` meta (`TestConfigCatalog` enforces) + `CONFIGURATION.md` entry + `Configuration-Docs: updated` trailer on this task's commit. Data-select: indices ≥ stock count get the generic mod-zone preview tile + registry-driven restart; absent-mod slots restart at zone 0 with a logged notice (parent §7 preservation). **All three code areas are in scope, read-first:** `TitleCardManager` (~182/~392), `S2DataSelectProfile` (`CLEAR_RESTARTS` bounds checks), and `S2DataSelectImageCacheManager` (`EXPECTED_ZONE_KEYS` fixed zone-key set — the preview cache must tolerate/serve the generic tile for mod-zone keys); trace the restart-resolution consumer from `S2DataSelectProfile`'s restart indices before changing it.
+**Contract (spec §D.4 + §D.3):** title cards use registry names with the documented skip flag. S2 slot metadata becomes a backward-compatible tagged saved-zone union: legacy stock numeric index or `ZoneKey.mod(owner, local)`. Save mod zones by key; load resolves the current synthetic index. Missing/disabled keys and legacy numeric values beyond stock preserve the slot but restart at zone 0 with a finding, never retarget. Data-select uses the key for generic preview/restart. Read title card, save provider/DTO, profile, image cache, and restart consumer before changes.
 
-- [ ] Steps: read the three files + the restart consumer → failing tests → implement → PASS → commit (`feat: registry-driven title card and data-select handling for mod zones` with `Configuration-Docs: updated`).
+- [ ] Steps: read all named files + restart consumer → failing tests for stock backward compatibility, save owner-B/reorder-or-disable owner-A/resume B, missing B fallback, and numeric-collision non-retarget → implement → PASS → commit (`feat: keyed mod-zone saves and registry-driven presentation` with `Configuration-Docs: updated`).
 
 ---
 
@@ -294,12 +412,16 @@ All multi-byte values big-endian. Reader materializes `ObjectSpriteSheet(Pattern
 
 **Files:**
 - Create: `src/main/java/com/openggf/editor/persistence/FullLevelExporter.java`
-- Modify: the Phase 0 v2 envelope spawn-entry type (+ `EditorSaveManager` apply path) for the optional `objectKey` field; `LevelEditorController`/`EditorInputHandler` for the export action
+- Create: `EditorSavePayloadV3`, `ObjectSpawnStateV3`, and explicit v1/v2→v3 migrator
+- Modify: `EditorSaveManager`, controller/input export action; leave v1/v2 DTOs,
+  canonical writers, and hashes byte-stable
 - Test: `src/test/java/com/openggf/editor/persistence/TestFullLevelExporter.java` + envelope compat tests
 
-**Contract (spec §G):** export serializes the complete `MutableLevel` — patterns (32-byte Sega format), chunks, blocks, map, solid tiles + chunk collision indices, palettes, spawns (mod-range ids as namespaced keys via Task 5's `idFor` reverse lookup), boundaries, start position — into a directory the SDK consumes. Envelope spawn entries: optional `objectKey`, map-shaped tolerant parsing (declared Phase 0 §C.3 amendment), version stays 2; apply resolves keys via the allocator, absent-mod keys skipped with a logged count.
+**Contract (spec §G):** export the complete `MutableLevel` using the exact `level.json` + binary directory contract and golden fixtures. Spawns remain tagged stock ids or namespaced keys. Editor envelopes containing mod keys are v3; older readers quarantine them. Missing keys skip with a structured logged count.
 
-- [ ] Steps: re-verify landed Phase 0 envelope code → failing tests (export round-trip against a fixture MutableLevel; v2-without-key compat; key resolution + absent-mod skip) → implement → PASS → commit (`feat: editor full-level export and key-based envelope spawns`).
+- [ ] Steps: failing tests for historical v1/v2 raw hashes, v3 stock/key tagged union,
+  v1/v2-reader quarantine of v3, migration, key/owner validation, absent-key skip, and
+  full export golden round trip → implement → PASS → commit.
 
 ---
 
@@ -318,14 +440,16 @@ All multi-byte values big-endian. Reader materializes `ObjectSpriteSheet(Pattern
 
 ## Workstream 4 — `ggfmod` SDK/CLI
 
-### Task 16: CLI skeleton + `validate` (reflection + ASM) + the ASM dependency **[P1]**
+### Task 16: CLI skeleton + `validate` wrapper **[P1]**
 
 **Files:**
-- Modify: `pom.xml` (add `org.ow2.asm:asm`)
 - Create: `src/main/java/com/openggf/tools/modsdk/GgfModCli.java`, `ModJarValidator.java`
 - Test: `src/test/java/com/openggf/tools/modsdk/TestModJarValidator.java`
 
-**Contract (spec §E):** `GgfModCli` dispatches subcommands (tools conventions: pure logic + thin `main`). `validate` checks: manifest schema (reuse Phase 1 parser), audio manifest, asset presence for every manifest reference, id-range + pattern-budget arithmetic, entrypoint presence/implements-`GgfMod`; reflection checks on an isolated loader (object classes extend the base classes, `RewindRecreatable` presence where dynamic, `final` scalar + object-ref field inventories per the three rewind rules); ASM checks (constructor bodies calling `services()`; ref-field capture usage). Output: numbered findings, exit code 0/1.
+**Contract (spec §E):** thin CLI over Task 0's reusable validator plus manifest,
+audio, asset/key, pattern-budget, format, and API-range checks. Include the
+compile-time-static-only rule; custom mod static adapters are deferred. There is no numeric mod-object id-range rule. Output
+numbered findings and exit 0/1.
 
 - [ ] Steps: failing tests (a known-good fixture jar passes; seeded violations each produce their finding — one test per rule) → implement → PASS → commit (`feat: ggfmod validate with reflection and bytecode checks` — stage pom.xml; `Configuration-Docs: n/a`, note the dependency in the commit body).
 
@@ -335,15 +459,29 @@ All multi-byte values big-endian. Reader materializes `ObjectSpriteSheet(Pattern
 
 **Files:**
 - Create: `src/main/java/com/openggf/tools/modsdk/ArtConverter.java`, `LevelConverter.java`, `ProjectScaffolder.java`, `JarPackager.java`
+- Modify: `pom.xml` to attach the `openggf-mod-sdk` classifier jar containing only
+  `com/openggf/tools/modsdk/**` plus templates/service resources
 - Test: per-converter tests
 
 **Contract (spec §E):**
 - `convert art`: PNG (via `javax.imageio`) + YAML sheet manifest (frame/piece boxes) → Task 6 baked container. Quantization: exact-match against the declared 16-color line, error listing offending pixels/colors (>16 colors, non-8×8 dimensions, out-of-bounds boxes).
-- `convert level`: Task 14 export directory → plan asset binaries + `ModLevelDefinition` YAML.
+- `convert level`: Task 14's exact `level.json` + binary directory contract; JSON is
+  the only level metadata format.
 - `convert audio`: the spec §E subcommand — validates/normalizes wav/ogg + loop metadata by reusing Phase 1's decoders and audio-manifest parser [P1]; thin wrapper, own tests.
-- `init`: scaffold (manifest, sample badnik source via `ObjectScaffoldTool`'s generator style, sheet manifest, `build.md` instructions). `package`: assemble the jar (manifest + assets + compiled classes dir).
+- `init`: scaffold the canonical manifest, a compilable sample badnik/sheet, a
+  minimal editor-export level source consumable by `convert level`, assets, and build
+  instructions; Phase 3 later adds the character stub when that API exists. Its
+  golden file-set test compiles/packages the unedited scaffold. `package`: run Task 16
+  validation and fail on errors, then assemble; runtime independently recomputes Task
+  0 validation and never trusts an embedded author record.
 - `run` — **dev mode is built HERE, not inherited** (correcting the spec's "Phase 1's flag" misattribution — Phase 1 ships no dev mode; a one-line spec §E amendment is staged with this plan's commit): `ModRepositoryScanner` [P1] gains exploded-directory support behind a system property (`-Dggfmod.dev.modDir=<build output>` scanned as if a jar), exempt from trace/test force-disable per parent §5/§7; `run` launches the engine with that property set.
-- [ ] Steps: re-verify Phase 1 scanner/decoders → failing tests per converter (art round-trip PNG→container→reader→pixel equality; level convert consumes a Task 14 fixture export; audio validation; exploded-dir scan; init output file set) → implement → PASS → commit (`feat: ggfmod converters, dev mode, and project scaffolding`).
+- Packaging excludes `com/openggf/tools/modsdk/**` from the main engine jar and
+  attaches a separate `openggf-mod-sdk` jar with the exact SDK class/template
+  inventory. Because classifier metadata shares the main POM, creator/build docs
+  require both coordinates explicitly. A jar-content test rejects engine internals
+  leaking into the SDK, rejects SDK classes in the engine jar, and launches `ggfmod`
+  with both artifacts on the classpath.
+- [ ] Steps: re-verify Phase 1 scanner/decoders → failing tests per converter (art round-trip PNG→container→reader→pixel equality; level convert consumes a Task 14 fixture export; audio validation; exploded-dir scan; unedited init scaffold file set compiles and packages) → implement → PASS → commit (`feat: ggfmod converters, dev mode, and project scaffolding`).
 
 ---
 
@@ -352,9 +490,15 @@ All multi-byte values big-endian. Reader materializes `ObjectSpriteSheet(Pattern
 ### Task 18: Sample mod + headless integration + docs **[P0][P1]**
 
 - [ ] **Step 1:** Build the sample mod exactly as a creator would: `ggfmod init` → one badnik (patrol + destruction via the standard helpers) + one minimal zone (static palette, no events; small layout authored via the editor export fixture) → `convert` → `package`. Keep the sample's source in `src/test/resources/mods/sample-mod-src/` with a build script; the built jar is produced during the test run, not committed.
-- [ ] **Step 2:** Headless integration test: load the jar through the real scanner/catalog/runtime, launch S2 headless (HeadlessGameBoot idiom + the Phase 0 patch resolution), assert: zone 11 loads and is playable-shaped (level non-null, spawns resolved, music id routed), the badnik spawns and destructs, a rewind snapshot/restore round-trips the badnik (Task 4's resolver), and with the mod force-disabled everything is bit-identical to stock (assert the resolved module is the base instance).
+- [ ] **Step 1b:** Add a separate checked-in data-only reskin source under
+  `src/test/resources/mods/sample-reskin-src/`; package it through the real CLI and
+  assert a stock art key is replaced while mods-off rendering/provider identity is
+  unchanged. This is the Phase 4 gallery's reskin source.
+- [ ] **Step 2:** Headless integration test: load the jar through the real scanner/catalog/runtime, launch S2 headless (HeadlessGameBoot idiom + the Phase 0 patch resolution), assert: zone 11 loads and is playable-shaped (level non-null, spawns resolved, music id routed), the badnik spawns and destructs, a rewind snapshot/restore round-trips the badnik, save/reload resumes zone 11, and disabling the mod preserves the slot but restarts at zone 0 with the specified finding. With the mod force-disabled all other behavior is bit-identical to stock (assert the resolved module is the base instance).
 - [ ] **Step 3:** Regression gates (global constraints) + `docs/modding/content-mods.md` (creator guide: project layout, object how-to, zone how-to, validate/package/run) + CHANGELOG + CLAUDE.md/AGENTS.md pointers.
 - [ ] **Step 4:** Final commit with `Changelog: updated`, `Agent-Docs: updated`, `Guide: n/a` (or `updated` if docs/GUIDE exists — check), rest per policy.
+- [ ] **Step 5:** Finalize the Phase 2 `@ModApi` public/protected baseline after all
+  annotated types exist; review the diff and set exact API version `1.1.0`.
 
 ---
 
@@ -362,4 +506,5 @@ All multi-byte values big-endian. Reader materializes `ObjectSpriteSheet(Pattern
 
 - The plan's [P0]/[P1] re-verify steps are not optional — this plan was authored before its dependencies landed.
 - Workstream boundaries are commit-clean checkpoints; pausing between workstreams is safe.
-- Merge flow: `superpowers:finishing-a-development-branch`; README release-log note on merge to `develop`.
+- Completion flow: commit verified task slices directly on `next`; the final task
+  includes README release notes. No merge-back step exists.
