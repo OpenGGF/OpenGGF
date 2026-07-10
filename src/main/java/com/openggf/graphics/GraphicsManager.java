@@ -1800,12 +1800,12 @@ public class GraphicsManager {
 
 		boolean applyMask = spriteMaskRequested;
 
-		// SpriteSatMaskPostProcessor.process(...) never retains the input reference:
-		// with masking on it builds a fresh list; with masking off it returns
+		// processReusable(...) never retains the input reference: with masking on it
+		// reuses thread-owned scratch; with masking off it returns
 		// `spriteSatEntries` itself (no defensive copy). The replay below consumes
 		// the processed list synchronously, so the live buffer is cleared in the
 		// finally block only after the replay finished with it.
-		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.process(spriteSatEntries, applyMask);
+		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processReusable(spriteSatEntries, applyMask);
 
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;

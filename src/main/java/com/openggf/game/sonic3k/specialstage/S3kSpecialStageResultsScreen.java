@@ -117,6 +117,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     private final List<ResultsElement> phase1Elements = new ArrayList<>();
     private final List<ResultsElement> phase2Elements = new ArrayList<>();
     private final List<CleanupSlider> cleanupSliders = new ArrayList<>();
+    private final com.openggf.level.PatternDesc reusablePatternDesc = new com.openggf.level.PatternDesc();
 
     // ---- Continue icon ----
     private boolean showContinueIcon;
@@ -785,7 +786,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
                     if (pieceVFlip) descIndex |= 0x1000;
                     descIndex |= (palIdx & 0x3) << 13;
 
-                    com.openggf.level.PatternDesc desc = new com.openggf.level.PatternDesc(descIndex);
+                    com.openggf.level.PatternDesc desc = configureReusablePatternDesc(descIndex);
                     gm.renderPatternWithId(patternId, desc, drawX, drawY);
                 }
             }
@@ -822,7 +823,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
                     if (pieceVFlip) descIndex |= 0x1000;
                     descIndex |= (palIdx & 0x3) << 13;
 
-                    com.openggf.level.PatternDesc desc = new com.openggf.level.PatternDesc(descIndex);
+                    com.openggf.level.PatternDesc desc = configureReusablePatternDesc(descIndex);
                     gm.renderPatternWithId(patternId, desc, drawX, drawY);
                 }
             }
@@ -855,10 +856,15 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
                 if (pieceVFlip) descIndex |= 0x1000;
                 descIndex |= (palIdx & 0x3) << 13;
 
-                com.openggf.level.PatternDesc desc = new com.openggf.level.PatternDesc(descIndex);
+                com.openggf.level.PatternDesc desc = configureReusablePatternDesc(descIndex);
                 gm.renderPatternWithId(patternId, desc, drawX, drawY);
             }
         }
+    }
+
+    com.openggf.level.PatternDesc configureReusablePatternDesc(int descIndex) {
+        reusablePatternDesc.set(descIndex);
+        return reusablePatternDesc;
     }
 
     private void ensurePatternSlots(Pattern[] patterns, int startIndex, int count) {

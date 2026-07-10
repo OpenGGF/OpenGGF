@@ -147,11 +147,8 @@ class TestSonic2SpecialRenderEffectRegistration {
                 new SpecialRenderEffectContext(camera, 11, levelManager, graphicsManager)));
     }
 
-    @SuppressWarnings("unchecked")
-    private static int pendingSlotRenderCount(Sonic2ZoneFeatureProvider provider) throws Exception {
-        Field field = Sonic2ZoneFeatureProvider.class.getDeclaredField("pendingSlotRenders");
-        field.setAccessible(true);
-        return ((java.util.List<int[]>) field.get(provider)).size();
+    private static int pendingSlotRenderCount(Sonic2ZoneFeatureProvider provider) {
+        return provider.pendingSlotRenderCount();
     }
 
     private static Object waterSurfaceManager(Sonic2ZoneFeatureProvider provider) {

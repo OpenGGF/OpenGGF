@@ -10,10 +10,11 @@ import com.openggf.game.render.SpecialRenderEffect;
 import com.openggf.game.render.SpecialRenderEffectContext;
 import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.game.sonic2.runtime.HtzRuntimeState;
-import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.TilemapGpuRenderer;
 import com.openggf.level.ParallaxManager;
+import java.util.ArrayDeque;
 
 /**
  * Renders the BG high-priority cave-ceiling overlay used by Hill Top Zone's
@@ -30,6 +31,7 @@ import com.openggf.level.ParallaxManager;
  * HTZ-specific flag on global game state.
  */
 public final class HtzEarthquakeBgOverlayEffect implements SpecialRenderEffect {
+    private final ArrayDeque<OverlayCommand> commandPool = new ArrayDeque<>();
 
     @Override
     public SpecialRenderEffectStage stage() {
@@ -43,6 +45,9 @@ public final class HtzEarthquakeBgOverlayEffect implements SpecialRenderEffect {
         }
 
         GraphicsManager graphicsManager = context.graphicsManager();
+        if (graphicsManager.isHeadlessMode() || !graphicsManager.isGlInitialized()) {
+            return;
+        }
         TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
         if (renderer == null) {
             return;
@@ -68,39 +73,70 @@ public final class HtzEarthquakeBgOverlayEffect implements SpecialRenderEffect {
         int screenW = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
         int screenH = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
 
-        graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
-            TilemapGpuRenderer tilemapRenderer = graphicsManager.getTilemapGpuRenderer();
-            if (tilemapRenderer == null) {
-                return;
+        OverlayCommand command = commandPool.pollFirst();
+        if (command == null) command = new OverlayCommand();
+        graphicsManager.registerCommand(command.configure(renderer, screenW, screenH,
+                bgWorldOffsetX, bgWorldOffsetY, graphicsManager.getPatternAtlasWidth(),
+                graphicsManager.getPatternAtlasHeight(), atlasId, paletteId));
+    }
+
+    OverlayCommand acquireCaptured(TilemapGpuRenderer renderer, int[] viewport, int marker) {
+        OverlayCommand command = commandPool.pollFirst();
+        if (command == null) command = new OverlayCommand();
+        return command.configureCaptured(renderer, 320, 224, marker, 0, 1, 1, 2, 3, viewport);
+    }
+
+    final class OverlayCommand implements GLCommandable {
+        private final int[] viewport = new int[4];
+        private TilemapGpuRenderer renderer;
+        private int screenW, screenH, atlasWidth, atlasHeight, atlasId, paletteId;
+        private float offsetX, offsetY;
+        private boolean leased;
+
+        OverlayCommand configure(TilemapGpuRenderer renderer, int screenW, int screenH,
+                float offsetX, float offsetY, int atlasWidth, int atlasHeight, int atlasId, int paletteId) {
+            try {
+                glGetIntegerv(GL_VIEWPORT, viewport);
+            } catch (RuntimeException | Error failure) {
+                commandPool.addFirst(this);
+                throw failure;
             }
-            int[] viewport = new int[4];
-            glGetIntegerv(GL_VIEWPORT, viewport);
-            // Disable VDP wrap height for the overlay — earthquake priority tiles are
-            // at tilemap rows 48+ (outside the 0-31 range that normal BG wrapping uses).
-            float savedWrapHeight = tilemapRenderer.getBgVdpWrapHeight();
-            tilemapRenderer.setBgVdpWrapHeight(0.0f);
-            tilemapRenderer.render(
-                    TilemapGpuRenderer.Layer.BACKGROUND,
-                    screenW,
-                    screenH,
-                    viewport[0],
-                    viewport[1],
-                    viewport[2],
-                    viewport[3],
-                    bgWorldOffsetX,
-                    bgWorldOffsetY,
-                    graphicsManager.getPatternAtlasWidth(),
-                    graphicsManager.getPatternAtlasHeight(),
-                    atlasId,
-                    paletteId,
-                    0,
-                    1,      // priorityPass=1: HIGH-PRIORITY TILES ONLY
-                    false,
-                    false,
-                    false,
-                    0.0f);
-            tilemapRenderer.setBgVdpWrapHeight(savedWrapHeight);
-        }));
+            return configureCaptured(renderer, screenW, screenH, offsetX, offsetY,
+                    atlasWidth, atlasHeight, atlasId, paletteId, viewport);
+        }
+
+        OverlayCommand configureCaptured(TilemapGpuRenderer renderer, int screenW, int screenH,
+                float offsetX, float offsetY, int atlasWidth, int atlasHeight, int atlasId, int paletteId,
+                int[] capturedViewport) {
+            this.renderer = renderer; this.screenW = screenW; this.screenH = screenH;
+            this.offsetX = offsetX; this.offsetY = offsetY;
+            this.atlasWidth = atlasWidth; this.atlasHeight = atlasHeight;
+            System.arraycopy(capturedViewport, 0, viewport, 0, 4);
+            this.atlasId = atlasId; this.paletteId = paletteId; leased = true;
+            return this;
+        }
+
+        @Override public void execute(int cx, int cy, int cw, int ch) {
+            try {
+                if (renderer == null) return;
+                float savedWrapHeight = renderer.getBgVdpWrapHeight();
+                renderer.setBgVdpWrapHeight(0.0f);
+                try {
+                    renderer.render(TilemapGpuRenderer.Layer.BACKGROUND, screenW, screenH,
+                            viewport[0], viewport[1], viewport[2], viewport[3], offsetX, offsetY,
+                            atlasWidth, atlasHeight,
+                            atlasId, paletteId, 0, 1, false, false, false, 0.0f);
+                } finally {
+                    renderer.setBgVdpWrapHeight(savedWrapHeight);
+                }
+            } finally { release(); }
+        }
+
+        @Override public void discard() { release(); }
+        private void release() {
+            if (!leased) return;
+            leased = false; renderer = null; commandPool.addFirst(this);
+        }
     }
 
     private static boolean isEarthquakeActive() {
