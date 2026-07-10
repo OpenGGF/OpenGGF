@@ -249,7 +249,10 @@ addresses each:
     reflection cannot see method bodies and the engine's own guard for this
     is a source scanner with nothing to reuse.
   - `package` — assemble the jar.
-  - `run` — dev-mode launch (Phase 1's flag) with the mod from build output.
+  - `run` — dev-mode launch with the mod from build output. (Correction:
+    dev mode is **built in Phase 2**, not inherited — Phase 1 ships no dev
+    flag; the scanner gains exploded-directory support behind a system
+    property here, exempt from trace/test force-disable per §7.)
 
 ### F. Trust gate
 
