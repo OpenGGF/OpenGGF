@@ -8,16 +8,22 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.SpritePriorityLayerHook;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.Sprite;
+import com.openggf.testmode.TraceRenderVisibility;
+import com.openggf.trace.replay.TraceGhostHook;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assumptions;
 
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 /**
@@ -62,10 +69,11 @@ class TestLevelRendererBucketInvalidation {
 
         assertFalse(source.contains(".invalidateRenderBuckets()"),
                 "LevelRenderer must not unconditionally invalidate render buckets every frame.");
-        assertTrue(source.contains("spriteManager.refreshRenderBucketsIfChanged()")
+        assertTrue(source.contains("spriteManager.prepareRenderBucketsForPass()")
                         && source.contains("objectManager.refreshRenderBucketsIfChanged()"),
-                "LevelRenderer must re-validate cached buckets against live priority state "
-                        + "before drawing the sprite/object pass.");
+                "LevelRenderer must prepare self-validating sprite buckets and revalidate objects.");
+        assertFalse(source.contains("() -> renderTraceGhostsForLayer"),
+                "bucket loops must not allocate capturing ghost lambdas");
     }
 
     @Test
@@ -166,6 +174,166 @@ class TestLevelRendererBucketInvalidation {
         assertEquals(eagerSpriteOrder(manager), afterRemove);
 
         manager.clearAllSprites();
+    }
+
+    @Test
+    void renderBucketPassResolvesSidekickSuppressionOnceAndPreservesLayerHookOrder() {
+        CountingSpriteManager manager = new CountingSpriteManager();
+        manager.clearAllSprites();
+        AbstractPlayableSprite low = playableSprite("low", 2, false, false);
+        AbstractPlayableSprite high = playableSprite("high", 2, true, true);
+        manager.addSprite(low);
+        manager.addSprite(high);
+        long[] fingerprint = {0};
+        doAnswer(invocation -> { fingerprint[0] = fingerprint[0] * 10 + 2; return null; }).when(low).draw();
+        doAnswer(invocation -> { fingerprint[0] = fingerprint[0] * 10 + 4; return null; }).when(high).draw();
+        SpritePriorityLayerHook hook = (bucket, highPriority) ->
+                fingerprint[0] = fingerprint[0] * 10 + (highPriority ? 3 : 1);
+
+        manager.prepareRenderBucketsForPass();
+        for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
+            manager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, hook);
+        }
+        assertEquals(1234, fingerprint[0], "hook must run immediately before its nonempty sprite layer");
+
+        manager.suppressionResolutionCount = 0;
+        for (int frame = 0; frame < 1_200; frame++) {
+            manager.prepareRenderBucketsForPass();
+            for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
+                manager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
+            }
+        }
+
+        assertEquals(1_200, manager.suppressionResolutionCount,
+                "one suppression resolution per pass replaces eight bucket resolutions plus per-sprite checks");
+        manager.clearAllSprites();
+    }
+
+    @Test
+    void preparedSuppressionIsStableWithinPassAndReevaluatedAcrossPasses() {
+        CountingSpriteManager manager = new CountingSpriteManager();
+        manager.clearAllSprites();
+        AbstractPlayableSprite sidekick = playableSprite("sidekick", 2, false, true);
+        manager.addSprite(sidekick);
+
+        int[] layerHookCount = {0};
+        SpritePriorityLayerHook hook = (bucket, highPriority) -> layerHookCount[0]++;
+        manager.suppressed = false;
+        manager.prepareRenderBucketsForPass();
+        manager.suppressed = true;
+        manager.drawPreparedUnifiedBucketWithPriority(2, graphicsManager, hook);
+        assertEquals(1, manager.suppressionResolutionCount);
+        assertEquals(1, layerHookCount[0], "mid-pass toggle must not change prepared membership");
+
+        manager.prepareRenderBucketsForPass();
+        assertEquals(2, manager.suppressionResolutionCount);
+        manager.drawPreparedUnifiedBucketWithPriority(2, graphicsManager, hook);
+        assertEquals(1, layerHookCount[0], "next pass must observe sidekick suppression");
+        manager.suppressed = false;
+        manager.prepareRenderBucketsForPass();
+        assertEquals(3, manager.suppressionResolutionCount);
+        manager.drawPreparedUnifiedBucketWithPriority(2, graphicsManager, hook);
+        assertEquals(2, layerHookCount[0]);
+
+        manager.drawUnifiedBucketWithPriority(2, graphicsManager);
+        assertEquals(4, manager.suppressionResolutionCount,
+                "standalone callers still resolve suppression directly");
+        manager.clearAllSprites();
+    }
+
+    @Test
+    void prepareAloneDetectsUntrackedPriorityMutation() {
+        CountingSpriteManager manager = new CountingSpriteManager();
+        manager.clearAllSprites();
+        AbstractPlayableSprite player = playableSprite("player", 2, false, false);
+        manager.addSprite(player);
+        manager.prepareRenderBucketsForPass();
+
+        when(player.getPriorityBucket()).thenReturn(5);
+        manager.prepareRenderBucketsForPass();
+        int[] hookCount = {0};
+        manager.drawPreparedUnifiedBucketWithPriority(2, graphicsManager,
+                (bucket, highPriority) -> hookCount[0]++);
+        assertEquals(0, hookCount[0]);
+        manager.drawPreparedUnifiedBucketWithPriority(5, graphicsManager,
+                (bucket, highPriority) -> hookCount[0]++);
+        assertEquals(1, hookCount[0], "prepare must rebuild after a direct priority mutation");
+        manager.clearAllSprites();
+    }
+
+    @Test
+    void ghostHookSelectionHonorsVisibilityWithoutChangingHudGates() {
+        TraceRenderVisibility visibility = TraceRenderVisibility.of(false, false, true);
+        TraceGhostHook.GhostLayerRenderer active = (bucket, highPriority) -> { };
+        assertEquals(null, LevelRenderer.selectGhostLayerHook(visibility, active));
+        assertFalse(visibility.showGameHud());
+        assertTrue(visibility.showDebugHud());
+        assertEquals(active, LevelRenderer.selectGhostLayerHook(TraceRenderVisibility.defaults(), active));
+    }
+
+    @Test
+    void preparedHookPathRetainsNonPlayableSpritesAfterMinimumBucketPlayables() {
+        CountingSpriteManager manager = new CountingSpriteManager();
+        manager.clearAllSprites();
+        AbstractPlayableSprite player = playableSprite("player", RenderPriority.MIN, false, false);
+        Sprite nonPlayable = mock(Sprite.class);
+        when(nonPlayable.getCode()).thenReturn("non-playable");
+        long[] fingerprint = {0};
+        doAnswer(invocation -> { fingerprint[0] = fingerprint[0] * 10 + 2; return null; }).when(player).draw();
+        doAnswer(invocation -> { fingerprint[0] = fingerprint[0] * 10 + 3; return null; }).when(nonPlayable).draw();
+        manager.addSprite(player);
+        manager.addSprite(nonPlayable);
+        manager.prepareRenderBucketsForPass();
+        manager.drawPreparedUnifiedBucketWithPriority(RenderPriority.MIN, graphicsManager,
+                (bucket, highPriority) -> fingerprint[0] = fingerprint[0] * 10 + 1);
+        assertEquals(123, fingerprint[0]);
+        manager.clearAllSprites();
+    }
+
+    @Test
+    void preparedEmptyBucketPassHasNearZeroSteadyAllocation() {
+        CountingSpriteManager manager = new CountingSpriteManager();
+        manager.clearAllSprites();
+        for (int warm = 0; warm < 2_000; warm++) runPreparedEmptyPass(manager);
+
+        java.lang.management.ThreadMXBean raw = ManagementFactory.getThreadMXBean();
+        Assumptions.assumeTrue(raw instanceof com.sun.management.ThreadMXBean,
+                "ThreadMXBean allocation accounting unavailable");
+        com.sun.management.ThreadMXBean bean = (com.sun.management.ThreadMXBean) raw;
+        Assumptions.assumeTrue(bean.isThreadAllocatedMemorySupported(),
+                "thread allocation accounting unsupported");
+        if (!bean.isThreadAllocatedMemoryEnabled()) bean.setThreadAllocatedMemoryEnabled(true);
+        long threadId = Thread.currentThread().threadId();
+        long allocation600 = measurePreparedPassAllocation(manager, bean, threadId, 600);
+        long allocation1200 = measurePreparedPassAllocation(manager, bean, threadId, 1_200);
+        assertTrue(allocation1200 <= allocation600 + 1_024,
+                "doubling frames must not add per-frame allocation; 600=" + allocation600
+                        + " 1200=" + allocation1200);
+    }
+
+    private void runPreparedEmptyPass(CountingSpriteManager manager) {
+        manager.prepareRenderBucketsForPass();
+        for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
+            manager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
+        }
+    }
+
+    private long measurePreparedPassAllocation(CountingSpriteManager manager,
+            com.sun.management.ThreadMXBean bean, long threadId, int frames) {
+        long before = bean.getThreadAllocatedBytes(threadId);
+        for (int frame = 0; frame < frames; frame++) runPreparedEmptyPass(manager);
+        return bean.getThreadAllocatedBytes(threadId) - before;
+    }
+
+    private static final class CountingSpriteManager extends SpriteManager {
+        private int suppressionResolutionCount;
+        private boolean suppressed;
+
+        @Override
+        protected boolean resolveCpuSidekickSuppressed() {
+            suppressionResolutionCount++;
+            return suppressed;
+        }
     }
 
     private ObjectManager newObjectManager() {

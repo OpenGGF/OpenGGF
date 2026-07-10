@@ -1337,9 +1337,6 @@ public final class LevelRenderer {
         // zone event overrides, follower objects mirroring player priority).
         // Re-validate the cached buckets against live state right before drawing
         // the unified pass; they only rebuild when the inputs actually changed.
-        if (spriteManager != null) {
-            spriteManager.refreshRenderBucketsIfChanged();
-        }
         ObjectManager objectManager = lm.objectManager;
         RingManager ringManager = lm.ringManager;
         GraphicsManager graphicsManager = lm.graphicsManager;
@@ -1355,6 +1352,9 @@ public final class LevelRenderer {
         boolean bonusStageSpriteSatOrdering = zoneFeatureProvider != null
                 && zoneFeatureProvider.useSpriteSatMasking(lm.currentZone);
         boolean useSpriteSatMasking = bonusStageSpriteSatOrdering;
+        TraceGhostHook.GhostLayerRenderer ghostLayerHook = selectGhostLayerHook(
+                currentTraceVisibility, TraceGhostHook.active());
+        if (spriteManager != null) spriteManager.prepareRenderBucketsForPass();
         if (useSpriteSatMasking) {
             graphicsManager.beginSpriteSatCollection();
             // SAT collection must follow sprite-table order, not painter order.
@@ -1368,7 +1368,7 @@ public final class LevelRenderer {
                     objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                 }
                 if (spriteManager != null) {
-                    spriteManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
+                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
                 }
                 drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
             }
@@ -1383,17 +1383,13 @@ public final class LevelRenderer {
                         objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                     }
                     if (spriteManager != null) {
-                        spriteManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
+                        spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
                     }
                     drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
                 } else {
                     if (spriteManager != null) {
-                        int layerBucket = bucket;
-                        spriteManager.drawUnifiedBucketWithPriority(
-                                bucket,
-                                graphicsManager,
-                                () -> renderTraceGhostsForLayer(layerBucket, false),
-                                () -> renderTraceGhostsForLayer(layerBucket, true));
+                        spriteManager.drawPreparedUnifiedBucketWithPriority(
+                                bucket, graphicsManager, ghostLayerHook);
                     }
                     if (objectManager != null) {
                         objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
@@ -1418,14 +1414,9 @@ public final class LevelRenderer {
         graphicsManager.registerCommand(disableWaterShaderCommand);
     }
 
-    private void renderTraceGhostsForLayer(int bucket, boolean highPriority) {
-        if (!currentTraceVisibility.showGhosts()) {
-            return;
-        }
-        TraceGhostHook.GhostLayerRenderer ghosts = TraceGhostHook.active();
-        if (ghosts != null) {
-            ghosts.renderGhostsForLayer(bucket, highPriority);
-        }
+    static TraceGhostHook.GhostLayerRenderer selectGhostLayerHook(
+            TraceRenderVisibility visibility, TraceGhostHook.GhostLayerRenderer activeHook) {
+        return visibility.showGhosts() ? activeHook : null;
     }
 
     private void renderSpriteObjectPassFiltered(SpriteManager spriteManager, LevelManager.LevelRenderOptions options) {
@@ -1436,9 +1427,6 @@ public final class LevelRenderer {
         ZoneFeatureProvider zoneFeatureProvider = lm.zoneFeatureProvider;
         profiler.beginSection("render.sprites");
 
-        if (spriteManager != null && options.includePlayerSprites()) {
-            spriteManager.refreshRenderBucketsIfChanged();
-        }
         if (objectManager != null && options.includeObjectSprites()) {
             objectManager.refreshRenderBucketsIfChanged();
         }
@@ -1447,9 +1435,13 @@ public final class LevelRenderer {
         graphicsManager.setCurrentSpriteHighPriority(false);
         graphicsManager.beginPatternBatch();
 
+        if (spriteManager != null && options.includePlayerSprites()) {
+            spriteManager.prepareRenderBucketsForPass();
+        }
+
         for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
             if (spriteManager != null && options.includePlayerSprites()) {
-                spriteManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
+                spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
             }
             if (objectManager != null && options.includeObjectSprites()) {
                 objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);

@@ -18,6 +18,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.camera.Camera;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.SpritePriorityLayerHook;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -288,21 +289,19 @@ public class SpriteManager {
 	}
 
 	private boolean renderBucketInputsChanged() {
-		// Early-out for the common membership-change case; the per-index
-		// identity comparison below would also catch it.
+		// Membership mutations mark bucketsDirty at their source. When this method
+		// runs, the retained snapshot therefore contains the same identities; scan
+		// it directly to avoid allocating a HashMap values iterator every frame.
 		if (sprites.size() != bucketSnapshotCount) {
 			return true;
 		}
-		int position = 0;
-		for (Sprite sprite : getAllSprites()) {
-			if (position >= bucketSnapshotCount
-					|| bucketSnapshotSprites[position] != sprite
-					|| bucketSnapshotKeys[position] != renderBucketKey(sprite)) {
+		for (int position = 0; position < bucketSnapshotCount; position++) {
+			Sprite sprite = bucketSnapshotSprites[position];
+			if (sprite == null || bucketSnapshotKeys[position] != renderBucketKey(sprite)) {
 				return true;
 			}
-			position++;
 		}
-		return position != bucketSnapshotCount;
+		return false;
 	}
 
 	private void captureRenderBucketSnapshot() {
@@ -1037,6 +1036,12 @@ public class SpriteManager {
 		void beforeDraw(Sprite sprite, boolean highPriority);
 	}
 
+	/** Resolves live suppression/priority inputs and prepares all buckets for one render pass. */
+	public void prepareRenderBucketsForPass() {
+		refreshRenderBucketsIfChanged();
+		bucketSprites(resolveCpuSidekickSuppressed());
+	}
+
 	/**
 	 * Draw all sprites in a single unified bucket with per-instance priority.
 	 * Priority is now handled per-instance in the shader, so no batch flushing
@@ -1046,61 +1051,47 @@ public class SpriteManager {
 	 * @param gfx    The graphics manager to use for priority state
 	 */
 	public void drawUnifiedBucketWithPriority(int bucket, GraphicsManager gfx) {
-		drawUnifiedBucketWithPriority(bucket, gfx, null, null);
+		prepareRenderBucketsForPass();
+		drawPreparedUnifiedBucketWithPriority(bucket, gfx, null);
 	}
 
 	/**
-	 * Draw all sprites in a single unified bucket with hooks immediately before each
-	 * tile-priority group. The hooks are used by render-only overlays that need the
-	 * same bucket/priority placement as playable sprites while staying behind them.
+	 * Draws one bucket from the most recent {@link #prepareRenderBucketsForPass()} snapshot.
+	 * Callers must prepare once immediately before their bucket loop and must not mutate
+	 * sprite membership or priority until that loop completes.
 	 */
-	public void drawUnifiedBucketWithPriority(int bucket, GraphicsManager gfx,
-											 Runnable beforeLowPriority,
-											 Runnable beforeHighPriority) {
+	public void drawPreparedUnifiedBucketWithPriority(int bucket, GraphicsManager gfx,
+			SpritePriorityLayerHook hook) {
 		boolean wrapEnabled = enableVerticalWrapIfNeeded();
 		try {
-			bucketSprites();
 			int idx = RenderPriority.clamp(bucket) - RenderPriority.MIN;
-
-			// The BatchedPatternRenderer uses a single global priority uniform —
-			// flush and restart the batch at each LOW→HIGH transition so each group
-			// gets its own batch with the correct priority.
 			if (!lowPriorityBuckets[idx].isEmpty()) {
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(false);
 				gfx.beginPatternBatch();
-				if (beforeLowPriority != null) {
-					beforeLowPriority.run();
+				if (hook != null) {
+					hook.beforePriorityLayer(bucket, false);
 					gfx.setCurrentSpriteHighPriority(false);
 					gfx.beginPatternBatch();
 				}
-				for (Sprite sprite : lowPriorityBuckets[idx]) {
-					sprite.draw();
-				}
+				for (Sprite sprite : lowPriorityBuckets[idx]) sprite.draw();
 			}
-
 			if (!highPriorityBuckets[idx].isEmpty()) {
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(true);
 				gfx.beginPatternBatch();
-				if (beforeHighPriority != null) {
-					beforeHighPriority.run();
+				if (hook != null) {
+					hook.beforePriorityLayer(bucket, true);
 					gfx.setCurrentSpriteHighPriority(true);
 					gfx.beginPatternBatch();
 				}
-				for (Sprite sprite : highPriorityBuckets[idx]) {
-					sprite.draw();
-				}
+				for (Sprite sprite : highPriorityBuckets[idx]) sprite.draw();
 			}
-
-			// Handle non-playable sprites at bucket MIN
 			if (bucket == RenderPriority.MIN && !nonPlayableSprites.isEmpty()) {
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(false);
 				gfx.beginPatternBatch();
-				for (Sprite sprite : nonPlayableSprites) {
-					sprite.draw();
-				}
+				for (Sprite sprite : nonPlayableSprites) sprite.draw();
 			}
 		} finally {
 			if (wrapEnabled) disableVerticalWrap();
@@ -1140,7 +1131,10 @@ public class SpriteManager {
 	}
 
 	private void bucketSprites() {
-		boolean currentSuppressed = isCpuSidekickSuppressed();
+		bucketSprites(resolveCpuSidekickSuppressed());
+	}
+
+	private void bucketSprites(boolean currentSuppressed) {
 		if (currentSuppressed != lastSidekickSuppressed) {
 			bucketsDirty = true;
 			lastSidekickSuppressed = currentSuppressed;
@@ -1169,7 +1163,7 @@ public class SpriteManager {
 			}
 		}
 		for (Sprite sprite : sprites) {
-			if (isSuppressedSidekickSprite(sprite)) {
+			if (isSuppressedSidekickSprite(sprite, currentSuppressed)) {
 				continue;
 			}
 			if (sprite instanceof AbstractPlayableSprite playable) {
@@ -1223,7 +1217,7 @@ public class SpriteManager {
 		this.playbackInputSuppressed = suppressed;
 	}
 
-	private boolean isCpuSidekickSuppressed() {
+	protected boolean resolveCpuSidekickSuppressed() {
 		LevelManager lm = GameServices.levelOrNull();
 		GameModule module = null;
 		var session = com.openggf.game.session.SessionManager.getCurrentWorldSession();
@@ -1242,8 +1236,16 @@ public class SpriteManager {
 		return false;
 	}
 
+	private boolean isCpuSidekickSuppressed() {
+		return resolveCpuSidekickSuppressed();
+	}
+
 	private boolean isSuppressedSidekickSprite(Sprite sprite) {
-		return isCpuSidekickSuppressed()
+		return isSuppressedSidekickSprite(sprite, resolveCpuSidekickSuppressed());
+	}
+
+	private boolean isSuppressedSidekickSprite(Sprite sprite, boolean suppressed) {
+		return suppressed
 				&& sprite instanceof AbstractPlayableSprite playable
 				&& playable.isCpuControlled();
 	}
