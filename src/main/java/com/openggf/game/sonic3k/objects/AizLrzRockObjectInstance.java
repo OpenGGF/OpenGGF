@@ -18,6 +18,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -36,7 +37,8 @@ import java.util.logging.Logger;
  * Object 0x05 - AIZ/LRZ/EMZ Rock (Sonic 3 & Knuckles).
  */
 public class AizLrzRockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
+        SpawnRewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(AizLrzRockObjectInstance.class.getName());
 
@@ -168,7 +170,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
             }
             if (participant instanceof AbstractPlayableSprite participantSprite) {
                 PlayerSolidContactResult result = batch.perPlayer().get(participant);
-                applyCheckpointContact(participantSprite, result);
+                applyCheckpointContact(participantSprite, result, batch);
                 if (!breaking && (behaviorBits & BIT_PUSHABLE) != 0) {
                     handlePush(participantSprite, result);
                 }
@@ -176,7 +178,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
                         && (behaviorBits & BIT_BREAK_SIDE) != 0
                         && isSideBreakCandidate(result)
                         && canSideBreak(participantSprite, result.pushingNow())) {
-                    breakFromSide(participantSprite);
+                    breakFromSide(participantSprite, batch);
                     return;
                 }
             }
@@ -191,7 +193,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
                 player.setYSpeed((short) -0x300);
                 player.setAir(true);
                 player.setOnObject(false);
-                breakRock(player);
+                breakRock(player, batch);
             }
             playerStandingOnRock = false;
             playerPushingSide = false;
@@ -204,7 +206,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
                 player.setYSpeed((short) -0x300);
                 player.setAir(true);
                 player.setOnObject(false);
-                breakRock(player);
+                breakRock(player, batch);
                 playerStandingOnRock = false;
                 playerPushingSide = false;
                 return;
@@ -217,7 +219,8 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         updateDynamicSpawn(currentX, currentY);
     }
 
-    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result) {
+    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result,
+                                        SolidCheckpointBatch batch) {
         if (player == null || result == null || breaking) {
             return;
         }
@@ -253,7 +256,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         if (!knucklesOnlyStanding
                 && (behaviorBits & BIT_BREAK_BOTTOM) != 0
                 && result.kind() == ContactKind.BOTTOM) {
-            breakRock(player);
+            breakRock(player, batch);
             player.setYSpeed((short) savedPreContactYSpeed);
         }
     }
@@ -286,7 +289,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         return pushingNow;
     }
 
-    private void breakFromSide(AbstractPlayableSprite player) {
+    private void breakFromSide(AbstractPlayableSprite player, SolidCheckpointBatch batch) {
         if (savedPreContactRolling) {
             enterRollingLaunch(player);
         }
@@ -299,7 +302,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         }
         player.setGSpeed(player.getXSpeed());
         player.setPushing(false);
-        breakRock(player);
+        breakRock(player, batch);
         playerStandingOnRock = false;
         playerPushingSide = false;
     }
@@ -356,6 +359,13 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int romObjectCodePointerHighWord() {
+        // The intact AIZ/LRZ rock routines live in ROM bank $0001. S3K
+        // sub_13EFC copies word 0 of the stood-on SST into Tails_CPU_interact.
+        return 0x0001;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (breaking || variant == ZoneVariant.UNKNOWN || variant.artKey == null) {
             return;
@@ -375,8 +385,9 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void breakRock(AbstractPlayableSprite player) {
+    private void breakRock(AbstractPlayableSprite player, SolidCheckpointBatch batch) {
         breaking = true;
+        releaseStandingParticipants(batch);
 
         if (isOnScreen()) {
             try {
@@ -388,6 +399,27 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
 
         spawnDebrisFragments(player);
         setDestroyed(true);
+    }
+
+    private void releaseStandingParticipants(SolidCheckpointBatch batch) {
+        if (batch == null) {
+            return;
+        }
+        for (var entry : batch.perPlayer().entrySet()) {
+            if (!(entry.getKey() instanceof AbstractPlayableSprite participant)
+                    || entry.getValue() == null
+                    || !entry.getValue().standingNow()) {
+                continue;
+            }
+            // sub_1FF1E clears both native standing bits before the side-break
+            // debris conversion, regardless of which player broke the rock.
+            participant.setAir(true);
+            participant.setOnObject(false);
+            var objectManager = services().objectManager();
+            if (objectManager != null) {
+                objectManager.clearRidingObject(participant);
+            }
+        }
     }
 
     private void spawnDebrisFragments(AbstractPlayableSprite player) {

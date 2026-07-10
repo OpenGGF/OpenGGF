@@ -322,9 +322,22 @@ complete-run frontier moves from f12002 (`camera_y` expected `$02BB`, actual
 Fresh full sweeps on this exact working tree pass all 29 S1 and all 48 S2 trace
 replays.
 
+Round 23 restores the AIZ/LRZ rock's two-player break release and S3K CPU
+interact word. `sub_13EFC` snapshots word 0 of the stood-on SST, so the intact
+rock now exposes the `$0001` high word of its native routine pointer instead of
+leaving CPU Tails' previous `$0002` Cork Floor value latched. When either player
+breaks the rock, `sub_1FF1E` clears `Status_OnObj` and sets `Status_InAir` for
+every player whose standing bit was returned by the same `SolidObjectFull`
+pass—not only the player who supplied the breaking side contact
+(`sonic3k.asm:44180-44303,26816-26843`). A focused two-player rock guard and the
+sidekick CPU interact suite pass. The complete-run frontier moves from f12091
+(`tails_cpu_interact` expected `$0001`, actual `$0002`) to f12706
+(`tails_status_byte` expected `$00`, actual `$01`). Fresh full sweeps on this
+exact working tree pass all 29 S1 and all 48 S2 trace replays.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f12091.
+banked rounds the current stacked working-tree complete-run frontier is f12706.
 Those causes will be recorded and committed separately as their focused guards
 are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes
