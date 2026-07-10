@@ -516,7 +516,18 @@ public final class MasterClient implements AutoCloseable {
 
         void acceptBinary(byte[] data) {
             try {
-                inbound.add(new RaceClient.GhostData(GhostPackets.decodeAggregate(data)));
+                if (data.length == 0) {
+                    throw new ProtocolViolationException("empty binary packet");
+                }
+                int type = data[0] & 0xFF;
+                if (type == GhostPackets.TYPE_GHOST_AGGREGATE) {
+                    inbound.add(new RaceClient.GhostData(GhostPackets.decodeAggregate(data)));
+                } else if (type == GhostPackets.TYPE_ROSTER) {
+                    inbound.add(new RaceClient.Roster(GhostPackets.decodeRoster(data)));
+                } else {
+                    throw new ProtocolViolationException(
+                            "unexpected room binary packet type " + type);
+                }
             } catch (ProtocolViolationException e) {
                 inbound.add(new RaceClient.Disconnected("protocol violation"));
                 close();

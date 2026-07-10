@@ -83,6 +83,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                     }
                 }
                 case RaceClient.GhostData ghost -> registry.onAggregate(ghost.aggregate());
+                case RaceClient.Roster roster -> registry.onRoster(roster.entries());
                 case RaceClient.Disconnected ignored -> connectionLost = true;
             }
         }
@@ -112,7 +113,9 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         return new MultiplayerHudState(transport.isOpen() || connectionLost,
                 session.phase().name(), session.remainingWindowMillis(),
                 session.remainingCountdownMillis(), session.standings(),
-                session.chatLines(), connectionLost, session.kickReason());
+                session.chatLines(), session.players().size(),
+                registry.farPlayers(session.localSlot()), connectionLost,
+                session.kickReason());
     }
 
     public ClientRaceSession session() {

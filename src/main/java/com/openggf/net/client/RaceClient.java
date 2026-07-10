@@ -32,7 +32,7 @@ public final class RaceClient implements RaceConnection {
         }
     }
 
-    public sealed interface InboundEvent permits Control, GhostData, Disconnected {
+    public sealed interface InboundEvent permits Control, GhostData, Roster, Disconnected {
     }
 
     public record Control(ControlMessage message) implements InboundEvent {
@@ -44,6 +44,12 @@ public final class RaceClient implements RaceConnection {
     public record GhostData(GhostPackets.Aggregate aggregate) implements InboundEvent {
         public GhostData {
             Objects.requireNonNull(aggregate, "aggregate");
+        }
+    }
+
+    public record Roster(List<GhostPackets.RosterEntry> entries) implements InboundEvent {
+        public Roster {
+            entries = List.copyOf(entries);
         }
     }
 
@@ -98,7 +104,19 @@ public final class RaceClient implements RaceConnection {
                 try {
                     byte[] packet = assembler.onBinaryPart(data, last);
                     if (packet != null) {
-                        client.inbound.add(new GhostData(GhostPackets.decodeAggregate(packet)));
+                        if (packet.length == 0) {
+                            throw new ProtocolViolationException("empty binary packet");
+                        }
+                        int type = packet[0] & 0xFF;
+                        if (type == GhostPackets.TYPE_GHOST_AGGREGATE) {
+                            client.inbound.add(new GhostData(
+                                    GhostPackets.decodeAggregate(packet)));
+                        } else if (type == GhostPackets.TYPE_ROSTER) {
+                            client.inbound.add(new Roster(GhostPackets.decodeRoster(packet)));
+                        } else {
+                            throw new ProtocolViolationException(
+                                    "unexpected room binary packet type " + type);
+                        }
                     }
                 } catch (ProtocolViolationException e) {
                     fail(ws, e);
