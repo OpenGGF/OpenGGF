@@ -305,9 +305,26 @@ frontier moves from f11897 (ring loss absent) to f12002 (`camera_y` expected
 `$02BB`, actual `$02B8`). Fresh full sweeps on this exact working tree pass all
 29 S1 and all 48 S2 trace replays.
 
+Round 22 restores native title-child exit lifetime and the Act 2 level-size
+creation cadence. The title children do not return all the way to their initial
+coordinates: `Render_Sprites` clears bit 7 once each authored width/height is
+wholly off-screen, the child consumes that stale bit on its next dispatch, and
+`Obj_TitleCardWait2` observes the final deletion on the following parent pass
+(`sonic3k.asm:62244-62399,36345-36387`). The title-card manager now carries
+those three phases explicitly and exposes the AIZ end-sign prediction only on
+the parent-observation tick. `Obj_IncLevEndYGradual` then contributes the native
+16.16 sequence while generic boundary easing supplies the later +2 carries; the
+proxy adds its compensating +2 only on the creation frame, before the new target
+was visible to the camera step (`sonic3k.asm:178210-178225,38313-38316,
+38761-38789`). Focused title-card, results, and miniboss-camera tests pass. The
+complete-run frontier moves from f12002 (`camera_y` expected `$02BB`, actual
+`$02B8`) to f12091 (`tails_cpu_interact` expected `$0001`, actual `$0002`).
+Fresh full sweeps on this exact working tree pass all 29 S1 and all 48 S2 trace
+replays.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f12002.
+banked rounds the current stacked working-tree complete-run frontier is f12091.
 Those causes will be recorded and committed separately as their focused guards
 are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes

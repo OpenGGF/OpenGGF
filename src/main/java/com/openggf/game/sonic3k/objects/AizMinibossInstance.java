@@ -386,8 +386,9 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         var camera = services().camera();
         var level = services().currentLevel();
         int storedMax = level != null ? level.getMaxX() : triggerX;
+        boolean startingSizeChange = !levelEndSizeChangeStarted;
 
-        if (!levelEndSizeChangeStarted) {
+        if (startingSizeChange) {
             levelEndSizeChangeStarted = true;
             // ROM Change_Act2Sizes copies Act 2 size words into the stored
             // camera-boundary memory and Camera_target_max_Y_pos, then creates
@@ -434,12 +435,12 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         int yDelta = levelEndMaxYAccumulator >>> 16;
         var player = camera.getFocusedSprite();
         boolean playerAirborne = player != null && player.getAir();
-        if (player != null && !playerAirborne) {
+        if (startingSizeChange && player != null && !playerAirborne) {
             // ROM DeformBgLayer runs MoveCameraY before Do_ResizeEvents, so
-            // each grounded frame's +2 max-Y resize is a carry into the next
-            // camera frame. The engine's generic camera step eases max-Y before
-            // the camera move; carry this AIZ results proxy by that ROM
-            // post-camera resize tick once the title-exit jump has landed
+            // the first grounded frame's +2 max-Y resize is a carry into the
+            // next camera frame. Later engine frames already receive that +2
+            // from generic boundary easing before this object runs; compensate
+            // only the creation frame, where the new target was not yet visible
             // (sonic3k.asm:38313-38316,38761-38789,178210-178225).
             yDelta += 2;
         }
