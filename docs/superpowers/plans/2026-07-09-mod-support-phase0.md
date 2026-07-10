@@ -569,7 +569,13 @@ try-with-resources. `ModAssetRoot`, repository scanners, metadata parsers, conve
 and audio preparation receive an immutable `ModInputLimits`; production wiring always
 passes `ModInputLimits.production()`, while tests use only `loweringBuilder()`. Test
 that upward overrides are rejected, plus declared-root/jar symlink escape, path/case
-collisions, declared and streaming overflow, and close behavior.
+collisions, declared and streaming overflow, and close behavior. Production jar roots
+and trusted-dev directory roots copy into private temp-disk snapshots at construction
+and serve every later read from the snapshot; verify source mutation after construction
+is invisible and close deletes only the owned snapshot. Directory roots are rejected
+outside explicit dev/test composition. Charge thread-safe actual cumulative read bytes
+against `maxModValidationBytes` (successful repeated reads charge again; failed reads
+roll back their reservation).
 
 ```java
 /**

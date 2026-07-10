@@ -20,6 +20,18 @@ target real path beneath the declared root before opening. Each root retains its
 limits, rejects a `readBounded` request above `limits.maxAssetBytes()`, and enforces
 the lower of the requested and injected caps. The factory caller owns `close()`.
 
+Threat/lifecycle boundary: production discovery accepts packed jar roots only. Jar
+roots copy the contained, non-symlink jar into an engine-owned private temporary file,
+then validate/read only that immutable snapshot. Directory roots are available only
+to explicit `ggfmod run` development and tests; the creator-controlled source tree is
+trusted during snapshot construction, copied with `NOFOLLOW_LINKS` plus before/after
+identity/size checks into an engine-owned private temporary directory, and never read
+again afterward. Concurrent malicious mutation of that explicitly trusted dev tree
+during snapshot construction is outside the threat model; mutation after construction
+cannot affect the session. `close()` closes archives and removes only the verified
+engine-created snapshot tree/file. This preserves Windows dev mode without pretending
+portable Java offers handle-relative race-proof traversal on every provider.
+
 Manifest ids match `[a-z0-9][a-z0-9-]{0,63}`. Registry-local object/art/track/SFX/
 animation names match `[a-z0-9][a-z0-9._/-]{0,127}`, with no empty, `.`, or `..`
 segment. Persisted keys are tagged `(modId, localName)` values; display form is exactly
