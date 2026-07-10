@@ -99,10 +99,16 @@ public final class MasterClient implements AutoCloseable {
     public CompletableFuture<ControlMessage.RoomCreated> createRoom(
             ControlMessage.RoomDescriptor descriptor, String routing, int directPort,
             String determinismFingerprint) {
+        return createRoom(descriptor, routing, directPort, determinismFingerprint, List.of());
+    }
+
+    public CompletableFuture<ControlMessage.RoomCreated> createRoom(
+            ControlMessage.RoomDescriptor descriptor, String routing, int directPort,
+            String determinismFingerprint, List<String> voteTrackKeys) {
         CompletableFuture<ControlMessage.RoomCreated> future = new CompletableFuture<>();
         pendingCreates.add(future);
         sendControl(new ControlMessage.RoomCreate(descriptor, routing, directPort,
-                determinismFingerprint));
+                determinismFingerprint, voteTrackKeys));
         return future.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
 

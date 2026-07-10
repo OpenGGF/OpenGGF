@@ -28,6 +28,9 @@ import java.util.List;
         @JsonSubTypes.Type(value = ControlMessage.AttemptFinish.class, name = "AttemptFinish"),
         @JsonSubTypes.Type(value = ControlMessage.AttemptReset.class, name = "AttemptReset"),
         @JsonSubTypes.Type(value = ControlMessage.TrackVote.class, name = "TrackVote"),
+        @JsonSubTypes.Type(value = ControlMessage.TrackVoteOffer.class, name = "TrackVoteOffer"),
+        @JsonSubTypes.Type(value = ControlMessage.TrackVoteTally.class, name = "TrackVoteTally"),
+        @JsonSubTypes.Type(value = ControlMessage.TrackVoteResult.class, name = "TrackVoteResult"),
         @JsonSubTypes.Type(value = ControlMessage.RecordingRequest.class, name = "RecordingRequest"),
         @JsonSubTypes.Type(value = ControlMessage.RoomCreate.class, name = "RoomCreate"),
         @JsonSubTypes.Type(value = ControlMessage.RoomCreated.class, name = "RoomCreated"),
@@ -47,7 +50,8 @@ import java.util.List;
         @JsonSubTypes.Type(value = ControlMessage.RelayGuestText.class, name = "RelayGuestText"),
         @JsonSubTypes.Type(value = ControlMessage.StandingsPageRequest.class, name = "StandingsPageRequest"),
         @JsonSubTypes.Type(value = ControlMessage.StandingsPage.class, name = "StandingsPage"),
-        @JsonSubTypes.Type(value = ControlMessage.RankUpdate.class, name = "RankUpdate")
+        @JsonSubTypes.Type(value = ControlMessage.RankUpdate.class, name = "RankUpdate"),
+        @JsonSubTypes.Type(value = ControlMessage.RoomTrackUpdate.class, name = "RoomTrackUpdate")
 })
 public sealed interface ControlMessage {
     record RoomDescriptor(String name, String gameId, int zone, int act, String characterPolicy,
@@ -144,12 +148,52 @@ public sealed interface ControlMessage {
     record TrackVote(String trackKey) implements ControlMessage {
     }
 
+    record TrackVoteOffer(List<String> trackKeys, long voteEndsAtHubMillis)
+            implements ControlMessage {
+        public TrackVoteOffer {
+            trackKeys = validatedTrackKeys(trackKeys, 8);
+        }
+    }
+
+    record VoteCount(String trackKey, int votes) {
+        public VoteCount {
+            validatedTrackKey(trackKey);
+            if (votes < 0) {
+                throw new IllegalArgumentException("negative vote count");
+            }
+        }
+    }
+
+    record TrackVoteTally(List<VoteCount> counts) implements ControlMessage {
+        public TrackVoteTally {
+            counts = List.copyOf(counts == null ? List.of() : counts);
+            if (counts.size() > 8) {
+                throw new IllegalArgumentException("too many vote counts");
+            }
+        }
+    }
+
+    record TrackVoteResult(String trackKey) implements ControlMessage {
+        public TrackVoteResult {
+            validatedTrackKey(trackKey);
+        }
+    }
+
     record RecordingRequest(int attemptId, String expectedHashHex, String uploadUrl)
             implements ControlMessage {
     }
 
     record RoomCreate(RoomDescriptor room, String routing, int directPort,
-                      String determinismFingerprint) implements ControlMessage {
+                      String determinismFingerprint, List<String> voteTrackKeys)
+            implements ControlMessage {
+        public RoomCreate {
+            voteTrackKeys = validatedTrackKeys(voteTrackKeys, 32);
+        }
+
+        public RoomCreate(RoomDescriptor room, String routing, int directPort,
+                          String determinismFingerprint) {
+            this(room, routing, directPort, determinismFingerprint, List.of());
+        }
     }
 
     record RoomCreated(String roomId) implements ControlMessage {
@@ -215,5 +259,30 @@ public sealed interface ControlMessage {
     }
 
     record RankUpdate(int rank, int bestTimeFrames) implements ControlMessage {
+    }
+
+    record RoomTrackUpdate(String roomId, int zone, int act) implements ControlMessage {
+        public RoomTrackUpdate {
+            if (roomId == null || roomId.isBlank() || zone < 0 || zone > 999
+                    || act < 0 || act > 999) {
+                throw new IllegalArgumentException("invalid room track update");
+            }
+        }
+    }
+
+    private static List<String> validatedTrackKeys(List<String> keys, int maxCount) {
+        List<String> result = List.copyOf(keys == null ? List.of() : keys);
+        if (result.size() > maxCount) {
+            throw new IllegalArgumentException("too many track keys");
+        }
+        result.forEach(ControlMessage::validatedTrackKey);
+        return result;
+    }
+
+    private static void validatedTrackKey(String key) {
+        if (key == null || key.length() > 32
+                || !key.matches("[a-z0-9]{1,8}:[0-9]{1,3}:[0-9]{1,3}")) {
+            throw new IllegalArgumentException("invalid track key");
+        }
     }
 }
