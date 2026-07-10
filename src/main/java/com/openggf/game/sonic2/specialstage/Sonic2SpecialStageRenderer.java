@@ -1,9 +1,11 @@
 package com.openggf.game.sonic2.specialstage;
 
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Palette;
 import com.openggf.level.PatternDesc;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -23,6 +25,9 @@ public class Sonic2SpecialStageRenderer {
     public static final int H32_TILES_Y = 28;
     public static final int TILE_SIZE = 8;
     public static final int H32_HEIGHT = H32_TILES_Y * TILE_SIZE;
+    private static final int PALETTE_ROW_COUNT = 4;
+    private static final int PALETTE_ROW_CONTENT_BYTES = 2 + Palette.PALETTE_SIZE * 3;
+    private static final int MAX_PALETTE_CONTENT_BYTES = PALETTE_ROW_COUNT * PALETTE_ROW_CONTENT_BYTES;
 
     private final GraphicsManager graphicsManager;
 
@@ -31,6 +36,15 @@ public class Sonic2SpecialStageRenderer {
 
     private int backgroundPatternBase;
     private int trackPatternBase;
+    private boolean staticBackgroundDirty = true;
+    private long staticBackgroundStageGeneration;
+    private long cachedBackgroundStageGeneration = -1;
+    private Object staticBackgroundContextGeneration;
+    private Object cachedBackgroundContextGeneration;
+    private byte[] cachedBackgroundMappings;
+    private byte[] cachedBackgroundPaletteContent;
+    private boolean cachedBackgroundPaletteContentInitialized;
+    private int cachedBackgroundPaletteRowMask;
     private int playerPatternBase;
     private int hudPatternBase;
     private int startPatternBase;
@@ -108,9 +122,42 @@ public class Sonic2SpecialStageRenderer {
     }
 
     public void setPatternBases(int backgroundBase, int trackBase) {
+        if (this.backgroundPatternBase != backgroundBase) {
+            invalidateStaticBackground();
+        }
         this.backgroundPatternBase = backgroundBase;
         this.trackPatternBase = trackBase;
         this.playerPatternBase = trackBase + 256;
+    }
+
+    void beginStaticBackgroundStage(long stageGeneration) {
+        if (staticBackgroundStageGeneration != stageGeneration) {
+            staticBackgroundStageGeneration = stageGeneration;
+            invalidateStaticBackground();
+        }
+    }
+
+    void onRenderContextGenerationChanged(Object contextGeneration) {
+        if (staticBackgroundContextGeneration != contextGeneration) {
+            staticBackgroundContextGeneration = contextGeneration;
+            invalidateStaticBackground();
+        }
+    }
+
+    void invalidateStaticBackground() {
+        staticBackgroundDirty = true;
+    }
+
+    boolean needsStaticBackgroundRebuild(byte[] mappings) {
+        return needsStaticBackgroundRebuild(mappings, null);
+    }
+
+    boolean needsStaticBackgroundRebuild(byte[] mappings, Palette[] palettes) {
+        return staticBackgroundDirty
+                || cachedBackgroundStageGeneration != staticBackgroundStageGeneration
+                || cachedBackgroundContextGeneration != staticBackgroundContextGeneration
+                || !Arrays.equals(cachedBackgroundMappings, mappings)
+                || !paletteContentMatches(palettes);
     }
 
     public void setPlayerPatternBase(int playerBase) {
@@ -267,6 +314,20 @@ public class Sonic2SpecialStageRenderer {
      * @param mappings Enigma-decoded mapping data (16-bit words)
      */
     public void renderBackgroundToFBO(byte[] mappings) {
+        renderBackgroundToFBO(mappings, null);
+    }
+
+    void renderBackgroundToFBO(byte[] mappings, Palette[] palettes) {
+        if (mappings == null || mappings.length < 2) {
+            return;
+        }
+        if (!needsStaticBackgroundRebuild(mappings, palettes)) {
+            return;
+        }
+        rebuildBackgroundToFBO(mappings, palettes);
+    }
+
+    void rebuildBackgroundToFBO(byte[] mappings, Palette[] palettes) {
         if (mappings == null || mappings.length < 2) {
             return;
         }
@@ -277,6 +338,7 @@ public class Sonic2SpecialStageRenderer {
         int mapWidth = H32_TILES_X; // 32 tiles wide
         int mapTotalHeight = 32;    // Background is 32 tiles tall
         int mapHeight = Math.min(wordCount / mapWidth, mapTotalHeight);
+        int usedPaletteRowMask = 0;
 
         for (int ty = 0; ty < mapHeight; ty++) {
             for (int tx = 0; tx < mapWidth; tx++) {
@@ -290,6 +352,8 @@ public class Sonic2SpecialStageRenderer {
                 // Skip empty tiles
                 if (word == 0)
                     continue;
+
+                usedPaletteRowMask |= 1 << ((word >>> 13) & 0x3);
 
                 reusableDesc.set(word);
                 PatternDesc desc = reusableDesc;
@@ -308,6 +372,79 @@ public class Sonic2SpecialStageRenderer {
         }
 
         graphicsManager.flushPatternBatch();
+        cachedBackgroundMappings = mappings.clone();
+        cachedBackgroundPaletteRowMask = usedPaletteRowMask;
+        retainPaletteContent(palettes);
+        cachedBackgroundStageGeneration = staticBackgroundStageGeneration;
+        cachedBackgroundContextGeneration = staticBackgroundContextGeneration;
+        staticBackgroundDirty = false;
+    }
+
+    private boolean paletteContentMatches(Palette[] palettes) {
+        if (!cachedBackgroundPaletteContentInitialized) {
+            return false;
+        }
+        int required = Integer.bitCount(cachedBackgroundPaletteRowMask) * PALETTE_ROW_CONTENT_BYTES;
+        if (cachedBackgroundPaletteContent == null
+                || cachedBackgroundPaletteContent.length < required) {
+            return false;
+        }
+        int offset = 0;
+        for (int row = 0; row < PALETTE_ROW_COUNT; row++) {
+            if ((cachedBackgroundPaletteRowMask & (1 << row)) == 0) {
+                continue;
+            }
+            if (cachedBackgroundPaletteContent[offset++] != (byte) row) {
+                return false;
+            }
+            Palette palette = palettes != null && row < palettes.length ? palettes[row] : null;
+            boolean present = palette != null;
+            if (cachedBackgroundPaletteContent[offset++] != (byte) (present ? 1 : 0)) {
+                return false;
+            }
+            if (present) {
+                for (int color = 0; color < Palette.PALETTE_SIZE; color++) {
+                    Palette.Color value = palette.getColor(color);
+                    if (cachedBackgroundPaletteContent[offset++] != value.r
+                            || cachedBackgroundPaletteContent[offset++] != value.g
+                            || cachedBackgroundPaletteContent[offset++] != value.b) {
+                        return false;
+                    }
+                }
+            } else {
+                offset += Palette.PALETTE_SIZE * 3;
+            }
+        }
+        return true;
+    }
+
+    private void retainPaletteContent(Palette[] palettes) {
+        cachedBackgroundPaletteContentInitialized = true;
+        if (cachedBackgroundPaletteContent == null
+                || cachedBackgroundPaletteContent.length != MAX_PALETTE_CONTENT_BYTES) {
+            cachedBackgroundPaletteContent = new byte[MAX_PALETTE_CONTENT_BYTES];
+        }
+        int offset = 0;
+        for (int row = 0; row < PALETTE_ROW_COUNT; row++) {
+            if ((cachedBackgroundPaletteRowMask & (1 << row)) == 0) {
+                continue;
+            }
+            cachedBackgroundPaletteContent[offset++] = (byte) row;
+            Palette palette = palettes != null && row < palettes.length ? palettes[row] : null;
+            cachedBackgroundPaletteContent[offset++] = (byte) (palette != null ? 1 : 0);
+            if (palette != null) {
+                for (int color = 0; color < Palette.PALETTE_SIZE; color++) {
+                    Palette.Color value = palette.getColor(color);
+                    cachedBackgroundPaletteContent[offset++] = value.r;
+                    cachedBackgroundPaletteContent[offset++] = value.g;
+                    cachedBackgroundPaletteContent[offset++] = value.b;
+                }
+            } else {
+                Arrays.fill(cachedBackgroundPaletteContent, offset,
+                        offset + Palette.PALETTE_SIZE * 3, (byte) 0);
+                offset += Palette.PALETTE_SIZE * 3;
+            }
+        }
     }
 
     /**

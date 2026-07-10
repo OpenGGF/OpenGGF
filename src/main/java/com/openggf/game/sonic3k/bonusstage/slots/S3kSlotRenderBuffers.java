@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.bonusstage.slots;
 
+import java.util.Arrays;
+
 public final class S3kSlotRenderBuffers {
     private final byte[] layout;
     private final byte[] expandedLayout;
@@ -10,6 +12,8 @@ public final class S3kSlotRenderBuffers {
     private short[] stagedPointGrid = new short[0];
     private int stagedCameraX;
     private int stagedCameraY;
+    private final VisibleCells[] visibleCellFrames = {new VisibleCells(16), new VisibleCells(16)};
+    private int nextVisibleCellFrame;
 
     private S3kSlotRenderBuffers(byte[] layout, byte[] expandedLayout,
                                  int layoutStrideBytes, int layoutRows, int layoutColumns) {
@@ -57,7 +61,7 @@ public final class S3kSlotRenderBuffers {
         stagedPointGrid = pointGrid != null ? pointGrid : new short[0];
     }
 
-    public short[] stagedPointGrid() {
+    short[] stagedPointGrid() {
         return stagedPointGrid;
     }
 
@@ -72,6 +76,13 @@ public final class S3kSlotRenderBuffers {
 
     public int stagedCameraY() {
         return stagedCameraY;
+    }
+
+    VisibleCells beginVisibleCellFrame() {
+        VisibleCells frame = visibleCellFrames[nextVisibleCellFrame];
+        nextVisibleCellFrame ^= 1;
+        frame.clear();
+        return frame;
     }
 
     public boolean startRingAnimationAt(int layoutIndex) {
@@ -216,6 +227,84 @@ public final class S3kSlotRenderBuffers {
                 return;
             }
             buffers.setCompactTile(layoutIndex, frames[frameIndex]);
+        }
+    }
+
+    /**
+     * Read-only published view of one slot-layout visibility frame.
+     *
+     * <p>The two instances alternate. A view published by build N remains valid
+     * throughout build N+1, covering the runtime's deferred update-to-render
+     * handoff. It may be cleared and overwritten when build N+2 starts, so callers
+     * must not retain it beyond the following visibility build.</p>
+     */
+    static final class VisibleCells {
+        private static final VisibleCells EMPTY = new VisibleCells(0);
+
+        private byte[] cellIds;
+        private int[] worldXs;
+        private int[] worldYs;
+        private int count;
+
+        VisibleCells(int initialCapacity) {
+            cellIds = new byte[initialCapacity];
+            worldXs = new int[initialCapacity];
+            worldYs = new int[initialCapacity];
+        }
+
+        static VisibleCells empty() {
+            return EMPTY;
+        }
+
+        int size() {
+            return count;
+        }
+
+        boolean isEmpty() {
+            return count == 0;
+        }
+
+        int cellIdAt(int index) {
+            checkIndex(index);
+            return cellIds[index] & 0xFF;
+        }
+
+        int worldXAt(int index) {
+            checkIndex(index);
+            return worldXs[index];
+        }
+
+        int worldYAt(int index) {
+            checkIndex(index);
+            return worldYs[index];
+        }
+
+        void add(int cellId, int worldX, int worldY) {
+            ensureCapacity(count + 1);
+            cellIds[count] = (byte) cellId;
+            worldXs[count] = worldX;
+            worldYs[count] = worldY;
+            count++;
+        }
+
+        private void clear() {
+            count = 0;
+        }
+
+        private void ensureCapacity(int requiredCapacity) {
+            if (requiredCapacity <= cellIds.length) {
+                return;
+            }
+            int newCapacity = Math.max(requiredCapacity, Math.max(1, cellIds.length << 1));
+            cellIds = Arrays.copyOf(cellIds, newCapacity);
+            worldXs = Arrays.copyOf(worldXs, newCapacity);
+            worldYs = Arrays.copyOf(worldYs, newCapacity);
+        }
+
+        private void checkIndex(int index) {
+            if (index < 0 || index >= count) {
+                throw new IndexOutOfBoundsException(index);
+            }
         }
     }
 }

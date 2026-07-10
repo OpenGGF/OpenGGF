@@ -100,6 +100,12 @@ public class InstancedPatternRenderer {
     // sites (e.g. special-stage background renderers) set up FBO projection
     // BEFORE creating the batch and restore it after the batch is flushed.
     private int batchDisplayHeight;
+    private int batchAtlasIndex;
+    private boolean batchUsePriorityShader;
+    private boolean batchUseWaterShader;
+    private boolean batchUnderwaterPalette;
+    private boolean batchGhostEffectActive;
+    private float batchGhostAlpha;
 
     /**
      * Resolves the current display height for Y coordinate calculations.
@@ -179,8 +185,18 @@ public class InstancedPatternRenderer {
     }
 
     public void beginBatch() {
+        beginBatch(0);
+    }
+
+    public void beginBatch(int atlasIndex) {
         instanceCount = 0;
         batchDisplayHeight = resolveDisplayHeight();
+        batchAtlasIndex = atlasIndex;
+        batchUsePriorityShader = graphicsManager.isUseSpritePriorityShader() && instancedPriorityShader != null;
+        batchUseWaterShader = graphicsManager.getShaderProgram() instanceof WaterShaderProgram;
+        batchUnderwaterPalette = graphicsManager.isUseUnderwaterPaletteForBackground();
+        batchGhostEffectActive = graphicsManager.isGhostRenderEffectActive();
+        batchGhostAlpha = graphicsManager.getGhostRenderAlpha();
         batchActive = true;
     }
 
@@ -188,8 +204,22 @@ public class InstancedPatternRenderer {
         return batchActive;
     }
 
+    /** Cancels a partially built batch without creating or executing a draw command. */
+    public void cancelBatch() {
+        instanceCount = 0;
+        batchDisplayHeight = 0;
+        batchAtlasIndex = 0;
+        batchActive = false;
+    }
+
     public boolean addPattern(PatternAtlas.Entry entry, int paletteIndex, PatternDesc desc, int x, int y) {
-        if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH) {
+        if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH
+                || entry.atlasIndex() != batchAtlasIndex
+                || batchUsePriorityShader != (graphicsManager.isUseSpritePriorityShader() && instancedPriorityShader != null)
+                || batchUseWaterShader != (graphicsManager.getShaderProgram() instanceof WaterShaderProgram)
+                || batchUnderwaterPalette != graphicsManager.isUseUnderwaterPaletteForBackground()
+                || batchGhostEffectActive != graphicsManager.isGhostRenderEffectActive()
+                || batchGhostAlpha != graphicsManager.getGhostRenderAlpha()) {
             return false;
         }
         // Display height resolved once per batch in beginBatch() (FBO-aware)
@@ -232,7 +262,13 @@ public class InstancedPatternRenderer {
 
     public boolean addStripPattern(PatternAtlas.Entry entry, int paletteIndex, PatternDesc desc,
             int x, int y, int stripIndex) {
-        if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH) {
+        if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH
+                || entry.atlasIndex() != batchAtlasIndex
+                || batchUsePriorityShader != (graphicsManager.isUseSpritePriorityShader() && instancedPriorityShader != null)
+                || batchUseWaterShader != (graphicsManager.getShaderProgram() instanceof WaterShaderProgram)
+                || batchUnderwaterPalette != graphicsManager.isUseUnderwaterPaletteForBackground()
+                || batchGhostEffectActive != graphicsManager.isGhostRenderEffectActive()
+                || batchGhostAlpha != graphicsManager.getGhostRenderAlpha()) {
             return false;
         }
         // Display height resolved once per batch in beginBatch() (FBO-aware)
@@ -298,18 +334,16 @@ public class InstancedPatternRenderer {
             return null;
         }
         GraphicsManager gm = graphicsManager;
-        boolean usePriority = gm.isUseSpritePriorityShader() && instancedPriorityShader != null;
-        boolean ghostEffectActive = gm.isGhostRenderEffectActive();
-        float ghostAlpha = gm.getGhostRenderAlpha();
-
         InstancedBatchCommand command = obtainCommand();
-        command.load(instanceData, instanceCount, usePriority, ghostEffectActive, ghostAlpha);
+        command.load(instanceData, instanceCount, batchAtlasIndex, batchUsePriorityShader,
+                batchUseWaterShader, batchUnderwaterPalette, batchGhostEffectActive, batchGhostAlpha);
         instanceCount = 0;
         batchActive = false;
         return command;
     }
 
     public void cleanup() {
+        cancelBatch();
         if (vaoId != 0) {
             glDeleteVertexArrays(vaoId);
         }
@@ -347,6 +381,7 @@ public class InstancedPatternRenderer {
      * Resets internal state without making GL calls.
      */
     public void cleanupHeadless() {
+        cancelBatch();
         vaoId = 0;
         quadVboId = 0;
         instanceVboId = 0;
@@ -483,12 +518,15 @@ public class InstancedPatternRenderer {
         if (command == null) {
             command = new InstancedBatchCommand();
         }
+        command.leased = true;
         return command;
     }
 
     private void recycleCommand(InstancedBatchCommand command) {
         if (commandPool.size() < COMMAND_POOL_LIMIT) {
             commandPool.addLast(command);
+        } else {
+            command.release();
         }
     }
 
@@ -518,14 +556,22 @@ public class InstancedPatternRenderer {
         private int instanceCount;
         private int floatCount;
         private boolean usePriorityShader;
+        private boolean useWaterShader;
+        private boolean useUnderwaterPalette;
+        private int atlasIndex;
         private boolean capturedGhostEffectActive;
         private float capturedGhostAlpha;
+        private boolean leased;
 
-        private void load(float[] data, int instanceCount, boolean usePriorityShader,
+        private void load(float[] data, int instanceCount, int atlasIndex, boolean usePriorityShader,
+                          boolean useWaterShader, boolean useUnderwaterPalette,
                           boolean ghostEffectActive, float ghostAlpha) {
             this.instanceCount = instanceCount;
             this.floatCount = instanceCount * FLOATS_PER_INSTANCE;
             this.usePriorityShader = usePriorityShader;
+            this.useWaterShader = useWaterShader;
+            this.useUnderwaterPalette = useUnderwaterPalette;
+            this.atlasIndex = atlasIndex;
             this.capturedGhostEffectActive = ghostEffectActive;
             this.capturedGhostAlpha = ghostAlpha;
             instanceBuffer = ensureBuffer(instanceBuffer, floatCount);
@@ -544,6 +590,14 @@ public class InstancedPatternRenderer {
 
         @Override
         public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            try {
+                executeLeased(cameraX, cameraY, cameraWidth, cameraHeight);
+            } finally {
+                discard();
+            }
+        }
+
+        private void executeLeased(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
             if (instanceCount == 0 || instancedShader == null) {
                 return;
             }
@@ -553,7 +607,7 @@ public class InstancedPatternRenderer {
                 while (glGetError() != GL_NO_ERROR) { /* drain errors */ }
             }
             GraphicsManager gm = graphicsManager;
-            boolean useWaterShader = gm.getShaderProgram() instanceof WaterShaderProgram;
+            boolean useWaterShader = this.useWaterShader;
             // Use captured priority shader state from batch creation time
             boolean usePriorityShader = this.usePriorityShader;
 
@@ -629,7 +683,7 @@ public class InstancedPatternRenderer {
             }
 
             Integer paletteTextureId;
-            if (gm.isUseUnderwaterPaletteForBackground()) {
+            if (useUnderwaterPalette) {
                 paletteTextureId = gm.getUnderwaterPaletteTextureId();
                 if (paletteTextureId == null) {
                     paletteTextureId = gm.getCombinedPaletteTextureId();
@@ -642,7 +696,7 @@ public class InstancedPatternRenderer {
                 glBindTexture(GL_TEXTURE_2D, paletteTextureId);
             }
 
-            Integer atlasTextureId = gm.getPatternAtlasTextureId();
+            Integer atlasTextureId = gm.getPatternAtlasTextureId(atlasIndex);
             if (atlasTextureId != null) {
                 glActiveTexture(GL_TEXTURE1);
                 glBindTexture(GL_TEXTURE_2D, atlasTextureId);
@@ -727,6 +781,14 @@ public class InstancedPatternRenderer {
             glDisable(GL_BLEND);
 
             PatternRenderCommand.resetFrameState();
+        }
+
+        @Override
+        public void discard() {
+            if (!leased) {
+                return;
+            }
+            leased = false;
             recycleCommand(this);
         }
 

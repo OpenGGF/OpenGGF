@@ -8,21 +8,50 @@ import java.util.Arrays;
 import java.util.function.Consumer;
 
 public interface DeterministicAudioRuntime {
+    /**
+     * Advances deterministic audio state for one frame. This method must not
+     * be called recursively from a command handler.
+     *
+     * @throws IllegalStateException if called from a command handler
+     */
     void advanceFrame(long frame, FrameAudioMode mode);
 
     default boolean consumesSubmittedCommands() {
         return false;
     }
 
+    /**
+     * Sets the handler invoked synchronously for commands due in
+     * {@link #advanceFrame(long, FrameAudioMode)}. Handlers must not mutate the
+     * submitted-command queue through {@link #submit(AudioTimelineEntry)},
+     * {@link #discardSubmittedCommandsAfter(long)}, or
+     * {@link #clearSubmittedCommands()}, and must not call
+     * {@link #advanceFrame(long, FrameAudioMode)} recursively.
+     */
     default void setCommandHandler(Consumer<AudioCommand> commandHandler) {
     }
 
+    /**
+     * Queues a command for deterministic frame dispatch.
+     *
+     * @throws IllegalStateException if called from a command handler
+     */
     default void submit(AudioTimelineEntry entry) {
     }
 
+    /**
+     * Discards queued commands after {@code frame}.
+     *
+     * @throws IllegalStateException if called from a command handler
+     */
     default void discardSubmittedCommandsAfter(long frame) {
     }
 
+    /**
+     * Clears all queued commands.
+     *
+     * @throws IllegalStateException if called from a command handler
+     */
     default void clearSubmittedCommands() {
     }
 

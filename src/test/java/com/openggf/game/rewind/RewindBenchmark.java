@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -43,6 +44,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @RequiresRom(SonicGame.SONIC_2)
 @EnabledIfSystemProperty(named = "openggf.rewind.benchmark.run", matches = "true")
 public class RewindBenchmark {
+
+    private static final ClassValue<StructuralSizePlan> STRUCTURAL_SIZE_PLANS =
+            new ClassValue<>() {
+                @Override
+                protected StructuralSizePlan computeValue(Class<?> type) {
+                    return createStructuralSizePlan(type);
+                }
+            };
 
     private static final Path TRACE_DIR =
             Path.of("src/test/resources/traces/s2/ehz1_fullrun");
@@ -566,10 +575,10 @@ public class RewindBenchmark {
         }
         if (cls.isRecord()) {
             long bytes = 16L;
-            for (var component : cls.getRecordComponents()) {
+            for (StructuralSizeComponent component : STRUCTURAL_SIZE_PLANS.get(cls).components()) {
                 try {
-                    Object value = component.getAccessor().invoke(obj);
-                    Class<?> type = component.getType();
+                    Object value = component.accessor().invoke(obj);
+                    Class<?> type = component.type();
                     bytes += type.isPrimitive() ? primitiveSize(type) : 8L;
                     if (!type.isPrimitive()) {
                         bytes += estimateStructuralSize(value, seen);
@@ -577,12 +586,36 @@ public class RewindBenchmark {
                 } catch (ReflectiveOperationException e) {
                     throw new IllegalStateException(
                             "Failed to estimate record component "
-                                    + cls.getName() + "." + component.getName(), e);
+                                    + cls.getName() + "." + component.name(), e);
                 }
             }
             return align8(bytes);
         }
         return 32L;
+    }
+
+    private static StructuralSizePlan createStructuralSizePlan(Class<?> type) {
+        var recordComponents = type.getRecordComponents();
+        StructuralSizeComponent[] components =
+                new StructuralSizeComponent[recordComponents.length];
+        for (int i = 0; i < recordComponents.length; i++) {
+            var component = recordComponents[i];
+            Method accessor = component.getAccessor();
+            if (!accessor.trySetAccessible()) {
+                throw new IllegalStateException(
+                        "Cannot access record component "
+                                + type.getName() + "." + component.getName());
+            }
+            components[i] = new StructuralSizeComponent(
+                    component.getName(), component.getType(), accessor);
+        }
+        return new StructuralSizePlan(components);
+    }
+
+    private record StructuralSizePlan(StructuralSizeComponent[] components) {
+    }
+
+    private record StructuralSizeComponent(String name, Class<?> type, Method accessor) {
     }
 
     private static long estimateLevelSnapshotSize(LevelSnapshot snapshot, IdentityHashMap<Object, Boolean> seen) {
@@ -906,14 +939,14 @@ public class RewindBenchmark {
         if (a.getClass() != b.getClass()) return false;
         Class<?> cls = a.getClass();
         if (!cls.isRecord()) return java.util.Objects.equals(a, b);
-        for (var component : cls.getRecordComponents()) {
+        for (StructuralSizeComponent component : STRUCTURAL_SIZE_PLANS.get(cls).components()) {
             try {
-                Object av = component.getAccessor().invoke(a);
-                Object bv = component.getAccessor().invoke(b);
+                Object av = component.accessor().invoke(a);
+                Object bv = component.accessor().invoke(b);
                 if (!fieldContentEqual(av, bv)) return false;
             } catch (ReflectiveOperationException e) {
                 throw new RuntimeException(
-                        "Failed to read record component " + component.getName(), e);
+                        "Failed to read record component " + component.name(), e);
             }
         }
         return true;
@@ -939,12 +972,12 @@ public class RewindBenchmark {
         }
         Class<?> cls = av.getClass();
         if (cls.isRecord()) {
-            for (var c : cls.getRecordComponents()) {
+            for (StructuralSizeComponent component : STRUCTURAL_SIZE_PLANS.get(cls).components()) {
                 try {
-                    Object aV = c.getAccessor().invoke(av);
-                    Object bV = c.getAccessor().invoke(bv);
+                    Object aV = component.accessor().invoke(av);
+                    Object bV = component.accessor().invoke(bv);
                     if (!fieldContentEqual(aV, bV)) {
-                        collectDiffs(path + "." + c.getName(), aV, bV, diffs);
+                        collectDiffs(path + "." + component.name(), aV, bV, diffs);
                     }
                 } catch (ReflectiveOperationException ignored) {}
             }
@@ -1010,12 +1043,12 @@ public class RewindBenchmark {
         if (!cls.isRecord()) return fieldContentString(o);
         StringBuilder sb = new StringBuilder(cls.getSimpleName()).append('[');
         boolean first = true;
-        for (var component : cls.getRecordComponents()) {
+        for (StructuralSizeComponent component : STRUCTURAL_SIZE_PLANS.get(cls).components()) {
             try {
-                Object v = component.getAccessor().invoke(o);
+                Object v = component.accessor().invoke(o);
                 if (!first) sb.append(", ");
                 first = false;
-                sb.append(component.getName()).append('=').append(fieldContentString(v));
+                sb.append(component.name()).append('=').append(fieldContentString(v));
             } catch (ReflectiveOperationException ignored) {}
         }
         return sb.append(']').toString();

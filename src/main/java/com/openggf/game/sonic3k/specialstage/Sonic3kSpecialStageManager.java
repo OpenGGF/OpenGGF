@@ -162,6 +162,7 @@ public class Sonic3kSpecialStageManager {
         if (renderer == null) {
             renderer = new Sonic3kSpecialStageRenderer(GameServices.graphics());
         }
+        renderer.resetStageGeometryCache();
         palette = new Sonic3kSpecialStagePalette();
 
         // Load ROM data and cache art patterns
@@ -1048,6 +1049,9 @@ public class Sonic3kSpecialStageManager {
     }
 
     public void reset() {
+        if (renderer != null) {
+            renderer.resetStageGeometryCache();
+        }
         initialized = false;
         finished = false;
         emeraldCollected = false;

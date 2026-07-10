@@ -1,5 +1,6 @@
 package com.openggf.graphics;
 
+import com.openggf.util.ShortIndexedView;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.FloatBuffer;
@@ -92,6 +93,34 @@ public class VScrollBuffer {
                 GL_RED,
                 GL_FLOAT,
                 uploadBuffer);
+        glBindTexture(GL_TEXTURE_1D, 0);
+    }
+
+    /** Uploads a read-only frame view without requiring an intermediate array copy. */
+    public void upload(ShortIndexedView vScroll) {
+        if (!initialized || vScroll == null) {
+            return;
+        }
+
+        for (int i = 0; i < entryCount; i++) {
+            int raw = i < vScroll.size() ? vScroll.get(i) : 0;
+            float normalized = raw / 32767.0f;
+            if (normalized > 1.0f) {
+                normalized = 1.0f;
+            } else if (normalized < -1.0f) {
+                normalized = -1.0f;
+            }
+            scrollData[i] = normalized;
+        }
+
+        if (uploadBuffer == null) {
+            uploadBuffer = MemoryUtil.memAllocFloat(entryCount);
+        }
+        uploadBuffer.clear();
+        uploadBuffer.put(scrollData);
+        uploadBuffer.flip();
+        glBindTexture(GL_TEXTURE_1D, textureId);
+        glTexSubImage1D(GL_TEXTURE_1D, 0, 0, entryCount, GL_RED, GL_FLOAT, uploadBuffer);
         glBindTexture(GL_TEXTURE_1D, 0);
     }
 

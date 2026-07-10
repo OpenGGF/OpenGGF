@@ -12,6 +12,15 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public final class StreamBackedDeterministicAudioRuntime implements DeterministicAudioRuntime {
+    private static final Comparator<AudioTimelineEntry> COMMAND_ORDER =
+            Comparator.comparingLong(AudioTimelineEntry::frame)
+                    .thenComparingInt(AudioTimelineEntry::order);
+    private static final int MINIMUM_COMMAND_COMPACTION_PREFIX = 64;
+    private static final String COMMAND_QUEUE_MUTATION_DURING_DISPATCH_MESSAGE =
+            "Command queue cannot be mutated while commands are being dispatched";
+    private static final String FRAME_ADVANCEMENT_DURING_DISPATCH_MESSAGE =
+            "Audio frame advancement cannot be re-entered from a command handler";
+
     private final AudioFrameClock frameClock;
     private final AudioOutputFifo outputFifo;
     private final List<AudioTimelineEntry> pendingCommands = new ArrayList<>();
@@ -30,6 +39,8 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     private short[] musicScratch = new short[0];
     private short[] sfxScratch = new short[0];
     private int lastProducedFrames;
+    private int firstPendingCommand;
+    private boolean dispatchingCommands;
 
     public StreamBackedDeterministicAudioRuntime(AudioFrameClock frameClock, AudioOutputFifo outputFifo) {
         this(frameClock, outputFifo, null);
@@ -68,17 +79,28 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
 
     @Override
     public void submit(AudioTimelineEntry entry) {
-        pendingCommands.add(Objects.requireNonNull(entry, "entry"));
+        ensureCommandQueueMutable();
+        AudioTimelineEntry requiredEntry = Objects.requireNonNull(entry, "entry");
+        compactConsumedCommandPrefixIfNeeded();
+        int insertionIndex = findCommandInsertionIndex(requiredEntry);
+        pendingCommands.add(insertionIndex, requiredEntry);
     }
 
     @Override
     public void discardSubmittedCommandsAfter(long frame) {
-        pendingCommands.removeIf(entry -> entry.frame() > frame);
+        ensureCommandQueueMutable();
+        int firstDiscardedCommand = findFirstCommandAfter(frame);
+        if (firstDiscardedCommand < pendingCommands.size()) {
+            pendingCommands.subList(firstDiscardedCommand, pendingCommands.size()).clear();
+        }
+        clearCommandStorageIfExhausted();
     }
 
     @Override
     public void clearSubmittedCommands() {
+        ensureCommandQueueMutable();
         pendingCommands.clear();
+        firstPendingCommand = 0;
     }
 
     @Override
@@ -93,6 +115,9 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
 
     @Override
     public void advanceFrame(long frame, FrameAudioMode mode) {
+        if (dispatchingCommands) {
+            throw new IllegalStateException(FRAME_ADVANCEMENT_DURING_DISPATCH_MESSAGE);
+        }
         if (mode == FrameAudioMode.PRESENTATION_ONLY_REVERSE) {
             return;
         }
@@ -198,18 +223,85 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     }
 
     private void consumeCommands(long frame) {
-        if (pendingCommands.isEmpty()) {
+        int commandCount = pendingCommands.size();
+        if (firstPendingCommand >= commandCount) {
             return;
         }
-        List<AudioTimelineEntry> entries = pendingCommands.stream()
-                .filter(entry -> entry.frame() == frame)
-                .sorted(Comparator.comparingLong(AudioTimelineEntry::frame)
-                        .thenComparingInt(AudioTimelineEntry::order))
-                .toList();
-        for (AudioTimelineEntry entry : entries) {
-            commandHandler.accept(entry.command());
+
+        int commandIndex = firstPendingCommand;
+        while (commandIndex < commandCount
+                && pendingCommands.get(commandIndex).frame() < frame) {
+            commandIndex++;
         }
-        pendingCommands.removeIf(entry -> entry.frame() <= frame);
+        int firstCommandForFrame = commandIndex;
+        while (commandIndex < commandCount
+                && pendingCommands.get(commandIndex).frame() == frame) {
+            commandIndex++;
+        }
+        int afterCommandForFrame = commandIndex;
+        if (firstCommandForFrame < afterCommandForFrame) {
+            dispatchingCommands = true;
+            try {
+                for (int index = firstCommandForFrame; index < afterCommandForFrame; index++) {
+                    commandHandler.accept(pendingCommands.get(index).command());
+                }
+            } finally {
+                dispatchingCommands = false;
+            }
+        }
+        firstPendingCommand = afterCommandForFrame;
+        clearCommandStorageIfExhausted();
+    }
+
+    private void ensureCommandQueueMutable() {
+        if (dispatchingCommands) {
+            throw new IllegalStateException(COMMAND_QUEUE_MUTATION_DURING_DISPATCH_MESSAGE);
+        }
+    }
+
+    private int findCommandInsertionIndex(AudioTimelineEntry entry) {
+        int low = firstPendingCommand;
+        int high = pendingCommands.size();
+        while (low < high) {
+            int middle = (low + high) >>> 1;
+            if (COMMAND_ORDER.compare(pendingCommands.get(middle), entry) <= 0) {
+                low = middle + 1;
+            } else {
+                high = middle;
+            }
+        }
+        return low;
+    }
+
+    private int findFirstCommandAfter(long frame) {
+        int low = firstPendingCommand;
+        int high = pendingCommands.size();
+        while (low < high) {
+            int middle = (low + high) >>> 1;
+            if (pendingCommands.get(middle).frame() <= frame) {
+                low = middle + 1;
+            } else {
+                high = middle;
+            }
+        }
+        return low;
+    }
+
+    private void compactConsumedCommandPrefixIfNeeded() {
+        if (firstPendingCommand < MINIMUM_COMMAND_COMPACTION_PREFIX
+                || firstPendingCommand < pendingCommands.size() - firstPendingCommand) {
+            return;
+        }
+        pendingCommands.subList(0, firstPendingCommand).clear();
+        firstPendingCommand = 0;
+    }
+
+    private void clearCommandStorageIfExhausted() {
+        if (firstPendingCommand < pendingCommands.size()) {
+            return;
+        }
+        pendingCommands.clear();
+        firstPendingCommand = 0;
     }
 
     private void rememberLastReverseFrame(short[] target, int readFrames) {

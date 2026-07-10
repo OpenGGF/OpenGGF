@@ -25,7 +25,7 @@ import com.openggf.game.sonic2.bumpers.CNZBumperManager;
 import com.openggf.game.sonic2.bumpers.CNZBumperSpawn;
 import com.openggf.game.sonic2.slotmachine.CNZSlotMachineManager;
 import com.openggf.game.sonic2.slotmachine.CNZSlotMachineRenderer;
-import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GLCommandable;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -68,7 +68,9 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
 
     // Deferred slot machine renders (queued during object phase, rendered after tilemap)
     // Each entry: {worldX, worldY, offsetX, offsetY} - offset values are from cage to display
-    private final java.util.List<int[]> pendingSlotRenders = new java.util.ArrayList<>();
+    private static final int SLOT_RENDER_STRIDE = 4;
+    private int[] pendingSlotRenders = new int[16];
+    private int pendingSlotRenderCount;
     private final SpecialRenderEffect cnzSlotOverlayEffect = new SpecialRenderEffect() {
         @Override
         public SpecialRenderEffectStage stage() {
@@ -268,8 +270,20 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
      * @param offsetY Y offset from cage center to slot display top-left
      */
     public void requestSlotRender(int worldX, int worldY, int offsetX, int offsetY) {
-        pendingSlotRenders.add(new int[]{worldX, worldY, offsetX, offsetY});
+        int offset = pendingSlotRenderCount * SLOT_RENDER_STRIDE;
+        if (offset + SLOT_RENDER_STRIDE > pendingSlotRenders.length) {
+            pendingSlotRenders = java.util.Arrays.copyOf(pendingSlotRenders, pendingSlotRenders.length * 2);
+        }
+        pendingSlotRenders[offset] = worldX;
+        pendingSlotRenders[offset + 1] = worldY;
+        pendingSlotRenders[offset + 2] = offsetX;
+        pendingSlotRenders[offset + 3] = offsetY;
+        pendingSlotRenderCount++;
     }
+
+    int[] pendingSlotRenderStorage() { return pendingSlotRenders; }
+    int pendingSlotRenderCount() { return pendingSlotRenderCount; }
+    void clearPendingSlotRenders() { pendingSlotRenderCount = 0; }
 
     @Override
     public void render(Camera camera, int frameCounter) {
@@ -303,7 +317,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     }
 
     private void renderCnzSlotOverlay(Camera camera) {
-        if (pendingSlotRenders.isEmpty()) {
+        if (pendingSlotRenderCount == 0) {
             return;
         }
         try {
@@ -312,12 +326,13 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
             if (!graphicsManager.isHeadlessMode() && cnzSlotMachineManager != null) {
                 Integer paletteTextureId = graphicsManager.getCombinedPaletteTextureId();
                 if (paletteTextureId != null) {
-                    for (int[] pos : pendingSlotRenders) {
-                        int screenX = pos[0] - camera.getX();
-                        int screenY = pos[1] - camera.getY();
-                        int offsetX = pos[2];
-                        int offsetY = pos[3];
-                        GLCommand cmd = cnzSlotMachineRenderer.createRenderCommand(
+                    for (int i = 0; i < pendingSlotRenderCount; i++) {
+                        int pos = i * SLOT_RENDER_STRIDE;
+                        int screenX = pendingSlotRenders[pos] - camera.getX();
+                        int screenY = pendingSlotRenders[pos + 1] - camera.getY();
+                        int offsetX = pendingSlotRenders[pos + 2];
+                        int offsetY = pendingSlotRenders[pos + 3];
+                        GLCommandable cmd = cnzSlotMachineRenderer.createRenderCommand(
                                 cnzSlotMachineManager,
                                 screenX,
                                 screenY,
@@ -333,7 +348,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
             }
             }
         } finally {
-            pendingSlotRenders.clear();
+            clearPendingSlotRenders();
         }
     }
 
@@ -428,7 +443,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     public void reset() {
         cnzBumperManager = null;
         cnzSlotMachineManager = null;
-        pendingSlotRenders.clear();
+        clearPendingSlotRenders();
         if (cnzSlotMachineRenderer != null) {
             cnzSlotMachineRenderer.cleanup();
             cnzSlotMachineRenderer = null;
