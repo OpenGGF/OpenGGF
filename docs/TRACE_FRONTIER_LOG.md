@@ -248,9 +248,20 @@ the pre-movement delete. With the prior Obj37 cadence formula unchanged, the
 complete-run frontier remains f9376. The same all-29 S1 and all-48 S2 sweeps
 reported for round 15 include this shared-base hook change and remain green.
 
+Round 17 corrects both inputs to S3K Obj37's floor-probe cadence. The native
+routine adds `V_int_run_count+3` to the live `Process_Sprites` `d7`; that
+countdown spans all 110 `Object_RAM` slots, including the fixed tail after the
+dynamic allocation window (`sonic3k.asm:35616-35637,35965-35980`). The engine's
+gameplay-scoped object clock starts without S3K's four-count native VBlank
+baseline, so the narrow `RingRules` owner now supplies values S1=0, S2=0,
+S3K=4 while slot phase uses the complete process table. Focused lost-ring and
+ring-manager tests pass. The AIZ complete-run frontier moves from f9376 (ring
+count) to f10517 (player horizontal velocity sign after an object interaction).
+Fresh full sweeps at this bank point pass all 29 S1 and all 48 S2 trace replays.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f9376. Those causes will be recorded and committed
+banked rounds the current stacked working-tree complete-run frontier is f10517. Those causes will be recorded and committed
 separately as their focused guards are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes
 an earlier f5435 mismatch and must restore/advance that route before the stage

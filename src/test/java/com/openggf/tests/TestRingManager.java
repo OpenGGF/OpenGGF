@@ -542,6 +542,7 @@ public class TestRingManager {
         RingRules ringRules = source.ring();
         RingRules customRingRules = new RingRules(
                 ringRules.ringFloorCheckMask(),
+                ringRules.ringFloorCheckCounterPhase(),
                 ringRules.ringFloorProbeRequiresRenderFlag(),
                 ringCollisionHalfSize,
                 ringCollisionHalfSize,

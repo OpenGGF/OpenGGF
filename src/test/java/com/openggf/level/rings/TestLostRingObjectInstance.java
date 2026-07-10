@@ -95,6 +95,14 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void s3kObj37CounterPhaseModelsNativeVIntVisibility() {
+        assertEquals(0, GameRules.SONIC_1.ring().ringFloorCheckCounterPhase());
+        assertEquals(0, GameRules.SONIC_2.ring().ringFloorCheckCounterPhase());
+        assertEquals(4, GameRules.SONIC_3K.ring().ringFloorCheckCounterPhase(),
+                "S3K Obj37 must see the native V_int_run_count byte four counts ahead of the object clock");
+    }
+
+    @Test
     void s3kReverseGravityProbesCeilingNotFloor() {
         // ROM: S3K Reverse_gravity_flag routes Obj37 to Obj_Bouncing_Ring_Reverse_Gravity,
         // which probes the CEILING (RingCheckFloorDist_ReverseGravity, upward) and only when
@@ -451,9 +459,9 @@ class TestLostRingObjectInstance {
         ringManager.spawnLostRings(player, 1, 0);
 
         LostRingObjectInstance ring = objectManager.activeObjectsOfType(LostRingObjectInstance.class).get(0);
-        assertEquals(ObjectSlotLayout.SONIC_3K.lastDynamicSlotExclusive() - 1 - ring.getSlotIndex(),
+        assertEquals(ObjectSlotLayout.SONIC_3K.lastProcessSlotExclusive() - 1 - ring.getSlotIndex(),
                 ring.getPhaseOffset(),
-                "S3K Obj37 cadence uses the managed dynamic-object countdown");
+                "S3K Obj37 cadence uses the full Process_Sprites Object_RAM countdown");
     }
 
     @Test

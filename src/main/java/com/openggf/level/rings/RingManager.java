@@ -1466,12 +1466,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         private static int phaseOffsetForSlot(ObjectManager objectManager, int slotIndex) {
-            // Obj37 floor probes use the ring's dynamic-object execution countdown.
-            // In the engine this countdown is tied to the managed dynamic slot window;
-            // using the broader S3K process table shifts the spill cadence and makes
-            // rings bounce hundreds of pixels before the ROM trace.
+            // Obj37 adds Process_Sprites' live d7 countdown to V_int_run_count.
+            // S3K walks all 110 Object_RAM slots, including the fixed tail after
+            // Dynamic_object_RAM (sonic3k.asm:35965-35980).
             int lastSlotExclusive = objectManager != null
-                    ? objectManager.getLastDynamicSlotExclusive()
+                    ? objectManager.getLastProcessSlotExclusive()
                     : 128;
             return lastSlotExclusive - 1 - slotIndex;
         }
