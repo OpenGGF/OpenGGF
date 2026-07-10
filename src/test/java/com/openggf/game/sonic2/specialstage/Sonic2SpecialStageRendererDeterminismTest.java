@@ -2,15 +2,220 @@ package com.openggf.game.sonic2.specialstage;
 
 import org.junit.jupiter.api.Test;
 
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.GLCommandable;
+import com.openggf.level.Palette;
+import com.openggf.level.PatternDesc;
+
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.ArgumentMatchers.anyFloat;
 import static org.mockito.Mockito.when;
 
 public class Sonic2SpecialStageRendererDeterminismTest {
+
+    @Test
+    void unchangedSnapshotRestoreKeepsStaticFboAndQueuesShaderAfterOrderedBuild() throws Exception {
+        FboFixture fixture = fboFixture();
+
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        assertEquals(List.of("beginTilePass", "mappingBatch", "endTilePass", "shader"),
+                fixture.graphics.events);
+        Sonic2SpecialStageSnapshot snapshot = fixture.manager.captureRewindSnapshot();
+
+        fixture.graphics.clearFrame();
+        fixture.manager.restoreRewindSnapshot(snapshot);
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+
+        assertEquals(List.of("shader"), fixture.graphics.events,
+                "unchanged exact-keyframe restores must retain the existing static FBO");
+
+        fixture.graphics.clearFrame();
+        fixture.renderer.beginStaticBackgroundStage(2);
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        assertEquals(List.of("beginTilePass", "mappingBatch", "endTilePass", "shader"),
+                fixture.graphics.events,
+                "a real stage generation change must rebuild before the live shader draw");
+    }
+
+    @Test
+    void onlyPaletteRowsContributingToMappingsInvalidateStaticFbo() throws Exception {
+        FboFixture fixture = fboFixture();
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        Object paletteContent = getField(fixture.renderer, "cachedBackgroundPaletteContent");
+
+        fixture.graphics.clearFrame();
+        Palette[] palettes = (Palette[]) getField(fixture.manager, "palettes");
+        palettes[1].getColor(3).r++;
+        palettes[3].getColor(7).g++;
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        assertEquals(List.of("shader"),
+                fixture.graphics.events,
+                "unused palette rows do not contribute to palette-resolved FBO pixels");
+        assertSame(paletteContent, getField(fixture.renderer, "cachedBackgroundPaletteContent"),
+                "same-sized palette snapshots must reuse retained byte storage");
+
+        fixture.graphics.clearFrame();
+        palettes[0].getColor(3).r++;
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        assertEquals(List.of("beginTilePass", "mappingBatch", "endTilePass", "shader"),
+                fixture.graphics.events,
+                "the palette row selected by the non-empty mapping must rebuild once");
+
+        fixture.graphics.clearFrame();
+        Palette[] equalReplacement = new Palette[palettes.length];
+        for (int i = 0; i < palettes.length; i++) {
+            equalReplacement[i] = palettes[i].deepCopy();
+        }
+        setField(fixture.manager, "palettes", equalReplacement);
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        assertEquals(List.of("shader"), fixture.graphics.events,
+                "equal palette content must remain a static-target cache hit");
+        assertSame(paletteContent, getField(fixture.renderer, "cachedBackgroundPaletteContent"));
+
+        fixture.graphics.clearFrame();
+        byte[] mappings = (byte[]) getField(fixture.manager, "combinedBackgroundMappings");
+        mappings[0] = 0x20; // select palette row 1
+        mappings[1] = 1;
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        assertEquals(List.of("beginTilePass", "mappingBatch", "endTilePass", "shader"),
+                fixture.graphics.events);
+        assertEquals(1 << 1, getField(fixture.renderer, "cachedBackgroundPaletteRowMask"));
+
+        fixture.graphics.clearFrame();
+        equalReplacement[0].getColor(3).b++;
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        assertEquals(List.of("shader"), fixture.graphics.events,
+                "removing row 0 from mappings removes its palette contribution");
+
+        fixture.graphics.clearFrame();
+        equalReplacement[1].getColor(3).b++;
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        assertEquals(List.of("beginTilePass", "mappingBatch", "endTilePass", "shader"),
+                fixture.graphics.events,
+                "newly introduced row 1 becomes a live contribution");
+
+        fixture.graphics.clearFrame();
+        equalReplacement[1] = null;
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        assertEquals(List.of("beginTilePass", "mappingBatch", "endTilePass", "shader"),
+                fixture.graphics.events, "a contributing row becoming absent invalidates once");
+
+        fixture.graphics.clearFrame();
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        assertEquals(List.of("shader"), fixture.graphics.events,
+                "a stable absent contributing row is cacheable");
+
+        fixture.graphics.clearFrame();
+        mappings[0] = 0;
+        mappings[1] = 0;
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        assertEquals(List.of("beginTilePass", "mappingBatch", "endTilePass", "shader"),
+                fixture.graphics.events);
+        assertEquals(0, getField(fixture.renderer, "cachedBackgroundPaletteRowMask"));
+        assertSame(paletteContent, getField(fixture.renderer, "cachedBackgroundPaletteContent"),
+                "palette contribution storage stays bounded and reusable as the mask changes");
+
+        fixture.graphics.clearFrame();
+        equalReplacement[0].getColor(5).g++;
+        fixture.manager.draw();
+        fixture.graphics.executeQueued();
+        assertEquals(List.of("shader"), fixture.graphics.events,
+                "an empty mapping plane has no contributing palette rows");
+    }
+
+    @Test
+    void unchangedBackgroundMappingsBuildStaticTargetOnlyOnce() {
+        RecordingGraphicsManager graphics = new RecordingGraphicsManager();
+        Sonic2SpecialStageRenderer renderer = new Sonic2SpecialStageRenderer(graphics);
+        renderer.setPatternBases(0x2000, 0x3000);
+        byte[] mappings = new byte[32 * 2];
+        mappings[1] = 1;
+
+        renderer.renderBackgroundToFBO(mappings);
+        renderer.renderBackgroundToFBO(mappings);
+
+        assertEquals(1, graphics.renderCount,
+                "unchanged static mappings must not be rebuilt into the FBO every frame");
+
+        renderer.onRenderContextGenerationChanged(new Object());
+        renderer.renderBackgroundToFBO(mappings);
+        assertEquals(2, graphics.renderCount, "a new render context must rebuild the static target");
+
+        renderer.beginStaticBackgroundStage(1);
+        renderer.renderBackgroundToFBO(mappings);
+        assertEquals(3, graphics.renderCount, "a new stage generation must rebuild the static target");
+
+        mappings[1] = 2;
+        renderer.renderBackgroundToFBO(mappings);
+        assertEquals(4, graphics.renderCount, "in-place authoritative mapping changes must invalidate by content");
+    }
+
+    @Test
+    void decodedTrackCacheUsesCompleteBoundedKeyAndDefensiveCopies() throws Exception {
+        Method decodeCached = Sonic2TrackFrameDecoder.class.getDeclaredMethod(
+                "decodeFrameCached", int.class, byte[].class, boolean.class);
+        Method clearCache = Sonic2TrackFrameDecoder.class.getDeclaredMethod("invalidateDecodedFrameCache");
+        Method buildCount = Sonic2TrackFrameDecoder.class.getDeclaredMethod("decodedFrameBuildCountForTesting");
+        Method cacheSize = Sonic2TrackFrameDecoder.class.getDeclaredMethod("decodedFrameCacheSizeForTesting");
+        Method identity = Sonic2TrackFrameDecoder.class.getDeclaredMethod(
+                "decodedFrameIdentityForTesting", int.class, boolean.class);
+        for (Method method : List.of(decodeCached, clearCache, buildCount, cacheSize, identity)) {
+            method.setAccessible(true);
+        }
+        clearCache.invoke(null);
+
+        byte[] frame = new byte[12];
+        int[] first = (int[]) decodeCached.invoke(null, 7, frame, false);
+        Object cachedIdentity = identity.invoke(null, 7, false);
+        first[0] = 0x7FFF;
+        int[] repeated = (int[]) decodeCached.invoke(null, 7, frame.clone(), false);
+
+        assertEquals(1, buildCount.invoke(null));
+        assertEquals(1, cacheSize.invoke(null));
+        assertEquals(0, repeated[0], "callers must not mutate the cached decoded array");
+        assertNotSame(first, repeated, "cached arrays must be defensively copied to consumers");
+        assertSame(cachedIdentity, identity.invoke(null, 7, false),
+                "an unchanged complete key must reuse the same internal immutable entry");
+
+        decodeCached.invoke(null, 7, frame, true);
+        decodeCached.invoke(null, 8, frame, false);
+        assertEquals(3, buildCount.invoke(null), "frame and flip are both output-affecting key parts");
+        assertEquals(3, cacheSize.invoke(null));
+        assertNotSame(identity.invoke(null, 7, false), identity.invoke(null, 7, true));
+        assertNotSame(identity.invoke(null, 7, false), identity.invoke(null, 8, false));
+
+        Object beforeContentChange = identity.invoke(null, 7, false);
+        frame[0] = 1;
+        decodeCached.invoke(null, 7, frame, false);
+        assertEquals(4, buildCount.invoke(null), "authoritative bytes complete the bounded slot key");
+        assertEquals(3, cacheSize.invoke(null), "changed content replaces its finite frame/flip slot");
+        assertNotSame(beforeContentChange, identity.invoke(null, 7, false));
+        assertTrue((int) cacheSize.invoke(null) <= 56 * 2, "finite 56-frame domain must bound the cache");
+    }
 
     /**
      * The player invulnerability flash must be driven purely by the manager-owned
@@ -50,5 +255,133 @@ public class Sonic2SpecialStageRendererDeterminismTest {
         boolean readBackAtZero = (boolean) flashHidden.invoke(renderer, player);
         assertEquals(firstReadAtZero, readBackAtZero,
                 "Re-applying an earlier frame counter must reproduce the earlier flash state");
+    }
+
+    private static final class RecordingGraphicsManager extends GraphicsManager {
+        int renderCount;
+
+        @Override
+        public void beginPatternBatch() {
+        }
+
+        @Override
+        public void flushPatternBatch() {
+        }
+
+        @Override
+        public void renderPatternWithId(int patternId, PatternDesc desc, int x, int y) {
+            renderCount++;
+        }
+    }
+
+    private static FboFixture fboFixture() throws Exception {
+        QueueRecordingGraphicsManager graphics = new QueueRecordingGraphicsManager();
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager(
+                new com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug(), null, graphics);
+        Sonic2SpecialStageRenderer renderer = new Sonic2SpecialStageRenderer(graphics);
+        SpecialStageBackgroundRenderer background = mock(SpecialStageBackgroundRenderer.class);
+        when(background.isInitialized()).thenReturn(true);
+        doAnswer(invocation -> {
+            graphics.events.add("beginTilePass");
+            return null;
+        }).when(background).beginTilePass(Sonic2SpecialStageManager.H32_HEIGHT);
+        doAnswer(invocation -> {
+            graphics.events.add("endTilePass");
+            return null;
+        }).when(background).endTilePass();
+        doAnswer(invocation -> {
+            graphics.events.add("shader");
+            return null;
+        }).when(background).renderWithShader(anyFloat());
+
+        byte[] mappings = new byte[32 * 2];
+        mappings[1] = 1;
+        setField(manager, "combinedBackgroundMappings", mappings);
+        setField(manager, "palettes", createTestPalettes());
+        setField(manager, "renderer", renderer);
+        setField(manager, "bgRenderer", background);
+        setField(manager, "initialized", true);
+        setField(manager, "alignmentTestMode", true);
+        setField(manager, "planeDebugMode", enumFieldValue(manager, "planeDebugMode", "PLANE_B_ONLY"));
+        return new FboFixture(manager, renderer, graphics);
+    }
+
+    private static Palette[] createTestPalettes() {
+        Palette[] palettes = new Palette[4];
+        for (int line = 0; line < palettes.length; line++) {
+            palettes[line] = new Palette();
+            for (int color = 0; color < Palette.PALETTE_SIZE; color++) {
+                palettes[line].setColor(color, new Palette.Color(
+                        (byte) (line * 16 + color),
+                        (byte) (line * 16 + color + 1),
+                        (byte) (line * 16 + color + 2)));
+            }
+        }
+        return palettes;
+    }
+
+    private static Object enumFieldValue(Object target, String fieldName, String value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        for (Object constant : field.getType().getEnumConstants()) {
+            if (((Enum<?>) constant).name().equals(value)) {
+                return constant;
+            }
+        }
+        throw new IllegalArgumentException(value);
+    }
+
+    private static Object getField(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static void setField(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    private record FboFixture(
+            Sonic2SpecialStageManager manager,
+            Sonic2SpecialStageRenderer renderer,
+            QueueRecordingGraphicsManager graphics) {
+    }
+
+    private static final class QueueRecordingGraphicsManager extends GraphicsManager {
+        final List<GLCommandable> queued = new ArrayList<>();
+        final List<String> events = new ArrayList<>();
+
+        @Override
+        public void registerCommand(GLCommandable command) {
+            queued.add(command);
+        }
+
+        @Override
+        public void beginPatternBatch() {
+        }
+
+        @Override
+        public void flushPatternBatch() {
+            registerCommand((cameraX, cameraY, cameraWidth, cameraHeight) -> events.add("mappingBatch"));
+        }
+
+        @Override
+        public void renderPatternWithId(int patternId, PatternDesc desc, int x, int y) {
+        }
+
+        void executeQueued() {
+            List<GLCommandable> frame = List.copyOf(queued);
+            queued.clear();
+            for (GLCommandable command : frame) {
+                command.execute(0, 0, 320, 224);
+            }
+        }
+
+        void clearFrame() {
+            queued.clear();
+            events.clear();
+        }
     }
 }

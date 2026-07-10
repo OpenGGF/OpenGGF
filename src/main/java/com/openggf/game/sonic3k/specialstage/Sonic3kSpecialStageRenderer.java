@@ -62,6 +62,24 @@ public class Sonic3kSpecialStageRenderer {
     /** Decompressed Enigma BG map (64x32 tiles, starfield). */
     private byte[] bgMapData;
 
+    private int[] cachedStarfieldGeometry;
+    private int[][] cachedFloorGeometry;
+    private byte[] cachedStarfieldContent;
+    private boolean cachedStarfieldContentInitialized;
+    private final byte[][] cachedFloorContent = new byte[9][];
+    private final boolean[] cachedFloorContentInitialized = new boolean[9];
+    private boolean staticGeometryDirty = true;
+    private long staticGeometryStageGeneration;
+    private long cachedStaticGeometryStageGeneration = -1;
+    private Object renderContextGeneration;
+    private Object cachedRenderContextGeneration;
+    private int staticGeometryBuildCount;
+    private boolean staticGeometryRebuiltThisRender;
+    private int backgroundContentValidationCount;
+    private int floorContentValidationCount;
+    // Logical source bytes covered by bulk validation calls, not scalar comparison work.
+    private int logicalContentValidationBytes;
+
     /** Raw mapping data for Sonic's SS sprite. */
     private byte[] sonicMappingData;
     /** Raw DPLC data for Sonic's SS sprite. */
@@ -129,6 +147,44 @@ public class Sonic3kSpecialStageRenderer {
         this.bgMapData = data;
     }
 
+    void onRenderContextGenerationChanged(Object generation) {
+        if (renderContextGeneration != generation) {
+            renderContextGeneration = generation;
+            invalidateStaticGeometry();
+        }
+    }
+
+    void resetStageGeometryCache() {
+        staticGeometryStageGeneration++;
+        invalidateStaticGeometry();
+    }
+
+    private void invalidateStaticGeometry() {
+        staticGeometryDirty = true;
+    }
+
+    int staticGeometryBuildCountForTesting() {
+        return staticGeometryBuildCount;
+    }
+
+    void resetContentValidationCountersForTesting() {
+        backgroundContentValidationCount = 0;
+        floorContentValidationCount = 0;
+        logicalContentValidationBytes = 0;
+    }
+
+    int backgroundContentValidationCountForTesting() {
+        return backgroundContentValidationCount;
+    }
+
+    int floorContentValidationCountForTesting() {
+        return floorContentValidationCount;
+    }
+
+    int logicalContentValidationBytesForTesting() {
+        return logicalContentValidationBytes;
+    }
+
     public void setHudNumberMap(byte[] data) {
         this.hudNumberMap = data;
     }
@@ -154,6 +210,8 @@ public class Sonic3kSpecialStageRenderer {
     private static final int SCREEN_TILES_Y = 28;
 
     public void render(Sonic3kSpecialStageManager manager) {
+        onRenderContextGenerationChanged(graphicsManager.getPatternAtlas());
+        staticGeometryRebuiltThisRender = false;
         Sonic3kSpecialStagePlayer player = manager.getPlayer();
         Sonic3kSpecialStageGrid grid = manager.getGrid();
 
@@ -401,6 +459,13 @@ public class Sonic3kSpecialStageRenderer {
     private void renderBackground(Sonic3kSpecialStageManager manager,
                                   Sonic3kSpecialStagePlayer player) {
         if (!artLoaded || bgMapData == null || bgPatternBase <= 0) return;
+        ensureGlobalStaticGeometry();
+        if (!staticGeometryRebuiltThisRender && !starfieldContentMatches()) {
+            cachedStarfieldGeometry = buildStarfieldGeometry();
+            cachedStarfieldContent = retainCopy(bgMapData, cachedStarfieldContent);
+            cachedStarfieldContentInitialized = true;
+            staticGeometryBuildCount++;
+        }
 
         // Get scroll values from background handler
         Sonic3kSpecialStageBackground bg = manager.getBackground();
@@ -426,36 +491,154 @@ public class Sonic3kSpecialStageRenderer {
                 int planeX = ((sx + hScrollTile) % BG_PLANE_W + BG_PLANE_W) % BG_PLANE_W;
                 int planeY = ((sy + vScrollTile) % BG_PLANE_H + BG_PLANE_H) % BG_PLANE_H;
 
-                int mapIdx = (planeY * BG_PLANE_W + planeX) * 2;
-                if (mapIdx + 1 >= bgMapData.length) continue;
-
-                int word = ((bgMapData[mapIdx] & 0xFF) << 8) | (bgMapData[mapIdx + 1] & 0xFF);
-
-                // Enigma word: PCCV_HTTT_TTTT_TTTT
-                int patternIdx = word & 0x7FF;
-                boolean hFlip = (word & 0x0800) != 0;
-                boolean vFlip = (word & 0x1000) != 0;
-                int palette = (word >> 13) & 3;
-                boolean priority = (word & 0x8000) != 0;
+                int geometryIndex = planeY * BG_PLANE_W + planeX;
+                if (cachedStarfieldGeometry == null || geometryIndex >= cachedStarfieldGeometry.length) continue;
+                int geometry = cachedStarfieldGeometry[geometryIndex];
+                int word = unpackDescriptorWord(geometry);
 
                 // The Enigma map was decompressed with startTile including the art base,
                 // so patternIdx already includes ArtTile_SStage_BG offset.
                 // We need to subtract the base and add our bgPatternBase.
-                int tileId = patternIdx - Sonic3kSpecialStageConstants.ART_TILE_BG;
-                if (tileId < 0) tileId = 0;
-                int patternId = bgPatternBase + tileId;
+                int patternId = bgPatternBase + unpackPatternIndex(geometry);
 
-                reusableDesc.set(0);
+                reusableDesc.set(word);
                 reusableDesc.setPriority(false); // BG behind everything
-                reusableDesc.setPaletteIndex(palette);
-                reusableDesc.setHFlip(hFlip);
-                reusableDesc.setVFlip(vFlip);
                 graphicsManager.renderPatternWithId(patternId, reusableDesc,
                         sx * TILE_SIZE - hScrollPx, sy * TILE_SIZE - vScrollPx);
             }
         }
 
         graphicsManager.flushPatternBatch();
+    }
+
+    private void ensureGlobalStaticGeometry() {
+        boolean rebuildAll = staticGeometryDirty
+                || cachedStaticGeometryStageGeneration != staticGeometryStageGeneration
+                || cachedRenderContextGeneration != renderContextGeneration;
+        if (!rebuildAll) {
+            return;
+        }
+
+        cachedStarfieldGeometry = buildStarfieldGeometry();
+        cachedStarfieldContent = retainCopy(bgMapData, cachedStarfieldContent);
+        cachedStarfieldContentInitialized = true;
+        staticGeometryBuildCount++;
+
+        cachedFloorGeometry = new int[9][];
+        for (int frame = 0; frame < cachedFloorGeometry.length; frame++) {
+            cachedFloorGeometry[frame] = buildFloorGeometry(frame);
+            cachedFloorContent[frame] = retainFloorFrameCopy(frame, cachedFloorContent[frame]);
+            cachedFloorContentInitialized[frame] = true;
+            staticGeometryBuildCount++;
+        }
+        cachedStaticGeometryStageGeneration = staticGeometryStageGeneration;
+        cachedRenderContextGeneration = renderContextGeneration;
+        staticGeometryDirty = false;
+        staticGeometryRebuiltThisRender = true;
+    }
+
+    private boolean starfieldContentMatches() {
+        backgroundContentValidationCount++;
+        if (!cachedStarfieldContentInitialized) {
+            return false;
+        }
+        return byteArraysEqualOverLogicalSpan(cachedStarfieldContent, bgMapData);
+    }
+
+    private boolean floorFrameContentMatches(int frame) {
+        floorContentValidationCount++;
+        if (!cachedFloorContentInitialized[frame]) {
+            return false;
+        }
+        int frameSize = 40 * 28 * 2;
+        int frameOffset = frame * frameSize;
+        boolean frameAvailable = floorMapData != null && frameOffset + frameSize <= floorMapData.length;
+        byte[] retained = cachedFloorContent[frame];
+        if (!frameAvailable) {
+            return retained == null;
+        }
+        if (retained == null || retained.length != frameSize) {
+            return false;
+        }
+        logicalContentValidationBytes += frameSize;
+        return Arrays.equals(floorMapData, frameOffset, frameOffset + frameSize,
+                retained, 0, frameSize);
+    }
+
+    private boolean byteArraysEqualOverLogicalSpan(byte[] expected, byte[] actual) {
+        if (expected == null || actual == null) {
+            return expected == actual;
+        }
+        if (expected.length != actual.length) {
+            return false;
+        }
+        logicalContentValidationBytes += expected.length;
+        return Arrays.equals(expected, actual);
+    }
+
+    private static byte[] retainCopy(byte[] source, byte[] retained) {
+        if (source == null) {
+            return null;
+        }
+        if (retained == null || retained.length != source.length) {
+            retained = new byte[source.length];
+        }
+        System.arraycopy(source, 0, retained, 0, source.length);
+        return retained;
+    }
+
+    private byte[] retainFloorFrameCopy(int frame, byte[] retained) {
+        int frameSize = 40 * 28 * 2;
+        int frameOffset = frame * frameSize;
+        if (floorMapData == null || frameOffset + frameSize > floorMapData.length) {
+            return null;
+        }
+        if (retained == null || retained.length != frameSize) {
+            retained = new byte[frameSize];
+        }
+        System.arraycopy(floorMapData, frameOffset, retained, 0, frameSize);
+        return retained;
+    }
+
+    private int[] buildStarfieldGeometry() {
+        int tileCount = Math.min(BG_PLANE_W * BG_PLANE_H, bgMapData != null ? bgMapData.length / 2 : 0);
+        int[] geometry = new int[tileCount];
+        for (int i = 0; i < tileCount; i++) {
+            int word = readWord(bgMapData, i * 2);
+            int tileId = (word & 0x7FF) - Sonic3kSpecialStageConstants.ART_TILE_BG;
+            // Preserve the exact descriptor that the old per-frame builder emitted:
+            // palette/flips only, forced behind all other layers, and no baked tile id.
+            geometry[i] = packGeometry(Math.max(0, tileId), word & 0x7800);
+        }
+        return geometry;
+    }
+
+    private int[] buildFloorGeometry(int frame) {
+        int tileCount = 40 * 28;
+        int frameOffset = frame * tileCount * 2;
+        if (floorMapData == null || frameOffset + tileCount * 2 > floorMapData.length) {
+            return new int[0];
+        }
+        int[] geometry = new int[tileCount];
+        for (int i = 0; i < tileCount; i++) {
+            int word = readWord(floorMapData, frameOffset + i * 2);
+            // Pattern lookup remains explicit; the descriptor contains only the
+            // priority/palette/flip metadata used by the live palette renderer.
+            geometry[i] = packGeometry(word & 0x7FF, word & 0xF800);
+        }
+        return geometry;
+    }
+
+    private static int packGeometry(int patternIndex, int descriptorWord) {
+        return (descriptorWord << 16) | (patternIndex & 0xFFFF);
+    }
+
+    private static int unpackPatternIndex(int geometry) {
+        return geometry & 0xFFFF;
+    }
+
+    private static int unpackDescriptorWord(int geometry) {
+        return geometry >>> 16;
     }
 
     /**
@@ -510,36 +693,28 @@ public class Sonic3kSpecialStageRenderer {
             floorFrame = FLOOR_FRAME_MAP[animFrame & 0xF]; // 0 or 1 alternating
         }
         int maxFrames = floorMapData.length / (40 * 28 * 2);
+        if (maxFrames <= 0) return;
         if (floorFrame >= maxFrames) floorFrame = 0;
 
-        int frameSize = 40 * 28 * 2; // bytes per frame (40 tiles x 28 rows x 2 bytes/word)
-        int frameOffset = floorFrame * frameSize;
+        ensureGlobalStaticGeometry();
+        if (!staticGeometryRebuiltThisRender && !floorFrameContentMatches(floorFrame)) {
+            cachedFloorGeometry[floorFrame] = buildFloorGeometry(floorFrame);
+            cachedFloorContent[floorFrame] = retainFloorFrameCopy(floorFrame, cachedFloorContent[floorFrame]);
+            cachedFloorContentInitialized[floorFrame] = true;
+            staticGeometryBuildCount++;
+        }
 
-        if (frameOffset + frameSize > floorMapData.length) return;
+        int[] floorGeometry = cachedFloorGeometry[floorFrame];
+        if (floorGeometry.length != 40 * 28) return;
 
         graphicsManager.beginPatternBatch();
 
         for (int ty = 0; ty < 28; ty++) {
             for (int tx = 0; tx < 40; tx++) {
-                int mapIdx = frameOffset + (ty * 40 + tx) * 2;
-                int word = ((floorMapData[mapIdx] & 0xFF) << 8)
-                         | (floorMapData[mapIdx + 1] & 0xFF);
+                int geometry = floorGeometry[ty * 40 + tx];
+                int patternId = floorPatternBase + unpackPatternIndex(geometry);
 
-                // Enigma map word format: PCCV_HTTT_TTTT_TTTT
-                // P=priority, CC=palette, V=vflip, H=hflip, T=pattern index
-                int patternIdx = word & 0x7FF;
-                boolean hFlip = (word & 0x0800) != 0;
-                boolean vFlip = (word & 0x1000) != 0;
-                int palette = (word >> 13) & 3;
-                boolean priority = (word & 0x8000) != 0;
-
-                int patternId = floorPatternBase + patternIdx;
-
-                reusableDesc.set(0);
-                reusableDesc.setPriority(priority);
-                reusableDesc.setPaletteIndex(palette);
-                reusableDesc.setHFlip(hFlip);
-                reusableDesc.setVFlip(vFlip);
+                reusableDesc.set(unpackDescriptorWord(geometry));
                 graphicsManager.renderPatternWithId(patternId, reusableDesc,
                         tx * TILE_SIZE, ty * TILE_SIZE);
             }
@@ -1085,7 +1260,12 @@ public class Sonic3kSpecialStageRenderer {
     // ==================== Setters ====================
 
     public boolean isArtLoaded() { return artLoaded; }
-    public void setArtLoaded(boolean loaded) { this.artLoaded = loaded; }
+    public void setArtLoaded(boolean loaded) {
+        if (this.artLoaded != loaded) {
+            invalidateStaticGeometry();
+        }
+        this.artLoaded = loaded;
+    }
     public void setFloorPatternBase(int base) { this.floorPatternBase = base; }
     public void setSpherePatternBase(int base) { this.spherePatternBase = base; }
     public void setRingPatternBase(int base) { this.ringPatternBase = base; }

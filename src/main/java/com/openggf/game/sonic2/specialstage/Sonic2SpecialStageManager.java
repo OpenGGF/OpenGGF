@@ -91,6 +91,7 @@ public class Sonic2SpecialStageManager {
 
     private Sonic2SpecialStageRenderer renderer;
     private SpecialStageBackgroundRenderer bgRenderer;
+    private long backgroundStageGeneration;
     private int frameCounter = 0;
 
     private enum PlaneDebugMode {
@@ -915,6 +916,8 @@ public class Sonic2SpecialStageManager {
     private void setupRenderer() throws IOException {
         GraphicsManager graphicsManager = graphicsManager();
         renderer = new Sonic2SpecialStageRenderer(graphicsManager);
+        renderer.beginStaticBackgroundStage(backgroundStageGeneration);
+        renderer.onRenderContextGenerationChanged(graphicsManager.getPatternAtlas());
         // Pattern bases are set in setupPatterns() after they have valid values
 
         // Initialize shader-based background renderer
@@ -933,6 +936,7 @@ public class Sonic2SpecialStageManager {
 
         lastDecodedFrameIndex = -1;
         decodedTrackFrame = null;
+        Sonic2TrackFrameDecoder.invalidateDecodedFrameCache();
 
         LOGGER.fine("Track animator initialized");
     }
@@ -1678,7 +1682,9 @@ public class Sonic2SpecialStageManager {
             // logging
             boolean runDiag = false;
 
-            decodedTrackFrame = Sonic2TrackFrameDecoder.decodeFrame(frameData, flipped, runDiag);
+            decodedTrackFrame = runDiag
+                    ? Sonic2TrackFrameDecoder.decodeFrame(frameData, flipped, true)
+                    : Sonic2TrackFrameDecoder.decodeFrameCached(frameIndex, frameData, flipped);
             lastDecodedFrameIndex = frameIndex;
             lastDecodedFlipped = flipped;
 
@@ -1702,7 +1708,9 @@ public class Sonic2SpecialStageManager {
         if (trackFrames != null && frameIndex >= 0 && frameIndex < trackFrames.length) {
             byte[] frameData = trackFrames[frameIndex];
             boolean runDiag = false;
-            alignmentDecodedTrackFrame = Sonic2TrackFrameDecoder.decodeFrame(frameData, false, runDiag);
+            alignmentDecodedTrackFrame = runDiag
+                    ? Sonic2TrackFrameDecoder.decodeFrame(frameData, false, true)
+                    : Sonic2TrackFrameDecoder.decodeFrameCached(frameIndex, frameData, false);
             alignmentLastDecodedFrameIndex = frameIndex;
         }
     }
@@ -1733,27 +1741,7 @@ public class Sonic2SpecialStageManager {
                 final int currentScrollX = skydomeScrollX;
                 final float currentVScrollBG = (float) vScrollBG;
 
-                // 1. Set up FBO projection BEFORE creating the batch
-                // This ensures Y coordinates are calculated for 256x256 FBO, not 320x224 screen
-                bgRenderer.beginFBOProjection();
-
-                // 2. Begin Tile Pass (Bind FBO) - queued as command for proper ordering
-                graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
-                    bgRenderer.beginTilePass(H32_HEIGHT);
-                }));
-
-                // 3. Render background tiles to FBO
-                graphicsManager.beginPatternBatch();
-                renderer.renderBackgroundToFBO(combinedBackgroundMappings);
-                graphicsManager.flushPatternBatch();
-
-                // 4. Restore normal projection after batch creation
-                bgRenderer.endFBOProjection();
-
-                // 5. End Tile Pass (Unbind FBO)
-                graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
-                    bgRenderer.endTilePass();
-                }));
+                queueStaticBackgroundRebuildIfNeeded(graphicsManager);
 
                 // 4. Update H-scroll and render with shader (vScrollBG applies vertical
                 // parallax)
@@ -1813,23 +1801,7 @@ public class Sonic2SpecialStageManager {
                 final int currentScrollX = skydomeScrollX;
                 final float currentVScrollBG = (float) vScrollBG;
 
-                // Set up FBO projection BEFORE creating the batch
-                bgRenderer.beginFBOProjection();
-
-                graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
-                    bgRenderer.beginTilePass(H32_HEIGHT);
-                }));
-
-                graphicsManager.beginPatternBatch();
-                renderer.renderBackgroundToFBO(combinedBackgroundMappings);
-                graphicsManager.flushPatternBatch();
-
-                // Restore normal projection after batch creation
-                bgRenderer.endFBOProjection();
-
-                graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
-                    bgRenderer.endTilePass();
-                }));
+                queueStaticBackgroundRebuildIfNeeded(graphicsManager);
 
                 graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
                     bgRenderer.setUniformHScroll(currentScrollX);
@@ -1847,6 +1819,23 @@ public class Sonic2SpecialStageManager {
         if (alignmentCheckpoint != null && alignmentCheckpoint.isActive()) {
             renderer.renderCheckpointUI();
         }
+    }
+
+    private void queueStaticBackgroundRebuildIfNeeded(GraphicsManager graphicsManager) {
+        renderer.onRenderContextGenerationChanged(graphicsManager.getPatternAtlas());
+        if (!renderer.needsStaticBackgroundRebuild(combinedBackgroundMappings, palettes)) {
+            return;
+        }
+
+        // Set up the FBO projection before creating the batch so its Y coordinates
+        // are calculated for the static 256x256 target.
+        bgRenderer.beginFBOProjection();
+        graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) ->
+                bgRenderer.beginTilePass(H32_HEIGHT)));
+        renderer.rebuildBackgroundToFBO(combinedBackgroundMappings, palettes);
+        bgRenderer.endFBOProjection();
+        graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) ->
+                bgRenderer.endTilePass()));
     }
 
     public void renderAlignmentOverlay(int viewportWidth, int viewportHeight) {
@@ -2020,6 +2009,11 @@ public class Sonic2SpecialStageManager {
         }
 
         initialized = false;
+        backgroundStageGeneration++;
+        if (renderer != null) {
+            renderer.beginStaticBackgroundStage(backgroundStageGeneration);
+        }
+        Sonic2TrackFrameDecoder.invalidateDecodedFrameCache();
         currentStage = 0;
         lagAccumulator = 0.0;
         lagCompensationDisplayEnabled = false;
@@ -2175,8 +2169,6 @@ public class Sonic2SpecialStageManager {
                 alignmentFrameIndex,
                 alignmentFrameTimer,
                 alignmentTrackFrameIndex,
-                alignmentLastDecodedFrameIndex,
-                alignmentDecodedTrackFrame,
                 alignmentDrawingIndex,
                 alignmentTriggerOffsetFrames,
                 alignmentRainbowSpeedScale,
@@ -2200,9 +2192,6 @@ public class Sonic2SpecialStageManager {
                 hScrollDebugTotal,
                 hScrollDebugFrames,
                 lastDebugSegmentIndex,
-                decodedTrackFrame,
-                lastDecodedFrameIndex,
-                lastDecodedFlipped,
                 palettes,
                 trackAnimator != null ? trackAnimator.captureRewindSnapshot() : null,
                 Sonic2SpecialStageSnapshot.PlayerTopologySnapshot.capture(players, sonicPlayer, tailsPlayer),
@@ -2246,8 +2235,8 @@ public class Sonic2SpecialStageManager {
         alignmentFrameIndex = snapshot.alignmentFrameIndex;
         alignmentFrameTimer = snapshot.alignmentFrameTimer;
         alignmentTrackFrameIndex = snapshot.alignmentTrackFrameIndex;
-        alignmentLastDecodedFrameIndex = snapshot.alignmentLastDecodedFrameIndex;
-        alignmentDecodedTrackFrame = Sonic2SpecialStageSnapshot.cloneIntArray(snapshot.alignmentDecodedTrackFrame);
+        alignmentLastDecodedFrameIndex = -1;
+        alignmentDecodedTrackFrame = null;
         alignmentDrawingIndex = snapshot.alignmentDrawingIndex;
         alignmentTriggerOffsetFrames = snapshot.alignmentTriggerOffsetFrames;
         alignmentRainbowSpeedScale = snapshot.alignmentRainbowSpeedScale;
@@ -2272,9 +2261,9 @@ public class Sonic2SpecialStageManager {
         hScrollDebugTotal = snapshot.hScrollDebugTotal;
         hScrollDebugFrames = snapshot.hScrollDebugFrames;
         lastDebugSegmentIndex = snapshot.lastDebugSegmentIndex;
-        decodedTrackFrame = Sonic2SpecialStageSnapshot.cloneIntArray(snapshot.decodedTrackFrame);
-        lastDecodedFrameIndex = snapshot.lastDecodedFrameIndex;
-        lastDecodedFlipped = snapshot.lastDecodedFlipped;
+        decodedTrackFrame = null;
+        lastDecodedFrameIndex = -1;
+        lastDecodedFlipped = false;
         palettes = Sonic2SpecialStageSnapshot.clonePalettes(snapshot.palettes);
         recacheRestoredPalettes();
         if (trackAnimator != null && snapshot.trackAnimator != null) {
@@ -2298,12 +2287,28 @@ public class Sonic2SpecialStageManager {
         } else {
             alignmentCheckpoint = null;
         }
+        reconstructDerivedTrackFramesAfterRestore();
         if (renderer != null) {
             renderer.setPlayers(players);
             renderer.setIntro(intro);
             renderer.setCheckpoint(alignmentTestMode && alignmentCheckpoint != null
                     ? alignmentCheckpoint
                     : checkpoint);
+        }
+    }
+
+    private void reconstructDerivedTrackFramesAfterRestore() {
+        decodedTrackFrame = null;
+        lastDecodedFrameIndex = -1;
+        lastDecodedFlipped = false;
+        alignmentDecodedTrackFrame = null;
+        alignmentLastDecodedFrameIndex = -1;
+
+        if (trackAnimator != null) {
+            decodeCurrentTrackFrame();
+        }
+        if (alignmentTestMode) {
+            decodeAlignmentTrackFrame();
         }
     }
 

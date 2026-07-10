@@ -10,6 +10,7 @@ import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -17,6 +18,93 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestSonic2SpecialStageRewindSnapshot {
+    @Test
+    void restoreReconstructsDerivedTrackPlanesForImmediateDrawAndReusesDecodeCache() throws Exception {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        seedMinimalInitializedGraph(manager);
+        Sonic2TrackAnimator animator = (Sonic2TrackAnimator) get(manager, "trackAnimator");
+        set(animator, "orientationFlipped", true);
+        int restoredFrameIndex = animator.getCurrentTrackFrameIndex();
+        int alignmentFrameIndex = (restoredFrameIndex + 1) % Sonic2SpecialStageConstants.TRACK_FRAME_COUNT;
+        byte[] restoredFrameData = minimalTrackFrame(3);
+        byte[] alignmentFrameData = minimalTrackFrame(7);
+        byte[][] trackFrames = new byte[Sonic2SpecialStageConstants.TRACK_FRAME_COUNT][];
+        trackFrames[restoredFrameIndex] = restoredFrameData;
+        trackFrames[alignmentFrameIndex] = alignmentFrameData;
+        set(manager, "trackFrames", trackFrames);
+        set(manager, "alignmentTestMode", true);
+        set(manager, "alignmentTrackFrameIndex", alignmentFrameIndex);
+        set(manager, "initialized", true);
+        set(manager, "planeDebugMode", planeMode("PLANE_A_ONLY"));
+        RecordingTrackRenderer renderer = new RecordingTrackRenderer();
+        set(manager, "renderer", renderer);
+        Sonic2TrackFrameDecoder.invalidateDecodedFrameCache();
+
+        int[] expectedTrack = Sonic2TrackFrameDecoder.decodeFrame(restoredFrameData, true);
+        int[] expectedAlignmentTrack = Sonic2TrackFrameDecoder.decodeFrame(alignmentFrameData, false);
+
+        set(manager, "decodedTrackFrame", new int[] { 1, 2, 3 });
+        set(manager, "lastDecodedFrameIndex", restoredFrameIndex);
+        set(manager, "lastDecodedFlipped", true);
+        set(manager, "alignmentDecodedTrackFrame", new int[] { 4, 5, 6 });
+        set(manager, "alignmentLastDecodedFrameIndex", alignmentFrameIndex);
+
+        Sonic2SpecialStageSnapshot snapshot = manager.captureRewindSnapshot();
+
+        java.util.Set<String> snapshotFields = Arrays.stream(Sonic2SpecialStageSnapshot.class.getDeclaredFields())
+                .map(Field::getName)
+                .collect(java.util.stream.Collectors.toSet());
+        assertFalse(snapshotFields.contains("decodedTrackFrame"));
+        assertFalse(snapshotFields.contains("lastDecodedFrameIndex"));
+        assertFalse(snapshotFields.contains("lastDecodedFlipped"));
+        assertFalse(snapshotFields.contains("alignmentDecodedTrackFrame"));
+        assertFalse(snapshotFields.contains("alignmentLastDecodedFrameIndex"));
+
+        set(animator, "orientationFlipped", false);
+        set(animator, "currentFrameInSegment", 1);
+        set(manager, "alignmentTrackFrameIndex", (alignmentFrameIndex + 1)
+                % Sonic2SpecialStageConstants.TRACK_FRAME_COUNT);
+        manager.restoreRewindSnapshot(snapshot);
+
+        int[] firstRestoredTrack = (int[]) get(manager, "decodedTrackFrame");
+        int[] firstRestoredAlignment = (int[]) get(manager, "alignmentDecodedTrackFrame");
+        assertNotNull(firstRestoredTrack);
+        assertNotNull(firstRestoredAlignment);
+        assertArrayEquals(expectedTrack, firstRestoredTrack);
+        assertArrayEquals(expectedAlignmentTrack, firstRestoredAlignment);
+        assertEquals(restoredFrameIndex, get(manager, "lastDecodedFrameIndex"));
+        assertEquals(true, get(manager, "lastDecodedFlipped"));
+        assertEquals(alignmentFrameIndex, get(manager, "alignmentLastDecodedFrameIndex"));
+        assertEquals(2, Sonic2TrackFrameDecoder.decodedFrameBuildCountForTesting());
+
+        // Exact-keyframe/held rewind restores must return safe manager-local copies
+        // without rebuilding the unchanged global fixed-domain entries.
+        firstRestoredTrack[0] ^= 0x7FFF;
+        firstRestoredAlignment[0] ^= 0x7FFF;
+        manager.restoreRewindSnapshot(snapshot);
+
+        int[] secondRestoredTrack = (int[]) get(manager, "decodedTrackFrame");
+        int[] secondRestoredAlignment = (int[]) get(manager, "alignmentDecodedTrackFrame");
+        assertNotSame(firstRestoredTrack, secondRestoredTrack);
+        assertNotSame(firstRestoredAlignment, secondRestoredAlignment);
+        assertArrayEquals(expectedTrack, secondRestoredTrack);
+        assertArrayEquals(expectedAlignmentTrack, secondRestoredAlignment);
+        assertEquals(2, Sonic2TrackFrameDecoder.decodedFrameBuildCountForTesting());
+
+        manager.draw();
+        assertEquals(alignmentFrameIndex, renderer.lastTrackFrameIndex);
+        assertSame(secondRestoredAlignment, renderer.lastTrackTiles);
+        assertArrayEquals(expectedAlignmentTrack, renderer.lastTrackTiles);
+
+        set(manager, "alignmentTestMode", false);
+        renderer.lastTrackFrameIndex = -1;
+        renderer.lastTrackTiles = null;
+        manager.draw();
+        assertEquals(restoredFrameIndex, renderer.lastTrackFrameIndex);
+        assertSame(secondRestoredTrack, renderer.lastTrackTiles);
+        assertArrayEquals(expectedTrack, renderer.lastTrackTiles);
+    }
+
     @Test
     void managerSnapshotRestoresScalarsNestedStateAndPalettes() throws Exception {
         Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
@@ -60,8 +148,6 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertEquals(3, get(manager, "alignmentFrameIndex"));
         assertEquals(4, get(manager, "alignmentFrameTimer"));
         assertEquals(5, get(manager, "alignmentTrackFrameIndex"));
-        assertEquals(6, get(manager, "alignmentLastDecodedFrameIndex"));
-        assertArrayEquals(new int[] { 21, 22, 23 }, (int[]) get(manager, "alignmentDecodedTrackFrame"));
         assertEquals(2, get(manager, "alignmentDrawingIndex"));
         assertEquals(9, get(manager, "alignmentTriggerOffsetFrames"));
         assertEquals(1.25, (double) get(manager, "alignmentRainbowSpeedScale"), 0.0001);
@@ -85,9 +171,6 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertEquals(101, get(manager, "hScrollDebugTotal"));
         assertEquals(11, get(manager, "hScrollDebugFrames"));
         assertEquals(12, get(manager, "lastDebugSegmentIndex"));
-        assertArrayEquals(new int[] { 31, 32, 33 }, (int[]) get(manager, "decodedTrackFrame"));
-        assertEquals(13, get(manager, "lastDecodedFrameIndex"));
-        assertEquals(true, get(manager, "lastDecodedFlipped"));
 
         Palette[] restoredPalettes = (Palette[]) get(manager, "palettes");
         assertEquals(capturedPaletteRed, restoredPalettes[3].getColor(11).r);
@@ -477,6 +560,42 @@ class TestSonic2SpecialStageRewindSnapshot {
             values[i] = start + i;
         }
         return values;
+    }
+
+    private static byte[] minimalTrackFrame(int uncIndex) {
+        byte[] data = new byte[15];
+        data[3] = 1;                 // one byte of source-selection flags
+        data[4] = (byte) 0x80;      // first tile comes from the UNC stream
+        data[8] = 1;                 // one byte of UNC index bits
+        data[9] = (byte) (uncIndex << 1); // non-extended six-bit UNC index
+        return data;
+    }
+
+    private static final class RecordingTrackRenderer extends Sonic2SpecialStageRenderer {
+        int lastTrackFrameIndex = -1;
+        int[] lastTrackTiles;
+
+        RecordingTrackRenderer() {
+            super(null);
+        }
+
+        @Override
+        public void renderTrack(int trackFrameIndex, int[] frameTiles) {
+            lastTrackFrameIndex = trackFrameIndex;
+            lastTrackTiles = frameTiles;
+        }
+
+        @Override
+        public void renderObjects() {
+        }
+
+        @Override
+        public void renderPlayers() {
+        }
+
+        @Override
+        public void renderIntroUI() {
+        }
     }
 
     private static Object planeMode(String name) throws Exception {

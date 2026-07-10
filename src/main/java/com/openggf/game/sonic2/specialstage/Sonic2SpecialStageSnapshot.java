@@ -33,8 +33,6 @@ final class Sonic2SpecialStageSnapshot {
     final int alignmentFrameIndex;
     final int alignmentFrameTimer;
     final int alignmentTrackFrameIndex;
-    final int alignmentLastDecodedFrameIndex;
-    final int[] alignmentDecodedTrackFrame;
     final int alignmentDrawingIndex;
     final int alignmentTriggerOffsetFrames;
     final double alignmentRainbowSpeedScale;
@@ -58,9 +56,6 @@ final class Sonic2SpecialStageSnapshot {
     final int hScrollDebugTotal;
     final int hScrollDebugFrames;
     final int lastDebugSegmentIndex;
-    final int[] decodedTrackFrame;
-    final int lastDecodedFrameIndex;
-    final boolean lastDecodedFlipped;
     final Palette[] palettes;
     final TrackAnimatorSnapshot trackAnimator;
     final PlayerTopologySnapshot playerTopology;
@@ -99,8 +94,6 @@ final class Sonic2SpecialStageSnapshot {
             int alignmentFrameIndex,
             int alignmentFrameTimer,
             int alignmentTrackFrameIndex,
-            int alignmentLastDecodedFrameIndex,
-            int[] alignmentDecodedTrackFrame,
             int alignmentDrawingIndex,
             int alignmentTriggerOffsetFrames,
             double alignmentRainbowSpeedScale,
@@ -124,9 +117,6 @@ final class Sonic2SpecialStageSnapshot {
             int hScrollDebugTotal,
             int hScrollDebugFrames,
             int lastDebugSegmentIndex,
-            int[] decodedTrackFrame,
-            int lastDecodedFrameIndex,
-            boolean lastDecodedFlipped,
             Palette[] palettes,
             TrackAnimatorSnapshot trackAnimator,
             PlayerTopologySnapshot playerTopology,
@@ -163,8 +153,6 @@ final class Sonic2SpecialStageSnapshot {
         this.alignmentFrameIndex = alignmentFrameIndex;
         this.alignmentFrameTimer = alignmentFrameTimer;
         this.alignmentTrackFrameIndex = alignmentTrackFrameIndex;
-        this.alignmentLastDecodedFrameIndex = alignmentLastDecodedFrameIndex;
-        this.alignmentDecodedTrackFrame = cloneIntArray(alignmentDecodedTrackFrame);
         this.alignmentDrawingIndex = alignmentDrawingIndex;
         this.alignmentTriggerOffsetFrames = alignmentTriggerOffsetFrames;
         this.alignmentRainbowSpeedScale = alignmentRainbowSpeedScale;
@@ -188,9 +176,6 @@ final class Sonic2SpecialStageSnapshot {
         this.hScrollDebugTotal = hScrollDebugTotal;
         this.hScrollDebugFrames = hScrollDebugFrames;
         this.lastDebugSegmentIndex = lastDebugSegmentIndex;
-        this.decodedTrackFrame = cloneIntArray(decodedTrackFrame);
-        this.lastDecodedFrameIndex = lastDecodedFrameIndex;
-        this.lastDecodedFlipped = lastDecodedFlipped;
         this.palettes = clonePalettes(palettes);
         this.trackAnimator = trackAnimator;
         this.playerTopology = playerTopology;
