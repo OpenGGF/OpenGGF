@@ -221,6 +221,21 @@ only; ring counts remain strict to the current gameplay row. Focused
 from f9295 to f9376, a new strict ring-count mismatch (`expected=2`,
 `actual=1`).
 
+Round 15 banks S3K's hurt-spill allocation snapshot independently of the
+remaining Obj37 cadence correction. ROM `HurtCharacter` allocates the owner in
+the player slot, then that owner uses `AllocateObjectAfterCurrent` before any
+higher slots execute; the engine deferred materialization by a frame and had
+reserved only the owner, allowing higher objects to free holes before the
+remaining 31 allocations. The pending-spill bridge now reserves the complete
+after-current chain at hurt time and materializes into exactly those slots on
+the delayed engine pass (`sonic3k.asm:21065-21088,35490-35591,37899-37934`).
+Focused lost-ring tests cover both immediate reservation and immunity to a
+subsequently-freed hole. With the prior cadence formula deliberately unchanged,
+the complete-run frontier remains f9376; this commit isolates the allocator
+cause from the next frame-counter visibility change. Full cross-game sweeps at
+this checkpoint are green: all 29 S1 and all 48 S2 trace replays pass with the
+explicit REV01 ROM paths.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
 banked rounds the current stacked working-tree complete-run frontier is f9376. Those causes will be recorded and committed

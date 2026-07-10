@@ -2281,9 +2281,31 @@ public class LevelManager {
         if (objectManager != null && objectManager.preallocatesLostRingOwnerSlot()) {
             preallocatedFirstSlot = objectManager.allocateDynamicSlotAvoidingCurrentPassFrees();
         }
+        int[] preallocatedSlots = preallocatedFirstSlot >= 0
+                ? new int[] {preallocatedFirstSlot}
+                : new int[0];
+        boolean slotsFullyReserved = false;
+        if (preallocatedFirstSlot >= 0 && objectManager != null
+                && objectManager.lostRingRemainderAllocatesAfterOwnerSlot()) {
+            int requested = Math.min(count, 32);
+            int[] reserved = new int[requested];
+            reserved[0] = preallocatedFirstSlot;
+            int reservedCount = 1;
+            int previousSlot = preallocatedFirstSlot;
+            while (reservedCount < requested) {
+                int slot = objectManager.allocateSlotAfter(previousSlot);
+                if (slot < 0) {
+                    break;
+                }
+                reserved[reservedCount++] = slot;
+                previousSlot = slot;
+            }
+            preallocatedSlots = java.util.Arrays.copyOf(reserved, reservedCount);
+            slotsFullyReserved = true;
+        }
         pendingLostRingSpawns.add(new PendingLostRingSpawn(
                 player, count, player.getCentreX(), player.getCentreY(), frameCounter,
-                preallocatedFirstSlot));
+                preallocatedSlots, slotsFullyReserved));
     }
 
     private void processPendingLostRingSpawns() {
@@ -2299,9 +2321,12 @@ public class LevelManager {
             if (pending.player().getRingCount() > 0) {
                 ringManager.spawnLostRingsWithInitialObjectStep(
                         pending.player(), pending.ringCount(), frameCounter,
-                        pending.x(), pending.y(), pending.preallocatedFirstSlot());
-            } else if (pending.preallocatedFirstSlot() >= 0 && objectManager != null) {
-                objectManager.releaseDynamicSlot(pending.preallocatedFirstSlot());
+                        pending.x(), pending.y(), pending.preallocatedSlots(),
+                        pending.slotsFullyReserved());
+            } else if (objectManager != null) {
+                for (int slot : pending.preallocatedSlots()) {
+                    objectManager.releaseDynamicSlot(slot);
+                }
             }
             iterator.remove();
         }
@@ -2309,7 +2334,7 @@ public class LevelManager {
 
     private record PendingLostRingSpawn(
             AbstractPlayableSprite player, int ringCount, int x, int y, int frameCounter,
-            int preallocatedFirstSlot) {
+            int[] preallocatedSlots, boolean slotsFullyReserved) {
     }
 
     // ── Post-load assembly methods ──────────────────────────────────────

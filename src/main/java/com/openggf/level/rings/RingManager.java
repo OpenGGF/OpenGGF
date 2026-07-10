@@ -483,8 +483,19 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     public void spawnLostRingsWithInitialObjectStep(AbstractPlayableSprite player, int ringCount,
                                                     int frameCounter, int x, int y,
                                                     int preallocatedFirstSlot) {
-        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y, preallocatedFirstSlot,
-                true);
+        int[] slots = preallocatedFirstSlot >= 0
+                ? new int[] {preallocatedFirstSlot}
+                : new int[0];
+        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y, slots,
+                false, true);
+    }
+
+    public void spawnLostRingsWithInitialObjectStep(AbstractPlayableSprite player, int ringCount,
+                                                    int frameCounter, int x, int y,
+                                                    int[] preallocatedSlots,
+                                                    boolean slotsFullyReserved) {
+        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y,
+                preallocatedSlots, slotsFullyReserved, true);
     }
 
     /** Shared spilled-ring spin owner feeding the LostRingObjectInstance object path. */
@@ -1333,6 +1344,17 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
                                     int x, int y, int preallocatedFirstSlot,
                                     boolean applyInitialObjectStep) {
+            int[] slots = preallocatedFirstSlot >= 0
+                    ? new int[] {preallocatedFirstSlot}
+                    : new int[0];
+            spawnLostRings(player, ringCount, frameCounter, x, y, slots,
+                    false, applyInitialObjectStep);
+        }
+
+        private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
+                                    int x, int y, int[] preallocatedSlots,
+                                    boolean slotsFullyReserved,
+                                    boolean applyInitialObjectStep) {
             if (player == null || renderer == null) {
                 return;
             }
@@ -1349,7 +1371,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             // Reset the shared spin owner that feeds every live ring's render frame.
             spillAnimation.reset();
             ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
-
             // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25143-25144:
             // `bsr.w AllocateObject; bne.w +++` — a failed AllocateObject branches PAST the
             // spill loop, truncating the spill). S1 allocates every Obj37 from the loop. S2
@@ -1360,7 +1381,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             boolean preallocateOwnerSlot = objectManager != null && objectManager.preallocatesLostRingOwnerSlot();
             boolean allocateRemainderAfterOwner = objectManager != null
                     && objectManager.lostRingRemainderAllocatesAfterOwnerSlot();
-            int firstReservedSlot = preallocatedFirstSlot;
+            int firstReservedSlot = preallocatedSlots.length > 0 ? preallocatedSlots[0] : -1;
             if (preallocateOwnerSlot && firstReservedSlot < 0) {
                 firstReservedSlot = objectManager.allocateDynamicSlot();
             }
@@ -1388,7 +1409,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 }
 
                 int slotIndex = -1;
-                if (i == 0 && preallocateOwnerSlot) {
+                if (i < preallocatedSlots.length) {
+                    slotIndex = preallocatedSlots[i];
+                } else if (slotsFullyReserved) {
+                    break;
+                } else if (i == 0 && preallocateOwnerSlot) {
                     slotIndex = firstReservedSlot;
                 } else if (objectManager != null) {
                     slotIndex = allocateRemainderAfterOwner
