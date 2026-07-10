@@ -98,9 +98,10 @@ class TestBlipResamplerBitExactness {
                     "output readiness must match at input " + i);
             while (production.hasOutputSample()) {
                 long index = compared;
-                assertEquals(reference.getOutputLeft(), production.getOutputLeft(),
+                long packed = production.getOutputStereoPacked();
+                assertEquals(reference.getOutputLeft(), (int) (packed >> 32),
                         "left output " + index + " diverged");
-                assertEquals(reference.getOutputRight(), production.getOutputRight(),
+                assertEquals(reference.getOutputRight(), (int) packed,
                         "right output " + index + " diverged");
                 production.advanceOutput();
                 reference.advanceOutput();

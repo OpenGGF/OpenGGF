@@ -214,6 +214,48 @@ public class BlipResampler {
         return interpolate(historyR);
     }
 
+    /**
+     * Get both interpolated output samples with one traversal of the FIR window.
+     * The left sample occupies the high 32 bits and the right sample the low 32
+     * bits. Each channel retains the scalar interpolation's multiplication and
+     * accumulation order so the packed path remains bit-exact.
+     */
+    public long getOutputStereoPacked() {
+        final double pos = outputPos;
+        // Direct cast is equivalent to Math.floor() for positive values (outputPos is always >= 0)
+        long center = (long) pos;
+        if (pos != cachedPhaseOutputPos) {
+            double frac = pos - center;
+            int phase = (int) (frac * PHASE_COUNT);
+            if (phase >= PHASE_COUNT) phase = PHASE_COUNT - 1;
+            cachedPhase = phase;
+            cachedPhaseOutputPos = pos;
+        }
+        double[] coeffs = SINC_TABLE[cachedPhase];
+
+        long start = center - (FILTER_TAPS / 2) + 1;
+        double sumL = 0.0;
+        double sumR = 0.0;
+        if (start >= inputIndex - BUFFER_SIZE && center + (FILTER_TAPS / 2) < inputIndex) {
+            int pos0 = (head - (int) (inputIndex - start)) & BUFFER_MASK;
+            for (int tap = 0; tap < FILTER_TAPS; tap++) {
+                sumL += historyL[pos0] * coeffs[tap];
+                sumR += historyR[pos0] * coeffs[tap];
+                pos0 = (pos0 + 1) & BUFFER_MASK;
+            }
+        } else {
+            for (int tap = 0; tap < FILTER_TAPS; tap++) {
+                long idx = start + tap;
+                sumL += sampleAt(historyL, idx) * coeffs[tap];
+                sumR += sampleAt(historyR, idx) * coeffs[tap];
+            }
+        }
+
+        int left = (int) Math.round(sumL);
+        int right = (int) Math.round(sumR);
+        return ((long) left << 32) | (right & 0xFFFF_FFFFL);
+    }
+
     // Phase index is a pure function of outputPos; cache it so the second channel of
     // each output sample (L then R at the same outputPos) skips the recomputation.
     private double cachedPhaseOutputPos = Double.NaN;
