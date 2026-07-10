@@ -23,6 +23,8 @@ import com.openggf.debug.DebugColor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.*;
@@ -199,6 +201,9 @@ public class Sonic2SpecialStageManager {
     private long diagnosticWallStartTime = 0;
     private int diagnosticUpdateCount = 0;
     private int diagnosticTrackAdvances = 0;
+    private DiagnosticClock diagnosticClock = DiagnosticClock.SYSTEM;
+    private Boolean fineDiagnosticsOverride;
+    private boolean diagnosticEpochActive;
 
     /**
      * Lag compensation factor to simulate original hardware lag frames.
@@ -324,6 +329,18 @@ public class Sonic2SpecialStageManager {
         this.graphicsManager = graphicsManager;
     }
 
+    void setDiagnosticClockForTesting(DiagnosticClock diagnosticClock) {
+        this.diagnosticClock = java.util.Objects.requireNonNull(diagnosticClock);
+    }
+
+    void setFineDiagnosticsOverrideForTesting(Boolean fineDiagnosticsOverride) {
+        this.fineDiagnosticsOverride = fineDiagnosticsOverride;
+    }
+
+    void runTimingDiagnosticsForTesting(boolean trackAdvanced) {
+        updateTimingDiagnostics(true, trackAdvanced);
+    }
+
     private SonicConfigurationService configuration() {
         return configService != null ? configService : GameServices.configuration();
     }
@@ -350,7 +367,7 @@ public class Sonic2SpecialStageManager {
      */
     public void initialize(int stageIndex) throws IOException {
         // Reset any partial state from previous initialization attempts
-        reset();
+        prepareForInitialization();
 
         try {
             // Get ROM from centralized RomManager
@@ -382,6 +399,10 @@ public class Sonic2SpecialStageManager {
             reset();
             throw e;
         }
+    }
+
+    void prepareForInitialization() {
+        reset();
     }
 
     /**
@@ -991,33 +1012,11 @@ public class Sonic2SpecialStageManager {
         if (lagAccumulator >= 1.0) {
             lagAccumulator -= 1.0;
             // Still update lastFrameTime to avoid FPS diagnostic skew
-            lastFrameTime = System.nanoTime();
+            updateTimingDiagnostics(false, false);
             return; // Skip this entire frame (simulate lag)
         }
 
-        // Frame timing diagnostic - measure actual FPS
-        long now = System.nanoTime();
-        if (lastFrameTime != 0) {
-            long delta = now - lastFrameTime;
-            frameSampleSum += delta;
-            frameSampleCount++;
-            if (frameSampleCount >= FRAME_SAMPLE_SIZE) {
-                double avgMs = (frameSampleSum / (double) frameSampleCount) / 1_000_000.0;
-                double actualFps = 1000.0 / avgMs;
-                LOGGER.fine(String.format("Actual FPS: %.1f (%.2f ms/frame)", actualFps, avgMs));
-                frameSampleCount = 0;
-                frameSampleSum = 0;
-            }
-        }
-        lastFrameTime = now;
-
         frameCounter++;
-
-        // Lag compensation diagnostics - track actual timing
-        if (diagnosticWallStartTime == 0) {
-            diagnosticWallStartTime = System.currentTimeMillis();
-        }
-        diagnosticUpdateCount++;
 
         // Increment drawing index, cycling based on current frame duration.
         // In ROM: drawing_index increments each VBlank, resets when >= frame_timer
@@ -1042,31 +1041,7 @@ public class Sonic2SpecialStageManager {
 
         // Track animation always runs (even during intro)
         boolean frameChanged = trackAnimator.update();
-
-        // Track advances for diagnostic
-        if (frameChanged) {
-            diagnosticTrackAdvances++;
-        }
-
-        // Log diagnostic every 5 seconds
-        long elapsedMs = System.currentTimeMillis() - diagnosticWallStartTime;
-        if (elapsedMs >= 5000) {
-            double seconds = elapsedMs / 1000.0;
-            double updatesPerSec = diagnosticUpdateCount / seconds;
-            double trackPerSec = diagnosticTrackAdvances / seconds;
-
-            LOGGER.warning(String.format(
-                    "DIAGNOSTIC: %.1f updates/sec (expect 60), %.1f track/sec (expect 12), " +
-                            "speedFactor=%d, duration=%d",
-                    updatesPerSec, trackPerSec,
-                    trackAnimator.getSpeedFactor(),
-                    getAlignmentFrameDuration()));
-
-            // Reset counters
-            diagnosticWallStartTime = System.currentTimeMillis();
-            diagnosticUpdateCount = 0;
-            diagnosticTrackAdvances = 0;
-        }
+        updateTimingDiagnostics(true, frameChanged);
 
         if (frameChanged || decodedTrackFrame == null) {
             decodeCurrentTrackFrame();
@@ -1096,6 +1071,91 @@ public class Sonic2SpecialStageManager {
         // Update rainbow palette cycling (runs every frame, but only changes every 8
         // frames)
         updateRainbowPaletteCycle();
+    }
+
+    private void updateTimingDiagnostics(boolean countUpdate, boolean trackAdvanced) {
+        if (!fineDiagnosticsEnabled()) {
+            if (diagnosticEpochActive || hasDiagnosticTimingState()) {
+                clearDiagnosticTimingState();
+            }
+            return;
+        }
+        if (!diagnosticEpochActive) {
+            clearDiagnosticTimingState();
+            diagnosticEpochActive = true;
+        }
+
+        long now = diagnosticClock.nanoTime();
+        if (countUpdate && lastFrameTime != 0) {
+            long delta = now - lastFrameTime;
+            frameSampleSum += delta;
+            frameSampleCount++;
+            if (frameSampleCount >= FRAME_SAMPLE_SIZE) {
+                double avgMs = (frameSampleSum / (double) frameSampleCount) / 1_000_000.0;
+                if (avgMs > 0.0 && Double.isFinite(avgMs)) {
+                    double actualFps = 1000.0 / avgMs;
+                    LOGGER.fine(String.format(Locale.ROOT,
+                            "Actual FPS: %.1f (%.2f ms/frame)", actualFps, avgMs));
+                }
+                frameSampleCount = 0;
+                frameSampleSum = 0;
+            }
+        }
+        lastFrameTime = now;
+
+        if (!countUpdate) {
+            return;
+        }
+
+        long wallNow = diagnosticClock.currentTimeMillis();
+        if (diagnosticWallStartTime == 0) {
+            diagnosticWallStartTime = wallNow;
+        }
+        diagnosticUpdateCount++;
+        if (trackAdvanced) {
+            diagnosticTrackAdvances++;
+        }
+
+        long elapsedMs = wallNow - diagnosticWallStartTime;
+        if (elapsedMs >= 5000) {
+            double seconds = elapsedMs / 1000.0;
+            double updatesPerSec = diagnosticUpdateCount / seconds;
+            double trackPerSec = diagnosticTrackAdvances / seconds;
+            LOGGER.fine(String.format(Locale.ROOT,
+                    "DIAGNOSTIC: %.1f updates/sec (expect 60), %.1f track/sec (expect 12), " +
+                            "speedFactor=%d, duration=%d",
+                    updatesPerSec, trackPerSec,
+                    trackAnimator != null ? trackAnimator.getSpeedFactor() : 12,
+                    getAlignmentFrameDuration()));
+            diagnosticWallStartTime = wallNow;
+            diagnosticUpdateCount = 0;
+            diagnosticTrackAdvances = 0;
+        }
+    }
+
+    private boolean fineDiagnosticsEnabled() {
+        return fineDiagnosticsOverride != null
+                ? fineDiagnosticsOverride
+                : LOGGER.isLoggable(Level.FINE);
+    }
+
+    private boolean hasDiagnosticTimingState() {
+        return diagnosticWallStartTime != 0
+                || diagnosticUpdateCount != 0
+                || diagnosticTrackAdvances != 0
+                || lastFrameTime != 0
+                || frameSampleCount != 0
+                || frameSampleSum != 0;
+    }
+
+    private void clearDiagnosticTimingState() {
+        diagnosticWallStartTime = 0;
+        diagnosticUpdateCount = 0;
+        diagnosticTrackAdvances = 0;
+        lastFrameTime = 0;
+        frameSampleCount = 0;
+        frameSampleSum = 0;
+        diagnosticEpochActive = false;
     }
 
     /**
@@ -1540,7 +1600,7 @@ public class Sonic2SpecialStageManager {
         }
 
         // Keep lastFrameTime updated to avoid huge FPS deltas on exit.
-        lastFrameTime = System.nanoTime();
+        updateTimingDiagnostics(false, false);
     }
 
     private int getAlignmentFrameDuration() {
@@ -2037,6 +2097,7 @@ public class Sonic2SpecialStageManager {
         emeraldCollected = false;
         diagnosticDone = false;
         flipDiagnosticDone = false;
+        clearDiagnosticTimingState();
 
         // Shader-based background renderer cleanup
         if (bgRenderer != null) {
@@ -2201,6 +2262,7 @@ public class Sonic2SpecialStageManager {
         lastFrameTime = snapshot.lastFrameTime;
         frameSampleCount = snapshot.frameSampleCount;
         frameSampleSum = snapshot.frameSampleSum;
+        diagnosticEpochActive = false;
         skydomeScrollX = snapshot.skydomeScrollX;
         alternateScrollBuffer = snapshot.alternateScrollBuffer;
         lastAlternateScrollBuffer = snapshot.lastAlternateScrollBuffer;
@@ -2964,4 +3026,22 @@ public class Sonic2SpecialStageManager {
             activeObjects.clear();
         }
     }
+}
+
+interface DiagnosticClock {
+    DiagnosticClock SYSTEM = new DiagnosticClock() {
+        @Override
+        public long nanoTime() {
+            return System.nanoTime();
+        }
+
+        @Override
+        public long currentTimeMillis() {
+            return System.currentTimeMillis();
+        }
+    };
+
+    long nanoTime();
+
+    long currentTimeMillis();
 }
