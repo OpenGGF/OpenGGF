@@ -543,6 +543,16 @@ public class CollisionSystem {
         updateGroundMode(sprite);
 
         if (selectedResult == null) {
+            // FindFloor initializes both angle outputs to the flagged empty-tile
+            // value 3. Player_Angle sees that odd result and rounds the current
+            // angle to its cardinal quadrant before AnglePos detaches the player
+            // (sonic3k.asm:18749-18752,18804-18815,18839-18842; the S2 AnglePos
+            // routine uses the same sequence). Engine probes represent an empty
+            // tile as null, so preserve the ROM's angle normalization explicitly.
+            // This is observable when a grounded player crosses the death plane:
+            // Kill_Character sets Status_InAir, but its caller still completes
+            // MoveSprite_TestGravity2 + AnglePos in the same frame.
+            sprite.setAngle((byte) (((sprite.getAngle() & 0xFF) + 0x20) & 0xC0));
             if (sprite.isStickToConvex()) {
                 return;
             }

@@ -74,10 +74,22 @@ and `TestPlayableSpriteMovement#s3kTailsJumpRepressDoesNotEnterSonicShieldMoves`
 pass with MSE disabled. These are shared sidekick-state rules, not AIZ/frame
 exceptions.
 
-Later unbanked investigation has advanced the branch-local complete-run frontier
-through f2303, f3294, f3420, the f4340-f4803 rock-push cluster, f5158, f5493,
-and currently f6237. Those causes will be recorded and committed separately as
-their focused guards are completed. The level-select AIZ trace remains at f8941
+Round 3 removes the legacy AIZ1 exact-distance landing carve-out. ROM
+`Tails_DoLevelCollision` rejects `d1 == 0` through `tst.w d1 / bpl`, independent
+of zone, roll state, or floor angle (`sonic3k.asm:28901-28908`); retaining the
+override made CPU Tails land early at the f3420 slope contact. The same shared
+collision pass now also models `Player_Angle`'s empty-probe fallback: two
+flagged angle-3 results round the existing angle to its cardinal quadrant before
+walk-off (`sonic3k.asm:18749-18842`). That closed the isolated f5493
+boundary-kill angle mismatch and advanced the complete-run frontier to f6237.
+Focused `TestSonic3kZoneFeatureProvider` and
+`TestCollisionSystemAirLanding` suites pass with MSE disabled. No zone, route,
+or frame predicate was added.
+
+Remaining unbanked object investigation has advanced through f2303, f3294, the
+f4340-f4803 rock-push cluster, and f5158; together with round 3 the current
+branch-local frontier is f6237. Those causes will be recorded and committed
+separately as their focused guards are completed. The level-select AIZ trace remains at f8941
 and is still part of the stage-green exit gate. S1/S2 full trace sweeps remain
 pending until the AIZ fixes are banked; no green claim is made yet.
 
