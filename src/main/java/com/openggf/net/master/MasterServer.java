@@ -11,6 +11,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
@@ -19,6 +21,9 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.ScheduledFuture;
 
 import java.io.File;
 import java.net.InetSocketAddress;
@@ -40,6 +45,8 @@ public final class MasterServer implements AutoCloseable {
     private final NioEventLoopGroup brokerGroup;
     private final NioEventLoopGroup relayGroup;
     private final Channel serverChannel;
+    private final ChannelGroup clientChannels;
+    private final List<ScheduledFuture<?>> scheduledTasks;
     private final SqliteIdentityStore store;
     private final TrustLadder ladder;
     private final SessionRegistry registry;
@@ -55,7 +62,9 @@ public final class MasterServer implements AutoCloseable {
 
     private MasterServer(MasterConfig config, Path dataDir,
                          NioEventLoopGroup brokerGroup, NioEventLoopGroup relayGroup,
-                         Channel serverChannel, SqliteIdentityStore store,
+                         Channel serverChannel, ChannelGroup clientChannels,
+                         List<ScheduledFuture<?>> scheduledTasks,
+                         SqliteIdentityStore store,
                          TrustLadder ladder, SessionRegistry registry,
                          GuestTunnelRouter tunnels, RelayRoomManager relays,
                          RoomBroker broker, RecordingBlobStore recordingBlobs,
@@ -67,6 +76,8 @@ public final class MasterServer implements AutoCloseable {
         this.brokerGroup = brokerGroup;
         this.relayGroup = relayGroup;
         this.serverChannel = serverChannel;
+        this.clientChannels = clientChannels;
+        this.scheduledTasks = scheduledTasks;
         this.store = store;
         this.ladder = ladder;
         this.registry = registry;
@@ -86,6 +97,7 @@ public final class MasterServer implements AutoCloseable {
                 Math.max(1, Runtime.getRuntime().availableProcessors()));
         SqliteIdentityStore store = null;
         Channel channel = null;
+        ChannelGroup clientChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
         try {
             var clock = (java.util.function.LongSupplier) System::currentTimeMillis;
             store = new SqliteIdentityStore(dataDir.resolve(config.dbPath()));
@@ -128,6 +140,7 @@ public final class MasterServer implements AutoCloseable {
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel socket) {
+                            clientChannels.add(socket);
                             ChannelPipeline pipeline = socket.pipeline();
                             if (ssl != null) {
                                 pipeline.addLast(ssl.newHandler(socket.alloc()));
@@ -149,21 +162,24 @@ public final class MasterServer implements AutoCloseable {
                                     tunnels, brokerLoop, counter));
                         }
                     }).bind(config.port()).syncUninterruptibly().channel();
-            brokerGroup.next().scheduleAtFixedRate(broker::tick,
-                    1, 1, TimeUnit.SECONDS);
-            brokerGroup.next().scheduleAtFixedRate(relays::tickAll,
-                    50, 50, TimeUnit.MILLISECONDS);
-            brokerGroup.next().scheduleAtFixedRate(() -> {
+            List<ScheduledFuture<?>> scheduledTasks = new ArrayList<>();
+            scheduledTasks.add(brokerGroup.next().scheduleAtFixedRate(broker::tick,
+                    1, 1, TimeUnit.SECONDS));
+            scheduledTasks.add(brokerGroup.next().scheduleAtFixedRate(relays::tickAll,
+                    50, 50, TimeUnit.MILLISECONDS));
+            scheduledTasks.add(brokerGroup.next().scheduleAtFixedRate(() -> {
                 relays.voidExpiredUploads();
                 verificationJobs.requeueExpiredLeases();
                 verifiers.expireStale();
-            }, 1, 1, TimeUnit.SECONDS);
-            brokerGroup.next().scheduleAtFixedRate(() -> recordingBlobs.deleteOlderThan(
+            }, 1, 1, TimeUnit.SECONDS));
+            scheduledTasks.add(brokerGroup.next().scheduleAtFixedRate(
+                    () -> recordingBlobs.deleteOlderThan(
                             clock.getAsLong() - config.recordingRetentionDays()
                                     * 24L * 3_600_000L),
-                    1, 1, TimeUnit.HOURS);
+                    1, 1, TimeUnit.HOURS));
             MasterServer server = new MasterServer(config, dataDir, brokerGroup,
-                    relayGroup, channel, store, ladder, registry, tunnels, relays, broker,
+                    relayGroup, channel, clientChannels, List.copyOf(scheduledTasks),
+                    store, ladder, registry, tunnels, relays, broker,
                     recordingBlobs, verifiers, verificationJobs, verdictConsequences);
             server.admin = AdminEndpoint.start(config, server, dataDir);
             return server;
@@ -171,6 +187,7 @@ public final class MasterServer implements AutoCloseable {
             if (channel != null) {
                 channel.close().syncUninterruptibly();
             }
+            clientChannels.close().syncUninterruptibly();
             if (store != null) {
                 store.close();
             }
@@ -235,10 +252,23 @@ public final class MasterServer implements AutoCloseable {
         if (admin != null) {
             admin.close();
         }
+        scheduledTasks.forEach(task -> task.cancel(false));
         serverChannel.close().syncUninterruptibly();
+        clientChannels.close().syncUninterruptibly();
+        drain(brokerGroup);
+        drain(relayGroup);
+        drain(brokerGroup);
         relayGroup.shutdownGracefully(0, 5, TimeUnit.SECONDS).syncUninterruptibly();
         brokerGroup.shutdownGracefully(0, 5, TimeUnit.SECONDS).syncUninterruptibly();
         store.close();
+    }
+
+    private static void drain(NioEventLoopGroup group) {
+        List<Future<?>> barriers = new ArrayList<>();
+        for (EventExecutor executor : group) {
+            barriers.add(executor.submit(() -> { }));
+        }
+        barriers.forEach(Future::syncUninterruptibly);
     }
 
     private static SslContext sslContext(MasterConfig config) throws Exception {

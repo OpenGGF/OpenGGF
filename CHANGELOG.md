@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Master-server shutdown now drains relay-room disconnect cleanup before terminating event loops.** Accepted client channels and periodic jobs are tracked explicitly; shutdown closes sockets, drains broker/room callbacks, and only then stops executors, avoiding rejected room-close tasks during clean process/test teardown.
 - **Multiplayer time attack (phase 5): replay verification and verified rooms.** Adds the `openggf-verifier` replay service, TRUSTED-gated verified relay rooms with pending-to-verified standings, HTTPS input-recording uploads, signed verdicts with cheat sanctions, and casual-room spot-checks.
 - **Multiplayer time attack (phase 4): race presentation and between-round polish.** Adds podium results, authoritative next-track voting, open-character standings badges, ghost nameplates and finish-state dimming, post-finish spectator panning, and a roster-driven minimap strip.
 - **Multiplayer time attack (phase 3): master server and relay scale.** Adds the server browser and room broker protocol, relay rooms for up to 256 players with relevance filtering, roster and backpressure channels, TLS transport, persistent pseudonymous identity trust/sanctions, proof-of-work admission, and load/fuzz acceptance tooling.
