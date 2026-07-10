@@ -159,6 +159,16 @@ public class Sonic2SpecialStageManager {
     private int pressedButtons = 0;
     private int p2HeldButtons = 0;
     private int p2LogicalButtons = 0;
+    private boolean recurringMainPassPending;
+    private int pendingMainHeldButtons;
+    private int pendingMainPressedButtons;
+    private int pendingMainP2HeldButtons;
+    private int pendingMainP2LogicalButtons;
+    private boolean pendingMainCheckpointStep;
+    private int previousPhysicalHeldButtons;
+    private int previousPhysicalPressedButtons;
+    private int previousPhysicalP2HeldButtons;
+    private int previousPhysicalP2LogicalButtons;
     private int tailsControlCounter = 0;
     private final int[] tailsCtrlRecordBuf = new int[16];
 
@@ -1043,10 +1053,6 @@ public class Sonic2SpecialStageManager {
             return;
         }
 
-        // Capture once: intro.update() transitions PRE_ROLL -> DROP mid-frame,
-        // but ROM state remains suppressed for that whole final pre-roll tick.
-        boolean preRoll = intro != null && intro.isPreRollActive();
-
         if (alignmentTestMode) {
             updateAlignmentTest();
             return;
@@ -1057,10 +1063,31 @@ public class Sonic2SpecialStageManager {
         lagAccumulator += lagCompensation;
         if (lagAccumulator >= 1.0) {
             lagAccumulator -= 1.0;
+            // No VInt/control-copy occurred, so a physical press edge sampled
+            // only on this skipped update must not survive into the next one.
+            // P2's current mapper exposes logical held state (not a separate
+            // pressed edge), so preserve it alongside P1 held state for the next
+            // executed VInt. Keep previousPhysical* unchanged: it belongs to the
+            // last VInt that actually ran (s2.asm:6674-6680).
+            pressedButtons = 0;
             // Still update lastFrameTime to avoid FPS diagnostic skew
             lastFrameTime = System.nanoTime();
             return; // Skip this entire frame (simulate lag)
         }
+
+        // The recorder can observe VInt/draw/stream/scroll state before the later
+        // RunObjects phase completes. Publish only that prior RunObjects work at
+        // the start of the next executed logical update (s2.asm:6674-6690).
+        executePendingRecurringMainPass();
+
+        // Capture once after the pending pass: intro object execution may cross a
+        // presentation phase, but current VInt gating stays fixed for this tick.
+        Sonic2SpecialStageIntro.Phase introPhase = intro != null
+                ? intro.getCurrentPhase()
+                : Sonic2SpecialStageIntro.Phase.GAMEPLAY;
+        boolean preRoll = introPhase == Sonic2SpecialStageIntro.Phase.PRE_ROLL;
+        boolean fadeFromWhite = introPhase == Sonic2SpecialStageIntro.Phase.FADE_FROM_WHITE;
+        boolean runtimeFrozen = preRoll || fadeFromWhite;
 
         // Frame timing diagnostic - measure actual FPS
         long now = System.nanoTime();
@@ -1087,7 +1114,7 @@ public class Sonic2SpecialStageManager {
         diagnosticUpdateCount++;
 
         boolean drawingIndexWrapped = false;
-        if (!preRoll) {
+        if (!runtimeFrozen) {
             if (initialPlayerSpawnPending) {
                 // Obj09/Obj10 ids become observable before this first
                 // Vint_S2SS tick (s2.asm:6628-6631).
@@ -1102,6 +1129,10 @@ public class Sonic2SpecialStageManager {
                 initialSpeedPromotionPending = false;
             }
 
+            // Vint_S2SS owns the duration countdown/reload. SSTrack_Draw owns
+            // animation-frame advancement and is invoked separately below.
+            trackAnimator.tickVintTimer();
+
             // Increment drawing index, cycling based on current frame duration.
             // In ROM: drawing_index increments each VBlank, resets when >= frame_timer
             // (duration).
@@ -1115,22 +1146,74 @@ public class Sonic2SpecialStageManager {
             drawingIndexWrapped = drawingIndex < previousDrawingIndex;
         }
 
-        // Update skydome scroll based on current track animation state
-        updateSkydomeScroll();
-
-        // Update vertical scroll for parallax effects (bobbing, rise/drop)
-        updateVScroll();
-
-        // Update intro sequence
-        if (intro != null) {
+        // PRE_ROLL and Pal_FadeFromWhite are synchronous wait loops. Their phase
+        // counters advance here, but DROP/WAIT presentation objects advance only
+        // from the deferred recurring RunObjects pass.
+        if (runtimeFrozen && intro != null) {
             intro.update();
         }
 
-        boolean frameChanged = !preRoll && trackAnimator.update();
+        boolean playerBootstrapWaitTick = !runtimeFrozen
+                && playerBootstrapPhase != PlayerBootstrapPhase.INITIALIZED;
+        boolean firstDrawingWaitTick = playerBootstrapWaitTick
+                && playerBootstrapPhase == PlayerBootstrapPhase.WAIT_FIRST_DRAWING_WRAP;
+        boolean secondDurationWaitTick = !runtimeFrozen
+                && playerBootstrapPhase == PlayerBootstrapPhase.WAIT_SECOND_DURATION_WRAP;
+        boolean recurringVintTick = !runtimeFrozen
+                && playerBootstrapPhase == PlayerBootstrapPhase.INITIALIZED;
 
-        // Track advances for diagnostic
-        if (frameChanged) {
+        boolean currentTrackFrameChanged = false;
+        if (firstDrawingWaitTick && drawingIndexWrapped) {
+            // The first startup loop calls SSTrack_Draw only after it observes
+            // drawing index zero (s2.asm:6644-6650).
+            currentTrackFrameChanged = trackAnimator.drawTrackFrame(drawingIndex);
+        }
+        if (secondDurationWaitTick) {
+            // The duration loop calls SSTrack_Draw and SSObjectsManager after
+            // every wait; only a zero drawing index advances the track frame
+            // (s2.asm:6651-6658,7026-7091).
+            currentTrackFrameChanged |= trackAnimator.drawTrackFrame(drawingIndex);
+        }
+        if (recurringVintTick) {
+            currentTrackFrameChanged |= trackAnimator.drawTrackFrame(drawingIndex);
+        }
+
+        if (!runtimeFrozen && (currentTrackFrameChanged || decodedTrackFrame == null)) {
+            decodeCurrentTrackFrame();
+        }
+        if (secondDurationWaitTick || recurringVintTick) {
+            streamSpecialStageObjects();
+        }
+
+        boolean startupPlayerInitializationTick = playerBootstrapWaitTick
+                && observePlayerBootstrapDrawingWrap(drawingIndexWrapped);
+        if (startupPlayerInitializationTick) {
+            // After the final SSObjectsManager stream pass, RunObjects scans the
+            // Obj09/Obj10 player slots before the later ring/bomb slots
+            // (s2.asm:29805-29846, 6651-6663). Apply player scalar init first,
+            // then execute/project/collide active special-stage objects once.
+            completePlayerScalarInitializationBootstrap();
+            executeActiveSpecialStageObjects();
+            intro.beginFadeFromWhite();
+        } else if (recurringVintTick) {
+            // The recurring loop completes current SSTrack_Draw, perspective,
+            // streaming, and scroll after WaitForVint. Only RunObjects-phase
+            // publication is deferred to the next observation
+            // (s2.asm:6679-6688,7026-7091).
+            scheduleRecurringMainPass(currentTrackFrameChanged);
+        }
+
+        if (!runtimeFrozen) {
+            updateSkydomeScroll();
+            updateVScroll();
+        }
+
+        if (currentTrackFrameChanged) {
             diagnosticTrackAdvances++;
+        }
+
+        if (!runtimeFrozen && trackAnimator.isStageComplete()) {
+            trackAnimator.resetStageComplete();
         }
 
         // Log diagnostic every 5 seconds
@@ -1147,64 +1230,70 @@ public class Sonic2SpecialStageManager {
                     trackAnimator.getSpeedFactor(),
                     getAlignmentFrameDuration()));
 
-            // Reset counters
             diagnosticWallStartTime = System.currentTimeMillis();
             diagnosticUpdateCount = 0;
             diagnosticTrackAdvances = 0;
         }
 
-        if (frameChanged || decodedTrackFrame == null) {
-            decodeCurrentTrackFrame();
+        latchCurrentPhysicalInputForNextVint();
+    }
+
+    private void executePendingRecurringMainPass() {
+        if (!recurringMainPassPending) {
+            return;
         }
 
-        boolean playerBootstrapWaitTick = !preRoll
-                && playerBootstrapPhase != PlayerBootstrapPhase.INITIALIZED;
-        boolean secondDurationWaitTick = !preRoll
-                && playerBootstrapPhase == PlayerBootstrapPhase.WAIT_SECOND_DURATION_WRAP;
-        if (secondDurationWaitTick) {
-            // Only the duration loop calls SSObjectsManager after each wait
-            // (s2.asm:6651-6658). This is stream/allocation bookkeeping only;
-            // active objects execute in the later RunObjects-equivalent pass.
-            streamSpecialStageObjects();
+        recurringMainPassPending = false;
+        updatePlayers(
+                pendingMainHeldButtons,
+                pendingMainPressedButtons,
+                pendingMainP2HeldButtons,
+                pendingMainP2LogicalButtons);
+        if (intro != null) {
+            intro.update();
         }
-
-        boolean startupPlayerInitializationTick = playerBootstrapWaitTick
-                && observePlayerBootstrapDrawingWrap(drawingIndexWrapped);
-        if (startupPlayerInitializationTick) {
-            // After the final SSObjectsManager stream pass, RunObjects scans the
-            // Obj09/Obj10 player slots before the later ring/bomb slots
-            // (s2.asm:29805-29846, 6651-6663). Apply player scalar init first,
-            // then execute/project/collide active special-stage objects once.
-            completePlayerScalarInitializationBootstrap();
-            executeActiveSpecialStageObjects();
-        }
-
-        if (trackAnimator.isStageComplete()) {
-            trackAnimator.resetStageComplete();
-        }
-
-        // Startup RunObjects initializes the player objects but does not execute
-        // their normal movement routines. Streaming and later-slot active-object
-        // execution were already consumed once in ROM slot order on this tick.
-        if (!startupPlayerInitializationTick && (intro == null || intro.isInputEnabled())) {
-            updatePlayers();
-            updateObjects();
-        }
+        executeActiveSpecialStageObjects();
 
         tryStartPendingCheckpoint();
-
-        // Update checkpoint animation
         if (checkpoint != null && checkpoint.isActive()) {
-            boolean checkpointStep = frameChanged;
-            boolean checkpointComplete = checkpoint.update(checkpointStep);
+            boolean checkpointComplete = checkpoint.update(pendingMainCheckpointStep);
             if (checkpointComplete) {
                 handleCheckpointAnimationComplete();
             }
         }
-
-        // Update rainbow palette cycling (runs every frame, but only changes every 8
-        // frames)
         updateRainbowPaletteCycle();
+
+        pendingMainHeldButtons = 0;
+        pendingMainPressedButtons = 0;
+        pendingMainP2HeldButtons = 0;
+        pendingMainP2LogicalButtons = 0;
+        pendingMainCheckpointStep = false;
+    }
+
+    private void scheduleRecurringMainPass(boolean checkpointStep) {
+        recurringMainPassPending = true;
+        // The ROM copies Ctrl_1/Ctrl_2 logical before WaitForVint. RunObjects
+        // after the current VInt therefore consumes the previously sampled
+        // physical word, not the current row's input (s2.asm:6674-6688).
+        pendingMainHeldButtons = previousPhysicalHeldButtons;
+        pendingMainPressedButtons = previousPhysicalPressedButtons;
+        pendingMainP2HeldButtons = previousPhysicalP2HeldButtons;
+        pendingMainP2LogicalButtons = previousPhysicalP2LogicalButtons;
+        pendingMainCheckpointStep = checkpointStep;
+    }
+
+    private void latchCurrentPhysicalInputForNextVint() {
+        // A lag-skipped physical edge is intentionally discarded above. If the
+        // button is still held when a VInt finally executes, reconstruct exactly
+        // one edge from the transition relative to the last executed VInt's held
+        // sample. Explicit mapper edges are ORed in for ordinary non-lag updates.
+        int effectivePressedButtons = pressedButtons
+                | (heldButtons & ~previousPhysicalHeldButtons);
+        previousPhysicalHeldButtons = heldButtons;
+        previousPhysicalPressedButtons = effectivePressedButtons;
+        previousPhysicalP2HeldButtons = p2HeldButtons;
+        previousPhysicalP2LogicalButtons = p2LogicalButtons;
+        pressedButtons = 0;
     }
 
     /**
@@ -1234,19 +1323,6 @@ public class Sonic2SpecialStageManager {
                         currentRingRequirement + " rings");
             }
         }
-    }
-
-    /**
-     * Updates objects (rings, bombs) and handles segment transitions.
-     *
-     * IMPORTANT: The drawing index (this.drawingIndex) cycles 0-4 every frame,
-     * matching the ROM's SSTrack_drawing_index behavior. This is used for:
-     * 1. Determining depth decrement value ($CCCC when index==4, $CCCD otherwise)
-     * 2. Triggering segment spawning when index reaches 4
-     */
-    private void updateObjects() {
-        streamSpecialStageObjects();
-        executeActiveSpecialStageObjects();
     }
 
     /** SSObjectsManager-equivalent stream/allocation work (s2.asm:6935-7001). */
@@ -1535,35 +1611,37 @@ public class Sonic2SpecialStageManager {
         }
     }
 
-    private void updatePlayers() {
+    private void updatePlayers(
+            int capturedHeldButtons,
+            int capturedPressedButtons,
+            int capturedP2HeldButtons,
+            int capturedP2LogicalButtons) {
         // Get the global animation frame timer from the track animator
         int animTimer = trackAnimator.getPlayerAnimFrameTimer();
 
         if (sonicPlayer != null && tailsPlayer != null) {
             sonicPlayer.setGlobalAnimFrameTimer(animTimer);
-            sonicPlayer.update(heldButtons, pressedButtons);
+            sonicPlayer.update(capturedHeldButtons, capturedPressedButtons);
             System.arraycopy(tailsCtrlRecordBuf, 0, tailsCtrlRecordBuf, 1, tailsCtrlRecordBuf.length - 1);
-            tailsCtrlRecordBuf[0] = heldButtons;
+            tailsCtrlRecordBuf[0] = capturedHeldButtons;
             int delayedInput = tailsCtrlRecordBuf[tailsCtrlRecordBuf.length - 1];
-            if ((p2HeldButtons & 0x7F) != 0) {
+            if ((capturedP2HeldButtons & 0x7F) != 0) {
                 java.util.Arrays.fill(tailsCtrlRecordBuf, 0);
                 tailsControlCounter = 0xB4;
-                delayedInput = p2LogicalButtons;
+                delayedInput = capturedP2LogicalButtons;
             } else if (tailsControlCounter > 0) {
                 tailsControlCounter--;
-                delayedInput = p2LogicalButtons;
+                delayedInput = capturedP2LogicalButtons;
             }
             tailsPlayer.setGlobalAnimFrameTimer(animTimer);
             tailsPlayer.update(delayedInput, 0);
         } else if (sonicPlayer != null) {
             sonicPlayer.setGlobalAnimFrameTimer(animTimer);
-            sonicPlayer.update(heldButtons, pressedButtons);
+            sonicPlayer.update(capturedHeldButtons, capturedPressedButtons);
         } else if (tailsPlayer != null) {
             tailsPlayer.setGlobalAnimFrameTimer(animTimer);
-            tailsPlayer.update(heldButtons, pressedButtons);
+            tailsPlayer.update(capturedHeldButtons, capturedPressedButtons);
         }
-
-        pressedButtons = 0;
     }
 
     private void enterAlignmentTestMode() {
@@ -2110,6 +2188,16 @@ public class Sonic2SpecialStageManager {
         pressedButtons = 0;
         p2HeldButtons = 0;
         p2LogicalButtons = 0;
+        recurringMainPassPending = false;
+        pendingMainHeldButtons = 0;
+        pendingMainPressedButtons = 0;
+        pendingMainP2HeldButtons = 0;
+        pendingMainP2LogicalButtons = 0;
+        pendingMainCheckpointStep = false;
+        previousPhysicalHeldButtons = 0;
+        previousPhysicalPressedButtons = 0;
+        previousPhysicalP2HeldButtons = 0;
+        previousPhysicalP2LogicalButtons = 0;
         tailsControlCounter = 0;
         java.util.Arrays.fill(tailsCtrlRecordBuf, 0);
 
@@ -2190,6 +2278,14 @@ public class Sonic2SpecialStageManager {
         return intro;
     }
 
+    int getSkydomeScrollXForTest() {
+        return skydomeScrollX;
+    }
+
+    int getVScrollBGForTest() {
+        return vScrollBG;
+    }
+
     /**
      * Checks if the intro sequence is still playing.
      */
@@ -2219,6 +2315,16 @@ public class Sonic2SpecialStageManager {
                 pressedButtons,
                 p2HeldButtons,
                 p2LogicalButtons,
+                recurringMainPassPending,
+                pendingMainHeldButtons,
+                pendingMainPressedButtons,
+                pendingMainP2HeldButtons,
+                pendingMainP2LogicalButtons,
+                pendingMainCheckpointStep,
+                previousPhysicalHeldButtons,
+                previousPhysicalPressedButtons,
+                previousPhysicalP2HeldButtons,
+                previousPhysicalP2LogicalButtons,
                 tailsControlCounter,
                 tailsCtrlRecordBuf,
                 lastDrawingIndex,
@@ -2289,6 +2395,16 @@ public class Sonic2SpecialStageManager {
         pressedButtons = snapshot.pressedButtons;
         p2HeldButtons = snapshot.p2HeldButtons;
         p2LogicalButtons = snapshot.p2LogicalButtons;
+        recurringMainPassPending = snapshot.recurringMainPassPending;
+        pendingMainHeldButtons = snapshot.pendingMainHeldButtons;
+        pendingMainPressedButtons = snapshot.pendingMainPressedButtons;
+        pendingMainP2HeldButtons = snapshot.pendingMainP2HeldButtons;
+        pendingMainP2LogicalButtons = snapshot.pendingMainP2LogicalButtons;
+        pendingMainCheckpointStep = snapshot.pendingMainCheckpointStep;
+        previousPhysicalHeldButtons = snapshot.previousPhysicalHeldButtons;
+        previousPhysicalPressedButtons = snapshot.previousPhysicalPressedButtons;
+        previousPhysicalP2HeldButtons = snapshot.previousPhysicalP2HeldButtons;
+        previousPhysicalP2LogicalButtons = snapshot.previousPhysicalP2LogicalButtons;
         tailsControlCounter = snapshot.tailsControlCounter;
         System.arraycopy(snapshot.tailsCtrlRecordBuf, 0, tailsCtrlRecordBuf, 0,
                 Math.min(tailsCtrlRecordBuf.length, snapshot.tailsCtrlRecordBuf.length));

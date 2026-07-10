@@ -40,6 +40,16 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertEquals(0x22, get(manager, "pressedButtons"));
         assertEquals(0x33, get(manager, "p2HeldButtons"));
         assertEquals(0x44, get(manager, "p2LogicalButtons"));
+        assertEquals(true, get(manager, "recurringMainPassPending"));
+        assertEquals(0x55, get(manager, "pendingMainHeldButtons"));
+        assertEquals(0x66, get(manager, "pendingMainPressedButtons"));
+        assertEquals(0x77, get(manager, "pendingMainP2HeldButtons"));
+        assertEquals(0x88, get(manager, "pendingMainP2LogicalButtons"));
+        assertEquals(true, get(manager, "pendingMainCheckpointStep"));
+        assertEquals(0x99, get(manager, "previousPhysicalHeldButtons"));
+        assertEquals(0xAA, get(manager, "previousPhysicalPressedButtons"));
+        assertEquals(0xBB, get(manager, "previousPhysicalP2HeldButtons"));
+        assertEquals(0xCC, get(manager, "previousPhysicalP2LogicalButtons"));
         assertEquals(7, get(manager, "tailsControlCounter"));
         assertArrayEquals(sequence(0x100, 16), (int[]) get(manager, "tailsCtrlRecordBuf"));
         assertEquals(5, get(manager, "lastDrawingIndex"));
@@ -99,6 +109,7 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertEquals(4, get(animator, "currentSegmentIndex"));
         assertEquals(7, get(animator, "currentFrameInSegment"));
         assertEquals(9, get(animator, "speedFactor"));
+        assertEquals(true, get(animator, "speedChangePending"));
         assertEquals(true, get(animator, "orientationFlipped"));
 
         Sonic2SpecialStagePlayer sonic = (Sonic2SpecialStagePlayer) get(manager, "sonicPlayer");
@@ -252,6 +263,7 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(animator, "currentSegmentType", 3);
         set(animator, "currentSegmentFlipped", true);
         set(animator, "speedFactor", 9);
+        set(animator, "speedChangePending", true);
         set(animator, "stageComplete", true);
         set(animator, "orientationFlipped", true);
         set(animator, "lastOrientationFrame", 12);
@@ -328,6 +340,16 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "pressedButtons", 0x22);
         set(manager, "p2HeldButtons", 0x33);
         set(manager, "p2LogicalButtons", 0x44);
+        set(manager, "recurringMainPassPending", true);
+        set(manager, "pendingMainHeldButtons", 0x55);
+        set(manager, "pendingMainPressedButtons", 0x66);
+        set(manager, "pendingMainP2HeldButtons", 0x77);
+        set(manager, "pendingMainP2LogicalButtons", 0x88);
+        set(manager, "pendingMainCheckpointStep", true);
+        set(manager, "previousPhysicalHeldButtons", 0x99);
+        set(manager, "previousPhysicalPressedButtons", 0xAA);
+        set(manager, "previousPhysicalP2HeldButtons", 0xBB);
+        set(manager, "previousPhysicalP2LogicalButtons", 0xCC);
         set(manager, "tailsControlCounter", 7);
         System.arraycopy(sequence(0x100, 16), 0, (int[]) get(manager, "tailsCtrlRecordBuf"), 0, 16);
         set(manager, "lastDrawingIndex", 5);
@@ -393,6 +415,16 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "pressedButtons", 999);
         set(manager, "p2HeldButtons", 999);
         set(manager, "p2LogicalButtons", 999);
+        set(manager, "recurringMainPassPending", false);
+        set(manager, "pendingMainHeldButtons", 999);
+        set(manager, "pendingMainPressedButtons", 999);
+        set(manager, "pendingMainP2HeldButtons", 999);
+        set(manager, "pendingMainP2LogicalButtons", 999);
+        set(manager, "pendingMainCheckpointStep", false);
+        set(manager, "previousPhysicalHeldButtons", 999);
+        set(manager, "previousPhysicalPressedButtons", 999);
+        set(manager, "previousPhysicalP2HeldButtons", 999);
+        set(manager, "previousPhysicalP2LogicalButtons", 999);
         set(manager, "tailsControlCounter", 999);
         Arrays.fill((int[]) get(manager, "tailsCtrlRecordBuf"), 999);
         set(manager, "lastDrawingIndex", 999);
@@ -447,6 +479,7 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(animator, "currentSegmentIndex", 99);
         set(animator, "currentFrameInSegment", 99);
         set(animator, "speedFactor", 1);
+        set(animator, "speedChangePending", false);
         set(animator, "orientationFlipped", false);
 
         Sonic2SpecialStagePlayer sonic = (Sonic2SpecialStagePlayer) get(manager, "sonicPlayer");

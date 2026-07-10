@@ -73,6 +73,8 @@ class Sonic2SpecialStageSpawnGateTest {
             assertNull(state.sonic(), "Sonic must be absent after suppressed update " + frame);
             assertNull(state.tails(), "Tails must be absent after suppressed update " + frame);
         }
+        assertEquals(Sonic2SpecialStageIntro.Phase.ROM_STARTUP,
+                manager.getIntro().getCurrentPhase());
 
         for (int step = 23; step <= 31; step++) {
             manager.update();
@@ -114,6 +116,8 @@ class Sonic2SpecialStageSpawnGateTest {
         assertEquals(0x80, initialized.tails().ssZ());
         assertEquals(Sonic2SpecialStageManager.PlayerBootstrapPhase.INITIALIZED,
                 manager.captureRewindSnapshot().playerBootstrapPhase);
+        assertEquals(Sonic2SpecialStageIntro.Phase.FADE_FROM_WHITE,
+                manager.getIntro().getCurrentPhase());
     }
 
     @Test

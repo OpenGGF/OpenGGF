@@ -50,6 +50,7 @@ public class Sonic2TrackAnimator {
     // pre-roll boundary.
     // Objects approach at ~48 depth/second regardless of speed factor.
     private int speedFactor = 0;
+    private boolean speedChangePending;
 
     private boolean stageComplete = false;
 
@@ -81,6 +82,7 @@ public class Sonic2TrackAnimator {
         // SS_Cur_Speed_Factor remains zero until Vint_S2SS promotes the new
         // factor written by SpecialStage (s2.asm:6640, 960-975).
         speedFactor = 0;
+        speedChangePending = false;
         resetOrientation();
 
         if (layoutLength > 0) {
@@ -113,6 +115,8 @@ public class Sonic2TrackAnimator {
         currentSegmentIndex = 0;
         currentFrameInSegment = 0;
         frameDelayCounter = 0;
+        speedFactor = 0;
+        speedChangePending = false;
         stageComplete = false;
         resetOrientation();
 
@@ -122,24 +126,33 @@ public class Sonic2TrackAnimator {
     }
 
     /**
-     * Updates the animation state for one frame.
-     * Returns true if the track frame changed.
+     * Runs the ROM's VInt-owned {@code SSRun_Animation_Timers} countdown without
+     * advancing the track frame. The frame advances only when the later
+     * {@code SSTrack_Draw} call observes drawing index zero
+     * (s2.asm:837-876,960-982,7026-7091).
      */
-    public boolean update() {
-        if (stageComplete || layoutLength == 0) {
-            return false;
+    public void tickVintTimer() {
+        if (speedChangePending) {
+            frameDelayCounter = 0;
+            speedChangePending = false;
+            return;
         }
 
         frameDelayCounter++;
-
-        int duration = getFrameDuration();
-
-        if (frameDelayCounter >= duration) {
+        if (frameDelayCounter >= getFrameDuration()) {
             frameDelayCounter = 0;
-            return advanceFrame();
         }
+    }
 
-        return false;
+    /**
+     * Models the animation-frame side effect at the start of
+     * {@code SSTrack_Draw}. Non-zero drawing slices continue the same frame.
+     */
+    public boolean drawTrackFrame(int drawingIndex) {
+        if (stageComplete || layoutLength == 0 || drawingIndex != 0) {
+            return false;
+        }
+        return advanceFrame();
     }
 
     /**
@@ -343,7 +356,11 @@ public class Sonic2TrackAnimator {
      * Higher values = faster animation.
      */
     public void setSpeedFactor(int speedFactor) {
-        this.speedFactor = Math.max(0, Math.min(14, speedFactor));
+        int clamped = Math.max(0, Math.min(14, speedFactor));
+        if (this.speedFactor != clamped) {
+            this.speedFactor = clamped;
+            speedChangePending = true;
+        }
     }
 
     public int getSpeedFactor() {
@@ -364,6 +381,7 @@ public class Sonic2TrackAnimator {
                 currentSegmentType,
                 currentSegmentFlipped,
                 speedFactor,
+                speedChangePending,
                 stageComplete,
                 orientationFlipped,
                 lastOrientationFrame);
@@ -378,6 +396,7 @@ public class Sonic2TrackAnimator {
         currentSegmentType = snapshot.currentSegmentType();
         currentSegmentFlipped = snapshot.currentSegmentFlipped();
         speedFactor = snapshot.speedFactor();
+        speedChangePending = snapshot.speedChangePending();
         stageComplete = snapshot.stageComplete();
         orientationFlipped = snapshot.orientationFlipped();
         lastOrientationFrame = snapshot.lastOrientationFrame();

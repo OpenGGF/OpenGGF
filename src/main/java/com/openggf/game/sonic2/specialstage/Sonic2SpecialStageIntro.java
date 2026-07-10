@@ -11,17 +11,21 @@ import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.*
  *
  * The intro sequence matches the original game's Obj5F (START banner) behavior:
  * 1. PRE_ROLL phase: Current speed/track/banner remain idle during ROM initialization
- * 2. DROP phase: Banner drops from y=-64 to y=72 (136 frames at 1 pixel/frame)
- * 3. WAIT1 phase: Pause while letters "explode" off banner (15 frames)
- * 4. WAIT2 phase: Display ring requirement message (31 frames)
- * 5. GAMEPLAY: Normal gameplay begins (SpecialStage_Started is set)
+ * 2. ROM_STARTUP phase: The manager runs the two semantic track waits and first RunObjects pass
+ * 3. FADE_FROM_WHITE phase: The ROM's 22 palette waits freeze the stage runtime
+ * 4. DROP phase: Banner drops from y=-64 to y=72 (136 frames at 1 pixel/frame)
+ * 5. WAIT1 phase: Pause while letters "explode" off banner (15 frames)
+ * 6. WAIT2 phase: Display ring requirement message (31 frames)
+ * 7. GAMEPLAY: Normal gameplay begins (SpecialStage_Started is set)
  *
  * The "GET X RINGS" message appears at the start of GAMEPLAY and displays
  * for 70 frames before flying off screen.
  *
  * During the intro sequence:
- * - Track animation starts after PRE_ROLL and then runs normally
- * - Player input is ignored
+ * - Track animation runs during ROM_STARTUP, freezes during FADE_FROM_WHITE, then resumes
+ * - Input remains control-locked until the later intro phases, but the ROM pre-start loop
+ *   still copies logical controls and executes player/object routines before
+ *   SpecialStage_Started is set (s2.asm:6674-6690)
  * - Banner and message sprites are rendered on top
  */
 public class Sonic2SpecialStageIntro {
@@ -35,11 +39,21 @@ public class Sonic2SpecialStageIntro {
     public static final int PRE_ROLL_FRAMES = 23;
 
     /**
+     * ROM {@code Pal_FadeFromWhite} loads {@code d4=$15} and uses {@code dbf},
+     * producing 22 waits (s2.asm:3460-3483, call at 6672).
+     */
+    public static final int FADE_FROM_WHITE_FRAMES = 22;
+
+    /**
      * Intro sequence phases.
      */
     public enum Phase {
         /** Initial empty-player/zero-speed observation window */
         PRE_ROLL,
+        /** Manager-owned drawing-index startup waits through the first RunObjects pass */
+        ROM_STARTUP,
+        /** Palette fade waits which do not tick track, players, objects, or banner */
+        FADE_FROM_WHITE,
         /** Banner dropping from top of screen */
         DROP,
         /** Pause after banner lands, letters fly off */
@@ -178,6 +192,13 @@ public class Sonic2SpecialStageIntro {
             case PRE_ROLL:
                 updatePreRollPhase();
                 break;
+            case ROM_STARTUP:
+                // The manager owns the two semantic Vint_S2SS waits and advances
+                // this phase only after their final RunObjects pass.
+                break;
+            case FADE_FROM_WHITE:
+                updateFadeFromWhitePhase();
+                break;
             case DROP:
                 updateDropPhase();
                 break;
@@ -201,6 +222,26 @@ public class Sonic2SpecialStageIntro {
     private void updatePreRollPhase() {
         phaseTimer++;
         if (phaseTimer >= PRE_ROLL_FRAMES) {
+            currentPhase = Phase.ROM_STARTUP;
+            phaseTimer = 0;
+        }
+    }
+
+    /**
+     * Called by the manager immediately after the startup RunObjects pass at
+     * s2.asm:6660-6663, before the CtrlDMA lag row and Pal_FadeFromWhite call.
+     */
+    void beginFadeFromWhite() {
+        if (currentPhase != Phase.ROM_STARTUP) {
+            throw new IllegalStateException("Fade from white can only follow ROM startup");
+        }
+        currentPhase = Phase.FADE_FROM_WHITE;
+        phaseTimer = 0;
+    }
+
+    private void updateFadeFromWhitePhase() {
+        phaseTimer++;
+        if (phaseTimer >= FADE_FROM_WHITE_FRAMES) {
             currentPhase = Phase.DROP;
             phaseTimer = 0;
         }
@@ -534,14 +575,6 @@ public class Sonic2SpecialStageIntro {
      */
     public boolean isComplete() {
         return currentPhase == Phase.GAMEPLAY;
-    }
-
-    /**
-     * Checks if player input should be processed.
-     * Input is ignored during DROP, WAIT1, and WAIT2 phases.
-     */
-    public boolean isInputEnabled() {
-        return currentPhase == Phase.GAMEPLAY || currentPhase == Phase.MESSAGE_FLYOUT;
     }
 
     /**

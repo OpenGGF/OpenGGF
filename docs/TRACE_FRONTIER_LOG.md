@@ -40,6 +40,78 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage Stage 1: startup fade and pre-start RunObjects cadence
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on `16422d35e`. The engine previously
+entered the START-banner `DROP` phase immediately after PRE_ROLL, advanced track
+and scroll throughout the ROM's fade from white, coupled the VInt duration timer
+to `SSTrack_Draw` animation advancement, retained press edges through frozen
+waits, and published the first recurring `RunObjects` pass in the f160 VInt
+observation. ROM instead freezes runtime work for the 22 `Pal_FadeFromWhite`
+waits, owns duration countdown/reload in VInt, advances animation only from
+`SSTrack_Draw`, and exposes the first recurring main-loop work after the f160
+observation (`s2.asm:837-876,960-982,3460-3483,6665-6690,7026-7091`).
+
+- RED command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest,com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePreRollTest" test`
+- Initial RED status: 5 assertion failures / 0 errors. PRE_ROLL reached `DROP`
+  instead of `ROM_STARTUP`; the post-step-32 state remained `DROP` instead of
+  entering a frozen fade.
+- Review RED command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest,com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePreRollTest,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageTrackAnimatorSnapshot" test`
+- Review RED status: 4 assertion failures / 0 errors. Speed promotion produced
+  elapsed timer 1 instead of 0; f136/fade held elapsed 0 instead of 4; and a
+  fade-only jump edge leaked into DROP (`JUMPING` instead of `NORMAL`).
+- Input re-review RED command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest" test`
+- Input re-review RED status: 1 assertion failure / 0 errors. RIGHT introduced
+  on the current f160-style VInt reached the next pending player pass immediately
+  (Sonic inertia expected 0, actual -96) instead of waiting for the following
+  control-copy/WaitForVint cycle; Tails history shared the same early source.
+- Lag-edge RED command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest" test`
+- Lag-edge RED/GREEN: the released-tap case first produced one assertion failure /
+  zero errors (`pressedButtons` expected 0, actual 16 after a skipped fade update),
+  then passed once the lag early-return discarded only the transient P1 press edge,
+  preserved held and P2 level state, and left the prior executed VInt's sampled word
+  unchanged. The paired held-through-lag case then failed with one assertion / zero
+  errors (`previousPhysicalPressedButtons` expected 16, actual 0) before the executed
+  VInt began deriving P1 edges from current held state versus the last executed held
+  sample. A held button now produces exactly one edge at that VInt with no repeat;
+  a released skipped tap remains gone. P2 remains level-only.
+- GREEN/neighborhood command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.*,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest,com.openggf.tests.trace.s2.S2SpecialStageTrackDurationMappingTest" test`
+- GREEN status: PASS (comparison-only target replay, determinism, and focused
+  special-stage tests); the target report remains intentionally red-allowed.
+- Before: 15,303 errors / 3,719 warnings; first error f142,
+  `track_anim_frame` expected `2`, actual `3`.
+- Final after review: 11,087 errors / 10 warnings; first error f791,
+  `combined_rings` expected `1`, actual `0`. This is a 27.55% error reduction
+  from the branch-local 15,303 baseline (27.60% from original Stage-1 15,313),
+  so the >=50% Stage-1 gate is **not met**. The quality-review changes remove the
+  f160 player and f166 track-draw errors and nearly all timer/drawing warnings;
+  no follow-on ring collision tuning is included here.
+- Frontier movement: `ROM_STARTUP` owns only the two existing semantic track
+  waits. The final startup `RunObjects` pass transitions the intro into a public
+  ROM-counted 22-update `FADE_FROM_WHITE`; each fade update preserves track
+  frame/duration (elapsed 4), drawing index, skydome/vscroll, initialized player
+  fields, active-object state, and banner position. The f160 update ticks VInt to
+  drawing index 1 / elapsed timer 0 and schedules a semantic recurring-main pass
+  with the physical input sampled before the current VInt; the next executed
+  logical update first publishes the prior player/Tails-buffer, fixed banner,
+  and later dynamic-object/collision work, then runs its current VInt. Current
+  `SSTrack_Draw`, decode/perspective, streaming, and scroll
+  remain synchronous, matching the recurring-loop order at `s2.asm:6679-6688`;
+  an index-zero f166 draw therefore advances frame 2 to 3 in that same observation.
+  Frozen phases continually replace the previous physical sample, so a tap that
+  is released before DROP stays gone. Rewind captures timer speed-change state,
+  previous P1/P2 samples, and pending main-pass inputs. Fixed object execution is
+  Sonic/Tails → banner → later dynamic objects, matching slot order.
+- Exact next root: ring collection/object cadence. ROM first has one Sonic ring
+  at f791 and remains at one through f799, then reaches three on lag f800 / next
+  compared f801. The engine is still zero at f791, then has two at f793-f799 and
+  six at f801. This is a distinct active-object/collision timeline after the
+  startup/fade pipeline aligns through the first compared frontier. Downstream
+  input-onset questions (including the later f888 movement window) remain
+  unadjudicated until this earlier ring root is fixed; CSV physical input plus
+  integer movement alone does not justify adding another logical-input latch.
+
 ## 2026-07-10 - S2 special-stage Stage 1: defer Obj09/Obj10 init to first RunObjects
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

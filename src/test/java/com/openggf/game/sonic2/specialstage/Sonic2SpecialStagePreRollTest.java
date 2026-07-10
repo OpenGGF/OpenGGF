@@ -81,15 +81,17 @@ class Sonic2SpecialStagePreRollTest {
         }
 
         assertFalse(manager.getIntro().isPreRollActive());
-        assertEquals(Sonic2SpecialStageIntro.Phase.DROP, manager.getIntro().getCurrentPhase());
+        assertEquals(Sonic2SpecialStageIntro.Phase.ROM_STARTUP, manager.getIntro().getCurrentPhase());
 
         manager.update();
 
         Sonic2SpecialStageComparisonState firstActive = manager.captureComparisonState();
         assertEquals(12, firstActive.speedFactor(), "first post-pre-roll tick promotes SS_New_Speed_Factor");
-        assertEquals(1, firstActive.trackFrameDelayCounter(), "track timer starts at the phase boundary");
+        assertEquals(0, firstActive.trackFrameDelayCounter(),
+                "speed promotion reloads the ROM duration timer on the first VInt");
         assertEquals(1, firstActive.drawingIndex(), "drawing index starts at the phase boundary");
-        assertEquals(initialBannerY + 1, manager.getIntro().getBannerY(), "DROP starts at the phase boundary");
+        assertEquals(initialBannerY, manager.getIntro().getBannerY(),
+                "the ROM startup waits do not start the DROP banner");
     }
 
     @Test
@@ -112,7 +114,7 @@ class Sonic2SpecialStagePreRollTest {
         for (int frame = 7; frame < Sonic2SpecialStageIntro.PRE_ROLL_FRAMES; frame++) {
             manager.update();
         }
-        assertEquals(Sonic2SpecialStageIntro.Phase.DROP, manager.getIntro().getCurrentPhase(),
+        assertEquals(Sonic2SpecialStageIntro.Phase.ROM_STARTUP, manager.getIntro().getCurrentPhase(),
                 "restored pre-roll timer should reach the same boundary");
 
         manager.update();

@@ -14,6 +14,16 @@ final class Sonic2SpecialStageSnapshot {
     final int pressedButtons;
     final int p2HeldButtons;
     final int p2LogicalButtons;
+    final boolean recurringMainPassPending;
+    final int pendingMainHeldButtons;
+    final int pendingMainPressedButtons;
+    final int pendingMainP2HeldButtons;
+    final int pendingMainP2LogicalButtons;
+    final boolean pendingMainCheckpointStep;
+    final int previousPhysicalHeldButtons;
+    final int previousPhysicalPressedButtons;
+    final int previousPhysicalP2HeldButtons;
+    final int previousPhysicalP2LogicalButtons;
     final int tailsControlCounter;
     final int[] tailsCtrlRecordBuf;
     final int lastDrawingIndex;
@@ -83,6 +93,16 @@ final class Sonic2SpecialStageSnapshot {
             int pressedButtons,
             int p2HeldButtons,
             int p2LogicalButtons,
+            boolean recurringMainPassPending,
+            int pendingMainHeldButtons,
+            int pendingMainPressedButtons,
+            int pendingMainP2HeldButtons,
+            int pendingMainP2LogicalButtons,
+            boolean pendingMainCheckpointStep,
+            int previousPhysicalHeldButtons,
+            int previousPhysicalPressedButtons,
+            int previousPhysicalP2HeldButtons,
+            int previousPhysicalP2LogicalButtons,
             int tailsControlCounter,
             int[] tailsCtrlRecordBuf,
             int lastDrawingIndex,
@@ -150,6 +170,16 @@ final class Sonic2SpecialStageSnapshot {
         this.pressedButtons = pressedButtons;
         this.p2HeldButtons = p2HeldButtons;
         this.p2LogicalButtons = p2LogicalButtons;
+        this.recurringMainPassPending = recurringMainPassPending;
+        this.pendingMainHeldButtons = pendingMainHeldButtons;
+        this.pendingMainPressedButtons = pendingMainPressedButtons;
+        this.pendingMainP2HeldButtons = pendingMainP2HeldButtons;
+        this.pendingMainP2LogicalButtons = pendingMainP2LogicalButtons;
+        this.pendingMainCheckpointStep = pendingMainCheckpointStep;
+        this.previousPhysicalHeldButtons = previousPhysicalHeldButtons;
+        this.previousPhysicalPressedButtons = previousPhysicalPressedButtons;
+        this.previousPhysicalP2HeldButtons = previousPhysicalP2HeldButtons;
+        this.previousPhysicalP2LogicalButtons = previousPhysicalP2LogicalButtons;
         this.tailsControlCounter = tailsControlCounter;
         this.tailsCtrlRecordBuf = cloneIntArray(tailsCtrlRecordBuf);
         this.lastDrawingIndex = lastDrawingIndex;
@@ -219,6 +249,7 @@ final class Sonic2SpecialStageSnapshot {
             int currentSegmentType,
             boolean currentSegmentFlipped,
             int speedFactor,
+            boolean speedChangePending,
             boolean stageComplete,
             boolean orientationFlipped,
             int lastOrientationFrame) {

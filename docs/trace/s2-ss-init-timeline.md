@@ -51,7 +51,7 @@ VInt, updates the palette, and services the PLC.
 | f132-f136 | Five `VintID_S2SS` interrupts in the duration wait (`s2.asm:6651-6658`). | Obj09/Obj10 remain present and zeroed through f135. At f136 the second wrap advances `track_anim_frame` to 2, the wait exits, and the first `RunObjects` initializes Sonic then Tails (`:6660-6663`, `:69040-69076`, `:70319-70372`). |
 | f137 | The one `VintID_CtrlDMA` wait at `s2.asm:6665-6666`. | Raw row is lagged and replay skips it. |
 | f138-f159 | 22 `VintID_Fade` interrupts for `Pal_FadeFromWhite` (`s2.asm:3460-3483`, call at `:6672`). | Obj09/Obj10 remain initialized and present, but are frozen because the fade handler does not run objects or track animation. |
-| f160 onward | `VintID_S2SS` intro/gameplay-gate loop (`s2.asm:6674-6690`). | Before the wait, the loop copies physical controls to the logical control words (`:6675-6676`); after the wait it updates the track and calls `RunObjects` (`:6681-6687`) before testing `SpecialStage_Started` (`:6689-6690`). The loop cannot enter the playable body while that byte is zero. |
+| f160 onward | `VintID_S2SS` intro/gameplay-gate loop (`s2.asm:6674-6690`). | Before the wait, the loop copies physical controls to the logical control words (`:6675-6676`); after the wait it updates the track and calls `RunObjects` (`:6681-6687`) before testing `SpecialStage_Started` (`:6689-6690`). Because the recorder samples at the VInt boundary, raw f160 shows the first drawing-index update while player fields are still at their initialized values; the post-wait `RunObjects` mutations first appear on lag row f161 and the next compared row f162. The loop cannot enter the playable body while that byte is zero. |
 
 ## Frame-by-frame replay observations
 
@@ -94,7 +94,7 @@ result of a physical frame but is not itself synonymous with a ROM VInt.
 | 31 | f135 | Fourth duration-loop wait. | Players remain present/zeroed; drawing index 3→4; duration 3→2. |
 | 32 | f136 | Fifth duration-loop wait; loop exits and reaches the first `RunObjects`. | `track_anim_frame` 1→2; Obj09 initializes first, then Obj10; both routines become 2 with their ROM positions/depth/angle. |
 | 33-54 | f138-f159 | 22 `Pal_FadeFromWhite` waits (`s2.asm:3460-3483`, call at `:6672`). | Initialized players remain present but frozen; track animation stays paused. |
-| 55 onward | f160 onward | Intro/gameplay-gate loop (`s2.asm:6674-6690`). | Physical controls are copied to logical controls before the wait; track/object updates and `RunObjects` occur before `SpecialStage_Started` gates entry to the playable body. |
+| 55 onward | f160 onward | Intro/gameplay-gate loop (`s2.asm:6674-6690`). | Physical controls are copied to logical controls before the wait; track/object updates and `RunObjects` occur before `SpecialStage_Started` gates entry to the playable body. The f160 recorder sample is taken after the VInt but before that iteration's post-wait `RunObjects` result becomes observable; raw f161 carries the result but is lagged, so replay next compares it at f162. |
 
 ## Initialization work between fade and player creation
 
@@ -158,7 +158,43 @@ compressed artifact's SHA-256:
 | `speed_factor` 0→`c` | step 23 | f127 | New factor written at `s2.asm:6640`, then promoted to current by the first `Vint_S2SS` (`:960-975`). |
 | `track_anim_frame` first moves 0→1 | step 27 | f131 | Fifth VInt of the first drawing-index wait, when index 4 wraps to 0. |
 | `track_anim_frame` moves 1→2 | step 32 | f136 | Fifth VInt of the duration wait. |
-| Track resumes after fade from white | step 55 | f160 | First `VintID_S2SS` in the gated intro loop (`s2.asm:6679-6690`). |
+| Track VInt/draw pipeline resumes after fade from white | step 55 | f160 | First `VintID_S2SS` in the gated intro loop (`s2.asm:6679-6690`): drawing index becomes 1, duration reloads to elapsed 0, and track animation remains frame 2. |
+
+The Stage-1 fade/cadence correction splits the VInt-owned duration countdown
+from `SSTrack_Draw` animation advancement (`s2.asm:837-876,960-982,7026-7091`).
+The first promoted VInt reloads duration to elapsed 0; subsequent startup waits
+produce elapsed 1,2,3,4, and only the documented startup `SSTrack_Draw` calls at
+drawing index zero advance frames 0→1 and 1→2. Fade therefore freezes frame 2,
+drawing index 0, and elapsed duration 4. The f160 VInt reloads elapsed 0 and sets
+drawing index 1 without advancing the track frame.
+
+In the recurring loop, current `SSTrack_Draw`, decode/perspective, streaming, and
+scroll remain synchronous. Only later `RunObjects`-phase publication (players,
+Tails input history, intro objects, and active objects/collisions) is scheduled
+for the next executed logical update. The logical word scheduled for that pass is
+the previous physical P1/P2 sample copied before the current `WaitForVint`
+(`s2.asm:6674-6680`); current-row input becomes the previous sample only after
+the VInt schedules its pass. Sonic and Tails history therefore receive the same
+delayed word. Frozen phases continuously replace this sample rather than OR-carrying
+edges, so a press released before DROP cannot leak. If a button remains held across
+a lag-skipped update, the next executed VInt derives one edge from the held transition
+against the last executed held sample; unchanged held input does not repeat it. P2 is
+level-only. Thus f160 still exposes Sonic
+`ss_y=$80`, while the pending main pass publishes `$6E` on the next compared
+update, matching raw lag f161/f162. Conversely, drawing index zero at non-lag f166
+advances track frame 2→3 synchronously. Pending fixed-slot order is Sonic/Tails,
+then the START banner, then later dynamic objects/collisions.
+
+After these boundaries align, the next independent frontier is f791 ring
+collection: ROM has one ring while the engine still has zero, after which the
+engine over-collects to two and later six. That active-object/collision cadence is
+left for a separate correction rather than adding a frame, route, or trace-data
+exception here. The pipeline is therefore established through the first f791
+frontier only: downstream input onset, including the later f888 movement window,
+remains unadjudicated until the earlier ring root is corrected. The fact that CSV
+physical input precedes integer movement does not by itself prove another ROM
+logical-input latch beyond the `Ctrl_1` copy before `WaitForVint` at
+`s2.asm:6674-6680`.
 
 The raw rows explain why a direct `frame`-column lookup appears different from
 the required f23 boundary: raw f23-f126 are `lag=1` init rows and the replay
