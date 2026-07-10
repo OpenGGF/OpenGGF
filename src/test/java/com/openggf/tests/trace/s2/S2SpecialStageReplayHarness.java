@@ -8,6 +8,7 @@ import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageInputMapper;
+import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageReplayTestBridge;
@@ -43,8 +44,9 @@ import java.util.Objects;
  *   <li>Set {@code MAIN_CHARACTER_CODE="sonic"} + {@code SIDEKICK_CHARACTER_CODE
  *       ="tails"} on {@code GameServices.configuration()} (done in this ctor)
  *       so {@code setupPlayers()} spawns the recorded Sonic+Tails team.</li>
- *   <li>{@code provider.initializeStage(index)} → {@code manager.reset()} +
- *       {@code manager.initialize(index)} (loads the SS data from ROM).</li>
+ *   <li>{@code provider.initializeStage(index, TRACE_ACCURATE)} →
+ *       {@code manager.reset()} + {@code manager.initialize(index)} (loads the
+ *       SS data from ROM while retaining observable startup cadence).</li>
  *   <li>{@code provider.setLagCompensation(0)} — replay is trace-paced, so the
  *       runtime must not apply its own frame-drop compensation.</li>
  * </ol>
@@ -90,7 +92,8 @@ final class S2SpecialStageReplayHarness {
         this.movie = new Bk2MovieLoader().load(Objects.requireNonNull(bk2, "bk2"));
         this.inputHandler = new InputHandler();
         this.provider = new Sonic2SpecialStageProvider();
-        this.provider.initializeStage(specialStageIndex);
+        this.provider.initializeStage(
+                specialStageIndex, SpecialStageStartupPolicy.TRACE_ACCURATE);
         // Trace-paced replay: disable the runtime's own lag compensation.
         this.provider.setLagCompensation(0);
     }

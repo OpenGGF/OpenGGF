@@ -8,6 +8,7 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
@@ -17,6 +18,7 @@ import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.DefaultObjectServices;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -77,8 +79,22 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void initializeStage(int stageIndex) throws IOException {
+        initializeStage(stageIndex, SpecialStageStartupPolicy.FAST);
+    }
+
+    @Override
+    public void initializeStage(int stageIndex, SpecialStageStartupPolicy policy) throws IOException {
+        Objects.requireNonNull(policy, "policy");
         manager.reset();
         manager.initialize(stageIndex);
+        if (policy == SpecialStageStartupPolicy.FAST) {
+            manager.advanceToEntryPresentation();
+        }
+    }
+
+    @Override
+    public boolean isEntryPresentationReady() {
+        return manager.isEntryPresentationReady();
     }
 
     @Override

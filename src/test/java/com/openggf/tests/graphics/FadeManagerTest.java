@@ -504,6 +504,40 @@ public class FadeManagerTest {
         assertEquals(0f, color[2], 0.001f);
     }
 
+    @Test
+    public void holdBlackReplacesRunningRevealAndRemainsOpaque() {
+        AtomicBoolean callbackExecuted = new AtomicBoolean(false);
+        fadeManager.startFadeFromBlack(() -> callbackExecuted.set(true));
+
+        fadeManager.holdBlack();
+        for (int frame = 0; frame < 30; frame++) {
+            fadeManager.update();
+        }
+
+        assertEquals(FadeState.HOLD_BLACK, fadeManager.getState());
+        assertEquals(FadeType.BLACK, fadeManager.getFadeType());
+        assertArrayEquals(new float[] {1f, 1f, 1f}, fadeManager.getFadeColor(), 0.001f);
+        assertFalse(fadeManager.hasPendingCompletion());
+        assertFalse(callbackExecuted.get());
+    }
+
+    @Test
+    public void holdWhiteReplacesRunningFadeAndRemainsOpaque() {
+        AtomicBoolean callbackExecuted = new AtomicBoolean(false);
+        fadeManager.startFadeToBlack(() -> callbackExecuted.set(true));
+
+        fadeManager.holdWhite();
+        for (int frame = 0; frame < 30; frame++) {
+            fadeManager.update();
+        }
+
+        assertEquals(FadeState.HOLD_WHITE, fadeManager.getState());
+        assertEquals(FadeType.WHITE, fadeManager.getFadeType());
+        assertArrayEquals(new float[] {1f, 1f, 1f}, fadeManager.getFadeColor(), 0.001f);
+        assertFalse(fadeManager.hasPendingCompletion());
+        assertFalse(callbackExecuted.get());
+    }
+
     // === Callback Execution Timing Tests ===
 
     @Test
@@ -543,5 +577,4 @@ public class FadeManagerTest {
         assertEquals(1, callCount[0], "Callback should execute exactly once");
     }
 }
-
 
