@@ -567,6 +567,10 @@ public final class MasterClient implements AutoCloseable {
         @Override public String sessionToken() {
             return joined == null ? null : joined.sessionToken();
         }
+        @Override public String uploadSessionToken() {
+            return parent.joinAccepted == null ? null
+                    : parent.joinAccepted.sessionToken();
+        }
         @Override public ControlMessage.JoinAccepted joinAccepted() { return joined; }
         @Override public boolean isOpen() { return open && parent.isOpen(); }
         @Override public void close() {

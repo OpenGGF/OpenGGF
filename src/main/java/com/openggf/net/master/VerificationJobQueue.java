@@ -119,4 +119,9 @@ public final class VerificationJobQueue {
         Entry entry = entries.get(jobId);
         return entry == null ? null : entry.state;
     }
+
+    public Optional<Job> find(String jobId) {
+        Entry entry = entries.get(jobId);
+        return entry == null ? Optional.empty() : Optional.of(entry.job);
+    }
 }

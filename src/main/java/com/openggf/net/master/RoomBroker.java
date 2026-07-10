@@ -129,6 +129,10 @@ public final class RoomBroker {
                 new HostHandshake(masterIdentity.fingerprint(), null), clock.getAsLong()));
     }
 
+    public boolean isSessionTokenValid(String token) {
+        return tokens.isValid(token) && tokenFingerprints.containsKey(token);
+    }
+
     public void onText(HubConnection connection, String text) {
         Member member = members.get(connection);
         if (member == null) {

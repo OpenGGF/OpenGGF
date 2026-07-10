@@ -20,7 +20,7 @@ public interface RaceTransport {
             @Override public int playerSlot() { return connection.playerSlot(); }
             @Override public String sessionToken() {
                 return connection.joinAccepted() == null ? null
-                        : connection.joinAccepted().sessionToken();
+                        : connection.uploadSessionToken();
             }
             @Override public boolean isOpen() { return connection.isOpen(); }
             @Override public void close() { connection.close(); }

@@ -46,6 +46,10 @@ public final class MasterServer implements AutoCloseable {
     private final GuestTunnelRouter tunnels;
     private final RelayRoomManager relays;
     private final RoomBroker broker;
+    private final RecordingBlobStore recordingBlobs;
+    private final VerifierRegistry verifiers;
+    private final VerificationJobQueue verificationJobs;
+    private final VerdictConsequences verdictConsequences;
     private final AtomicBoolean closed = new AtomicBoolean();
     private AdminEndpoint admin;
 
@@ -54,7 +58,10 @@ public final class MasterServer implements AutoCloseable {
                          Channel serverChannel, SqliteIdentityStore store,
                          TrustLadder ladder, SessionRegistry registry,
                          GuestTunnelRouter tunnels, RelayRoomManager relays,
-                         RoomBroker broker) {
+                         RoomBroker broker, RecordingBlobStore recordingBlobs,
+                         VerifierRegistry verifiers,
+                         VerificationJobQueue verificationJobs,
+                         VerdictConsequences verdictConsequences) {
         this.config = config;
         this.dataDir = dataDir;
         this.brokerGroup = brokerGroup;
@@ -66,6 +73,10 @@ public final class MasterServer implements AutoCloseable {
         this.tunnels = tunnels;
         this.relays = relays;
         this.broker = broker;
+        this.recordingBlobs = recordingBlobs;
+        this.verifiers = verifiers;
+        this.verificationJobs = verificationJobs;
+        this.verdictConsequences = verdictConsequences;
     }
 
     public static MasterServer start(MasterConfig config, Path dataDir) throws Exception {
@@ -99,6 +110,15 @@ public final class MasterServer implements AutoCloseable {
             RoomBroker broker = new RoomBroker(masterIdentity, config, registry, store,
                     ladder, cache, clock, relays, tunnels,
                     key -> profileExists(profiles, key));
+            RecordingBlobStore recordingBlobs = new RecordingBlobStore(
+                    dataDir.resolve("recordings"));
+            VerifierRegistry verifiers = new VerifierRegistry(clock,
+                    config.verifierStaleSeconds() * 1000L);
+            VerificationJobQueue verificationJobs = new VerificationJobQueue(clock,
+                    config.verifierLeaseSeconds() * 1000L);
+            VerdictConsequences verdictConsequences = new VerdictConsequences(
+                    store, ladder, clock, config.cheatBanDays() <= 0 ? 0
+                    : config.cheatBanDays() * 24L * 3_600_000L);
             ConnectionHygiene.ConnectionCounter counter =
                     new ConnectionHygiene.ConnectionCounter(MAX_CONNECTIONS_PER_IP);
             SslContext ssl = sslContext(config);
@@ -112,7 +132,12 @@ public final class MasterServer implements AutoCloseable {
                                 pipeline.addLast(ssl.newHandler(socket.alloc()));
                             }
                             pipeline.addLast(new HttpServerCodec());
-                            pipeline.addLast(new HttpObjectAggregator(8192));
+                            pipeline.addLast(new HttpObjectAggregator(
+                                    config.maxRecordingBytes() + 8192));
+                            pipeline.addLast(new MasterHttpRoutes(config,
+                                    broker::isSessionTokenValid, recordingBlobs,
+                                    verifiers, verificationJobs, verdictConsequences,
+                                    clock, brokerLoop, (job, pass) -> { }));
                             pipeline.addLast(new WebSocketServerProtocolHandler(
                                     "/master", null, true,
                                     Protocol.MAX_MASTER_FRAME_BYTES));
@@ -128,7 +153,8 @@ public final class MasterServer implements AutoCloseable {
             brokerGroup.next().scheduleAtFixedRate(relays::tickAll,
                     50, 50, TimeUnit.MILLISECONDS);
             MasterServer server = new MasterServer(config, dataDir, brokerGroup,
-                    relayGroup, channel, store, ladder, registry, tunnels, relays, broker);
+                    relayGroup, channel, store, ladder, registry, tunnels, relays, broker,
+                    recordingBlobs, verifiers, verificationJobs, verdictConsequences);
             server.admin = AdminEndpoint.start(config, server, dataDir);
             return server;
         } catch (Throwable failure) {
@@ -161,6 +187,9 @@ public final class MasterServer implements AutoCloseable {
 
     public RoomBroker broker() { return broker; }
     public RelayRoomManager relays() { return relays; }
+    public VerifierRegistry verifiers() { return verifiers; }
+    public VerificationJobQueue verificationJobs() { return verificationJobs; }
+    public RecordingBlobStore recordingBlobs() { return recordingBlobs; }
 
     public void sanction(IdentityStore.SanctionRecord sanction) {
         ladder.sanction(sanction);
