@@ -234,7 +234,7 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "trackAnimator", animator);
 
         Sonic2SpecialStagePlayer sonic = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true, manager);
         ArrayList<Sonic2SpecialStagePlayer> players = new ArrayList<>();
         players.add(sonic);
         set(manager, "players", players);
@@ -270,9 +270,9 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "trackAnimator", animator);
 
         Sonic2SpecialStagePlayer sonic = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true, manager);
         Sonic2SpecialStagePlayer tails = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
+                Sonic2SpecialStagePlayer.PlayerType.TAILS, false, manager);
         sonic.setOtherPlayer(tails);
         tails.setOtherPlayer(sonic);
         set(sonic, "ssXPos", 0x1234);

@@ -26,6 +26,7 @@ final class Sonic2SpecialStageSnapshot {
     final int previousPhysicalP2LogicalButtons;
     final int tailsControlCounter;
     final int[] tailsCtrlRecordBuf;
+    final int swapPositionsFlag;
     final int lastDrawingIndex;
     final boolean checkpointRainbowPaletteActive;
     final int rainbowPaletteCycleIndex;
@@ -106,6 +107,7 @@ final class Sonic2SpecialStageSnapshot {
             int previousPhysicalP2LogicalButtons,
             int tailsControlCounter,
             int[] tailsCtrlRecordBuf,
+            int swapPositionsFlag,
             int lastDrawingIndex,
             boolean checkpointRainbowPaletteActive,
             int rainbowPaletteCycleIndex,
@@ -184,6 +186,7 @@ final class Sonic2SpecialStageSnapshot {
         this.previousPhysicalP2LogicalButtons = previousPhysicalP2LogicalButtons;
         this.tailsControlCounter = tailsControlCounter;
         this.tailsCtrlRecordBuf = cloneIntArray(tailsCtrlRecordBuf);
+        this.swapPositionsFlag = swapPositionsFlag;
         this.lastDrawingIndex = lastDrawingIndex;
         this.checkpointRainbowPaletteActive = checkpointRainbowPaletteActive;
         this.rainbowPaletteCycleIndex = rainbowPaletteCycleIndex;
@@ -341,7 +344,6 @@ final class Sonic2SpecialStageSnapshot {
             int globalAnimFrameTimer,
             int[] ctrlRecordBuf,
             int ctrlRecordIndex,
-            boolean swapPositionsFlag,
             int invulnerabilityCountdown) {
         PlayerSnapshot {
             ctrlRecordBuf = Sonic2SpecialStageSnapshot.cloneIntArray(ctrlRecordBuf);

@@ -61,7 +61,7 @@ class Sonic2SpecialStagePerPlayerRingsTest {
 
     private static Sonic2SpecialStagePlayer player(Sonic2SpecialStagePlayer.PlayerType type,
                                                     boolean main) {
-        return new Sonic2SpecialStagePlayer(type, main);
+        return new Sonic2SpecialStagePlayer(type, main, new Sonic2SpecialStageManager());
     }
 
     private static Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager objectManager() {

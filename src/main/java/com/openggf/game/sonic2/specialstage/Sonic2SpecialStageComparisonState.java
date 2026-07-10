@@ -16,12 +16,14 @@ public record Sonic2SpecialStageComparisonState(
         int trackFrameDelayCounter,// animator getFrameDelayCounter() (counts up 0..duration-1)
         int combinedRings,         // manager.getRingsCollected()
         int tailsControlCounter,
+        int swapPositionsFlag,     // manager-owned SS_Swap_Positions_Flag byte
         boolean finished,
         PlayerState sonic,         // null if absent
         PlayerState tails) {       // null if absent
 
     public record PlayerState(int ssX, int ssY, int ssZ, int angle,
                                String routine, int routineSecondary,
-                               int anim, int animFrame, int rings) {
+                               int anim, int animFrame, int rings,
+                               int hurtTimer, int slideTimer, int flipTimer) {
     }
 }

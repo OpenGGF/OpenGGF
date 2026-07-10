@@ -37,7 +37,8 @@ class Sonic2SpecialStagePlayerInitializationTest {
     @Test
     void newAndResetPlayerRemainZeroedInInitRoutine() {
         Sonic2SpecialStagePlayer player = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true,
+                new Sonic2SpecialStageManager());
 
         assertZeroedInit(player);
 
@@ -51,10 +52,11 @@ class Sonic2SpecialStagePlayerInitializationTest {
 
     @Test
     void romObjectInitializerAppliesObj09AndObj10StateWithoutMovementStep() {
+        Sonic2SpecialStageManager owner = new Sonic2SpecialStageManager();
         Sonic2SpecialStagePlayer sonic = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true, owner);
         Sonic2SpecialStagePlayer tails = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
+                Sonic2SpecialStagePlayer.PlayerType.TAILS, false, owner);
         sonic.setSpawned(true);
         tails.setSpawned(true);
 
@@ -70,7 +72,8 @@ class Sonic2SpecialStagePlayerInitializationTest {
     @Test
     void negativeFractionalInertiaTruncatesTowardZeroBeforeChangingAngle() {
         Sonic2SpecialStagePlayer sonic = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true,
+                new Sonic2SpecialStageManager());
         sonic.initializeScalarStateFromRomObjectRoutine();
 
         sonic.update(0x08, 0);

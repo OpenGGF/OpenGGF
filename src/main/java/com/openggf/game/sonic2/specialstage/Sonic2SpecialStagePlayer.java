@@ -5,6 +5,7 @@ import com.openggf.game.GameServices;
 import com.openggf.audio.GameSound;
 import com.openggf.physics.TrigLookupTable;
 
+import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
@@ -140,15 +141,18 @@ public class Sonic2SpecialStagePlayer {
     private int ctrlRecordIndex;
     private static final int CTRL_RECORD_SIZE = 16;
 
-    private boolean swapPositionsFlag;
+    private Sonic2SpecialStageManager swapPositionsOwner;
     private int invulnerabilityCountdown;
     private Sonic2SpecialStagePlayer otherPlayer;
     private boolean spawned;
 
 
-    public Sonic2SpecialStagePlayer(PlayerType type, boolean isMain) {
+    Sonic2SpecialStagePlayer(PlayerType type, boolean isMain,
+                             Sonic2SpecialStageManager swapPositionsOwner) {
         this.playerType = type;
         this.isMainCharacter = isMain;
+        this.swapPositionsOwner = Objects.requireNonNull(
+                swapPositionsOwner, "swapPositionsOwner");
         this.ctrlRecordBuf = new int[CTRL_RECORD_SIZE];
         reset();
     }
@@ -199,7 +203,6 @@ public class Sonic2SpecialStagePlayer {
         renderYFlip = false;
 
         collisionProperty = 0;
-        swapPositionsFlag = false;
         invulnerabilityCountdown = 0;
         spawned = false;
 
@@ -262,7 +265,6 @@ public class Sonic2SpecialStagePlayer {
         renderXFlip = false;
         renderYFlip = false;
         collisionProperty = 0;
-        swapPositionsFlag = false;
         invulnerabilityCountdown = 0;
     }
 
@@ -466,7 +468,7 @@ public class Sonic2SpecialStagePlayer {
         // Original: tst.b (SS_2p_Flag).w / bne.s loc_33B9E / tst.w (Player_mode).w / bne.s loc_33BA2
         // Only toggle swap flag in team mode (when otherPlayer exists)
         if (otherPlayer != null) {
-            swapPositionsFlag = !swapPositionsFlag;
+            toggleSwapPositionsFlag();
         }
 
         GameServices.audio().playSfx(GameSound.JUMP);
@@ -614,9 +616,9 @@ public class Sonic2SpecialStagePlayer {
 
         boolean shouldMoveCloser;
         if (isMainCharacter) {
-            shouldMoveCloser = !swapPositionsFlag;
+            shouldMoveCloser = !getSwapPositionsFlag();
         } else {
-            shouldMoveCloser = swapPositionsFlag;
+            shouldMoveCloser = getSwapPositionsFlag();
         }
 
         if (shouldMoveCloser) {
@@ -792,9 +794,9 @@ public class Sonic2SpecialStagePlayer {
         inertia &= 0xFF;
 
         if (isMainCharacter) {
-            swapPositionsFlag = true;
+            setSwapPositionsFlag(true);
         } else {
-            swapPositionsFlag = false;
+            setSwapPositionsFlag(false);
         }
 
         routineSecondary = 2;
@@ -850,6 +852,9 @@ public class Sonic2SpecialStagePlayer {
     public boolean isJumping() { return statusJumping; }
     public boolean isHurt() { return routineSecondary == 2; }
     public int getRings() { return rings; }
+    public int getHurtTimer() { return ssHurtTimer & 0xFF; }
+    public int getSlideTimer() { return ssSlideTimer & 0xFF; }
+    public int getFlipTimer() { return ssFlipTimer & 0xFF; }
 
     void collectRing() {
         rings++;
@@ -900,11 +905,19 @@ public class Sonic2SpecialStagePlayer {
     }
 
     public void setSwapPositionsFlag(boolean flag) {
-        this.swapPositionsFlag = flag;
+        swapPositionsOwner.setSwapPositionsFlag(flag);
     }
 
     public boolean getSwapPositionsFlag() {
-        return swapPositionsFlag;
+        return swapPositionsOwner.getSwapPositionsFlag() != 0;
+    }
+
+    void toggleSwapPositionsFlag() {
+        swapPositionsOwner.toggleSwapPositionsFlag();
+    }
+
+    void setSwapPositionsOwner(Sonic2SpecialStageManager owner) {
+        this.swapPositionsOwner = Objects.requireNonNull(owner, "owner");
     }
 
     public int getControlRecordEntry(int framesAgo) {
@@ -957,7 +970,6 @@ public class Sonic2SpecialStagePlayer {
                 globalAnimFrameTimer,
                 ctrlRecordBuf,
                 ctrlRecordIndex,
-                swapPositionsFlag,
                 invulnerabilityCountdown);
     }
 
@@ -1004,7 +1016,6 @@ public class Sonic2SpecialStagePlayer {
         globalAnimFrameTimer = snapshot.globalAnimFrameTimer();
         ctrlRecordBuf = Sonic2SpecialStageSnapshot.cloneIntArray(snapshot.ctrlRecordBuf());
         ctrlRecordIndex = snapshot.ctrlRecordIndex();
-        swapPositionsFlag = snapshot.swapPositionsFlag();
         invulnerabilityCountdown = snapshot.invulnerabilityCountdown();
     }
 }

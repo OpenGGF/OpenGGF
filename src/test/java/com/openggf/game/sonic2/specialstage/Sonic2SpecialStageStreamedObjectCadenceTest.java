@@ -207,6 +207,8 @@ class Sonic2SpecialStageStreamedObjectCadenceTest {
                 Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
         Sonic2SpecialStagePlayer tails = initializedPlayer(
                 Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
+        sonic.setSwapPositionsOwner(manager);
+        tails.setSwapPositionsOwner(manager);
 
         set(manager, "objectManager", objectManager);
         set(manager, "players", new ArrayList<>(List.of(sonic, tails)));
@@ -234,6 +236,8 @@ class Sonic2SpecialStageStreamedObjectCadenceTest {
                 Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
         set(sonic, "ssZPos", 0x80);
         set(tails, "ssZPos", 0x80);
+        sonic.setSwapPositionsOwner(manager);
+        tails.setSwapPositionsOwner(manager);
         set(sonic, "collisionProperty", 0);
         set(tails, "collisionProperty", 0);
 
@@ -329,7 +333,8 @@ class Sonic2SpecialStageStreamedObjectCadenceTest {
     private static Sonic2SpecialStagePlayer initializedPlayer(
             Sonic2SpecialStagePlayer.PlayerType type,
             boolean main) {
-        Sonic2SpecialStagePlayer player = new Sonic2SpecialStagePlayer(type, main);
+        Sonic2SpecialStagePlayer player = new Sonic2SpecialStagePlayer(
+                type, main, new Sonic2SpecialStageManager());
         player.initializeScalarStateFromRomObjectRoutine();
         return player;
     }

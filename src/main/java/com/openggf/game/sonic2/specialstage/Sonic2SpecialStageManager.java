@@ -172,6 +172,10 @@ public class Sonic2SpecialStageManager {
     private int previousPhysicalP2LogicalButtons;
     private int tailsControlCounter = 0;
     private final int[] tailsCtrlRecordBuf = new int[16];
+    // The ROM exposes one global byte, SS_Swap_Positions_Flag. Obj09 clears it,
+    // either player's jump toggles it, and both players read it while changing
+    // depth (s2.asm:69058, 69247-69253, 69505-69518).
+    private int swapPositionsFlag;
 
     // Intro sequence
     private Sonic2SpecialStageIntro intro;
@@ -991,16 +995,16 @@ public class Sonic2SpecialStageManager {
 
         if ("tails".equals(characterCode)) {
             tailsPlayer = new Sonic2SpecialStagePlayer(
-                    Sonic2SpecialStagePlayer.PlayerType.TAILS, true);
+                    Sonic2SpecialStagePlayer.PlayerType.TAILS, true, this);
             players.add(tailsPlayer);
             LOGGER.fine("Special Stage: Tails alone");
         } else if (tailsSidekick) {
             sonicPlayer = new Sonic2SpecialStagePlayer(
-                    Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                    Sonic2SpecialStagePlayer.PlayerType.SONIC, true, this);
             players.add(sonicPlayer);
 
             tailsPlayer = new Sonic2SpecialStagePlayer(
-                    Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
+                    Sonic2SpecialStagePlayer.PlayerType.TAILS, false, this);
             players.add(tailsPlayer);
 
             sonicPlayer.setOtherPlayer(tailsPlayer);
@@ -1008,7 +1012,7 @@ public class Sonic2SpecialStageManager {
             LOGGER.fine("Special Stage: Sonic and Tails");
         } else {
             sonicPlayer = new Sonic2SpecialStagePlayer(
-                    Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                    Sonic2SpecialStagePlayer.PlayerType.SONIC, true, this);
             players.add(sonicPlayer);
             LOGGER.fine("Special Stage: Sonic alone");
         }
@@ -1028,6 +1032,7 @@ public class Sonic2SpecialStageManager {
         // RunObjects scans the main-character slot before the sidekick slot
         // (s2.asm:29805-29846).
         if (sonicPlayer != null) {
+            swapPositionsFlag = 0;
             sonicPlayer.initializeScalarStateFromRomObjectRoutine();
         }
         if (tailsPlayer != null) {
@@ -2308,6 +2313,18 @@ public class Sonic2SpecialStageManager {
         return players;
     }
 
+    int getSwapPositionsFlag() {
+        return swapPositionsFlag & 0xFF;
+    }
+
+    void setSwapPositionsFlag(boolean set) {
+        swapPositionsFlag = set ? 0xFF : 0;
+    }
+
+    void toggleSwapPositionsFlag() {
+        swapPositionsFlag ^= 0xFF;
+    }
+
     /**
      * Resets the Special Stage manager state.
      */
@@ -2362,6 +2379,7 @@ public class Sonic2SpecialStageManager {
         previousPhysicalP2LogicalButtons = 0;
         tailsControlCounter = 0;
         java.util.Arrays.fill(tailsCtrlRecordBuf, 0);
+        swapPositionsFlag = 0;
 
         intro = null;
         hudPatternBase = 0;
@@ -2489,6 +2507,7 @@ public class Sonic2SpecialStageManager {
                 previousPhysicalP2LogicalButtons,
                 tailsControlCounter,
                 tailsCtrlRecordBuf,
+                swapPositionsFlag,
                 lastDrawingIndex,
                 checkpointRainbowPaletteActive,
                 rainbowPaletteCycleIndex,
@@ -2571,6 +2590,7 @@ public class Sonic2SpecialStageManager {
         tailsControlCounter = snapshot.tailsControlCounter;
         System.arraycopy(snapshot.tailsCtrlRecordBuf, 0, tailsCtrlRecordBuf, 0,
                 Math.min(tailsCtrlRecordBuf.length, snapshot.tailsCtrlRecordBuf.length));
+        swapPositionsFlag = snapshot.swapPositionsFlag;
         lastDrawingIndex = snapshot.lastDrawingIndex;
         checkpointRainbowPaletteActive = snapshot.checkpointRainbowPaletteActive;
         rainbowPaletteCycleIndex = snapshot.rainbowPaletteCycleIndex;
@@ -2675,6 +2695,7 @@ public class Sonic2SpecialStageManager {
         }
         for (int i = 0; i < players.size(); i++) {
             Sonic2SpecialStagePlayer player = players.get(i);
+            player.setSwapPositionsOwner(this);
             Sonic2SpecialStageSnapshot.PlayerSlotSnapshot slot = topology.slots().get(i);
             if (player.getPlayerType() != slot.type() || player.isMainCharacter() != slot.mainCharacter()) {
                 throw new IllegalStateException("Sonic 2 special-stage player topology changed during rewind restore");
@@ -2842,6 +2863,7 @@ public class Sonic2SpecialStageManager {
                 trackFrameDelayCounterValue,
                 getRingsCollected(),
                 tailsControlCounter,
+                getSwapPositionsFlag(),
                 isFinished(),
                 toComparisonPlayerState(sonicPlayer),
                 toComparisonPlayerState(tailsPlayer));
@@ -2861,7 +2883,10 @@ public class Sonic2SpecialStageManager {
                 player.isHurt() ? 2 : 0,
                 player.getAnim(),
                 player.getAnimFrame(),
-                player.getRings());
+                player.getRings(),
+                player.getHurtTimer(),
+                player.getSlideTimer(),
+                player.getFlipTimer());
     }
 
     /**

@@ -71,8 +71,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <h2>Comparator tiers</h2>
  * <p>Tier-1 mismatches are report ERRORs, Tier-2 are WARNINGs. Only fields
  * exposed by {@link Sonic2SpecialStageComparisonState} are wired; trace columns
- * with no engine counterpart in that snapshot ({@code rings_togo_bcd},
- * {@code swap_positions_flag}, hurt/slide/flip timers) are not compared, and
+ * with no engine counterpart in that snapshot ({@code rings_togo_bcd}) are not
+ * compared, and
  * {@code player_anim_frame_timer} is intentionally never compared (its engine
  * counterpart is a constant).
  * <ul>
@@ -81,14 +81,18 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       {@code RoutineState} name), {@code hurt} ({@code routine_secondary==2});
  *       per-player {@code sonic_rings}/{@code tails_rings},
  *       {@code combined_rings}, {@code speed_factor}, {@code current_segment},
- *       {@code track_anim_frame}, {@code finished}, and the
+ *       {@code track_anim_frame}, {@code swap_positions_flag}, per-player
+ *       {@code hurt_timer}/{@code slide_timer}, {@code finished}, and the
  *       {@code finished_transition_frame} boundary check.</li>
  *   <li><b>Tier-2</b>: {@code track_drawing_index}, {@code track_duration_timer}
  *       (ROM counts down from the {@code SSAnim_Base_Duration} for the current
  *       speed factor; engine counts up — compared via
  *       {@code duration - romTimer == engineCounter}), and
- *       {@code tails_control_counter}.</li>
+ *       {@code tails_control_counter}, and per-player {@code flip_timer}.</li>
  * </ul>
+ * <p>Player timers are compared only from atomic {@code run_objects_end}
+ * snapshots: a raw VBlank row can interrupt the Obj09→Obj10 scan and contain
+ * Sonic's post-pass timer beside Tails's pre-pass timer.</p>
  *
  * <p>Tier-1 parity is release-gated: the pipeline writes a complete report and
  * {@link #assertNoReleaseBlockingDivergences} rejects any ERROR divergence.
@@ -235,8 +239,10 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             SpecialStageExpectedState expected =
                     SpecialStageExpectedState.from(tf, passEnd);
             addManagerFields(fields, expected, state, false);
-            addPlayerFields(fields, "sonic", expected.sonic(), state.sonic());
-            addPlayerFields(fields, "tails", expected.tails(), state.tails());
+            addPlayerFields(fields, "sonic", expected.sonic(), state.sonic(),
+                    expected.hasRunObjectsEnd());
+            addPlayerFields(fields, "tails", expected.tails(), state.tails(),
+                    expected.hasRunObjectsEnd());
             comparisons.add(new FrameComparison(f, fields));
         }
 
@@ -325,6 +331,10 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 cmp("track_duration_timer", str(expectedCounter), str(state.trackFrameDelayCounter()), Severity.WARNING));
         fields.put("tails_control_counter",
                 cmp("tails_control_counter", str(expected.tailsControlCounter()), str(state.tailsControlCounter()), Severity.WARNING));
+        int swapPositionsFlag = pass != null ? pass.swapPositionsFlag() : tf.swapPositionsFlag();
+        fields.put("swap_positions_flag",
+                cmp("swap_positions_flag", str(swapPositionsFlag),
+                        str(state.swapPositionsFlag()), Severity.ERROR));
     }
 
     /** Focused comparison seam used by atomic RunObjects-end mapping tests. */
@@ -333,8 +343,10 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             Sonic2SpecialStageComparisonState state) {
         Map<String, FieldComparison> fields = new LinkedHashMap<>();
         addManagerFields(fields, expected, state, false);
-        addPlayerFields(fields, "sonic", expected.sonic(), state.sonic());
-        addPlayerFields(fields, "tails", expected.tails(), state.tails());
+        addPlayerFields(fields, "sonic", expected.sonic(), state.sonic(),
+                expected.hasRunObjectsEnd());
+        addPlayerFields(fields, "tails", expected.tails(), state.tails(),
+                expected.hasRunObjectsEnd());
         return fields;
     }
 
@@ -349,7 +361,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     private static void addPlayerFields(Map<String, FieldComparison> fields,
                                         String prefix,
                                         CharacterState tc,
-                                        PlayerState ps) {
+                                        PlayerState ps,
+                                        boolean atomicPassEnd) {
         boolean tracePresent = tc != null && tc.present();
         boolean engPresent = ps != null;
         fields.put(prefix + "_present",
@@ -383,6 +396,21 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         fields.put(prefix + "_rings", cmp(prefix + "_rings",
                 intOr(tracePresent, tracePresent ? tc.ringsBinary() : 0),
                 intOr(engPresent, engPresent ? ps.rings() : 0), Severity.ERROR));
+        // A VBlank CSV sample can bisect RunObjects between Obj09 and Obj10
+        // (the committed trace does so at f160 and f183). Player-owned timers
+        // are therefore compared only against the recorder's atomic pass-end
+        // snapshot, never against a mixed raw observation.
+        if (atomicPassEnd) {
+            fields.put(prefix + "_hurt_timer", cmp(prefix + "_hurt_timer",
+                    intOr(tracePresent, tracePresent ? tc.hurtTimer() : 0),
+                    intOr(engPresent, engPresent ? ps.hurtTimer() : 0), Severity.ERROR));
+            fields.put(prefix + "_slide_timer", cmp(prefix + "_slide_timer",
+                    intOr(tracePresent, tracePresent ? tc.slideTimer() : 0),
+                    intOr(engPresent, engPresent ? ps.slideTimer() : 0), Severity.ERROR));
+            fields.put(prefix + "_flip_timer", cmp(prefix + "_flip_timer",
+                    intOr(tracePresent, tracePresent ? tc.flipTimer() : 0),
+                    intOr(engPresent, engPresent ? ps.flipTimer() : 0), Severity.WARNING));
+        }
     }
 
     /**

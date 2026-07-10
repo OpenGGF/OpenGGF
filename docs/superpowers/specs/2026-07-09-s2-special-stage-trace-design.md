@@ -185,60 +185,67 @@ stage natively — team config from metadata via the same two-key pattern as
 `TraceReplaySessionBootstrap.prepareConfiguration()` (relying on the
 `setupPlayers()` alignment above), then
 `Sonic2SpecialStageProvider.initializeStage(specialStageIndex)`; lag compensation set
-to 0. No recorded player/track/object state is copied into the engine. Per frame:
-non-lag row → step fixture with that row's pad input; lag row → consume input without
-stepping. Input validation per frame (BK2 vs CSV `input`), failing fast with
-`bk2_frame_offset` guidance.
+to 0. No recorded player/track/object state is copied into the engine. Startup uses
+the verified VBlank/non-lag pacing through the recorded `SpecialStage_Started`
+transition. After that semantic boundary, each observation executes the zero, one,
+or multiple ordered `run_objects_end` passes captured for it. Every pass names the
+exact current and previous BK2 rows sampled by its preceding `ReadJoypads`; replay
+derives held/pressed input from those movie identities, while the auxiliary held
+bytes only validate the binding. The finish-causing pass is owned by its semantic
+terminal lag observation. Player/object fields use the latest completed atomic pass
+snapshot where required; raw VBlank fields retain observation semantics.
 
 Frame 0 of the compared range is the first recorded frame with
-`Game_Mode == 0x10`; the fixture anchors it to a documented engine state
-immediately after `initializeStage()` (intro `DROP` phase start — the exact anchor
-frame is pinned during implementation, analogous to level traces'
-`alignFrameCountersForReplayStart`). `routine` values are compared through an
+`Game_Mode == 0x10`; the fixture anchors it immediately after
+`initializeStage()` at the manager-owned `PRE_ROLL` phase, before the ROM player
+object-creation tick. `routine` values are compared through an
 explicit ROM↔engine mapping table (the ROM encodes hurt as a routine value; the
 engine models it as `routineSecondary == 2`), defined in the fixture, not by raw
 value equality.
 
 **Comparator tiers:**
 
-- Tier 1 (errors): per-player `present`, `ss_x`, `ss_y`, `ss_z`, `angle`, `routine`;
-  **combined** ring total (sum of the two players' BCD fields, decoded to binary);
-  global `speed_factor`, `current_segment`, `track_anim_frame`.
-- Tier 2 (warnings initially, ratcheted to errors as fixes land): per-player rings,
-  intro/message timing, `rings_togo_bcd`, checkpoint flags, `tails_control_counter`,
-  `track_drawing_index`, `track_duration_timer` (via mapping), `swap_positions_flag`,
-  hurt/slide timers.
-- Recorded but not compared (engine counterpart missing/constant — see caveats):
-  `player_anim_frame_timer`.
+- Errors: per-player `present`, `ss_x`, `ss_y`, `ss_z`, `angle`, `routine`/hurt,
+  decoded per-player rings, hurt timer, and slide timer; **combined** ring total;
+  global `speed_factor`, `current_segment`, `track_anim_frame`,
+  `swap_positions_flag`, `finished`, and the logical finish-transition boundary.
+- Warnings: `tails_control_counter`, `track_drawing_index`,
+  `track_duration_timer` (through the explicit countdown→elapsed mapping), and
+  per-player flip timers. Flip remains visible at its f429 one-pass animation-phase
+  frontier; it is not promoted until that engine cadence is corrected.
+- Recorded but not currently compared: `player_anim_frame_timer` and
+  `rings_togo_bcd` (Task 9 owns their engine counter/refresh-gated mappings), plus
+  checkpoint/message diagnostics that do not yet have a ratcheted comparison.
 
-**Per-player rings caveat:** the ROM tracks each player's ring pickups separately
+**Per-player rings contract:** the ROM tracks each player's ring pickups separately
 on their object slots (`ss_rings_*` at `objoff_3C..3E`; incremented per touching
-object `s2.asm:70771-70789`, summed for the HUD `s2.asm:9938-9943`). The engine has
-only a shared pool (`objectManager.collectRing()` regardless of which player
-touched; `Sonic2SpecialStagePlayer` has no rings field). Per-player rings are
-therefore *recorded* in the CSV but compared only as Tier-2 diagnostics until the
-follow-up fix plan adds per-player ring tracking to the engine (a real ROM-parity
-gap — the results screen tallies each player's rings separately). BCD fields are
-decoded to binary before comparison.
+object `s2.asm:70771-70789`, summed for the HUD `s2.asm:9938-9943`). The engine
+stores that count on the touching `Sonic2SpecialStagePlayer`; ring collection and
+bomb spill mutate that owner and the preserved combined total together. Rewind
+captures each count, BCD fields are decoded to binary, and per-player mismatches
+are errors.
 
-**Further field-comparability caveats** (same class as rings — recorded now,
-faithfully comparable only after small engine parity fixes; all are follow-up-plan
-worklist items, not MVP blockers):
+**Further field-comparability contracts:**
 
-- `swap_positions_flag`: ROM has one global cell toggled by whichever player jumps
-  (`s2.asm:69058`, `s2.asm:69253`); the engine keeps a *per-player copy* on each
-  `Sonic2SpecialStagePlayer` (`swapPositionsFlag`, line 142) with no cross-instance
-  sync, so the copies diverge from a ROM-faithful single flag whenever only one
-  player acts. Tier-2 diagnostic only until reconciled.
+- `swap_positions_flag`: ROM has one global cell, cleared by Obj09 initialization,
+  toggled by whichever player jumps, and read by both players' depth routines
+  (`s2.asm:69058`, `s2.asm:69247-69253`, `s2.asm:69505-69518`). The engine now
+  owns the byte once on `Sonic2SpecialStageManager`; player reads and writes
+  delegate to that required constructor owner, rewind captures it in the manager
+  section, and the comparator treats mismatches as errors. There is no ownerless
+  player construction path or silent-false getter fallback.
+- Player hurt/slide timers are errors and flip timer remains a warning at f429.
+  These object-owned bytes are compared only from atomic `run_objects_end` snapshots:
+  raw VBlank rows can bisect the Obj09→Obj10 scan (the committed trace does so at
+  f160 and f183), so raw rows are not a coherent two-player timer boundary.
 - `player_anim_frame_timer`: the engine's only counterpart,
   `Sonic2TrackAnimator.getPlayerAnimFrameTimer()`, returns a constant
   (`getFrameDuration() - 1`) by its own admission, not a live decrementing counter.
   Recorded, **not compared**, until a real counter exists — wiring it in now would
   be permanently-noisy diagnostics.
-- `track_duration_timer`: no engine accessor exists, and the closest analog
-  (`frameDelayCounter`) counts *up* 0→duration while the ROM counts *down* to 0
-  (`s2.asm:967`). Needs a new getter plus the same explicit ROM↔engine mapping
-  treatment as `routine` — never raw value equality.
+- `track_duration_timer`: `frameDelayCounter` counts *up* while the ROM counts
+  down (`s2.asm:967`), so the warning comparison uses
+  `SSAnim_Base_Duration - romTimer == engineCounter`, never raw equality.
 
 Report JSON to
 `target/trace-reports/s2_special_stage_<special_stage_index>_report.json` —
@@ -297,9 +304,11 @@ focus, `LevelFrameStep`-based stepping).
 
 - Comparison-only invariant per the `trace-replay-bug-fixing` skill: committed code
   never hydrates engine state from trace fields.
-- Per-frame input validation as in level traces.
-- The new test is **not** added to must-keep-green; on first run its first-error
-  frame/field is logged in `docs/TRACE_FRONTIER_LOG.md`.
+- Startup validates BK2 input against each VBlank row; active replay validates
+  every pass's exact current/previous `ReadJoypads` BK2 identities and masks.
+- The trace's ERROR-severity frontier is release-gated by
+  `assertNoReleaseBlockingDivergences()`; remaining WARNING fields and their first
+  frontier stay explicit in `docs/TRACE_FRONTIER_LOG.md`.
 - Recorder hard-fails if SS mode never appears (bk2 drift guard).
 
 ## Testing the Infrastructure
@@ -314,7 +323,6 @@ focus, `LevelFrameStep`-based stepping).
 
 - Full round trip (level → SS → return transition validation).
 - Results/ring-bonus tally replay (recorded in the trace tail, uncompared for MVP).
-- Per-player ring tracking in the engine (follow-up fix; see comparator caveat).
 - All-7-stage complete-run traces; solo-Sonic / solo-Tails / human-P2 traces.
 - S1 special stage generalization (seams intentionally left).
 - All discrepancy fixes, including replacing the flat lag compensator for normal
