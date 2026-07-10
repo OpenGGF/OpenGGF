@@ -117,7 +117,11 @@ public final class CaterkillerJrBodyInstance extends AbstractObjectInstance
             this.canFire = false;
         }
 
-        this.waitTimer = waitDelay;
+        // The constructor folds loc_877AC (routine 0) into object creation. A
+        // child allocated after the head executes that setup later in the same
+        // object pass, but does not enter loc_877D8's routine-2 decrement until
+        // the next pass. Preserve that init-only dispatch with one extra tick.
+        this.waitTimer = waitDelay + 1;
     }
 
     public CaterkillerJrBodyInstance(ObjectSpawn spawn) {

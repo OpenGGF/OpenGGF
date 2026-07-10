@@ -100,7 +100,9 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
     private void spawnBodySegments() {
         for (int i = 0; i < BODY_SEGMENT_COUNT; i++) {
             int segmentIndex = i;
-            CaterkillerJrBodyInstance segment = spawnFreeChild(
+            // CreateChild3_NormalRepeated allocates each child with
+            // AllocateObjectAfterCurrent, preserving head-before-body touch order.
+            CaterkillerJrBodyInstance segment = spawnChild(
                     () -> new CaterkillerJrBodyInstance(
                             spawn, segmentIndex, SEGMENT_WAIT_DELAYS[segmentIndex]));
             if (!segment.isDestroyed() && segment.getSlotIndex() >= 0) {

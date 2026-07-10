@@ -347,9 +347,22 @@ movement suite passes. The complete-run frontier moves from f12706
 `$056F`, actual `$056A`). Fresh full sweeps on this exact working tree pass all
 29 S1 and all 48 S2 trace replays.
 
+Round 25 restores Caterkiller Jr's native child allocation and folded-init
+timing. `CreateChild3_NormalRepeated` calls `AllocateObjectAfterCurrent` for
+all six bodies, so the attackable head precedes every HURT segment in the
+collision-response list. The Java bodies now use that same after-current path;
+their folded constructor also preserves routine 0 as a setup-only dispatch by
+delaying the first routine-2 wait decrement one pass (`sonic3k.asm:
+176996-177027,183317-183515`). This keeps the earlier f12778 CPU Tails body
+contact aligned while letting Sonic destroy the head before its bodies at
+f12910. The Caterkiller rewind graph suite passes. The complete-run frontier
+moves from f12910 (`y` expected `$056F`, actual `$056A`, following an incorrect
+ring spill) to f13141 (`y` expected `$04DC`, actual `$04E7`). Fresh full sweeps
+on this exact working tree pass all 29 S1 and all 48 S2 trace replays.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f12910.
+banked rounds the current stacked working-tree complete-run frontier is f13141.
 Those causes will be recorded and committed separately as their focused guards
 are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes
