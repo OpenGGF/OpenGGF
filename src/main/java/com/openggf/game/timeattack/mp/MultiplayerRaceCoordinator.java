@@ -2,6 +2,7 @@ package com.openggf.game.timeattack.mp;
 
 import com.openggf.game.ghost.GhostFrame;
 import com.openggf.game.timeattack.AttemptInputRecording;
+import com.openggf.game.timeattack.GhostStore;
 import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameServices;
@@ -20,10 +21,15 @@ import java.util.Comparator;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Objects;
+import java.nio.file.Path;
 import java.util.function.LongSupplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /** Bridges a room connection to one attached time-attack runtime per round. */
 public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.AttemptListener {
+    private static final Logger LOGGER = Logger.getLogger(
+            MultiplayerRaceCoordinator.class.getName());
     private static final long PING_INTERVAL_MILLIS = 500;
     private static final long STANDINGS_PAGE_INTERVAL_MILLIS = 2000;
     private static final int STANDINGS_PAGE_SIZE = 10;
@@ -34,6 +40,9 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private final RemoteGhostRegistry registry = new RemoteGhostRegistry();
     private final LongSupplier clockMillis;
     private final AttemptRecordingVault recordingVault;
+    private final RecordingUploader recordingUploader;
+    private final String configuredMasterUrl;
+    private final GhostStore ghostStore;
 
     private TimeAttackRuntime runtime;
     private GhostStreamPublisher publisher;
@@ -49,15 +58,28 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private final SpectatePanController spectatePan = new SpectatePanController();
 
     public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session) {
-        this(transport, session, System::currentTimeMillis);
+        this(transport, session, System::currentTimeMillis, "", false,
+                new GhostStore(Path.of("ghosts")));
     }
 
     public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session,
                                       LongSupplier clockMillis) {
+        this(transport, session, clockMillis, "", false,
+                new GhostStore(Path.of("ghosts")));
+    }
+
+    public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session,
+                                      LongSupplier clockMillis, String configuredMasterUrl,
+                                      boolean trustInsecure, GhostStore ghostStore) {
         this.transport = Objects.requireNonNull(transport, "transport");
         this.session = Objects.requireNonNull(session, "session");
         this.clockMillis = Objects.requireNonNull(clockMillis, "clockMillis");
         this.recordingVault = new AttemptRecordingVault(clockMillis);
+        this.configuredMasterUrl = configuredMasterUrl == null ? "" : configuredMasterUrl;
+        this.ghostStore = Objects.requireNonNull(ghostStore, "ghostStore");
+        String token = transport.sessionToken();
+        this.recordingUploader = token == null || token.isBlank()
+                ? null : new RecordingUploader(token, trustInsecure);
     }
 
     public void attachRuntime(TimeAttackRuntime runtime) {
@@ -116,6 +138,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                         applyAroundYouPage(page.rows());
                     } else if (control.message() instanceof ControlMessage.RoundEnd) {
                         recordingVault.onRoundEnd();
+                    } else if (control.message() instanceof ControlMessage.RecordingRequest request) {
+                        uploadRequestedRecording(request);
                     }
                 }
                 case RaceClient.GhostData ghost -> registry.onAggregate(ghost.aggregate());
@@ -211,6 +235,9 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 
     public void shutdown() {
         detachRuntime();
+        if (recordingUploader != null) {
+            recordingUploader.close();
+        }
         transport.close();
     }
 
@@ -258,6 +285,39 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
             throw new IllegalStateException("no runtime attached");
         }
         return publisher;
+    }
+
+    private void uploadRequestedRecording(ControlMessage.RecordingRequest request) {
+        if (recordingUploader == null) {
+            LOGGER.warning("Ignoring recording request without an upload session token");
+            return;
+        }
+        byte[] recording = recordingVault.get(request.expectedHashHex()).orElse(null);
+        if (recording == null) {
+            try {
+                recording = ghostStore.findInputRecording(request.expectedHashHex())
+                        .orElse(null);
+            } catch (java.io.IOException failure) {
+                LOGGER.log(Level.WARNING, "Unable to search persisted recording sidecars", failure);
+            }
+        }
+        if (recording == null) {
+            LOGGER.warning("Requested attempt recording is no longer available: "
+                    + request.expectedHashHex());
+            return;
+        }
+        try {
+            String url = RecordingUploader.resolveUploadUrl(
+                    request.uploadUrl(), configuredMasterUrl);
+            recordingUploader.upload(url, recording, success -> {
+                if (!success) {
+                    LOGGER.warning("Attempt recording upload failed: "
+                            + request.expectedHashHex());
+                }
+            });
+        } catch (IllegalArgumentException invalidUrl) {
+            LOGGER.log(Level.WARNING, "Invalid recording upload URL", invalidUrl);
+        }
     }
 
     static List<ActiveGhost> presentRemoteGhosts(

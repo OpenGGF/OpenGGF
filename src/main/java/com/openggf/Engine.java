@@ -1226,7 +1226,11 @@ public class Engine {
 		ClientRaceSession session = new ClientRaceSession(System::currentTimeMillis);
 		session.applyJoin(client.joinAccepted());
 		multiplayerRaceCoordinator = new MultiplayerRaceCoordinator(
-				RaceTransport.from(client), session);
+				RaceTransport.from(client), session, System::currentTimeMillis,
+				configService.getString(SonicConfiguration.TIME_ATTACK_NET_MASTER_URL),
+				configService.getBoolean(
+						SonicConfiguration.TIME_ATTACK_NET_MASTER_TRUST_INSECURE),
+				new com.openggf.game.timeattack.GhostStore(Path.of("ghosts")));
 		gameLoop.setMultiplayerRaceCoordinator(multiplayerRaceCoordinator);
 		openRaceLobbyOnCurrentTitle();
 	}

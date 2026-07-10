@@ -18,6 +18,10 @@ public interface RaceTransport {
             }
             @Override public void sendBinary(byte[] data) { connection.sendBinary(data); }
             @Override public int playerSlot() { return connection.playerSlot(); }
+            @Override public String sessionToken() {
+                return connection.joinAccepted() == null ? null
+                        : connection.joinAccepted().sessionToken();
+            }
             @Override public boolean isOpen() { return connection.isOpen(); }
             @Override public void close() { connection.close(); }
         };
@@ -30,6 +34,8 @@ public interface RaceTransport {
     void sendBinary(byte[] data);
 
     int playerSlot();
+
+    default String sessionToken() { return null; }
 
     boolean isOpen();
 

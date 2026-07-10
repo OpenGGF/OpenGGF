@@ -1,0 +1,128 @@
+package com.openggf.game.timeattack.mp;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
+import java.time.Duration;
+import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Consumer;
+
+/** Asynchronous out-of-band uploader for input-only attempt recordings. */
+public final class RecordingUploader implements AutoCloseable {
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
+    private static final long RETRY_DELAY_MILLIS = 2_000;
+
+    private final String sessionToken;
+    private final ExecutorService executor;
+    private final HttpClient client;
+
+    public RecordingUploader(String sessionToken, boolean trustInsecure) {
+        this.sessionToken = Objects.requireNonNull(sessionToken, "sessionToken");
+        executor = Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "recording-uploader");
+            thread.setDaemon(true);
+            return thread;
+        });
+        HttpClient.Builder builder = HttpClient.newBuilder()
+                .connectTimeout(REQUEST_TIMEOUT);
+        if (trustInsecure) {
+            builder.sslContext(insecureSslContext());
+        }
+        client = builder.build();
+    }
+
+    public void upload(String uploadUrl, byte[] recording, Consumer<Boolean> onDone) {
+        byte[] body = recording.clone();
+        executor.execute(() -> {
+            boolean result = send(uploadUrl, body);
+            if (!result && !Thread.currentThread().isInterrupted()) {
+                try {
+                    Thread.sleep(RETRY_DELAY_MILLIS);
+                    result = send(uploadUrl, body);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            onDone.accept(result);
+        });
+    }
+
+    public static String resolveUploadUrl(String uploadUrlOrPath,
+                                          String configuredMasterUrl) {
+        URI requested = URI.create(Objects.requireNonNull(uploadUrlOrPath,
+                "uploadUrlOrPath"));
+        if (requested.isAbsolute()) {
+            if (!"http".equalsIgnoreCase(requested.getScheme())
+                    && !"https".equalsIgnoreCase(requested.getScheme())) {
+                throw new IllegalArgumentException("upload URL must use HTTP(S)");
+            }
+            return requested.toString();
+        }
+        URI master = URI.create(Objects.requireNonNull(configuredMasterUrl,
+                "configuredMasterUrl"));
+        String scheme = switch (master.getScheme().toLowerCase()) {
+            case "ws" -> "http";
+            case "wss" -> "https";
+            default -> throw new IllegalArgumentException(
+                    "configured master URL must use WS(S)");
+        };
+        try {
+            return new URI(scheme, master.getUserInfo(), master.getHost(),
+                    master.getPort(), requested.getPath(), requested.getQuery(), null)
+                    .toString();
+        } catch (java.net.URISyntaxException impossible) {
+            throw new IllegalArgumentException("invalid upload URL", impossible);
+        }
+    }
+
+    @Override
+    public void close() {
+        executor.shutdownNow();
+    }
+
+    private boolean send(String uploadUrl, byte[] recording) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder(URI.create(uploadUrl))
+                    .timeout(REQUEST_TIMEOUT)
+                    .header("Authorization", "Bearer " + sessionToken)
+                    .header("Content-Type", "application/octet-stream")
+                    .PUT(HttpRequest.BodyPublishers.ofByteArray(recording))
+                    .build();
+            int status = client.send(request,
+                    HttpResponse.BodyHandlers.discarding()).statusCode();
+            return status / 100 == 2;
+        } catch (Exception failure) {
+            if (failure instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            return false;
+        }
+    }
+
+    private static SSLContext insecureSslContext() {
+        try {
+            TrustManager[] trustAll = {new X509TrustManager() {
+                @Override public void checkClientTrusted(X509Certificate[] chain,
+                                                          String authType) { }
+                @Override public void checkServerTrusted(X509Certificate[] chain,
+                                                          String authType) { }
+                @Override public X509Certificate[] getAcceptedIssuers() {
+                    return new X509Certificate[0];
+                }
+            }};
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, trustAll, new SecureRandom());
+            return context;
+        } catch (Exception failure) {
+            throw new IllegalStateException("unable to create insecure TLS context", failure);
+        }
+    }
+}
