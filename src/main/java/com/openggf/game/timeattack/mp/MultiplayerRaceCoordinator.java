@@ -14,6 +14,9 @@ import com.openggf.sprites.ghost.ActiveGhost;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Comparator;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.Objects;
 import java.util.function.LongSupplier;
 
@@ -39,6 +42,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private int localRank = -1;
     private List<ControlMessage.StandingsRow> topStandings = List.of();
     private List<ControlMessage.StandingsRow> aroundYouStandings = List.of();
+    private int lastLocalFrameX;
 
     public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session) {
         this(transport, session, System::currentTimeMillis);
@@ -126,7 +130,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         if (runtime != null && !session.isWindowOpen() && runtime.isAttemptActive()) {
             runtime.voidCurrentAttempt();
         }
-        remoteGhosts = toActiveGhosts(registry.advanceAll(session.localSlot()));
+        remoteGhosts = presentRemoteGhosts(
+                registry.advanceAll(session.localSlot()), lastLocalFrameX);
     }
 
     public List<ActiveGhost> remoteActiveGhosts() {
@@ -191,6 +196,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     @Override
     public void onFrameSampled(int attemptOrdinal, GhostFrame frame) {
         requirePublisher();
+        lastLocalFrameX = frame.x();
         publisher.onFrame(frame);
     }
 
@@ -222,12 +228,20 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         return publisher;
     }
 
-    private static List<ActiveGhost> toActiveGhosts(
-            List<RemoteGhostRegistry.RemoteGhost> ghosts) {
+    static List<ActiveGhost> presentRemoteGhosts(
+            List<RemoteGhostRegistry.RemoteGhost> ghosts, int localCentreX) {
+        Set<Integer> named = ghosts.stream()
+                .sorted(Comparator.comparingInt(ghost -> Math.abs(
+                        ghost.state().frame().x() - localCentreX)))
+                .limit(4).map(RemoteGhostRegistry.RemoteGhost::slot)
+                .collect(Collectors.toUnmodifiableSet());
         List<ActiveGhost> active = new ArrayList<>(ghosts.size());
         for (RemoteGhostRegistry.RemoteGhost ghost : ghosts) {
+            float finishedScale = ghost.state().frame().finished() ? 0.55f : 1f;
             active.add(new ActiveGhost("net:" + ghost.slot(), ghost.character(),
-                    ghost.state().frame()));
+                    ghost.state().frame(), named.contains(ghost.slot())
+                    ? ghost.displayName() : null,
+                    ghost.state().opacityScale() * finishedScale));
         }
         return List.copyOf(active);
     }
