@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.specialstage;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.TestEnvironment;
@@ -44,7 +45,7 @@ class Sonic2SpecialStagePreRollTest {
                 .setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
 
         Sonic2SpecialStageProvider provider = new Sonic2SpecialStageProvider();
-        provider.initializeStage(0);
+        provider.initializeStage(0, SpecialStageStartupPolicy.TRACE_ACCURATE);
         provider.setLagCompensation(0);
         manager = provider.getManager();
     }
