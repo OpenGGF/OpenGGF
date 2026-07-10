@@ -97,6 +97,10 @@ public final class TimeAttackRuntime {
         return attempt != null && attempt.phase() == TimeAttackAttempt.Phase.RUNNING;
     }
 
+    public boolean isAttemptFinished() {
+        return attempt != null && attempt.phase() == TimeAttackAttempt.Phase.FINISHED;
+    }
+
     /** ARMED or RUNNING; spawn-idle attempts are already visible on the wire. */
     public boolean isAttemptActive() {
         return attempt != null && (attempt.phase() == TimeAttackAttempt.Phase.ARMED

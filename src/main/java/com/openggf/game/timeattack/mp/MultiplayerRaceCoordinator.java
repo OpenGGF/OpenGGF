@@ -3,6 +3,7 @@ package com.openggf.game.timeattack.mp;
 import com.openggf.game.ghost.GhostFrame;
 import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.control.InputHandler;
+import com.openggf.game.GameServices;
 import com.openggf.net.client.ClientRaceSession;
 import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.client.RaceClient;
@@ -43,6 +44,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private List<ControlMessage.StandingsRow> topStandings = List.of();
     private List<ControlMessage.StandingsRow> aroundYouStandings = List.of();
     private int lastLocalFrameX;
+    private final SpectatePanController spectatePan = new SpectatePanController();
 
     public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session) {
         this(transport, session, System::currentTimeMillis);
@@ -65,6 +67,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     public void detachRuntime() {
+        spectatePan.update(GameServices.cameraOrNull(), false, 0, 0);
         if (runtime != null) {
             runtime.setAttemptListener(null);
             runtime.setExtraGhostSupplier(null);
@@ -170,6 +173,12 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                 castVote(option);
             }
         }
+        var logical = input.logical();
+        int dx = (logical.menuRight() ? 1 : 0) - (logical.menuLeft() ? 1 : 0);
+        int dy = (logical.menuDown() ? 1 : 0) - (logical.menuUp() ? 1 : 0);
+        boolean active = runtime != null && runtime.isAttemptFinished()
+                && session.phase() == ClientRaceSession.Phase.RUNNING;
+        spectatePan.update(GameServices.cameraOrNull(), active, dx, dy);
     }
 
     void castVote(int optionIndex) {
