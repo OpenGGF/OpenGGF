@@ -61,6 +61,8 @@ class TestS3kBossTouchResponseProfiles {
 
         assertEquals(TouchCategoryDecodeMode.NORMAL, profile.categoryDecodeMode());
         assertEquals(TouchActorContextPolicy.MAIN_ONLY, profile.actorContextPolicy());
+        assertTrue(boss.usesCurrentTouchResponseState(),
+                "Collision_response_list keeps the live AIZ miniboss object-RAM pointer");
     }
 
     @Test

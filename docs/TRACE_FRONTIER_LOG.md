@@ -259,9 +259,21 @@ ring-manager tests pass. The AIZ complete-run frontier moves from f9376 (ring
 count) to f10517 (player horizontal velocity sign after an object interaction).
 Fresh full sweeps at this bank point pass all 29 S1 and all 48 S2 trace replays.
 
+Round 18 restores AIZ miniboss touch-list ordering. ROM
+`CreateChild1_Normal` repeatedly calls `AllocateObjectAfterCurrent`, placing the
+body, arm, and barrels after the attackable parent; the engine's lowest-free
+allocation had put the HURT body first, so it stopped the collision loop before
+the boss hit. The parent now also opts into the live post-motion coordinates
+held by its previous `Collision_response_list` object-RAM pointer, rather than
+the generic older snapshot (`sonic3k.asm:137222-137271,137396-137422,
+176919-176950,20656-20710`). The focused S3K boss touch-profile test passes,
+and the complete-run frontier moves from f10517 (Sonic boss-hit velocity sign)
+to f10758 (Tails boss-hit velocity sign). Fresh full sweeps pass all 29 S1 and
+all 48 S2 trace replays at this bank point.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f10517. Those causes will be recorded and committed
+banked rounds the current stacked working-tree complete-run frontier is f10758. Those causes will be recorded and committed
 separately as their focused guards are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes
 an earlier f5435 mismatch and must restore/advance that route before the stage

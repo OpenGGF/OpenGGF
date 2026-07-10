@@ -173,6 +173,15 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     }
 
     @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Draw_And_Touch_Sprite publishes this parent after its movement
+        // routine. Collision_response_list keeps the object-RAM pointer, so
+        // the following player slot observes that live post-motion position
+        // (sonic3k.asm:137222-137229,137262-137271,20656-20710).
+        return true;
+    }
+
+    @Override
     protected void onHitTaken(int remainingHits) {
         // Behavior changes are driven by the state machine and parent flags.
     }
@@ -719,7 +728,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     }
 
     private void spawnBossComponent(java.util.function.Supplier<? extends AbstractBossChild> factory) {
-        AbstractBossChild child = spawnFreeChild(factory);
+        AbstractBossChild child = spawnChild(factory);
         childComponents.add(child);
     }
 
@@ -727,7 +736,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         for (int i = 0; i < BREATH_FLAME_X_OFFSETS.length; i++) {
             int flameIndex = i;
             // CreateChild1_Normal sets subtype = d2 (increments by 2): 0, 2, 4, 6
-            spawnFreeChild(() -> new AizMinibossFlameChild(
+            spawnChild(() -> new AizMinibossFlameChild(
                     this,
                     BREATH_FLAME_X_OFFSETS[flameIndex],
                     BREATH_FLAME_Y_OFFSETS[flameIndex],
