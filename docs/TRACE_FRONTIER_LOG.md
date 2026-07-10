@@ -118,9 +118,20 @@ frame-start render-bounds helper now lets the S3K spike preserve the stale flag
 cadence, advancing the frontier to f5493. `TestSonic3kSpikeObjectInstance`
 guards both exclusive render edges and movement-into-view timing.
 
-Remaining unbanked object investigation has advanced through f2303, the
-later transition-floor contact; together with the banked rounds the current
-branch-local frontier is f6237. Those causes will be recorded and committed
+Round 7 banks the Cork Floor roll-break position fix. Obj2F's roll-break path
+calls `sub_2A58E`, which writes rolling radii and status but never changes the
+player's native `y_pos` (`sonic3k.asm:58493-58554`). The engine's solid-contact
+bridge could first restore standing dimensions, after which `setRolling(true)`
+shifted centre Y upward by five pixels solely because the visual height changed.
+The roll handoff now preserves centre Y (and its subpixel word) across that
+dimension change. This closes the isolated complete-run f6729 position cluster
+and moves the stacked working-tree frontier to f6947. The focused
+`TestS3kObjectPlayerQueryParticipation#corkFloorRollBreakUsesAllLivePlayers`
+guard now asserts both the launch and native Y preservation.
+
+Remaining unbanked transition/event investigation has advanced through the
+later transition-floor contact and AIZ2 terrain-table handoff; together with the
+banked rounds the current stacked working-tree frontier is f6947. Those causes will be recorded and committed
 separately as their focused guards are completed. The level-select AIZ trace remains at f8941
 and is still part of the stage-green exit gate. S1/S2 full trace sweeps remain
 pending until the AIZ fixes are banked; no green claim is made yet.

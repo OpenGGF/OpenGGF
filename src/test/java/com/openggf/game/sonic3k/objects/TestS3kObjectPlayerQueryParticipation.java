@@ -17,6 +17,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kObjectPlayerQueryParticipation {
@@ -48,6 +49,7 @@ class TestS3kObjectPlayerQueryParticipation {
                 0x0100, 0x0200, 0x2A, 1, 0, false, 0));
         floor.batch = new SolidCheckpointBatch(floor, Map.of(sidekick, standingContact(2)));
         floor.setServices(new QueryOnlyPlayerServices(main, List.of(sidekick)));
+        int launchY = sidekick.getCentreY();
 
         floor.update(0, main);
 
@@ -55,6 +57,8 @@ class TestS3kObjectPlayerQueryParticipation {
                 "Cork floor should consume query-only sidekick roll-break state");
         assertTrue(sidekick.getAir(),
                 "Roll-breaking query-only sidekick should receive the launch handoff");
+        assertEquals(launchY, sidekick.getCentreY(),
+                "Cork-floor roll launch must preserve ROM y_pos while changing rolling dimensions");
     }
 
     private static TestablePlayableSprite player(String code, int x, int y) {
