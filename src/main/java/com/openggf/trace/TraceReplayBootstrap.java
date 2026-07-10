@@ -176,11 +176,19 @@ public final class TraceReplayBootstrap {
             return 0;
         }
         if (isS3kCompleteRunSegment(trace)) {
-            // Per-zone complete-run segments arm after the ROM has already
-            // completed the setup LevelLoop OscillateNumDo pass. The first
-            // replay-driven object pass therefore needs to see that prior
-            // oscillator phase before it advances natively.
-            return Math.max(1, trace.metadata().preTraceOscillationFrames());
+            TraceFrame firstFrame = trace.getFrame(0);
+            boolean firstRowIsVblankOnly =
+                    isS3kCompleteRunInitialHandoffRow(trace, null, firstFrame)
+                            || isS3kCompleteRunVisibleVelocityHoldRow(trace, null, firstFrame);
+            // A structural handoff/hold row is not driven through LevelLoop,
+            // so reproduce the ROM's already-completed setup OscillateNumDo
+            // pass before the first native object update. When frame 0 is a
+            // real FULL_LEVEL_FRAME (as in the AIZ complete run), that step
+            // advances OscillateNumDo itself; pre-advancing as well shifts
+            // every oscillating object one frame ahead.
+            return firstRowIsVblankOnly
+                    ? Math.max(1, trace.metadata().preTraceOscillationFrames())
+                    : trace.metadata().preTraceOscillationFrames();
         }
         if (usesSidekickTitleCardSeedFrame(trace)) {
             // The S3K Sonic+Tails seed row is not driven through a full engine

@@ -40,6 +40,35 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S3K AIZ frontier campaign (in progress)
+
+Branch `bugfix/ai-s3k-trace-frontier` from `develop` `ff60ac28d`. The first red
+stage in the requested AIZ -> HCZ -> MGZ -> CNZ -> ICZ -> LBZ order is AIZ.
+Campaign baseline:
+
+- `TestS3kAizCompleteRunTraceReplay`: f1095 / 4319 errors (`x_sub` expected
+  `0x0000`, actual `0x0C00`).
+- `TestS3kAizTraceReplay`: f8941 / 1160 errors (`camera_y` expected `0x02C1`,
+  actual `0x02B9`).
+
+Round 1 separates two native cadence fixes. Complete-run bootstrap now
+pre-advances `OscillateNumDo` only when frame zero is a structural VBlank-only
+handoff/hold row; AIZ's real full-level first row advances it natively. The AIZ1
+Knuckles intro now follows its object dispatcher: the trigger returns through
+`PalLoad_Line1` before the first falling movement, and the exit routine consumes
+the previous `Draw_Sprite` render flag before the post-move flag becomes visible
+on the next dispatch (`sonic3k.asm:128608-128665,128731-128749`). These fixes
+moved the complete-run frontier through f2014 and f2138 without hydrating trace
+state. Focused guards `TestTraceReplayStartPositionPolicy` and
+`TestCutsceneKnucklesAiz1Instance` pass with MSE disabled.
+
+Later unbanked investigation has advanced the branch-local complete-run frontier
+through f2303, f3294, f3420, the f4340-f4803 rock-push cluster, f5158, f5493,
+and currently f6237. Those causes will be recorded and committed separately as
+their focused guards are completed. The level-select AIZ trace remains at f8941
+and is still part of the stage-green exit gate. S1/S2 full trace sweeps remain
+pending until the AIZ fixes are banked; no green claim is made yet.
+
 ## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green
 
 Worktree `.worktrees/ai-s2-mtz3-round96-orbinit`, branch
