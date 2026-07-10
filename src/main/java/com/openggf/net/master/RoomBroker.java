@@ -24,6 +24,7 @@ import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 
 /** Authenticated master-browser connection and room-directory state machine. */
 public final class RoomBroker {
@@ -87,6 +88,7 @@ public final class RoomBroker {
     private final LongSupplier clock;
     private final RelayRoomDirectory relays;
     private final DirectTunnelDirectory tunnels;
+    private final Predicate<String> knownTrack;
     private final SecureRandom random = new SecureRandom();
     private final SessionTokenIssuer tokens = new SessionTokenIssuer();
     private final AtomicBoolean attackMode;
@@ -100,6 +102,14 @@ public final class RoomBroker {
                       SessionRegistry registry, IdentityStore store, TrustLadder ladder,
                       NewIdentityCache cache, LongSupplier clock, RelayRoomDirectory relays,
                       DirectTunnelDirectory tunnels) {
+        this(masterIdentity, config, registry, store, ladder, cache, clock,
+                relays, tunnels, ignored -> true);
+    }
+
+    public RoomBroker(PlayerIdentity masterIdentity, MasterConfig config,
+                      SessionRegistry registry, IdentityStore store, TrustLadder ladder,
+                      NewIdentityCache cache, LongSupplier clock, RelayRoomDirectory relays,
+                      DirectTunnelDirectory tunnels, Predicate<String> knownTrack) {
         this.masterIdentity = masterIdentity;
         this.config = config;
         this.registry = registry;
@@ -109,6 +119,7 @@ public final class RoomBroker {
         this.clock = clock;
         this.relays = relays;
         this.tunnels = tunnels;
+        this.knownTrack = knownTrack;
         attackMode = new AtomicBoolean(config.attackMode());
         nextGcMillis = clock.getAsLong() + GC_INTERVAL_MILLIS;
     }
@@ -303,6 +314,7 @@ public final class RoomBroker {
             case ControlMessage.RelayAttach attach -> attach(member, attach.roomId());
             case ControlMessage.Heartbeat heartbeat -> heartbeat(member, heartbeat);
             case ControlMessage.RoomLeave leave -> leaveRoom(member, leave.roomId());
+            case ControlMessage.RoomTrackUpdate update -> updateTrack(member, update);
             default -> strike(member, "illegal broker message");
         }
     }
@@ -316,6 +328,10 @@ public final class RoomBroker {
         }
         if (descriptor.maxPlayers() < 1 || descriptor.maxPlayers() > Protocol.MAX_PLAYERS_RELAY) {
             send(member, new ControlMessage.RoomCreateRejected("invalid player limit"));
+            return;
+        }
+        if (!validVoteTrackPool(descriptor.gameId(), create.voteTrackKeys())) {
+            send(member, new ControlMessage.RoomCreateRejected("invalid vote track pool"));
             return;
         }
         if ("DIRECT".equals(routing)
@@ -338,7 +354,7 @@ public final class RoomBroker {
         try {
             entry = registry.create(descriptor, routing,
                     member.fingerprint, member.connection.remoteHost(), create.directPort(),
-                    create.determinismFingerprint());
+                    create.determinismFingerprint(), create.voteTrackKeys());
             if ("RELAY".equals(routing)) {
                 relays.createRelayRoom(entry);
                 member.joinGrantedRooms.add(entry.roomId());
@@ -455,6 +471,30 @@ public final class RoomBroker {
         registry.find(heartbeat.roomId()).filter(room ->
                 room.hostFingerprint().equals(member.fingerprint))
                 .ifPresent(room -> registry.heartbeat(room.roomId(), heartbeat.playerCount()));
+    }
+
+    private void updateTrack(Member member, ControlMessage.RoomTrackUpdate update) {
+        SessionRegistry.RoomEntry room = registry.find(update.roomId()).orElse(null);
+        if (room == null || !room.hostFingerprint().equals(member.fingerprint)) {
+            strike(member, "unauthorized room track update");
+            return;
+        }
+        String key = room.descriptor().gameId() + ":" + update.zone() + ":" + update.act();
+        if (!knownTrack.test(key)) {
+            strike(member, "unknown room track update");
+            return;
+        }
+        registry.updateTrack(room.roomId(), member.fingerprint, update.zone(), update.act());
+    }
+
+    private boolean validVoteTrackPool(String gameId, List<String> trackKeys) {
+        for (String key : trackKeys) {
+            String[] parts = key.split(":", -1);
+            if (parts.length != 3 || !parts[0].equals(gameId) || !knownTrack.test(key)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void leaveRoom(Member member, String roomId) {

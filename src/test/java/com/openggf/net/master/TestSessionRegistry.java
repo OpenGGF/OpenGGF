@@ -83,6 +83,18 @@ class TestSessionRegistry {
     }
 
     @Test
+    void updateTrackReplacesDescriptorForOwnerOnly() throws Exception {
+        SessionRegistry.RoomEntry room = registry.create(desc("A"), "DIRECT", "fp",
+                "1.1.1.1", 1, "f", java.util.List.of("s3k:0:1"));
+        assertTrue(registry.updateTrack(room.roomId(), "fp", 1, 1));
+        assertEquals(1, registry.find(room.roomId()).orElseThrow().descriptor().zone());
+        assertEquals(java.util.List.of("s3k:0:1"),
+                registry.find(room.roomId()).orElseThrow().voteTrackKeys());
+        assertTrue(!registry.updateTrack(room.roomId(), "not-owner", 2, 0));
+        assertEquals(1, registry.find(room.roomId()).orElseThrow().descriptor().zone());
+    }
+
+    @Test
     void configLoadsFromYamlWithDefaults(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir)
             throws Exception {
         java.nio.file.Path yaml = dir.resolve("master.yaml");

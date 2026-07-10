@@ -90,11 +90,15 @@ public final class MasterServer implements AutoCloseable {
             Executor brokerLoop = brokerGroup.next();
             PlayerIdentity masterIdentity = PlayerIdentity.loadOrCreate(
                     dataDir.resolve("master-identity"));
+            BundledProfileSource profiles = new BundledProfileSource();
             RelayRoomManager relays = new RelayRoomManager(masterIdentity, ladder,
-                    new BundledProfileSource(), roomLoops, brokerLoop, clock,
-                    registry::heartbeat);
+                    profiles, roomLoops, brokerLoop, clock,
+                    registry::heartbeat,
+                    (roomId, owner, zone, act) ->
+                            registry.updateTrack(roomId, owner, zone, act));
             RoomBroker broker = new RoomBroker(masterIdentity, config, registry, store,
-                    ladder, cache, clock, relays, tunnels);
+                    ladder, cache, clock, relays, tunnels,
+                    key -> profileExists(profiles, key));
             ConnectionHygiene.ConnectionCounter counter =
                     new ConnectionHygiene.ConnectionCounter(MAX_CONNECTIONS_PER_IP);
             SslContext ssl = sslContext(config);
@@ -196,5 +200,18 @@ public final class MasterServer implements AutoCloseable {
         }
         return SslContextBuilder.forServer(new File(config.tlsCertPath()),
                 new File(config.tlsKeyPath())).build();
+    }
+
+    private static boolean profileExists(BundledProfileSource profiles, String key) {
+        String[] parts = key == null ? new String[0] : key.split(":", -1);
+        if (parts.length != 3) {
+            return false;
+        }
+        try {
+            return profiles.profileFor(parts[0], Integer.parseInt(parts[1]),
+                    Integer.parseInt(parts[2])).isPresent();
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
     }
 }

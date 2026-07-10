@@ -21,7 +21,10 @@ public final class SessionRegistry {
     public record RoomEntry(String roomId, ControlMessage.RoomDescriptor descriptor,
                             String routing, String hostFingerprint, String hostAddress,
                             int directPort, String determinismFingerprint, int playerCount,
-                            long lastHeartbeatMillis) {
+                            long lastHeartbeatMillis, List<String> voteTrackKeys) {
+        public RoomEntry {
+            voteTrackKeys = List.copyOf(voteTrackKeys == null ? List.of() : voteTrackKeys);
+        }
     }
 
     private final LongSupplier clock;
@@ -37,6 +40,14 @@ public final class SessionRegistry {
     public RoomEntry create(ControlMessage.RoomDescriptor descriptor, String routing,
                             String hostFingerprint, String hostAddress, int directPort,
                             String determinismFingerprint) throws RoomCreateException {
+        return create(descriptor, routing, hostFingerprint, hostAddress, directPort,
+                determinismFingerprint, List.of());
+    }
+
+    public RoomEntry create(ControlMessage.RoomDescriptor descriptor, String routing,
+                            String hostFingerprint, String hostAddress, int directPort,
+                            String determinismFingerprint, List<String> voteTrackKeys)
+            throws RoomCreateException {
         long byIdentity = rooms.values().stream().filter(room ->
                 room.hostFingerprint().equals(hostFingerprint)).count();
         if (byIdentity >= config.maxRoomsPerIdentity()) {
@@ -49,7 +60,7 @@ public final class SessionRegistry {
         }
         RoomEntry entry = new RoomEntry("r-" + ++counter, descriptor, routing,
                 hostFingerprint, hostAddress, directPort, determinismFingerprint, 0,
-                clock.getAsLong());
+                clock.getAsLong(), voteTrackKeys);
         rooms.put(entry.roomId(), entry);
         return entry;
     }
@@ -61,8 +72,24 @@ public final class SessionRegistry {
                     entry.routing(), entry.hostFingerprint(), entry.hostAddress(),
                     entry.directPort(), entry.determinismFingerprint(),
                     Math.max(0, Math.min(playerCount, entry.descriptor().maxPlayers())),
-                    clock.getAsLong()));
+                    clock.getAsLong(), entry.voteTrackKeys()));
         }
+    }
+
+    public boolean updateTrack(String roomId, String hostFingerprint, int zone, int act) {
+        RoomEntry entry = rooms.get(roomId);
+        if (entry == null || !entry.hostFingerprint().equals(hostFingerprint)) {
+            return false;
+        }
+        ControlMessage.RoomDescriptor old = entry.descriptor();
+        ControlMessage.RoomDescriptor updated = new ControlMessage.RoomDescriptor(
+                old.name(), old.gameId(), zone, act, old.characterPolicy(),
+                old.lockedCharacter(), old.maxPlayers(), old.verified());
+        rooms.put(roomId, new RoomEntry(entry.roomId(), updated, entry.routing(),
+                entry.hostFingerprint(), entry.hostAddress(), entry.directPort(),
+                entry.determinismFingerprint(), entry.playerCount(),
+                entry.lastHeartbeatMillis(), entry.voteTrackKeys()));
+        return true;
     }
 
     public int expireStale() {

@@ -52,6 +52,9 @@ public final class RoomHost {
     private final RoomHostHooks hooks;
     private final Map<HubConnection, Member> members = new LinkedHashMap<>();
     private final Map<HubConnection, String> expectedFingerprints = new LinkedHashMap<>();
+    private String roomGameId;
+    private int roomZone;
+    private int roomAct;
 
     public RoomHost(RoomHostConfig config, PlayerIdentity hostIdentity,
                     LongSupplier wallClockMillis,
@@ -67,6 +70,9 @@ public final class RoomHost {
         this.hostIdentity = hostIdentity;
         this.wallClockMillis = wallClockMillis;
         this.hooks = hooks == null ? RoomHostHooks.none() : hooks;
+        roomGameId = config.gameId();
+        roomZone = config.zone();
+        roomAct = config.act();
         this.hub = new GhostHub(wallClockMillis, profiles,
                 (slot, fingerprint, kind, detail) -> {
                     Member member = memberForSlot(slot);
@@ -79,6 +85,7 @@ public final class RoomHost {
                                     + kind + ": " + detail);
                 }, this.hooks.relevanceFiltering());
         this.round = new HostRoundEngine(wallClockMillis, this::broadcast);
+        round.setVoteTrackPool(config.voteTrackKeys(), this.hooks.knownVoteTrack());
         hub.setTrack(config.gameId(), config.zone(), config.act());
     }
 
@@ -165,8 +172,7 @@ public final class RoomHost {
     }
 
     public boolean requestStartRound(ControlMessage.RoundConfig roundConfig) {
-        if (roundConfig == null || !config.gameId().equals(roundConfig.gameId())
-                || config.zone() != roundConfig.zone() || config.act() != roundConfig.act()) {
+        if (roundConfig == null || !trackAllowed(roundConfig)) {
             return false;
         }
         if (!round.startRound(roundConfig)) {
@@ -177,6 +183,9 @@ public final class RoomHost {
             member.finishedThisRound = false;
         }
         hub.setTrack(roundConfig.gameId(), roundConfig.zone(), roundConfig.act());
+        roomGameId = roundConfig.gameId();
+        roomZone = roundConfig.zone();
+        roomAct = roundConfig.act();
         return true;
     }
 
@@ -218,8 +227,8 @@ public final class RoomHost {
     }
 
     public ControlMessage.RoomDescriptor descriptor() {
-        return new ControlMessage.RoomDescriptor(config.roomName(), config.gameId(),
-                config.zone(), config.act(), config.characterPolicy(),
+        return new ControlMessage.RoomDescriptor(config.roomName(), roomGameId,
+                roomZone, roomAct, config.characterPolicy(),
                 config.lockedCharacter(), config.maxPlayers(), false);
     }
 
@@ -302,6 +311,8 @@ public final class RoomHost {
             }
             case ControlMessage.AttemptStart ignored -> { }
             case ControlMessage.AttemptReset ignored -> { }
+            case ControlMessage.TrackVote vote ->
+                    round.onTrackVote(member.slot, vote.trackKey());
             case ControlMessage.AttemptFinish finish -> {
                 HostRoundEngine.FinishOutcome outcome = round.onAttemptFinish(
                         member.slot, member.displayName, member.character,
@@ -401,5 +412,15 @@ public final class RoomHost {
             }
         }
         return null;
+    }
+
+    private boolean trackAllowed(ControlMessage.RoundConfig requested) {
+        if (requested.gameId().equals(roomGameId)
+                && requested.zone() == roomZone && requested.act() == roomAct) {
+            return true;
+        }
+        ControlMessage.RoundConfig voted = round.votedNextConfig();
+        return voted != null && voted.gameId().equals(requested.gameId())
+                && voted.zone() == requested.zone() && voted.act() == requested.act();
     }
 }

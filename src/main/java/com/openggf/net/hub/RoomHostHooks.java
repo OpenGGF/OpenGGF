@@ -7,7 +7,8 @@ public record RoomHostHooks(boolean relevanceFiltering,
                             ChatGate chatGate,
                             RoundOutcomeListener roundOutcomeListener,
                             String roundOwnerFingerprint,
-                            Predicate<String> isNewPlayer) {
+                            Predicate<String> isNewPlayer,
+                            Predicate<String> knownVoteTrack) {
     @FunctionalInterface
     public interface ChatGate {
         boolean mayChat(String fingerprint, long memberSinceMillis);
@@ -19,6 +20,14 @@ public record RoomHostHooks(boolean relevanceFiltering,
     }
 
     public static RoomHostHooks none() {
-        return new RoomHostHooks(false, null, null, null, null);
+        return new RoomHostHooks(false, null, null, null, null, null);
+    }
+
+    public RoomHostHooks(boolean relevanceFiltering, ChatGate chatGate,
+                         RoundOutcomeListener roundOutcomeListener,
+                         String roundOwnerFingerprint,
+                         Predicate<String> isNewPlayer) {
+        this(relevanceFiltering, chatGate, roundOutcomeListener,
+                roundOwnerFingerprint, isNewPlayer, null);
     }
 }

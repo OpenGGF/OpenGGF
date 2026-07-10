@@ -70,6 +70,7 @@ class TestRoomBroker {
     private SqliteIdentityStore store;
     private TrustLadder ladder;
     private FakeTunnels tunnels;
+    private SessionRegistry registry;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -80,9 +81,10 @@ class TestRoomBroker {
         ladder = new TrustLadder(store, cache, config.thresholds(), () -> now);
         relays = new FakeRelays();
         tunnels = new FakeTunnels();
+        registry = new SessionRegistry(() -> now, config);
         broker = new RoomBroker(PlayerIdentity.loadOrCreate(dir.resolve("master")), config,
-                new SessionRegistry(() -> now, config), store, ladder, cache, () -> now,
-                relays, tunnels);
+                registry, store, ladder, cache, () -> now, relays, tunnels,
+                java.util.Set.of("s3k:0:0", "s3k:0:1")::contains);
     }
 
     @AfterEach
@@ -248,5 +250,30 @@ class TestRoomBroker {
                 new ControlMessage.RelayAttach(roomId)));
         assertInstanceOf(ControlMessage.RoomJoinRejected.class, lastMessage(guest));
         assertTrue(relays.attached.isEmpty());
+    }
+
+    @Test
+    void votePoolAndTrackUpdatesRequireKnownSameGameTracks(@TempDir Path idDir)
+            throws Exception {
+        FakeConnection host = new FakeConnection();
+        String token = admit(host, idDir, "HOST");
+        String fingerprint = PlayerIdentity.loadOrCreate(idDir).fingerprint();
+        establish(fingerprint);
+        ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
+                "R", "s3k", 0, 0, "OPEN", null, 8, false);
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                descriptor, "DIRECT", 27888, "0.6:cafe", List.of("s2:0:0"))));
+        assertInstanceOf(ControlMessage.RoomCreateRejected.class, lastMessage(host));
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                descriptor, "DIRECT", 27888, "0.6:cafe", List.of("s3k:0:1"))));
+        String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+        assertEquals(List.of("s3k:0:1"), registry.find(roomId).orElseThrow().voteTrackKeys());
+
+        broker.onText(host, ControlCodec.encode(token,
+                new ControlMessage.RoomTrackUpdate(roomId, 99, 99)));
+        assertEquals(0, registry.find(roomId).orElseThrow().descriptor().zone());
+        broker.onText(host, ControlCodec.encode(token,
+                new ControlMessage.RoomTrackUpdate(roomId, 0, 1)));
+        assertEquals(1, registry.find(roomId).orElseThrow().descriptor().act());
     }
 }
