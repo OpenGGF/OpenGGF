@@ -36,8 +36,7 @@ public final class PlayerIdentity {
         this.identityDir = identityDir;
         this.privateKey = privateKey;
         this.publicKey = publicKey;
-        this.fingerprint = HexFormat.of().formatHex(
-                MessageDigest.getInstance("SHA-256").digest(publicKey.getEncoded()));
+        this.fingerprint = fingerprintOf(publicKey.getEncoded());
     }
 
     public static PlayerIdentity loadOrCreate(Path dir) throws IOException, GeneralSecurityException {
@@ -59,6 +58,15 @@ public final class PlayerIdentity {
 
     public String fingerprint() { return fingerprint; }
     public byte[] publicKeyEncoded() { return publicKey.getEncoded(); }
+
+    public static String fingerprintOf(byte[] publicKeyEncoded) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(publicKeyEncoded));
+        } catch (GeneralSecurityException impossible) {
+            throw new IllegalStateException("SHA-256 unavailable", impossible);
+        }
+    }
 
     public byte[] sign(byte[] message) throws GeneralSecurityException {
         Signature signature = Signature.getInstance(ALGORITHM);
