@@ -1042,7 +1042,7 @@ Expected: all pass; diagnostics gating produces no logical comparison-state or r
 Run:
 
 ```powershell
-mvn "-Dtest=com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.tests.TestObjectServicesMigrationGuard" test
+mvn "-Dtest=com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.level.objects.TestObjectServicesMigrationGuard" test
 ```
 
 Expected: all pass. Do not broaden a guard baseline for these changes.
