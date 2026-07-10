@@ -40,10 +40,44 @@ class S2SpecialStageExpectedComparisonTest {
         assertEquals(Severity.MATCH, compared.get("combined_rings").severity());
     }
 
+    @Test
+    void signedRomTrackCoordinatesMatchEngineSignedIntegers() {
+        SpecialStageTraceFrame.CharacterState sonic = character(0xFFFA, 0xFFF2, 0x006E);
+        SpecialStageExpectedState expected = SpecialStageExpectedState.from(frame(sonic), List.of());
+
+        Map<String, FieldComparison> compared =
+                AbstractS2SpecialStageTraceReplayTest.compareExpectedFrame(
+                        expected, engine(new PlayerState(-6, -14, 0x006E, 64,
+                                "NORMAL", 0, 1, 2)));
+
+        assertEquals(Severity.MATCH, compared.get("sonic_ss_x").severity());
+        assertEquals(Severity.MATCH, compared.get("sonic_ss_y").severity());
+    }
+
+    @Test
+    void specialStageDepthRemainsAnUnsignedRawWord() {
+        SpecialStageTraceFrame.CharacterState sonic = character(0, 0, 0xFFFA);
+        SpecialStageExpectedState expected = SpecialStageExpectedState.from(frame(sonic), List.of());
+
+        Map<String, FieldComparison> compared =
+                AbstractS2SpecialStageTraceReplayTest.compareExpectedFrame(
+                        expected, engine(new PlayerState(0, 0, -6, 64,
+                                "NORMAL", 0, 1, 2)));
+
+        assertEquals(Severity.ERROR, compared.get("sonic_ss_z").severity());
+        assertEquals("65530", compared.get("sonic_ss_z").expected());
+    }
+
     private static Sonic2SpecialStageComparisonState engine(int rings) {
         PlayerState player = new PlayerState(128, 90, 300, 64, "NORMAL", 0, 1, 2);
         return new Sonic2SpecialStageComparisonState(12, 5, 7, 4, 58,
                 rings, 9, false, player, player);
+    }
+
+    private static Sonic2SpecialStageComparisonState engine(PlayerState sonic) {
+        PlayerState tails = new PlayerState(128, 90, 300, 64, "NORMAL", 0, 1, 2);
+        return new Sonic2SpecialStageComparisonState(12, 5, 7, 4, 10,
+                0, 4, false, sonic, tails);
     }
 
     private static TraceEvent.StateSnapshot snapshot(int frame, int sonicRings) {
@@ -52,5 +86,17 @@ class S2SpecialStageExpectedComparisonTest {
 
     private static SpecialStageTraceFrame frame(int frame, int sonicRings) {
         return SpecialStageExpectedStateTestFixtures.frame(frame, sonicRings);
+    }
+
+    private static SpecialStageTraceFrame frame(SpecialStageTraceFrame.CharacterState sonic) {
+        SpecialStageTraceFrame.CharacterState tails = character(128, 90, 300);
+        return new SpecialStageTraceFrame(1, 0, 0, false,
+                12, 0, 7, 4, 0, 2, 5, 7, 0, 0, 4, 0, sonic, tails);
+    }
+
+    private static SpecialStageTraceFrame.CharacterState character(int ssX, int ssY, int ssZ) {
+        return new SpecialStageTraceFrame.CharacterState(true,
+                ssX, 0, ssY, 0, ssZ, 64, 2, 0, 0, 1, 2,
+                0, 0, 0, 0);
     }
 }

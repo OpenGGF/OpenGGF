@@ -343,10 +343,10 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 cmp(prefix + "_routine", expRoutine, engRoutine, Severity.ERROR));
 
         fields.put(prefix + "_ss_x", cmp(prefix + "_ss_x",
-                intOr(tracePresent, tracePresent ? tc.ssX() : 0),
+                intOr(tracePresent, tracePresent ? signedWord(tc.ssX()) : 0),
                 intOr(engPresent, engPresent ? ps.ssX() : 0), Severity.ERROR));
         fields.put(prefix + "_ss_y", cmp(prefix + "_ss_y",
-                intOr(tracePresent, tracePresent ? tc.ssY() : 0),
+                intOr(tracePresent, tracePresent ? signedWord(tc.ssY()) : 0),
                 intOr(engPresent, engPresent ? ps.ssY() : 0), Severity.ERROR));
         fields.put(prefix + "_ss_z", cmp(prefix + "_ss_z",
                 intOr(tracePresent, tracePresent ? tc.ssZ() : 0),
@@ -359,6 +359,18 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         boolean engHurt = engPresent && ps.routineSecondary() == 2;
         fields.put(prefix + "_hurt",
                 cmp(prefix + "_hurt", bool(traceHurt), bool(engHurt), Severity.ERROR));
+    }
+
+    /**
+     * Maps a raw 68000 word to the signed value used by the ROM's track-space
+     * coordinate arithmetic. {@code ss_x_pos}/{@code ss_y_pos} are the integer
+     * words of 16.16 positions and are consumed by sign branches and signed
+     * multiplies; {@code ss_z_pos} is a separate positive depth word and is not
+     * routed through this mapping (s2.asm:69290-69303, 69324-69374,
+     * 69450-69458, 69718-69750).
+     */
+    private static int signedWord(int rawWord) {
+        return (short) rawWord;
     }
 
     private static String mapRoutine(int romRoutineByte) {

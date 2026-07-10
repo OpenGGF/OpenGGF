@@ -40,6 +40,40 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage signed track-coordinate comparison
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `0d26aca5d`. The f1019
+`sonic_ss_x` mismatch (`65530` expected / `-6` actual) was a comparison
+representation defect: the recorder faithfully emits the raw `$FFFA` RAM word,
+while the engine exposes the same value as a signed Java integer.
+
+- `ss_x_pos` and `ss_y_pos` are the integer words of 16.16 track-space
+  positions (`ss_x_sub` / `ss_y_sub` are the following fractional words). ROM
+  movement loads and stores the pairs as longs, then reads the integer words
+  with sign branches and signed multiplies for angle, collision, and screen
+  projection (`s2.asm:69290-69303,69324-69374,69450-69458,69718-69750`). The
+  comparison now sign-extends only those two raw 16-bit expected values.
+- `ss_z_pos` is not folded into that rule. ROM keeps it in the positive
+  `$6E..$80` depth range and uses unsigned depth division/comparison alongside
+  signed coordinate multiplication (`s2.asm:69414-69429,69507-69534,
+  69734-69739`). A focused negative test proves a raw `$FFFA` depth does not
+  compare equal to engine `-6`.
+- RED command:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.S2SpecialStageExpectedComparisonTest" test`
+  failed `signedRomTrackCoordinatesMatchEngineSignedIntegers` because
+  `sonic_ss_x` remained `ERROR`. The same command passes all four mapping tests
+  after the comparison-only correction.
+- Replay/determinism command:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`
+  passes. Before: 3,694 errors / 0 warnings, first f1019 `sonic_ss_x`
+  expected 65530 / actual -6. After: 1,311 / 0, first f1331
+  `combined_rings` expected 34 / actual 35.
+
+No tolerance, runtime behavior, trace hydration, route/frame exception, or
+`ss_z_pos` reinterpretation was added. The f1331 extra-ring divergence is the
+next independent frontier.
+
 ## 2026-07-10 - S2 special-stage completed-pass pacing clears the Stage-1 gate
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch
