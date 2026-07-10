@@ -51,6 +51,75 @@ bookkeeping row.
 The intro/init misalignment is the dominant root; most of the error mass is its
 cascade. Issues 1 and 4 are largely THIS; issues 2 and 3 sit behind it.
 
+### 2026-07-10 atomic comparison correction
+
+The original table treated each VBlank CSV row as though it were the completed
+state of the ROM logic pass. A PC-execute probe disproved that assumption:
+`WaitForVint` can return before a VBlank sample and the following
+`SSObjectsManager -> RunObjects` work can finish after it, including across a
+lag row. At f799 the CSV therefore reports one ring while the exact
+`RunObjects_End` state for that same logical step reports three. Conversely,
+the first-ring f791 pass end remains one. Recorder v1.3-s2ss uses exactly two
+REV01 execute hooks: the shared `ReadJoypads` RTS at `$1156`, filtered to
+`A0=$F608` and stack return `$88E` so it represents the completed P1/P2 poll
+inside `Vint_S2SS`, and `RunObjects_End` at `$15FE4`
+(`s2.asm:837-840,1361-1387,29805-29849`). Every completed recurring pass records
+the full manager/player surface atomically, a contiguous `pass_sequence`, and
+the exact physical poll identity/raw held/previous-polled held bytes it consumed.
+The pass queues to the first forward non-lag observation after completion;
+replay then executes zero, one, or multiple engine updates in that order. The
+pass whose input sample still saw `SpecialStage_Started=0` is retained on the
+verified startup VBlank path rather than replayed twice, and pass capture stops
+at the final-checkpoint `stage_finished` boundary. Obj6F is retained later as
+`results_started` in the uncompared tail. This is physical input plus pacing
+only, never trace-to-engine state hydration. Missing fields, sequence/sample gaps, held-chain breaks, BK2
+identity mismatches, invalid bounds, or a post-finish pass fail validation.
+
+The semantic gate deliberately leaves the distinct startup/fade loops on their
+VBlank CSV observations; there is no frame-number exception. Completed-pass
+pacing removes the f916 one-pass-ahead mismatch. Replay binds each captured
+sample to the already-pending owning pass before executing it, rather than
+letting `update()` consume the preceding sample. The Stage-1 report now has
+3,694 errors / 0 warnings (75.88% below the 15,313-error baseline), first
+divergence f1019 `sonic_ss_x` expected 65530, actual -6 (signed mapping).
+
+### 2026-07-10 f890 player-control correction
+
+A bounded PC-execute probe resolved f890 as two partly compensating engine
+errors. In the active recurring loop, `Vint_S2SS` reads the current joypad word
+during `WaitForVint` and the main thread copies that fresh raw word to
+`Ctrl_1_Logical` immediately before `RunObjects` (`s2.asm:6694-6721`). Obj5F
+latches `SpecialStage_Started` when WAIT2 creates the ring-requirement message
+(`s2.asm:9734-9746`), so MESSAGE_FLYOUT and GAMEPLAY select this source while
+pre-start DROP/WAIT1/WAIT2 retain the preceding raw word copied before their wait
+(`s2.asm:6674-6688`). The engine snapshots this semantic latch so later
+checkpoint-message reuse cannot re-lock the control-copy path. Separately, Obj09's
+`SSObjectMove` negates negative inertia and logically shifts the magnitude
+before subtraction (`s2.asm:69718-69735`), truncating `-$60` and `-$C0` to zero
+where Java's signed shift had produced `-1`. Modeling both rules moves the
+frontier to f896 and reduces the report from 12,271 to 11,049 errors. The f896
+residual is a separate pass-observation/cadence question around lag-labelled
+VBlank rows, not justification for another input latch or movement offset.
+The raw press byte stored at each executed VInt is likewise computed once from
+current held versus the last executed VInt held sample (`s2.asm:1361-1387`);
+BK2 mapper edges whose intervening release occurred entirely on a skipped update
+are neither ORed into the active pass nor retained for the following pre-start
+prior-word copy.
+
+### 2026-07-10 f1331 ring-angle boundary correction
+
+After signed coordinate comparison exposed f1331, atomic pass snapshots and an
+engine active-object dump showed paired animation-8 rings at angles `$48` and
+`$38`. Sonic was at `$42`; the engine collected both in pass 570, while ROM
+collected the `$48` ring in pass 570 and the `$38` ring only in pass 571 after
+Sonic moved to `$41`. `Obj61_TestCollision` implements a half-open byte interval:
+`objectAngle-d6 <= playerAngle < objectAngle+d6`, including wraparound
+(`s2.asm:70846-70877`). Obj60 supplies `d6=$A`; Obj61 supplies `d6=8`
+(`:70674-70676,70767-70769`). The engine had made the positive endpoint inclusive
+and shared Obj60's width with bombs. Correcting both properties in the shared
+predicate moves the report from 1,311 errors / 0 warnings at f1331 to 606 / 0 at
+f4845; no collision timing or trace-specific offset is involved.
+
 ## Method (binding rules)
 
 - **Fix loop:** per the `trace-replay-bug-fixing` skill — take the FIRST
@@ -212,7 +281,9 @@ trace-derived state-keyed model:
   both sides from the same artifact rather than hardcoding these counts);
   asserted by a JUnit 5 (Jupiter) test against the committed trace artifacts.
   Perceived-speed eyeball via the visual SS session (jar test mode) at the end.
-- Keep the F1/F6/F7 lag overlay as a debug/tuning view over the new model.
+- Keep the F1 lag overlay as a read-only view of the current model bucket and
+  ratio. The derived model has no live enable/disable or tuning control;
+  `setLagCompensation(0)` remains an internal trace-pacing bypass only.
 
 ### Stage 5 — Green gate & closeout
 
@@ -222,8 +293,8 @@ trace test to the tracked keep-green set used by trace sweeps.
 
 ## Out of scope (follow-ups)
 
-- Results-screen replay/timing (the recorded post-`stage_finished` tail stays
-  uncompared).
+- Results-screen replay/timing (the recorded post-`stage_finished` tail,
+  including `results_started`, stays uncompared).
 - Additional traces (solo Sonic, solo Tails, human-P2 override, failed-stage,
   stages 2–7) — recommended immediately after green to lock the fixes broadly,
   using the existing recorder unchanged.

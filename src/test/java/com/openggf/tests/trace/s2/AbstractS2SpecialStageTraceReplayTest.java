@@ -11,7 +11,11 @@ import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
 import com.openggf.trace.SpecialStageTraceData;
+import com.openggf.trace.SpecialStageExpectedState;
 import com.openggf.trace.SpecialStageTraceFrame;
+import com.openggf.trace.SpecialStageRunObjectsPassBinder;
+import com.openggf.trace.SpecialStageRunObjectsPassBinder.CompletedPass;
+import com.openggf.trace.TraceEvent;
 import com.openggf.trace.SpecialStageTraceFrame.CharacterState;
 import org.junit.jupiter.api.Test;
 
@@ -21,12 +25,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -39,47 +46,60 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *
  * <h2>Replay semantics</h2>
  * <ul>
- *   <li><b>Trace-paced.</b> Iterate trace frames {@code 0..compareEnd-1}. A lag
- *       row advances nothing engine-side (the row is skipped entirely); a
- *       non-lag row is stepped exactly once. The press-edge diff still uses the
- *       previous <em>physical</em> BK2 row (see the harness), so skipping lag
- *       rows does not corrupt edge detection.</li>
+ *   <li><b>ROM-pass-paced after control unlock.</b> Startup retains the verified
+ *       VBlank/non-lag pacing. Once {@code SpecialStage_Started} is observed,
+ *       each observation executes exactly its ordered {@code run_objects_end}
+ *       events: zero events means zero engine updates and two events means two.
+ *       Each pass identifies the current and previous BK2 rows sampled by its
+ *       preceding {@code Vint_S2SS}; held and pressed inputs are derived from
+ *       those movie rows. Raw auxiliary held values are diagnostics only and
+ *       are rejected if they disagree with the identified BK2 rows.</li>
+ *   <li><b>Started boundary pass.</b> The observation that first exposes
+ *       {@code SpecialStage_Started} follows Obj5F's terminal pre-start object
+ *       pass. Replay completes that already-pending pass without a new VInt;
+ *       recorder pass sequence 0 begins with the following VInt sample.</li>
  *   <li><b>Comparison-only.</b> Trace values are read for input + expectation
  *       only; engine state is never hydrated from the trace.</li>
+ *   <li><b>Atomic object-pass expectations.</b> A VBlank CSV row can bisect
+ *       the following ROM {@code RunObjects} pass. When the recorder provides
+ *       ordered {@code run_objects_end} events, the pass binder selects the
+ *       latest completed atomic result visible at that observation; player,
+ *       ring, and Tails-control fields come from that snapshot, while track and
+ *       finish/results fields remain on their CSV observation.</li>
  *   <li><b>Finish boundary.</b> {@code compareEnd = stageFinishedFrame().orElse(
  *       frameCount())}. A Tier-1 {@code finished_transition_frame} check asserts
  *       the engine's {@code isFinished()} first becomes true exactly at the
- *       recorded stage-finished frame.</li>
+ *       final-checkpoint logical observation. The later Obj6F
+ *       {@code results_started} event and results tail are recorded but not
+ *       compared.</li>
  * </ul>
  *
- * <h2>Comparator tiers</h2>
- * <p>Tier-1 mismatches are report ERRORs, Tier-2 are WARNINGs. Only fields
- * exposed by {@link Sonic2SpecialStageComparisonState} are wired; trace columns
- * with no engine counterpart in that snapshot (per-player rings,
- * {@code rings_togo_bcd}, {@code swap_positions_flag}, hurt/slide/flip timers)
- * are not compared, and {@code player_anim_frame_timer} is intentionally never
- * compared (its engine counterpart is a constant).
+ * <h2>Release-ratcheted comparator surface</h2>
+ * <p>Every mismatch below is a report ERROR. Every field is a comparison-only
+ * read of {@link Sonic2SpecialStageComparisonState}.
  * <ul>
- *   <li><b>Tier-1</b>: per-player {@code present}, {@code ss_x}, {@code ss_y},
+ *   <li>Per-player {@code present}, {@code ss_x}, {@code ss_y},
  *       {@code ss_z}, {@code angle}, {@code routine} (mapped ROM byte → engine
  *       {@code RoutineState} name), {@code hurt} ({@code routine_secondary==2});
+ *       per-player {@code sonic_rings}/{@code tails_rings},
  *       {@code combined_rings}, {@code speed_factor}, {@code current_segment},
- *       {@code track_anim_frame}, {@code finished}, and the
+ *       {@code track_anim_frame}, {@code swap_positions_flag}, per-player
+ *       {@code hurt_timer}/{@code slide_timer}/{@code flip_timer},
+ *       {@code player_anim_frame_timer}, refresh-gated decoded
+ *       {@code rings_togo_bcd}, {@code finished}, and the
  *       {@code finished_transition_frame} boundary check.</li>
- *   <li><b>Tier-2</b>: {@code track_drawing_index}, {@code track_duration_timer}
+ *   <li>{@code track_drawing_index}, {@code track_duration_timer}
  *       (ROM counts down from the {@code SSAnim_Base_Duration} for the current
  *       speed factor; engine counts up — compared via
  *       {@code duration - romTimer == engineCounter}), and
  *       {@code tails_control_counter}.</li>
  * </ul>
+ * <p>Player timers are compared only from atomic {@code run_objects_end}
+ * snapshots: a raw VBlank row can interrupt the Obj09→Obj10 scan and contain
+ * Sonic's post-pass timer beside Tails's pre-pass timer.</p>
  *
- * <p>This is a red-allowed MVP: divergences are recorded, not asserted. Known
- * engine gaps (control-lock timing, Tails CPU, intro timing) legitimately
- * diverge and must NOT be papered over by editing engine code — the deliverable
- * is a faithful report. The pipeline itself (trace loads, harness steps to
- * {@code compareEnd} without exceptions, report written) IS asserted, and
- * {@link #assertNoReleaseBlockingDivergences} is the one-line ratchet to flip
- * on once parity lands (see {@code docs/TRACE_FRONTIER_LOG.md}).
+ * <p>The pipeline writes a complete report and
+ * {@link #assertNoReleaseBlockingDivergences} rejects any comparator divergence.
  */
 public abstract class AbstractS2SpecialStageTraceReplayTest {
 
@@ -135,17 +155,10 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     }
 
     /**
-     * Release-gate ratchet, intentionally disabled for the red-allowed MVP.
-     *
-     * <p>The engine currently diverges from the recorded ROM trace on known
-     * fronts (control-lock timing, Tails CPU behaviour, intro timing); those are
-     * captured in the report rather than failing the test. When the engine
-     * reaches parity, replace the body with
-     * {@code assertFalse(report.hasErrors(), report.toAssertionSummary());} and
-     * record the frontier move in {@code docs/TRACE_FRONTIER_LOG.md}.
+     * Release-gate ratchet for Tier-1 fields, which use ERROR severity.
      */
     protected void assertNoReleaseBlockingDivergences(DivergenceReport report) {
-        // Disabled ratchet — see docs/TRACE_FRONTIER_LOG.md.
+        assertFalse(report.hasErrors(), report.toAssertionSummary());
     }
 
     // ==================== Boot ====================
@@ -177,26 +190,70 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     static DivergenceReport compareReplay(SpecialStageTraceData trace,
                                           S2SpecialStageReplayHarness harness) {
         OptionalInt ssFinished = trace.stageFinishedFrame();
+        OptionalInt ssFinishedObserved = trace.stageFinishedObservedFrame();
         int compareEnd = ssFinished.orElse(trace.frameCount());
+        Set<Integer> ringsToGoRefreshFrames = ringsToGoRefreshFrames(trace);
 
         List<FrameComparison> comparisons = new ArrayList<>();
         int firstEngineFinished = -1;
+        SpecialStageRunObjectsPassBinder passBinder =
+                new SpecialStageRunObjectsPassBinder(
+                        trace.runObjectsEndSnapshots(),
+                        trace.frameCount(),
+                        frame -> !trace.getFrame(frame).lag()
+                                || (ssFinishedObserved.isPresent()
+                                && frame == ssFinishedObserved.getAsInt()),
+                        trace.metadata().bk2FrameOffset(),
+                        harness.movieFrames());
+        int passPacingStart = trace.controlStateTransitions().stream()
+                .filter(SpecialStageTraceData.ControlStateTransition::started)
+                .mapToInt(SpecialStageTraceData.ControlStateTransition::frame)
+                .findFirst()
+                .orElse(Integer.MAX_VALUE);
 
         for (int f = 0; f < compareEnd; f++) {
             SpecialStageTraceFrame tf = trace.getFrame(f);
-            if (tf.lag()) {
-                continue; // lag row: nothing steps engine-side
+            List<CompletedPass> completedPasses = passBinder.passesForObservation(f);
+            if (f < passPacingStart) {
+                if (tf.lag()) {
+                    continue;
+                }
+                harness.stepFrame(f);
+            } else {
+                if (isTerminalPreStartPassFrame(trace, f)) {
+                    // Obj5F sets SpecialStage_Started from the terminal pass
+                    // whose VInt sample still belonged to the pre-start loop.
+                    // Recorder pass sequence 0 begins with the following VInt;
+                    // publish this boundary pass once through the native path.
+                    harness.completeTerminalPreStartPass();
+                }
+                for (CompletedPass pass : completedPasses) {
+                    harness.stepPass(pass);
+                }
+                if (tf.lag()) {
+                    continue;
+                }
             }
-            harness.stepFrame(f);
             Sonic2SpecialStageComparisonState state = harness.capture();
             if (firstEngineFinished < 0 && state.finished()) {
                 firstEngineFinished = f;
             }
 
             Map<String, FieldComparison> fields = new LinkedHashMap<>();
-            addManagerFields(fields, tf, state, false);
-            addPlayerFields(fields, "sonic", tf.sonic(), state.sonic());
-            addPlayerFields(fields, "tails", tf.tails(), state.tails());
+            List<TraceEvent> passEnd = f >= passPacingStart
+                    ? passBinder.latestCompleted()
+                            .map(CompletedPass::snapshot)
+                            .<List<TraceEvent>>map(List::of)
+                            .orElseGet(List::of)
+                    : List.of();
+            SpecialStageExpectedState expected =
+                    SpecialStageExpectedState.from(tf, passEnd);
+            addManagerFields(fields, expected, state, false,
+                    ringsToGoRefreshFrames.contains(f));
+            addPlayerFields(fields, "sonic", expected.sonic(), state.sonic(),
+                    expected.hasRunObjectsEnd());
+            addPlayerFields(fields, "tails", expected.tails(), state.tails(),
+                    expected.hasRunObjectsEnd());
             comparisons.add(new FrameComparison(f, fields));
         }
 
@@ -204,55 +261,345 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         // observe whether the engine flips isFinished() at the same frame.
         if (ssFinished.isPresent()) {
             int sf = ssFinished.getAsInt();
-            if (sf >= 0 && sf < trace.frameCount() && !trace.getFrame(sf).lag()) {
-                harness.stepFrame(sf);
-                if (firstEngineFinished < 0 && harness.isFinished()) {
-                    firstEngineFinished = sf;
+            String finishTransitionActual = "never";
+            if (sf >= 0 && sf < trace.frameCount()) {
+                List<CompletedPass> completedPasses = passBinder.passesForObservation(sf);
+                if (sf < passPacingStart) {
+                    if (!trace.getFrame(sf).lag()) {
+                        harness.stepFrame(sf);
+                    }
+                } else {
+                    completedPasses.forEach(harness::stepPass);
                 }
+            }
+            // The recorder labels finish with the last logical non-lag frame,
+            // while publishing the finish-causing pass at the following raw lag
+            // observation. The engine must still be unfinished immediately
+            // before that pass, and must become finished because of it.
+            boolean finishedBeforeTerminal = firstEngineFinished >= 0 || harness.isFinished();
+            if (finishedBeforeTerminal) {
+                finishTransitionActual = "before-terminal-pass@" + sf;
+            }
+            int observed = ssFinishedObserved.orElse(sf);
+            if (observed <= sf || observed >= trace.frameCount()) {
+                throw new IllegalStateException(
+                        "stage finish must have one later raw observation; logical="
+                                + sf + " observed=" + observed);
+            }
+            List<CompletedPass> finishPasses = passBinder.passesForObservation(observed);
+            if (finishPasses.size() != 1) {
+                throw new IllegalStateException(
+                        "stage finish observation must own exactly one completed pass; got "
+                                + finishPasses.size());
+            }
+            CompletedPass terminalPass = finishPasses.get(0);
+            harness.stepPass(terminalPass);
+            Sonic2SpecialStageComparisonState terminalState = harness.capture();
+            if (!finishedBeforeTerminal && harness.isFinished()) {
+                finishTransitionActual = String.valueOf(sf);
+            }
+            if (passBinder.hasRemaining()) {
+                throw new IllegalStateException(
+                        "run_objects_end passes remain after the terminal finish observation");
             }
             Map<String, FieldComparison> fields = new LinkedHashMap<>();
             String expected = String.valueOf(sf);
-            String actual = firstEngineFinished < 0 ? "never" : String.valueOf(firstEngineFinished);
             fields.put("finished_transition_frame",
-                    cmp("finished_transition_frame", expected, actual, Severity.ERROR));
+                    cmp("finished_transition_frame", expected, finishTransitionActual,
+                            Severity.ERROR));
             comparisons.add(new FrameComparison(sf, fields));
+
+            SpecialStageExpectedState terminalExpected = SpecialStageExpectedState.from(
+                    trace.getFrame(observed), List.of(terminalPass.snapshot()));
+            Map<String, FieldComparison> terminalFields = new LinkedHashMap<>();
+            addRingsToGoField(terminalFields, terminalExpected, terminalState);
+            comparisons.add(new FrameComparison(observed, terminalFields));
         }
 
         return new DivergenceReport(comparisons);
     }
 
     private static void addManagerFields(Map<String, FieldComparison> fields,
-                                         SpecialStageTraceFrame tf,
+                                         SpecialStageExpectedState expected,
                                          Sonic2SpecialStageComparisonState state,
-                                         boolean finishedExpected) {
+                                         boolean finishedExpected,
+                                         boolean ringsToGoRefreshActive) {
+        SpecialStageTraceFrame tf = expected.csv();
+        SpecialStageExpectedState.RunObjectsEndState pass = expected.runObjectsEnd();
+        int speedFactor = pass != null ? pass.speedFactor() : tf.speedFactor();
+        int currentSegment = pass != null ? pass.currentSegment() : tf.currentSegment();
+        int trackAnimFrame = pass != null ? pass.trackAnimFrame() : tf.trackAnimFrame();
+        int trackDrawingIndex = pass != null ? pass.trackDrawingIndex() : tf.trackDrawingIndex();
+        int trackDurationTimer = pass != null ? pass.trackDurationTimer() : tf.trackDurationTimer();
         // Tier-1
         fields.put("speed_factor",
-                cmp("speed_factor", str(tf.speedFactor()), str(state.speedFactor()), Severity.ERROR));
+                cmp("speed_factor", str(speedFactor), str(state.speedFactor()), Severity.ERROR));
         fields.put("current_segment",
-                cmp("current_segment", str(tf.currentSegment()), str(state.currentSegmentIndex()), Severity.ERROR));
+                cmp("current_segment", str(currentSegment), str(state.currentSegmentIndex()), Severity.ERROR));
         fields.put("track_anim_frame",
-                cmp("track_anim_frame", str(tf.trackAnimFrame()), str(state.trackAnimFrame()), Severity.ERROR));
-        int combinedTraceRings = ringsBinary(tf.sonic()) + ringsBinary(tf.tails());
+                cmp("track_anim_frame", str(trackAnimFrame), str(state.trackAnimFrame()), Severity.ERROR));
         fields.put("combined_rings",
-                cmp("combined_rings", str(combinedTraceRings), str(state.combinedRings()), Severity.ERROR));
+                cmp("combined_rings", str(expected.combinedRings()), str(state.combinedRings()), Severity.ERROR));
         fields.put("finished",
                 cmp("finished", String.valueOf(finishedExpected), String.valueOf(state.finished()), Severity.ERROR));
 
-        // Tier-2
         fields.put("track_drawing_index",
-                cmp("track_drawing_index", str(tf.trackDrawingIndex()), str(state.drawingIndex()), Severity.WARNING));
-        int duration = ANIM_BASE_DURATIONS[(tf.speedFactor() >> 1) & 7];
-        int expectedCounter = duration - tf.trackDurationTimer();
+                cmp("track_drawing_index", str(trackDrawingIndex), str(state.drawingIndex()), Severity.ERROR));
+        int expectedCounter = mapTrackDurationElapsed(speedFactor, trackDurationTimer);
         fields.put("track_duration_timer",
-                cmp("track_duration_timer", str(expectedCounter), str(state.trackFrameDelayCounter()), Severity.WARNING));
+                cmp("track_duration_timer", str(expectedCounter), str(state.trackFrameDelayCounter()), Severity.ERROR));
         fields.put("tails_control_counter",
-                cmp("tails_control_counter", str(tf.tailsControlCounter()), str(state.tailsControlCounter()), Severity.WARNING));
+                cmp("tails_control_counter", str(expected.tailsControlCounter()), str(state.tailsControlCounter()), Severity.ERROR));
+        int playerAnimFrameTimer = pass != null
+                ? pass.playerAnimFrameTimer() : tf.playerAnimFrameTimer();
+        fields.put("player_anim_frame_timer",
+                cmp("player_anim_frame_timer", str(playerAnimFrameTimer),
+                        str(state.playerAnimFrameTimer()), Severity.ERROR));
+        if (ringsToGoRefreshActive) {
+            addRingsToGoField(fields, expected, state);
+        }
+        int swapPositionsFlag = pass != null ? pass.swapPositionsFlag() : tf.swapPositionsFlag();
+        fields.put("swap_positions_flag",
+                cmp("swap_positions_flag", str(swapPositionsFlag),
+                        str(state.swapPositionsFlag()), Severity.ERROR));
+    }
+
+    private static void addRingsToGoField(
+            Map<String, FieldComparison> fields,
+            SpecialStageExpectedState expected,
+            Sonic2SpecialStageComparisonState state) {
+        SpecialStageExpectedState.RunObjectsEndState pass = expected.runObjectsEnd();
+        int ringsToGoBcd = pass != null
+                ? pass.ringsToGoBcd() : expected.csv().ringsToGoBcd();
+        fields.put("rings_togo_bcd",
+                cmp("rings_togo_bcd", str(decodeRingsToGoBcd(ringsToGoBcd)),
+                        str(state.ringsToGo()), Severity.ERROR));
+    }
+
+    /** Focused comparison seam used by atomic RunObjects-end mapping tests. */
+    static Map<String, FieldComparison> compareExpectedFrame(
+            SpecialStageExpectedState expected,
+            Sonic2SpecialStageComparisonState state) {
+        return compareExpectedFrame(expected, state, false);
+    }
+
+    static Map<String, FieldComparison> compareExpectedFrame(
+            SpecialStageExpectedState expected,
+            Sonic2SpecialStageComparisonState state,
+            boolean ringsToGoRefreshActive) {
+        Map<String, FieldComparison> fields = new LinkedHashMap<>();
+        addManagerFields(fields, expected, state, false, ringsToGoRefreshActive);
+        addPlayerFields(fields, "sonic", expected.sonic(), state.sonic(),
+                expected.hasRunObjectsEnd());
+        addPlayerFields(fields, "tails", expected.tails(), state.tails(),
+                expected.hasRunObjectsEnd());
+        return fields;
+    }
+
+    /** Decodes the ROM's packed three-digit {@code SS_RingsToGoBCD} word. */
+    static int decodeRingsToGoBcd(int packedBcd) {
+        if ((packedBcd & ~0x0FFF) != 0) {
+            throw new IllegalArgumentException(
+                    "rings-to-go BCD has bits outside 12-bit field: 0x"
+                            + Integer.toHexString(packedBcd));
+        }
+        int hundreds = (packedBcd >> 8) & 0xF;
+        int tens = (packedBcd >> 4) & 0xF;
+        int units = packedBcd & 0xF;
+        if (hundreds > 9 || tens > 9 || units > 9) {
+            throw new IllegalArgumentException(
+                    "rings-to-go field is not packed BCD: 0x"
+                            + Integer.toHexString(packedBcd));
+        }
+        return hundreds * 100 + tens * 10 + units;
+    }
+
+    static boolean isRingsToGoRefreshFrame(SpecialStageTraceData trace, int frame) {
+        return ringsToGoRefreshFrames(trace).contains(frame);
+    }
+
+    /**
+     * The observation that first exposes {@code SpecialStage_Started} follows
+     * the terminal pre-start {@code RunObjects} pass which set it. Recorder
+     * pass identity begins with the next VInt sample, so replay must publish
+     * this one semantic boundary pass through the native startup path.
+     */
+    static boolean isTerminalPreStartPassFrame(SpecialStageTraceData trace, int frame) {
+        return trace.controlStateTransitions().stream()
+                .anyMatch(transition -> transition.started() && transition.frame() == frame);
+    }
+
+    /**
+     * Selects only observations where the ROM cell is known to have been
+     * refreshed. Clearing {@code SS_TriggerRingsToGo} enables Obj5A's
+     * calculation, so the first completed object pass strictly after that
+     * transition is comparable. Later passes are not: a ring in a later SST
+     * slot can change the live total after Obj5A already stored the BCD cell.
+     * A rising {@code SS_Check_Rings_flag} is itself an explicit refresh gate
+     * (s2.asm:71411-71582,71814-71842).
+     */
+    private static Set<Integer> ringsToGoRefreshFrames(SpecialStageTraceData trace) {
+        List<TriggerSample> triggerSamples = new ArrayList<>();
+        List<Integer> checkRingsFlags = new ArrayList<>();
+        List<Integer> finishObservedFrames = new ArrayList<>();
+        for (int frame = 0; frame < trace.frameCount(); frame++) {
+            checkRingsFlags.add(trace.getFrame(frame).checkRingsFlag());
+
+            for (TraceEvent event : trace.getEventsForFrame(frame)) {
+                if (!(event instanceof TraceEvent.StateSnapshot snapshot)) {
+                    continue;
+                }
+                if ("message_state".equals(snapshot.fields().get("type"))) {
+                    Object rawTrigger = snapshot.fields().get("trigger_rings_to_go");
+                    if (rawTrigger != null) {
+                        triggerSamples.add(new TriggerSample(
+                                frame, numericTraceValue(rawTrigger)));
+                    }
+                }
+                if ("stage_finished".equals(snapshot.fields().get("type"))) {
+                    Object rawObserved = snapshot.fields().get("observed_frame");
+                    if (rawObserved == null) {
+                        throw new IllegalStateException(
+                                "stage_finished is missing observed_frame");
+                    }
+                    finishObservedFrames.add(numericTraceValue(rawObserved));
+                }
+            }
+        }
+
+        return discoverRingsToGoRefreshFrames(
+                triggerSamples,
+                trace.runObjectsEndSnapshots().stream()
+                        .map(TraceEvent.StateSnapshot::frame)
+                        .toList(),
+                checkRingsFlags,
+                finishObservedFrames);
+    }
+
+    record TriggerSample(int frame, int value) {
+    }
+
+    static Set<Integer> discoverRingsToGoRefreshFrames(
+            List<TriggerSample> triggerSamples,
+            List<Integer> completedPassFrames,
+            List<Integer> checkRingsFlags,
+            List<Integer> finishObservedFrames) {
+        if (triggerSamples.isEmpty() || triggerSamples.get(0).value() != 0xFF) {
+            throw new IllegalStateException(
+                    "rings-to-go artifact is missing initial FF trigger sample");
+        }
+
+        List<Integer> triggerClearFrames = new ArrayList<>();
+        int previousTrigger = 0xFF;
+        int previousSampleFrame = -1;
+        for (TriggerSample sample : triggerSamples) {
+            if (sample.frame() <= previousSampleFrame) {
+                throw new IllegalStateException(
+                        "duplicate or out-of-order rings-to-go trigger sample at frame "
+                                + sample.frame());
+            }
+            previousSampleFrame = sample.frame();
+            if (sample.value() != 0 && sample.value() != 0xFF) {
+                throw new IllegalStateException(
+                        "ambiguous rings-to-go trigger value " + sample.value()
+                                + " at frame " + sample.frame());
+            }
+            if (sample.value() == previousTrigger) {
+                continue;
+            }
+            if (previousTrigger == 0xFF && sample.value() == 0) {
+                triggerClearFrames.add(sample.frame());
+            } else if (previousTrigger != 0 || sample.value() != 0xFF) {
+                throw new IllegalStateException(
+                        "ambiguous rings-to-go trigger transition at frame "
+                                + sample.frame());
+            }
+            previousTrigger = sample.value();
+        }
+        if (triggerClearFrames.isEmpty() || previousTrigger != 0) {
+            throw new IllegalStateException(
+                    "rings-to-go artifact is missing a completed FF-to-00 trigger clear");
+        }
+
+        Set<Integer> refreshFrames = new LinkedHashSet<>();
+        for (int gateFrame : triggerClearFrames) {
+            int refreshFrame = completedPassFrames.stream()
+                    .mapToInt(Integer::intValue)
+                    .filter(frame -> frame > gateFrame)
+                    .min()
+                    .orElseThrow(() -> new IllegalStateException(
+                            "rings-to-go trigger clear at frame " + gateFrame
+                                    + " has no following completed pass"));
+            long passCountAtObservation = completedPassFrames.stream()
+                    .filter(frame -> frame == refreshFrame)
+                    .count();
+            if (passCountAtObservation != 1) {
+                throw new IllegalStateException(
+                        "rings-to-go refresh observation " + refreshFrame
+                                + " owns multiple completed passes ("
+                                + passCountAtObservation + ")");
+            }
+            if (!refreshFrames.add(refreshFrame)) {
+                throw new IllegalStateException(
+                        "multiple rings-to-go trigger clears map to pass frame "
+                                + refreshFrame);
+            }
+        }
+
+        List<Integer> checkRiseFrames = new ArrayList<>();
+        int previousCheckRings = 0;
+        for (int frame = 0; frame < checkRingsFlags.size(); frame++) {
+            int checkRings = checkRingsFlags.get(frame);
+            if (previousCheckRings == 0 && checkRings != 0) {
+                checkRiseFrames.add(frame);
+            }
+            previousCheckRings = checkRings;
+        }
+        if (checkRiseFrames.size() != 1) {
+            throw new IllegalStateException(
+                    "rings-to-go artifact requires exactly one terminal check-ring rise; got "
+                            + checkRiseFrames.size());
+        }
+        if (finishObservedFrames.size() != 1) {
+            throw new IllegalStateException(
+                    "rings-to-go artifact requires exactly one stage_finished observation; got "
+                            + finishObservedFrames.size());
+        }
+        int checkRiseFrame = checkRiseFrames.get(0);
+        int finishObservedFrame = finishObservedFrames.get(0);
+        if (checkRiseFrame != finishObservedFrame) {
+            throw new IllegalStateException(
+                    "terminal check-ring rise frame " + checkRiseFrame
+                            + " does not match stage_finished observed frame "
+                            + finishObservedFrame);
+        }
+        refreshFrames.add(checkRiseFrame);
+        return refreshFrames;
+    }
+
+    private static int numericTraceValue(Object raw) {
+        if (raw instanceof Number number) {
+            return number.intValue();
+        }
+        String text = String.valueOf(raw);
+        return text.startsWith("0x") || text.startsWith("0X")
+                ? Integer.parseUnsignedInt(text.substring(2), 16)
+                : Integer.parseInt(text);
+    }
+
+    static int mapTrackDurationElapsed(int speedFactor, int rawDurationTimer) {
+        if (speedFactor == 0 && rawDurationTimer == 0) {
+            return 0;
+        }
+        int duration = ANIM_BASE_DURATIONS[(speedFactor >> 1) & 7];
+        return duration - rawDurationTimer;
     }
 
     private static void addPlayerFields(Map<String, FieldComparison> fields,
                                         String prefix,
                                         CharacterState tc,
-                                        PlayerState ps) {
+                                        PlayerState ps,
+                                        boolean atomicPassEnd) {
         boolean tracePresent = tc != null && tc.present();
         boolean engPresent = ps != null;
         fields.put(prefix + "_present",
@@ -267,10 +614,10 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 cmp(prefix + "_routine", expRoutine, engRoutine, Severity.ERROR));
 
         fields.put(prefix + "_ss_x", cmp(prefix + "_ss_x",
-                intOr(tracePresent, tracePresent ? tc.ssX() : 0),
+                intOr(tracePresent, tracePresent ? signedWord(tc.ssX()) : 0),
                 intOr(engPresent, engPresent ? ps.ssX() : 0), Severity.ERROR));
         fields.put(prefix + "_ss_y", cmp(prefix + "_ss_y",
-                intOr(tracePresent, tracePresent ? tc.ssY() : 0),
+                intOr(tracePresent, tracePresent ? signedWord(tc.ssY()) : 0),
                 intOr(engPresent, engPresent ? ps.ssY() : 0), Severity.ERROR));
         fields.put(prefix + "_ss_z", cmp(prefix + "_ss_z",
                 intOr(tracePresent, tracePresent ? tc.ssZ() : 0),
@@ -283,6 +630,36 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         boolean engHurt = engPresent && ps.routineSecondary() == 2;
         fields.put(prefix + "_hurt",
                 cmp(prefix + "_hurt", bool(traceHurt), bool(engHurt), Severity.ERROR));
+        fields.put(prefix + "_rings", cmp(prefix + "_rings",
+                intOr(tracePresent, tracePresent ? tc.ringsBinary() : 0),
+                intOr(engPresent, engPresent ? ps.rings() : 0), Severity.ERROR));
+        // A VBlank CSV sample can bisect RunObjects between Obj09 and Obj10
+        // (the committed trace does so at f160 and f183). Player-owned timers
+        // are therefore compared only against the recorder's atomic pass-end
+        // snapshot, never against a mixed raw observation.
+        if (atomicPassEnd) {
+            fields.put(prefix + "_hurt_timer", cmp(prefix + "_hurt_timer",
+                    intOr(tracePresent, tracePresent ? tc.hurtTimer() : 0),
+                    intOr(engPresent, engPresent ? ps.hurtTimer() : 0), Severity.ERROR));
+            fields.put(prefix + "_slide_timer", cmp(prefix + "_slide_timer",
+                    intOr(tracePresent, tracePresent ? tc.slideTimer() : 0),
+                    intOr(engPresent, engPresent ? ps.slideTimer() : 0), Severity.ERROR));
+            fields.put(prefix + "_flip_timer", cmp(prefix + "_flip_timer",
+                    intOr(tracePresent, tracePresent ? tc.flipTimer() : 0),
+                    intOr(engPresent, engPresent ? ps.flipTimer() : 0), Severity.ERROR));
+        }
+    }
+
+    /**
+     * Maps a raw 68000 word to the signed value used by the ROM's track-space
+     * coordinate arithmetic. {@code ss_x_pos}/{@code ss_y_pos} are the integer
+     * words of 16.16 positions and are consumed by sign branches and signed
+     * multiplies; {@code ss_z_pos} is a separate positive depth word and is not
+     * routed through this mapping (s2.asm:69290-69303, 69324-69374,
+     * 69450-69458, 69718-69750).
+     */
+    private static int signedWord(int rawWord) {
+        return (short) rawWord;
     }
 
     private static String mapRoutine(int romRoutineByte) {
@@ -290,10 +667,6 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         return mapped != null
                 ? mapped
                 : String.format("ROM_0x%02X", romRoutineByte & 0xFF);
-    }
-
-    private static int ringsBinary(CharacterState c) {
-        return c != null && c.present() ? c.ringsBinary() : 0;
     }
 
     private static FieldComparison cmp(String name, String expected, String actual,

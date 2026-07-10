@@ -10,12 +10,24 @@ final class Sonic2SpecialStageSnapshot {
     final Sonic2SpecialStageManager.ResultState resultState;
     final boolean emeraldCollected;
     final int frameCounter;
+    final int renderFrameCounter;
     final int heldButtons;
     final int pressedButtons;
     final int p2HeldButtons;
     final int p2LogicalButtons;
+    final boolean recurringMainPassPending;
+    final int pendingMainHeldButtons;
+    final int pendingMainPressedButtons;
+    final int pendingMainP2HeldButtons;
+    final int pendingMainP2LogicalButtons;
+    final boolean pendingMainCheckpointStep;
+    final int previousPhysicalHeldButtons;
+    final int previousPhysicalPressedButtons;
+    final int previousPhysicalP2HeldButtons;
+    final int previousPhysicalP2LogicalButtons;
     final int tailsControlCounter;
     final int[] tailsCtrlRecordBuf;
+    final int swapPositionsFlag;
     final int lastDrawingIndex;
     final boolean checkpointRainbowPaletteActive;
     final int rainbowPaletteCycleIndex;
@@ -41,7 +53,6 @@ final class Sonic2SpecialStageSnapshot {
     final double alignmentRainbowSpeedAccumulator;
     final boolean alignmentStepByTrackFrame;
     final double lagCompensation;
-    final double lagAccumulator;
     final boolean lagCompensationDisplayEnabled;
     final long diagnosticWallStartTime;
     final int diagnosticUpdateCount;
@@ -53,6 +64,10 @@ final class Sonic2SpecialStageSnapshot {
     final boolean alternateScrollBuffer;
     final boolean lastAlternateScrollBuffer;
     final int drawingIndex;
+    final boolean speedPromotionPending;
+    final int pendingSpeedFactor;
+    final boolean initialPlayerSpawnPending;
+    final Sonic2SpecialStageManager.PlayerBootstrapPhase playerBootstrapPhase;
     final int lastAnimFrame;
     final int vScrollBG;
     final int hScrollDebugTotal;
@@ -76,12 +91,24 @@ final class Sonic2SpecialStageSnapshot {
             Sonic2SpecialStageManager.ResultState resultState,
             boolean emeraldCollected,
             int frameCounter,
+            int renderFrameCounter,
             int heldButtons,
             int pressedButtons,
             int p2HeldButtons,
             int p2LogicalButtons,
+            boolean recurringMainPassPending,
+            int pendingMainHeldButtons,
+            int pendingMainPressedButtons,
+            int pendingMainP2HeldButtons,
+            int pendingMainP2LogicalButtons,
+            boolean pendingMainCheckpointStep,
+            int previousPhysicalHeldButtons,
+            int previousPhysicalPressedButtons,
+            int previousPhysicalP2HeldButtons,
+            int previousPhysicalP2LogicalButtons,
             int tailsControlCounter,
             int[] tailsCtrlRecordBuf,
+            int swapPositionsFlag,
             int lastDrawingIndex,
             boolean checkpointRainbowPaletteActive,
             int rainbowPaletteCycleIndex,
@@ -107,7 +134,6 @@ final class Sonic2SpecialStageSnapshot {
             double alignmentRainbowSpeedAccumulator,
             boolean alignmentStepByTrackFrame,
             double lagCompensation,
-            double lagAccumulator,
             boolean lagCompensationDisplayEnabled,
             long diagnosticWallStartTime,
             int diagnosticUpdateCount,
@@ -119,6 +145,10 @@ final class Sonic2SpecialStageSnapshot {
             boolean alternateScrollBuffer,
             boolean lastAlternateScrollBuffer,
             int drawingIndex,
+            boolean speedPromotionPending,
+            int pendingSpeedFactor,
+            boolean initialPlayerSpawnPending,
+            Sonic2SpecialStageManager.PlayerBootstrapPhase playerBootstrapPhase,
             int lastAnimFrame,
             int vScrollBG,
             int hScrollDebugTotal,
@@ -140,12 +170,24 @@ final class Sonic2SpecialStageSnapshot {
         this.resultState = resultState;
         this.emeraldCollected = emeraldCollected;
         this.frameCounter = frameCounter;
+        this.renderFrameCounter = renderFrameCounter;
         this.heldButtons = heldButtons;
         this.pressedButtons = pressedButtons;
         this.p2HeldButtons = p2HeldButtons;
         this.p2LogicalButtons = p2LogicalButtons;
+        this.recurringMainPassPending = recurringMainPassPending;
+        this.pendingMainHeldButtons = pendingMainHeldButtons;
+        this.pendingMainPressedButtons = pendingMainPressedButtons;
+        this.pendingMainP2HeldButtons = pendingMainP2HeldButtons;
+        this.pendingMainP2LogicalButtons = pendingMainP2LogicalButtons;
+        this.pendingMainCheckpointStep = pendingMainCheckpointStep;
+        this.previousPhysicalHeldButtons = previousPhysicalHeldButtons;
+        this.previousPhysicalPressedButtons = previousPhysicalPressedButtons;
+        this.previousPhysicalP2HeldButtons = previousPhysicalP2HeldButtons;
+        this.previousPhysicalP2LogicalButtons = previousPhysicalP2LogicalButtons;
         this.tailsControlCounter = tailsControlCounter;
         this.tailsCtrlRecordBuf = cloneIntArray(tailsCtrlRecordBuf);
+        this.swapPositionsFlag = swapPositionsFlag;
         this.lastDrawingIndex = lastDrawingIndex;
         this.checkpointRainbowPaletteActive = checkpointRainbowPaletteActive;
         this.rainbowPaletteCycleIndex = rainbowPaletteCycleIndex;
@@ -171,7 +213,6 @@ final class Sonic2SpecialStageSnapshot {
         this.alignmentRainbowSpeedAccumulator = alignmentRainbowSpeedAccumulator;
         this.alignmentStepByTrackFrame = alignmentStepByTrackFrame;
         this.lagCompensation = lagCompensation;
-        this.lagAccumulator = lagAccumulator;
         this.lagCompensationDisplayEnabled = lagCompensationDisplayEnabled;
         this.diagnosticWallStartTime = diagnosticWallStartTime;
         this.diagnosticUpdateCount = diagnosticUpdateCount;
@@ -183,6 +224,10 @@ final class Sonic2SpecialStageSnapshot {
         this.alternateScrollBuffer = alternateScrollBuffer;
         this.lastAlternateScrollBuffer = lastAlternateScrollBuffer;
         this.drawingIndex = drawingIndex;
+        this.speedPromotionPending = speedPromotionPending;
+        this.pendingSpeedFactor = pendingSpeedFactor;
+        this.initialPlayerSpawnPending = initialPlayerSpawnPending;
+        this.playerBootstrapPhase = playerBootstrapPhase;
         this.lastAnimFrame = lastAnimFrame;
         this.vScrollBG = vScrollBG;
         this.hScrollDebugTotal = hScrollDebugTotal;
@@ -207,9 +252,11 @@ final class Sonic2SpecialStageSnapshot {
             int currentSegmentIndex,
             int currentFrameInSegment,
             int frameDelayCounter,
+            int playerAnimFrameTimer,
             int currentSegmentType,
             boolean currentSegmentFlipped,
             int speedFactor,
+            boolean speedChangePending,
             boolean stageComplete,
             boolean orientationFlipped,
             int lastOrientationFrame) {
@@ -259,6 +306,7 @@ final class Sonic2SpecialStageSnapshot {
     record PlayerSnapshot(
             Sonic2SpecialStagePlayer.PlayerType playerType,
             boolean mainCharacter,
+            boolean spawned,
             Sonic2SpecialStagePlayer.RoutineState routine,
             int routineSecondary,
             int ssXPos,
@@ -293,10 +341,10 @@ final class Sonic2SpecialStageSnapshot {
             boolean renderXFlip,
             boolean renderYFlip,
             int collisionProperty,
+            int rings,
             int globalAnimFrameTimer,
             int[] ctrlRecordBuf,
             int ctrlRecordIndex,
-            boolean swapPositionsFlag,
             int invulnerabilityCountdown) {
         PlayerSnapshot {
             ctrlRecordBuf = Sonic2SpecialStageSnapshot.cloneIntArray(ctrlRecordBuf);
@@ -325,6 +373,7 @@ final class Sonic2SpecialStageSnapshot {
             Sonic2SpecialStageIntro.Phase currentPhase,
             int phaseTimer,
             int frameCounter,
+            boolean specialStageStarted,
             int bannerX,
             int bannerY,
             boolean bannerVisible,

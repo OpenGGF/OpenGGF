@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -35,7 +36,8 @@ class Sonic2SpecialStageComparisonStateTest {
 
         assertNotNull(state, "captureComparisonState() should never return null");
         assertFalse(state.finished(), "Freshly constructed manager should not be finished");
-        assertEquals(12, state.speedFactor(), "Default speed factor should be 12 (track animator not yet initialized)");
+        assertEquals(0, state.speedFactor(),
+                "SS_Cur_Speed_Factor is zero before the ROM promotes the new factor (s2.asm:6640, 960-975)");
         assertNull(state.sonic(), "Sonic sub-record should be null before setupPlayers() runs");
         assertNull(state.tails(), "Tails sub-record should be null before setupPlayers() runs");
     }
@@ -64,6 +66,7 @@ class Sonic2SpecialStageComparisonStateTest {
         assertEquals(sonicPlayer.isHurt() ? 2 : 0, state.sonic().routineSecondary());
         assertEquals(sonicPlayer.getAnim(), state.sonic().anim());
         assertEquals(sonicPlayer.getAnimFrame(), state.sonic().animFrame());
+        assertEquals(sonicPlayer.getRings(), state.sonic().rings());
     }
 
     @Test
@@ -73,6 +76,29 @@ class Sonic2SpecialStageComparisonStateTest {
         Sonic2SpecialStageComparisonState state = manager.captureComparisonState();
 
         assertEquals(manager.getRingsCollected(), state.combinedRings());
+        assertEquals(0, state.playerAnimFrameTimer());
+        assertEquals(0, state.ringsToGo(),
+                "rings-to-go is floored when no positive requirement remains");
         assertEquals(manager.isFinished(), state.finished());
+    }
+
+    @Test
+    void mapsRingsToGoFromRequirementMinusCombinedRingsAndFloorsAtZero() throws Exception {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        var objectManager = new Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager(null);
+        set(objectManager, "ringsCollected", 43);
+        set(manager, "objectManager", objectManager);
+        set(manager, "currentRingRequirement", 50);
+
+        assertEquals(7, manager.captureComparisonState().ringsToGo());
+
+        set(objectManager, "ringsCollected", 51);
+        assertEquals(0, manager.captureComparisonState().ringsToGo());
+    }
+
+    private static void set(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }

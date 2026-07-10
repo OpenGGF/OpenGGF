@@ -76,16 +76,18 @@ public class Sonic2SpecialStageBomb extends Sonic2SpecialStageObject {
     /**
      * Called when the bomb is hit by a player.
      * Triggers the explosion animation.
+     * @return true when this call transitions an active bomb to exploding
      */
-    public void explode() {
+    public boolean explode() {
         if (state != State.ACTIVE) {
-            return;
+            return false;
         }
 
         state = State.EXPLODING;
         animIndex = EXPLOSION_ANIM;
         animFrame = 0;
         animTimer = 0;
+        return true;
     }
 
     @Override

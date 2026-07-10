@@ -1244,9 +1244,5 @@ public class Sonic3kSpecialStageManager {
 
     public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) {}
 
-    public double getLagCompensation() {
-        return 0.0;
-    }
-
     public void setLagCompensation(double factor) {}
 }

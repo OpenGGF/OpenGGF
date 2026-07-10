@@ -1684,9 +1684,7 @@ public class GameLoop {
                 || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))
                 || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DEBUG_MODE_KEY))
                 || isUnmodifiedDebugKeyPressed(GLFW_KEY_F4)
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F6)
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F7)) {
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)) {
             severSpecialStageRewindForLiveOnlyShortcut();
             return;
         }
@@ -3942,14 +3940,6 @@ public class GameLoop {
             ssProvider.toggleLagCompensationDisplay();
         }
 
-        // Lag compensation adjustment (F6 decrease, F7 increase)
-        if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F6)) {
-            adjustLagCompensation(-0.05);
-        }
-        if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F7)) {
-            adjustLagCompensation(0.05);
-        }
-
         if (ssProvider.isAlignmentTestMode()) {
             if (isUnmodifiedDebugKeyPressed(leftKey)) {
                 ssProvider.adjustAlignmentOffset(-1);
@@ -3973,29 +3963,6 @@ public class GameLoop {
                 SpecialStageInputMapper.map(inputHandler.logical());
         ssProvider.handleInput(mapped.p1Held(), mapped.p1Pressed());
         ssProvider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
-    }
-
-    /**
-     * Adjusts the lag compensation factor for the entire special stage simulation.
-     * The lag compensation simulates original Mega Drive hardware lag frames,
-     * affecting track animation, player movement, object speed, and all other
-     * timing.
-     *
-     * @param delta Amount to adjust (positive = more lag compensation = slower
-     *              simulation)
-     */
-    private void adjustLagCompensation(double delta) {
-        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-        if (!ssProvider.isInitialized() || !ssProvider.adjustLagCompensationIfDisplayEnabled(delta)) {
-            return;
-        }
-
-        // Calculate effective simulation rate for display
-        // Base is 60 fps. With lag compensation, effective = 60 * (1 - lagComp)
-        double effectiveUpdates = 60.0 * (1.0 - ssProvider.getLagCompensation());
-
-        LOGGER.info(String.format("Lag compensation: %.0f%% (effective ~%.1f updates/sec)",
-                ssProvider.getLagCompensation() * 100, effectiveUpdates));
     }
 
     // ==================== Ending / Credits Sequence Methods ====================

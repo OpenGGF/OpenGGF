@@ -6,8 +6,10 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.OptionalInt;
 
 /**
@@ -22,17 +24,23 @@ import java.util.OptionalInt;
  */
 public final class SpecialStageTraceData {
 
+    /** Typed view of a recorder {@code control_state} transition. */
+    public record ControlStateTransition(int frame, boolean started) {
+    }
+
     private static final String REQUIRED_TRACE_PROFILE = "s2_special_stage";
 
     private final TraceMetadata metadata;
     private final List<SpecialStageTraceFrame> frames;
     private final Map<Integer, List<TraceEvent>> eventsByFrame;
+    private final List<ControlStateTransition> controlStateTransitions;
 
     private SpecialStageTraceData(TraceMetadata metadata, List<SpecialStageTraceFrame> frames,
             Map<Integer, List<TraceEvent>> eventsByFrame) {
         this.metadata = metadata;
         this.frames = frames;
         this.eventsByFrame = eventsByFrame;
+        this.controlStateTransitions = parseControlStateTransitions(eventsByFrame);
     }
 
     public static SpecialStageTraceData load(Path traceDirectory) throws IOException {
@@ -81,17 +89,78 @@ public final class SpecialStageTraceData {
         return eventsByFrame.getOrDefault(i, Collections.emptyList());
     }
 
-    /** Returns the first frame carrying a {@code stage_finished} aux event, if any. */
+    /** Atomic object-pass snapshots; the validated binder owns execution ordering. */
+    public List<TraceEvent.StateSnapshot> runObjectsEndSnapshots() {
+        return eventsByFrame.values().stream()
+                .flatMap(List::stream)
+                .filter(TraceEvent.StateSnapshot.class::isInstance)
+                .map(TraceEvent.StateSnapshot.class::cast)
+                .filter(snapshot -> "run_objects_end".equals(snapshot.fields().get("type")))
+                .toList();
+    }
+
+    /** Returns all initial/transition samples of ROM {@code SpecialStage_Started}. */
+    public List<ControlStateTransition> controlStateTransitions() {
+        return controlStateTransitions;
+    }
+
+    private static List<ControlStateTransition> parseControlStateTransitions(
+            Map<Integer, List<TraceEvent>> eventsByFrame) {
+        return eventsByFrame.values().stream()
+                .flatMap(List::stream)
+                .filter(TraceEvent.StateSnapshot.class::isInstance)
+                .map(TraceEvent.StateSnapshot.class::cast)
+                .filter(snapshot -> "control_state".equals(snapshot.fields().get("type")))
+                .map(snapshot -> new ControlStateTransition(snapshot.frame(),
+                        numericValue(snapshot.fields().get("started")) != 0))
+                .sorted(Comparator.comparingInt(ControlStateTransition::frame))
+                .toList();
+    }
+
+    /** Returns the logical frame where the final checkpoint resolved, if captured. */
     public OptionalInt stageFinishedFrame() {
+        return firstEventFrame("stage_finished");
+    }
+
+    /**
+     * Returns the raw VBlank observation that first saw the final
+     * {@code SS_Check_Rings_flag} rise. This can be a lag-labelled row after
+     * the logical non-lag frame used to label the finish boundary.
+     */
+    public OptionalInt stageFinishedObservedFrame() {
+        return eventsByFrame.values().stream()
+                .flatMap(List::stream)
+                .filter(TraceEvent.StateSnapshot.class::isInstance)
+                .map(TraceEvent.StateSnapshot.class::cast)
+                .filter(snapshot -> "stage_finished".equals(snapshot.fields().get("type")))
+                .map(snapshot -> snapshot.fields().get("observed_frame"))
+                .filter(Objects::nonNull)
+                .mapToInt(SpecialStageTraceData::numericValue)
+                .min();
+    }
+
+    /** Returns the later frame where the ROM creates the Obj6F results object. */
+    public OptionalInt resultsStartedFrame() {
+        return firstEventFrame("results_started");
+    }
+
+    private OptionalInt firstEventFrame(String type) {
         return eventsByFrame.entrySet().stream()
-            .filter(entry -> entry.getValue().stream().anyMatch(SpecialStageTraceData::isStageFinished))
+            .filter(entry -> entry.getValue().stream().anyMatch(event -> isType(event, type)))
             .mapToInt(Map.Entry::getKey)
             .min();
     }
 
-    private static boolean isStageFinished(TraceEvent event) {
+    private static boolean isType(TraceEvent event, String type) {
         return event instanceof TraceEvent.StateSnapshot snapshot
-            && "stage_finished".equals(snapshot.fields().get("type"));
+            && type.equals(snapshot.fields().get("type"));
+    }
+
+    private static int numericValue(Object raw) {
+        if (raw instanceof Number number) {
+            return number.intValue();
+        }
+        return Integer.parseInt(String.valueOf(raw));
     }
 
     private static List<SpecialStageTraceFrame> loadPhysicsCsv(Path csvPath) throws IOException {

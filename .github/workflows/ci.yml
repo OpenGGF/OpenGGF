@@ -135,6 +135,9 @@ jobs:
 
           expected_policy_reports = set()
           expected_trace_reports = set()
+          required_keep_green_reports = {
+              "TEST-com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay.xml",
+          }
           for source in sorted(source_root.rglob("Test*.java")):
               if is_diagnostic(source):
                   continue
@@ -143,6 +146,13 @@ jobs:
               expected_policy_reports.add(report_name)
               if source.name.endswith("TraceReplay.java"):
                   expected_trace_reports.add(report_name)
+
+          untracked_keep_green = required_keep_green_reports - expected_trace_reports
+          if untracked_keep_green:
+              print("Required keep-green traces are outside the replay profile:", file=sys.stderr)
+              for name in sorted(untracked_keep_green):
+                  print(name, file=sys.stderr)
+              sys.exit(1)
 
           missing_policy = [
               name for name in sorted(expected_policy_reports)
@@ -206,6 +216,21 @@ jobs:
               print("Trace replay skipped tests are develop-blocking", file=sys.stderr)
               for report, skipped_count in skipped_reports:
                   print(f"{report}: skipped={skipped_count}", file=sys.stderr)
+              sys.exit(1)
+
+          required_ss_report = Path("target/trace-reports/s2_special_stage_0_report.json")
+          if not required_ss_report.exists():
+              print(f"Missing required keep-green divergence report: {required_ss_report}",
+                    file=sys.stderr)
+              sys.exit(1)
+          required_ss_data = json.loads(required_ss_report.read_text(encoding="utf-8"))
+          required_ss_errors = int(required_ss_data.get("error_count", 0))
+          required_ss_warnings = int(required_ss_data.get("warning_count", 0))
+          if required_ss_errors > 0 or required_ss_warnings > 0:
+              print(
+                  f"Required S2 special-stage keep-green trace is red: "
+                  f"errors={required_ss_errors} warnings={required_ss_warnings}",
+                  file=sys.stderr)
               sys.exit(1)
 
           warning_reports = []

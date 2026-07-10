@@ -36,10 +36,21 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertEquals(Sonic2SpecialStageManager.ResultState.RUNNING, get(manager, "resultState"));
         assertEquals(true, get(manager, "emeraldCollected"));
         assertEquals(123, get(manager, "frameCounter"));
+        assertEquals(87, get(manager, "renderFrameCounter"));
         assertEquals(0x11, get(manager, "heldButtons"));
         assertEquals(0x22, get(manager, "pressedButtons"));
         assertEquals(0x33, get(manager, "p2HeldButtons"));
         assertEquals(0x44, get(manager, "p2LogicalButtons"));
+        assertEquals(true, get(manager, "recurringMainPassPending"));
+        assertEquals(0x55, get(manager, "pendingMainHeldButtons"));
+        assertEquals(0x66, get(manager, "pendingMainPressedButtons"));
+        assertEquals(0x77, get(manager, "pendingMainP2HeldButtons"));
+        assertEquals(0x88, get(manager, "pendingMainP2LogicalButtons"));
+        assertEquals(true, get(manager, "pendingMainCheckpointStep"));
+        assertEquals(0x99, get(manager, "previousPhysicalHeldButtons"));
+        assertEquals(0xAA, get(manager, "previousPhysicalPressedButtons"));
+        assertEquals(0xBB, get(manager, "previousPhysicalP2HeldButtons"));
+        assertEquals(0xCC, get(manager, "previousPhysicalP2LogicalButtons"));
         assertEquals(7, get(manager, "tailsControlCounter"));
         assertArrayEquals(sequence(0x100, 16), (int[]) get(manager, "tailsCtrlRecordBuf"));
         assertEquals(5, get(manager, "lastDrawingIndex"));
@@ -68,7 +79,6 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertEquals(0.5, (double) get(manager, "alignmentRainbowSpeedAccumulator"), 0.0001);
         assertEquals(true, get(manager, "alignmentStepByTrackFrame"));
         assertEquals(0.25, (double) get(manager, "lagCompensation"), 0.0001);
-        assertEquals(0.75, (double) get(manager, "lagAccumulator"), 0.0001);
         assertEquals(true, get(manager, "lagCompensationDisplayEnabled"));
         assertEquals(1_234_567L, get(manager, "diagnosticWallStartTime"));
         assertEquals(8, get(manager, "diagnosticUpdateCount"));
@@ -80,6 +90,8 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertEquals(true, get(manager, "alternateScrollBuffer"));
         assertEquals(true, get(manager, "lastAlternateScrollBuffer"));
         assertEquals(4, get(manager, "drawingIndex"));
+        assertEquals(Sonic2SpecialStageManager.PlayerBootstrapPhase.WAIT_SECOND_DURATION_WRAP,
+                get(manager, "playerBootstrapPhase"));
         assertEquals(33, get(manager, "lastAnimFrame"));
         assertEquals(-7, get(manager, "vScrollBG"));
         assertEquals(101, get(manager, "hScrollDebugTotal"));
@@ -97,6 +109,7 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertEquals(4, get(animator, "currentSegmentIndex"));
         assertEquals(7, get(animator, "currentFrameInSegment"));
         assertEquals(9, get(animator, "speedFactor"));
+        assertEquals(true, get(animator, "speedChangePending"));
         assertEquals(true, get(animator, "orientationFlipped"));
 
         Sonic2SpecialStagePlayer sonic = (Sonic2SpecialStagePlayer) get(manager, "sonicPlayer");
@@ -221,7 +234,7 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "trackAnimator", animator);
 
         Sonic2SpecialStagePlayer sonic = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true, manager);
         ArrayList<Sonic2SpecialStagePlayer> players = new ArrayList<>();
         players.add(sonic);
         set(manager, "players", players);
@@ -250,15 +263,16 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(animator, "currentSegmentType", 3);
         set(animator, "currentSegmentFlipped", true);
         set(animator, "speedFactor", 9);
+        set(animator, "speedChangePending", true);
         set(animator, "stageComplete", true);
         set(animator, "orientationFlipped", true);
         set(animator, "lastOrientationFrame", 12);
         set(manager, "trackAnimator", animator);
 
         Sonic2SpecialStagePlayer sonic = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true, manager);
         Sonic2SpecialStagePlayer tails = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
+                Sonic2SpecialStagePlayer.PlayerType.TAILS, false, manager);
         sonic.setOtherPlayer(tails);
         tails.setOtherPlayer(sonic);
         set(sonic, "ssXPos", 0x1234);
@@ -322,10 +336,21 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "resultState", Sonic2SpecialStageManager.ResultState.RUNNING);
         set(manager, "emeraldCollected", true);
         set(manager, "frameCounter", 123);
+        set(manager, "renderFrameCounter", 87);
         set(manager, "heldButtons", 0x11);
         set(manager, "pressedButtons", 0x22);
         set(manager, "p2HeldButtons", 0x33);
         set(manager, "p2LogicalButtons", 0x44);
+        set(manager, "recurringMainPassPending", true);
+        set(manager, "pendingMainHeldButtons", 0x55);
+        set(manager, "pendingMainPressedButtons", 0x66);
+        set(manager, "pendingMainP2HeldButtons", 0x77);
+        set(manager, "pendingMainP2LogicalButtons", 0x88);
+        set(manager, "pendingMainCheckpointStep", true);
+        set(manager, "previousPhysicalHeldButtons", 0x99);
+        set(manager, "previousPhysicalPressedButtons", 0xAA);
+        set(manager, "previousPhysicalP2HeldButtons", 0xBB);
+        set(manager, "previousPhysicalP2LogicalButtons", 0xCC);
         set(manager, "tailsControlCounter", 7);
         System.arraycopy(sequence(0x100, 16), 0, (int[]) get(manager, "tailsCtrlRecordBuf"), 0, 16);
         set(manager, "lastDrawingIndex", 5);
@@ -354,7 +379,6 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "alignmentRainbowSpeedAccumulator", 0.5);
         set(manager, "alignmentStepByTrackFrame", true);
         set(manager, "lagCompensation", 0.25);
-        set(manager, "lagAccumulator", 0.75);
         set(manager, "lagCompensationDisplayEnabled", true);
         set(manager, "diagnosticWallStartTime", 1_234_567L);
         set(manager, "diagnosticUpdateCount", 8);
@@ -366,6 +390,8 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "alternateScrollBuffer", true);
         set(manager, "lastAlternateScrollBuffer", true);
         set(manager, "drawingIndex", 4);
+        set(manager, "playerBootstrapPhase",
+                Sonic2SpecialStageManager.PlayerBootstrapPhase.WAIT_SECOND_DURATION_WRAP);
         set(manager, "lastAnimFrame", 33);
         set(manager, "vScrollBG", -7);
         set(manager, "hScrollDebugTotal", 101);
@@ -385,10 +411,21 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "resultState", Sonic2SpecialStageManager.ResultState.FAILED);
         set(manager, "emeraldCollected", false);
         set(manager, "frameCounter", 999);
+        set(manager, "renderFrameCounter", 999);
         set(manager, "heldButtons", 999);
         set(manager, "pressedButtons", 999);
         set(manager, "p2HeldButtons", 999);
         set(manager, "p2LogicalButtons", 999);
+        set(manager, "recurringMainPassPending", false);
+        set(manager, "pendingMainHeldButtons", 999);
+        set(manager, "pendingMainPressedButtons", 999);
+        set(manager, "pendingMainP2HeldButtons", 999);
+        set(manager, "pendingMainP2LogicalButtons", 999);
+        set(manager, "pendingMainCheckpointStep", false);
+        set(manager, "previousPhysicalHeldButtons", 999);
+        set(manager, "previousPhysicalPressedButtons", 999);
+        set(manager, "previousPhysicalP2HeldButtons", 999);
+        set(manager, "previousPhysicalP2LogicalButtons", 999);
         set(manager, "tailsControlCounter", 999);
         Arrays.fill((int[]) get(manager, "tailsCtrlRecordBuf"), 999);
         set(manager, "lastDrawingIndex", 999);
@@ -417,7 +454,6 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "alignmentRainbowSpeedAccumulator", 9.0);
         set(manager, "alignmentStepByTrackFrame", false);
         set(manager, "lagCompensation", 0.5);
-        set(manager, "lagAccumulator", 0.5);
         set(manager, "lagCompensationDisplayEnabled", false);
         set(manager, "diagnosticWallStartTime", 99L);
         set(manager, "diagnosticUpdateCount", 99);
@@ -429,6 +465,7 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "alternateScrollBuffer", false);
         set(manager, "lastAlternateScrollBuffer", false);
         set(manager, "drawingIndex", 99);
+        set(manager, "playerBootstrapPhase", Sonic2SpecialStageManager.PlayerBootstrapPhase.INITIALIZED);
         set(manager, "lastAnimFrame", 99);
         set(manager, "vScrollBG", 99);
         set(manager, "hScrollDebugTotal", 99);
@@ -442,6 +479,7 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(animator, "currentSegmentIndex", 99);
         set(animator, "currentFrameInSegment", 99);
         set(animator, "speedFactor", 1);
+        set(animator, "speedChangePending", false);
         set(animator, "orientationFlipped", false);
 
         Sonic2SpecialStagePlayer sonic = (Sonic2SpecialStagePlayer) get(manager, "sonicPlayer");
