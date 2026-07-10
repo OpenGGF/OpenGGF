@@ -144,9 +144,21 @@ f6947 to f7746. Focused `TestSolidObjectManager` guards latch set/clear, and
 `TestSidekickCpuFollowParity#s3kRollingNonzeroGroundSpeedPushFallsThroughNearIczSegmentColumn`
 confirms the previously-green unowned ICZ stale-push case remains unchanged.
 
+Round 9 banks the S3K spring `jumping`-byte reset. Sonic entered the AIZ2 up
+spring with a real jump latch still set; Obj07 then replaced `y_vel` with
+`-$A00`, but the engine omitted `sub_22F98`'s following `clr.b jumping(a1)`.
+When the trace released A/B/C at f7746, engine `Sonic_JumpHeight` capped that
+spring velocity toward `-$400`, while ROM retained the object launch
+(`sonic3k.asm:47714-47726`). The equivalent down and diagonal trigger tails
+also clear `jumping` and are fixed together (`sonic3k.asm:48139-48144,
+48213-48217,48304-48308`); horizontal springs deliberately remain unchanged.
+This moves the stacked complete-run frontier from f7746 to f7849. Focused
+`TestSonic3kSpringObjectInstance` assertions cover up, down, and diagonal
+launches alongside their existing `Status_OnObj` handoff checks.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree frontier is f7746. Those causes will be recorded and committed
+banked rounds the current stacked working-tree frontier is f7849. Those causes will be recorded and committed
 separately as their focused guards are completed. The level-select AIZ trace remains at f8941
 and is still part of the stage-green exit gate. S1/S2 full trace sweeps remain
 pending until the AIZ fixes are banked; no green claim is made yet.
