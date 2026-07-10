@@ -187,6 +187,8 @@ public final class LevelRenderer {
         SonicConfigurationService configuration = lm.configService;
         graphics.setUseWaterShader(true);
 
+        Integer underwaterTextureId = resolveUnderwaterPaletteTextureForFrame();
+
         WaterShaderProgram shader = graphics.getWaterShaderProgram();
         shader.use();
 
@@ -210,17 +212,12 @@ public final class LevelRenderer {
         graphics.setWindowHeight(windowHeight);
         graphics.setScreenHeight(screenHeightPixels);
 
-        int zoneId = lm.getFeatureZoneId();
-        Palette[] underwater = lm.waterSystem.getUnderwaterPalette(zoneId, lm.currentAct);
-        if (underwater != null) {
-            Palette normalLine0 = (lm.level != null) ? lm.level.getPalette(0) : null;
-            graphics.cacheUnderwaterPaletteTexture(underwater, normalLine0);
-            Integer texId = graphics.getUnderwaterPaletteTextureId();
+        if (underwaterTextureId != null) {
             int loc = shader.getUnderwaterPaletteLocation();
 
-            if (texId != null && loc != -1) {
+            if (loc != -1) {
                 glActiveTexture(GL_TEXTURE2);
-                glBindTexture(GL_TEXTURE_2D, texId);
+                glBindTexture(GL_TEXTURE_2D, underwaterTextureId);
                 glUniform1i(loc, 2);
                 glActiveTexture(GL_TEXTURE0);
             }
@@ -244,15 +241,11 @@ public final class LevelRenderer {
             instancedShader.setScreenDimensions((float) configuration.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
                     (float) configuration.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS));
 
-            Palette[] underwaterInstanced = lm.waterSystem.getUnderwaterPalette(zoneId, lm.currentAct);
-            if (underwaterInstanced != null) {
-                Palette normalLine0Instanced = (lm.level != null) ? lm.level.getPalette(0) : null;
-                graphics.cacheUnderwaterPaletteTexture(underwaterInstanced, normalLine0Instanced);
-                Integer texId = graphics.getUnderwaterPaletteTextureId();
+            if (underwaterTextureId != null) {
                 int loc = instancedShader.getUnderwaterPaletteLocation();
-                if (texId != null && loc != -1) {
+                if (loc != -1) {
                     glActiveTexture(GL_TEXTURE2);
-                    glBindTexture(GL_TEXTURE_2D, texId);
+                    glBindTexture(GL_TEXTURE_2D, underwaterTextureId);
                     glUniform1i(loc, 2);
                     glActiveTexture(GL_TEXTURE0);
                 }
@@ -456,9 +449,25 @@ public final class LevelRenderer {
         currentAdvancedRenderFrameState = AdvancedRenderFrameState.disabled();
     }
 
+    /** Resolves and content-validates the underwater texture once for this shader setup command. */
+    Integer resolveUnderwaterPaletteTextureForFrame() {
+        int zoneId = lm.getFeatureZoneId();
+        Palette[] underwater = lm.waterSystem.getUnderwaterPalette(zoneId, lm.currentAct);
+        if (underwater == null) {
+            return null;
+        }
+        Palette normalLine0 = lm.level != null ? lm.level.getPalette(0) : null;
+        return lm.graphicsManager.cacheUnderwaterPaletteTexture(underwater, normalLine0);
+    }
+
     /** Drains the GLCommand to disable water shader (used by callers needing post-pass cleanup). */
     GLCommand getDisableWaterShaderCommand() {
         return disableWaterShaderCommand;
+    }
+
+    /** Exposes the deferred water setup command to package-level render integration tests. */
+    GLCommand getWaterShaderSetupCommand() {
+        return waterShaderSetupCommand;
     }
 
     /**

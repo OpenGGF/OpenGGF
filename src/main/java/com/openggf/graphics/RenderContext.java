@@ -26,6 +26,8 @@ public class RenderContext {
     public static final int LINES_PER_CONTEXT = 4;
 
     private static final Map<GameId, RenderContext> donorContexts = new LinkedHashMap<>();
+    private static final Collection<RenderContext> donorContextView =
+            Collections.unmodifiableCollection(donorContexts.values());
     private static final java.util.List<RenderContext> sidekickContexts = new java.util.ArrayList<>();
     private static int nextPaletteBase = LINES_PER_CONTEXT; // first donor starts at line 4
 
@@ -86,7 +88,7 @@ public class RenderContext {
      * Returns all active donor render contexts (unmodifiable).
      */
     public static Collection<RenderContext> getDonorContexts() {
-        return Collections.unmodifiableCollection(donorContexts.values());
+        return donorContextView;
     }
 
     /**

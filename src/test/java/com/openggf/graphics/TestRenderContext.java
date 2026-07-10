@@ -250,6 +250,5 @@ public class TestRenderContext {
         assertEquals(60, Byte.toUnsignedInt(c.g));
         assertEquals(30, Byte.toUnsignedInt(c.b));
     }
+
 }
-
-
