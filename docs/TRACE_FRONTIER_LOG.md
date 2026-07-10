@@ -282,9 +282,20 @@ f10766 (Tails fixed horizontal speed during the following interaction). The
 all-29 S1/all-48 S2 sweep immediately preceding this S3K-only profile delta is
 green.
 
+Round 20 makes the AIZ miniboss HURT body consume its live refreshed child
+position. ROM `loc_686E8` calls `Refresh_ChildPositionAdjusted` immediately
+before `Child_DrawTouch_Sprite2` publishes the object-RAM pointer; using the
+engine's older generic snapshot missed a one-pixel boundary contact and left
+Tails in normal CPU control instead of the native hurt routine. The body now
+opts into live touch-response coordinates (`sonic3k.asm:136888-136921,
+20656-20710`). The focused boss touch-profile test passes and the complete-run
+frontier moves from f10766 (Tails hurt-state fixed velocity) to f11897 (ring
+loss absent). The all-29 S1/all-48 S2 sweep immediately preceding this
+S3K-only body-profile delta is green.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f10766. Those causes will be recorded and committed
+banked rounds the current stacked working-tree complete-run frontier is f11897. Those causes will be recorded and committed
 separately as their focused guards are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes
 an earlier f5435 mismatch and must restore/advance that route before the stage

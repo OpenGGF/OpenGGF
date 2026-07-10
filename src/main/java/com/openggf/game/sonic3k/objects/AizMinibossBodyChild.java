@@ -136,6 +136,14 @@ public class AizMinibossBodyChild extends AbstractBossChild implements TouchResp
     }
 
     @Override
+    public boolean usesCurrentTouchResponseState() {
+        // loc_686E8 refreshes the child position immediately before
+        // Child_DrawTouch_Sprite2 publishes its object-RAM pointer. The next
+        // player slot therefore reads this live child position.
+        return true;
+    }
+
+    @Override
     public boolean isHighPriority() {
         // ROM: make_art_tile(ArtTile_AIZMiniboss,1,1) — priority bit = 1
         return true;

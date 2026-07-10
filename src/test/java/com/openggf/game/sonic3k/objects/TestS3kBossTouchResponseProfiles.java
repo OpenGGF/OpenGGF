@@ -50,6 +50,8 @@ class TestS3kBossTouchResponseProfiles {
         TouchResponseProfile profile = body.getTouchResponseProfile();
         assertFireShieldSingleRegionEnemy(profile);
         assertEquals(profile, body.getTouchResponseProfile(false));
+        assertTrue(body.usesCurrentTouchResponseState(),
+                "Child_DrawTouch_Sprite2 publishes the live refreshed body pointer");
     }
 
     @Test
