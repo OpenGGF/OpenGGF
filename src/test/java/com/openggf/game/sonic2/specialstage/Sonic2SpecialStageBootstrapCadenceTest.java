@@ -19,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -152,6 +154,27 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         assertEquals(0, currentDrawWrap.drawingIndex());
         assertEquals(3, currentDrawWrap.trackAnimFrame(),
                 "current index-zero SSTrack_Draw is synchronous even while RunObjects is pending");
+    }
+
+    @Test
+    void drawSkipsPlaceholderUntilFirstTrackFrameIsDecoded() throws Exception {
+        TrackRenderRecorder renderer = new TrackRenderRecorder(GraphicsManager.getInstance());
+        setManagerField("renderer", renderer);
+
+        assertNull(decodedTrackFrame(), "pre-roll starts before the first track decode");
+        manager.draw();
+        assertEquals(0, renderer.trackRenderCalls,
+                "production draw must not expose the renderer's test placeholder at startup");
+
+        int updatesRemaining = 1_000;
+        while (decodedTrackFrame() == null && updatesRemaining-- > 0) {
+            manager.update();
+        }
+        assertNotNull(decodedTrackFrame(), "the first active runtime update should decode Plane A");
+
+        manager.draw();
+        assertEquals(1, renderer.trackRenderCalls,
+                "Plane A should render normally once decoded track data is available");
     }
 
     @Test
@@ -831,6 +854,31 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         java.lang.reflect.Field frameField = Sonic2SpecialStageRenderer.class.getDeclaredField("frameCounter");
         frameField.setAccessible(true);
         return frameField.getInt(renderer);
+    }
+
+    private int[] decodedTrackFrame() throws Exception {
+        java.lang.reflect.Field field = Sonic2SpecialStageManager.class.getDeclaredField("decodedTrackFrame");
+        field.setAccessible(true);
+        return (int[]) field.get(manager);
+    }
+
+    private void setManagerField(String name, Object value) throws Exception {
+        java.lang.reflect.Field field = Sonic2SpecialStageManager.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(manager, value);
+    }
+
+    private static final class TrackRenderRecorder extends Sonic2SpecialStageRenderer {
+        private int trackRenderCalls;
+
+        private TrackRenderRecorder(GraphicsManager graphicsManager) {
+            super(graphicsManager);
+        }
+
+        @Override
+        public void renderTrack(int trackFrameIndex, int[] frameTiles) {
+            trackRenderCalls++;
+        }
     }
 
     private static void assertTerminalBoundaryStateUnchanged(
