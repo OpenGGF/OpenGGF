@@ -109,8 +109,17 @@ and f4803 spindash-resume cluster, advancing the frontier to f5158. Focused
 `TestAizLrzRockPlayerParticipation` covers player ownership, saved push phase,
 release clearing, and subpixel preservation.
 
+Round 6 banks the moving-spike render-flag gate. The moving spike routines update
+`x_pos/y_pos` before `SolidObjectFull`, but `loc_1DF88` consumes render bit 7 from
+the preceding `Render_Sprites` pass (`sonic3k.asm:41390-41392,49011-49039,
+49102-49131`). The engine had recomputed visibility from the post-move position,
+making an upside-down spike solid as it entered the viewport at f5158. A shared
+frame-start render-bounds helper now lets the S3K spike preserve the stale flag
+cadence, advancing the frontier to f5493. `TestSonic3kSpikeObjectInstance`
+guards both exclusive render edges and movement-into-view timing.
+
 Remaining unbanked object investigation has advanced through f2303, the
-f5158 moving-spike contact; together with the banked rounds the current
+later transition-floor contact; together with the banked rounds the current
 branch-local frontier is f6237. Those causes will be recorded and committed
 separately as their focused guards are completed. The level-select AIZ trace remains at f8941
 and is still part of the stage-green exit gate. S1/S2 full trace sweeps remain

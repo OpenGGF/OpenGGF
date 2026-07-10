@@ -899,6 +899,16 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Render_Sprites bounds at the frame-start object position. Moving objects
+     * can use this when their solid helper observes the render flag produced
+     * before the current object routine changes x_pos/y_pos.
+     */
+    protected boolean isPreUpdateWithinRenderSpriteBounds(int xMargin, int yMargin) {
+        return preUpdateValid && cameraBounds.containsRenderSpriteBounds(
+                preUpdateX, preUpdateY, xMargin, yMargin);
+    }
+
+    /**
      * Configured viewport width in pixels (cameraBounds is updated each frame from
      * camera.getWidth()). Returns 320 at native (NATIVE_4_3), 528 at ULTRA_21_9.
      */
