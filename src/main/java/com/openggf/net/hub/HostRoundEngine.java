@@ -6,17 +6,21 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 
 /** Authoritative lobby, countdown, race-window, round-end, and standings state. */
 public final class HostRoundEngine {
-    public enum Phase { LOBBY, COUNTDOWN, RUNNING, ROUND_END }
+    public enum Phase { LOBBY, COUNTDOWN, RUNNING, ROUND_END, VOTE }
 
     public static final long COUNTDOWN_MILLIS = 3000;
     public static final long FINISH_GRACE_MILLIS = 2000;
     public static final long ROUND_END_LINGER_MILLIS = 10_000;
     public static final int STANDINGS_BROADCAST_CAP = 10;
+    public static final long VOTE_WINDOW_MILLIS = 15_000;
+    public static final int VOTE_OPTION_COUNT = 3;
 
     public record FinishOutcome(int slot, int rank, boolean outsideBroadcastCap) {
     }
@@ -28,6 +32,8 @@ public final class HostRoundEngine {
     private final LongSupplier hubClockMillis;
     private final Consumer<ControlMessage> broadcaster;
     private final Map<Integer, Best> bests = new LinkedHashMap<>();
+    private final List<String> voteTrackPool = new ArrayList<>();
+    private final Map<Integer, String> votesBySlot = new LinkedHashMap<>();
 
     private Phase phase = Phase.LOBBY;
     private ControlMessage.RoundConfig config;
@@ -35,6 +41,11 @@ public final class HostRoundEngine {
     private long deadline;
     private long roundEndAt;
     private long achievedCounter;
+    private Predicate<String> knownTrack;
+    private int voteRotation;
+    private List<String> voteOptions = List.of();
+    private long voteEndsAt;
+    private ControlMessage.RoundConfig votedNextConfig;
 
     public HostRoundEngine(LongSupplier hubClockMillis,
                            Consumer<ControlMessage> broadcaster) {
@@ -47,7 +58,8 @@ public final class HostRoundEngine {
     }
 
     public boolean startRound(ControlMessage.RoundConfig newConfig) {
-        if (phase != Phase.LOBBY && phase != Phase.ROUND_END) {
+        if (phase != Phase.LOBBY
+                && (phase != Phase.ROUND_END || !voteTrackPool.isEmpty())) {
             return false;
         }
         long now = hubClockMillis.getAsLong();
@@ -56,6 +68,7 @@ public final class HostRoundEngine {
         deadline = countdownEndsAt + newConfig.windowSeconds() * 1000L;
         bests.clear();
         achievedCounter = 0;
+        votedNextConfig = null;
         phase = Phase.COUNTDOWN;
         broadcaster.accept(new ControlMessage.RoundStart(config, countdownEndsAt, deadline));
         return true;
@@ -73,8 +86,44 @@ public final class HostRoundEngine {
         }
         if (phase == Phase.ROUND_END
                 && now >= roundEndAt + ROUND_END_LINGER_MILLIS) {
-            phase = Phase.LOBBY;
+            if (voteTrackPool.isEmpty()) {
+                phase = Phase.LOBBY;
+            } else {
+                beginVote();
+            }
         }
+        if (phase == Phase.VOTE && now >= voteEndsAt) {
+            closeVote();
+        }
+    }
+
+    public void setVoteTrackPool(List<String> trackKeys) {
+        setVoteTrackPool(trackKeys, null);
+    }
+
+    public void setVoteTrackPool(List<String> trackKeys, Predicate<String> knownTrack) {
+        this.knownTrack = knownTrack;
+        voteTrackPool.clear();
+        if (trackKeys != null) {
+            trackKeys.stream().filter(Objects::nonNull).distinct()
+                    .forEach(voteTrackPool::add);
+        }
+    }
+
+    public List<String> voteOptions() {
+        return List.copyOf(voteOptions);
+    }
+
+    public ControlMessage.RoundConfig votedNextConfig() {
+        return votedNextConfig;
+    }
+
+    public void onTrackVote(int slot, String trackKey) {
+        if (phase != Phase.VOTE || trackKey == null || !voteOptions.contains(trackKey)) {
+            return;
+        }
+        votesBySlot.put(slot, trackKey);
+        broadcaster.accept(new ControlMessage.TrackVoteTally(currentTally()));
     }
 
     public FinishOutcome onAttemptFinish(int slot, String displayName, String character,
@@ -157,5 +206,85 @@ public final class HostRoundEngine {
             List<ControlMessage.StandingsRow> rows) {
         return List.copyOf(rows.subList(0,
                 Math.min(STANDINGS_BROADCAST_CAP, rows.size())));
+    }
+
+    private void beginVote() {
+        voteOptions = pickVoteOptions();
+        if (voteOptions.size() < 2) {
+            voteOptions = List.of();
+            phase = Phase.LOBBY;
+            return;
+        }
+        votesBySlot.clear();
+        voteEndsAt = hubClockMillis.getAsLong() + VOTE_WINDOW_MILLIS;
+        phase = Phase.VOTE;
+        broadcaster.accept(new ControlMessage.TrackVoteOffer(voteOptions, voteEndsAt));
+    }
+
+    private List<String> pickVoteOptions() {
+        List<String> candidates = voteTrackPool.stream()
+                .filter(this::isEligibleVoteKey).toList();
+        List<String> picked = new ArrayList<>();
+        for (int index = 0; index < candidates.size()
+                && picked.size() < VOTE_OPTION_COUNT; index++) {
+            picked.add(candidates.get((voteRotation + index) % candidates.size()));
+        }
+        voteRotation = candidates.isEmpty() ? 0
+                : (voteRotation + VOTE_OPTION_COUNT) % candidates.size();
+        return List.copyOf(picked);
+    }
+
+    private boolean isEligibleVoteKey(String key) {
+        if (key == null || key.equals(currentTrackKey()) || config == null) {
+            return false;
+        }
+        String[] parts = key.split(":", -1);
+        if (parts.length != 3 || !parts[0].equals(config.gameId())) {
+            return false;
+        }
+        try {
+            if (Integer.parseInt(parts[1]) < 0 || Integer.parseInt(parts[2]) < 0) {
+                return false;
+            }
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+        return knownTrack == null || knownTrack.test(key);
+    }
+
+    private List<ControlMessage.VoteCount> currentTally() {
+        List<ControlMessage.VoteCount> counts = new ArrayList<>(voteOptions.size());
+        for (String option : voteOptions) {
+            int count = (int) votesBySlot.values().stream().filter(option::equals).count();
+            counts.add(new ControlMessage.VoteCount(option, count));
+        }
+        return List.copyOf(counts);
+    }
+
+    private void closeVote() {
+        String winner = null;
+        int bestVotes = 0;
+        for (String option : voteOptions) {
+            int count = (int) votesBySlot.values().stream().filter(option::equals).count();
+            if (count > bestVotes) {
+                bestVotes = count;
+                winner = option;
+            }
+        }
+        if (winner != null) {
+            String[] parts = winner.split(":");
+            votedNextConfig = new ControlMessage.RoundConfig(parts[0],
+                    Integer.parseInt(parts[1]), Integer.parseInt(parts[2]),
+                    config.windowSeconds(), config.characterPolicy(), config.lockedCharacter());
+        }
+        broadcaster.accept(new ControlMessage.TrackVoteResult(
+                winner == null ? currentTrackKey() : winner));
+        voteOptions = List.of();
+        votesBySlot.clear();
+        phase = Phase.LOBBY;
+    }
+
+    private String currentTrackKey() {
+        return config == null ? "" : config.gameId() + ":" + config.zone() + ":" + config.act();
     }
 }
