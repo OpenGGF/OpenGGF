@@ -348,6 +348,39 @@ public class Sonic2TrackAnimator {
         return speedFactor;
     }
 
+    public int getFrameDelayCounter() {
+        return frameDelayCounter;
+    }
+
+    Sonic2SpecialStageSnapshot.TrackAnimatorSnapshot captureRewindSnapshot() {
+        return new Sonic2SpecialStageSnapshot.TrackAnimatorSnapshot(
+                stageLayout,
+                layoutLength,
+                currentSegmentIndex,
+                currentFrameInSegment,
+                frameDelayCounter,
+                currentSegmentType,
+                currentSegmentFlipped,
+                speedFactor,
+                stageComplete,
+                orientationFlipped,
+                lastOrientationFrame);
+    }
+
+    void restoreRewindSnapshot(Sonic2SpecialStageSnapshot.TrackAnimatorSnapshot snapshot) {
+        stageLayout = Sonic2SpecialStageSnapshot.cloneByteArray(snapshot.stageLayout());
+        layoutLength = snapshot.layoutLength();
+        currentSegmentIndex = snapshot.currentSegmentIndex();
+        currentFrameInSegment = snapshot.currentFrameInSegment();
+        frameDelayCounter = snapshot.frameDelayCounter();
+        currentSegmentType = snapshot.currentSegmentType();
+        currentSegmentFlipped = snapshot.currentSegmentFlipped();
+        speedFactor = snapshot.speedFactor();
+        stageComplete = snapshot.stageComplete();
+        orientationFlipped = snapshot.orientationFlipped();
+        lastOrientationFrame = snapshot.lastOrientationFrame();
+    }
+
     public int getCurrentSegmentIndex() {
         return currentSegmentIndex;
     }

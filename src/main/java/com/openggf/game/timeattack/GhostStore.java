@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.HexFormat;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -55,6 +56,30 @@ public final class GhostStore {
             return files.filter(p -> p.getFileName().toString().endsWith(".ggfghost"))
                     .sorted().toList();
         }
+    }
+
+    /** Finds a persisted best/previous input sidecar by its content hash. */
+    public Optional<byte[]> findInputRecording(String hashHex) throws IOException {
+        if (!Files.isDirectory(root)) {
+            return Optional.empty();
+        }
+        try (Stream<Path> files = Files.walk(root)) {
+            for (Path file : files.filter(path -> path.getFileName().toString()
+                    .endsWith(".ggfinputs")).toList()) {
+                byte[] encoded = Files.readAllBytes(file);
+                AttemptInputRecording recording;
+                try {
+                    recording = AttemptInputRecording.decode(encoded);
+                } catch (IllegalArgumentException invalid) {
+                    continue;
+                }
+                if (HexFormat.of().formatHex(recording.sha256())
+                        .equalsIgnoreCase(hashHex)) {
+                    return Optional.of(encoded);
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     private Path bestPath(String gameId, int zone, int act, String character) {

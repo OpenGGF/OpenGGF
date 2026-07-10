@@ -161,6 +161,50 @@ Manager classes consolidated for reduced complexity:
 - **`CollisionSystem`** orchestrates collision in phases: terrain probes (`TerrainCollisionManager`) → solid object resolution (`ObjectManager.SolidContacts`) → post-resolution (ground mode, headroom). Supports trace recording via `CollisionTrace` (`RecordingCollisionTrace` / `NoOpCollisionTrace`).
 - **`UiRenderPipeline`** (`graphics.pipeline`) enforces render order: Scene → HUD overlay → Fade pass. `Engine.display()` drives screen transitions through it. `RenderOrderRecorder` is available for tests.
 
+## Multiplayer time attack networking
+
+The direct-connect and master-server networking core lives under
+`com.openggf.net.protocol`, `com.openggf.net.hub`, `com.openggf.net.host`, and
+`com.openggf.net.client`. These packages are engine-free and may share only the
+canonical `GhostFrame` / `GhostFrameCodec`; `TestNetIsolationRules` enforces the
+boundary. Each `RoomHost` and `GhostHub` is single-event-loop-thread confined.
+Phase 3 reuses those room classes unchanged inside the master server. Engine and
+UI adapters belong in `com.openggf.game.timeattack.mp`.
+
+### Master server (phase 3)
+
+- `com.openggf.net.master` is the standalone, engine-free browser/relay service;
+  the architecture fence includes it. Start `MasterServerMain` with
+  `--config master.yaml --data ./master-data`. The YAML maps directly to
+  `MasterConfig` (ports, PEM certificate/key paths, SQLite path, trust
+  thresholds, proof-of-work settings, room limits, and admin token).
+- Production masters require TLS. `plaintextForTest: true` exists only for
+  loopback tests. The admin HTTP endpoint binds to localhost, requires its
+  bearer token, and appends actions to `admin-audit.jsonl`.
+- Identity age, clean rounds, sanctions, and trust tiers persist in SQLite.
+  Relay rooms reuse `RoomHost`/`GhostHub`; the broker and database remain on
+  their own event loop while each room is pinned to a relay event loop.
+- The CI scale gate runs 32 in-JVM bots through `TestGhostLoadTest`. For the
+  on-demand 128/256-player CPU gate, run
+  `java -cp target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar com.openggf.tools.net.GhostLoadTestTool --n 256 --duration 30 --mix adversarial`.
+  This deterministic mode measures hub aggregation CPU, not deployed socket
+  throughput; run a separate socket-level load against the deployed TLS master.
+
+### Replay verifier (phase 5)
+
+- Enable worker registration on the master with a non-empty
+  `verifierRegistrationToken`. Verified rooms are relay-only and require a live
+  worker supporting the room's determinism fingerprint; their creator and
+  entrants must be `TRUSTED` identities.
+- Start a worker with operator-supplied ROMs:
+  `java -cp target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar com.openggf.tools.verifier.VerifierMain --master https://host:27900 --registration-token <token> --rom s3k.gen --data ./verifier-data`.
+  Repeat `--rom` for additional supported fingerprints. `--once` processes at
+  most one job; `--trust-insecure` is development-only.
+- The master stores input-only recording blobs under its data directory and
+  deletes them after `recordingRetentionDays`. ROM bytes never cross the
+  network. Worker verdicts are Ed25519-signed; failed verification sanctions
+  the submitting identity, while upload timeout voids are master-issued.
+
 ## Multi-Sidekick System
 
 The engine extends the ROM's single CPU-controlled sidekick (Tails at `$FFFFB040`) to support an arbitrary number of sidekick characters configured via comma-separated `characters.sidekick` in `config.yaml` (e.g. `"tails,knuckles,sonic,sonic"`). This is a novelty feature — not present in any official Sonic game.

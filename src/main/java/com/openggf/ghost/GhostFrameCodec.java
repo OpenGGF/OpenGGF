@@ -1,4 +1,4 @@
-package com.openggf.game.ghost;
+package com.openggf.ghost;
 
 /** Fixed 7-byte wire/file layout for {@link GhostFrame} (main spec §7). */
 public final class GhostFrameCodec {
@@ -13,8 +13,10 @@ public final class GhostFrameCodec {
         out[off + 2] = (byte) (f.y() >>> 8);
         out[off + 3] = (byte) f.y();
         out[off + 4] = (byte) f.mappingFrame();
-        out[off + 5] = (byte) ((f.hFlip() ? 0x01 : 0) | (f.vFlip() ? 0x02 : 0) | (f.finished() ? 0x04 : 0));
-        out[off + 6] = (byte) ((f.priorityBucket() & 0x07) | (f.highPriority() ? 0x08 : 0));
+        out[off + 5] = (byte) ((f.hFlip() ? 0x01 : 0)
+                | (f.vFlip() ? 0x02 : 0) | (f.finished() ? 0x04 : 0));
+        out[off + 6] = (byte) ((f.priorityBucket() & 0x07)
+                | (f.highPriority() ? 0x08 : 0));
     }
 
     public static GhostFrame decode(byte[] in, int off) {
@@ -23,7 +25,8 @@ public final class GhostFrameCodec {
         int mapping = in[off + 4] & 0xFF;
         int flags = in[off + 5] & 0xFF;
         int layer = in[off + 6] & 0xFF;
-        return new GhostFrame(x, y, mapping, (flags & 0x01) != 0, (flags & 0x02) != 0,
-                (flags & 0x04) != 0, layer & 0x07, (layer & 0x08) != 0);
+        return new GhostFrame(x, y, mapping, (flags & 0x01) != 0,
+                (flags & 0x02) != 0, (flags & 0x04) != 0,
+                layer & 0x07, (layer & 0x08) != 0);
     }
 }

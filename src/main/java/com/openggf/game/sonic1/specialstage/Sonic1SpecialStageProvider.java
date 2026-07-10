@@ -5,6 +5,7 @@ import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 
 import com.openggf.level.Palette;
@@ -12,6 +13,7 @@ import com.openggf.level.Palette;
 import static org.lwjgl.opengl.GL11.glClearColor;
 
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * Sonic 1 special stage provider.
@@ -41,6 +43,16 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     @Override
     public boolean hasSpecialStages() {
         return true;
+    }
+
+    @Override
+    public boolean supportsRewind() {
+        return true;
+    }
+
+    @Override
+    public Optional<RewindSnapshottable<?>> rewindAdapter() {
+        return Optional.of(new Sonic1SpecialStageRewindAdapter(manager));
     }
 
     @Override

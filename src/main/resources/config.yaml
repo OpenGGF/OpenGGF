@@ -128,6 +128,19 @@ capture:
   fps: 60   # Output frame rate for trace capture
   codec: "ffv1"   # Capture video codec (e.g. ffv1)
 
+# ── Time Attack ──
+timeAttack:
+  retryKey: R   # Instantly retry the current time attack from the act start
+  menuKey: F10   # Open the Time Attack menu from the master title screen
+  net:
+    hostPort: 27888   # TCP/WebSocket port for player-hosted LAN race rooms
+    lastJoinAddress: ""   # Most recently joined LAN race address
+    displayName: ""   # Blank uses the first eight characters of the identity fingerprint
+    masterUrl: ""   # Master-server WebSocket URL for internet race browsing
+    masterTrustInsecure: false   # Development only: trust any master-server TLS certificate
+  hud:
+    minimap: true   # Show the multiplayer minimap progress strip
+
 # ════════════════════════════════════════════
 #  DEBUG  (developer tooling — safe to ignore for normal play)
 # ════════════════════════════════════════════

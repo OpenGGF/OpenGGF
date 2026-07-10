@@ -326,6 +326,25 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         super(spawn, "GumballMachine");
     }
 
+    @Override
+    protected void afterRewindRestoreSettled() {
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager == null) {
+            return;
+        }
+        dispenser = objectManager.getActiveObjects().stream()
+                .filter(object -> object instanceof DispenserChild && !object.isDestroyed())
+                .map(DispenserChild.class::cast)
+                .findFirst()
+                .orElse(null);
+        springs.clear();
+        objectManager.getActiveObjects().stream()
+                .filter(object -> object instanceof GumballSpringChild && !object.isDestroyed())
+                .map(GumballSpringChild.class::cast)
+                .filter(spring -> spring.parent == this)
+                .forEach(springs::add);
+    }
+
     private void spawnChildren() {
         int px = spawn.x();
         int py = spawn.y() + MACHINE_Y_OFFSET;

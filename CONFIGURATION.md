@@ -306,6 +306,33 @@ Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SM
 |-----|-----------|------|---------|-------------|
 | `TIME_ATTACK_RETRY_KEY` | `timeAttack.retryKey` | key | `R` | Instant retry to act start during solo time attack. |
 | `TIME_ATTACK_MENU_KEY` | `timeAttack.menuKey` | key | `F10` | Opens the solo Time Attack menu from the master title screen. |
+| `TIME_ATTACK_NET_HOST_PORT` | `timeAttack.net.hostPort` | int | `27888` | TCP/WebSocket port for player-hosted LAN race rooms. |
+| `TIME_ATTACK_NET_LAST_JOIN_ADDRESS` | `timeAttack.net.lastJoinAddress` | string | `""` | Most recently joined LAN race address. |
+| `TIME_ATTACK_NET_DISPLAY_NAME` | `timeAttack.net.displayName` | string | `""` | Multiplayer display name; blank uses the identity prefix. |
+| `TIME_ATTACK_NET_MASTER_URL` | `timeAttack.net.masterUrl` | string | `""` | Master-server WebSocket URL for internet race browsing. |
+| `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | bool | `false` | Development-only trust-all TLS mode for the master server. |
+| `TIME_ATTACK_HUD_MINIMAP` | `timeAttack.hud.minimap` | bool | `true` | Show the multiplayer minimap progress strip. |
+
+### Master verifier settings
+
+These keys belong in the standalone master server's YAML (`MasterServerMain
+--config`), not the engine's `config.yaml`:
+
+| YAML key | Default | Description |
+|----------|---------|-------------|
+| `verifierRegistrationToken` | disabled | Shared bootstrap token required by `openggf-verifier` workers. Keep it secret and rotate it if disclosed. |
+| `maxRecordingBytes` | `65536` | Maximum accepted input-only attempt recording size. |
+| `maxRecordingStorageBytes` | `536870912` | Maximum total bytes retained in the content-addressed recording store; new uploads receive HTTP 507 when full. |
+| `recordingUploadMinIntervalMillis` | `1000` | Minimum interval between accepted recording uploads from the same player identity. |
+| `uploadDeadlineSeconds` | `180` | Casual spot-check upload deadline. |
+| `verifiedUploadDeadlineSeconds` | `15` | Verified-room upload deadline. |
+| `recordingRetentionDays` | `3` | Recording blob retention before scheduled deletion. |
+| `verdictGraceMillis` | `10000` | Extra verified-room result hold after the upload window. |
+| `spotCheckTopTimes` | `1` | Top casual standings entries selected for spot-checking. |
+| `cheatBanDays` | `0` | Failed-verification ban duration; `0` is permanent. |
+| `verifierStaleSeconds` | `120` | Worker heartbeat/registration age after which it is unavailable. |
+| `verifierLeaseSeconds` | `300` | Job lease duration before requeue. |
+| `publicBaseUrl` | `""` | Absolute public HTTPS base for recording requests; blank sends a relative path that clients resolve against their master URL. |
 
 ## Debug
 
@@ -434,6 +461,12 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 | `LIVE_REWIND_DOUBLE_SPEED_KEY` | `rewind.liveDoubleSpeedKey` | `340` | Left Shift | Modifier held together with the rewind key for double-speed rewind (two engine steps per frame; reverse audio pitches up, and the VHS effect shows a third tear band). The mirrored left/right variant of a modifier key also counts. |
 | `TIME_ATTACK_RETRY_KEY` | `timeAttack.retryKey` | `82` | R | Instantly retry the current solo time attack from the act start. |
 | `TIME_ATTACK_MENU_KEY` | `timeAttack.menuKey` | `299` | F10 | Opens the solo Time Attack menu from the master title screen. |
+| `TIME_ATTACK_NET_HOST_PORT` | `timeAttack.net.hostPort` | `27888` |  | TCP/WebSocket port for player-hosted LAN race rooms. |
+| `TIME_ATTACK_NET_LAST_JOIN_ADDRESS` | `timeAttack.net.lastJoinAddress` | `""` |  | Most recently joined LAN race address. |
+| `TIME_ATTACK_NET_DISPLAY_NAME` | `timeAttack.net.displayName` | `""` |  | Multiplayer display name; blank uses the identity prefix. |
+| `TIME_ATTACK_NET_MASTER_URL` | `timeAttack.net.masterUrl` | `""` |  | Master-server WebSocket URL for internet race browsing. |
+| `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | `false` |  | Development-only trust-all TLS mode for the master server. |
+| `TIME_ATTACK_HUD_MINIMAP` | `timeAttack.hud.minimap` | `true` |  | Show the multiplayer minimap progress strip. |
 
 ### Debug Navigation
 

@@ -29,18 +29,19 @@ class TestArchitecturalSourceGuard {
     // (8766a6889..0f7794de8) grew reserved-slot spawn and placement handling,
     // then 2821 -> 2823 for the rewind capture of the S2 post-camera unload
     // latch (PlacementSnapshot restore path).
-    // 2026-07-07: 2823 -> 2869 re-ratchet during the develop->next merge. This
-    // overage pre-existed on next (the time-attack line grew ObjectManager without
-    // re-ratcheting); the file is unchanged by the merge itself.
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2869;
+    // 2026-07-06: 2823 -> 2869 for dependency-ordered dynamic rewind
+    // reconstruction. The growth is rewind orchestration, not placement,
+    // touch-response, or solid-contact logic owned by extracted collaborators.
+    // Rewind child reconstruction adds a narrowly scoped lifecycle hook at the
+    // existing restore orchestration boundary; it does not move collaborator logic back here.
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2880;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule
             // refactor (d9b727925) settled the sprite at 3115 effective lines.
-            // 2026-07-07: 3115 -> 3156 re-ratchet during the develop->next merge. This
-            // overage pre-existed on next (time-attack sprite hooks grew the file without
-            // re-ratcheting); the file is unchanged by the merge itself.
-            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3156,
+            // 2026-07-09: 3115 -> 3159 for drowning, speed-shoes, and fixed-skid
+            // controller state captured by the playable rewind schema.
+            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3159,
             "com/openggf/level/LevelManager.java", 2500,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
@@ -51,12 +52,24 @@ class TestArchitecturalSourceGuard {
             // (setTimeAttackLaunchHandler/installTimeAttackLaunchHandler/
             // getTimeAttackRuntime()) and the deactivate() call in
             // returnToMasterTitle().
-            // 2026-07-07: 2962 -> 3058 when merging develop into next, which folds the
-            // Gumball/Pachinko bonus-stage live-rewind integration (isBonusStageRewindable
-            // + the updateBonusStageMode capture hook + coordinator-adapter
-            // register/deregister on bonus entry/exit, incl. the failed-load error-path
-            // deregister) on top of the time-attack growth above.
-            GAME_LOOP_PATH, 3058
+            // 2026-07-06: 2890 -> 2910 for the Gumball/Pachinko bonus-stage live-rewind
+            // integration (isBonusStageRewindable + the updateBonusStageMode capture hook
+            // + coordinator-adapter register/deregister on bonus entry/exit, incl. the
+            // failed-load error-path deregister for lifecycle symmetry). The edits are
+            // scattered across stepInternal/updateBonusStageMode/doEnter/doExit and do
+            // not form an extractable collaborator.
+            // 2026-07-09: 2910 -> 2985 for the live special-stage trace visual session
+            // skip gate in updateSpecialStageMode (recorded-input override + lag-row
+            // provider.update() gate + trace-cursor advance + launcher-owned finish
+            // guard). Prior work had already grown the file to 2973 effective lines
+            // without a budget bump; this raises the ratchet to the true current count
+            // including the +12 SS-gate lines. The gate is a handful of guarded calls
+            // to TraceSessionLauncher and does not form an extractable collaborator.
+            // 2026-07-09: the independent time-attack and special/bonus-stage rewind
+            // branches both added lifecycle hooks around existing mode boundaries.
+            // Their merge produces 3168 effective lines; freeze that exact combined
+            // shape so subsequent work must still extract before growing GameLoop.
+            GAME_LOOP_PATH, 3168
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;

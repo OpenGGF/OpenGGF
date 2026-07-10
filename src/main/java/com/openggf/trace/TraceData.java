@@ -769,7 +769,9 @@ public class TraceData {
         return frames;
     }
 
-    private static Map<Integer, List<TraceEvent>> loadAuxEvents(Path auxPath)
+    // Package-visible so other trace-profile loaders (e.g. SpecialStageTraceData)
+    // can reuse the aux jsonl parsing without duplicating it.
+    static Map<Integer, List<TraceEvent>> loadAuxEvents(Path auxPath)
             throws IOException {
         Map<Integer, List<TraceEvent>> map = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
@@ -786,7 +788,9 @@ public class TraceData {
         return map;
     }
 
-    private static Path resolveTraceFile(Path traceDirectory, String fileName) {
+    // Package-visible so other trace-profile loaders (e.g. SpecialStageTraceData)
+    // can reuse the gzip-or-plain file resolution without duplicating it.
+    static Path resolveTraceFile(Path traceDirectory, String fileName) {
         Path plainPath = traceDirectory.resolve(fileName);
         if (Files.exists(plainPath)) {
             return plainPath;
@@ -795,7 +799,9 @@ public class TraceData {
         return Files.exists(gzipPath) ? gzipPath : null;
     }
 
-    private static BufferedReader openTraceReader(Path path) throws IOException {
+    // Package-visible so other trace-profile loaders (e.g. SpecialStageTraceData)
+    // can reuse gzip-or-plain reader opening without duplicating it.
+    static BufferedReader openTraceReader(Path path) throws IOException {
         if (path.getFileName().toString().endsWith(".gz")) {
             InputStream input = Files.newInputStream(path);
             try {

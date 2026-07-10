@@ -1,11 +1,16 @@
-package com.openggf.sprites.ghost;
+package com.openggf.game.timeattack;
 
 import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.game.GameServices;
-import com.openggf.game.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrame;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PixelFontTextRenderer;
+import com.openggf.debug.DebugColor;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.art.SpriteArtSet;
+import com.openggf.sprites.ghost.ActiveGhost;
+import com.openggf.sprites.ghost.GhostArtBankAllocator;
+import com.openggf.sprites.ghost.GhostOpacityCalculator;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.io.IOException;
@@ -27,8 +32,9 @@ public final class GhostRenderer {
     private static final int FULL_OPACITY_DISTANCE = 32;
 
     private final Map<String, Slot> slots = new HashMap<>();
+    private final PixelFontTextRenderer nameplateRenderer = new PixelFontTextRenderer();
 
-    static boolean layerMatches(GhostFrame frame, int bucket, boolean highPriority) {
+    public static boolean layerMatches(GhostFrame frame, int bucket, boolean highPriority) {
         return frame.priorityBucket() == bucket && frame.highPriority() == highPriority;
     }
 
@@ -40,7 +46,8 @@ public final class GhostRenderer {
                 continue;
             }
             float alpha = GhostOpacityCalculator.alphaForDistance(
-                    frame.x() - playerCentreX, frame.y() - playerCentreY, FULL_OPACITY_DISTANCE);
+                    frame.x() - playerCentreX, frame.y() - playerCentreY, FULL_OPACITY_DISTANCE)
+                    * Math.max(0f, ghost.opacityScale());
             if (alpha <= 0.0f) {
                 continue;
             }
@@ -66,6 +73,29 @@ public final class GhostRenderer {
                 graphics.endGhostRenderEffect();
                 graphics.setCurrentSpriteHighPriority(previousHighPriority);
             }
+            drawNameplate(ghost);
+        }
+    }
+
+    private void drawNameplate(ActiveGhost ghost) {
+        if (ghost.nameplate() == null || ghost.nameplate().isBlank()) {
+            return;
+        }
+        var camera = GameServices.cameraOrNull();
+        if (camera == null) {
+            return;
+        }
+        int screenX = ghost.frame().x() - camera.getX();
+        int screenY = ghost.frame().y() - camera.getY() - 24;
+        int width = nameplateRenderer.measureWidth(ghost.nameplate(), 0.5f);
+        nameplateRenderer.setProjectionMatrix(
+                GameServices.graphics().getProjectionMatrixBuffer());
+        nameplateRenderer.beginBatch();
+        try {
+            nameplateRenderer.drawShadowedText(ghost.nameplate(), screenX - width / 2,
+                    screenY, DebugColor.WHITE, 0.5f);
+        } finally {
+            nameplateRenderer.endBatch();
         }
     }
 

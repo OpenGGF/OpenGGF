@@ -362,4 +362,32 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
     public boolean isCollidable() {
         return false;
     }
+
+    @Override
+    Sonic2SpecialStageSnapshot.ObjectSnapshot captureRewindSnapshot() {
+        return new Sonic2SpecialStageSnapshot.ObjectSnapshot(
+                Sonic2SpecialStageSnapshot.SpecialStageObjectType.EMERALD,
+                captureBaseRewindSnapshot(),
+                null,
+                phase,
+                phaseTimer,
+                bobbingOffset,
+                bobbingCounter,
+                ringRequirement,
+                musicFaded,
+                emeraldAwarded);
+    }
+
+    void restoreRewindSnapshot(Sonic2SpecialStageSnapshot.ObjectSnapshot snapshot,
+                               Sonic2SpecialStageManager manager) {
+        restoreBaseRewindSnapshot(snapshot.base());
+        phase = snapshot.emeraldPhase();
+        phaseTimer = snapshot.emeraldPhaseTimer();
+        bobbingOffset = snapshot.emeraldBobbingOffset();
+        bobbingCounter = snapshot.emeraldBobbingCounter();
+        ringRequirement = snapshot.emeraldRingRequirement();
+        musicFaded = snapshot.emeraldMusicFaded();
+        emeraldAwarded = snapshot.emeraldAwarded();
+        this.manager = manager;
+    }
 }

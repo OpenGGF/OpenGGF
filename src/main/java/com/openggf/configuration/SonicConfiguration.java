@@ -332,6 +332,24 @@ public enum SonicConfiguration {
 	 */
 	TIME_ATTACK_MENU_KEY,
 
+	/** TCP/WebSocket port used by player-hosted LAN time-attack rooms. */
+	TIME_ATTACK_NET_HOST_PORT,
+
+	/** Most recently joined LAN host address, used to prefill the join field. */
+	TIME_ATTACK_NET_LAST_JOIN_ADDRESS,
+
+	/** Pseudonymous multiplayer display name; blank uses the identity prefix. */
+	TIME_ATTACK_NET_DISPLAY_NAME,
+
+	/** Master-server WebSocket URL; blank disables internet-room browsing. */
+	TIME_ATTACK_NET_MASTER_URL,
+
+	/** Development-only trust-all TLS switch for the master-server client. */
+	TIME_ATTACK_NET_MASTER_TRUST_INSECURE,
+
+	/** Show the roster-fed multiplayer progress strip. */
+	TIME_ATTACK_HUD_MINIMAP,
+
 	/**
 	 * Key held in visual Trace Test Mode to rewind deterministic engine state.
 	 */

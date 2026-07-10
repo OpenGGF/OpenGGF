@@ -293,9 +293,13 @@ final class DefaultObjectRewindPolicies {
             // CorkFloor onto the generic path and silently drop the CAPTURED rollingBreakPlayer.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CorkFloorObjectInstance", "effectiveVelTable"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CorkFloorObjectInstance", "rollingBreakPlayer"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", "dispenser"), RewindFieldPolicy.CAPTURED),
+            // Gumball live child links are rebuilt from the restored child graph in
+            // afterRewindRestoreSettled(). Capturing them as object refs can crash
+            // after the dispenser/springs have been removed from ObjectManager while
+            // the machine still retains stale Java references.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", "dispenser"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", "springOriginalPositions"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", "springs"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", "springs"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance", "rocketTouchChildren"), RewindFieldPolicy.DEFERRED),
             // Fixed 2-slot rider array whose RiderState holds a live player reference plus the
@@ -355,7 +359,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p1SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p2SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p2RecentlyClearedSolidContact"), RewindFieldPolicy.DEFERRED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance", "parentRing"), RewindFieldPolicy.CAPTURED),
+            // SS-entry flash parent links are structural and can outlive a ring removed from
+            // ObjectManager while the flash finishes the transition. Restore relinks by position.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance", "parentRing"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance", "playerAtCollapse"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractBadnikInstance", "destructionConfig"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractMonitorObjectInstance", "effectTarget"), RewindFieldPolicy.TRANSIENT),

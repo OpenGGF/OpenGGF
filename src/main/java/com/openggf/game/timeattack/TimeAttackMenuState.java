@@ -27,13 +27,19 @@ public final class TimeAttackMenuState {
     /** Ghosts raced alongside the player, in addition to the auto-loaded best. */
     static final int MAX_GHOSTS_RACED = 7;
 
-    public enum Row { GAME, TRACK, CHARACTER }
+    public enum Row { GAME, TRACK, CHARACTER, MODE, POLICY, WINDOW }
+    public enum Mode { SOLO, HOST_LAN, JOIN_LAN, BROWSE }
+
+    private static final int[] WINDOW_MINUTES = {1, 2, 5, 10};
 
     private final List<String> games;
     private final GhostStore ghostStore;
     private int gameIndex;
     private int trackIndex;
     private int characterIndex;
+    private int modeIndex;
+    private int policyIndex;
+    private int windowIndex = 2;
     private Row focusedRow = Row.GAME;
     private boolean closeRequested;
     private TimeAttackLaunchRequest launchRequest;
@@ -105,6 +111,9 @@ public final class TimeAttackMenuState {
                 characterIndex = wrap(characterIndex + delta, characterCount);
                 refreshGhostSummary();
             }
+            case MODE -> modeIndex = wrap(modeIndex + delta, Mode.values().length);
+            case POLICY -> policyIndex = wrap(policyIndex + delta, 2);
+            case WINDOW -> windowIndex = wrap(windowIndex + delta, WINDOW_MINUTES.length);
         }
     }
 
@@ -195,6 +204,22 @@ public final class TimeAttackMenuState {
 
     public Row focusedRow() {
         return focusedRow;
+    }
+
+    public Mode mode() {
+        return Mode.values()[modeIndex];
+    }
+
+    public String characterPolicy() {
+        return policyIndex == 0 ? "OPEN" : "LOCKED";
+    }
+
+    public String lockedCharacter() {
+        return policyIndex == 0 ? null : currentCharacter();
+    }
+
+    public int windowSeconds() {
+        return WINDOW_MINUTES[windowIndex] * 60;
     }
 
     public boolean bestExists() {

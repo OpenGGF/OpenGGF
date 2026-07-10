@@ -241,6 +241,7 @@ class TestPreludeFramesKnobsZero {
                 /* traceType */ null,
                 /* inputSource */ null,
                 /* creditsDemoIndex */ null,
-                /* creditsDemoSlug */ null);
+                /* creditsDemoSlug */ null,
+                /* specialStageIndex */ null);
     }
 }

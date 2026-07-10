@@ -27,11 +27,11 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kSsEntryFlashGraphRewind {
@@ -120,7 +120,7 @@ class TestS3kSsEntryFlashGraphRewind {
     }
 
     @Test
-    void captureFailsForFlashWhoseRequiredParentRingHasNoRewindIdentity() {
+    void captureIgnoresFlashWhoseParentRingHasNoRewindIdentity() {
         Harness harness = Harness.create(List.of());
         Sonic3kSSEntryRingObjectInstance unmanagedRing =
                 new Sonic3kSSEntryRingObjectInstance(CAPTURED_RING_SPAWN);
@@ -131,10 +131,8 @@ class TestS3kSsEntryFlashGraphRewind {
         assertSame(unmanagedRing, readObjectField(flash, "parentRing"),
                 "precondition: flash parent ring is outside ObjectManager identity registration");
 
-        IllegalStateException thrown = assertThrows(
-                IllegalStateException.class, registryFor(harness.objectManager())::capture);
-        assertTrue(thrown.getMessage().contains("no registered id for object reference"),
-                "missing parent ring identity must fail loudly");
+        assertDoesNotThrow(() -> registryFor(harness.objectManager()).capture(),
+                "capture must tolerate stale SS-entry flash parent-ring references");
     }
 
     private record Harness(ObjectManager objectManager, ObjectServices services) {

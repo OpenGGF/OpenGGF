@@ -136,6 +136,9 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance$AquisWingChild",
                     "TestS2BadnikChildGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance$Obj83SlotChild",
+                    "TestS2ArzRotPformsGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance",
                     "TestS2BadnikChildGraphRewind"),
             Map.entry(

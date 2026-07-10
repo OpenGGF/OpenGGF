@@ -3595,6 +3595,13 @@ public class ObjectManager {
                                     () -> ObjectConstructionContext.with(objectServices, targetSlot,
                                             () -> registry != null ? registry.create(spawn) : null));
                             if (inst != null) {
+                                if (inst instanceof AbstractObjectInstance constructed) {
+                                    constructed.setServices(objectServices);
+                                    ObjectConstructionContext.withRewindActiveRestore(() -> {
+                                        constructed.recreateConstructionChildrenForRewind();
+                                        return null;
+                                    });
+                                }
                                 // Constructors that spawn children or reserve child slots have
                                 // restore-relevant construction side effects that in-place reuse
                                 // would skip; latch those classes onto the recreate path. Under
@@ -3707,6 +3714,10 @@ public class ObjectManager {
                             aoi.setSlotIndex(slot);
                         }
                     } else {
+                        ObjectConstructionContext.withRewindActiveRestore(() -> {
+                            aoi.recreateConstructionChildrenForRewind();
+                            return null;
+                        });
                         // Went through the generic recreateForRewind() path, not adoption --
                         // give owners that keep their own back-reference list (e.g.
                         // AbstractBossChild -> parent.childComponents) a chance to re-register

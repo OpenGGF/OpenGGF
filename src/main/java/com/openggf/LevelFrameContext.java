@@ -5,6 +5,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.NoOpBonusStageProvider;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.sprites.managers.SpriteManager;
@@ -18,7 +19,8 @@ public record LevelFrameContext(GameModule gameModule,
                                 BonusStageProvider bonusStageProvider,
                                 SpriteManager spriteManager,
                                 GameStateManager gameStateManager,
-                                TimerManager timerManager) {
+                                TimerManager timerManager,
+                                PaletteOwnershipRegistry paletteOwnershipRegistry) {
 
     public LevelFrameContext {
         Objects.requireNonNull(gameModule, "gameModule");
@@ -37,6 +39,7 @@ public record LevelFrameContext(GameModule gameModule,
                 context.getActiveBonusStageProvider(),
                 context.getSpriteManager(),
                 context.getGameStateManager(),
-                context.getTimerManager());
+                context.getTimerManager(),
+                context.getPaletteOwnershipRegistry());
     }
 }

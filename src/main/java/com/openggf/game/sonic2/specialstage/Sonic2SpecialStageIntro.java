@@ -417,6 +417,83 @@ public class Sonic2SpecialStageIntro {
         }
     }
 
+    Sonic2SpecialStageSnapshot.IntroSnapshot captureRewindSnapshot() {
+        ArrayList<Sonic2SpecialStageSnapshot.IntroMessageLetterSnapshot> message = new ArrayList<>();
+        for (MessageLetter letter : messageLetters) {
+            message.add(new Sonic2SpecialStageSnapshot.IntroMessageLetterSnapshot(
+                    letter.x,
+                    letter.y,
+                    letter.tileOffset,
+                    letter.flyoutAngle,
+                    letter.flyoutSpeed,
+                    letter.visible));
+        }
+
+        ArrayList<Sonic2SpecialStageSnapshot.IntroBannerLetterSnapshot> banner = new ArrayList<>();
+        for (BannerLetter letter : bannerLetters) {
+            banner.add(new Sonic2SpecialStageSnapshot.IntroBannerLetterSnapshot(
+                    letter.x,
+                    letter.y,
+                    letter.frame,
+                    letter.flyoutAngle,
+                    letter.flyoutSpeed,
+                    letter.visible));
+        }
+
+        return new Sonic2SpecialStageSnapshot.IntroSnapshot(
+                currentPhase,
+                phaseTimer,
+                frameCounter,
+                bannerX,
+                bannerY,
+                bannerVisible,
+                messageX,
+                messageY,
+                messageVisible,
+                ringRequirement,
+                lettersFlying,
+                letterFlyoutProgress,
+                messageFlyoutInitialized,
+                bannerFlyoutInitialized,
+                message,
+                banner);
+    }
+
+    void restoreRewindSnapshot(Sonic2SpecialStageSnapshot.IntroSnapshot snapshot) {
+        currentPhase = snapshot.currentPhase();
+        phaseTimer = snapshot.phaseTimer();
+        frameCounter = snapshot.frameCounter();
+        bannerX = snapshot.bannerX();
+        bannerY = snapshot.bannerY();
+        bannerVisible = snapshot.bannerVisible();
+        messageX = snapshot.messageX();
+        messageY = snapshot.messageY();
+        messageVisible = snapshot.messageVisible();
+        ringRequirement = snapshot.ringRequirement();
+        lettersFlying = snapshot.lettersFlying();
+        letterFlyoutProgress = snapshot.letterFlyoutProgress();
+        messageFlyoutInitialized = snapshot.messageFlyoutInitialized();
+        bannerFlyoutInitialized = snapshot.bannerFlyoutInitialized();
+
+        messageLetters.clear();
+        for (Sonic2SpecialStageSnapshot.IntroMessageLetterSnapshot letter : snapshot.messageLetters()) {
+            MessageLetter restored = new MessageLetter(letter.x(), letter.y(), letter.tileOffset());
+            restored.flyoutAngle = letter.flyoutAngle();
+            restored.flyoutSpeed = letter.flyoutSpeed();
+            restored.visible = letter.visible();
+            messageLetters.add(restored);
+        }
+
+        bannerLetters.clear();
+        for (Sonic2SpecialStageSnapshot.IntroBannerLetterSnapshot letter : snapshot.bannerLetters()) {
+            BannerLetter restored = new BannerLetter(letter.x(), letter.y(), letter.frame());
+            restored.flyoutAngle = letter.flyoutAngle();
+            restored.flyoutSpeed = letter.flyoutSpeed();
+            restored.visible = letter.visible();
+            bannerLetters.add(restored);
+        }
+    }
+
     /**
      * Gets the current intro phase.
      */

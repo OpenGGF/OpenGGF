@@ -44,6 +44,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -801,6 +802,22 @@ class TestS3kBadnikChildGraphRewind {
         assertEquals(10, readIntField(restoredEjection, "timer"));
         assertEquals(0xD8, readIntField(restoredEjection, "drawX"));
         assertEquals(0x318, readIntField(restoredEjection, "drawY"));
+    }
+
+    @Test
+    void gumballMachineCaptureIgnoresRemovedDispenserReference() {
+        Harness harness = Harness.create(new GumballTestRegistry(), List.of(
+                new ObjectSpawn(0x100, 0x200, Sonic3kObjectIds.GUMBALL_MACHINE, 0, 0, false, 10)));
+        ObjectManager objectManager = harness.objectManager();
+        GumballMachineObjectInstance machine =
+                liveByType(objectManager, GumballMachineObjectInstance.class).getFirst();
+        machine.update(0, player());
+
+        ObjectInstance dispenser = liveByClassName(objectManager, GUMBALL_DISPENSER).getFirst();
+        objectManager.removeDynamicObject(dispenser);
+
+        assertDoesNotThrow(() -> registryFor(objectManager).capture(),
+                "capture must ignore stale structural gumball dispenser references");
     }
 
     @Test

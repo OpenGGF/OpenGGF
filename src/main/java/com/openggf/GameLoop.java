@@ -8,9 +8,7 @@ import com.openggf.debug.DebugColor;
 import com.openggf.editor.EditorInputHandler;
 import com.openggf.game.*;
 
-import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
-import com.openggf.control.PlayerInputState;
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -86,10 +84,13 @@ import com.openggf.game.recording.UserRecordingVerificationResult;
 import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.timeattack.GhostStore;
 import com.openggf.game.timeattack.TimeAttackHudOverlay;
+import com.openggf.game.timeattack.TimeAttackDebugInput;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
 import com.openggf.game.timeattack.TimeAttackLevelEndRouting;
 import com.openggf.game.timeattack.TimeAttackMenu;
 import com.openggf.game.timeattack.TimeAttackRuntime;
+import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
+import com.openggf.game.timeattack.mp.MultiplayerHudRenderer;
 import com.openggf.testmode.TraceCameraFocusController;
 
 import java.io.IOException;
@@ -175,9 +176,12 @@ public class GameLoop {
     private final UserRecordingRuntimeControls userRecordingControls;
     private final TimeAttackRuntime timeAttackRuntime;
     private final TimeAttackHudOverlay timeAttackHudOverlay;
+    private final MultiplayerHudRenderer multiplayerHudRenderer;
+    private MultiplayerRaceCoordinator multiplayerRaceCoordinator;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
     private TimeAttackMenu.LaunchStarter timeAttackLaunchHandler =
             request -> LOGGER.warning("Time attack launch handler not configured.");
+    private TimeAttackMenu.NetworkStarter timeAttackNetworkHandler = TimeAttackMenu.NetworkStarter.NONE;
     private int lastAppliedUserRecordingPlaybackFrame = -1;
     private long gameplayAudioFrame;
     private boolean audioUpdatedThisStep;
@@ -195,6 +199,7 @@ public class GameLoop {
 
     // Flag to freeze level updates during special stage entry transition
     private boolean specialStageTransitionPending = false;
+    private boolean specialStageRewindBoundaryThisFrame;
 
     // Bonus stage entry/exit state
     private boolean bonusStageTransitionPending;
@@ -341,7 +346,10 @@ public class GameLoop {
         this.debugOverlayManager = this.engineServices.debugOverlay();
         this.profiler = this.engineServices.profiler();
         this.playbackDebugManager = this.engineServices.playbackDebug();
-        this.liveRewindManager = new LiveRewindManager(configService);
+        this.liveRewindManager = new LiveRewindManager(
+                configService,
+                () -> currentGameMode,
+                this::getActiveSpecialStageProvider);
         this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
         this.userRecordingControls = new UserRecordingRuntimeControls(new LiveUserRecordingRuntime());
         this.timeAttackRuntime = new TimeAttackRuntime(new GhostStore(java.nio.file.Path.of("ghosts")),
@@ -350,6 +358,7 @@ public class GameLoop {
                         || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
                         || playbackDebugManager.isDriving(GameMode.LEVEL));
         this.timeAttackHudOverlay = new TimeAttackHudOverlay(timeAttackRuntime::hudState, configService);
+        this.multiplayerHudRenderer = new MultiplayerHudRenderer(configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
@@ -468,6 +477,9 @@ public class GameLoop {
             return;
         }
         timeAttackHudOverlay.render(textRenderer);
+        if (multiplayerRaceCoordinator != null) {
+            multiplayerHudRenderer.render(textRenderer, multiplayerRaceCoordinator.hudState());
+        }
     }
 
     public boolean shouldSuppressUserRecordingSceneRendering() {
@@ -512,9 +524,21 @@ public class GameLoop {
         installTimeAttackLaunchHandler(currentMasterTitleScreen());
     }
 
+    public void setTimeAttackNetworkHandler(TimeAttackMenu.NetworkStarter handler) {
+        this.timeAttackNetworkHandler = Objects.requireNonNull(handler, "handler");
+        MasterTitleScreen screen = currentMasterTitleScreen();
+        if (screen != null) {
+            screen.setTimeAttackNetworkStarter(handler);
+        }
+    }
+
     /** Exposed so tests/Engine can arm and end a launched Time Attack session. */
     public TimeAttackRuntime getTimeAttackRuntime() {
         return timeAttackRuntime;
+    }
+
+    public void setMultiplayerRaceCoordinator(MultiplayerRaceCoordinator coordinator) {
+        this.multiplayerRaceCoordinator = coordinator;
     }
 
     private UserRecordingMenu.PlaybackStarter withPlaybackAppliedFrameReset(
@@ -625,8 +649,25 @@ public class GameLoop {
         }
         if (oldMode == GameMode.LEVEL && newMode != GameMode.LEVEL) {
             context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
-        } else if (oldMode != GameMode.LEVEL && newMode == GameMode.LEVEL) {
+        }
+        if (oldMode == GameMode.SPECIAL_STAGE && isActiveSpecialStageProviderRewindable()) {
+            deregisterSpecialStageAdapter();
+            if (!specialStageRewindBoundaryThisFrame) {
+                context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
+            }
+        }
+        if (newMode == GameMode.SPECIAL_STAGE && isActiveSpecialStageProviderRewindable()) {
             context.markRewindBoundary(RewindBoundary.MODE_ENTER_REWINDABLE);
+        }
+        if (oldMode != GameMode.LEVEL && newMode == GameMode.LEVEL) {
+            context.markRewindBoundary(RewindBoundary.MODE_ENTER_REWINDABLE);
+        }
+    }
+
+    private void deregisterSpecialStageAdapter() {
+        GameplayModeContext context = resolveGameplayModeContext();
+        if (context != null) {
+            context.deregisterSpecialStageAdapter();
         }
     }
 
@@ -733,28 +774,6 @@ public class GameLoop {
         return configService.getInt(SonicConfiguration.TIME_ATTACK_RETRY_KEY);
     }
 
-    private static boolean anyDebugOverlayTogglePressed(InputHandler input) {
-        for (DebugOverlayToggle toggle : DebugOverlayToggle.values()) {
-            if (input.isKeyPressed(toggle.keyCode())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * State-altering debug cheat keys whose use during a timed attempt taints it.
-     * These are the gameplay debug cheats (debug mode, last-checkpoint warp, super,
-     * give emeralds); tainting only — the keys themselves are never blocked.
-     */
-    private boolean anyTimeAttackDebugCheatKeyPressed(InputHandler input) {
-        return input.isKeyPressed(configService.getInt(SonicConfiguration.DEBUG_MODE_KEY))
-                || input.isKeyPressedWithoutModifiers(
-                configService.getInt(SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY))
-                || input.isKeyPressed(configService.getInt(SonicConfiguration.SUPER_SONIC_DEBUG_KEY))
-                || input.isKeyPressed(configService.getInt(SonicConfiguration.GIVE_EMERALDS_KEY));
-    }
-
     /**
      * True while the level is mid a special-stage/bonus-stage/ending transition
      * or a pending zone/act transition -- the exact same composite condition
@@ -824,13 +843,73 @@ public class GameLoop {
                 && activeBonusStageProvider.supportsRewind();
     }
 
-    private void stepInternal() {
+    private boolean isSpecialStageRewindable() {
+        return currentGameMode == GameMode.SPECIAL_STAGE
+                && !specialStageRewindBoundaryThisFrame
+                && isActiveSpecialStageProviderRewindable();
+    }
+
+    private boolean isActiveSpecialStageProviderRewindable() {
+        return activeSpecialStageProvider != null
+                && activeSpecialStageProvider.supportsRewind();
+    }
+
+    private void severSpecialStageRewindForLiveOnlyShortcut() {
+        if (currentGameMode != GameMode.SPECIAL_STAGE || specialStageRewindBoundaryThisFrame) {
+            return;
+        }
+        specialStageRewindBoundaryThisFrame = true;
+        GameplayModeContext context = resolveGameplayModeContext();
+        if (context != null) {
+            context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
+        }
+    }
+
+    private void prepareSpecialStageRewindFrame() {
+        specialStageRewindBoundaryThisFrame = false;
+        if (currentGameMode == GameMode.SPECIAL_STAGE) {
+            detectSpecialStageLiveOnlyShortcutBoundary();
+        }
+    }
+
+    private void finishTimeAttackMasterTitleFrame(MasterTitleScreen masterScreen) {
+        if (pendingTimeAttackLaunch != null) {
+            TimeAttackLaunchRequest deferredLaunch = pendingTimeAttackLaunch;
+            pendingTimeAttackLaunch = null;
+            timeAttackLaunchHandler.launch(deferredLaunch);
+        }
+        if (pendingReopenTimeAttackMenu && masterScreen != null
+                && masterScreen.tryOpenTimeAttackMenu()) {
+            pendingReopenTimeAttackMenu = false;
+        }
+        wasMasterTitleScreenActiveLastFrame = true;
+    }
+
+    private void finishTimeAttackMasterTitleExit() {
+        if (wasMasterTitleScreenActiveLastFrame) {
+            pendingReopenTimeAttackMenu = false;
+        }
+        wasMasterTitleScreenActiveLastFrame = false;
+    }
+
+    private void handleTimeAttackRetryInput() {
+        if (timeAttackRuntime.isActive() && inputHandler.isKeyPressed(timeAttackRetryKey())) {
+            timeAttackRuntime.requestRetry();
+        }
+    }
+
+    private void requireInputHandler() {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
         }
+    }
+
+    private void stepInternal() {
+        requireInputHandler();
         inputHandler.refreshLogicalSnapshot();
         audioUpdatedThisStep = false;
         refreshRuntimeBindings();
+        prepareSpecialStageRewindFrame();
         PaletteOwnershipRegistry paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
@@ -846,7 +925,7 @@ public class GameLoop {
             inputHandler.update();
             return;
         }
-        if ((currentGameMode == GameMode.LEVEL || isBonusStageRewindable())
+        if ((currentGameMode == GameMode.LEVEL || isBonusStageRewindable() || isSpecialStageRewindable())
                 && TraceSessionLauncher.active() == null
                 && !timeAttackRuntime.isActive()
                 && liveRewindManager.handleRealtimeRewindInput(
@@ -879,26 +958,10 @@ public class GameLoop {
                     masterScreen,
                     inputHandler,
                     this::exitMasterTitleScreen);
-            if (pendingTimeAttackLaunch != null) {
-                TimeAttackLaunchRequest deferredLaunch = pendingTimeAttackLaunch;
-                pendingTimeAttackLaunch = null;
-                timeAttackLaunchHandler.launch(deferredLaunch);
-            }
-            // Retried every frame because tryOpenTimeAttackMenu() is a no-op until the
-            // screen's own fade-in reaches ACTIVE (see MasterTitleScreen#state).
-            if (pendingReopenTimeAttackMenu && masterScreen != null && masterScreen.tryOpenTimeAttackMenu()) {
-                pendingReopenTimeAttackMenu = false;
-            }
-            wasMasterTitleScreenActiveLastFrame = true;
+            finishTimeAttackMasterTitleFrame(masterScreen);
             return;
         }
-        if (wasMasterTitleScreenActiveLastFrame) {
-            // Defensive: the mode just left MASTER_TITLE_SCREEN (e.g. the user picked a
-            // normal game/menu entry) with the reopen request never consumed. Drop it so
-            // it can't fire against some unrelated, later master-title visit.
-            pendingReopenTimeAttackMenu = false;
-        }
-        wasMasterTitleScreenActiveLastFrame = false;
+        finishTimeAttackMasterTitleExit();
 
         if (!isPaused()
                 && !timeAttackRuntime.isActive()
@@ -936,9 +999,7 @@ public class GameLoop {
         escapeToMasterTitleController.update(currentGameMode, inputHandler);
         if (currentGameMode == GameMode.LEVEL) {
             userRecordingControls.updateLevelControlInput(inputHandler);
-            if (timeAttackRuntime.isActive() && inputHandler.isKeyPressed(timeAttackRetryKey())) {
-                timeAttackRuntime.requestRetry();
-            }
+            handleTimeAttackRetryInput();
         }
 
         int pauseKey = configService.getInt(SonicConfiguration.PAUSE_KEY);
@@ -987,14 +1048,7 @@ public class GameLoop {
         profiler.beginSection("input");
         boolean debugShortcutsEnabled = debugShortcutsEnabled();
         if (timeAttackRuntime.isActive() && debugShortcutsEnabled
-                && (anyDebugOverlayTogglePressed(inputHandler)
-                        || anyTimeAttackDebugCheatKeyPressed(inputHandler))) {
-            // Debug tools are never blocked, but using them during a timed
-            // attempt taints it so the run can never be saved as a new best.
-            // Gated on isActive() (not isAttemptRunning()) so a press during the
-            // ARMED pre-start window taints too, and covers the state-altering
-            // cheat keys (debug mode / last-checkpoint warp / super / emeralds)
-            // alongside the debug overlay toggles.
+                && TimeAttackDebugInput.taintPressed(inputHandler, configService)) {
             timeAttackRuntime.markTainted();
         }
         debugOverlayManager.updateInput(inputHandler, debugShortcutsEnabled);
@@ -1003,6 +1057,9 @@ public class GameLoop {
         }
 
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))) {
+            if (currentGameMode == GameMode.SPECIAL_STAGE) {
+                severSpecialStageRewindForLiveOnlyShortcut();
+            }
             handleSpecialStageDebugKey();
         }
 
@@ -1147,11 +1204,34 @@ public class GameLoop {
             }
         }
 
-        updateSpecialStageInput();
-        ssProvider.update();
+        // Visual SS trace session: feed the recorded row's input and skip the
+        // engine tick on a lag row (mirrors the LEVEL-mode playback skip gate).
+        // The trace cursor advances one row per engine frame regardless of lag,
+        // so lag rows render as authentic no-motion frames.
+        TraceSessionLauncher ssSession = TraceSessionLauncher.active();
+        if (ssSession != null) {
+            ssSession.applySpecialStageTraceInputIfActive(inputHandler);
+        }
+        boolean skipSsTick = ssSession != null
+                && ssSession.shouldSkipCurrentSpecialStageTick();
+        if (!skipSsTick) {
+            updateSpecialStageInput();
+            ssProvider.update();
+        }
+        if (ssSession != null) {
+            ssSession.advanceSpecialStageTraceCursorIfActive(inputHandler);
+        }
 
-        // Check for special stage completion or failure
-        if (ssProvider.isFinished()) {
+        if (isSpecialStageRewindable() && ssSession == null) {
+            liveRewindManager.recordExternalFrame(currentGameMode, false, inputHandler);
+        }
+
+        // Check for special stage completion or failure. A visual SS trace
+        // session owns its own end (fade-out at the recorded stage-finished
+        // frame), so an early engine isFinished() must not hijack it into the
+        // results screen.
+        if (ssProvider.isFinished()
+                && (ssSession == null || !ssSession.isSpecialStageSession())) {
             boolean gotEmerald = ssProvider.isEmeraldCollected();
             enterResultsScreen(gotEmerald);
         }
@@ -1296,6 +1376,15 @@ public class GameLoop {
         TitleCardProvider tcp = getTitleCardProviderLazy();
         if (tcp != null && tcp.isOverlayActive()) {
             tcp.update();
+        }
+
+        if (multiplayerRaceCoordinator != null) {
+            multiplayerRaceCoordinator.pump();
+            multiplayerRaceCoordinator.pollLocalInput(inputHandler);
+            if (multiplayerRaceCoordinator.holdGameplay()) {
+                updateNonGameplayAudio(doFrameStep);
+                return true;
+            }
         }
 
         // Handle in-place seamless transitions before fade-based routes.
@@ -1478,6 +1567,9 @@ public class GameLoop {
                 userRecordingControls.afterLevelFrame();
                 if (timeAttackRuntime.isActive()) {
                     timeAttackRuntime.afterLevelFrame();
+                }
+                if (multiplayerRaceCoordinator != null) {
+                    multiplayerRaceCoordinator.afterLevelFrame();
                 }
             } else if (levelManager.getObjectManager() != null) {
                 // ROM v_vbla_byte increments in VBlank even on rows where
@@ -1756,6 +1848,53 @@ public class GameLoop {
         }
     }
 
+    private void detectSpecialStageLiveOnlyShortcutBoundary() {
+        if (currentGameMode != GameMode.SPECIAL_STAGE || !debugShortcutsEnabled()) {
+            return;
+        }
+
+        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
+        int leftKey = configService.getInt(SonicConfiguration.LEFT);
+        int rightKey = configService.getInt(SonicConfiguration.RIGHT);
+        int upKey = configService.getInt(SonicConfiguration.UP);
+        int downKey = configService.getInt(SonicConfiguration.DOWN);
+
+        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_X)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_Z)
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY))
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_FAIL_KEY))
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY))
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DEBUG_MODE_KEY))
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F4)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F6)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F7)) {
+            severSpecialStageRewindForLiveOnlyShortcut();
+            return;
+        }
+
+        if (ssProvider.isSpriteDebugMode()
+                && ssProvider.getDebugProvider() != null
+                && (isUnmodifiedDebugKeyPressed(leftKey)
+                || isUnmodifiedDebugKeyPressed(rightKey)
+                || isUnmodifiedDebugKeyPressed(upKey)
+                || isUnmodifiedDebugKeyPressed(downKey))) {
+            severSpecialStageRewindForLiveOnlyShortcut();
+            return;
+        }
+
+        if (ssProvider.isAlignmentTestMode()
+                && (isUnmodifiedDebugKeyPressed(leftKey)
+                || isUnmodifiedDebugKeyPressed(rightKey)
+                || isUnmodifiedDebugKeyPressed(upKey)
+                || isUnmodifiedDebugKeyPressed(downKey)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_SPACE))) {
+            severSpecialStageRewindForLiveOnlyShortcut();
+        }
+    }
+
     private boolean isUnmodifiedDebugKeyPressed(int keyCode) {
         return debugShortcutsEnabled() && inputHandler.isKeyPressedWithoutModifiers(keyCode);
     }
@@ -1988,13 +2127,7 @@ public class GameLoop {
             return;
         }
 
-        // Special stage entry is fully disabled while a time attack is active — the
-        // request is swallowed here and the run continues unharmed (it is no longer
-        // voided; see enterBonusStage() for the bonus-stage equivalent). Gating here
-        // covers every caller uniformly: the checkpoint-star/big-ring request-consume
-        // path above, the debug Tab shortcut, and level-select "enter special stage".
-        if (timeAttackRuntime.isActive()) {
-            LOGGER.info("Special/bonus stage entry disabled during time attack");
+        if (TimeAttackLevelEndRouting.suppressesStageEntry(timeAttackRuntime.isActive())) {
             return;
         }
 
@@ -2066,7 +2199,7 @@ public class GameLoop {
      * @param fadeFromBlack true if the screen is already black and should fade from black;
      *                      false for the normal fade-from-white reveal
      */
-    private void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
+    void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                                      boolean fadeFromBlack) {
         // Clear the transition freeze flag (now we're in special stage mode)
         specialStageTransitionPending = false;
@@ -2075,19 +2208,16 @@ public class GameLoop {
             ssProvider.reset();
             ssProvider.initializeStage(stageIndex);
             activeSpecialStageProvider = ssProvider;
-
-            GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE);
+            GameplayModeContext context = resolveGameplayModeContext();
+            if (context != null) {
+                context.registerSpecialStageAdapter(ssProvider);
+            }
 
             // Set camera to origin for special stage rendering (uses screen coordinates)
             camera.setX((short) 0);
             camera.setY((short) 0);
 
             playSpecialStageStageMusic(ssProvider);
-
-            // Notify listener of mode change
-            if (gameModeChangeListener != null) {
-                gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-            }
 
             // Reveal the special stage
             if (fadeFromBlack) {
@@ -2096,9 +2226,22 @@ public class GameLoop {
                 fadeManager.startFadeFromWhite(null);
             }
 
+            GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE);
+
+            // Notify listener of mode change
+            if (gameModeChangeListener != null) {
+                gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
+            }
+
             LOGGER.info("Entered Special Stage " + (stageIndex + 1) + " (H32 mode: 256x224)");
         } catch (IOException e) {
+            deregisterSpecialStageAdapter();
+            activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
             throw new RuntimeException("Failed to initialize Special Stage " + (stageIndex + 1), e);
+        } catch (RuntimeException e) {
+            deregisterSpecialStageAdapter();
+            activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
+            throw e;
         }
     }
 
@@ -2109,14 +2252,7 @@ public class GameLoop {
      * Captures current state, fades to black, loads the bonus zone.
      */
     private void enterBonusStage(BonusStageType type) {
-        if (currentGameMode != GameMode.LEVEL) {
-            return;
-        }
-
-        // Bonus stage entry is fully disabled while a time attack is active — see
-        // enterSpecialStage() for the special-stage equivalent and rationale.
-        if (timeAttackRuntime.isActive()) {
-            LOGGER.info("Special/bonus stage entry disabled during time attack");
+        if (currentGameMode != GameMode.LEVEL || timeAttackRuntime.isActive()) {
             return;
         }
 
@@ -2734,6 +2870,7 @@ public class GameLoop {
     private void doExitResultsScreen() {
         // Clean up results screen
         resultsScreen = null;
+        deregisterSpecialStageAdapter();
         activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
 
         if (levelManager.getCurrentLevel() == null) {
@@ -3093,6 +3230,7 @@ public class GameLoop {
                 ? masterTitleScreenSupplier.get() : null;
         installUserRecordingPlaybackStarter(masterScreen);
         installTimeAttackLaunchHandler(masterScreen);
+        installTimeAttackNetworkHandler(masterScreen);
         return masterScreen;
     }
 
@@ -3124,6 +3262,12 @@ public class GameLoop {
     private void installTimeAttackLaunchHandler(MasterTitleScreen masterScreen) {
         if (masterScreen != null) {
             masterScreen.setTimeAttackLaunchStarter(request -> pendingTimeAttackLaunch = request);
+        }
+    }
+
+    private void installTimeAttackNetworkHandler(MasterTitleScreen masterScreen) {
+        if (masterScreen != null) {
+            masterScreen.setTimeAttackNetworkStarter(timeAttackNetworkHandler);
         }
     }
 
@@ -3174,7 +3318,7 @@ public class GameLoop {
         if (manager.isActive()) {
             return;
         }
-        pendingReopenTimeAttackMenu = true;
+        pendingReopenTimeAttackMenu = multiplayerRaceCoordinator == null;
         audioManager.fadeOutMusic();
         manager.startFadeToBlack(this::returnToMasterTitle);
     }
@@ -4086,54 +4230,10 @@ public class GameLoop {
             return;
         }
 
-        int heldButtons = 0;
-        int pressedButtons = 0;
-        int p2HeldButtons = 0;
-        int p2LogicalButtons = 0;
-
-        PlayerInputState p1 = inputHandler.logical().player1();
-        PlayerInputState p2 = inputHandler.logical().player2();
-
-        heldButtons |= directionBits(p1.heldMask());
-        pressedButtons |= directionBits(p1.pressedMask());
-        heldButtons |= InputActionMasks.toMegaDriveButtonBits(p1.actionHeldMask());
-        pressedButtons |= InputActionMasks.toMegaDriveButtonBits(p1.actionPressedMask());
-        if (p1.startHeld()) {
-            heldButtons |= 0x80;
-        }
-        if (p1.startPressed()) {
-            pressedButtons |= 0x80;
-        }
-
-        p2HeldButtons |= directionBits(p2.heldMask());
-        p2LogicalButtons = p2HeldButtons;
-        int p2ActionHeld = InputActionMasks.toMegaDriveButtonBits(p2.actionHeldMask());
-        p2HeldButtons |= p2ActionHeld;
-        p2LogicalButtons |= p2ActionHeld;
-        if (p2.startHeld()) {
-            p2HeldButtons |= 0x80;
-            p2LogicalButtons |= 0x80;
-        }
-
-        ssProvider.handleInput(heldButtons, pressedButtons);
-        ssProvider.handlePlayer2Input(p2HeldButtons, p2LogicalButtons);
-    }
-
-    private static int directionBits(int logicalMask) {
-        int bits = 0;
-        if ((logicalMask & AbstractPlayableSprite.INPUT_UP) != 0) {
-            bits |= 0x01;
-        }
-        if ((logicalMask & AbstractPlayableSprite.INPUT_DOWN) != 0) {
-            bits |= 0x02;
-        }
-        if ((logicalMask & AbstractPlayableSprite.INPUT_LEFT) != 0) {
-            bits |= 0x04;
-        }
-        if ((logicalMask & AbstractPlayableSprite.INPUT_RIGHT) != 0) {
-            bits |= 0x08;
-        }
-        return bits;
+        SpecialStageInputMapper.MappedInput mapped =
+                SpecialStageInputMapper.map(inputHandler.logical());
+        ssProvider.handleInput(mapped.p1Held(), mapped.p1Pressed());
+        ssProvider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
     }
 
     /**

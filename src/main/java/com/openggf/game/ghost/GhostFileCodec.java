@@ -1,5 +1,7 @@
 package com.openggf.game.ghost;
 
+import com.openggf.ghost.GhostFrameCodec;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;

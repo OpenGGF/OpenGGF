@@ -1,5 +1,7 @@
 package com.openggf.game.ghost;
 
+import com.openggf.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrameCodec;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
