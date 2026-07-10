@@ -40,6 +40,42 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage Tier-1 ratchet enabled
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `f1413d4f8`. The Stage-2
+frontier was first rechecked before enabling the gate with:
+`mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`.
+Both selected classes passed (two JUnit tests in the replay class and one in
+the determinism class), the generated report contained 0 errors / 0 warnings
+over 3,227 compared frames, and the determinism test confirmed byte-identical
+replay output.
+
+- The formerly empty `assertNoReleaseBlockingDivergences()` hook now executes
+  the campaign-prescribed Tier-1 gate:
+  `assertFalse(report.hasErrors(), report.toAssertionSummary());`. Tier-1
+  comparisons use ERROR severity, so a future release-blocking divergence now
+  fails the concrete replay instead of remaining report-only. Comparator
+  severities, mappings, tolerances, and engine mechanics are unchanged.
+- Focused RED before the hook change:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay#releaseRatchetRejectsTierOneError" test`.
+  The new synthetic ERROR report was accepted and JUnit failed because no
+  `AssertionFailedError` was thrown. The same command passed after the exact
+  one-line ratchet was installed.
+- Ratchet-on replay command, executed twice from fresh Maven invocations:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`.
+  Both invocations passed the class's two JUnit tests and independently wrote
+  a 0-error / 0-warning, 3,227-frame report with SHA-256
+  `3E7F0A06E012C519C9913056633CD58A65781CBC8CA7871FB52412B0978186D7`.
+- The focused recorder/binder/finish-boundary/determinism/rewind/special-stage
+  neighborhood command then exited successfully with every selected class
+  passing:
+  `mvn "-Dtest=com.openggf.trace.SpecialStageRunObjectsPassBinderTest,com.openggf.trace.SpecialStageExpectedStateTest,com.openggf.trace.SpecialStageTraceFrameTest,com.openggf.game.sonic2.specialstage.*Test,com.openggf.game.sonic2.specialstage.Test*,com.openggf.tests.trace.s2.S2SpecialStageRecorderContractTest,com.openggf.tests.trace.s2.S2SpecialStageExpectedComparisonTest,com.openggf.tests.trace.s2.S2SpecialStageFinishBoundaryMappingTest,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`.
+
+No trace hydration, tolerance, comparison relaxation, or route/frame/zone
+predicate was introduced. The Tier-1 green frontier is now enforced; the next
+campaign step is Task 7's per-player-ring Tier-2 enabler.
+
 ## 2026-07-10 - S2 special-stage Obj59 init/award pass order (Tier-1 green)
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

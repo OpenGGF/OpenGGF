@@ -31,6 +31,7 @@ import java.util.Objects;
 import java.util.OptionalInt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -88,13 +89,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       {@code tails_control_counter}.</li>
  * </ul>
  *
- * <p>This is a red-allowed MVP: divergences are recorded, not asserted. Known
- * engine gaps (control-lock timing, Tails CPU, intro timing) legitimately
- * diverge and must NOT be papered over by editing engine code — the deliverable
- * is a faithful report. The pipeline itself (trace loads, harness steps to
- * {@code compareEnd} without exceptions, report written) IS asserted, and
- * {@link #assertNoReleaseBlockingDivergences} is the one-line ratchet to flip
- * on once parity lands (see {@code docs/TRACE_FRONTIER_LOG.md}).
+ * <p>Tier-1 parity is release-gated: the pipeline writes a complete report and
+ * {@link #assertNoReleaseBlockingDivergences} rejects any ERROR divergence.
+ * Tier-2 WARNING fields remain visible in the report while their state and
+ * ratchets are implemented (see {@code docs/TRACE_FRONTIER_LOG.md}).
  */
 public abstract class AbstractS2SpecialStageTraceReplayTest {
 
@@ -150,17 +148,10 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     }
 
     /**
-     * Release-gate ratchet, intentionally disabled for the red-allowed MVP.
-     *
-     * <p>The engine currently diverges from the recorded ROM trace on known
-     * fronts (control-lock timing, Tails CPU behaviour, intro timing); those are
-     * captured in the report rather than failing the test. When the engine
-     * reaches parity, replace the body with
-     * {@code assertFalse(report.hasErrors(), report.toAssertionSummary());} and
-     * record the frontier move in {@code docs/TRACE_FRONTIER_LOG.md}.
+     * Release-gate ratchet for Tier-1 fields, which use ERROR severity.
      */
     protected void assertNoReleaseBlockingDivergences(DivergenceReport report) {
-        // Disabled ratchet — see docs/TRACE_FRONTIER_LOG.md.
+        assertFalse(report.hasErrors(), report.toAssertionSummary());
     }
 
     // ==================== Boot ====================
