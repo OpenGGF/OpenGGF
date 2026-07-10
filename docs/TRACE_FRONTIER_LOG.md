@@ -372,9 +372,20 @@ and bridge rewind suites pass. The complete-run frontier moves from f13141
 `$0229`). The immediately preceding exact-tree full sweeps passed all 29 S1
 and all 48 S2 traces; this delta is confined to the S3K bridge implementation.
 
+Round 27 restores the falling log's exact-boundary `SolidObjectTop` gate. At
+f13469 the newly fallen log and airborne Sonic meet with native `d0 == 0`;
+`cmpi.w #-$10,d0 / blo` accepts only negative overlap from -16 through -1, but
+the engine's generic S3K top-solid default attached Sonic at zero. The falling
+log now advertises the routine's explicit zero-distance rejection
+(`sonic3k.asm:59965-60003,42048-42068`). Focused falling-log and rewind suites
+pass. The complete-run frontier moves from f13469 (`y` expected `$022B`, actual
+`$0229`) to f13740 (`rings` expected `1`, actual `2`), leaving one reported
+complete-run mismatch. The change is S3K-local; the most recent full 29-test S1
+and 48-test S2 sweeps remain green.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f13469.
+banked rounds the current stacked working-tree complete-run frontier is f13740.
 Those causes will be recorded and committed separately as their focused guards
 are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes

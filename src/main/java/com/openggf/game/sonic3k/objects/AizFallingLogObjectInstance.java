@@ -262,6 +262,13 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
         }
 
         @Override
+        public boolean rejectsZeroDistanceTopSolidLanding() {
+            // SolidObjectTop accepts only d0 in [-16,-1]. At exact contact,
+            // cmpi.w #-$10,d0 / blo rejects d0 == 0 before RideObject_SetRide.
+            return true;
+        }
+
+        @Override
         public boolean isSolidFor(PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             return !isDestroyed();
