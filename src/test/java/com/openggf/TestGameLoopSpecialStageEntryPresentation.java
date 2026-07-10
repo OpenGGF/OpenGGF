@@ -1,0 +1,189 @@
+package com.openggf;
+
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.GameMusic;
+import com.openggf.control.InputHandler;
+import com.openggf.game.GameMode;
+import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.SpecialStageStartupPolicy;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
+import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
+import com.openggf.graphics.FadeManager;
+import com.openggf.tests.TestEnvironment;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class TestGameLoopSpecialStageEntryPresentation {
+
+    private GameLoop loop;
+    private FadeManager fade;
+    private AudioManager audio;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        loop = new GameLoop(new InputHandler());
+        fade = mock(FadeManager.class);
+        audio = mock(AudioManager.class);
+        when(audio.playMusic(any(GameMusic.class))).thenReturn(true);
+        setField(loop, "fadeManager", fade);
+        setField(loop, "audioManager", audio);
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        setActiveTraceSession(null);
+        SessionManager.clear();
+    }
+
+    @Test
+    void normalReadyEntryUsesFastPolicyAndPreservesMusicRevealListenerOrder() throws Exception {
+        SpecialStageProvider provider = readyProvider();
+        GameLoop.GameModeChangeListener listener = mock(GameLoop.GameModeChangeListener.class);
+        loop.setGameModeChangeListener(listener);
+
+        loop.doEnterSpecialStage(provider, 2, false);
+
+        InOrder order = inOrder(provider, audio, fade, listener);
+        order.verify(provider).initializeStage(2, SpecialStageStartupPolicy.FAST);
+        order.verify(audio).playMusic(GameMusic.SPECIAL_STAGE);
+        order.verify(fade).startFadeFromWhite(isNull());
+        order.verify(listener).onGameModeChanged(GameMode.LEVEL, GameMode.SPECIAL_STAGE);
+        verify(fade, never()).holdWhite();
+        assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
+    }
+
+    @Test
+    void accurateBlackEntryHoldsOpaqueThenStartsMusicAndRevealExactlyOnce() throws Exception {
+        setActiveTraceSession(mock(TraceSessionLauncher.class));
+        AtomicBoolean ready = new AtomicBoolean(false);
+        SpecialStageProvider provider = providerWithReadiness(ready);
+
+        loop.doEnterSpecialStage(provider, 0, true, SpecialStageStartupPolicy.TRACE_ACCURATE);
+
+        verify(fade).holdBlack();
+        verify(audio, never()).playMusic(GameMusic.SPECIAL_STAGE);
+        assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
+
+        ready.set(true);
+        invokeUpdateSpecialStageMode();
+        invokeUpdateSpecialStageMode();
+
+        InOrder order = inOrder(audio, fade);
+        order.verify(audio).playMusic(GameMusic.SPECIAL_STAGE);
+        order.verify(fade).startFadeFromBlack(isNull());
+        verify(audio, times(1)).playMusic(GameMusic.SPECIAL_STAGE);
+        verify(fade, times(1)).startFadeFromBlack(isNull());
+    }
+
+    @Test
+    void leavingSpecialStageClearsDeferredPresentation() throws Exception {
+        setActiveTraceSession(mock(TraceSessionLauncher.class));
+        AtomicBoolean ready = new AtomicBoolean(false);
+        SpecialStageProvider provider = providerWithReadiness(ready);
+        loop.doEnterSpecialStage(provider, 0, false, SpecialStageStartupPolicy.TRACE_ACCURATE);
+
+        loop.changeGameModeForBoundary(GameMode.TITLE_SCREEN);
+        ready.set(true);
+        invokeUpdateSpecialStageMode();
+
+        verify(audio, never()).playMusic(GameMusic.SPECIAL_STAGE);
+        assertFalse(entryPresentationPending());
+    }
+
+    @Test
+    void concreteS1AndS3kProvidersRetainImmediateWhiteAndBlackEntry() throws Exception {
+        Sonic1SpecialStageProvider s1 = spy(new Sonic1SpecialStageProvider());
+        doNothing().when(s1).reset();
+        doNothing().when(s1).initializeStage(anyInt(), eq(SpecialStageStartupPolicy.FAST));
+        doReturn(false).when(s1).supportsRewind();
+        doReturn(Optional.empty()).when(s1).rewindAdapter();
+
+        loop.doEnterSpecialStage(s1, 0, false);
+        verify(fade).startFadeFromWhite(isNull());
+        verify(fade, never()).holdWhite();
+
+        loop.changeGameModeForBoundary(GameMode.LEVEL);
+        Sonic3kSpecialStageProvider s3k = spy(new Sonic3kSpecialStageProvider());
+        doNothing().when(s3k).reset();
+        doNothing().when(s3k).initializeStage(anyInt(), eq(SpecialStageStartupPolicy.FAST));
+        doReturn(false).when(s3k).supportsRewind();
+        doReturn(Optional.empty()).when(s3k).rewindAdapter();
+
+        loop.doEnterSpecialStage(s3k, 0, true);
+        verify(fade).startFadeFromBlack(isNull());
+        verify(fade, never()).holdBlack();
+        assertTrue(s1.isEntryPresentationReady());
+        assertTrue(s3k.isEntryPresentationReady());
+    }
+
+    private SpecialStageProvider readyProvider() throws Exception {
+        return providerWithReadiness(new AtomicBoolean(true));
+    }
+
+    private SpecialStageProvider providerWithReadiness(AtomicBoolean ready) throws Exception {
+        SpecialStageProvider provider = mock(SpecialStageProvider.class);
+        when(provider.isEntryPresentationReady()).thenAnswer(ignored -> ready.get());
+        when(provider.getStageMusic()).thenReturn(GameMusic.SPECIAL_STAGE);
+        when(provider.getStageMusicId()).thenReturn(-1);
+        when(provider.rewindAdapter()).thenReturn(Optional.empty());
+        when(provider.isFinished()).thenReturn(false);
+        return provider;
+    }
+
+    private void invokeUpdateSpecialStageMode() throws Exception {
+        Method method = GameLoop.class.getDeclaredMethod("updateSpecialStageMode");
+        method.setAccessible(true);
+        method.invoke(loop);
+    }
+
+    private boolean entryPresentationPending() throws Exception {
+        Object controller = getField(loop, "specialStageEntryPresentation");
+        Method method = controller.getClass().getMethod("isPending");
+        return (boolean) method.invoke(controller);
+    }
+
+    private static void setField(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    private static Object getField(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static void setActiveTraceSession(TraceSessionLauncher session) throws Exception {
+        Field field = TraceSessionLauncher.class.getDeclaredField("activeSession");
+        field.setAccessible(true);
+        field.set(null, session);
+    }
+}
