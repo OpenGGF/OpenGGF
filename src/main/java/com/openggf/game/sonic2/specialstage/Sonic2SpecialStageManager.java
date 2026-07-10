@@ -82,10 +82,11 @@ public class Sonic2SpecialStageManager {
     public static final int H32_HEIGHT = 224;
 
     private Sonic2TrackAnimator trackAnimator;
-    // One-shot promotion of SS_New_Speed_Factor at the first post-pre-roll
-    // Vint_S2SS boundary. Speed 0 is not a sentinel: ROM writes it again later
-    // (s2.asm:72418).
-    private boolean initialSpeedPromotionPending;
+    // Vint_S2SS copies SS_New_Speed_Factor into SS_Cur_Speed_Factor. The
+    // initial request is 12; Obj59 later requests zero on failure
+    // (s2.asm:960-975, 6640, 72417-72423). Zero is a value, not a sentinel.
+    private boolean speedPromotionPending;
+    private int pendingSpeedFactor;
     // One-shot exposure of the already-constructed Obj09/Obj10 instances at
     // the ROM object-creation boundary, independent of speed promotion state.
     private boolean initialPlayerSpawnPending;
@@ -932,12 +933,31 @@ public class Sonic2SpecialStageManager {
 
         // Use the real stage layout data from ROM
         trackAnimator.initialize(currentStage);
-        initialSpeedPromotionPending = true;
+        requestSpeedFactor(12);
 
         lastDecodedFrameIndex = -1;
         decodedTrackFrame = null;
 
         LOGGER.fine("Track animator initialized");
+    }
+
+    /** Models a write to SS_New_Speed_Factor for the following Vint_S2SS. */
+    void requestSpeedFactor(int speedFactor) {
+        pendingSpeedFactor = Math.max(0, Math.min(14, speedFactor));
+        speedPromotionPending = true;
+    }
+
+    /**
+     * Vint_S2SS promotes the requested factor before its timer work
+     * (s2.asm:960-975). Keeping this at the VInt boundary prevents Obj59's
+     * RunObjects write from changing the current pass retroactively.
+     */
+    private void promotePendingSpeedFactorAtVint() {
+        if (!speedPromotionPending) {
+            return;
+        }
+        trackAnimator.setSpeedFactor(pendingSpeedFactor);
+        speedPromotionPending = false;
     }
 
     /**
@@ -1122,12 +1142,7 @@ public class Sonic2SpecialStageManager {
                 initialPlayerSpawnPending = false;
             }
 
-            // SpecialStage writes SS_New_Speed_Factor=$000C0000 and the first
-            // Vint_S2SS promotes it (s2.asm:6640, 960-975).
-            if (initialSpeedPromotionPending) {
-                trackAnimator.setSpeedFactor(12);
-                initialSpeedPromotionPending = false;
-            }
+            promotePendingSpeedFactorAtVint();
 
             // Vint_S2SS owns the duration countdown/reload. SSTrack_Draw owns
             // animation-frame advancement and is invoked separately below.
@@ -2310,7 +2325,8 @@ public class Sonic2SpecialStageManager {
         lagCompensationDisplayEnabled = false;
 
         trackAnimator = null;
-        initialSpeedPromotionPending = false;
+        speedPromotionPending = false;
+        pendingSpeedFactor = 0;
         initialPlayerSpawnPending = false;
         playerBootstrapPhase = PlayerBootstrapPhase.WAIT_FIRST_DRAWING_WRAP;
         decodedTrackFrame = null;
@@ -2510,7 +2526,8 @@ public class Sonic2SpecialStageManager {
                 alternateScrollBuffer,
                 lastAlternateScrollBuffer,
                 drawingIndex,
-                initialSpeedPromotionPending,
+                speedPromotionPending,
+                pendingSpeedFactor,
                 initialPlayerSpawnPending,
                 playerBootstrapPhase,
                 lastAnimFrame,
@@ -2594,7 +2611,8 @@ public class Sonic2SpecialStageManager {
         alternateScrollBuffer = snapshot.alternateScrollBuffer;
         lastAlternateScrollBuffer = snapshot.lastAlternateScrollBuffer;
         drawingIndex = snapshot.drawingIndex;
-        initialSpeedPromotionPending = snapshot.initialSpeedPromotionPending;
+        speedPromotionPending = snapshot.speedPromotionPending;
+        pendingSpeedFactor = snapshot.pendingSpeedFactor;
         initialPlayerSpawnPending = snapshot.initialPlayerSpawnPending;
         playerBootstrapPhase = snapshot.playerBootstrapPhase;
         lastAnimFrame = snapshot.lastAnimFrame;

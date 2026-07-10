@@ -414,8 +414,9 @@ function Convert-SsRawHeldToMovieMask([int]$RawHeld) {
 }
 
 # The SS recorder's aux stream is part of the comparison contract. Completed
-# RunObjects passes bind forward to the first non-lag observation after return;
-# each event also names and carries the physical BK2 sample consumed at entry.
+# RunObjects passes bind forward to the first non-lag observation after return,
+# except the single terminal pass owned by the raw finish observation; each
+# event also names and carries the physical BK2 sample consumed at entry.
 function Assert-SsAuxCoverage([string]$TraceDir) {
     $events = Get-AuxEvents $TraceDir
     $rows = Get-PhysicsRows $TraceDir
@@ -425,6 +426,7 @@ function Assert-SsAuxCoverage([string]$TraceDir) {
     $runObjectsEndCount = 0
     $expectedRunObjectsSequence = 0
     $delayedRunObjectsPassCount = 0
+    $terminalFinishPassCount = 0
     $runObjectsPassesByFrame = @{}
     $metadata = Get-Content -LiteralPath (Join-Path $TraceDir "metadata.json") -Raw | ConvertFrom-Json
     $bk2Path = Join-Path $TraceDir $metadata.source_bk2
@@ -499,7 +501,12 @@ function Assert-SsAuxCoverage([string]$TraceDir) {
         } elseif ($event.type -eq "run_objects_end") {
             $runObjectsEndCount++
             $frame = [int]$event.frame
-            if ($null -ne $stageFinishedFrame -and $frame -gt $stageFinishedFrame) {
+            $isTerminalFinishPass = $frame -eq $finishObservation
+            if ($isTerminalFinishPass) {
+                $terminalFinishPassCount++
+            }
+            if ($null -ne $stageFinishedFrame -and $frame -gt $stageFinishedFrame -and
+                    -not $isTerminalFinishPass) {
                 throw "run_objects_end frame $frame occurs after stage_finished frame $stageFinishedFrame"
             }
             if ([int]$event.pass_sequence -ne $expectedRunObjectsSequence) {
@@ -516,16 +523,17 @@ function Assert-SsAuxCoverage([string]$TraceDir) {
             if ($completionCursor -lt [int]$event.first_eligible_frame) {
                 throw "run_objects_end completion cursor $completionCursor precedes entry $($event.first_eligible_frame)"
             }
-            $firstNonLagAtOrAfterCompletion = $completionCursor
-            while ($firstNonLagAtOrAfterCompletion -lt $rows.Count) {
-                $candidateColumns = $rows[$firstNonLagAtOrAfterCompletion].Split(",")
-                if ($candidateColumns.Length -ge 4 -and [int]$candidateColumns[3] -eq 0) {
+            $firstEligibleAtOrAfterCompletion = $completionCursor
+            while ($firstEligibleAtOrAfterCompletion -lt $rows.Count) {
+                $candidateColumns = $rows[$firstEligibleAtOrAfterCompletion].Split(",")
+                if (($candidateColumns.Length -ge 4 -and [int]$candidateColumns[3] -eq 0) -or
+                        $firstEligibleAtOrAfterCompletion -eq $finishObservation) {
                     break
                 }
-                $firstNonLagAtOrAfterCompletion++
+                $firstEligibleAtOrAfterCompletion++
             }
-            if ($firstNonLagAtOrAfterCompletion -ne $frame) {
-                throw "run_objects_end frame $frame is not first non-lag observation $firstNonLagAtOrAfterCompletion at/after completion $completionCursor"
+            if ($firstEligibleAtOrAfterCompletion -ne $frame) {
+                throw "run_objects_end frame $frame is not first eligible observation $firstEligibleAtOrAfterCompletion at/after completion $completionCursor"
             }
             $inputSampleFrame = [int]$event.input_sample_frame
             if ($inputSampleFrame -gt $completionCursor) {
@@ -543,7 +551,8 @@ function Assert-SsAuxCoverage([string]$TraceDir) {
                 throw "run_objects_end frame $frame is outside physics row range"
             }
             $columns = $rows[$frame].Split(",")
-            if ($columns.Length -lt 4 -or [int]$columns[3] -ne 0) {
+            if ($columns.Length -lt 4 -or
+                    ([int]$columns[3] -ne 0 -and -not $isTerminalFinishPass)) {
                 throw "run_objects_end frame $frame is not associated with a non-lag logical row"
             }
             $propertyNames = @($event.PSObject.Properties.Name)
@@ -634,6 +643,9 @@ function Assert-SsAuxCoverage([string]$TraceDir) {
     }
     if ($delayedRunObjectsPassCount -le 0) {
         throw "SS aux stream lost delayed RunObjects passes (possible eligibility regression)"
+    }
+    if ($terminalFinishPassCount -ne 1) {
+        throw "raw finish observation must own exactly one terminal RunObjects pass; got $terminalFinishPassCount"
     }
     Write-Host ("SS aux coverage verified ({0} passes, {1} multi-pass observations, {2} delayed passes)" -f `
         $runObjectsEndCount, $multiPassObservationFrames, $delayedRunObjectsPassCount)

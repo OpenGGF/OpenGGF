@@ -89,6 +89,111 @@ class Sonic2SpecialStageStreamedObjectCadenceTest {
     }
 
     @Test
+    void emeraldFinalInitializationPassFallsThroughToApproachMotion() {
+        Sonic2SpecialStageEmerald emerald = new Sonic2SpecialStageEmerald();
+        emerald.initialize(54, 0x40);
+
+        for (int pass = 0; pass < 59; pass++) {
+            emerald.update(0, false, 12, false);
+        }
+        assertEquals(Sonic2SpecialStageEmerald.EmeraldPhase.INITIALIZING, emerald.getPhase());
+        assertEquals(54, emerald.getDepth());
+
+        emerald.update(0, false, 12, true);
+
+        assertEquals(Sonic2SpecialStageEmerald.EmeraldPhase.APPROACHING, emerald.getPhase());
+        assertEquals(53, emerald.getDepth(),
+                "Obj59 routine zero falls through to loc_36022 on the -$3C pass");
+    }
+
+    @Test
+    void emeraldChecksAnimationBeforeMovementAndAwardsOnTheFollowingPass() throws Exception {
+        Sonic2SpecialStageEmerald emerald = new Sonic2SpecialStageEmerald();
+        emerald.initialize(54, 0x40);
+        set(emerald, "phase", Sonic2SpecialStageEmerald.EmeraldPhase.APPROACHING);
+        set(emerald, "depthFixed", 3L << 16);
+        emerald.updateScreenPosition(alwaysVisiblePerspective(), 0, false);
+
+        emerald.update(0, false, 12, true);
+
+        assertEquals(2, emerald.getDepth(), "movement should cross into animation 9");
+        assertEquals(Sonic2SpecialStageEmerald.EmeraldPhase.APPROACHING, emerald.getPhase(),
+                "loc_360F0 reads the pre-movement animation");
+
+        emerald.updateScreenPosition(alwaysVisiblePerspective(), 0, false);
+        emerald.update(0, false, 12, false);
+
+        assertEquals(Sonic2SpecialStageEmerald.EmeraldPhase.COLLECTED, emerald.getPhase(),
+                "the next pass must select routine 8 and award the emerald immediately");
+        assertTrue(emerald.isEmeraldAwarded(),
+                "the routine-change pass also owns the emerald-music award latch");
+        assertEquals(0x63, emerald.captureRewindSnapshot().emeraldPhaseTimer());
+
+        emerald.update(0, false, 12, false);
+
+        assertEquals(0x62, emerald.captureRewindSnapshot().emeraldPhaseTimer(),
+                "routine 8 starts decrementing on the pass after the award");
+    }
+
+    @Test
+    void emeraldSuccessCountdownCompletesOnlyAfterZero() throws Exception {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        Sonic2SpecialStageEmerald emerald = new Sonic2SpecialStageEmerald();
+        emerald.initialize(54, 0x40);
+        emerald.setManager(manager);
+        set(emerald, "phase", Sonic2SpecialStageEmerald.EmeraldPhase.APPROACHING);
+        set(emerald, "animIndex", 9);
+
+        emerald.update(0, false, 12, false);
+        assertEquals(0x63, emerald.captureRewindSnapshot().emeraldPhaseTimer());
+
+        for (int pass = 0; pass < 0x63; pass++) {
+            emerald.update(0, false, 12, false);
+        }
+
+        assertEquals(0, emerald.captureRewindSnapshot().emeraldPhaseTimer());
+        assertEquals(Sonic2SpecialStageEmerald.EmeraldPhase.COLLECTED, emerald.getPhase());
+        assertFalse(manager.isFinished(), "ROM bpl keeps routine 8 active at timer zero");
+        assertFalse(emerald.shouldRemove());
+
+        emerald.update(0, false, 12, false);
+
+        assertEquals(-1, emerald.captureRewindSnapshot().emeraldPhaseTimer());
+        assertTrue(manager.isFinished());
+        assertTrue(emerald.shouldRemove());
+    }
+
+    @Test
+    void emeraldFailureSeedsFourFAndCompletesOnlyAfterZero() throws Exception {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        Sonic2SpecialStageEmerald emerald = new Sonic2SpecialStageEmerald();
+        emerald.initialize(54, 0x40);
+        emerald.setManager(manager);
+        emerald.setRingRequirement(1);
+        set(emerald, "phase", Sonic2SpecialStageEmerald.EmeraldPhase.APPROACHING);
+        set(emerald, "animIndex", 6);
+
+        emerald.update(0, false, 12, false);
+
+        assertEquals(Sonic2SpecialStageEmerald.EmeraldPhase.FAILED, emerald.getPhase());
+        assertEquals(0x4F, emerald.captureRewindSnapshot().emeraldPhaseTimer());
+
+        for (int pass = 0; pass < 0x4F; pass++) {
+            emerald.update(0, false, 12, false);
+        }
+
+        assertEquals(0, emerald.captureRewindSnapshot().emeraldPhaseTimer());
+        assertFalse(manager.isFinished(), "ROM bpl keeps routine 6 active at timer zero");
+        assertFalse(emerald.shouldRemove());
+
+        emerald.update(0, false, 12, false);
+
+        assertEquals(-1, emerald.captureRewindSnapshot().emeraldPhaseTimer());
+        assertTrue(manager.isFinished());
+        assertTrue(emerald.shouldRemove());
+    }
+
+    @Test
     void firstPlayerToCollectSharedRingConsumesCollisionForBothPlayers() throws Exception {
         Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
         Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager objectManager =

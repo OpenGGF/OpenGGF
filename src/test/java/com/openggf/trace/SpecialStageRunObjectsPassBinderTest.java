@@ -98,7 +98,7 @@ class SpecialStageRunObjectsPassBinderTest {
                 () -> new SpecialStageRunObjectsPassBinder(List.of(
                         pass(12, 0, 10, 10, 10, 0, 0, 0, 0))));
 
-        assertTrue(error.getMessage().contains("first non-lag observation"));
+        assertTrue(error.getMessage().contains("first eligible observation"));
     }
 
     @Test
@@ -113,6 +113,28 @@ class SpecialStageRunObjectsPassBinderTest {
         assertEquals(915, pass.inputSampleFrame());
         assertEquals(3669, pass.inputSampleBk2Frame());
         assertEquals(100, pass.inputSampleSequence());
+    }
+
+    @Test
+    void terminalLagObservationUsesItsOwnLaterJoypadIdentity() {
+        SpecialStageRunObjectsPassBinder binder = new SpecialStageRunObjectsPassBinder(
+                List.of(
+                        pass(10, 0, 10, 10, 10, 100, 0x08, 0, 0, 0),
+                        pass(11, 1, 11, 11, 11, 101, 0x10, 0, 0x08, 0)),
+                12,
+                frame -> frame == 10 || frame == 11);
+
+        SpecialStageRunObjectsPassBinder.CompletedPass preceding =
+                binder.passesForObservation(10).getFirst();
+        SpecialStageRunObjectsPassBinder.CompletedPass terminal =
+                binder.passesForObservation(11).getFirst();
+
+        assertEquals(10, preceding.inputSampleFrame());
+        assertEquals(11, terminal.inputSampleFrame());
+        assertEquals(101, terminal.inputSampleSequence());
+        assertEquals(0x10, terminal.p1Held());
+        assertEquals(0x10, terminal.p1Pressed(),
+                "terminal pass must not reuse the preceding RIGHT sample");
     }
 
     @Test

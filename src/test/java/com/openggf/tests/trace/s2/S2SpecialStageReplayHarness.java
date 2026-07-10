@@ -14,6 +14,7 @@ import com.openggf.trace.SpecialStageRunObjectsPassBinder.CompletedPass;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -71,6 +72,8 @@ final class S2SpecialStageReplayHarness {
     private final int bk2FrameOffset;
     private final InputHandler inputHandler;
     private final Sonic2SpecialStageProvider provider;
+    private final List<Integer> steppedPassSequences = new ArrayList<>();
+    private int forceFinishedAfterPassSequenceForTest = -1;
 
     S2SpecialStageReplayHarness(Path bk2, int bk2FrameOffset, int specialStageIndex)
             throws IOException {
@@ -143,6 +146,18 @@ final class S2SpecialStageReplayHarness {
         provider.bindPendingRecurringPassInput(
                 mapped.p1Held(), mapped.p1Pressed(), mapped.p2Held(), mapped.p2Logical());
         provider.update();
+        steppedPassSequences.add(pass.sequence());
+        if (pass.sequence() == forceFinishedAfterPassSequenceForTest) {
+            provider.getManager().markCompleted(true);
+        }
+    }
+
+    void forceFinishedAfterPassForTest(int sequence) {
+        forceFinishedAfterPassSequenceForTest = sequence;
+    }
+
+    List<Integer> steppedPassSequencesForTest() {
+        return List.copyOf(steppedPassSequences);
     }
 
     static SpecialStageInputMapper.MappedInput mappedInputForPass(

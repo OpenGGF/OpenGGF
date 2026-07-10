@@ -32,8 +32,6 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
         INITIALIZING,
         /** Approaching player with perspective animation */
         APPROACHING,
-        /** Player has enough rings, emerald collection in progress */
-        COLLECTING,
         /** Not enough rings, stage will fail */
         FAILED,
         /** Emerald collected, bobbing animation */
@@ -195,13 +193,16 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
 
         switch (phase) {
             case INITIALIZING:
-                updateInitializing();
+                if (updateInitializing()) {
+                    // Obj59_Init does not return on the -$3C tick: after
+                    // selecting routine 2 it falls through to loc_36022 and
+                    // performs the first approach step in the same RunObjects
+                    // pass (s2.asm:72279-72306).
+                    updateApproaching(speedFactor, drawingIndex4);
+                }
                 break;
             case APPROACHING:
                 updateApproaching(speedFactor, drawingIndex4);
-                break;
-            case COLLECTING:
-                updateCollecting();
                 break;
             case FAILED:
                 updateFailed();
@@ -212,29 +213,22 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
         }
     }
 
-    private void updateInitializing() {
+    private boolean updateInitializing() {
         // Count up until initialization delay is reached
         phaseTimer++;
         if (phaseTimer >= INIT_DELAY_FRAMES) {
             phase = EmeraldPhase.APPROACHING;
             phaseTimer = 0;
             LOGGER.fine("Emerald initialization complete, starting approach");
+            return true;
         }
+        return false;
     }
 
     private void updateApproaching(int speedFactor, boolean drawingIndex4) {
-        // Decrement depth (emerald approaches) - ROM uses fixed rate based on drawing index
-        decrementDepth(drawingIndex4, speedFactor);
-
-        // Check if emerald has passed the player
-        if (getDepth() <= 0) {
-            // Should not happen - emerald stops at closest position
-            markForRemoval();
-            return;
-        }
-
-        // Check animation index thresholds (from loc_360F0)
-        int anim = calculateAnimIndex();
+        // loc_36022 checks the animation published by the preceding projection
+        // before loc_3512A advances depth for this pass (s2.asm:72306-72312).
+        int anim = animIndex;
 
         // At anim 3+: Fade out music
         if (anim >= 3 && !musicFaded) {
@@ -248,37 +242,46 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
             int ringsCollected = (manager != null) ? manager.getRingsCollected() : 0;
 
             if (ringsCollected < ringRequirement) {
-                // Not enough rings - fail
+                // loc_36142 writes SS_New_Speed_Factor=0 for the following
+                // Vint, selects routine 6/$4F, then returns through loc_36022's
+                // movement tail in this same pass (s2.asm:72306-72312,
+                // 72417-72423).
+                if (manager != null) {
+                    manager.requestSpeedFactor(0);
+                }
                 phase = EmeraldPhase.FAILED;
-                phaseTimer = 0;
+                phaseTimer = FAIL_COUNTDOWN;
                 LOGGER.info("Emerald check failed: " + ringsCollected + " < " + ringRequirement);
-                return;
+            } else if (anim >= 9) {
+                awardEmerald();
             }
+        }
 
-            // At anim 9: Award emerald
-            if (anim >= 9) {
-                phase = EmeraldPhase.COLLECTING;
-                phaseTimer = COLLECT_COUNTDOWN;
-                LOGGER.info("Emerald reached anim 9, starting collection");
-            }
+        // Even when loc_360F0 selects routine 8, loc_36022 continues through
+        // the movement and projection tail in the same object pass.
+        decrementDepth(drawingIndex4, speedFactor);
+
+        // Check if emerald has passed the player
+        if (getDepth() <= 0 && phase == EmeraldPhase.APPROACHING) {
+            // Should not happen - emerald stops at closest position
+            markForRemoval();
         }
     }
 
-    private void updateCollecting() {
-        // Play emerald jingle once
+    private void awardEmerald() {
         if (!emeraldAwarded) {
             GameServices.audio().playMusic(GameMusic.EMERALD);
             emeraldAwarded = true;
-            phase = EmeraldPhase.COLLECTED;
-            phaseTimer = COLLECT_COUNTDOWN;
             LOGGER.info("Emerald awarded! Playing jingle.");
         }
+        phase = EmeraldPhase.COLLECTED;
+        phaseTimer = COLLECT_COUNTDOWN;
     }
 
     private void updateFailed() {
         // Count down then signal stage end
         phaseTimer--;
-        if (phaseTimer <= 0) {
+        if (phaseTimer < 0) {
             // Signal to manager that stage should end (failed)
             if (manager != null) {
                 manager.markFailed();
@@ -298,7 +301,7 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
 
         // Count down then signal stage end (success)
         phaseTimer--;
-        if (phaseTimer <= 0) {
+        if (phaseTimer < 0) {
             // Signal to manager that stage is complete with emerald
             if (manager != null) {
                 manager.markCompleted(true);

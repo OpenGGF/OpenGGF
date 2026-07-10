@@ -142,6 +142,8 @@ class SpecialStageTraceFrameTest {
         OptionalInt stageFinished = data.stageFinishedFrame();
         assertTrue(stageFinished.isPresent());
         assertEquals(1, stageFinished.getAsInt());
+        assertEquals(2, data.stageFinishedObservedFrame().orElseThrow(),
+                "finish mapping must preserve the raw observation that saw the flag rise");
         assertEquals(2, data.resultsStartedFrame().orElseThrow());
     }
 

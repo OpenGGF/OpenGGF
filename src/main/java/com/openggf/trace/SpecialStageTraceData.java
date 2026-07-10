@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.OptionalInt;
 
 /**
@@ -119,6 +120,23 @@ public final class SpecialStageTraceData {
     /** Returns the logical frame where the final checkpoint resolved, if captured. */
     public OptionalInt stageFinishedFrame() {
         return firstEventFrame("stage_finished");
+    }
+
+    /**
+     * Returns the raw VBlank observation that first saw the final
+     * {@code SS_Check_Rings_flag} rise. This can be a lag-labelled row after
+     * the logical non-lag frame used to label the finish boundary.
+     */
+    public OptionalInt stageFinishedObservedFrame() {
+        return eventsByFrame.values().stream()
+                .flatMap(List::stream)
+                .filter(TraceEvent.StateSnapshot.class::isInstance)
+                .map(TraceEvent.StateSnapshot.class::cast)
+                .filter(snapshot -> "stage_finished".equals(snapshot.fields().get("type")))
+                .map(snapshot -> snapshot.fields().get("observed_frame"))
+                .filter(Objects::nonNull)
+                .mapToInt(SpecialStageTraceData::numericValue)
+                .min();
     }
 
     /** Returns the later frame where the ROM creates the Obj6F results object. */

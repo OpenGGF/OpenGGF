@@ -28,19 +28,19 @@ class S2SpecialStageRecorderContractTest {
             Path.of("tools", "bizhawk", "record_s2_level_select_traces.ps1");
 
     @Test
-    void recorderDeclaresBoundedRev01RunObjectsEndAndControlHooks() throws Exception {
+    void recorderDeclaresBoundedRev01RecurringPassAndControlHooks() throws Exception {
         String lua = Files.readString(LUA);
 
-        assertTrue(lua.contains("local LUA_SCRIPT_VERSION = \"1.3-s2ss\""));
+        assertTrue(lua.contains("local LUA_SCRIPT_VERSION = \"1.4-s2ss\""));
         assertTrue(lua.contains("local PC_READ_JOYPADS_RETURN = 0x1156"));
         assertTrue(lua.contains("local VINT_S2SS_READ_JOYPADS_RETURN_PC = 0x88E"));
         assertTrue(lua.contains("local CTRL_2_READ_COMPLETE_A0 = 0xF608"));
-        assertTrue(lua.contains("local PC_RUN_OBJECTS_END = 0x15FE4"));
+        assertTrue(lua.contains("local PC_S2SS_POST_RUN_OBJECTS = 0x52B2"));
         assertTrue(lua.contains("event.onmemoryexecute"));
-        assertTrue(lua.contains("s2ss_run_objects_end"));
+        assertTrue(lua.contains("s2ss_recurring_post_run_objects"));
         assertTrue(lua.contains("s2ss_input_sample"));
-        assertFalse(lua.contains("PC_RUN_OBJECTS_BEGIN"));
-        assertFalse(lua.contains("s2ss_run_objects_begin"));
+        assertFalse(lua.contains("PC_RUN_OBJECTS_END"),
+                "Obj59 success bypasses the generic RunObjects_End RTS");
         assertEquals(2, lua.split("event\\.onmemoryexecute\\(", -1).length - 1,
                 "BizHawk supports only two simultaneous execute callbacks");
         assertTrue(lua.contains("event.unregisterbyname"));
@@ -63,6 +63,7 @@ class S2SpecialStageRecorderContractTest {
         assertTrue(lua.contains("mainmemory.read_u8(ADDR_SPECIAL_STAGE_STARTED) == 0"));
         assertTrue(lua.contains("prev_check_rings_flag == 0 and check_rings_flag ~= 0"));
         assertTrue(lua.contains("last_nonlag_trace_frame"));
+        assertTrue(lua.contains("publish_pending_finish_pass"));
         assertTrue(lua.contains("\"observed_frame\":%d,\"type\":\"stage_finished\""));
         assertTrue(lua.contains("\"type\":\"results_started\""));
         assertFalse(lua.contains("\"type\":\"stage_finished\",\"slot\""),
@@ -84,10 +85,11 @@ class S2SpecialStageRecorderContractTest {
         assertTrue(ps1.contains("$delayedRunObjectsPassCount"));
         assertTrue(ps1.contains("vint_s2ss_read_joypads"));
         assertTrue(ps1.contains("$previousP1Held"));
+        assertTrue(ps1.contains("$terminalFinishPassCount"));
         assertTrue(ps1.contains("$stageFinishedFrame"));
         assertTrue(ps1.contains("$stageFinishedEvents.Count -ne 1"));
         assertTrue(ps1.contains("$resultsStartedEvent"));
-        assertTrue(ps1.contains("$firstNonLagAtOrAfterCompletion"));
+        assertTrue(ps1.contains("$firstEligibleAtOrAfterCompletion"));
         assertTrue(ps1.contains("$previousInputBk2Index"));
         assertTrue(ps1.contains("-le 2900"));
     }
@@ -130,12 +132,13 @@ class S2SpecialStageRecorderContractTest {
                 AbstractS2SpecialStageTraceReplayTest.TRACE_DIRECTORY.resolve(
                         trace.metadata().sourceBk2()));
 
+        int finishObservation = trace.stageFinishedObservedFrame().orElseThrow();
         new SpecialStageRunObjectsPassBinder(
                 trace.runObjectsEndSnapshots(), trace.frameCount(),
-                frame -> !trace.getFrame(frame).lag(),
+                frame -> !trace.getFrame(frame).lag() || frame == finishObservation,
                 trace.metadata().bk2FrameOffset(), movie.getFrames());
 
-        assertEquals("1.3-s2ss", trace.metadata().luaScriptVersion());
+        assertEquals("1.4-s2ss", trace.metadata().luaScriptVersion());
         assertFalse(trace.controlStateTransitions().isEmpty());
         assertEquals(0, trace.controlStateTransitions().get(0).frame());
         assertFalse(trace.controlStateTransitions().get(0).started());
@@ -159,8 +162,9 @@ class S2SpecialStageRecorderContractTest {
                 Object type = snapshot.fields().get("type");
                 if ("run_objects_end".equals(type)) {
                     runObjectsEndCount++;
-                    assertFalse(trace.getFrame(frame).lag(),
-                            "pass-end snapshot must be keyed to a non-lag logical frame");
+                    boolean finishPass = frame == finishObservation;
+                    assertTrue(!trace.getFrame(frame).lag() || finishPass,
+                            "only the terminal pass may bind to its lag finish observation");
                     assertEquals(expectedPassSequence++,
                             ((Number) snapshot.fields().get("pass_sequence")).intValue(),
                             "pass sequence must be contiguous in execution order");
@@ -173,13 +177,14 @@ class S2SpecialStageRecorderContractTest {
                     }
                     int completion = ((Number) snapshot.fields()
                             .get("completion_cursor_frame")).intValue();
-                    int firstNonLag = completion;
-                    while (firstNonLag < trace.frameCount()
-                            && trace.getFrame(firstNonLag).lag()) {
-                        firstNonLag++;
+                    int firstEligible = completion;
+                    while (firstEligible < trace.frameCount()
+                            && trace.getFrame(firstEligible).lag()
+                            && firstEligible != finishObservation) {
+                        firstEligible++;
                     }
-                    assertEquals(firstNonLag, frame,
-                            "pass must bind to the first non-lag observation at/after completion");
+                    assertEquals(firstEligible, frame,
+                            "pass must bind to the first eligible observation at/after completion");
                     runObjectsPassesByFrame.merge(frame, 1, Integer::sum);
                     for (String required : List.of(
                             "pass_sequence", "first_eligible_frame",
@@ -222,9 +227,11 @@ class S2SpecialStageRecorderContractTest {
         long multiPassObservationFrames = runObjectsPassesByFrame.values().stream()
                 .filter(count -> count > 1)
                 .count();
-        assertEquals(2990, runObjectsEndCount);
-        assertEquals(596, multiPassObservationFrames);
-        assertEquals(1257, delayedRunObjectsPassCount);
+        assertEquals(2991, runObjectsEndCount);
+        assertEquals(595, multiPassObservationFrames);
+        assertEquals(1259, delayedRunObjectsPassCount);
+        assertEquals(1, runObjectsPassesByFrame.getOrDefault(finishObservation, 0),
+                "raw finish observation must own exactly one terminal pass");
         assertEquals(1, stageFinished.size());
         assertEquals(1, checkpoints.size());
         assertEquals(1, resultsStarted.size());
@@ -236,6 +243,27 @@ class S2SpecialStageRecorderContractTest {
         assertFalse(trace.getFrame(finish.frame()).lag(),
                 "finish marker must be owned by the last logical observation");
         assertEquals(finish.frame(), trace.stageFinishedFrame().orElseThrow());
+        assertTrue(trace.getFrame(finishObservation).lag(),
+                "the committed finish flag first appears on a lag-labelled raw observation");
+        assertEquals(0xff, trace.getFrame(finishObservation).checkRingsFlag());
+        TraceEvent.StateSnapshot terminalPass = trace.runObjectsEndSnapshots().stream()
+                .max(java.util.Comparator.comparingInt(pass ->
+                        ((Number) pass.fields().get("pass_sequence")).intValue()))
+                .orElseThrow();
+        TraceEvent.StateSnapshot precedingPass = trace.runObjectsEndSnapshots().stream()
+                .filter(pass -> ((Number) pass.fields().get("pass_sequence")).intValue() == 2989)
+                .findFirst().orElseThrow();
+        assertEquals(finishObservation, terminalPass.frame());
+        assertEquals(2990, ((Number) terminalPass.fields().get("pass_sequence")).intValue());
+        assertEquals(0xff, ((Number) terminalPass.fields().get("check_rings_flag")).intValue());
+        assertEquals(finishObservation,
+                ((Number) terminalPass.fields().get("completion_cursor_frame")).intValue());
+        assertEquals(((Number) precedingPass.fields().get("input_sample_frame")).intValue(),
+                ((Number) terminalPass.fields().get("previous_input_sample_frame")).intValue(),
+                "terminal pass must preserve the exact ReadJoypads identity chain");
+        assertTrue(((Number) terminalPass.fields().get("input_sample_frame")).intValue()
+                        > ((Number) precedingPass.fields().get("input_sample_frame")).intValue(),
+                "terminal pass owns a later executed VInt sample");
         assertTrue(resultsStarted.getFirst().frame() > finish.frame());
         assertTrue(trace.frameCount() > resultsStarted.getFirst().frame(),
                 "recording must retain the uncompared results tail");

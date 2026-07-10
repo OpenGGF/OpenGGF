@@ -233,7 +233,7 @@ class Sonic2SpecialStageSpawnGateTest {
     @Test
     void playerSpawnBoundaryIsIndependentFromInitialSpeedPromotion() throws Exception {
         Field speedPromotionPending = Sonic2SpecialStageManager.class
-                .getDeclaredField("initialSpeedPromotionPending");
+                .getDeclaredField("speedPromotionPending");
         speedPromotionPending.setAccessible(true);
         speedPromotionPending.setBoolean(manager, false);
 

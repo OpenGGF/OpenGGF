@@ -10,6 +10,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -145,5 +147,70 @@ class Sonic2SpecialStagePreRollTest {
 
         assertEquals(0, manager.captureComparisonState().speedFactor(),
                 "rewind must restore that the initial promotion was already consumed");
+    }
+
+    @Test
+    void emeraldFailureMovesAndProjectsBeforeZeroSpeedPromotionAtNextVint() throws Exception {
+        for (int frame = 0; frame <= Sonic2SpecialStageIntro.PRE_ROLL_FRAMES; frame++) {
+            manager.update();
+        }
+        assertEquals(12, manager.captureComparisonState().speedFactor());
+
+        Sonic2SpecialStageEmerald emerald = new Sonic2SpecialStageEmerald();
+        emerald.initialize(54, 0x40);
+        emerald.setManager(manager);
+        emerald.setRingRequirement(1);
+        set(emerald, "phase", Sonic2SpecialStageEmerald.EmeraldPhase.APPROACHING);
+        set(emerald, "depthFixed", 7L << 16);
+        set(emerald, "animIndex", 6);
+        manager.getObjectManager().getActiveObjects().add(emerald);
+        set(manager, "drawingIndex", 4);
+
+        invoke(manager, "executeActiveSpecialStageObjects");
+
+        assertEquals(Sonic2SpecialStageEmerald.EmeraldPhase.FAILED, emerald.getPhase());
+        assertEquals(0x4F, emerald.captureRewindSnapshot().emeraldPhaseTimer());
+        assertEquals(6, emerald.getDepth(),
+                "loc_36142 returns through loc_36022's movement tail in the failure pass");
+        assertEquals(7, emerald.getAnimIndex(),
+                "the same pass must project the post-movement depth");
+        assertEquals(12, manager.captureComparisonState().speedFactor(),
+                "SS_New_Speed_Factor does not change current speed inside RunObjects");
+        Sonic2SpecialStageSnapshot pendingFailure = manager.captureRewindSnapshot();
+
+        manager.update();
+
+        assertEquals(0, manager.captureComparisonState().speedFactor(),
+                "the following Vint_S2SS promotes Obj59's requested zero factor");
+
+        manager.getTrackAnimator().setSpeedFactor(12);
+        manager.restoreRewindSnapshot(pendingFailure);
+        assertEquals(12, manager.captureComparisonState().speedFactor());
+
+        manager.update();
+
+        assertEquals(0, manager.captureComparisonState().speedFactor(),
+                "rewind must preserve the pending zero factor, not just its latch");
+    }
+
+    private static void invoke(Object target, String methodName) throws Exception {
+        Method method = target.getClass().getDeclaredMethod(methodName);
+        method.setAccessible(true);
+        method.invoke(target);
+    }
+
+    private static void set(Object target, String fieldName, Object value) throws Exception {
+        Class<?> current = target.getClass();
+        while (current != null) {
+            try {
+                Field field = current.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                field.set(target, value);
+                return;
+            } catch (NoSuchFieldException ignored) {
+                current = current.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(fieldName);
     }
 }

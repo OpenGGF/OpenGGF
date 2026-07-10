@@ -192,6 +192,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     static DivergenceReport compareReplay(SpecialStageTraceData trace,
                                           S2SpecialStageReplayHarness harness) {
         OptionalInt ssFinished = trace.stageFinishedFrame();
+        OptionalInt ssFinishedObserved = trace.stageFinishedObservedFrame();
         int compareEnd = ssFinished.orElse(trace.frameCount());
 
         List<FrameComparison> comparisons = new ArrayList<>();
@@ -200,7 +201,9 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 new SpecialStageRunObjectsPassBinder(
                         trace.runObjectsEndSnapshots(),
                         trace.frameCount(),
-                        frame -> !trace.getFrame(frame).lag(),
+                        frame -> !trace.getFrame(frame).lag()
+                                || (ssFinishedObserved.isPresent()
+                                && frame == ssFinishedObserved.getAsInt()),
                         trace.metadata().bk2FrameOffset(),
                         harness.movieFrames());
         int passPacingStart = trace.controlStateTransitions().stream()
@@ -249,6 +252,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         // observe whether the engine flips isFinished() at the same frame.
         if (ssFinished.isPresent()) {
             int sf = ssFinished.getAsInt();
+            String finishTransitionActual = "never";
             if (sf >= 0 && sf < trace.frameCount()) {
                 List<CompletedPass> completedPasses = passBinder.passesForObservation(sf);
                 if (sf < passPacingStart) {
@@ -258,15 +262,40 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 } else {
                     completedPasses.forEach(harness::stepPass);
                 }
-                if (firstEngineFinished < 0 && harness.isFinished()) {
-                    firstEngineFinished = sf;
-                }
+            }
+            // The recorder labels finish with the last logical non-lag frame,
+            // while publishing the finish-causing pass at the following raw lag
+            // observation. The engine must still be unfinished immediately
+            // before that pass, and must become finished because of it.
+            boolean finishedBeforeTerminal = firstEngineFinished >= 0 || harness.isFinished();
+            if (finishedBeforeTerminal) {
+                finishTransitionActual = "before-terminal-pass@" + sf;
+            }
+            int observed = ssFinishedObserved.orElse(sf);
+            if (observed <= sf || observed >= trace.frameCount()) {
+                throw new IllegalStateException(
+                        "stage finish must have one later raw observation; logical="
+                                + sf + " observed=" + observed);
+            }
+            List<CompletedPass> finishPasses = passBinder.passesForObservation(observed);
+            if (finishPasses.size() != 1) {
+                throw new IllegalStateException(
+                        "stage finish observation must own exactly one completed pass; got "
+                                + finishPasses.size());
+            }
+            finishPasses.forEach(harness::stepPass);
+            if (!finishedBeforeTerminal && harness.isFinished()) {
+                finishTransitionActual = String.valueOf(sf);
+            }
+            if (passBinder.hasRemaining()) {
+                throw new IllegalStateException(
+                        "run_objects_end passes remain after the terminal finish observation");
             }
             Map<String, FieldComparison> fields = new LinkedHashMap<>();
             String expected = String.valueOf(sf);
-            String actual = firstEngineFinished < 0 ? "never" : String.valueOf(firstEngineFinished);
             fields.put("finished_transition_frame",
-                    cmp("finished_transition_frame", expected, actual, Severity.ERROR));
+                    cmp("finished_transition_frame", expected, finishTransitionActual,
+                            Severity.ERROR));
             comparisons.add(new FrameComparison(sf, fields));
         }
 

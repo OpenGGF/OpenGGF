@@ -63,7 +63,8 @@ final class Sonic2SpecialStageSnapshot {
     final boolean alternateScrollBuffer;
     final boolean lastAlternateScrollBuffer;
     final int drawingIndex;
-    final boolean initialSpeedPromotionPending;
+    final boolean speedPromotionPending;
+    final int pendingSpeedFactor;
     final boolean initialPlayerSpawnPending;
     final Sonic2SpecialStageManager.PlayerBootstrapPhase playerBootstrapPhase;
     final int lastAnimFrame;
@@ -142,7 +143,8 @@ final class Sonic2SpecialStageSnapshot {
             boolean alternateScrollBuffer,
             boolean lastAlternateScrollBuffer,
             int drawingIndex,
-            boolean initialSpeedPromotionPending,
+            boolean speedPromotionPending,
+            int pendingSpeedFactor,
             boolean initialPlayerSpawnPending,
             Sonic2SpecialStageManager.PlayerBootstrapPhase playerBootstrapPhase,
             int lastAnimFrame,
@@ -219,7 +221,8 @@ final class Sonic2SpecialStageSnapshot {
         this.alternateScrollBuffer = alternateScrollBuffer;
         this.lastAlternateScrollBuffer = lastAlternateScrollBuffer;
         this.drawingIndex = drawingIndex;
-        this.initialSpeedPromotionPending = initialSpeedPromotionPending;
+        this.speedPromotionPending = speedPromotionPending;
+        this.pendingSpeedFactor = pendingSpeedFactor;
         this.initialPlayerSpawnPending = initialPlayerSpawnPending;
         this.playerBootstrapPhase = playerBootstrapPhase;
         this.lastAnimFrame = lastAnimFrame;

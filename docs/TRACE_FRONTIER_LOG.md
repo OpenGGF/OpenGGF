@@ -40,6 +40,134 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage Obj59 init/award pass order (Tier-1 green)
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `21a65e158`. The only remaining
+Tier-1 divergence was f5180 `finished_transition_frame`, expected 5180 / actual
+`never`; every per-frame gameplay field was already green.
+
+- The canonical boundary is the ROM's final `SS_Check_Rings_flag` rise, not the
+  later Obj6F results-screen start. This is also the real gameplay-loop exit:
+  after `RunObjects`, the recurring loop branches out as soon as the flag is
+  nonzero (`docs/s2disasm/s2.asm:6721-6729`). The event's logical f5180 label
+  is therefore the comparison contract; its raw observation/pass binding is
+  adjudicated separately below.
+- A temporary read-only engine diagnostic (removed before commit) replayed the
+  exact committed pass schedule through logical f5180 and found Obj59 still in
+  `COLLECTED` with timer 1 and `isFinished()==false`. ROM `Obj59_Init`
+  decrements `objoff_2A` on each routine-zero execution; when it reaches
+  `-$3C`, the routine writes routine 2 and falls directly through to
+  `loc_36022`, performing the first approach/depth step in that same
+  `RunObjects` pass (`docs/s2disasm/s2.asm:72279-72306`). The engine changed
+  phase at that boundary but returned.
+- Review of the first green patch exposed two compensating errors later in the
+  same routine. ROM `loc_36022` calls `loc_360F0` before `loc_3512A`, so Obj59
+  tests the animation published by the preceding pass before advancing depth.
+  When that pre-movement animation is 9, `loc_360F0` writes routine 8 and timer
+  `$63` and plays the emerald music immediately; the outer routine then
+  continues through movement in the same pass
+  (`docs/s2disasm/s2.asm:72306-72312,72390-72414`). The engine instead moved before testing (selecting collection
+  one pass early), then spent the next pass in a separate `COLLECTING` phase
+  before awarding/resetting `$63` (one pass late). The two errors hid each
+  other after the init-only change, so both were removed rather than accepted
+  as a trace-shaped compensation.
+- Focused RED commands:
+  `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest#emeraldFinalInitializationPassFallsThroughToApproachMotion" test`.
+  Before the fix, Obj59's 60th init update entered `APPROACHING` but retained
+  depth 54 (expected 53 after the drawing-index-4 `$CCCC` step). The focused
+  test passes after the init transition dispatches the approach tail once.
+  A second RED,
+  `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest#emeraldChecksAnimationBeforeMovementAndAwardsOnTheFollowingPass" test`,
+  crossed depth 3→2 and found the engine already in `COLLECTING` (expected the
+  pre-movement animation-8 check to keep `APPROACHING`). It now proves that the
+  following pass awards/music-latches immediately at animation 9 with timer
+  `$63`, and that routine 8 first decrements it to `$62` one pass later.
+- Quality review then pinned both terminal routines. ROM routine 8 and routine
+  6 use `subi.w #1` followed by `bpl`: timer zero remains active and only the
+  following decrement to `-1` raises `SS_Check_Rings_flag`. The insufficient-
+  rings branch also seeds `$4F` before selecting routine 6
+  (`docs/s2disasm/s2.asm:72411-72431`). Focused REDs
+  `emeraldSuccessCountdownCompletesOnlyAfterZero` and
+  `emeraldFailureSeedsFourFAndCompletesOnlyAfterZero` respectively found the
+  engine completing at zero and seeding failure with zero. Both now walk the
+  full `$63`/`$4F` countdown, assert zero is still active, and assert native
+  completion/removal only at `-1`. The unreachable engine-only `COLLECTING`
+  enum/switch/update path was removed.
+- Spec review found a second failure-path ordering detail: `loc_36142` writes
+  `SS_New_Speed_Factor=0`, routine 6, and `$4F`, then returns through
+  `loc_36022` so `loc_3512A` movement and the projection/display tail still run
+  in that same pass (`docs/s2disasm/s2.asm:72306-72312,72417-72423`). The
+  focused RED `emeraldFailureMovesAndProjectsBeforeZeroSpeedPromotionAtNextVint`
+  entered failure at depth 7 / animation 6 but remained at depth 7 because the
+  Java branch returned early. It now reaches depth 6 / animation 7 in the
+  transition pass, leaves current speed 12 during `RunObjects`, and promotes
+  the requested zero only at the following modeled VInt. The pending target
+  and latch are rewind-captured; restoring between the object pass and VInt
+  reproduces the zero promotion.
+- Correcting the success terminal edge initially reopened the report to 1 error
+  / 0 warnings at f5180, which exposed a comparison mapping issue rather than
+  an engine offset. Published `run_objects_end` sequence 2989 is keyed to
+  logical non-lag f5180 and still has `check_rings_flag=0`; the raw CSV first
+  observes `$FF` at lag-labelled f5181. Recorder v1.4 now hooks the instruction
+  after the recurring loop's `jsr RunObjects` at REV01 `$52B2`, rather than the
+  generic `RunObjects_End` RTS at `$15FE4`: Obj59's success tail pops the
+  `RunObject` return and returns directly through the outer frame, bypassing
+  that generic RTS (`docs/s2disasm/s2.asm:6694-6729,72427-72445`). This captures
+  the actual terminal pass as sequence 2990 at raw f5181 with
+  `check_rings_flag=$FF`, exact ReadJoypads sample f5179 / BK2 7933, and the
+  preceding identity f5177 / BK2 7931. The finish event retains canonical
+  `frame=5180, observed_frame=5181`.
+- `S2SpecialStageFinishBoundaryMappingTest` was run with the observation-pass
+  mapping removed and failed with the exact original result: 1 error / 0
+  warnings, f5180 expected 5180 / actual `never`. The mapping now requires
+  exactly one captured `CompletedPass` at the raw observation and consumes it
+  through the ordinary BK2-identity binder, applies no recorded engine state,
+  and retains logical label f5180. A synthetic differing-input test uses a
+  preceding RIGHT sample and a terminal JUMP sample and proves the terminal
+  pass owns the later identity rather than reusing its neighbor. The obsolete
+  custom pending-pass helper and its guessed preceding-input contract were
+  removed.
+- Quality review caught a false-green guard in that mapping: terminal retrieval
+  was conditional on the engine not already being finished after logical
+  sequence 2989. A forced-early-finish RED therefore reported no errors and
+  skipped sequence 2990 entirely. The finish mapper now always requires and
+  executes the single raw-observation pass, records
+  `before-terminal-pass@5180` when the engine was already finished, accepts
+  f5180 only when the terminal pass causes the transition, and asserts the
+  binder has no remaining passes. Both the normal and forced-early integration
+  cases assert terminal sequence 2990 executes exactly once through its BK2
+  identity.
+- The regenerated v1.4 artifact contains 2,991 contiguous recurring passes,
+  595 multi-pass observations, and 1,259 delayed bindings. Its decompressed
+  `physics.csv` is byte-identical to v1.3 (SHA-256
+  `418033A193690BE9DDD8BD7CA5EBAEEA48EFCE08C13B807883A318D6E415777B`).
+  Moving capture from the generic RTS to the exact call-site return also
+  corrected two earlier VBlank-straddling completion cursors (sequences 1146
+  and 1740); those were the only existing events whose published frame,
+  completion cursor, input-sample frame, or check-rings state changed.
+- Replay command:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`.
+  Before: 1 error / 0 warnings, first f5180
+  `finished_transition_frame` expected 5180 / actual `never`. After: 0 errors /
+  0 warnings over 3,227 compared frames; the engine now raises its native
+  completed state in the finish-causing ROM pass mapped to logical f5180.
+- The complete focused cadence class passed after the review correction:
+  `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest" test`.
+  The combined trace plus determinism command also passed, preserving both the
+  zero-divergence report and byte-identical replay output:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`.
+  The broader focused recorder/binder/mapping/replay/cadence/rewind command ran
+  67 checks with 67 passed, 0 failed, 0 errors, and 0 skipped; the generated
+  report remained 0 errors / 0 warnings over 3,227 compared frames.
+  Rewind coverage for the manager, concrete object snapshot, and adapter also
+  passed after removing `COLLECTING`:
+  `mvn "-Dtest=com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageRewindSnapshot,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageObjectSnapshot,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageRewindAdapter" test`.
+
+No comparator relaxation, trace hydration, tolerance, recorded-state input,
+or frame/route/zone predicate was introduced. This closes the Stage-2 Tier-1
+frontier; the ratchet remains the next separate campaign step.
+
 ## 2026-07-10 - S2 special-stage emerald pause-only control gate
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

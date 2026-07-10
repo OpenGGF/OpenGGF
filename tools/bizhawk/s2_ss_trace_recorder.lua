@@ -24,21 +24,26 @@
 --- Constants ---
 -----------------
 
-local LUA_SCRIPT_VERSION = "1.3-s2ss"
+local LUA_SCRIPT_VERSION = "1.4-s2ss"
 local TRACE_PROFILE = "s2_special_stage"
 
 -- S2 REV01 ReadJoypads' shared RTS is $1156 (s2.asm:1361-1387). It executes
 -- once after P1 and once after P2, so the callback filters A0=$F608 (both pads
 -- stored) and the stack return PC=$88E (the Vint_S2SS call at $88A has
--- returned; s2.asm:837-840). RunObjects_End then attaches that exact sample to
--- the completed pass. BizHawk permits only two simultaneous execute hooks, so
--- there is deliberately no RunObjects-entry callback.
+-- returned; s2.asm:837-840). The recurring loop's post-RunObjects call site
+-- then attaches that exact sample to the completed pass. BizHawk permits only
+-- two simultaneous execute hooks, so there is deliberately no RunObjects-entry
+-- callback.
 local PC_READ_JOYPADS_RETURN = 0x1156
 local VINT_S2SS_READ_JOYPADS_RETURN_PC = 0x88E
 local CTRL_2_READ_COMPLETE_A0 = 0xF608
-local PC_RUN_OBJECTS_END = 0x15FE4
+-- $52B2 is the instruction after the recurring loop's jsr RunObjects
+-- (s2.asm:6694-6729). Obj59's successful tail pops RunObjects' own return
+-- frame and bypasses the generic RunObjects_End RTS when it raises
+-- SS_Check_Rings_flag (s2.asm:72427-72445), but it still returns here.
+local PC_S2SS_POST_RUN_OBJECTS = 0x52B2
 local INPUT_SAMPLE_HOOK_NAME = "s2ss_input_sample"
-local RUN_OBJECTS_HOOK_NAME = "s2ss_run_objects_end"
+local RUN_OBJECTS_HOOK_NAME = "s2ss_recurring_post_run_objects"
 
 -- The workflow passes an absolute directory because EmuHawk's child-process
 -- working directory is not stable across launcher/config variants.
@@ -293,12 +298,38 @@ local function publish_run_objects_end(pass, frame)
     write_run_objects_end(frame, pass, pass.state)
 end
 
-local function flush_pending_run_objects_ends()
+local function publish_pending_run_objects_ends(frame)
     if #pending_run_objects_ends == 0 then return end
     for _, pass in ipairs(pending_run_objects_ends) do
-        publish_run_objects_end(pass, last_nonlag_trace_frame)
+        publish_run_objects_end(pass, frame)
     end
     pending_run_objects_ends = {}
+end
+
+local function flush_pending_run_objects_ends()
+    publish_pending_run_objects_ends(last_nonlag_trace_frame)
+end
+
+-- The final RunObjects return can occur inside the lag-labelled VBlank that
+-- first exposes SS_Check_Rings_flag. No later recurring observation exists to
+-- flush it forward, so publish that one pending pass at the raw finish
+-- observation with its exact ReadJoypads identity intact.
+local function publish_pending_finish_pass()
+    if #pending_run_objects_ends ~= 1 then
+        error(string.format(
+            "stage finish expected exactly one pending RunObjects pass, got %d",
+            #pending_run_objects_ends))
+    end
+    local pass = pending_run_objects_ends[1]
+    if pass.completion_cursor_frame ~= trace_frame then
+        error(string.format(
+            "terminal pass completion cursor %d differs from finish observation %d",
+            pass.completion_cursor_frame, trace_frame))
+    end
+    if pass.state.check_rings_flag == 0 then
+        error("terminal pending pass did not raise SS_Check_Rings_flag")
+    end
+    publish_pending_run_objects_ends(trace_frame)
 end
 
 -- Read the BK2 movie's logical input for the given absolute BK2 frame index
@@ -413,6 +444,7 @@ local function check_checkpoint(check_rings_flag)
             if last_nonlag_trace_frame < 0 then
                 error("final checkpoint resolved before any logical observation")
             end
+            publish_pending_finish_pass()
             write_aux(string.format(
                 '{"frame":%d,"observed_frame":%d,"type":"stage_finished",'
                 .. '"check_rings_flag":"0x%02x"}',
@@ -485,7 +517,7 @@ local function on_s2ss_input_sample()
     next_input_sample_sequence = next_input_sample_sequence + 1
 end
 
-local function on_run_objects_end()
+local function on_recurring_post_run_objects()
     if not started or finished or physics_file == nil then return end
     if mainmemory.read_u8(ADDR_GAME_MODE) ~= GAMEMODE_SPECIAL_STAGE then return end
     if stage_finished_emitted then return end
@@ -496,7 +528,7 @@ local function on_run_objects_end()
         return
     end
     if latest_input_sample == nil then
-        error("RunObjects_End observed without a preceding Vint_S2SS input sample")
+        error("recurring RunObjects return observed without a preceding Vint_S2SS input sample")
     end
     if latest_input_sample.started_at_input_sample == 0 then return end
     if last_completed_input_sample_sequence ~= nil
@@ -525,8 +557,10 @@ local function on_run_objects_end()
     last_completed_input_sample_sequence = pass.input_sample_sequence
 
     -- The return hook runs during emu.frameadvance(), after the prior row has
-    -- already been sampled. Queue forward to the next non-lag observation;
-    -- publishing to last_nonlag_trace_frame would bind the pass backwards.
+    -- already been sampled. Queue forward to the next eligible observation;
+    -- normally that is the next non-lag row, while the finish-causing pass is
+    -- published explicitly at its raw observation. Publishing immediately to
+    -- last_nonlag_trace_frame would bind the pass backwards.
     table.insert(pending_run_objects_ends, pass)
 end
 
@@ -537,7 +571,7 @@ local function register_run_objects_hook()
     end
     event.onmemoryexecute(on_s2ss_input_sample, PC_READ_JOYPADS_RETURN,
         INPUT_SAMPLE_HOOK_NAME)
-    event.onmemoryexecute(on_run_objects_end, PC_RUN_OBJECTS_END,
+    event.onmemoryexecute(on_recurring_post_run_objects, PC_S2SS_POST_RUN_OBJECTS,
         RUN_OBJECTS_HOOK_NAME)
     run_objects_hook_registered = true
 end

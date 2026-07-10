@@ -17,9 +17,11 @@ import java.util.function.IntPredicate;
  * <p>The special-stage 68K loop is not paced one-to-one with VBlank
  * observations: one observation can complete no object pass, while another can
  * expose two ordered completions. The recorder therefore binds each pass
- * forward to the first non-lag observation at or after its return cursor.
- * Replay consumes every pass bound to that exact observation and does not step
- * for an empty list.
+ * forward to the first eligible observation at or after its return cursor.
+ * Eligibility normally means non-lag; the recorder's single terminal pass is
+ * instead owned by the raw finish observation because the ROM exits before a
+ * later non-lag row. Replay consumes every pass bound to that exact observation
+ * and does not step for an empty list.
  */
 public final class SpecialStageRunObjectsPassBinder {
 
@@ -51,7 +53,7 @@ public final class SpecialStageRunObjectsPassBinder {
 
     private final List<CompletedPass> passes;
     private final int observationFrameCount;
-    private final IntPredicate nonLagObservation;
+    private final IntPredicate eligibleObservation;
     private final Integer bk2FrameOffset;
     private final List<Bk2FrameInput> movieFrames;
     private int nextIndex;
@@ -64,8 +66,8 @@ public final class SpecialStageRunObjectsPassBinder {
     public SpecialStageRunObjectsPassBinder(
             List<TraceEvent.StateSnapshot> snapshots,
             int observationFrameCount,
-            IntPredicate nonLagObservation) {
-        this(snapshots, observationFrameCount, nonLagObservation, null, null);
+            IntPredicate eligibleObservation) {
+        this(snapshots, observationFrameCount, eligibleObservation, null, null);
     }
 
     /**
@@ -75,25 +77,25 @@ public final class SpecialStageRunObjectsPassBinder {
     public SpecialStageRunObjectsPassBinder(
             List<TraceEvent.StateSnapshot> snapshots,
             int observationFrameCount,
-            IntPredicate nonLagObservation,
+            IntPredicate eligibleObservation,
             int bk2FrameOffset,
             List<Bk2FrameInput> movieFrames) {
-        this(snapshots, observationFrameCount, nonLagObservation,
+        this(snapshots, observationFrameCount, eligibleObservation,
                 Integer.valueOf(bk2FrameOffset), movieFrames);
     }
 
     private SpecialStageRunObjectsPassBinder(
             List<TraceEvent.StateSnapshot> snapshots,
             int observationFrameCount,
-            IntPredicate nonLagObservation,
+            IntPredicate eligibleObservation,
             Integer bk2FrameOffset,
             List<Bk2FrameInput> movieFrames) {
         if (observationFrameCount < 0) {
             throw new IllegalArgumentException("observation frame count is negative");
         }
         this.observationFrameCount = observationFrameCount;
-        this.nonLagObservation = Objects.requireNonNull(
-                nonLagObservation, "nonLagObservation");
+        this.eligibleObservation = Objects.requireNonNull(
+                eligibleObservation, "eligibleObservation");
         this.bk2FrameOffset = bk2FrameOffset;
         this.movieFrames = movieFrames == null ? null : List.copyOf(movieFrames);
         this.passes = snapshots.stream()
@@ -154,20 +156,20 @@ public final class SpecialStageRunObjectsPassBinder {
                         "run_objects_end completion cursor precedes input sample for sequence "
                                 + pass.sequence());
             }
-            int firstNonLag = pass.completionCursorFrame();
-            while (firstNonLag < observationFrameCount
-                    && !nonLagObservation.test(firstNonLag)) {
-                firstNonLag++;
+            int firstEligible = pass.completionCursorFrame();
+            while (firstEligible < observationFrameCount
+                    && !eligibleObservation.test(firstEligible)) {
+                firstEligible++;
             }
-            if (firstNonLag >= observationFrameCount) {
+            if (firstEligible >= observationFrameCount) {
                 throw new IllegalArgumentException(
-                        "run_objects_end has no non-lag observation at/after completion for sequence "
+                        "run_objects_end has no eligible observation at/after completion for sequence "
                                 + pass.sequence());
             }
-            if (observation != firstNonLag) {
+            if (observation != firstEligible) {
                 throw new IllegalArgumentException(
                         "run_objects_end frame " + observation
-                                + " is not the first non-lag observation " + firstNonLag
+                                + " is not the first eligible observation " + firstEligible
                                 + " at/after completion for sequence " + pass.sequence());
             }
             if (pass.inputSampleFrame() > pass.completionCursorFrame()) {
