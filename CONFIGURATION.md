@@ -322,6 +322,8 @@ These keys belong in the standalone master server's YAML (`MasterServerMain
 |----------|---------|-------------|
 | `verifierRegistrationToken` | disabled | Shared bootstrap token required by `openggf-verifier` workers. Keep it secret and rotate it if disclosed. |
 | `maxRecordingBytes` | `65536` | Maximum accepted input-only attempt recording size. |
+| `maxRecordingStorageBytes` | `536870912` | Maximum total bytes retained in the content-addressed recording store; new uploads receive HTTP 507 when full. |
+| `recordingUploadMinIntervalMillis` | `1000` | Minimum interval between accepted recording uploads from the same player identity. |
 | `uploadDeadlineSeconds` | `180` | Casual spot-check upload deadline. |
 | `verifiedUploadDeadlineSeconds` | `15` | Verified-room upload deadline. |
 | `recordingRetentionDays` | `3` | Recording blob retention before scheduled deletion. |

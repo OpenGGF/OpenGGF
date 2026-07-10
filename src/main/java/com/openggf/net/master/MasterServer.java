@@ -30,7 +30,9 @@ import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -135,6 +137,7 @@ public final class MasterServer implements AutoCloseable {
             ConnectionHygiene.ConnectionCounter counter =
                     new ConnectionHygiene.ConnectionCounter(MAX_CONNECTIONS_PER_IP);
             SslContext ssl = sslContext(config);
+            Map<String, Long> lastUploadByIdentity = new HashMap<>();
             channel = new ServerBootstrap().group(brokerGroup, relayGroup)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
@@ -149,9 +152,10 @@ public final class MasterServer implements AutoCloseable {
                             pipeline.addLast(new HttpObjectAggregator(
                                     config.maxRecordingBytes() + 8192));
                             pipeline.addLast(new MasterHttpRoutes(config,
-                                    broker::isSessionTokenValid, recordingBlobs,
+                                    broker::fingerprintForSessionToken, recordingBlobs,
                                     verifiers, verificationJobs, verdictConsequences,
-                                    clock, brokerLoop, relays::onVerdict));
+                                    clock, brokerLoop, relays::onVerdict,
+                                    lastUploadByIdentity));
                             pipeline.addLast(new WebSocketServerProtocolHandler(
                                     "/master", null, true,
                                     Protocol.MAX_MASTER_FRAME_BYTES));

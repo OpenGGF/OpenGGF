@@ -190,6 +190,28 @@ public final class GhostHub {
         return player != null && player.validator.isAttemptFlagged();
     }
 
+    public void onAttemptStart(int slot, int attemptId) {
+        Player player = players.get(slot);
+        if (player != null) {
+            player.validator.onAttemptStart(attemptId);
+        }
+    }
+
+    public void onAttemptReset(int slot, int attemptId) {
+        Player player = players.get(slot);
+        if (player != null) {
+            player.validator.onAttemptReset(attemptId);
+        }
+    }
+
+    public boolean hasFinishEvidence(int slot, int attemptId, int finishFrame,
+                                     String claimedStreamHashHex) {
+        Player player = players.get(slot);
+        return player != null
+                && player.validator.hasFinishEvidence(
+                attemptId, finishFrame, claimedStreamHashHex);
+    }
+
     public int tickCount() {
         return tickCount;
     }

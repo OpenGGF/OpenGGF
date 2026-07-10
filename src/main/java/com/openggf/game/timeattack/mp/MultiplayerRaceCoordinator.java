@@ -47,6 +47,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private TimeAttackRuntime runtime;
     private GhostStreamPublisher publisher;
     private boolean publisherActive;
+    private int pendingAttemptOrdinal = -1;
     private List<ActiveGhost> remoteGhosts = List.of();
     private boolean connectionLost;
     private long lastPingAtMillis = Long.MIN_VALUE;
@@ -102,6 +103,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
             publisher.abandonAttempt();
         }
         publisherActive = false;
+        pendingAttemptOrdinal = -1;
         publisher = null;
         remoteGhosts = List.of();
     }
@@ -147,6 +149,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                 case RaceClient.Disconnected ignored -> connectionLost = true;
             }
         }
+        activatePendingAttemptIfRunning();
         maybePing();
         recordingVault.evictExpired();
     }
@@ -244,14 +247,21 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     @Override
     public void onAttemptBegan(int attemptOrdinal) {
         requirePublisher();
-        publisher.beginAttempt(attemptOrdinal);
-        publisherActive = true;
-        transport.sendControl(new ControlMessage.AttemptStart(attemptOrdinal));
+        if (session.phase() == ClientRaceSession.Phase.RUNNING) {
+            startPublisher(attemptOrdinal);
+        } else {
+            pendingAttemptOrdinal = attemptOrdinal;
+        }
     }
 
     @Override
     public void onFrameSampled(int attemptOrdinal, GhostFrame frame) {
         requirePublisher();
+        activatePendingAttemptIfRunning();
+        if (!publisherActive || publisher.currentAttemptId() != attemptOrdinal) {
+            throw new IllegalStateException(
+                    "attempt frame sampled before authoritative RUNNING phase");
+        }
         lastLocalFrameX = frame.x();
         publisher.onFrame(frame);
     }
@@ -275,6 +285,10 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     @Override
     public void onAttemptVoided(int attemptOrdinal) {
         requirePublisher();
+        if (!publisherActive && pendingAttemptOrdinal == attemptOrdinal) {
+            pendingAttemptOrdinal = -1;
+            return;
+        }
         publisher.abandonAttempt();
         publisherActive = false;
         transport.sendControl(new ControlMessage.AttemptReset(attemptOrdinal));
@@ -285,6 +299,20 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
             throw new IllegalStateException("no runtime attached");
         }
         return publisher;
+    }
+
+    private void activatePendingAttemptIfRunning() {
+        if (pendingAttemptOrdinal >= 0
+                && session.phase() == ClientRaceSession.Phase.RUNNING) {
+            startPublisher(pendingAttemptOrdinal);
+        }
+    }
+
+    private void startPublisher(int attemptOrdinal) {
+        publisher.beginAttempt(attemptOrdinal);
+        publisherActive = true;
+        pendingAttemptOrdinal = -1;
+        transport.sendControl(new ControlMessage.AttemptStart(attemptOrdinal));
     }
 
     private void uploadRequestedRecording(ControlMessage.RecordingRequest request) {

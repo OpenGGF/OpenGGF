@@ -73,6 +73,7 @@ public class TestProductionSingletonClosureGuard {
             "com/openggf/game/timeattack/AttemptReplayHarness.java",
             "com/openggf/game/timeattack/mp/RecordingUploader.java",
             "com/openggf/net/client/GhostStreamPublisher.java",
+            "com/openggf/net/hub/GhostStreamValidator.java",
             "com/openggf/net/hub/HostHandshake.java",
             "com/openggf/net/identity/PlayerIdentity.java",
             "com/openggf/net/identity/ProofOfWork.java",
@@ -1196,4 +1197,3 @@ public class TestProductionSingletonClosureGuard {
         return Files.isDirectory(srcMain) ? srcMain : null;
     }
 }
-

@@ -65,6 +65,7 @@ public final class RoomBroker {
         State state = State.HANDSHAKE;
         String fingerprint;
         String displayName;
+        boolean displayNameClaimed;
         String determinismFingerprint;
         byte[] publicKeyEncoded;
         byte[] joinChallenge;
@@ -241,6 +242,10 @@ public final class RoomBroker {
                 && member.fingerprint.equals(tokenFingerprints.get(token));
     }
 
+    public java.util.Optional<String> fingerprintForSessionToken(String token) {
+        return java.util.Optional.ofNullable(tokenFingerprints.get(token));
+    }
+
     private void handleHandshake(Member member, ControlMessage message) {
         HostHandshake.Step step = switch (message) {
             case ControlMessage.Hello hello -> member.handshake.onHello(hello);
@@ -256,6 +261,7 @@ public final class RoomBroker {
 
     private void afterAdmit(Member member, HostHandshake.Admit admit) {
         member.fingerprint = admit.fingerprint();
+        member.displayNameClaimed = !admit.displayName().isBlank();
         member.displayName = admit.displayName().isBlank()
                 ? admit.fingerprint().substring(0, 8) : admit.displayName();
         member.publicKeyEncoded = admit.publicKeyEncoded();
@@ -313,7 +319,7 @@ public final class RoomBroker {
         member.token = tokens.issue();
         tokenFingerprints.put(member.token, member.fingerprint);
         member.state = State.ADMITTED;
-        if (!member.displayName.isBlank()) {
+        if (member.displayNameClaimed) {
             ladder.onDisplayNameClaim(member.fingerprint, member.displayName);
         } else {
             cache.firstSeenOf(member.fingerprint);

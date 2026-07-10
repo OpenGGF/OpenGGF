@@ -38,6 +38,9 @@ class TestGhostHub {
         hub.addPlayer(0, "fp-a", a);
         hub.addPlayer(1, "fp-b", b);
         hub.addPlayer(2, "fp-c", c);
+        hub.onAttemptStart(0, 1);
+        hub.onAttemptStart(1, 1);
+        hub.onAttemptStart(2, 1);
     }
 
     private static byte[] frames(int startX, int count) {

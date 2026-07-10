@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.timeattack.AttemptInputRecording;
 import com.openggf.game.timeattack.AttemptStartDescriptor;
+import com.openggf.ghost.GhostFrame;
+import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.client.MasterClient;
 import com.openggf.net.client.RaceClient;
 import com.openggf.net.client.RaceConnection;
@@ -103,8 +105,17 @@ class TestVerifiedRoomEndToEnd {
             recording.appendFrame(8, false);
             byte[] encoded = recording.encode();
             String hash = HexFormat.of().formatHex(recording.sha256());
+            GhostStreamPublisher publisher = new GhostStreamPublisher(race::sendBinary);
+            race.sendControl(new ControlMessage.AttemptStart(1));
+            publisher.beginAttempt(1);
+            for (int frame = 0; frame <= 101; frame++) {
+                publisher.onFrame(new GhostFrame(100 + frame, 200, 1,
+                        false, false, false, 2, false));
+            }
+            publisher.finishAttempt();
             race.sendControl(new ControlMessage.AttemptFinish(
-                    1, 100, 1, 101, hash, "ghost-hash", null));
+                    1, 100, 1, 101, hash,
+                    HexFormat.of().formatHex(publisher.streamHashSha256()), null));
             ControlMessage.RecordingRequest request = awaitPendingAndRequest(race, 10_000);
             assertEquals(hash, request.expectedHashHex());
 

@@ -74,10 +74,10 @@ class TestMasterEndToEnd {
         awaitControl(guest3, ControlMessage.RoundStart.class, 10_000);
         Thread.sleep(3100);
 
-        runAttempt(host, 3600, 100);
-        runAttempt(guest1, 3000, 104);
-        runAttempt(guest2, 3300, 108);
-        runAttempt(guest3, 3900, 112);
+        runAttempt(host, 24, 100);
+        runAttempt(guest1, 20, 104);
+        runAttempt(guest2, 22, 108);
+        runAttempt(guest3, 26, 112);
         await(guest1, RaceClient.GhostData.class::isInstance, 10_000);
         await(guest1, RaceClient.Roster.class::isInstance, 10_000);
 
@@ -145,8 +145,10 @@ class TestMasterEndToEnd {
             publisher.onFrame(frame(x + frame));
         }
         publisher.finishAttempt();
-        connection.sendControl(new ControlMessage.AttemptFinish(1, timeFrames, 5,
-                5 + timeFrames, "ab".repeat(32),
+        int finishFrame = publisher.framesPublished() - 1;
+        int firstInputFrame = finishFrame - timeFrames;
+        connection.sendControl(new ControlMessage.AttemptFinish(1, timeFrames,
+                firstInputFrame, finishFrame, "ab".repeat(32),
                 HexFormat.of().formatHex(publisher.streamHashSha256()), null));
     }
 

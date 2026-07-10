@@ -332,14 +332,18 @@ public final class RoomHost {
                     requestStartRound(configure.config());
                 }
             }
-            case ControlMessage.AttemptStart ignored -> { }
-            case ControlMessage.AttemptReset ignored -> { }
+            case ControlMessage.AttemptStart start ->
+                    hub.onAttemptStart(member.slot, start.attemptId());
+            case ControlMessage.AttemptReset reset ->
+                    hub.onAttemptReset(member.slot, reset.attemptId());
             case ControlMessage.TrackVote vote ->
                     round.onTrackVote(member.slot, vote.trackKey());
             case ControlMessage.AttemptFinish finish -> {
                 HostRoundEngine.FinishOutcome outcome = round.onAttemptFinish(
                         member.slot, member.displayName, member.character,
-                        finish, hub.isAttemptFlagged(member.slot));
+                        finish, !hub.hasFinishEvidence(member.slot,
+                                finish.attemptId(), finish.finishFrame(),
+                                finish.ghostStreamHashHex()));
                 member.finishedThisRound = round.standings().stream()
                         .anyMatch(row -> row.slot() == member.slot);
                 if (outcome != null && outcome.outsideBroadcastCap()) {

@@ -1,6 +1,8 @@
 package com.openggf.net.master;
 
+import com.openggf.ghost.GhostFrame;
 import com.openggf.net.client.ClientHandshake;
+import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.hub.HubConnection;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -190,9 +193,20 @@ class TestRelayRoomManager {
                             "s3k", 0, 0, 60, "OPEN", null))));
             now[0] += 3_000;
             access.room().tick();
+            GhostStreamPublisher publisher = new GhostStreamPublisher(
+                    packet -> access.room().onBinary(connection, packet));
+            access.room().onText(connection, ControlCodec.encode(token,
+                    new ControlMessage.AttemptStart(1)));
+            publisher.beginAttempt(1);
+            for (int frame = 0; frame <= 101; frame++) {
+                publisher.onFrame(new GhostFrame(100 + frame, 200, 1,
+                        false, false, false, 2, false));
+            }
+            publisher.finishAttempt();
             access.room().onText(connection, ControlCodec.encode(token,
                     new ControlMessage.AttemptFinish(1, 100, 1, 101,
-                            "aa", "bb", null)));
+                            "aa", HexFormat.of().formatHex(
+                            publisher.streamHashSha256()), null)));
 
             assertInstanceOf(ControlMessage.RecordingRequest.class,
                     lastOfType(connection, ControlMessage.RecordingRequest.class));
@@ -200,7 +214,7 @@ class TestRelayRoomManager {
                     jobs.stateOf("vj-1"));
             assertEquals("PENDING",
                     access.room().round().standings().getFirst().verifyState());
-            jobs.onRecordingUploaded("aa");
+            jobs.onRecordingUploaded("aa", player.fingerprint());
             VerificationJobQueue.Job job = jobs.lease("worker", java.util.Set.of("0.6:cafe"))
                     .orElseThrow();
             jobs.complete(job.jobId(), "worker").orElseThrow();

@@ -29,6 +29,7 @@ class TestGhostHubScaleMode {
         hub.addPlayer(1, "fp-near", near);
         hub.addPlayer(2, "fp-far", far);
         hub.addPlayer(3, "fp-idle", idle);
+        for (int slot = 0; slot < 4; slot++) hub.onAttemptStart(slot, 1);
     }
 
     private static byte[] frames(int x, int count, boolean finishedLast) {
@@ -99,6 +100,8 @@ class TestGhostHubScaleMode {
         smallRoom.setTrack("s3k", 0, 0);
         smallRoom.addPlayer(0, "a", a);
         smallRoom.addPlayer(1, "b", b);
+        smallRoom.onAttemptStart(0, 1);
+        smallRoom.onAttemptStart(1, 1);
         smallRoom.onBinary(0, GhostPackets.encodeFrames(1, 0, frames(1000, 3, false)));
         smallRoom.onBinary(1, GhostPackets.encodeFrames(1, 0, frames(60_000, 3, false)));
         for (int tick = 0; tick < GhostHub.ROSTER_INTERVAL_TICKS + 1; tick++) {

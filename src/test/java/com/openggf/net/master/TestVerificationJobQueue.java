@@ -19,7 +19,7 @@ class TestVerificationJobQueue {
         VerificationJobQueue queue = new VerificationJobQueue(() -> 0, 100);
         String id = queue.submit(job("0.6:cafe", "aa"), 1000);
         assertEquals(VerificationJobQueue.State.AWAITING_UPLOAD, queue.stateOf(id));
-        queue.onRecordingUploaded("aa");
+        queue.onRecordingUploaded("aa", "player");
         assertEquals(VerificationJobQueue.State.QUEUED, queue.stateOf(id));
     }
 
@@ -27,7 +27,7 @@ class TestVerificationJobQueue {
     void leaseOnlyMatchingFingerprintAndOnlyQueued() {
         VerificationJobQueue queue = new VerificationJobQueue(() -> 0, 100);
         queue.submit(job("0.6:cafe", "aa"), 1000);
-        queue.onRecordingUploaded("aa");
+        queue.onRecordingUploaded("aa", "player");
         assertTrue(queue.lease("wrong", Set.of("0.7:beef")).isEmpty());
         assertTrue(queue.lease("right", Set.of("0.6:cafe")).isPresent());
         assertTrue(queue.lease("other", Set.of("0.6:cafe")).isEmpty());
@@ -51,7 +51,7 @@ class TestVerificationJobQueue {
         long[] now = {0};
         VerificationJobQueue queue = new VerificationJobQueue(() -> now[0], 10);
         String id = queue.submit(job("fp", "aa"), 100);
-        queue.onRecordingUploaded("aa");
+        queue.onRecordingUploaded("aa", "player");
         queue.lease("w1", Set.of("fp")).orElseThrow();
         now[0] = 11;
         assertEquals(1, queue.requeueExpiredLeases());
@@ -64,12 +64,23 @@ class TestVerificationJobQueue {
     void completeRequiresLeaseholderAndIsIdempotent() {
         VerificationJobQueue queue = new VerificationJobQueue(() -> 0, 100);
         String id = queue.submit(job("fp", "aa"), 1000);
-        queue.onRecordingUploaded("aa");
+        queue.onRecordingUploaded("aa", "player");
         assertTrue(queue.complete(id, "w1").isEmpty());
         queue.lease("w1", Set.of("fp")).orElseThrow();
         assertTrue(queue.complete(id, "w2").isEmpty());
         assertEquals(VerificationJobQueue.State.LEASED, queue.stateOf(id));
         assertTrue(queue.complete(id, "w1").isPresent());
         assertTrue(queue.complete(id, "w1").isEmpty());
+    }
+
+    @Test
+    void uploadMustMatchAwaitingJobIdentity() {
+        VerificationJobQueue queue = new VerificationJobQueue(() -> 0, 100);
+        String id = queue.submit(job("fp", "aa"), 1000);
+        assertTrue(!queue.awaitsUpload("aa", "attacker"));
+        assertTrue(!queue.onRecordingUploaded("aa", "attacker"));
+        assertEquals(VerificationJobQueue.State.AWAITING_UPLOAD, queue.stateOf(id));
+        assertTrue(queue.onRecordingUploaded("aa", "player"));
+        assertEquals(VerificationJobQueue.State.QUEUED, queue.stateOf(id));
     }
 }

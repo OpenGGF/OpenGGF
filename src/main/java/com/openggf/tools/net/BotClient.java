@@ -1,8 +1,8 @@
 package com.openggf.tools.net;
 
 import com.openggf.ghost.GhostFrame;
-import com.openggf.ghost.GhostFrameCodec;
 import com.openggf.net.client.ClientHandshake;
+import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.hub.HubConnection;
 import com.openggf.net.hub.RoomHost;
 import com.openggf.net.identity.PlayerIdentity;
@@ -12,6 +12,7 @@ import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.Protocol;
 
 import java.nio.file.Path;
+import java.util.HexFormat;
 
 /** Headless, ROM-free room participant used by {@link GhostLoadTestTool}. */
 public final class BotClient {
@@ -21,6 +22,7 @@ public final class BotClient {
     private String token;
     private int slot = -1;
     private int nextFrame;
+    private GhostStreamPublisher publisher;
 
     public BotClient(RoomHost room, GhostLoadTestTool.Behavior behavior,
                      Path identityDir, String fingerprint) throws Exception {
@@ -45,6 +47,7 @@ public final class BotClient {
         if (connection.closed || slot < 0) {
             return;
         }
+        ensureAttemptStarted();
         switch (behavior) {
             case NORMAL, ADVERSARIAL_MIX -> publishFrames(3, false);
             case PACING_SLOW -> publishFrames(1, false);
@@ -64,9 +67,12 @@ public final class BotClient {
         if (connection.closed || token == null || behavior != GhostLoadTestTool.Behavior.NORMAL) {
             return;
         }
+        publisher.finishAttempt();
+        int finishFrame = publisher.framesPublished() - 1;
         room.onText(connection, ControlCodec.encode(token,
-                new ControlMessage.AttemptFinish(1, Math.max(1, nextFrame), 0,
-                        nextFrame, "ab".repeat(32), "cd".repeat(32), null)));
+                new ControlMessage.AttemptFinish(1, finishFrame, 0,
+                        finishFrame, "ab".repeat(32), HexFormat.of().formatHex(
+                        publisher.streamHashSha256()), null)));
     }
 
     public boolean adversaryCaught() {
@@ -84,18 +90,25 @@ public final class BotClient {
     }
 
     private void publishFrames(int count, boolean teleport) {
-        byte[] data = new byte[count * GhostFrameCodec.BYTES];
         for (int index = 0; index < count; index++) {
-            int frame = nextFrame + index;
+            int frame = nextFrame++;
             int base = slot * 32;
             int x = teleport ? base + ((frame & 1) == 0 ? 0 : 1000)
                     : base + frame / 3;
-            GhostFrameCodec.encode(new GhostFrame(x, 100, 1,
-                    false, false, false, 0, false), data,
-                    index * GhostFrameCodec.BYTES);
+            publisher.onFrame(new GhostFrame(x, 100, 1,
+                    false, false, false, 0, false));
         }
-        room.onBinary(connection, GhostPackets.encodeFrames(1, nextFrame, data));
-        nextFrame += count;
+    }
+
+    private void ensureAttemptStarted() {
+        if (publisher != null) {
+            return;
+        }
+        room.onText(connection, ControlCodec.encode(token,
+                new ControlMessage.AttemptStart(1)));
+        publisher = new GhostStreamPublisher(
+                packet -> room.onBinary(connection, packet));
+        publisher.beginAttempt(1);
     }
 
     private static final class Connection implements HubConnection {

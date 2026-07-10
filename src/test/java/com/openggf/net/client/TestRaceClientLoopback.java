@@ -77,6 +77,7 @@ class TestRaceClientLoopback {
         byte[] frame = new byte[GhostFrameCodec.BYTES];
         GhostFrameCodec.encode(new GhostFrame(100, 200, 1,
                 false, false, false, 2, false), frame, 0);
+        a.sendControl(new ControlMessage.AttemptStart(1));
         a.sendBinary(GhostPackets.encodeFrames(1, 0, frame));
         RaceClient.InboundEvent aggregate = await(b, e -> e instanceof RaceClient.GhostData);
         GhostPackets.Aggregate decoded = ((RaceClient.GhostData) aggregate).aggregate();

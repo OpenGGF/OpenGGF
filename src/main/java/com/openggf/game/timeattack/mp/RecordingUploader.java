@@ -57,30 +57,61 @@ public final class RecordingUploader implements AutoCloseable {
 
     public static String resolveUploadUrl(String uploadUrlOrPath,
                                           String configuredMasterUrl) {
+        URI masterOrigin = masterHttpOrigin(configuredMasterUrl);
         URI requested = URI.create(Objects.requireNonNull(uploadUrlOrPath,
                 "uploadUrlOrPath"));
+        if (requested.getPath() == null
+                || !requested.getPath().startsWith("/recordings/")) {
+            throw new IllegalArgumentException("upload URL must target /recordings/");
+        }
         if (requested.isAbsolute()) {
-            if (!"http".equalsIgnoreCase(requested.getScheme())
-                    && !"https".equalsIgnoreCase(requested.getScheme())) {
-                throw new IllegalArgumentException("upload URL must use HTTP(S)");
+            if (!sameOrigin(requested, masterOrigin)) {
+                throw new IllegalArgumentException(
+                        "upload URL must match the configured master origin");
             }
             return requested.toString();
         }
-        URI master = URI.create(Objects.requireNonNull(configuredMasterUrl,
-                "configuredMasterUrl"));
-        String scheme = switch (master.getScheme().toLowerCase()) {
+        try {
+            return new URI(masterOrigin.getScheme(), null, masterOrigin.getHost(),
+                    masterOrigin.getPort(), requested.getPath(), requested.getQuery(), null)
+                    .toString();
+        } catch (java.net.URISyntaxException impossible) {
+            throw new IllegalArgumentException("invalid upload URL", impossible);
+        }
+    }
+
+    private static URI masterHttpOrigin(String configuredMasterUrl) {
+        if (configuredMasterUrl == null || configuredMasterUrl.isBlank()) {
+            throw new IllegalArgumentException("configured master URL is required");
+        }
+        URI master = URI.create(configuredMasterUrl);
+        String scheme = switch (String.valueOf(master.getScheme()).toLowerCase()) {
             case "ws" -> "http";
             case "wss" -> "https";
             default -> throw new IllegalArgumentException(
                     "configured master URL must use WS(S)");
         };
-        try {
-            return new URI(scheme, master.getUserInfo(), master.getHost(),
-                    master.getPort(), requested.getPath(), requested.getQuery(), null)
-                    .toString();
-        } catch (java.net.URISyntaxException impossible) {
-            throw new IllegalArgumentException("invalid upload URL", impossible);
+        if (master.getHost() == null || master.getHost().isBlank()) {
+            throw new IllegalArgumentException("configured master URL must include a host");
         }
+        try {
+            return new URI(scheme, null, master.getHost(), master.getPort(),
+                    null, null, null);
+        } catch (java.net.URISyntaxException impossible) {
+            throw new IllegalArgumentException("invalid master URL", impossible);
+        }
+    }
+
+    private static boolean sameOrigin(URI requested, URI master) {
+        return requested.getScheme().equalsIgnoreCase(master.getScheme())
+                && requested.getHost() != null
+                && requested.getHost().equalsIgnoreCase(master.getHost())
+                && effectivePort(requested) == effectivePort(master);
+    }
+
+    private static int effectivePort(URI uri) {
+        if (uri.getPort() >= 0) return uri.getPort();
+        return "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
     }
 
     @Override

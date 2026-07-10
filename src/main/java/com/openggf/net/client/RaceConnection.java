@@ -11,8 +11,8 @@ public interface RaceConnection {
     void sendBinary(byte[] data);
     int playerSlot();
     String sessionToken();
-    /** Master admission token used for out-of-band HTTP; direct rooms reuse the room token. */
-    default String uploadSessionToken() { return sessionToken(); }
+    /** Master admission token used for out-of-band HTTP; direct rooms have none. */
+    default String uploadSessionToken() { return null; }
     ControlMessage.JoinAccepted joinAccepted();
     boolean isOpen();
     void close();

@@ -19,11 +19,14 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 
 import java.security.MessageDigest;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.HexFormat;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 
@@ -40,7 +43,7 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
     private record ResponseData(HttpResponseStatus status, String contentType, byte[] body) { }
 
     private final MasterConfig config;
-    private final Predicate<String> sessionTokenValid;
+    private final Function<String, Optional<String>> sessionIdentity;
     private final RecordingBlobStore blobs;
     private final VerifierRegistry verifiers;
     private final VerificationJobQueue jobs;
@@ -48,14 +51,17 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
     private final LongSupplier clock;
     private final Executor brokerLoop;
     private final BiConsumer<VerificationJobQueue.Job, Boolean> verdictRouter;
+    private final Map<String, Long> lastUploadByIdentity;
 
-    public MasterHttpRoutes(MasterConfig config, Predicate<String> sessionTokenValid,
+    public MasterHttpRoutes(MasterConfig config,
+                            Function<String, Optional<String>> sessionIdentity,
                             RecordingBlobStore blobs, VerifierRegistry verifiers,
                             VerificationJobQueue jobs, VerdictConsequences consequences,
                             LongSupplier clock, Executor brokerLoop,
-                            BiConsumer<VerificationJobQueue.Job, Boolean> verdictRouter) {
+                            BiConsumer<VerificationJobQueue.Job, Boolean> verdictRouter,
+                            Map<String, Long> lastUploadByIdentity) {
         this.config = config;
-        this.sessionTokenValid = sessionTokenValid;
+        this.sessionIdentity = sessionIdentity;
         this.blobs = blobs;
         this.verifiers = verifiers;
         this.jobs = jobs;
@@ -63,6 +69,29 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
         this.clock = clock;
         this.brokerLoop = brokerLoop;
         this.verdictRouter = verdictRouter;
+        this.lastUploadByIdentity = lastUploadByIdentity;
+    }
+
+    public MasterHttpRoutes(MasterConfig config,
+                            Function<String, Optional<String>> sessionIdentity,
+                            RecordingBlobStore blobs, VerifierRegistry verifiers,
+                            VerificationJobQueue jobs, VerdictConsequences consequences,
+                            LongSupplier clock, Executor brokerLoop,
+                            BiConsumer<VerificationJobQueue.Job, Boolean> verdictRouter) {
+        this(config, sessionIdentity, blobs, verifiers, jobs, consequences, clock,
+                brokerLoop, verdictRouter, new HashMap<>());
+    }
+
+    /** Compatibility constructor for focused route tests. */
+    public MasterHttpRoutes(MasterConfig config, Predicate<String> sessionTokenValid,
+                            RecordingBlobStore blobs, VerifierRegistry verifiers,
+                            VerificationJobQueue jobs, VerdictConsequences consequences,
+                            LongSupplier clock, Executor brokerLoop,
+                            BiConsumer<VerificationJobQueue.Job, Boolean> verdictRouter) {
+        this(config, (Function<String, Optional<String>>) token ->
+                        sessionTokenValid.test(token)
+                                ? Optional.of("player") : Optional.empty(),
+                blobs, verifiers, jobs, consequences, clock, brokerLoop, verdictRouter);
     }
 
     @Override
@@ -139,7 +168,9 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
 
     private ResponseData putRecording(RequestData request) {
         String token = bearer(request.authorization());
-        if (token == null || !sessionTokenValid.test(token)) {
+        Optional<String> identity = token == null
+                ? Optional.empty() : sessionIdentity.apply(token);
+        if (identity.isEmpty()) {
             return response(HttpResponseStatus.UNAUTHORIZED);
         }
         if (request.body().length > config.maxRecordingBytes()) {
@@ -150,8 +181,21 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
         if (!actual.equals(hash)) {
             return response(HttpResponseStatus.BAD_REQUEST);
         }
-        blobs.put(hash, request.body());
-        jobs.onRecordingUploaded(hash);
+        if (!jobs.awaitsUpload(hash, identity.orElseThrow())) {
+            return response(HttpResponseStatus.CONFLICT);
+        }
+        long now = clock.getAsLong();
+        Long lastUpload = lastUploadByIdentity.get(identity.orElseThrow());
+        if (lastUpload != null
+                && now - lastUpload < config.recordingUploadMinIntervalMillis()) {
+            return response(HttpResponseStatus.TOO_MANY_REQUESTS);
+        }
+        if (!blobs.putIfWithinLimit(hash, request.body(),
+                config.maxRecordingStorageBytes())) {
+            return response(HttpResponseStatus.INSUFFICIENT_STORAGE);
+        }
+        jobs.onRecordingUploaded(hash, identity.orElseThrow());
+        lastUploadByIdentity.put(identity.orElseThrow(), now);
         return response(HttpResponseStatus.NO_CONTENT);
     }
 

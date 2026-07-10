@@ -160,8 +160,9 @@ class TestRoomHost {
     void ghostFramesFlowToOtherPlayersAfterTick() throws Exception {
         FakeHubConnection a = new FakeHubConnection();
         FakeHubConnection b = new FakeHubConnection();
-        admit(a, "A", dir.resolve("a"));
+        String token = admit(a, "A", dir.resolve("a")).sessionToken();
         admit(b, "B", dir.resolve("b"));
+        room.onText(a, ControlCodec.encode(token, new ControlMessage.AttemptStart(1)));
         byte[] frame = new byte[GhostFrameCodec.BYTES];
         GhostFrameCodec.encode(new GhostFrame(100, 200, 1,
                 false, false, false, 2, false), frame, 0);

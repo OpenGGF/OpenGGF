@@ -56,12 +56,28 @@ public final class VerificationJobQueue {
         return id;
     }
 
-    public void onRecordingUploaded(String recordingHashHex) {
+    public boolean awaitsUpload(String recordingHashHex, String identityFingerprint) {
+        return entries.values().stream()
+                .anyMatch(entry -> entry.state == State.AWAITING_UPLOAD
+                        && entry.job.inputRecordingHashHex().equalsIgnoreCase(
+                        recordingHashHex)
+                        && entry.job.identityFingerprint().equals(identityFingerprint));
+    }
+
+    public boolean onRecordingUploaded(String recordingHashHex,
+                                       String identityFingerprint) {
+        boolean[] matched = {false};
         entries.values().stream()
                 .filter(entry -> entry.state == State.AWAITING_UPLOAD)
                 .filter(entry -> entry.job.inputRecordingHashHex()
                         .equalsIgnoreCase(recordingHashHex))
-                .forEach(entry -> entry.state = State.QUEUED);
+                .filter(entry -> entry.job.identityFingerprint()
+                        .equals(identityFingerprint))
+                .forEach(entry -> {
+                    entry.state = State.QUEUED;
+                    matched[0] = true;
+                });
+        return matched[0];
     }
 
     public Optional<Job> lease(String workerId, Set<String> supportedFingerprints) {

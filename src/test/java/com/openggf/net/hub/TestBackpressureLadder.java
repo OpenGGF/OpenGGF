@@ -34,6 +34,9 @@ class TestBackpressureLadder {
         hub.addPlayer(0, "sender", sender);
         hub.addPlayer(1, "slow", slow);
         hub.addPlayer(2, "healthy", healthy);
+        hub.onAttemptStart(0, 1);
+        hub.onAttemptStart(1, 1);
+        hub.onAttemptStart(2, 1);
     }
 
     private void streamNearEveryone(int startIndex) {

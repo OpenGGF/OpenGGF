@@ -140,6 +140,15 @@ class TestRoomBroker {
     }
 
     @Test
+    void blankDisplayNameUsesFallbackWithoutPersistingIdentity(@TempDir Path idDir)
+            throws Exception {
+        PlayerIdentity identity = PlayerIdentity.loadOrCreate(idDir);
+        FakeConnection connection = new FakeConnection();
+        assertNotNull(admit(connection, idDir, ""));
+        assertTrue(store.find(identity.fingerprint()).isEmpty());
+    }
+
+    @Test
     void newTierCannotCreateEstablishedCan(@TempDir Path idDir) throws Exception {
         FakeConnection connection = new FakeConnection();
         String token = admit(connection, idDir, "A");

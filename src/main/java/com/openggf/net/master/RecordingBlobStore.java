@@ -29,6 +29,30 @@ public final class RecordingBlobStore {
         }
     }
 
+    public boolean putIfWithinLimit(String hashHex, byte[] bytes, long maxTotalBytes) {
+        Path target = pathFor(hashHex);
+        if (Files.isRegularFile(target)) {
+            return true;
+        }
+        if (totalBytes() + bytes.length > maxTotalBytes) {
+            return false;
+        }
+        put(hashHex, bytes);
+        return true;
+    }
+
+    public long totalBytes() {
+        try (Stream<Path> files = Files.list(dir)) {
+            long total = 0;
+            for (Path path : files.filter(Files::isRegularFile).toList()) {
+                total = Math.addExact(total, Files.size(path));
+            }
+            return total;
+        } catch (IOException | ArithmeticException failure) {
+            throw new IllegalStateException("unable to measure recording store", failure);
+        }
+    }
+
     public Optional<byte[]> get(String hashHex) {
         Path path = pathFor(hashHex);
         if (!Files.isRegularFile(path)) {

@@ -39,6 +39,7 @@ class TestMasterHttpRoutes {
     private VerifierRegistry verifiers;
     private VerificationJobQueue jobs;
     private EmbeddedChannel channel;
+    private long now = 100;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -47,19 +48,20 @@ class TestMasterHttpRoutes {
                 plaintextForTest: true
                 verifierRegistrationToken: register-me
                 maxRecordingBytes: 8
+                maxRecordingStorageBytes: 4
+                recordingUploadMinIntervalMillis: 10
                 """);
         config = MasterConfig.load(yaml);
-        long[] now = {100};
         store = new SqliteIdentityStore(dir.resolve("ids.db"));
         TrustLadder ladder = new TrustLadder(store,
-                new NewIdentityCache(100, 10_000, () -> now[0]),
-                config.thresholds(), () -> now[0]);
-        verifiers = new VerifierRegistry(() -> now[0], 1000);
-        jobs = new VerificationJobQueue(() -> now[0], 1000);
+                new NewIdentityCache(100, 10_000, () -> now),
+                config.thresholds(), () -> now);
+        verifiers = new VerifierRegistry(() -> now, 1000);
+        jobs = new VerificationJobQueue(() -> now, 1000);
         channel = new EmbeddedChannel(new MasterHttpRoutes(config,
                 "session"::equals, new RecordingBlobStore(dir.resolve("recordings")),
                 verifiers, jobs, new VerdictConsequences(store, ladder,
-                () -> now[0], 0), () -> now[0], Runnable::run,
+                () -> now, 0), () -> now, Runnable::run,
                 (job, pass) -> { }));
     }
 
@@ -82,8 +84,44 @@ class TestMasterHttpRoutes {
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE,
                 send(HttpMethod.PUT, "/recordings/" + hash, new byte[9],
                         "Bearer session", null).status());
+        assertEquals(HttpResponseStatus.CONFLICT,
+                send(HttpMethod.PUT, "/recordings/" + hash, body,
+                        "Bearer session", null).status());
+        jobs.submit(job("0.6:cafe", hash), 1000);
         assertEquals(HttpResponseStatus.NO_CONTENT,
                 send(HttpMethod.PUT, "/recordings/" + hash, body,
+                        "Bearer session", null).status());
+    }
+
+    @Test
+    void uploadsAreRateAndTotalStorageBounded() throws Exception {
+        byte[] first = {1, 2};
+        String firstHash = HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(first));
+        jobs.submit(job("fp", firstHash), 1000);
+        assertEquals(HttpResponseStatus.NO_CONTENT,
+                send(HttpMethod.PUT, "/recordings/" + firstHash, first,
+                        "Bearer session", null).status());
+
+        byte[] second = {3, 4};
+        String secondHash = HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(second));
+        jobs.submit(job("fp", secondHash), 1000);
+        assertEquals(HttpResponseStatus.TOO_MANY_REQUESTS,
+                send(HttpMethod.PUT, "/recordings/" + secondHash, second,
+                        "Bearer session", null).status());
+        now += 11;
+        assertEquals(HttpResponseStatus.NO_CONTENT,
+                send(HttpMethod.PUT, "/recordings/" + secondHash, second,
+                        "Bearer session", null).status());
+
+        byte[] third = {5};
+        String thirdHash = HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(third));
+        jobs.submit(job("fp", thirdHash), 1000);
+        now += 11;
+        assertEquals(HttpResponseStatus.INSUFFICIENT_STORAGE,
+                send(HttpMethod.PUT, "/recordings/" + thirdHash, third,
                         "Bearer session", null).status());
     }
 
@@ -93,7 +131,7 @@ class TestMasterHttpRoutes {
         WorkerAuth worker = register(identity, Set.of("0.6:cafe"));
         VerificationJobQueue.Job candidate = job("0.6:cafe", "aa");
         String jobId = jobs.submit(candidate, 1000);
-        jobs.onRecordingUploaded("aa");
+        jobs.onRecordingUploaded("aa", "player");
 
         FullHttpResponse leased = send(HttpMethod.GET, "/verifier/jobs", new byte[0],
                 "Bearer " + worker.token(), worker.id());
@@ -116,7 +154,7 @@ class TestMasterHttpRoutes {
         WorkerAuth worker = register(identity, Set.of("0.6:cafe"));
         for (String result : new String[]{VerdictCodec.RESULT_VOID_NO_UPLOAD, "BOGUS"}) {
             String jobId = jobs.submit(job("0.6:cafe", result), 1000);
-            jobs.onRecordingUploaded(result);
+            jobs.onRecordingUploaded(result, "player");
             FullHttpResponse leased = send(HttpMethod.GET, "/verifier/jobs", new byte[0],
                     "Bearer " + worker.token(), worker.id());
             assertEquals(HttpResponseStatus.OK, leased.status());
@@ -142,7 +180,7 @@ class TestMasterHttpRoutes {
         WorkerAuth second = register(secondIdentity, Set.of("0.6:cafe"));
 
         String unleasedId = jobs.submit(job("0.6:cafe", "u1"), 1000);
-        jobs.onRecordingUploaded("u1");
+        jobs.onRecordingUploaded("u1", "player");
         assertEquals(HttpResponseStatus.BAD_REQUEST,
                 postVerdict(first, unleasedId, "u1", VerdictCodec.RESULT_PASS,
                         new byte[]{1, 2, 3}).status());

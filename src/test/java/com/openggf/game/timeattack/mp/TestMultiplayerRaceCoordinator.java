@@ -52,6 +52,9 @@ class TestMultiplayerRaceCoordinator {
                 new ControlMessage.RoomDescriptor(
                         "LAN", "s3k", 0, 0, "OPEN", null, 8, false),
                 new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of())));
+        session.onControl(new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig("s3k", 0, 0, 60, "OPEN", null),
+                now, now + 60_000));
         TimeAttackRuntime runtime = armedRuntime(root);
         MultiplayerRaceCoordinator coordinator =
                 new MultiplayerRaceCoordinator(transport, session, () -> now);
@@ -93,6 +96,47 @@ class TestMultiplayerRaceCoordinator {
                 .map(ControlMessage.AttemptFinish.class::cast).findFirst().orElseThrow();
         assertEquals(64, finish.inputRecordingHashHex().length());
         assertEquals(64, finish.ghostStreamHashHex().length());
+    }
+
+    @Test
+    void attachingAfterLevelReadyRecoversTheActiveAttempt(@TempDir Path root) {
+        Rig rig = rig(root, false);
+        TimeAttackRuntimeTestBridge.begin(rig.runtime(), "0.6:cafe");
+        assertTrue(rig.transport().sentControl.stream()
+                .noneMatch(ControlMessage.AttemptStart.class::isInstance));
+
+        rig.coordinator().attachRuntime(rig.runtime());
+
+        assertEquals(1, rig.transport().sentControl.stream()
+                .filter(ControlMessage.AttemptStart.class::isInstance).count());
+        for (int frame = 0; frame < 3; frame++) {
+            TimeAttackRuntimeTestBridge.tick(
+                    rig.runtime(), 0, false, frame(10 + frame));
+        }
+        assertFalse(rig.transport().sentBinary.isEmpty());
+    }
+
+    @Test
+    void countdownDefersAttemptStartAndPacingUntilRunning(@TempDir Path root) {
+        Rig rig = rig(root);
+        ControlMessage.RoundConfig config = new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 60, "OPEN", null);
+        rig.session().onControl(new ControlMessage.RoundStart(
+                config, now + 3_000, now + 63_000));
+
+        TimeAttackRuntimeTestBridge.begin(rig.runtime(), "0.6:cafe");
+        assertTrue(rig.transport().sentControl.stream()
+                .noneMatch(ControlMessage.AttemptStart.class::isInstance));
+
+        now += 3_000;
+        rig.coordinator().pump();
+        assertEquals(1, rig.transport().sentControl.stream()
+                .filter(ControlMessage.AttemptStart.class::isInstance).count());
+        for (int frame = 0; frame < 3; frame++) {
+            TimeAttackRuntimeTestBridge.tick(
+                    rig.runtime(), 0, false, frame(10 + frame));
+        }
+        assertFalse(rig.transport().sentBinary.isEmpty());
     }
 
     @Test

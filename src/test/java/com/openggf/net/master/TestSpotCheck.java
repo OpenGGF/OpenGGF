@@ -1,6 +1,8 @@
 package com.openggf.net.master;
 
+import com.openggf.ghost.GhostFrame;
 import com.openggf.net.client.ClientHandshake;
+import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.hub.HubConnection;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 
@@ -67,16 +70,12 @@ class TestSpotCheck {
                             "s3k", 0, 0, 1, "OPEN", null))));
             now[0] += 3_000;
             access.room().tick();
-            ControlMessage.AttemptFinish firstFinish = new ControlMessage.AttemptFinish(
-                    1, 100, 5, 105, "aa", "ga", null);
-            ControlMessage.AttemptFinish secondFinish = new ControlMessage.AttemptFinish(
-                    1, 120, 7, 127, "bb", "gb", null);
-            access.room().onText(firstConnection,
-                    ControlCodec.encode(firstToken, firstFinish));
             String secondToken = last(secondConnection,
                     ControlMessage.JoinAccepted.class).sessionToken();
-            access.room().onText(secondConnection,
-                    ControlCodec.encode(secondToken, secondFinish));
+            ControlMessage.AttemptFinish firstFinish = finish(
+                    access, firstConnection, firstToken, 1, 100, 5, "aa", 100);
+            ControlMessage.AttemptFinish secondFinish = finish(
+                    access, secondConnection, secondToken, 1, 120, 7, "bb", 300);
             now[0] += 1_001;
             manager.tickAll();
 
@@ -91,7 +90,7 @@ class TestSpotCheck {
             assertEquals(secondFinish.finishFrame(), secondJob.finishFrame());
             List<ControlMessage.StandingsRow> before = access.room().round().standings();
 
-            jobs.onRecordingUploaded("aa");
+            jobs.onRecordingUploaded("aa", first.fingerprint());
             VerificationJobQueue.Job leased = jobs.lease("worker", Set.of("0.6:cafe"))
                     .orElseThrow();
             jobs.complete(leased.jobId(), "worker").orElseThrow();
@@ -113,13 +112,33 @@ class TestSpotCheck {
                     "s3k", 0, 0, 1, "OPEN", null));
             now[0] += 3_000;
             access.room().tick();
-            access.room().onText(firstConnection, ControlCodec.encode(firstToken,
-                    new ControlMessage.AttemptFinish(2, 90, 1, 91,
-                            "cc", "gc", null)));
+            finish(access, firstConnection, firstToken, 2, 90, 1, "cc", 500);
             now[0] += 1_001;
             manager.tickAll();
             assertEquals(2, jobs.size(), "hourly throttle must suppress repeat spot-check");
         }
+    }
+
+    private static ControlMessage.AttemptFinish finish(
+            RelayRoomManager.RoomAccess access, Connection connection, String token,
+            int attemptId, int timeFrames, int firstInputFrame, String inputHash,
+            int startX) {
+        int finishFrame = firstInputFrame + timeFrames;
+        GhostStreamPublisher publisher = new GhostStreamPublisher(
+                packet -> access.room().onBinary(connection, packet));
+        access.room().onText(connection, ControlCodec.encode(token,
+                new ControlMessage.AttemptStart(attemptId)));
+        publisher.beginAttempt(attemptId);
+        for (int frame = 0; frame <= finishFrame; frame++) {
+            publisher.onFrame(new GhostFrame(startX + frame, 200, 1,
+                    false, false, false, 2, false));
+        }
+        publisher.finishAttempt();
+        ControlMessage.AttemptFinish finish = new ControlMessage.AttemptFinish(
+                attemptId, timeFrames, firstInputFrame, finishFrame, inputHash,
+                HexFormat.of().formatHex(publisher.streamHashSha256()), null);
+        access.room().onText(connection, ControlCodec.encode(token, finish));
+        return finish;
     }
 
     private static Connection admit(RelayRoomManager manager,

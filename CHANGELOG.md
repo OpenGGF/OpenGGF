@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Time-attack verification trust boundaries are now enforced end to end.** Network attempts begin only when the authoritative round enters `RUNNING`; finishes require a server-observed start, a contiguous spawn-to-finish ghost stream, pacing validation, consistent timing fields, and a server-computed SHA-256 match. Recording requests are pinned to the configured master origin, uploads require an identity-owned awaiting job, and the master applies per-identity rate and total-storage caps without promoting blank fallback display names into durable identity rows.
 - **Master-server shutdown now drains relay-room disconnect cleanup before terminating event loops.** Accepted client channels and periodic jobs are tracked explicitly; shutdown closes sockets, drains broker/room callbacks, and only then stops executors, avoiding rejected room-close tasks during clean process/test teardown.
 - **Multiplayer time attack (phase 5): replay verification and verified rooms.** Adds the `openggf-verifier` replay service, TRUSTED-gated verified relay rooms with pending-to-verified standings, HTTPS input-recording uploads, signed verdicts with cheat sanctions, and casual-room spot-checks.
 - **Multiplayer time attack (phase 4): race presentation and between-round polish.** Adds podium results, authoritative next-track voting, open-character standings badges, ghost nameplates and finish-state dimming, post-finish spectator panning, and a roster-driven minimap strip.

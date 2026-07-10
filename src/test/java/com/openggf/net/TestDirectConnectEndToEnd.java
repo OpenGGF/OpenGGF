@@ -68,8 +68,10 @@ class TestDirectConnectEndToEnd {
             publisher.onFrame(frame(100 + i));
         }
         publisher.finishAttempt();
+        int finishFrame = frames - 1;
+        int firstInputFrame = finishFrame - timeFrames;
         client.sendControl(new ControlMessage.AttemptFinish(attemptId, timeFrames,
-                5, 5 + timeFrames, "ab".repeat(32),
+                firstInputFrame, finishFrame, "ab".repeat(32),
                 HexFormat.of().formatHex(publisher.streamHashSha256()), null));
     }
 
@@ -101,8 +103,8 @@ class TestDirectConnectEndToEnd {
         await(guest, event -> isMessage(event, ControlMessage.RoundStart.class), 10_000);
         Thread.sleep(3100);
 
-        runAttempt(host, 1, 30, 3600);
-        runAttempt(guest, 1, 30, 3000);
+        runAttempt(host, 1, 30, 24);
+        runAttempt(guest, 1, 30, 20);
 
         RaceClient.InboundEvent delta = await(host,
                 event -> event instanceof RaceClient.Control control
@@ -112,7 +114,7 @@ class TestDirectConnectEndToEnd {
         List<ControlMessage.StandingsRow> rows =
                 ((ControlMessage.StandingsDelta) ((RaceClient.Control) delta).message()).rows();
         assertEquals("GUEST", rows.get(0).displayName());
-        assertEquals(3000, rows.get(0).bestTimeFrames());
+        assertEquals(20, rows.get(0).bestTimeFrames());
 
         RemoteGhostPlayback playback = new RemoteGhostPlayback();
         long ghostDeadline = System.currentTimeMillis() + 15_000;

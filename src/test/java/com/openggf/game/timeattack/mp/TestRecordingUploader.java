@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRecordingUploader {
@@ -51,8 +52,18 @@ class TestRecordingUploader {
         assertEquals("http://127.0.0.1:1234/recordings/ab",
                 RecordingUploader.resolveUploadUrl(
                         "/recordings/ab", "ws://127.0.0.1:1234/master"));
-        assertEquals("https://cdn.example/recordings/ab",
+        assertEquals("https://m.example/recordings/ab",
+                RecordingUploader.resolveUploadUrl(
+                        "https://m.example/recordings/ab", "wss://m.example/master"));
+        assertThrows(IllegalArgumentException.class, () ->
                 RecordingUploader.resolveUploadUrl(
                         "https://cdn.example/recordings/ab", "wss://m.example/master"));
+        assertThrows(IllegalArgumentException.class, () ->
+                RecordingUploader.resolveUploadUrl(
+                        "http://127.0.0.1/recordings/ab", "wss://m.example/master"));
+        assertThrows(IllegalArgumentException.class, () ->
+                RecordingUploader.resolveUploadUrl("/recordings/ab", ""));
+        assertThrows(IllegalArgumentException.class, () ->
+                RecordingUploader.resolveUploadUrl("/admin", "wss://m.example/master"));
     }
 }

@@ -191,7 +191,11 @@ public final class HostRoundEngine {
                                          boolean attemptFlagged) {
         long now = hubClockMillis.getAsLong();
         if (phase != Phase.RUNNING || now > deadline + FINISH_GRACE_MILLIS
-                || attemptFlagged || finish.timeFrames() <= 0) {
+                || attemptFlagged || finish.timeFrames() <= 0
+                || finish.firstInputFrame() < 0
+                || finish.finishFrame() < finish.firstInputFrame()
+                || finish.finishFrame() - finish.firstInputFrame()
+                != finish.timeFrames()) {
             return null;
         }
         Best existing = bests.get(slot);

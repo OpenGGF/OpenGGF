@@ -41,7 +41,9 @@ public record MasterConfig(
         String verifierRegistrationToken,
         long verifierStaleSeconds,
         long verifierLeaseSeconds,
-        String publicBaseUrl) {
+        String publicBaseUrl,
+        long maxRecordingStorageBytes,
+        long recordingUploadMinIntervalMillis) {
 
     public MasterConfig {
         port = port == null ? 27_900 : port;
@@ -73,6 +75,10 @@ public record MasterConfig(
         verifierStaleSeconds = verifierStaleSeconds <= 0 ? 120 : verifierStaleSeconds;
         verifierLeaseSeconds = verifierLeaseSeconds <= 0 ? 300 : verifierLeaseSeconds;
         publicBaseUrl = publicBaseUrl == null ? "" : publicBaseUrl;
+        maxRecordingStorageBytes = maxRecordingStorageBytes <= 0
+                ? 512L * 1024 * 1024 : maxRecordingStorageBytes;
+        recordingUploadMinIntervalMillis = recordingUploadMinIntervalMillis <= 0
+                ? 1_000 : recordingUploadMinIntervalMillis;
     }
 
     /** Compatibility constructor for phase-3 call sites and configurations. */
@@ -92,13 +98,13 @@ public record MasterConfig(
                 attackModePowBits, attackMode, maxRoomsPerIdentity, maxRoomsPerIp,
                 roomHeartbeatTimeoutSeconds, browserPageSize, identityGcInactiveDays,
                 newIdentityCacheSize, newIdentityCacheTtlMinutes,
-                0, 0, 0, 0, 0, 0, 0, null, 0, 0, "");
+                0, 0, 0, 0, 0, 0, 0, null, 0, 0, "", 0, 0);
     }
 
     public static MasterConfig defaults() {
         return new MasterConfig(null, null, null, false, null, null, null,
                 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, null, 0, 0, "");
+                0, 0, 0, 0, 0, 0, 0, null, 0, 0, "", 0, 0);
     }
 
     public static MasterConfig load(Path yamlFile) throws IOException {

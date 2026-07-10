@@ -4,6 +4,9 @@ import com.openggf.ghost.GhostFrame;
 import com.openggf.ghost.GhostFrameCodec;
 import com.openggf.net.protocol.GhostPackets;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.function.LongSupplier;
 
 /** Per-player ghost-stream contiguity, bounds, speed, rate, and pacing checks. */
@@ -24,7 +27,10 @@ public final class GhostStreamValidator {
     private int nextExpectedFrameIndex;
     private long attemptFirstSeenMillis;
     private boolean attemptFlagged;
+    private boolean attemptStarted;
     private GhostFrame previousFrame;
+    private MessageDigest streamDigest = newDigest();
+    private byte[] sealedStreamHash;
     private int violationCount;
     private double rateTokens = RATE_BURST_FRAMES;
     private long rateLastRefillMillis = Long.MIN_VALUE;
@@ -40,22 +46,39 @@ public final class GhostStreamValidator {
         profile = profileOrNull;
     }
 
+    /** Anchors stream pacing to the server-observed control message, not first data. */
+    public void onAttemptStart(int attemptId) {
+        if (attemptId <= currentAttemptId) {
+            violate("attempt-order", "attempt " + attemptId
+                    + " did not advance past " + currentAttemptId);
+            return;
+        }
+        currentAttemptId = attemptId;
+        nextExpectedFrameIndex = 0;
+        attemptFirstSeenMillis = wallClockMillis.getAsLong();
+        attemptFlagged = false;
+        attemptStarted = true;
+        previousFrame = null;
+        streamDigest = newDigest();
+        sealedStreamHash = null;
+    }
+
+    public void onAttemptReset(int attemptId) {
+        if (attemptId == currentAttemptId) {
+            attemptStarted = false;
+            previousFrame = null;
+        }
+    }
+
     public Verdict onBatch(GhostPackets.FramesBatch batch) {
         long now = wallClockMillis.getAsLong();
         if (batch.attemptId() < currentAttemptId) {
             return Verdict.DROP;
         }
-        if (batch.attemptId() > currentAttemptId) {
-            if (batch.startFrameIndex() != 0) {
-                return violate("attempt-start", "attempt " + batch.attemptId()
-                        + " began at frame " + batch.startFrameIndex());
-            }
-            currentAttemptId = batch.attemptId();
-            nextExpectedFrameIndex = 0;
-            attemptFirstSeenMillis = now;
-            attemptFlagged = false;
-            previousFrame = null;
-        } else if (batch.startFrameIndex() != nextExpectedFrameIndex) {
+        if (!attemptStarted || batch.attemptId() != currentAttemptId) {
+            return violate("attempt-start", "stream arrived without matching AttemptStart");
+        }
+        if (batch.startFrameIndex() != nextExpectedFrameIndex) {
             return violate("frame-gap", "expected frame " + nextExpectedFrameIndex
                     + " got " + batch.startFrameIndex());
         }
@@ -94,20 +117,46 @@ public final class GhostStreamValidator {
             previous = frame;
         }
         previousFrame = previous;
+        streamDigest.update(frameData);
         nextExpectedFrameIndex = batch.startFrameIndex() + batch.frameCount();
 
-        long elapsed = Math.max(0, now - attemptFirstSeenMillis);
-        if (elapsed > PACING_WARMUP_MILLIS
-                && nextExpectedFrameIndex < elapsed * PACING_MIN_FPS / 1000) {
-            if (!attemptFlagged) {
-                attemptFlagged = true;
-                violationCount++;
-                sink.onViolation("pacing", "attempt " + currentAttemptId + " at "
-                        + nextExpectedFrameIndex * 1000L / Math.max(elapsed, 1) + " fps");
-            }
+        if (pacingFlagged(now)) {
             return violationCount >= KICK_THRESHOLD ? Verdict.KICK : Verdict.ACCEPT_FLAGGED;
         }
         return Verdict.ACCEPT;
+    }
+
+    /** True only when the current attempt has an unflagged spawn-to-finish stream. */
+    public boolean hasFinishEvidence(int attemptId, int finishFrame,
+                                     String claimedStreamHashHex) {
+        long now = wallClockMillis.getAsLong();
+        if (!attemptStarted || attemptId != currentAttemptId || finishFrame < 0
+                || nextExpectedFrameIndex != finishFrame + 1) {
+            violate("finish-evidence", "attempt " + attemptId + " expected through frame "
+                    + finishFrame + " but received " + nextExpectedFrameIndex);
+            return false;
+        }
+        if (pacingFlagged(now) || attemptFlagged) {
+            return false;
+        }
+        if (sealedStreamHash == null) {
+            sealedStreamHash = streamDigest.digest();
+        }
+        byte[] claimed;
+        try {
+            if (claimedStreamHashHex == null || claimedStreamHashHex.length() != 64) {
+                throw new IllegalArgumentException("not a SHA-256 hex digest");
+            }
+            claimed = HexFormat.of().parseHex(claimedStreamHashHex);
+        } catch (IllegalArgumentException invalidHash) {
+            violate("stream-hash", "malformed claimed stream hash");
+            return false;
+        }
+        if (!MessageDigest.isEqual(sealedStreamHash, claimed)) {
+            violate("stream-hash", "claimed stream hash does not match accepted frames");
+            return false;
+        }
+        return true;
     }
 
     public boolean isAttemptFlagged() {
@@ -129,9 +178,32 @@ public final class GhostStreamValidator {
         }
     }
 
+    private boolean pacingFlagged(long now) {
+        long elapsed = Math.max(0, now - attemptFirstSeenMillis);
+        if (elapsed <= PACING_WARMUP_MILLIS
+                || nextExpectedFrameIndex >= elapsed * PACING_MIN_FPS / 1000) {
+            return attemptFlagged;
+        }
+        if (!attemptFlagged) {
+            attemptFlagged = true;
+            violationCount++;
+            sink.onViolation("pacing", "attempt " + currentAttemptId + " at "
+                    + nextExpectedFrameIndex * 1000L / Math.max(elapsed, 1) + " fps");
+        }
+        return true;
+    }
+
     private Verdict violate(String kind, String detail) {
         violationCount++;
         sink.onViolation(kind, detail);
         return violationCount >= KICK_THRESHOLD ? Verdict.KICK : Verdict.DROP;
+    }
+
+    private static MessageDigest newDigest() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException unavailable) {
+            throw new IllegalStateException(unavailable);
+        }
     }
 }

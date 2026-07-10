@@ -110,6 +110,9 @@ public final class TimeAttackRuntime {
 
     public void setAttemptListener(AttemptListener listener) {
         this.attemptListener = listener;
+        if (listener != null && isAttemptActive()) {
+            listener.onAttemptBegan(attemptOrdinal);
+        }
     }
 
     public void setExtraGhostSupplier(Supplier<List<ActiveGhost>> supplier) {
