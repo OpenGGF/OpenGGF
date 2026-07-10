@@ -168,7 +168,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
                 base.shieldReactionFlags(),
                 base.enablesPostSpecialTouchAirborneSideVelocityPreservation(),
                 base.attackBouncePolicy(),
-                TouchActorContextPolicy.MAIN_ONLY,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
                 base.stopAfterFirstOverlapPolicy());
     }
 

@@ -271,9 +271,20 @@ and the complete-run frontier moves from f10517 (Sonic boss-hit velocity sign)
 to f10758 (Tails boss-hit velocity sign). Fresh full sweeps pass all 29 S1 and
 all 48 S2 trace replays at this bank point.
 
+Round 19 restores CPU Tails participation in the AIZ miniboss parent response.
+The parent profile was `MAIN_ONLY`, so Tails never reached native
+`Touch_Enemy` boss handling even while attacking. It now uses the shared
+main-plus-sidekick actor policy, allowing the ROM path to negate Tails'
+`x_vel`, `y_vel`, and `ground_vel` and consume the hit
+(`sonic3k.asm:20875-20938`). The focused boss touch-profile test passes and the
+complete-run frontier moves from f10758 (Tails boss-hit velocity sign) to
+f10766 (Tails fixed horizontal speed during the following interaction). The
+all-29 S1/all-48 S2 sweep immediately preceding this S3K-only profile delta is
+green.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f10758. Those causes will be recorded and committed
+banked rounds the current stacked working-tree complete-run frontier is f10766. Those causes will be recorded and committed
 separately as their focused guards are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes
 an earlier f5435 mismatch and must restore/advance that route before the stage

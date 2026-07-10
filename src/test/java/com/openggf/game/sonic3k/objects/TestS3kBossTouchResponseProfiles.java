@@ -53,14 +53,15 @@ class TestS3kBossTouchResponseProfiles {
     }
 
     @Test
-    void aizMinibossParentTouchResponseIsMainPlayerOnly() {
+    void aizMinibossParentTouchResponseIncludesCpuSidekick() {
         AizMinibossInstance boss = new AizMinibossInstance(
                 new ObjectSpawn(0x11F0, 0x0335, 0x91, 0, 0, false, 0));
 
         TouchResponseProfile profile = boss.getTouchResponseProfile();
 
         assertEquals(TouchCategoryDecodeMode.NORMAL, profile.categoryDecodeMode());
-        assertEquals(TouchActorContextPolicy.MAIN_ONLY, profile.actorContextPolicy());
+        assertEquals(TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                profile.actorContextPolicy());
         assertTrue(boss.usesCurrentTouchResponseState(),
                 "Collision_response_list keeps the live AIZ miniboss object-RAM pointer");
     }
