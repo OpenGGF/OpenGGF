@@ -1,7 +1,7 @@
 package com.openggf.net.master;
 
 import com.openggf.net.host.ConnectionHygiene;
-import com.openggf.net.hub.TrackValidationProfileSource;
+import com.openggf.net.hub.BundledProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.Protocol;
 import io.netty.bootstrap.ServerBootstrap;
@@ -91,7 +91,7 @@ public final class MasterServer implements AutoCloseable {
             PlayerIdentity masterIdentity = PlayerIdentity.loadOrCreate(
                     dataDir.resolve("master-identity"));
             RelayRoomManager relays = new RelayRoomManager(masterIdentity, ladder,
-                    TrackValidationProfileSource.none(), roomLoops, brokerLoop, clock,
+                    new BundledProfileSource(), roomLoops, brokerLoop, clock,
                     registry::heartbeat);
             RoomBroker broker = new RoomBroker(masterIdentity, config, registry, store,
                     ladder, cache, clock, relays, tunnels);
