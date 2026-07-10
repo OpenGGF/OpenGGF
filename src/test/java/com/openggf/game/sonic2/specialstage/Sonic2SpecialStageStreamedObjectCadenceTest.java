@@ -57,6 +57,38 @@ class Sonic2SpecialStageStreamedObjectCadenceTest {
     }
 
     @Test
+    void streamedEmeraldRunsRoutineZeroOnItsAllocationAssociatedPass() throws Exception {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager objectManager =
+                new Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager(null);
+        set(objectManager, "objectLocationData", new byte[] {
+                (byte) Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager.MARKER_EMERALD
+        });
+        set(objectManager, "currentPosition", 0);
+
+        Sonic2TrackAnimator trackAnimator = new Sonic2TrackAnimator(null);
+        trackAnimator.initializeWithMockLayout();
+        set(manager, "objectManager", objectManager);
+        set(manager, "trackAnimator", trackAnimator);
+        set(manager, "playerBootstrapPhase", Sonic2SpecialStageManager.PlayerBootstrapPhase.INITIALIZED);
+        set(manager, "drawingIndex", 4);
+        set(manager, "lastDrawingIndex", 3);
+
+        invoke(manager, "streamSpecialStageObjects");
+
+        Sonic2SpecialStageEmerald emerald = objectManager.getActiveEmerald();
+        assertTrue(emerald.restrictsControlsToStart(),
+                "Obj59 routine zero sets SS_Pause_Only_flag on its allocation-associated pass");
+        assertEquals(1, emerald.captureRewindSnapshot().emeraldPhaseTimer(),
+                "allocation must contribute exactly one of Obj59's sixty initialization passes");
+
+        set(manager, "drawingIndex", 0);
+        invoke(manager, "executeActiveSpecialStageObjects");
+        assertEquals(2, emerald.captureRewindSnapshot().emeraldPhaseTimer(),
+                "the following active pass must advance the delay exactly once more");
+    }
+
+    @Test
     void firstPlayerToCollectSharedRingConsumesCollisionForBothPlayers() throws Exception {
         Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
         Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager objectManager =

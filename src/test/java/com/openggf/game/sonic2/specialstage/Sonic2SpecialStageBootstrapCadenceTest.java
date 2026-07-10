@@ -280,6 +280,30 @@ class Sonic2SpecialStageBootstrapCadenceTest {
     }
 
     @Test
+    void emeraldInitMasksPendingLogicalControlsToStartOnly() throws Exception {
+        advanceToGameplay();
+        assertTrue(manager.captureRewindSnapshot().recurringMainPassPending);
+
+        Sonic2SpecialStageEmerald emerald = new Sonic2SpecialStageEmerald();
+        emerald.initialize(0x36, 0x40);
+        emerald.setManager(manager);
+        manager.getObjectManager().getActiveObjects().add(emerald);
+        emerald.update(0, false, 12, false);
+
+        provider.bindPendingRecurringPassInput(0x98, 0x90, 0x8C, 0x8C);
+
+        Sonic2SpecialStageSnapshot pending = manager.captureRewindSnapshot();
+        assertEquals(0x80, pending.pendingMainHeldButtons,
+                "Obj59 pause-only mode must suppress P1 direction/action held bits");
+        assertEquals(0x80, pending.pendingMainPressedButtons,
+                "Obj59 pause-only mode must preserve only P1 Start presses");
+        assertEquals(0x80, pending.pendingMainP2HeldButtons,
+                "Obj59 pause-only mode must suppress P2 direction held bits");
+        assertEquals(0x80, pending.pendingMainP2LogicalButtons,
+                "Obj59 pause-only mode must preserve only P2 Start logically");
+    }
+
+    @Test
     void wait2MessageCreationSwitchesTheFollowingVintToCurrentInput() {
         advanceThroughStartupRunObjects();
         int updatesRemaining = 1_000;

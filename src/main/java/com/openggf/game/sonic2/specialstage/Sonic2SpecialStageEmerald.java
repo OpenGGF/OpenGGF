@@ -330,6 +330,16 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
     }
 
     /**
+     * Obj59 sets {@code SS_Pause_Only_flag} at the start of its first routine-0
+     * execution, before advancing its 60-pass initialization delay. The marker
+     * allocation itself happens earlier and must not lock the controls yet
+     * (s2.asm:6679-6688, 72279-72291).
+     */
+    boolean restrictsControlsToStart() {
+        return phase != EmeraldPhase.INITIALIZING || phaseTimer > 0;
+    }
+
+    /**
      * Gets the mapping frame index for the current animation state.
      * Emerald uses frames 0-9 based on perspective size.
      */

@@ -40,6 +40,54 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage emerald pause-only control gate
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `a8f7eaa10`. The f4845 Obj09
+position mismatch was the first visible consequence of feeding a physical RIGHT
+sample to a ROM pass whose emerald sequence had already restricted logical
+controls to Start.
+
+- A bounded read-only BizHawk probe over absolute movie frames 7588-7605
+  (trace f4834-f4851) captured Obj09 at `$FFFFB000` together with raw and
+  logical controls. At f7598 the ROM had inertia -447, angle 65, X -3, and
+  logical/raw RIGHT. At f7599 raw RIGHT remained `$08`, but logical held was
+  zero; Obj09 took its neutral-friction path to inertia -391, angle 64, X 0,
+  Y 110, `Status_Slowing`, and slide timer 29. Output
+  `C:\tmp\s2ss-f4845.txt` has SHA-256
+  `FB3497C5A6D33D8E98F42A6FEE5AAA3D65960F9722BBB0B6E48391135B1E7887`;
+  the temporary Lua and engine diagnostics were removed before commit.
+- The recurring main loop masks both controller words with Start-only when
+  `SS_Pause_Only_flag` is set (`docs/s2disasm/s2.asm:6706-6721`). Obj59 sets
+  that flag at the start of routine zero, before advancing its 60-pass delay
+  (`:72279-72291`). Because `SSObjectsManager` allocates Obj59 before the same
+  pass's `RunObjects`, routine zero executes on the allocation-associated pass;
+  the following pass is the first whose logical control copy is masked.
+- RED commands separately proved both missing contracts. The bootstrap cadence
+  test first expected Start-only `$80` but observed raw `$98` after replay input
+  binding. The streamed-object cadence test then found the newly allocated
+  emerald still had delay 0 and had not activated the gate:
+  `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest#emeraldInitMasksPendingLogicalControlsToStartOnly" test`
+  and
+  `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest#streamedEmeraldRunsRoutineZeroOnItsAllocationAssociatedPass" test`.
+  Both pass after Obj59 contributes exactly one allocation-associated init pass
+  and the owning main-loop input seam applies the semantic mask to live and
+  replay-bound raw samples.
+- Replay command:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`
+  passes its red-allowed pipeline assertion. Before: 606 errors / 0 warnings,
+  first f4845 `sonic_ss_x` expected 0 / actual 2. After: 1 / 0, first f5180
+  `finished_transition_frame` expected 5180 / actual `never`; all per-frame
+  player, object-count, and track comparisons through the compared gameplay
+  tail are green.
+- A 34-test neighborhood covering bootstrap cadence, streamed objects, player
+  initialization, rewind snapshots, replay, and replay determinism completed
+  with 0 failures.
+
+No trace tolerance, state hydration, frame/route predicate, or recorded logical
+input was introduced. The next Stage-2 owner is the final-checkpoint completion
+boundary at f5180.
+
 ## 2026-07-10 - S2 special-stage object-specific half-open collision windows
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

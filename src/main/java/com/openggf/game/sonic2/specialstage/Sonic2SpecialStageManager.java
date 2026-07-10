@@ -1288,7 +1288,27 @@ public class Sonic2SpecialStageManager {
         pendingMainP2LogicalButtons = gameplayControls
                 ? p2LogicalButtons
                 : previousPhysicalP2LogicalButtons;
+        applyPauseOnlyControlMask();
         pendingMainCheckpointStep = checkpointStep;
+    }
+
+    /**
+     * The recurring SS loop copies the raw pad words after V-int, but Obj59's
+     * {@code SS_Pause_Only_flag} changes that copy to Start-only while the
+     * emerald sequence owns the stage (s2.asm:6706-6721, 72287-72291).
+     */
+    private void applyPauseOnlyControlMask() {
+        if (objectManager == null) {
+            return;
+        }
+        Sonic2SpecialStageEmerald emerald = objectManager.getActiveEmerald();
+        if (emerald == null || !emerald.restrictsControlsToStart()) {
+            return;
+        }
+        pendingMainHeldButtons &= 0x80;
+        pendingMainPressedButtons &= 0x80;
+        pendingMainP2HeldButtons &= 0x80;
+        pendingMainP2LogicalButtons &= 0x80;
     }
 
     private void latchCurrentPhysicalInputForNextVint() {
@@ -1367,8 +1387,10 @@ public class Sonic2SpecialStageManager {
      * {@code SSObjectsManager -> RunObjects} pass. Obj60 and Obj61 both set
      * routine 2 and continue through depth, projection, animation, and collision
      * in that allocation-associated execution (s2.asm:6679-6688, 6935-6967,
-     * 70645-70665, 70731-70752). Marker-created emerald/message objects use
-     * different init routines and are intentionally left to their normal owner.
+     * 70645-70665, 70731-70752). Obj59 also runs routine zero in that same
+     * RunObjects pass, setting the pause-only control flag before counting its
+     * 60-pass delay (s2.asm:72279-72291). Message markers remain with their
+     * separate owner.
      */
     private void executeStreamedObjectInitFallthrough(List<Sonic2SpecialStageObject> streamedObjects) {
         if (streamedObjects.isEmpty() || trackAnimator == null) {
@@ -1381,6 +1403,12 @@ public class Sonic2SpecialStageManager {
         boolean drawingIndex4 = this.drawingIndex == 4;
 
         for (Sonic2SpecialStageObject object : streamedObjects) {
+            if (object.isEmerald()) {
+                // Obj59 routine zero sets globals and advances its delay, but
+                // returns before projection/display until the delay expires.
+                object.update(currentFrame, flipped, speedFactor, drawingIndex4);
+                continue;
+            }
             if (!object.isRing() && !object.isBomb()) {
                 continue;
             }
@@ -1884,6 +1912,7 @@ public class Sonic2SpecialStageManager {
         pendingMainPressedButtons = p1Pressed & 0xFF;
         pendingMainP2HeldButtons = p2Held & 0xFF;
         pendingMainP2LogicalButtons = p2Logical & 0xFF;
+        applyPauseOnlyControlMask();
     }
 
     public void toggleAlignmentTestMode() {
