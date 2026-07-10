@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -251,11 +252,17 @@ final class DirectoryModAssetRoot extends AbstractModAssetRoot {
         try (var paths = Files.walk(root)) {
             paths.filter(path -> !path.equals(root)).forEach(path -> {
                 try {
+                    if (Files.isSymbolicLink(path)
+                            || (!Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)
+                            && !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS))) {
+                        throw new IOException("Symbolic links and special files are not allowed in directory roots: "
+                                + path);
+                    }
                     Path real = path.toRealPath();
                     if (!real.startsWith(root)) {
                         throw new IOException("Directory entry escapes root: " + path);
                     }
-                    if (Files.isDirectory(real)) {
+                    if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
                         return;
                     }
                     if (++count[0] > limits().maxJarEntries()) {
@@ -284,7 +291,8 @@ final class DirectoryModAssetRoot extends AbstractModAssetRoot {
     public byte[] readBounded(String normalizedEntry, long maxBytes) throws IOException {
         long cap = checkedCap(maxBytes);
         String name = ModAssetRoot.requireNormalizedEntry(normalizedEntry);
-        Path candidate = root.resolve(name).toRealPath();
+        Path unresolved = rejectSymlinkPath(name);
+        Path candidate = unresolved.toRealPath();
         if (!candidate.startsWith(root) || !Files.isRegularFile(candidate)) {
             throw new IOException("Missing or escaping mod asset: " + name);
         }
@@ -292,6 +300,26 @@ final class DirectoryModAssetRoot extends AbstractModAssetRoot {
         try (InputStream input = Files.newInputStream(candidate)) {
             return readFullyBounded(input, size, cap);
         }
+    }
+
+    private Path rejectSymlinkPath(String normalizedEntry) throws IOException {
+        Path relative = Path.of(normalizedEntry);
+        Path current = root;
+        for (int i = 0; i < relative.getNameCount(); i++) {
+            current = current.resolve(relative.getName(i));
+            if (Files.isSymbolicLink(current)) {
+                throw new IOException("Symbolic-link paths are not readable from directory roots: "
+                        + normalizedEntry);
+            }
+            boolean last = i == relative.getNameCount() - 1;
+            if (!last && !Files.isDirectory(current, LinkOption.NOFOLLOW_LINKS)) {
+                throw new IOException("Missing directory in mod asset path: " + normalizedEntry);
+            }
+            if (last && !Files.isRegularFile(current, LinkOption.NOFOLLOW_LINKS)) {
+                throw new IOException("Missing mod asset: " + normalizedEntry);
+            }
+        }
+        return current;
     }
 
     @Override

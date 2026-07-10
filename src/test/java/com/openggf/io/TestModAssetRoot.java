@@ -90,6 +90,28 @@ class TestModAssetRoot {
     }
 
     @Test
+    void rejectsContainedDirectorySymlinkAliasesBeforeInventory() throws Exception {
+        Path rootDir = Files.createDirectory(temp.resolve("directory-alias"));
+        Path real = Files.createDirectory(rootDir.resolve("real"));
+        Files.write(real.resolve("asset.bin"), new byte[]{1});
+        createSymlinkOrAbort(rootDir.resolve("alias"), real);
+
+        assertThrows(IOException.class, () -> ModAssetRoot.directory(rootDir, rootDir));
+    }
+
+    @Test
+    void rejectsDirectorySymlinkAliasesAddedAfterInventory() throws Exception {
+        Path rootDir = Files.createDirectory(temp.resolve("late-directory-alias"));
+        Path real = Files.createDirectory(rootDir.resolve("real"));
+        Files.write(real.resolve("asset.bin"), new byte[]{1});
+
+        try (ModAssetRoot root = ModAssetRoot.directory(rootDir, rootDir)) {
+            createSymlinkOrAbort(rootDir.resolve("alias"), real);
+            assertThrows(IOException.class, () -> root.readBounded("alias/asset.bin", 1));
+        }
+    }
+
+    @Test
     void countingStreamRejectsDishonestCentralDirectorySize() throws Exception {
         Path rootDir = Files.createDirectory(temp.resolve("dishonest"));
         Path jar = writeJar(rootDir.resolve("mod.jar"), Map.of("a.bin", new byte[]{1, 2, 3, 4, 5}));
@@ -128,6 +150,14 @@ class TestModAssetRoot {
             }
         }
         return path;
+    }
+
+    private static void createSymlinkOrAbort(Path link, Path target) {
+        try {
+            Files.createSymbolicLink(link, target);
+        } catch (UnsupportedOperationException | IOException e) {
+            org.junit.jupiter.api.Assumptions.abort("Symbolic links unavailable: " + e.getMessage());
+        }
     }
 
     private static int findSignature(byte[] bytes, int signature) {
