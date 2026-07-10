@@ -335,9 +335,21 @@ sidekick CPU interact suite pass. The complete-run frontier moves from f12091
 (`tails_status_byte` expected `$00`, actual `$01`). Fresh full sweeps on this
 exact working tree pass all 29 S1 and all 48 S2 trace replays.
 
+Round 24 makes the S3K low-speed Duck path consume the edge-balance decision
+from its native pre-movement instant. `Tails_InputAcceleration_Path` checks
+`ChooseChkFloorEdge`, `next_tilt`, and `tilt` before `SpeedToPos` and
+`Player_AnglePos`; the engine already performed that pre-movement check for
+the look-camera gate, but discarded its state and recomputed after advancing
+the player. The gate now retains the transient balance level and facing for
+the later moving-crouch bridge (`sonic3k.asm:27796-27861`). The focused
+movement suite passes. The complete-run frontier moves from f12706
+(`tails_status_byte` expected `$00`, actual `$01`) to f12910 (`y` expected
+`$056F`, actual `$056A`). Fresh full sweeps on this exact working tree pass all
+29 S1 and all 48 S2 trace replays.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f12706.
+banked rounds the current stacked working-tree complete-run frontier is f12910.
 Those causes will be recorded and committed separately as their focused guards
 are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes

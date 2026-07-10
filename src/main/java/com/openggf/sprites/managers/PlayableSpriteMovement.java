@@ -122,6 +122,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private int staleHorizontalInputSuppressFrames;
 	private int staleHorizontalInputRideFrames;
 	private boolean staleHorizontalInputPreviousHorizontal;
+	private boolean preMoveBalanceEvaluated;
+	private int preMoveBalanceState;
+	private Direction preMoveBalanceDirection;
 
 	public PlayableSpriteMovement(AbstractPlayableSprite sprite,
 			CollisionSystem collisionSystem,
@@ -204,6 +207,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		staleHorizontalInputSuppressFrames = 0;
 		staleHorizontalInputRideFrames = 0;
 		staleHorizontalInputPreviousHorizontal = false;
+		preMoveBalanceEvaluated = false;
+		preMoveBalanceState = 0;
+		preMoveBalanceDirection = null;
 	}
 
 	public RewindState captureRewindState() {
@@ -225,7 +231,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				staleHorizontalInputRideSlotIndex,
 				staleHorizontalInputSuppressFrames,
 				staleHorizontalInputRideFrames,
-				staleHorizontalInputPreviousHorizontal);
+				staleHorizontalInputPreviousHorizontal,
+				preMoveBalanceEvaluated,
+				preMoveBalanceState,
+				preMoveBalanceDirection);
 	}
 
 	public void restoreRewindState(RewindState state) {
@@ -251,6 +260,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		staleHorizontalInputSuppressFrames = state.staleHorizontalInputSuppressFrames();
 		staleHorizontalInputRideFrames = state.staleHorizontalInputRideFrames();
 		staleHorizontalInputPreviousHorizontal = state.staleHorizontalInputPreviousHorizontal();
+		preMoveBalanceEvaluated = state.preMoveBalanceEvaluated();
+		preMoveBalanceState = state.preMoveBalanceState();
+		preMoveBalanceDirection = state.preMoveBalanceDirection();
 	}
 
 	public record RewindState(
@@ -271,7 +283,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			int staleHorizontalInputRideSlotIndex,
 			int staleHorizontalInputSuppressFrames,
 			int staleHorizontalInputRideFrames,
-			boolean staleHorizontalInputPreviousHorizontal
+			boolean staleHorizontalInputPreviousHorizontal,
+			boolean preMoveBalanceEvaluated,
+			int preMoveBalanceState,
+			Direction preMoveBalanceDirection
 	) {}
 
 	public void clearJumpHeightLatch() {
@@ -416,6 +431,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		slopeResistAppliedThisFrame = false;
 		skidAnimationRefreshedThisFrame = false;
 		sprite.clearDeferredGroundWallVelocityResponse();
+		preMoveBalanceEvaluated = false;
 
 		// Snapshot pre-physics state for per-object hooks running AFTER
 		// physics in the engine's frame order. ROM order runs cage/object
@@ -3541,6 +3557,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				&& !sprite.getAir() && !sprite.getRolling() && !sprite.getSpindash()
 				&& Math.abs(sprite.getGSpeed()) < movingThreshold
 				&& !sprite.isOnObject()) {
+			if (preMoveBalanceEvaluated && preMoveBalanceState != 0) {
+				sprite.setBalanceState(preMoveBalanceState);
+				sprite.setDirection(preMoveBalanceDirection);
+				sprite.setCrouching(false);
+				return;
+			}
 			sprite.setCrouching(true);
 			sprite.setBalanceState(0);
 			return;
@@ -3845,8 +3867,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * normally computes balance in updateCrouchState() AFTER the doGroundMove()
 	 * look code, so the look code needs a current-frame read here. updateBalanceState()
 	 * sets the balance level and (on an edge) the facing direction; we snapshot and
-	 * restore both so the authoritative balance/facing is still produced at the
-	 * normal time by updateCrouchState() -- this predicate is purely a read.
+	 * restore both while retaining the decision for the later moving-crouch bridge.
+	 * This preserves the ROM's pre-movement decision point without exposing the
+	 * temporary state before updateCrouchState() applies it.
 	 *
 	 * <p>Returns false when left/right is held (ROM reaches the look/duck/balance
 	 * block only when not steering, s1.asm Sonic_CheckDpadLetGo). Callers gate on
@@ -3860,6 +3883,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int savedBalanceState = sprite.getBalanceState();
 		updateBalanceState();
 		boolean balancing = sprite.isBalancing();
+		preMoveBalanceEvaluated = true;
+		preMoveBalanceState = sprite.getBalanceState();
+		preMoveBalanceDirection = sprite.getDirection();
 		// Restore: the real balance state + facing are recomputed at their normal
 		// time by updateCrouchState(); this call must leave no trace.
 		sprite.setBalanceState(savedBalanceState);
@@ -4145,7 +4171,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (centerDist < EDGE_THRESHOLD) {
 			return; // Center still has ground — ROM branches to Lookup/Duck, no balance.
 		}
-
 		// Right edge: left sensor has ground, right sensor doesn't
 		if (leftDist < EDGE_THRESHOLD && rightDist >= EDGE_THRESHOLD) {
 			// S2/S3K: precarious check - scan at center - 6 (dx = +3 from left sensor)
