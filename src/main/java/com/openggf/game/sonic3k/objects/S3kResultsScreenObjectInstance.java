@@ -8,9 +8,9 @@ import com.openggf.game.save.SaveReason;
 import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.game.sonic3k.Sonic3kObjectArt;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
-import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.tools.NemesisReader;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.PatternAtlasRange;
@@ -631,7 +631,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 titleCardProvider.initializeInLevel(zone, 1);
                 if (aizAct1MinibossTitleHandoff
                         && titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
-                    s3kTitleCard.requestLevelGamestateResetOnInLevelComplete();
+                    s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
                 }
             }
 
@@ -640,9 +640,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // creates a fresh LevelGamestate. For non-seamless S3K act transitions
             // (where acts share level data), the results screen must reset the
             // gamestate directly since no level reload occurs. AIZ's miniboss
-            // handoff is the ROM's Obj_TitleCard in-level path; it changes
-            // Apparent_act before the title card but does not clear Ring_count
-            // at this point (sonic3k.asm:62708-62720, 62244-62279).
+            // handoff carries its Timer/Ring_count reset through the title-card
+            // request above, where it becomes visible after the title children
+            // reach their display positions (sonic3k.asm:62708-62720,
+            // 62214-62235).
             if (!hasSeamlessTransition && !aizAct1MinibossTitleHandoff) {
                 resetLevelGamestateForActTransition();
             }

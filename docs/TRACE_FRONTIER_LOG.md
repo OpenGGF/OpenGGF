@@ -293,14 +293,26 @@ frontier moves from f10766 (Tails hurt-state fixed velocity) to f11897 (ring
 loss absent). The all-29 S1/all-48 S2 sweep immediately preceding this
 S3K-only body-profile delta is green.
 
+Round 21 moves AIZ's Act 2 HUD reset to the in-level title-card wait boundary.
+`Obj_LevelResults` changes `Apparent_act` and creates `Obj_TitleCard`, but the
+native `Timer`/`Ring_count` clear belongs to `Obj_TitleCardWait` after the card
+children reach their display positions (`sonic3k.asm:62708-62720,
+62214-62235`). The results object now carries a reset request into the title
+card; its manager predicts the object-owned wait two manager updates ahead,
+matching the existing manager/object execution bridge, instead of waiting four
+arbitrary DISPLAY ticks. Focused results/title-card tests pass. The complete-run
+frontier moves from f11897 (ring loss absent) to f12002 (`camera_y` expected
+`$02BB`, actual `$02B8`). Fresh full sweeps on this exact working tree pass all
+29 S1 and all 48 S2 trace replays.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f11897. Those causes will be recorded and committed
-separately as their focused guards are completed. The banked level-select AIZ
+banked rounds the current stacked working-tree complete-run frontier is f12002.
+Those causes will be recorded and committed separately as their focused guards
+are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes
 an earlier f5435 mismatch and must restore/advance that route before the stage
-can turn green. S1/S2 full trace sweeps remain
-pending until the AIZ fixes are banked; no green claim is made yet.
+can turn green. No AIZ-stage green claim is made yet.
 
 ## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green
 
