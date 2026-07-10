@@ -6,6 +6,8 @@ import com.openggf.debug.DebugColor;
 import com.openggf.game.timeattack.TimeAttackTrackCatalog;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.game.GameServices;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
 
@@ -56,6 +58,7 @@ public final class MultiplayerHudRenderer {
                                 state.voteResultTrackKey(), MultiplayerHudRenderer::trackLabel),
                         8, 24, DebugColor.YELLOW, SCALE);
             }
+            drawMinimap(text, state);
             if (state.connectionLost()) {
                 text.drawShadowedText("CONNECTION LOST", 8, 8, DebugColor.RED, SCALE);
             } else if (state.kickReason() != null) {
@@ -95,5 +98,35 @@ public final class MultiplayerHudRenderer {
         } catch (NumberFormatException ignored) {
             return key;
         }
+    }
+
+    private void drawMinimap(PixelFontTextRenderer text, MultiplayerHudState state) {
+        if (!"RUNNING".equals(state.phase())
+                || !config.getBoolean(SonicConfiguration.TIME_ATTACK_HUD_MINIMAP)) {
+            return;
+        }
+        var profile = LiveLevelProfileFactory.fromLoadedLevelOrNull();
+        var sprites = GameServices.spritesOrNull();
+        if (profile == null || sprites == null) {
+            return;
+        }
+        java.util.List<MinimapLayout.Dot> dots = new java.util.ArrayList<>();
+        for (var player : state.farPlayers()) {
+            char glyph = player.status() == -1 ? 'o'
+                    : MinimapLayout.glyphForFarStatus(player.status());
+            if (glyph != ' ') {
+                dots.add(new MinimapLayout.Dot(player.cellX() * 64 + 32, glyph));
+            }
+        }
+        sprites.getAllSprites().stream()
+                .filter(AbstractPlayableSprite.class::isInstance)
+                .map(AbstractPlayableSprite.class::cast)
+                .filter(sprite -> !sprite.isCpuControlled())
+                .findFirst().ifPresent(sprite -> dots.add(
+                        new MinimapLayout.Dot(sprite.getCentreX(), '*')));
+        String strip = "[" + MinimapLayout.compose(profile.levelWidthPx(), dots) + "]";
+        int screenHeight = config.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+        text.drawShadowedText(strip, 4, screenHeight - 10,
+                DebugColor.LIGHT_GRAY, SCALE);
     }
 }

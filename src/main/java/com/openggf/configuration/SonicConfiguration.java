@@ -347,6 +347,9 @@ public enum SonicConfiguration {
 	/** Development-only trust-all TLS switch for the master-server client. */
 	TIME_ATTACK_NET_MASTER_TRUST_INSECURE,
 
+	/** Show the roster-fed multiplayer progress strip. */
+	TIME_ATTACK_HUD_MINIMAP,
+
 	/**
 	 * Key held in visual Trace Test Mode to rewind deterministic engine state.
 	 */

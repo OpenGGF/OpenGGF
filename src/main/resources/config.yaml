@@ -138,6 +138,8 @@ timeAttack:
     displayName: ""   # Blank uses the first eight characters of the identity fingerprint
     masterUrl: ""   # Master-server WebSocket URL for internet race browsing
     masterTrustInsecure: false   # Development only: trust any master-server TLS certificate
+  hud:
+    minimap: true   # Show the multiplayer minimap progress strip
 
 # ════════════════════════════════════════════
 #  DEBUG  (developer tooling — safe to ignore for normal play)

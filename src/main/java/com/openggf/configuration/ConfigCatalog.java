@@ -248,6 +248,8 @@ public final class ConfigCatalog {
                 "Master-server WebSocket URL for internet race browsing."));
         put(TIME_ATTACK_NET_MASTER_TRUST_INSECURE, of("timeAttack.net", "masterTrustInsecure", BOOL,
                 "Development-only trust-all TLS mode for the master server."));
+        put(TIME_ATTACK_HUD_MINIMAP, of("timeAttack.hud", "minimap", BOOL,
+                "Show the multiplayer minimap progress strip."));
 
         // ───────────────── DEBUG BLOCK ─────────────────
 

@@ -144,11 +144,25 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     public MultiplayerHudState hudState() {
         ControlMessage.RoundConfig config = session.roundConfig();
         ControlMessage.StandingsRow local = session.localStandingsRow();
+        List<RemoteGhostRegistry.FarPlayer> minimapPlayers = new ArrayList<>(
+                registry.farPlayers(session.localSlot()));
+        for (ActiveGhost ghost : remoteGhosts) {
+            int slot;
+            try {
+                slot = Integer.parseInt(ghost.slotId().substring("net:".length()));
+            } catch (RuntimeException ignored) {
+                continue;
+            }
+            minimapPlayers.add(new RemoteGhostRegistry.FarPlayer(slot,
+                    ghost.nameplate() == null ? "?" : ghost.nameplate(),
+                    ghost.characterCode(), ghost.frame().x() >> 6,
+                    ghost.frame().y() >> 6, -1));
+        }
         return new MultiplayerHudState(transport.isOpen() || connectionLost,
                 session.phase().name(), session.remainingWindowMillis(),
                 session.remainingCountdownMillis(), combinedStandings(),
                 session.chatLines(), connectionLost, session.kickReason(),
-                session.players().size(), registry.farPlayers(session.localSlot()),
+                session.players().size(), minimapPlayers,
                 config == null ? null : config.characterPolicy(),
                 session.voteOptions(), session.voteCounts(), session.voteRemainingMillis(),
                 session.lastVoteResultTrackKey(), session.podiumTop(3),

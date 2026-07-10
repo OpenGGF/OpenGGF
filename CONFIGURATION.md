@@ -311,6 +311,7 @@ Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SM
 | `TIME_ATTACK_NET_DISPLAY_NAME` | `timeAttack.net.displayName` | string | `""` | Multiplayer display name; blank uses the identity prefix. |
 | `TIME_ATTACK_NET_MASTER_URL` | `timeAttack.net.masterUrl` | string | `""` | Master-server WebSocket URL for internet race browsing. |
 | `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | bool | `false` | Development-only trust-all TLS mode for the master server. |
+| `TIME_ATTACK_HUD_MINIMAP` | `timeAttack.hud.minimap` | bool | `true` | Show the multiplayer minimap progress strip. |
 
 ## Debug
 
@@ -444,6 +445,7 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 | `TIME_ATTACK_NET_DISPLAY_NAME` | `timeAttack.net.displayName` | `""` |  | Multiplayer display name; blank uses the identity prefix. |
 | `TIME_ATTACK_NET_MASTER_URL` | `timeAttack.net.masterUrl` | `""` |  | Master-server WebSocket URL for internet race browsing. |
 | `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | `false` |  | Development-only trust-all TLS mode for the master server. |
+| `TIME_ATTACK_HUD_MINIMAP` | `timeAttack.hud.minimap` | `true` |  | Show the multiplayer minimap progress strip. |
 
 ### Debug Navigation
 
