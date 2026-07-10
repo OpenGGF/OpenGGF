@@ -205,9 +205,25 @@ was hurt by an enemy the ROM still held at its original coordinates. Full
 placeholder bounds plus the pre-init collision latch move the stacked
 complete-run frontier from f8350 to f9295 without an AIZ/frame exception.
 
+Round 14 banks Bloominator's native dispatch chain and S3K split-row camera
+sampling. Obj8C now preserves the two-stage `Obj_WaitOffscreen`/attribute-init
+handoff, uses its real `$0C`-by-`$18` render bounds for the idle timer, and
+models `Animate_RawMultiDelay` returning script offsets `6/$E` when each shot
+is created. `CreateChild2_Complex` allocates after the parent, allowing the
+projectile's movement callback to publish its current hurt position later in
+the same object pass (`sonic3k.asm:176955-176981,180266-180298,
+182533-182650`). At f9295 the resulting hurt state was byte-aligned, but Lua's
+camera sample became visible on the following unchanged VBlank-only row. S3K
+replay now applies the existing split-row execution model to camera diagnostics
+only; ring counts remain strict to the current gameplay row. Focused
+`TestBloominatorBadnikInstance`, `TestTraceExecutionModel`, and
+`TestTraceReplayInvariantGuard` pass. The stacked complete-run frontier moves
+from f9295 to f9376, a new strict ring-count mismatch (`expected=2`,
+`actual=1`).
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f9295. Those causes will be recorded and committed
+banked rounds the current stacked working-tree complete-run frontier is f9376. Those causes will be recorded and committed
 separately as their focused guards are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes
 an earlier f5435 mismatch and must restore/advance that route before the stage

@@ -165,14 +165,15 @@ class TestTraceReplayInvariantGuard {
     }
 
     @Test
-    void s3kTraceReplayDoesNotRewriteRingDiagnosticsBeforeComparison() throws IOException {
+    void s3kTraceReplayKeepsRingDiagnosticsRowStrictBeforeComparison() throws IOException {
         String text = Files.readString(Path.of(
                 "src/test/java/com/openggf/tests/trace/AbstractTraceReplayTest.java"));
         String method = methodBody(text, "private void replayS3kTrace(");
 
+        assertTrue(method.contains("s3kFrameForGameplayComparison("),
+                "S3K trace replay must normalize split-row camera sampling explicitly.");
         assertFalse(method.contains("s3kFrameForRingDiagnosticComparison("),
-                "S3K trace replay must compare the current trace row directly; "
-                        + "diagnostic helpers must not substitute next-row ring counts.");
+                "S3K trace replay must not substitute next-row ring counts.");
         assertFalse(Files.readString(Path.of("src/main/java/com/openggf/trace/TraceFrame.java"))
                         .contains("withRingDiagnosticsFrom"),
                 "TraceFrame must not expose a helper that rewrites only the expected ring count.");

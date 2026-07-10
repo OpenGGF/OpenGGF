@@ -774,6 +774,38 @@ public final class TraceReplayBootstrap {
     /**
      * Returns the S3K frame values that should be compared after a replay step.
      *
+     * <p>S3K can expose the same full-frame/VBlank-only split as S1/S2. Camera
+     * diagnostics belong to the following VBlank row in that case, while ring
+     * counts remain strict to the current gameplay row so a collection-timing
+     * mismatch cannot be hidden by expected-value normalization.
+     */
+    public static TraceFrame s3kFrameForGameplayComparison(TraceData trace,
+                                                            int currentIndex,
+                                                            TraceFrame previous,
+                                                            TraceFrame current,
+                                                            TraceExecutionPhase currentPhase) {
+        if (trace == null || current == null
+                || currentPhase != TraceExecutionPhase.FULL_LEVEL_FRAME
+                || currentIndex + 1 >= trace.frameCount()) {
+            return current;
+        }
+
+        TraceFrame next = trace.getFrame(currentIndex + 1);
+        TraceExecutionPhase nextPhase = phaseForReplay(trace, current, next);
+        if (nextPhase != TraceExecutionPhase.VBLANK_ONLY
+                || !current.stateEquals(next)
+                || current.gameplayFrameCounter() != next.gameplayFrameCounter()
+                || current.cameraX() < 0 || current.cameraY() < 0
+                || next.cameraX() < 0 || next.cameraY() < 0) {
+            return current;
+        }
+
+        return current.withCameraDiagnosticsFrom(next);
+    }
+
+    /**
+     * Returns the S3K frame values that should be compared after a replay step.
+     *
      * <p>S3K trace comparison is intentionally row-strict for ring counts. Earlier
      * release candidates borrowed a next-row ring diagnostic when the engine
      * already matched that next row, but that rewrote the expected value before
