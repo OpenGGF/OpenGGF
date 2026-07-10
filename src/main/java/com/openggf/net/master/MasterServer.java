@@ -102,14 +102,6 @@ public final class MasterServer implements AutoCloseable {
             PlayerIdentity masterIdentity = PlayerIdentity.loadOrCreate(
                     dataDir.resolve("master-identity"));
             BundledProfileSource profiles = new BundledProfileSource();
-            RelayRoomManager relays = new RelayRoomManager(masterIdentity, ladder,
-                    profiles, roomLoops, brokerLoop, clock,
-                    registry::heartbeat,
-                    (roomId, owner, zone, act) ->
-                            registry.updateTrack(roomId, owner, zone, act));
-            RoomBroker broker = new RoomBroker(masterIdentity, config, registry, store,
-                    ladder, cache, clock, relays, tunnels,
-                    key -> profileExists(profiles, key));
             RecordingBlobStore recordingBlobs = new RecordingBlobStore(
                     dataDir.resolve("recordings"));
             VerifierRegistry verifiers = new VerifierRegistry(clock,
@@ -119,6 +111,15 @@ public final class MasterServer implements AutoCloseable {
             VerdictConsequences verdictConsequences = new VerdictConsequences(
                     store, ladder, clock, config.cheatBanDays() <= 0 ? 0
                     : config.cheatBanDays() * 24L * 3_600_000L);
+            RelayRoomManager relays = new RelayRoomManager(masterIdentity, ladder,
+                    profiles, roomLoops, brokerLoop, clock,
+                    registry::heartbeat,
+                    (roomId, owner, zone, act) ->
+                            registry.updateTrack(roomId, owner, zone, act),
+                    config, verificationJobs, verdictConsequences);
+            RoomBroker broker = new RoomBroker(masterIdentity, config, registry, store,
+                    ladder, cache, clock, relays, tunnels,
+                    key -> profileExists(profiles, key), verifiers);
             ConnectionHygiene.ConnectionCounter counter =
                     new ConnectionHygiene.ConnectionCounter(MAX_CONNECTIONS_PER_IP);
             SslContext ssl = sslContext(config);
@@ -137,7 +138,7 @@ public final class MasterServer implements AutoCloseable {
                             pipeline.addLast(new MasterHttpRoutes(config,
                                     broker::isSessionTokenValid, recordingBlobs,
                                     verifiers, verificationJobs, verdictConsequences,
-                                    clock, brokerLoop, (job, pass) -> { }));
+                                    clock, brokerLoop, relays::onVerdict));
                             pipeline.addLast(new WebSocketServerProtocolHandler(
                                     "/master", null, true,
                                     Protocol.MAX_MASTER_FRAME_BYTES));
@@ -152,6 +153,11 @@ public final class MasterServer implements AutoCloseable {
                     1, 1, TimeUnit.SECONDS);
             brokerGroup.next().scheduleAtFixedRate(relays::tickAll,
                     50, 50, TimeUnit.MILLISECONDS);
+            brokerGroup.next().scheduleAtFixedRate(() -> {
+                relays.voidExpiredUploads();
+                verificationJobs.requeueExpiredLeases();
+                verifiers.expireStale();
+            }, 1, 1, TimeUnit.SECONDS);
             MasterServer server = new MasterServer(config, dataDir, brokerGroup,
                     relayGroup, channel, store, ladder, registry, tunnels, relays, broker,
                     recordingBlobs, verifiers, verificationJobs, verdictConsequences);

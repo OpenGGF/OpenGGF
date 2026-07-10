@@ -89,6 +89,7 @@ public final class RoomBroker {
     private final RelayRoomDirectory relays;
     private final DirectTunnelDirectory tunnels;
     private final Predicate<String> knownTrack;
+    private final VerifierRegistry verifiers;
     private final SecureRandom random = new SecureRandom();
     private final SessionTokenIssuer tokens = new SessionTokenIssuer();
     private final AtomicBoolean attackMode;
@@ -103,13 +104,22 @@ public final class RoomBroker {
                       NewIdentityCache cache, LongSupplier clock, RelayRoomDirectory relays,
                       DirectTunnelDirectory tunnels) {
         this(masterIdentity, config, registry, store, ladder, cache, clock,
-                relays, tunnels, ignored -> true);
+                relays, tunnels, ignored -> true, null);
     }
 
     public RoomBroker(PlayerIdentity masterIdentity, MasterConfig config,
                       SessionRegistry registry, IdentityStore store, TrustLadder ladder,
                       NewIdentityCache cache, LongSupplier clock, RelayRoomDirectory relays,
                       DirectTunnelDirectory tunnels, Predicate<String> knownTrack) {
+        this(masterIdentity, config, registry, store, ladder, cache, clock,
+                relays, tunnels, knownTrack, null);
+    }
+
+    public RoomBroker(PlayerIdentity masterIdentity, MasterConfig config,
+                      SessionRegistry registry, IdentityStore store, TrustLadder ladder,
+                      NewIdentityCache cache, LongSupplier clock, RelayRoomDirectory relays,
+                      DirectTunnelDirectory tunnels, Predicate<String> knownTrack,
+                      VerifierRegistry verifiers) {
         this.masterIdentity = masterIdentity;
         this.config = config;
         this.registry = registry;
@@ -120,6 +130,7 @@ public final class RoomBroker {
         this.relays = relays;
         this.tunnels = tunnels;
         this.knownTrack = knownTrack;
+        this.verifiers = verifiers;
         attackMode = new AtomicBoolean(config.attackMode());
         nextGcMillis = clock.getAsLong() + GC_INTERVAL_MILLIS;
     }
@@ -338,6 +349,23 @@ public final class RoomBroker {
             send(member, new ControlMessage.RoomCreateRejected("invalid vote track pool"));
             return;
         }
+        if (descriptor.verified() && !"RELAY".equals(routing)) {
+            send(member, new ControlMessage.RoomCreateRejected(
+                    "verified rooms are relay-only"));
+            return;
+        }
+        if (descriptor.verified()
+                && ladder.tierOf(member.fingerprint) != TrustLadder.Tier.TRUSTED) {
+            send(member, new ControlMessage.RoomCreateRejected(
+                    "verified rooms require TRUSTED"));
+            return;
+        }
+        if (descriptor.verified() && (verifiers == null
+                || !verifiers.verifierAvailable(create.determinismFingerprint()))) {
+            send(member, new ControlMessage.RoomCreateRejected(
+                    "no verifier available for this build"));
+            return;
+        }
         if ("DIRECT".equals(routing)
                 && descriptor.maxPlayers() > Protocol.MAX_PLAYERS_DIRECT) {
             send(member, new ControlMessage.RoomCreateRejected(
@@ -423,6 +451,12 @@ public final class RoomBroker {
                 room.determinismFingerprint())) {
             send(member, new ControlMessage.RoomJoinRejected(
                     "determinism fingerprint mismatch"));
+            return;
+        }
+        if (room.descriptor().verified()
+                && ladder.tierOf(member.fingerprint) != TrustLadder.Tier.TRUSTED) {
+            send(member, new ControlMessage.RoomJoinRejected(
+                    "verified rooms require TRUSTED"));
             return;
         }
         boolean underPressure = room.descriptor().maxPlayers() > 0

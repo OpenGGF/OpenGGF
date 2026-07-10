@@ -124,4 +124,14 @@ public final class VerificationJobQueue {
         Entry entry = entries.get(jobId);
         return entry == null ? Optional.empty() : Optional.of(entry.job);
     }
+
+    public Optional<Job> voidJob(String jobId) {
+        Entry entry = entries.get(jobId);
+        if (entry == null || entry.state == State.DONE || entry.state == State.VOID) {
+            return Optional.empty();
+        }
+        entry.state = State.VOID;
+        entry.leasedWorkerId = null;
+        return Optional.of(entry.job);
+    }
 }

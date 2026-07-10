@@ -8,7 +8,9 @@ public record RoomHostHooks(boolean relevanceFiltering,
                             RoundOutcomeListener roundOutcomeListener,
                             String roundOwnerFingerprint,
                             Predicate<String> isNewPlayer,
-                            Predicate<String> knownVoteTrack) {
+                            Predicate<String> knownVoteTrack,
+                            String roomId,
+                            VerificationHooks verificationHooks) {
     @FunctionalInterface
     public interface ChatGate {
         boolean mayChat(String fingerprint, long memberSinceMillis);
@@ -19,8 +21,18 @@ public record RoomHostHooks(boolean relevanceFiltering,
         void onRoundComplete(String fingerprint, boolean clean);
     }
 
+    public interface VerificationHooks {
+        void onFinishNeedingVerification(String roomId, int slot,
+                String identityFingerprint, com.openggf.net.protocol.ControlMessage.AttemptFinish finish,
+                String trackKey, String character, String determinismFingerprint,
+                boolean spotCheck);
+
+        default void onPendingExpired(String roomId, int slot, int attemptId) { }
+    }
+
     public static RoomHostHooks none() {
-        return new RoomHostHooks(false, null, null, null, null, null);
+        return new RoomHostHooks(false, null, null, null, null, null,
+                null, null);
     }
 
     public RoomHostHooks(boolean relevanceFiltering, ChatGate chatGate,
@@ -28,6 +40,15 @@ public record RoomHostHooks(boolean relevanceFiltering,
                          String roundOwnerFingerprint,
                          Predicate<String> isNewPlayer) {
         this(relevanceFiltering, chatGate, roundOutcomeListener,
-                roundOwnerFingerprint, isNewPlayer, null);
+                roundOwnerFingerprint, isNewPlayer, null, null, null);
+    }
+
+    public RoomHostHooks(boolean relevanceFiltering, ChatGate chatGate,
+                         RoundOutcomeListener roundOutcomeListener,
+                         String roundOwnerFingerprint,
+                         Predicate<String> isNewPlayer,
+                         Predicate<String> knownVoteTrack) {
+        this(relevanceFiltering, chatGate, roundOutcomeListener,
+                roundOwnerFingerprint, isNewPlayer, knownVoteTrack, null, null);
     }
 }

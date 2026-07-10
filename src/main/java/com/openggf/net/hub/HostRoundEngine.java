@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 
@@ -22,11 +23,13 @@ public final class HostRoundEngine {
     public static final long VOTE_WINDOW_MILLIS = 15_000;
     public static final int VOTE_OPTION_COUNT = 3;
 
-    public record FinishOutcome(int slot, int rank, boolean outsideBroadcastCap) {
+    public record FinishOutcome(int slot, int rank, boolean outsideBroadcastCap,
+                                int attemptId) {
     }
 
     private record Best(String displayName, String character, int timeFrames,
-                        long achievedOrder) {
+                        long achievedOrder, ControlMessage.AttemptFinish finish,
+                        String verifyState) {
     }
 
     private final LongSupplier hubClockMillis;
@@ -46,6 +49,9 @@ public final class HostRoundEngine {
     private List<String> voteOptions = List.of();
     private long voteEndsAt;
     private ControlMessage.RoundConfig votedNextConfig;
+    private boolean verifiedRoom;
+    private long pendingHoldMillis = 10_000;
+    private BiConsumer<Integer, Integer> pendingExpiryListener = (slot, attempt) -> { };
 
     public HostRoundEngine(LongSupplier hubClockMillis,
                            Consumer<ControlMessage> broadcaster) {
@@ -86,6 +92,23 @@ public final class HostRoundEngine {
         }
         if (phase == Phase.ROUND_END
                 && now >= roundEndAt + ROUND_END_LINGER_MILLIS) {
+            if (pendingVerdictCount() > 0
+                    && now < roundEndAt + ROUND_END_LINGER_MILLIS
+                    + pendingHoldMillis) {
+                return;
+            }
+            if (pendingVerdictCount() > 0) {
+                List<Map.Entry<Integer, Best>> expired = bests.entrySet().stream()
+                        .filter(entry -> "PENDING".equals(entry.getValue().verifyState()))
+                        .toList();
+                for (Map.Entry<Integer, Best> entry : expired) {
+                    bests.remove(entry.getKey());
+                    pendingExpiryListener.accept(entry.getKey(),
+                            entry.getValue().finish().attemptId());
+                }
+                broadcaster.accept(new ControlMessage.StandingsDelta(
+                        broadcastStandings()));
+            }
             if (voteTrackPool.isEmpty()) {
                 phase = Phase.LOBBY;
             } else {
@@ -118,6 +141,43 @@ public final class HostRoundEngine {
         return votedNextConfig;
     }
 
+    public void setVerifiedRoom(boolean verified) {
+        verifiedRoom = verified;
+    }
+
+    public void setPendingHoldMillis(long millis) {
+        pendingHoldMillis = Math.max(0, millis);
+    }
+
+    public void setPendingExpiryListener(BiConsumer<Integer, Integer> listener) {
+        pendingExpiryListener = listener == null ? (slot, attempt) -> { } : listener;
+    }
+
+    public int pendingVerdictCount() {
+        return (int) bests.values().stream()
+                .filter(best -> "PENDING".equals(best.verifyState())).count();
+    }
+
+    public ControlMessage.AttemptFinish bestFinish(int slot) {
+        Best best = bests.get(slot);
+        return best == null ? null : best.finish();
+    }
+
+    public void onVerdict(int slot, int attemptId, boolean pass) {
+        Best best = bests.get(slot);
+        if (best == null || !"PENDING".equals(best.verifyState())
+                || best.finish().attemptId() != attemptId) {
+            return;
+        }
+        if (pass) {
+            bests.put(slot, new Best(best.displayName(), best.character(),
+                    best.timeFrames(), best.achievedOrder(), best.finish(), "VERIFIED"));
+        } else {
+            bests.remove(slot);
+        }
+        broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings()));
+    }
+
     public void onTrackVote(int slot, String trackKey) {
         if (phase != Phase.VOTE || trackKey == null || !voteOptions.contains(trackKey)) {
             return;
@@ -139,7 +199,7 @@ public final class HostRoundEngine {
             return null;
         }
         bests.put(slot, new Best(displayName, character, finish.timeFrames(),
-                achievedCounter++));
+                achievedCounter++, finish, verifiedRoom ? "PENDING" : "NONE"));
         List<ControlMessage.StandingsRow> rows = standings();
         broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings(rows)));
         int rank = rows.stream()
@@ -147,7 +207,8 @@ public final class HostRoundEngine {
                 .mapToInt(ControlMessage.StandingsRow::rank)
                 .findFirst()
                 .orElseThrow();
-        return new FinishOutcome(slot, rank, rank > STANDINGS_BROADCAST_CAP);
+        return new FinishOutcome(slot, rank, rank > STANDINGS_BROADCAST_CAP,
+                finish.attemptId());
     }
 
     public void onPlayerLeft(int slot) {
@@ -167,7 +228,7 @@ public final class HostRoundEngine {
             Map.Entry<Integer, Best> entry = sorted.get(index);
             Best best = entry.getValue();
             rows.add(new ControlMessage.StandingsRow(entry.getKey(), best.displayName(),
-                    best.character(), best.timeFrames(), index + 1, "NONE"));
+                    best.character(), best.timeFrames(), index + 1, best.verifyState()));
         }
         return List.copyOf(rows);
     }

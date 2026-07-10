@@ -85,6 +85,13 @@ public final class RoomHost {
                                     + kind + ": " + detail);
                 }, this.hooks.relevanceFiltering());
         this.round = new HostRoundEngine(wallClockMillis, this::broadcast);
+        round.setVerifiedRoom(config.verified());
+        round.setPendingExpiryListener((slot, attemptId) -> {
+            if (this.hooks.verificationHooks() != null) {
+                this.hooks.verificationHooks().onPendingExpired(
+                        this.hooks.roomId(), slot, attemptId);
+            }
+        });
         round.setVoteTrackPool(config.voteTrackKeys(), this.hooks.knownVoteTrack());
         hub.setTrack(config.gameId(), config.zone(), config.act());
     }
@@ -229,7 +236,14 @@ public final class RoomHost {
     public ControlMessage.RoomDescriptor descriptor() {
         return new ControlMessage.RoomDescriptor(config.roomName(), roomGameId,
                 roomZone, roomAct, config.characterPolicy(),
-                config.lockedCharacter(), config.maxPlayers(), false);
+                config.lockedCharacter(), config.maxPlayers(), config.verified());
+    }
+
+    public void sendToSlot(int slot, ControlMessage message) {
+        Member member = memberForSlot(slot);
+        if (member != null) {
+            send(member, message);
+        }
     }
 
     private void handleHandshake(Member member, ControlMessage message) {
@@ -322,6 +336,13 @@ public final class RoomHost {
                 if (outcome != null && outcome.outsideBroadcastCap()) {
                     send(member, new ControlMessage.RankUpdate(
                             outcome.rank(), finish.timeFrames()));
+                }
+                if (outcome != null && config.verified()
+                        && hooks.verificationHooks() != null) {
+                    hooks.verificationHooks().onFinishNeedingVerification(
+                            hooks.roomId(), member.slot, member.fingerprint, finish,
+                            roomGameId + ":" + roomZone + ":" + roomAct,
+                            member.character, config.requiredDeterminismFingerprint(), false);
                 }
             }
             case ControlMessage.StandingsPageRequest request -> {

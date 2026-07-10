@@ -71,6 +71,7 @@ class TestRoomBroker {
     private TrustLadder ladder;
     private FakeTunnels tunnels;
     private SessionRegistry registry;
+    private VerifierRegistry verifiers;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -82,9 +83,10 @@ class TestRoomBroker {
         relays = new FakeRelays();
         tunnels = new FakeTunnels();
         registry = new SessionRegistry(() -> now, config);
+        verifiers = new VerifierRegistry(() -> now, 60_000);
         broker = new RoomBroker(PlayerIdentity.loadOrCreate(dir.resolve("master")), config,
                 registry, store, ladder, cache, () -> now, relays, tunnels,
-                java.util.Set.of("s3k:0:0", "s3k:0:1")::contains);
+                java.util.Set.of("s3k:0:0", "s3k:0:1")::contains, verifiers);
     }
 
     @AfterEach
@@ -120,6 +122,13 @@ class TestRoomBroker {
             now += TrustLadder.ACCRUAL_MIN_INTERVAL_MILLIS + 1;
             ladder.onCleanRound(fingerprint);
         }
+    }
+
+    private void trust(String fingerprint) {
+        store.establishForTest(fingerprint,
+                now - TrustLadder.Thresholds.defaults().trustedAgeMillis() - 1,
+                now, TrustLadder.Thresholds.defaults().trustedCleanRounds());
+        assertEquals(TrustLadder.Tier.TRUSTED, ladder.tierOf(fingerprint));
     }
 
     @Test
@@ -275,5 +284,43 @@ class TestRoomBroker {
         broker.onText(host, ControlCodec.encode(token,
                 new ControlMessage.RoomTrackUpdate(roomId, 0, 1)));
         assertEquals(1, registry.find(roomId).orElseThrow().descriptor().act());
+    }
+
+    @Test
+    void verifiedRoomsRequireRelayTrustedPlayersAndAvailableVerifier(
+            @TempDir Path hostDir, @TempDir Path guestDir) throws Exception {
+        FakeConnection host = new FakeConnection();
+        String hostToken = admit(host, hostDir, "HOST");
+        String hostFingerprint = PlayerIdentity.loadOrCreate(hostDir).fingerprint();
+        ControlMessage.RoomDescriptor verified = new ControlMessage.RoomDescriptor(
+                "Verified", "s3k", 0, 0, "OPEN", null, 8, true);
+
+        establish(hostFingerprint);
+        broker.onText(host, ControlCodec.encode(hostToken, new ControlMessage.RoomCreate(
+                verified, "DIRECT", 27888, "0.6:cafe")));
+        assertEquals("verified rooms are relay-only",
+                ((ControlMessage.RoomCreateRejected) lastMessage(host)).reason());
+        broker.onText(host, ControlCodec.encode(hostToken, new ControlMessage.RoomCreate(
+                verified, "RELAY", 0, "0.6:cafe")));
+        assertEquals("verified rooms require TRUSTED",
+                ((ControlMessage.RoomCreateRejected) lastMessage(host)).reason());
+
+        trust(hostFingerprint);
+        broker.onText(host, ControlCodec.encode(hostToken, new ControlMessage.RoomCreate(
+                verified, "RELAY", 0, "0.6:cafe")));
+        assertEquals("no verifier available for this build",
+                ((ControlMessage.RoomCreateRejected) lastMessage(host)).reason());
+        PlayerIdentity worker = PlayerIdentity.loadOrCreate(dir.resolve("worker"));
+        verifiers.register(worker.publicKeyEncoded(), java.util.Set.of("0.6:cafe"));
+        broker.onText(host, ControlCodec.encode(hostToken, new ControlMessage.RoomCreate(
+                verified, "RELAY", 0, "0.6:cafe")));
+        String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+
+        FakeConnection guest = new FakeConnection();
+        String guestToken = admit(guest, guestDir, "GUEST");
+        broker.onText(guest, ControlCodec.encode(guestToken,
+                new ControlMessage.RoomJoinRequest(roomId)));
+        assertEquals("verified rooms require TRUSTED",
+                ((ControlMessage.RoomJoinRejected) lastMessage(guest)).reason());
     }
 }

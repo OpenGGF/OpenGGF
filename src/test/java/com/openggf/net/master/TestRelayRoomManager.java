@@ -152,4 +152,61 @@ class TestRelayRoomManager {
             assertInstanceOf(ControlMessage.JoinRejected.class, lastMessage(impostor));
         }
     }
+
+    @Test
+    void verifiedFinishQueuesJobRequestsUploadAndPassesVerdict(@TempDir Path dir)
+            throws Exception {
+        long[] now = {1_000_000};
+        try (var store = new SqliteIdentityStore(dir.resolve("ids.db"))) {
+            var ladder = new TrustLadder(store,
+                    new NewIdentityCache(100, 3_600_000, () -> now[0]),
+                    TrustLadder.Thresholds.defaults(), () -> now[0]);
+            MasterConfig config = MasterConfig.defaults();
+            VerificationJobQueue jobs = new VerificationJobQueue(() -> now[0], 1000);
+            VerdictConsequences consequences = new VerdictConsequences(
+                    store, ladder, () -> now[0], 0);
+            RelayRoomManager manager = new RelayRoomManager(
+                    PlayerIdentity.loadOrCreate(dir.resolve("m")), ladder,
+                    TrackValidationProfileSource.none(), List.of(Runnable::run),
+                    Runnable::run, () -> now[0], (roomId, count) -> { },
+                    (roomId, owner, zone, act) -> { }, config, jobs, consequences);
+            PlayerIdentity player = PlayerIdentity.loadOrCreate(dir.resolve("player"));
+            SessionRegistry.RoomEntry entry = new SessionRegistry(() -> now[0], config)
+                    .create(new ControlMessage.RoomDescriptor(
+                                    "Verified", "s3k", 0, 0, "OPEN", null, 8, true),
+                            "RELAY", player.fingerprint(), "1.1.1.1", 0, "0.6:cafe");
+            manager.createRelayRoom(entry);
+            var access = manager.find(entry.roomId()).orElseThrow();
+            FakeConnection connection = new FakeConnection();
+            manager.attach(connection, entry.roomId(), player.fingerprint(), "P");
+            ClientHandshake handshake = new ClientHandshake(player, "P", "0.6:cafe");
+            access.room().onText(connection, ControlCodec.encode(null, handshake.hello()));
+            access.room().onText(connection, ControlCodec.encode(null,
+                    handshake.onWelcome((ControlMessage.Welcome) lastMessage(connection))));
+            String token = lastOfType(connection,
+                    ControlMessage.JoinAccepted.class).sessionToken();
+            access.room().onText(connection, ControlCodec.encode(token,
+                    new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
+                            "s3k", 0, 0, 60, "OPEN", null))));
+            now[0] += 3_000;
+            access.room().tick();
+            access.room().onText(connection, ControlCodec.encode(token,
+                    new ControlMessage.AttemptFinish(1, 100, 1, 101,
+                            "aa", "bb", null)));
+
+            assertInstanceOf(ControlMessage.RecordingRequest.class,
+                    lastOfType(connection, ControlMessage.RecordingRequest.class));
+            assertEquals(VerificationJobQueue.State.AWAITING_UPLOAD,
+                    jobs.stateOf("vj-1"));
+            assertEquals("PENDING",
+                    access.room().round().standings().getFirst().verifyState());
+            jobs.onRecordingUploaded("aa");
+            VerificationJobQueue.Job job = jobs.lease("worker", java.util.Set.of("0.6:cafe"))
+                    .orElseThrow();
+            jobs.complete(job.jobId(), "worker").orElseThrow();
+            manager.onVerdict(job, true);
+            assertEquals("VERIFIED",
+                    access.room().round().standings().getFirst().verifyState());
+        }
+    }
 }
