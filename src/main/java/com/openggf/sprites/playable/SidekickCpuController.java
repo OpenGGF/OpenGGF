@@ -2234,6 +2234,12 @@ public class SidekickCpuController {
                         && collisionRules.sidekickSuppressesFastLeaderTinyFollowNudge()
                         && effectiveLeader.getGSpeed() >= 0x400
                         && !leaderStatusOnObject
+                        // This is an engine object-order bridge for the live
+                        // spring/wall support case, not a ROM-wide fast-leader
+                        // rule. With no latched support, loc_13E0A/loc_13E34
+                        // still applies its native +/-1 x_pos nudge
+                        // (sonic3k.asm:26707-26741).
+                        && hasLiveInteractSlotObject(currentInteractSlotObject())
                         && Math.abs(sidekick.getGSpeed()) < 0x100
                         && localGraceAbsDx < followSnapThreshold
                         && dy < -JUMP_HEIGHT_THRESHOLD

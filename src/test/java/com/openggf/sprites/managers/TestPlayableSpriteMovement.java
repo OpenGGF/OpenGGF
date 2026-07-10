@@ -241,6 +241,25 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s3kTailsJumpRepressDoesNotEnterSonicShieldMoves() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                Tails tails = new Tails("tails_p2", (short) 0, (short) 0);
+                setGameRulesForTest(tails, GameRules.SONIC_3K);
+                tails.setAir(true);
+                tails.setRolling(true);
+                tails.setRollingJump(true);
+                tails.setJumping(true);
+                PlayableSpriteMovement tailsMovement = new PlayableSpriteMovement(tails);
+
+                Method shieldAbility = PlayableSpriteMovement.class.getDeclaredMethod("tryShieldAbility");
+                shieldAbility.setAccessible(true);
+
+                assertFalse((boolean) shieldAbility.invoke(tailsMovement));
+                assertTrue(tails.getRollingJump(),
+                                "Tails_JumpHeight does not call Sonic_ShieldMoves or clear Status_RollJump");
+        }
+
+        @Test
         public void s3kShieldMoveTransformsInsteadOfInstaShieldWhenEligible() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
                 setGameRulesForTest(GameRules.SONIC_3K);

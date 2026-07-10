@@ -1169,6 +1169,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (capabilityRules == null) {
 			return false;
 		}
+		// Tails_JumpHeight never enters Sonic_ShieldMoves. In particular it
+		// must not clear Status_RollJump on a CPU-generated A/B/C re-press;
+		// doing so exposes Sonic_ChgJumpDir air steering for a frame that the
+		// ROM keeps roll-locked (sonic3k.asm:28593-28621 vs 23401-23413).
+		if (sprite.getSecondaryAbility() == SecondaryAbility.FLY) {
+			return false;
+		}
 		boolean hasElemental = capabilityRules.elementalShieldsEnabled();
 		boolean hasInsta = capabilityRules.instaShieldEnabled();
 		if (!hasElemental && !hasInsta) {

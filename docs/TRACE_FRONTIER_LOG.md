@@ -62,6 +62,18 @@ moved the complete-run frontier through f2014 and f2138 without hydrating trace
 state. Focused guards `TestTraceReplayStartPositionPolicy` and
 `TestCutsceneKnucklesAiz1Instance` pass with MSE disabled.
 
+Round 2 banks two CPU-Tails execution fixes encountered after that intro. The
+S3K fast-leader tiny follow nudge is native unless a live interact/support object
+owns the engine's object-order suppression bridge; a stale/no-object latch no
+longer suppresses loc_13E0A/loc_13E34's +/-1 `x_pos` write
+(`sonic3k.asm:26707-26741`). Tails' airborne jump re-press also bypasses
+`Sonic_ShieldMoves`, preserving `Status_RollJump` as `Tails_JumpHeight` does
+(`sonic3k.asm:28593-28621,23401-23413`). Focused guards
+`TestSidekickCpuFollowParity#s3kFastLeaderLowSpeedFollowerStillNudgesWithoutSupportObject`
+and `TestPlayableSpriteMovement#s3kTailsJumpRepressDoesNotEnterSonicShieldMoves`
+pass with MSE disabled. These are shared sidekick-state rules, not AIZ/frame
+exceptions.
+
 Later unbanked investigation has advanced the branch-local complete-run frontier
 through f2303, f3294, f3420, the f4340-f4803 rock-push cluster, f5158, f5493,
 and currently f6237. Those causes will be recorded and committed separately as
