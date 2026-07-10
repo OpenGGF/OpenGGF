@@ -13,6 +13,11 @@ public interface IdentityStore extends AutoCloseable {
                           long issuedAtMillis, long expiryMillis) {
     }
 
+    record VerdictRecord(String fingerprint, String attemptRef,
+                         String inputRecordingHashHex, String result,
+                         String verifierSignatureBase64, long timestampMillis) {
+    }
+
     Optional<IdentityRecord> find(String fingerprint);
 
     void persistOnDurableEvent(String fingerprint, long firstSeenMillis, long nowMillis);
@@ -28,6 +33,10 @@ public interface IdentityStore extends AutoCloseable {
     void addSanction(SanctionRecord sanction);
 
     List<SanctionRecord> activeSanctions(String fingerprint, long nowMillis);
+
+    void addVerdict(VerdictRecord verdict);
+
+    List<VerdictRecord> verdictsFor(String fingerprint);
 
     int gcInactiveNewIdentities(long inactiveSinceMillis);
 

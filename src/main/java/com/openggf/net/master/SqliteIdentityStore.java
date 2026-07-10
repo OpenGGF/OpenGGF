@@ -128,6 +128,38 @@ public final class SqliteIdentityStore implements IdentityStore {
     }
 
     @Override
+    public void addVerdict(VerdictRecord verdict) {
+        execute("""
+                INSERT INTO verdicts
+                  (fingerprint, attempt_ref, input_recording_hash, result,
+                   verifier_signature, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?)""", verdict.fingerprint(),
+                verdict.attemptRef(), verdict.inputRecordingHashHex(), verdict.result(),
+                verdict.verifierSignatureBase64(), verdict.timestampMillis());
+    }
+
+    @Override
+    public List<VerdictRecord> verdictsFor(String fingerprint) {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT attempt_ref, input_recording_hash, result,
+                       verifier_signature, timestamp
+                FROM verdicts WHERE fingerprint = ? ORDER BY id""")) {
+            statement.setString(1, fingerprint);
+            try (ResultSet row = statement.executeQuery()) {
+                List<VerdictRecord> verdicts = new ArrayList<>();
+                while (row.next()) {
+                    verdicts.add(new VerdictRecord(fingerprint, row.getString(1),
+                            row.getString(2), row.getString(3), row.getString(4),
+                            row.getLong(5)));
+                }
+                return List.copyOf(verdicts);
+            }
+        } catch (SQLException e) {
+            throw databaseFailure(e);
+        }
+    }
+
+    @Override
     public int gcInactiveNewIdentities(long inactiveSinceMillis) {
         try (PreparedStatement statement = connection.prepareStatement(
                 "DELETE FROM identities WHERE tier = 'NEW' AND last_seen < ?")) {
