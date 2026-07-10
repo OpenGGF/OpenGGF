@@ -5,6 +5,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ghost.GhostCaptureBuffer;
 import com.openggf.game.ghost.GhostFrame;
+import com.openggf.game.ghost.GhostFrameSampler;
 import com.openggf.game.ghost.GhostHeader;
 import com.openggf.game.ghost.GhostFileCodec;
 import com.openggf.game.ghost.GhostPlaybackCursor;
@@ -372,9 +373,7 @@ public final class TimeAttackRuntime {
         boolean endOfLevel = gameState.isEndOfLevelActive() || gameState.isActCompletionSignalActive();
         var checkpointState = level.getCheckpointState();
         int checkpointIndex = checkpointState != null ? checkpointState.getLastCheckpointIndex() : -1;
-        GhostFrame sampledFrame = new GhostFrame(player.getCentreX(), player.getCentreY(),
-                player.getMappingFrame(), player.getRenderHFlip(), player.getRenderVFlip(),
-                false, player.getPriorityBucket(), player.isHighPriority());
+        GhostFrame sampledFrame = GhostFrameSampler.sample(player, false);
         tickForTest(pendingHeldMask, pendingStartHeld, endOfLevel, checkpointIndex, sampledFrame);
     }
 
