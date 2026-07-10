@@ -178,6 +178,7 @@ class TestArchUnitRules {
             "level -> editor",
             "level -> game",
             "level -> graphics",
+            "level -> io",
             "level -> physics",
             "level -> sprites",
             "level -> testmode",

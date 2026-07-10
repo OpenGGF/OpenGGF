@@ -215,7 +215,22 @@ public class LevelResourcePlan {
             if (chunkOps.isEmpty()) {
                 throw new IllegalStateException("At least one chunk operation is required");
             }
+            validateCompositionOrder("pattern", patternOps);
+            validateCompositionOrder("block", blockOps);
+            validateCompositionOrder("chunk", chunkOps);
             return new LevelResourcePlan(this);
+        }
+
+        private static void validateCompositionOrder(String resourceName, List<LoadOp> operations) {
+            if (operations.get(0).destOffsetBytes() != 0) {
+                throw new IllegalStateException("First " + resourceName + " operation must be a base load");
+            }
+            for (int i = 1; i < operations.size(); i++) {
+                if (operations.get(i).destOffsetBytes() == 0) {
+                    throw new IllegalStateException(
+                            "Only the first " + resourceName + " operation may be a base load");
+                }
+            }
         }
     }
 }
