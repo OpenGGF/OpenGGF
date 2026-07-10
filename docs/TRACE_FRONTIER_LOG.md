@@ -183,11 +183,25 @@ stacked complete-run frontier from f8014 to f8326. The focused
 guard now covers both the counter and oscillator portions of the skipped ROM
 tail.
 
+Round 12 banks terrain ownership of S3K CPU-Tails underwater push state. At
+f8324 `CalcRoomInFront` sets `Status_Push` against the AIZ2 wall, but a stale
+historical `interact` slot made the engine's released-object cleanup clear that
+fresh bit after the f8325 CPU read. ROM keeps the same literal status bit live,
+so `loc_13DD0` continues bypassing the +/-1 follow nudge until the jump path
+clears it (`sonic3k.asm:26702-26705,27974-28018`). The engine already tracked
+terrain-wall provenance for its pre-CPU stale clear; that ownership now covers
+the post-CPU clear and the subsequent underwater bypass as well. Focused
+`TestSidekickCpuFollowParity` guards preserve both the old stale-object one-shot
+clear and the fresh terrain-owned case. The stacked complete-run frontier moves
+from f8326 to f8350.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree frontier is f8326. Those causes will be recorded and committed
-separately as their focused guards are completed. The level-select AIZ trace remains at f8941
-and is still part of the stage-green exit gate. S1/S2 full trace sweeps remain
+banked rounds the current stacked working-tree complete-run frontier is f8350. Those causes will be recorded and committed
+separately as their focused guards are completed. The banked level-select AIZ
+baseline remains f8941; the unbanked transition-timing stack currently exposes
+an earlier f5435 mismatch and must restore/advance that route before the stage
+can turn green. S1/S2 full trace sweeps remain
 pending until the AIZ fixes are banked; no green claim is made yet.
 
 ## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green

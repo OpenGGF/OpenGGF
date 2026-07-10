@@ -2123,11 +2123,20 @@ public class SidekickCpuController {
                 && (!sidekick.isInWater()
                 || !restrictUnderwaterPushBypassToContactPulses
                 || delayedObjectOrPushContext
+                || sidekick.isPushFromGroundWallCollision()
                 || isUnderwaterCurrentPushPulse()))
                 || frameStartPushBypass;
         boolean clearReleasedUnderwaterPushAfterCpu = currentPushBypass
                 && releasedUnderwaterZeroSpeedPush
-                && !releasedUnderwaterPushConsumed;
+                && !releasedUnderwaterPushConsumed
+                // A released interact slot is only evidence that an old
+                // object-owned bit may be stale. A terrain CalcRoomInFront
+                // response can set the same native Status_Push bit after that
+                // release; ROM loc_13DD0 consumes it and a zero-distance next
+                // probe leaves it intact (sonic3k.asm:26702-26705,
+                // 27974-28018). Do not classify that fresh terrain source as
+                // the released object's one-shot clear.
+                && !sidekick.isPushFromGroundWallCollision();
         boolean pushBypassGraceEnabled = collisionRules != null && collisionRules.sidekickPushBypassUsesGraceStatus();
         boolean gracePushBypass = !sidekick.getAir()
                 && pushBypassGraceEnabled

@@ -2034,6 +2034,53 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kDestroyedLatchedObjectDoesNotClearFreshUnderwaterTerrainWallPush() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setInWater(true);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x0AB5);
+        tails.setCentreY((short) 0x059D);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0);
+        tails.setXSpeed((short) 0x0018);
+        tails.setYSpeed((short) 0);
+        tails.setPushing(true);
+        tails.markPushFromGroundWallCollision();
+
+        LiveRideObject releasedRide = new LiveRideObject(0x07);
+        releasedRide.setSlotIndex(29);
+        releasedRide.setDestroyed(true);
+        tails.setLatchedSolidObject(0x07, releasedRide);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0ABD);
+        Arrays.fill(yHistory, (short) 0x0407);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x2085);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics =
+                controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("current_push_bypass", diagnostics.followBranch()),
+                () -> assertTrue(diagnostics.skipFollowSteering()),
+                () -> assertTrue(tails.getPushing(),
+                        "A live CalcRoomInFront push must outlive stale interact-slot bookkeeping"),
+                () -> assertTrue(tails.isPushFromGroundWallCollision()));
+    }
+
+    @Test
     void s3kEmptyInteractSlotConsumesThenPreClearsUnderwaterZeroSpeedPushAfterAizReload()
             throws Exception {
         GameModule previous = GameModuleRegistry.getBootstrapDefault();
