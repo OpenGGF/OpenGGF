@@ -315,19 +315,20 @@ public class GraphicsManager {
 		ensurePatternAtlas();
 		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
 
-		Integer paletteTextureId;
-		if (useUnderwaterPaletteForBackground && underwaterPaletteTextureId != null) {
-			paletteTextureId = underwaterPaletteTextureId;
-		} else {
-			paletteTextureId = combinedPaletteTextureId;
-		}
+		Integer paletteTextureId = resolveEffectivePatternPaletteTextureId();
 
 		if (entry == null || paletteTextureId == null) {
 			return;
 		}
+		boolean restartInstanced = instancedBatchActive && instancedPatternRenderer != null;
+		boolean restartBatched = !restartInstanced && batchedRenderer != null && batchedRenderer.isBatchActive();
+		if (restartInstanced || restartBatched) {
+			flushPatternBatch();
+		}
 
 		PatternRenderCommand command = PatternRenderCommand.obtain(entry, paletteTextureId, desc, x, y, width, height, this);
 		registerCommand(command);
+		restartPatternBatch(restartInstanced, restartBatched, 0);
 	}
 
 	/**
@@ -799,12 +800,7 @@ public class GraphicsManager {
 		ensurePatternAtlas();
 		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
 
-		Integer paletteTextureId;
-		if (useUnderwaterPaletteForBackground && underwaterPaletteTextureId != null) {
-			paletteTextureId = underwaterPaletteTextureId;
-		} else {
-			paletteTextureId = combinedPaletteTextureId;
-		}
+		Integer paletteTextureId = resolveEffectivePatternPaletteTextureId();
 
 		if (entry == null) {
 			return;
@@ -815,11 +811,23 @@ public class GraphicsManager {
 		// Try batched rendering for better performance
 		// Only use batching if enabled, batch is active, and pattern was successfully added
 		boolean usedBatch = false;
-		if (entry.atlasIndex() == 0) {
-			if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
+		boolean restartBatchedAfterFallback = false;
+		int paletteIndex = desc.getPaletteIndex();
+		if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
+			usedBatch = instancedPatternRenderer.addPattern(entry, paletteIndex, desc, x, y);
+			if (!usedBatch) {
+				flushPatternBatch();
+				restartPatternBatch(true, false, entry.atlasIndex());
 				usedBatch = instancedPatternRenderer.addPattern(entry, desc.getPaletteIndex(), desc, x, y);
-			} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
-				usedBatch = batchedRenderer.addPattern(entry, desc.getPaletteIndex(), desc, x, y);
+			}
+		} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
+			if (entry.atlasIndex() == 0) {
+				usedBatch = batchedRenderer.addPattern(entry, paletteIndex, desc, x, y);
+			}
+			if (!usedBatch) {
+				// A direct fallback must be ordered after already staged page-0 geometry.
+				restartBatchedAfterFallback = true;
+				flushPatternBatch();
 			}
 		}
 
@@ -827,6 +835,9 @@ public class GraphicsManager {
 			// Fallback to individual commands (use pooled allocation)
 			PatternRenderCommand command = PatternRenderCommand.obtain(entry, paletteTextureId, desc, x, y, this);
 			registerCommand(command);
+			if (restartBatchedAfterFallback) {
+				restartPatternBatch(false, true, 0);
+			}
 		}
 	}
 
@@ -868,17 +879,64 @@ public class GraphicsManager {
 		}
 		ensurePatternAtlas();
 		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
-		if (entry == null || combinedPaletteTextureId == null) {
+		Integer paletteTextureId = resolveEffectivePatternPaletteTextureId();
+		if (entry == null || paletteTextureId == null) {
 			return;
 		}
 
-		// Only use batched rendering for strip patterns
-		if (entry.atlasIndex() == 0) {
-			if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
-				instancedPatternRenderer.addStripPattern(entry, desc.getPaletteIndex(), desc, x, y, stripIndex);
-			} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
-				batchedRenderer.addStripPattern(entry, desc.getPaletteIndex(), desc, x, y, stripIndex);
+		// Only use batched rendering for strip patterns.
+		int paletteIndex = desc.getPaletteIndex();
+		boolean restartInstancedAfterDirect = false;
+		boolean restartBatchedAfterDirect = false;
+		if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
+			boolean added = instancedPatternRenderer.addStripPattern(entry, paletteIndex, desc, x, y, stripIndex);
+			if (!added) {
+				flushPatternBatch();
+				restartPatternBatch(true, false, entry.atlasIndex());
+				added = instancedPatternRenderer.addStripPattern(entry, desc.getPaletteIndex(), desc, x, y, stripIndex);
 			}
+			if (!added) {
+				flushPatternBatch();
+				restartInstancedAfterDirect = true;
+			} else {
+				return;
+			}
+		} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
+			boolean added = entry.atlasIndex() == 0
+					&& batchedRenderer.addStripPattern(entry, paletteIndex, desc, x, y, stripIndex);
+			if (added) {
+				return;
+			}
+			flushPatternBatch();
+			if (entry.atlasIndex() == 0) {
+				restartPatternBatch(false, true, 0);
+				if (batchedRenderer.addStripPattern(entry, paletteIndex, desc, x, y, stripIndex)) {
+					return;
+				}
+				flushPatternBatch();
+			}
+			restartBatchedAfterDirect = true;
+		}
+		PatternRenderCommand command = PatternRenderCommand.obtain(entry, paletteTextureId,
+				desc, x, y, 8f, 2f, this);
+		command.resolveStripTextureCoordinates(entry, stripIndex);
+		registerCommand(command);
+		restartPatternBatch(restartInstancedAfterDirect, restartBatchedAfterDirect, entry.atlasIndex());
+	}
+
+	private Integer resolveEffectivePatternPaletteTextureId() {
+		if (useUnderwaterPaletteForBackground && underwaterPaletteTextureId != null) {
+			return underwaterPaletteTextureId;
+		}
+		return combinedPaletteTextureId;
+	}
+
+	private void restartPatternBatch(boolean instanced, boolean batched, int atlasIndex) {
+		if (instanced && instancedPatternRenderer != null) {
+			instancedPatternRenderer.beginBatch(atlasIndex);
+			instancedBatchActive = true;
+		} else if (batched && batchedRenderer != null) {
+			batchedRenderer.beginBatch();
 		}
 	}
 
@@ -955,7 +1013,13 @@ public class GraphicsManager {
 			return;
 		}
 		if (batchedRenderer != null && batchedRenderer.isShadowBatchActive()) {
-			batchedRenderer.addShadowPattern(entry, desc, x, y);
+			if (!batchedRenderer.addShadowPattern(entry, desc, x, y)) {
+				flushShadowBatch();
+				batchedRenderer.beginShadowBatch(entry.atlasIndex());
+				if (!batchedRenderer.addShadowPattern(entry, desc, x, y)) {
+					throw new IllegalStateException("Unable to add shadow pattern to a fresh batch");
+				}
+			}
 		}
 	}
 
@@ -1528,6 +1592,9 @@ public class GraphicsManager {
 				instancedPatternRenderer.cleanupHeadless();
 			}
 			clearPaletteTextures();
+			PatternRenderCommand.cleanupHeadless();
+			GLCommand.cleanupHeadless();
+			GLCommandGroup.cleanup();
 			return;
 		}
 		// Delete pattern atlas texture
@@ -1572,6 +1639,9 @@ public class GraphicsManager {
 		}
 		// Release renderers, palette textures, native buffers
 		releasePerLevelResources();
+		PatternRenderCommand.cleanup();
+		GLCommand.cleanup();
+		GLCommandGroup.cleanup();
 		glInitialized = false;
 	}
 
@@ -1898,12 +1968,10 @@ public class GraphicsManager {
 						return;
 					}
 					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-					if (atlasEntry.atlasIndex() == 0
-							&& addToSatReplayBatch(atlasEntry, paletteIndex, drawX, drawY)) {
+					if (addToSatReplayBatch(atlasEntry, paletteIndex, drawX, drawY)) {
 						return;
 					}
-					// Overflow-atlas tile (the instanced renderer only binds atlas 0):
-					// flush the open batch first so draw order is preserved, then draw direct.
+					// Unsupported state: flush first so draw order is preserved, then draw direct.
 					flushSatReplayBatch();
 					registerCommand(PatternRenderCommand.obtain(atlasEntry, paletteTextureId,
 							reusableReplayDesc, drawX, drawY, this));
@@ -1912,7 +1980,7 @@ public class GraphicsManager {
 
 	private boolean addToSatReplayBatch(PatternAtlas.Entry atlasEntry, int paletteIndex, int drawX, int drawY) {
 		if (!satReplayBatchOpen) {
-			instancedPatternRenderer.beginBatch();
+			instancedPatternRenderer.beginBatch(atlasEntry.atlasIndex());
 			satReplayBatchOpen = true;
 		}
 		if (instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY)) {
@@ -1920,7 +1988,7 @@ public class GraphicsManager {
 		}
 		// Batch full: flush and retry once in a fresh batch.
 		flushSatReplayBatch();
-		instancedPatternRenderer.beginBatch();
+		instancedPatternRenderer.beginBatch(atlasEntry.atlasIndex());
 		satReplayBatchOpen = true;
 		return instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY);
 	}

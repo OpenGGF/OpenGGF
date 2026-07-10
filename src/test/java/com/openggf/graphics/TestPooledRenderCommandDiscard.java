@@ -182,7 +182,7 @@ class TestPooledRenderCommandDiscard {
 
     private static GLCommandable batchCommand(BatchedPatternRenderer renderer, boolean shadow) {
         if (shadow) {
-            renderer.beginShadowBatch();
+            renderer.beginShadowBatch(ENTRY.atlasIndex());
             renderer.addShadowPattern(ENTRY, descriptor(), 0, 0);
             return renderer.endShadowBatch();
         }
@@ -192,7 +192,7 @@ class TestPooledRenderCommandDiscard {
     }
 
     private static GLCommandable instancedCommand(InstancedPatternRenderer renderer) {
-        renderer.beginBatch();
+        renderer.beginBatch(ENTRY.atlasIndex());
         renderer.addPattern(ENTRY, 0, descriptor(), 0, 0);
         return renderer.endBatch();
     }

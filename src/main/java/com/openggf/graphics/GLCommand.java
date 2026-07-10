@@ -69,6 +69,10 @@ public class GLCommand implements GLCommandable {
 	private static int cachedCameraOffsetLoc = -1;
 	private static int lastProgramId = -1;
 
+	static boolean hasNativeScratch() {
+		return vertexBuffer != null;
+	}
+
 	public GLCommand(CommandType commandType, int value) {
 		this(commandType, value, bootstrapGraphicsManager(), bootstrapConfigService());
 	}
@@ -197,6 +201,12 @@ public class GLCommand implements GLCommandable {
 		if (vaoId == 0) {
 			vaoId = glGenVertexArrays();
 			vboId = glGenBuffers();
+		}
+		ensureNativeScratch();
+	}
+
+	static void ensureNativeScratch() {
+		if (vertexBuffer == null) {
 			vertexBuffer = MemoryUtil.memAllocFloat(MAX_VERTICES * VERTEX_SIZE);
 		}
 	}
@@ -382,6 +392,7 @@ public class GLCommand implements GLCommandable {
 	 * Cleanup static resources.
 	 */
 	public static void cleanup() {
+		inGroup = false;
 		if (vboId != 0) {
 			glDeleteBuffers(vboId);
 			vboId = 0;
@@ -395,5 +406,21 @@ public class GLCommand implements GLCommandable {
 			vertexBuffer = null;
 		}
 		lastProgramId = -1;
+		cachedProjectionLoc = -1;
+		cachedCameraOffsetLoc = -1;
+	}
+
+	/** Resets native/static state without issuing GL calls. */
+	public static void cleanupHeadless() {
+		inGroup = false;
+		vaoId = 0;
+		vboId = 0;
+		if (vertexBuffer != null) {
+			MemoryUtil.memFree(vertexBuffer);
+			vertexBuffer = null;
+		}
+		lastProgramId = -1;
+		cachedProjectionLoc = -1;
+		cachedCameraOffsetLoc = -1;
 	}
 }

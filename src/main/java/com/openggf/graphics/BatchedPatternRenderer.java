@@ -64,6 +64,7 @@ public class BatchedPatternRenderer {
 
     // Track whether a shadow batch is active (uses different shader and blend mode)
     private boolean shadowBatchActive = false;
+    private int shadowAtlasIndex;
 
     public static synchronized BatchedPatternRenderer getInstance() {
         if (instance == null) {
@@ -373,8 +374,13 @@ public class BatchedPatternRenderer {
      * where shadow pixels are rendered (VDP shadow/highlight mode).
      */
     public void beginShadowBatch() {
+        beginShadowBatch(0);
+    }
+
+    public void beginShadowBatch(int atlasIndex) {
         patternCount = 0;
         batchDisplayHeight = resolveDisplayHeight();
+        shadowAtlasIndex = atlasIndex;
         shadowBatchActive = true;
         batchActive = false; // Ensure normal batch is not active
     }
@@ -391,7 +397,8 @@ public class BatchedPatternRenderer {
      * Uses the same buffer management as normal batches.
      */
     public boolean addShadowPattern(PatternAtlas.Entry entry, PatternDesc desc, int x, int y) {
-        if (!shadowBatchActive || patternCount >= MAX_PATTERNS_PER_BATCH) {
+        if (!shadowBatchActive || patternCount >= MAX_PATTERNS_PER_BATCH
+                || entry.atlasIndex() != shadowAtlasIndex) {
             return false;
         }
 
@@ -440,7 +447,7 @@ public class BatchedPatternRenderer {
         }
 
         ShadowBatchRenderCommand command = obtainShadowCommand();
-        command.load(vertexData, texCoordData, patternCount);
+        command.load(vertexData, texCoordData, patternCount, shadowAtlasIndex);
 
         // Reset for next batch
         patternCount = 0;
@@ -837,6 +844,7 @@ public class BatchedPatternRenderer {
         private int patternCount;
         private int vertexFloatCount;
         private int texCoordFloatCount;
+        private int atlasIndex;
 
         private FloatBuffer vertexBuffer;
         private FloatBuffer texCoordBuffer;
@@ -855,8 +863,9 @@ public class BatchedPatternRenderer {
         private int cachedCameraOffsetLoc = -2;
         private int cachedShaderProgramId = -1;
 
-        private void load(float[] vertexData, float[] texCoordData, int patternCount) {
+        private void load(float[] vertexData, float[] texCoordData, int patternCount, int atlasIndex) {
             this.patternCount = patternCount;
+            this.atlasIndex = atlasIndex;
             this.vertexFloatCount = patternCount * FLOATS_PER_PATTERN_VERTS;
             this.texCoordFloatCount = patternCount * FLOATS_PER_PATTERN_TEXCOORDS;
 
@@ -932,7 +941,7 @@ public class BatchedPatternRenderer {
             // Bind VAO (required for core profile)
             glBindVertexArray(vaoId);
 
-            Integer atlasTextureId = gm.getPatternAtlasTextureId();
+            Integer atlasTextureId = resolveAtlasTextureId();
             if (atlasTextureId != null) {
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, atlasTextureId);
@@ -965,6 +974,10 @@ public class BatchedPatternRenderer {
 
             PatternRenderCommand.resetFrameState();
 
+        }
+
+        private Integer resolveAtlasTextureId() {
+            return graphicsManager.getPatternAtlasTextureId(atlasIndex);
         }
 
         @Override

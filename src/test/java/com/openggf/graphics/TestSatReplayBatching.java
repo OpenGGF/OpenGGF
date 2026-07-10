@@ -134,6 +134,33 @@ public class TestSatReplayBatching {
     }
 
     @Test
+    void atlasPageTransitionsFlushIntoOrderedInstancedBatches() throws Exception {
+        installInstancedRenderer();
+        PatternAtlas atlas = new PatternAtlas(8, 8); // one tile per page, two-page fallback
+        int virtualId = PatternAtlasRange.OBJECTS.base();
+        PatternAtlas.Entry pageZero = atlas.cachePatternHeadless(createSolidPattern((byte) 1), 0);
+        PatternAtlas.Entry pageOne = atlas.cachePatternHeadless(createSolidPattern((byte) 2), virtualId);
+        assertEquals(0, pageZero.atlasIndex());
+        assertEquals(1, pageOne.atlasIndex());
+        setField(graphicsManager, "patternAtlas", atlas);
+        setField(graphicsManager, "combinedPaletteTextureId", 1);
+
+        graphicsManager.beginSpriteSatCollection();
+        graphicsManager.submitSpriteSatPiece(piece(10, 20, 0, false));
+        graphicsManager.submitSpriteSatPiece(piece(20, 20, virtualId, false));
+        graphicsManager.submitSpriteSatPiece(piece(30, 20, 0, false));
+        graphicsManager.endSpriteSatCollectionAndReplay();
+
+        assertEquals(3, graphicsManager.commands.size(),
+                "page 0 -> 1 -> 0 must flush at each page boundary without direct fallback");
+        assertEquals(List.of("InstancedBatchCommand", "InstancedBatchCommand", "InstancedBatchCommand"),
+                graphicsManager.commands.stream().map(c -> c.getClass().getSimpleName()).toList());
+        assertEquals(0, getIntField(graphicsManager.commands.get(0), "atlasIndex"));
+        assertEquals(1, getIntField(graphicsManager.commands.get(1), "atlasIndex"));
+        assertEquals(0, getIntField(graphicsManager.commands.get(2), "atlasIndex"));
+    }
+
+    @Test
     void interruptedSatReplayCancelsPartialInstancedBatchWithoutDrawing() throws Exception {
         InstancedPatternRenderer renderer = installInstancedRenderer();
         PatternAtlas.Entry entry = new PatternAtlas.Entry(1, 0, 1, 0, 0, 0, 0, 1, 1);
