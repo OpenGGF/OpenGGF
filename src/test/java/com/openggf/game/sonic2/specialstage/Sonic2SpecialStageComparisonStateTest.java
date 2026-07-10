@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -75,6 +76,29 @@ class Sonic2SpecialStageComparisonStateTest {
         Sonic2SpecialStageComparisonState state = manager.captureComparisonState();
 
         assertEquals(manager.getRingsCollected(), state.combinedRings());
+        assertEquals(0, state.playerAnimFrameTimer());
+        assertEquals(0, state.ringsToGo(),
+                "rings-to-go is floored when no positive requirement remains");
         assertEquals(manager.isFinished(), state.finished());
+    }
+
+    @Test
+    void mapsRingsToGoFromRequirementMinusCombinedRingsAndFloorsAtZero() throws Exception {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        var objectManager = new Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager(null);
+        set(objectManager, "ringsCollected", 43);
+        set(manager, "objectManager", objectManager);
+        set(manager, "currentRingRequirement", 50);
+
+        assertEquals(7, manager.captureComparisonState().ringsToGo());
+
+        set(objectManager, "ringsCollected", 51);
+        assertEquals(0, manager.captureComparisonState().ringsToGo());
+    }
+
+    private static void set(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }

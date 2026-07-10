@@ -15,9 +15,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -277,6 +279,147 @@ class Sonic2SpecialStageBootstrapCadenceTest {
 
         assertTrue(manager.getSonicPlayer().isJumping(),
                 "the first jump edge must affect the completed pass that recorded it");
+    }
+
+    @Test
+    void terminalPassCompletionExecutesExactObj5fBoundaryWithoutAdvancingVint()
+            throws Exception {
+        advanceToTerminalPreStartBoundary();
+        int[] activeObjectUpdates = {0};
+        manager.getObjectManager().getActiveObjects().add(new Sonic2SpecialStageRing() {
+            @Override
+            public void update(
+                    int currentTrackFrame,
+                    boolean trackFlipped,
+                    int speedFactor,
+                    boolean drawingIndex4) {
+                activeObjectUpdates[0]++;
+            }
+        });
+        Sonic2SpecialStageSnapshot before = manager.captureRewindSnapshot();
+        assertTrue(before.recurringMainPassPending);
+
+        manager.completeTerminalPreStartPassWithoutVint();
+
+        Sonic2SpecialStageSnapshot after = manager.captureRewindSnapshot();
+        assertEquals(1, activeObjectUpdates[0], "exactly one pending pass must execute");
+        assertEquals(before.frameCounter, after.frameCounter, "VInt frame must not advance");
+        assertEquals(before.lastDrawingIndex, after.lastDrawingIndex,
+                "VInt draw slice must not advance");
+        assertArrayEquals(before.trackAnimator.stageLayout(), after.trackAnimator.stageLayout());
+        assertEquals(before.trackAnimator.layoutLength(), after.trackAnimator.layoutLength());
+        assertEquals(before.trackAnimator.currentSegmentIndex(),
+                after.trackAnimator.currentSegmentIndex());
+        assertEquals(before.trackAnimator.currentFrameInSegment(),
+                after.trackAnimator.currentFrameInSegment());
+        assertEquals(before.trackAnimator.frameDelayCounter(),
+                after.trackAnimator.frameDelayCounter());
+        assertEquals(before.trackAnimator.playerAnimFrameTimer(),
+                after.trackAnimator.playerAnimFrameTimer());
+        assertEquals(before.trackAnimator.currentSegmentType(),
+                after.trackAnimator.currentSegmentType());
+        assertEquals(before.trackAnimator.currentSegmentFlipped(),
+                after.trackAnimator.currentSegmentFlipped());
+        assertEquals(before.trackAnimator.speedFactor(), after.trackAnimator.speedFactor());
+        assertEquals(before.trackAnimator.speedChangePending(),
+                after.trackAnimator.speedChangePending());
+        assertEquals(before.trackAnimator.stageComplete(), after.trackAnimator.stageComplete());
+        assertEquals(before.trackAnimator.orientationFlipped(),
+                after.trackAnimator.orientationFlipped());
+        assertEquals(before.trackAnimator.lastOrientationFrame(),
+                after.trackAnimator.lastOrientationFrame());
+        assertEquals(Sonic2SpecialStageIntro.Phase.MESSAGE_FLYOUT,
+                after.intro.currentPhase());
+        assertTrue(after.intro.specialStageStarted(),
+                "Obj5F's terminal pass must publish SpecialStage_Started");
+        assertTrue(after.recurringMainPassPending,
+                "completion must leave the following recurring pass slot pending");
+
+        provider.bindPendingRecurringPassInput(0x108, 0x110, 0x204, 0x208);
+        Sonic2SpecialStageSnapshot rebound = manager.captureRewindSnapshot();
+        assertEquals(0x08, rebound.pendingMainHeldButtons);
+        assertEquals(0x10, rebound.pendingMainPressedButtons);
+        assertEquals(0x04, rebound.pendingMainP2HeldButtons);
+        assertEquals(0x08, rebound.pendingMainP2LogicalButtons);
+    }
+
+    @Test
+    void terminalPassCompletionRejectsPendingGameplayPassWithoutMutation() {
+        advanceToGameplay();
+        Sonic2SpecialStageSnapshot before = manager.captureRewindSnapshot();
+        assertTrue(before.recurringMainPassPending,
+                "wrong-phase proof requires an otherwise valid pending pass");
+
+        assertThrows(IllegalStateException.class,
+                manager::completeTerminalPreStartPassWithoutVint);
+
+        assertTerminalBoundaryStateUnchanged(before, manager.captureRewindSnapshot());
+    }
+
+    @Test
+    void terminalPassCompletionIsOneShotAndRepeatLeavesStateUnchanged() {
+        advanceToTerminalPreStartBoundary();
+        manager.completeTerminalPreStartPassWithoutVint();
+        Sonic2SpecialStageSnapshot afterFirst = manager.captureRewindSnapshot();
+
+        assertThrows(IllegalStateException.class,
+                manager::completeTerminalPreStartPassWithoutVint);
+
+        assertTerminalBoundaryStateUnchanged(afterFirst, manager.captureRewindSnapshot());
+    }
+
+    @Test
+    void initialObj5fChildrenRenderDuringCountdownAndMessageAppearsAtTerminalPass() {
+        advanceToInitialWait2Start();
+        Sonic2SpecialStageIntro intro = manager.getIntro();
+
+        assertTrue(intro.isBannerVisible(),
+                "the banner-child render pass must remain enabled at allocation");
+        assertTrue(intro.isBannerInFlyoutPhase(),
+                "WAIT2 owns the independent child flight after Obj5F allocation");
+        assertEquals(7, intro.getBannerLetters().size());
+        assertTrue(intro.getBannerLetters().stream().allMatch(letter -> letter.visible));
+        assertEquals(1, intro.getLetterFlyoutProgress(),
+                "new later-slot banner children execute once in their allocation pass");
+        assertNotEquals(-0x48, intro.getBannerLetters().get(0).x,
+                "the first child ObjectMove precedes its first display");
+        assertFalse(intro.isMessageVisible(),
+                "Obj5A ring-requirement message does not exist during initial countdown");
+        assertEquals(0, manager.captureRewindSnapshot().intro.phaseTimer(),
+                "Obj5F child creation stores $1E but does not decrement it");
+
+        int initialLeftPieceX = intro.getBannerLetters().get(0).x;
+        for (int countdownPass = 1;
+             countdownPass <= Sonic2SpecialStageConstants.INTRO_WAIT2_FRAMES - 1;
+             countdownPass++) {
+            manager.update();
+            assertEquals(countdownPass,
+                    manager.captureRewindSnapshot().intro.phaseTimer());
+            assertEquals(Sonic2SpecialStageIntro.Phase.WAIT2, intro.getCurrentPhase());
+            assertFalse(intro.isSpecialStageStarted());
+            assertFalse(intro.isMessageVisible());
+            if (countdownPass == 5) {
+                assertNotEquals(initialLeftPieceX, intro.getBannerLetters().get(0).x,
+                        "banner children must keep moving during the overlapping countdown");
+            }
+        }
+        assertTrue(intro.isBannerVisible());
+        assertTrue(intro.isBannerInFlyoutPhase());
+        assertFalse(intro.isMessageVisible());
+
+        manager.completeTerminalPreStartPassWithoutVint();
+
+        assertFalse(intro.isBannerVisible());
+        assertFalse(intro.isBannerInFlyoutPhase());
+        assertTrue(intro.isMessageVisible(),
+                "terminal Obj5F pass creates the initial GET-rings message");
+        assertTrue(intro.isSpecialStageStarted());
+
+        intro.showRingRequirementMessage(50);
+        assertEquals(Sonic2SpecialStageIntro.Phase.WAIT2, intro.getCurrentPhase());
+        assertFalse(intro.isBannerVisible());
+        assertTrue(intro.isMessageVisible(),
+                "checkpoint reuse must retain its immediate message visibility");
     }
 
     @Test
@@ -553,5 +696,59 @@ class Sonic2SpecialStageBootstrapCadenceTest {
             manager.update();
         }
         assertTrue(manager.getIntro().isComplete(), "intro should reach semantic gameplay gate");
+    }
+
+    private void advanceToTerminalPreStartBoundary() {
+        advanceThroughStartupRunObjects();
+        int updatesRemaining = 1_000;
+        while ((manager.getIntro().getCurrentPhase() != Sonic2SpecialStageIntro.Phase.WAIT2
+                || manager.captureRewindSnapshot().intro.phaseTimer()
+                < Sonic2SpecialStageConstants.INTRO_WAIT2_FRAMES - 1)
+                && updatesRemaining-- > 0) {
+            manager.handleInput(0, 0);
+            manager.update();
+        }
+        Sonic2SpecialStageSnapshot boundary = manager.captureRewindSnapshot();
+        assertEquals(Sonic2SpecialStageIntro.Phase.WAIT2, boundary.intro.currentPhase());
+        assertEquals(Sonic2SpecialStageConstants.INTRO_WAIT2_FRAMES - 1,
+                boundary.intro.phaseTimer());
+        assertFalse(boundary.intro.specialStageStarted());
+        assertTrue(boundary.recurringMainPassPending);
+    }
+
+    private void advanceToInitialWait2Start() {
+        advanceThroughStartupRunObjects();
+        int updatesRemaining = 1_000;
+        while (manager.getIntro().getCurrentPhase() != Sonic2SpecialStageIntro.Phase.WAIT2
+                && updatesRemaining-- > 0) {
+            manager.handleInput(0, 0);
+            manager.update();
+        }
+        assertEquals(Sonic2SpecialStageIntro.Phase.WAIT2,
+                manager.getIntro().getCurrentPhase());
+        assertEquals(0, manager.captureRewindSnapshot().intro.phaseTimer());
+    }
+
+    private static void assertTerminalBoundaryStateUnchanged(
+            Sonic2SpecialStageSnapshot expected,
+            Sonic2SpecialStageSnapshot actual) {
+        assertEquals(expected.frameCounter, actual.frameCounter);
+        assertEquals(expected.lastDrawingIndex, actual.lastDrawingIndex);
+        assertEquals(expected.recurringMainPassPending, actual.recurringMainPassPending);
+        assertEquals(expected.pendingMainHeldButtons, actual.pendingMainHeldButtons);
+        assertEquals(expected.pendingMainPressedButtons, actual.pendingMainPressedButtons);
+        assertEquals(expected.pendingMainP2HeldButtons, actual.pendingMainP2HeldButtons);
+        assertEquals(expected.pendingMainP2LogicalButtons, actual.pendingMainP2LogicalButtons);
+        assertEquals(expected.pendingMainCheckpointStep, actual.pendingMainCheckpointStep);
+        assertEquals(expected.intro, actual.intro);
+        assertArrayEquals(expected.trackAnimator.stageLayout(), actual.trackAnimator.stageLayout());
+        assertEquals(expected.trackAnimator.currentSegmentIndex(),
+                actual.trackAnimator.currentSegmentIndex());
+        assertEquals(expected.trackAnimator.currentFrameInSegment(),
+                actual.trackAnimator.currentFrameInSegment());
+        assertEquals(expected.trackAnimator.frameDelayCounter(),
+                actual.trackAnimator.frameDelayCounter());
+        assertEquals(expected.trackAnimator.playerAnimFrameTimer(),
+                actual.trackAnimator.playerAnimFrameTimer());
     }
 }

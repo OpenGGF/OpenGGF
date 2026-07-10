@@ -876,7 +876,8 @@ public class Sonic2SpecialStageRenderer {
 
     /**
      * Renders the START banner sprite using the real Obj5F frame0 sprite pieces.
-     * During WAIT1 phase, renders individual pieces flying off instead of the full banner.
+     * During the Obj5F child-flight window (WAIT1 into the overlapping WAIT2
+     * countdown), renders individual pieces instead of the full banner.
      *
      * Mega Drive coordinate system: Y=0 is at the TOP of the screen.
      * intro.getBannerX()/getBannerY() are in that same space.

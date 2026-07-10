@@ -35,6 +35,8 @@ public class Sonic2TrackAnimator {
     private int currentSegmentIndex;
     private int currentFrameInSegment;
     private int frameDelayCounter;
+    /** ROM RAM byte {@code SS_player_anim_frame_timer} ($FFDB21). */
+    private int playerAnimFrameTimer;
     private int currentSegmentType;
     private boolean currentSegmentFlipped;
 
@@ -78,6 +80,7 @@ public class Sonic2TrackAnimator {
         currentSegmentIndex = 0;
         currentFrameInSegment = 0;
         frameDelayCounter = 0;
+        playerAnimFrameTimer = 0;
         stageComplete = false;
         // SS_Cur_Speed_Factor remains zero until Vint_S2SS promotes the new
         // factor written by SpecialStage (s2.asm:6640, 960-975).
@@ -115,6 +118,7 @@ public class Sonic2TrackAnimator {
         currentSegmentIndex = 0;
         currentFrameInSegment = 0;
         frameDelayCounter = 0;
+        playerAnimFrameTimer = 0;
         speedFactor = 0;
         speedChangePending = false;
         stageComplete = false;
@@ -134,6 +138,7 @@ public class Sonic2TrackAnimator {
     public void tickVintTimer() {
         if (speedChangePending) {
             frameDelayCounter = 0;
+            playerAnimFrameTimer = (getRomFrameDuration() - 1) & 0xFF;
             speedChangePending = false;
             return;
         }
@@ -141,6 +146,7 @@ public class Sonic2TrackAnimator {
         frameDelayCounter++;
         if (frameDelayCounter >= getFrameDuration()) {
             frameDelayCounter = 0;
+            playerAnimFrameTimer = (getRomFrameDuration() - 1) & 0xFF;
         }
     }
 
@@ -332,23 +338,28 @@ public class Sonic2TrackAnimator {
      * This is used for track animation timing.
      */
     private int getFrameDuration() {
+        return Math.max(1, getRomFrameDuration());
+    }
+
+    private int getRomFrameDuration() {
         int index = (speedFactor >> 1) & 0x7;
         if (index < Sonic2SpecialStageConstants.ANIM_BASE_DURATIONS.length) {
-            return Math.max(1, Sonic2SpecialStageConstants.ANIM_BASE_DURATIONS[index]);
+            return Sonic2SpecialStageConstants.ANIM_BASE_DURATIONS[index];
         }
         return 15;
     }
 
     /**
      * Gets the player animation frame timer value.
-     * This is SS_player_anim_frame_timer from the original game.
-     * The player animation uses this value divided by 2.
+     * This is the stored {@code SS_player_anim_frame_timer} RAM byte. On track
+     * timer expiry the ROM reloads the base duration into both timer bytes and
+     * decrements this byte once; on non-expiry ticks it returns this value plus
+     * one in {@code d1} without storing it (s2.asm:960-982). Player animation
+     * uses the stored value divided by two (s2.asm:69610-69612).
      * @return The current player animation timer value
      */
     public int getPlayerAnimFrameTimer() {
-        // In the original game, this decrements each frame from the base duration.
-        // For simplicity, return the base duration - 1 (matching line 69975: subq.b #1)
-        return getFrameDuration() - 1;
+        return playerAnimFrameTimer;
     }
 
     /**
@@ -378,6 +389,7 @@ public class Sonic2TrackAnimator {
                 currentSegmentIndex,
                 currentFrameInSegment,
                 frameDelayCounter,
+                playerAnimFrameTimer,
                 currentSegmentType,
                 currentSegmentFlipped,
                 speedFactor,
@@ -393,6 +405,7 @@ public class Sonic2TrackAnimator {
         currentSegmentIndex = snapshot.currentSegmentIndex();
         currentFrameInSegment = snapshot.currentFrameInSegment();
         frameDelayCounter = snapshot.frameDelayCounter();
+        playerAnimFrameTimer = snapshot.playerAnimFrameTimer();
         currentSegmentType = snapshot.currentSegmentType();
         currentSegmentFlipped = snapshot.currentSegmentFlipped();
         speedFactor = snapshot.speedFactor();

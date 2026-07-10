@@ -42,6 +42,7 @@ class TestSonic2SpecialStageTrackAnimatorSnapshot {
         set(animator, "currentSegmentIndex", 4);
         set(animator, "currentFrameInSegment", 7);
         set(animator, "frameDelayCounter", 2);
+        set(animator, "playerAnimFrameTimer", 4);
         set(animator, "currentSegmentType", 3);
         set(animator, "currentSegmentFlipped", true);
         set(animator, "speedFactor", 9);
@@ -56,6 +57,7 @@ class TestSonic2SpecialStageTrackAnimatorSnapshot {
         set(animator, "currentSegmentIndex", 99);
         set(animator, "currentFrameInSegment", 99);
         set(animator, "frameDelayCounter", 99);
+        set(animator, "playerAnimFrameTimer", 99);
         set(animator, "currentSegmentType", 99);
         set(animator, "currentSegmentFlipped", false);
         set(animator, "speedFactor", 1);
@@ -69,6 +71,7 @@ class TestSonic2SpecialStageTrackAnimatorSnapshot {
         assertEquals(4, get(animator, "currentSegmentIndex"));
         assertEquals(7, get(animator, "currentFrameInSegment"));
         assertEquals(2, get(animator, "frameDelayCounter"));
+        assertEquals(4, get(animator, "playerAnimFrameTimer"));
         assertEquals(3, get(animator, "currentSegmentType"));
         assertEquals(true, get(animator, "currentSegmentFlipped"));
         assertEquals(9, get(animator, "speedFactor"));

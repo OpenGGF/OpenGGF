@@ -42,6 +42,21 @@ public class Sonic2SpecialStageManagerTest {
     }
 
     @Test
+    void terminalPassCompletionRejectsAnAbsentPendingPassWithoutMutation() {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        Sonic2SpecialStageSnapshot before = manager.captureRewindSnapshot();
+
+        assertThrows(IllegalStateException.class,
+                manager::completeTerminalPreStartPassWithoutVint);
+
+        Sonic2SpecialStageSnapshot after = manager.captureRewindSnapshot();
+        assertEquals(before.frameCounter, after.frameCounter);
+        assertEquals(before.lastDrawingIndex, after.lastDrawingIndex);
+        assertEquals(before.recurringMainPassPending, after.recurringMainPassPending);
+        assertEquals(before.trackAnimator, after.trackAnimator);
+    }
+
+    @Test
     public void lagCompensationDisplayStartsOffAndToggles() {
         Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
 
@@ -126,5 +141,3 @@ public class Sonic2SpecialStageManagerTest {
         assertEquals(TRACK_FRAMES_END, expectedEnd, "Last frame should end at TRACK_FRAMES_END");
     }
 }
-
-

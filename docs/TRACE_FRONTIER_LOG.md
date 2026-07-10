@@ -40,6 +40,141 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage animation timer and refresh-gated rings-to-go ratchets
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `aec89f733`. Task 9 implements
+the two remaining recorded manager fields and resolves Task 8's flip-phase
+warning without changing the flip counter itself.
+
+- `SSRun_Animation_Timers` compares the current/new speed factor, clears
+  `SSTrack_duration_timer` on a change, and still executes that tick's byte
+  decrement. Expiry reloads `SSAnim_Base_Duration[(speedFactor>>1)&7]` into
+  both timer bytes, then decrements only `SS_player_anim_frame_timer`; the
+  non-expiry path returns the stored player byte plus one in `d1` without
+  storing it (`docs/s2disasm/s2.asm:960-982`). `Sonic2TrackAnimator` now stores
+  that RAM byte, including `$00 -> $FF` underflow for table entry 7, while its
+  existing elapsed counter remains the inverse track-byte view. Rewind captures
+  the new byte and comparison state publishes it.
+- Timer REDs were observed before production changes. The focused timer suite
+  initially reported expected speed-12 player timer 4 / actual constant-path
+  behavior, missing snapshot field reflection, and later expected `$FF` /
+  actual 0 for the zero-duration entry. The committed tests cover initial 0,
+  speed-12 duration-5 reload/cadence, speed-change reset to duration 6, byte
+  underflow, and snapshot roundtrip.
+- Rings-to-go uses `max(0, currentRingRequirement - combinedRings)`, matching
+  Obj5A's subtract/negate/floor calculation before BCD conversion
+  (`docs/s2disasm/s2.asm:71535-71582`). Comparison decodes the packed BCD word
+  only at proven refresh observations. Committed aux shows the
+  `SS_TriggerRingsToGo` `$FF -> $00` transition at f1324 while pass 567 still
+  stores BCD 0; the first strictly following completed pass, sequence 568 at
+  f1327, stores BCD 7 and matches the live subtraction. Persistent comparison
+  is invalid: sequence 570 at f1331 still stores 7 while later-slot ring
+  collection makes the pass-end live subtraction 6; sequence 571 refreshes 6.
+  The comparator therefore selects only the first completed pass after a trigger
+  clear (plus an exact rising `SS_Check_Rings_flag` observation), never every
+  subsequent frame. Focused tests prove before-gate absence, f1327 selection,
+  f1331 exclusion, BCD decoding, and floored engine mapping.
+- With player timer and rings-to-go initially at WARNING, replay was 0 errors /
+  360 warnings: 103 rings-to-go warnings from the rejected persistent gate and
+  the existing 257 flip warnings. The corrected refresh selection returned the
+  report to 0 / 257, with player timer and rings-to-go green and only flip left.
+  Mismatch-severity REDs then observed WARNING instead of expected ERROR before
+  both green fields were ratcheted.
+- A temporary comparison-only animation timeline proved the first flip mismatch
+  was the whole animation phase: ROM completed pass sequence 2 with
+  `anim_frame=2, flip_timer=3`, while engine still had frame 1 / flip 4 and
+  caught up on sequence 3; the pattern repeated every three passes. The raw
+  boundary showed engine `anim_frame_duration=0` after f423, while ROM's f424
+  lag-labelled observation already exposed Obj5F's terminal pre-start pass and
+  frame 1 / flip 4. Recorder recurring sequence 0 starts with the following
+  VInt sample, so replay had omitted exactly that pending native object pass.
+  Promoting flip to ERROR produced the expected RED: 257 errors / 0 warnings,
+  first f429 Sonic flip expected 3 / actual 4. Completing the already-pending
+  pass at the semantic `SpecialStage_Started` transition, without ticking a new
+  VInt, aligns `anim_frame_duration` and both flip bytes while preserving all
+  track/physics state. No trace field is copied into engine state.
+- Post-fix replay is 3,227 compared frames, 0 errors / 0 warnings. Focused timer/
+  snapshot/comparison verification passed 20 tests across four selected reports;
+  the full S2 special-stage package passed 99 tests across 20 reports; recorder/
+  binder/expected-state/frame/mapping contracts passed 44 tests across seven
+  reports; rewind coverage passed 15 tests across six reports; all had 0
+  failures / 0 errors / 0 skipped. `S2SpecialStageReplayDeterminismTest` passed
+  its one test. Two independent ratcheted replay invocations each passed two
+  tests and regenerated the same 3,227-frame 0/0 report SHA-256
+  `3E7F0A06E012C519C9913056633CD58A65781CBC8CA7871FB52412B0978186D7`.
+- Review follow-up found that the selected final rings-to-go refresh at raw
+  f5181 was stepped only in the finish block, after the ordinary comparison
+  loop stopped at logical f5180. The comparator now captures the engine after
+  terminal pass 2990 and emits one ERROR-severity `rings_togo_bcd` comparison
+  at semantic raw frame f5181 using that pass's atomic BCD snapshot. A focused
+  finish-boundary test proves the field is present in report context; the
+  existing deliberate mismatch test proves it remains release-blocking.
+- The terminal pre-start completion helper previously treated an absent pending
+  pass as a no-op and then scheduled a fresh slot. It now throws before any
+  mutation unless a recurring pass is already pending. Regression coverage
+  proves the rejected path preserves VInt/draw/track/pass state, while the valid
+  path executes exactly one active-object pass, advances no VInt-owned track
+  state, and leaves the next slot available for exact replay input binding.
+- Follow-up verification passed 286 tests across the combined engine and trace
+  S2 special-stage packages (64 reports), plus 12 focused rewind capability/
+  adapter/snapshot tests, with 0 failures / 0 errors / 0 skipped. Two independent
+  ratcheted replay invocations each regenerated the same 3,228-frame, 0-error,
+  0-warning report SHA-256
+  `ACEBE257DC220FE54C7E989B2D3AF77BD95A8E180EFBF222375B83D9B1E6F36C`.
+- A second quality pass tightened the no-VInt boundary from "some pending pass"
+  to Obj5F's exact native transition state: recurring pass pending, intro WAIT2
+  at `INTRO_WAIT2_FRAMES-1`, and `SpecialStage_Started` still clear. The public
+  provider mutator was removed; only a package-owned manager operation remains,
+  reached by replay through a test-source bridge. Wrong-phase gameplay and a
+  repeated post-transition call both throw before mutation. The valid regression
+  advances to that native boundary, executes exactly one active-object pass,
+  advances no VInt/draw/track state, publishes MESSAGE_FLYOUT/Started, schedules
+  the following input-bindable slot, and then becomes permanently ineligible.
+- Pinning that guard exposed the intro at WAIT2 timer 9 on the recorded terminal
+  observation. Obj5F creates its banner-letter children, changes to routine 10,
+  installs `$1E`, and returns; the children fly independently while routine 10
+  decrements (`docs/s2disasm/s2.asm:9700-9739`). The engine instead waited for
+  the children to leave the screen before beginning WAIT2, double-counting 21
+  passes. WAIT2 now begins at child creation and continues their visual movement
+  concurrently. The creation pass stores `$1E` with elapsed timer zero; 30
+  following passes leave the counter active through zero and the 31st publishes
+  MESSAGE_FLYOUT/Started. The remaining one-pass alignment came from Obj5F_Init's
+  ROM fallthrough into Obj5F_Main and its first `+$100` movement before the fade,
+  now modeled object-locally instead of falsifying the countdown timer.
+- Presentation remains owned by the same ROM lifecycle. The full banner switches
+  to seven child pieces at allocation. Because RunObjects continues its ascending
+  live-slot scan, all seven newly allocated later-slot children execute their
+  first routine-6 movement in that same pass while the parent timer remains zero.
+  Their render predicate spans the initial WAIT2 countdown and their positions
+  continue moving there. The initial GET-rings
+  message remains hidden until the terminal pass creates it, at which point the
+  banner render gate closes. Later checkpoint `showRingRequirementMessage` reuse
+  is distinguished by the already-latched `SpecialStage_Started` state and keeps
+  its intended immediate message visibility. Focused assertions cover allocation,
+  allocation-pass progress/position, mid-countdown, timer 30, terminal pass, and
+  checkpoint reuse.
+- Rings refresh discovery now fails closed over artifact semantics. It accepts
+  any number of complete `$FF->$00` cycles separated by a `0->$FF` re-arm and
+  maps each clear to a unique first following completed pass. Missing initial or
+  clear samples, unfinished re-arms, duplicate same-frame samples, non-boolean/
+  ambiguous transitions, missing following passes, clears mapping to the same
+  pass, and a selected observation owning multiple completed-pass identities
+  throw. Independently, exactly one `SS_Check_Rings_flag` rise and one
+  `stage_finished.observed_frame` are required and must be equal. Synthetic tests
+  cover missing/duplicate/mismatch artifacts plus a legitimate two-cycle trace.
+  Packed BCD decoding now rejects bits above bit 11 and any digit A-F; 000, 007,
+  and 123 remain valid.
+- Final quality verification passed 295 tests across the combined engine and
+  trace S2 special-stage packages (64 reports), plus the focused determinism and
+  rewind capability/adapter/snapshot selection, all with 0 failures / 0 errors /
+  0 skipped. Two independent ratcheted replays regenerated 3,228 frames at
+  0 errors / 0 warnings with identical SHA-256
+  `ACEBE257DC220FE54C7E989B2D3AF77BD95A8E180EFBF222375B83D9B1E6F36C`.
+
+No tolerance, hydration, or route/zone/frame runtime carve-out was introduced.
+Player timer, refresh-gated rings-to-go, and flip mismatches are all ERROR.
+
 ## 2026-07-10 - S2 special-stage shared swap byte and timer ratchets
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

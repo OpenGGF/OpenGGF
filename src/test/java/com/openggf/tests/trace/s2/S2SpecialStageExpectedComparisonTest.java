@@ -5,6 +5,7 @@ import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState.Pl
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.Severity;
 import com.openggf.trace.SpecialStageExpectedState;
+import com.openggf.trace.SpecialStageTraceData;
 import com.openggf.trace.SpecialStageTraceFrame;
 import com.openggf.trace.TraceEvent;
 import org.junit.jupiter.api.Test;
@@ -12,10 +13,13 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class S2SpecialStageExpectedComparisonTest {
 
@@ -128,23 +132,169 @@ class S2SpecialStageExpectedComparisonTest {
 
         assertEquals(Severity.ERROR, compared.get("sonic_hurt_timer").severity());
         assertEquals(Severity.ERROR, compared.get("sonic_slide_timer").severity());
-        assertEquals(Severity.WARNING, compared.get("sonic_flip_timer").severity());
+        assertEquals(Severity.ERROR, compared.get("sonic_flip_timer").severity());
+    }
+
+    @Test
+    void playerAnimationTimerUsesAtomicPassEndAsRatchetedError() {
+        TraceEvent.StateSnapshot base = snapshot(799, 0);
+        Map<String, Object> fields = new HashMap<>(base.fields());
+        fields.put("player_anim_frame_timer", 4);
+        SpecialStageExpectedState expected = SpecialStageExpectedState.from(frame(799, 0),
+                List.of(new TraceEvent.StateSnapshot(799, fields)));
+
+        Map<String, FieldComparison> compared =
+                AbstractS2SpecialStageTraceReplayTest.compareExpectedFrame(
+                        expected, engine(0, 3, 0), false);
+
+        assertEquals(Severity.ERROR, compared.get("player_anim_frame_timer").severity());
+    }
+
+    @Test
+    void ringsToGoIsAbsentBeforeRefreshGateAndBcdDecodedAfterIt() {
+        TraceEvent.StateSnapshot base = snapshot(1324, 12);
+        Map<String, Object> fields = new HashMap<>(base.fields());
+        fields.put("rings_togo_bcd", 0x38);
+        SpecialStageExpectedState expected = SpecialStageExpectedState.from(frame(1324, 12),
+                List.of(new TraceEvent.StateSnapshot(1324, fields)));
+        Sonic2SpecialStageComparisonState state = engine(12, 4, 37);
+
+        Map<String, FieldComparison> before =
+                AbstractS2SpecialStageTraceReplayTest.compareExpectedFrame(expected, state, false);
+        Map<String, FieldComparison> after =
+                AbstractS2SpecialStageTraceReplayTest.compareExpectedFrame(expected, state, true);
+
+        assertFalse(before.containsKey("rings_togo_bcd"));
+        assertEquals(Severity.ERROR, after.get("rings_togo_bcd").severity());
+        assertEquals(0, AbstractS2SpecialStageTraceReplayTest.decodeRingsToGoBcd(0));
+        assertEquals(7, AbstractS2SpecialStageTraceReplayTest.decodeRingsToGoBcd(0x0007));
+        assertEquals(38, AbstractS2SpecialStageTraceReplayTest.decodeRingsToGoBcd(0x0038));
+        assertEquals(123, AbstractS2SpecialStageTraceReplayTest.decodeRingsToGoBcd(0x0123));
+        assertThrows(IllegalArgumentException.class,
+                () -> AbstractS2SpecialStageTraceReplayTest.decodeRingsToGoBcd(0x000A));
+        assertThrows(IllegalArgumentException.class,
+                () -> AbstractS2SpecialStageTraceReplayTest.decodeRingsToGoBcd(0x0A00));
+        assertThrows(IllegalArgumentException.class,
+                () -> AbstractS2SpecialStageTraceReplayTest.decodeRingsToGoBcd(0x1000));
+    }
+
+    @Test
+    void refreshDiscoveryRejectsMissingInitialTriggerSample() {
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
+                        List.of(), List.of(3), List.of(0, 0, 0, 0xFF), List.of(3)));
+        assertTrue(ex.getMessage().contains("initial"), ex.getMessage());
+    }
+
+    @Test
+    void refreshDiscoveryRejectsMissingTriggerClear() {
+        var samples = List.of(
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(0, 0xFF));
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
+                        samples, List.of(3), List.of(0, 0, 0, 0xFF), List.of(3)));
+        assertTrue(ex.getMessage().contains("clear"), ex.getMessage());
+    }
+
+    @Test
+    void refreshDiscoveryRejectsDuplicateTriggerSamplesAtOneObservation() {
+        var samples = List.of(
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(0, 0xFF),
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(1, 0),
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(1, 0));
+        assertThrows(IllegalStateException.class,
+                () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
+                        samples, List.of(2), List.of(0, 0, 0xFF), List.of(2)));
+    }
+
+    @Test
+    void refreshDiscoveryRequiresOneTerminalRiseMatchingFinishObservation() {
+        var samples = List.of(
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(0, 0xFF),
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(1, 0));
+        assertThrows(IllegalStateException.class,
+                () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
+                        samples, List.of(2), List.of(0, 0, 0), List.of(2)));
+        assertThrows(IllegalStateException.class,
+                () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
+                        samples, List.of(2), List.of(0, 0, 0xFF), List.of(2, 2)));
+        assertThrows(IllegalStateException.class,
+                () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
+                        samples, List.of(2), List.of(0, 0, 0xFF), List.of(1)));
+    }
+
+    @Test
+    void refreshDiscoverySupportsMultipleCompleteMessageCycles() {
+        var samples = List.of(
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(0, 0xFF),
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(1, 0),
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(4, 0xFF),
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(6, 0));
+        assertEquals(java.util.Set.of(2, 7, 9),
+                AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
+                        samples, List.of(2, 3, 7),
+                        List.of(0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF), List.of(9)));
+    }
+
+    @Test
+    void refreshDiscoveryRejectsMultiplePassIdentitiesAtSelectedObservation() {
+        var samples = List.of(
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(0, 0xFF),
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(1, 0));
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
+                        samples, List.of(2, 2), List.of(0, 0, 0xFF), List.of(2)));
+        assertTrue(ex.getMessage().contains("multiple completed passes"), ex.getMessage());
+    }
+
+    @Test
+    void committedTraceComparesFirstCompletedPassAfterTriggerTransitionOnly() throws Exception {
+        SpecialStageTraceData trace = SpecialStageTraceData.load(Path.of(
+                "src/test/resources/traces/s2/special_stage"));
+
+        assertFalse(AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1324),
+                "the transition observation still contains the pre-refresh BCD cell");
+        assertEquals(true,
+                AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1327),
+                "the next completed RunObjects pass has executed Obj5A_RingsNeeded");
+        assertFalse(AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1331),
+                "later ring collection can occur after Obj5A in slot order and must not compare live subtraction");
+        assertEquals(true,
+                AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 5181),
+                "rising SS_Check_Rings_flag is an explicit refresh observation");
+    }
+
+    @Test
+    void startedTransitionPublishesTerminalPreStartObjectPass() throws Exception {
+        SpecialStageTraceData trace = SpecialStageTraceData.load(Path.of(
+                "src/test/resources/traces/s2/special_stage"));
+
+        assertFalse(AbstractS2SpecialStageTraceReplayTest.isTerminalPreStartPassFrame(trace, 423));
+        assertEquals(true,
+                AbstractS2SpecialStageTraceReplayTest.isTerminalPreStartPassFrame(trace, 424));
+        assertFalse(AbstractS2SpecialStageTraceReplayTest.isTerminalPreStartPassFrame(trace, 425));
     }
 
     private static Sonic2SpecialStageComparisonState engine(int rings) {
+        return engine(rings, 0, 0);
+    }
+
+    private static Sonic2SpecialStageComparisonState engine(int rings,
+                                                             int playerAnimFrameTimer,
+                                                             int ringsToGo) {
         PlayerState player = new PlayerState(128, 90, 300, 64, "NORMAL", 0, 1, 2,
                 rings, 0, 0, 0);
         PlayerState tails = new PlayerState(128, 90, 300, 64, "NORMAL", 0, 1, 2,
                 0, 0, 0, 0);
         return new Sonic2SpecialStageComparisonState(12, 5, 7, 4, 58,
-                rings, 9, 0, false, player, tails);
+                playerAnimFrameTimer, ringsToGo, rings, 9, 0, false, player, tails);
     }
 
     private static Sonic2SpecialStageComparisonState engine(PlayerState sonic) {
         PlayerState tails = new PlayerState(128, 90, 300, 64, "NORMAL", 0, 1, 2,
                 0, 0, 0, 0);
         return new Sonic2SpecialStageComparisonState(12, 5, 7, 4, 10,
-                0, 4, 0, false, sonic, tails);
+                0, 0, 0, 4, 0, false, sonic, tails);
     }
 
     private static TraceEvent.StateSnapshot snapshot(int frame, int sonicRings) {

@@ -14,6 +14,8 @@ public record Sonic2SpecialStageComparisonState(
         int trackAnimFrame,        // animator.getCurrentFrameInSegment()
         int drawingIndex,          // manager drawingIndex field
         int trackFrameDelayCounter,// animator getFrameDelayCounter() (counts up 0..duration-1)
+        int playerAnimFrameTimer,  // animator ROM SS_player_anim_frame_timer byte
+        int ringsToGo,             // max(0, current requirement - combined rings)
         int combinedRings,         // manager.getRingsCollected()
         int tailsControlCounter,
         int swapPositionsFlag,     // manager-owned SS_Swap_Positions_Flag byte

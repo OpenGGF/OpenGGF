@@ -1290,6 +1290,32 @@ public class Sonic2SpecialStageManager {
         pendingMainCheckpointStep = false;
     }
 
+    /**
+     * Completes the already-pending main-thread object pass without executing a
+     * new VInt. A VBlank observation can expose {@code SpecialStage_Started}
+     * after Obj5F's terminal pre-start {@code RunObjects} pass completes even
+     * though no following {@code Vint_S2SS} ran yet (s2.asm:6674-6694,
+     * 9734-9746). Deterministic replay uses this semantic boundary; all state is
+     * evolved natively from the pending pass and no trace state is copied in.
+     */
+    void completeTerminalPreStartPassWithoutVint() {
+        if (!recurringMainPassPending
+                || intro == null
+                || !intro.isTerminalPreStartPassPending()) {
+            Sonic2SpecialStageSnapshot.IntroSnapshot introState = intro != null
+                    ? intro.captureRewindSnapshot() : null;
+            throw new IllegalStateException(
+                    "cannot complete terminal pre-start pass outside Obj5F WAIT2 boundary"
+                            + ": pending=" + recurringMainPassPending
+                            + ", intro=" + introState);
+        }
+        executePendingRecurringMainPass();
+        // The recurring loop owns a following pass slot. Its exact controller
+        // sample is bound by the replay harness before execution; no VInt-owned
+        // track state advances at this completion boundary.
+        scheduleRecurringMainPass(false);
+    }
+
     private void scheduleRecurringMainPass(boolean checkpointStep) {
         recurringMainPassPending = true;
         // Before SpecialStage_Started, main copies Ctrl_1/2 before WaitForVint;
@@ -2843,17 +2869,23 @@ public class Sonic2SpecialStageManager {
         int currentSegmentIndexValue;
         int trackAnimFrameValue;
         int trackFrameDelayCounterValue;
+        int playerAnimFrameTimerValue;
         if (trackAnimator != null) {
             speedFactorValue = trackAnimator.getSpeedFactor();
             currentSegmentIndexValue = trackAnimator.getCurrentSegmentIndex();
             trackAnimFrameValue = trackAnimator.getCurrentFrameInSegment();
             trackFrameDelayCounterValue = trackAnimator.getFrameDelayCounter();
+            playerAnimFrameTimerValue = trackAnimator.getPlayerAnimFrameTimer();
         } else {
             speedFactorValue = 0;
             currentSegmentIndexValue = 0;
             trackAnimFrameValue = 0;
             trackFrameDelayCounterValue = 0;
+            playerAnimFrameTimerValue = 0;
         }
+
+        int combinedRings = getRingsCollected();
+        int ringsToGo = Math.max(0, currentRingRequirement - combinedRings);
 
         return new Sonic2SpecialStageComparisonState(
                 speedFactorValue,
@@ -2861,7 +2893,9 @@ public class Sonic2SpecialStageManager {
                 trackAnimFrameValue,
                 drawingIndex,
                 trackFrameDelayCounterValue,
-                getRingsCollected(),
+                playerAnimFrameTimerValue,
+                ringsToGo,
+                combinedRings,
                 tailsControlCounter,
                 getSwapPositionsFlag(),
                 isFinished(),

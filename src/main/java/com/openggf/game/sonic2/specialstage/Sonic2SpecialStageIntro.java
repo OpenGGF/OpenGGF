@@ -238,6 +238,11 @@ public class Sonic2SpecialStageIntro {
         if (currentPhase != Phase.ROM_STARTUP) {
             throw new IllegalStateException("Fade from white can only follow ROM startup");
         }
+        // Obj5F_Init falls through Obj5F_Main and applies its first +$100
+        // ObjectMove step on the allocation pass before Pal_FadeFromWhite.
+        // Preserve that object-local fall-through while the subsequent fade
+        // freezes presentation/runtime state (s2.asm:9661-9684).
+        bannerY += INTRO_BANNER_VELOCITY;
         currentPhase = Phase.FADE_FROM_WHITE;
         phaseTimer = 0;
     }
@@ -284,39 +289,42 @@ public class Sonic2SpecialStageIntro {
             bannerFlyoutInitialized = true;
             lettersFlying = true;
             letterFlyoutProgress = 0;
+            // Obj5F starts its $1E countdown as soon as it creates the independent
+            // banner-letter children. Their movement overlaps WAIT2; waiting for
+            // them to leave the screen before starting the count adds a false
+            // 21-pass delay to SpecialStage_Started (s2.asm:9710-9746).
+            currentPhase = Phase.WAIT2;
+            // This child-creation pass only stores $1E and returns. The first
+            // decrement belongs to the following Obj5F dispatch.
+            phaseTimer = 0;
+            bannerVisible = true;
+            messageVisible = false;
+            // RunObjects scans ascending live slots. Obj5F's newly allocated
+            // later-slot children therefore execute routine 6 once before this
+            // allocation pass returns, while the parent $1E counter remains
+            // untouched until its next dispatch (s2.asm:9707-9739).
+            updateBannerLetterFlyout();
+            LOGGER.fine("Intro: WAIT1 complete, entering overlapping Obj5F WAIT2");
         }
+    }
 
-        // Update banner letter flyout - each piece flies off independently
+    private void updateBannerLetterFlyout() {
+        if (!bannerFlyoutInitialized) {
+            return;
+        }
         letterFlyoutProgress++;
-        boolean allGone = true;
         for (BannerLetter letter : bannerLetters) {
-            if (!letter.visible) continue;
-
-            // Move letter based on angle (same as Obj5A flyout)
+            if (!letter.visible) {
+                continue;
+            }
             letter.x += (int) (Math.cos(letter.flyoutAngle) * letter.flyoutSpeed);
             letter.y += (int) (Math.sin(letter.flyoutAngle) * letter.flyoutSpeed);
 
-            // Check if off screen using actual screen position
-            // Banner center is at INTRO_BANNER_X (128), letter.x/y are offsets from center
             int screenX = INTRO_BANNER_X + letter.x;
             int screenY = INTRO_BANNER_END_Y + letter.y;
-            // Use generous bounds since pieces are up to 32 pixels wide (4 tiles)
             if (screenX < -32 || screenX > 288 || screenY < -32 || screenY > 256) {
                 letter.visible = false;
-            } else {
-                allGone = false;
             }
-        }
-
-        // Transition to WAIT2 when all banner pieces are gone
-        // Original waits $1E (30) more frames after spawning children, but we transition
-        // when animation is visually complete
-        if (allGone || phaseTimer >= BANNER_LAND_DELAY_FRAMES + 45) {
-            currentPhase = Phase.WAIT2;
-            phaseTimer = 0;
-            bannerVisible = false;  // Banner disappears after letters fly off
-            messageVisible = true;  // Ring requirement message appears
-            LOGGER.fine("Intro: WAIT1 complete, entering WAIT2, showing ring requirement");
         }
     }
 
@@ -363,15 +371,25 @@ public class Sonic2SpecialStageIntro {
     }
 
     private void updateWait2Phase() {
+        // Initial Obj5F countdown overlaps its independently moving children.
+        // Checkpoint WAIT2 reuse has no banner children and shows its message
+        // immediately through showRingRequirementMessage().
+        if (!specialStageStarted) {
+            updateBannerLetterFlyout();
+        }
         phaseTimer++;
 
         // After WAIT2_FRAMES, transition to message flyout phase.
         // Original: counter starts at $1E (30), decrements with bpl (branch if >= 0).
         // Counts 30->29->...->0->-1, exiting at -1. That's 31 frames total.
-        // Java: counter starts at 0, increments to 31. Same 31 frames.
+        // Child creation leaves the parent timer at zero even though the newly
+        // allocated later-slot children already moved once. The following 30
+        // parent passes publish 1..30; pass 31 is the matching terminal dispatch.
         if (phaseTimer >= INTRO_WAIT2_FRAMES) {
             currentPhase = Phase.MESSAGE_FLYOUT;
             phaseTimer = 0;
+            bannerVisible = false;
+            messageVisible = true;
             // Obj5F creates the ring-requirement message, sets
             // SpecialStage_Started, and deletes itself in this same object pass
             // (s2.asm:9734-9746). Keep this latched through later checkpoint
@@ -596,6 +614,13 @@ public class Sonic2SpecialStageIntro {
         return specialStageStarted;
     }
 
+    /** Native Obj5F state immediately before its terminal WAIT2 object pass. */
+    boolean isTerminalPreStartPassPending() {
+        return currentPhase == Phase.WAIT2
+                && phaseTimer == INTRO_WAIT2_FRAMES - 1
+                && !specialStageStarted;
+    }
+
     /**
      * Gets the total frame count since intro started.
      */
@@ -658,7 +683,8 @@ public class Sonic2SpecialStageIntro {
      * Checks if letters are currently flying off the banner.
      */
     public boolean areLettersFlying() {
-        return lettersFlying && currentPhase == Phase.WAIT1;
+        return lettersFlying && (currentPhase == Phase.WAIT1
+                || (currentPhase == Phase.WAIT2 && !specialStageStarted));
     }
 
     /**
@@ -687,14 +713,15 @@ public class Sonic2SpecialStageIntro {
     }
 
     /**
-     * Checks if the banner is currently in the flyout animation phase (WAIT1 after delay).
+     * Checks if the banner is currently in its independent child-flight phase.
      * When true, the renderer should render individual banner pieces instead of the full banner.
-     * Returns false during the 15-frame delay after landing.
+     * Returns false during the 15-frame delay after landing and after Obj5F's
+     * terminal pass creates the initial ring-requirement message.
      */
     public boolean isBannerInFlyoutPhase() {
-        return currentPhase == Phase.WAIT1 &&
-               phaseTimer >= BANNER_LAND_DELAY_FRAMES &&
-               bannerFlyoutInitialized;
+        boolean childFlightPhase = currentPhase == Phase.WAIT1
+                || (currentPhase == Phase.WAIT2 && !specialStageStarted);
+        return childFlightPhase && bannerFlyoutInitialized;
     }
 
     /**

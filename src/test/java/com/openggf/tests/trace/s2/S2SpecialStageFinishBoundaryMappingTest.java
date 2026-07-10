@@ -30,6 +30,8 @@ class S2SpecialStageFinishBoundaryMappingTest {
                 AbstractS2SpecialStageTraceReplayTest.compareReplay(trace, harness);
 
         assertFalse(report.hasErrors(), report.toAssertionSummary());
+        assertTrue(report.getContextWindow(5181, 0).contains("rings_togo_bcd"),
+                "the raw finish observation must retain its final rings-to-go comparison");
         assertEquals(1, java.util.Collections.frequency(
                 harness.steppedPassSequencesForTest(), 2990));
     }

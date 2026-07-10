@@ -252,6 +252,7 @@ final class Sonic2SpecialStageSnapshot {
             int currentSegmentIndex,
             int currentFrameInSegment,
             int frameDelayCounter,
+            int playerAnimFrameTimer,
             int currentSegmentType,
             boolean currentSegmentFlipped,
             int speedFactor,

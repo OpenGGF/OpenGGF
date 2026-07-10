@@ -10,6 +10,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageInputMapper;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageReplayTestBridge;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder.CompletedPass;
 
 import java.io.IOException;
@@ -150,6 +151,12 @@ final class S2SpecialStageReplayHarness {
         if (pass.sequence() == forceFinishedAfterPassSequenceForTest) {
             provider.getManager().markCompleted(true);
         }
+    }
+
+    /** Publishes Obj5F's terminal pre-start object pass without a new VInt. */
+    void completeTerminalPreStartPass() {
+        Sonic2SpecialStageReplayTestBridge.completeTerminalPreStartPassWithoutVint(
+                provider.getManager());
     }
 
     void forceFinishedAfterPassForTest(int sequence) {
