@@ -15,7 +15,7 @@ public class TestNetIsolationRules {
             noClasses().that().resideInAnyPackage(
                             "com.openggf.net.protocol..", "com.openggf.net.hub..",
                             "com.openggf.net.host..", "com.openggf.net.client..",
-                            "com.openggf.net.identity..")
+                            "com.openggf.net.identity..", "com.openggf.net.master..")
                     .should().dependOnClassesThat(
                             com.tngtech.archunit.base.DescribedPredicate.describe(
                                     "are engine classes outside net and the ghost frame codec",
@@ -26,4 +26,10 @@ public class TestNetIsolationRules {
                                             && !javaClass.getName().equals(
                                             "com.openggf.game.ghost.GhostFrameCodec")))
                     .because("the standalone master and room transports must stay engine-free");
+
+    @ArchTest
+    static final ArchRule NET_LOAD_TOOLS_ARE_HEADLESS =
+            noClasses().that().resideInAnyPackage("com.openggf.tools.net..")
+                    .should().dependOnClassesThat().resideInAnyPackage("org.lwjgl..")
+                    .because("network load tools must run without graphics or input natives");
 }

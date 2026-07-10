@@ -233,6 +233,25 @@ boundary. Each `RoomHost` and `GhostHub` is single-event-loop-thread confined.
 Phase 3 reuses those room classes unchanged inside the master server. Engine and
 UI adapters belong in `com.openggf.game.timeattack.mp`.
 
+### Master server (phase 3)
+
+- `com.openggf.net.master` is the standalone, engine-free browser/relay service;
+  the architecture fence includes it. Start `MasterServerMain` with
+  `--config master.yaml --data ./master-data`. The YAML maps directly to
+  `MasterConfig` (ports, PEM certificate/key paths, SQLite path, trust
+  thresholds, proof-of-work settings, room limits, and admin token).
+- Production masters require TLS. `plaintextForTest: true` exists only for
+  loopback tests. The admin HTTP endpoint binds to localhost, requires its
+  bearer token, and appends actions to `admin-audit.jsonl`.
+- Identity age, clean rounds, sanctions, and trust tiers persist in SQLite.
+  Relay rooms reuse `RoomHost`/`GhostHub`; the broker and database remain on
+  their own event loop while each room is pinned to a relay event loop.
+- The CI scale gate runs 32 in-JVM bots through `TestGhostLoadTest`. For the
+  on-demand 128/256-player CPU gate, run
+  `java -cp target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar com.openggf.tools.net.GhostLoadTestTool --n 256 --duration 30 --mix adversarial`.
+  This deterministic mode measures hub aggregation CPU, not deployed socket
+  throughput; run a separate socket-level load against the deployed TLS master.
+
 ## Multi-Game Support Architecture
 
 Game-specific behavior is isolated behind the `GameModule` interface. `GameModuleRegistry` holds the current module, `RomDetectionService` auto-detects ROM type.
