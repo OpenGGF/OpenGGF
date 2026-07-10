@@ -129,9 +129,24 @@ and moves the stacked working-tree frontier to f6947. The focused
 `TestS3kObjectPlayerQueryParticipation#corkFloorRollBreakUsesAllLivePlayers`
 guard now asserts both the launch and native Y preservation.
 
+Round 8 banks the SolidObject-owned CPU-Tails push bypass. At complete-run
+f6947 Tails begins the frame with `status=$25` (`Status_Push|Status_Roll|
+Status_Facing`) and nonzero inertia from the prior AIZ rock side contact. ROM
+`loc_13DD0` tests that literal current push bit and, because delayed Sonic is not
+pushing, branches directly to `loc_13E9C`, preserving the prior down-only
+`Ctrl_2` word (`sonic3k.asm:26702-26705`). The engine's broad rolling/nonzero
+stale-push filter instead manufactured same-frame right input, adding `$20`
+roll deceleration on top of the correct `$09` slope repel. The shared solid
+controller now exposes whether a real per-player object pushing latch owns the
+bit; Tails preserves that source (and terrain-wall provenance) while still
+discarding unowned residue. This moves the stacked complete-run frontier from
+f6947 to f7746. Focused `TestSolidObjectManager` guards latch set/clear, and
+`TestSidekickCpuFollowParity#s3kRollingNonzeroGroundSpeedPushFallsThroughNearIczSegmentColumn`
+confirms the previously-green unowned ICZ stale-push case remains unchanged.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree frontier is f6947. Those causes will be recorded and committed
+banked rounds the current stacked working-tree frontier is f7746. Those causes will be recorded and committed
 separately as their focused guards are completed. The level-select AIZ trace remains at f8941
 and is still part of the stage-green exit gate. S1/S2 full trace sweeps remain
 pending until the AIZ fixes are banked; no green claim is made yet.

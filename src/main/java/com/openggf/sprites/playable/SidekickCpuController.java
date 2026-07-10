@@ -2084,7 +2084,15 @@ public class SidekickCpuController {
                         && collisionRules.sidekickPushBypassUsesGraceStatus()
                         && !sidekick.getAir()
                         && sidekick.getRolling()
-                        && sidekick.getGSpeed() != 0;
+                        && sidekick.getGSpeed() != 0
+                        // A terrain wall push normally zeroes ground_vel before
+                        // setting Status_Push, but SolidObjectFull can own the
+                        // same native bit while rolling inertia remains nonzero.
+                        // Preserve that concrete object latch for loc_13DD0;
+                        // only an unowned player-only bit is stale
+                        // (sonic3k.asm:26702-26705,43916-43935).
+                        && !sidekick.isPushFromGroundWallCollision()
+                        && !hasLiveObjectPushingLatch();
         boolean romVisibleCurrentStatusPush =
                 currentStatusPush && !rollingNonzeroGroundSpeedStalePush;
         boolean frameStartStatusPush = sidekick.getPushingAtFrameStart();
@@ -2789,6 +2797,13 @@ public class SidekickCpuController {
             return levelManager.getObjectManager().getRidingObject(sidekick);
         }
         return sidekick.getLatchedSolidObjectInstance();
+    }
+
+    private boolean hasLiveObjectPushingLatch() {
+        LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
+        return levelManager != null
+                && levelManager.getObjectManager() != null
+                && levelManager.getObjectManager().hasObjectPushingBit(sidekick);
     }
 
     private ObjectInstance currentInteractSlotObject() {

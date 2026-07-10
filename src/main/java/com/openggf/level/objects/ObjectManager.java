@@ -2436,6 +2436,15 @@ public class ObjectManager {
         return solidContacts.hasStandingLatch(player, instance);
     }
 
+    /**
+     * Returns whether a solid object's native per-player pushing latch is live.
+     * This distinguishes a Status_Push bit owned by SolidObject processing from
+     * stale player-only residue without inspecting an object id or zone.
+     */
+    public boolean hasObjectPushingBit(PlayableEntity player) {
+        return solidContacts.hasPushingLatch(player);
+    }
+
     /** Is ANY player riding anything? */
     public boolean isAnyPlayerRiding() {
         return solidContacts.isAnyPlayerRiding();
