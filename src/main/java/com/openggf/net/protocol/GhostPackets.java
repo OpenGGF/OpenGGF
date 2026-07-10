@@ -1,6 +1,6 @@
 package com.openggf.net.protocol;
 
-import com.openggf.game.ghost.GhostFrameCodec;
+import com.openggf.ghost.GhostFrameCodec;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

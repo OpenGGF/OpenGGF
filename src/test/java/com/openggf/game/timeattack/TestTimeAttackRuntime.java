@@ -1,7 +1,7 @@
 package com.openggf.game.timeattack;
 
 import com.openggf.game.GameStateManager;
-import com.openggf.game.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrame;
 import com.openggf.game.ghost.GhostRenderRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -56,7 +56,7 @@ class TestTimeAttackRuntime {
     @Test
     void incompatibleImportsAreSkipped(@TempDir Path root, @TempDir Path importDir) throws Exception {
         // A ghost recorded for a DIFFERENT track must never race in this one.
-        byte[] frames = new byte[com.openggf.game.ghost.GhostFrameCodec.BYTES];
+        byte[] frames = new byte[com.openggf.ghost.GhostFrameCodec.BYTES];
         var wrongTrack = new com.openggf.game.ghost.GhostRecording(
                 new com.openggf.game.ghost.GhostHeader(1, "s3k", 1, 0, "sonic", "x", 0, 100,
                         new int[0], new byte[32]), frames);

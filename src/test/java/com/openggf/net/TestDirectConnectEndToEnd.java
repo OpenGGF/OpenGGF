@@ -1,6 +1,6 @@
 package com.openggf.net;
 
-import com.openggf.game.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrame;
 import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.client.RaceClient;
 import com.openggf.net.client.RemoteGhostPlayback;

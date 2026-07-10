@@ -1,5 +1,8 @@
 package com.openggf.game.ghost;
 
+import com.openggf.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrameCodec;
+
 import java.io.ByteArrayOutputStream;
 
 /** Per-frame render-state sampler for the local player's run (main spec §3/§7). */

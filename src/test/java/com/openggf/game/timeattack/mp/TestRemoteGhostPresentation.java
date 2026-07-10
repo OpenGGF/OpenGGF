@@ -1,6 +1,6 @@
 package com.openggf.game.timeattack.mp;
 
-import com.openggf.game.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrame;
 import com.openggf.net.client.RemoteGhostPlayback;
 import com.openggf.net.client.RemoteGhostRegistry;
 import com.openggf.sprites.ghost.ActiveGhost;

@@ -4,10 +4,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.game.GameModule;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.ghost.GhostFrame;
-import com.openggf.game.ghost.GhostFrameCodec;
+import com.openggf.ghost.GhostFrameCodec;
 import com.openggf.game.ghost.GhostFrameSampler;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
@@ -15,7 +13,6 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
-import com.openggf.graphics.GraphicsManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.RecordingFrameDriver;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
@@ -51,7 +48,6 @@ public final class AttemptReplayHarness {
                 return failure("fingerprint mismatch");
             }
 
-            EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
             EngineContext services = EngineServices.current();
             services.roms().setRom(rom);
             GameModule module = services.romDetection().detectAndCreateModule(rom)
@@ -63,8 +59,7 @@ public final class AttemptReplayHarness {
             SessionManager.clear();
             GameplayModeContext mode = SessionManager.openGameplaySession(module);
             GameplaySessionFactory.attachManagers(mode, services);
-            GameModuleRegistry.setCurrent(module);
-            GraphicsManager.getInstance().initHeadless();
+            services.graphics().initHeadless();
             TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
 
             configuration = services.configuration();

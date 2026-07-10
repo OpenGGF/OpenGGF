@@ -1,7 +1,7 @@
 package com.openggf.net.hub;
 
-import com.openggf.game.ghost.GhostFrame;
-import com.openggf.game.ghost.GhostFrameCodec;
+import com.openggf.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrameCodec;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.ProtocolViolationException;
 
@@ -263,7 +263,7 @@ public final class GhostHub {
         GhostPackets.FramesBatch big = player.pending.removeFirst();
         player.pendingFrames -= big.frameCount();
         int take = GhostPackets.MAX_AGGREGATE_FRAMES_PER_ENTRY;
-        int frameBytes = com.openggf.game.ghost.GhostFrameCodec.BYTES;
+        int frameBytes = GhostFrameCodec.BYTES;
         byte[] data = big.frameData();
         byte[] first = java.util.Arrays.copyOfRange(data, 0, take * frameBytes);
         byte[] rest = java.util.Arrays.copyOfRange(data, take * frameBytes, data.length);

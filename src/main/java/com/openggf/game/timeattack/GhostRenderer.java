@@ -1,13 +1,16 @@
-package com.openggf.sprites.ghost;
+package com.openggf.game.timeattack;
 
 import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.game.GameServices;
-import com.openggf.game.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrame;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.debug.DebugColor;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.art.SpriteArtSet;
+import com.openggf.sprites.ghost.ActiveGhost;
+import com.openggf.sprites.ghost.GhostArtBankAllocator;
+import com.openggf.sprites.ghost.GhostOpacityCalculator;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.io.IOException;
@@ -31,7 +34,7 @@ public final class GhostRenderer {
     private final Map<String, Slot> slots = new HashMap<>();
     private final PixelFontTextRenderer nameplateRenderer = new PixelFontTextRenderer();
 
-    static boolean layerMatches(GhostFrame frame, int bucket, boolean highPriority) {
+    public static boolean layerMatches(GhostFrame frame, int bucket, boolean highPriority) {
         return frame.priorityBucket() == bucket && frame.highPriority() == highPriority;
     }
 

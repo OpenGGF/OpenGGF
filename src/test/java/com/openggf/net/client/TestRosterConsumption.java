@@ -18,7 +18,7 @@ class TestRosterConsumption {
                 new ControlMessage.PlayerInfo(1, "fp1", "NEAR", "tails", false),
                 new ControlMessage.PlayerInfo(2, "fp2", "FAR", "knuckles", false)));
 
-        byte[] frames = new byte[3 * com.openggf.game.ghost.GhostFrameCodec.BYTES];
+        byte[] frames = new byte[3 * com.openggf.ghost.GhostFrameCodec.BYTES];
         for (int i = 0; i < 12; i += 3) {
             registry.onAggregate(new GhostPackets.Aggregate(i, List.of(
                     new GhostPackets.AggregateEntry(1, 1, i, 3, frames.clone()))));

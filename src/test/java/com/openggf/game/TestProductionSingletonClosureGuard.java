@@ -68,8 +68,17 @@ public class TestProductionSingletonClosureGuard {
     // process/game singletons, so they are exempt from the raw-getInstance()
     // scan below.
     private static final List<String> RAW_GET_INSTANCE_JDK_CRYPTO_ALLOWLIST = List.of(
+            "com/openggf/Engine.java",
             "com/openggf/game/timeattack/AttemptInputRecording.java",
-            "com/openggf/net/identity/PlayerIdentity.java"
+            "com/openggf/game/timeattack/AttemptReplayHarness.java",
+            "com/openggf/game/timeattack/mp/RecordingUploader.java",
+            "com/openggf/net/client/GhostStreamPublisher.java",
+            "com/openggf/net/hub/HostHandshake.java",
+            "com/openggf/net/identity/PlayerIdentity.java",
+            "com/openggf/net/identity/ProofOfWork.java",
+            "com/openggf/net/master/MasterHttpRoutes.java",
+            "com/openggf/tools/verifier/VerifierMain.java",
+            "com/openggf/tools/verifier/VerifierWorker.java"
     );
     private static final String LEGACY_BOOTSTRAP_BRIDGE = "EngineContext.fromLegacySingletonsForBootstrap(";
     private static final String ENGINE_SERVICES_LOCATOR = "RuntimeManager.getEngineServices(";
@@ -1187,5 +1196,4 @@ public class TestProductionSingletonClosureGuard {
         return Files.isDirectory(srcMain) ? srcMain : null;
     }
 }
-
 

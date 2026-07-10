@@ -1,7 +1,7 @@
 package com.openggf.net.hub;
 
-import com.openggf.game.ghost.GhostFrame;
-import com.openggf.game.ghost.GhostFrameCodec;
+import com.openggf.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrameCodec;
 import com.openggf.net.protocol.GhostPackets;
 
 import java.util.function.LongSupplier;

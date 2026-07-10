@@ -84,6 +84,7 @@ import com.openggf.game.recording.UserRecordingVerificationResult;
 import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.timeattack.GhostStore;
 import com.openggf.game.timeattack.TimeAttackHudOverlay;
+import com.openggf.game.timeattack.TimeAttackDebugInput;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
 import com.openggf.game.timeattack.TimeAttackLevelEndRouting;
 import com.openggf.game.timeattack.TimeAttackMenu;
@@ -773,28 +774,6 @@ public class GameLoop {
         return configService.getInt(SonicConfiguration.TIME_ATTACK_RETRY_KEY);
     }
 
-    private static boolean anyDebugOverlayTogglePressed(InputHandler input) {
-        for (DebugOverlayToggle toggle : DebugOverlayToggle.values()) {
-            if (input.isKeyPressed(toggle.keyCode())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * State-altering debug cheat keys whose use during a timed attempt taints it.
-     * These are the gameplay debug cheats (debug mode, last-checkpoint warp, super,
-     * give emeralds); tainting only — the keys themselves are never blocked.
-     */
-    private boolean anyTimeAttackDebugCheatKeyPressed(InputHandler input) {
-        return input.isKeyPressed(configService.getInt(SonicConfiguration.DEBUG_MODE_KEY))
-                || input.isKeyPressedWithoutModifiers(
-                        configService.getInt(SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY))
-                || input.isKeyPressed(configService.getInt(SonicConfiguration.SUPER_SONIC_DEBUG_KEY))
-                || input.isKeyPressed(configService.getInt(SonicConfiguration.GIVE_EMERALDS_KEY));
-    }
-
     /**
      * True while the level is mid a special-stage/bonus-stage/ending transition
      * or a pending zone/act transition -- the exact same composite condition
@@ -886,19 +865,51 @@ public class GameLoop {
         }
     }
 
-    private void stepInternal() {
+    private void prepareSpecialStageRewindFrame() {
+        specialStageRewindBoundaryThisFrame = false;
+        if (currentGameMode == GameMode.SPECIAL_STAGE) {
+            detectSpecialStageLiveOnlyShortcutBoundary();
+        }
+    }
+
+    private void finishTimeAttackMasterTitleFrame(MasterTitleScreen masterScreen) {
+        if (pendingTimeAttackLaunch != null) {
+            TimeAttackLaunchRequest deferredLaunch = pendingTimeAttackLaunch;
+            pendingTimeAttackLaunch = null;
+            timeAttackLaunchHandler.launch(deferredLaunch);
+        }
+        if (pendingReopenTimeAttackMenu && masterScreen != null
+                && masterScreen.tryOpenTimeAttackMenu()) {
+            pendingReopenTimeAttackMenu = false;
+        }
+        wasMasterTitleScreenActiveLastFrame = true;
+    }
+
+    private void finishTimeAttackMasterTitleExit() {
+        if (wasMasterTitleScreenActiveLastFrame) {
+            pendingReopenTimeAttackMenu = false;
+        }
+        wasMasterTitleScreenActiveLastFrame = false;
+    }
+
+    private void handleTimeAttackRetryInput() {
+        if (timeAttackRuntime.isActive() && inputHandler.isKeyPressed(timeAttackRetryKey())) {
+            timeAttackRuntime.requestRetry();
+        }
+    }
+
+    private void requireInputHandler() {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
         }
+    }
+
+    private void stepInternal() {
+        requireInputHandler();
         inputHandler.refreshLogicalSnapshot();
         audioUpdatedThisStep = false;
         refreshRuntimeBindings();
-        if (currentGameMode == GameMode.SPECIAL_STAGE) {
-            specialStageRewindBoundaryThisFrame = false;
-            detectSpecialStageLiveOnlyShortcutBoundary();
-        } else {
-            specialStageRewindBoundaryThisFrame = false;
-        }
+        prepareSpecialStageRewindFrame();
         PaletteOwnershipRegistry paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
@@ -947,26 +958,10 @@ public class GameLoop {
                     masterScreen,
                     inputHandler,
                     this::exitMasterTitleScreen);
-            if (pendingTimeAttackLaunch != null) {
-                TimeAttackLaunchRequest deferredLaunch = pendingTimeAttackLaunch;
-                pendingTimeAttackLaunch = null;
-                timeAttackLaunchHandler.launch(deferredLaunch);
-            }
-            // Retried every frame because tryOpenTimeAttackMenu() is a no-op until the
-            // screen's own fade-in reaches ACTIVE (see MasterTitleScreen#state).
-            if (pendingReopenTimeAttackMenu && masterScreen != null && masterScreen.tryOpenTimeAttackMenu()) {
-                pendingReopenTimeAttackMenu = false;
-            }
-            wasMasterTitleScreenActiveLastFrame = true;
+            finishTimeAttackMasterTitleFrame(masterScreen);
             return;
         }
-        if (wasMasterTitleScreenActiveLastFrame) {
-            // Defensive: the mode just left MASTER_TITLE_SCREEN (e.g. the user picked a
-            // normal game/menu entry) with the reopen request never consumed. Drop it so
-            // it can't fire against some unrelated, later master-title visit.
-            pendingReopenTimeAttackMenu = false;
-        }
-        wasMasterTitleScreenActiveLastFrame = false;
+        finishTimeAttackMasterTitleExit();
 
         if (!isPaused()
                 && !timeAttackRuntime.isActive()
@@ -1004,9 +999,7 @@ public class GameLoop {
         escapeToMasterTitleController.update(currentGameMode, inputHandler);
         if (currentGameMode == GameMode.LEVEL) {
             userRecordingControls.updateLevelControlInput(inputHandler);
-            if (timeAttackRuntime.isActive() && inputHandler.isKeyPressed(timeAttackRetryKey())) {
-                timeAttackRuntime.requestRetry();
-            }
+            handleTimeAttackRetryInput();
         }
 
         int pauseKey = configService.getInt(SonicConfiguration.PAUSE_KEY);
@@ -1055,14 +1048,7 @@ public class GameLoop {
         profiler.beginSection("input");
         boolean debugShortcutsEnabled = debugShortcutsEnabled();
         if (timeAttackRuntime.isActive() && debugShortcutsEnabled
-                && (anyDebugOverlayTogglePressed(inputHandler)
-                        || anyTimeAttackDebugCheatKeyPressed(inputHandler))) {
-            // Debug tools are never blocked, but using them during a timed
-            // attempt taints it so the run can never be saved as a new best.
-            // Gated on isActive() (not isAttemptRunning()) so a press during the
-            // ARMED pre-start window taints too, and covers the state-altering
-            // cheat keys (debug mode / last-checkpoint warp / super / emeralds)
-            // alongside the debug overlay toggles.
+                && TimeAttackDebugInput.taintPressed(inputHandler, configService)) {
             timeAttackRuntime.markTainted();
         }
         debugOverlayManager.updateInput(inputHandler, debugShortcutsEnabled);
@@ -2141,13 +2127,7 @@ public class GameLoop {
             return;
         }
 
-        // Special stage entry is fully disabled while a time attack is active — the
-        // request is swallowed here and the run continues unharmed (it is no longer
-        // voided; see enterBonusStage() for the bonus-stage equivalent). Gating here
-        // covers every caller uniformly: the checkpoint-star/big-ring request-consume
-        // path above, the debug Tab shortcut, and level-select "enter special stage".
-        if (timeAttackRuntime.isActive()) {
-            LOGGER.info("Special/bonus stage entry disabled during time attack");
+        if (TimeAttackLevelEndRouting.suppressesStageEntry(timeAttackRuntime.isActive())) {
             return;
         }
 
@@ -2272,14 +2252,7 @@ public class GameLoop {
      * Captures current state, fades to black, loads the bonus zone.
      */
     private void enterBonusStage(BonusStageType type) {
-        if (currentGameMode != GameMode.LEVEL) {
-            return;
-        }
-
-        // Bonus stage entry is fully disabled while a time attack is active — see
-        // enterSpecialStage() for the special-stage equivalent and rationale.
-        if (timeAttackRuntime.isActive()) {
-            LOGGER.info("Special/bonus stage entry disabled during time attack");
+        if (currentGameMode != GameMode.LEVEL || timeAttackRuntime.isActive()) {
             return;
         }
 

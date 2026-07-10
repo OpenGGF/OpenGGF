@@ -1,7 +1,7 @@
 package com.openggf.tools.net;
 
-import com.openggf.game.ghost.GhostFrame;
-import com.openggf.game.ghost.GhostFrameCodec;
+import com.openggf.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrameCodec;
 import com.openggf.net.client.ClientHandshake;
 import com.openggf.net.hub.HubConnection;
 import com.openggf.net.hub.RoomHost;

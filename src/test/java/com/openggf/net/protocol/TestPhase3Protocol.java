@@ -78,7 +78,7 @@ class TestPhase3Protocol {
     @Test
     void relayGuestBinaryWrapsAndEnforcesCap() {
         byte[] inner = GhostPackets.encodeFrames(1, 0,
-                new byte[com.openggf.game.ghost.GhostFrameCodec.BYTES]);
+                new byte[com.openggf.ghost.GhostFrameCodec.BYTES]);
         GhostPackets.RelayGuestBinary decoded = GhostPackets.decodeRelayGuestBinary(
                 GhostPackets.encodeRelayGuestBinary(300, inner));
         assertEquals(300, decoded.guestId());

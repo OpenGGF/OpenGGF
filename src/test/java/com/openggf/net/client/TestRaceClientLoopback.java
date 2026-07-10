@@ -1,7 +1,7 @@
 package com.openggf.net.client;
 
-import com.openggf.game.ghost.GhostFrame;
-import com.openggf.game.ghost.GhostFrameCodec;
+import com.openggf.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrameCodec;
 import com.openggf.net.host.RaceHostServer;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfileSource;

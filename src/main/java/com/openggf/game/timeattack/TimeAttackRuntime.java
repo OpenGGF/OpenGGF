@@ -4,7 +4,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ghost.GhostCaptureBuffer;
-import com.openggf.game.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrame;
 import com.openggf.game.ghost.GhostFrameSampler;
 import com.openggf.game.ghost.GhostHeader;
 import com.openggf.game.ghost.GhostFileCodec;
@@ -13,7 +13,6 @@ import com.openggf.game.ghost.GhostRecording;
 import com.openggf.game.ghost.GhostRenderRegistry;
 import com.openggf.game.recording.RecordingMainPlayerResolver;
 import com.openggf.sprites.ghost.ActiveGhost;
-import com.openggf.sprites.ghost.GhostRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.version.AppVersion;
 

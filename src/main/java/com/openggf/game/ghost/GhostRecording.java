@@ -1,5 +1,8 @@
 package com.openggf.game.ghost;
 
+import com.openggf.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrameCodec;
+
 public final class GhostRecording {
     private final GhostHeader header;
     private final byte[] frameData;

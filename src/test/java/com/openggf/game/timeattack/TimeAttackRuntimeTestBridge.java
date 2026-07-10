@@ -1,6 +1,6 @@
 package com.openggf.game.timeattack;
 
-import com.openggf.game.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrame;
 
 /** Package bridge for coordinator tests without widening production-only test seams. */
 public final class TimeAttackRuntimeTestBridge {

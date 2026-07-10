@@ -1,6 +1,6 @@
 package com.openggf.game.timeattack.mp;
 
-import com.openggf.game.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrame;
 import com.openggf.game.timeattack.AttemptInputRecording;
 import com.openggf.game.timeattack.GhostStore;
 import com.openggf.game.timeattack.TimeAttackRuntime;

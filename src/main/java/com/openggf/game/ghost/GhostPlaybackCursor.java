@@ -1,5 +1,7 @@
 package com.openggf.game.ghost;
 
+import com.openggf.ghost.GhostFrame;
+
 /** Spawn-anchored playback: attempt frame N maps directly to recorded frame N. */
 public final class GhostPlaybackCursor {
     private final GhostRecording recording;

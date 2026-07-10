@@ -1,4 +1,4 @@
-package com.openggf.game.ghost;
+package com.openggf.ghost;
 
 /** One resolved render-state ghost frame (spec §7: final render state, never physics). */
 public record GhostFrame(int x, int y, int mappingFrame, boolean hFlip, boolean vFlip,

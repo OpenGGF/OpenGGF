@@ -91,7 +91,7 @@ class TestRelayFallbackTunnel {
         assertTrue(guest.text.stream().map(value -> ControlCodec.decode(value).message())
                 .anyMatch(ControlMessage.JoinAccepted.class::isInstance));
 
-        byte[] frame = new byte[com.openggf.game.ghost.GhostFrameCodec.BYTES];
+        byte[] frame = new byte[com.openggf.ghost.GhostFrameCodec.BYTES];
         router.guestBinary(guestId, GhostPackets.encodeFrames(1, 0, frame));
         pump.run();
         room.tick();

@@ -22,9 +22,9 @@ public class TestNetIsolationRules {
                                     javaClass -> javaClass.getPackageName().startsWith("com.openggf")
                                             && !javaClass.getPackageName().startsWith("com.openggf.net")
                                             && !javaClass.getName().equals(
-                                            "com.openggf.game.ghost.GhostFrame")
+                                            "com.openggf.ghost.GhostFrame")
                                             && !javaClass.getName().equals(
-                                            "com.openggf.game.ghost.GhostFrameCodec")))
+                                            "com.openggf.ghost.GhostFrameCodec")))
                     .because("the standalone master and room transports must stay engine-free");
 
     @ArchTest

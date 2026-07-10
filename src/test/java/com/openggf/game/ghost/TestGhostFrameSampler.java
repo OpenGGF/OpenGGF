@@ -1,5 +1,6 @@
 package com.openggf.game.ghost;
 
+import com.openggf.ghost.GhostFrame;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;

@@ -22,6 +22,11 @@ public final class TimeAttackLevelEndRouting {
         return timeAttackActive;
     }
 
+    /** Special and bonus stage entry requests are swallowed during timed play. */
+    public static boolean suppressesStageEntry(boolean timeAttackActive) {
+        return timeAttackActive;
+    }
+
     /**
      * The S3K seamless-transition consume site is narrower: only a
      * {@code RELOAD_TARGET_LEVEL} request whose target differs from the armed

@@ -1,6 +1,6 @@
 package com.openggf.game.timeattack;
 
-import com.openggf.game.ghost.GhostFrame;
+import com.openggf.ghost.GhostFrame;
 import com.openggf.sprites.ghost.ActiveGhost;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

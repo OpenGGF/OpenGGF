@@ -1,5 +1,6 @@
 package com.openggf.game.ghost;
 
+import com.openggf.ghost.GhostFrame;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /** Shared resolved playable-state sampler for live capture and verifier replay. */
