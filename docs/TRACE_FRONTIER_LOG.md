@@ -236,6 +236,18 @@ cause from the next frame-counter visibility change. Full cross-game sweeps at
 this checkpoint are green: all 29 S1 and all 48 S2 trace replays pass with the
 explicit REV01 ROM paths.
 
+Round 16 banks S3K collapsing-platform fragment lifetime ordering. ROM
+`loc_20620` tests the render flag produced by the preceding `Render_Sprites`
+pass and deletes before `MoveSprite`; the shared fragment base instead moved
+first and retained objects through a fresh 128-pixel margin. S3K fragments now
+latch their inherited platform `$3C/$20` bounds in the post-camera render-state
+phase, preserve the delay routine's unconditional draw, and consume that bit
+before the first falling step (`sonic3k.asm:44879-44883,45308-45431,
+36345-36387`). Focused fragment tests cover both the wait-to-fall handoff and
+the pre-movement delete. With the prior Obj37 cadence formula unchanged, the
+complete-run frontier remains f9376. The same all-29 S1 and all-48 S2 sweeps
+reported for round 15 include this shared-base hook change and remain green.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
 banked rounds the current stacked working-tree complete-run frontier is f9376. Those causes will be recorded and committed

@@ -71,6 +71,11 @@ public abstract class AbstractFallingFragment extends AbstractObjectInstance {
             return;
         }
 
+        if (shouldDeleteBeforeFall()) {
+            ObjectLifetimeOps.expireDynamic(this);
+            return;
+        }
+
         SubpixelMotion.objectFall(motion, GRAVITY);
 
         if (shouldDeleteAfterFall()) {
@@ -91,4 +96,13 @@ public abstract class AbstractFallingFragment extends AbstractObjectInstance {
     protected boolean shouldDeleteAfterFall() {
         return !isOnScreen(OFF_SCREEN_MARGIN);
     }
+
+    /**
+     * Optional ROM-order lifetime gate evaluated before the falling movement.
+     * Most shared fragments retain the post-movement margin check above.
+     */
+    protected boolean shouldDeleteBeforeFall() {
+        return false;
+    }
+
 }
