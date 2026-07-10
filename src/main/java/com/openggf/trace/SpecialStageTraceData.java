@@ -88,12 +88,14 @@ public final class SpecialStageTraceData {
         return eventsByFrame.getOrDefault(i, Collections.emptyList());
     }
 
-    /**
-     * Selects the atomic expected state for one logical frame. This is a
-     * comparison-only mapping and does not write trace data into the engine.
-     */
-    public SpecialStageExpectedState expectedStateForFrame(int i) {
-        return SpecialStageExpectedState.from(getFrame(i), getEventsForFrame(i));
+    /** Atomic object-pass snapshots; the validated binder owns execution ordering. */
+    public List<TraceEvent.StateSnapshot> runObjectsEndSnapshots() {
+        return eventsByFrame.values().stream()
+                .flatMap(List::stream)
+                .filter(TraceEvent.StateSnapshot.class::isInstance)
+                .map(TraceEvent.StateSnapshot.class::cast)
+                .filter(snapshot -> "run_objects_end".equals(snapshot.fields().get("type")))
+                .toList();
     }
 
     /** Returns all initial/transition samples of ROM {@code SpecialStage_Started}. */

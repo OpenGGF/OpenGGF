@@ -414,8 +414,11 @@ function Assert-SsAuxCoverage([string]$TraceDir) {
     $controlInitial = $false
     $controlUnlock = $false
     $runObjectsEndCount = 0
-    $runObjectsEndFrames = New-Object System.Collections.Generic.HashSet[int]
+    $expectedRunObjectsSequence = 0
+    $delayedRunObjectsPassCount = 0
+    $runObjectsPassesByFrame = @{}
     $requiredRunObjectsFields = @(
+        "pass_sequence", "first_eligible_frame",
         "speed_factor", "track_anim", "track_anim_frame", "track_drawing_index",
         "track_orientation", "track_duration_timer", "current_segment",
         "player_anim_frame_timer", "rings_togo_bcd", "check_rings_flag",
@@ -445,8 +448,20 @@ function Assert-SsAuxCoverage([string]$TraceDir) {
         } elseif ($event.type -eq "run_objects_end") {
             $runObjectsEndCount++
             $frame = [int]$event.frame
-            if (-not $runObjectsEndFrames.Add($frame)) {
-                throw "duplicate run_objects_end snapshot for logical frame $frame"
+            if ([int]$event.pass_sequence -ne $expectedRunObjectsSequence) {
+                throw "run_objects_end sequence discontinuity: expected $expectedRunObjectsSequence got $($event.pass_sequence)"
+            }
+            $expectedRunObjectsSequence++
+            if ([int]$event.first_eligible_frame -gt $frame) {
+                throw "run_objects_end frame $frame precedes first eligible frame $($event.first_eligible_frame)"
+            }
+            if ([int]$event.first_eligible_frame -lt $frame) {
+                $delayedRunObjectsPassCount++
+            }
+            if ($runObjectsPassesByFrame.ContainsKey($frame)) {
+                $runObjectsPassesByFrame[$frame]++
+            } else {
+                $runObjectsPassesByFrame[$frame] = 1
             }
             if ($frame -lt 0 -or $frame -ge $rows.Count) {
                 throw "run_objects_end frame $frame is outside physics row range"
@@ -475,10 +490,20 @@ function Assert-SsAuxCoverage([string]$TraceDir) {
     if (-not $controlUnlock) {
         throw "SS aux stream missing control_state unlock transition"
     }
-    if ($runObjectsEndCount -le 1000) {
+    $multiPassObservationFrames = @(
+        $runObjectsPassesByFrame.GetEnumerator() | Where-Object { $_.Value -gt 1 }
+    ).Count
+    if ($runObjectsEndCount -le 2900) {
         throw "SS aux stream has insufficient run_objects_end coverage: $runObjectsEndCount"
     }
-    Write-Host "SS aux coverage verified ($runObjectsEndCount logical RunObjects-end snapshots)"
+    if ($multiPassObservationFrames -le 0) {
+        throw "SS aux stream lost multi-pass observation frames (possible pass dedupe regression)"
+    }
+    if ($delayedRunObjectsPassCount -le 0) {
+        throw "SS aux stream lost delayed RunObjects passes (possible eligibility regression)"
+    }
+    Write-Host ("SS aux coverage verified ({0} passes, {1} multi-pass observations, {2} delayed passes)" -f `
+        $runObjectsEndCount, $multiPassObservationFrames, $delayedRunObjectsPassCount)
 }
 
 function Assert-SsTraceOutput([object]$Route, [string]$TraceDir, [string]$Bk2Path) {

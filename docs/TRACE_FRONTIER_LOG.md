@@ -40,6 +40,57 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage ordered RunObjects observation identity
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `1b9272029`. The f896 player
+position mismatch was a recorder/comparator association defect, not another
+Obj09 movement or input rule.
+
+- PC-execute evidence: `C:\tmp\s2ss-input-cadence.txt`, SHA-256
+  `79013220E442CEC845D187ADABA24823B44194980C8825B18D8BE11183C9902E`;
+  trace f870-f910 / BizHawk f3624-f3664. At raw f894 the pass ends x=`$0005`.
+  A second valid pass runs across lag-labelled f895 and ends x=`$0007`, but the
+  v1.1 recorder discarded it because f894 already owned an event. The following
+  pass ends x=`$000D` across f897 and was consequently mis-keyed to f896, where
+  the engine correctly exposed x=`$0007`. This directly disproves the old
+  one-event-per-last-nonlag-frame assumption.
+- Recorder/model correction: v1.2 hooks `RunObjects` entry `$15F9C` and return
+  `$15FE4` (`s2.asm:29805-29849`). Each atomic snapshot carries contiguous
+  `pass_sequence` and `first_eligible_frame`; the comparison-only binder selects
+  the latest completed result visible at an executed observation. The workflow
+  validates sequence continuity, eligibility, complete fields, and non-lag
+  binding while allowing multiple ordered passes on one observation. No aux
+  field paces or mutates the engine.
+- Re-record command:
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/bizhawk/record_s2_level_select_traces.ps1 -RomPath s2.gen -MoviesDir C:\Users\farre\IdeaProjects\sonic-engine\docs\BizHawk-2.11-win-x64\Movies -OutputRoot src/test/resources/traces/s2 -Only special_stage`
+  passed P1/P2 alignment and aux validation with 3,009 contiguous pass-end
+  snapshots across 2,911 observation frames (98 frames carry two passes). The
+  decompressed physics CSV remains byte-identical at 612,518 bytes, SHA-256
+  `418033A193690BE9DDD8BD7CA5EBAEEA48EFCE08C13B807883A318D6E415777B`.
+- RED commands: the recorder contract failed on v1.1/missing pass identity;
+  `SpecialStageRunObjectsPassBinderTest` then failed expected latest sequence 1
+  / actual 0 for two completed passes sharing one observation. A rejected
+  intermediate one-pass-per-update binder produced 11,112 errors and moved the
+  frontier backward to f791 rings, proving that sequential consumption was not
+  the observation contract.
+- GREEN focused command:
+  `mvn -Dmse=off "-Dtest=com.openggf.trace.SpecialStageRunObjectsPassBinderTest,com.openggf.tests.trace.s2.S2SpecialStageRecorderContractTest,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`
+  passed 9/9 after review hardening. The artifact contract pins 3,009 passes,
+  98 multi-pass frames, and 172 delayed bindings; malformed sequence gaps and
+  pre-eligibility bindings are rejected by focused binder tests. f791 remains
+  one ring, f799 remains three, and f896 player state is
+  exact.
+- Neighborhood/determinism command:
+  `mvn -Dmse=off "-Dtest=com.openggf.trace.SpecialStageRunObjectsPassBinderTest,com.openggf.trace.SpecialStageExpectedStateTest,com.openggf.game.sonic2.specialstage.*Test,com.openggf.game.sonic2.specialstage.Test*,com.openggf.tests.trace.s2.S2SpecialStageRecorderContractTest,com.openggf.tests.trace.s2.S2SpecialStageExpectedComparisonTest,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`
+  passed 92/92.
+- Before (`1b9272029`): 11,049 errors / 10 warnings, first error f896
+  `sonic_ss_x` expected 13, actual 7 (angle 59/61).
+- After (uncommitted implementation measurement): 11,001 errors / 10 warnings,
+  first error f916 `sonic_ss_x` expected 58, actual 61 (y 92/91, angle 41/40).
+  This is 28.16% below the original 15,313-error Stage-1 baseline, still below
+  the required 50% gate. f916 player/pass cadence is the next independent root.
+
 ## 2026-07-10 - S2 special-stage Obj09 recurring input and signed inertia step
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

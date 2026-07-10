@@ -11,7 +11,7 @@ import java.util.Map;
  * <p>The CSV row is sampled at VBlank and can therefore bisect the ROM's
  * subsequent {@code RunObjects} pass. For fields actually owned by that pass
  * (player object state, player ring digits, and Tails's control counter), a
- * same-logical-frame {@code run_objects_end} snapshot is authoritative. Other
+ * pass-identity binder-selected {@code run_objects_end} snapshot is authoritative. Other
  * manager fields keep their CSV value because their owning routines run before
  * or after {@code RunObjects}; in particular this helper never shifts finish or
  * results state across frames.
@@ -52,6 +52,8 @@ public record SpecialStageExpectedState(
                 .map(TraceEvent.StateSnapshot.class::cast)
                 .filter(snapshot -> "run_objects_end".equals(snapshot.fields().get("type")))
                 .toList();
+        // The pass binder reduces a physical observation's ordered pass list to
+        // one latest completed atomic state before calling this mapper.
         if (passEnds.size() > 1) {
             throw new IllegalArgumentException(
                     "duplicate run_objects_end snapshots for frame " + csv.frame());

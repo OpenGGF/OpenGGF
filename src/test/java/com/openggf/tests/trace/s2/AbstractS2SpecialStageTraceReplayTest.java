@@ -13,6 +13,8 @@ import com.openggf.trace.Severity;
 import com.openggf.trace.SpecialStageTraceData;
 import com.openggf.trace.SpecialStageExpectedState;
 import com.openggf.trace.SpecialStageTraceFrame;
+import com.openggf.trace.SpecialStageRunObjectsPassBinder;
+import com.openggf.trace.TraceEvent;
 import com.openggf.trace.SpecialStageTraceFrame.CharacterState;
 import org.junit.jupiter.api.Test;
 
@@ -49,8 +51,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       only; engine state is never hydrated from the trace.</li>
  *   <li><b>Atomic object-pass expectations.</b> A VBlank CSV row can bisect
  *       the following ROM {@code RunObjects} pass. When the recorder provides
- *       a same-logical-frame {@code run_objects_end} event, player/ring/Tails
- *       control fields come from that exact pass-end snapshot; track and
+ *       ordered {@code run_objects_end} events, the pass binder selects the
+ *       latest completed atomic result visible at that observation; player,
+ *       ring, and Tails-control fields come from that snapshot, while track and
  *       finish/results fields remain on their CSV observation.</li>
  *   <li><b>Finish boundary.</b> {@code compareEnd = stageFinishedFrame().orElse(
  *       frameCount())}. A Tier-1 {@code finished_transition_frame} check asserts
@@ -187,6 +190,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
 
         List<FrameComparison> comparisons = new ArrayList<>();
         int firstEngineFinished = -1;
+        SpecialStageRunObjectsPassBinder passBinder =
+                new SpecialStageRunObjectsPassBinder(trace.runObjectsEndSnapshots());
 
         for (int f = 0; f < compareEnd; f++) {
             SpecialStageTraceFrame tf = trace.getFrame(f);
@@ -200,7 +205,11 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             }
 
             Map<String, FieldComparison> fields = new LinkedHashMap<>();
-            SpecialStageExpectedState expected = trace.expectedStateForFrame(f);
+            List<TraceEvent> passEnd = passBinder.nextForExecutedFrame(f)
+                    .<List<TraceEvent>>map(List::of)
+                    .orElseGet(List::of);
+            SpecialStageExpectedState expected =
+                    SpecialStageExpectedState.from(tf, passEnd);
             addManagerFields(fields, expected, state, false);
             addPlayerFields(fields, "sonic", expected.sonic(), state.sonic());
             addPlayerFields(fields, "tails", expected.tails(), state.tails());

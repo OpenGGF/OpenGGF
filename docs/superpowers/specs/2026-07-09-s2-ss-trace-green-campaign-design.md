@@ -59,25 +59,31 @@ state of the ROM logic pass. A PC-execute probe disproved that assumption:
 `SSObjectsManager -> RunObjects` work can finish after it, including across a
 lag row. At f799 the CSV therefore reports one ring while the exact
 `RunObjects_End` state for that same logical step reports three. Conversely,
-the first-ring f791 pass end remains one. The v1.1-s2ss recorder now hooks the
-REV01 `RunObjects_End` RTS at ROM `$15FE4` (`s2.asm:29805-29849`), keys each
-snapshot to the last non-lag logical trace frame, and records the full manager
-and player surface atomically once the ROM's semantic
-`SpecialStage_Started` gate is nonzero. Comparison uses these snapshots only for fields
-owned by `RunObjects` (player state/ring digits and Tails control counter); CSV
-remains authoritative for track, finish/results, and any frame with no pass-end
-event. This is expectation selection only, never trace-to-engine hydration.
-An emitted pass-end event is an indivisible atomic record: the parser rejects
-missing required fields or duplicate events for one logical frame rather than
-mixing VBlank and pass-end values. Whole-event absence is the only CSV fallback;
-an explicit absent-player flag remains authoritative and yields an absent player
-without requiring meaningless positional fields.
+the first-ring f791 pass end remains one. The v1.2-s2ss recorder now hooks both
+REV01 `RunObjects` entry at ROM `$15F9C` and `RunObjects_End` at `$15FE4`
+(`s2.asm:29805-29849`). Every completed pass records the full manager/player
+surface atomically, a contiguous `pass_sequence`, and the first trace cursor at
+which that pass can be observed. This identity is necessary because a pass can
+cross a lag-labelled VBlank row: the old last-non-lag-frame dedupe discarded
+535 real passes, and 98 observations legitimately receive two completed pass
+results. The comparison-only binder selects the highest-sequence completed
+result visible at each executed replay observation. It uses that snapshot only
+for fields owned by `RunObjects` (player state/ring digits and Tails control
+counter); CSV remains authoritative for track, finish/results, and observations
+with no pass-end event. This is expectation selection only, never trace pacing
+or trace-to-engine hydration. Each emitted pass event remains indivisible:
+missing required fields, sequence gaps, or a binding before
+`first_eligible_frame` fail validation rather than mixing VBlank and pass-end
+values. Whole-event absence is the only CSV fallback; an explicit absent-player
+flag remains authoritative and yields an absent player without requiring
+meaningless positional fields.
 
 The semantic gate deliberately leaves the distinct startup/fade loops on their
 VBlank CSV observations; there is no frame-number exception. The corrected
-boundary removes the f799 false mismatch and moves the first trustworthy
-frontier to f890 player position/angle, with the first combined-ring mismatch
-now f920.
+boundary removes the f799 false mismatch and originally exposed f890 player
+position/angle. The recurring-input correction below moved that to f896; pass
+identity then proved f896 was itself a misbound later pass. The first trustworthy
+frontier is now f916 player position/angle.
 
 ### 2026-07-10 f890 player-control correction
 

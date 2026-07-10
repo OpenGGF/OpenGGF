@@ -6,7 +6,9 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -22,15 +24,18 @@ class S2SpecialStageRecorderContractTest {
     void recorderDeclaresBoundedRev01RunObjectsEndAndControlHooks() throws Exception {
         String lua = Files.readString(LUA);
 
-        assertTrue(lua.contains("local LUA_SCRIPT_VERSION = \"1.1-s2ss\""));
+        assertTrue(lua.contains("local LUA_SCRIPT_VERSION = \"1.2-s2ss\""));
+        assertTrue(lua.contains("local PC_RUN_OBJECTS_BEGIN = 0x15F9C"));
         assertTrue(lua.contains("local PC_RUN_OBJECTS_END = 0x15FE4"));
         assertTrue(lua.contains("event.onmemoryexecute"));
         assertTrue(lua.contains("s2ss_run_objects_end"));
+        assertTrue(lua.contains("s2ss_run_objects_begin"));
         assertTrue(lua.contains("event.unregisterbyname"));
         assertTrue(lua.contains("\"type\":\"run_objects_end\""));
         assertTrue(lua.contains("\"type\":\"control_state\""));
         assertTrue(lua.contains("ADDR_SPECIAL_STAGE_STARTED"));
-        assertTrue(lua.contains("last_nonlag_trace_frame"));
+        assertTrue(lua.contains("first_eligible_frame"));
+        assertTrue(lua.contains("pass_sequence"));
         assertTrue(lua.contains("mainmemory.read_u8(ADDR_SPECIAL_STAGE_STARTED) == 0"));
         assertTrue(lua.contains("OGGF_TRACE_OUTPUT_DIR"));
         assertTrue(Files.readString(WORKFLOW).contains("OGGF_TRACE_OUTPUT_DIR"));
@@ -45,6 +50,9 @@ class S2SpecialStageRecorderContractTest {
         assertTrue(ps1.contains("stage_finished"));
         assertTrue(ps1.contains("checkpoint"));
         assertTrue(ps1.contains("message_state"));
+        assertTrue(ps1.contains("$multiPassObservationFrames"));
+        assertTrue(ps1.contains("$delayedRunObjectsPassCount"));
+        assertTrue(ps1.contains("-le 2900"));
     }
 
     @Test
@@ -63,7 +71,7 @@ class S2SpecialStageRecorderContractTest {
         SpecialStageTraceData trace = SpecialStageTraceData.load(
                 AbstractS2SpecialStageTraceReplayTest.TRACE_DIRECTORY);
 
-        assertEquals("1.1-s2ss", trace.metadata().luaScriptVersion());
+        assertEquals("1.2-s2ss", trace.metadata().luaScriptVersion());
         assertFalse(trace.controlStateTransitions().isEmpty());
         assertEquals(0, trace.controlStateTransitions().get(0).frame());
         assertFalse(trace.controlStateTransitions().get(0).started());
@@ -71,7 +79,9 @@ class S2SpecialStageRecorderContractTest {
                 SpecialStageTraceData.ControlStateTransition::started));
 
         int runObjectsEndCount = 0;
-        java.util.Set<Integer> runObjectsEndFrames = new java.util.HashSet<>();
+        int expectedPassSequence = 0;
+        int delayedRunObjectsPassCount = 0;
+        Map<Integer, Integer> runObjectsPassesByFrame = new HashMap<>();
         boolean stageFinished = false;
         boolean checkpoint = false;
         boolean messageState = false;
@@ -84,11 +94,21 @@ class S2SpecialStageRecorderContractTest {
                 Object type = snapshot.fields().get("type");
                 if ("run_objects_end".equals(type)) {
                     runObjectsEndCount++;
-                    assertTrue(runObjectsEndFrames.add(frame),
-                            "duplicate pass-end snapshot for logical frame " + frame);
                     assertFalse(trace.getFrame(frame).lag(),
                             "pass-end snapshot must be keyed to a non-lag logical frame");
+                    assertEquals(expectedPassSequence++,
+                            ((Number) snapshot.fields().get("pass_sequence")).intValue(),
+                            "pass sequence must be contiguous in execution order");
+                    assertTrue(((Number) snapshot.fields().get("first_eligible_frame")).intValue()
+                                    <= frame,
+                            "pass may only bind at or after its first eligible trace row");
+                    if (((Number) snapshot.fields().get("first_eligible_frame")).intValue()
+                            < frame) {
+                        delayedRunObjectsPassCount++;
+                    }
+                    runObjectsPassesByFrame.merge(frame, 1, Integer::sum);
                     for (String required : List.of(
+                            "pass_sequence", "first_eligible_frame",
                             "speed_factor", "track_anim", "track_anim_frame",
                             "track_drawing_index", "track_orientation",
                             "track_duration_timer", "current_segment",
@@ -117,7 +137,12 @@ class S2SpecialStageRecorderContractTest {
                 }
             }
         }
-        assertTrue(runObjectsEndCount > 1000, "expected broad recurring RunObjects coverage");
+        long multiPassObservationFrames = runObjectsPassesByFrame.values().stream()
+                .filter(count -> count > 1)
+                .count();
+        assertEquals(3009, runObjectsEndCount);
+        assertEquals(98, multiPassObservationFrames);
+        assertEquals(172, delayedRunObjectsPassCount);
         assertTrue(stageFinished);
         assertTrue(checkpoint);
         assertTrue(messageState);

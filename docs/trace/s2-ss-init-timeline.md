@@ -215,15 +215,19 @@ f790 shows depth `$0005999A`→`$0004CCCD`, animation 7→8, collision clear, an
 single Sonic count increment before compared f791. The probe values are evidence,
 not engine constants.
 
-With that correction, the first independent frontier is f799: the engine reaches
-combined count 3 while ROM remains at 1, then the counts resynchronize at f801.
-Another pair is transiently early at f808. This later paired-ring timing needs its
-own allocation/update/collision timeline; it does not justify a frame, lag,
-route, or trace-data exception. Downstream input onset, including the later f888
-movement window, remains unadjudicated until this earlier object root is resolved.
-The fact that CSV physical input precedes integer movement does not by itself
-prove another ROM logical-input latch beyond the `Ctrl_1` copy before
-`WaitForVint` at `s2.asm:6674-6680`.
+The later paired-ring observations are also exact once `RunObjects` pass identity
+is preserved. A pass can begin after one VBlank sample and complete on either
+side of the next, including across a row BizHawk labels lagged. Recorder v1.2
+therefore captures both the `$15F9C` entry and `$15FE4` return
+(`s2.asm:29805-29849`), assigning every completed pass a contiguous sequence and
+first eligible trace cursor. Of 3,009 recorded passes, 98 observation frames
+legitimately carry two results; comparison selects the latest completed atomic
+state visible at that observation. This keeps f791 at one ring, f799 at three,
+and resolves the former f896 player mismatch without using a frame exception,
+trace pacing, or state hydration. The next independent frontier is f916 player
+position/angle. Physical CSV input timing alone still does not justify another
+ROM logical-input latch beyond the active-loop copy proven at
+`s2.asm:6694-6721`.
 
 The raw rows explain why a direct `frame`-column lookup appears different from
 the required f23 boundary: raw f23-f126 are `lag=1` init rows and the replay

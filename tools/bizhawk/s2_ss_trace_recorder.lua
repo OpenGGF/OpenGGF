@@ -24,13 +24,15 @@
 --- Constants ---
 -----------------
 
-local LUA_SCRIPT_VERSION = "1.1-s2ss"
+local LUA_SCRIPT_VERSION = "1.2-s2ss"
 local TRACE_PROFILE = "s2_special_stage"
 
 -- S2 REV01 RunObjects_End RTS. RunObjects spans s2.asm:29805-29849
 -- (ROM $15F9C-$15FE4); the hook observes the atomic object-pass result after
 -- every active slot has executed and before BuildSprites/result handling.
+local PC_RUN_OBJECTS_BEGIN = 0x15F9C
 local PC_RUN_OBJECTS_END = 0x15FE4
+local RUN_OBJECTS_BEGIN_HOOK_NAME = "s2ss_run_objects_begin"
 local RUN_OBJECTS_HOOK_NAME = "s2ss_run_objects_end"
 
 -- The workflow passes an absolute directory because EmuHawk's child-process
@@ -127,11 +129,15 @@ local prev_hide_rings_to_go = 0
 local prev_trigger_rings_to_go = 0
 local prev_no_rings_togo_lifetime = 0
 local prev_special_stage_started = nil
--- A hook firing after VBlank belongs to the most recent logical input-poll
--- step. Lag rows do not advance that cursor, so a pass spanning a lag VBlank
--- remains associated with the preceding non-lag trace frame.
+-- RunObjects can begin after one VBlank sample and finish on either side of
+-- the next sample. Capture its first eligible trace cursor at entry, then bind
+-- the completed pass to the first non-lag row at or after that cursor. Using
+-- only the last non-lag row at return drops real passes that cross lag-labelled
+-- samples (s2.asm:6679-6688, 29805-29849).
 local last_nonlag_trace_frame = -1
-local last_run_objects_end_frame = -1
+local current_run_objects_first_eligible_frame = nil
+local pending_run_objects_end = nil
+local next_run_objects_pass_sequence = 0
 local run_objects_hook_registered = false
 
 local physics_file = nil
@@ -240,15 +246,17 @@ local function character_json(prefix, character)
         prefix, character.flip_timer)
 end
 
-local function write_run_objects_end(frame, state)
+local function write_run_objects_end(frame, pass_sequence, first_eligible_frame, state)
     write_aux(string.format(
-        '{"frame":%d,"type":"run_objects_end","speed_factor":%d,'
+        '{"frame":%d,"type":"run_objects_end","pass_sequence":%d,'
+        .. '"first_eligible_frame":%d,"speed_factor":%d,'
         .. '"track_anim":%d,"track_anim_frame":%d,"track_drawing_index":%d,'
         .. '"track_orientation":%d,"track_duration_timer":%d,'
         .. '"current_segment":%d,"player_anim_frame_timer":%d,'
         .. '"rings_togo_bcd":%d,"check_rings_flag":%d,'
         .. '"tails_control_counter":%d,"swap_positions_flag":%d',
-        frame, state.speed_factor, state.track_anim, state.track_anim_frame,
+        frame, pass_sequence, first_eligible_frame, state.speed_factor,
+        state.track_anim, state.track_anim_frame,
         state.track_drawing_index, state.track_orientation,
         state.track_duration_timer, state.current_segment,
         state.player_anim_frame_timer, state.rings_togo_bcd,
@@ -257,6 +265,20 @@ local function write_run_objects_end(frame, state)
         .. character_json("sonic", state.sonic)
         .. character_json("tails", state.tails)
         .. '}')
+end
+
+local function publish_run_objects_end(pass, frame)
+    write_run_objects_end(frame, pass.pass_sequence,
+        pass.first_eligible_frame, pass.state)
+end
+
+local function flush_pending_run_objects_end()
+    if pending_run_objects_end == nil then return end
+    if last_nonlag_trace_frame < pending_run_objects_end.first_eligible_frame then
+        return
+    end
+    publish_run_objects_end(pending_run_objects_end, last_nonlag_trace_frame)
+    pending_run_objects_end = nil
 end
 
 -- Read the BK2 movie's logical input for the given absolute BK2 frame index
@@ -400,19 +422,42 @@ local function check_control_state()
     end
 end
 
+local function on_run_objects_begin()
+    if not started or finished or physics_file == nil then return end
+    if mainmemory.read_u8(ADDR_GAME_MODE) ~= GAMEMODE_SPECIAL_STAGE then return end
+    current_run_objects_first_eligible_frame = trace_frame
+end
+
 local function on_run_objects_end()
     if not started or finished or physics_file == nil then return end
     if mainmemory.read_u8(ADDR_GAME_MODE) ~= GAMEMODE_SPECIAL_STAGE then return end
     -- The startup/fade loops have different observation ownership. Atomic
     -- pass-end comparison begins only when the ROM's recurring gameplay loop
     -- is enabled by SpecialStage_Started (s2.asm:6689,9745).
-    if mainmemory.read_u8(ADDR_SPECIAL_STAGE_STARTED) == 0 then return end
-    if last_nonlag_trace_frame < 0
-            or last_run_objects_end_frame == last_nonlag_trace_frame then
+    if mainmemory.read_u8(ADDR_SPECIAL_STAGE_STARTED) == 0 then
+        current_run_objects_first_eligible_frame = nil
         return
     end
-    write_run_objects_end(last_nonlag_trace_frame, read_ss_state())
-    last_run_objects_end_frame = last_nonlag_trace_frame
+    if current_run_objects_first_eligible_frame == nil then
+        error("RunObjects_End observed without matching RunObjects entry")
+    end
+    if pending_run_objects_end ~= nil then
+        error("a second RunObjects pass completed before the prior pass was bound")
+    end
+
+    local pass = {
+        pass_sequence = next_run_objects_pass_sequence,
+        first_eligible_frame = current_run_objects_first_eligible_frame,
+        state = read_ss_state(),
+    }
+    next_run_objects_pass_sequence = next_run_objects_pass_sequence + 1
+    current_run_objects_first_eligible_frame = nil
+
+    if last_nonlag_trace_frame >= pass.first_eligible_frame then
+        publish_run_objects_end(pass, last_nonlag_trace_frame)
+    else
+        pending_run_objects_end = pass
+    end
 end
 
 local function register_run_objects_hook()
@@ -420,6 +465,8 @@ local function register_run_objects_hook()
     if not event or not event.onmemoryexecute then
         error("BizHawk event.onmemoryexecute is required for S2 SS RunObjects-end capture")
     end
+    event.onmemoryexecute(on_run_objects_begin, PC_RUN_OBJECTS_BEGIN,
+        RUN_OBJECTS_BEGIN_HOOK_NAME)
     event.onmemoryexecute(on_run_objects_end, PC_RUN_OBJECTS_END,
         RUN_OBJECTS_HOOK_NAME)
     run_objects_hook_registered = true
@@ -428,6 +475,7 @@ end
 unregister_run_objects_hook = function()
     if not run_objects_hook_registered then return end
     if event and event.unregisterbyname then
+        pcall(event.unregisterbyname, RUN_OBJECTS_BEGIN_HOOK_NAME)
         pcall(event.unregisterbyname, RUN_OBJECTS_HOOK_NAME)
     end
     run_objects_hook_registered = false
@@ -444,6 +492,7 @@ local function record_frame()
     local lag = emu.islagged() and 1 or 0
     if lag == 0 then
         last_nonlag_trace_frame = trace_frame
+        flush_pending_run_objects_end()
     end
 
     -- frame is decimal and lag is 0/1; every other column (including the
