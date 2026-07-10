@@ -1444,8 +1444,6 @@ public class Sonic2SpecialStageManager {
             return;
         }
 
-        // Collision threshold: ±10 angle units (0x0A), matching original game
-        final int ANGLE_THRESHOLD = 10;
         List<Sonic2SpecialStagePlayer> collisionCandidates = orderedCollisionCandidates();
 
         for (Sonic2SpecialStageObject obj : objects) {
@@ -1455,6 +1453,9 @@ public class Sonic2SpecialStageManager {
             }
 
             int objAngle = obj.getAngle() & 0xFF;
+            // Obj60 loads d6=$A; Obj61 loads d6=8 before the shared collision
+            // helper (s2.asm:70674-70676, 70767-70769).
+            int angleThreshold = obj.isBomb() ? 8 : 10;
 
             // Test against each player
             for (Sonic2SpecialStagePlayer player : collisionCandidates) {
@@ -1481,10 +1482,10 @@ public class Sonic2SpecialStageManager {
                 // Calculate angle difference with wraparound handling
                 int diff = (playerAngle - objAngle) & 0xFF;
 
-                // Check if within threshold (accounting for 0/255 wraparound)
-                // diff <= threshold means player is slightly ahead of object
-                // diff >= 256-threshold means player is slightly behind (wrapped)
-                if (diff <= ANGLE_THRESHOLD || diff >= (256 - ANGLE_THRESHOLD)) {
+                // ROM accepts object-d6 <= player < object+d6: the negative
+                // boundary is inclusive, while the positive boundary is not
+                // (s2.asm:70846-70856).
+                if (diff < angleThreshold || diff >= (256 - angleThreshold)) {
                     if (handleObjectCollision(obj, player)) {
                         break;
                     }

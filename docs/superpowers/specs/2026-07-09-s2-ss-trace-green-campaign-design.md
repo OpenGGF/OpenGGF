@@ -106,6 +106,20 @@ BK2 mapper edges whose intervening release occurred entirely on a skipped update
 are neither ORed into the active pass nor retained for the following pre-start
 prior-word copy.
 
+### 2026-07-10 f1331 ring-angle boundary correction
+
+After signed coordinate comparison exposed f1331, atomic pass snapshots and an
+engine active-object dump showed paired animation-8 rings at angles `$48` and
+`$38`. Sonic was at `$42`; the engine collected both in pass 570, while ROM
+collected the `$48` ring in pass 570 and the `$38` ring only in pass 571 after
+Sonic moved to `$41`. `Obj61_TestCollision` implements a half-open byte interval:
+`objectAngle-d6 <= playerAngle < objectAngle+d6`, including wraparound
+(`s2.asm:70846-70877`). Obj60 supplies `d6=$A`; Obj61 supplies `d6=8`
+(`:70674-70676,70767-70769`). The engine had made the positive endpoint inclusive
+and shared Obj60's width with bombs. Correcting both properties in the shared
+predicate moves the report from 1,311 errors / 0 warnings at f1331 to 606 / 0 at
+f4845; no collision timing or trace-specific offset is involved.
+
 ## Method (binding rules)
 
 - **Fix loop:** per the `trace-replay-bug-fixing` skill — take the FIRST

@@ -207,6 +207,19 @@ The Obj60 caller increments exactly one player's counter and changes routine
 collect or explode as a consumed transition, and stops the player scan after the
 first success; a ring overlapping both players can no longer add twice.
 
+The same collision routine uses object-specific half-open circular angle
+intervals, not a single symmetrically inclusive threshold. Obj60 loads
+`d6=$A`, while Obj61 loads `d6=8` (`s2.asm:70674-70676,70767-70769`). Its
+ordinary path first rejects
+`playerAngle >= objectAngle+d6`, then accepts
+`playerAngle >= objectAngle-d6` (`s2.asm:70846-70877`), yielding
+`objectAngle-d6 <= playerAngle < objectAngle+d6` with the corresponding wrap
+branches. This matters for the f1331 paired rings: with Obj60's `d6=$A`, Sonic
+at `$42` collects the `$48` ring but must reject the `$38` ring at the exact
+positive boundary. On the next pass Sonic is at `$41`, so the second ring is
+then legitimately collected. Modeling that byte comparison moves the report
+from 1,311 errors at f1331 to 606 at f4845 without a timing offset.
+
 The targeted PC-execute capture at `C:\tmp\s2ss-ring-probe.txt` (SHA-256
 `CFF5570952D0D4319E6EB0086EFBBC2F00D6392F7999B618D61CDE90B53D6DD8`) verifies
 those disassembly-owned transitions: trace f674 shows Obj60 routine 0→2 and

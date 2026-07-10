@@ -40,6 +40,49 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage object-specific half-open collision windows
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `82b2a1f10`. The f1331
+`combined_rings` mismatch (`34` expected / `35` actual) was one paired ring
+being collected one completed `RunObjects` pass early.
+
+- Atomic ROM snapshots show pass 569 ending with 33 combined rings, pass 570
+  with 34, and pass 571 with 35. An engine-only active-object dump showed pass
+  570 collecting both depth `$0004CCCE`, animation-8 rings at angles `$48` and
+  `$38` while Sonic was at angle `$42`; the temporary diagnostic was removed
+  before commit.
+- `Obj61_TestCollision` constructs an upper angle bound in `d1` and lower bound
+  in `d2`. On the ordinary no-wrap path it rejects `player >= object+d6`, then
+  accepts `player >= object-d6`, so its interval is lower-inclusive and
+  upper-exclusive (`docs/s2disasm/s2.asm:70846-70877`). For Obj60, `d6=$A`
+  (`:70767-70773`): Sonic at `$42` must collect the `$48` ring but reject the
+  `$38` ring because `$42 == $38+$A`. On pass 571 Sonic reaches `$41`, placing
+  that second ring inside the interval. Obj61 uses the same helper with `d6=8`
+  (`:70674-70681`), so the shared predicate must select the width by object
+  type rather than applying Obj60's `$A` to bombs.
+- RED command:
+  `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest" test`
+  first failed `ringCollisionExcludesThePositiveAngleThresholdBoundary` with
+  ring count expected `0`, actual `1`. Review coverage then proved the remaining
+  hardcoded-width defect: bomb `+8` and `-9` both exploded under the `$A` window.
+  The nine-test class now covers ring/bomb positive exclusion, negative
+  inclusion, negative outside, and wrapped endpoints, and passes after selecting
+  Obj60 `$A` versus Obj61 `8` before the shared half-open comparison.
+- Replay command:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`
+  passes its red-allowed pipeline assertion. Before: 1,311 errors / 0 warnings,
+  first f1331 `combined_rings` expected 34 / actual 35. After: 606 / 0, first
+  f4845 `sonic_ss_x` expected 0 / actual 2 (with same-frame Y/angle mismatches).
+- Neighborhood command covering the collision regression, startup cadence,
+  player initialization, replay, and determinism ran 28 tests with 0 failures;
+  a standalone determinism rerun also passed cleanly:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`.
+
+No trace tolerance, comparator masking, hydration, route/frame predicate, or
+object-specific offset was added. The next Stage-2 owner is the late f4845
+Obj09 movement/input transition.
+
 ## 2026-07-10 - S2 special-stage signed track-coordinate comparison
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

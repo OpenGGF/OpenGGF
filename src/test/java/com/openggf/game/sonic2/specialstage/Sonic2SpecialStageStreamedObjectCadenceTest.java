@@ -111,6 +111,84 @@ class Sonic2SpecialStageStreamedObjectCadenceTest {
         assertTrue(tails.isHurt(), "the first successful Tails collision must consume the bomb");
     }
 
+    @Test
+    void ringCollisionExcludesThePositiveAngleThresholdBoundary() throws Exception {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager objectManager =
+                new Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager(null);
+        Sonic2SpecialStageRing ring = new Sonic2SpecialStageRing();
+        ring.initialize(4, 0x38);
+        set(ring, "animIndex", 8);
+        objectManager.getActiveObjects().add(ring);
+
+        Sonic2SpecialStagePlayer sonic = initializedPlayer(
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+        set(sonic, "angle", 0x42);
+
+        set(manager, "objectManager", objectManager);
+        set(manager, "players", new ArrayList<>(List.of(sonic)));
+
+        invoke(manager, "checkObjectCollisions");
+
+        assertEquals(0, objectManager.getRingsCollected(),
+                "Obj61_TestCollision rejects playerAngle == objectAngle + d6");
+        assertEquals(Sonic2SpecialStageObject.State.ACTIVE, ring.getState());
+    }
+
+    @Test
+    void ringCollisionIncludesTheNegativeThresholdBoundaryAcrossWrap() throws Exception {
+        assertCollisionState(new Sonic2SpecialStageRing(), 0x04, 0xFA,
+                Sonic2SpecialStageObject.State.COLLECTED);
+    }
+
+    @Test
+    void ringCollisionExcludesThePositiveThresholdBoundaryAcrossWrap() throws Exception {
+        assertCollisionState(new Sonic2SpecialStageRing(), 0xFC, 0x06,
+                Sonic2SpecialStageObject.State.ACTIVE);
+    }
+
+    @Test
+    void bombCollisionExcludesThePositiveEightUnitBoundary() throws Exception {
+        assertCollisionState(new Sonic2SpecialStageBomb(), 0x38, 0x40,
+                Sonic2SpecialStageObject.State.ACTIVE);
+    }
+
+    @Test
+    void bombCollisionIncludesTheNegativeEightUnitBoundaryAcrossWrap() throws Exception {
+        assertCollisionState(new Sonic2SpecialStageBomb(), 0x04, 0xFC,
+                Sonic2SpecialStageObject.State.EXPLODING);
+    }
+
+    @Test
+    void bombCollisionExcludesTheNegativeNineUnitOutsideBoundary() throws Exception {
+        assertCollisionState(new Sonic2SpecialStageBomb(), 0x40, 0x37,
+                Sonic2SpecialStageObject.State.ACTIVE);
+    }
+
+    private static void assertCollisionState(
+            Sonic2SpecialStageObject object,
+            int objectAngle,
+            int playerAngle,
+            Sonic2SpecialStageObject.State expectedState) throws Exception {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager objectManager =
+                new Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager(null);
+        object.initialize(4, objectAngle);
+        set(object, "animIndex", 8);
+        objectManager.getActiveObjects().add(object);
+
+        Sonic2SpecialStagePlayer sonic = initializedPlayer(
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+        set(sonic, "angle", playerAngle);
+
+        set(manager, "objectManager", objectManager);
+        set(manager, "players", new ArrayList<>(List.of(sonic)));
+
+        invoke(manager, "checkObjectCollisions");
+
+        assertEquals(expectedState, object.getState());
+    }
+
     private static Sonic2SpecialStagePlayer initializedPlayer(
             Sonic2SpecialStagePlayer.PlayerType type,
             boolean main) {
