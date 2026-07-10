@@ -56,9 +56,17 @@ class TestS3kSlotGlassPriority {
                 "ROM Obj_Sonic_RotatingSlotBonus keeps the slot player low-priority for foreground/layout layering");
 
         runtime.update(0);
-        assertTrue(runtime.activeVisibleCellsForTest().stream()
-                        .anyMatch(cell -> (cell.cellId() & 0xFF) != 0x09),
+        assertTrue(hasVisibleNonMachineCell(runtime.activeVisibleCellsForTest()),
                 "The visible cage/walls should also be available through the slot layout pass");
+    }
+
+    private static boolean hasVisibleNonMachineCell(S3kSlotRenderBuffers.VisibleCells cells) {
+        for (int i = 0; i < cells.size(); i++) {
+            if (cells.cellIdAt(i) != 0x09) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean hasAnyHighPriorityGlassTile(LevelManager level, boolean liveTilemap) {

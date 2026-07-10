@@ -4,9 +4,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 import static com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageConstants.*;
@@ -87,6 +85,29 @@ public class Sonic3kSpecialStageRenderer {
         { 8,  0x1A,-1, 0x1F,  1, 0x1F },  // South (0x80-0xBF)
         { 0x18,0x1A, 1, 0x1F,  1, 0x1F }, // East  (0xC0-0xFF)
     };
+
+    private static final int[] HUD_TEMPLATE_BORDER_COLUMNS = {0, 7};
+    /** Flat triples of tile width, tile height, tile offset by size index. */
+    private static final int[] EMERALD_SIZE_MAP = {
+            4, 4, 0x00, 4, 4, 0x10,
+            3, 3, 0x20, 3, 3, 0x29, 3, 3, 0x32, 3, 3, 0x3B,
+            2, 2, 0x44, 2, 2, 0x48, 2, 2, 0x4C, 2, 2, 0x50,
+            1, 1, 0x54, 1, 1, 0x55, 1, 1, 0x56, 1, 1, 0x57
+    };
+    private static final int[] RING_FRONT_SIZE_MAP = {
+            3, 2, 0x00, 3, 2, 0x0C, 3, 3, 0x18, 3, 2, 0x27,
+            2, 2, 0x33, 2, 2, 0x39, 2, 2, 0x3F, 2, 1, 0x45, 1, 1, 0x48
+    };
+    private static final int[] RING_SIDE_SIZE_MAP = {
+            2, 3, 0x06, 2, 3, 0x12, 2, 3, 0x21, 2, 3, 0x2D,
+            1, 2, 0x37, 1, 2, 0x3D, 1, 2, 0x43, 1, 1, 0x47, 1, 1, 0x49
+    };
+
+    private int[] spriteCellTypes = new int[16];
+    private int[] spriteScreenXs = new int[16];
+    private int[] spriteScreenYs = new int[16];
+    private int[] spriteSizeIndices = new int[16];
+    private int spriteCount;
 
     public Sonic3kSpecialStageRenderer(GraphicsManager graphicsManager) {
         this.graphicsManager = graphicsManager;
@@ -306,7 +327,7 @@ public class Sonic3kSpecialStageRenderer {
         // Columns 1-6 contain "000" which would show through under the actual digits.
         if (hudTemplate != null) {
             for (int row = 0; row < 3; row++) {
-                for (int col : new int[]{0, 7}) {
+                for (int col : HUD_TEMPLATE_BORDER_COLUMNS) {
                     int off = (row * 8 + col) * 2;
                     if (off + 1 >= hudTemplate.length) continue;
                     int word = ((hudTemplate[off] & 0xFF) << 8) | (hudTemplate[off + 1] & 0xFF);
@@ -599,7 +620,7 @@ public class Sonic3kSpecialStageRenderer {
         // and close sprites (bottom of screen) draw last (on top).
         // This matches VDP behaviour where lower sprite table entries (drawn first
         // by Draw_SSSprites for close rows) appear in front of later entries.
-        List<int[]> spriteList = new ArrayList<>();
+        spriteCount = 0;
         int ringAnim = manager.getRingAnimFrame();
 
         int perspIdx = 0;
@@ -633,7 +654,7 @@ public class Sonic3kSpecialStageRenderer {
                         int sizeIndex = sizeField - 6;
 
                         if (sizeIndex >= 0 && sizeIndex < 16) {
-                            spriteList.add(new int[]{cellType, scrX, scrY, sizeIndex});
+                            appendSprite(cellType, scrX, scrY, sizeIndex);
                         }
                     }
                 }
@@ -646,7 +667,7 @@ public class Sonic3kSpecialStageRenderer {
         }
 
         // Sort by screen Y ascending: far/top sprites first, close/bottom sprites last (on top)
-        spriteList.sort(Comparator.comparingInt(a -> a[2]));
+        sortSpritesByScreenYStable();
 
         // Apply fly-away effect during clear sequence
         // ROM: Draw_SSSprite_FlyAway modifies sprite positions:
@@ -655,13 +676,14 @@ public class Sonic3kSpecialStageRenderer {
         int clearTimer = manager.getClearTimer();
 
         graphicsManager.beginPatternBatch();
-        for (int[] s : spriteList) {
-            int sx = s[1], sy = s[2];
+        for (int i = 0; i < spriteCount; i++) {
+            int sx = spriteScreenXs[i];
+            int sy = spriteScreenYs[i];
             if (clearTimer > 0) {
                 sy -= clearTimer;                              // Fly upward
                 sx = (((sx - 160) * (clearTimer + 256)) >> 8) + 160; // Spread outward
             }
-            renderPerspectiveSprite(s[0], sx, sy, s[3], ringAnim);
+            renderPerspectiveSprite(spriteCellTypes[i], sx, sy, spriteSizeIndices[i], ringAnim);
         }
 
         // Render player with jump height offset.
@@ -697,6 +719,48 @@ public class Sonic3kSpecialStageRenderer {
         }
 
         graphicsManager.flushPatternBatch();
+    }
+
+    private void appendSprite(int cellType, int screenX, int screenY, int sizeIndex) {
+        ensureSpriteCapacity(spriteCount + 1);
+        spriteCellTypes[spriteCount] = cellType;
+        spriteScreenXs[spriteCount] = screenX;
+        spriteScreenYs[spriteCount] = screenY;
+        spriteSizeIndices[spriteCount] = sizeIndex;
+        spriteCount++;
+    }
+
+    private void ensureSpriteCapacity(int requiredCapacity) {
+        if (requiredCapacity <= spriteCellTypes.length) {
+            return;
+        }
+        int newCapacity = Math.max(requiredCapacity, spriteCellTypes.length << 1);
+        spriteCellTypes = Arrays.copyOf(spriteCellTypes, newCapacity);
+        spriteScreenXs = Arrays.copyOf(spriteScreenXs, newCapacity);
+        spriteScreenYs = Arrays.copyOf(spriteScreenYs, newCapacity);
+        spriteSizeIndices = Arrays.copyOf(spriteSizeIndices, newCapacity);
+    }
+
+    /** Stable insertion sort: equal Y keys never move ahead of their traversal predecessor. */
+    private void sortSpritesByScreenYStable() {
+        for (int i = 1; i < spriteCount; i++) {
+            int cellType = spriteCellTypes[i];
+            int screenX = spriteScreenXs[i];
+            int screenY = spriteScreenYs[i];
+            int sizeIndex = spriteSizeIndices[i];
+            int insertAt = i;
+            while (insertAt > 0 && spriteScreenYs[insertAt - 1] > screenY) {
+                spriteCellTypes[insertAt] = spriteCellTypes[insertAt - 1];
+                spriteScreenXs[insertAt] = spriteScreenXs[insertAt - 1];
+                spriteScreenYs[insertAt] = spriteScreenYs[insertAt - 1];
+                spriteSizeIndices[insertAt] = spriteSizeIndices[insertAt - 1];
+                insertAt--;
+            }
+            spriteCellTypes[insertAt] = cellType;
+            spriteScreenXs[insertAt] = screenX;
+            spriteScreenYs[insertAt] = screenY;
+            spriteSizeIndices[insertAt] = sizeIndex;
+        }
     }
 
     /**
@@ -781,14 +845,10 @@ public class Sonic3kSpecialStageRenderer {
         // Frames 6-9: 2×2 (0x44, 0x48, 0x4C, 0x50), Frames 10-13: 1×1 (0x54-0x57)
         boolean isEmerald = (cellType == CELL_CHAOS_EMERALD || cellType == CELL_SUPER_EMERALD);
         if (isEmerald) {
-            int[][] em = {
-                {4,4,0x00},{4,4,0x10},                              // sizeIndex 0-1
-                {3,3,0x20},{3,3,0x29},{3,3,0x32},{3,3,0x3B},        // sizeIndex 2-5
-                {2,2,0x44},{2,2,0x48},{2,2,0x4C},{2,2,0x50},        // sizeIndex 6-9
-                {1,1,0x54},{1,1,0x55},{1,1,0x56},{1,1,0x57},        // sizeIndex 10-13
-            };
-            int idx = Math.min(sizeIndex, em.length - 1);
-            tilesW = em[idx][0]; tilesH = em[idx][1]; tileOffset = em[idx][2];
+            int offset = Math.min(sizeIndex, EMERALD_SIZE_MAP.length / 3 - 1) * 3;
+            tilesW = EMERALD_SIZE_MAP[offset];
+            tilesH = EMERALD_SIZE_MAP[offset + 1];
+            tileOffset = EMERALD_SIZE_MAP[offset + 2];
         }
 
         // Ring art has 3 rotation phases (from Map_SStageRing).
@@ -801,14 +861,16 @@ public class Sonic3kSpecialStageRenderer {
             int idx = Math.min(sizeIndex, 8);
             if (ringAnimPhase == 0) {
                 // Phase 0: front-facing (wider)
-                int[][] p0 = {{3,2,0x00},{3,2,0x0C},{3,3,0x18},{3,2,0x27},
-                              {2,2,0x33},{2,2,0x39},{2,2,0x3F},{2,1,0x45},{1,1,0x48}};
-                tilesW = p0[idx][0]; tilesH = p0[idx][1]; tileOffset = p0[idx][2];
+                int offset = idx * 3;
+                tilesW = RING_FRONT_SIZE_MAP[offset];
+                tilesH = RING_FRONT_SIZE_MAP[offset + 1];
+                tileOffset = RING_FRONT_SIZE_MAP[offset + 2];
             } else {
                 // Phase 1 & 2: side view (narrower), phase 2 adds H-flip
-                int[][] p1 = {{2,3,0x06},{2,3,0x12},{2,3,0x21},{2,3,0x2D},
-                              {1,2,0x37},{1,2,0x3D},{1,2,0x43},{1,1,0x47},{1,1,0x49}};
-                tilesW = p1[idx][0]; tilesH = p1[idx][1]; tileOffset = p1[idx][2];
+                int offset = idx * 3;
+                tilesW = RING_SIDE_SIZE_MAP[offset];
+                tilesH = RING_SIDE_SIZE_MAP[offset + 1];
+                tileOffset = RING_SIDE_SIZE_MAP[offset + 2];
                 ringHFlip = (ringAnimPhase == 2);
             }
         }
