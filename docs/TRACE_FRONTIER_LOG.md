@@ -156,9 +156,24 @@ This moves the stacked complete-run frontier from f7746 to f7849. Focused
 `TestSonic3kSpringObjectInstance` assertions cover up, down, and diagonal
 launches alongside their existing `Status_OnObj` handoff checks.
 
+Round 10 banks Rhinobot's Obj_WaitOffscreen and target-selection parity. ROM
+installs a placeholder with `width_pixels=$20` while Obj8D is dormant and
+restores its real operation when that placeholder is rendered
+(`sonic3k.asm:180266-180298`). The engine gated on the Rhinobot centre alone,
+starting patrol several frames late; by f7849 ROM had charged through x=$07D0
+and `Touch_Enemy` applied the upward-hit `y_vel += $100` bounce, while the
+engine's still-live Rhinobot was at x=$07DA and did not overlap Sonic. Using the
+placeholder margin restores the complete patrol/charge position and bounce.
+The same pass replaces Rhinobot's main-only target with the horizontally-nearest
+native P1/P2 selected by `Find_SonicTails` before its d2/d3 range and facing
+tests (`sonic3k.asm:178243-178277,182535-182553`). Focused
+`TestRhinobotBadnikInstance` guards both the exact placeholder edge and nearest
+native-player side selection. The stacked complete-run frontier moves from
+f7849 to f8014.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree frontier is f7849. Those causes will be recorded and committed
+banked rounds the current stacked working-tree frontier is f8014. Those causes will be recorded and committed
 separately as their focused guards are completed. The level-select AIZ trace remains at f8941
 and is still part of the stage-green exit gate. S1/S2 full trace sweeps remain
 pending until the AIZ fixes are banked; no green claim is made yet.
