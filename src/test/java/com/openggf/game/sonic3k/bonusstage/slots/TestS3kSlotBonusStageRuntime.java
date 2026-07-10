@@ -279,14 +279,17 @@ class TestS3kSlotBonusStageRuntime {
         assertNotNull(runtime.activeVisibleCellsForTest());
         assertFalse(runtime.activeVisibleCellsForTest().isEmpty());
         assertTrue(runtime.activeVisibleCellsForTest().size() >= 8);
-        assertTrue(runtime.activeVisibleCellsForTest().stream().allMatch(cell -> cell.cellId() > 0));
-        assertTrue(runtime.activeVisibleCellsForTest().stream().noneMatch(cell -> cell.cellId() == 0x09));
         int cameraX = GameServices.camera().getX();
         int cameraY = GameServices.camera().getY();
-        assertTrue(runtime.activeVisibleCellsForTest().stream().allMatch(cell -> cell.worldX() >= cameraX - 0x10));
-        assertTrue(runtime.activeVisibleCellsForTest().stream().allMatch(cell -> cell.worldX() < cameraX + 0x150));
-        assertTrue(runtime.activeVisibleCellsForTest().stream().allMatch(cell -> cell.worldY() >= cameraY - 0x10));
-        assertTrue(runtime.activeVisibleCellsForTest().stream().allMatch(cell -> cell.worldY() < cameraY + 0xF0));
+        S3kSlotRenderBuffers.VisibleCells cells = runtime.activeVisibleCellsForTest();
+        for (int i = 0; i < cells.size(); i++) {
+            assertTrue(cells.cellIdAt(i) > 0);
+            assertTrue(cells.cellIdAt(i) != 0x09);
+            assertTrue(cells.worldXAt(i) >= cameraX - 0x10);
+            assertTrue(cells.worldXAt(i) < cameraX + 0x150);
+            assertTrue(cells.worldYAt(i) >= cameraY - 0x10);
+            assertTrue(cells.worldYAt(i) < cameraY + 0xF0);
+        }
     }
 
     @Test
@@ -581,5 +584,4 @@ class TestS3kSlotBonusStageRuntime {
         }
     }
 }
-
 

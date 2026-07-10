@@ -1,5 +1,8 @@
 package com.openggf.graphics;
 
+import com.openggf.util.ShortIndexedView;
+import com.openggf.util.IntIndexedView;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -208,6 +211,15 @@ public class TilemapGpuRenderer {
         enablePerLineScroll(foregroundLineScrollBuffer.getTextureId(), 224.0f, 0.0f, 0.0f, 0.0f);
     }
 
+    public void enablePerLineForegroundScroll(IntIndexedView packedHScroll) {
+        if (packedHScroll == null || packedHScroll.size() == 0) {
+            this.perLineScroll = false;
+            return;
+        }
+        foregroundLineScrollBuffer.upload(packedHScroll);
+        enablePerLineScroll(foregroundLineScrollBuffer.getTextureId(), 224.0f, 0.0f, 0.0f, 0.0f);
+    }
+
     /**
      * Enable per-column vertical scroll for the next render() call.
      * Column count scales with viewport width: ceil(screenWidth/16) — 20 at native 320px.
@@ -215,6 +227,16 @@ public class TilemapGpuRenderer {
      */
     public void enablePerColumnVScroll(short[] columnVScroll) {
         if (columnVScroll == null || columnVScroll.length == 0) {
+            this.perColumnVScroll = false;
+            return;
+        }
+        columnVScrollBuffer.upload(columnVScroll);
+        this.perColumnVScroll = true;
+    }
+
+    /** Enables per-column scroll from frame-owned read-only storage. */
+    public void enablePerColumnVScroll(ShortIndexedView columnVScroll) {
+        if (columnVScroll == null || columnVScroll.size() == 0) {
             this.perColumnVScroll = false;
             return;
         }

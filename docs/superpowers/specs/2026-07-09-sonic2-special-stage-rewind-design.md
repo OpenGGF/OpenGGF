@@ -265,12 +265,11 @@ rewind session before mutating state:
 - Sprite-debug and plane-debug toggles.
 - Sprite-debug navigation.
 - Alignment-test toggle and adjustment controls.
-- F1/F6/F7 lag-compensation controls.
+- F1 lag-model diagnostics display.
 
-S2 should capture the lag-compensation numeric state because it affects whether
-`update()` skips a frame. The keys that mutate it stay boundary events. After the
-boundary, the next clean frame installs a fresh special-stage session with the
-new lag state in frame zero.
+S2 captures the internal lag-model enable state because trace-paced sessions
+force the model off. Normal play has no live enable/disable control; F1 only
+toggles the read-only diagnostics display and remains a boundary event.
 
 ## Audio Rules
 
@@ -341,7 +340,7 @@ With `s2.gen` available:
 4. Verify repeated short backward steps across a keyframe boundary are seamless.
 5. Verify no double-triggered SFX or duplicated music fade/jingle occurs during
    replay or release.
-6. Verify F1/F6/F7 or alignment/debug controls sever the current rewind session
+6. Verify F1 or alignment/debug controls sever the current rewind session
    and a clean following frame starts a fresh session.
 7. Verify the transition to results disables special-stage rewind.
 8. Verify Sonic 1 special-stage rewind still works and Sonic 3 and Knuckles

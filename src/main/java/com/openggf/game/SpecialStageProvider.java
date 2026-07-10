@@ -6,6 +6,7 @@ import com.openggf.audio.GameMusic;
 import com.openggf.game.rewind.RewindSnapshottable;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -106,6 +107,20 @@ public interface SpecialStageProvider extends MiniGameProvider {
      * @throws IOException if initialization fails
      */
     void initializeStage(int stageIndex) throws IOException;
+
+    /**
+     * Initializes a stage with an explicit startup pacing policy. Providers
+     * without observable startup phases use their normal initialization path.
+     */
+    default void initializeStage(int stageIndex, SpecialStageStartupPolicy policy) throws IOException {
+        Objects.requireNonNull(policy, "policy");
+        initializeStage(stageIndex);
+    }
+
+    /** Returns whether entry presentation may reveal the initialized stage. */
+    default boolean isEntryPresentationReady() {
+        return true;
+    }
 
     /**
      * Gets the current stage index.
@@ -281,7 +296,7 @@ public interface SpecialStageProvider extends MiniGameProvider {
     /**
      * Checks whether the lag compensation debug display is enabled.
      *
-     * @return true if the lag compensation display and F6/F7 adjustments are enabled
+     * @return true if the read-only lag-model diagnostics are visible
      */
     default boolean isLagCompensationDisplayEnabled() {
         return false;
@@ -295,31 +310,10 @@ public interface SpecialStageProvider extends MiniGameProvider {
     }
 
     /**
-     * Adjusts lag compensation only when the debug display is enabled.
+     * Configures the internal lag-pacing bypass used by trace sessions.
      *
-     * @param delta amount to adjust the lag compensation factor
-     * @return true if the adjustment was applied
-     */
-    default boolean adjustLagCompensationIfDisplayEnabled(double delta) {
-        if (!isLagCompensationDisplayEnabled()) {
-            return false;
-        }
-
-        setLagCompensation(getLagCompensation() + delta);
-        return true;
-    }
-
-    /**
-     * Gets the current lag compensation factor.
-     *
-     * @return the lag compensation factor
-     */
-    double getLagCompensation();
-
-    /**
-     * Sets the lag compensation factor.
-     *
-     * @param factor the new lag compensation factor
+     * @param factor zero to disable native lag modeling for externally paced
+     *               replay; a positive value restores normal native pacing
      */
     void setLagCompensation(double factor);
 

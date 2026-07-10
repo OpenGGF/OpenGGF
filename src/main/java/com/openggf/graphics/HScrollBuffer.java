@@ -1,5 +1,6 @@
 package com.openggf.graphics;
 
+import com.openggf.util.IntIndexedView;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.FloatBuffer;
@@ -93,20 +94,7 @@ public class HScrollBuffer {
             return;
         }
 
-        // Extract per-line scroll values from packed words and normalize to -1..1.
-        // foregroundWord=false -> BG word (low 16 bits), true -> FG word (high 16 bits).
-        for (int i = 0; i < VISIBLE_LINES && i < hScroll.length; i++) {
-            int raw = foregroundWord
-                    ? (short) ((hScroll[i] >>> 16) & 0xFFFF)
-                    : (short) (hScroll[i] & 0xFFFF);
-            float normalized = raw / 32767.0f;
-            if (normalized > 1.0f) {
-                normalized = 1.0f;
-            } else if (normalized < -1.0f) {
-                normalized = -1.0f;
-            }
-            scrollData[i] = normalized;
-        }
+        stageForUpload(hScroll);
 
         if (uploadBuffer == null) {
             uploadBuffer = MemoryUtil.memAllocFloat(VISIBLE_LINES);
@@ -124,6 +112,43 @@ public class HScrollBuffer {
                 GL_RED,
                 GL_FLOAT,
                 uploadBuffer);
+        glBindTexture(GL_TEXTURE_1D, 0);
+    }
+
+    void stageForUpload(int[] hScroll) {
+        for (int i = 0; i < VISIBLE_LINES; i++) {
+            scrollData[i] = normalize(i < hScroll.length ? hScroll[i] : 0);
+        }
+    }
+
+    float stagedScrollAt(int line) {
+        return scrollData[line];
+    }
+
+    private float normalize(int packed) {
+        int raw = foregroundWord
+                ? (short) ((packed >>> 16) & 0xFFFF)
+                : (short) (packed & 0xFFFF);
+        return Math.max(-1.0f, Math.min(1.0f, raw / 32767.0f));
+    }
+
+    /** Uploads a logical-size read-only view, zero-filling missing scanlines. */
+    public void upload(IntIndexedView hScroll) {
+        if (!initialized || hScroll == null) {
+            return;
+        }
+        for (int i = 0; i < VISIBLE_LINES; i++) {
+            int packed = i < hScroll.size() ? hScroll.get(i) : 0;
+            scrollData[i] = normalize(packed);
+        }
+        if (uploadBuffer == null) {
+            uploadBuffer = MemoryUtil.memAllocFloat(VISIBLE_LINES);
+        }
+        uploadBuffer.clear();
+        uploadBuffer.put(scrollData);
+        uploadBuffer.flip();
+        glBindTexture(GL_TEXTURE_1D, textureId);
+        glTexSubImage1D(GL_TEXTURE_1D, 0, 0, VISIBLE_LINES, GL_RED, GL_FLOAT, uploadBuffer);
         glBindTexture(GL_TEXTURE_1D, 0);
     }
 

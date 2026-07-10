@@ -176,6 +176,30 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         this.holdFrameCount = 0;
     }
 
+    /** Holds a fully opaque white overlay until another fade is started or cancelled. */
+    public void holdWhite() {
+        holdOpaque(FadeState.HOLD_WHITE, FadeType.WHITE);
+    }
+
+    /** Holds a fully opaque black overlay until another fade is started or cancelled. */
+    public void holdBlack() {
+        holdOpaque(FadeState.HOLD_BLACK, FadeType.BLACK);
+    }
+
+    private void holdOpaque(FadeState holdState, FadeType type) {
+        holdRestoredFrameForNextUpdate = false;
+        state = holdState;
+        fadeType = type;
+        frameCount = 0;
+        fadeR = 1f;
+        fadeG = 1f;
+        fadeB = 1f;
+        fadeAlpha = type == FadeType.BLACK ? 1f : 0f;
+        onFadeComplete = null;
+        holdDuration = Integer.MAX_VALUE;
+        holdFrameCount = 0;
+    }
+
     /**
      * Start a fade-to-black transition.
      * Used for level transitions, menus, continue screen, etc.
@@ -349,6 +373,9 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
     }
 
     private void updateHoldWhite() {
+        if (holdDuration == Integer.MAX_VALUE) {
+            return;
+        }
         holdFrameCount++;
         if (holdFrameCount >= holdDuration) {
             completeFade();
@@ -417,6 +444,9 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
     }
 
     private void updateHoldBlack() {
+        if (holdDuration == Integer.MAX_VALUE) {
+            return;
+        }
         holdFrameCount++;
         if (holdFrameCount >= holdDuration) {
             completeFade();

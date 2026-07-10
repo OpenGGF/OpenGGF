@@ -75,7 +75,8 @@ public class Sonic1SpecialStageBackgroundRenderer {
 
     // State
     private boolean initialized = false;
-    private int[] savedViewport;
+    private final int[] savedViewport = new int[4];
+    private final int[] shaderViewport = new int[4];
     private float backdropR;
     private float backdropG;
     private float backdropB;
@@ -182,7 +183,7 @@ public class Sonic1SpecialStageBackgroundRenderer {
     public void beginTilePass(int displayHeight) {
         if (!initialized) return;
 
-        savedViewport = FboHelper.saveViewport();
+        glGetIntegerv(GL_VIEWPORT, savedViewport);
 
         glBindFramebuffer(GL_FRAMEBUFFER, fboId);
         glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
@@ -274,12 +275,11 @@ public class Sonic1SpecialStageBackgroundRenderer {
         shader.setBackgroundTexture(0);
         shader.setHScrollTexture(1);
 
-        int[] viewport = new int[4];
-        glGetIntegerv(GL_VIEWPORT, viewport);
-        int fullViewportX = viewport[0];
-        int fullViewportY = viewport[1];
-        int fullViewportWidth = viewport[2];
-        int fullViewportHeight = viewport[3];
+        glGetIntegerv(GL_VIEWPORT, shaderViewport);
+        int fullViewportX = shaderViewport[0];
+        int fullViewportY = shaderViewport[1];
+        int fullViewportWidth = shaderViewport[2];
+        int fullViewportHeight = shaderViewport[3];
 
         glViewport(fullViewportX, fullViewportY, fullViewportWidth, fullViewportHeight);
 
@@ -292,12 +292,9 @@ public class Sonic1SpecialStageBackgroundRenderer {
         shader.setFillTransparentWithBackdrop(fillTransparentWithBackdrop);
 
         boolean blendWasEnabled = glIsEnabled(GL_BLEND);
-        int[] prevBlendSrc = new int[1];
-        int[] prevBlendDst = new int[1];
-        int[] prevBlendEquation = new int[1];
-        glGetIntegerv(GL_BLEND_SRC_ALPHA, prevBlendSrc);
-        glGetIntegerv(GL_BLEND_DST_ALPHA, prevBlendDst);
-        glGetIntegerv(GL_BLEND_EQUATION_RGB, prevBlendEquation);
+        int prevBlendSrc = glGetInteger(GL_BLEND_SRC_ALPHA);
+        int prevBlendDst = glGetInteger(GL_BLEND_DST_ALPHA);
+        int prevBlendEquation = glGetInteger(GL_BLEND_EQUATION_RGB);
         glDisable(GL_BLEND);
         glBlendEquation(GL_FUNC_ADD);
 
@@ -311,13 +308,13 @@ public class Sonic1SpecialStageBackgroundRenderer {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, 0);
 
-        glBlendEquation(prevBlendEquation[0]);
+        glBlendEquation(prevBlendEquation);
         if (blendWasEnabled) {
             glEnable(GL_BLEND);
         } else {
             glDisable(GL_BLEND);
         }
-        glBlendFunc(prevBlendSrc[0], prevBlendDst[0]);
+        glBlendFunc(prevBlendSrc, prevBlendDst);
         glViewport(fullViewportX, fullViewportY, fullViewportWidth, fullViewportHeight);
     }
 

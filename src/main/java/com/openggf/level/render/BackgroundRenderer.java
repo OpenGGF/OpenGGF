@@ -8,6 +8,8 @@ import com.openggf.graphics.ParallaxShaderProgram;
 import com.openggf.graphics.QuadRenderer;
 import com.openggf.graphics.VScrollBuffer;
 import com.openggf.util.FboHelper;
+import com.openggf.util.IntIndexedView;
+import com.openggf.util.ShortIndexedView;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -206,6 +208,12 @@ public class BackgroundRenderer {
         }
     }
 
+    public void uploadHScroll(IntIndexedView hScroll) {
+        if (initialized && hScrollBuffer != null) {
+            hScrollBuffer.upload(hScroll);
+        }
+    }
+
     /**
      * Get the HScroll texture ID for binding in the tilemap shader.
      */
@@ -267,6 +275,30 @@ public class BackgroundRenderer {
             vScrollColumnBuffer.upload(vScrollPerColumn);
         }
 
+        renderUploadedScroll(scrollMidpoint, extraBuffer, fboVScroll, noHScroll,
+                vScrollPerLine != null, vScrollPerColumn != null);
+    }
+
+    public void renderWithScrollWide(IntIndexedView hScroll, ShortIndexedView vScrollPerLine,
+            ShortIndexedView vScrollPerColumn, int scrollMidpoint, int extraBuffer,
+            int fboVScroll, boolean noHScroll) {
+        if (!initialized) {
+            return;
+        }
+        hScrollBuffer.upload(hScroll);
+        if (vScrollPerLine != null && vScrollBuffer != null) {
+            vScrollBuffer.upload(vScrollPerLine);
+        }
+        if (vScrollPerColumn != null && vScrollColumnBuffer != null) {
+            vScrollColumnBuffer.upload(vScrollPerColumn);
+        }
+        renderUploadedScroll(scrollMidpoint, extraBuffer, fboVScroll, noHScroll,
+                vScrollPerLine != null, vScrollPerColumn != null);
+    }
+
+    private void renderUploadedScroll(int scrollMidpoint, int extraBuffer, int fboVScroll,
+            boolean noHScroll, boolean usePerLineVScroll, boolean usePerColumnVScroll) {
+
         // Bind 1D sampler textures before shader use; macOS may validate samplers
         // at program-use time.
         hScrollBuffer.bind(1);
@@ -310,8 +342,8 @@ public class BackgroundRenderer {
         parallaxShader.setBackdropColor(backdropR, backdropG, backdropB);
         parallaxShader.setFillTransparentWithBackdrop(true);
         parallaxShader.setNoHScroll(noHScroll);
-        parallaxShader.setUsePerLineVScroll(vScrollPerLine != null);
-        parallaxShader.setUsePerColumnVScroll(vScrollPerColumn != null);
+        parallaxShader.setUsePerLineVScroll(usePerLineVScroll);
+        parallaxShader.setUsePerColumnVScroll(usePerColumnVScroll);
         parallaxShader.setShimmerParams(shimmerFrameCounter, shimmerStyle, shimmerWaterlineScreenY);
 
         // Bind textures

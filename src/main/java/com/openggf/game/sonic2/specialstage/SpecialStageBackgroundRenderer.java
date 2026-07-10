@@ -57,7 +57,8 @@ public class SpecialStageBackgroundRenderer {
 
     // State
     private boolean initialized = false;
-    private int[] savedViewport;
+    private final int[] savedViewport = new int[4];
+    private final int[] shaderViewport = new int[4];
     private final GraphicsManager graphicsManager;
 
     public SpecialStageBackgroundRenderer(GraphicsManager graphicsManager) {
@@ -155,7 +156,7 @@ public class SpecialStageBackgroundRenderer {
             return;
 
         // Save current viewport to restore later (must query actual GL state)
-        savedViewport = FboHelper.saveViewport();
+        glGetIntegerv(GL_VIEWPORT, savedViewport);
 
         // Bind FBO
         glBindFramebuffer(GL_FRAMEBUFFER, fboId);
@@ -217,17 +218,16 @@ public class SpecialStageBackgroundRenderer {
         shader.setHScrollTexture(1); // H-scroll table
 
         // Get actual viewport dimensions for resolution independence
-        int[] viewport = new int[4];
-        glGetIntegerv(GL_VIEWPORT, viewport);
-        float realWidth = (float) viewport[2];
-        float realHeight = (float) viewport[3];
+        glGetIntegerv(GL_VIEWPORT, shaderViewport);
+        float realWidth = (float) shaderViewport[2];
+        float realHeight = (float) shaderViewport[3];
 
         // Set shader uniforms
         shader.setScreenDimensions(realWidth, realHeight);
         shader.setActiveDisplayWidth((float) H32_WIDTH);
         shader.setBGTextureDimensions(FBO_WIDTH, FBO_HEIGHT);
         shader.setVScrollBG(vScrollBG);
-        shader.setViewportOffset((float) viewport[0], (float) viewport[1]);
+        shader.setViewportOffset((float) shaderViewport[0], (float) shaderViewport[1]);
 
         // Bind textures
         glActiveTexture(GL_TEXTURE0);
@@ -273,14 +273,6 @@ public class SpecialStageBackgroundRenderer {
         if (scanline >= 0 && scanline < SCREEN_HEIGHT) {
             hScrollData[scanline] = scroll;
         }
-    }
-
-    /**
-     * Get the H-scroll data array for direct manipulation.
-     * Useful for bulk updates based on segment animation.
-     */
-    public int[] getHScrollData() {
-        return hScrollData;
     }
 
     /**

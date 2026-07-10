@@ -241,11 +241,6 @@ class TestLiveRewindManagerSpecialStageMode {
         }
 
         @Override
-        public double getLagCompensation() {
-            return 0.0;
-        }
-
-        @Override
         public void setLagCompensation(double factor) {
         }
 

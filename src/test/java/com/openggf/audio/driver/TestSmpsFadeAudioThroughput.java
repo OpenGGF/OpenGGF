@@ -1,5 +1,6 @@
 package com.openggf.audio.driver;
 
+import com.openggf.audio.AudioBenchmarkMemoryProbe;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
@@ -92,26 +93,39 @@ public class TestSmpsFadeAudioThroughput {
     public void fadeWindowRenderThroughput() {
         assumeTrue(loader != null, "ROM not available, skipping fade throughput measurement");
 
+        FadeRun[] runs = new FadeRun[ITERATIONS];
         double[] throughputs = new double[ITERATIONS];
+        long[] allocatedBytes = new long[ITERATIONS];
+        boolean allocatedSupported = true;
         for (int i = 0; i < ITERATIONS; i++) {
-            throughputs[i] = renderFadeWindowOnce();
+            runs[i] = renderFadeWindowOnce();
+            throughputs[i] = runs[i].throughput();
+            allocatedBytes[i] = runs[i].allocatedBytes();
+            allocatedSupported &= runs[i].supported();
         }
 
         double median = median(throughputs.clone());
+        long medianAllocatedBytes = allocatedSupported ? median(allocatedBytes.clone()) : -1L;
         StringBuilder iterations = new StringBuilder("[");
         for (int i = 0; i < throughputs.length; i++) {
             if (i > 0) {
-                iterations.append(", ");
+                iterations.append(',');
             }
             iterations.append(String.format(Locale.ROOT, "%.2f", throughputs[i]));
         }
         iterations.append("]");
         System.out.printf(Locale.ROOT,
-                "FADE_THROUGHPUT median=%.2f renderedSecPerWallSec iterations=%s "
+                "FADE_THROUGHPUT median=%.2f unit=renderedSecPerWallSec "
+                        + "medianAllocatedBytes=%d allocatedSupported=%s iterations=%s "
                         + "preRollSec=1.5 fadeWindowFrames=%d bufferFrames=%d sampleRate=%.0f%n",
-                median, iterations, FADE_WINDOW_FRAMES, BUFFER_FRAMES, SAMPLE_RATE);
+                median, medianAllocatedBytes, allocatedSupported, iterations,
+                FADE_WINDOW_FRAMES, BUFFER_FRAMES, SAMPLE_RATE);
 
         assertTrue(median > 0, "fade-window render throughput must be positive");
+        if (allocatedSupported) {
+            assertTrue(medianAllocatedBytes >= 0,
+                    "fade-window allocation must be non-negative when supported");
+        }
     }
 
     /**
@@ -119,7 +133,7 @@ public class TestSmpsFadeAudioThroughput {
      * trigger, timed fade-window render. Returns rendered-seconds per
      * wall-second for the timed window.
      */
-    private double renderFadeWindowOnce() {
+    private FadeRun renderFadeWindowOnce() {
         AbstractSmpsData musicData = loader.loadMusic(MUSIC_EHZ);
         assertNotNull(musicData, "Music data should load");
 
@@ -141,12 +155,17 @@ public class TestSmpsFadeAudioThroughput {
         // Record per-chunk peak amplitude so we can assert fade behavior in
         // addition to throughput.
         int[] chunkPeaks = new int[FADE_WINDOW_CHUNKS];
-        long start = System.nanoTime();
-        boolean audible = renderChunks(driver, buffer, FADE_WINDOW_CHUNKS, chunkPeaks);
-        long elapsedNanos = System.nanoTime() - start;
+        AudioBenchmarkMemoryProbe probe = AudioBenchmarkMemoryProbe.create();
+        boolean[] audible = new boolean[1];
+        AudioBenchmarkMemoryProbe.RunResult measurement = probe.measureTimedRun(
+                () -> audible[0] = renderChunks(driver, buffer, FADE_WINDOW_CHUNKS, chunkPeaks));
 
-        assertTrue(audible, "fade window should contain audible PCM before fade completion");
-        assertTrue(elapsedNanos > 0, "timed window must consume wall time");
+        assertTrue(audible[0], "fade window should contain audible PCM before fade completion");
+        assertTrue(measurement.elapsedNanos() > 0, "timed window must consume wall time");
+        if (measurement.allocatedBytesSupported()) {
+            assertTrue(measurement.allocatedBytes() >= 0,
+                    "fade-window allocation must be non-negative when supported");
+        }
 
         // Behavioral invariant: a fade-out must reduce amplitude over the window.
         // The early peak (start of fade) should be louder than the late peak
@@ -161,7 +180,10 @@ public class TestSmpsFadeAudioThroughput {
                         + "(early peak=" + earlyPeak + ", late peak=" + latePeak + ")");
 
         double renderedSeconds = FADE_WINDOW_FRAMES / SAMPLE_RATE;
-        return renderedSeconds / (elapsedNanos / 1_000_000_000.0);
+        return new FadeRun(
+                renderedSeconds / (measurement.elapsedNanos() / 1_000_000_000.0),
+                measurement.allocatedBytes(),
+                measurement.allocatedBytesSupported());
     }
 
     /** Renders {@code chunks} full buffers; returns true if any sample was non-zero. */
@@ -199,5 +221,16 @@ public class TestSmpsFadeAudioThroughput {
         Arrays.sort(values);
         int mid = values.length / 2;
         return values.length % 2 == 1 ? values[mid] : (values[mid - 1] + values[mid]) / 2.0;
+    }
+
+    private static long median(long[] values) {
+        Arrays.sort(values);
+        int mid = values.length / 2;
+        return values.length % 2 == 1
+                ? values[mid]
+                : Math.round((values[mid - 1] + values[mid]) / 2.0);
+    }
+
+    private record FadeRun(double throughput, long allocatedBytes, boolean supported) {
     }
 }

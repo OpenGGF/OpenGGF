@@ -14,7 +14,8 @@ class TestSonic2SpecialStagePlayerSnapshot {
     @Test
     void playerSnapshotRestoresDeterministicFieldsAndClonesControlBuffer() throws Exception {
         Sonic2SpecialStagePlayer player = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true,
+                new Sonic2SpecialStageManager());
         seedPlayer(player);
 
         Sonic2SpecialStageSnapshot.PlayerSnapshot snapshot = player.captureRewindSnapshot();
@@ -54,7 +55,8 @@ class TestSonic2SpecialStagePlayerSnapshot {
     @Test
     void playerOwnedInvulnerabilityCountdownTicksInSpecialStageUpdatePath() throws Exception {
         Sonic2SpecialStagePlayer player = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true,
+                new Sonic2SpecialStageManager());
         set(player, "invulnerabilityCountdown", 2);
 
         assertTrue(player.isInvulnerable());
@@ -66,10 +68,11 @@ class TestSonic2SpecialStagePlayerSnapshot {
 
     @Test
     void topologySnapshotPreservesSoloAndTeamPlayerRoles() {
+        Sonic2SpecialStageManager owner = new Sonic2SpecialStageManager();
         Sonic2SpecialStagePlayer sonic = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true, owner);
         Sonic2SpecialStagePlayer tails = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
+                Sonic2SpecialStagePlayer.PlayerType.TAILS, false, owner);
         sonic.setOtherPlayer(tails);
         tails.setOtherPlayer(sonic);
 
@@ -89,11 +92,13 @@ class TestSonic2SpecialStagePlayerSnapshot {
     @Test
     void restoreTopologyCoversSonicSoloTailsSoloAndTeamRelinking() throws Exception {
         assertSoloTopology(
-                new Sonic2SpecialStagePlayer(Sonic2SpecialStagePlayer.PlayerType.SONIC, true),
+                new Sonic2SpecialStagePlayer(Sonic2SpecialStagePlayer.PlayerType.SONIC, true,
+                        new Sonic2SpecialStageManager()),
                 "sonicPlayer",
                 "tailsPlayer");
         assertSoloTopology(
-                new Sonic2SpecialStagePlayer(Sonic2SpecialStagePlayer.PlayerType.TAILS, true),
+                new Sonic2SpecialStagePlayer(Sonic2SpecialStagePlayer.PlayerType.TAILS, true,
+                        new Sonic2SpecialStageManager()),
                 "tailsPlayer",
                 "sonicPlayer");
 
@@ -101,9 +106,9 @@ class TestSonic2SpecialStagePlayerSnapshot {
         Sonic2SpecialStageRenderer renderer = new Sonic2SpecialStageRenderer(null);
         java.util.ArrayList<Sonic2SpecialStagePlayer> players = new java.util.ArrayList<>();
         Sonic2SpecialStagePlayer sonic = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true, manager);
         Sonic2SpecialStagePlayer tails = new Sonic2SpecialStagePlayer(
-                Sonic2SpecialStagePlayer.PlayerType.TAILS, false);
+                Sonic2SpecialStagePlayer.PlayerType.TAILS, false, manager);
         sonic.setOtherPlayer(tails);
         tails.setOtherPlayer(sonic);
         players.add(sonic);
@@ -187,7 +192,6 @@ class TestSonic2SpecialStagePlayerSnapshot {
         int[] ctrl = (int[]) get(player, "ctrlRecordBuf");
         ctrl[0] = 0xAAAA;
         set(player, "ctrlRecordIndex", 3);
-        set(player, "swapPositionsFlag", true);
     }
 
     private static void set(Object target, String field, Object value) throws Exception {

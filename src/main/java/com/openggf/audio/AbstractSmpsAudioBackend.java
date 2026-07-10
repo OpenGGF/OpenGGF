@@ -38,8 +38,8 @@ import java.util.logging.Logger;
  *   <li>{@link LWJGLAudioBackend} relocates the original OpenAL device code
  *       verbatim into each hook (live audio).</li>
  *   <li>{@link HeadlessSmpsAudioBackend} implements every hook as a no-op
- *       (except device init, which fixes the synthesis sample rate to 48000
- *       and initialises {@code pcmHistory}). The deterministic capture runtime
+ *       (except device init, which fixes the device-facing fallback rate to 48000).
+ *       The deterministic capture runtime
  *       is the sole consumer of synthesized PCM in that mode.</li>
  * </ul>
  */
@@ -60,7 +60,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private SmpsSequencer currentSmps;
     private SmpsDriver smpsDriver;
     private DeterministicAudioRuntime deterministicAudioRuntime;
-    protected PcmHistoryRing pcmHistory;
+    private PcmHistoryRing pcmHistory;
     private PcmHistoryRing.ReverseCursor reverseCursor;
     private double pendingReverseRate = 1.0;
     private boolean rewindHistoryArmed = false;
@@ -136,8 +136,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
     /**
      * Opens/initialises the output device (or, headless, fixes the synthesis
-     * sample rate and initialises {@link #pcmHistory}). Must establish
-     * {@link #getDeviceSampleRate()} and create {@link #pcmHistory}.
+     * sample rate). Must establish {@link #getDeviceSampleRate()}.
      */
     protected abstract void hookInitDevice();
 
@@ -714,7 +713,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                         sfxStream = null;
                     }
                 }
-                if (rewindHistoryArmed && reverseCursor == null && pcmHistory != null) {
+                if (!runtimePresentation && rewindHistoryArmed
+                        && reverseCursor == null && pcmHistory != null) {
                     pcmHistory.write(streamData, STREAM_BUFFER_SIZE);
                 }
 
@@ -1020,6 +1020,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         synchronized (streamLock) {
             deterministicAudioRuntime = runtime;
             bindRuntimePresentationStreams();
+            reconcilePcmHistoryOwnershipLocked();
         }
     }
 
@@ -1069,7 +1070,33 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     public void setRewindHistoryArmed(boolean armed) {
         synchronized (streamLock) {
             rewindHistoryArmed = armed;
+            reconcilePcmHistoryOwnershipLocked();
         }
+    }
+
+    private void reconcilePcmHistoryOwnershipLocked() {
+        if (!rewindHistoryArmed || runtimeProvidesPresentationPcm()) {
+            reverseCursor = null;
+            pcmHistory = null;
+            return;
+        }
+        if (pcmHistory == null) {
+            reverseCursor = null;
+            ensurePcmHistoryLocked();
+        }
+    }
+
+    private void ensurePcmHistoryLocked() {
+        if (pcmHistory != null) {
+            return;
+        }
+        int sampleRate = Math.max(1, outputSampleRate());
+        int capacityFrames = PcmHistoryRing.capacityFramesFor(
+                sampleRate,
+                configService.getString(SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE),
+                configService.getInt(SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS),
+                configService.getInt(SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB));
+        pcmHistory = new PcmHistoryRing(Math.max(STREAM_BUFFER_SIZE, capacityFrames));
     }
 
     @Override
@@ -1316,6 +1343,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
     @Override
     public void destroy() {
+        synchronized (streamLock) {
+            reverseCursor = null;
+            pcmHistory = null;
+        }
         hookDestroyDevice();
     }
 

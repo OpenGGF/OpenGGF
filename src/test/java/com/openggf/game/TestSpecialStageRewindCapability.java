@@ -9,6 +9,7 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSpecialStageRewindCapability {
@@ -43,6 +44,12 @@ class TestSpecialStageRewindCapability {
                 sonic3k.rewindAdapter().orElseThrow().key());
     }
 
+    @Test
+    void lagBypassIsWriteOnlyProviderConfiguration() {
+        assertThrows(NoSuchMethodException.class,
+                () -> SpecialStageProvider.class.getMethod("getLagCompensation"));
+    }
+
     private static final class MinimalSpecialStageProvider implements SpecialStageProvider {
         @Override public void initialize() throws IOException { }
         @Override public void update() { }
@@ -70,7 +77,6 @@ class TestSpecialStageRewindCapability {
         @Override public void toggleAlignmentStepMode() { }
         @Override public void renderAlignmentOverlay(int viewportWidth, int viewportHeight) { }
         @Override public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) { }
-        @Override public double getLagCompensation() { return 0.0; }
         @Override public void setLagCompensation(double factor) { }
         @Override public ResultsScreen createResultsScreen(
                 int ringsCollected, boolean gotEmerald, int stageIndex, int totalEmeraldCount) {

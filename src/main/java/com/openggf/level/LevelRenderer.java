@@ -22,6 +22,7 @@ import com.openggf.game.render.SpecialRenderEffectContext;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternRenderCommand;
 import com.openggf.graphics.RenderPriority;
@@ -36,9 +37,15 @@ import com.openggf.level.rings.RingManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.testmode.TraceRenderVisibility;
+import com.openggf.util.ShortIndexedView;
+import com.openggf.util.IntIndexedView;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 
 import static org.lwjgl.opengl.GL11.GL_BLEND;
 import static org.lwjgl.opengl.GL11.GL_ONE;
@@ -81,6 +88,13 @@ public final class LevelRenderer {
 
     // Pre-allocated viewport buffer to avoid per-frame int[4] allocations inside GL commands.
     private final int[] viewportBuffer = new int[4];
+    private final FrameCommandPool frameCommandPool = new FrameCommandPool();
+    private int pendingFrameCounter;
+    private int[] pendingFgHScrollData;
+    private short[] pendingFgDefaultVScrollData;
+    private IntIndexedView pendingFgHScrollView;
+    private ShortIndexedView pendingFgDefaultVScrollView;
+    private boolean pendingFgVerticalWrap;
 
     // Mutable state for the pre-allocated water shader setup command.
     private float pendingWaterlineScreenY;
@@ -99,6 +113,9 @@ public final class LevelRenderer {
     private int pendingBgShaderExtraBuffer;
     private int pendingBgVOffset;
     private boolean pendingBgPerLineScroll;
+    private IntIndexedView pendingBgHScrollView;
+    private ShortIndexedView pendingBgVScrollView;
+    private ShortIndexedView pendingBgVScrollColumnView;
 
     // Mutable state for the pre-allocated FG tilemap pass commands (low + high priority).
     private float pendingFgWorldOffsetX_low;
@@ -145,6 +162,7 @@ public final class LevelRenderer {
     private float pendingBgTilePassPerLineScrollSampleYOffsetPx;
     private float pendingBgTilePassUpperBandWrapHeightPx;
     private float pendingBgTilePassUpperBandWrapWidthTiles;
+    private IntIndexedView pendingBgTilePassHScrollView;
 
     // Render-frame state (resolved each frame from the AdvancedRenderModeController).
     private AdvancedRenderFrameState currentAdvancedRenderFrameState = AdvancedRenderFrameState.disabled();
@@ -188,6 +206,8 @@ public final class LevelRenderer {
         SonicConfigurationService configuration = lm.configService;
         graphics.setUseWaterShader(true);
 
+        Integer underwaterTextureId = resolveUnderwaterPaletteTextureForFrame();
+
         WaterShaderProgram shader = graphics.getWaterShaderProgram();
         shader.use();
 
@@ -199,7 +219,7 @@ public final class LevelRenderer {
 
         shader.setWindowHeight(windowHeight);
         shader.setWaterlineScreenY(pendingWaterlineScreenY);
-        shader.setFrameCounter(lm.frameCounter);
+        shader.setFrameCounter(pendingFrameCounter);
         shader.setDistortionAmplitude(0.0f);
         shader.setShimmerStyle(pendingWaterShimmerStyle);
         shader.setIndexedTextureWidth(graphics.getPatternAtlasWidth());
@@ -211,17 +231,12 @@ public final class LevelRenderer {
         graphics.setWindowHeight(windowHeight);
         graphics.setScreenHeight(screenHeightPixels);
 
-        int zoneId = lm.getFeatureZoneId();
-        Palette[] underwater = lm.waterSystem.getUnderwaterPalette(zoneId, lm.currentAct);
-        if (underwater != null) {
-            Palette normalLine0 = (lm.level != null) ? lm.level.getPalette(0) : null;
-            graphics.cacheUnderwaterPaletteTexture(underwater, normalLine0);
-            Integer texId = graphics.getUnderwaterPaletteTextureId();
+        if (underwaterTextureId != null) {
             int loc = shader.getUnderwaterPaletteLocation();
 
-            if (texId != null && loc != -1) {
+            if (loc != -1) {
                 glActiveTexture(GL_TEXTURE2);
-                glBindTexture(GL_TEXTURE_2D, texId);
+                glBindTexture(GL_TEXTURE_2D, underwaterTextureId);
                 glUniform1i(loc, 2);
                 glActiveTexture(GL_TEXTURE0);
             }
@@ -229,7 +244,7 @@ public final class LevelRenderer {
 
         TilemapGpuRenderer tilemapRenderer = graphics.getTilemapGpuRenderer();
         if (tilemapRenderer != null) {
-            tilemapRenderer.setShimmerState(lm.frameCounter, pendingWaterShimmerStyle);
+            tilemapRenderer.setShimmerState(pendingFrameCounter, pendingWaterShimmerStyle);
         }
 
         WaterShaderProgram instancedShader = graphics.getInstancedWaterShaderProgram();
@@ -238,22 +253,18 @@ public final class LevelRenderer {
             instancedShader.cacheUniformLocations();
             instancedShader.setWindowHeight(windowHeight);
             instancedShader.setWaterlineScreenY(pendingWaterlineScreenY);
-            instancedShader.setFrameCounter(lm.frameCounter);
+            instancedShader.setFrameCounter(pendingFrameCounter);
             instancedShader.setDistortionAmplitude(0.0f);
             instancedShader.setShimmerStyle(pendingWaterShimmerStyle);
             instancedShader.setIndexedTextureWidth(graphics.getPatternAtlasWidth());
             instancedShader.setScreenDimensions((float) configuration.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
                     (float) configuration.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS));
 
-            Palette[] underwaterInstanced = lm.waterSystem.getUnderwaterPalette(zoneId, lm.currentAct);
-            if (underwaterInstanced != null) {
-                Palette normalLine0Instanced = (lm.level != null) ? lm.level.getPalette(0) : null;
-                graphics.cacheUnderwaterPaletteTexture(underwaterInstanced, normalLine0Instanced);
-                Integer texId = graphics.getUnderwaterPaletteTextureId();
+            if (underwaterTextureId != null) {
                 int loc = instancedShader.getUnderwaterPaletteLocation();
-                if (texId != null && loc != -1) {
+                if (loc != -1) {
                     glActiveTexture(GL_TEXTURE2);
-                    glBindTexture(GL_TEXTURE_2D, texId);
+                    glBindTexture(GL_TEXTURE_2D, underwaterTextureId);
                     glUniform1i(loc, 2);
                     glActiveTexture(GL_TEXTURE0);
                 }
@@ -272,7 +283,7 @@ public final class LevelRenderer {
     private final GLCommand bgRenderWithScrollCommand = new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
         BackgroundRenderer bgRenderer = lm.graphicsManager.getBackgroundRenderer();
         if (bgRenderer != null) {
-            bgRenderer.renderWithScrollWide(pendingBgHScrollData, pendingBgVScrollData, pendingBgVScrollColumnData,
+            bgRenderer.renderWithScrollWide(pendingBgHScrollView, pendingBgVScrollView, pendingBgVScrollColumnView,
                     pendingBgShaderScrollMidpoint, pendingBgShaderExtraBuffer,
                     pendingBgVOffset, pendingBgPerLineScroll);
         }
@@ -284,10 +295,7 @@ public final class LevelRenderer {
             return;
         }
         applyForegroundScrollFeatures(tilemapRenderer);
-        short[] fgPerColumnVScrollLow = resolveForegroundPerColumnVScroll();
-        if (fgPerColumnVScrollLow != null) {
-            tilemapRenderer.enablePerColumnVScroll(fgPerColumnVScrollLow);
-        }
+        enableForegroundPerColumnVScroll(tilemapRenderer);
         // viewportBuffer cached once per frame; see cacheViewportForFrame().
         tilemapRenderer.render(
                 TilemapGpuRenderer.Layer.FOREGROUND,
@@ -305,7 +313,7 @@ public final class LevelRenderer {
                 pendingFgPaletteId_low,
                 pendingFgUnderwaterPaletteId_low != null ? pendingFgUnderwaterPaletteId_low : 0,
                 pendingFgPriorityPass_low,
-                lm.verticalWrapEnabled,
+                pendingFgVerticalWrap,
                 false,
                 pendingFgUseUnderwater_low,
                 pendingFgWaterlineScreenY_low);
@@ -317,10 +325,7 @@ public final class LevelRenderer {
             return;
         }
         applyForegroundScrollFeatures(tilemapRenderer);
-        short[] fgPerColumnVScrollHigh = resolveForegroundPerColumnVScroll();
-        if (fgPerColumnVScrollHigh != null) {
-            tilemapRenderer.enablePerColumnVScroll(fgPerColumnVScrollHigh);
-        }
+        enableForegroundPerColumnVScroll(tilemapRenderer);
         // viewportBuffer cached once per frame; see cacheViewportForFrame().
         tilemapRenderer.render(
                 TilemapGpuRenderer.Layer.FOREGROUND,
@@ -338,7 +343,7 @@ public final class LevelRenderer {
                 pendingFgPaletteId_high,
                 pendingFgUnderwaterPaletteId_high != null ? pendingFgUnderwaterPaletteId_high : 0,
                 pendingFgPriorityPass_high,
-                lm.verticalWrapEnabled,
+                pendingFgVerticalWrap,
                 false,
                 pendingFgUseUnderwater_high,
                 pendingFgWaterlineScreenY_high);
@@ -358,10 +363,7 @@ public final class LevelRenderer {
         glBlendFunc(GL_ONE, GL_ONE);
 
         applyForegroundScrollFeatures(tilemapRenderer);
-        short[] fgPerColumnVScrollFbo = resolveForegroundPerColumnVScroll();
-        if (fgPerColumnVScrollFbo != null) {
-            tilemapRenderer.enablePerColumnVScroll(fgPerColumnVScrollFbo);
-        }
+        enableForegroundPerColumnVScroll(tilemapRenderer);
         tilemapRenderer.render(
                 TilemapGpuRenderer.Layer.FOREGROUND,
                 pendingFboScreenW,
@@ -373,9 +375,9 @@ public final class LevelRenderer {
                 lm.graphicsManager.getPatternAtlasHeight(),
                 pendingFboAtlasId,
                 pendingFboPaletteId,
-                0, 1, lm.verticalWrapEnabled, true, false, 0.0f);
+                0, 1, pendingFgVerticalWrap, true, false, 0.0f);
         lm.graphicsManager.executeCapturedCommands(
-                () -> dispatchSpecialRenderEffects(SpecialRenderEffectStage.SPRITE_PRIORITY_MASK, lm.frameCounter),
+                () -> dispatchSpecialRenderEffects(SpecialRenderEffectStage.SPRITE_PRIORITY_MASK, pendingFrameCounter),
                 Math.round(pendingFboFgWorldOffsetX),
                 Math.round(pendingFboFgWorldOffsetY),
                 pendingFboScreenW,
@@ -396,7 +398,7 @@ public final class LevelRenderer {
         TilemapGpuRenderer tilemapRenderer = lm.graphicsManager.getTilemapGpuRenderer();
         if (tilemapRenderer != null) {
             int savedShimmerStyle = tilemapRenderer.getShimmerStyle();
-            tilemapRenderer.setShimmerState(lm.frameCounter, 0);
+            tilemapRenderer.setShimmerState(pendingFrameCounter, 0);
 
             Integer atlasId = lm.graphicsManager.getPatternAtlasTextureId();
             Integer paletteId = lm.graphicsManager.getCombinedPaletteTextureId();
@@ -404,7 +406,7 @@ public final class LevelRenderer {
             boolean useUnderwaterPalette = pendingBgTilePassHasWater && underwaterPaletteId != null;
             if (atlasId != null && paletteId != null) {
                 if (pendingBgTilePassPerLineScroll) {
-                    bgRenderer.uploadHScroll(pendingBgTilePassHScrollData);
+                    bgRenderer.uploadHScroll(pendingBgTilePassHScrollView);
                     tilemapRenderer.enablePerLineScroll(
                             bgRenderer.getHScrollTextureId(), 224.0f,
                             pendingBgTilePassVdpWrapWidth, pendingBgTilePassNametableBase,
@@ -435,12 +437,362 @@ public final class LevelRenderer {
                         pendingBgTilePassFboWaterlineY);
             }
 
-            tilemapRenderer.setShimmerState(lm.frameCounter, savedShimmerStyle);
+            tilemapRenderer.setShimmerState(pendingFrameCounter, savedShimmerStyle);
         }
 
         bgRenderer.endTilePass();
         lm.graphicsManager.setUseUnderwaterPaletteForBackground(false);
     });
+
+    static final class FrameCommandPool {
+        private final ArrayDeque<FrameCommand> available = new ArrayDeque<>();
+        private final Set<FrameCommand> outstanding = Collections.newSetFromMap(new IdentityHashMap<>());
+
+        FrameCommand obtain(LevelRenderer owner, FrameCommand.Kind kind) {
+            FrameCommand command = available.pollLast();
+            if (command == null) command = new FrameCommand(this);
+            command.leased = true;
+            command.cancelled = false;
+            outstanding.add(command);
+            command.capture(owner, kind);
+            return command;
+        }
+
+        FrameCommand obtainForTesting(int[] viewport, int[] scroll) {
+            return obtainForTesting(viewport, scroll, null);
+        }
+
+        FrameCommand obtainForTesting(int[] viewport, int[] scroll, short[] shortScroll) {
+            return obtainForTesting(viewport, scroll, shortScroll, (short[]) null);
+        }
+
+        FrameCommand obtainForTesting(int[] viewport, int[] scroll, short[] shortScroll,
+                                      short[] columnShortScroll) {
+            return obtainForTesting(viewport, scroll, shortScroll, columnShortScroll,
+                    FrameCommand.Kind.TEST, false);
+        }
+
+        FrameCommand obtainForTesting(int[] viewport, int[] scroll, short[] shortScroll, FrameCommand.Kind kind) {
+            return obtainForTesting(viewport, scroll, shortScroll, null, kind, false);
+        }
+
+        FrameCommand obtainForTesting(int[] viewport, int[] scroll, short[] shortScroll,
+                                      FrameCommand.Kind kind, boolean verticalWrap) {
+            return obtainForTesting(viewport, scroll, shortScroll, null, kind, verticalWrap);
+        }
+
+        private FrameCommand obtainForTesting(int[] viewport, int[] scroll, short[] shortScroll,
+                                              short[] columnShortScroll, FrameCommand.Kind kind,
+                                              boolean verticalWrap) {
+            FrameCommand command = available.pollLast();
+            if (command == null) command = new FrameCommand(this);
+            command.leased = true;
+            command.cancelled = false;
+            outstanding.add(command);
+            command.owner = null;
+            command.kind = kind;
+            command.bools[6] = verticalWrap;
+            System.arraycopy(viewport, 0, command.viewport, 0, 4);
+            command.setScroll0(scroll);
+            command.setShort0(shortScroll);
+            command.setShort1(columnShortScroll);
+            return command;
+        }
+
+        void cancelOutstanding() {
+            for (FrameCommand command : outstanding) command.cancelForReset();
+            outstanding.clear();
+        }
+
+        private void onDiscard(FrameCommand command) { outstanding.remove(command); }
+        private void release(FrameCommand command) { available.addLast(command); }
+    }
+
+    static final class FrameCommand implements GLCommandable {
+        enum Kind { WATER, BG_ENSURE, BG_RENDER, FG_LOW, FG_HIGH, HIGH_FBO, BG_TILE, TEST }
+
+        private final FrameCommandPool pool;
+        private final int[] viewport = new int[4];
+        private final int[] ints = new int[20];
+        private final float[] floats = new float[18];
+        private final boolean[] bools = new boolean[8];
+        private final Object[] refs = new Object[8];
+        private int[] scroll0;
+        private short[] short0;
+        private short[] short1;
+        private int scroll0Length;
+        private int short0Length;
+        private int short1Length;
+        private boolean scroll0Present;
+        private boolean short0Present;
+        private boolean short1Present;
+        private final IntIndexedView scroll0View = new IntIndexedView() {
+            @Override public int size() { return scroll0Length; }
+            @Override public int get(int index) { return scrollAt(index); }
+        };
+        private final ShortIndexedView short0View = new ShortIndexedView() {
+            @Override public int size() { return short0Length; }
+            @Override public short get(int index) { return shortScrollAt(index); }
+        };
+        private final ShortIndexedView short1View = new ShortIndexedView() {
+            @Override public int size() { return short1Length; }
+            @Override public short get(int index) {
+                if (index < 0 || index >= short1Length) throw new IndexOutOfBoundsException(index);
+                return short1[index];
+            }
+        };
+        private LevelRenderer owner;
+        private Kind kind;
+        private boolean leased;
+        private boolean cancelled;
+
+        private FrameCommand(FrameCommandPool pool) { this.pool = pool; }
+
+        private void capture(LevelRenderer r, Kind kind) {
+            owner = r;
+            this.kind = kind;
+            System.arraycopy(r.viewportBuffer, 0, viewport, 0, 4);
+            ints[0] = r.lm.frameCounter;
+            ints[1] = r.pendingWaterShimmerStyle;
+            ints[2] = r.pendingBgRenderWidth;
+            ints[3] = r.pendingBgRenderHeight;
+            ints[4] = r.pendingBgShaderScrollMidpoint;
+            ints[5] = r.pendingBgShaderExtraBuffer;
+            ints[6] = r.pendingBgVOffset;
+            ints[7] = r.pendingFgScreenW_low;
+            ints[8] = r.pendingFgScreenH_low;
+            ints[9] = r.pendingFgPriorityPass_low;
+            ints[10] = r.pendingFgScreenW_high;
+            ints[11] = r.pendingFgScreenH_high;
+            ints[12] = r.pendingFgPriorityPass_high;
+            ints[13] = r.pendingFboScreenW;
+            ints[14] = r.pendingFboScreenH;
+            ints[15] = r.pendingBgTilePassRenderWidth;
+            ints[16] = r.pendingBgTilePassRenderHeight;
+            ints[17] = r.pendingBgTilePassAlignedBgY;
+            ints[18] = r.currentShimmerStyle;
+            floats[0] = r.pendingWaterlineScreenY;
+            floats[1] = r.pendingFgWorldOffsetX_low;
+            floats[2] = r.pendingFgWorldOffsetY_low;
+            floats[3] = r.pendingFgWaterlineScreenY_low;
+            floats[4] = r.pendingFgWorldOffsetX_high;
+            floats[5] = r.pendingFgWorldOffsetY_high;
+            floats[6] = r.pendingFgWaterlineScreenY_high;
+            floats[7] = r.pendingFboFgWorldOffsetX;
+            floats[8] = r.pendingFboFgWorldOffsetY;
+            floats[9] = r.pendingBgTilePassFboWaterlineY;
+            floats[10] = r.pendingBgTilePassBgTilemapWorldOffsetX;
+            floats[11] = r.pendingBgTilePassVdpWrapWidth;
+            floats[12] = r.pendingBgTilePassNametableBase;
+            floats[13] = r.pendingBgTilePassPerLineScrollSampleYOffsetPx;
+            floats[14] = r.pendingBgTilePassUpperBandWrapHeightPx;
+            floats[15] = r.pendingBgTilePassUpperBandWrapWidthTiles;
+            bools[0] = r.pendingSuppressUnderwaterPalette;
+            bools[1] = r.pendingBgPerLineScroll;
+            bools[2] = r.pendingFgUseUnderwater_low;
+            bools[3] = r.pendingFgUseUnderwater_high;
+            bools[4] = r.pendingBgTilePassHasWater;
+            bools[5] = r.pendingBgTilePassPerLineScroll;
+            bools[6] = r.lm.verticalWrapEnabled;
+            refs[0] = r.pendingFgAtlasId_low;
+            refs[1] = r.pendingFgPaletteId_low;
+            refs[2] = r.pendingFgUnderwaterPaletteId_low;
+            refs[3] = r.pendingFgAtlasId_high;
+            refs[4] = r.pendingFgPaletteId_high;
+            refs[5] = r.pendingFgUnderwaterPaletteId_high;
+            refs[6] = r.pendingFboAtlasId;
+            refs[7] = r.pendingFboPaletteId;
+            advancedState = r.currentAdvancedRenderFrameState;
+            scroll0Length = 0;
+            short0Length = 0;
+            short1Length = 0;
+            scroll0Present = false;
+            short0Present = false;
+            short1Present = false;
+
+            switch (kind) {
+                case BG_RENDER -> {
+                    setScroll0(r.pendingBgHScrollData);
+                    setShort0(r.pendingBgVScrollData);
+                    setShort1(r.pendingBgVScrollColumnData);
+                }
+                case FG_LOW, FG_HIGH, HIGH_FBO -> {
+                    setScroll0(r.lm.parallaxManager.getHScrollForShader());
+                    setShort0(r.lm.parallaxManager.getVScrollPerColumnFGForShader());
+                }
+                case BG_TILE -> setScroll0(r.pendingBgTilePassHScrollData);
+                default -> { }
+            }
+        }
+
+        private AdvancedRenderFrameState advancedState;
+
+        private void load() {
+            LevelRenderer r = owner;
+            System.arraycopy(viewport, 0, r.viewportBuffer, 0, 4);
+            r.pendingFrameCounter = ints[0];
+            r.pendingWaterShimmerStyle = ints[1];
+            r.pendingBgRenderWidth = ints[2];
+            r.pendingBgRenderHeight = ints[3];
+            r.pendingBgShaderScrollMidpoint = ints[4];
+            r.pendingBgShaderExtraBuffer = ints[5];
+            r.pendingBgVOffset = ints[6];
+            r.pendingFgScreenW_low = ints[7];
+            r.pendingFgScreenH_low = ints[8];
+            r.pendingFgPriorityPass_low = ints[9];
+            r.pendingFgScreenW_high = ints[10];
+            r.pendingFgScreenH_high = ints[11];
+            r.pendingFgPriorityPass_high = ints[12];
+            r.pendingFboScreenW = ints[13];
+            r.pendingFboScreenH = ints[14];
+            r.pendingBgTilePassRenderWidth = ints[15];
+            r.pendingBgTilePassRenderHeight = ints[16];
+            r.pendingBgTilePassAlignedBgY = ints[17];
+            r.currentShimmerStyle = ints[18];
+            r.pendingWaterlineScreenY = floats[0];
+            r.pendingFgWorldOffsetX_low = floats[1];
+            r.pendingFgWorldOffsetY_low = floats[2];
+            r.pendingFgWaterlineScreenY_low = floats[3];
+            r.pendingFgWorldOffsetX_high = floats[4];
+            r.pendingFgWorldOffsetY_high = floats[5];
+            r.pendingFgWaterlineScreenY_high = floats[6];
+            r.pendingFboFgWorldOffsetX = floats[7];
+            r.pendingFboFgWorldOffsetY = floats[8];
+            r.pendingBgTilePassFboWaterlineY = floats[9];
+            r.pendingBgTilePassBgTilemapWorldOffsetX = floats[10];
+            r.pendingBgTilePassVdpWrapWidth = floats[11];
+            r.pendingBgTilePassNametableBase = floats[12];
+            r.pendingBgTilePassPerLineScrollSampleYOffsetPx = floats[13];
+            r.pendingBgTilePassUpperBandWrapHeightPx = floats[14];
+            r.pendingBgTilePassUpperBandWrapWidthTiles = floats[15];
+            r.pendingSuppressUnderwaterPalette = bools[0];
+            r.pendingBgPerLineScroll = bools[1];
+            r.pendingFgUseUnderwater_low = bools[2];
+            r.pendingFgUseUnderwater_high = bools[3];
+            r.pendingBgTilePassHasWater = bools[4];
+            r.pendingBgTilePassPerLineScroll = bools[5];
+            r.pendingFgVerticalWrap = bools[6];
+            r.pendingFgAtlasId_low = (Integer) refs[0];
+            r.pendingFgPaletteId_low = (Integer) refs[1];
+            r.pendingFgUnderwaterPaletteId_low = (Integer) refs[2];
+            r.pendingFgAtlasId_high = (Integer) refs[3];
+            r.pendingFgPaletteId_high = (Integer) refs[4];
+            r.pendingFgUnderwaterPaletteId_high = (Integer) refs[5];
+            r.pendingFboAtlasId = (Integer) refs[6];
+            r.pendingFboPaletteId = (Integer) refs[7];
+            r.currentAdvancedRenderFrameState = advancedState;
+            switch (kind) {
+                case BG_RENDER -> {
+                    r.pendingBgHScrollView = scroll0Present ? scroll0View : null;
+                    r.pendingBgVScrollView = short0Present ? short0View : null;
+                    r.pendingBgVScrollColumnView = short1Present ? short1View : null;
+                }
+                case FG_LOW, FG_HIGH, HIGH_FBO -> {
+                    r.pendingFgHScrollView = scroll0Present ? scroll0View : null;
+                    r.pendingFgDefaultVScrollView = short0Present ? short0View : null;
+                }
+                case BG_TILE -> r.pendingBgTilePassHScrollView = scroll0Present ? scroll0View : null;
+                default -> { }
+            }
+        }
+
+        @Override
+        public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            try {
+                if (owner == null || kind == Kind.TEST) return;
+                load();
+                switch (kind) {
+                    case WATER -> owner.waterShaderSetupCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+                    case BG_ENSURE -> owner.bgEnsureCapacityCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+                    case BG_RENDER -> owner.bgRenderWithScrollCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+                    case FG_LOW -> owner.fgTilemapPassLowCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+                    case FG_HIGH -> owner.fgTilemapPassHighCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+                    case HIGH_FBO -> owner.highPriorityFboCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+                    case BG_TILE -> owner.bgTilePassCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+                    case TEST -> { }
+                }
+            } finally { discard(); }
+        }
+
+        @Override
+        public void discard() {
+            if (!leased && !cancelled) return;
+            if (leased) pool.onDiscard(this);
+            leased = false;
+            cancelled = false;
+            owner = null;
+            advancedState = null;
+            pool.release(this);
+        }
+
+        private void cancelForReset() {
+            if (!leased) return;
+            leased = false;
+            cancelled = true;
+            owner = null;
+            advancedState = null;
+        }
+
+        private void setScroll0(int[] source) {
+            scroll0Present = source != null;
+            scroll0Length = source == null ? 0 : source.length;
+            if (scroll0Length == 0) return;
+            if (scroll0 == null || scroll0.length < scroll0Length) {
+                int capacity = scroll0 == null ? scroll0Length : Math.max(scroll0Length, scroll0.length * 2);
+                scroll0 = new int[capacity];
+            }
+            System.arraycopy(source, 0, scroll0, 0, scroll0Length);
+        }
+
+        private void setShort0(short[] source) {
+            short0Present = source != null;
+            short0Length = source == null ? 0 : source.length;
+            if (short0Length == 0) return;
+            if (short0 == null || short0.length < short0Length) {
+                int capacity = short0 == null ? short0Length : Math.max(short0Length, short0.length * 2);
+                short0 = new short[capacity];
+            }
+            System.arraycopy(source, 0, short0, 0, short0Length);
+        }
+
+        private void setShort1(short[] source) {
+            short1Present = source != null;
+            short1Length = source == null ? 0 : source.length;
+            if (short1Length == 0) return;
+            if (short1 == null || short1.length < short1Length) {
+                int capacity = short1 == null ? short1Length : Math.max(short1Length, short1.length * 2);
+                short1 = new short[capacity];
+            }
+            System.arraycopy(source, 0, short1, 0, short1Length);
+        }
+
+        int viewportAt(int index) { return viewport[index]; }
+        int scrollAt(int index) {
+            if (index < 0 || index >= scroll0Length) throw new IndexOutOfBoundsException(index);
+            return scroll0[index];
+        }
+        short shortScrollAt(int index) {
+            if (index < 0 || index >= short0Length) throw new IndexOutOfBoundsException(index);
+            return short0[index];
+        }
+        short columnShortScrollAt(int index) {
+            if (index < 0 || index >= short1Length) throw new IndexOutOfBoundsException(index);
+            return short1[index];
+        }
+        int scrollLength() { return scroll0Length; }
+        int shortScrollLength() { return short0Length; }
+        int columnShortScrollLength() { return short1Length; }
+        int scrollCapacity() { return scroll0 == null ? 0 : scroll0.length; }
+        int shortScrollCapacity() { return short0 == null ? 0 : short0.length; }
+        int columnShortScrollCapacity() { return short1 == null ? 0 : short1.length; }
+        Object viewportBackingIdentity() { return viewport; }
+        Object scrollBackingIdentity() { return scroll0; }
+        Object shortScrollBackingIdentity() { return short0; }
+        Object columnShortScrollBackingIdentity() { return short1; }
+        boolean isCancelledForTesting() { return cancelled; }
+        boolean isLeasedForTesting() { return leased; }
+        boolean verticalWrapForTesting() { return bools[6]; }
+    }
 
     LevelRenderer(LevelManager levelManager) {
         this.lm = levelManager;
@@ -453,13 +805,31 @@ public final class LevelRenderer {
 
     /** Resets per-frame derived state (used when the level is unloaded). */
     void resetState() {
+        frameCommandPool.cancelOutstanding();
         currentShimmerStyle = 0;
         currentAdvancedRenderFrameState = AdvancedRenderFrameState.disabled();
+    }
+
+    /** Resolves and content-validates the underwater texture once for this shader setup command. */
+    Integer resolveUnderwaterPaletteTextureForFrame() {
+        int zoneId = lm.getFeatureZoneId();
+        Palette[] underwater = lm.waterSystem.getUnderwaterPalette(zoneId, lm.currentAct);
+        if (underwater == null) {
+            return null;
+        }
+        Palette normalLine0 = lm.level != null ? lm.level.getPalette(0) : null;
+        return lm.graphicsManager.cacheUnderwaterPaletteTexture(underwater, normalLine0);
     }
 
     /** Drains the GLCommand to disable water shader (used by callers needing post-pass cleanup). */
     GLCommand getDisableWaterShaderCommand() {
         return disableWaterShaderCommand;
+    }
+
+    /** Exposes the deferred water setup command to package-level render integration tests. */
+    GLCommand getWaterShaderSetupCommand() {
+        pendingFrameCounter = lm.frameCounter;
+        return waterShaderSetupCommand;
     }
 
     /**
@@ -480,13 +850,20 @@ public final class LevelRenderer {
     private void applyForegroundScrollFeatures(TilemapGpuRenderer tilemapRenderer) {
         if (currentAdvancedRenderFrameState.enableForegroundHeatHaze()
                 || currentAdvancedRenderFrameState.enablePerLineForegroundScroll()) {
-            tilemapRenderer.enablePerLineForegroundScroll(lm.parallaxManager.getHScrollForShader());
+            tilemapRenderer.enablePerLineForegroundScroll(pendingFgHScrollView);
         }
     }
 
-    private short[] resolveForegroundPerColumnVScroll() {
-        short[] override = currentAdvancedRenderFrameState.foregroundPerColumnVScrollOverride();
-        return override != null ? override : lm.parallaxManager.getVScrollPerColumnFGForShader();
+    private void enableForegroundPerColumnVScroll(TilemapGpuRenderer tilemapRenderer) {
+        ShortIndexedView override = currentAdvancedRenderFrameState.foregroundPerColumnVScrollView();
+        if (override != null) {
+            tilemapRenderer.enablePerColumnVScroll(override);
+            return;
+        }
+        ShortIndexedView defaultColumns = pendingFgDefaultVScrollView;
+        if (defaultColumns != null) {
+            tilemapRenderer.enablePerColumnVScroll(defaultColumns);
+        }
     }
 
     /**
@@ -723,7 +1100,7 @@ public final class LevelRenderer {
             pendingWaterlineScreenY = waterlineScreenY;
             pendingWaterShimmerStyle = shimmerStyle;
             pendingSuppressUnderwaterPalette = lm.shouldSuppressUnderwaterPalette(zoneId, actId);
-            lm.graphicsManager.registerCommand(waterShaderSetupCommand);
+            lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.WATER));
         } else {
             // No water in this zone - disable underwater palette for sprite priority shader
             currentShimmerStyle = 0;
@@ -831,7 +1208,7 @@ public final class LevelRenderer {
         // 1. Ensure FBO capacity (grow-only, no per-frame reallocation)
         pendingBgRenderWidth = renderWidth;
         pendingBgRenderHeight = renderHeight;
-        lm.graphicsManager.registerCommand(bgEnsureCapacityCommand);
+        lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.BG_ENSURE));
 
         // 2. Begin Tile Pass (Bind FBO)
         // Use water shader in screen-space mode for FBO, with adjusted waterline
@@ -875,7 +1252,7 @@ public final class LevelRenderer {
         pendingBgTilePassPerLineScrollSampleYOffsetPx = perLineScrollActive ? (float) vOffset : 0.0f;
         pendingBgTilePassUpperBandWrapHeightPx = upperBandWrapHeightPx;
         pendingBgTilePassUpperBandWrapWidthTiles = upperBandWrapWidthTiles;
-        lm.graphicsManager.registerCommand(bgTilePassCommand);
+        lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.BG_TILE));
 
         // 5. Set shimmer state on BG renderer for parallax compositing pass
         bgRenderer.setShimmerState(lm.frameCounter, currentShimmerStyle, bgWaterlineScreenY);
@@ -896,7 +1273,7 @@ public final class LevelRenderer {
             pendingBgShaderExtraBuffer = shaderExtraBuffer;
             pendingBgVOffset = shaderVOffset;
             pendingBgPerLineScroll = perLineScrollActive;
-            lm.graphicsManager.registerCommand(bgRenderWithScrollCommand);
+            lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.BG_RENDER));
         }
     }
 
@@ -1182,7 +1559,7 @@ public final class LevelRenderer {
             pendingFgAtlasId_low = atlasId;
             pendingFgPaletteId_low = paletteId;
             pendingFgUnderwaterPaletteId_low = underwaterPaletteId;
-            lm.graphicsManager.registerCommand(fgTilemapPassLowCommand);
+            lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.FG_LOW));
         } else {
             pendingFgWorldOffsetX_high = worldOffsetX;
             pendingFgWorldOffsetY_high = worldOffsetY;
@@ -1194,7 +1571,7 @@ public final class LevelRenderer {
             pendingFgAtlasId_high = atlasId;
             pendingFgPaletteId_high = paletteId;
             pendingFgUnderwaterPaletteId_high = underwaterPaletteId;
-            lm.graphicsManager.registerCommand(fgTilemapPassHighCommand);
+            lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.FG_HIGH));
         }
     }
 
@@ -1233,6 +1610,6 @@ public final class LevelRenderer {
         pendingFboFgWorldOffsetY = fgWorldOffsetY;
         pendingFboAtlasId = atlasId;
         pendingFboPaletteId = paletteId;
-        lm.graphicsManager.registerCommand(highPriorityFboCommand);
+        lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.HIGH_FBO));
     }
 }

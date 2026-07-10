@@ -7,6 +7,8 @@ import com.openggf.level.PatternDesc;
 
 import java.nio.FloatBuffer;
 import java.util.ArrayDeque;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import static org.lwjgl.opengl.GL11.*;
@@ -42,10 +44,12 @@ public class PatternRenderCommand implements GLCommandable {
     private int paletteIndex;
     private boolean hFlip;
     private boolean vFlip;
+    private boolean textureCoordinatesResolved;
     private boolean piecePriority; // VDP per-tile priority from PatternDesc bit 15
     private boolean capturedGlobalHighPriority;
     private boolean ghostEffectActive;
     private float ghostAlpha;
+    private boolean leased;
     private float x;
     private float y;
     private float width;
@@ -72,9 +76,32 @@ public class PatternRenderCommand implements GLCommandable {
     private static boolean stateInitialized = false;
 
     // Pre-allocated vertex buffers for transformed coordinates
-    private static final FloatBuffer VERTEX_BUFFER = MemoryUtil.memAllocFloat(8);
-    private static final FloatBuffer TEX_COORD_BUFFER = MemoryUtil.memAllocFloat(8);
-    private static final FloatBuffer PALETTE_BUFFER = MemoryUtil.memAllocFloat(4);
+    private static FloatBuffer vertexBuffer;
+    private static FloatBuffer texCoordBuffer;
+    private static FloatBuffer paletteBuffer;
+    private static final Map<Integer, int[]> TRANSFORM_UNIFORM_LOCATIONS = new HashMap<>();
+
+    @FunctionalInterface
+    interface UniformLookup {
+        int find(int programId, String name);
+    }
+
+    static int pooledCommandCount() {
+        return pool.size();
+    }
+
+    static boolean hasNativeScratch() {
+        return vertexBuffer != null || texCoordBuffer != null || paletteBuffer != null;
+    }
+
+    static int[] transformUniformLocations(int programId, UniformLookup lookup) {
+        return TRANSFORM_UNIFORM_LOCATIONS.computeIfAbsent(programId,
+                id -> new int[] {lookup.find(id, "ProjectionMatrix"), lookup.find(id, "CameraOffset")});
+    }
+
+    static void clearUniformLocationCache() {
+        TRANSFORM_UNIFORM_LOCATIONS.clear();
+    }
 
     // VAO and VBOs for modern OpenGL (shared across all instances)
     private static int vaoId = 0;
@@ -109,6 +136,19 @@ public class PatternRenderCommand implements GLCommandable {
         return cmd;
     }
 
+    void resolveStripTextureCoordinates(PatternAtlas.Entry entry, int stripIndex) {
+        int rowTop = stripIndex * 2;
+        int rowBottom = rowTop + 1;
+        float rowStep = (entry.v1() - entry.v0()) / 8.0f;
+        float stripTop = entry.v0() + rowStep * ((7 - rowTop) + 0.5f);
+        float stripBottom = entry.v0() + rowStep * ((7 - rowBottom) + 0.5f);
+        u0 = hFlip ? entry.u1() : entry.u0();
+        u1 = hFlip ? entry.u0() : entry.u1();
+        v0 = vFlip ? stripTop : stripBottom;
+        v1 = vFlip ? stripBottom : stripTop;
+        textureCoordinatesResolved = true;
+    }
+
     private PatternRenderCommand() {
         // Private constructor for pooling
     }
@@ -126,6 +166,7 @@ public class PatternRenderCommand implements GLCommandable {
         this.paletteIndex = desc.getPaletteIndex();
         this.hFlip = desc.getHFlip();
         this.vFlip = desc.getVFlip();
+        this.textureCoordinatesResolved = false;
         this.piecePriority = desc.getPriority();
         this.capturedGlobalHighPriority = graphicsManager.getCurrentSpriteHighPriority();
         this.ghostEffectActive = graphicsManager.isGhostRenderEffectActive();
@@ -133,6 +174,7 @@ public class PatternRenderCommand implements GLCommandable {
         this.x = x;
         this.width = width;
         this.height = height;
+        this.leased = true;
         // Genesis Y refers to the TOP of the pattern, so we subtract the pattern height
         // to get the OpenGL Y coordinate for the bottom of the quad
         // width/height are allowed to vary for scaled host preview rendering.
@@ -143,9 +185,19 @@ public class PatternRenderCommand implements GLCommandable {
      * Return this command to the pool for reuse.
      */
     public void recycle() {
+        if (!leased) {
+            return;
+        }
+        leased = false;
+        graphicsManager = null;
         if (pool.size() < 512) { // Cap pool size to prevent unbounded growth
             pool.offerFirst(this);
         }
+    }
+
+    @Override
+    public void discard() {
+        recycle();
     }
 
     /**
@@ -173,6 +225,7 @@ public class PatternRenderCommand implements GLCommandable {
     }
 
     private static void ensureVbos() {
+        ensureNativeScratch();
         if (vaoId != 0) {
             return;
         }
@@ -182,8 +235,24 @@ public class PatternRenderCommand implements GLCommandable {
         paletteVboId = glGenBuffers();
     }
 
+    static void ensureNativeScratch() {
+        if (vertexBuffer == null) {
+            vertexBuffer = MemoryUtil.memAllocFloat(8);
+            texCoordBuffer = MemoryUtil.memAllocFloat(8);
+            paletteBuffer = MemoryUtil.memAllocFloat(4);
+        }
+    }
+
     @Override
     public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+        try {
+            executeLeased(cameraX, cameraY, cameraWidth, cameraHeight);
+        } finally {
+            recycle();
+        }
+    }
+
+    private void executeLeased(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
         GraphicsManager graphicsManager = this.graphicsManager;
         ShaderProgram shaderProgram = graphicsManager.getShaderProgram();
 
@@ -199,7 +268,9 @@ public class PatternRenderCommand implements GLCommandable {
             shaderProgram.setTotalPaletteLines((float) RenderContext.getTotalPaletteLines());
 
             // Set projection matrix uniform - REQUIRED for correct rendering
-            int projectionLoc = glGetUniformLocation(shaderProgram.getProgramId(), "ProjectionMatrix");
+            int[] transformLocations = transformUniformLocations(shaderProgram.getProgramId(),
+                    (programId, name) -> glGetUniformLocation(programId, name));
+            int projectionLoc = transformLocations[0];
             if (projectionLoc != -1) {
                 float[] projMatrix = graphicsManager.getProjectionMatrixBuffer();
                 if (projMatrix != null) {
@@ -210,7 +281,7 @@ public class PatternRenderCommand implements GLCommandable {
             // Set camera offset uniform
             // X is negated to scroll objects left when camera moves right
             // Y is NOT negated because vertex Y is already in screen space (flipped from Genesis coords)
-            int cameraOffsetLoc = glGetUniformLocation(shaderProgram.getProgramId(), "CameraOffset");
+            int cameraOffsetLoc = transformLocations[1];
             if (cameraOffsetLoc != -1) {
                 glUniform2f(cameraOffsetLoc, -cameraX, cameraY);
             }
@@ -343,7 +414,7 @@ public class PatternRenderCommand implements GLCommandable {
         float y1 = screenY + height;
 
         // Apply horizontal flip by swapping left/right
-        if (hFlip) {
+        if (!textureCoordinatesResolved && hFlip) {
             float temp = x0;
             x0 = x1;
             x1 = temp;
@@ -351,53 +422,51 @@ public class PatternRenderCommand implements GLCommandable {
 
         // Apply vertical flip by swapping top/bottom
         // Note: VFlip=false means apply flip (original VDP behavior)
-        if (!vFlip) {
+        if (!textureCoordinatesResolved && !vFlip) {
             float temp = y0;
             y0 = y1;
             y1 = temp;
         }
 
         // Fill vertex buffer (quad: bottom-left, bottom-right, top-right, top-left)
-        VERTEX_BUFFER.clear();
-        VERTEX_BUFFER.put(x0).put(y0); // Bottom-left
-        VERTEX_BUFFER.put(x1).put(y0); // Bottom-right
-        VERTEX_BUFFER.put(x1).put(y1); // Top-right
-        VERTEX_BUFFER.put(x0).put(y1); // Top-left
-        VERTEX_BUFFER.flip();
+        vertexBuffer.clear();
+        vertexBuffer.put(x0).put(y0); // Bottom-left
+        vertexBuffer.put(x1).put(y0); // Bottom-right
+        vertexBuffer.put(x1).put(y1); // Top-right
+        vertexBuffer.put(x0).put(y1); // Top-left
+        vertexBuffer.flip();
 
         // Fill texture coordinate buffer
-        TEX_COORD_BUFFER.clear();
-        TEX_COORD_BUFFER.put(u0).put(v0);
-        TEX_COORD_BUFFER.put(u1).put(v0);
-        TEX_COORD_BUFFER.put(u1).put(v1);
-        TEX_COORD_BUFFER.put(u0).put(v1);
-        TEX_COORD_BUFFER.flip();
+        texCoordBuffer.clear();
+        texCoordBuffer.put(u0).put(v0);
+        texCoordBuffer.put(u1).put(v0);
+        texCoordBuffer.put(u1).put(v1);
+        texCoordBuffer.put(u0).put(v1);
+        texCoordBuffer.flip();
 
         // Fill palette coordinate buffer (same palette index for all 4 vertices)
-        PALETTE_BUFFER.clear();
-        PALETTE_BUFFER.put(paletteIndex).put(paletteIndex).put(paletteIndex).put(paletteIndex);
-        PALETTE_BUFFER.flip();
+        paletteBuffer.clear();
+        paletteBuffer.put(paletteIndex).put(paletteIndex).put(paletteIndex).put(paletteIndex);
+        paletteBuffer.flip();
 
         // Upload and bind vertex data
         glBindBuffer(GL_ARRAY_BUFFER, vertexVboId);
-        glBufferData(GL_ARRAY_BUFFER, VERTEX_BUFFER, GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, vertexBuffer, GL_DYNAMIC_DRAW);
         glVertexAttribPointer(ATTRIB_POSITION, 2, GL_FLOAT, false, 0, 0L);
         glEnableVertexAttribArray(ATTRIB_POSITION);
 
         glBindBuffer(GL_ARRAY_BUFFER, texCoordVboId);
-        glBufferData(GL_ARRAY_BUFFER, TEX_COORD_BUFFER, GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, texCoordBuffer, GL_DYNAMIC_DRAW);
         glVertexAttribPointer(ATTRIB_TEXCOORD, 2, GL_FLOAT, false, 0, 0L);
         glEnableVertexAttribArray(ATTRIB_TEXCOORD);
 
         glBindBuffer(GL_ARRAY_BUFFER, paletteVboId);
-        glBufferData(GL_ARRAY_BUFFER, PALETTE_BUFFER, GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, paletteBuffer, GL_DYNAMIC_DRAW);
         glVertexAttribPointer(ATTRIB_PALETTE, 1, GL_FLOAT, false, 0, 0L);
         glEnableVertexAttribArray(ATTRIB_PALETTE);
 
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
-        // Return to pool for reuse
-        recycle();
     }
 
     /**
@@ -451,5 +520,32 @@ public class PatternRenderCommand implements GLCommandable {
             glDeleteBuffers(paletteVboId);
             paletteVboId = 0;
         }
+        cleanupNativeState();
+    }
+
+    public static void cleanupHeadless() {
+        vaoId = 0;
+        vertexVboId = 0;
+        texCoordVboId = 0;
+        paletteVboId = 0;
+        cleanupNativeState();
+    }
+
+    private static void cleanupNativeState() {
+        if (vertexBuffer != null) {
+            MemoryUtil.memFree(vertexBuffer);
+            MemoryUtil.memFree(texCoordBuffer);
+            MemoryUtil.memFree(paletteBuffer);
+            vertexBuffer = null;
+            texCoordBuffer = null;
+            paletteBuffer = null;
+        }
+        for (PatternRenderCommand command : pool) {
+            command.graphicsManager = null;
+            command.leased = false;
+        }
+        pool.clear();
+        clearUniformLocationCache();
+        resetFrameState();
     }
 }

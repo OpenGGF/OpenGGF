@@ -9,7 +9,7 @@ import com.openggf.game.sonic1.Sonic1PlayerArt;
 import com.openggf.game.sonic1.Sonic1RingArt;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
-import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
@@ -21,6 +21,8 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 import static com.openggf.game.sonic1.constants.Sonic1Constants.*;
@@ -43,6 +45,7 @@ public final class Sonic1SpecialStageManager {
     private static final int SS_PATTERN_BASE = PatternAtlasRange.SONIC1_SPECIAL_STAGE.base();
     private static final int SS_ROLL_SPEED_SWITCH = 0x600;
     private static final int DEBUG_MOVE_SPEED = 3;
+    private final BackgroundCommandPool backgroundCommandPool = new BackgroundCommandPool();
 
     // Collection animation buffer (matches v_ssitembuffer from SS_AniRingSparks)
     private static final int SS_ANIM_BUFFER_SIZE = 8;
@@ -1626,20 +1629,12 @@ public final class Sonic1SpecialStageManager {
         renderLayerToFbo(fgRenderer);
 
         // BG pass: per-scanline H-scroll + BG V-scroll.
-        final int[] bgScrollSnapshot = bgHScrollData != null ? bgHScrollData.clone() : new int[224];
-        final float bgVScroll = (float) bgYScroll;
-        graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
-            bgRenderer.setHScrollData(bgScrollSnapshot);
-            bgRenderer.renderWithShader(bgVScroll);
-        }));
+        graphicsManager.registerCommand(backgroundCommandPool.obtainScroll(
+                bgRenderer, bgHScrollData, (float) bgYScroll));
 
         // FG pass: uniform H-scroll (-v_bg3screenposx) + FG V-scroll from byte_4ABC.
-        final int fgUniformHScroll = -bgExtraScrollX;
-        final float fgVScroll = (float) fgYScroll;
-        graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
-            fgRenderer.setUniformHScroll(fgUniformHScroll);
-            fgRenderer.renderWithShader(fgVScroll);
-        }));
+        graphicsManager.registerCommand(backgroundCommandPool.obtainUniform(
+                fgRenderer, -bgExtraScrollX, (float) fgYScroll));
 
         // Maze pass - every frame.
         renderer.renderMaze(layout, ssAngle, cameraX, cameraY, wallRotFrame, ringAnimFrame, wallVramAnimFrame,
@@ -1652,16 +1647,179 @@ public final class Sonic1SpecialStageManager {
         }
 
         layerRenderer.beginFBOProjection();
-        graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
-            layerRenderer.beginTilePass(Sonic1SpecialStageRenderer.H32_HEIGHT);
-        }));
+        graphicsManager.registerCommand(backgroundCommandPool.obtainBegin(layerRenderer));
         graphicsManager.beginPatternBatch();
         layerRenderer.renderTilesToFBO(graphicsManager);
         graphicsManager.flushPatternBatch();
         layerRenderer.endFBOProjection();
-        graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
-            layerRenderer.endTilePass();
-        }));
+        graphicsManager.registerCommand(backgroundCommandPool.obtainEnd(layerRenderer));
+    }
+
+    /** Bounded owner for deferred special-stage background commands. */
+    static final class BackgroundCommandPool {
+        private final ArrayDeque<BackgroundCommand> available = new ArrayDeque<>();
+        private Sonic1SpecialStageBackgroundRenderer activeTilePassRenderer;
+
+        BackgroundCommand obtainScroll(Sonic1SpecialStageBackgroundRenderer renderer,
+                                       int[] hScroll, float vScroll) {
+            BackgroundCommand command = obtain();
+            command.configureScroll(renderer, hScroll, vScroll);
+            return command;
+        }
+
+        BackgroundCommand obtainUniform(Sonic1SpecialStageBackgroundRenderer renderer,
+                                        int hScroll, float vScroll) {
+            BackgroundCommand command = obtain();
+            command.configureUniform(renderer, hScroll, vScroll);
+            return command;
+        }
+
+        BackgroundCommand obtainBegin(Sonic1SpecialStageBackgroundRenderer renderer) {
+            BackgroundCommand command = obtain();
+            command.configure(renderer, BackgroundCommand.Kind.BEGIN);
+            return command;
+        }
+
+        BackgroundCommand obtainEnd(Sonic1SpecialStageBackgroundRenderer renderer) {
+            BackgroundCommand command = obtain();
+            command.configure(renderer, BackgroundCommand.Kind.END);
+            return command;
+        }
+
+        private BackgroundCommand obtain() {
+            BackgroundCommand command = available.pollLast();
+            if (command == null) {
+                command = new BackgroundCommand(this);
+            }
+            command.leased = true;
+            return command;
+        }
+
+        private void release(BackgroundCommand command) {
+            available.addLast(command);
+        }
+
+        private void armTilePass(Sonic1SpecialStageBackgroundRenderer renderer) {
+            activeTilePassRenderer = renderer;
+        }
+
+        private boolean isTilePassArmed(Sonic1SpecialStageBackgroundRenderer renderer) {
+            return activeTilePassRenderer == renderer;
+        }
+
+        private void disarmTilePass(Sonic1SpecialStageBackgroundRenderer renderer) {
+            if (activeTilePassRenderer == renderer) {
+                activeTilePassRenderer = null;
+            }
+        }
+    }
+
+    static final class BackgroundCommand implements GLCommandable {
+        private enum Kind { SCROLL, UNIFORM, BEGIN, END }
+
+        private final BackgroundCommandPool owner;
+        private int[] hScroll;
+        private Sonic1SpecialStageBackgroundRenderer renderer;
+        private Kind kind;
+        private int uniformHScroll;
+        private float vScroll;
+        private boolean leased;
+
+        private BackgroundCommand(BackgroundCommandPool owner) {
+            this.owner = owner;
+        }
+
+        private void configureScroll(Sonic1SpecialStageBackgroundRenderer renderer,
+                                     int[] source, float vScroll) {
+            configure(renderer, Kind.SCROLL);
+            int length = Sonic1SpecialStageBackgroundRenderer.SCREEN_HEIGHT;
+            if (hScroll == null || hScroll.length < length) {
+                hScroll = new int[length];
+            }
+            int copied = source == null ? 0 : Math.min(source.length, length);
+            if (copied > 0) {
+                System.arraycopy(source, 0, hScroll, 0, copied);
+            }
+            if (copied < length) {
+                Arrays.fill(hScroll, copied, length, 0);
+            }
+            this.vScroll = vScroll;
+        }
+
+        private void configureUniform(Sonic1SpecialStageBackgroundRenderer renderer,
+                                      int hScroll, float vScroll) {
+            configure(renderer, Kind.UNIFORM);
+            this.uniformHScroll = hScroll;
+            this.vScroll = vScroll;
+        }
+
+        private void configure(Sonic1SpecialStageBackgroundRenderer renderer, Kind kind) {
+            this.renderer = renderer;
+            this.kind = kind;
+        }
+
+        @Override
+        public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            try {
+                if (renderer == null) {
+                    return;
+                }
+                switch (kind) {
+                    case SCROLL -> {
+                        renderer.setHScrollData(hScroll);
+                        renderer.renderWithShader(vScroll);
+                    }
+                    case UNIFORM -> {
+                        renderer.setUniformHScroll(uniformHScroll);
+                        renderer.renderWithShader(vScroll);
+                    }
+                    case BEGIN -> {
+                        renderer.beginTilePass(Sonic1SpecialStageRenderer.H32_HEIGHT);
+                        owner.armTilePass(renderer);
+                    }
+                    case END -> {
+                        try {
+                            renderer.endTilePass();
+                        } finally {
+                            owner.disarmTilePass(renderer);
+                        }
+                    }
+                }
+            } finally {
+                discard();
+            }
+        }
+
+        @Override
+        public void unwindAfterFailure(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            if (kind == Kind.END && owner.isTilePassArmed(renderer)) {
+                execute(cameraX, cameraY, cameraWidth, cameraHeight);
+            } else {
+                discard();
+            }
+        }
+
+        @Override
+        public void discard() {
+            if (!leased) {
+                return;
+            }
+            leased = false;
+            renderer = null;
+            owner.release(this);
+        }
+
+        int hScrollAt(int index) {
+            return hScroll[index];
+        }
+
+        float vScroll() {
+            return vScroll;
+        }
+
+        Object hScrollBackingIdentity() {
+            return hScroll;
+        }
     }
 
     // ---- Input ----

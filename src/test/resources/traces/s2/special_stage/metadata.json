@@ -9,8 +9,8 @@
   "bk2_frame_offset": 2754,
   "trace_frame_count": 5299,
   "source_bk2": "s2-lvl-select-special-stage.bk2",
-  "lua_script_version": "1.0-s2ss",
-  "recording_date": "2026-07-09",
+  "lua_script_version": "1.4-s2ss",
+  "recording_date": "2026-07-10",
   "bizhawk_version": "2.11",
   "genesis_core": "Genplus-gx"
 }

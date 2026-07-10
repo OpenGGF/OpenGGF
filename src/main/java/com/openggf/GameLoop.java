@@ -200,6 +200,8 @@ public class GameLoop {
     // Flag to freeze level updates during special stage entry transition
     private boolean specialStageTransitionPending = false;
     private boolean specialStageRewindBoundaryThisFrame;
+    private final SpecialStageEntryPresentationController specialStageEntryPresentation =
+            new SpecialStageEntryPresentationController();
 
     // Bonus stage entry/exit state
     private boolean bonusStageTransitionPending;
@@ -630,6 +632,9 @@ public class GameLoop {
     GameMode changeGameModeForBoundary(GameMode nextMode) {
         GameMode oldMode = currentGameMode;
         if (oldMode != nextMode) {
+            if (oldMode == GameMode.SPECIAL_STAGE) {
+                specialStageEntryPresentation.clear();
+            }
             currentGameMode = nextMode;
             reportRewindModeBoundary(oldMode, nextMode);
         }
@@ -638,6 +643,9 @@ public class GameLoop {
 
     GameMode changeGameModeWithoutRewindBoundary(GameMode nextMode) {
         GameMode oldMode = currentGameMode;
+        if (oldMode == GameMode.SPECIAL_STAGE && oldMode != nextMode) {
+            specialStageEntryPresentation.clear();
+        }
         currentGameMode = nextMode;
         return oldMode;
     }
@@ -1218,6 +1226,8 @@ public class GameLoop {
             updateSpecialStageInput();
             ssProvider.update();
         }
+        specialStageEntryPresentation.update(ssProvider, fadeManager,
+                () -> playSpecialStageStageMusic(ssProvider));
         if (ssSession != null) {
             ssSession.advanceSpecialStageTraceCursorIfActive(inputHandler);
         }
@@ -1868,9 +1878,7 @@ public class GameLoop {
                 || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))
                 || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DEBUG_MODE_KEY))
                 || isUnmodifiedDebugKeyPressed(GLFW_KEY_F4)
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F6)
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F7)) {
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)) {
             severSpecialStageRewindForLiveOnlyShortcut();
             return;
         }
@@ -2201,12 +2209,18 @@ public class GameLoop {
      */
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                                      boolean fadeFromBlack) {
+        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack,
+                SpecialStageStartupPolicy.FAST);
+    }
+
+    void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
+                             boolean fadeFromBlack, SpecialStageStartupPolicy startupPolicy) {
         // Clear the transition freeze flag (now we're in special stage mode)
         specialStageTransitionPending = false;
 
         try {
             ssProvider.reset();
-            ssProvider.initializeStage(stageIndex);
+            ssProvider.initializeStage(stageIndex, startupPolicy);
             activeSpecialStageProvider = ssProvider;
             GameplayModeContext context = resolveGameplayModeContext();
             if (context != null) {
@@ -2217,14 +2231,8 @@ public class GameLoop {
             camera.setX((short) 0);
             camera.setY((short) 0);
 
-            playSpecialStageStageMusic(ssProvider);
-
-            // Reveal the special stage
-            if (fadeFromBlack) {
-                fadeManager.startFadeFromBlack(null);
-            } else {
-                fadeManager.startFadeFromWhite(null);
-            }
+            specialStageEntryPresentation.begin(ssProvider, fadeFromBlack, fadeManager,
+                    () -> playSpecialStageStageMusic(ssProvider));
 
             GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE);
 
@@ -2235,10 +2243,12 @@ public class GameLoop {
 
             LOGGER.info("Entered Special Stage " + (stageIndex + 1) + " (H32 mode: 256x224)");
         } catch (IOException e) {
+            specialStageEntryPresentation.clear();
             deregisterSpecialStageAdapter();
             activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
             throw new RuntimeException("Failed to initialize Special Stage " + (stageIndex + 1), e);
         } catch (RuntimeException e) {
+            specialStageEntryPresentation.clear();
             deregisterSpecialStageAdapter();
             activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
             throw e;
@@ -4203,14 +4213,6 @@ public class GameLoop {
             ssProvider.toggleLagCompensationDisplay();
         }
 
-        // Lag compensation adjustment (F6 decrease, F7 increase)
-        if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F6)) {
-            adjustLagCompensation(-0.05);
-        }
-        if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F7)) {
-            adjustLagCompensation(0.05);
-        }
-
         if (ssProvider.isAlignmentTestMode()) {
             if (isUnmodifiedDebugKeyPressed(leftKey)) {
                 ssProvider.adjustAlignmentOffset(-1);
@@ -4234,29 +4236,6 @@ public class GameLoop {
                 SpecialStageInputMapper.map(inputHandler.logical());
         ssProvider.handleInput(mapped.p1Held(), mapped.p1Pressed());
         ssProvider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
-    }
-
-    /**
-     * Adjusts the lag compensation factor for the entire special stage simulation.
-     * The lag compensation simulates original Mega Drive hardware lag frames,
-     * affecting track animation, player movement, object speed, and all other
-     * timing.
-     *
-     * @param delta Amount to adjust (positive = more lag compensation = slower
-     *              simulation)
-     */
-    private void adjustLagCompensation(double delta) {
-        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-        if (!ssProvider.isInitialized() || !ssProvider.adjustLagCompensationIfDisplayEnabled(delta)) {
-            return;
-        }
-
-        // Calculate effective simulation rate for display
-        // Base is 60 fps. With lag compensation, effective = 60 * (1 - lagComp)
-        double effectiveUpdates = 60.0 * (1.0 - ssProvider.getLagCompensation());
-
-        LOGGER.info(String.format("Lag compensation: %.0f%% (effective ~%.1f updates/sec)",
-                ssProvider.getLagCompensation() * 100, effectiveUpdates));
     }
 
     // ==================== Ending / Credits Sequence Methods ====================

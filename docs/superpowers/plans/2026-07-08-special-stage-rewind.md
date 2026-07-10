@@ -230,7 +230,6 @@ class TestSpecialStageRewindCapability {
         @Override public void toggleAlignmentStepMode() { }
         @Override public void renderAlignmentOverlay(int viewportWidth, int viewportHeight) { }
         @Override public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) { }
-        @Override public double getLagCompensation() { return 0.0; }
         @Override public void setLagCompensation(double factor) { }
         @Override public ResultsScreen createResultsScreen(
                 int ringsCollected, boolean gotEmerald, int stageIndex, int totalEmeraldCount) {
@@ -624,7 +623,6 @@ class TestSpecialStageStepperReplay {
         @Override public void toggleAlignmentStepMode() { }
         @Override public void renderAlignmentOverlay(int viewportWidth, int viewportHeight) { }
         @Override public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) { }
-        @Override public double getLagCompensation() { return 0.0; }
         @Override public void setLagCompensation(double factor) { }
         @Override public ResultsScreen createResultsScreen(
                 int ringsCollected, boolean gotEmerald, int stageIndex, int totalEmeraldCount) {
@@ -1522,7 +1520,6 @@ private static class MinimalSpecialStageProvider implements SpecialStageProvider
     @Override public void toggleAlignmentStepMode() { }
     @Override public void renderAlignmentOverlay(int viewportWidth, int viewportHeight) { }
     @Override public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) { }
-    @Override public double getLagCompensation() { return 0.0; }
     @Override public void setLagCompensation(double factor) { }
     @Override public ResultsScreen createResultsScreen(
             int ringsCollected, boolean gotEmerald, int stageIndex, int totalEmeraldCount) {
@@ -1578,7 +1575,7 @@ void alignmentAdjustmentClearsSpecialStageRewindAndSkipsSameFrameRecord() throws
 }
 ```
 
-Also cover `SPECIAL_STAGE_KEY`, X/Z stage/layout debug, complete/fail keys, sprite-debug toggle, plane-debug toggle, sprite-debug navigation, F4 alignment toggle, F1/F6/F7 lag-compensation controls, and alignment adjustment controls. The `SPECIAL_STAGE_KEY` path is handled by the global debug shortcut branch before `updateSpecialStageMode()`, so that case must drive `stepInternal()`/`loop.step()` or directly invoke the global shortcut path before asserting the boundary. The mode-local shortcut cases can use `invokeUpdateSpecialStageMode(loop)` when that is the path under test. Assert `isSpecialStageRewindable()`/top-level engagement returns false on those frames when the rewind key is also held. Use the existing test input helpers where possible; if the current helper surface cannot synthesize unmodified debug keys, add a focused package-private test helper rather than weakening the assertions.
+Also cover `SPECIAL_STAGE_KEY`, X/Z stage/layout debug, complete/fail keys, sprite-debug toggle, plane-debug toggle, sprite-debug navigation, F4 alignment toggle, the F1 lag-model display, and alignment adjustment controls. F6/F7 do not mutate the deterministic lag model and therefore are not special-stage rewind boundaries. The `SPECIAL_STAGE_KEY` path is handled by the global debug shortcut branch before `updateSpecialStageMode()`, so that case must drive `stepInternal()`/`loop.step()` or directly invoke the global shortcut path before asserting the boundary. The mode-local shortcut cases can use `invokeUpdateSpecialStageMode(loop)` when that is the path under test. Assert `isSpecialStageRewindable()`/top-level engagement returns false on those frames when the rewind key is also held. Use the existing test input helpers where possible; if the current helper surface cannot synthesize unmodified debug keys, add a focused package-private test helper rather than weakening the assertions.
 
 - [ ] **Step 2: Run failing tests**
 
