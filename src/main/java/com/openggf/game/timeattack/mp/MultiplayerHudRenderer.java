@@ -3,7 +3,7 @@ package com.openggf.game.timeattack.mp;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugColor;
-import com.openggf.game.timeattack.TimeAttackTimeFormat;
+import com.openggf.game.timeattack.TimeAttackTrackCatalog;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.net.protocol.ControlMessage;
 
@@ -38,10 +38,23 @@ public final class MultiplayerHudRenderer {
             }
             int y = 12;
             for (ControlMessage.StandingsRow row : state.standings()) {
-                drawRight(text, "%d %-8s %s".formatted(row.rank(), row.displayName(),
-                                TimeAttackTimeFormat.frames(row.bestTimeFrames())),
+                drawRight(text, HudTextLayout.standingsLine(row, state.characterPolicy()),
                         screenWidth, y, DebugColor.LIGHT_GRAY);
                 y += 6;
+            }
+            if ("ROUND_END".equals(state.phase())) {
+                drawBlock(text, HudTextLayout.podiumLines(state.podiumRows(),
+                        state.localRank(), state.standings(), -1,
+                        state.characterPolicy()), 72, 60, DebugColor.YELLOW);
+            } else if ("VOTE".equals(state.phase())) {
+                drawBlock(text, HudTextLayout.voteLines(state.voteOptions(),
+                        state.voteCounts(), state.voteRemainingMillis(),
+                        MultiplayerHudRenderer::trackLabel), 56, 60, DebugColor.YELLOW);
+            } else if ("LOBBY".equals(state.phase())
+                    && state.voteResultTrackKey() != null) {
+                text.drawShadowedText(HudTextLayout.voteResultLine(
+                                state.voteResultTrackKey(), MultiplayerHudRenderer::trackLabel),
+                        8, 24, DebugColor.YELLOW, SCALE);
             }
             if (state.connectionLost()) {
                 text.drawShadowedText("CONNECTION LOST", 8, 8, DebugColor.RED, SCALE);
@@ -58,5 +71,29 @@ public final class MultiplayerHudRenderer {
                                   int screenWidth, int y, DebugColor color) {
         int x = screenWidth - 4 - text.measureWidth(line, SCALE);
         text.drawShadowedText(line, x, y, color, SCALE);
+    }
+
+    private static void drawBlock(PixelFontTextRenderer text, java.util.List<String> lines,
+                                  int x, int y, DebugColor color) {
+        for (String line : lines) {
+            text.drawShadowedText(line, x, y, color, SCALE);
+            y += 8;
+        }
+    }
+
+    private static String trackLabel(String key) {
+        String[] parts = key == null ? new String[0] : key.split(":", -1);
+        if (parts.length != 3) {
+            return key;
+        }
+        try {
+            int zone = Integer.parseInt(parts[1]);
+            int act = Integer.parseInt(parts[2]);
+            return TimeAttackTrackCatalog.tracksFor(parts[0]).stream()
+                    .filter(track -> track.zone() == zone && track.act() == act)
+                    .map(TimeAttackTrackCatalog.Track::label).findFirst().orElse(key);
+        } catch (NumberFormatException ignored) {
+            return key;
+        }
     }
 }
