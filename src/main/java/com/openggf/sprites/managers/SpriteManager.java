@@ -1104,13 +1104,22 @@ public class SpriteManager {
 	 * caller must disable it after drawing).
 	 */
 	private boolean enableVerticalWrapIfNeeded() {
-		Camera camera = GameServices.cameraOrNull();
+		Camera camera = resolveRenderCameraForVerticalWrap();
 		if (camera != null && camera.isVerticalWrapEnabled()) {
 			GameServices.graphics().enableVerticalWrapAdjust(
 					camera.getVerticalWrapRange(), camera.getY());
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Resolves the render camera used only for vertical-wrap adjustment.
+	 * Kept as a protected seam so headless allocation tests can isolate the
+	 * prepared-bucket core from ambient gameplay-session test doubles.
+	 */
+	protected Camera resolveRenderCameraForVerticalWrap() {
+		return GameServices.cameraOrNull();
 	}
 
 	private void disableVerticalWrap() {

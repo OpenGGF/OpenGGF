@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -296,19 +297,34 @@ class TestLevelRendererBucketInvalidation {
         manager.clearAllSprites();
         for (int warm = 0; warm < 2_000; warm++) runPreparedEmptyPass(manager);
 
-        java.lang.management.ThreadMXBean raw = ManagementFactory.getThreadMXBean();
-        Assumptions.assumeTrue(raw instanceof com.sun.management.ThreadMXBean,
-                "ThreadMXBean allocation accounting unavailable");
-        com.sun.management.ThreadMXBean bean = (com.sun.management.ThreadMXBean) raw;
-        Assumptions.assumeTrue(bean.isThreadAllocatedMemorySupported(),
-                "thread allocation accounting unsupported");
-        if (!bean.isThreadAllocatedMemoryEnabled()) bean.setThreadAllocatedMemoryEnabled(true);
+        com.sun.management.ThreadMXBean bean = allocationBeanOrSkip();
         long threadId = Thread.currentThread().threadId();
+        int resolutionsBeforeMeasurement = manager.suppressionResolutionCount;
         long allocation600 = measurePreparedPassAllocation(manager, bean, threadId, 600);
         long allocation1200 = measurePreparedPassAllocation(manager, bean, threadId, 1_200);
+        assertEquals(1_800, manager.suppressionResolutionCount - resolutionsBeforeMeasurement,
+                "allocation measurement must execute every prepared pass");
         assertTrue(allocation1200 <= allocation600 + 1_024,
                 "doubling frames must not add per-frame allocation; 600=" + allocation600
                         + " 1200=" + allocation1200);
+    }
+
+    @Test
+    void renderCameraSeamStillFeedsVerticalWrapResolution() {
+        Camera camera = mock(Camera.class);
+        SpriteManager manager = new SpriteManager() {
+            @Override
+            protected Camera resolveRenderCameraForVerticalWrap() {
+                return camera;
+            }
+        };
+        manager.clearAllSprites();
+        manager.prepareRenderBucketsForPass();
+
+        manager.drawPreparedUnifiedBucketWithPriority(
+                RenderPriority.MAX, graphicsManager, null);
+
+        verify(camera).isVerticalWrapEnabled();
     }
 
     private void runPreparedEmptyPass(CountingSpriteManager manager) {
@@ -325,6 +341,22 @@ class TestLevelRendererBucketInvalidation {
         return bean.getThreadAllocatedBytes(threadId) - before;
     }
 
+    private static com.sun.management.ThreadMXBean allocationBeanOrSkip() {
+        java.lang.management.ThreadMXBean raw = ManagementFactory.getThreadMXBean();
+        Assumptions.assumeTrue(raw instanceof com.sun.management.ThreadMXBean,
+                "ThreadMXBean allocation accounting unavailable");
+        com.sun.management.ThreadMXBean bean = (com.sun.management.ThreadMXBean) raw;
+        Assumptions.assumeTrue(bean.isThreadAllocatedMemorySupported(),
+                "thread allocation accounting unsupported");
+        if (!bean.isThreadAllocatedMemoryEnabled()) bean.setThreadAllocatedMemoryEnabled(true);
+        Assumptions.assumeTrue(bean.isThreadAllocatedMemoryEnabled(),
+                "thread allocation accounting could not be enabled");
+        Assumptions.assumeTrue(
+                bean.getThreadAllocatedBytes(Thread.currentThread().threadId()) >= 0,
+                "thread allocation accounting returned an unavailable value");
+        return bean;
+    }
+
     private static final class CountingSpriteManager extends SpriteManager {
         private int suppressionResolutionCount;
         private boolean suppressed;
@@ -333,6 +365,11 @@ class TestLevelRendererBucketInvalidation {
         protected boolean resolveCpuSidekickSuppressed() {
             suppressionResolutionCount++;
             return suppressed;
+        }
+
+        @Override
+        protected Camera resolveRenderCameraForVerticalWrap() {
+            return null;
         }
     }
 
