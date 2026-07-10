@@ -97,7 +97,11 @@ public final class RaceLobbyScreen {
             int index = 0;
             for (ControlMessage.PlayerInfo player : coordinator.session().players()) {
                 String badge = index++ == 0 ? " [HOST]" : "";
-                font.drawText(player.displayName() + "  "
+                String fingerprintTag = player.fingerprint() == null ? "????"
+                        : player.fingerprint().substring(0,
+                                Math.min(4, player.fingerprint().length()));
+                String newBadge = player.newPlayer() ? " (new)" : "";
+                font.drawText(player.displayName() + "#" + fingerprintTag + newBadge + "  "
                                 + player.character().toUpperCase() + badge,
                         12, y, SCALE, 1f, 1f, 1f, 1f);
                 y += LINE_HEIGHT;

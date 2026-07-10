@@ -309,6 +309,8 @@ Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SM
 | `TIME_ATTACK_NET_HOST_PORT` | `timeAttack.net.hostPort` | int | `27888` | TCP/WebSocket port for player-hosted LAN race rooms. |
 | `TIME_ATTACK_NET_LAST_JOIN_ADDRESS` | `timeAttack.net.lastJoinAddress` | string | `""` | Most recently joined LAN race address. |
 | `TIME_ATTACK_NET_DISPLAY_NAME` | `timeAttack.net.displayName` | string | `""` | Multiplayer display name; blank uses the identity prefix. |
+| `TIME_ATTACK_NET_MASTER_URL` | `timeAttack.net.masterUrl` | string | `""` | Master-server WebSocket URL for internet race browsing. |
+| `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | bool | `false` | Development-only trust-all TLS mode for the master server. |
 
 ## Debug
 
@@ -440,6 +442,8 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 | `TIME_ATTACK_NET_HOST_PORT` | `timeAttack.net.hostPort` | `27888` |  | TCP/WebSocket port for player-hosted LAN race rooms. |
 | `TIME_ATTACK_NET_LAST_JOIN_ADDRESS` | `timeAttack.net.lastJoinAddress` | `""` |  | Most recently joined LAN race address. |
 | `TIME_ATTACK_NET_DISPLAY_NAME` | `timeAttack.net.displayName` | `""` |  | Multiplayer display name; blank uses the identity prefix. |
+| `TIME_ATTACK_NET_MASTER_URL` | `timeAttack.net.masterUrl` | `""` |  | Master-server WebSocket URL for internet race browsing. |
+| `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | `false` |  | Development-only trust-all TLS mode for the master server. |
 
 ### Debug Navigation
 

@@ -44,6 +44,8 @@ public final class TimeAttackMenu {
                 case HOST_LAN -> networkStarter.host(request,
                         state.characterPolicy(), state.lockedCharacter(), state.windowSeconds());
                 case JOIN_LAN -> networkStarter.join(request, joinAddress.text());
+                case BROWSE -> networkStarter.browse(request,
+                        state.characterPolicy(), state.lockedCharacter(), state.windowSeconds());
             }
         }
     }
@@ -75,7 +77,8 @@ public final class TimeAttackMenu {
         y = drawRow("Character", characterLabel, TimeAttackMenuState.Row.CHARACTER, y);
         y = drawRow("Mode", state.mode().name().replace('_', ' '),
                 TimeAttackMenuState.Row.MODE, y);
-        if (state.mode() == TimeAttackMenuState.Mode.HOST_LAN) {
+        if (state.mode() == TimeAttackMenuState.Mode.HOST_LAN
+                || state.mode() == TimeAttackMenuState.Mode.BROWSE) {
             String policy = state.characterPolicy().equals("OPEN") ? "OPEN"
                     : "LOCKED " + characterLabel;
             y = drawRow("Policy", policy, TimeAttackMenuState.Row.POLICY, y);
@@ -139,5 +142,8 @@ public final class TimeAttackMenu {
                   String lockedCharacter, int windowSeconds);
 
         void join(TimeAttackLaunchRequest request, String address);
+
+        default void browse(TimeAttackLaunchRequest request, String policy,
+                            String lockedCharacter, int windowSeconds) { }
     }
 }

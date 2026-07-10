@@ -16,6 +16,10 @@ public final class HostRoundEngine {
     public static final long COUNTDOWN_MILLIS = 3000;
     public static final long FINISH_GRACE_MILLIS = 2000;
     public static final long ROUND_END_LINGER_MILLIS = 10_000;
+    public static final int STANDINGS_BROADCAST_CAP = 10;
+
+    public record FinishOutcome(int slot, int rank, boolean outsideBroadcastCap) {
+    }
 
     private record Best(String displayName, String character, int timeFrames,
                         long achievedOrder) {
@@ -65,7 +69,7 @@ public final class HostRoundEngine {
         if (phase == Phase.RUNNING && now > deadline) {
             phase = Phase.ROUND_END;
             roundEndAt = now;
-            broadcaster.accept(new ControlMessage.RoundEnd(standings()));
+            broadcaster.accept(new ControlMessage.RoundEnd(broadcastStandings()));
         }
         if (phase == Phase.ROUND_END
                 && now >= roundEndAt + ROUND_END_LINGER_MILLIS) {
@@ -73,21 +77,28 @@ public final class HostRoundEngine {
         }
     }
 
-    public void onAttemptFinish(int slot, String displayName, String character,
-                                ControlMessage.AttemptFinish finish,
-                                boolean attemptFlagged) {
+    public FinishOutcome onAttemptFinish(int slot, String displayName, String character,
+                                         ControlMessage.AttemptFinish finish,
+                                         boolean attemptFlagged) {
         long now = hubClockMillis.getAsLong();
         if (phase != Phase.RUNNING || now > deadline + FINISH_GRACE_MILLIS
                 || attemptFlagged || finish.timeFrames() <= 0) {
-            return;
+            return null;
         }
         Best existing = bests.get(slot);
         if (existing != null && existing.timeFrames() <= finish.timeFrames()) {
-            return;
+            return null;
         }
         bests.put(slot, new Best(displayName, character, finish.timeFrames(),
                 achievedCounter++));
-        broadcaster.accept(new ControlMessage.StandingsDelta(standings()));
+        List<ControlMessage.StandingsRow> rows = standings();
+        broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings(rows)));
+        int rank = rows.stream()
+                .filter(row -> row.slot() == slot)
+                .mapToInt(ControlMessage.StandingsRow::rank)
+                .findFirst()
+                .orElseThrow();
+        return new FinishOutcome(slot, rank, rank > STANDINGS_BROADCAST_CAP);
     }
 
     public void onPlayerLeft(int slot) {
@@ -112,8 +123,39 @@ public final class HostRoundEngine {
         return List.copyOf(rows);
     }
 
+    public List<ControlMessage.StandingsRow> page(int page, int pageSize) {
+        if (page < 0 || pageSize <= 0) {
+            return List.of();
+        }
+        List<ControlMessage.StandingsRow> rows = standings();
+        long requestedStart = (long) page * pageSize;
+        if (requestedStart >= rows.size()) {
+            return List.of();
+        }
+        int start = (int) requestedStart;
+        return List.copyOf(rows.subList(start, Math.min(rows.size(), start + pageSize)));
+    }
+
+    public int totalPages(int pageSize) {
+        if (pageSize <= 0) {
+            throw new IllegalArgumentException("pageSize must be positive");
+        }
+        int size = bests.size();
+        return size == 0 ? 0 : (size + pageSize - 1) / pageSize;
+    }
+
     public ControlMessage.RoundSnapshot snapshot() {
         return new ControlMessage.RoundSnapshot(
-                phase.name(), config, countdownEndsAt, deadline, standings());
+                phase.name(), config, countdownEndsAt, deadline, broadcastStandings());
+    }
+
+    private List<ControlMessage.StandingsRow> broadcastStandings() {
+        return broadcastStandings(standings());
+    }
+
+    private static List<ControlMessage.StandingsRow> broadcastStandings(
+            List<ControlMessage.StandingsRow> rows) {
+        return List.copyOf(rows.subList(0,
+                Math.min(STANDINGS_BROADCAST_CAP, rows.size())));
     }
 }

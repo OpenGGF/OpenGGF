@@ -634,6 +634,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.TIME_ATTACK_NET_HOST_PORT, 27888);
 		putDefault(SonicConfiguration.TIME_ATTACK_NET_LAST_JOIN_ADDRESS, "");
 		putDefault(SonicConfiguration.TIME_ATTACK_NET_DISPLAY_NAME, "");
+		putDefault(SonicConfiguration.TIME_ATTACK_NET_MASTER_URL, "");
+		putDefault(SonicConfiguration.TIME_ATTACK_NET_MASTER_TRUST_INSECURE, false);
 		putDefaultKey(SonicConfiguration.TRACE_REWIND_KEY, GLFW_KEY_R);
 		putDefault(SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, true);
 		putDefault(SonicConfiguration.TRACE_SHOW_GAME_HUD, true);

@@ -18,6 +18,7 @@ import com.openggf.game.timeattack.TimeAttackMenuState;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
 import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
 import com.openggf.game.timeattack.mp.RaceLobbyScreen;
+import com.openggf.game.timeattack.mp.ServerBrowserScreen;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.testmode.TestModeTracePicker;
 import com.openggf.trace.catalog.TraceCatalog;
@@ -166,6 +167,7 @@ public class MasterTitleScreen {
             request -> LOGGER.info("Time attack launch callback not configured.");
     private TimeAttackMenu.NetworkStarter timeAttackNetworkStarter = TimeAttackMenu.NetworkStarter.NONE;
     private RaceLobbyScreen raceLobbyScreen;
+    private ServerBrowserScreen serverBrowserScreen;
     private int bgTextureId;
     private int solidWhiteTextureId; // 1x1 white texture for solid color overlays
     private int titleTextId;
@@ -331,6 +333,7 @@ public class MasterTitleScreen {
             userRecordingMenu = null;
             timeAttackMenu = null;
             raceLobbyScreen = null;
+            serverBrowserScreen = null;
             if (tracePicker == null) {
                 Path root = Path.of(System.getProperty("user.dir"))
                         .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR))
@@ -360,6 +363,11 @@ public class MasterTitleScreen {
 
         if (raceLobbyScreen != null) {
             raceLobbyScreen.update(inputHandler);
+            return;
+        }
+
+        if (serverBrowserScreen != null) {
+            serverBrowserScreen.update(inputHandler);
             return;
         }
 
@@ -476,6 +484,13 @@ public class MasterTitleScreen {
             renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
                     0f, 0f, 0f, 1f);
             raceLobbyScreen.render();
+            return;
+        }
+
+        if (serverBrowserScreen != null) {
+            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
+                    0f, 0f, 0f, 1f);
+            serverBrowserScreen.render();
             return;
         }
 
@@ -903,6 +918,21 @@ public class MasterTitleScreen {
         timeAttackMenu = null;
         raceLobbyScreen = new RaceLobbyScreen(coordinator, font, host, roundConfig,
                 character, roundLauncher, leaveHandler);
+        serverBrowserScreen = null;
+    }
+
+    public void openServerBrowser(ServerBrowserScreen browser) {
+        timeAttackMenu = null;
+        raceLobbyScreen = null;
+        serverBrowserScreen = Objects.requireNonNull(browser, "browser");
+    }
+
+    public void closeServerBrowser() {
+        serverBrowserScreen = null;
+    }
+
+    public PixelFont pixelFont() {
+        return font;
     }
 
     public boolean isRaceLobbyOpen() {

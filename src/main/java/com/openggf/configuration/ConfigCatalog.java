@@ -244,6 +244,10 @@ public final class ConfigCatalog {
                 "Most recently joined LAN race address."));
         put(TIME_ATTACK_NET_DISPLAY_NAME, of("timeAttack.net", "displayName", STRING,
                 "Pseudonymous multiplayer race display name."));
+        put(TIME_ATTACK_NET_MASTER_URL, of("timeAttack.net", "masterUrl", STRING,
+                "Master-server WebSocket URL for internet race browsing."));
+        put(TIME_ATTACK_NET_MASTER_TRUST_INSECURE, of("timeAttack.net", "masterTrustInsecure", BOOL,
+                "Development-only trust-all TLS mode for the master server."));
 
         // ───────────────── DEBUG BLOCK ─────────────────
 

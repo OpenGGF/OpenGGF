@@ -163,6 +163,36 @@ class TestMultiplayerRaceCoordinator {
     }
 
     @Test
+    void rankOutsideBroadcastCapRequestsAndSplicesAroundYouPage(@TempDir Path root) {
+        Rig rig = rig(root, false);
+        List<ControlMessage.StandingsRow> top = new ArrayList<>();
+        for (int rank = 1; rank <= 10; rank++) {
+            top.add(new ControlMessage.StandingsRow(rank, "P" + rank,
+                    "sonic", 1000 + rank, rank));
+        }
+        rig.transport().inbound.add(new RaceClient.Control(
+                new ControlMessage.StandingsDelta(top)));
+        rig.transport().inbound.add(new RaceClient.Control(
+                new ControlMessage.RankUpdate(16, 2000)));
+        rig.coordinator().pump();
+        assertTrue(rig.transport().sentControl.stream()
+                .anyMatch(message -> message.equals(new ControlMessage.StandingsPageRequest(1))));
+
+        List<ControlMessage.StandingsRow> page = new ArrayList<>();
+        for (int rank = 11; rank <= 20; rank++) {
+            int slot = rank == 16 ? 0 : rank;
+            page.add(new ControlMessage.StandingsRow(slot, "P" + rank,
+                    "sonic", 1000 + rank, rank));
+        }
+        rig.transport().inbound.add(new RaceClient.Control(
+                new ControlMessage.StandingsPage(page, 1, 3)));
+        rig.coordinator().pump();
+        assertEquals(15, rig.coordinator().hudState().standings().size());
+        assertTrue(rig.coordinator().hudState().standings().stream()
+                .anyMatch(row -> row.slot() == 0 && row.rank() == 16));
+    }
+
+    @Test
     void roundStartResetsRemoteAttemptIds(@TempDir Path root) {
         Rig rig = rig(root);
         rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoomState(List.of(

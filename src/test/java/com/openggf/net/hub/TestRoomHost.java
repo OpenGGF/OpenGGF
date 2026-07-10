@@ -203,4 +203,28 @@ class TestRoomHost {
         assertTrue(b.text.stream().map(text -> ControlCodec.decode(text).message())
                 .noneMatch(message -> message instanceof ControlMessage.ChatBroadcast));
     }
+
+    @Test
+    void standingsPageRequestsAreUnicastAndRateLimited() throws Exception {
+        FakeHubConnection player = new FakeHubConnection();
+        String token = admit(player, "A", dir.resolve("a")).sessionToken();
+        room.requestStartRound(new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 300, "OPEN", null));
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        room.tick();
+        room.round().onAttemptFinish(0, "A", "sonic",
+                new ControlMessage.AttemptFinish(1, 1000, 5, 1005,
+                        "ab".repeat(32), "cd".repeat(32), null), false);
+
+        int before = player.text.size();
+        room.onText(player, ControlCodec.encode(token,
+                new ControlMessage.StandingsPageRequest(0)));
+        assertEquals(before + 1, player.text.size());
+        ControlMessage.StandingsPage page = assertInstanceOf(
+                ControlMessage.StandingsPage.class, lastMessage(player));
+        assertEquals(1, page.rows().size());
+        room.onText(player, ControlCodec.encode(token,
+                new ControlMessage.StandingsPageRequest(0)));
+        assertEquals(before + 1, player.text.size(), "second request inside 2s is dropped");
+    }
 }

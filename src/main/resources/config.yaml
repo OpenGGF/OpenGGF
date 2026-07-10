@@ -136,6 +136,8 @@ timeAttack:
     hostPort: 27888   # TCP/WebSocket port for player-hosted LAN race rooms
     lastJoinAddress: ""   # Most recently joined LAN race address
     displayName: ""   # Blank uses the first eight characters of the identity fingerprint
+    masterUrl: ""   # Master-server WebSocket URL for internet race browsing
+    masterTrustInsecure: false   # Development only: trust any master-server TLS certificate
 
 # ════════════════════════════════════════════
 #  DEBUG  (developer tooling — safe to ignore for normal play)

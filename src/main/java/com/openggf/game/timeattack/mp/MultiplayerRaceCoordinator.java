@@ -6,6 +6,7 @@ import com.openggf.net.client.ClientRaceSession;
 import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.client.RaceClient;
 import com.openggf.net.client.RemoteGhostRegistry;
+import com.openggf.net.hub.HostRoundEngine;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.sprites.ghost.ActiveGhost;
 
@@ -18,6 +19,9 @@ import java.util.function.LongSupplier;
 /** Bridges a room connection to one attached time-attack runtime per round. */
 public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.AttemptListener {
     private static final long PING_INTERVAL_MILLIS = 500;
+    private static final long STANDINGS_PAGE_INTERVAL_MILLIS = 2000;
+    private static final int STANDINGS_PAGE_SIZE = 10;
+    private static final int AROUND_YOU_ROWS = 5;
 
     private final RaceTransport transport;
     private final ClientRaceSession session;
@@ -30,6 +34,10 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private List<ActiveGhost> remoteGhosts = List.of();
     private boolean connectionLost;
     private long lastPingAtMillis = Long.MIN_VALUE;
+    private long lastStandingsPageRequestAt = Long.MIN_VALUE;
+    private int localRank = -1;
+    private List<ControlMessage.StandingsRow> topStandings = List.of();
+    private List<ControlMessage.StandingsRow> aroundYouStandings = List.of();
 
     public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session) {
         this(transport, session, System::currentTimeMillis);
@@ -80,6 +88,21 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                     } else if (control.message() instanceof ControlMessage.RoundStart) {
                         registry.reset();
                         remoteGhosts = List.of();
+                        localRank = -1;
+                        topStandings = List.of();
+                        aroundYouStandings = List.of();
+                    } else if (control.message() instanceof ControlMessage.StandingsDelta delta) {
+                        topStandings = List.copyOf(delta.rows());
+                        delta.rows().stream()
+                                .filter(row -> row.slot() == session.localSlot())
+                                .findFirst()
+                                .ifPresent(row -> localRank = row.rank());
+                        maybeRequestAroundYouPage();
+                    } else if (control.message() instanceof ControlMessage.RankUpdate rank) {
+                        localRank = rank.rank();
+                        maybeRequestAroundYouPage();
+                    } else if (control.message() instanceof ControlMessage.StandingsPage page) {
+                        applyAroundYouPage(page.rows());
                     }
                 }
                 case RaceClient.GhostData ghost -> registry.onAggregate(ghost.aggregate());
@@ -112,7 +135,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     public MultiplayerHudState hudState() {
         return new MultiplayerHudState(transport.isOpen() || connectionLost,
                 session.phase().name(), session.remainingWindowMillis(),
-                session.remainingCountdownMillis(), session.standings(),
+                session.remainingCountdownMillis(), combinedStandings(),
                 session.chatLines(), session.players().size(),
                 registry.farPlayers(session.localSlot()), connectionLost,
                 session.kickReason());
@@ -197,5 +220,53 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
             lastPingAtMillis = now;
             transport.sendControl(new ControlMessage.Ping(now));
         }
+    }
+
+    private void maybeRequestAroundYouPage() {
+        if (localRank <= HostRoundEngine.STANDINGS_BROADCAST_CAP || !transport.isOpen()) {
+            return;
+        }
+        long now = clockMillis.getAsLong();
+        if (lastStandingsPageRequestAt != Long.MIN_VALUE
+                && now - lastStandingsPageRequestAt < STANDINGS_PAGE_INTERVAL_MILLIS) {
+            return;
+        }
+        lastStandingsPageRequestAt = now;
+        transport.sendControl(new ControlMessage.StandingsPageRequest(
+                (localRank - 1) / STANDINGS_PAGE_SIZE));
+    }
+
+    private void applyAroundYouPage(List<ControlMessage.StandingsRow> rows) {
+        int localIndex = -1;
+        for (int index = 0; index < rows.size(); index++) {
+            if (rows.get(index).slot() == session.localSlot()) {
+                localIndex = index;
+                localRank = rows.get(index).rank();
+                break;
+            }
+        }
+        if (localIndex < 0) {
+            aroundYouStandings = List.of();
+            return;
+        }
+        int start = Math.max(0, localIndex - AROUND_YOU_ROWS / 2);
+        start = Math.min(start, Math.max(0, rows.size() - AROUND_YOU_ROWS));
+        aroundYouStandings = List.copyOf(rows.subList(
+                start, Math.min(rows.size(), start + AROUND_YOU_ROWS)));
+    }
+
+    private List<ControlMessage.StandingsRow> combinedStandings() {
+        List<ControlMessage.StandingsRow> top = topStandings.isEmpty()
+                ? session.standings() : topStandings;
+        if (aroundYouStandings.isEmpty()) {
+            return top;
+        }
+        List<ControlMessage.StandingsRow> combined = new ArrayList<>(top);
+        for (ControlMessage.StandingsRow row : aroundYouStandings) {
+            if (combined.stream().noneMatch(existing -> existing.slot() == row.slot())) {
+                combined.add(row);
+            }
+        }
+        return List.copyOf(combined);
     }
 }

@@ -341,6 +341,12 @@ public enum SonicConfiguration {
 	/** Pseudonymous multiplayer display name; blank uses the identity prefix. */
 	TIME_ATTACK_NET_DISPLAY_NAME,
 
+	/** Master-server WebSocket URL; blank disables internet-room browsing. */
+	TIME_ATTACK_NET_MASTER_URL,
+
+	/** Development-only trust-all TLS switch for the master-server client. */
+	TIME_ATTACK_NET_MASTER_TRUST_INSECURE,
+
 	/**
 	 * Key held in visual Trace Test Mode to rewind deterministic engine state.
 	 */

@@ -28,7 +28,7 @@ public final class TimeAttackMenuState {
     static final int MAX_GHOSTS_RACED = 7;
 
     public enum Row { GAME, TRACK, CHARACTER, MODE, POLICY, WINDOW }
-    public enum Mode { SOLO, HOST_LAN, JOIN_LAN }
+    public enum Mode { SOLO, HOST_LAN, JOIN_LAN, BROWSE }
 
     private static final int[] WINDOW_MINUTES = {1, 2, 5, 10};
 

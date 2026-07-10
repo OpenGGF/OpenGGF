@@ -55,8 +55,12 @@ import com.openggf.game.timeattack.DeterminismFingerprint;
 import com.openggf.game.timeattack.mp.LiveLevelProfileFactory;
 import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
 import com.openggf.game.timeattack.mp.RaceTransport;
+import com.openggf.game.timeattack.mp.ServerBrowserScreen;
 import com.openggf.net.client.ClientRaceSession;
+import com.openggf.net.client.MasterClient;
 import com.openggf.net.client.RaceClient;
+import com.openggf.net.client.RaceConnection;
+import com.openggf.net.host.HostMasterLink;
 import com.openggf.net.host.RaceHostServer;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfile;
@@ -90,6 +94,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 
 import static org.lwjgl.glfw.Callbacks.*;
 import static org.lwjgl.glfw.GLFW.*;
@@ -201,7 +210,10 @@ public class Engine {
 	// Master title screen (game selection before ROM loading)
 	private MasterTitleScreen masterTitleScreen;
 	private RaceHostServer raceHostServer;
-	private RaceClient raceClient;
+	private RaceConnection raceConnection;
+	private MasterClient masterClient;
+	private String masterRoomId;
+	private Thread masterHeartbeatThread;
 	private MultiplayerRaceCoordinator multiplayerRaceCoordinator;
 	private ControlMessage.RoundConfig multiplayerRoundConfig;
 	private String multiplayerCharacter;
@@ -278,6 +290,12 @@ public class Engine {
 			@Override
 			public void join(TimeAttackLaunchRequest request, String address) {
 				joinTimeAttackRoom(request, address);
+			}
+
+			@Override
+			public void browse(TimeAttackLaunchRequest request, String policy,
+							   String lockedCharacter, int windowSeconds) {
+				browseTimeAttackRooms(request, policy, lockedCharacter, windowSeconds);
 			}
 		});
 		this.gameLoop.setReturnToMasterTitleHandler(this::returnToMasterTitleScreen);
@@ -1197,17 +1215,187 @@ public class Engine {
 		}
 	}
 
-	private void finishRoomJoin(RaceClient client) {
-		raceClient = client;
+	private void finishRoomJoin(RaceConnection client) {
+		raceConnection = client;
 		if (multiplayerCharacter != null) {
 			client.sendControl(new ControlMessage.SelectCharacter(multiplayerCharacter));
 		}
 		ClientRaceSession session = new ClientRaceSession(System::currentTimeMillis);
 		session.applyJoin(client.joinAccepted());
 		multiplayerRaceCoordinator = new MultiplayerRaceCoordinator(
-				new ClientRaceTransport(client), session);
+				RaceTransport.from(client), session);
 		gameLoop.setMultiplayerRaceCoordinator(multiplayerRaceCoordinator);
 		openRaceLobbyOnCurrentTitle();
+	}
+
+	private void browseTimeAttackRooms(TimeAttackLaunchRequest request, String policy,
+			String lockedCharacter, int windowSeconds) {
+		leaveTimeAttackRoom();
+		String configuredUrl = configService.getString(
+				SonicConfiguration.TIME_ATTACK_NET_MASTER_URL);
+		if (configuredUrl == null || configuredUrl.isBlank()) {
+			LOGGER.warning("Master browsing is disabled: timeAttack.net.masterUrl is blank");
+			if (masterTitleScreen != null) {
+				masterTitleScreen.tryOpenTimeAttackMenu();
+			}
+			return;
+		}
+		try {
+			PlayerIdentity identity = PlayerIdentity.loadOrCreate(Path.of("identity"));
+			String displayName = multiplayerDisplayName(identity);
+			String fingerprint = fingerprintForGame(request.gameId());
+			SSLContext ssl = configService.getBoolean(
+					SonicConfiguration.TIME_ATTACK_NET_MASTER_TRUST_INSECURE)
+					? insecureMasterSslContext() : null;
+			masterClient = MasterClient.connect(URI.create(configuredUrl.trim()), identity,
+					displayName, fingerprint, ssl)
+					.get(MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 2000,
+							TimeUnit.MILLISECONDS);
+			multiplayerRoundConfig = new ControlMessage.RoundConfig(request.gameId(),
+					request.zone(), request.act(), windowSeconds, policy, lockedCharacter);
+			multiplayerCharacter = request.character();
+			if (masterTitleScreen != null) {
+				masterTitleScreen.openServerBrowser(new ServerBrowserScreen(masterClient,
+						request.gameId(), masterTitleScreen.pixelFont(), browserActions(
+								identity, displayName, fingerprint)));
+			}
+		} catch (Exception e) {
+			LOGGER.warning("Unable to browse time attack rooms: " + rootMessage(e));
+			closeMasterBrowser();
+		}
+	}
+
+	private ServerBrowserScreen.Actions browserActions(PlayerIdentity identity,
+			String displayName, String fingerprint) {
+		return new ServerBrowserScreen.Actions() {
+			@Override public void join(ControlMessage.RoomSummary room) {
+				joinMasterRoom(room, identity, displayName, fingerprint);
+			}
+
+			@Override public void create(String routing) {
+				createMasterRoom(routing, identity, displayName, fingerprint);
+			}
+
+			@Override public void back() {
+				closeMasterBrowser();
+			}
+		};
+	}
+
+	private void joinMasterRoom(ControlMessage.RoomSummary room, PlayerIdentity identity,
+			String displayName, String fingerprint) {
+		try {
+			RaceConnection connection = masterClient.joinRoom(room.roomId(), identity,
+					displayName, fingerprint)
+					.get(MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS,
+							TimeUnit.MILLISECONDS);
+			masterRoomId = room.roomId();
+			ControlMessage.RoomDescriptor joined = connection.joinAccepted().room();
+			multiplayerRoundConfig = new ControlMessage.RoundConfig(joined.gameId(), joined.zone(),
+					joined.act(), multiplayerRoundConfig.windowSeconds(), joined.characterPolicy(),
+					joined.lockedCharacter());
+			if (joined.lockedCharacter() != null) {
+				multiplayerCharacter = joined.lockedCharacter();
+			}
+			hostingTimeAttackRoom = false;
+			finishRoomJoin(connection);
+		} catch (Exception e) {
+			LOGGER.warning("Unable to join master room: " + rootMessage(e));
+		}
+	}
+
+	private void createMasterRoom(String routing, PlayerIdentity identity,
+			String displayName, String fingerprint) {
+		try {
+			boolean direct = "DIRECT".equals(routing);
+			if (direct) {
+				RoomHostConfig room = new RoomHostConfig(displayName + "'s room",
+						multiplayerRoundConfig.gameId(), multiplayerRoundConfig.zone(),
+						multiplayerRoundConfig.act(), multiplayerRoundConfig.characterPolicy(),
+						multiplayerRoundConfig.lockedCharacter(), 8, fingerprint);
+				raceHostServer = RaceHostServer.start(
+						configService.getInt(SonicConfiguration.TIME_ATTACK_NET_HOST_PORT),
+						room, identity, TrackValidationProfileSource.none());
+			}
+			ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
+					displayName + "'s room", multiplayerRoundConfig.gameId(),
+					multiplayerRoundConfig.zone(), multiplayerRoundConfig.act(),
+					multiplayerRoundConfig.characterPolicy(),
+					multiplayerRoundConfig.lockedCharacter(), 8, false);
+			ControlMessage.RoomCreated created = masterClient.createRoom(descriptor,
+					routing, direct ? raceHostServer.port() : 0, fingerprint)
+					.get(MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, TimeUnit.MILLISECONDS);
+			masterRoomId = created.roomId();
+			if (direct) {
+				masterClient.bindHostLink(HostMasterLink.forServer(raceHostServer,
+						new HostMasterLink.MessageSink() {
+							@Override public void sendControl(ControlMessage message) {
+								masterClient.sendControl(message);
+							}
+							@Override public void sendBinary(byte[] data) {
+								masterClient.sendBinary(data);
+							}
+						}));
+			}
+			if (direct) {
+				startMasterHeartbeat();
+			}
+			RaceConnection connection = masterClient.joinRoom(created.roomId(), identity,
+					displayName, fingerprint)
+					.get(MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS,
+							TimeUnit.MILLISECONDS);
+			hostingTimeAttackRoom = true;
+			finishRoomJoin(connection);
+		} catch (Exception e) {
+			LOGGER.warning("Unable to create master room: " + rootMessage(e));
+			if (raceHostServer != null) {
+				raceHostServer.close();
+				raceHostServer = null;
+			}
+		}
+	}
+
+	private void startMasterHeartbeat() {
+		if (masterHeartbeatThread != null) {
+			masterHeartbeatThread.interrupt();
+		}
+		masterHeartbeatThread = Thread.ofVirtual().name("time-attack-master-heartbeat").start(() -> {
+			try {
+				while (!Thread.currentThread().isInterrupted() && masterClient != null
+						&& masterClient.isOpen() && masterRoomId != null) {
+					Thread.sleep(5000);
+					int players = raceHostServer == null ? 1 : raceHostServer.room().playerCount();
+					masterClient.heartbeat(masterRoomId, players);
+				}
+			} catch (InterruptedException ignored) {
+				Thread.currentThread().interrupt();
+			}
+		});
+	}
+
+	private void closeMasterBrowser() {
+		if (masterTitleScreen != null) {
+			masterTitleScreen.closeServerBrowser();
+		}
+		if (masterClient != null) {
+			masterClient.close();
+			masterClient = null;
+		}
+		if (masterTitleScreen != null) {
+			masterTitleScreen.tryOpenTimeAttackMenu();
+		}
+	}
+
+	private static SSLContext insecureMasterSslContext() throws Exception {
+		LOGGER.warning("TIME ATTACK MASTER TLS CERTIFICATE VERIFICATION IS DISABLED");
+		TrustManager[] trustAll = {new X509TrustManager() {
+			@Override public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+			@Override public void checkClientTrusted(X509Certificate[] chain, String authType) { }
+			@Override public void checkServerTrusted(X509Certificate[] chain, String authType) { }
+		}};
+		SSLContext context = SSLContext.getInstance("TLS");
+		context.init(null, trustAll, new SecureRandom());
+		return context;
 	}
 
 	private void openRaceLobbyOnCurrentTitle() {
@@ -1284,8 +1472,20 @@ public class Engine {
 			multiplayerRaceCoordinator.shutdown();
 		}
 		multiplayerRaceCoordinator = null;
-		raceClient = null;
+		raceConnection = null;
 		gameLoop.setMultiplayerRaceCoordinator(null);
+		if (masterHeartbeatThread != null) {
+			masterHeartbeatThread.interrupt();
+			masterHeartbeatThread = null;
+		}
+		if (masterClient != null) {
+			if (masterRoomId != null && masterClient.isOpen()) {
+				masterClient.leaveRoom(masterRoomId);
+			}
+			masterClient.close();
+			masterClient = null;
+		}
+		masterRoomId = null;
 		if (raceHostServer != null) {
 			raceHostServer.close();
 			raceHostServer = null;
@@ -1296,15 +1496,6 @@ public class Engine {
 		if (reopenMenu && masterTitleScreen != null) {
 			masterTitleScreen.tryOpenTimeAttackMenu();
 		}
-	}
-
-	private record ClientRaceTransport(RaceClient client) implements RaceTransport {
-		@Override public List<RaceClient.InboundEvent> drainInbound() { return client.drainInbound(); }
-		@Override public void sendControl(ControlMessage message) { client.sendControl(message); }
-		@Override public void sendBinary(byte[] data) { client.sendBinary(data); }
-		@Override public int playerSlot() { return client.playerSlot(); }
-		@Override public boolean isOpen() { return client.isOpen(); }
-		@Override public void close() { client.close(); }
 	}
 
 	static Optional<com.openggf.game.save.SaveReason> dataSelectLaunchSaveReason(

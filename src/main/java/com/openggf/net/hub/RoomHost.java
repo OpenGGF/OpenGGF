@@ -15,6 +15,8 @@ import java.util.function.LongSupplier;
 /** Single-threaded room protocol driver and owner of its hub and round state. */
 public final class RoomHost {
     public static final long ADMISSION_TIMEOUT_MILLIS = 5000;
+    public static final long STANDINGS_PAGE_INTERVAL_MILLIS = 2000;
+    public static final int STANDINGS_PAGE_SIZE = 10;
     private static final int TOKEN_STRIKE_LIMIT = 3;
 
     private static final class Member {
@@ -29,6 +31,7 @@ public final class RoomHost {
         String character;
         long memberSinceMillis;
         long lastChatMillis = Long.MIN_VALUE;
+        long lastStandingsPageMillis = Long.MIN_VALUE;
         int tokenStrikes;
         int violationsThisRound;
         boolean finishedThisRound;
@@ -300,10 +303,25 @@ public final class RoomHost {
             case ControlMessage.AttemptStart ignored -> { }
             case ControlMessage.AttemptReset ignored -> { }
             case ControlMessage.AttemptFinish finish -> {
-                round.onAttemptFinish(member.slot, member.displayName, member.character,
+                HostRoundEngine.FinishOutcome outcome = round.onAttemptFinish(
+                        member.slot, member.displayName, member.character,
                         finish, hub.isAttemptFlagged(member.slot));
                 member.finishedThisRound = round.standings().stream()
                         .anyMatch(row -> row.slot() == member.slot);
+                if (outcome != null && outcome.outsideBroadcastCap()) {
+                    send(member, new ControlMessage.RankUpdate(
+                            outcome.rank(), finish.timeFrames()));
+                }
+            }
+            case ControlMessage.StandingsPageRequest request -> {
+                if (member.lastStandingsPageMillis == Long.MIN_VALUE
+                        || now - member.lastStandingsPageMillis
+                        >= STANDINGS_PAGE_INTERVAL_MILLIS) {
+                    member.lastStandingsPageMillis = now;
+                    send(member, new ControlMessage.StandingsPage(
+                            round.page(request.page(), STANDINGS_PAGE_SIZE),
+                            request.page(), round.totalPages(STANDINGS_PAGE_SIZE)));
+                }
             }
             default -> drop(member,
                     "illegal client message " + message.getClass().getSimpleName());
@@ -337,6 +355,10 @@ public final class RoomHost {
                 member.connection.sendText(encoded);
             }
         }
+    }
+
+    private static void send(Member member, ControlMessage message) {
+        member.connection.sendText(ControlCodec.encode(null, message));
     }
 
     private int lowestFreeSlot() {
