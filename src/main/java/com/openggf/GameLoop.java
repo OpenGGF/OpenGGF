@@ -3942,7 +3942,8 @@ public class GameLoop {
             ssProvider.toggleLagCompensationDisplay();
         }
 
-        // Lag compensation adjustment (F6 decrease, F7 increase)
+        // The lag ratios are trace-derived rather than tunable: F6 disables the
+        // model and F7 restores it while the F1 overlay is visible.
         if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F6)) {
             adjustLagCompensation(-0.05);
         }
@@ -3975,27 +3976,15 @@ public class GameLoop {
         ssProvider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
     }
 
-    /**
-     * Adjusts the lag compensation factor for the entire special stage simulation.
-     * The lag compensation simulates original Mega Drive hardware lag frames,
-     * affecting track animation, player movement, object speed, and all other
-     * timing.
-     *
-     * @param delta Amount to adjust (positive = more lag compensation = slower
-     *              simulation)
-     */
+    /** Enables or disables the trace-derived special-stage lag model. */
     private void adjustLagCompensation(double delta) {
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
         if (!ssProvider.isInitialized() || !ssProvider.adjustLagCompensationIfDisplayEnabled(delta)) {
             return;
         }
 
-        // Calculate effective simulation rate for display
-        // Base is 60 fps. With lag compensation, effective = 60 * (1 - lagComp)
-        double effectiveUpdates = 60.0 * (1.0 - ssProvider.getLagCompensation());
-
-        LOGGER.info(String.format("Lag compensation: %.0f%% (effective ~%.1f updates/sec)",
-                ssProvider.getLagCompensation() * 100, effectiveUpdates));
+        LOGGER.info("Special-stage lag model: "
+                + (ssProvider.getLagCompensation() > 0.0 ? "enabled" : "disabled"));
     }
 
     // ==================== Ending / Credits Sequence Methods ====================

@@ -36,6 +36,7 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertEquals(Sonic2SpecialStageManager.ResultState.RUNNING, get(manager, "resultState"));
         assertEquals(true, get(manager, "emeraldCollected"));
         assertEquals(123, get(manager, "frameCounter"));
+        assertEquals(87, get(manager, "renderFrameCounter"));
         assertEquals(0x11, get(manager, "heldButtons"));
         assertEquals(0x22, get(manager, "pressedButtons"));
         assertEquals(0x33, get(manager, "p2HeldButtons"));
@@ -78,7 +79,6 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertEquals(0.5, (double) get(manager, "alignmentRainbowSpeedAccumulator"), 0.0001);
         assertEquals(true, get(manager, "alignmentStepByTrackFrame"));
         assertEquals(0.25, (double) get(manager, "lagCompensation"), 0.0001);
-        assertEquals(0.75, (double) get(manager, "lagAccumulator"), 0.0001);
         assertEquals(true, get(manager, "lagCompensationDisplayEnabled"));
         assertEquals(1_234_567L, get(manager, "diagnosticWallStartTime"));
         assertEquals(8, get(manager, "diagnosticUpdateCount"));
@@ -336,6 +336,7 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "resultState", Sonic2SpecialStageManager.ResultState.RUNNING);
         set(manager, "emeraldCollected", true);
         set(manager, "frameCounter", 123);
+        set(manager, "renderFrameCounter", 87);
         set(manager, "heldButtons", 0x11);
         set(manager, "pressedButtons", 0x22);
         set(manager, "p2HeldButtons", 0x33);
@@ -378,7 +379,6 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "alignmentRainbowSpeedAccumulator", 0.5);
         set(manager, "alignmentStepByTrackFrame", true);
         set(manager, "lagCompensation", 0.25);
-        set(manager, "lagAccumulator", 0.75);
         set(manager, "lagCompensationDisplayEnabled", true);
         set(manager, "diagnosticWallStartTime", 1_234_567L);
         set(manager, "diagnosticUpdateCount", 8);
@@ -411,6 +411,7 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "resultState", Sonic2SpecialStageManager.ResultState.FAILED);
         set(manager, "emeraldCollected", false);
         set(manager, "frameCounter", 999);
+        set(manager, "renderFrameCounter", 999);
         set(manager, "heldButtons", 999);
         set(manager, "pressedButtons", 999);
         set(manager, "p2HeldButtons", 999);
@@ -453,7 +454,6 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "alignmentRainbowSpeedAccumulator", 9.0);
         set(manager, "alignmentStepByTrackFrame", false);
         set(manager, "lagCompensation", 0.5);
-        set(manager, "lagAccumulator", 0.5);
         set(manager, "lagCompensationDisplayEnabled", false);
         set(manager, "diagnosticWallStartTime", 99L);
         set(manager, "diagnosticUpdateCount", 99);

@@ -51,6 +51,7 @@ public class Sonic2SpecialStageManagerTest {
 
         Sonic2SpecialStageSnapshot after = manager.captureRewindSnapshot();
         assertEquals(before.frameCounter, after.frameCounter);
+        assertEquals(before.renderFrameCounter, after.renderFrameCounter);
         assertEquals(before.lastDrawingIndex, after.lastDrawingIndex);
         assertEquals(before.recurringMainPassPending, after.recurringMainPassPending);
         assertEquals(before.trackAnimator, after.trackAnimator);
@@ -82,14 +83,37 @@ public class Sonic2SpecialStageManagerTest {
         assertEquals(initial, manager.getLagCompensation(), 0.0001);
 
         manager.toggleLagCompensationDisplay();
+        assertTrue(manager.adjustLagCompensationIfDisplayEnabled(-0.05),
+                "F6 should disable the model after F1 enables the display");
+        assertEquals(0.0, manager.getLagCompensation(), 0.0001);
         assertTrue(manager.adjustLagCompensationIfDisplayEnabled(0.05),
-                "F6/F7-style adjustments should apply after F1 enables the display");
-        assertEquals(initial + 0.05, manager.getLagCompensation(), 0.0001);
+                "F7 should re-enable the model without tuning its derived ratio");
+        assertEquals(initial, manager.getLagCompensation(), 0.0001);
 
         manager.toggleLagCompensationDisplay();
         assertFalse(manager.adjustLagCompensationIfDisplayEnabled(-0.05),
                 "F6/F7-style adjustments should stop applying after the display is toggled off");
-        assertEquals(initial + 0.05, manager.getLagCompensation(), 0.0001);
+        assertEquals(initial, manager.getLagCompensation(), 0.0001);
+    }
+
+    @Test
+    void lagAccumulatorIsRetiredBecauseTheModelIsStateless() {
+        assertThrows(NoSuchFieldException.class,
+                () -> Sonic2SpecialStageManager.class.getDeclaredField("lagAccumulator"));
+        assertThrows(NoSuchFieldException.class,
+                () -> Sonic2SpecialStageSnapshot.class.getDeclaredField("lagAccumulator"));
+    }
+
+    @Test
+    void disabledLagOverlaySeparatesActualRateFromTargetBucket() {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        manager.setLagCompensation(0);
+
+        String text = manager.formatLagCompensationOverlayText();
+
+        assertTrue(text.contains("actual 0.0%"));
+        assertTrue(text.contains("~60 upd/s"));
+        assertTrue(text.contains("target seg=3 speed=0"));
     }
 
     @Test

@@ -23,6 +23,7 @@ import com.openggf.debug.DebugColor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Logger;
 
 import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.*;
@@ -115,6 +116,8 @@ public class Sonic2SpecialStageManager {
     private Sonic2SpecialStageRenderer renderer;
     private SpecialStageBackgroundRenderer bgRenderer;
     private int frameCounter = 0;
+    /** Last executed logic/render phase; Vint_Lag intentionally leaves it latched. */
+    private int renderFrameCounter = 0;
 
     private enum PlaneDebugMode {
         BOTH("Plane A + Plane B"),
@@ -239,26 +242,9 @@ public class Sonic2SpecialStageManager {
     private int diagnosticUpdateCount = 0;
     private int diagnosticTrackAdvances = 0;
 
-    /**
-     * Lag compensation factor to simulate original hardware lag frames.
-     *
-     * The original Mega Drive special stage VBlank handler (Vint_S2SS) does heavy
-     * DMA transfers (~3500 bytes: palette, sprites, H-scroll, 1/4 plane table).
-     * When this can't complete in one VBlank period, Vint_Lag runs instead,
-     * which does NOT run the main game loop - effectively skipping that entire
-     * frame.
-     *
-     * Our Java implementation runs at consistent 60fps with no lag, making the
-     * entire simulation appear ~35% faster than the original hardware. This factor
-     * compensates by skipping a proportional number of update frames entirely.
-     *
-     * Value of 0.35 means ~35% of frames are "lag frames" (entire update skipped):
-     * - Original theoretical: 60 updates/sec
-     * - Original with lag: ~39 effective updates/sec
-     * - This affects track animation, player movement, object speed, everything
-     */
-    private double lagCompensation = 0.35;
-    private double lagAccumulator = 0.0;
+    /** Legacy zero/off control retained for trace launchers; not a pacing ratio. */
+    private static final double LAG_MODEL_ENABLED_VALUE = 0.35;
+    private double lagCompensation = LAG_MODEL_ENABLED_VALUE;
     private boolean lagCompensationDisplayEnabled = false;
 
     // Skydome scroll state (accumulated horizontal scroll for background)
@@ -760,7 +746,7 @@ public class Sonic2SpecialStageManager {
         }
 
         // Only update every 8 frames (matches original: andi.b #7,d0; bne.s +)
-        if ((frameCounter & 7) != 0) {
+        if ((renderFrameCounter & 7) != 0) {
             return;
         }
 
@@ -1083,11 +1069,26 @@ public class Sonic2SpecialStageManager {
             return;
         }
 
-        // Lag compensation: simulate original hardware lag frames
-        // by skipping entire update frames proportionally
-        lagAccumulator += lagCompensation;
-        if (lagAccumulator >= 1.0) {
-            lagAccumulator -= 1.0;
+        // frameCounter is the host-frame input to the stateless lag model. It
+        // must advance on skipped frames as well as executed logical frames so
+        // a lag decision cannot repeat forever after rewind or normal play.
+        frameCounter++;
+
+        // A zero compatibility factor is the existing trace-replay force-off
+        // switch. Any positive value enables the trace-derived model; the
+        // numeric value no longer controls pacing.
+        int lagSpeedFactor = trackAnimator != null ? trackAnimator.getSpeedFactor() : 0;
+        int lagSegmentType = trackAnimator != null
+                ? trackAnimator.getCurrentSegmentType()
+                : Sonic2SpecialStageConstants.SEGMENT_STRAIGHT;
+        int liveObjectCount = objectManager != null ? objectManager.getActiveObjects().size() : 0;
+        if (lagCompensation > 0.0
+                && Sonic2SpecialStageLagModel.shouldLagThisFrame(
+                        frameCounter,
+                        lagSpeedFactor,
+                        lagSegmentType,
+                        drawingIndex,
+                        liveObjectCount)) {
             // No VInt/control-copy occurred, so a physical press edge sampled
             // only on this skipped update must not survive into the next one.
             // P2's current mapper exposes logical held state (not a separate
@@ -1099,6 +1100,11 @@ public class Sonic2SpecialStageManager {
             lastFrameTime = System.nanoTime();
             return; // Skip this entire frame (simulate lag)
         }
+
+        // Vint_runcount advances at VintRet even when intervening VInts took the
+        // lag path. Publish the current successful VInt phase before RunObjects
+        // consumes global blink/palette cadence (s2.asm:507-508,71616-71633).
+        renderFrameCounter = frameCounter;
 
         // The recorder can observe VInt/draw/stream/scroll state before the later
         // RunObjects phase completes. Publish only that prior RunObjects work at
@@ -1129,8 +1135,6 @@ public class Sonic2SpecialStageManager {
             }
         }
         lastFrameTime = now;
-
-        frameCounter++;
 
         // Lag compensation diagnostics - track actual timing
         if (diagnosticWallStartTime == 0) {
@@ -2013,7 +2017,7 @@ public class Sonic2SpecialStageManager {
             lastDecodedFrameIndex = frameIndex;
             lastDecodedFlipped = flipped;
 
-            if (frameCounter % 60 == 0) {
+            if (renderFrameCounter % 60 == 0) {
                 LOGGER.fine("Decoded track frame " + frameIndex +
                         " (flipped=" + flipped + "), segment " +
                         trackAnimator.getCurrentSegmentIndex() +
@@ -2055,7 +2059,7 @@ public class Sonic2SpecialStageManager {
 
         boolean renderPlaneB = planeDebugMode.renderPlaneB();
         boolean renderPlaneA = planeDebugMode.renderPlaneA();
-        renderer.setFrameCounter(frameCounter);
+        renderer.setFrameCounter(renderFrameCounter);
 
         if (renderPlaneB) {
             // Use shader-based background rendering if available
@@ -2124,7 +2128,7 @@ public class Sonic2SpecialStageManager {
                     objectManager != null && objectManager.isRingsToGoEnabled()) {
                 int ringsCollected = objectManager.getRingsCollected();
                 int ringsToGo = currentRingRequirement - ringsCollected;
-                renderer.renderRingsToGoHUD(ringsToGo, frameCounter);
+                renderer.renderRingsToGoHUD(ringsToGo, renderFrameCounter);
             }
         }
 
@@ -2247,14 +2251,38 @@ public class Sonic2SpecialStageManager {
         // Position at bottom-left of screen
         int y = 14;
 
-        // Calculate effective updates per second: base 60 * (1 - lagComp)
-        double effectiveUpdates = 60.0 * (1.0 - lagCompensation);
-
         lagCompensationTextRenderer.drawTextOutlined(
-                String.format("Lag: %.0f%% (~%.0f upd/s)  F6/F7", lagCompensation * 100, effectiveUpdates),
+                formatLagCompensationOverlayText(),
                 8, y, DebugColor.YELLOW, FontSize.SMALL);
 
         lagCompensationTextRenderer.end();
+    }
+
+    String formatLagCompensationOverlayText() {
+        int speedFactor = trackAnimator != null ? trackAnimator.getSpeedFactor() : 0;
+        int segmentType = trackAnimator != null
+                ? trackAnimator.getCurrentSegmentType()
+                : Sonic2SpecialStageConstants.SEGMENT_STRAIGHT;
+        Sonic2SpecialStageLagModel.BucketRatio bucket =
+                Sonic2SpecialStageLagModel.ratioForBucket(segmentType, speedFactor);
+        if (lagCompensation <= 0.0) {
+            return String.format(Locale.ROOT,
+                    "Lag model OFF: actual 0.0%% (~60 upd/s); target seg=%d speed=%d %.1f%% (%d/%d)  F7 ON",
+                    segmentType,
+                    speedFactor,
+                    bucket.fraction() * 100.0,
+                    bucket.numerator(),
+                    bucket.denominator());
+        }
+        double effectiveUpdates = 60.0 * (1.0 - bucket.fraction());
+        return String.format(Locale.ROOT,
+                "Lag model ON: seg=%d speed=%d %.1f%% (%d/%d, ~%.0f upd/s)  F6 OFF",
+                segmentType,
+                speedFactor,
+                bucket.fraction() * 100.0,
+                bucket.numerator(),
+                bucket.denominator(),
+                effectiveUpdates);
     }
 
     /**
@@ -2284,9 +2312,9 @@ public class Sonic2SpecialStageManager {
     }
 
     /**
-     * Gets the lag compensation factor.
+     * Gets the legacy lag-model enable control.
      * 
-     * @return Value between 0.0 and 0.5 representing proportion of frames skipped
+     * @return zero when forced off; a positive compatibility value when enabled
      */
     public double getLagCompensation() {
         return lagCompensation;
@@ -2306,17 +2334,20 @@ public class Sonic2SpecialStageManager {
             return false;
         }
 
-        setLagCompensation(lagCompensation + delta);
+        if (delta < 0.0) {
+            setLagCompensation(0.0);
+        } else if (delta > 0.0) {
+            setLagCompensation(LAG_MODEL_ENABLED_VALUE);
+        }
         return true;
     }
 
     /**
-     * Sets the lag compensation factor.
-     * Value of 0.35 means ~35% of frames are "lag frames" (entire update skipped).
-     * Range: 0.0 (no compensation) to 0.5 (half the frames are lag).
+     * Compatibility setter retained for trace launchers. Zero forces the lag
+     * model off; any positive value enables the trace-derived bucket model.
      */
     public void setLagCompensation(double factor) {
-        this.lagCompensation = Math.max(0.0, Math.min(0.5, factor));
+        this.lagCompensation = factor <= 0.0 ? 0.0 : LAG_MODEL_ENABLED_VALUE;
     }
 
     public int getCurrentStage() {
@@ -2364,7 +2395,6 @@ public class Sonic2SpecialStageManager {
 
         initialized = false;
         currentStage = 0;
-        lagAccumulator = 0.0;
         lagCompensationDisplayEnabled = false;
 
         trackAnimator = null;
@@ -2517,6 +2547,7 @@ public class Sonic2SpecialStageManager {
                 resultState,
                 emeraldCollected,
                 frameCounter,
+                renderFrameCounter,
                 heldButtons,
                 pressedButtons,
                 p2HeldButtons,
@@ -2559,7 +2590,6 @@ public class Sonic2SpecialStageManager {
                 alignmentRainbowSpeedAccumulator,
                 alignmentStepByTrackFrame,
                 lagCompensation,
-                lagAccumulator,
                 lagCompensationDisplayEnabled,
                 diagnosticWallStartTime,
                 diagnosticUpdateCount,
@@ -2599,6 +2629,7 @@ public class Sonic2SpecialStageManager {
         resultState = snapshot.resultState;
         emeraldCollected = snapshot.emeraldCollected;
         frameCounter = snapshot.frameCounter;
+        renderFrameCounter = snapshot.renderFrameCounter;
         heldButtons = snapshot.heldButtons;
         pressedButtons = snapshot.pressedButtons;
         p2HeldButtons = snapshot.p2HeldButtons;
@@ -2645,7 +2676,6 @@ public class Sonic2SpecialStageManager {
         alignmentRainbowSpeedAccumulator = snapshot.alignmentRainbowSpeedAccumulator;
         alignmentStepByTrackFrame = snapshot.alignmentStepByTrackFrame;
         lagCompensation = snapshot.lagCompensation;
-        lagAccumulator = snapshot.lagAccumulator;
         lagCompensationDisplayEnabled = snapshot.lagCompensationDisplayEnabled;
         diagnosticWallStartTime = snapshot.diagnosticWallStartTime;
         diagnosticUpdateCount = snapshot.diagnosticUpdateCount;

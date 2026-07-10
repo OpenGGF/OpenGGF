@@ -10,6 +10,7 @@ final class Sonic2SpecialStageSnapshot {
     final Sonic2SpecialStageManager.ResultState resultState;
     final boolean emeraldCollected;
     final int frameCounter;
+    final int renderFrameCounter;
     final int heldButtons;
     final int pressedButtons;
     final int p2HeldButtons;
@@ -52,7 +53,6 @@ final class Sonic2SpecialStageSnapshot {
     final double alignmentRainbowSpeedAccumulator;
     final boolean alignmentStepByTrackFrame;
     final double lagCompensation;
-    final double lagAccumulator;
     final boolean lagCompensationDisplayEnabled;
     final long diagnosticWallStartTime;
     final int diagnosticUpdateCount;
@@ -91,6 +91,7 @@ final class Sonic2SpecialStageSnapshot {
             Sonic2SpecialStageManager.ResultState resultState,
             boolean emeraldCollected,
             int frameCounter,
+            int renderFrameCounter,
             int heldButtons,
             int pressedButtons,
             int p2HeldButtons,
@@ -133,7 +134,6 @@ final class Sonic2SpecialStageSnapshot {
             double alignmentRainbowSpeedAccumulator,
             boolean alignmentStepByTrackFrame,
             double lagCompensation,
-            double lagAccumulator,
             boolean lagCompensationDisplayEnabled,
             long diagnosticWallStartTime,
             int diagnosticUpdateCount,
@@ -170,6 +170,7 @@ final class Sonic2SpecialStageSnapshot {
         this.resultState = resultState;
         this.emeraldCollected = emeraldCollected;
         this.frameCounter = frameCounter;
+        this.renderFrameCounter = renderFrameCounter;
         this.heldButtons = heldButtons;
         this.pressedButtons = pressedButtons;
         this.p2HeldButtons = p2HeldButtons;
@@ -212,7 +213,6 @@ final class Sonic2SpecialStageSnapshot {
         this.alignmentRainbowSpeedAccumulator = alignmentRainbowSpeedAccumulator;
         this.alignmentStepByTrackFrame = alignmentStepByTrackFrame;
         this.lagCompensation = lagCompensation;
-        this.lagAccumulator = lagAccumulator;
         this.lagCompensationDisplayEnabled = lagCompensationDisplayEnabled;
         this.diagnosticWallStartTime = diagnosticWallStartTime;
         this.diagnosticUpdateCount = diagnosticUpdateCount;

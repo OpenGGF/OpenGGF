@@ -155,6 +155,56 @@ class Sonic2SpecialStageBootstrapCadenceTest {
     }
 
     @Test
+    void statelessLagAdvancesHostClockWhileRenderPhaseLatchesAndZeroKeepsReplayForceOff()
+            throws Exception {
+        manager.setLagCompensation(0.35);
+        boolean observedLag = false;
+
+        for (int hostFrame = 0; hostFrame < 30 && !observedLag; hostFrame++) {
+            Sonic2SpecialStageSnapshot before = manager.captureRewindSnapshot();
+            manager.draw();
+            int renderedBefore = rendererFrameCounter();
+            manager.update();
+            Sonic2SpecialStageSnapshot after = manager.captureRewindSnapshot();
+            if (after.intro.phaseTimer() == before.intro.phaseTimer()) {
+                observedLag = true;
+                assertEquals(before.frameCounter + 1, after.frameCounter,
+                        "the existing snapshotted host/model clock advances on lag");
+                manager.draw();
+                assertEquals(renderedBefore, rendererFrameCounter(),
+                        "Vint_Lag must reuse the prior render phase and sprite visibility");
+
+                boolean laterExecuted = false;
+                for (int retry = 0; retry < 100 && !laterExecuted; retry++) {
+                    int timerBefore = manager.captureRewindSnapshot().intro.phaseTimer();
+                    manager.update();
+                    laterExecuted = manager.captureRewindSnapshot().intro.phaseTimer() > timerBefore;
+                }
+                assertTrue(laterExecuted,
+                        "advancing host phase must prevent a pure lag decision from freezing forever");
+                Sonic2SpecialStageSnapshot resumed = manager.captureRewindSnapshot();
+                manager.draw();
+                assertEquals(resumed.frameCounter, rendererFrameCounter(),
+                        "the next executed VInt must catch presentation phase up to Vint_runcount");
+            }
+        }
+        assertTrue(observedLag, "normal play must produce a trace-derived lag frame");
+
+        manager.setLagCompensation(0);
+        Sonic2SpecialStageSnapshot forceOffStart = manager.captureRewindSnapshot();
+        manager.draw();
+        int forceOffRenderFrame = rendererFrameCounter();
+        for (int hostFrame = 0; hostFrame < 5; hostFrame++) {
+            manager.update();
+        }
+        Sonic2SpecialStageSnapshot replayPaced = manager.captureRewindSnapshot();
+        manager.draw();
+        assertEquals(forceOffStart.frameCounter + 5, replayPaced.frameCounter);
+        assertEquals(forceOffRenderFrame + 5, rendererFrameCounter(),
+                "setLagCompensation(0) must continue to execute every replay-paced frame");
+    }
+
+    @Test
     void jumpPressWhollyInsideFadeDoesNotLeakIntoFirstRecurringMainPass() {
         advanceThroughStartupRunObjects();
 
@@ -178,15 +228,14 @@ class Sonic2SpecialStageBootstrapCadenceTest {
     @Test
     void lagSkippedFadePressReleasedBeforeNextVintDoesNotLeakIntoDrop() {
         advanceThroughStartupRunObjects();
-        for (int update = 0; update < 20; update++) {
+        for (int update = 0; update < 10; update++) {
             manager.handleInput(0, 0);
             manager.update();
         }
-        assertEquals(20, manager.captureRewindSnapshot().intro.phaseTimer());
+        assertEquals(10, manager.captureRewindSnapshot().intro.phaseTimer());
 
-        manager.setLagCompensation(0.5);
-        manager.handleInput(0, 0);
-        manager.update(); // executes fade update 21 and primes the lag accumulator
+        manager.setLagCompensation(0.35);
+        advanceUntilNextLagFrame(0);
 
         manager.handleInput(0x10, 0x10);
         manager.update(); // skipped: no VInt/control copy occurred
@@ -198,11 +247,13 @@ class Sonic2SpecialStageBootstrapCadenceTest {
                 "lag skip preserves the last executed VInt's sampled input");
         assertEquals(0, skipped.pendingMainPressedButtons);
 
+        manager.setLagCompensation(0);
         manager.handleInput(0, 0);
-        manager.update(); // release is sampled by final fade update
+        while (manager.getIntro().getCurrentPhase() == Sonic2SpecialStageIntro.Phase.FADE_FROM_WHITE) {
+            manager.update();
+        }
         assertEquals(Sonic2SpecialStageIntro.Phase.DROP, manager.getIntro().getCurrentPhase());
 
-        manager.setLagCompensation(0);
         manager.update(); // first DROP VInt
         manager.update(); // publish its pending RunObjects pass
 
@@ -214,31 +265,33 @@ class Sonic2SpecialStageBootstrapCadenceTest {
     @Test
     void lagSkippedFadePressHeldThroughNextVintFeedsExactlyOnePreStartPass() {
         advanceThroughStartupRunObjects();
-        for (int update = 0; update < 20; update++) {
+        for (int update = 0; update < Sonic2SpecialStageIntro.FADE_FROM_WHITE_FRAMES; update++) {
             manager.handleInput(0, 0);
             manager.update();
         }
+        assertEquals(Sonic2SpecialStageIntro.Phase.DROP,
+                manager.getIntro().getCurrentPhase());
 
-        manager.setLagCompensation(0.5);
-        manager.handleInput(0, 0);
-        manager.update(); // executes fade update 21 and primes the lag accumulator
+        manager.setLagCompensation(0.35);
+        advanceUntilNextLagFrame(0);
 
         manager.handleInput(0x10, 0x10);
         manager.update(); // skipped physical edge; held state remains current
 
+        manager.setLagCompensation(0);
         manager.handleInput(0x10, 0);
-        manager.update(); // next executed VInt must synthesize the held transition
+        manager.update(); // next executed VInt synthesizes the held transition
         Sonic2SpecialStageSnapshot sampledHeld = manager.captureRewindSnapshot();
         assertEquals(0x10, sampledHeld.previousPhysicalPressedButtons);
         assertEquals(0x10, sampledHeld.previousPhysicalHeldButtons);
 
-        manager.setLagCompensation(0);
         manager.handleInput(0x10, 0);
         manager.update(); // pre-start loop copies the prior raw word before WaitForVint
         Sonic2SpecialStageSnapshot scheduledEdge = manager.captureRewindSnapshot();
         assertEquals(0x10, scheduledEdge.pendingMainPressedButtons);
         assertEquals(0, scheduledEdge.previousPhysicalPressedButtons,
                 "unchanged held input must not synthesize a second press");
+        assertEquals(0x10, scheduledEdge.previousPhysicalHeldButtons);
 
         manager.handleInput(0x10, 0);
         manager.update(); // publishes the one pre-start logical edge
@@ -493,13 +546,13 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         manager.update();
         assertEquals(0x08, manager.captureRewindSnapshot().previousPhysicalHeldButtons);
 
-        manager.setLagCompensation(0.5);
-        manager.handleInput(0x08, 0);
-        manager.update(); // executed: primes lag accumulator, held remains established
+        manager.setLagCompensation(0.35);
+        advanceUntilNextLagFrame(0x08);
 
         manager.handleInput(0, 0);
         manager.update(); // skipped release: ReadJoypads never observes it
 
+        manager.setLagCompensation(0);
         manager.handleInput(0x08, 0x08);
         manager.update(); // executed re-press row, but last executed held was already RIGHT
 
@@ -525,15 +578,14 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         manager.handleInput(0x08, 0);
         manager.update();
 
-        manager.setLagCompensation(0.5);
-        manager.handleInput(0x08, 0);
-        manager.update(); // executed: primes lag accumulator with RIGHT established
+        manager.setLagCompensation(0.35);
+        advanceUntilNextLagFrame(0x08);
         manager.handleInput(0, 0);
         manager.update(); // skipped release
+        manager.setLagCompensation(0);
         manager.handleInput(0x08, 0x08);
         manager.update(); // executed mapper re-press must latch raw press zero
 
-        manager.setLagCompensation(0);
         manager.handleInput(0x08, 0);
         manager.update(); // pre-start loop copies the preceding executed raw word
 
@@ -566,6 +618,32 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         manager.update(); // players, fixed banner, then later dynamic slot
 
         assertEquals(List.of("110:" + (initialBannerY + 1)), dynamicObservations);
+    }
+
+    @Test
+    void deferredMainPassReadsTheCurrentExecutedVintPhase() {
+        advanceToGameplay();
+        Sonic2SpecialStageSnapshot before = manager.captureRewindSnapshot();
+        assertTrue(before.recurringMainPassPending);
+        int[] observedPhase = {-1};
+        manager.getObjectManager().getActiveObjects().add(new Sonic2SpecialStageRing() {
+            @Override
+            public void update(
+                    int currentTrackFrame,
+                    boolean trackFlipped,
+                    int speedFactor,
+                    boolean drawingIndex4) {
+                observedPhase[0] = manager.captureRewindSnapshot().renderFrameCounter;
+            }
+        });
+
+        manager.update();
+
+        Sonic2SpecialStageSnapshot after = manager.captureRewindSnapshot();
+        assertEquals(before.frameCounter + 1, after.frameCounter);
+        assertEquals(after.frameCounter, observedPhase[0],
+                "RunObjects after VInt must read that VInt's global run-count phase");
+        assertEquals(after.frameCounter, after.renderFrameCounter);
     }
 
     @Test
@@ -729,10 +807,37 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         assertEquals(0, manager.captureRewindSnapshot().intro.phaseTimer());
     }
 
+    private void advanceUntilNextLagFrame(int heldButtons) {
+        for (int hostFrame = 0; hostFrame < 100; hostFrame++) {
+            Sonic2SpecialStageSnapshot snapshot = manager.captureRewindSnapshot();
+            if (Sonic2SpecialStageLagModel.shouldLagThisFrame(
+                    snapshot.frameCounter + 1,
+                    snapshot.trackAnimator.speedFactor(),
+                    snapshot.trackAnimator.currentSegmentType(),
+                    snapshot.drawingIndex,
+                    snapshot.objectManager.activeObjects().size())) {
+                return;
+            }
+            manager.handleInput(heldButtons, 0);
+            manager.update();
+        }
+        throw new AssertionError("lag model did not produce a lag frame within 100 host frames");
+    }
+
+    private int rendererFrameCounter() throws Exception {
+        java.lang.reflect.Field rendererField = Sonic2SpecialStageManager.class.getDeclaredField("renderer");
+        rendererField.setAccessible(true);
+        Object renderer = rendererField.get(manager);
+        java.lang.reflect.Field frameField = Sonic2SpecialStageRenderer.class.getDeclaredField("frameCounter");
+        frameField.setAccessible(true);
+        return frameField.getInt(renderer);
+    }
+
     private static void assertTerminalBoundaryStateUnchanged(
             Sonic2SpecialStageSnapshot expected,
             Sonic2SpecialStageSnapshot actual) {
         assertEquals(expected.frameCounter, actual.frameCounter);
+        assertEquals(expected.renderFrameCounter, actual.renderFrameCounter);
         assertEquals(expected.lastDrawingIndex, actual.lastDrawingIndex);
         assertEquals(expected.recurringMainPassPending, actual.recurringMainPassPending);
         assertEquals(expected.pendingMainHeldButtons, actual.pendingMainHeldButtons);
