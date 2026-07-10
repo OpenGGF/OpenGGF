@@ -1272,28 +1272,39 @@ public class Sonic2SpecialStageManager {
 
     private void scheduleRecurringMainPass(boolean checkpointStep) {
         recurringMainPassPending = true;
-        // The ROM copies Ctrl_1/Ctrl_2 logical before WaitForVint. RunObjects
-        // after the current VInt therefore consumes the previously sampled
-        // physical word, not the current row's input (s2.asm:6674-6688).
-        pendingMainHeldButtons = previousPhysicalHeldButtons;
-        pendingMainPressedButtons = previousPhysicalPressedButtons;
-        pendingMainP2HeldButtons = previousPhysicalP2HeldButtons;
-        pendingMainP2LogicalButtons = previousPhysicalP2LogicalButtons;
+        // Before SpecialStage_Started, main copies Ctrl_1/2 before WaitForVint;
+        // once Obj5F advances the semantic intro gate, the gameplay loop copies
+        // the freshly read word after the wait. Keep those two ROM loops distinct
+        // (s2.asm:6674-6688, 6694-6721, 837-875, 9745).
+        boolean gameplayControls = intro != null && intro.isSpecialStageStarted();
+        pendingMainHeldButtons = gameplayControls ? heldButtons : previousPhysicalHeldButtons;
+        pendingMainPressedButtons = gameplayControls
+                // ReadJoypads derives press from the last VInt it executed. A
+                // mapper edge across a lag-skipped release/re-press must not
+                // override that raw comparison (s2.asm:1361-1387).
+                ? currentExecutedRawPressedButtons()
+                : previousPhysicalPressedButtons;
+        pendingMainP2HeldButtons = gameplayControls ? p2HeldButtons : previousPhysicalP2HeldButtons;
+        pendingMainP2LogicalButtons = gameplayControls
+                ? p2LogicalButtons
+                : previousPhysicalP2LogicalButtons;
         pendingMainCheckpointStep = checkpointStep;
     }
 
     private void latchCurrentPhysicalInputForNextVint() {
-        // A lag-skipped physical edge is intentionally discarded above. If the
-        // button is still held when a VInt finally executes, reconstruct exactly
-        // one edge from the transition relative to the last executed VInt's held
-        // sample. Explicit mapper edges are ORed in for ordinary non-lag updates.
-        int effectivePressedButtons = pressedButtons
-                | (heldButtons & ~previousPhysicalHeldButtons);
+        // ReadJoypads compares held state at executed VInts. Physical mapper
+        // edges whose release or press occurred only on skipped updates are not
+        // separate ROM observations (s2.asm:1361-1387).
+        int effectivePressedButtons = currentExecutedRawPressedButtons();
         previousPhysicalHeldButtons = heldButtons;
         previousPhysicalPressedButtons = effectivePressedButtons;
         previousPhysicalP2HeldButtons = p2HeldButtons;
         previousPhysicalP2LogicalButtons = p2LogicalButtons;
         pressedButtons = 0;
+    }
+
+    private int currentExecutedRawPressedButtons() {
+        return heldButtons & ~previousPhysicalHeldButtons;
     }
 
     /**

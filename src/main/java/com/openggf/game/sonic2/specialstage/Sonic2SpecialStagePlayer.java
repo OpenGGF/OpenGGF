@@ -414,9 +414,12 @@ public class Sonic2SpecialStagePlayer {
     }
 
     private void ssObjectMove() {
-        // Add inertia to angle: angle += inertia >> 8
-        // Inertia is signed, so positive = left (increasing angle), negative = right
-        int angleChange = inertia >> 8;
+        // ROM branches on the sign, negates negative inertia, then performs an
+        // unsigned magnitude shift before subtracting it. That truncates both
+        // directions toward zero; Java's signed >> would round a negative
+        // fractional value such as -$60 down to -1 (s2.asm:69718-69735).
+        int angleMagnitude = Math.abs(inertia) >> 8;
+        int angleChange = inertia < 0 ? -angleMagnitude : angleMagnitude;
         angle = (angle + angleChange) & 0xFF;
 
         // Calculate track-space position from angle and depth

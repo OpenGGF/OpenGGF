@@ -209,7 +209,7 @@ class Sonic2SpecialStageBootstrapCadenceTest {
     }
 
     @Test
-    void lagSkippedFadePressHeldThroughNextVintProducesExactlyOneLogicalEdge() {
+    void lagSkippedFadePressHeldThroughNextVintFeedsExactlyOnePreStartPass() {
         advanceThroughStartupRunObjects();
         for (int update = 0; update < 20; update++) {
             manager.handleInput(0, 0);
@@ -231,14 +231,14 @@ class Sonic2SpecialStageBootstrapCadenceTest {
 
         manager.setLagCompensation(0);
         manager.handleInput(0x10, 0);
-        manager.update(); // schedules the synthesized edge, then observes no repeat
+        manager.update(); // pre-start loop copies the prior raw word before WaitForVint
         Sonic2SpecialStageSnapshot scheduledEdge = manager.captureRewindSnapshot();
         assertEquals(0x10, scheduledEdge.pendingMainPressedButtons);
         assertEquals(0, scheduledEdge.previousPhysicalPressedButtons,
                 "unchanged held input must not synthesize a second press");
 
         manager.handleInput(0x10, 0);
-        manager.update(); // publishes the one scheduled jump edge
+        manager.update(); // publishes the one pre-start logical edge
         Sonic2SpecialStageSnapshot afterJump = manager.captureRewindSnapshot();
         assertEquals(Sonic2SpecialStagePlayer.RoutineState.JUMPING,
                 manager.getSonicPlayer().getRoutine());
@@ -247,30 +247,115 @@ class Sonic2SpecialStageBootstrapCadenceTest {
     }
 
     @Test
-    void currentVintRightInputReachesPlayersAndTailsHistoryOnFollowingCopyWaitCycle() {
+    void currentVintRightInputIsCopiedAfterWaitIntoSameRunObjectsPass() {
+        advanceToGameplay();
+
+        manager.handleInput(0x08, 0);
+        manager.update(); // VInt reads RIGHT; main copies raw Ctrl_1 after WaitForVint
+        assertEquals(0, manager.getSonicPlayer().getInertia());
+        assertEquals(0x08, manager.captureRewindSnapshot().pendingMainHeldButtons,
+                "the current VInt raw word must feed its following RunObjects pass");
+
+        manager.handleInput(0x08, 0);
+        manager.update(); // publishes the RunObjects pass scheduled above
+
+        assertEquals(-0x60, manager.getSonicPlayer().getInertia());
+        assertEquals(0x08, manager.captureRewindSnapshot().tailsCtrlRecordBuf[0]);
+    }
+
+    @Test
+    void wait2MessageCreationSwitchesTheFollowingVintToCurrentInput() {
+        advanceThroughStartupRunObjects();
+        int updatesRemaining = 1_000;
+        while ((manager.getIntro().getCurrentPhase() != Sonic2SpecialStageIntro.Phase.WAIT2
+                || manager.captureRewindSnapshot().intro.phaseTimer()
+                        < Sonic2SpecialStageConstants.INTRO_WAIT2_FRAMES - 1)
+                && updatesRemaining-- > 0) {
+            manager.handleInput(0, 0);
+            manager.update();
+        }
+
+        assertEquals(Sonic2SpecialStageIntro.Phase.WAIT2,
+                manager.getIntro().getCurrentPhase());
+        assertEquals(Sonic2SpecialStageConstants.INTRO_WAIT2_FRAMES - 1,
+                manager.captureRewindSnapshot().intro.phaseTimer());
+        assertFalse(manager.getIntro().isSpecialStageStarted());
+        Sonic2SpecialStageSnapshot beforeStart = manager.captureRewindSnapshot();
+
+        manager.handleInput(0x08, 0);
+        manager.update();
+
+        assertEquals(Sonic2SpecialStageIntro.Phase.MESSAGE_FLYOUT,
+                manager.getIntro().getCurrentPhase(),
+                "Obj5F message creation sets SpecialStage_Started at this boundary");
+        assertTrue(manager.getIntro().isSpecialStageStarted());
+        assertEquals(0x08, manager.captureRewindSnapshot().pendingMainHeldButtons,
+                "the loop after message creation copies current input after WaitForVint");
+        Sonic2SpecialStageSnapshot afterStart = manager.captureRewindSnapshot();
+
+        manager.restoreRewindSnapshot(beforeStart);
+        assertFalse(manager.getIntro().isSpecialStageStarted());
+        manager.restoreRewindSnapshot(afterStart);
+        assertTrue(manager.getIntro().isSpecialStageStarted(),
+                "rewind must restore the latched ROM control-loop boundary");
+    }
+
+    @Test
+    void gameplayLagSkippedReleaseThenRepressDoesNotCreateRawPressEdge() {
+        advanceToGameplay();
+
+        manager.handleInput(0x08, 0x08);
+        manager.update();
+        manager.handleInput(0x08, 0);
+        manager.update();
+        assertEquals(0x08, manager.captureRewindSnapshot().previousPhysicalHeldButtons);
+
+        manager.setLagCompensation(0.5);
+        manager.handleInput(0x08, 0);
+        manager.update(); // executed: primes lag accumulator, held remains established
+
+        manager.handleInput(0, 0);
+        manager.update(); // skipped release: ReadJoypads never observes it
+
+        manager.handleInput(0x08, 0x08);
+        manager.update(); // executed re-press row, but last executed held was already RIGHT
+
+        Sonic2SpecialStageSnapshot resumed = manager.captureRewindSnapshot();
+        assertEquals(0x08, resumed.pendingMainHeldButtons);
+        assertEquals(0, resumed.pendingMainPressedButtons,
+                "ROM raw press compares current held with the last executed VInt held sample");
+    }
+
+    @Test
+    void preStartLagSkippedReleaseThenRepressDoesNotLeakIntoFollowingCopy() {
         advanceThroughStartupRunObjects();
         for (int update = 0; update < Sonic2SpecialStageIntro.FADE_FROM_WHITE_FRAMES; update++) {
             manager.handleInput(0, 0);
             manager.update();
         }
+        assertEquals(Sonic2SpecialStageIntro.Phase.DROP,
+                manager.getIntro().getCurrentPhase());
+        assertFalse(manager.getIntro().isSpecialStageStarted());
 
+        manager.handleInput(0x08, 0x08);
+        manager.update();
         manager.handleInput(0x08, 0);
-        manager.update(); // f160 VInt: schedules the previously sampled neutral word
-        assertEquals(0, manager.getSonicPlayer().getInertia());
+        manager.update();
 
+        manager.setLagCompensation(0.5);
         manager.handleInput(0x08, 0);
-        manager.update(); // publishes f160's neutral logical word
+        manager.update(); // executed: primes lag accumulator with RIGHT established
+        manager.handleInput(0, 0);
+        manager.update(); // skipped release
+        manager.handleInput(0x08, 0x08);
+        manager.update(); // executed mapper re-press must latch raw press zero
 
-        assertEquals(0, manager.getSonicPlayer().getInertia(),
-                "current VInt input must not reach the prior pending RunObjects pass");
-        assertEquals(0, manager.captureRewindSnapshot().tailsCtrlRecordBuf[0],
-                "Tails history must receive the same prior logical word as Sonic");
-
+        manager.setLagCompensation(0);
         manager.handleInput(0x08, 0);
-        manager.update(); // publishes the RIGHT word copied by the prior cycle
+        manager.update(); // pre-start loop copies the preceding executed raw word
 
-        assertTrue(manager.getSonicPlayer().getInertia() < 0);
-        assertEquals(0x08, manager.captureRewindSnapshot().tailsCtrlRecordBuf[0]);
+        assertEquals(0, manager.captureRewindSnapshot().pendingMainPressedButtons,
+                "the skipped release must not leak through previousPhysicalPressedButtons");
     }
 
     @Test
@@ -360,9 +445,10 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         assertTrue(scheduled.recurringMainPassPending);
         assertEquals(0x08, scheduled.pendingMainHeldButtons);
         assertEquals(0x08, scheduled.pendingMainPressedButtons,
-                "held transition at the last executed fade VInt synthesizes one edge");
+                "pre-start loop copies the held transition sampled by the final fade VInt");
         assertFalse(scheduled.pendingMainCheckpointStep);
         assertEquals(0, scheduled.previousPhysicalHeldButtons);
+        assertEquals(0, scheduled.previousPhysicalPressedButtons);
         assertEquals(0, scheduled.pressedButtons,
                 "scheduling consumes the live press edge immediately");
 
@@ -417,5 +503,15 @@ class Sonic2SpecialStageBootstrapCadenceTest {
                 manager.captureRewindSnapshot().playerBootstrapPhase);
         assertEquals(Sonic2SpecialStagePlayer.RoutineState.NORMAL,
                 manager.getSonicPlayer().getRoutine());
+    }
+
+    private void advanceToGameplay() {
+        advanceThroughStartupRunObjects();
+        int updatesRemaining = 1_000;
+        while (!manager.getIntro().isComplete() && updatesRemaining-- > 0) {
+            manager.handleInput(0, 0);
+            manager.update();
+        }
+        assertTrue(manager.getIntro().isComplete(), "intro should reach semantic gameplay gate");
     }
 }

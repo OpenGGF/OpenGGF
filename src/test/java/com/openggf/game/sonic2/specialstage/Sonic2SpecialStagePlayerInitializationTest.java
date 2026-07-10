@@ -67,6 +67,30 @@ class Sonic2SpecialStagePlayerInitializationTest {
         assertTrue(tails.isSpawned(), "Obj10 init must not own object-slot presence");
     }
 
+    @Test
+    void negativeFractionalInertiaTruncatesTowardZeroBeforeChangingAngle() {
+        Sonic2SpecialStagePlayer sonic = new Sonic2SpecialStagePlayer(
+                Sonic2SpecialStagePlayer.PlayerType.SONIC, true);
+        sonic.initializeScalarStateFromRomObjectRoutine();
+
+        sonic.update(0x08, 0);
+        assertEquals(-0x60, sonic.getInertia());
+        assertEquals(0x40, sonic.getAngle(),
+                "ROM negates negative inertia before its logical >>8 magnitude step");
+        assertEquals(0, sonic.getSSXPos());
+        assertEquals(0x6E, sonic.getSSYPos());
+
+        sonic.update(0x08, 0);
+        assertEquals(-0xC0, sonic.getInertia());
+        assertEquals(0x40, sonic.getAngle());
+
+        sonic.update(0x08, 0);
+        assertEquals(-0x120, sonic.getInertia());
+        assertEquals(0x3F, sonic.getAngle());
+        assertEquals(2, sonic.getSSXPos());
+        assertEquals(0x6D, sonic.getSSYPos());
+    }
+
     private static void assertZeroedInit(Sonic2SpecialStagePlayer player) {
         assertEquals(Sonic2SpecialStagePlayer.RoutineState.INIT, player.getRoutine());
         assertEquals(0, player.getSSXPos());

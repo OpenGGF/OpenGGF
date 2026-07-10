@@ -16,10 +16,11 @@ import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.*
  * 4. DROP phase: Banner drops from y=-64 to y=72 (136 frames at 1 pixel/frame)
  * 5. WAIT1 phase: Pause while letters "explode" off banner (15 frames)
  * 6. WAIT2 phase: Display ring requirement message (31 frames)
- * 7. GAMEPLAY: Normal gameplay begins (SpecialStage_Started is set)
+ * 7. MESSAGE_FLYOUT: Ring message exists and SpecialStage_Started is set
+ * 8. GAMEPLAY: Intro presentation has fully cleared
  *
- * The "GET X RINGS" message appears at the start of GAMEPLAY and displays
- * for 70 frames before flying off screen.
+ * Creating the "GET X RINGS" message enters MESSAGE_FLYOUT, sets
+ * SpecialStage_Started, and displays it for 70 frames before flying off screen.
  *
  * During the intro sequence:
  * - Track animation runs during ROM_STARTUP, freezes during FADE_FROM_WHITE, then resumes
@@ -100,6 +101,7 @@ public class Sonic2SpecialStageIntro {
     private Phase currentPhase = Phase.PRE_ROLL;
     private int phaseTimer = 0;
     private int frameCounter = 0;
+    private boolean specialStageStarted;
 
     // Banner state
     private int bannerX = INTRO_BANNER_X;
@@ -158,6 +160,7 @@ public class Sonic2SpecialStageIntro {
         currentPhase = Phase.PRE_ROLL;
         phaseTimer = 0;
         frameCounter = 0;
+        specialStageStarted = false;
 
         bannerX = INTRO_BANNER_X;
         bannerY = INTRO_BANNER_START_Y;
@@ -369,6 +372,11 @@ public class Sonic2SpecialStageIntro {
         if (phaseTimer >= INTRO_WAIT2_FRAMES) {
             currentPhase = Phase.MESSAGE_FLYOUT;
             phaseTimer = 0;
+            // Obj5F creates the ring-requirement message, sets
+            // SpecialStage_Started, and deletes itself in this same object pass
+            // (s2.asm:9734-9746). Keep this latched through later checkpoint
+            // message reuse of WAIT2.
+            specialStageStarted = true;
             LOGGER.fine("Intro: WAIT2 complete, entering MESSAGE_FLYOUT");
         }
     }
@@ -506,6 +514,7 @@ public class Sonic2SpecialStageIntro {
                 currentPhase,
                 phaseTimer,
                 frameCounter,
+                specialStageStarted,
                 bannerX,
                 bannerY,
                 bannerVisible,
@@ -525,6 +534,7 @@ public class Sonic2SpecialStageIntro {
         currentPhase = snapshot.currentPhase();
         phaseTimer = snapshot.phaseTimer();
         frameCounter = snapshot.frameCounter();
+        specialStageStarted = snapshot.specialStageStarted();
         bannerX = snapshot.bannerX();
         bannerY = snapshot.bannerY();
         bannerVisible = snapshot.bannerVisible();
@@ -575,6 +585,15 @@ public class Sonic2SpecialStageIntro {
      */
     public boolean isComplete() {
         return currentPhase == Phase.GAMEPLAY;
+    }
+
+    /**
+     * Returns the ROM's latched {@code SpecialStage_Started} state. This turns
+     * on when Obj5F creates the initial ring message at the WAIT2 boundary,
+     * before the message flyout presentation completes (s2.asm:9734-9746).
+     */
+    public boolean isSpecialStageStarted() {
+        return specialStageStarted;
     }
 
     /**

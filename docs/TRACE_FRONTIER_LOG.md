@@ -40,6 +40,58 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage Obj09 recurring input and signed inertia step
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `5a15e0a4a`. The atomic
+pass-end trace first diverged at f890 because two engine errors partly cancelled:
+the recurring loop fed Obj09 the preceding VInt's input word, while its negative
+fractional inertia conversion moved one pass too early.
+
+- PC-execute evidence: `C:\tmp\s2ss-input-cadence.txt`, SHA-256
+  `79013220E442CEC845D187ADABA24823B44194980C8825B18D8BE11183C9902E`;
+  trace f870-f910 / BizHawk f3624-f3664. Hooks covered `ReadJoypads`
+  (`$111C`/`$1156`), the recurring logical copy (`$52A0-$52AC`), Obj09
+  (`$338EC`), and `RunObjects_End` (`$15FE4`). At trace f888 / BizHawk f3642,
+  Vint_S2SS changed raw Ctrl_1 from `$00/$00` to RIGHT `$08/$08`, the recurring
+  main loop copied logical `$08/$08` before Obj09, yet pass end remained
+  x=`$0000`, y=`$006E`, angle=`$40`. The next RIGHT pass also remained centered;
+  the third reached x=`$0002`, y=`$006D`, angle=`$3F`.
+- ROM mechanism: the recurring gameplay path copies freshly read Ctrl_1/2
+  after `WaitForVint`, immediately before `RunObjects` (`s2.asm:6694-6721`),
+  unlike the earlier pre-start loop's copy position. `SSObjectMove` branches on
+  the inertia sign, negates a negative word, logically shifts its magnitude by
+  eight, then subtracts it (`s2.asm:69718-69735`). Thus `-$60` and `-$C0`
+  truncate to zero and `-$120` first moves one angle unit; Java's signed `>> 8`
+  had rounded `-$60` to `-1`.
+- RED commands:
+  `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePlayerInitializationTest#negativeFractionalInertiaTruncatesTowardZeroBeforeChangingAngle" test`
+  failed expected angle 64 / actual 63; after the arithmetic correction,
+  `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest#currentVintRightInputIsCopiedAfterWaitIntoSameRunObjectsPass" test`
+  failed expected pending held 8 / actual 0.
+- GREEN/neighborhood command:
+  `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.specialstage.*Test,com.openggf.game.sonic2.specialstage.Test*,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`
+  passed 76/76. The fade/lag tests preserve the distinct pre-start rule: a press
+  sampled by the last fade VInt feeds exactly one pass through the prior-word
+  copy and is not repeated. A boundary assertion advances WAIT2 through Obj5F
+  message creation and proves MESSAGE_FLYOUT already uses current-VInt input,
+  matching the latched `SpecialStage_Started` flag. Rewind captures both that
+  latch and the selected pending held/pressed words. A gameplay lag regression
+  holds RIGHT across executed VInts, hides a release in a skipped update, then
+  supplies a mapper re-press edge; the pending ROM press remains zero because
+  `ReadJoypads` compares held state against the last VInt it actually executed.
+  The paired pre-start regression executes one additional prior-word copy and
+  proves the same false edge is not retained in `previousPhysicalPressedButtons`.
+- Before (`5a15e0a4a`): 12,271 errors / 10 warnings, first error f890
+  `sonic_ss_x` expected 0, actual 2 (y 110/109, angle 64/63).
+- After (uncommitted implementation measurement): 11,049 errors / 10 warnings,
+  first error f896 `sonic_ss_x` expected 13, actual 7 (angle 59/61). This removes
+  1,222 errors (9.96%) from the immediate baseline and leaves 27.85% reduction
+  from the original 15,313-error Stage-1 baseline, below the required 50% gate.
+  The next f896 root is a separate RunObjects observation/cadence question around
+  lag-labelled VBlank rows; the probe shows later catch-up, so no lag/frame
+  predicate or further player-math compensation is included here.
+
 ## 2026-07-10 - S2 special-stage atomic RunObjects-end comparison capture
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch
@@ -200,10 +252,10 @@ observation (`s2.asm:837-876,960-982,3460-3483,6665-6690,7026-7091`).
   waits. The final startup `RunObjects` pass transitions the intro into a public
   ROM-counted 22-update `FADE_FROM_WHITE`; each fade update preserves track
   frame/duration (elapsed 4), drawing index, skydome/vscroll, initialized player
-  fields, active-object state, and banner position. The f160 update ticks VInt to
-  drawing index 1 / elapsed timer 0 and schedules a semantic recurring-main pass
-  with the physical input sampled before the current VInt; the next executed
-  logical update first publishes the prior player/Tails-buffer, fixed banner,
+  fields, active-object state, and banner position. The f160 first-DROP update
+  ticks VInt to drawing index 1 / elapsed timer 0 but its pre-start loop schedules
+  the preceding raw word sampled by the final fade VInt before the wait; the next
+  executed logical update first publishes that deferred player/Tails-buffer, fixed banner,
   and later dynamic-object/collision work, then runs its current VInt. Current
   `SSTrack_Draw`, decode/perspective, streaming, and scroll
   remain synchronous, matching the recurring-loop order at `s2.asm:6679-6688`;
@@ -217,9 +269,9 @@ observation (`s2.asm:837-876,960-982,3460-3483,6665-6690,7026-7091`).
   compared f801. The engine is still zero at f791, then has two at f793-f799 and
   six at f801. This is a distinct active-object/collision timeline after the
   startup/fade pipeline aligns through the first compared frontier. Downstream
-  input-onset questions (including the later f888 movement window) remain
-  unadjudicated until this earlier ring root is fixed; CSV physical input plus
-  integer movement alone does not justify adding another logical-input latch.
+  input-onset questions (including the later f888 movement window) were left
+  unadjudicated at this point; the later f890 PC probe entry above resolves them
+  through the recurring copy position plus signed-magnitude movement semantics.
 
 ## 2026-07-10 - S2 special-stage Stage 1: defer Obj09/Obj10 init to first RunObjects
 

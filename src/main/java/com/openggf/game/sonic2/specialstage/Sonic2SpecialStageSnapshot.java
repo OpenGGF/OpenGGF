@@ -366,6 +366,7 @@ final class Sonic2SpecialStageSnapshot {
             Sonic2SpecialStageIntro.Phase currentPhase,
             int phaseTimer,
             int frameCounter,
+            boolean specialStageStarted,
             int bannerX,
             int bannerY,
             boolean bannerVisible,

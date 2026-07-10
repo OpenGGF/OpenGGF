@@ -79,6 +79,29 @@ boundary removes the f799 false mismatch and moves the first trustworthy
 frontier to f890 player position/angle, with the first combined-ring mismatch
 now f920.
 
+### 2026-07-10 f890 player-control correction
+
+A bounded PC-execute probe resolved f890 as two partly compensating engine
+errors. In the active recurring loop, `Vint_S2SS` reads the current joypad word
+during `WaitForVint` and the main thread copies that fresh raw word to
+`Ctrl_1_Logical` immediately before `RunObjects` (`s2.asm:6694-6721`). Obj5F
+latches `SpecialStage_Started` when WAIT2 creates the ring-requirement message
+(`s2.asm:9734-9746`), so MESSAGE_FLYOUT and GAMEPLAY select this source while
+pre-start DROP/WAIT1/WAIT2 retain the preceding raw word copied before their wait
+(`s2.asm:6674-6688`). The engine snapshots this semantic latch so later
+checkpoint-message reuse cannot re-lock the control-copy path. Separately, Obj09's
+`SSObjectMove` negates negative inertia and logically shifts the magnitude
+before subtraction (`s2.asm:69718-69735`), truncating `-$60` and `-$C0` to zero
+where Java's signed shift had produced `-1`. Modeling both rules moves the
+frontier to f896 and reduces the report from 12,271 to 11,049 errors. The f896
+residual is a separate pass-observation/cadence question around lag-labelled
+VBlank rows, not justification for another input latch or movement offset.
+The raw press byte stored at each executed VInt is likewise computed once from
+current held versus the last executed VInt held sample (`s2.asm:1361-1387`);
+BK2 mapper edges whose intervening release occurred entirely on a skipped update
+are neither ORed into the active pass nor retained for the following pre-start
+prior-word copy.
+
 ## Method (binding rules)
 
 - **Fix loop:** per the `trace-replay-bug-fixing` skill — take the FIRST
