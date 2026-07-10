@@ -7,6 +7,9 @@ import org.lwjgl.opengl.GL;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -18,6 +21,30 @@ import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 
 public class TestDisplayShaderPipelineSmoke {
+
+    @Test
+    void frameStateRetainsViewportAndReusesTwoBackingsAcross600Frames() {
+        DisplayShaderPipeline.FrameStatePool pool = new DisplayShaderPipeline.FrameStatePool();
+        DisplayShaderPipeline.FrameState frameN = pool.obtainForTesting(1, 2, 320, 224);
+        DisplayShaderPipeline.FrameState frameNPlusOne = pool.obtainForTesting(3, 4, 640, 448);
+
+        assertEquals(1, frameN.viewportAt(0));
+        assertEquals(2, frameN.viewportAt(1));
+        assertEquals(320, frameN.viewportAt(2));
+        assertEquals(224, frameN.viewportAt(3));
+        assertEquals(3, frameNPlusOne.viewportAt(0));
+        assertEquals(448, frameNPlusOne.viewportAt(3));
+
+        Set<Object> states = Collections.newSetFromMap(new IdentityHashMap<>());
+        Set<Object> viewports = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (int frame = 0; frame < 600; frame++) {
+            DisplayShaderPipeline.FrameState state = pool.obtainForTesting(frame, 0, 320, 224);
+            states.add(state);
+            viewports.add(state.viewportBackingIdentity());
+        }
+        assertEquals(2, states.size());
+        assertEquals(2, viewports.size());
+    }
 
     @Test
     public void brokenShaderActivationReturnsFalseAndInactive() {

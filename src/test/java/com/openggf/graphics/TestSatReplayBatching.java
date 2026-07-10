@@ -13,6 +13,8 @@ import java.nio.FloatBuffer;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -131,6 +133,36 @@ public class TestSatReplayBatching {
         assertEquals(4, getIntField(graphicsManager.commands.get(0), "instanceCount"));
     }
 
+    @Test
+    void interruptedSatReplayCancelsPartialInstancedBatchWithoutDrawing() throws Exception {
+        InstancedPatternRenderer renderer = installInstancedRenderer();
+        PatternAtlas.Entry entry = new PatternAtlas.Entry(1, 0, 1, 0, 0, 0, 0, 1, 1);
+        setField(graphicsManager, "patternAtlas", new PatternAtlas(8, 8) {
+            private int lookups;
+
+            @Override
+            public Entry getEntry(int patternId) {
+                if (lookups++ == 0) {
+                    return entry;
+                }
+                throw new IllegalStateException("interrupted replay");
+            }
+        });
+        setField(graphicsManager, "combinedPaletteTextureId", 1);
+
+        graphicsManager.beginSpriteSatCollection();
+        graphicsManager.submitSpriteSatPiece(piece(10, 20, 0, false));
+        graphicsManager.submitSpriteSatPiece(piece(20, 20, 1, false));
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                graphicsManager::endSpriteSatCollectionAndReplay);
+
+        assertEquals("interrupted replay", failure.getMessage());
+        assertFalse(renderer.isBatchActive());
+        assertEquals(0, getIntField(renderer, "instanceCount"));
+        assertEquals(0, graphicsManager.commands.size(), "cancelling must not queue or draw the partial batch");
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     /**
@@ -139,11 +171,12 @@ public class TestSatReplayBatching {
      * (only InstancedBatchCommand.execute does), so the batching decision logic
      * is fully testable headlessly.
      */
-    private void installInstancedRenderer() throws Exception {
+    private InstancedPatternRenderer installInstancedRenderer() throws Exception {
         InstancedPatternRenderer renderer = new InstancedPatternRenderer(
                 graphicsManager, com.openggf.game.GameServices.configuration());
         setField(renderer, "supported", true);
         setField(graphicsManager, "instancedPatternRenderer", renderer);
+        return renderer;
     }
 
     private void cachePatterns(int count) {

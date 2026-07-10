@@ -254,21 +254,37 @@ public class GraphicsManager {
 			capturedCommands = new ArrayList<>();
 		}
 		commandCaptureTarget = capturedCommands;
+		int nextUnexecuted = 0;
+		boolean frameStateActive = false;
 		try {
 			producer.run();
 			if (headlessMode || capturedCommands.isEmpty() || !glInitialized) {
 				return;
 			}
 			PatternRenderCommand.resetFrameState();
+			frameStateActive = true;
 			for (int i = 0, n = capturedCommands.size(); i < n; i++) {
 				capturedCommands.get(i).execute(cameraX, cameraY, cameraWidth, cameraHeight);
+				nextUnexecuted = i + 1;
 			}
-			PatternRenderCommand.cleanupFrameState(this);
+		} catch (RuntimeException | Error failure) {
+			unwindCommands(capturedCommands, nextUnexecuted,
+					cameraX, cameraY, cameraWidth, cameraHeight, failure);
+			nextUnexecuted = capturedCommands.size();
+			throw failure;
 		} finally {
+			if (frameStateActive) {
+				cleanupPatternFrameState();
+			}
+			discardCommands(capturedCommands, nextUnexecuted);
 			commandCaptureTarget = previousCaptureTarget;
 			capturedCommands.clear();
 			captureListPool.addLast(capturedCommands);
 		}
+	}
+
+	void cleanupPatternFrameState() {
+		PatternRenderCommand.cleanupFrameState(this);
 	}
 
 	public <T> CompletableFuture<T> submitRenderThreadTask(Callable<T> callable) {
@@ -517,20 +533,47 @@ public class GraphicsManager {
 	 */
 	public void flushWithCamera(short cameraX, short cameraY, short cameraWidth, short cameraHeight) {
 		if (headlessMode || commands.isEmpty() || !glInitialized) {
+			discardCommands(commands, 0);
 			commands.clear();
 			return;
 		}
 
 		// Reset pattern render state for new batch of commands
 		PatternRenderCommand.resetFrameState();
-		for (GLCommandable command : commands) {
-			command.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+		int nextUnexecuted = 0;
+		try {
+			for (int i = 0, n = commands.size(); i < n; i++) {
+				commands.get(i).execute(cameraX, cameraY, cameraWidth, cameraHeight);
+				nextUnexecuted = i + 1;
+			}
+		} catch (RuntimeException | Error failure) {
+			unwindCommands(commands, nextUnexecuted,
+					cameraX, cameraY, cameraWidth, cameraHeight, failure);
+			nextUnexecuted = commands.size();
+			throw failure;
+		} finally {
+			// Cleanup pattern render state even if a custom command throws.
+			PatternRenderCommand.cleanupFrameState(this);
+			discardCommands(commands, nextUnexecuted);
+			commands.clear();
 		}
+	}
 
-		// Cleanup pattern render state after all commands
-		PatternRenderCommand.cleanupFrameState(this);
+	private static void discardCommands(List<? extends GLCommandable> queued, int fromIndex) {
+		for (int i = Math.max(0, fromIndex), n = queued.size(); i < n; i++) {
+			queued.get(i).discard();
+		}
+	}
 
-		commands.clear();
+	private static void unwindCommands(List<? extends GLCommandable> queued, int fromIndex,
+			int cameraX, int cameraY, int cameraWidth, int cameraHeight, Throwable failure) {
+		for (int i = Math.max(0, fromIndex), n = queued.size(); i < n; i++) {
+			try {
+				queued.get(i).unwindAfterFailure(cameraX, cameraY, cameraWidth, cameraHeight);
+			} catch (RuntimeException | Error cleanupFailure) {
+				failure.addSuppressed(cleanupFailure);
+			}
+		}
 	}
 
 	/**
@@ -1462,6 +1505,7 @@ public class GraphicsManager {
 		}
 		// Reset palette textures so they're rebuilt from scratch
 		clearPaletteTextures();
+		discardCommands(commands, 0);
 		commands.clear();
 	}
 
@@ -1470,6 +1514,8 @@ public class GraphicsManager {
 	 */
 	public void cleanup() {
 		clearPendingRenderThreadTasks();
+		discardCommands(commands, 0);
+		commands.clear();
 		if (headlessMode || !glInitialized) {
 			// In headless mode, just clear the tracking maps
 			if (patternAtlas != null) {
@@ -1554,6 +1600,7 @@ public class GraphicsManager {
 	 * Clears render command queues and palette caches.
 	 */
 	public void resetState() {
+		discardCommands(commands, 0);
 		commands.clear();
 		clearPendingRenderThreadTasks();
 		releasePerLevelResources();
@@ -1838,6 +1885,7 @@ public class GraphicsManager {
 		} finally {
 			useSpritePriorityShader = savedUseSpritePriorityShader;
 			// An exception mid-replay must not strand an open instanced batch.
+			instancedPatternRenderer.cancelBatch();
 			satReplayBatchOpen = false;
 		}
 	}

@@ -6,6 +6,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.game.GameId;
 
+import java.lang.reflect.Field;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -249,6 +252,111 @@ public class TestRenderContext {
         assertEquals(120, Byte.toUnsignedInt(c.r));
         assertEquals(60, Byte.toUnsignedInt(c.g));
         assertEquals(30, Byte.toUnsignedInt(c.b));
+    }
+
+    @Test
+    void headlessFlushDiscardsDeferredCommands() {
+        GraphicsManager graphics = new GraphicsManager();
+        graphics.initHeadless();
+        TrackingCommand command = new TrackingCommand(false);
+        graphics.registerCommand(command);
+
+        graphics.flushWithCamera((short) 0, (short) 0, (short) 320, (short) 224);
+
+        assertEquals(0, command.executions);
+        assertEquals(1, command.releases);
+    }
+
+    @Test
+    void executedAndExceptionalQueuesReleaseEveryCommandExactlyOnce() throws Exception {
+        GraphicsManager graphics = new GraphicsManager();
+        setBooleanField(graphics, "glInitialized", true);
+        TrackingCommand first = new TrackingCommand(false);
+        TrackingCommand throwing = new TrackingCommand(true);
+        TrackingCommand remaining = new TrackingCommand(false);
+        graphics.registerCommand(first);
+        graphics.registerCommand(throwing);
+        graphics.registerCommand(remaining);
+
+        assertThrows(IllegalStateException.class,
+                () -> graphics.flushWithCamera((short) 0, (short) 0, (short) 320, (short) 224));
+
+        assertEquals(1, first.executions);
+        assertEquals(1, throwing.executions);
+        assertEquals(0, remaining.executions);
+        assertEquals(1, first.releases);
+        assertEquals(1, throwing.releases);
+        assertEquals(1, remaining.releases);
+    }
+
+    @Test
+    void nestedHeadlessCaptureDiscardsCommandsAtTheirOwningDrain() {
+        GraphicsManager graphics = new GraphicsManager();
+        graphics.initHeadless();
+        TrackingCommand outerBefore = new TrackingCommand(false);
+        TrackingCommand inner = new TrackingCommand(false);
+        TrackingCommand outerAfter = new TrackingCommand(false);
+
+        graphics.executeCapturedCommands(() -> {
+            graphics.registerCommand(outerBefore);
+            graphics.executeCapturedCommands(() -> graphics.registerCommand(inner), 0, 0, 320, 224);
+            graphics.registerCommand(outerAfter);
+        }, 0, 0, 320, 224);
+
+        assertEquals(1, outerBefore.releases);
+        assertEquals(1, inner.releases);
+        assertEquals(1, outerAfter.releases);
+    }
+
+    @Test
+    void resetAndHeadlessCleanupDiscardQueuedCommands() {
+        GraphicsManager graphics = new GraphicsManager();
+        graphics.initHeadless();
+        TrackingCommand resetCommand = new TrackingCommand(false);
+        graphics.registerCommand(resetCommand);
+        graphics.resetState();
+        assertEquals(1, resetCommand.releases);
+
+        TrackingCommand cleanupCommand = new TrackingCommand(false);
+        graphics.registerCommand(cleanupCommand);
+        graphics.cleanup();
+        assertEquals(1, cleanupCommand.releases);
+    }
+
+    private static void setBooleanField(Object target, String fieldName, boolean value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setBoolean(target, value);
+    }
+
+    private static final class TrackingCommand implements GLCommandable {
+        private final boolean throwOnExecute;
+        private final AtomicBoolean released = new AtomicBoolean();
+        private int executions;
+        private int releases;
+
+        private TrackingCommand(boolean throwOnExecute) {
+            this.throwOnExecute = throwOnExecute;
+        }
+
+        @Override
+        public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            executions++;
+            try {
+                if (throwOnExecute) {
+                    throw new IllegalStateException("expected");
+                }
+            } finally {
+                discard();
+            }
+        }
+
+        @Override
+        public void discard() {
+            if (released.compareAndSet(false, true)) {
+                releases++;
+            }
+        }
     }
 
 }

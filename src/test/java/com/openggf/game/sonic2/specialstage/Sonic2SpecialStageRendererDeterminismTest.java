@@ -10,19 +10,102 @@ import com.openggf.level.PatternDesc;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.ArgumentMatchers.anyFloat;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class Sonic2SpecialStageRendererDeterminismTest {
+
+    @Test
+    void capturedFailureExecutesArmedFboEndOnceAndDiscardsOrdinaryTail() {
+        GraphicsManager graphics = new GraphicsManager();
+        graphics.setGlInitialized(true);
+        Sonic2SpecialStageManager.BackgroundCommandPool pool =
+                new Sonic2SpecialStageManager.BackgroundCommandPool();
+        SpecialStageBackgroundRenderer recordingRenderer = mock(SpecialStageBackgroundRenderer.class);
+        TrackingDiscardCommand ordinaryTail = new TrackingDiscardCommand();
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> graphics.executeCapturedCommands(() -> {
+                    graphics.registerCommand(pool.obtainBegin(recordingRenderer));
+                    graphics.registerCommand((cameraX, cameraY, cameraWidth, cameraHeight) -> {
+                        throw new IllegalStateException("middle");
+                    });
+                    graphics.registerCommand(pool.obtainEnd(recordingRenderer));
+                    graphics.registerCommand(ordinaryTail);
+                }, 0, 0, 320, 224));
+
+        assertEquals("middle", failure.getMessage());
+        verify(recordingRenderer, times(1)).beginTilePass(Sonic2SpecialStageManager.H32_HEIGHT);
+        verify(recordingRenderer, times(1)).endTilePass();
+        assertEquals(0, ordinaryTail.executions);
+        assertEquals(1, ordinaryTail.discards);
+    }
+
+    @Test
+    void deferredBackgroundCommandsRetainFramesReleaseOnFailureAndReuseTwoIdentities() {
+        Sonic2SpecialStageManager.BackgroundCommandPool pool =
+                new Sonic2SpecialStageManager.BackgroundCommandPool();
+        Sonic2SpecialStageManager.BackgroundCommand frameN = pool.obtainShader(null, 3, 5.0f);
+        Sonic2SpecialStageManager.BackgroundCommand frameNPlusOne = pool.obtainShader(null, 7, 11.0f);
+
+        assertEquals(3, frameN.hScroll());
+        assertEquals(5.0f, frameN.vScroll());
+        assertEquals(7, frameNPlusOne.hScroll());
+        assertEquals(11.0f, frameNPlusOne.vScroll());
+        frameN.discard();
+        frameNPlusOne.discard();
+
+        Set<Object> identities = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (int frame = 0; frame < 600; frame++) {
+            Sonic2SpecialStageManager.BackgroundCommand current = pool.obtainShader(null, frame, frame + 0.5f);
+            Sonic2SpecialStageManager.BackgroundCommand next = pool.obtainShader(null, frame + 1, frame + 1.5f);
+            identities.add(current);
+            identities.add(next);
+            current.discard();
+            next.discard();
+        }
+        assertEquals(2, identities.size());
+
+        SpecialStageBackgroundRenderer throwingRenderer = mock(SpecialStageBackgroundRenderer.class);
+        org.mockito.Mockito.doThrow(new IllegalStateException("expected"))
+                .when(throwingRenderer).renderWithShader(anyFloat());
+        Sonic2SpecialStageManager.BackgroundCommand throwing =
+                pool.obtainShader(throwingRenderer, 13, 17.0f);
+        assertThrows(IllegalStateException.class, () -> throwing.execute(0, 0, 320, 224));
+        Sonic2SpecialStageManager.BackgroundCommand reused = pool.obtainShader(null, 0, 0.0f);
+        assertSame(throwing, reused, "execute failure must release the command in finally");
+        reused.discard();
+    }
+
+    private static final class TrackingDiscardCommand implements GLCommandable {
+        private int executions;
+        private int discards;
+
+        @Override
+        public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            executions++;
+        }
+
+        @Override
+        public void discard() {
+            discards++;
+        }
+    }
 
     @Test
     void unchangedSnapshotRestoreKeepsStaticFboAndQueuesShaderAfterOrderedBuild() throws Exception {

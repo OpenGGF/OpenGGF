@@ -188,6 +188,13 @@ public class InstancedPatternRenderer {
         return batchActive;
     }
 
+    /** Cancels a partially built batch without creating or executing a draw command. */
+    public void cancelBatch() {
+        instanceCount = 0;
+        batchDisplayHeight = 0;
+        batchActive = false;
+    }
+
     public boolean addPattern(PatternAtlas.Entry entry, int paletteIndex, PatternDesc desc, int x, int y) {
         if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH) {
             return false;
@@ -310,6 +317,7 @@ public class InstancedPatternRenderer {
     }
 
     public void cleanup() {
+        cancelBatch();
         if (vaoId != 0) {
             glDeleteVertexArrays(vaoId);
         }
@@ -347,6 +355,7 @@ public class InstancedPatternRenderer {
      * Resets internal state without making GL calls.
      */
     public void cleanupHeadless() {
+        cancelBatch();
         vaoId = 0;
         quadVboId = 0;
         instanceVboId = 0;
@@ -483,12 +492,15 @@ public class InstancedPatternRenderer {
         if (command == null) {
             command = new InstancedBatchCommand();
         }
+        command.leased = true;
         return command;
     }
 
     private void recycleCommand(InstancedBatchCommand command) {
         if (commandPool.size() < COMMAND_POOL_LIMIT) {
             commandPool.addLast(command);
+        } else {
+            command.release();
         }
     }
 
@@ -520,6 +532,7 @@ public class InstancedPatternRenderer {
         private boolean usePriorityShader;
         private boolean capturedGhostEffectActive;
         private float capturedGhostAlpha;
+        private boolean leased;
 
         private void load(float[] data, int instanceCount, boolean usePriorityShader,
                           boolean ghostEffectActive, float ghostAlpha) {
@@ -544,6 +557,14 @@ public class InstancedPatternRenderer {
 
         @Override
         public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            try {
+                executeLeased(cameraX, cameraY, cameraWidth, cameraHeight);
+            } finally {
+                discard();
+            }
+        }
+
+        private void executeLeased(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
             if (instanceCount == 0 || instancedShader == null) {
                 return;
             }
@@ -727,6 +748,14 @@ public class InstancedPatternRenderer {
             glDisable(GL_BLEND);
 
             PatternRenderCommand.resetFrameState();
+        }
+
+        @Override
+        public void discard() {
+            if (!leased) {
+                return;
+            }
+            leased = false;
             recycleCommand(this);
         }
 

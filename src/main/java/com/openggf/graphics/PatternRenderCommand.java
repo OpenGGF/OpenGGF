@@ -46,6 +46,7 @@ public class PatternRenderCommand implements GLCommandable {
     private boolean capturedGlobalHighPriority;
     private boolean ghostEffectActive;
     private float ghostAlpha;
+    private boolean leased;
     private float x;
     private float y;
     private float width;
@@ -133,6 +134,7 @@ public class PatternRenderCommand implements GLCommandable {
         this.x = x;
         this.width = width;
         this.height = height;
+        this.leased = true;
         // Genesis Y refers to the TOP of the pattern, so we subtract the pattern height
         // to get the OpenGL Y coordinate for the bottom of the quad
         // width/height are allowed to vary for scaled host preview rendering.
@@ -143,9 +145,18 @@ public class PatternRenderCommand implements GLCommandable {
      * Return this command to the pool for reuse.
      */
     public void recycle() {
+        if (!leased) {
+            return;
+        }
+        leased = false;
         if (pool.size() < 512) { // Cap pool size to prevent unbounded growth
             pool.offerFirst(this);
         }
+    }
+
+    @Override
+    public void discard() {
+        recycle();
     }
 
     /**
@@ -184,6 +195,14 @@ public class PatternRenderCommand implements GLCommandable {
 
     @Override
     public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+        try {
+            executeLeased(cameraX, cameraY, cameraWidth, cameraHeight);
+        } finally {
+            recycle();
+        }
+    }
+
+    private void executeLeased(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
         GraphicsManager graphicsManager = this.graphicsManager;
         ShaderProgram shaderProgram = graphicsManager.getShaderProgram();
 
@@ -396,8 +415,6 @@ public class PatternRenderCommand implements GLCommandable {
 
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
-        // Return to pool for reuse
-        recycle();
     }
 
     /**

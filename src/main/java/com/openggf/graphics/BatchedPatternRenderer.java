@@ -454,6 +454,7 @@ public class BatchedPatternRenderer {
         if (command == null) {
             command = new BatchRenderCommand();
         }
+        command.leased = true;
         return command;
     }
 
@@ -462,6 +463,7 @@ public class BatchedPatternRenderer {
         if (command == null) {
             command = new ShadowBatchRenderCommand();
         }
+        command.leased = true;
         return command;
     }
 
@@ -497,6 +499,12 @@ public class BatchedPatternRenderer {
      * Clears internal state without making GL calls.
      */
     public void cleanupHeadless() {
+        for (BatchRenderCommand command : batchCommandPool) {
+            command.releaseNativeBuffers();
+        }
+        for (ShadowBatchRenderCommand command : shadowCommandPool) {
+            command.releaseNativeBuffers();
+        }
         batchCommandPool.clear();
         shadowCommandPool.clear();
         patternCount = 0;
@@ -520,6 +528,7 @@ public class BatchedPatternRenderer {
         private FloatBuffer vertexBuffer;
         private FloatBuffer texCoordBuffer;
         private FloatBuffer paletteCoordBuffer;
+        private boolean leased;
 
         private int vaoId;
         private int vertexVboId;
@@ -566,6 +575,14 @@ public class BatchedPatternRenderer {
 
         @Override
         public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            try {
+                executeLeased(cameraX, cameraY, cameraWidth, cameraHeight);
+            } finally {
+                discard();
+            }
+        }
+
+        private void executeLeased(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
             if (patternCount == 0) {
                 return;
             }
@@ -736,6 +753,14 @@ public class BatchedPatternRenderer {
             // will properly reinitialize GL state (since we just disabled everything)
             PatternRenderCommand.resetFrameState();
 
+        }
+
+        @Override
+        public void discard() {
+            if (!leased) {
+                return;
+            }
+            leased = false;
             recycleBatchCommand(this);
         }
 
@@ -766,6 +791,21 @@ public class BatchedPatternRenderer {
             return buffer;
         }
 
+        private void releaseNativeBuffers() {
+            if (vertexBuffer != null) {
+                MemoryUtil.memFree(vertexBuffer);
+                vertexBuffer = null;
+            }
+            if (texCoordBuffer != null) {
+                MemoryUtil.memFree(texCoordBuffer);
+                texCoordBuffer = null;
+            }
+            if (paletteCoordBuffer != null) {
+                MemoryUtil.memFree(paletteCoordBuffer);
+                paletteCoordBuffer = null;
+            }
+        }
+
         private void dispose() {
             if (vaoId != 0) {
                 glDeleteVertexArrays(vaoId);
@@ -783,18 +823,7 @@ public class BatchedPatternRenderer {
                 glDeleteBuffers(paletteVboId);
                 paletteVboId = 0;
             }
-            if (vertexBuffer != null) {
-                MemoryUtil.memFree(vertexBuffer);
-                vertexBuffer = null;
-            }
-            if (texCoordBuffer != null) {
-                MemoryUtil.memFree(texCoordBuffer);
-                texCoordBuffer = null;
-            }
-            if (paletteCoordBuffer != null) {
-                MemoryUtil.memFree(paletteCoordBuffer);
-                paletteCoordBuffer = null;
-            }
+            releaseNativeBuffers();
         }
     }
 
@@ -811,6 +840,7 @@ public class BatchedPatternRenderer {
 
         private FloatBuffer vertexBuffer;
         private FloatBuffer texCoordBuffer;
+        private boolean leased;
 
         private int vaoId;
         private int vertexVboId;
@@ -844,6 +874,14 @@ public class BatchedPatternRenderer {
 
         @Override
         public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            try {
+                executeLeased(cameraX, cameraY, cameraWidth, cameraHeight);
+            } finally {
+                discard();
+            }
+        }
+
+        private void executeLeased(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
             if (patternCount == 0) {
                 return;
             }
@@ -927,6 +965,14 @@ public class BatchedPatternRenderer {
 
             PatternRenderCommand.resetFrameState();
 
+        }
+
+        @Override
+        public void discard() {
+            if (!leased) {
+                return;
+            }
+            leased = false;
             recycleShadowCommand(this);
         }
 
@@ -956,6 +1002,17 @@ public class BatchedPatternRenderer {
             return buffer;
         }
 
+        private void releaseNativeBuffers() {
+            if (vertexBuffer != null) {
+                MemoryUtil.memFree(vertexBuffer);
+                vertexBuffer = null;
+            }
+            if (texCoordBuffer != null) {
+                MemoryUtil.memFree(texCoordBuffer);
+                texCoordBuffer = null;
+            }
+        }
+
         private void dispose() {
             if (vaoId != 0) {
                 glDeleteVertexArrays(vaoId);
@@ -969,14 +1026,7 @@ public class BatchedPatternRenderer {
                 glDeleteBuffers(texCoordVboId);
                 texCoordVboId = 0;
             }
-            if (vertexBuffer != null) {
-                MemoryUtil.memFree(vertexBuffer);
-                vertexBuffer = null;
-            }
-            if (texCoordBuffer != null) {
-                MemoryUtil.memFree(texCoordBuffer);
-                texCoordBuffer = null;
-            }
+            releaseNativeBuffers();
         }
     }
 }

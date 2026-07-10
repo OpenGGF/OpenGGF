@@ -17,11 +17,12 @@ import com.openggf.level.Pattern;
 import com.openggf.debug.GlyphBatchRenderer;
 import com.openggf.debug.FontSize;
 
-import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GLCommandable;
 
 import com.openggf.debug.DebugColor;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Locale;
 import java.util.logging.Level;
@@ -45,6 +46,7 @@ import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.*
  */
 public class Sonic2SpecialStageManager {
     private static final Logger LOGGER = Logger.getLogger(Sonic2SpecialStageManager.class.getName());
+    private final BackgroundCommandPool backgroundCommandPool = new BackgroundCommandPool();
 
     /**
      * Result state for special stage completion.
@@ -1745,10 +1747,8 @@ public class Sonic2SpecialStageManager {
 
                 // 4. Update H-scroll and render with shader (vScrollBG applies vertical
                 // parallax)
-                graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
-                    bgRenderer.setUniformHScroll(currentScrollX);
-                    bgRenderer.renderWithShader(currentVScrollBG);
-                }));
+                graphicsManager.registerCommand(backgroundCommandPool.obtainShader(
+                        bgRenderer, currentScrollX, currentVScrollBG));
             } else {
                 // Fallback to CPU-based rendering
                 renderer.renderBackground(combinedBackgroundMappings, skydomeScrollX, vScrollBG);
@@ -1803,10 +1803,8 @@ public class Sonic2SpecialStageManager {
 
                 queueStaticBackgroundRebuildIfNeeded(graphicsManager);
 
-                graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
-                    bgRenderer.setUniformHScroll(currentScrollX);
-                    bgRenderer.renderWithShader(currentVScrollBG);
-                }));
+                graphicsManager.registerCommand(backgroundCommandPool.obtainShader(
+                        bgRenderer, currentScrollX, currentVScrollBG));
             } else {
                 renderer.renderBackground(combinedBackgroundMappings, skydomeScrollX, vScrollBG);
             }
@@ -1830,12 +1828,144 @@ public class Sonic2SpecialStageManager {
         // Set up the FBO projection before creating the batch so its Y coordinates
         // are calculated for the static 256x256 target.
         bgRenderer.beginFBOProjection();
-        graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) ->
-                bgRenderer.beginTilePass(H32_HEIGHT)));
+        graphicsManager.registerCommand(backgroundCommandPool.obtainBegin(bgRenderer));
         renderer.rebuildBackgroundToFBO(combinedBackgroundMappings, palettes);
         bgRenderer.endFBOProjection();
-        graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) ->
-                bgRenderer.endTilePass()));
+        graphicsManager.registerCommand(backgroundCommandPool.obtainEnd(bgRenderer));
+    }
+
+    /** Bounded owner for deferred Plane-B background commands. */
+    static final class BackgroundCommandPool {
+        private final ArrayDeque<BackgroundCommand> available = new ArrayDeque<>();
+        private SpecialStageBackgroundRenderer activeTilePassRenderer;
+
+        BackgroundCommand obtainShader(SpecialStageBackgroundRenderer renderer,
+                                       int hScroll, float vScroll) {
+            BackgroundCommand command = obtain();
+            command.configureShader(renderer, hScroll, vScroll);
+            return command;
+        }
+
+        BackgroundCommand obtainBegin(SpecialStageBackgroundRenderer renderer) {
+            BackgroundCommand command = obtain();
+            command.configure(renderer, BackgroundCommand.Kind.BEGIN);
+            return command;
+        }
+
+        BackgroundCommand obtainEnd(SpecialStageBackgroundRenderer renderer) {
+            BackgroundCommand command = obtain();
+            command.configure(renderer, BackgroundCommand.Kind.END);
+            return command;
+        }
+
+        private BackgroundCommand obtain() {
+            BackgroundCommand command = available.pollLast();
+            if (command == null) {
+                command = new BackgroundCommand(this);
+            }
+            command.leased = true;
+            return command;
+        }
+
+        private void release(BackgroundCommand command) {
+            available.addLast(command);
+        }
+
+        private void armTilePass(SpecialStageBackgroundRenderer renderer) {
+            activeTilePassRenderer = renderer;
+        }
+
+        private boolean isTilePassArmed(SpecialStageBackgroundRenderer renderer) {
+            return activeTilePassRenderer == renderer;
+        }
+
+        private void disarmTilePass(SpecialStageBackgroundRenderer renderer) {
+            if (activeTilePassRenderer == renderer) {
+                activeTilePassRenderer = null;
+            }
+        }
+    }
+
+    static final class BackgroundCommand implements GLCommandable {
+        private enum Kind { SHADER, BEGIN, END }
+
+        private final BackgroundCommandPool owner;
+        private SpecialStageBackgroundRenderer renderer;
+        private Kind kind;
+        private int hScroll;
+        private float vScroll;
+        private boolean leased;
+
+        private BackgroundCommand(BackgroundCommandPool owner) {
+            this.owner = owner;
+        }
+
+        private void configureShader(SpecialStageBackgroundRenderer renderer,
+                                     int hScroll, float vScroll) {
+            configure(renderer, Kind.SHADER);
+            this.hScroll = hScroll;
+            this.vScroll = vScroll;
+        }
+
+        private void configure(SpecialStageBackgroundRenderer renderer, Kind kind) {
+            this.renderer = renderer;
+            this.kind = kind;
+        }
+
+        @Override
+        public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            try {
+                if (renderer == null) {
+                    return;
+                }
+                switch (kind) {
+                    case SHADER -> {
+                        renderer.setUniformHScroll(hScroll);
+                        renderer.renderWithShader(vScroll);
+                    }
+                    case BEGIN -> {
+                        renderer.beginTilePass(H32_HEIGHT);
+                        owner.armTilePass(renderer);
+                    }
+                    case END -> {
+                        try {
+                            renderer.endTilePass();
+                        } finally {
+                            owner.disarmTilePass(renderer);
+                        }
+                    }
+                }
+            } finally {
+                discard();
+            }
+        }
+
+        @Override
+        public void unwindAfterFailure(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            if (kind == Kind.END && owner.isTilePassArmed(renderer)) {
+                execute(cameraX, cameraY, cameraWidth, cameraHeight);
+            } else {
+                discard();
+            }
+        }
+
+        @Override
+        public void discard() {
+            if (!leased) {
+                return;
+            }
+            leased = false;
+            renderer = null;
+            owner.release(this);
+        }
+
+        int hScroll() {
+            return hScroll;
+        }
+
+        float vScroll() {
+            return vScroll;
+        }
     }
 
     public void renderAlignmentOverlay(int viewportWidth, int viewportHeight) {
