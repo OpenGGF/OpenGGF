@@ -3,6 +3,8 @@ package com.openggf;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.debug.DebugOverlayManager;
+import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.NoOpResultsScreen;
@@ -139,6 +141,11 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
             RecordingProvider provider = new RecordingProvider(order);
             provider.lagDisplay = true;
             activateSpecialStage(provider);
+            DebugOverlayManager overlays = (DebugOverlayManager) getField(loop, "debugOverlayManager");
+            DebugOverlayToggle toggle = key == GLFW_KEY_F6
+                    ? DebugOverlayToggle.CAMERA_BOUNDS
+                    : DebugOverlayToggle.PLAYER_BOUNDS;
+            boolean overlayBefore = overlays.isEnabled(toggle);
 
             input.handleKeyEvent(key, GLFW_PRESS);
             loop.step();
@@ -147,6 +154,8 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
                     "the fixed lag model must not expose an F6/F7 runtime toggle");
             assertTrue(boundaries.isEmpty(),
                     "a removed lag toggle must not sever the rewind timeline");
+            assertEquals(!overlayBefore, overlays.isEnabled(toggle),
+                    "F6/F7 must retain their general debug-overlay behavior");
         }
     }
 
@@ -445,11 +454,6 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
         public void toggleLagCompensationDisplay() {
             order.add("toggleLagCompensationDisplay");
             lagDisplay = !lagDisplay;
-        }
-
-        @Override
-        public double getLagCompensation() {
-            return 0.0;
         }
 
         @Override

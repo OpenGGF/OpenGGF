@@ -2311,15 +2311,6 @@ public class Sonic2SpecialStageManager {
         return initialized;
     }
 
-    /**
-     * Gets the legacy lag-model enable control.
-     * 
-     * @return zero when forced off; a positive compatibility value when enabled
-     */
-    public double getLagCompensation() {
-        return lagCompensation;
-    }
-
     public boolean isLagCompensationDisplayEnabled() {
         return lagCompensationDisplayEnabled;
     }

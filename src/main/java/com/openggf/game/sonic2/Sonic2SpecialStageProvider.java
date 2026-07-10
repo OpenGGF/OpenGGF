@@ -197,11 +197,6 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
-    public double getLagCompensation() {
-        return manager.getLagCompensation();
-    }
-
-    @Override
     public void setLagCompensation(double factor) {
         manager.setLagCompensation(factor);
     }

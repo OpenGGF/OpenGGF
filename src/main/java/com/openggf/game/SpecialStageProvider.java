@@ -295,16 +295,10 @@ public interface SpecialStageProvider extends MiniGameProvider {
     }
 
     /**
-     * Gets the current lag compensation factor.
+     * Configures the internal lag-pacing bypass used by trace sessions.
      *
-     * @return the lag compensation factor
-     */
-    double getLagCompensation();
-
-    /**
-     * Sets the lag compensation factor.
-     *
-     * @param factor the new lag compensation factor
+     * @param factor zero to disable native lag modeling for externally paced
+     *               replay; a positive value restores normal native pacing
      */
     void setLagCompensation(double factor);
 

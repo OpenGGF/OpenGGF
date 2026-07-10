@@ -230,7 +230,6 @@ class TestSpecialStageRewindCapability {
         @Override public void toggleAlignmentStepMode() { }
         @Override public void renderAlignmentOverlay(int viewportWidth, int viewportHeight) { }
         @Override public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) { }
-        @Override public double getLagCompensation() { return 0.0; }
         @Override public void setLagCompensation(double factor) { }
         @Override public ResultsScreen createResultsScreen(
                 int ringsCollected, boolean gotEmerald, int stageIndex, int totalEmeraldCount) {
@@ -624,7 +623,6 @@ class TestSpecialStageStepperReplay {
         @Override public void toggleAlignmentStepMode() { }
         @Override public void renderAlignmentOverlay(int viewportWidth, int viewportHeight) { }
         @Override public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) { }
-        @Override public double getLagCompensation() { return 0.0; }
         @Override public void setLagCompensation(double factor) { }
         @Override public ResultsScreen createResultsScreen(
                 int ringsCollected, boolean gotEmerald, int stageIndex, int totalEmeraldCount) {
@@ -1522,7 +1520,6 @@ private static class MinimalSpecialStageProvider implements SpecialStageProvider
     @Override public void toggleAlignmentStepMode() { }
     @Override public void renderAlignmentOverlay(int viewportWidth, int viewportHeight) { }
     @Override public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) { }
-    @Override public double getLagCompensation() { return 0.0; }
     @Override public void setLagCompensation(double factor) { }
     @Override public ResultsScreen createResultsScreen(
             int ringsCollected, boolean gotEmerald, int stageIndex, int totalEmeraldCount) {
