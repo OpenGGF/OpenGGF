@@ -17,8 +17,10 @@ import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class TestObjectPhysicsStandardizationGuard {
+    private static volatile List<SourceViolation> productionScanCache;
     private static final Pattern OBJECT_CONTROL_SETTER = Pattern.compile(
             "\\.setObjectControl(?:led|AllowsCpu|SuppressesMovement)\\s*\\(");
     private static final Pattern NATIVE_P2_SIDEKICK_ACCESS = Pattern.compile(
@@ -223,7 +225,9 @@ class TestObjectPhysicsStandardizationGuard {
 
     @Test
     void productionObjectPhysicsStandardizationHasNoUnapprovedViolations() throws IOException {
-        assertEquals(List.of(), scanProductionSources());
+        List<SourceViolation> first = scanProductionSources();
+        assertSame(first, scanProductionSources(), "production scan must be cached once per class");
+        assertEquals(List.of(), first);
     }
 
     @Test
@@ -727,6 +731,21 @@ class TestObjectPhysicsStandardizationGuard {
     }
 
     private static List<SourceViolation> scanProductionSources() throws IOException {
+        List<SourceViolation> cached = productionScanCache;
+        if (cached != null) {
+            return cached;
+        }
+        synchronized (TestObjectPhysicsStandardizationGuard.class) {
+            cached = productionScanCache;
+            if (cached == null) {
+                cached = List.copyOf(scanProductionSourcesUncached());
+                productionScanCache = cached;
+            }
+            return cached;
+        }
+    }
+
+    private static List<SourceViolation> scanProductionSourcesUncached() throws IOException {
         Path srcMain = ObjectGuardSourceScanner.findSourceRoot();
         if (srcMain == null) {
             throw new IOException("Could not locate src/main/java");
