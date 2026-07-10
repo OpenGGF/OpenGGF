@@ -40,6 +40,55 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean Task-10 commit `495e4cf08`.
+
+- Full comparator audit found three final WARNING declarations:
+  `track_drawing_index`, mapped `track_duration_timer`, and
+  `tails_control_counter`. A focused mismatch test first failed with expected
+  ERROR / actual WARNING, then passed after all three were promoted. `rg` now
+  finds no `Severity.WARNING` in the special-stage abstract replay; every
+  manager/player comparison, control-state adjudication, timer, per-player ring,
+  shared swap, animation timer, and refresh-gated rings-to-go field is
+  ERROR-severity. No tolerance or comparison mapping changed.
+- The actual keep-green mechanism is the scheduled/self-hosted
+  `develop-trace-replay` job in `.github/workflows/ci.yml`, which runs Maven's
+  `trace-replay` profile and derives its expected execution set from every
+  tracked `Test*TraceReplay.java` source. The guard now names
+  `TestS2SpecialStageTraceReplay` as a required keep-green report, proves it is
+  inside that derived replay set, requires its Surefire execution report, and
+  independently requires `target/trace-reports/s2_special_stage_0_report.json`
+  to exist with zero errors and zero warnings. This turns the prior implicit
+  wildcard inclusion into an explicit scheduled gate.
+- Full default sweep: `mvn test` completed in 121.2 seconds and returned exit 0
+  under the repository's relaxed Maven output extension. Its streamed result
+  exposed one nondeterministic failure in 11,494 reported tests / 1 failure /
+  0 errors / 12 skipped: the unrelated S1-only
+  `TestCheckpointStarpostGraphRewind#sonic1LamppostTwirlEndsAsOneCenteredBallNotADuplicate`
+  observed zero live parents. The campaign diff against current `develop`
+  touches no S1 lamppost/checkpoint code or that test, and the exact test passed
+  immediately on a fresh focused rerun (1 / 0 / 0 / 0); no unrelated change was
+  made. The rerun left the final Surefire aggregate at 11,487 tests / 0 failures /
+  0 errors / 12 skipped. The sweep-generated `docs/rewind/real-gaps.md` rewrite
+  was restored to its tracked contents.
+- Three existing S2 level-select spot routes passed together with no
+  `frontierOnly` or failure-ignore switch:
+  `TestS2CpzLevelSelectTraceReplay#replayMatchesTrace` (route `cpz`, CPZ1),
+  `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` (route `cnz2`, CNZ2),
+  and `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace` (route `mtz3`, MTZ3):
+  3 tests / 0 failures / 0 errors / 0 skipped.
+- Final gate command, executed in two independent fresh Maven invocations:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`.
+  Each invocation passed 3 tests / 0 failures / 0 errors / 0 skipped and
+  regenerated the same 3,228-frame, 0-error, 0-warning report SHA-256
+  `ACEBE257DC220FE54C7E989B2D3AF77BD95A8E180EFBF222375B83D9B1E6F36C`.
+
+The campaign closes with comparison-only replay, no trace-to-engine hydration,
+no route/zone/frame carve-out, and no WARNING-tier comparator left. README
+remains a merge-time obligation and is intentionally not changed on this branch.
+
 ## 2026-07-10 - S2 special-stage animation timer and refresh-gated rings-to-go ratchets
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

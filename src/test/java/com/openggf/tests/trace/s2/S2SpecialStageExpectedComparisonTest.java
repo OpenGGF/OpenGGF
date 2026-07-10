@@ -151,6 +151,25 @@ class S2SpecialStageExpectedComparisonTest {
     }
 
     @Test
+    void remainingManagerDiagnosticsAreRatchetedErrors() {
+        SpecialStageExpectedState expected = SpecialStageExpectedState.from(frame(799, 0),
+                List.of(snapshot(799, 0)));
+        Sonic2SpecialStageComparisonState mismatched = new Sonic2SpecialStageComparisonState(
+                12, 5, 8, 5, 10, 7, 0, 0, 10, 0, false,
+                new PlayerState(128, 90, 300, 64, "NORMAL", 0, 1, 2,
+                        0, 0, 0, 0),
+                new PlayerState(128, 90, 300, 64, "NORMAL", 0, 1, 2,
+                        0, 0, 0, 0));
+
+        Map<String, FieldComparison> compared =
+                AbstractS2SpecialStageTraceReplayTest.compareExpectedFrame(expected, mismatched);
+
+        assertEquals(Severity.ERROR, compared.get("track_drawing_index").severity());
+        assertEquals(Severity.ERROR, compared.get("track_duration_timer").severity());
+        assertEquals(Severity.ERROR, compared.get("tails_control_counter").severity());
+    }
+
+    @Test
     void ringsToGoIsAbsentBeforeRefreshGateAndBcdDecodedAfterIt() {
         TraceEvent.StateSnapshot base = snapshot(1324, 12);
         Map<String, Object> fields = new HashMap<>(base.fields());

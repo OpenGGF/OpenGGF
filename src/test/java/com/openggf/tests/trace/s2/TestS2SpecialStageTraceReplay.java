@@ -16,8 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /**
  * Concrete S2 special-stage trace replay against the committed MVP trace at
  * {@code src/test/resources/traces/s2/special_stage} (Special Stage 1,
- * Sonic + Tails). Tier-1 divergences fail the release ratchet; Tier-2
- * divergences remain report warnings. See
+ * Sonic + Tails). Every compared field is release-ratcheted: any divergence
+ * fails the replay. See
  * {@link AbstractS2SpecialStageTraceReplayTest}.
  */
 class TestS2SpecialStageTraceReplay extends AbstractS2SpecialStageTraceReplayTest {

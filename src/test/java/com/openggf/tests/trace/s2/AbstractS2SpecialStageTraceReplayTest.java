@@ -74,11 +74,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       compared.</li>
  * </ul>
  *
- * <h2>Comparator tiers</h2>
- * <p>Tier-1 mismatches are report ERRORs, Tier-2 are WARNINGs. Every field below
- * is a comparison-only read of {@link Sonic2SpecialStageComparisonState}.
+ * <h2>Release-ratcheted comparator surface</h2>
+ * <p>Every mismatch below is a report ERROR. Every field is a comparison-only
+ * read of {@link Sonic2SpecialStageComparisonState}.
  * <ul>
- *   <li><b>Tier-1</b>: per-player {@code present}, {@code ss_x}, {@code ss_y},
+ *   <li>Per-player {@code present}, {@code ss_x}, {@code ss_y},
  *       {@code ss_z}, {@code angle}, {@code routine} (mapped ROM byte → engine
  *       {@code RoutineState} name), {@code hurt} ({@code routine_secondary==2});
  *       per-player {@code sonic_rings}/{@code tails_rings},
@@ -88,7 +88,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       {@code player_anim_frame_timer}, refresh-gated decoded
  *       {@code rings_togo_bcd}, {@code finished}, and the
  *       {@code finished_transition_frame} boundary check.</li>
- *   <li><b>Tier-2</b>: {@code track_drawing_index}, {@code track_duration_timer}
+ *   <li>{@code track_drawing_index}, {@code track_duration_timer}
  *       (ROM counts down from the {@code SSAnim_Base_Duration} for the current
  *       speed factor; engine counts up — compared via
  *       {@code duration - romTimer == engineCounter}), and
@@ -98,10 +98,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * snapshots: a raw VBlank row can interrupt the Obj09→Obj10 scan and contain
  * Sonic's post-pass timer beside Tails's pre-pass timer.</p>
  *
- * <p>Tier-1 parity is release-gated: the pipeline writes a complete report and
- * {@link #assertNoReleaseBlockingDivergences} rejects any ERROR divergence.
- * Tier-2 WARNING fields remain visible in the report while their remaining
- * ratchets are implemented (see {@code docs/TRACE_FRONTIER_LOG.md}).
+ * <p>The pipeline writes a complete report and
+ * {@link #assertNoReleaseBlockingDivergences} rejects any comparator divergence.
  */
 public abstract class AbstractS2SpecialStageTraceReplayTest {
 
@@ -345,14 +343,13 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         fields.put("finished",
                 cmp("finished", String.valueOf(finishedExpected), String.valueOf(state.finished()), Severity.ERROR));
 
-        // Tier-2
         fields.put("track_drawing_index",
-                cmp("track_drawing_index", str(trackDrawingIndex), str(state.drawingIndex()), Severity.WARNING));
+                cmp("track_drawing_index", str(trackDrawingIndex), str(state.drawingIndex()), Severity.ERROR));
         int expectedCounter = mapTrackDurationElapsed(speedFactor, trackDurationTimer);
         fields.put("track_duration_timer",
-                cmp("track_duration_timer", str(expectedCounter), str(state.trackFrameDelayCounter()), Severity.WARNING));
+                cmp("track_duration_timer", str(expectedCounter), str(state.trackFrameDelayCounter()), Severity.ERROR));
         fields.put("tails_control_counter",
-                cmp("tails_control_counter", str(expected.tailsControlCounter()), str(state.tailsControlCounter()), Severity.WARNING));
+                cmp("tails_control_counter", str(expected.tailsControlCounter()), str(state.tailsControlCounter()), Severity.ERROR));
         int playerAnimFrameTimer = pass != null
                 ? pass.playerAnimFrameTimer() : tf.playerAnimFrameTimer();
         fields.put("player_anim_frame_timer",
