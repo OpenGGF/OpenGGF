@@ -195,9 +195,19 @@ the post-CPU clear and the subsequent underwater bypass as well. Focused
 clear and the fresh terrain-owned case. The stacked complete-run frontier moves
 from f8326 to f8350.
 
+Round 13 banks Caterkiller Jr's complete `Obj_WaitOffscreen` state. The ROM
+parks Obj8F behind a `$20`-by-`$20` placeholder and leaves
+`collision_flags=0` until that render box becomes visible and
+`SetUp_ObjAttributes` runs (`sonic3k.asm:180266-180298,183317-183337`). The
+engine used horizontal visibility alone and exposed the constructor's enemy
+collision while the object was still vertically below the camera, so CPU Tails
+was hurt by an enemy the ROM still held at its original coordinates. Full
+placeholder bounds plus the pre-init collision latch move the stacked
+complete-run frontier from f8350 to f9295 without an AIZ/frame exception.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f8350. Those causes will be recorded and committed
+banked rounds the current stacked working-tree complete-run frontier is f9295. Those causes will be recorded and committed
 separately as their focused guards are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes
 an earlier f5435 mismatch and must restore/advance that route before the stage
