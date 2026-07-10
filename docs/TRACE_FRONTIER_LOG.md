@@ -86,8 +86,18 @@ Focused `TestSonic3kZoneFeatureProvider` and
 `TestCollisionSystemAirLanding` suites pass with MSE disabled. No zone, route,
 or frame predicate was added.
 
-Remaining unbanked object investigation has advanced through f2303, f3294, the
-f4340-f4803 rock-push cluster, and f5158; together with round 3 the current
+Round 4 banks the AIZ falling-log clock/solid fix. Obj2D masks the native
+`Level_frame_counter`, not the object/VBlank execution count; during
+`Process_Sprites` the LevelManager's late-frame stored value therefore needs
+the already-visible +1 cadence (`sonic3k.asm:59918-59922`). Falling log children
+also pass the literal `d3=8` to `SolidObjectTop`, rather than using a 9-pixel
+standing height (`sonic3k.asm:60156-60163`). This closed the f3294 first-landing
+cluster and exposed the later f3420 terrain contact. New focused
+`TestAizFallingLogObjectInstance` guards both the clock source and the exact
+solid dimensions.
+
+Remaining unbanked object investigation has advanced through f2303, the
+f4340-f4803 rock-push cluster, and f5158; together with the banked rounds the current
 branch-local frontier is f6237. Those causes will be recorded and committed
 separately as their focused guards are completed. The level-select AIZ trace remains at f8941
 and is still part of the stage-green exit gate. S1/S2 full trace sweeps remain
