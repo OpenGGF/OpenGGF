@@ -404,9 +404,18 @@ function Assert-SsBk2InputAlignment([string]$Bk2Path, [string]$TraceDir) {
     Write-Host "SS BK2 input alignment verified for $($rows.Count) frames (P1 + P2)"
 }
 
-# The SS recorder's aux stream is part of the comparison contract. In
-# particular, RunObjects-end events must be keyed to a non-lag logical frame,
-# never to the later raw VBlank that happened to observe the hook.
+# Collapse the ROM's distinct A/B/C bits to the trace/engine jump bit while
+# preserving D-pad and Start. RunObjects aux stores the authoritative raw Ctrl
+# byte; the BK2 contract stores the engine-normalized movie mask.
+function Convert-SsRawHeldToMovieMask([int]$RawHeld) {
+    $mask = $RawHeld -band 0x8F
+    if (($RawHeld -band 0x70) -ne 0) { $mask = $mask -bor 0x10 }
+    return $mask
+}
+
+# The SS recorder's aux stream is part of the comparison contract. Completed
+# RunObjects passes bind forward to the first non-lag observation after return;
+# each event also names and carries the physical BK2 sample consumed at entry.
 function Assert-SsAuxCoverage([string]$TraceDir) {
     $events = Get-AuxEvents $TraceDir
     $rows = Get-PhysicsRows $TraceDir
@@ -417,8 +426,50 @@ function Assert-SsAuxCoverage([string]$TraceDir) {
     $expectedRunObjectsSequence = 0
     $delayedRunObjectsPassCount = 0
     $runObjectsPassesByFrame = @{}
+    $metadata = Get-Content -LiteralPath (Join-Path $TraceDir "metadata.json") -Raw | ConvertFrom-Json
+    $bk2Path = Join-Path $TraceDir $metadata.source_bk2
+    $bk2Pairs = Get-Bk2SsInputMaskPairs $bk2Path
+    $previousP1Held = $null
+    $previousP2Held = $null
+    $previousInputSampleSequence = $null
+    $stageFinishedEvents = @($events | Where-Object { $_.type -eq "stage_finished" })
+    if ($stageFinishedEvents.Count -ne 1) {
+        throw "SS aux stream must contain exactly one stage_finished event; got $($stageFinishedEvents.Count)"
+    }
+    $stageFinishedEvent = $stageFinishedEvents[0]
+    $stageFinishedFrame = [int]$stageFinishedEvent.frame
+    $checkpointEvents = @($events | Where-Object { $_.type -eq "checkpoint" })
+    $resultsStartedEvents = @($events | Where-Object { $_.type -eq "results_started" })
+    if ($resultsStartedEvents.Count -ne 1) {
+        throw "SS aux stream must contain exactly one results_started event; got $($resultsStartedEvents.Count)"
+    }
+    $resultsStartedEvent = $resultsStartedEvents[0]
+    $finishObservation = [int]$stageFinishedEvent.observed_frame
+    $matchingFinishCheckpoints = @($checkpointEvents | Where-Object {
+        [int]$_.frame -eq $finishObservation
+    })
+    if ($matchingFinishCheckpoints.Count -ne 1) {
+        throw "stage_finished must identify exactly one raw checkpoint observation"
+    }
+    if ([int]$resultsStartedEvent.frame -le $stageFinishedFrame) {
+        throw "results_started must follow the logical stage_finished boundary"
+    }
+    if ([int]$resultsStartedEvent.frame -ge $rows.Count) {
+        throw "results_started must leave a recorded results tail"
+    }
+    if ($stageFinishedFrame -lt 0 -or $stageFinishedFrame -ge $rows.Count) {
+        throw "stage_finished frame $stageFinishedFrame is outside physics row range"
+    }
+    $stageFinishedColumns = $rows[$stageFinishedFrame].Split(",")
+    if ($stageFinishedColumns.Length -lt 4 -or [int]$stageFinishedColumns[3] -ne 0) {
+        throw "stage_finished frame $stageFinishedFrame is not a logical non-lag observation"
+    }
     $requiredRunObjectsFields = @(
-        "pass_sequence", "first_eligible_frame",
+        "pass_sequence", "first_eligible_frame", "completion_cursor_frame",
+        "input_sample_frame", "input_sample_bk2_frame", "input_sample_sequence",
+        "previous_input_sample_frame", "previous_input_sample_bk2_frame",
+        "input_source", "started_at_input_sample", "p1_held", "p2_held",
+        "previous_p1_held", "previous_p2_held",
         "speed_factor", "track_anim", "track_anim_frame", "track_drawing_index",
         "track_orientation", "track_duration_timer", "current_segment",
         "player_anim_frame_timer", "rings_togo_bcd", "check_rings_flag",
@@ -448,6 +499,9 @@ function Assert-SsAuxCoverage([string]$TraceDir) {
         } elseif ($event.type -eq "run_objects_end") {
             $runObjectsEndCount++
             $frame = [int]$event.frame
+            if ($null -ne $stageFinishedFrame -and $frame -gt $stageFinishedFrame) {
+                throw "run_objects_end frame $frame occurs after stage_finished frame $stageFinishedFrame"
+            }
             if ([int]$event.pass_sequence -ne $expectedRunObjectsSequence) {
                 throw "run_objects_end sequence discontinuity: expected $expectedRunObjectsSequence got $($event.pass_sequence)"
             }
@@ -455,7 +509,29 @@ function Assert-SsAuxCoverage([string]$TraceDir) {
             if ([int]$event.first_eligible_frame -gt $frame) {
                 throw "run_objects_end frame $frame precedes first eligible frame $($event.first_eligible_frame)"
             }
-            if ([int]$event.first_eligible_frame -lt $frame) {
+            $completionCursor = [int]$event.completion_cursor_frame
+            if ($completionCursor -gt $frame) {
+                throw "run_objects_end frame $frame precedes completion cursor $completionCursor"
+            }
+            if ($completionCursor -lt [int]$event.first_eligible_frame) {
+                throw "run_objects_end completion cursor $completionCursor precedes entry $($event.first_eligible_frame)"
+            }
+            $firstNonLagAtOrAfterCompletion = $completionCursor
+            while ($firstNonLagAtOrAfterCompletion -lt $rows.Count) {
+                $candidateColumns = $rows[$firstNonLagAtOrAfterCompletion].Split(",")
+                if ($candidateColumns.Length -ge 4 -and [int]$candidateColumns[3] -eq 0) {
+                    break
+                }
+                $firstNonLagAtOrAfterCompletion++
+            }
+            if ($firstNonLagAtOrAfterCompletion -ne $frame) {
+                throw "run_objects_end frame $frame is not first non-lag observation $firstNonLagAtOrAfterCompletion at/after completion $completionCursor"
+            }
+            $inputSampleFrame = [int]$event.input_sample_frame
+            if ($inputSampleFrame -gt $completionCursor) {
+                throw "run_objects_end input sample $inputSampleFrame follows pass completion"
+            }
+            if ($completionCursor -lt $frame) {
                 $delayedRunObjectsPassCount++
             }
             if ($runObjectsPassesByFrame.ContainsKey($frame)) {
@@ -476,10 +552,67 @@ function Assert-SsAuxCoverage([string]$TraceDir) {
                     throw "run_objects_end frame $frame is missing required field '$required'"
                 }
             }
+            $p1Held = [int]$event.p1_held
+            $p2Held = [int]$event.p2_held
+            if ([string]$event.input_source -ne "vint_s2ss_read_joypads") {
+                throw "run_objects_end has unknown input source '$($event.input_source)'"
+            }
+            if ([int]$event.started_at_input_sample -eq 0) {
+                throw "run_objects_end includes the SpecialStage_Started transition pass"
+            }
+            if ($null -ne $previousP1Held -and [int]$event.previous_p1_held -ne $previousP1Held) {
+                throw "run_objects_end P1 held chain discontinuity at sequence $($event.pass_sequence)"
+            }
+            if ($null -ne $previousP2Held -and [int]$event.previous_p2_held -ne $previousP2Held) {
+                throw "run_objects_end P2 held chain discontinuity at sequence $($event.pass_sequence)"
+            }
+            $previousP1Held = $p1Held
+            $previousP2Held = $p2Held
+            $inputSampleSequence = [int]$event.input_sample_sequence
+            if ($null -ne $previousInputSampleSequence -and
+                    $inputSampleSequence -ne $previousInputSampleSequence + 1) {
+                throw "run_objects_end input sample sequence is not contiguous at pass $($event.pass_sequence)"
+            }
+            $previousInputSampleSequence = $inputSampleSequence
+            $bk2Index = [int]$event.input_sample_bk2_frame
+            if ($bk2Index -ne [int]$metadata.bk2_frame_offset + $inputSampleFrame) {
+                throw "run_objects_end input sample relative/absolute identity mismatch at pass $($event.pass_sequence)"
+            }
+            $previousInputSampleFrame = [int]$event.previous_input_sample_frame
+            $previousInputBk2Index = [int]$event.previous_input_sample_bk2_frame
+            if ($previousInputBk2Index -ne [int]$metadata.bk2_frame_offset + $previousInputSampleFrame) {
+                throw "run_objects_end previous input sample relative/absolute identity mismatch at pass $($event.pass_sequence)"
+            }
+            if ($bk2Index -lt 0 -or $bk2Index -ge $bk2Pairs.Length) {
+                throw "run_objects_end input sample needs missing BK2 row $bk2Index"
+            }
+            if ($previousInputBk2Index -lt 0 -or $previousInputBk2Index -ge $bk2Pairs.Length) {
+                throw "run_objects_end previous input sample needs missing BK2 row $previousInputBk2Index"
+            }
+            $normalizedP1 = Convert-SsRawHeldToMovieMask $p1Held
+            $normalizedP2 = Convert-SsRawHeldToMovieMask $p2Held
+            if ($normalizedP1 -ne $bk2Pairs[$bk2Index].P1) {
+                throw ("run_objects_end P1 sample mismatch at sequence {0}, BK2 {1}: raw=0x{2:X2} normalized=0x{3:X2} bk2=0x{4:X2}" -f `
+                    $event.pass_sequence, $bk2Index, $p1Held, $normalizedP1, $bk2Pairs[$bk2Index].P1)
+            }
+            if ($normalizedP2 -ne $bk2Pairs[$bk2Index].P2) {
+                throw ("run_objects_end P2 sample mismatch at sequence {0}, BK2 {1}: raw=0x{2:X2} normalized=0x{3:X2} bk2=0x{4:X2}" -f `
+                    $event.pass_sequence, $bk2Index, $p2Held, $normalizedP2, $bk2Pairs[$bk2Index].P2)
+            }
+            $normalizedPreviousP1 = Convert-SsRawHeldToMovieMask ([int]$event.previous_p1_held)
+            $normalizedPreviousP2 = Convert-SsRawHeldToMovieMask ([int]$event.previous_p2_held)
+            if ($normalizedPreviousP1 -ne $bk2Pairs[$previousInputBk2Index].P1) {
+                throw ("run_objects_end previous P1 sample mismatch at sequence {0}, BK2 {1}" -f `
+                    $event.pass_sequence, $previousInputBk2Index)
+            }
+            if ($normalizedPreviousP2 -ne $bk2Pairs[$previousInputBk2Index].P2) {
+                throw ("run_objects_end previous P2 sample mismatch at sequence {0}, BK2 {1}" -f `
+                    $event.pass_sequence, $previousInputBk2Index)
+            }
         }
     }
 
-    foreach ($required in @("control_state", "run_objects_end", "stage_finished", "checkpoint", "message_state")) {
+    foreach ($required in @("control_state", "run_objects_end", "stage_finished", "checkpoint", "message_state", "results_started")) {
         if (-not $types.Contains($required)) {
             throw "SS aux stream missing required event family '$required'"
         }

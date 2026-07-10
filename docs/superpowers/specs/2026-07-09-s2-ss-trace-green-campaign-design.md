@@ -59,31 +59,29 @@ state of the ROM logic pass. A PC-execute probe disproved that assumption:
 `SSObjectsManager -> RunObjects` work can finish after it, including across a
 lag row. At f799 the CSV therefore reports one ring while the exact
 `RunObjects_End` state for that same logical step reports three. Conversely,
-the first-ring f791 pass end remains one. The v1.2-s2ss recorder now hooks both
-REV01 `RunObjects` entry at ROM `$15F9C` and `RunObjects_End` at `$15FE4`
-(`s2.asm:29805-29849`). Every completed pass records the full manager/player
-surface atomically, a contiguous `pass_sequence`, and the first trace cursor at
-which that pass can be observed. This identity is necessary because a pass can
-cross a lag-labelled VBlank row: the old last-non-lag-frame dedupe discarded
-535 real passes, and 98 observations legitimately receive two completed pass
-results. The comparison-only binder selects the highest-sequence completed
-result visible at each executed replay observation. It uses that snapshot only
-for fields owned by `RunObjects` (player state/ring digits and Tails control
-counter); CSV remains authoritative for track, finish/results, and observations
-with no pass-end event. This is expectation selection only, never trace pacing
-or trace-to-engine hydration. Each emitted pass event remains indivisible:
-missing required fields, sequence gaps, or a binding before
-`first_eligible_frame` fail validation rather than mixing VBlank and pass-end
-values. Whole-event absence is the only CSV fallback; an explicit absent-player
-flag remains authoritative and yields an absent player without requiring
-meaningless positional fields.
+the first-ring f791 pass end remains one. Recorder v1.3-s2ss uses exactly two
+REV01 execute hooks: the shared `ReadJoypads` RTS at `$1156`, filtered to
+`A0=$F608` and stack return `$88E` so it represents the completed P1/P2 poll
+inside `Vint_S2SS`, and `RunObjects_End` at `$15FE4`
+(`s2.asm:837-840,1361-1387,29805-29849`). Every completed recurring pass records
+the full manager/player surface atomically, a contiguous `pass_sequence`, and
+the exact physical poll identity/raw held/previous-polled held bytes it consumed.
+The pass queues to the first forward non-lag observation after completion;
+replay then executes zero, one, or multiple engine updates in that order. The
+pass whose input sample still saw `SpecialStage_Started=0` is retained on the
+verified startup VBlank path rather than replayed twice, and pass capture stops
+at the final-checkpoint `stage_finished` boundary. Obj6F is retained later as
+`results_started` in the uncompared tail. This is physical input plus pacing
+only, never trace-to-engine state hydration. Missing fields, sequence/sample gaps, held-chain breaks, BK2
+identity mismatches, invalid bounds, or a post-finish pass fail validation.
 
 The semantic gate deliberately leaves the distinct startup/fade loops on their
-VBlank CSV observations; there is no frame-number exception. The corrected
-boundary removes the f799 false mismatch and originally exposed f890 player
-position/angle. The recurring-input correction below moved that to f896; pass
-identity then proved f896 was itself a misbound later pass. The first trustworthy
-frontier is now f916 player position/angle.
+VBlank CSV observations; there is no frame-number exception. Completed-pass
+pacing removes the f916 one-pass-ahead mismatch. Replay binds each captured
+sample to the already-pending owning pass before executing it, rather than
+letting `update()` consume the preceding sample. The Stage-1 report now has
+3,694 errors / 0 warnings (75.88% below the 15,313-error baseline), first
+divergence f1019 `sonic_ss_x` expected 65530, actual -6 (signed mapping).
 
 ### 2026-07-10 f890 player-control correction
 
@@ -279,8 +277,8 @@ trace test to the tracked keep-green set used by trace sweeps.
 
 ## Out of scope (follow-ups)
 
-- Results-screen replay/timing (the recorded post-`stage_finished` tail stays
-  uncompared).
+- Results-screen replay/timing (the recorded post-`stage_finished` tail,
+  including `results_started`, stays uncompared).
 - Additional traces (solo Sonic, solo Tails, human-P2 override, failed-stage,
   stages 2–7) — recommended immediately after green to lock the fixes broadly,
   using the existing recorder unchanged.

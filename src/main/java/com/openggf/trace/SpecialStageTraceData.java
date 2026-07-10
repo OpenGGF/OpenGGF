@@ -116,17 +116,26 @@ public final class SpecialStageTraceData {
                 .toList();
     }
 
-    /** Returns the first frame carrying a {@code stage_finished} aux event, if any. */
+    /** Returns the logical frame where the final checkpoint resolved, if captured. */
     public OptionalInt stageFinishedFrame() {
+        return firstEventFrame("stage_finished");
+    }
+
+    /** Returns the later frame where the ROM creates the Obj6F results object. */
+    public OptionalInt resultsStartedFrame() {
+        return firstEventFrame("results_started");
+    }
+
+    private OptionalInt firstEventFrame(String type) {
         return eventsByFrame.entrySet().stream()
-            .filter(entry -> entry.getValue().stream().anyMatch(SpecialStageTraceData::isStageFinished))
+            .filter(entry -> entry.getValue().stream().anyMatch(event -> isType(event, type)))
             .mapToInt(Map.Entry::getKey)
             .min();
     }
 
-    private static boolean isStageFinished(TraceEvent event) {
+    private static boolean isType(TraceEvent event, String type) {
         return event instanceof TraceEvent.StateSnapshot snapshot
-            && "stage_finished".equals(snapshot.fields().get("type"));
+            && type.equals(snapshot.fields().get("type"));
     }
 
     private static int numericValue(Object raw) {

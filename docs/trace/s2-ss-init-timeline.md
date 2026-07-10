@@ -215,19 +215,28 @@ f790 shows depth `$0005999A`→`$0004CCCD`, animation 7→8, collision clear, an
 single Sonic count increment before compared f791. The probe values are evidence,
 not engine constants.
 
-The later paired-ring observations are also exact once `RunObjects` pass identity
-is preserved. A pass can begin after one VBlank sample and complete on either
-side of the next, including across a row BizHawk labels lagged. Recorder v1.2
-therefore captures both the `$15F9C` entry and `$15FE4` return
-(`s2.asm:29805-29849`), assigning every completed pass a contiguous sequence and
-first eligible trace cursor. Of 3,009 recorded passes, 98 observation frames
-legitimately carry two results; comparison selects the latest completed atomic
-state visible at that observation. This keeps f791 at one ring, f799 at three,
-and resolves the former f896 player mismatch without using a frame exception,
-trace pacing, or state hydration. The next independent frontier is f916 player
-position/angle. Physical CSV input timing alone still does not justify another
-ROM logical-input latch beyond the active-loop copy proven at
-`s2.asm:6694-6721`.
+The later observations are exact only when replay follows completed `RunObjects`
+passes rather than assuming one pass per non-lag VBlank. Recorder v1.3 uses the
+shared `ReadJoypads` return `$1156` (filtered to completed P2 state `A0=$F608`
+and the `Vint_S2SS` return PC `$88E`) plus `RunObjects_End` `$15FE4`
+(`s2.asm:837-840,1361-1387,29805-29849`). Each pass identifies its exact current
+and previous physical BK2 polls and queues forward to the first non-lag
+observation, so an observation may
+execute zero, one, or multiple engine updates. The VInt sample preceding the
+`SpecialStage_Started` transition still reports zero; that transition pass stays
+on startup VBlank pacing and the following already-started sample begins recurring
+pass pacing. The committed artifact contains 2,990 recurring passes, 596
+multi-pass observations, and 1,257 delayed bindings through `stage_finished`,
+with none from the results tail. This removes the former f916 one-pass-ahead
+mismatch. Replay replaces only the controller fields on the already-pending
+owning pass before executing it, so the captured sample is not shifted to the
+following pass. Held and pressed values are mapped from the identified BK2 rows;
+the auxiliary held bytes are cross-checked diagnostics only, and no gameplay
+state is hydrated. The last recurring pass and canonical `stage_finished` share
+logical f5180; the flag rise is observed on raw f5181. Obj6F appears later as
+`results_started` at f5219, and that uncompared tail remains in the recording.
+The next independent frontier is
+f1019 signed-coordinate comparison (`sonic_ss_x` 65530 versus -6).
 
 The raw rows explain why a direct `frame`-column lookup appears different from
 the required f23 boundary: raw f23-f126 are `lag=1` init rows and the replay

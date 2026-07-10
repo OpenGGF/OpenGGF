@@ -1868,6 +1868,23 @@ public class Sonic2SpecialStageManager {
         this.p2LogicalButtons = logical;
     }
 
+    /**
+     * Replaces only the controller sample owned by the recurring pass that is
+     * already pending execution. Deterministic replay uses this after matching
+     * a ROM {@code RunObjects_End} completion to its preceding VInt sample; no
+     * player, object, track, or checkpoint state is copied from the trace.
+     */
+    public void bindPendingRecurringPassInput(
+            int p1Held, int p1Pressed, int p2Held, int p2Logical) {
+        if (!recurringMainPassPending) {
+            throw new IllegalStateException("no recurring main pass is pending input binding");
+        }
+        pendingMainHeldButtons = p1Held & 0xFF;
+        pendingMainPressedButtons = p1Pressed & 0xFF;
+        pendingMainP2HeldButtons = p2Held & 0xFF;
+        pendingMainP2LogicalButtons = p2Logical & 0xFF;
+    }
+
     public void toggleAlignmentTestMode() {
         alignmentTestMode = !alignmentTestMode;
         if (alignmentTestMode) {

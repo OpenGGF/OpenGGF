@@ -25,6 +25,7 @@ class Sonic2SpecialStageBootstrapCadenceTest {
 
     private static final int STARTUP_WAIT_UPDATES = 10;
     private Rom rom;
+    private Sonic2SpecialStageProvider provider;
     private Sonic2SpecialStageManager manager;
 
     @BeforeEach
@@ -45,7 +46,7 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         GameServices.configuration()
                 .setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
 
-        Sonic2SpecialStageProvider provider = new Sonic2SpecialStageProvider();
+        provider = new Sonic2SpecialStageProvider();
         provider.initializeStage(0);
         provider.setLagCompensation(0);
         manager = provider.getManager();
@@ -261,6 +262,21 @@ class Sonic2SpecialStageBootstrapCadenceTest {
 
         assertEquals(-0x60, manager.getSonicPlayer().getInertia());
         assertEquals(0x08, manager.captureRewindSnapshot().tailsCtrlRecordBuf[0]);
+    }
+
+    @Test
+    void replayInputBindingChangesTheOwningPendingPassNotTheFollowingPass() throws Exception {
+        advanceToGameplay();
+        assertTrue(manager.captureRewindSnapshot().recurringMainPassPending);
+        assertFalse(manager.getSonicPlayer().isJumping());
+
+        provider.handleInput(0x10, 0x10);
+        provider.handlePlayer2Input(0, 0);
+        provider.bindPendingRecurringPassInput(0x10, 0x10, 0, 0);
+        provider.update();
+
+        assertTrue(manager.getSonicPlayer().isJumping(),
+                "the first jump edge must affect the completed pass that recorded it");
     }
 
     @Test

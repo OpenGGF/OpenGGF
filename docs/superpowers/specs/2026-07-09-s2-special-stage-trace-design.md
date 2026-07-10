@@ -90,7 +90,11 @@ Derived from `s2_trace_recorder.lua` (v9.10). Behavior:
   retained as data for future results-screen parity work.
 - Emit an aux `stage_finished` event at the frame the final checkpoint resolves
   (the ROM-side equivalent of the engine's `isFinished()`, before
-  `Pal_FadeToWhite`/Obj6F). This marks the end of the compared range.
+  `Pal_FadeToWhite`/Obj6F). If the flag rise is observed on a lag row, key the
+  event to the last non-lag logical observation and retain the raw row as
+  `observed_frame`. This marks the end of the compared range. Record the later
+  first Obj6F sighting separately as `results_started`; it must not redefine
+  `stage_finished`.
 - Assert SS mode is reached within a bounded frame count of movie start (guards
   against bk2 drift); record `bk2_frame_offset` at SS entry.
 
@@ -130,6 +134,12 @@ player plane (Java composes fields later, as level traces do), and a frame -1
 
 Capture is deliberately generous (cheap at record time); the comparator binds fields
 incrementally.
+
+Recurring `run_objects_end` events identify both the current and previous
+executed `Vint_S2SS` BK2 rows. Replay derives controller held/pressed state from
+those rows through the normal BK2 input mapper; raw auxiliary held bytes are
+diagnostics only. Recording workflow validation and the Java artifact contract
+reject any relative/absolute identity or P1/P2 mask disagreement before replay.
 
 ## Component 2 — Recording workflow
 

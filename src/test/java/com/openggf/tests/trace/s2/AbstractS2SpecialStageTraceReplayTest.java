@@ -14,6 +14,7 @@ import com.openggf.trace.SpecialStageTraceData;
 import com.openggf.trace.SpecialStageExpectedState;
 import com.openggf.trace.SpecialStageTraceFrame;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder;
+import com.openggf.trace.SpecialStageRunObjectsPassBinder.CompletedPass;
 import com.openggf.trace.TraceEvent;
 import com.openggf.trace.SpecialStageTraceFrame.CharacterState;
 import org.junit.jupiter.api.Test;
@@ -42,11 +43,14 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *
  * <h2>Replay semantics</h2>
  * <ul>
- *   <li><b>Trace-paced.</b> Iterate trace frames {@code 0..compareEnd-1}. A lag
- *       row advances nothing engine-side (the row is skipped entirely); a
- *       non-lag row is stepped exactly once. The press-edge diff still uses the
- *       previous <em>physical</em> BK2 row (see the harness), so skipping lag
- *       rows does not corrupt edge detection.</li>
+ *   <li><b>ROM-pass-paced after control unlock.</b> Startup retains the verified
+ *       VBlank/non-lag pacing. Once {@code SpecialStage_Started} is observed,
+ *       each observation executes exactly its ordered {@code run_objects_end}
+ *       events: zero events means zero engine updates and two events means two.
+ *       Each pass identifies the current and previous BK2 rows sampled by its
+ *       preceding {@code Vint_S2SS}; held and pressed inputs are derived from
+ *       those movie rows. Raw auxiliary held values are diagnostics only and
+ *       are rejected if they disagree with the identified BK2 rows.</li>
  *   <li><b>Comparison-only.</b> Trace values are read for input + expectation
  *       only; engine state is never hydrated from the trace.</li>
  *   <li><b>Atomic object-pass expectations.</b> A VBlank CSV row can bisect
@@ -58,7 +62,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *   <li><b>Finish boundary.</b> {@code compareEnd = stageFinishedFrame().orElse(
  *       frameCount())}. A Tier-1 {@code finished_transition_frame} check asserts
  *       the engine's {@code isFinished()} first becomes true exactly at the
- *       recorded stage-finished frame.</li>
+ *       final-checkpoint logical observation. The later Obj6F
+ *       {@code results_started} event and results tail are recorded but not
+ *       compared.</li>
  * </ul>
  *
  * <h2>Comparator tiers</h2>
@@ -191,23 +197,46 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         List<FrameComparison> comparisons = new ArrayList<>();
         int firstEngineFinished = -1;
         SpecialStageRunObjectsPassBinder passBinder =
-                new SpecialStageRunObjectsPassBinder(trace.runObjectsEndSnapshots());
+                new SpecialStageRunObjectsPassBinder(
+                        trace.runObjectsEndSnapshots(),
+                        trace.frameCount(),
+                        frame -> !trace.getFrame(frame).lag(),
+                        trace.metadata().bk2FrameOffset(),
+                        harness.movieFrames());
+        int passPacingStart = trace.controlStateTransitions().stream()
+                .filter(SpecialStageTraceData.ControlStateTransition::started)
+                .mapToInt(SpecialStageTraceData.ControlStateTransition::frame)
+                .findFirst()
+                .orElse(Integer.MAX_VALUE);
 
         for (int f = 0; f < compareEnd; f++) {
             SpecialStageTraceFrame tf = trace.getFrame(f);
-            if (tf.lag()) {
-                continue; // lag row: nothing steps engine-side
+            List<CompletedPass> completedPasses = passBinder.passesForObservation(f);
+            if (f < passPacingStart) {
+                if (tf.lag()) {
+                    continue;
+                }
+                harness.stepFrame(f);
+            } else {
+                for (CompletedPass pass : completedPasses) {
+                    harness.stepPass(pass);
+                }
+                if (tf.lag()) {
+                    continue;
+                }
             }
-            harness.stepFrame(f);
             Sonic2SpecialStageComparisonState state = harness.capture();
             if (firstEngineFinished < 0 && state.finished()) {
                 firstEngineFinished = f;
             }
 
             Map<String, FieldComparison> fields = new LinkedHashMap<>();
-            List<TraceEvent> passEnd = passBinder.nextForExecutedFrame(f)
-                    .<List<TraceEvent>>map(List::of)
-                    .orElseGet(List::of);
+            List<TraceEvent> passEnd = f >= passPacingStart
+                    ? passBinder.latestCompleted()
+                            .map(CompletedPass::snapshot)
+                            .<List<TraceEvent>>map(List::of)
+                            .orElseGet(List::of)
+                    : List.of();
             SpecialStageExpectedState expected =
                     SpecialStageExpectedState.from(tf, passEnd);
             addManagerFields(fields, expected, state, false);
@@ -220,8 +249,15 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         // observe whether the engine flips isFinished() at the same frame.
         if (ssFinished.isPresent()) {
             int sf = ssFinished.getAsInt();
-            if (sf >= 0 && sf < trace.frameCount() && !trace.getFrame(sf).lag()) {
-                harness.stepFrame(sf);
+            if (sf >= 0 && sf < trace.frameCount()) {
+                List<CompletedPass> completedPasses = passBinder.passesForObservation(sf);
+                if (sf < passPacingStart) {
+                    if (!trace.getFrame(sf).lag()) {
+                        harness.stepFrame(sf);
+                    }
+                } else {
+                    completedPasses.forEach(harness::stepPass);
+                }
                 if (firstEngineFinished < 0 && harness.isFinished()) {
                     firstEngineFinished = sf;
                 }
@@ -242,13 +278,19 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                                          Sonic2SpecialStageComparisonState state,
                                          boolean finishedExpected) {
         SpecialStageTraceFrame tf = expected.csv();
+        SpecialStageExpectedState.RunObjectsEndState pass = expected.runObjectsEnd();
+        int speedFactor = pass != null ? pass.speedFactor() : tf.speedFactor();
+        int currentSegment = pass != null ? pass.currentSegment() : tf.currentSegment();
+        int trackAnimFrame = pass != null ? pass.trackAnimFrame() : tf.trackAnimFrame();
+        int trackDrawingIndex = pass != null ? pass.trackDrawingIndex() : tf.trackDrawingIndex();
+        int trackDurationTimer = pass != null ? pass.trackDurationTimer() : tf.trackDurationTimer();
         // Tier-1
         fields.put("speed_factor",
-                cmp("speed_factor", str(tf.speedFactor()), str(state.speedFactor()), Severity.ERROR));
+                cmp("speed_factor", str(speedFactor), str(state.speedFactor()), Severity.ERROR));
         fields.put("current_segment",
-                cmp("current_segment", str(tf.currentSegment()), str(state.currentSegmentIndex()), Severity.ERROR));
+                cmp("current_segment", str(currentSegment), str(state.currentSegmentIndex()), Severity.ERROR));
         fields.put("track_anim_frame",
-                cmp("track_anim_frame", str(tf.trackAnimFrame()), str(state.trackAnimFrame()), Severity.ERROR));
+                cmp("track_anim_frame", str(trackAnimFrame), str(state.trackAnimFrame()), Severity.ERROR));
         fields.put("combined_rings",
                 cmp("combined_rings", str(expected.combinedRings()), str(state.combinedRings()), Severity.ERROR));
         fields.put("finished",
@@ -256,8 +298,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
 
         // Tier-2
         fields.put("track_drawing_index",
-                cmp("track_drawing_index", str(tf.trackDrawingIndex()), str(state.drawingIndex()), Severity.WARNING));
-        int expectedCounter = mapTrackDurationElapsed(tf.speedFactor(), tf.trackDurationTimer());
+                cmp("track_drawing_index", str(trackDrawingIndex), str(state.drawingIndex()), Severity.WARNING));
+        int expectedCounter = mapTrackDurationElapsed(speedFactor, trackDurationTimer);
         fields.put("track_duration_timer",
                 cmp("track_duration_timer", str(expectedCounter), str(state.trackFrameDelayCounter()), Severity.WARNING));
         fields.put("tails_control_counter",

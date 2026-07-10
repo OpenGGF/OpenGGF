@@ -10,6 +10,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageInputMapper;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState;
+import com.openggf.trace.SpecialStageRunObjectsPassBinder.CompletedPass;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -92,12 +93,15 @@ final class S2SpecialStageReplayHarness {
 
     /** Absolute BK2 input-log row backing trace frame {@code traceFrame}. */
     private Bk2FrameInput rowAt(int traceFrame) {
-        List<Bk2FrameInput> frames = movie.getFrames();
         int index = bk2FrameOffset + traceFrame;
+        return rowAtAbsolute(index);
+    }
+
+    private Bk2FrameInput rowAtAbsolute(int index) {
+        List<Bk2FrameInput> frames = movie.getFrames();
         if (index < 0 || index >= frames.size()) {
             throw new IndexOutOfBoundsException(
-                    "BK2 row " + index + " (offset " + bk2FrameOffset + " + frame "
-                            + traceFrame + ") out of range [0, " + frames.size() + ")");
+                    "BK2 row " + index + " out of range [0, " + frames.size() + ")");
         }
         return frames.get(index);
     }
@@ -124,6 +128,34 @@ final class S2SpecialStageReplayHarness {
         } finally {
             inputHandler.clearLogicalOverride();
         }
+    }
+
+    /**
+     * Steps one recurring ROM object pass using only the current/previous BK2
+     * row identities captured by the preceding Vint_S2SS ReadJoypads call.
+     * Auxiliary held values are diagnostics validated by the pass binder; they
+     * are never used to drive the engine.
+     */
+    void stepPass(CompletedPass pass) {
+        SpecialStageInputMapper.MappedInput mapped = mappedInputForPass(movie, pass);
+        provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
+        provider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
+        provider.bindPendingRecurringPassInput(
+                mapped.p1Held(), mapped.p1Pressed(), mapped.p2Held(), mapped.p2Logical());
+        provider.update();
+    }
+
+    static SpecialStageInputMapper.MappedInput mappedInputForPass(
+            Bk2Movie movie, CompletedPass pass) {
+        List<Bk2FrameInput> frames = movie.getFrames();
+        Bk2FrameInput current = frames.get(pass.inputSampleBk2Frame());
+        Bk2FrameInput previous = frames.get(pass.previousInputSampleBk2Frame());
+        return SpecialStageInputMapper.map(
+                RecordedInputSnapshots.fromBk2(current, previous));
+    }
+
+    List<Bk2FrameInput> movieFrames() {
+        return movie.getFrames();
     }
 
     /** Read-only comparison snapshot of the current engine SS state. */

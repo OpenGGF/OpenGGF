@@ -40,6 +40,68 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage completed-pass pacing clears the Stage-1 gate
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on `ef72ba101` with this implementation
+uncommitted. The f916 player mismatch was caused by stepping one engine update
+for every non-lag VBlank observation even though the 68K completed zero, one, or
+multiple `RunObjects` passes between observations.
+
+- Recorder v1.3 uses exactly two execute callbacks. `ReadJoypads`' shared RTS at
+  `$1156` fires once after each player read, so the input hook accepts only
+  `A0=$F608` and stack return PC `$88E`, proving both pads were stored for the
+  `Vint_S2SS` call at `$88A` (`s2.asm:837-840,1361-1387`). `$88C` is the BSR
+  displacement word and is not executable. `RunObjects_End` remains `$15FE4`
+  (`:29805-29849`). The latter attaches the exact current and previous poll
+  identities plus raw P1/P2 diagnostic bytes, then queues the atomic snapshot
+  to the first forward non-lag observation. Replay loads both identified BK2
+  rows and derives held/pressed state through `RecordedInputSnapshots` and
+  `SpecialStageInputMapper`; no auxiliary held value drives the engine. The
+  workflow, Java artifact contract, and binder reject identity or mask tampering.
+- The capture excludes the pass whose preceding VInt sample still saw
+  `SpecialStage_Started=0` but whose end set it to 1. Startup VBlank pacing already
+  owns that transition pass; replaying it again caused the rejected f429 track
+  phase regression. Capture also ends at `stage_finished`, because results-tail
+  `RunObjects` calls are outside the compared runtime.
+- Pass-count reconciliation is exact. v1.2 contained 2,929 recurring passes plus
+  the Started transition pass through `stage_finished`, then 79 results-tail
+  events (3,009 total). The corrected hook
+  observes 2,990 recurring passes through that same boundary and zero after it:
+  61 gameplay passes previously hidden by backward/last-nonlag association are
+  recovered while all 79 irrelevant tail events and the one startup transition
+  pass are removed. The artifact pins 596 multi-pass observation frames and
+  1,257 delayed bindings.
+- Record/validation command:
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/bizhawk/record_s2_level_select_traces.ps1 -RomPath s2.gen -Only special_stage`
+  passed. The 5,299-row physics CSV is byte-identical to v1.2 (compressed SHA-256
+  `DE6174B8DE48F4AA1541E654D9E334C0442183778CF1FBD42C4E749F499A43DF`);
+  aux SHA-256 is
+  `6144DCD81B4DC11E11CB4226DDC94E257B435F4161D5C76D11D80677196B1A80`.
+- Replay command:
+  `mvn -q "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`
+  completed and regenerated the report. Review then found that calling
+  `handleInput(N)` before `update()` still executed the already-pending N-1 pass.
+  The provider now exposes a narrow input-only bind that replaces that pending
+  pass's four controller fields before update; a same-pass jump-edge test proves
+  sample N changes pass N, without copying any gameplay state. Before the campaign: 15,313 errors /
+  1,877 warnings, first f0. Before pass pacing (`ef72ba101`): 11,001 / 10,
+  first f916 `sonic_ss_x` 58/61. After: 3,694 / 0, first f1019
+  `sonic_ss_x` expected 65530, actual -6 (a separate signed-coordinate mapping).
+  This is a 75.88% error reduction from the
+  campaign baseline and satisfies Task 4's required >=50% Stage-1 gate.
+- The canonical finish boundary is the final `SS_Check_Rings_flag` 0→`$FF`
+  resolution: it is observed on raw f5181 and owned by the preceding logical
+  non-lag observation f5180, which also owns recurring pass sequence 2989.
+  Obj6F is not the finish contract; its later sighting is recorded separately
+  as `results_started` at f5219, with the remaining results tail retained but
+  excluded from comparison. The report now expects
+  `finished_transition_frame=5180`; engine actual remains `never`, a distinct
+  finish-flow parity root rather than recorder pacing loss.
+
+The f1019 signed-coordinate comparison is the next independent frontier; there is no
+frame/route carve-out, comparator fallback, or trace-to-engine state writeback.
+
 ## 2026-07-10 - S2 special-stage ordered RunObjects observation identity
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch
