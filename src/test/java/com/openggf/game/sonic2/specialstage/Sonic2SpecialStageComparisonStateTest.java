@@ -65,6 +65,7 @@ class Sonic2SpecialStageComparisonStateTest {
         assertEquals(sonicPlayer.isHurt() ? 2 : 0, state.sonic().routineSecondary());
         assertEquals(sonicPlayer.getAnim(), state.sonic().anim());
         assertEquals(sonicPlayer.getAnimFrame(), state.sonic().animFrame());
+        assertEquals(sonicPlayer.getRings(), state.sonic().rings());
     }
 
     @Test

@@ -337,6 +337,7 @@ final class Sonic2SpecialStageSnapshot {
             boolean renderXFlip,
             boolean renderYFlip,
             int collisionProperty,
+            int rings,
             int globalAnimFrameTimer,
             int[] ctrlRecordBuf,
             int ctrlRecordIndex,

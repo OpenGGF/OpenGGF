@@ -71,14 +71,15 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <h2>Comparator tiers</h2>
  * <p>Tier-1 mismatches are report ERRORs, Tier-2 are WARNINGs. Only fields
  * exposed by {@link Sonic2SpecialStageComparisonState} are wired; trace columns
- * with no engine counterpart in that snapshot (per-player rings,
- * {@code rings_togo_bcd}, {@code swap_positions_flag}, hurt/slide/flip timers)
- * are not compared, and {@code player_anim_frame_timer} is intentionally never
- * compared (its engine counterpart is a constant).
+ * with no engine counterpart in that snapshot ({@code rings_togo_bcd},
+ * {@code swap_positions_flag}, hurt/slide/flip timers) are not compared, and
+ * {@code player_anim_frame_timer} is intentionally never compared (its engine
+ * counterpart is a constant).
  * <ul>
  *   <li><b>Tier-1</b>: per-player {@code present}, {@code ss_x}, {@code ss_y},
  *       {@code ss_z}, {@code angle}, {@code routine} (mapped ROM byte → engine
  *       {@code RoutineState} name), {@code hurt} ({@code routine_secondary==2});
+ *       per-player {@code sonic_rings}/{@code tails_rings},
  *       {@code combined_rings}, {@code speed_factor}, {@code current_segment},
  *       {@code track_anim_frame}, {@code finished}, and the
  *       {@code finished_transition_frame} boundary check.</li>
@@ -379,6 +380,9 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         boolean engHurt = engPresent && ps.routineSecondary() == 2;
         fields.put(prefix + "_hurt",
                 cmp(prefix + "_hurt", bool(traceHurt), bool(engHurt), Severity.ERROR));
+        fields.put(prefix + "_rings", cmp(prefix + "_rings",
+                intOr(tracePresent, tracePresent ? tc.ringsBinary() : 0),
+                intOr(engPresent, engPresent ? ps.rings() : 0), Severity.ERROR));
     }
 
     /**

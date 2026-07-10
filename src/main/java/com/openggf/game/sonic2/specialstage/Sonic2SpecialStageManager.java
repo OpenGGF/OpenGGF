@@ -1579,7 +1579,7 @@ public class Sonic2SpecialStageManager {
             if (!ring.collect()) {
                 return false;
             }
-            objectManager.collectRing();
+            objectManager.collectRing(player);
             GameServices.audio().playSfx(GameSound.RING);
             LOGGER.fine("Collected ring! Total: " + objectManager.getRingsCollected());
             return true;
@@ -1592,7 +1592,7 @@ public class Sonic2SpecialStageManager {
             // Original game plays SndID_SlowSmash for bomb explosion
             GameServices.audio().playSfx(GameSound.SLOW_SMASH);
             // Ring spill sound plays when rings are actually lost
-            int ringsLost = objectManager.loseRingsFromBombHit();
+            int ringsLost = objectManager.loseRingsFromBombHit(player);
             if (ringsLost > 0) {
                 GameServices.audio().playSfx(GameSound.RING_SPILL);
             }
@@ -2860,7 +2860,8 @@ public class Sonic2SpecialStageManager {
                 player.getRoutine().name(),
                 player.isHurt() ? 2 : 0,
                 player.getAnim(),
-                player.getAnimFrame());
+                player.getAnimFrame(),
+                player.getRings());
     }
 
     /**
@@ -3228,7 +3229,8 @@ public class Sonic2SpecialStageManager {
         /**
          * Collects a ring and increments the counter.
          */
-        public void collectRing() {
+        public void collectRing(Sonic2SpecialStagePlayer player) {
+            player.collectRing();
             ringsCollected++;
         }
 
@@ -3236,22 +3238,9 @@ public class Sonic2SpecialStageManager {
          * Loses rings from a bomb hit (BCD-style subtraction).
          * Returns the number of rings lost.
          */
-        public int loseRingsFromBombHit() {
-            if (ringsCollected == 0) {
-                return 0;
-            }
-
-            int ringsLost;
-            if (ringsCollected >= 10) {
-                // Lose exactly 10 rings
-                ringsLost = 10;
-                ringsCollected -= 10;
-            } else {
-                // Lose all remaining rings
-                ringsLost = ringsCollected;
-                ringsCollected = 0;
-            }
-
+        public int loseRingsFromBombHit(Sonic2SpecialStagePlayer player) {
+            int ringsLost = player.loseRingsFromBombHit();
+            ringsCollected -= ringsLost;
             return ringsLost;
         }
 

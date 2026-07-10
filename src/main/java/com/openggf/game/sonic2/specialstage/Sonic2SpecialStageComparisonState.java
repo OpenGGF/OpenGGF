@@ -22,6 +22,6 @@ public record Sonic2SpecialStageComparisonState(
 
     public record PlayerState(int ssX, int ssY, int ssZ, int angle,
                                String routine, int routineSecondary,
-                               int anim, int animFrame) {
+                               int anim, int animFrame, int rings) {
     }
 }

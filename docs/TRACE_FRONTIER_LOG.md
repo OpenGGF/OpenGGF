@@ -40,6 +40,35 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-10 - S2 special-stage per-player ring ownership ratcheted
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `7dd0506ee`. Task 7 promotes
+the recorded Sonic/Tails ring digits from diagnostic Tier 2 to ERROR severity
+without changing the already-green combined-ring contract.
+
+- ROM Obj60 increments the touching object's decimal digit cells and the
+  corresponding Sonic/Tails total (`docs/s2disasm/s2.asm:70771-70789`). Obj5B
+  later spills ten rings when that same player has a tens/hundreds digit;
+  otherwise it clears and spills all remaining units, subtracting only from
+  that player's total (`docs/s2disasm/s2.asm:71233-71272`). The engine now owns
+  that count on each `Sonic2SpecialStagePlayer`; collision routing passes the
+  touching player to collection/spill, and the existing combined counter is
+  updated by the same mutation so its invariant is `sonic + tails`.
+- Player rewind snapshots include the owned count. The comparison snapshot's
+  trailing `PlayerState.rings` value is compared with the trace character's
+  decoded `ringsBinary()` as ERROR; no other severity or tolerance changed.
+- Focused RED for ownership/snapshot APIs:
+  `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePerPlayerRingsTest" test`.
+  Test compilation failed because `getRings()`, player-aware `collectRing`, and
+  player-aware bomb spill did not exist. Focused RED for the comparison seam:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.S2SpecialStageExpectedComparisonTest#perPlayerRingMismatchIsAnError" test`.
+  JUnit failed because `sonic_rings` was absent from the comparison map.
+- After implementation, the focused per-player/comparison tests pass. A fresh
+  `TestS2SpecialStageTraceReplay` run passes both JUnit tests and writes a
+  3,227-frame report with 0 errors / 0 warnings, proving the stricter field is
+  natively green without trace hydration or a route/frame/zone carve-out.
+
 ## 2026-07-10 - S2 special-stage Tier-1 ratchet enabled
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

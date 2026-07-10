@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class S2SpecialStageExpectedComparisonTest {
 
@@ -48,7 +49,7 @@ class S2SpecialStageExpectedComparisonTest {
         Map<String, FieldComparison> compared =
                 AbstractS2SpecialStageTraceReplayTest.compareExpectedFrame(
                         expected, engine(new PlayerState(-6, -14, 0x006E, 64,
-                                "NORMAL", 0, 1, 2)));
+                                "NORMAL", 0, 1, 2, 0)));
 
         assertEquals(Severity.MATCH, compared.get("sonic_ss_x").severity());
         assertEquals(Severity.MATCH, compared.get("sonic_ss_y").severity());
@@ -62,20 +63,38 @@ class S2SpecialStageExpectedComparisonTest {
         Map<String, FieldComparison> compared =
                 AbstractS2SpecialStageTraceReplayTest.compareExpectedFrame(
                         expected, engine(new PlayerState(0, 0, -6, 64,
-                                "NORMAL", 0, 1, 2)));
+                                "NORMAL", 0, 1, 2, 0)));
 
         assertEquals(Severity.ERROR, compared.get("sonic_ss_z").severity());
         assertEquals("65530", compared.get("sonic_ss_z").expected());
     }
 
+    @Test
+    void perPlayerRingMismatchIsAnError() {
+        SpecialStageTraceFrame.CharacterState sonic = character(0, 0, 0x006E, 5);
+        SpecialStageExpectedState expected = SpecialStageExpectedState.from(frame(sonic), List.of());
+
+        Map<String, FieldComparison> compared =
+                AbstractS2SpecialStageTraceReplayTest.compareExpectedFrame(
+                        expected, engine(new PlayerState(0, 0, 0x006E, 64,
+                                "NORMAL", 0, 1, 2, 4)));
+
+        FieldComparison rings = compared.get("sonic_rings");
+        assertNotNull(rings);
+        assertEquals(Severity.ERROR, rings.severity());
+        assertEquals("5", rings.expected());
+        assertEquals("4", rings.actual());
+    }
+
     private static Sonic2SpecialStageComparisonState engine(int rings) {
-        PlayerState player = new PlayerState(128, 90, 300, 64, "NORMAL", 0, 1, 2);
+        PlayerState player = new PlayerState(128, 90, 300, 64, "NORMAL", 0, 1, 2, rings);
+        PlayerState tails = new PlayerState(128, 90, 300, 64, "NORMAL", 0, 1, 2, 0);
         return new Sonic2SpecialStageComparisonState(12, 5, 7, 4, 58,
-                rings, 9, false, player, player);
+                rings, 9, false, player, tails);
     }
 
     private static Sonic2SpecialStageComparisonState engine(PlayerState sonic) {
-        PlayerState tails = new PlayerState(128, 90, 300, 64, "NORMAL", 0, 1, 2);
+        PlayerState tails = new PlayerState(128, 90, 300, 64, "NORMAL", 0, 1, 2, 0);
         return new Sonic2SpecialStageComparisonState(12, 5, 7, 4, 10,
                 0, 4, false, sonic, tails);
     }
@@ -95,8 +114,13 @@ class S2SpecialStageExpectedComparisonTest {
     }
 
     private static SpecialStageTraceFrame.CharacterState character(int ssX, int ssY, int ssZ) {
+        return character(ssX, ssY, ssZ, 0);
+    }
+
+    private static SpecialStageTraceFrame.CharacterState character(int ssX, int ssY, int ssZ,
+                                                                    int rings) {
         return new SpecialStageTraceFrame.CharacterState(true,
                 ssX, 0, ssY, 0, ssZ, 64, 2, 0, 0, 1, 2,
-                0, 0, 0, 0);
+                rings, 0, 0, 0);
     }
 }

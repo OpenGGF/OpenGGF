@@ -63,6 +63,7 @@ public class Sonic2SpecialStagePlayer {
     private int ssSlideTimer;
     private int ssHurtTimer;
     private int ssDplcTimer;
+    private int rings;
 
     // Flip timer for creating 8-frame running animation from 4 art frames.
     // ss_init_flip_timer is a word (0x400), but when read as byte it gives high byte (0x04).
@@ -173,6 +174,7 @@ public class Sonic2SpecialStagePlayer {
         ssSlideTimer = 0;
         ssHurtTimer = 0;
         ssDplcTimer = 0;
+        rings = 0;
 
         ssInitFlipTimer = 0;
         ssFlipTimer = 0;
@@ -847,6 +849,22 @@ public class Sonic2SpecialStagePlayer {
     public boolean isRenderYFlip() { return renderYFlip; }
     public boolean isJumping() { return statusJumping; }
     public boolean isHurt() { return routineSecondary == 2; }
+    public int getRings() { return rings; }
+
+    void collectRing() {
+        rings++;
+    }
+
+    /**
+     * Applies Obj5B's owning-player ring spill: ten rings when a tens or
+     * hundreds digit exists, otherwise all remaining units
+     * ({@code docs/s2disasm/s2.asm:71233-71272}).
+     */
+    int loseRingsFromBombHit() {
+        int lost = Math.min(10, rings);
+        rings -= lost;
+        return lost;
+    }
 
     public boolean isInvulnerable() {
         return invulnerabilityCountdown > 0;
@@ -935,6 +953,7 @@ public class Sonic2SpecialStagePlayer {
                 renderXFlip,
                 renderYFlip,
                 collisionProperty,
+                rings,
                 globalAnimFrameTimer,
                 ctrlRecordBuf,
                 ctrlRecordIndex,
@@ -981,6 +1000,7 @@ public class Sonic2SpecialStagePlayer {
         renderXFlip = snapshot.renderXFlip();
         renderYFlip = snapshot.renderYFlip();
         collisionProperty = snapshot.collisionProperty();
+        rings = snapshot.rings();
         globalAnimFrameTimer = snapshot.globalAnimFrameTimer();
         ctrlRecordBuf = Sonic2SpecialStageSnapshot.cloneIntArray(snapshot.ctrlRecordBuf());
         ctrlRecordIndex = snapshot.ctrlRecordIndex();
