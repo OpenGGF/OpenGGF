@@ -2102,7 +2102,7 @@ public class Sonic2SpecialStageManager {
             }
         }
 
-        if (renderPlaneA) {
+        if (renderPlaneA && decodedTrackFrame != null && decodedTrackFrame.length > 0) {
             int trackFrameIndex = trackAnimator.getCurrentTrackFrameIndex();
             renderer.renderTrack(trackFrameIndex, decodedTrackFrame);
         }
