@@ -3328,6 +3328,14 @@ public class LevelManager {
      * without skipping the rest of the gameplay loop.
      */
     private void advanceFrameCounterAcrossSeamlessReload() {
+        // The reload is requested by ScreenEvents, but the ROM returns to the
+        // remainder of LevelLoop afterward: OscillateNumDo still runs before
+        // the next VBlank (docs/skdisasm/sonic3k.asm:7884-7910,
+        // 104722-104774). The engine applies the pending reload at the next
+        // frame top and returns from RecordingFrameDriver/GameLoop, so preserve
+        // that native post-ScreenEvents oscillator tick explicitly.
+        advanceGlobalOscillation();
+
         // ROM keeps Level_frame_counter ticking through AIZ's reload frame
         // (docs/skdisasm/sonic3k.asm:7884-7894); S3K Tails CPU reads it for
         // loc_13E9C's 64-frame auto-jump gate (docs/skdisasm/sonic3k.asm:26775-26782).

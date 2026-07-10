@@ -171,9 +171,21 @@ tests (`sonic3k.asm:178243-178277,182535-182553`). Focused
 native-player side selection. The stacked complete-run frontier moves from
 f7849 to f8014.
 
+Round 11 banks the seamless-reload oscillator tail. AIZ's act reload is issued
+inside `ScreenEvents`, after which the ROM returns to the remainder of
+`LevelLoop` and still runs `OscillateNumDo` (`sonic3k.asm:7884-7910,
+104722-104774`). The engine applies that pending reload at the next driver-frame
+top and returns immediately; its existing reload-frame bridge advanced
+`Level_frame_counter` but omitted the post-event oscillator tick. Extending the
+same state-driven bridge restores the AIZ2 floating-platform phase and moves the
+stacked complete-run frontier from f8014 to f8326. The focused
+`TestLevelManager#seamlessReloadFrameCounterBridgeAdvancesStoredLevelAndSpriteCounters`
+guard now covers both the counter and oscillator portions of the skipped ROM
+tail.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree frontier is f8014. Those causes will be recorded and committed
+banked rounds the current stacked working-tree frontier is f8326. Those causes will be recorded and committed
 separately as their focused guards are completed. The level-select AIZ trace remains at f8941
 and is still part of the stage-green exit gate. S1/S2 full trace sweeps remain
 pending until the AIZ fixes are banked; no green claim is made yet.
