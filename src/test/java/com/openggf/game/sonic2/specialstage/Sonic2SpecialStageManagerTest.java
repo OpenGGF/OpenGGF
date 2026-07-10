@@ -197,7 +197,13 @@ public class Sonic2SpecialStageManagerTest {
         assertTrue(normalWallReads > 0);
 
         manager.setLagCompensation(0.5);
-        setField(manager, "lagAccumulator", 0.5);
+        setField(manager, "frameCounter", 2);
+        assertTrue(Sonic2SpecialStageLagModel.shouldLagThisFrame(
+                3,
+                animator.getSpeedFactor(),
+                animator.getCurrentSegmentType(),
+                0,
+                0), "the next host frame must exercise the stateless lag branch");
         manager.update();
         assertEquals(normalNanoReads + 1, clock.nanoTimeReads,
                 "A lag-skip update should refresh only the fine diagnostic frame timestamp");
@@ -241,6 +247,22 @@ public class Sonic2SpecialStageManagerTest {
     }
 
     @Test
+    void terminalPassCompletionRejectsAnAbsentPendingPassWithoutMutation() {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        Sonic2SpecialStageSnapshot before = manager.captureRewindSnapshot();
+
+        assertThrows(IllegalStateException.class,
+                manager::completeTerminalPreStartPassWithoutVint);
+
+        Sonic2SpecialStageSnapshot after = manager.captureRewindSnapshot();
+        assertEquals(before.frameCounter, after.frameCounter);
+        assertEquals(before.renderFrameCounter, after.renderFrameCounter);
+        assertEquals(before.lastDrawingIndex, after.lastDrawingIndex);
+        assertEquals(before.recurringMainPassPending, after.recurringMainPassPending);
+        assertEquals(before.trackAnimator, after.trackAnimator);
+    }
+
+    @Test
     public void lagCompensationDisplayStartsOffAndToggles() {
         Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
 
@@ -257,23 +279,23 @@ public class Sonic2SpecialStageManagerTest {
     }
 
     @Test
-    public void lagCompensationAdjustmentsRequireDisplayEnabled() {
+    void lagAccumulatorIsRetiredBecauseTheModelIsStateless() {
+        assertThrows(NoSuchFieldException.class,
+                () -> Sonic2SpecialStageManager.class.getDeclaredField("lagAccumulator"));
+        assertThrows(NoSuchFieldException.class,
+                () -> Sonic2SpecialStageSnapshot.class.getDeclaredField("lagAccumulator"));
+    }
+
+    @Test
+    void disabledLagOverlaySeparatesActualRateFromTargetBucket() {
         Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
-        double initial = manager.getLagCompensation();
+        manager.setLagCompensation(0);
 
-        assertFalse(manager.adjustLagCompensationIfDisplayEnabled(0.05),
-                "F6/F7-style adjustments should be ignored while the display is disabled");
-        assertEquals(initial, manager.getLagCompensation(), 0.0001);
+        String text = manager.formatLagCompensationOverlayText();
 
-        manager.toggleLagCompensationDisplay();
-        assertTrue(manager.adjustLagCompensationIfDisplayEnabled(0.05),
-                "F6/F7-style adjustments should apply after F1 enables the display");
-        assertEquals(initial + 0.05, manager.getLagCompensation(), 0.0001);
-
-        manager.toggleLagCompensationDisplay();
-        assertFalse(manager.adjustLagCompensationIfDisplayEnabled(-0.05),
-                "F6/F7-style adjustments should stop applying after the display is toggled off");
-        assertEquals(initial + 0.05, manager.getLagCompensation(), 0.0001);
+        assertTrue(text.contains("actual 0.0%"));
+        assertTrue(text.contains("~60 upd/s"));
+        assertTrue(text.contains("target seg=3 speed=0"));
     }
 
     @Test

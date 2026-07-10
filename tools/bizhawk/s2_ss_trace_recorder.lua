@@ -24,12 +24,33 @@
 --- Constants ---
 -----------------
 
-local LUA_SCRIPT_VERSION = "1.0-s2ss"
+local LUA_SCRIPT_VERSION = "1.4-s2ss"
 local TRACE_PROFILE = "s2_special_stage"
 
--- Output directory (relative to BizHawk working dir, resolved by the
--- run_bizhawk_lua.bat pushd to tools/bizhawk/).
-local OUTPUT_DIR = "trace_output/"
+-- S2 REV01 ReadJoypads' shared RTS is $1156 (s2.asm:1361-1387). It executes
+-- once after P1 and once after P2, so the callback filters A0=$F608 (both pads
+-- stored) and the stack return PC=$88E (the Vint_S2SS call at $88A has
+-- returned; s2.asm:837-840). The recurring loop's post-RunObjects call site
+-- then attaches that exact sample to the completed pass. BizHawk permits only
+-- two simultaneous execute hooks, so there is deliberately no RunObjects-entry
+-- callback.
+local PC_READ_JOYPADS_RETURN = 0x1156
+local VINT_S2SS_READ_JOYPADS_RETURN_PC = 0x88E
+local CTRL_2_READ_COMPLETE_A0 = 0xF608
+-- $52B2 is the instruction after the recurring loop's jsr RunObjects
+-- (s2.asm:6694-6729). Obj59's successful tail pops RunObjects' own return
+-- frame and bypasses the generic RunObjects_End RTS when it raises
+-- SS_Check_Rings_flag (s2.asm:72427-72445), but it still returns here.
+local PC_S2SS_POST_RUN_OBJECTS = 0x52B2
+local INPUT_SAMPLE_HOOK_NAME = "s2ss_input_sample"
+local RUN_OBJECTS_HOOK_NAME = "s2ss_recurring_post_run_objects"
+
+-- The workflow passes an absolute directory because EmuHawk's child-process
+-- working directory is not stable across launcher/config variants.
+local OUTPUT_DIR = os.getenv("OGGF_TRACE_OUTPUT_DIR") or "trace_output/"
+if OUTPUT_DIR:sub(-1) ~= "/" and OUTPUT_DIR:sub(-1) ~= "\\" then
+    OUTPUT_DIR = OUTPUT_DIR .. "/"
+end
 
 -- Headless mode: run at maximum speed, auto-exit when done.
 local HEADLESS = true
@@ -63,6 +84,9 @@ local ADDR_HIDE_RINGS_TOGO          = 0xDBA6  -- SS_HideRingsToGo (u8)
 local ADDR_TRIGGER_RINGS_TOGO       = 0xDBA7  -- SS_TriggerRingsToGo (u8)
 local ADDR_TAILS_CONTROL_COUNTER    = 0xF702  -- Tails_control_counter (u16be)
 local ADDR_SWAP_POSITIONS_FLAG      = 0xF742  -- SS_Swap_Positions_Flag (u8)
+local ADDR_SPECIAL_STAGE_STARTED    = 0xDB23  -- SpecialStage_Started (u8)
+local ADDR_CTRL_1_HELD              = 0xF604  -- Ctrl_1_Held (u8, raw physical)
+local ADDR_CTRL_2_HELD              = 0xF606  -- Ctrl_2_Held (u8, raw physical)
 
 -- Per-player object bases (S2 SST slots reused for special-stage players).
 local SONIC_BASE = 0xB000
@@ -112,13 +136,30 @@ local finished = false
 local trace_frame = 0
 local bk2_frame_offset = 0
 local stage_finished_emitted = false
+local results_started_emitted = false
 local prev_check_rings_flag = 0
 local prev_hide_rings_to_go = 0
 local prev_trigger_rings_to_go = 0
 local prev_no_rings_togo_lifetime = 0
+local prev_special_stage_started = nil
+-- RunObjects consumes the physical sample captured by the preceding
+-- Vint_S2SS. It can finish on either side of the next VBlank observation, so
+-- completed passes queue forward to the next non-lag row. Using only the last
+-- non-lag row at return binds state backwards and drops passes that cross
+-- lag-labelled samples (s2.asm:6679-6688, 29805-29849).
+local last_nonlag_trace_frame = -1
+local pending_run_objects_ends = {}
+local next_run_objects_pass_sequence = 0
+local next_input_sample_sequence = 0
+local latest_input_sample = nil
+local last_completed_input_sample_sequence = nil
+local previous_s2ss_sample_p1_held = 0
+local previous_s2ss_sample_p2_held = 0
+local run_objects_hook_registered = false
 
 local physics_file = nil
 local aux_file = nil
+local unregister_run_objects_hook
 
 -----------------
 --- Helpers   ---
@@ -181,6 +222,116 @@ local function read_ss_character(base)
     }
 end
 
+-- One reusable state reader backs both VBlank CSV rows and the execution-hook
+-- snapshot. Keeping these reads together prevents the two diagnostic views
+-- from silently drifting as the schema evolves.
+local function read_ss_state()
+    return {
+        speed_factor = mainmemory.read_u16_be(ADDR_CUR_SPEED_FACTOR),
+        track_anim = mainmemory.read_u8(ADDR_TRACK_ANIM),
+        track_anim_frame = mainmemory.read_u8(ADDR_TRACK_ANIM_FRAME),
+        track_drawing_index = mainmemory.read_u8(ADDR_TRACK_DRAWING_INDEX),
+        track_orientation = mainmemory.read_u8(ADDR_TRACK_ORIENTATION),
+        track_duration_timer = mainmemory.read_u8(ADDR_TRACK_DURATION_TIMER),
+        current_segment = mainmemory.read_u8(ADDR_CURRENT_SEGMENT),
+        player_anim_frame_timer = mainmemory.read_u8(ADDR_PLAYER_ANIM_FRAME_TIMER),
+        rings_togo_bcd = mainmemory.read_u16_be(ADDR_RINGS_TOGO_BCD),
+        check_rings_flag = mainmemory.read_u8(ADDR_CHECK_RINGS_FLAG),
+        tails_control_counter = mainmemory.read_u16_be(ADDR_TAILS_CONTROL_COUNTER),
+        swap_positions_flag = mainmemory.read_u8(ADDR_SWAP_POSITIONS_FLAG),
+        sonic = read_ss_character(SONIC_BASE),
+        tails = read_ss_character(TAILS_BASE),
+    }
+end
+
+local function character_json(prefix, character)
+    return string.format(
+        ',"%s_present":%d,"%s_ss_x":%d,"%s_ss_x_sub":%d,'
+        .. '"%s_ss_y":%d,"%s_ss_y_sub":%d,"%s_ss_z":%d,'
+        .. '"%s_angle":%d,"%s_routine":%d,"%s_routine_secondary":%d,'
+        .. '"%s_status":%d,"%s_anim":%d,"%s_anim_frame":%d,'
+        .. '"%s_rings_bcd":%d,"%s_hurt_timer":%d,"%s_slide_timer":%d,'
+        .. '"%s_flip_timer":%d',
+        prefix, character.present and 1 or 0,
+        prefix, character.ss_x, prefix, character.ss_x_sub,
+        prefix, character.ss_y, prefix, character.ss_y_sub,
+        prefix, character.ss_z, prefix, character.angle,
+        prefix, character.routine, prefix, character.routine_secondary,
+        prefix, character.status, prefix, character.anim,
+        prefix, character.anim_frame, prefix, character.rings_bcd,
+        prefix, character.hurt_timer, prefix, character.slide_timer,
+        prefix, character.flip_timer)
+end
+
+local function write_run_objects_end(frame, pass, state)
+    write_aux(string.format(
+        '{"frame":%d,"type":"run_objects_end","pass_sequence":%d,'
+        .. '"first_eligible_frame":%d,"completion_cursor_frame":%d,'
+        .. '"input_sample_frame":%d,"input_sample_bk2_frame":%d,'
+        .. '"previous_input_sample_frame":%d,"previous_input_sample_bk2_frame":%d,'
+        .. '"input_sample_sequence":%d,"input_source":"vint_s2ss_read_joypads",'
+        .. '"started_at_input_sample":%d,"p1_held":%d,"p2_held":%d,'
+        .. '"previous_p1_held":%d,"previous_p2_held":%d,"speed_factor":%d,'
+        .. '"track_anim":%d,"track_anim_frame":%d,"track_drawing_index":%d,'
+        .. '"track_orientation":%d,"track_duration_timer":%d,'
+        .. '"current_segment":%d,"player_anim_frame_timer":%d,'
+        .. '"rings_togo_bcd":%d,"check_rings_flag":%d,'
+        .. '"tails_control_counter":%d,"swap_positions_flag":%d',
+        frame, pass.pass_sequence, pass.first_eligible_frame,
+        pass.completion_cursor_frame, pass.input_sample_frame,
+        pass.input_sample_bk2_frame, pass.previous_input_sample_frame,
+        pass.previous_input_sample_bk2_frame, pass.input_sample_sequence,
+        pass.started_at_input_sample, pass.p1_held, pass.p2_held,
+        pass.previous_p1_held, pass.previous_p2_held, state.speed_factor,
+        state.track_anim, state.track_anim_frame,
+        state.track_drawing_index, state.track_orientation,
+        state.track_duration_timer, state.current_segment,
+        state.player_anim_frame_timer, state.rings_togo_bcd,
+        state.check_rings_flag, state.tails_control_counter,
+        state.swap_positions_flag)
+        .. character_json("sonic", state.sonic)
+        .. character_json("tails", state.tails)
+        .. '}')
+end
+
+local function publish_run_objects_end(pass, frame)
+    write_run_objects_end(frame, pass, pass.state)
+end
+
+local function publish_pending_run_objects_ends(frame)
+    if #pending_run_objects_ends == 0 then return end
+    for _, pass in ipairs(pending_run_objects_ends) do
+        publish_run_objects_end(pass, frame)
+    end
+    pending_run_objects_ends = {}
+end
+
+local function flush_pending_run_objects_ends()
+    publish_pending_run_objects_ends(last_nonlag_trace_frame)
+end
+
+-- The final RunObjects return can occur inside the lag-labelled VBlank that
+-- first exposes SS_Check_Rings_flag. No later recurring observation exists to
+-- flush it forward, so publish that one pending pass at the raw finish
+-- observation with its exact ReadJoypads identity intact.
+local function publish_pending_finish_pass()
+    if #pending_run_objects_ends ~= 1 then
+        error(string.format(
+            "stage finish expected exactly one pending RunObjects pass, got %d",
+            #pending_run_objects_ends))
+    end
+    local pass = pending_run_objects_ends[1]
+    if pass.completion_cursor_frame ~= trace_frame then
+        error(string.format(
+            "terminal pass completion cursor %d differs from finish observation %d",
+            pass.completion_cursor_frame, trace_frame))
+    end
+    if pass.state.check_rings_flag == 0 then
+        error("terminal pending pass did not raise SS_Check_Rings_flag")
+    end
+    publish_pending_run_objects_ends(trace_frame)
+end
+
 -- Read the BK2 movie's logical input for the given absolute BK2 frame index
 -- and controller (1 or 2), converted to the engine's input bitmask. Returns
 -- 0 when no movie is loaded or the controller has no recorded input (the
@@ -221,6 +372,7 @@ local function open_files()
 end
 
 local function close_files()
+    unregister_run_objects_hook()
     if physics_file then
         physics_file:close()
         physics_file = nil
@@ -268,17 +420,16 @@ local function write_pretrace_snapshot()
 end
 
 -- Scan all 128 SST slots ($FFFFB000..$FFFFCFFF) for the first appearance of
--- ObjID_SSResults ($6F), emitting a one-shot stage_finished aux event.
--- Recording continues afterward (uncompared results tail) until Game_Mode
--- leaves special-stage mode.
-local function check_stage_finished()
-    if stage_finished_emitted then return end
+-- ObjID_SSResults ($6F). This is later than the canonical stage-finished
+-- boundary and marks only the start of the recorded, uncompared results tail.
+local function check_results_started()
+    if results_started_emitted then return end
     for slot = 0, OBJ_TOTAL_SLOTS - 1 do
         local addr = OBJ_TABLE_START + (slot * OBJ_SLOT_SIZE)
         if mainmemory.read_u8(addr) == OBJID_SS_RESULTS then
-            write_aux(string.format('{"frame":%d,"type":"stage_finished","slot":%d}',
+            write_aux(string.format('{"frame":%d,"type":"results_started","slot":%d}',
                 trace_frame, slot))
-            stage_finished_emitted = true
+            results_started_emitted = true
             return
         end
     end
@@ -289,6 +440,17 @@ local function check_checkpoint(check_rings_flag)
         write_aux(string.format(
             '{"frame":%d,"type":"checkpoint","check_rings_flag":"0x%02x"}',
             trace_frame, check_rings_flag))
+        if not stage_finished_emitted then
+            if last_nonlag_trace_frame < 0 then
+                error("final checkpoint resolved before any logical observation")
+            end
+            publish_pending_finish_pass()
+            write_aux(string.format(
+                '{"frame":%d,"observed_frame":%d,"type":"stage_finished",'
+                .. '"check_rings_flag":"0x%02x"}',
+                last_nonlag_trace_frame, trace_frame, check_rings_flag))
+            stage_finished_emitted = true
+        end
     end
     prev_check_rings_flag = check_rings_flag
 end
@@ -310,37 +472,144 @@ local function check_message_state()
     end
 end
 
-local function record_frame()
-    local speed_factor = mainmemory.read_u16_be(ADDR_CUR_SPEED_FACTOR)
-    local track_anim = mainmemory.read_u8(ADDR_TRACK_ANIM)
-    local track_anim_frame = mainmemory.read_u8(ADDR_TRACK_ANIM_FRAME)
-    local track_drawing_index = mainmemory.read_u8(ADDR_TRACK_DRAWING_INDEX)
-    local track_orientation = mainmemory.read_u8(ADDR_TRACK_ORIENTATION)
-    local track_duration_timer = mainmemory.read_u8(ADDR_TRACK_DURATION_TIMER)
-    local current_segment = mainmemory.read_u8(ADDR_CURRENT_SEGMENT)
-    local player_anim_frame_timer = mainmemory.read_u8(ADDR_PLAYER_ANIM_FRAME_TIMER)
-    local rings_togo_bcd = mainmemory.read_u16_be(ADDR_RINGS_TOGO_BCD)
-    local check_rings_flag = mainmemory.read_u8(ADDR_CHECK_RINGS_FLAG)
-    local tails_control_counter = mainmemory.read_u16_be(ADDR_TAILS_CONTROL_COUNTER)
-    local swap_positions_flag = mainmemory.read_u8(ADDR_SWAP_POSITIONS_FLAG)
+local function check_control_state()
+    local special_stage_started = mainmemory.read_u8(ADDR_SPECIAL_STAGE_STARTED)
+    if prev_special_stage_started == nil
+            or special_stage_started ~= prev_special_stage_started then
+        write_aux(string.format(
+            '{"frame":%d,"type":"control_state","started":%d}',
+            trace_frame, special_stage_started ~= 0 and 1 or 0))
+        prev_special_stage_started = special_stage_started
+    end
+end
 
-    local sonic = read_ss_character(SONIC_BASE)
-    local tails = read_ss_character(TAILS_BASE)
+local function on_s2ss_input_sample()
+    if not started or finished or physics_file == nil then return end
+    if mainmemory.read_u8(ADDR_GAME_MODE) ~= GAMEMODE_SPECIAL_STAGE then return end
+    local a0 = emu.getregister("M68K A0") & 0xFFFF
+    if a0 ~= CTRL_2_READ_COMPLETE_A0 then return end
+    local stack_pointer = emu.getregister("M68K A7") & 0xFFFF
+    local return_pc = mainmemory.read_u32_be(stack_pointer) & 0xFFFFFF
+    if return_pc ~= VINT_S2SS_READ_JOYPADS_RETURN_PC then return end
+    local p1_held = mainmemory.read_u8(ADDR_CTRL_1_HELD)
+    local p2_held = mainmemory.read_u8(ADDR_CTRL_2_HELD)
+    local input_sample_bk2_frame = emu.framecount()
+    local previous_input_sample_frame = input_sample_bk2_frame - bk2_frame_offset - 1
+    local previous_input_sample_bk2_frame = input_sample_bk2_frame - 1
+    if latest_input_sample ~= nil then
+        previous_input_sample_frame = latest_input_sample.input_sample_frame
+        previous_input_sample_bk2_frame = latest_input_sample.input_sample_bk2_frame
+    end
+    latest_input_sample = {
+        input_sample_sequence = next_input_sample_sequence,
+        input_sample_frame = input_sample_bk2_frame - bk2_frame_offset,
+        input_sample_bk2_frame = input_sample_bk2_frame,
+        previous_input_sample_frame = previous_input_sample_frame,
+        previous_input_sample_bk2_frame = previous_input_sample_bk2_frame,
+        started_at_input_sample = mainmemory.read_u8(ADDR_SPECIAL_STAGE_STARTED),
+        p1_held = p1_held,
+        p2_held = p2_held,
+        previous_p1_held = previous_s2ss_sample_p1_held,
+        previous_p2_held = previous_s2ss_sample_p2_held,
+    }
+    previous_s2ss_sample_p1_held = p1_held
+    previous_s2ss_sample_p2_held = p2_held
+    next_input_sample_sequence = next_input_sample_sequence + 1
+end
+
+local function on_recurring_post_run_objects()
+    if not started or finished or physics_file == nil then return end
+    if mainmemory.read_u8(ADDR_GAME_MODE) ~= GAMEMODE_SPECIAL_STAGE then return end
+    if stage_finished_emitted then return end
+    -- The startup/fade loops have different observation ownership. Atomic
+    -- pass-end comparison begins only when the ROM's recurring gameplay loop
+    -- is enabled by SpecialStage_Started (s2.asm:6689,9745).
+    if mainmemory.read_u8(ADDR_SPECIAL_STAGE_STARTED) == 0 then
+        return
+    end
+    if latest_input_sample == nil then
+        error("recurring RunObjects return observed without a preceding Vint_S2SS input sample")
+    end
+    if latest_input_sample.started_at_input_sample == 0 then return end
+    if last_completed_input_sample_sequence ~= nil
+            and latest_input_sample.input_sample_sequence
+                <= last_completed_input_sample_sequence then
+        error("more than one active RunObjects pass consumed the same Vint_S2SS sample")
+    end
+
+    local pass = {
+        input_sample_sequence = latest_input_sample.input_sample_sequence,
+        first_eligible_frame = latest_input_sample.input_sample_frame,
+        input_sample_frame = latest_input_sample.input_sample_frame,
+        input_sample_bk2_frame = latest_input_sample.input_sample_bk2_frame,
+        previous_input_sample_frame = latest_input_sample.previous_input_sample_frame,
+        previous_input_sample_bk2_frame = latest_input_sample.previous_input_sample_bk2_frame,
+        started_at_input_sample = latest_input_sample.started_at_input_sample,
+        p1_held = latest_input_sample.p1_held,
+        p2_held = latest_input_sample.p2_held,
+        previous_p1_held = latest_input_sample.previous_p1_held,
+        previous_p2_held = latest_input_sample.previous_p2_held,
+    }
+    pass.pass_sequence = next_run_objects_pass_sequence
+    pass.completion_cursor_frame = trace_frame
+    pass.state = read_ss_state()
+    next_run_objects_pass_sequence = next_run_objects_pass_sequence + 1
+    last_completed_input_sample_sequence = pass.input_sample_sequence
+
+    -- The return hook runs during emu.frameadvance(), after the prior row has
+    -- already been sampled. Queue forward to the next eligible observation;
+    -- normally that is the next non-lag row, while the finish-causing pass is
+    -- published explicitly at its raw observation. Publishing immediately to
+    -- last_nonlag_trace_frame would bind the pass backwards.
+    table.insert(pending_run_objects_ends, pass)
+end
+
+local function register_run_objects_hook()
+    if run_objects_hook_registered then return end
+    if not event or not event.onmemoryexecute then
+        error("BizHawk event.onmemoryexecute is required for S2 SS RunObjects-end capture")
+    end
+    event.onmemoryexecute(on_s2ss_input_sample, PC_READ_JOYPADS_RETURN,
+        INPUT_SAMPLE_HOOK_NAME)
+    event.onmemoryexecute(on_recurring_post_run_objects, PC_S2SS_POST_RUN_OBJECTS,
+        RUN_OBJECTS_HOOK_NAME)
+    run_objects_hook_registered = true
+end
+
+unregister_run_objects_hook = function()
+    if not run_objects_hook_registered then return end
+    if event and event.unregisterbyname then
+        pcall(event.unregisterbyname, INPUT_SAMPLE_HOOK_NAME)
+        pcall(event.unregisterbyname, RUN_OBJECTS_HOOK_NAME)
+    end
+    run_objects_hook_registered = false
+end
+
+local function record_frame()
+    local state = read_ss_state()
+    local sonic = state.sonic
+    local tails = state.tails
 
     local frame_index = bk2_frame_offset + trace_frame
     local input_mask = joypad_mask_from_frame(frame_index, 1)
     local input_p2_mask = joypad_mask_from_frame(frame_index, 2)
     local lag = emu.islagged() and 1 or 0
+    if lag == 0 then
+        last_nonlag_trace_frame = trace_frame
+        flush_pending_run_objects_ends()
+    end
 
     -- frame is decimal and lag is 0/1; every other column (including the
     -- *_present flags) is lowercase hex per the ss_csv_version 1 schema.
     physics_file:write(string.format(
         "%d,%x,%x,%d,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n",
         trace_frame, input_mask, input_p2_mask, lag,
-        speed_factor, track_anim, track_anim_frame, track_drawing_index,
-        track_orientation, track_duration_timer, current_segment,
-        player_anim_frame_timer, rings_togo_bcd, check_rings_flag,
-        tails_control_counter, swap_positions_flag,
+        state.speed_factor, state.track_anim, state.track_anim_frame,
+        state.track_drawing_index, state.track_orientation,
+        state.track_duration_timer, state.current_segment,
+        state.player_anim_frame_timer, state.rings_togo_bcd,
+        state.check_rings_flag, state.tails_control_counter,
+        state.swap_positions_flag,
         sonic.present and 1 or 0, sonic.ss_x, sonic.ss_x_sub, sonic.ss_y,
         sonic.ss_y_sub, sonic.ss_z, sonic.angle, sonic.routine,
         sonic.routine_secondary, sonic.status, sonic.anim, sonic.anim_frame,
@@ -357,9 +626,10 @@ local function record_frame()
         write_metadata()
     end
 
-    check_checkpoint(check_rings_flag)
+    check_control_state()
+    check_checkpoint(state.check_rings_flag)
     check_message_state()
-    check_stage_finished()
+    check_results_started()
 
     trace_frame = trace_frame + 1
 end
@@ -381,6 +651,7 @@ local function on_frame_end()
             -- recorded immediately as trace frame 0.
             bk2_frame_offset = emu.framecount()
             open_files()
+            register_run_objects_hook()
             prev_check_rings_flag = mainmemory.read_u8(ADDR_CHECK_RINGS_FLAG)
             prev_hide_rings_to_go = mainmemory.read_u8(ADDR_HIDE_RINGS_TOGO)
             prev_trigger_rings_to_go = mainmemory.read_u8(ADDR_TRIGGER_RINGS_TOGO)

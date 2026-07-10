@@ -706,11 +706,15 @@ public class Sonic2SpecialStageRenderer {
      * Shadows are rendered first (behind players).
      */
     public void renderPlayers() {
-        if (players.isEmpty()) {
+        List<Sonic2SpecialStagePlayer> sortedPlayers = new ArrayList<>();
+        for (Sonic2SpecialStagePlayer player : players) {
+            if (isPlayerRenderEligible(player)) {
+                sortedPlayers.add(player);
+            }
+        }
+        if (sortedPlayers.isEmpty()) {
             return;
         }
-
-        List<Sonic2SpecialStagePlayer> sortedPlayers = new ArrayList<>(players);
         sortedPlayers.sort(Comparator.comparingInt(Sonic2SpecialStagePlayer::getPriority));
 
         // Render shadows first using shadow batch (VDP shadow/highlight mode)
@@ -745,7 +749,7 @@ public class Sonic2SpecialStageRenderer {
      *
      * Special stage sprites are NOT simple grids - they consist of multiple
      * sprite pieces at different positions with different sizes.
-     * Data is from obj09.asm (Sonic) / obj0A.asm (Tails) mappings.
+     * Data is from Obj09 (Sonic) / Obj10 (Tails) mappings.
      *
      * @param player The player to render
      */
@@ -915,7 +919,9 @@ public class Sonic2SpecialStageRenderer {
             return;
         }
 
-        List<Sonic2SpecialStagePlayer> sortedPlayers = new ArrayList<>(players);
+        List<Sonic2SpecialStagePlayer> sortedPlayers = players.stream()
+                .filter(Sonic2SpecialStageRenderer::isPlayerRenderEligible)
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         sortedPlayers.sort(Comparator.comparingInt(Sonic2SpecialStagePlayer::getPriority));
 
         graphicsManager.beginPatternBatch();
@@ -967,6 +973,11 @@ public class Sonic2SpecialStageRenderer {
         graphicsManager.flushPatternBatch();
     }
 
+    private static boolean isPlayerRenderEligible(Sonic2SpecialStagePlayer player) {
+        return player.isSpawned()
+                && player.getRoutine() != Sonic2SpecialStagePlayer.RoutineState.INIT;
+    }
+
     private boolean isInvulnerabilityFlashHidden(Sonic2SpecialStagePlayer player) {
         return player.isInvulnerable() && ((frameCounter >> 3) & 1) != 0;
     }
@@ -1002,7 +1013,8 @@ public class Sonic2SpecialStageRenderer {
 
     /**
      * Renders the START banner sprite using the real Obj5F frame0 sprite pieces.
-     * During WAIT1 phase, renders individual pieces flying off instead of the full banner.
+     * During the Obj5F child-flight window (WAIT1 into the overlapping WAIT2
+     * countdown), renders individual pieces instead of the full banner.
      *
      * Mega Drive coordinate system: Y=0 is at the TOP of the screen.
      * intro.getBannerX()/getBannerY() are in that same space.

@@ -94,16 +94,18 @@ public class Sonic2SpecialStageRing extends Sonic2SpecialStageObject {
 
     /**
      * Called when the ring is collected by a player.
+     * @return true when this call transitions an active ring to collected
      */
-    public void collect() {
+    public boolean collect() {
         if (state != State.ACTIVE) {
-            return;
+            return false;
         }
 
         state = State.COLLECTED;
         animIndex = SPARKLE_ANIM;
         animFrame = 0;
         animTimer = 0;
+        return true;
     }
 
     @Override

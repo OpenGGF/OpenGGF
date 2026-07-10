@@ -178,11 +178,6 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
-    public double getLagCompensation() {
-        return manager.getLagCompensation();
-    }
-
-    @Override
     public void setLagCompensation(double factor) {
         manager.setLagCompensation(factor);
     }

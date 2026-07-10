@@ -1,11 +1,10 @@
 package com.openggf.game.sonic2.specialstage;
 
-import org.junit.jupiter.api.Test;
-
-import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.GLCommandable;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
 import com.openggf.level.PatternDesc;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -24,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.ArgumentMatchers.anyFloat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -338,6 +338,33 @@ public class Sonic2SpecialStageRendererDeterminismTest {
         boolean readBackAtZero = (boolean) flashHidden.invoke(renderer, player);
         assertEquals(firstReadAtZero, readBackAtZero,
                 "Re-applying an earlier frame counter must reproduce the earlier flash state");
+    }
+
+    @Test
+    public void mixedSpawnStateRendersOnlySpawnedPlayer() {
+        GraphicsManager graphics = mock(GraphicsManager.class);
+        Sonic2SpecialStageRenderer renderer = new Sonic2SpecialStageRenderer(graphics);
+
+        Sonic2SpecialStagePlayer spawned = mock(Sonic2SpecialStagePlayer.class);
+        when(spawned.isSpawned()).thenReturn(true);
+        when(spawned.getRoutine()).thenReturn(Sonic2SpecialStagePlayer.RoutineState.NORMAL);
+        when(spawned.getPlayerType()).thenReturn(Sonic2SpecialStagePlayer.PlayerType.SONIC);
+
+        Sonic2SpecialStagePlayer spawnedInit = mock(Sonic2SpecialStagePlayer.class);
+        when(spawnedInit.isSpawned()).thenReturn(true);
+        when(spawnedInit.getRoutine()).thenReturn(Sonic2SpecialStagePlayer.RoutineState.INIT);
+        when(spawnedInit.getPlayerType()).thenReturn(Sonic2SpecialStagePlayer.PlayerType.SONIC);
+
+        Sonic2SpecialStagePlayer unspawned = mock(Sonic2SpecialStagePlayer.class);
+        when(unspawned.isSpawned()).thenReturn(false);
+        when(unspawned.getPlayerType()).thenReturn(Sonic2SpecialStagePlayer.PlayerType.TAILS);
+
+        renderer.setPlayers(List.of(spawned, spawnedInit, unspawned));
+        renderer.renderPlayers();
+
+        verify(spawned).getMappingFrame();
+        verify(spawnedInit, never()).getMappingFrame();
+        verify(unspawned, never()).getMappingFrame();
     }
 
     private static final class RecordingGraphicsManager extends GraphicsManager {

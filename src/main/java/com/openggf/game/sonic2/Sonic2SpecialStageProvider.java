@@ -197,16 +197,6 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
-    public boolean adjustLagCompensationIfDisplayEnabled(double delta) {
-        return manager.adjustLagCompensationIfDisplayEnabled(delta);
-    }
-
-    @Override
-    public double getLagCompensation() {
-        return manager.getLagCompensation();
-    }
-
-    @Override
     public void setLagCompensation(double factor) {
         manager.setLagCompensation(factor);
     }
@@ -251,6 +241,12 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     @Override
     public void handlePlayer2Input(int heldButtons, int logicalButtons) {
         manager.handlePlayer2Input(heldButtons, logicalButtons);
+    }
+
+    /** Binds physical input to the recurring pass that the next update executes. */
+    public void bindPendingRecurringPassInput(
+            int p1Held, int p1Pressed, int p2Held, int p2Logical) {
+        manager.bindPendingRecurringPassInput(p1Held, p1Pressed, p2Held, p2Logical);
     }
 
     @Override

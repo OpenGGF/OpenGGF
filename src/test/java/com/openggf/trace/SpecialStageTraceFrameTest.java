@@ -19,7 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@link SpecialStageTraceData#load(Path)}: verifies every CSV column maps to
  * its named field (hex decoding, decimal frame, boolean lag/present), and that
  * {@code load} enforces the {@code s2_special_stage} trace profile and
- * surfaces the {@code stage_finished} aux event via {@code stageFinishedFrame()}.
+ * surfaces the final-checkpoint {@code stage_finished} boundary and later
+ * {@code results_started} observation independently.
  */
 class SpecialStageTraceFrameTest {
 
@@ -116,12 +117,15 @@ class SpecialStageTraceFrameTest {
     }
 
     @Test
-    void loadParsesThreeRowsAndStageFinishedEvent(@TempDir Path dir) throws IOException {
+    void loadParsesCheckpointOwnedFinishAndLaterResultsStart(@TempDir Path dir)
+            throws IOException {
         writeMetadata(dir, "s2_special_stage", 1);
         Files.writeString(dir.resolve("physics.csv"),
             HEADER + "\n" + rowForFrame(0) + "\n" + rowForFrame(1) + "\n" + rowForFrame(2) + "\n");
         Files.writeString(dir.resolve("aux_state.jsonl"),
-            "{\"frame\":2,\"type\":\"stage_finished\"}\n");
+            "{\"frame\":2,\"type\":\"checkpoint\",\"check_rings_flag\":\"0xff\"}\n"
+                + "{\"frame\":1,\"observed_frame\":2,\"type\":\"stage_finished\"}\n"
+                + "{\"frame\":2,\"type\":\"results_started\",\"slot\":32}\n");
 
         SpecialStageTraceData data = SpecialStageTraceData.load(dir);
 
@@ -133,11 +137,14 @@ class SpecialStageTraceFrameTest {
         assertEquals(1, data.metadata().specialStageIndex());
 
         List<TraceEvent> frame2Events = data.getEventsForFrame(2);
-        assertEquals(1, frame2Events.size());
+        assertEquals(2, frame2Events.size());
 
         OptionalInt stageFinished = data.stageFinishedFrame();
         assertTrue(stageFinished.isPresent());
-        assertEquals(2, stageFinished.getAsInt());
+        assertEquals(1, stageFinished.getAsInt());
+        assertEquals(2, data.stageFinishedObservedFrame().orElseThrow(),
+                "finish mapping must preserve the raw observation that saw the flag rise");
+        assertEquals(2, data.resultsStartedFrame().orElseThrow());
     }
 
     @Test
