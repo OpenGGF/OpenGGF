@@ -150,6 +150,11 @@ public final class LevelRenderer {
     // Mutable state for the pre-allocated BG tile pass command.
     private int pendingBgTilePassRenderWidth;
     private int pendingBgTilePassRenderHeight;
+    private int pendingBgTilePassRingBaseTiles;
+    private int pendingBgTilePassContentGeneration;
+    private int completedBgTilePassFrame = Integer.MIN_VALUE;
+    private int completedBgTilePassSourceGeneration = -1;
+    private int completedBgTilePassCurrentGeneration = -1;
     private boolean pendingBgTilePassHasWater;
     private float pendingBgTilePassFboWaterlineY;
     private int pendingBgTilePassAlignedBgY;
@@ -281,7 +286,9 @@ public final class LevelRenderer {
 
     private final GLCommand bgRenderWithScrollCommand = new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
         BackgroundRenderer bgRenderer = lm.graphicsManager.getBackgroundRenderer();
-        if (bgRenderer != null) {
+        TilemapGpuRenderer tilemapRenderer = lm.graphicsManager.getTilemapGpuRenderer();
+        if (bgRenderer != null && tilemapRenderer != null
+                && isBackgroundCompositeCurrent(tilemapRenderer)) {
             bgRenderer.renderWithScrollWide(pendingBgHScrollView, pendingBgVScrollView, pendingBgVScrollColumnView,
                     pendingBgShaderScrollMidpoint, pendingBgShaderExtraBuffer,
                     pendingBgVOffset, pendingBgPerLineScroll);
@@ -390,57 +397,63 @@ public final class LevelRenderer {
 
     private final GLCommand bgTilePassCommand = new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
         BackgroundRenderer bgRenderer = lm.graphicsManager.getBackgroundRenderer();
-        if (bgRenderer == null) {
+        TilemapGpuRenderer tilemapRenderer = lm.graphicsManager.getTilemapGpuRenderer();
+        if (bgRenderer == null || tilemapRenderer == null
+                || !tilemapRenderer.isBackgroundContentGenerationCurrent(
+                        pendingBgTilePassContentGeneration)) {
             return;
         }
         bgRenderer.beginTilePass(pendingBgTilePassRenderWidth, pendingBgTilePassRenderHeight, true);
-        TilemapGpuRenderer tilemapRenderer = lm.graphicsManager.getTilemapGpuRenderer();
-        if (tilemapRenderer != null) {
-            int savedShimmerStyle = tilemapRenderer.getShimmerStyle();
+        int savedShimmerStyle = tilemapRenderer.getShimmerStyle();
+        try {
             tilemapRenderer.setShimmerState(pendingFrameCounter, 0);
-
-            Integer atlasId = lm.graphicsManager.getPatternAtlasTextureId();
-            Integer paletteId = lm.graphicsManager.getCombinedPaletteTextureId();
-            Integer underwaterPaletteId = lm.graphicsManager.getUnderwaterPaletteTextureId();
-            boolean useUnderwaterPalette = pendingBgTilePassHasWater && underwaterPaletteId != null;
-            if (atlasId != null && paletteId != null) {
-                if (pendingBgTilePassPerLineScroll) {
-                    bgRenderer.uploadHScroll(pendingBgTilePassHScrollView);
-                    tilemapRenderer.enablePerLineScroll(
-                            bgRenderer.getHScrollTextureId(), 224.0f,
-                            pendingBgTilePassVdpWrapWidth, pendingBgTilePassNametableBase,
-                            pendingBgTilePassPerLineScrollSampleYOffsetPx);
+            try {
+                Integer atlasId = lm.graphicsManager.getPatternAtlasTextureId();
+                Integer paletteId = lm.graphicsManager.getCombinedPaletteTextureId();
+                Integer underwaterPaletteId = lm.graphicsManager.getUnderwaterPaletteTextureId();
+                boolean useUnderwaterPalette = pendingBgTilePassHasWater && underwaterPaletteId != null;
+                if (atlasId != null && paletteId != null) {
+                    if (pendingBgTilePassPerLineScroll) {
+                        bgRenderer.uploadHScroll(pendingBgTilePassHScrollView);
+                        tilemapRenderer.enablePerLineScroll(
+                                bgRenderer.getHScrollTextureId(), 224.0f,
+                                pendingBgTilePassVdpWrapWidth, pendingBgTilePassNametableBase,
+                                pendingBgTilePassPerLineScrollSampleYOffsetPx);
+                    }
+                    tilemapRenderer.setUpperBandWrap(
+                            pendingBgTilePassUpperBandWrapHeightPx,
+                            pendingBgTilePassUpperBandWrapWidthTiles);
+                    tilemapRenderer.setBackgroundRenderRingBaseOverride(
+                            pendingBgTilePassRingBaseTiles, pendingBgTilePassContentGeneration);
+                    tilemapRenderer.render(
+                            TilemapGpuRenderer.Layer.BACKGROUND,
+                            pendingBgTilePassRenderWidth,
+                            pendingBgTilePassRenderHeight,
+                            0, 0,
+                            pendingBgTilePassRenderWidth,
+                            pendingBgTilePassRenderHeight,
+                            pendingBgTilePassBgTilemapWorldOffsetX,
+                            (float) pendingBgTilePassAlignedBgY,
+                            lm.graphicsManager.getPatternAtlasWidth(),
+                            lm.graphicsManager.getPatternAtlasHeight(),
+                            atlasId, paletteId,
+                            underwaterPaletteId != null ? underwaterPaletteId : 0,
+                            -1, true, false, useUnderwaterPalette,
+                            pendingBgTilePassFboWaterlineY);
+                    completedBgTilePassFrame = pendingFrameCounter;
+                    completedBgTilePassSourceGeneration = pendingBgTilePassContentGeneration;
+                    completedBgTilePassCurrentGeneration = tilemapRenderer.getBackgroundContentGeneration();
                 }
-                tilemapRenderer.setUpperBandWrap(
-                        pendingBgTilePassUpperBandWrapHeightPx,
-                        pendingBgTilePassUpperBandWrapWidthTiles);
-                tilemapRenderer.render(
-                        TilemapGpuRenderer.Layer.BACKGROUND,
-                        pendingBgTilePassRenderWidth,
-                        pendingBgTilePassRenderHeight,
-                        0,
-                        0,
-                        pendingBgTilePassRenderWidth,
-                        pendingBgTilePassRenderHeight,
-                        pendingBgTilePassBgTilemapWorldOffsetX,
-                        (float) pendingBgTilePassAlignedBgY,
-                        lm.graphicsManager.getPatternAtlasWidth(),
-                        lm.graphicsManager.getPatternAtlasHeight(),
-                        atlasId,
-                        paletteId,
-                        underwaterPaletteId != null ? underwaterPaletteId : 0,
-                        -1,
-                        true,
-                        false,
-                        useUnderwaterPalette,
-                        pendingBgTilePassFboWaterlineY);
+            } finally {
+                tilemapRenderer.setShimmerState(pendingFrameCounter, savedShimmerStyle);
             }
-
-            tilemapRenderer.setShimmerState(pendingFrameCounter, savedShimmerStyle);
+        } finally {
+            try {
+                bgRenderer.endTilePass();
+            } finally {
+                lm.graphicsManager.setUseUnderwaterPaletteForBackground(false);
+            }
         }
-
-        bgRenderer.endTilePass();
-        lm.graphicsManager.setUseUnderwaterPaletteForBackground(false);
     });
 
     static final class FrameCommandPool {
@@ -512,7 +525,7 @@ public final class LevelRenderer {
 
         private final FrameCommandPool pool;
         private final int[] viewport = new int[4];
-        private final int[] ints = new int[20];
+        private final int[] ints = new int[21];
         private final float[] floats = new float[18];
         private final boolean[] bools = new boolean[8];
         private final Object[] refs = new Object[8];
@@ -570,6 +583,8 @@ public final class LevelRenderer {
             ints[16] = r.pendingBgTilePassRenderHeight;
             ints[17] = r.pendingBgTilePassAlignedBgY;
             ints[18] = r.currentShimmerStyle;
+            ints[19] = r.pendingBgTilePassRingBaseTiles;
+            ints[20] = r.pendingBgTilePassContentGeneration;
             floats[0] = r.pendingWaterlineScreenY;
             floats[1] = r.pendingFgWorldOffsetX_low;
             floats[2] = r.pendingFgWorldOffsetY_low;
@@ -648,6 +663,8 @@ public final class LevelRenderer {
             r.pendingBgTilePassRenderHeight = ints[16];
             r.pendingBgTilePassAlignedBgY = ints[17];
             r.currentShimmerStyle = ints[18];
+            r.pendingBgTilePassRingBaseTiles = ints[19];
+            r.pendingBgTilePassContentGeneration = ints[20];
             r.pendingWaterlineScreenY = floats[0];
             r.pendingFgWorldOffsetX_low = floats[1];
             r.pendingFgWorldOffsetY_low = floats[2];
@@ -797,6 +814,26 @@ public final class LevelRenderer {
         this.lm = levelManager;
     }
 
+    private boolean isBackgroundCompositeCurrent(TilemapGpuRenderer tilemapRenderer) {
+        return completedBgTilePassFrame == pendingFrameCounter
+                && completedBgTilePassSourceGeneration == pendingBgTilePassContentGeneration
+                && tilemapRenderer.isBackgroundContentGenerationCurrent(
+                        completedBgTilePassCurrentGeneration);
+    }
+
+    void setBackgroundCompositeStateForTesting(int pendingFrame, int pendingSourceGeneration,
+            int completedFrame, int completedSourceGeneration, int completedCurrentGeneration) {
+        pendingFrameCounter = pendingFrame;
+        pendingBgTilePassContentGeneration = pendingSourceGeneration;
+        completedBgTilePassFrame = completedFrame;
+        completedBgTilePassSourceGeneration = completedSourceGeneration;
+        completedBgTilePassCurrentGeneration = completedCurrentGeneration;
+    }
+
+    boolean isBackgroundCompositeCurrentForTesting(TilemapGpuRenderer renderer) {
+        return isBackgroundCompositeCurrent(renderer);
+    }
+
     /** Returns the AdvancedRenderFrameState resolved for the current frame. */
     public AdvancedRenderFrameState getCurrentAdvancedRenderFrameState() {
         return currentAdvancedRenderFrameState;
@@ -807,6 +844,9 @@ public final class LevelRenderer {
         frameCommandPool.cancelOutstanding();
         currentShimmerStyle = 0;
         currentAdvancedRenderFrameState = AdvancedRenderFrameState.disabled();
+        completedBgTilePassFrame = Integer.MIN_VALUE;
+        completedBgTilePassSourceGeneration = -1;
+        completedBgTilePassCurrentGeneration = -1;
     }
 
     /** Resolves and content-validates the underwater texture once for this shader setup command. */
@@ -1251,6 +1291,11 @@ public final class LevelRenderer {
         pendingBgTilePassPerLineScrollSampleYOffsetPx = perLineScrollActive ? (float) vOffset : 0.0f;
         pendingBgTilePassUpperBandWrapHeightPx = upperBandWrapHeightPx;
         pendingBgTilePassUpperBandWrapWidthTiles = upperBandWrapWidthTiles;
+        TilemapGpuRenderer tilemapRenderer = lm.graphicsManager.getTilemapGpuRenderer();
+        pendingBgTilePassRingBaseTiles = tilemapRenderer != null
+                ? tilemapRenderer.getBackgroundRingBaseTiles() : 0;
+        pendingBgTilePassContentGeneration = tilemapRenderer != null
+                ? tilemapRenderer.getBackgroundContentGeneration() : 0;
         lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.BG_TILE));
 
         // 5. Set shimmer state on BG renderer for parallax compositing pass
