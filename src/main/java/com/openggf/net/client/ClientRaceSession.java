@@ -11,7 +11,7 @@ import java.util.function.LongSupplier;
 
 /** Client-side room/round mirror with an NTP-lite hub-clock estimate. */
 public final class ClientRaceSession {
-    public enum Phase { LOBBY, COUNTDOWN, RUNNING, ROUND_END }
+    public enum Phase { LOBBY, COUNTDOWN, RUNNING, ROUND_END, VOTE }
 
     public static final int CLOCK_SAMPLES_TARGET = 5;
     public static final int CHAT_LINES_KEPT = 8;
@@ -29,6 +29,11 @@ public final class ClientRaceSession {
     private List<ControlMessage.StandingsRow> standings = List.of();
     private List<ControlMessage.PlayerInfo> players = List.of();
     private String kickReason;
+    private List<String> voteOptions = List.of();
+    private List<ControlMessage.VoteCount> voteCounts = List.of();
+    private long voteEndsAtHubMillis = -1;
+    private String lastVoteResult;
+    private List<ControlMessage.StandingsRow> finalStandings = List.of();
 
     public ClientRaceSession(LongSupplier clientClockMillis) {
         this.clientClockMillis = clientClockMillis;
@@ -38,11 +43,13 @@ public final class ClientRaceSession {
         room = accepted.room();
         localSlot = accepted.playerSlot();
         ControlMessage.RoundSnapshot snapshot = accepted.round();
-        basePhase = Phase.valueOf(snapshot.phase());
-        roundConfig = snapshot.config();
-        countdownEndsAtHub = snapshot.countdownEndsAtHubMillis();
-        deadlineHub = snapshot.deadlineHubMillis();
-        standings = List.copyOf(snapshot.standings());
+        if (snapshot != null) {
+            basePhase = Phase.valueOf(snapshot.phase());
+            roundConfig = snapshot.config();
+            countdownEndsAtHub = snapshot.countdownEndsAtHubMillis();
+            deadlineHub = snapshot.deadlineHubMillis();
+            standings = List.copyOf(snapshot.standings());
+        }
     }
 
     public void onControl(ControlMessage message) {
@@ -54,10 +61,13 @@ public final class ClientRaceSession {
                 countdownEndsAtHub = start.countdownEndsAtHubMillis();
                 deadlineHub = start.deadlineHubMillis();
                 standings = List.of();
+                finalStandings = List.of();
+                lastVoteResult = null;
             }
             case ControlMessage.RoundEnd end -> {
                 basePhase = Phase.ROUND_END;
                 standings = List.copyOf(end.finalStandings());
+                finalStandings = standings;
             }
             case ControlMessage.StandingsDelta delta ->
                     standings = List.copyOf(delta.rows());
@@ -76,6 +86,21 @@ public final class ClientRaceSession {
                 }
             }
             case ControlMessage.Kick kick -> kickReason = kick.reason();
+            case ControlMessage.TrackVoteOffer offer -> {
+                basePhase = Phase.VOTE;
+                voteOptions = List.copyOf(offer.trackKeys());
+                voteCounts = List.of();
+                voteEndsAtHubMillis = offer.voteEndsAtHubMillis();
+            }
+            case ControlMessage.TrackVoteTally tally ->
+                    voteCounts = List.copyOf(tally.counts());
+            case ControlMessage.TrackVoteResult result -> {
+                basePhase = Phase.LOBBY;
+                lastVoteResult = result.trackKey();
+                voteOptions = List.of();
+                voteCounts = List.of();
+                voteEndsAtHubMillis = -1;
+            }
             default -> { }
         }
     }
@@ -151,6 +176,30 @@ public final class ClientRaceSession {
 
     public String kickReason() {
         return kickReason;
+    }
+
+    public List<String> voteOptions() { return voteOptions; }
+
+    public List<ControlMessage.VoteCount> voteCounts() { return voteCounts; }
+
+    public long voteRemainingMillis() {
+        return voteEndsAtHubMillis < 0 ? -1
+                : Math.max(0, voteEndsAtHubMillis - hubNowEstimateMillis());
+    }
+
+    public String lastVoteResultTrackKey() { return lastVoteResult; }
+
+    public List<ControlMessage.StandingsRow> podiumTop(int count) {
+        if (count <= 0) {
+            return List.of();
+        }
+        return List.copyOf(finalStandings.subList(
+                0, Math.min(count, finalStandings.size())));
+    }
+
+    public ControlMessage.StandingsRow localStandingsRow() {
+        return standings.stream().filter(row -> row.slot() == localSlot)
+                .findFirst().orElse(null);
     }
 
     private static long midpoint(long left, long right) {
