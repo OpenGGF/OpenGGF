@@ -246,6 +246,15 @@ public final class RoomHost {
         }
     }
 
+    public String identityFingerprintForSlot(int slot) {
+        Member member = memberForSlot(slot);
+        return member == null ? null : member.fingerprint;
+    }
+
+    public String determinismFingerprint() {
+        return config.requiredDeterminismFingerprint();
+    }
+
     private void handleHandshake(Member member, ControlMessage message) {
         HostHandshake.Step step = switch (message) {
             case ControlMessage.Hello hello -> member.handshake.onHello(hello);

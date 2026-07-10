@@ -46,11 +46,13 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
     private final MasterConfig verificationConfig;
     private final VerificationJobQueue verificationJobs;
     private final VerdictConsequences verdictConsequences;
+    private final VerifierRegistry verifiers;
     private final Map<String, RoomAccess> rooms = new ConcurrentHashMap<>();
     private final Map<String, Boolean> newTierByFingerprint = new ConcurrentHashMap<>();
     private final Map<String, String> roomOwners = new ConcurrentHashMap<>();
     private final Map<String, String> lastTrackKeys = new ConcurrentHashMap<>();
     private final Map<String, RoomRef> verificationRoutes = new ConcurrentHashMap<>();
+    private final Map<String, Long> lastSpotCheckByFingerprint = new ConcurrentHashMap<>();
     private final AtomicInteger nextLoop = new AtomicInteger();
     private int tickCounter;
 
@@ -59,7 +61,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                             Executor brokerLoop, LongSupplier clock,
                             PlayerCountSink playerCounts) {
         this(masterIdentity, ladder, profiles, roomLoops, brokerLoop, clock,
-                playerCounts, (roomId, owner, zone, act) -> { }, null, null, null);
+                playerCounts, (roomId, owner, zone, act) -> { }, null, null, null, null);
     }
 
     public RelayRoomManager(PlayerIdentity masterIdentity, TrustLadder ladder,
@@ -67,7 +69,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                             Executor brokerLoop, LongSupplier clock,
                             PlayerCountSink playerCounts, TrackUpdateSink trackUpdates) {
         this(masterIdentity, ladder, profiles, roomLoops, brokerLoop, clock,
-                playerCounts, trackUpdates, null, null, null);
+                playerCounts, trackUpdates, null, null, null, null);
     }
 
     public RelayRoomManager(PlayerIdentity masterIdentity, TrustLadder ladder,
@@ -77,6 +79,19 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                             MasterConfig verificationConfig,
                             VerificationJobQueue verificationJobs,
                             VerdictConsequences verdictConsequences) {
+        this(masterIdentity, ladder, profiles, roomLoops, brokerLoop, clock,
+                playerCounts, trackUpdates, verificationConfig, verificationJobs,
+                verdictConsequences, null);
+    }
+
+    public RelayRoomManager(PlayerIdentity masterIdentity, TrustLadder ladder,
+                            TrackValidationProfileSource profiles, List<Executor> roomLoops,
+                            Executor brokerLoop, LongSupplier clock,
+                            PlayerCountSink playerCounts, TrackUpdateSink trackUpdates,
+                            MasterConfig verificationConfig,
+                            VerificationJobQueue verificationJobs,
+                            VerdictConsequences verdictConsequences,
+                            VerifierRegistry verifiers) {
         if (roomLoops == null || roomLoops.isEmpty()) {
             throw new IllegalArgumentException("at least one relay room loop is required");
         }
@@ -91,6 +106,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
         this.verificationConfig = verificationConfig;
         this.verificationJobs = verificationJobs;
         this.verdictConsequences = verdictConsequences;
+        this.verifiers = verifiers;
     }
 
     @Override
@@ -187,7 +203,14 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
             String roomId = entry.getKey();
             RoomAccess access = entry.getValue();
             access.loop().execute(() -> {
+                com.openggf.net.hub.HostRoundEngine.Phase previous =
+                        access.room().round().phase();
                 access.room().tick();
+                if (previous == com.openggf.net.hub.HostRoundEngine.Phase.RUNNING
+                        && access.room().round().phase()
+                        == com.openggf.net.hub.HostRoundEngine.Phase.ROUND_END) {
+                    selectSpotChecks(roomId, access.room());
+                }
                 ControlMessage.RoomDescriptor descriptor = access.room().descriptor();
                 String currentTrack = trackKey(descriptor);
                 String previousTrack = lastTrackKeys.put(roomId, currentTrack);
@@ -204,6 +227,41 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                 }
             });
         }
+    }
+
+    private void selectSpotChecks(String roomId, RoomHost room) {
+        if (verificationConfig == null || verificationJobs == null || verifiers == null
+                || room.descriptor().verified()) {
+            return;
+        }
+        record Candidate(int slot, String fingerprint, String character,
+                         ControlMessage.AttemptFinish finish) { }
+        List<Candidate> candidates = room.round().standings().stream()
+                .limit(verificationConfig.spotCheckTopTimes())
+                .map(row -> new Candidate(row.slot(),
+                        room.identityFingerprintForSlot(row.slot()), row.character(),
+                        room.round().bestFinish(row.slot())))
+                .filter(candidate -> candidate.fingerprint() != null
+                        && candidate.finish() != null)
+                .toList();
+        String trackKey = trackKey(room.descriptor());
+        String fingerprint = room.determinismFingerprint();
+        brokerLoop.execute(() -> {
+            if (!verifiers.verifierAvailable(fingerprint)) {
+                return;
+            }
+            long now = clock.getAsLong();
+            for (Candidate candidate : candidates) {
+                Long last = lastSpotCheckByFingerprint.get(candidate.fingerprint());
+                if (last != null && now - last < 3_600_000L) {
+                    continue;
+                }
+                lastSpotCheckByFingerprint.put(candidate.fingerprint(), now);
+                submitVerification(roomId, candidate.slot(), candidate.fingerprint(),
+                        candidate.finish(), trackKey, candidate.character(),
+                        fingerprint, true);
+            }
+        });
     }
 
     public void onVerdict(VerificationJobQueue.Job job, boolean pass) {

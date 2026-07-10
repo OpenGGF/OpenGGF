@@ -116,7 +116,7 @@ public final class MasterServer implements AutoCloseable {
                     registry::heartbeat,
                     (roomId, owner, zone, act) ->
                             registry.updateTrack(roomId, owner, zone, act),
-                    config, verificationJobs, verdictConsequences);
+                    config, verificationJobs, verdictConsequences, verifiers);
             RoomBroker broker = new RoomBroker(masterIdentity, config, registry, store,
                     ladder, cache, clock, relays, tunnels,
                     key -> profileExists(profiles, key), verifiers);
@@ -158,6 +158,10 @@ public final class MasterServer implements AutoCloseable {
                 verificationJobs.requeueExpiredLeases();
                 verifiers.expireStale();
             }, 1, 1, TimeUnit.SECONDS);
+            brokerGroup.next().scheduleAtFixedRate(() -> recordingBlobs.deleteOlderThan(
+                            clock.getAsLong() - config.recordingRetentionDays()
+                                    * 24L * 3_600_000L),
+                    1, 1, TimeUnit.HOURS);
             MasterServer server = new MasterServer(config, dataDir, brokerGroup,
                     relayGroup, channel, store, ladder, registry, tunnels, relays, broker,
                     recordingBlobs, verifiers, verificationJobs, verdictConsequences);

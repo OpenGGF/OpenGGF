@@ -134,4 +134,8 @@ public final class VerificationJobQueue {
         entry.leasedWorkerId = null;
         return Optional.of(entry.job);
     }
+
+    public int size() {
+        return entries.size();
+    }
 }
