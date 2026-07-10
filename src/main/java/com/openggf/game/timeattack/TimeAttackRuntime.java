@@ -40,7 +40,8 @@ public final class TimeAttackRuntime {
 
         void onAttemptFinished(int attemptOrdinal, int timeFrames,
                                int firstInputFrame, int finishFrame,
-                               byte[] inputRecordingSha256);
+                               byte[] inputRecordingSha256,
+                               AttemptInputRecording recording);
 
         void onAttemptVoided(int attemptOrdinal);
     }
@@ -207,7 +208,8 @@ public final class TimeAttackRuntime {
             }
             if (attemptListener != null) {
                 attemptListener.onAttemptFinished(attemptOrdinal, attempt.finalTimeFrames(),
-                        attempt.firstInputFrame(), attempt.finishFrame(), inputRecording.sha256());
+                        attempt.firstInputFrame(), attempt.finishFrame(), inputRecording.sha256(),
+                        inputRecording);
             }
         }
     }

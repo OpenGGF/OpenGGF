@@ -23,6 +23,7 @@ class TestTimeAttackRuntimeMultiplayerSeams {
         final List<Event> events = new ArrayList<>();
         final List<GhostFrame> sampled = new ArrayList<>();
         byte[] lastInputHash;
+        AttemptInputRecording lastRecording;
         int lastTimeFrames = -1;
 
         @Override
@@ -39,10 +40,12 @@ class TestTimeAttackRuntimeMultiplayerSeams {
         @Override
         public void onAttemptFinished(int attemptOrdinal, int timeFrames,
                                       int firstInputFrame, int finishFrame,
-                                      byte[] inputRecordingSha256) {
+                                      byte[] inputRecordingSha256,
+                                      AttemptInputRecording recording) {
             events.add(new Event("finished", attemptOrdinal));
             lastTimeFrames = timeFrames;
             lastInputHash = inputRecordingSha256;
+            lastRecording = recording;
         }
 
         @Override

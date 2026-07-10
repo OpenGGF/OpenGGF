@@ -1,6 +1,7 @@
 package com.openggf.game.timeattack.mp;
 
 import com.openggf.game.ghost.GhostFrame;
+import com.openggf.game.timeattack.AttemptInputRecording;
 import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameServices;
@@ -32,6 +33,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private final ClientRaceSession session;
     private final RemoteGhostRegistry registry = new RemoteGhostRegistry();
     private final LongSupplier clockMillis;
+    private final AttemptRecordingVault recordingVault;
 
     private TimeAttackRuntime runtime;
     private GhostStreamPublisher publisher;
@@ -55,6 +57,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         this.transport = Objects.requireNonNull(transport, "transport");
         this.session = Objects.requireNonNull(session, "session");
         this.clockMillis = Objects.requireNonNull(clockMillis, "clockMillis");
+        this.recordingVault = new AttemptRecordingVault(clockMillis);
     }
 
     public void attachRuntime(TimeAttackRuntime runtime) {
@@ -111,6 +114,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                         maybeRequestAroundYouPage();
                     } else if (control.message() instanceof ControlMessage.StandingsPage page) {
                         applyAroundYouPage(page.rows());
+                    } else if (control.message() instanceof ControlMessage.RoundEnd) {
+                        recordingVault.onRoundEnd();
                     }
                 }
                 case RaceClient.GhostData ghost -> registry.onAggregate(ghost.aggregate());
@@ -119,6 +124,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
             }
         }
         maybePing();
+        recordingVault.evictExpired();
     }
 
     public void beforeLevelFrame() {
@@ -226,13 +232,16 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     @Override
     public void onAttemptFinished(int attemptOrdinal, int timeFrames,
                                   int firstInputFrame, int finishFrame,
-                                  byte[] inputRecordingSha256) {
+                                  byte[] inputRecordingSha256,
+                                  AttemptInputRecording recording) {
         requirePublisher();
         publisher.finishAttempt();
         publisherActive = false;
+        String recordingHash = HexFormat.of().formatHex(inputRecordingSha256);
+        recordingVault.put(recordingHash, recording.encode());
         transport.sendControl(new ControlMessage.AttemptFinish(
                 attemptOrdinal, timeFrames, firstInputFrame, finishFrame,
-                HexFormat.of().formatHex(inputRecordingSha256),
+                recordingHash,
                 HexFormat.of().formatHex(publisher.streamHashSha256()), null));
     }
 
