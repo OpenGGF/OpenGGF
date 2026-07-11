@@ -833,6 +833,10 @@ public class TestSonic3kAIZEvents {
         assertTrue(events.isBattleshipAutoScrollActive(), "AIZ2_ScreenEvent should start the bombing sequence");
         assertEquals(0x4160, camera.getX() & 0xFFFF,
                 "ScreenEvents should arm SpecialEvents without running the ship loop in the same frame");
+        var objectManager = GameServices.level().getObjectManager();
+        assertFalse(objectManager.getActiveObjects().stream()
+                        .anyMatch(AizBattleshipInstance.class::isInstance),
+                "AIZ2SE_ShipRefresh must finish on the following ScreenEvents pass before allocating the ship");
 
         events.updatePrePhysics(1);
         assertEquals(0x4164, camera.getX() & 0xFFFF,
@@ -841,6 +845,9 @@ public class TestSonic3kAIZEvents {
         events.update(1, 4);
         assertFalse(events.isEventsFg4(), "AIZ2_ScreenEvent should consume Events_fg_4");
         assertTrue(events.isBattleshipAutoScrollActive(), "Battleship bombing should remain active after the handoff");
+        assertTrue(objectManager.getActiveObjects().stream()
+                        .anyMatch(AizBattleshipInstance.class::isInstance),
+                "the completed ShipRefresh pass should allocate the battleship");
     }
 
     @Test

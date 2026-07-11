@@ -583,6 +583,20 @@ its errors fall from 1056 to 687. Full exact-tree
 S1 (29) and S2 (48) trace sweeps passed immediately before this S3K-local event
 delta. The AIZ stage is not green yet.
 
+Round 41 separates the AIZ2 foreground ShipRefresh redraw from battleship
+object allocation. ROM `AIZ2SE_Normal` arms `Special_events_routine=4` and
+falls through to `AIZ2SE_ShipRefresh`; `Obj_AIZBattleship` is allocated only
+when `Draw_PlaneVertBottomUp` reports completion on the following ScreenEvents
+pass (`sonic3k.asm:104872-104925`). The engine previously spawned the ship
+while arming auto-scroll, two object passes before the ROM-visible ship slot;
+the bomb's own setup recovered one pass, leaving impacts one pass early. A
+pending refresh-pass counter now delays only ship allocation while the first
+`AIZ2_DoShipLoop` `$+4` camera step retains Round 40's exact phase. The focused
+replay advances from f16943 / 302 errors (CPU Tails hurt one frame early by a
+new bomb explosion) to f19089 / 208 errors (`g_speed` sign at a later terrain
+turn). The complete-run frontier remains f16755 while its errors fall from 687
+to 668. The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

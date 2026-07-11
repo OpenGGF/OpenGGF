@@ -248,6 +248,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private boolean battleshipCameraWasFrozen;
     /** True once the battleship object has been spawned (one-shot guard). */
     private boolean battleshipSpawned;
+    /** Remaining ShipRefresh plane passes before AllocateObject creates the ship. */
+    private int battleshipSpawnRefreshPasses;
     /** True once the AIZ2 end boss has been handed off to the object system. */
     private boolean endBossSpawned;
     /** True once the AIZ2 bombership 8x8/16x16 terrain overlays have been applied. */
@@ -473,6 +475,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         battleshipCameraFrozenForScrollLock = false;
         battleshipCameraWasFrozen = false;
         battleshipSpawned = false;
+        battleshipSpawnRefreshPasses = 0;
         endBossSpawned = false;
         battleshipTerrainLoaded = false;
         battleshipWrapX = BATTLESHIP_WRAP_X_BOMBING;
@@ -1204,6 +1207,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
     private void updateAct2Continuation(int frameCounter) {
         boolean battleshipAutoScrollActiveAtEntry = battleshipAutoScrollActive;
+        int battleshipSpawnRefreshPassesAtEntry = battleshipSpawnRefreshPasses;
         // ROM order inside LevelLoop is DeformBgLayer -> Do_ResizeEvents,
         // then ScreenEvents. The AIZ2 resize stage at camera X >= $4160 sets
         // Events_fg_4, and AIZ2_ScreenEvent consumes it in the same frame to
@@ -1215,6 +1219,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // refresh/draw chain. Keep this separate from AIZ2_Resize so the trigger
         // remains observable and follows the same event handoff as the ROM.
         updateAiz2ScreenEvent();
+
+        if (battleshipSpawnRefreshPassesAtEntry > 0) {
+            battleshipSpawnRefreshPasses--;
+            if (battleshipSpawnRefreshPasses == 0) {
+                spawnBattleshipObject();
+            }
+        }
 
         if (fireSequencePhase.curtainActive() || fireSequencePhase == FireSequencePhase.AIZ2_BG_REDRAW) {
             switch (fireSequencePhase) {
@@ -1635,17 +1646,28 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // Lock player control during the bombing sequence
         setTransitionControlLock(false); // Player can still run left/right
 
-        if (!battleshipSpawned) {
-            battleshipSpawned = true;
-            int baseSecondaryY = (camera().getY() + 0x08F0) & 0x0FF0;
-            ObjectSpawn shipSpawn = new ObjectSpawn(cameraX, baseSecondaryY, 0, 0, 0, false, 0);
-            AizBattleshipInstance ship = new AizBattleshipInstance(shipSpawn, baseSecondaryY);
-            var objManager = levelManager().getObjectManager();
-            if (objManager != null) {
-                objManager.addDynamicObject(ship);
-            }
-            LOG.info("AIZ2 battleship: spawned at cameraX=0x" + Integer.toHexString(cameraX));
+        // AIZ2SE_Normal falls through to AIZ2SE_ShipRefresh. The plane redraw
+        // must report complete on the following ScreenEvents pass before ROM calls
+        // AllocateObject for Obj_AIZBattleship (sonic3k.asm:104885-104925).
+        // Snapshot-at-entry dispatch above prevents this newly armed work from
+        // being consumed in the same pass.
+        battleshipSpawnRefreshPasses = 1;
+    }
+
+    private void spawnBattleshipObject() {
+        if (battleshipSpawned) {
+            return;
         }
+        battleshipSpawned = true;
+        int cameraX = camera().getX();
+        int baseSecondaryY = (camera().getY() + 0x08F0) & 0x0FF0;
+        ObjectSpawn shipSpawn = new ObjectSpawn(cameraX, baseSecondaryY, 0, 0, 0, false, 0);
+        AizBattleshipInstance ship = new AizBattleshipInstance(shipSpawn, baseSecondaryY);
+        var objManager = levelManager().getObjectManager();
+        if (objManager != null) {
+            objManager.addDynamicObject(ship);
+        }
+        LOG.info("AIZ2 battleship: spawned at cameraX=0x" + Integer.toHexString(cameraX));
     }
 
     private void updateAiz2EndBossSpawn() {
