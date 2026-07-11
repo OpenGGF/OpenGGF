@@ -85,6 +85,11 @@ public class AudioManager {
         return backend;
     }
 
+    /** Transfers a launch-scoped prepared streamed-music lease to the backend. */
+    public void installStreamedMusicPort(StreamedMusicPort port) {
+        backend.installStreamedMusicPort(java.util.Objects.requireNonNull(port, "port"));
+    }
+
     /**
      * The active backend's output (synthesis) sample rate. Routed through
      * AudioManager so callers don't reach the backend directly (see
@@ -460,6 +465,9 @@ public class AudioManager {
     }
 
     public AudioReplayScope beginRewindReplay(int fromFrame, int targetFrame, AudioReplayReason reason) {
+        if (rewindReplaySuppressionDepth == 0 && backend != null) {
+            backend.beginStreamedOverrideReplayBypass();
+        }
         rewindReplaySuppressionDepth++;
         return new AudioReplayScope() {
             private boolean closed;
@@ -472,6 +480,9 @@ public class AudioManager {
                 closed = true;
                 if (rewindReplaySuppressionDepth > 0) {
                     rewindReplaySuppressionDepth--;
+                    if (rewindReplaySuppressionDepth == 0 && backend != null) {
+                        backend.endStreamedOverrideReplayBypass();
+                    }
                 }
             }
         };
@@ -519,7 +530,8 @@ public class AudioManager {
                         current.pendingRestore(),
                         speed.enabled(),
                         current.speedMultiplier(),
-                        current.overrideStack()));
+                        current.overrideStack(), null, null, current.streamedMusic(),
+                        current.streamedOverrideStack()));
             }
             case AudioCommand.SetSpeedMultiplier speed -> {
                 AudioBackendLogicalSnapshot current = currentBackendLogicalSnapshot();
@@ -529,7 +541,8 @@ public class AudioManager {
                         current.pendingRestore(),
                         current.speedShoesEnabled(),
                         speed.multiplier(),
-                        current.overrideStack()));
+                        current.overrideStack(), null, null, current.streamedMusic(),
+                        current.streamedOverrideStack()));
             }
             case AudioCommand.ResetRingAlternation reset -> ringLeft = reset.ringLeft();
             case AudioCommand.FadeOutMusic ignored -> {
@@ -545,10 +558,13 @@ public class AudioManager {
         AudioSourceDescriptor descriptor = descriptorFor(command);
         AudioBackendLogicalSnapshot current = currentBackendLogicalSnapshot();
         List<AudioSourceDescriptor> overrides = new ArrayList<>(current.overrideStack());
+        List<StreamedMusicPort.State> streamedOverrides = new ArrayList<>(current.streamedOverrideStack());
         if (command.override() && current.currentMusic() != null) {
             overrides.addFirst(current.currentMusic());
+            streamedOverrides.addFirst(current.streamedMusic());
         } else if (!command.override()) {
             overrides.clear();
+            streamedOverrides.clear();
         }
         restoreBackendLogicalSnapshot(new AudioBackendLogicalSnapshot(
                 descriptor,
@@ -556,7 +572,7 @@ public class AudioManager {
                 false,
                 current.speedShoesEnabled(),
                 current.speedMultiplier(),
-                overrides));
+                overrides, null, null, current.streamedMusic(), streamedOverrides));
     }
 
     private void applyLogicalSfx(AudioCommand.PlaySfx command) {
@@ -576,14 +592,16 @@ public class AudioManager {
             return;
         }
         List<AudioSourceDescriptor> overrides = new ArrayList<>(current.overrideStack());
+        List<StreamedMusicPort.State> streamedOverrides = new ArrayList<>(current.streamedOverrideStack());
         AudioSourceDescriptor restored = overrides.removeFirst();
+        StreamedMusicPort.State restoredStream = streamedOverrides.removeFirst();
         restoreBackendLogicalSnapshot(new AudioBackendLogicalSnapshot(
                 restored,
                 false,
                 false,
                 current.speedShoesEnabled(),
                 current.speedMultiplier(),
-                overrides));
+                overrides, null, null, restoredStream, streamedOverrides));
     }
 
     private void applyLogicalEndMusicOverride(int musicId) {
@@ -593,14 +611,21 @@ public class AudioManager {
             return;
         }
         List<AudioSourceDescriptor> overrides = new ArrayList<>(current.overrideStack());
-        overrides.removeIf(descriptor -> descriptor != null && descriptor.id() == musicId);
+        List<StreamedMusicPort.State> streamedOverrides = new ArrayList<>(current.streamedOverrideStack());
+        for (int index = overrides.size() - 1; index >= 0; index--) {
+            AudioSourceDescriptor descriptor = overrides.get(index);
+            if (descriptor != null && descriptor.id() == musicId) {
+                overrides.remove(index);
+                streamedOverrides.remove(index);
+            }
+        }
         restoreBackendLogicalSnapshot(new AudioBackendLogicalSnapshot(
                 current.currentMusic(),
                 current.sfxBlocked(),
                 current.pendingRestore(),
                 current.speedShoesEnabled(),
                 current.speedMultiplier(),
-                overrides));
+                overrides, null, null, current.streamedMusic(), streamedOverrides));
     }
 
     private AudioSourceDescriptor descriptorFor(AudioCommand.PlayMusic command) {
@@ -849,8 +874,10 @@ public class AudioManager {
                 recordTimelineCommand(new AudioCommand.PlayMusic(
                         musicId, AudioCommand.MusicRoute.BASE_SMPS, false, null));
                 if (sendLiveBackendCommands()) {
-                    backend.prepareLogicalMusicSource(AudioSourceDescriptor.baseMusic(musicId));
-                    backend.playSmps(data, dacData);
+                    backend.playStreamedMusicOrElse(musicId, () -> {
+                        backend.prepareLogicalMusicSource(AudioSourceDescriptor.baseMusic(musicId));
+                        backend.playSmps(data, dacData);
+                    });
                 }
                 return;
             }
@@ -858,8 +885,10 @@ public class AudioManager {
         recordTimelineCommand(new AudioCommand.PlayMusic(
                 musicId, AudioCommand.MusicRoute.FALLBACK_WAV, false, null));
         if (sendLiveBackendCommands()) {
-            backend.prepareLogicalMusicSource(AudioSourceDescriptor.fallbackMusic(musicId));
-            backend.playMusic(musicId);
+            backend.playStreamedMusicOrElse(musicId, () -> {
+                backend.prepareLogicalMusicSource(AudioSourceDescriptor.fallbackMusic(musicId));
+                backend.playMusic(musicId);
+            });
         }
     }
 
@@ -1267,6 +1296,7 @@ public class AudioManager {
      */
     public void resetState() {
         if (backend != null) {
+            backend.resetStreamedMusicPort();
             backend.stopPlayback();
         }
         this.smpsLoader = null;

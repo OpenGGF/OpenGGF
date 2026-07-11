@@ -151,26 +151,46 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
 
     @Override
     protected void hookStartStream() {
+        ensurePresentationBuffers();
+
+        int[] ids = presentationBufferIds();
+        for (int id : ids) {
+            fillBuffer(id);
+        }
+
+        queueInitialPresentationBuffers(ids);
+        playPresentationSource();
+    }
+
+    protected void ensurePresentationBuffers() {
         if (streamBuffers == null) {
             streamBuffers = new int[STREAM_BUFFER_COUNT];
-            for (int i = 0; i < STREAM_BUFFER_COUNT; i++) {
-                streamBuffers[i] = alGenBuffers();
-            }
+            for (int i = 0; i < STREAM_BUFFER_COUNT; i++) streamBuffers[i] = alGenBuffers();
         }
+    }
 
-        for (int i = 0; i < STREAM_BUFFER_COUNT; i++) {
-            fillBuffer(streamBuffers[i]);
-        }
+    protected int[] presentationBufferIds() {
+        return streamBuffers;
+    }
 
+    protected boolean presentationBuffersReady() {
+        return streamBuffers != null;
+    }
+
+    protected void queueInitialPresentationBuffers(int[] ids) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer bufferIds = stack.mallocInt(STREAM_BUFFER_COUNT);
-            for (int i = 0; i < STREAM_BUFFER_COUNT; i++) {
-                bufferIds.put(i, streamBuffers[i]);
-            }
+            IntBuffer bufferIds = stack.mallocInt(ids.length);
+            for (int i = 0; i < ids.length; i++) bufferIds.put(i, ids[i]);
             alSourceQueueBuffers(musicSource, bufferIds);
         }
-        alSourcePlay(musicSource);
     }
+
+    protected int presentationSourceState() { return alGetSourcei(musicSource, AL_SOURCE_STATE); }
+    protected int queuedPresentationBufferCount() { return alGetSourcei(musicSource, AL_BUFFERS_QUEUED); }
+    protected int processedPresentationBufferCount() { return alGetSourcei(musicSource, AL_BUFFERS_PROCESSED); }
+    protected int unqueuePresentationBuffer() { return alSourceUnqueueBuffers(musicSource); }
+    protected void queuePresentationBuffer(int bufferId) { alSourceQueueBuffers(musicSource, bufferId); }
+    protected void playPresentationSource() { alSourcePlay(musicSource); }
 
     @Override
     protected void hookStopStreamSource() {
@@ -187,40 +207,30 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
 
     @Override
     protected void hookUpdateStream() {
-        // Check for pending music restoration (deferred from E4 handler)
-        if (pendingRestore) {
-            pendingRestore = false;
-            doRestoreMusic();
-            return;
-        }
-
-        boolean hasStream;
-        synchronized (streamLock) {
-            hasStream = currentStream != null || sfxStream != null || runtimeProvidesPresentationPcm();
-        }
-        if (hasStream && streamBuffers == null) {
+        boolean hasStream = hasPresentationWork();
+        if (hasStream && !presentationBuffersReady()) {
             startStream();
         }
         if (hasStream) {
-            int state = alGetSourcei(musicSource, AL_SOURCE_STATE);
-            int queued = alGetSourcei(musicSource, AL_BUFFERS_QUEUED);
-            if (streamBuffers == null || queued == 0) {
+            int state = presentationSourceState();
+            int queued = queuedPresentationBufferCount();
+            if (!presentationBuffersReady() || queued == 0) {
                 startStream();
                 return;
             }
-            int processed = alGetSourcei(musicSource, AL_BUFFERS_PROCESSED);
+            int processed = processedPresentationBufferCount();
 
             while (processed > 0) {
-                int bufferId = alSourceUnqueueBuffers(musicSource);
+                int bufferId = unqueuePresentationBuffer();
                 fillBuffer(bufferId);
-                alSourceQueueBuffers(musicSource, bufferId);
+                queuePresentationBuffer(bufferId);
                 processed--;
             }
 
             // Check state again
-            state = alGetSourcei(musicSource, AL_SOURCE_STATE);
+            state = presentationSourceState();
             if (state != AL_PLAYING) {
-                alSourcePlay(musicSource);
+                playPresentationSource();
             }
         }
     }
@@ -431,5 +441,10 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
                 alSourcePlay(src);
             }
         }
+    }
+
+    @Override
+    protected boolean canRestartPresentationAfterRestore() {
+        return musicSource >= 0;
     }
 }

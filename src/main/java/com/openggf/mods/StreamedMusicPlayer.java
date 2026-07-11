@@ -85,6 +85,17 @@ public final class StreamedMusicPlayer {
         fadeStepAmount = -fadeGain / steps;
     }
 
+    public void fadeIn(int steps, int stepDelay) {
+        requireUsable();
+        if (steps <= 0 || stepDelay < 0) throw new IllegalArgumentException("Invalid fade cadence");
+        if (current == null) throw new IllegalStateException("No streamed track is playing");
+        fadeGain = 0;
+        fadeRemainingSteps = steps;
+        fadeStepDelay = stepDelay;
+        fadeDelayCounter = stepDelay;
+        fadeStepAmount = 1.0f / steps;
+    }
+
     /** Advances one logical fade tick, independently of presentation buffer size. */
     public void advanceFade() {
         requireUsable();
@@ -97,9 +108,13 @@ public final class StreamedMusicPlayer {
         fadeRemainingSteps--;
         fadeDelayCounter = fadeStepDelay;
         if (fadeRemainingSteps == 0) {
-            fadeGain = 0;
-            current = null;
-            logicalMusicId = 0;
+            if (fadeStepAmount < 0) {
+                fadeGain = 0;
+                current = null;
+                logicalMusicId = 0;
+            } else {
+                clearFade();
+            }
         }
     }
 
@@ -125,22 +140,25 @@ public final class StreamedMusicPlayer {
     }
 
     public boolean playing() { requireUsable(); return current != null; }
+    public int outputRate() { requireUsable(); return outputRate; }
     public boolean paused() { requireUsable(); return pauseMask != 0; }
     public int pauseMask() { requireUsable(); return pauseMask; }
     public double position() { requireUsable(); return current == null ? 0 : current.position(); }
     public double rate() { requireUsable(); return current == null ? 1.0 : activeRate(); }
     public float fadeGain() { requireUsable(); return fadeGain; }
+    public boolean fadeActive() { requireUsable(); return fadeRemainingSteps > 0; }
+    public boolean fadeAtFullGain() { requireUsable(); return fadeRemainingSteps == 0 && fadeGain == 1.0f; }
     public boolean closed() { requireOwner(); return closed; }
 
-    Optional<PlaybackState> snapshot() {
+    public Optional<StreamedPlaybackSnapshot> capture() {
         requireUsable();
         if (current == null) return Optional.empty();
-        return Optional.of(new PlaybackState(current.data().key(), logicalMusicId, current.position(), pauseMask,
-                new FadeState(fadeGain, fadeRemainingSteps, fadeStepDelay, fadeDelayCounter, fadeStepAmount),
+        return Optional.of(new StreamedPlaybackSnapshot(current.data().key(), logicalMusicId, current.position(), pauseMask,
+                new StreamedFadeSnapshot(fadeGain, fadeRemainingSteps, fadeStepDelay, fadeDelayCounter, fadeStepAmount),
                 activeRate()));
     }
 
-    void restore(PlaybackState state, TrackResolver resolver) {
+    public void restore(StreamedPlaybackSnapshot state, TrackResolver resolver) {
         requireUsable();
         Objects.requireNonNull(state, "state");
         Objects.requireNonNull(resolver, "resolver");
@@ -164,7 +182,7 @@ public final class StreamedMusicPlayer {
         current = replacement;
         logicalMusicId = state.logicalMusicId();
         pauseMask = state.pauseMask();
-        FadeState fade = state.fade();
+        StreamedFadeSnapshot fade = state.fade();
         fadeGain = fade.gain();
         fadeRemainingSteps = fade.remainingSteps();
         fadeStepDelay = fade.stepDelay();
@@ -208,18 +226,19 @@ public final class StreamedMusicPlayer {
         if (mask < 0 || (mask & ~KNOWN_PAUSE_MASK) != 0) throw new IllegalArgumentException("Unknown pause bits");
     }
 
-    private static void validateFade(FadeState fade) {
+    private static void validateFade(StreamedFadeSnapshot fade) {
         if (fade == null) throw new IllegalArgumentException("Snapshot fade state is required");
-        if (!Float.isFinite(fade.gain()) || fade.gain() <= 0 || fade.gain() > 1
+        if (!Float.isFinite(fade.gain()) || fade.gain() < 0 || fade.gain() > 1
                 || fade.remainingSteps() < 0 || fade.stepDelay() < 0
                 || fade.delayCounter() < 0 || fade.delayCounter() > fade.stepDelay()
-                || !Float.isFinite(fade.stepAmount()) || fade.stepAmount() > 0
+                || !Float.isFinite(fade.stepAmount())
                 || (fade.remainingSteps() == 0 && fade.stepAmount() != 0)
-                || (fade.remainingSteps() > 0 && fade.stepAmount() >= 0)
                 || (fade.remainingSteps() == 0 && (fade.gain() != 1.0f
                         || fade.stepDelay() != 0 || fade.delayCounter() != 0))
                 || (fade.remainingSteps() > 0
-                        && Math.abs(fade.gain() + fade.stepAmount() * fade.remainingSteps()) > 0.00001f)) {
+                        && (fade.stepAmount() == 0
+                        || Math.abs(fade.gain() + fade.stepAmount() * fade.remainingSteps()
+                        - (fade.stepAmount() > 0 ? 1.0f : 0.0f)) > 0.00001f))) {
             throw new IllegalArgumentException("Invalid streamed fade state");
         }
     }
@@ -236,12 +255,7 @@ public final class StreamedMusicPlayer {
     }
 
     @FunctionalInterface
-    interface TrackResolver {
+    public interface TrackResolver {
         PreparedTrack resolve(TrackKey key);
     }
-
-    record FadeState(float gain, int remainingSteps, int stepDelay, int delayCounter, float stepAmount) { }
-
-    record PlaybackState(TrackKey key, int logicalMusicId, double sourceFramePosition,
-                         int pauseMask, FadeState fade, double rate) { }
 }

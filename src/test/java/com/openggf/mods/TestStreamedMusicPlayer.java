@@ -11,6 +11,27 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestStreamedMusicPlayer {
     @Test
+    void publicSnapshotDtosRejectInvalidPersistedShapes() {
+        TrackKey key = new TrackKey("owner", "music");
+        StreamedFadeSnapshot idle = new StreamedFadeSnapshot(1, 0, 0, 0, 0);
+        assertThrows(NullPointerException.class,
+                () -> new StreamedPlaybackSnapshot(null, 1, 0, 0, idle, 1));
+        assertThrows(IllegalArgumentException.class,
+                () -> new StreamedPlaybackSnapshot(key, -1, 0, 0, idle, 1));
+        assertThrows(IllegalArgumentException.class,
+                () -> new StreamedPlaybackSnapshot(key, 1, Double.NaN, 0, idle, 1));
+        assertThrows(IllegalArgumentException.class,
+                () -> new StreamedPlaybackSnapshot(key, 1, 0, 8, idle, 1));
+        assertThrows(IllegalArgumentException.class,
+                () -> new StreamedPlaybackSnapshot(key, 1, 0, 0, idle, 2));
+        assertThrows(IllegalArgumentException.class,
+                () -> new StreamedFadeSnapshot(.5f, 0, 0, 0, 0));
+        assertThrows(IllegalArgumentException.class,
+                () -> new StreamedFadeSnapshot(.5f, 2, 0, 0, -.1f));
+        assertDoesNotThrow(() -> new StreamedFadeSnapshot(.5f, 2, 0, 0, -.25f));
+        assertDoesNotThrow(() -> new StreamedFadeSnapshot(.5f, 2, 0, 0, .25f));
+    }
+    @Test
     void playIsIdempotentOnlyForSameLogicalIdAndTrackKey() {
         StreamedMusicPlayer player = new StreamedMusicPlayer(8_000);
         PreparedTrack first = prepared("first", false);
@@ -104,17 +125,17 @@ class TestStreamedMusicPlayer {
         source.fadeOut(4, 2);
         source.advanceFade();
         source.setSpeedMultiplier(2);
-        StreamedMusicPlayer.PlaybackState snapshot = source.snapshot().orElseThrow();
+        StreamedPlaybackSnapshot snapshot = source.capture().orElseThrow();
 
         StreamedMusicPlayer restored = new StreamedMusicPlayer(8_000);
         restored.restore(snapshot, key -> key.equals(snapshot.key()) ? prepared("music", true) : null);
-        assertEquals(Optional.of(snapshot), restored.snapshot());
+        assertEquals(Optional.of(snapshot), restored.capture());
 
-        StreamedMusicPlayer.PlaybackState wrongKey = new StreamedMusicPlayer.PlaybackState(
+        StreamedPlaybackSnapshot wrongKey = new StreamedPlaybackSnapshot(
                 new TrackKey("owner", "other"), 7, 1, 0,
-                new StreamedMusicPlayer.FadeState(1, 0, 0, 0, 0), 1);
+                new StreamedFadeSnapshot(1, 0, 0, 0, 0), 1);
         assertThrows(IllegalArgumentException.class, () -> restored.restore(wrongKey, key -> null));
-        assertEquals(Optional.of(snapshot), restored.snapshot());
+        assertEquals(Optional.of(snapshot), restored.capture());
 
         assertThrows(IllegalArgumentException.class, () -> restored.restore(
                 state(snapshot, Double.NaN, snapshot.pauseMask(), snapshot.fade(), snapshot.rate()),
@@ -124,24 +145,23 @@ class TestStreamedMusicPlayer {
                 key -> prepared("music", true)));
         assertThrows(IllegalArgumentException.class, () -> restored.restore(
                 state(snapshot, snapshot.sourceFramePosition(), snapshot.pauseMask(),
-                        new StreamedMusicPlayer.FadeState(1.1f, 1, 0, 0, -1), snapshot.rate()),
+                        new StreamedFadeSnapshot(1.1f, 1, 0, 0, -1), snapshot.rate()),
                 key -> prepared("music", true)));
         assertThrows(IllegalArgumentException.class, () -> restored.restore(
                 state(snapshot, snapshot.sourceFramePosition(), snapshot.pauseMask(),
-                        new StreamedMusicPlayer.FadeState(0.5f, 0, 0, 0, 0), snapshot.rate()),
+                        new StreamedFadeSnapshot(0.5f, 0, 0, 0, 0), snapshot.rate()),
                 key -> prepared("music", true)));
         assertThrows(IllegalArgumentException.class, () -> restored.restore(
                 state(snapshot, snapshot.sourceFramePosition(), snapshot.pauseMask(),
-                        new StreamedMusicPlayer.FadeState(0.5f, 1, 0, 0, -0.1f), snapshot.rate()),
+                        new StreamedFadeSnapshot(0.5f, 1, 0, 0, -0.1f), snapshot.rate()),
                 key -> prepared("music", true)));
         assertThrows(IllegalArgumentException.class, () -> restored.restore(
                 state(snapshot, snapshot.sourceFramePosition(), snapshot.pauseMask(), snapshot.fade(), 2.0),
                 key -> prepared("music", true)));
-        StreamedMusicPlayer.PlaybackState negativeId = new StreamedMusicPlayer.PlaybackState(
-                snapshot.key(), -1, snapshot.sourceFramePosition(), snapshot.pauseMask(), snapshot.fade(), snapshot.rate());
         assertThrows(IllegalArgumentException.class,
-                () -> restored.restore(negativeId, key -> prepared("music", true)));
-        assertEquals(Optional.of(snapshot), restored.snapshot(), "invalid restore must be atomic");
+                () -> new StreamedPlaybackSnapshot(snapshot.key(), -1,
+                        snapshot.sourceFramePosition(), snapshot.pauseMask(), snapshot.fade(), snapshot.rate()));
+        assertEquals(Optional.of(snapshot), restored.capture(), "invalid restore must be atomic");
 
         StreamedMusicPlayer wrongRate = new StreamedMusicPlayer(16_000);
         assertThrows(IllegalArgumentException.class, () -> wrongRate.play(1, prepared("music", false)));
@@ -160,7 +180,7 @@ class TestStreamedMusicPlayer {
         original.pause(StreamedMusicPlayer.PAUSE_APP);
         original.pause(StreamedMusicPlayer.PAUSE_JINGLE);
 
-        StreamedMusicPlayer.PlaybackState snapshot = original.snapshot().orElseThrow();
+        StreamedPlaybackSnapshot snapshot = original.capture().orElseThrow();
         StreamedMusicPlayer restored = new StreamedMusicPlayer(8_000);
         restored.restore(snapshot, key -> prepared);
         original.resume(StreamedMusicPlayer.PAUSE_APP);
@@ -175,7 +195,7 @@ class TestStreamedMusicPlayer {
             assertArrayEquals(expected, actual);
             original.advanceFade();
             restored.advanceFade();
-            assertEquals(original.snapshot(), restored.snapshot());
+            assertEquals(original.capture(), restored.capture());
         }
     }
 
@@ -207,7 +227,7 @@ class TestStreamedMusicPlayer {
         assertEquals(StreamedMusicPlayer.PAUSE_APP, player.pauseMask());
         assertEquals(1.0, player.rate());
         assertEquals(1.0f, player.fadeGain());
-        assertEquals(Optional.empty(), player.snapshot());
+        assertEquals(Optional.empty(), player.capture());
 
         player.play(1, prepared("music", true));
         assertEquals(1.25, player.rate());
@@ -257,10 +277,45 @@ class TestStreamedMusicPlayer {
         assertFalse(body.contains("Map<"));
     }
 
-    private static StreamedMusicPlayer.PlaybackState state(StreamedMusicPlayer.PlaybackState source,
+    @Test
+    void fadeInUsesPositiveSignedStepAndRetainsPlaybackAtUnityGain() {
+        StreamedMusicPlayer player = playing(false);
+
+        player.fadeIn(4, 0);
+        StreamedPlaybackSnapshot initial = player.capture().orElseThrow();
+        assertEquals(0.0f, initial.fade().gain());
+        assertEquals(0.25f, initial.fade().stepAmount());
+
+        for (int step = 0; step < 4; step++) player.advanceFade();
+
+        assertTrue(player.playing());
+        assertEquals(1.0f, player.fadeGain());
+        assertEquals(new StreamedFadeSnapshot(1.0f, 0, 0, 0, 0),
+                player.capture().orElseThrow().fade());
+        assertThrows(IllegalArgumentException.class, () -> player.fadeIn(0, 0));
+        assertThrows(IllegalArgumentException.class, () -> player.fadeIn(1, -1));
+    }
+
+    @Test
+    void publicSnapshotRestoreAcceptsAValidPositiveFadeAtomically() {
+        StreamedMusicPlayer player = new StreamedMusicPlayer(8_000);
+        StreamedPlaybackSnapshot snapshot = new StreamedPlaybackSnapshot(
+                new TrackKey("owner", "music"), 7, 1.0, 0,
+                new StreamedFadeSnapshot(0.5f, 2, 0, 0, 0.25f), 1.0);
+
+        player.restore(snapshot, key -> prepared("music", false));
+
+        assertEquals(Optional.of(snapshot), player.capture());
+        player.advanceFade();
+        player.advanceFade();
+        assertEquals(1.0f, player.fadeGain());
+        assertTrue(player.playing());
+    }
+
+    private static StreamedPlaybackSnapshot state(StreamedPlaybackSnapshot source,
                                                             double position, int mask,
-                                                            StreamedMusicPlayer.FadeState fade, double rate) {
-        return new StreamedMusicPlayer.PlaybackState(source.key(), source.logicalMusicId(), position, mask, fade, rate);
+                                                            StreamedFadeSnapshot fade, double rate) {
+        return new StreamedPlaybackSnapshot(source.key(), source.logicalMusicId(), position, mask, fade, rate);
     }
 
     private static StreamedMusicPlayer playing(boolean tempoEffects) {

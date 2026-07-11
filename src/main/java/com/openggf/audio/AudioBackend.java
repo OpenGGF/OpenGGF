@@ -13,6 +13,25 @@ public interface AudioBackend {
 
     void setAudioProfile(GameAudioProfile profile);
 
+    /** Transfers ownership of a launch-scoped streamed-music port to this backend. */
+    default void installStreamedMusicPort(StreamedMusicPort port) {
+        if (port != null && port != StreamedMusicPort.EMPTY) {
+            port.close();
+        }
+    }
+
+    /** Queues a prepared override lookup, running the stock fallback when unresolved. */
+    default void playStreamedMusicOrElse(int musicId, Runnable stockFallback) {
+        java.util.Objects.requireNonNull(stockFallback, "stockFallback").run();
+    }
+
+    default void beginStreamedOverrideReplayBypass() { }
+
+    default void endStreamedOverrideReplayBypass() { }
+
+    /** Clears active and queued streamed-music ownership during session reset. */
+    default void resetStreamedMusicPort() { }
+
     /**
      * Plays music by ID (potentially loading from ROM or fallback map).
      * 
