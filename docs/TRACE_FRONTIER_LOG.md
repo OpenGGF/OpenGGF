@@ -774,6 +774,22 @@ slot. The focused AIZ replay remains fully green, and a fresh exact replay
 sweep passes all 29 S1 classes plus every S2 replay (20 passed tests and the
 ROM-optional special-stage skip). No stage-green claim is made yet.
 
+Round 55 restores the AIZ flipping bridge's separately allocated multisprite
+draw owner. ROM `Obj_AIZFlippingBridge` calls `AllocateObjectAfterCurrent`,
+writes `loc_2AA78` into that child, and stores all eight subsprites there while
+the parent retains animation and solid logic (`sonic3k.asm:58872-59043`). The
+consolidated Java bridge rendered those subsprites without reserving the child
+SST, so the later collapsing platform took engine slot 27 instead of ROM slot
+28 and S3K's after-owner ring spill began its remainder at 28 instead of 29.
+The bridge now reserves one after-current child slot on its first native update;
+a focused allocation guard pins parent-plus-child ownership. Combined with
+Round 54's water-shake timer, `TestS3kAizCompleteRunTraceReplay` advances from
+f16755 / 204 errors (`rings`, expected 2 / actual 3) to f23523 / 200 errors
+(`y_speed`, expected `-$02B0`, actual `$02B0`). The focused AIZ replay remains
+green. A second exact boundary sweep passes all 29 S1 replay classes and every
+S2 replay (20 passed tests plus the ROM-optional special-stage skip). The AIZ
+stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch
