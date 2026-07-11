@@ -4588,7 +4588,13 @@ public class SidekickCpuController {
         // x_pos. Routine 6 (NORMAL / loc_13D78, sonic3k.asm:26668) instead branches
         // to loc_13EBE after the same respawn (object_control bit 7 -> bmi) and
         // never runs a facing block, so it keeps sub_13ECA's cleared facing.
-        applyDespawnMarker(state == State.PANIC);
+        // The ordinary TailsCPU_CheckDespawn timeout calls sub_13ECA directly,
+        // even if the CPU dispatcher currently holds routine 8. Only the
+        // object/interact mismatch path originates inside loc_13F40's
+        // sub_13EFC call and therefore continues into its post-warp facing
+        // block.
+        applyDespawnMarker(state == State.PANIC
+                && cause == DespawnCause.OBJECT_ID_MISMATCH);
     }
 
     /**

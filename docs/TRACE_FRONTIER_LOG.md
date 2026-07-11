@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f14859 / 1908 errors (1 error under `frontierOnly`).
+f3318 / 4234 errors to f15161 / 1907 errors (2 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -468,6 +468,22 @@ isolated granular replay matrix keeps both AIZ routes green and preserves every
 non-HCZ frontier and count exactly: CNZ complete f1846 / 5, CNZ level-select
 f291 / 7, MGZ complete f866 / 1, MGZ level-select f894 / 1, ICZ f3174 / 1,
 MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 25 separates the two S3K off-screen marker call paths. The ordinary
+`TailsCPU_CheckDespawn` respawn-counter timeout calls `sub_13ECA` directly and
+therefore leaves `status=Status_InAir`, even when the CPU dispatcher currently
+holds routine 8. Only an object/interact mismatch reached from routine 8's
+`sub_13EFC` returns into `loc_13F40` and applies its post-warp facing block
+(`sonic3k.asm:26374-26446,26800-26865`).
+
+This closes f14859-f15160 and advances HCZ to f15161 / 1907 full-run errors (2
+under `frontierOnly`), reducing the full report by one group. The two focused
+cause-specific marker guards pass. Both AIZ routes remain green; CNZ complete
+f1846 / 5, CNZ level-select f291 / 7, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ
+f2270 / 5 remain exact. The shared correction also advances MGZ complete from
+f866 / 1 to f1072 / 1 and MGZ level-select from f894 / 1 to f1030 / 1; both new
+frontiers are later ring-count mismatches, with no earlier or additional
+frontier-only failure.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

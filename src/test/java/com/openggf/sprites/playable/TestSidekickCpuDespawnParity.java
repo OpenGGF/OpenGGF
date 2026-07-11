@@ -186,6 +186,40 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s3kPanicOffscreenTimeoutUsesDirectMarkerFacing() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setDirection(Direction.LEFT);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.PANIC, 0);
+
+        controller.despawn(SidekickCpuController.DespawnCause.OFF_SCREEN_TIMEOUT);
+
+        assertEquals(Direction.RIGHT, tails.getDirection(),
+                "TailsCPU_CheckDespawn calls sub_13ECA directly and leaves status=Status_InAir");
+    }
+
+    @Test
+    void s3kPanicInteractMismatchContinuesIntoRoutineEightFacing() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.useGameRules(GameRules.SONIC_3K);
+        sonic.setCentreX((short) 0x0200);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.PANIC, 0);
+
+        controller.despawn(SidekickCpuController.DespawnCause.OBJECT_ID_MISMATCH);
+
+        assertEquals(Direction.LEFT, tails.getDirection(),
+                "loc_13F40 continues after sub_13EFC and faces from the post-warp sentinel");
+    }
+
+    @Test
     void s2FlyingRespawnTimeoutReturnsToSpawningAtZeroMarker() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
