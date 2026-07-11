@@ -75,8 +75,8 @@ import com.openggf.integration.presence.RuntimePresenceSnapshotProvider;
 import com.openggf.integration.presence.discord.DiscordIpcPresenceClient;
 import com.openggf.integration.presence.discord.DiscordIpcTransports;
 import com.openggf.game.recording.RecordingLaunchContext;
-import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.ModuleResolutionService;
+import com.openggf.game.patch.DeterministicPatchLaunches;
 import com.openggf.game.recording.UserRecordingHudState;
 import com.openggf.game.recording.UserRecordingRuntimeControls;
 import com.openggf.game.recording.UserRecordingSessionLauncher;
@@ -3428,7 +3428,8 @@ public class GameLoop {
                     .orElseThrow(() -> new IOException(
                             "ROM not recognized for recording launch context: " + context.gameId()));
 
-            GameModule module = resolveRecordingModuleForLaunch(rootModule, context);
+            GameModule module = DeterministicPatchLaunches.forRecording(
+                    moduleResolutionService, rootModule, context);
             audioManager.setAudioProfile(module.getAudioProfile());
             audioManager.setRom(rom);
             resetModuleScopedProviders();
@@ -3455,14 +3456,6 @@ public class GameLoop {
         } catch (IOException e) {
             throw new RuntimeException("Failed to restart from recording launch context", e);
         }
-    }
-
-    GameModule resolveRecordingModuleForLaunch(GameModule rootModule,
-            RecordingLaunchContext context) {
-        return moduleResolutionService.resolveForLaunch(rootModule,
-                new GameplayLaunchRequest(context.gameId(), context.mainCharacter(),
-                        context.sidekickCharacters()),
-                ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
     }
 
     private FadeManager resolveFadeManager() {

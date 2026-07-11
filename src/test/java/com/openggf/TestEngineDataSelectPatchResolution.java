@@ -39,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.mock;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
+import com.openggf.game.patch.DeterministicPatchLaunches;
 
 class TestEngineDataSelectPatchResolution {
 
@@ -119,7 +120,7 @@ class TestEngineDataSelectPatchResolution {
 
         assertEquals(List.of("one"),
                 ((PatchTrail) engine.resolveInitialModuleForLaunch(root)).ids());
-        GameModule recordingModule = engine.getGameLoop().resolveRecordingModuleForLaunch(root,
+        GameModule recordingModule = DeterministicPatchLaunches.forRecording(resolver, root,
                 new RecordingLaunchContext("s2", 0, 0, "knuckles", List.of("tails"),
                         false, "test"));
         assertEquals(List.of("one"), ((PatchTrail) recordingModule).ids());
