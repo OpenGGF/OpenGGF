@@ -150,9 +150,11 @@ profile that runs the full S2/S3K closure-validation sweep.
 Verification will include focused validator and MHZ1 lifecycle tests, existing
 rewind graph tests, S2/S3K trace replay tests, rewind coverage/field-disposition
 guards, captured-policy compact-reachability tests, a no-baseline closure
-fixture, and the S3K must-keep-green suite. A full trace sweep will update
-`docs/TRACE_FRONTIER_LOG.md` only if it moves a frontier or exposes a previously
-passing trace regression.
+fixture, and the S3K must-keep-green suite. Because the full trace sweep is used
+to discover and prioritize closure failures, its exact command, commit context,
+pass/fail/skip counts, and closure findings will be recorded in
+`docs/TRACE_FRONTIER_LOG.md`. Physics-frontier movement remains distinguished
+from closure-only failures.
 
 ## Non-goals
 
