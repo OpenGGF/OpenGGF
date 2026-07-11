@@ -576,6 +576,10 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                 // through the outer game loop leaves one unshifted comparison
                 // frame (sonic3k.asm:105747-105780).
                 lm.executeActTransition(request);
+                // _unkFAA2 is a global word and survives Load_Level. The engine
+                // stores dynamic-water state per act, so carry the lock onto the
+                // freshly initialized HCZ2 state explicitly.
+                waterSystem().setDynamicWaterLocked(Sonic3kZoneIds.ZONE_HCZ, 1, true);
                 waterSystem().setWaterLevelDirect(
                         Sonic3kZoneIds.ZONE_HCZ, 1, TRANSITION_WATER_LEVEL);
                 waterSystem().setWaterLevelTarget(

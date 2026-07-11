@@ -871,6 +871,11 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             defeatHandoffTimer--;
             if (defeatHandoffTimer < 0) {
                 releaseTrackedVortexPlayersOnWaterEffectDelete();
+                // loc_6A22A sets the global _unkFAA2 lock before entering
+                // Obj_EndSignControl, freezing DynamicWaterHeight_HCZ through
+                // the results-era act reload (sonic3k.asm:140574-140575).
+                services().waterSystem().setDynamicWaterLocked(
+                        services().featureZoneId(), services().featureActId(), true);
                 defeatHandoffStarted = true;
                 spawnChild(() -> new S3kBossDefeatSignpostFlow(
                         state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE));

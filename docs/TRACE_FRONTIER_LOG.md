@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f9976 / 2466 errors (1 error under `frontierOnly`).
+f3318 / 4234 errors to f10386 / 2393 errors (2 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -119,6 +119,20 @@ HCZ to f9976 / 2466 full-run errors (1 under `frontierOnly`). The all-S3K sweep
 again keeps both AIZ routes green and reproduces every non-HCZ frontier exactly.
 The 11 invariant guards, 21 keep-green tests, and all 4 focused HCZ event tests
 pass.
+
+Milestone 4 carries the ROM `_unkFAA2` dynamic-water lock through the HCZ
+miniboss/results transition. `loc_6A22A` sets the global lock before
+`Obj_EndSignControl`; `DynamicWaterHeight_HCZ2` returns while it is set, so the
+transition's `$06A0` current/mean/target words do not start drifting toward
+HCZ2's ordinary `$0700` target underneath the frozen players
+(`sonic3k.asm:8721-8737,140574-140575`). `WaterSystem` now exposes this already
+rewind-captured generic lock, the miniboss sets it from ROM state, and the
+per-act transition transfers it onto HCZ2's newly initialized water state.
+
+This closes f9976 and advances HCZ to f10386 / 2393 full-run errors (2 under
+`frontierOnly`). The fresh S3K sweep keeps both AIZ traces green and every
+non-HCZ frontier unchanged; 11 invariant guards, 27 dynamic-water tests, the
+miniboss cleanup guard, and all 21 S3K keep-green tests pass.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
