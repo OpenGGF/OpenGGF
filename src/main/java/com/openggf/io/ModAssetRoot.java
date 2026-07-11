@@ -34,12 +34,10 @@ public sealed interface ModAssetRoot extends AutoCloseable
         return jar(declaredRoot, jar, ModInputLimits.production());
     }
 
-    static ModAssetRoot directory(Path declaredRoot, Path directory, ModInputLimits limits) throws IOException {
-        return new DirectoryModAssetRoot(declaredRoot, directory, limits);
-    }
-
-    static ModAssetRoot directory(Path declaredRoot, Path directory) throws IOException {
-        return directory(declaredRoot, directory, ModInputLimits.production());
+    static ModAssetRoot directory(Path declaredRoot, Path directory, ModInputLimits limits,
+                                  DirectoryAccess access) throws IOException {
+        Objects.requireNonNull(access, "access").requireDirectoryAllowed();
+        return new DirectoryModAssetRoot(declaredRoot, directory, limits, access);
     }
 
     static ModAssetRoot forTests(String description, ModInputLimits limits) {
@@ -322,20 +320,22 @@ final class DirectoryModAssetRoot extends AbstractModAssetRoot {
     private final ModAssetSnapshot snapshot;
     private final Path root;
 
-    DirectoryModAssetRoot(Path declaredRoot, Path directory, ModInputLimits limits) throws IOException {
-        this(declaredRoot, directory, limits, SnapshotHook.NONE);
+    DirectoryModAssetRoot(Path declaredRoot, Path directory, ModInputLimits limits,
+                          DirectoryAccess access) throws IOException {
+        this(declaredRoot, directory, limits, access, SnapshotHook.NONE);
     }
 
     DirectoryModAssetRoot(Path declaredRoot, Path directory, ModInputLimits limits,
-                          SnapshotHook hook) throws IOException {
+                          DirectoryAccess access, SnapshotHook hook) throws IOException {
         super(limits);
+        Objects.requireNonNull(access, "access").requireDirectoryAllowed();
         Path source = containedRealPath(declaredRoot, directory);
         this.sourceDescription = source.toString();
         if (Files.isSymbolicLink(directory.toAbsolutePath())
                 || !Files.isDirectory(source, LinkOption.NOFOLLOW_LINKS)) {
             throw new IOException("Dev mod asset root must be a non-symlink directory: " + source);
         }
-        ModAssetSnapshot created = ModAssetSnapshot.directory(source, limits.maxAssetBytes(), hook);
+        ModAssetSnapshot created = ModAssetSnapshot.directory(source, limits, hook);
         this.snapshot = created;
         this.root = created.content();
         try {
@@ -375,7 +375,7 @@ final class DirectoryModAssetRoot extends AbstractModAssetRoot {
                     if (++count[0] > limits().maxJarEntries()) {
                         throw new IOException("Directory entry count exceeds limit");
                     }
-                    String name = root.relativize(path).toString().replace('\\', '/');
+                    String name = ModAssetSnapshot.normalizedRelativeName(root.relativize(path));
                     registerName(name, limits(), exact, folded, nameBytes);
                     long size = Files.size(real);
                     if (size > limits().maxAssetBytes()) {

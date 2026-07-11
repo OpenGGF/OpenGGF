@@ -3,11 +3,13 @@ package com.openggf.io;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -15,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
@@ -31,12 +34,75 @@ class TestModAssetRoot {
         Path rootDir = Files.createDirectory(temp.resolve("project"));
         Files.write(rootDir.resolve("asset.bin"), new byte[]{1, 2, 3, 4});
         ModInputLimits limits = ModInputLimits.loweringBuilder().maxAssetBytes(4).build();
-        try (ModAssetRoot root = ModAssetRoot.directory(rootDir, rootDir, limits)) {
+        try (ModAssetRoot root = ModAssetRoot.directory(rootDir, rootDir, limits, DirectoryAccess.TEST)) {
             assertArrayEquals(new byte[]{1, 2, 3, 4}, root.readBounded("asset.bin", 4));
             assertThrows(IOException.class, () -> root.readBounded("asset.bin", 3));
             assertThrows(IllegalArgumentException.class, () -> root.readBounded("asset.bin", 5));
             assertThrows(IllegalArgumentException.class, () -> root.readBounded("../asset.bin", 4));
         }
+    }
+
+    @Test
+    void directoryRootsRequireExplicitNonProductionAccess() throws Exception {
+        Path rootDir = Files.createDirectory(temp.resolve("directory-access"));
+        assertThrows(IllegalArgumentException.class, () -> ModAssetRoot.directory(
+                rootDir, rootDir, ModInputLimits.production(), DirectoryAccess.PRODUCTION));
+        try (ModAssetRoot ignored = ModAssetRoot.directory(
+                rootDir, rootDir, ModInputLimits.production(), DirectoryAccess.DEVELOPMENT)) {
+            assertNotNull(ignored);
+        }
+        try (ModAssetRoot ignored = ModAssetRoot.directory(
+                rootDir, rootDir, ModInputLimits.production(), DirectoryAccess.TEST)) {
+            assertNotNull(ignored);
+        }
+    }
+
+    @Test
+    void directorySnapshotEnforcesAllLimitsBeforeTempGrowthAndCleansFailure() throws Exception {
+        Path countRoot = Files.createDirectory(temp.resolve("limit-count"));
+        Files.write(countRoot.resolve("a"), new byte[]{1});
+        Files.write(countRoot.resolve("b"), new byte[]{2});
+        assertDirectorySnapshotRejectedAndCleaned(countRoot,
+                ModInputLimits.loweringBuilder().maxJarEntries(1).build(), 1);
+
+        Path nameRoot = Files.createDirectory(temp.resolve("limit-name"));
+        Files.write(nameRoot.resolve("toolong"), new byte[]{1});
+        assertDirectorySnapshotRejectedAndCleaned(nameRoot,
+                ModInputLimits.loweringBuilder().maxEntryNameBytes(3).build(), 0);
+
+        Path aggregateNameRoot = Files.createDirectory(temp.resolve("limit-aggregate-name"));
+        Files.write(aggregateNameRoot.resolve("aa"), new byte[]{1});
+        Files.write(aggregateNameRoot.resolve("bb"), new byte[]{2});
+        assertDirectorySnapshotRejectedAndCleaned(aggregateNameRoot,
+                ModInputLimits.loweringBuilder().maxAggregateEntryNameBytes(3).build(), 1);
+
+        Path fileRoot = Files.createDirectory(temp.resolve("limit-file"));
+        Files.write(fileRoot.resolve("a"), new byte[]{1, 2});
+        assertDirectorySnapshotRejectedAndCleaned(fileRoot,
+                ModInputLimits.loweringBuilder().maxAssetBytes(1).build(), 0);
+
+        Path aggregateBytesRoot = Files.createDirectory(temp.resolve("limit-aggregate-bytes"));
+        Files.write(aggregateBytesRoot.resolve("a"), new byte[]{1, 2});
+        Files.write(aggregateBytesRoot.resolve("b"), new byte[]{3, 4});
+        assertDirectorySnapshotRejectedAndCleaned(aggregateBytesRoot,
+                ModInputLimits.loweringBuilder().maxAssetBytes(2).maxModValidationBytes(3).build(), 2);
+    }
+
+    @Test
+    void directorySnapshotRejectsLiteralBackslashPathComponents() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(File.separatorChar != '\\',
+                "Windows treats backslash as a path separator");
+        Path rootDir = Files.createDirectory(temp.resolve("literal-backslash"));
+        Files.write(rootDir.resolve("a\\b"), new byte[]{1});
+
+        assertThrows(IOException.class, () -> ModAssetRoot.directory(
+                rootDir, rootDir, ModInputLimits.production(), DirectoryAccess.TEST));
+    }
+
+    @Test
+    void normalizedSnapshotNameRejectsBackslashComponentOnEveryPlatform() {
+        assertThrows(IOException.class,
+                () -> ModAssetSnapshot.normalizedRelativeNameComponents(List.of("a\\b")));
     }
 
     @Test
@@ -84,7 +150,8 @@ class TestModAssetRoot {
     void rootsRejectTargetsOutsideDeclaredRealRootAndReadsAfterClose() throws Exception {
         Path declared = Files.createDirectory(temp.resolve("declared"));
         Path outside = Files.createDirectory(temp.resolve("outside"));
-        assertThrows(IOException.class, () -> ModAssetRoot.directory(declared, outside));
+        assertThrows(IOException.class, () -> ModAssetRoot.directory(
+                declared, outside, ModInputLimits.production(), DirectoryAccess.TEST));
 
         Path jar = writeJar(declared.resolve("mod.jar"), Map.of("a.bin", new byte[]{1}));
         ModAssetRoot root = ModAssetRoot.jar(declared, jar);
@@ -119,7 +186,8 @@ class TestModAssetRoot {
         Files.write(real.resolve("asset.bin"), new byte[]{1});
         createSymlinkOrAbort(rootDir.resolve("alias"), real);
 
-        assertThrows(IOException.class, () -> ModAssetRoot.directory(rootDir, rootDir));
+        assertThrows(IOException.class, () -> ModAssetRoot.directory(
+                rootDir, rootDir, ModInputLimits.production(), DirectoryAccess.TEST));
     }
 
     @Test
@@ -128,7 +196,8 @@ class TestModAssetRoot {
         Path real = Files.createDirectory(rootDir.resolve("real"));
         Files.write(real.resolve("asset.bin"), new byte[]{1});
 
-        try (ModAssetRoot root = ModAssetRoot.directory(rootDir, rootDir)) {
+        try (ModAssetRoot root = ModAssetRoot.directory(
+                rootDir, rootDir, ModInputLimits.production(), DirectoryAccess.TEST)) {
             createSymlinkOrAbort(rootDir.resolve("alias"), real);
             assertThrows(IOException.class, () -> root.readBounded("alias/asset.bin", 1));
         }
@@ -246,7 +315,8 @@ class TestModAssetRoot {
         Path asset = rootDir.resolve("a.bin");
         Files.write(asset, new byte[]{1});
 
-        try (ModAssetRoot root = ModAssetRoot.directory(rootDir, rootDir)) {
+        try (ModAssetRoot root = ModAssetRoot.directory(
+                rootDir, rootDir, ModInputLimits.production(), DirectoryAccess.TEST)) {
             Files.write(asset, new byte[]{9}, StandardOpenOption.TRUNCATE_EXISTING);
             assertArrayEquals(new byte[]{1}, root.readBounded("a.bin", 1));
         }
@@ -260,7 +330,7 @@ class TestModAssetRoot {
                 Files.write(asset, new byte[]{9}, StandardOpenOption.TRUNCATE_EXISTING);
 
         try (ModAssetRoot root = new DirectoryModAssetRoot(
-                rootDir, rootDir, ModInputLimits.production(), replaceSource)) {
+                rootDir, rootDir, ModInputLimits.production(), DirectoryAccess.TEST, replaceSource)) {
             assertArrayEquals(new byte[]{1}, root.readBounded("a.bin", 1));
         }
     }
@@ -351,6 +421,33 @@ class TestModAssetRoot {
         } catch (IOException e) {
             return false;
         }
+    }
+
+    private static void assertDirectorySnapshotRejectedAndCleaned(
+            Path source, ModInputLimits limits, long maxExpectedCopiedBytes) {
+        AtomicReference<Path> snapshotRoot = new AtomicReference<>();
+        AtomicLong copiedBytes = new AtomicLong();
+        SnapshotHook observer = new SnapshotHook() {
+            @Override
+            public void snapshotAllocated(Path sourcePath, Path snapshotContent) {
+                snapshotRoot.set(snapshotContent.getParent());
+            }
+
+            @Override
+            public void afterFileCopied(Path sourceEntry, Path snapshotEntry, long totalSnapshotBytes) {
+                copiedBytes.set(totalSnapshotBytes);
+            }
+
+            @Override
+            public void afterCopy(Path sourcePath, Path snapshotContent) {
+            }
+        };
+        assertThrows(IOException.class, () -> new DirectoryModAssetRoot(
+                source, source, limits, DirectoryAccess.TEST, observer));
+        assertNotNull(snapshotRoot.get());
+        assertFalse(Files.exists(snapshotRoot.get()), "failed snapshot must be cleaned");
+        assertTrue(copiedBytes.get() <= maxExpectedCopiedBytes,
+                "snapshot grew beyond the bytes allowed before the failing entry");
     }
 
     private static void createSymlinkOrAbort(Path link, Path target) {

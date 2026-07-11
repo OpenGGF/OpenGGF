@@ -3,15 +3,21 @@ package com.openggf.io;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @FunctionalInterface
@@ -19,6 +25,13 @@ interface SnapshotHook {
     SnapshotHook NONE = (source, snapshot) -> { };
 
     default void beforeCopy(Path source) throws IOException {
+    }
+
+    default void snapshotAllocated(Path source, Path snapshot) throws IOException {
+    }
+
+    default void afterFileCopied(Path sourceEntry, Path snapshotEntry, long totalSnapshotBytes)
+            throws IOException {
     }
 
     void afterCopy(Path source, Path snapshot) throws IOException;
@@ -47,12 +60,17 @@ final class ModAssetSnapshot implements AutoCloseable {
         return create(source, false, maxBytes, hook);
     }
 
-    static ModAssetSnapshot directory(Path source, long maxFileBytes, SnapshotHook hook) throws IOException {
-        return create(source, true, maxFileBytes, hook);
+    static ModAssetSnapshot directory(Path source, ModInputLimits limits, SnapshotHook hook) throws IOException {
+        return create(source, true, limits.maxAssetBytes(), limits, hook);
     }
 
     private static ModAssetSnapshot create(Path source, boolean directory, long maxFileBytes,
                                            SnapshotHook hook) throws IOException {
+        return create(source, directory, maxFileBytes, null, hook);
+    }
+
+    private static ModAssetSnapshot create(Path source, boolean directory, long maxFileBytes,
+                                           ModInputLimits directoryLimits, SnapshotHook hook) throws IOException {
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(hook, "hook");
         Path root = createPrivateTempDirectory();
@@ -61,11 +79,12 @@ final class ModAssetSnapshot implements AutoCloseable {
             Files.writeString(root.resolve(OWNER_MARKER), token,
                     StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
             Path content = root.resolve(directory ? "tree" : "asset.jar");
+            hook.snapshotAllocated(source, content);
             hook.beforeCopy(source);
             if (directory) {
-                copyDirectoryVerified(source, content, maxFileBytes);
+                copyDirectoryVerified(source, content, directoryLimits, hook);
             } else {
-                copyFileVerified(source, content, maxFileBytes);
+                copyFileVerified(source, content, maxFileBytes, null, hook);
             }
             hook.afterCopy(source, content);
             return new ModAssetSnapshot(root, content, token);
@@ -96,11 +115,13 @@ final class ModAssetSnapshot implements AutoCloseable {
         return root;
     }
 
-    private static void copyDirectoryVerified(Path source, Path destination, long maxFileBytes) throws IOException {
+    private static void copyDirectoryVerified(Path source, Path destination, ModInputLimits limits,
+                                              SnapshotHook hook) throws IOException {
         if (Files.isSymbolicLink(source)
                 || !Files.isDirectory(source, LinkOption.NOFOLLOW_LINKS)) {
             throw new IOException("Directory snapshot source must be a non-symlink directory: " + source);
         }
+        DirectoryCopyBudget budget = new DirectoryCopyBudget(limits);
         Files.createDirectory(destination);
         try (var paths = Files.walk(source)) {
             paths.filter(path -> !path.equals(source)).forEach(path -> {
@@ -108,11 +129,14 @@ final class ModAssetSnapshot implements AutoCloseable {
                     if (Files.isSymbolicLink(path)) {
                         throw new IOException("Symbolic links are not allowed in directory snapshots: " + path);
                     }
+                    String normalizedName = normalizedRelativeName(source.relativize(path));
+                    BasicFileAttributes before = attributes(path);
+                    budget.checkEntry(normalizedName, before);
                     Path target = destination.resolve(source.relativize(path).toString());
                     if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
                         Files.createDirectory(target);
                     } else if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
-                        copyFileVerified(path, target, maxFileBytes);
+                        copyFileVerified(path, target, limits.maxAssetBytes(), budget, hook);
                     } else {
                         throw new IOException("Special files are not allowed in directory snapshots: " + path);
                     }
@@ -125,7 +149,8 @@ final class ModAssetSnapshot implements AutoCloseable {
         }
     }
 
-    private static void copyFileVerified(Path source, Path destination, long maxBytes) throws IOException {
+    private static void copyFileVerified(Path source, Path destination, long maxBytes,
+                                         DirectoryCopyBudget budget, SnapshotHook hook) throws IOException {
         BasicFileAttributes before = attributes(source);
         if (!before.isRegularFile() || before.size() > maxBytes) {
             throw new IOException("Snapshot source must be a bounded regular non-symlink file: " + source);
@@ -142,6 +167,9 @@ final class ModAssetSnapshot implements AutoCloseable {
                 if (copiedBytes > maxBytes) {
                     throw new IOException("Snapshot source exceeds byte limit " + maxBytes + ": " + source);
                 }
+                if (budget != null) {
+                    budget.reserveActualBytes(buffer.remaining());
+                }
                 while (buffer.hasRemaining()) {
                     output.write(buffer);
                 }
@@ -155,10 +183,39 @@ final class ModAssetSnapshot implements AutoCloseable {
                 || !copied.isRegularFile()) {
             throw new IOException("Snapshot source changed while it was being copied: " + source);
         }
+        if (budget != null) {
+            hook.afterFileCopied(source, destination, budget.actualBytes());
+        }
     }
 
     private static BasicFileAttributes attributes(Path path) throws IOException {
         return Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+    }
+
+    static String normalizedRelativeName(Path relativePath) throws IOException {
+        List<String> components = new ArrayList<>();
+        for (Path component : relativePath) {
+            components.add(component.toString());
+        }
+        return normalizedRelativeNameComponents(components);
+    }
+
+    static String normalizedRelativeNameComponents(Iterable<String> components) throws IOException {
+        StringBuilder normalized = new StringBuilder();
+        for (String segment : components) {
+            if (segment.indexOf('\\') >= 0) {
+                throw new IOException("Backslashes are not allowed in mod asset path components: " + segment);
+            }
+            if (!normalized.isEmpty()) {
+                normalized.append('/');
+            }
+            normalized.append(segment);
+        }
+        try {
+            return ModAssetRoot.requireNormalizedEntry(normalized.toString());
+        } catch (IllegalArgumentException e) {
+            throw new IOException("Invalid directory snapshot entry: " + normalized, e);
+        }
     }
 
     private static boolean sameIdentityAndSize(BasicFileAttributes before, BasicFileAttributes after) {
@@ -169,6 +226,62 @@ final class ModAssetSnapshot implements AutoCloseable {
                 : before.lastModifiedTime().equals(after.lastModifiedTime());
         return identityMatches && before.size() == after.size()
                 && before.lastModifiedTime().equals(after.lastModifiedTime());
+    }
+
+    private static final class DirectoryCopyBudget {
+        private final ModInputLimits limits;
+        private final Set<String> exactNames = new HashSet<>();
+        private final Set<String> foldedNames = new HashSet<>();
+        private int entries;
+        private long nameBytes;
+        private long actualBytes;
+
+        private DirectoryCopyBudget(ModInputLimits limits) {
+            this.limits = Objects.requireNonNull(limits, "limits");
+        }
+
+        private void checkEntry(String normalizedName, BasicFileAttributes attributes) throws IOException {
+            try {
+                ModAssetRoot.requireNormalizedEntry(normalizedName);
+            } catch (IllegalArgumentException e) {
+                throw new IOException("Invalid directory snapshot entry: " + normalizedName, e);
+            }
+            if (++entries > limits.maxJarEntries()) {
+                throw new IOException("Directory snapshot entry count exceeds limit");
+            }
+            int currentNameBytes = normalizedName.getBytes(StandardCharsets.UTF_8).length;
+            if (currentNameBytes > limits.maxEntryNameBytes()) {
+                throw new IOException("Directory snapshot entry name exceeds limit: " + normalizedName);
+            }
+            nameBytes = Math.addExact(nameBytes, currentNameBytes);
+            if (nameBytes > limits.maxAggregateEntryNameBytes()) {
+                throw new IOException("Directory snapshot aggregate entry names exceed limit");
+            }
+            if (!exactNames.add(normalizedName)
+                    || !foldedNames.add(normalizedName.toLowerCase(Locale.ROOT))) {
+                throw new IOException("Duplicate or case-folding directory snapshot entry: " + normalizedName);
+            }
+            if (attributes.isRegularFile()) {
+                if (attributes.size() > limits.maxAssetBytes()) {
+                    throw new IOException("Directory snapshot file exceeds limit: " + normalizedName);
+                }
+                if (Math.addExact(actualBytes, attributes.size()) > limits.maxModValidationBytes()) {
+                    throw new IOException("Directory snapshot aggregate bytes exceed limit");
+                }
+            }
+        }
+
+        private void reserveActualBytes(int bytes) throws IOException {
+            long updated = Math.addExact(actualBytes, bytes);
+            if (updated > limits.maxModValidationBytes()) {
+                throw new IOException("Directory snapshot aggregate bytes exceed limit");
+            }
+            actualBytes = updated;
+        }
+
+        private long actualBytes() {
+            return actualBytes;
+        }
     }
 
     @Override
