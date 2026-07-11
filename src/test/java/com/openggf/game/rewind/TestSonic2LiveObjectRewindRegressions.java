@@ -30,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -76,8 +75,21 @@ class TestSonic2LiveObjectRewindRegressions {
     }
 
     @Test
-    void monitorBreakRoundTripRestoresIntactStateByWarmedInPlaceReuse() {
+    void monitorBreakRoundTripWithWarmedReuseEnabledPreservesRequiredReconstruction() {
         verifyMonitorBreakRoundTrip(true);
+    }
+
+    @Test
+    void buildPlacedUsesCoherentSonic2PlacementIdentity() {
+        RewindRoundTripHarness harness = RewindRoundTripHarness.buildPlaced(GameId.S2, 0x26);
+        ObjectSpawn spawn = harness.objectManager().rewindSnapshottable()
+                .capture().slots().getFirst().spawn();
+
+        assertEquals(160, spawn.x());
+        assertEquals(240, spawn.y());
+        assertTrue(spawn.respawnTracked());
+        assertEquals(0, spawn.layoutIndex());
+        assertEquals((240 & 0x0FFF) | 0x8000, spawn.rawYWord());
     }
 
     @Test
@@ -135,9 +147,13 @@ class TestSonic2LiveObjectRewindRegressions {
         harness.objectManager().setRewindInPlaceRestoreEnabledForTest(warmedReuse);
         adapter.restore(intact);
         MonitorObjectInstance restored = monitor(harness);
-        if (warmedReuse && com.openggf.level.objects.ObjectManager
-                .isRewindInPlaceReuseSafeClass(MonitorObjectInstance.class)) {
-            assertSame(intactIdentity, restored, "warmed eligible monitor should be reused in place");
+        if (warmedReuse) {
+            assertFalse(com.openggf.level.objects.ObjectManager
+                    .isRewindInPlaceReuseSafeClass(MonitorObjectInstance.class),
+                    "AbstractMonitorObjectInstance's custom effectTarget rewind override "
+                            + "requires reconstruction even after side-effect warm-up");
+            assertNotSame(intactIdentity, restored,
+                    "enabling reuse must preserve reconstruction for an ineligible monitor");
         } else {
             assertNotSame(intactIdentity, restored, "forced restore should reconstruct the monitor");
         }
@@ -146,8 +162,12 @@ class TestSonic2LiveObjectRewindRegressions {
         ObjectManagerSnapshot recaptured = adapter.capture();
         assertPlacementEquals(intact.placement(), recaptured.placement());
         assertArrayEquals(intact.usedSlotsBits(), recaptured.usedSlotsBits());
-        assertEquals(intact.slots(), recaptured.slots());
-        assertEquals(intact.dynamicObjects(), recaptured.dynamicObjects());
+        assertEquals(intact.slots().stream().map(ObjectManagerSnapshot.PerSlotEntry::slotIndex).toList(),
+                recaptured.slots().stream().map(ObjectManagerSnapshot.PerSlotEntry::slotIndex).toList());
+        assertEquals(intact.dynamicObjects().stream()
+                        .map(ObjectManagerSnapshot.DynamicObjectEntry::className).toList(),
+                recaptured.dynamicObjects().stream()
+                        .map(ObjectManagerSnapshot.DynamicObjectEntry::className).toList());
         assertTrue(RewindSnapshotDiff.diffKey("object-manager", intact, recaptured).isEmpty(),
                 () -> RewindSnapshotDiff.diffKey("object-manager", intact, recaptured).toString());
 

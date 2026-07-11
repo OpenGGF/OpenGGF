@@ -707,7 +707,7 @@ public final class RewindRoundTripHarness {
         ObjectServices services = makeServices(holder, camera);
 
         ObjectRegistry registry = registryFor(gameId);
-        ObjectSpawn spawn = new ObjectSpawn(160, 240, objectId, 0, 0, true, 0, 0);
+        ObjectSpawn spawn = placedProbeSpawn(gameId, objectId);
         ObjectManager om = new ObjectManager(
                 List.of(spawn), registry,
                 0, null, null,
@@ -719,6 +719,15 @@ public final class RewindRoundTripHarness {
         rr.register(om.rewindSnapshottable());
 
         return new RewindRoundTripHarness(gameId, om, rr);
+    }
+
+    private static ObjectSpawn placedProbeSpawn(GameId gameId, int objectId) {
+        int y = 240;
+        // S2/S3K encode the respawn-table/remember bit in bit 15 of the raw Y
+        // word. S1 carries it in bit 7 of the object-id byte, so its Y word
+        // contains only the coordinate/render bits represented by this probe.
+        int rawYWord = gameId == GameId.S1 ? y : y | 0x8000;
+        return new ObjectSpawn(160, y, objectId, 0, 0, true, rawYWord, 0);
     }
 
     // =========================================================================
