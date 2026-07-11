@@ -78,9 +78,12 @@ class Sonic2SpecialStageRenderOrderingTest {
 
         renderer.renderPlayers();
 
+        // A lower priority(a0) value wins ROM's Sprite_Table ordering (earlier
+        // sprites occlude later same-tile-priority ones), so both passes draw the
+        // highest priority bucket first and the lowest (p1a/p1b) last, on top.
         assertEquals(List.of(
-                "shadow:p1a", "shadow:p1b", "shadow:p2",
-                "player:p1a", "player:p1b", "player:p2"), playerEvents);
+                "shadow:p2", "shadow:p1a", "shadow:p1b",
+                "player:p2", "player:p1a", "player:p1b"), playerEvents);
 
         List<String> objectEvents = new ArrayList<>();
         List<Sonic2SpecialStageObject> objects = List.of(
