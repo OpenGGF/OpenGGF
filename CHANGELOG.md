@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Ordinary AIZ ride vines now reserve their native child SST entries:** the consolidated Java object retains its root slot while reserving the four link objects and final handle allocated by `AllocateObjectAfterCurrent`, preserving ROM object-table pressure during the vine's lifetime (`docs/skdisasm/sonic3k.asm:46115-46142`).
 - **AIZ's HCZ handoff now preserves the ROM camera sample:** when the falling player reaches the `StartNewLevel` threshold, the post-boss controller freezes the camera at the pre-physics airborne target before requesting the full zone transition, so the ordinary later camera pass cannot advance it from `$02B6` to `$02C2` (`docs/skdisasm/sonic3k.asm:138318-138326,178210-178229`).
 - **AIZ's post-boss sidekick lock now clears the late logical controller word:** the `loc_863C0` replacement preserves CPU movement generation, then clears the live `Ctrl_2_logical` latch from its later object slot while the positive lock is active; detailed CPU-step diagnostics retain the pre-clear sample (`docs/skdisasm/sonic3k.asm:181346-181365`).
 - **AIZ's boss-end draw bridge now preserves rider facing:** the consolidated bridge exposes the ROM parent's permanent status-bit-7 balance suppression, so `Sonic_Move` skips object-edge balancing instead of briefly turning Sonic toward the parent object's distant left edge (`docs/skdisasm/sonic3k.asm:22450-22461,59490-59507`).

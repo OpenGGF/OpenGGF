@@ -37,6 +37,14 @@ class TestAizGiantRideVineObjectInstance {
     }
 
     @Test
+    void ordinaryRideVineDeclaresFiveRomChildSlots() {
+        ObjectSpawn spawn = new ObjectSpawn(0x1800, 0x0500, 0x06, 0, 0, false, 0);
+
+        assertEquals(5, new AizRideVineObjectInstance(spawn).getReservedChildSlotCount(),
+                "Obj_AIZRideVine allocates four links and one handle after its root slot");
+    }
+
+    @Test
     void reservesRomChildSlotsAfterParentSlot() {
         ObjectManager[] holder = new ObjectManager[1];
         StubObjectServices services = new StubObjectServices() {

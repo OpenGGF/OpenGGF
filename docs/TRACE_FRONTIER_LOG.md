@@ -641,6 +641,17 @@ f16755, with 657 errors (`rings`, expected 2 / actual 3), so the AIZ stage is
 not green yet. Full S1 (29) and S2 (48) trace fleets passed at the immediately
 preceding shared-sidekick commit boundary.
 
+Round 46 restores the ordinary AIZ ride vine's five child SST reservations.
+ROM `Obj_AIZRideVine` retains the root and allocates four link entries plus a
+final handle using `AllocateObjectAfterCurrent`; the engine's consolidated
+object previously consumed only the root slot. The reservation is made during
+the root's first execution pass and freed with the vine, matching the native
+lifetime without changing gameplay ordering. The focused replay remains green
+through all 20,443 frames. The complete-run replay remains red at f16755 / 657
+errors (`rings`, expected 2 / actual 3), proving this earlier vine's released
+children are not the live allocation mismatch at the later ring spill. The
+focused vine unit suite passes. The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

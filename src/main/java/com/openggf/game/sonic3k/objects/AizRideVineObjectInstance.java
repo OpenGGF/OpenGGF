@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -64,6 +65,7 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
             new Segment()
     };
     private final AizVineHandleLogic.State handle = new AizVineHandleLogic.State();
+    private boolean childSlotsReserved;
 
     private State state = State.WAIT_FOR_GRAB;
     private int rootAngle;
@@ -118,6 +120,13 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getReservedChildSlotCount() {
+        // Obj_AIZRideVine allocates the first link, three more chain links,
+        // then rewrites the last child as the handle (sonic3k.asm:46115-46142).
+        return 5;
+    }
+
+    @Override
     public boolean isPersistent() {
         return AizVineHandleLogic.anyGrabbed(handle);
     }
@@ -125,12 +134,25 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        reserveRomChildSlots();
         updateRootState();
         updateSegments();
         updateHandle(player);
         updateDynamicSpawn(currentX, currentY);
         // Off-screen lifecycle is handled by the Placement system (see comment in
         // AizGiantRideVineObjectInstance).
+    }
+
+    private void reserveRomChildSlots() {
+        if (childSlotsReserved || getSlotIndex() < 0) {
+            return;
+        }
+        childSlotsReserved = true;
+        ObjectServices svc = tryServices();
+        if (svc != null && svc.objectManager() != null) {
+            svc.objectManager().allocateChildSlotsAfter(
+                    spawn, getReservedChildSlotCount(), getSlotIndex());
+        }
     }
 
     @Override
