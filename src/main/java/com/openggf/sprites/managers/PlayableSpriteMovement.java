@@ -125,6 +125,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean preMoveBalanceEvaluated;
 	private int preMoveBalanceState;
 	private Direction preMoveBalanceDirection;
+	/** ROM next_tilt/tilt bytes copied from Primary/Secondary_Angle after player dispatch. */
+	private int latchedNextTilt;
+	private int latchedTilt;
 
 	public PlayableSpriteMovement(AbstractPlayableSprite sprite,
 			CollisionSystem collisionSystem,
@@ -210,6 +213,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		preMoveBalanceEvaluated = false;
 		preMoveBalanceState = 0;
 		preMoveBalanceDirection = null;
+		latchedNextTilt = 0;
+		latchedTilt = 0;
 	}
 
 	public RewindState captureRewindState() {
@@ -234,7 +239,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				staleHorizontalInputPreviousHorizontal,
 				preMoveBalanceEvaluated,
 				preMoveBalanceState,
-				preMoveBalanceDirection);
+				preMoveBalanceDirection,
+				latchedNextTilt,
+				latchedTilt);
 	}
 
 	public void restoreRewindState(RewindState state) {
@@ -263,6 +270,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		preMoveBalanceEvaluated = state.preMoveBalanceEvaluated();
 		preMoveBalanceState = state.preMoveBalanceState();
 		preMoveBalanceDirection = state.preMoveBalanceDirection();
+		latchedNextTilt = state.latchedNextTilt();
+		latchedTilt = state.latchedTilt();
 	}
 
 	public record RewindState(
@@ -286,7 +295,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			boolean staleHorizontalInputPreviousHorizontal,
 			boolean preMoveBalanceEvaluated,
 			int preMoveBalanceState,
-			Direction preMoveBalanceDirection
+			Direction preMoveBalanceDirection,
+			int latchedNextTilt,
+			int latchedTilt
 	) {}
 
 	public void clearJumpHeightLatch() {
@@ -3585,7 +3596,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Update balance state (checks for ledge edges)
 		// ROM: Balance check happens before crouch/lookup in Obj01_LookUpDown
 		if (standingStill && !inputLeft && !inputRight) {
-			updateBalanceState();
+			if (preMoveBalanceEvaluated) {
+				// doGroundMove evaluated the ROM balance branch before SpeedToPos
+				// and AnglePos. Reuse that result even when it was "not balancing":
+				// AnglePos has since refreshed Primary/Secondary_Angle for the
+				// player-tail next_tilt/tilt copy, and recomputing here would expose
+				// those new bytes one dispatch early (sonic3k.asm:27840-27849,
+				// 26215-26244).
+				sprite.setBalanceState(preMoveBalanceState);
+				sprite.setDirection(preMoveBalanceDirection);
+			} else {
+				updateBalanceState();
+			}
 		} else {
 			sprite.setBalanceState(0);
 		}
@@ -3839,7 +3861,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	/** Sensor update + angle positioning */
 	private void doAnglePosWithSensorUpdate(short originalX, short originalY) {
 		sprite.updateSensors(originalX, originalY);
+		captureTiltAnglesForGroundDispatch();
 		doAnglePos();
+	}
+
+	private void captureTiltAnglesForGroundDispatch() {
+		Sensor[] groundSensors = sprite.getGroundSensors();
+		if (groundSensors == null || groundSensors.length < 2) {
+			return;
+		}
+		// Player_AnglePos leaves the two FindFloor angle outputs in the global
+		// Primary_Angle/Secondary_Angle bytes. The player tail copies them to
+		// next_tilt/tilt only after the movement dispatch (S3K Tails:
+		// sonic3k.asm:26215-26244). Airborne landing does not run this ground
+		// AnglePos path, so the first grounded control frame must still consume
+		// the previous values; these latches update only here, after that frame's
+		// ground attachment pass. Sample before doAnglePos can snap the player:
+		// the ROM globals retain the angles produced by that routine's probes.
+		SensorResult left = groundSensors[0].scan();
+		SensorResult right = groundSensors[1].scan();
+		latchedNextTilt = right == null ? 3 : right.angle() & 0xFF;
+		latchedTilt = left == null ? 3 : left.angle() & 0xFF;
 	}
 
 	// ========================================
@@ -4171,8 +4213,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (centerDist < EDGE_THRESHOLD) {
 			return; // Center still has ground — ROM branches to Lookup/Duck, no balance.
 		}
-		// Right edge: left sensor has ground, right sensor doesn't
-		if (leftDist < EDGE_THRESHOLD && rightDist >= EDGE_THRESHOLD) {
+		// ROM chooses the edge from the prior player-tail copy of
+		// Primary_Angle/Secondary_Angle, not from a fresh pair of side probes
+		// inside Tails_InputAcceleration_Path (sonic3k.asm:27840-27849).
+		if (latchedNextTilt == 3) {
 			// S2/S3K: precarious check - scan at center - 6 (dx = +3 from left sensor)
 			SensorResult precariousResult = groundSensors[0].scan((short) 3, (short) 0);
 			int precariousDist = (precariousResult == null) ? 99 : precariousResult.distance();
@@ -4181,8 +4225,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		// Left edge: right sensor has ground, left sensor doesn't
-		if (rightDist < EDGE_THRESHOLD && leftDist >= EDGE_THRESHOLD) {
+		if (latchedTilt == 3) {
 			// S2/S3K: precarious check - scan at center + 6 (dx = -3 from right sensor)
 			SensorResult precariousResult = groundSensors[1].scan((short) -3, (short) 0);
 			int precariousDist = (precariousResult == null) ? 99 : precariousResult.distance();

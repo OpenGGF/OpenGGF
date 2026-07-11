@@ -399,9 +399,25 @@ expected `1`, actual `2`) to f16123 (`tails_status_byte` expected `$41`, actual
 `$40`), again leaving one reported mismatch. Fresh full sweeps on this exact
 working tree pass all 29 S1 and all 48 S2 trace replays.
 
+Round 29 restores the player-tail angle-latch phase used by terrain edge
+balance. S3K Tails checks the previous `next_tilt`/`tilt` bytes during
+`Tails_InputAcceleration_Path`; only after movement and `Player_AnglePos` does
+the player tail copy the newly produced `Primary_Angle`/`Secondary_Angle` bytes
+for the following dispatch (`sonic3k.asm:27796-27859,26215-26244`). The engine
+instead inferred the edge from fresh side probes, then recomputed balance after
+`AnglePos`, exposing the new right-edge result on the first grounded frame at
+f16123. Movement now retains the two ROM-visible angle latches and applies the
+balance decision captured at its native pre-movement point, including a
+non-balancing result. The complete-run frontier moves from f16123
+(`tails_status_byte` expected `$41`, actual `$40`) to f16485
+(`tails_cpu_respawn_counter` expected `$00EB`, actual `$0000`), leaving one
+reported mismatch. `TestPlayableSpriteMovement` passes all 114 checks with the
+Java-26 Byte Buddy compatibility flag, and fresh full sweeps on this exact
+working tree pass all 29 S1 and all 48 S2 trace replays.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f16123.
+banked rounds the current stacked working-tree complete-run frontier is f16485.
 Those causes will be recorded and committed separately as their focused guards
 are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes
