@@ -53,6 +53,15 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         ACTIVE
     }
 
+    private enum ArmRootPhase {
+        INITIAL_SWING,
+        RANDOM_SWING,
+        ATTACK_WINDUP,
+        ATTACK_SWING,
+        ATTACK_RETURN,
+        POST_ATTACK_SWING
+    }
+
     private static final int ARM_FRAME_BASE = 3;
     private static final int ARM_FRAME_THROW = 4;
     private static final int COCONUT_FRAME = 6;
@@ -77,6 +86,12 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
     private final int[] followerDelayTimer = new int[ARM_FOLLOWER_COUNT];
     private int armRootAngle;
     private int armAngleStep = ARM_ANGLE_STEP;
+    private ArmRootPhase armRootPhase = ArmRootPhase.INITIAL_SWING;
+    private int romArmRootAngle;
+    private int romArmAngleStep = 1;
+    private int armRandomWaitTimer;
+    private int armSetupDelay = 2;
+    private boolean armRootActivated;
     private boolean lastFacingLeft;
 
     private State state = State.WAIT;
@@ -114,7 +129,23 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM entry point begins with Obj_WaitOffscreen, so the state machine,
         // arm animation, and throw cadence must not advance until visible.
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
+            return;
+        }
+
+        boolean withinWaitOffscreenBounds = isOnScreen(0x20);
+        if (!armRootActivated) {
+            if (!withinWaitOffscreenBounds) {
+                return;
+            }
+            armRootActivated = true;
+        }
+
+        // Obj_WaitOffscreen replaces the operation only until the placeholder
+        // first becomes visible. Once restored, the separately allocated root
+        // child keeps running even after it leaves those bounds.
+        if (!withinWaitOffscreenBounds) {
+            updateNativeArmRoot(player);
             return;
         }
 
@@ -123,6 +154,7 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         }
 
         updateFacingAndOffset(player);
+        updateNativeArmRoot(player);
         updateArmChainAnimation();
 
         switch (state) {
@@ -262,6 +294,93 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         }
     }
 
+    private void updateNativeArmRoot(PlayableEntity player) {
+        if (armSetupDelay > 0) {
+            armSetupDelay--;
+            return;
+        }
+        updateArmRootRoutine(closestNativePlayerByHorizontalDistance(player));
+    }
+
+    private void updateArmRootRoutine(PlayableEntity targetEntity) {
+        boolean mirrored = !initialFacingLeft;
+        switch (armRootPhase) {
+            case INITIAL_SWING -> {
+                romArmRootAngle = addAngle(romArmRootAngle, mirrored ? 4 : -4);
+                if ((mirrored && romArmRootAngle >= 0x80)
+                        || (!mirrored && romArmRootAngle <= 0x80)) {
+                    armRootPhase = ArmRootPhase.RANDOM_SWING;
+                    resetRandomArmWait();
+                }
+            }
+            case RANDOM_SWING -> {
+                if (armTargetIsOnNativeSide(targetEntity, mirrored)) {
+                    armRootPhase = ArmRootPhase.ATTACK_WINDUP;
+                } else {
+                    updateRandomArmSwing(mirrored);
+                }
+            }
+            case ATTACK_WINDUP -> {
+                romArmRootAngle = addAngle(romArmRootAngle, mirrored ? 4 : -4);
+                if ((mirrored && romArmRootAngle >= 0xC0)
+                        || (!mirrored && romArmRootAngle <= 0x40)) {
+                    armRootPhase = ArmRootPhase.ATTACK_SWING;
+                }
+            }
+            case ATTACK_SWING -> {
+                romArmRootAngle = addAngle(romArmRootAngle, mirrored ? -8 : 8);
+                if ((mirrored && romArmRootAngle <= 0x60)
+                        || (!mirrored && romArmRootAngle >= 0xA0)) {
+                    armRootPhase = ArmRootPhase.ATTACK_RETURN;
+                }
+            }
+            case ATTACK_RETURN -> {
+                romArmRootAngle = addAngle(romArmRootAngle, mirrored ? 2 : -2);
+                if ((mirrored && romArmRootAngle >= 0x80)
+                        || (!mirrored && romArmRootAngle <= 0x80)) {
+                    armRootPhase = ArmRootPhase.POST_ATTACK_SWING;
+                    resetRandomArmWait();
+                }
+            }
+            case POST_ATTACK_SWING -> updateRandomArmSwing(mirrored);
+        }
+    }
+
+    private boolean armTargetIsOnNativeSide(PlayableEntity targetEntity, boolean mirrored) {
+        if (!(targetEntity instanceof AbstractPlayableSprite target)
+                || Math.abs(target.getCentreY() - currentY) >= PLAYER_Y_RANGE) {
+            return false;
+        }
+        int dx = target.getCentreX() - treeAnchorX;
+        return mirrored ? dx >= 0 : dx < 0;
+    }
+
+    private void updateRandomArmSwing(boolean mirrored) {
+        romArmRootAngle = addAngle(romArmRootAngle, romArmAngleStep);
+        int rangeRelative = addAngle(romArmRootAngle, mirrored ? -0x20 : -0x80);
+        if (rangeRelative >= 0x60) {
+            romArmAngleStep = -romArmAngleStep;
+            romArmRootAngle = addAngle(romArmRootAngle, romArmAngleStep);
+        }
+        armRandomWaitTimer--;
+        if (armRandomWaitTimer < 0) {
+            resetRandomArmWait();
+        }
+    }
+
+    private void resetRandomArmWait() {
+        services().rng().nextRaw();
+        // 68k move.w (RNG_seed).w reads the first (high) word of the
+        // big-endian longword stored by Random_Number.
+        int seedWord = (int) (services().rng().getSeed() >>> 16) & 0xFFFF;
+        romArmAngleStep = (seedWord & 1) == 0 ? 1 : -1;
+        armRandomWaitTimer = seedWord & 0x3C;
+    }
+
+    private static int addAngle(int angle, int delta) {
+        return (angle + delta) & 0xFF;
+    }
+
     private void updateArmChainAnimation() {
         int anchorX = getRenderAnchorX();
         // Root chain anchor from loc_87280 / sub_87500.
@@ -272,7 +391,8 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         }
         armSegmentY[0] = rootY;
 
-        // Swing root angle and clamp to facing-specific quadrant.
+        // The consolidated renderer retains its established arm-chain pose;
+        // the ROM root-child state above owns timing/RNG independently.
         armRootAngle = (armRootAngle + armAngleStep) & 0xFF;
         int minAngle = facingLeft ? ARM_LEFT_MIN_ANGLE : ARM_RIGHT_MIN_ANGLE;
         int maxAngle = facingLeft ? ARM_LEFT_MAX_ANGLE : ARM_RIGHT_MAX_ANGLE;

@@ -815,6 +815,18 @@ expected `-$02B0`, actual `$02B0`) because five earlier non-signpost RNG calls
 are still mistimed before the end boss. A focused phase guard pins the global
 four-frame boundary. The AIZ stage is not green yet.
 
+Round 58 restores the separately allocated Monkey Dude arm root's native RNG
+cadence. The root now waits for its full `$20x$20` `Obj_WaitOffscreen` gate,
+consumes both setup dispatches, continues after its first activation, and runs
+the ROM swing/windup/throw/return phases independently of the consolidated Java
+arm renderer. Each random reset calls `Random_Number`, then reads the high word
+of the big-endian `RNG_seed` for its direction bit and `$3C`-masked timer
+(`sonic3k.asm:183755-183913`). The focused AIZ replay remains green. In the
+complete run, all Monkey/animal RNG transitions through the first end-boss
+selection now match the recording; the next remaining owner is fixed-slot air
+countdown state across the seamless act handoff. The AIZ stage is not green
+yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch
