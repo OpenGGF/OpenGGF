@@ -13,12 +13,14 @@ import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * Emerald glow child for the AIZ1 intro plane.
+ * Animated propeller/booster child for the AIZ1 intro plane.
  * ROM: loc_67824 / loc_67862 (sonic3k.asm)
  *
  * Two instances are spawned after the plane child by CreateChild1_Normal.
  * Each owns a real SST slot, follows the plane at its child-data offset, and
- * self-destructs when the parent is destroyed.
+ * self-destructs when the parent is destroyed. The legacy class name predates
+ * the SST-slot implementation; these objects use Map_AIZIntroPlane and
+ * ArtTile_AIZIntroPlane, not the separately loaded Chaos Emerald art.
  */
 public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements RewindRecreatable {
 
@@ -93,7 +95,7 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = AizIntroArtLoader.getEmeraldRenderer(services());
+        PatternSpriteRenderer renderer = planePieceRenderer();
         if (renderer == null || !renderer.isReady()) return;
         // Screen-space coordinates use the ROM +128 sprite-table bias.
         int renderX = getX();
@@ -107,5 +109,9 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements 
         }
         renderer.drawFrameIndex(
                 ANIM_SEQUENCES[variant][animIndex], renderX, renderY, false, false);
+    }
+
+    PatternSpriteRenderer planePieceRenderer() {
+        return AizIntroArtLoader.getPlaneRenderer(services());
     }
 }
