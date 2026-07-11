@@ -1,0 +1,214 @@
+package com.openggf.io;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.Objects;
+import java.util.UUID;
+
+@FunctionalInterface
+interface SnapshotHook {
+    SnapshotHook NONE = (source, snapshot) -> { };
+
+    default void beforeCopy(Path source) throws IOException {
+    }
+
+    void afterCopy(Path source, Path snapshot) throws IOException;
+}
+
+/** Engine-owned immutable temp-disk snapshot used by all file-backed mod roots. */
+final class ModAssetSnapshot implements AutoCloseable {
+    private static final String PREFIX = "openggf-mod-snapshot-";
+    private static final String OWNER_MARKER = ".openggf-snapshot-owner";
+
+    private final Path root;
+    private final Path content;
+    private final Object rootIdentity;
+    private final String ownerToken;
+    private boolean closed;
+
+    private ModAssetSnapshot(Path root, Path content, String ownerToken) throws IOException {
+        this.root = root;
+        this.content = content;
+        this.ownerToken = ownerToken;
+        this.rootIdentity = Files.readAttributes(root, BasicFileAttributes.class,
+                LinkOption.NOFOLLOW_LINKS).fileKey();
+    }
+
+    static ModAssetSnapshot file(Path source, long maxBytes, SnapshotHook hook) throws IOException {
+        return create(source, false, maxBytes, hook);
+    }
+
+    static ModAssetSnapshot directory(Path source, long maxFileBytes, SnapshotHook hook) throws IOException {
+        return create(source, true, maxFileBytes, hook);
+    }
+
+    private static ModAssetSnapshot create(Path source, boolean directory, long maxFileBytes,
+                                           SnapshotHook hook) throws IOException {
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(hook, "hook");
+        Path root = createPrivateTempDirectory();
+        String token = UUID.randomUUID().toString();
+        try {
+            Files.writeString(root.resolve(OWNER_MARKER), token,
+                    StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+            Path content = root.resolve(directory ? "tree" : "asset.jar");
+            hook.beforeCopy(source);
+            if (directory) {
+                copyDirectoryVerified(source, content, maxFileBytes);
+            } else {
+                copyFileVerified(source, content, maxFileBytes);
+            }
+            hook.afterCopy(source, content);
+            return new ModAssetSnapshot(root, content, token);
+        } catch (IOException | RuntimeException e) {
+            try {
+                deleteCreatedTree(root);
+            } catch (IOException cleanupFailure) {
+                e.addSuppressed(cleanupFailure);
+            }
+            throw e;
+        }
+    }
+
+    Path content() {
+        return content;
+    }
+
+    private static Path createPrivateTempDirectory() throws IOException {
+        Path root = Files.createTempDirectory(PREFIX);
+        try {
+            Files.setPosixFilePermissions(root, EnumSet.of(
+                    PosixFilePermission.OWNER_READ,
+                    PosixFilePermission.OWNER_WRITE,
+                    PosixFilePermission.OWNER_EXECUTE));
+        } catch (UnsupportedOperationException ignored) {
+            // Windows temp ACLs are inherited from the user's private temp directory.
+        }
+        return root;
+    }
+
+    private static void copyDirectoryVerified(Path source, Path destination, long maxFileBytes) throws IOException {
+        if (Files.isSymbolicLink(source)
+                || !Files.isDirectory(source, LinkOption.NOFOLLOW_LINKS)) {
+            throw new IOException("Directory snapshot source must be a non-symlink directory: " + source);
+        }
+        Files.createDirectory(destination);
+        try (var paths = Files.walk(source)) {
+            paths.filter(path -> !path.equals(source)).forEach(path -> {
+                try {
+                    if (Files.isSymbolicLink(path)) {
+                        throw new IOException("Symbolic links are not allowed in directory snapshots: " + path);
+                    }
+                    Path target = destination.resolve(source.relativize(path).toString());
+                    if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+                        Files.createDirectory(target);
+                    } else if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+                        copyFileVerified(path, target, maxFileBytes);
+                    } else {
+                        throw new IOException("Special files are not allowed in directory snapshots: " + path);
+                    }
+                } catch (IOException e) {
+                    throw new SnapshotCopyException(e);
+                }
+            });
+        } catch (SnapshotCopyException e) {
+            throw e.ioCause;
+        }
+    }
+
+    private static void copyFileVerified(Path source, Path destination, long maxBytes) throws IOException {
+        BasicFileAttributes before = attributes(source);
+        if (!before.isRegularFile() || before.size() > maxBytes) {
+            throw new IOException("Snapshot source must be a bounded regular non-symlink file: " + source);
+        }
+        try (FileChannel input = FileChannel.open(source,
+                StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS);
+             FileChannel output = FileChannel.open(destination,
+                     StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
+            ByteBuffer buffer = ByteBuffer.allocate(8192);
+            long copiedBytes = 0;
+            while (input.read(buffer) != -1) {
+                buffer.flip();
+                copiedBytes = Math.addExact(copiedBytes, buffer.remaining());
+                if (copiedBytes > maxBytes) {
+                    throw new IOException("Snapshot source exceeds byte limit " + maxBytes + ": " + source);
+                }
+                while (buffer.hasRemaining()) {
+                    output.write(buffer);
+                }
+                buffer.clear();
+            }
+        }
+        BasicFileAttributes after = attributes(source);
+        BasicFileAttributes copied = attributes(destination);
+        if (!sameIdentityAndSize(before, after)
+                || before.size() != copied.size()
+                || !copied.isRegularFile()) {
+            throw new IOException("Snapshot source changed while it was being copied: " + source);
+        }
+    }
+
+    private static BasicFileAttributes attributes(Path path) throws IOException {
+        return Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+    }
+
+    private static boolean sameIdentityAndSize(BasicFileAttributes before, BasicFileAttributes after) {
+        Object beforeKey = before.fileKey();
+        Object afterKey = after.fileKey();
+        boolean identityMatches = beforeKey != null && afterKey != null
+                ? beforeKey.equals(afterKey)
+                : before.lastModifiedTime().equals(after.lastModifiedTime());
+        return identityMatches && before.size() == after.size()
+                && before.lastModifiedTime().equals(after.lastModifiedTime());
+    }
+
+    @Override
+    public synchronized void close() throws IOException {
+        if (closed) {
+            return;
+        }
+        if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
+            closed = true;
+            return;
+        }
+        BasicFileAttributes current = attributes(root);
+        Object currentIdentity = current.fileKey();
+        boolean identityMatches = rootIdentity != null && currentIdentity != null
+                ? rootIdentity.equals(currentIdentity)
+                : current.isDirectory() && !Files.isSymbolicLink(root);
+        Path marker = root.resolve(OWNER_MARKER);
+        if (!identityMatches || Files.isSymbolicLink(root)
+                || !root.getFileName().toString().startsWith(PREFIX)
+                || !Files.isRegularFile(marker, LinkOption.NOFOLLOW_LINKS)
+                || !ownerToken.equals(Files.readString(marker))) {
+            throw new IOException("Refusing to delete unverified mod snapshot: " + root);
+        }
+        deleteCreatedTree(root);
+        closed = true;
+    }
+
+    private static void deleteCreatedTree(Path root) throws IOException {
+        if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
+            return;
+        }
+        try (var paths = Files.walk(root)) {
+            for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+                Files.deleteIfExists(path);
+            }
+        }
+    }
+
+    private static final class SnapshotCopyException extends RuntimeException {
+        private final IOException ioCause;
+        private SnapshotCopyException(IOException cause) { super(cause); this.ioCause = cause; }
+    }
+}

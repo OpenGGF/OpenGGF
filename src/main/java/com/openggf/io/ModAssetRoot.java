@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -73,6 +74,7 @@ public sealed interface ModAssetRoot extends AutoCloseable
 abstract sealed class AbstractModAssetRoot implements ModAssetRoot
         permits JarModAssetRoot, DirectoryModAssetRoot, InMemoryModAssetRoot {
     private final ModInputLimits limits;
+    private final AtomicLong cumulativeReadBytes = new AtomicLong();
     private boolean closed;
 
     AbstractModAssetRoot(ModInputLimits limits) {
@@ -105,7 +107,7 @@ abstract sealed class AbstractModAssetRoot implements ModAssetRoot
         closed = true;
     }
 
-    static byte[] readFullyBounded(InputStream input, long declaredSize, long cap) throws IOException {
+    final byte[] readFullyBounded(InputStream input, long declaredSize, long cap) throws IOException {
         if (declaredSize > cap) {
             throw new IOException("Asset declared size " + declaredSize + " exceeds limit " + cap);
         }
@@ -113,15 +115,44 @@ abstract sealed class AbstractModAssetRoot implements ModAssetRoot
         ByteArrayOutputStream output = new ByteArrayOutputStream(initial);
         byte[] buffer = new byte[8192];
         long count = 0;
-        int read;
-        while ((read = input.read(buffer)) != -1) {
-            count += read;
-            if (count > cap) {
-                throw new IOException("Asset stream exceeds limit " + cap);
+        long reserved = 0;
+        try {
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                count += read;
+                if (count > cap) {
+                    throw new IOException("Asset stream exceeds limit " + cap);
+                }
+                reserveValidationBytes(read);
+                reserved += read;
+                output.write(buffer, 0, read);
             }
-            output.write(buffer, 0, read);
+            return output.toByteArray();
+        } catch (IOException | RuntimeException e) {
+            if (reserved != 0) {
+                cumulativeReadBytes.addAndGet(-reserved);
+            }
+            throw e;
         }
-        return output.toByteArray();
+    }
+
+    private void reserveValidationBytes(int bytes) throws IOException {
+        while (true) {
+            long current = cumulativeReadBytes.get();
+            long updated;
+            try {
+                updated = Math.addExact(current, bytes);
+            } catch (ArithmeticException e) {
+                throw new IOException("Mod validation read budget overflow", e);
+            }
+            if (updated > limits.maxModValidationBytes()) {
+                throw new IOException("Cumulative mod reads exceed validation budget "
+                        + limits.maxModValidationBytes());
+            }
+            if (cumulativeReadBytes.compareAndSet(current, updated)) {
+                return;
+            }
+        }
     }
 
     static Path containedRealPath(Path declaredRoot, Path target) throws IOException {
@@ -137,46 +168,75 @@ abstract sealed class AbstractModAssetRoot implements ModAssetRoot
 
     static void registerName(String name, ModInputLimits limits, Set<String> exact,
                              Set<String> folded, long[] aggregate) throws IOException {
+        registerName(name, name, limits, exact, folded, aggregate);
+    }
+
+    static void registerName(String normalizedName, String budgetedName, ModInputLimits limits,
+                             Set<String> exact, Set<String> folded, long[] aggregate) throws IOException {
         try {
-            ModAssetRoot.requireNormalizedEntry(name);
+            ModAssetRoot.requireNormalizedEntry(normalizedName);
         } catch (IllegalArgumentException e) {
-            throw new IOException("Invalid mod entry name: " + name, e);
+            throw new IOException("Invalid mod entry name: " + budgetedName, e);
         }
-        int bytes = name.getBytes(StandardCharsets.UTF_8).length;
+        int bytes = budgetedName.getBytes(StandardCharsets.UTF_8).length;
         if (bytes > limits.maxEntryNameBytes()) {
-            throw new IOException("Entry name exceeds byte limit: " + name);
+            throw new IOException("Entry name exceeds byte limit: " + budgetedName);
         }
         aggregate[0] = Math.addExact(aggregate[0], bytes);
         if (aggregate[0] > limits.maxAggregateEntryNameBytes()) {
             throw new IOException("Aggregate entry-name bytes exceed limit");
         }
-        if (!exact.add(name)) {
-            throw new IOException("Duplicate entry name: " + name);
+        if (!exact.add(normalizedName)) {
+            throw new IOException("Duplicate entry name: " + budgetedName);
         }
-        if (!folded.add(name.toLowerCase(Locale.ROOT))) {
-            throw new IOException("Case-folding entry collision: " + name);
+        if (!folded.add(normalizedName.toLowerCase(Locale.ROOT))) {
+            throw new IOException("Case-folding entry collision: " + budgetedName);
         }
     }
 }
 
 final class JarModAssetRoot extends AbstractModAssetRoot {
+    private final String sourceDescription;
+    private final ModAssetSnapshot snapshot;
     private final Path jarPath;
     private final ZipFile zip;
 
     JarModAssetRoot(Path declaredRoot, Path jar, ModInputLimits limits) throws IOException {
+        this(declaredRoot, jar, limits, SnapshotHook.NONE);
+    }
+
+    JarModAssetRoot(Path declaredRoot, Path jar, ModInputLimits limits, SnapshotHook hook) throws IOException {
         super(limits);
-        this.jarPath = containedRealPath(declaredRoot, jar);
-        if (!Files.isRegularFile(jarPath) || Files.size(jarPath) > limits.maxJarBytes()) {
-            throw new IOException("Invalid or oversized mod jar: " + jarPath);
+        Path source = containedRealPath(declaredRoot, jar);
+        this.sourceDescription = source.toString();
+        if (Files.isSymbolicLink(jar.toAbsolutePath())
+                || !Files.isRegularFile(source, LinkOption.NOFOLLOW_LINKS)
+                || Files.size(source) > limits.maxJarBytes()) {
+            throw new IOException("Invalid, symlinked, or oversized mod jar: " + source);
         }
-        ZipFile opened = new ZipFile(jarPath.toFile());
+        ModAssetSnapshot created = ModAssetSnapshot.file(source, limits.maxJarBytes(), hook);
+        ZipFile opened = null;
         try {
+            opened = new ZipFile(created.content().toFile());
             validateCentralDirectory(opened);
-            this.zip = opened;
         } catch (IOException | RuntimeException e) {
-            opened.close();
+            if (opened != null) {
+                try {
+                    opened.close();
+                } catch (IOException cleanupFailure) {
+                    e.addSuppressed(cleanupFailure);
+                }
+            }
+            try {
+                created.close();
+            } catch (IOException cleanupFailure) {
+                e.addSuppressed(cleanupFailure);
+            }
             throw e;
         }
+        this.snapshot = created;
+        this.jarPath = created.content();
+        this.zip = opened;
     }
 
     private void validateCentralDirectory(ZipFile opened) throws IOException {
@@ -191,7 +251,17 @@ final class JarModAssetRoot extends AbstractModAssetRoot {
             if (++count > limits().maxJarEntries()) {
                 throw new IOException("Jar entry count exceeds limit");
             }
-            registerName(entry.getName(), limits(), exact, folded, nameBytes);
+            String rawName = entry.getName();
+            if (entry.isDirectory()) {
+                if (!rawName.endsWith("/") || rawName.length() == 1
+                        || rawName.charAt(rawName.length() - 2) == '/') {
+                    throw new IOException("Jar directory entry must have exactly one terminal slash: " + rawName);
+                }
+                registerName(rawName.substring(0, rawName.length() - 1), rawName,
+                        limits(), exact, folded, nameBytes);
+            } else {
+                registerName(rawName, limits(), exact, folded, nameBytes);
+            }
             long size = entry.getSize();
             if (size > limits().maxAssetBytes()) {
                 throw new IOException("Jar entry exceeds asset limit: " + entry.getName());
@@ -219,28 +289,65 @@ final class JarModAssetRoot extends AbstractModAssetRoot {
     }
 
     @Override
-    public String describe() { return jarPath.toString(); }
+    public String describe() { return sourceDescription; }
 
     @Override
     public void close() throws IOException {
+        IOException failure = null;
         try {
             zip.close();
+        } catch (IOException e) {
+            failure = e;
         } finally {
             markClosed();
+        }
+        try {
+            snapshot.close();
+        } catch (IOException e) {
+            if (failure != null) {
+                failure.addSuppressed(e);
+            } else {
+                failure = e;
+            }
+        }
+        if (failure != null) {
+            throw failure;
         }
     }
 }
 
+/** Immutable snapshot root for explicitly trusted development and test directories only. */
 final class DirectoryModAssetRoot extends AbstractModAssetRoot {
+    private final String sourceDescription;
+    private final ModAssetSnapshot snapshot;
     private final Path root;
 
     DirectoryModAssetRoot(Path declaredRoot, Path directory, ModInputLimits limits) throws IOException {
+        this(declaredRoot, directory, limits, SnapshotHook.NONE);
+    }
+
+    DirectoryModAssetRoot(Path declaredRoot, Path directory, ModInputLimits limits,
+                          SnapshotHook hook) throws IOException {
         super(limits);
-        this.root = containedRealPath(declaredRoot, directory);
-        if (!Files.isDirectory(root)) {
-            throw new IOException("Mod asset root is not a directory: " + root);
+        Path source = containedRealPath(declaredRoot, directory);
+        this.sourceDescription = source.toString();
+        if (Files.isSymbolicLink(directory.toAbsolutePath())
+                || !Files.isDirectory(source, LinkOption.NOFOLLOW_LINKS)) {
+            throw new IOException("Dev mod asset root must be a non-symlink directory: " + source);
         }
-        validateTree();
+        ModAssetSnapshot created = ModAssetSnapshot.directory(source, limits.maxAssetBytes(), hook);
+        this.snapshot = created;
+        this.root = created.content();
+        try {
+            validateTree();
+        } catch (IOException | RuntimeException e) {
+            try {
+                created.close();
+            } catch (IOException cleanupFailure) {
+                e.addSuppressed(cleanupFailure);
+            }
+            throw e;
+        }
     }
 
     private void validateTree() throws IOException {
@@ -323,10 +430,13 @@ final class DirectoryModAssetRoot extends AbstractModAssetRoot {
     }
 
     @Override
-    public String describe() { return root.toString(); }
+    public String describe() { return sourceDescription; }
 
     @Override
-    public void close() { markClosed(); }
+    public void close() throws IOException {
+        markClosed();
+        snapshot.close();
+    }
 
     private static final class DirectoryValidationException extends RuntimeException {
         private final IOException ioCause;
