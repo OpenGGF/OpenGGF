@@ -20,8 +20,10 @@ round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now EMPTY: the full S2 level-select suite passes (MSE:OK passed=48).
 The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
-therefore closed as the first-red stage; HCZ is the next unstarted stage in the
-requested level order. OOZ2 greened in round 54 and
+therefore closed as the first-red stage. HCZ is active on branch
+`bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
+f3318 / 4234 errors to f9760 / 3217 errors (5 errors under `frontierOnly`).
+OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
 round 96 landed the ROM-backed later-orb refresh predicate. Rounds 90-94 used Lua PC-execute probes to rule out shared
@@ -41,6 +43,48 @@ probe is required before the bounce is accepted.
 Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
+
+## 2026-07-11 - S3K HCZ frontier campaign (in progress)
+
+Branch `bugfix/ai-hcz-trace-replays` begins from the fully green AIZ frontier.
+The HCZ complete-run baseline was f3318 / 4234 errors: the conveyor's native
+logical jump press expected Tails to launch at `-$500`, while the engine had
+already consumed the transient raw edge during player movement.
+
+Milestone 1 banks two HCZ object-pass fixes. Obj2E's conveyor now reads the
+published low-byte press bits from `Ctrl_1_logical` / `Ctrl_2_logical`, matching
+the word loaded by `loc_311C4` and tested by `sub_31226` after the player slot
+has executed (`sonic3k.asm:66344-66354,66411-66438`). The HCZ miniboss now
+retains the water-effect child's native P1/P2 pull ownership, releases those
+players when the defeated-parent delete path runs, and starts
+`Obj_EndSignControl` from the parent's retained `$3F` wait independently of the
+separate explosion child (`sonic3k.asm:140174-140233,140574-140594,
+179651-179669,180372-180379`). No trace state is hydrated and no zone, route,
+or frame exception was added.
+
+This advances the full HCZ replay through f9482 to f9760, reducing the report
+from 4234 to 3217 errors. The new frontier is Tails' signpost ending-pose frame:
+CPU movement produces and consumes RIGHT correctly (`x_vel/ground_vel=$0060`),
+then later object execution clears both velocities.
+
+Milestone verification:
+
+- HCZ focused tests: 12/12 green; HCZ `trace.frontierOnly` reports f9760 / 5.
+- Trace invariant guards: 11/11 green (`TestTraceReplayInvariantGuard` 10/10,
+  `TestTraceHydrateSwitchDefault` 1/1).
+- S3K keep-green set: 21/21 green (`TestS3kAiz1SkipHeadless`, level loading,
+  bootstrap resolver, and decoding utils).
+- Fresh `*TraceReplay` frontier sweep: all 29 S1 and all 20 S2 classes remain
+  green; both S3K AIZ classes remain green. Non-HCZ S3K first frontiers are
+  unchanged: CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete
+  f866 / 1, MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1, and LBZ
+  f2270 / 5. The pre-existing CNZ auxiliary assertions remain red in the broad
+  class invocation and are unrelated to these HCZ-only object changes.
+
+Commands used (MSE disabled, one fork, ROM paths supplied explicitly): focused
+HCZ + invariant + keep-green Maven selection; full HCZ replay; and
+`mvn -Dtest=*TraceReplay -Dtrace.frontierOnly=true
+-Dmaven.test.failure.ignore=true -DfailIfNoTests=false test`.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

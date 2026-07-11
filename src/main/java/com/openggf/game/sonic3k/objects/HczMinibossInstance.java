@@ -132,6 +132,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private static final int SLOW_RISE_VEL = -0x20;
     private static final int VORTEX_APPROACH_Y = 0x108;
     private static final int CONTINUOUS_SFX_INTERVAL = 16;
+    private static final int DEFEAT_HANDOFF_WAIT = REOPEN_TIME + 1;
 
 
     private static final int[][] ATTACK_PATTERNS = {
@@ -231,6 +232,10 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private int waterEffectAnimTimer;
     private boolean waterEffectPullReady;
     private boolean vortexFinalPullPending;
+    private boolean vortexTrackedP1;
+    private boolean vortexTrackedP2;
+    private int defeatHandoffTimer;
+    private boolean defeatHandoffStarted;
     private int lastFrameCounter;
     private int lastHitFrame = -1;
     private int lastHitRoutine = -1;
@@ -353,6 +358,10 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         waterEffectAnimTimer = 0;
         waterEffectPullReady = false;
         vortexFinalPullPending = false;
+        vortexTrackedP1 = false;
+        vortexTrackedP2 = false;
+        defeatHandoffTimer = -1;
+        defeatHandoffStarted = false;
         lastHitFrame = -1;
         lastHitRoutine = -1;
         lastHitWaitTimer = -1;
@@ -468,6 +477,17 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         waterEffectAnimTimer = 0;
         waterEffectPullReady = false;
         vortexFinalPullPending = false;
+        // Touch_Enemy sets the defeated status after Obj_HCZ_MinibossLoop has
+        // already run. On the following object pass sub_6AC48 installs
+        // Wait_FadeToLevelMusic, which counts the retained $3F wait before
+        // loc_6A22A calls Obj_EndSignControl (sonic3k.asm:140574-140594,
+        // 179651-179669,180372-180379). The explosion controller is a separate
+        // child and must not gate this parent handoff.
+        // Touch_Enemy runs from Draw_And_Touch_Sprite after the boss routine
+        // dispatch, so Wait_FadeToLevelMusic's first decrement is necessarily
+        // on the following object pass (sonic3k.asm:139242-139249,20900-20925).
+        defeatHandoffTimer = DEFEAT_HANDOFF_WAIT;
+        defeatHandoffStarted = false;
         state.invulnerable = false;
         state.invulnerabilityTimer = 0;
         loadBossPalette();
@@ -847,12 +867,20 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             }
             spawnChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
         }
-        if (!defeatExplosionController.isFinished() || defeatRenderComplete) {
+        if (!defeatHandoffStarted) {
+            defeatHandoffTimer--;
+            if (defeatHandoffTimer < 0) {
+                releaseTrackedVortexPlayersOnWaterEffectDelete();
+                defeatHandoffStarted = true;
+                spawnChild(() -> new S3kBossDefeatSignpostFlow(
+                        state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE));
+            }
+        }
+        if (!defeatHandoffStarted || !defeatExplosionController.isFinished()
+                || defeatRenderComplete) {
             return;
         }
         defeatRenderComplete = true;
-        spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE));
         setDestroyed(true);
     }
 
@@ -955,11 +983,26 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     }
 
     private void applyVortexPull(AbstractPlayableSprite player) {
+        boolean trackedP1 = false;
+        boolean trackedP2 = false;
+        int nativeIndex = 0;
         for (PlayableEntity entity : nativeParticipants(player)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
-                applyVortexPullTo(sprite);
+                boolean tracked = applyVortexPullTo(sprite);
+                if (nativeIndex == 0) {
+                    trackedP1 = tracked;
+                } else if (nativeIndex == 1) {
+                    trackedP2 = tracked;
+                }
+                nativeIndex++;
             }
         }
+        // sub_6A9B8 begins with clr.l $42(a0), then records the native player
+        // pointers that passed the current pull-height gates. The water-effect
+        // child retains these words after the vortex ends (sonic3k.asm:140211-
+        // 140233) and consumes them if its parent is defeated.
+        vortexTrackedP1 = trackedP1;
+        vortexTrackedP2 = trackedP2;
     }
 
     private List<PlayableEntity> nativeParticipants(PlayableEntity player) {
@@ -973,14 +1016,14 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
      * First contact: sets player airborne, under object control, tumble animation.
      * Each frame: accelerates player toward vortex X center, nudges Y toward center.
      */
-    private void applyVortexPullTo(AbstractPlayableSprite sprite) {
+    private boolean applyVortexPullTo(AbstractPlayableSprite sprite) {
         if (sprite.getDead()) {
-            return;
+            return false;
         }
         int vortexY = getWaterEffectY();
         int checkY = vortexY - 0x20;
         if (sprite.getY() < checkY) {
-            return;
+            return false;
         }
 
         boolean firstContact = !sprite.isObjectControlled();
@@ -1028,6 +1071,31 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             sprite.setYSpeed((short) 0);
             sprite.setGSpeed((short) 0);
         }
+        return true;
+    }
+
+    /**
+     * Mirrors the water-effect child's defeated-parent cleanup. ROM sub_6A960
+     * converts the child to its delete routine, then sub_6A996 sets
+     * Status_InAir and clears object_control on the player pointers retained in
+     * $42/$44 (sonic3k.asm:140174-140209).
+     */
+    void releaseTrackedVortexPlayersOnWaterEffectDelete() {
+        int nativeIndex = 0;
+        PlayableEntity focused = services().camera().getFocusedSprite();
+        for (PlayableEntity entity : nativeParticipants(focused)) {
+            if (entity instanceof AbstractPlayableSprite sprite) {
+                boolean tracked = nativeIndex == 0 ? vortexTrackedP1
+                        : nativeIndex == 1 && vortexTrackedP2;
+                if (tracked) {
+                    sprite.setAir(true);
+                    ObjectControlState.none().applyTo(sprite);
+                }
+                nativeIndex++;
+            }
+        }
+        vortexTrackedP1 = false;
+        vortexTrackedP2 = false;
     }
 
     @Override
@@ -1051,10 +1119,15 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             }
         }
         return String.format(
-                "r=%02X hits=%d def=%s inv=%s/%d lastHit=%d/%s hr=%02X hw=%d hwr=%02X xV=%04X yV=%04X wait=%d cb=%s pass=%d closed=%s vortex=%s waterR=%02X water=%04X,%04X wf=%d wa=%02X/%02X pullReady=%s rockets=%s",
+                "r=%02X hits=%d def=%s done=%s handoff=%s/%d tracked=%s/%s inv=%s/%d lastHit=%d/%s hr=%02X hw=%d hwr=%02X xV=%04X yV=%04X wait=%d cb=%s pass=%d closed=%s vortex=%s waterR=%02X water=%04X,%04X wf=%d wa=%02X/%02X pullReady=%s rockets=%s",
                 state.routine & 0xFF,
                 state.hitCount,
                 state.defeated,
+                defeatRenderComplete,
+                defeatHandoffStarted,
+                defeatHandoffTimer,
+                vortexTrackedP1,
+                vortexTrackedP2,
                 state.invulnerable,
                 state.invulnerabilityTimer,
                 lastHitFrame,
