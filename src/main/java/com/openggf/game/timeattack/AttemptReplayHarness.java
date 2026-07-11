@@ -58,11 +58,8 @@ public final class AttemptReplayHarness {
                 return failure("track mismatch");
             }
 
-            ModuleResolutionService moduleResolutionService = services.moduleResolutionService();
-            GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
-                    new GameplayLaunchRequest(recording.start().gameId(),
-                            recording.start().character(), java.util.List.of()),
-                    ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+            GameModule module = resolveAttemptModuleForReplay(
+                    services, rootModule, recording.start());
 
             SessionManager.clear();
             GameplayModeContext mode = SessionManager.openGameplaySession(
@@ -149,6 +146,14 @@ public final class AttemptReplayHarness {
         } catch (java.io.IOException failure) {
             throw new IllegalArgumentException("ROM checksum failed", failure);
         }
+    }
+
+    static GameModule resolveAttemptModuleForReplay(EngineContext services,
+            GameModule rootModule, AttemptStartDescriptor start) {
+        ModuleResolutionService moduleResolutionService = services.moduleResolutionService();
+        return moduleResolutionService.resolveForLaunch(rootModule,
+                new GameplayLaunchRequest(start.gameId(), start.character(), java.util.List.of()),
+                ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
     }
 
     private static Result failure(String reason) {

@@ -14,11 +14,15 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class TestPatchResolutionAtBoot {
+
+    private EngineContext previousEngineContext;
 
     interface PatchTrail {
         List<String> appliedPatchIds();
@@ -27,6 +31,9 @@ class TestPatchResolutionAtBoot {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
+        if (previousEngineContext != null) {
+            EngineServices.configure(previousEngineContext);
+        }
     }
 
     @Test
@@ -85,7 +92,8 @@ class TestPatchResolutionAtBoot {
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
 
-        EngineContext legacy = EngineContext.fromLegacySingletonsForBootstrap();
+        EngineContext legacy = EngineServices.current();
+        previousEngineContext = legacy;
         EngineContext injected = new EngineContext(config, legacy.graphics(), legacy.audio(),
                 legacy.roms(), legacy.profiler(), legacy.debugOverlay(), legacy.playbackDebug(),
                 legacy.romDetection(), legacy.crossGameFeatures(), service);
@@ -109,14 +117,44 @@ class TestPatchResolutionAtBoot {
                 "builtin", trailPatch("builtin"), 0);
         RegisteredPatch mod = new RegisteredPatch(new PatchOwner.Mod("mod"),
                 "mod:patch", trailPatch("mod"), 1);
-        ModuleResolutionService service = ModuleResolutionService.forTests(
-                List.of(builtIn, mod), PatchEnablement.ALL_ENABLED);
+        AtomicInteger scans = new AtomicInteger();
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        ModuleResolutionService service = new ModuleResolutionService(List.of(builtIn),
+                PatchEnablement.ALL_ENABLED, new LogicalRomResolver(() -> null), config,
+                enablement -> {
+                    scans.incrementAndGet();
+                    return new ModuleResolutionService.PatchPlan(List.of(mod), Map.of());
+                });
 
         GameModule resolved = service.resolveForLaunch(new Sonic2GameModule(),
                 new GameplayLaunchRequest("s2", "knuckles", List.of()),
                 ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
 
         assertEquals(List.of("builtin"), ((PatchTrail) resolved).appliedPatchIds());
+        assertEquals(0, scans.get(), "deterministic launch must not scan external patch plans");
+    }
+
+    @Test
+    void preparedLaunchFreezesOnePlanForAvailabilityAndResolution() {
+        RegisteredPatch mod = new RegisteredPatch(new PatchOwner.Mod("mod"),
+                "mod:patch", trailPatch("mod"), 0);
+        AtomicInteger scans = new AtomicInteger();
+        ModuleResolutionService service = new ModuleResolutionService(List.of(),
+                PatchEnablement.ALL_ENABLED, new LogicalRomResolver(() -> null),
+                SonicConfigurationService.createStandalone(), enablement ->
+                        scans.getAndIncrement() == 0
+                                ? new ModuleResolutionService.PatchPlan(List.of(mod), Map.of())
+                                : ModuleResolutionService.PatchPlan.empty());
+
+        ModuleResolutionService.PreparedLaunch launch = service.prepareLaunch(
+                ModuleResolutionService.LaunchPolicy.STANDARD);
+
+        assertEquals(List.of("knuckles"),
+                service.availableMainCharacters(launch, "s2"));
+        GameModule resolved = service.resolveForLaunch(launch, new Sonic2GameModule(),
+                new GameplayLaunchRequest("s2", "knuckles", List.of()));
+        assertEquals(List.of("mod"), ((PatchTrail) resolved).appliedPatchIds());
+        assertEquals(1, scans.get());
     }
 
     @Test

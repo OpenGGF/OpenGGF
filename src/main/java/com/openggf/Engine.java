@@ -776,13 +776,7 @@ public class Engine {
 			showStartupRomError("Failed to load ROM during game initialization: " + e.getMessage());
 			return;
 		}
-		ModuleResolutionService.LaunchPolicy launchPolicy =
-				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
-						? ModuleResolutionService.LaunchPolicy.DETERMINISTIC
-						: ModuleResolutionService.LaunchPolicy.STANDARD;
-		GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
-				GameplayLaunchRequest.fromConfig(configService, rootModule.getGameId().code()),
-				launchPolicy);
+		GameModule module = resolveInitialModuleForLaunch(rootModule);
 		GameplayModeContext gameplayMode = SessionManager.openGameplaySession(rootModule, module, null);
 		initializeGameplayRuntime(gameplayMode, true);
 		boolean generationRan = maybeGenerateDonatedDataSelectImagesBeforeStartupMode(module);
@@ -799,6 +793,16 @@ public class Engine {
 			graphicsManager.runPendingRenderThreadTasks();
 		}
 		enterConfiguredStartupMode();
+	}
+
+	GameModule resolveInitialModuleForLaunch(GameModule rootModule) {
+		ModuleResolutionService.LaunchPolicy launchPolicy =
+				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+						? ModuleResolutionService.LaunchPolicy.DETERMINISTIC
+						: ModuleResolutionService.LaunchPolicy.STANDARD;
+		return moduleResolutionService.resolveForLaunch(rootModule,
+				GameplayLaunchRequest.fromConfig(configService, rootModule.getGameId().code()),
+				launchPolicy);
 	}
 
 	private void showStartupRomError(String message) {
@@ -1108,14 +1112,16 @@ public class Engine {
 		Map<String, Object> loadedPayload = loadDataSelectPayload(module, action, saveManager);
 		com.openggf.game.save.SaveSessionContext saveContext = createDataSelectSaveContext(module, action, saveManager);
 		String gameId = SessionManager.getCurrentWorldSession().rootGameModule().getGameId().code();
+		ModuleResolutionService.PreparedLaunch preparedLaunch =
+				moduleResolutionService.prepareLaunch(ModuleResolutionService.LaunchPolicy.STANDARD);
 		List<String> availableCharacters = new ArrayList<>(stockCharacters(gameId));
-		availableCharacters.addAll(moduleResolutionService.availableMainCharactersForLaunch(
-				gameId, ModuleResolutionService.LaunchPolicy.STANDARD));
+		availableCharacters.addAll(moduleResolutionService.availableMainCharacters(
+				preparedLaunch, gameId));
 		if (CrossGameFeatureProvider.isActive()) {
 			availableCharacters.addAll(stockCharacters(crossGameFeatureProvider.getDonorGameId()));
 		}
 		GameplayModeContext gameplay = openDataSelectPatchSession(
-				saveContext, availableCharacters);
+				saveContext, availableCharacters, preparedLaunch);
 		initializeGameplayRuntime(gameplay, false);
 		loadLevelFromDataSelect(action.zone(), action.act());
 		restoreGameplayModeFromDataSelectPayload(gameplayMode, loadedPayload);
@@ -1128,16 +1134,16 @@ public class Engine {
 	/** Package-visible no-render seam for data-select patch relaunch integration tests. */
 	GameplayModeContext openDataSelectPatchSession(
 			com.openggf.game.save.SaveSessionContext saveContext,
-			List<String> availableCharacters) {
+			List<String> availableCharacters,
+			ModuleResolutionService.PreparedLaunch preparedLaunch) {
 		GameModule rootModule = SessionManager.getCurrentWorldSession().rootGameModule();
 		String gameId = rootModule.getGameId().code();
 		com.openggf.game.save.SaveSessionContext sanitized =
 				GameplayTeamAvailability.sanitizeForLaunch(
 						saveContext, gameId, availableCharacters);
 		SelectedTeam selectedTeam = sanitized.selectedTeam();
-		GameModule resolvedModule = moduleResolutionService.resolveForLaunch(rootModule,
-				new GameplayLaunchRequest(gameId, selectedTeam.mainCharacter(), selectedTeam.sidekicks()),
-				ModuleResolutionService.LaunchPolicy.STANDARD);
+		GameModule resolvedModule = moduleResolutionService.resolveForLaunch(preparedLaunch, rootModule,
+				new GameplayLaunchRequest(gameId, selectedTeam.mainCharacter(), selectedTeam.sidekicks()));
 		return SessionManager.openGameplaySession(rootModule, resolvedModule, sanitized);
 	}
 

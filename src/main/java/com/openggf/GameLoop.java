@@ -3428,10 +3428,7 @@ public class GameLoop {
                     .orElseThrow(() -> new IOException(
                             "ROM not recognized for recording launch context: " + context.gameId()));
 
-            GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
-                    new GameplayLaunchRequest(context.gameId(), context.mainCharacter(),
-                            context.sidekickCharacters()),
-                    ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+            GameModule module = resolveRecordingModuleForLaunch(rootModule, context);
             audioManager.setAudioProfile(module.getAudioProfile());
             audioManager.setRom(rom);
             resetModuleScopedProviders();
@@ -3458,6 +3455,14 @@ public class GameLoop {
         } catch (IOException e) {
             throw new RuntimeException("Failed to restart from recording launch context", e);
         }
+    }
+
+    GameModule resolveRecordingModuleForLaunch(GameModule rootModule,
+            RecordingLaunchContext context) {
+        return moduleResolutionService.resolveForLaunch(rootModule,
+                new GameplayLaunchRequest(context.gameId(), context.mainCharacter(),
+                        context.sidekickCharacters()),
+                ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
     }
 
     private FadeManager resolveFadeManager() {

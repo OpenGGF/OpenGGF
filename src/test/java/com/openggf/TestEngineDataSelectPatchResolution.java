@@ -21,7 +21,9 @@ import com.openggf.game.patch.PatchOwner;
 import com.openggf.game.patch.RegisteredPatch;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.recording.RecordingLaunchContext;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.graphics.GraphicsManager;
@@ -38,6 +40,8 @@ import static org.mockito.Mockito.mock;
 
 class TestEngineDataSelectPatchResolution {
 
+    private EngineContext previousEngineContext;
+
     interface PatchTrail {
         List<String> ids();
     }
@@ -45,10 +49,14 @@ class TestEngineDataSelectPatchResolution {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
+        if (previousEngineContext != null) {
+            EngineServices.configure(previousEngineContext);
+        }
     }
 
     @Test
     void dataSelectTeamChangeAlwaysReresolvesTwoPatchStackFromWorldRoot() {
+        previousEngineContext = EngineServices.current();
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
         List<RegisteredPatch> builtIns = List.of(
                 new RegisteredPatch(new PatchOwner.BuiltIn("one"), "one", patch("one"), 0),
@@ -65,17 +73,46 @@ class TestEngineDataSelectPatchResolution {
                 ModuleResolutionService.LaunchPolicy.STANDARD);
         SessionManager.openGameplaySession(root, initiallyResolved, null);
 
+        ModuleResolutionService.PreparedLaunch sonicLaunch = resolver.prepareLaunch(
+                ModuleResolutionService.LaunchPolicy.STANDARD);
         engine.openDataSelectPatchSession(SaveSessionContext.noSave("s2",
                 new SelectedTeam("sonic", List.of("tails")), 0, 0),
-                List.of("sonic", "tails", "knuckles"));
+                List.of("sonic", "tails", "knuckles"), sonicLaunch);
         assertSame(root, SessionManager.requireCurrentGameModule());
 
+        ModuleResolutionService.PreparedLaunch knucklesLaunch = resolver.prepareLaunch(
+                ModuleResolutionService.LaunchPolicy.STANDARD);
         engine.openDataSelectPatchSession(SaveSessionContext.noSave("s2",
                 new SelectedTeam("knuckles", List.of()), 0, 0),
-                List.of("sonic", "tails", "knuckles"));
+                List.of("sonic", "tails", "knuckles"), knucklesLaunch);
         assertSame(root, SessionManager.getCurrentWorldSession().rootGameModule());
         assertEquals(List.of("one", "two"),
                 ((PatchTrail) SessionManager.requireCurrentGameModule()).ids());
+    }
+
+    @Test
+    void engineInitializationAndRecordingRestartUseBehavioralResolutionSeams() {
+        previousEngineContext = EngineServices.current();
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE,
+                "knuckles");
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE,
+                "tails");
+        ModuleResolutionService resolver = new ModuleResolutionService(List.of(
+                new RegisteredPatch(new PatchOwner.BuiltIn("one"), "one", patch("one"), 0)),
+                PatchEnablement.ALL_ENABLED, new LogicalRomResolver(() -> null), config);
+        Engine engine = new Engine(new EngineContext(config, mock(GraphicsManager.class),
+                mock(AudioManager.class), mock(RomManager.class), mock(PerformanceProfiler.class),
+                mock(DebugOverlayManager.class), mock(PlaybackDebugManager.class),
+                mock(RomDetectionService.class), mock(CrossGameFeatureProvider.class), resolver));
+        GameModule root = new Sonic2GameModule();
+
+        assertEquals(List.of("one"),
+                ((PatchTrail) engine.resolveInitialModuleForLaunch(root)).ids());
+        GameModule recordingModule = engine.getGameLoop().resolveRecordingModuleForLaunch(root,
+                new RecordingLaunchContext("s2", 0, 0, "knuckles", List.of("tails"),
+                        false, "test"));
+        assertEquals(List.of("one"), ((PatchTrail) recordingModule).ids());
     }
 
     private static GamePatch patch(String id) {

@@ -47,6 +47,17 @@ public final class ModuleResolutionService {
         }
     }
 
+    /** One immutable plan/context shared by every decision in a single launch. */
+    public static final class PreparedLaunch {
+        private final ModuleResolutionService owner;
+        private final ResolutionContext context;
+
+        private PreparedLaunch(ModuleResolutionService owner, ResolutionContext context) {
+            this.owner = owner;
+            this.context = context;
+        }
+    }
+
     private final List<RegisteredPatch> builtIns;
     private final PatchEnablement enablement;
     private final Predicate<LogicalRom> prerequisiteAvailable;
@@ -137,15 +148,26 @@ public final class ModuleResolutionService {
     /** Resolves one launch from the undecorated root module. */
     public GameModule resolveForLaunch(GameModule root, GameplayLaunchRequest request,
             LaunchPolicy policy) {
+        return resolveForLaunch(prepareLaunch(policy), root, request);
+    }
+
+    public PreparedLaunch prepareLaunch(LaunchPolicy policy) {
         Objects.requireNonNull(policy, "policy");
         PatchEnablement launchEnablement = policy == LaunchPolicy.DETERMINISTIC
                 ? builtInsOnly(enablement) : enablement;
-        // The policy is selected before asking the source to scan. Phase 2's mod
-        // catalog therefore cannot even contribute disabled deterministic owners.
-        PatchPlan plan = Objects.requireNonNull(
-                patchPlanSource.scan(launchEnablement), "patch plan");
-        ResolutionResult result = resolve(newContext(launchEnablement,
-                plan.registrations(), plan.ownerDependencies()), root, request);
+        // Deterministic surfaces must not touch external mod storage at all.
+        PatchPlan plan = policy == LaunchPolicy.DETERMINISTIC
+                ? PatchPlan.empty()
+                : Objects.requireNonNull(patchPlanSource.scan(launchEnablement), "patch plan");
+        return new PreparedLaunch(this, newContext(launchEnablement,
+                plan.registrations(), plan.ownerDependencies()));
+    }
+
+    public GameModule resolveForLaunch(PreparedLaunch launch, GameModule root,
+            GameplayLaunchRequest request) {
+        Objects.requireNonNull(launch, "launch");
+        requireOwnedLaunch(launch);
+        ResolutionResult result = resolve(launch.context, root, request);
         if (result instanceof ResolutionResult.Resolved resolved) {
             return resolved.module();
         }
@@ -155,13 +177,19 @@ public final class ModuleResolutionService {
     }
 
     public List<String> availableMainCharactersForLaunch(String gameId, LaunchPolicy policy) {
-        Objects.requireNonNull(policy, "policy");
-        PatchEnablement launchEnablement = policy == LaunchPolicy.DETERMINISTIC
-                ? builtInsOnly(enablement) : enablement;
-        PatchPlan plan = Objects.requireNonNull(
-                patchPlanSource.scan(launchEnablement), "patch plan");
-        return availableMainCharacters(newContext(launchEnablement,
-                plan.registrations(), plan.ownerDependencies()), gameId);
+        return availableMainCharacters(prepareLaunch(policy), gameId);
+    }
+
+    public List<String> availableMainCharacters(PreparedLaunch launch, String gameId) {
+        Objects.requireNonNull(launch, "launch");
+        requireOwnedLaunch(launch);
+        return availableMainCharacters(launch.context, gameId);
+    }
+
+    private void requireOwnedLaunch(PreparedLaunch launch) {
+        if (launch.owner != this) {
+            throw new IllegalArgumentException("Prepared launch belongs to a different resolver");
+        }
     }
 
     private static PatchEnablement builtInsOnly(PatchEnablement delegate) {
