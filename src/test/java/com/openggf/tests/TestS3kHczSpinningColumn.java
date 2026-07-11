@@ -109,6 +109,26 @@ public class TestS3kHczSpinningColumn {
     }
 
     @Test
+    public void heldJumpWithoutNewLogicalPressKeepsRiderCaptured() {
+        HCZSpinningColumnObjectInstance column = new HCZSpinningColumnObjectInstance(
+                new ObjectSpawn(0x1000, 0x0800, 0x68, 0x01, 0x00, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x1008, (short) 0x07C0);
+        player.defineSpeeds();
+
+        column.onSolidContact(player, new SolidContact(true, false, false, false, false), 0);
+        column.update(0, null);
+        player.setJumpInputPressed(true, false);
+        column.onSolidContact(player, new SolidContact(true, false, false, false, false), 1);
+        column.update(1, null);
+
+        assertTrue(player.isObjectControlled(),
+                "Obj68 masks the newly-pressed low byte of Ctrl_1_logical, not held B");
+        assertFalse(player.getAir());
+        assertEquals(0, player.getYSpeed());
+    }
+
+    @Test
     public void twistRenderFlipDoesNotOverwriteLogicalFacing() {
         HCZSpinningColumnObjectInstance column = new HCZSpinningColumnObjectInstance(
                 new ObjectSpawn(0x1000, 0x0800, 0x68, 0x00, 0x00, false, 0));

@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f19165 / 2173 errors (11 errors under `frontierOnly`).
+f3318 / 4234 errors to f19190 / 1482 errors (1 error under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -605,6 +605,19 @@ This closes f18717-f19164 and advances HCZ to f19165 / 2173 full-run errors (11
 under `frontierOnly`). The larger total exposes a later route cascade after the
 removed extra pixel; there is no mismatch before the new frontier. All 12
 focused snake-block tests pass. The granular S3K replay matrix remains exact:
+both AIZ routes green; CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ
+complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1,
+and LBZ f2270 / 5.
+
+Milestone 37 makes the spinning column consume the logical pressed byte for
+jump release. Obj68 loads `Ctrl_1_logical` / `Ctrl_2_logical` as a word but
+then applies `andi.b` to the low, newly-pressed A/B/C byte. A held B bit without
+a fresh press therefore keeps the rider captured instead of applying the
+column's `-$680` release velocity (`sonic3k.asm:68136-68148,68220-68290`).
+
+This closes f19165-f19189 and advances HCZ to f19190 / 1482 full-run errors (1
+under `frontierOnly`). The focused spinning-column suite passes 6/6, including
+the new held-without-press guard. The granular S3K replay matrix remains exact:
 both AIZ routes green; CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ
 complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1,
 and LBZ f2270 / 5.

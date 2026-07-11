@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **HCZ spinning columns now release only on a newly pressed action button:** Obj68 masks the low pressed byte of `Ctrl_1_logical` / `Ctrl_2_logical`, so a held B button no longer causes a repeated engine-only `-$680` launch (`docs/skdisasm/sonic3k.asm:68136-68148,68220-68290`).
 - **HCZ snake blocks now use their post-movement X as the continued-ride reference:** Obj67 passes its updated `x_pos` through `d4` to `MvSonicOnPtfm`, producing zero horizontal platform carry while preserving the rider's own ground motion (`docs/skdisasm/sonic3k.asm:50893-50910,41016-41042,41642-41679`).
 - **HCZ hand launchers now reject exact-boundary fresh landings:** their `SolidObjectTop` contact accepts only the native negative overlap band from `-$10` through `-1`, preventing a zero-distance contact from attaching Sonic one frame early (`docs/skdisasm/sonic3k.asm:41779-41820,41982-42068,65763-65827`).
 - **S2/S3K spindash charges now publish the native animation-change push clear:** each charge mirrors the ROM's combined anim/prev-anim word write, so the later animation transition clears `Status_Push` even when the visible spindash animation id was already active (`docs/skdisasm/sonic3k.asm:28797-28808,29681-29686`; `docs/s2disasm/s2.asm:40548-40559,40879-40884`).

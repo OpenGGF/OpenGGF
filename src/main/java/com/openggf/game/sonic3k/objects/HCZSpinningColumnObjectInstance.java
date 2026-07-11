@@ -186,7 +186,10 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         player.setGSpeed((short) 0);
         applyTwistAnimation(player, rider.swingAngle);
 
-        if (player.isJumpPressed()) {
+        // d5 is the Ctrl_*_logical word; andi.b addresses its low byte, which
+        // contains newly pressed A/B/C bits rather than the held byte
+        // (sonic3k.asm:68136-68148,68264-68276).
+        if (player.isJumpJustPressed()) {
             releaseRider(rider, frameCounter, true);
         }
     }
