@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
+import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 @RequiresRom(SonicGame.SONIC_2)
 class TestLiveRewindMonitorState {
@@ -88,44 +89,57 @@ class TestLiveRewindMonitorState {
 
         InputHandler rewindInput = new InputHandler();
         LiveRewindManager manager = new LiveRewindManager(config);
-        assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput));
-        assertEquals(0, gameplayMode.getRewindController().currentFrame());
+        int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
+        try {
+            assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput));
+            assertEquals(0, gameplayMode.getRewindController().currentFrame());
 
-        HeadlessTestRunner runner = new HeadlessTestRunner(sonic);
-        int intactFrame = -1;
-        int brokenFrame = -1;
-        for (int row = 1; row <= 40; row++) {
+            HeadlessTestRunner runner = new HeadlessTestRunner(sonic);
+            int intactFrame = -1;
+            int brokenFrame = -1;
+            for (int row = 1; row <= 40; row++) {
+                runner.stepFrame(false, false, false, false, false);
+                manager.recordExternalFrame(GameMode.LEVEL, false, rewindInput);
+                MonitorObjectInstance monitor = firstLive(objects, MonitorObjectInstance.class);
+                if (monitor.getCollisionFlags() == 0x46) {
+                    intactFrame = gameplayMode.getRewindController().currentFrame();
+                } else {
+                    brokenFrame = gameplayMode.getRewindController().currentFrame();
+                    break;
+                }
+            }
+
+            assertTrue(intactFrame > 0, "the history must contain an intact row before collision");
+            assertTrue(brokenFrame > intactFrame, "production collision must create the break row");
+            assertBroken(objects);
+
             runner.stepFrame(false, false, false, false, false);
             manager.recordExternalFrame(GameMode.LEVEL, false, rewindInput);
-            MonitorObjectInstance monitor = firstLive(objects, MonitorObjectInstance.class);
-            if (monitor.getCollisionFlags() == 0x46) {
-                intactFrame = gameplayMode.getRewindController().currentFrame();
-            } else {
-                brokenFrame = gameplayMode.getRewindController().currentFrame();
-                break;
+            assertTrue(gameplayMode.getRewindController().currentFrame() > brokenFrame,
+                    "history must include a later row after the break");
+
+            rewindInput.handleKeyEvent(rewindKey, GLFW_PRESS);
+            while (gameplayMode.getRewindController().currentFrame() >= brokenFrame) {
+                int before = gameplayMode.getRewindController().currentFrame();
+                assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput));
+                assertTrue(manager.effectIntensity() > 0.0f);
+                assertTrue(gameplayMode.getRewindController().currentFrame() < before,
+                        "every held call must move the live context controller backward");
             }
+
+            assertTrue(gameplayMode.getRewindController().currentFrame() < brokenFrame);
+            assertIntact(objects, firstLive(objects, MonitorObjectInstance.class));
+        } finally {
+            rewindInput.handleKeyEvent(rewindKey, GLFW_RELEASE);
+            assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput),
+                    "release must leave live rewind inactive");
+            assertEquals(0.0f, manager.effectIntensity(),
+                    "release must clear the rewind presentation envelope");
+            assertFalse(GameServices.audio().isReverseAudioPresentationActive(),
+                    "release must end global reverse audio presentation before session teardown");
+            assertFalse(gameplayMode.getFadeManager().isReversePresentationActive(),
+                    "release must end reverse fade presentation before session teardown");
         }
-
-        assertTrue(intactFrame > 0, "the history must contain an intact row before collision");
-        assertTrue(brokenFrame > intactFrame, "production collision must create the break row");
-        assertBroken(objects);
-
-        runner.stepFrame(false, false, false, false, false);
-        manager.recordExternalFrame(GameMode.LEVEL, false, rewindInput);
-        assertTrue(gameplayMode.getRewindController().currentFrame() > brokenFrame,
-                "history must include a later row after the break");
-
-        rewindInput.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
-        while (gameplayMode.getRewindController().currentFrame() >= brokenFrame) {
-            int before = gameplayMode.getRewindController().currentFrame();
-            assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput));
-            assertTrue(manager.effectIntensity() > 0.0f);
-            assertTrue(gameplayMode.getRewindController().currentFrame() < before,
-                    "every held call must move the live context controller backward");
-        }
-
-        assertTrue(gameplayMode.getRewindController().currentFrame() < brokenFrame);
-        assertIntact(objects, firstLive(objects, MonitorObjectInstance.class));
     }
 
     private static void assertBroken(ObjectManager objects) {
