@@ -707,7 +707,7 @@ public final class RewindRoundTripHarness {
         ObjectServices services = makeServices(holder, camera);
 
         ObjectRegistry registry = registryFor(gameId);
-        ObjectSpawn spawn = new ObjectSpawn(160, 240, objectId, 0, 0, false, 0);
+        ObjectSpawn spawn = new ObjectSpawn(160, 240, objectId, 0, 0, true, 0, 0);
         ObjectManager om = new ObjectManager(
                 List.of(spawn), registry,
                 0, null, null,
