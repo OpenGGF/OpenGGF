@@ -132,6 +132,14 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean suppressesObjectEdgeBalance() {
+        // Obj_AIZDrawBridge keeps status bit 7 set (ori.b #$80,status).
+        // Sonic_Move tests that bit before reading width_pixels and skips the
+        // object-edge balance/facing branch while the player rides it.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         // ROM loc_2B2E8 still falls through to SolidObjectFull2 while the
         // collapse delay counts down. Player support ends only when loc_2B45E

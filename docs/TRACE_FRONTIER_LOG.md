@@ -610,6 +610,17 @@ after the 128-pass move loop exits. The focused replay advances from f19089 /
 208 errors to f19410 / 3 errors (a two-frame bridge-rider facing bit followed
 by two isolated late-run diagnostics). The AIZ stage is not green yet.
 
+Round 43 models the AIZ boss-end draw bridge parent's permanent status bit 7.
+ROM `Sonic_Move` tests the ridden object's status byte before its
+`width_pixels` edge calculation and skips balancing when the sign bit is set;
+the engine's consolidated bridge previously entered that branch and faced
+Sonic left for two frames because its parent centre lies far to the right of
+the rider. `suppressesObjectEdgeBalance()` now exposes the same object state.
+The focused replay advances from f19410 / 3 errors to f20715 / 2 errors (one
+CPU-Tails logical-held bit and one later camera-Y sample). The full S1 (29)
+and S2 (48) trace fleets passed with the Round 42-43 working tree. The AIZ
+stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

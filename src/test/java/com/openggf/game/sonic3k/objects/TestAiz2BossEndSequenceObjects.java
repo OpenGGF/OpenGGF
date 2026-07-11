@@ -170,6 +170,8 @@ class TestAiz2BossEndSequenceObjects {
                 "ROM Obj_AIZDrawBridge calls SolidObjectFull2, so new landings narrow d1=$6B "
                         + "back to width_pixels=$60 instead of using a top-only full-width landing");
         assertTrue(bridge.bypassesOffscreenSolidGate());
+        assertTrue(bridge.suppressesObjectEdgeBalance(),
+                "ROM bridge status bit 7 skips Sonic_Move's object-edge balance branch");
         assertEquals(0x6B, params.halfWidth());
         assertEquals(8, params.airHalfHeight());
         assertEquals(8, params.groundHalfHeight());
