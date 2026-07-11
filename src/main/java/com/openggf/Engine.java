@@ -3,6 +3,8 @@ package com.openggf;
 import com.openggf.architecture.CompositionRoot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
+import com.openggf.mods.code.ModClassLoaderFactory;
+import com.openggf.mods.code.ModRuntime;
 import com.openggf.game.*;
 import com.openggf.graphics.*;
 import com.openggf.graphics.pipeline.RenderOrderRecorder;
@@ -248,6 +250,7 @@ public class Engine {
 
 	// Static instance for singleton access
 	private static Engine instance;
+	private ModRuntime modRuntime = ModRuntime.empty();
 
 	// Frame timing
 	private int targetFps;
@@ -1069,6 +1072,14 @@ public class Engine {
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
 				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)));
+		modRuntime = replaceModRuntime(modRuntime, ModRuntime.empty());
+		try {
+			modRuntime = replaceModRuntime(modRuntime,
+					new ModClassLoaderFactory(Engine.class.getClassLoader())
+							.create(ModSubsystem.current().processCatalog().effective()));
+		} catch (IOException error) {
+			LOGGER.log(java.util.logging.Level.WARNING, "Compiled-mod runtime initialization failed", error);
+		}
 	}
 
 	private MasterTitleScreen createMasterTitleScreen() {
@@ -2997,6 +3008,7 @@ public class Engine {
 		});
 		cleanupStep("graphics manager", graphicsManager::cleanup);
 		cleanupStep("presence", gameLoop::closePresence);
+		cleanupStep("compiled mod runtime", () -> closeModRuntime(modRuntime));
 		cleanupStep("mod subsystem", ModSubsystem::clearProcess);
 		cleanupStep("audio manager", audioManager::destroy);
 		cleanupStep("GLFW window", () -> {
@@ -3025,6 +3037,20 @@ public class Engine {
 			cleanup.run();
 		} catch (Throwable t) {
 			LOGGER.log(java.util.logging.Level.WARNING, "Cleanup failed for " + description, t);
+		}
+	}
+
+	static ModRuntime replaceModRuntime(ModRuntime current, ModRuntime replacement) {
+		Objects.requireNonNull(replacement, "replacement");
+		closeModRuntime(Objects.requireNonNull(current, "current"));
+		return replacement;
+	}
+
+	static void closeModRuntime(ModRuntime runtime) {
+		try {
+			runtime.close();
+		} catch (IOException error) {
+			throw new IllegalStateException("Failed to close compiled-mod runtime", error);
 		}
 	}
 

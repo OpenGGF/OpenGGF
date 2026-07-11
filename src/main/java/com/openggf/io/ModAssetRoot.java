@@ -360,6 +360,12 @@ final class JarModAssetRoot extends AbstractModAssetRoot implements PackedModAss
     }
 
     @Override
+    public Path immutableContentPath() throws IOException {
+        ensureOpen();
+        return jarPath;
+    }
+
+    @Override
     public void close() throws IOException {
         IOException failure = null;
         try {
