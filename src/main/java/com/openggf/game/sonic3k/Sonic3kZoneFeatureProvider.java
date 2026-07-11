@@ -305,7 +305,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ && player != null && !player.getDead()) {
             int act = levelManager != null ? levelManager.getFeatureActId() : 0;
-            HCZWaterSkimHandler.update();
+            HCZWaterSkimHandler.beginFrame();
             if (GameServices.module().getLevelEventProvider()
                     instanceof Sonic3kLevelEventManager mgr) {
                 mgr.ensureZoneRuntimeStateInstalled();
@@ -331,7 +331,8 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public void updateAfterPlayablePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
-        if (zoneIndex != Sonic3kZoneIds.ZONE_ICZ || player == null || player.getDead()) {
+        if (player == null || player.getDead()
+                || (zoneIndex != Sonic3kZoneIds.ZONE_HCZ && zoneIndex != Sonic3kZoneIds.ZONE_ICZ)) {
             return;
         }
         var levelManager = GameServices.levelOrNull();
@@ -339,9 +340,17 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         if (GameServices.module().getLevelEventProvider()
                 instanceof Sonic3kLevelEventManager mgr) {
             mgr.ensureZoneRuntimeStateInstalled();
-            var events = mgr.getIczEvents();
-            if (events != null) {
-                events.updateSlideTerrainAfterPlayablePhysics(act, player);
+            if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
+                HCZWaterSkimHandler.updateAfterPlayablePhysics(player);
+                var events = mgr.getHczEvents();
+                if (events != null) {
+                    events.updateSlideTerrainAfterPlayablePhysics(act, player);
+                }
+            } else {
+                var events = mgr.getIczEvents();
+                if (events != null) {
+                    events.updateSlideTerrainAfterPlayablePhysics(act, player);
+                }
             }
         }
     }

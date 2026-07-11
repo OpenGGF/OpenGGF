@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f16133 / 2584 errors (5 errors under `frontierOnly`).
+f3318 / 4234 errors to f16519 / 1674 errors (1 error under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -517,6 +517,25 @@ column and consecutive follower-history guards pass. The isolated replay matrix
 keeps both AIZ routes green and preserves every non-HCZ frontier/count exactly:
 CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
 level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
+large water loop. `sub_714E -> sub_717C` now samples the live foreground layout
+byte after playable physics, recognizes the ten HCZ2 slide chunks, moves
+`ground_vel` toward `-$800`, and publishes `status_secondary` bit 7 for the next
+movement dispatch. `Obj_HCZWaterSplash` subtype 1 now runs its activation and
+sustain physics after each native player slot rather than before the frame's
+terrain collision, so its direction refresh, surface pin, and airborne `$C`
+friction are visible on the same ROM dispatch
+(`sonic3k.asm:8960-9100,75314-75491`).
+
+This closes f16133-f16518 and advances HCZ to f16519 / 1674 full-run errors (1
+under `frontierOnly`), reducing the full report by 910 groups. The new frontier
+is the independent native-Tails respawn counter (`expected=$0043`,
+`actual=$0000`). The focused HCZ/ICZ slide and HCZ water-skim tests pass. The
+isolated granular replay matrix keeps both AIZ routes green and preserves every
+non-HCZ frontier/count exactly: CNZ complete f1846 / 5, CNZ level-select f291 /
+7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ
+f2920 / 1, and LBZ f2270 / 5.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

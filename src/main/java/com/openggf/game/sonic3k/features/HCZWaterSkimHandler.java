@@ -111,13 +111,9 @@ public final class HCZWaterSkimHandler {
         }
     }
 
-    /**
-     * Main per-frame update. Called from zone feature provider's pre-physics hook.
-     * Processes both P1 and P2 skim state.
-     */
-    public static void update() {
+    /** Advances the object-local counter once before the playable slots run. */
+    public static void beginFrame() {
         frameCounter++;
-        update(playerQueryFromGameServices(), getWaterLevel(), frameCounter);
     }
 
     static void update(ObjectPlayerQuery query, int waterLevel, int frameCounter) {
@@ -144,6 +140,26 @@ public final class HCZWaterSkimHandler {
                 skimActiveP2 = false;
                 splashAnimFrameP2 = SPLASH_EXIT_FRAME;
             }
+        }
+    }
+
+    /** Runs {@code sub_3857E} for one native player at ROM post-player timing. */
+    public static void updateAfterPlayablePhysics(AbstractPlayableSprite player) {
+        if (player == null || player.getDead() || player.isDebugMode()) {
+            return;
+        }
+        ObjectPlayerQuery query = playerQueryFromGameServices();
+        int waterLevel = getWaterLevel();
+        if (waterLevel == 0) {
+            return;
+        }
+        if (player == query.mainPlayerOrNull()) {
+            skimActiveP1 = processSkimPhysics(player, skimActiveP1, waterLevel, frameCounter, true);
+            return;
+        }
+        AbstractPlayableSprite nativeP2 = nativeP2From(query);
+        if (player == nativeP2) {
+            skimActiveP2 = processSkimPhysics(player, skimActiveP2, waterLevel, frameCounter, false);
         }
     }
 
@@ -236,12 +252,6 @@ public final class HCZWaterSkimHandler {
         // ROM: move.w d0,y_pos(a1) / move.w #0,y_vel(a1) (sonic3k.asm:75442-75443)
         NativePositionOps.writeYPosPreserveSubpixel(player, pinnedY);
         player.setYSpeed((short) 0);
-        if (player.getAir()) {
-            // Obj_HCZWaterSplash runs in object order after the player
-            // dispatcher; the engine hook runs pre-physics. Suppress the
-            // generic airborne gravity tick that the ROM has already passed.
-            player.suppressNextGravityStep();
-        }
 
         // Apply friction when airborne and no directional input
         // ROM: btst #Status_InAir,status(a1) / andi.w #(left|right)<<8,d5
@@ -320,12 +330,6 @@ public final class HCZWaterSkimHandler {
             splashAnimFrameP2 = SPLASH_EXIT_FRAME;
         }
 
-        if (player.getAir()) {
-            // loc_38646 clears the splash object's active bit after the player
-            // routine for the frame (sonic3k.asm:75473-75476), so an airborne
-            // speed/terrain exit must not receive a same-frame gravity step.
-            player.suppressNextGravityStep();
-        }
         player.setWaterSkimActive(false);
         return false;
     }

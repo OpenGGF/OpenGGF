@@ -16,6 +16,7 @@ import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.scroll.ZoneScrollHandler;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -87,6 +88,16 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     // Act 2 FG threshold (ROM: HCZ2_Resize)
     // =========================================================================
     private static final int ACT2_CAM_X_WALL_CHASE_END = 0xC00;
+
+    // ROM: sub_714E -> sub_717C. These are the ten HCZ2 layout bytes
+    // immediately preceding byte_7498; every entry drives toward -$800.
+    private static final int[] HCZ2_SLIDE_BLOCKS = {
+            0x1C, 0x72, 0x83, 0x84, 0x8B, 0x91, 0x9F, 0xA0, 0xA5, 0xA6
+    };
+    private static final int HCZ2_SLIDE_TARGET_HIGH_BYTE = -8;
+    private static final int HCZ2_SLIDE_ACCELERATION = 0x40;
+    private static final int HCZ2_SLIDE_ANIMATION = 0x1B;
+    private static final int HCZ2_SLIDE_EXIT_MOVE_LOCK = 5;
 
     // =========================================================================
     // Act 2 BG: Wall-chase event constants (ROM: HCZ2_BackgroundEvent/HCZ2_WallMove)
@@ -1133,6 +1144,61 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
      */
     public boolean isWallChaseBgOverlayActive() {
         return wallChaseBgOverlayActive;
+    }
+
+    /**
+     * Publishes HCZ2 slide-terrain state after the current playable slot has
+     * moved, matching {@code sub_714E -> sub_717C}. The status bit is therefore
+     * consumed by the next frame's movement routine.
+     */
+    public void updateSlideTerrainAfterPlayablePhysics(int act, AbstractPlayableSprite player) {
+        if (act != 1 || player == null || player.getDead() || player.isDebugMode()) {
+            return;
+        }
+        LevelManager manager = levelManager();
+        int blockId = manager != null
+                ? manager.getBlockIdAt(player.getCentreX(), player.getCentreY())
+                : -1;
+        applyHcz2SlideTerrainForBlock(player, blockId);
+    }
+
+    static void applyHcz2SlideTerrainForBlock(AbstractPlayableSprite player, int blockId) {
+        if (player == null) {
+            return;
+        }
+        if (player.getAir()
+                || (player.getTopSolidBit() & 0xFF) == 0x0C
+                || !isHcz2SlideBlock(blockId)) {
+            exitHcz2Slide(player);
+            return;
+        }
+
+        int inertia = player.getGSpeed();
+        int inertiaHighByte = (byte) (inertia >> 8);
+        if (inertiaHighByte > HCZ2_SLIDE_TARGET_HIGH_BYTE) {
+            inertia -= HCZ2_SLIDE_ACCELERATION;
+            player.setGSpeed((short) inertia);
+        }
+        player.setDirection(inertiaHighByte < 0 ? Direction.LEFT : Direction.RIGHT);
+        player.setAnimationId(HCZ2_SLIDE_ANIMATION);
+        player.setSliding(true);
+    }
+
+    static boolean isHcz2SlideBlock(int blockId) {
+        int layoutByte = blockId & 0xFF;
+        for (int slideBlock : HCZ2_SLIDE_BLOCKS) {
+            if (layoutByte == slideBlock) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void exitHcz2Slide(AbstractPlayableSprite player) {
+        if (player.isSliding()) {
+            player.setMoveLockTimer(HCZ2_SLIDE_EXIT_MOVE_LOCK);
+            player.setSliding(false);
+        }
     }
 
     /**
