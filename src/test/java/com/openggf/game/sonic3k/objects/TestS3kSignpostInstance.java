@@ -43,6 +43,14 @@ class TestS3kSignpostInstance {
     }
 
     @Test
+    void sparkleCadenceUsesGlobalVIntPhaseRatherThanAllocationAge() {
+        assertFalse(S3kSignpostInstance.isRomSparkleFrame(11023));
+        assertTrue(S3kSignpostInstance.isRomSparkleFrame(11024));
+        assertFalse(S3kSignpostInstance.isRomSparkleFrame(11025));
+        assertTrue(S3kSignpostInstance.isRomSparkleFrame(11028));
+    }
+
+    @Test
     void bumpFromBelowRequiresRomAnimationTwoAndUpwardVelocity() {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setAir(true);

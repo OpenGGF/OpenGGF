@@ -805,6 +805,16 @@ boss choices. The focused AIZ replay remains fully green. A fresh explicit
 48-class sweep (29 S1 and 19 S2 `*TraceReplay` classes) passes with the one
 ROM-optional special-stage skip. The AIZ stage is not green yet.
 
+Round 57 corrects the signpost sparkle trigger from allocation-local age to
+the ROM's global `V_int_run_count & 3 == 0` phase
+(`sonic3k.asm:176148-176153`). The complete-run signpost now consumes all 66
+random words recorded during its falling routine instead of 65, while the
+focused AIZ replay remains green. This is a prerequisite cadence correction:
+the strict complete-run frontier remains f23523 / 210 errors (`y_speed`,
+expected `-$02B0`, actual `$02B0`) because five earlier non-signpost RNG calls
+are still mistimed before the end boss. A focused phase guard pins the global
+four-frame boundary. The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

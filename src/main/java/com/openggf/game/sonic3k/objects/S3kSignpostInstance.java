@@ -60,7 +60,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private int animFrame;
     private int animIndex;
     private int animTimer;
-    private int sparkleCounter;
 
     /**
      * ROM-accurate spin animation sequences.
@@ -188,7 +187,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
 
         switch (state) {
             case INIT -> updateInit(player);
-            case FALLING -> updateFalling(player);
+            case FALLING -> updateFalling(frameCounter, player);
             case LANDED -> updateLanded();
             case RESULTS -> updateResults(player);
             case AFTER -> updateAfter();
@@ -209,7 +208,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         animIndex = 0;
         animFrame = animSequence[0];
         animTimer = 0;
-        sparkleCounter = 0;
 
         try {
             services().playSfx(Sonic3kSfx.SIGNPOST.id);
@@ -228,7 +226,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     // FALLING
     // =========================================================================
 
-    private void updateFalling(AbstractPlayableSprite player) {
+    private void updateFalling(int frameCounter, AbstractPlayableSprite player) {
         // Apply gravity
         yVel += GRAVITY;
 
@@ -247,9 +245,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         }
 
         // Sparkle effect
-        sparkleCounter++;
-        if (sparkleCounter >= SPARKLE_INTERVAL) {
-            sparkleCounter = 0;
+        // ROM tests the global V_int_run_count low bits, not a counter local
+        // to the signpost's allocation frame.
+        if (isRomSparkleFrame(frameCounter)) {
             spawnDynamicObject(new S3kSignpostSparkleChild(
                     worldX, worldY + romSparkleYOffset(services().rng())));
         }
@@ -296,6 +294,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
      */
     static int romSparkleYOffset(GameRng rng) {
         return rng.nextBits(0x1F) - 0x10;
+    }
+
+    static boolean isRomSparkleFrame(int frameCounter) {
+        return (frameCounter & (SPARKLE_INTERVAL - 1)) == 0;
     }
 
     /**
