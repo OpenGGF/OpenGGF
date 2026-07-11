@@ -31,7 +31,8 @@ import java.util.UUID;
 /** Strict, bounded persistence for repository-local pending mod state. */
 public final class ModStateStore {
     private static final Set<String> ROOT_FIELDS = Set.of("formatVersion", "entries");
-    private static final Set<String> ENTRY_FIELDS = Set.of("id", "enabled", "order");
+    private static final Set<String> ENTRY_FIELDS = Set.of(
+            "id", "enabled", "order", "trusted", "trustedJarSha256");
 
     private final Path root;
     private final Path statePath;
@@ -60,7 +61,7 @@ public final class ModStateStore {
         StreamReadConstraints constraints = StreamReadConstraints.builder()
                 .maxNestingDepth(limits.maxYamlDepth())
                 .maxDocumentLength(limits.maxDocumentCodePoints())
-                .maxTokenCount(Math.max(32L, limits.maxCollectionEntries() * 8L + 16L))
+                .maxTokenCount(Math.max(32L, limits.maxCollectionEntries() * 12L + 16L))
                 .maxStringLength(limits.maxStringChars())
                 .maxNameLength(limits.maxStringChars())
                 .maxNumberLength(limits.maxNumericDigits())
@@ -227,6 +228,8 @@ public final class ModStateStore {
         String id = null;
         Boolean enabled = null;
         Integer order = null;
+        boolean trusted = false;
+        String trustedJarSha256 = null;
         int fields = 0;
         while (parser.nextToken() != JsonToken.END_OBJECT) {
             requireToken(parser.currentToken(), JsonToken.FIELD_NAME, "Expected state-entry field");
@@ -250,13 +253,28 @@ public final class ModStateStore {
                     enabled = value == JsonToken.VALUE_TRUE;
                 }
                 case "order" -> order = requiredInt(parser, value, "entry order");
+                case "trusted" -> {
+                    if (value != JsonToken.VALUE_TRUE && value != JsonToken.VALUE_FALSE) {
+                        throw new IOException("entry trusted must be a boolean");
+                    }
+                    trusted = value == JsonToken.VALUE_TRUE;
+                }
+                case "trustedJarSha256" -> {
+                    if (value == JsonToken.VALUE_NULL) {
+                        trustedJarSha256 = null;
+                    } else {
+                        requireToken(value, JsonToken.VALUE_STRING,
+                                "entry trustedJarSha256 must be a string or null");
+                        trustedJarSha256 = parser.getText();
+                    }
+                }
                 default -> throw new IOException("Unknown state-entry field: " + name);
             }
         }
         if (id == null || enabled == null || order == null) {
             throw new IOException("State entries require id, enabled, and order");
         }
-        return new ModState.Entry(id, enabled, order);
+        return new ModState.Entry(id, enabled, order, trusted, trustedJarSha256);
     }
 
     private static int requiredInt(JsonParser parser, JsonToken token, String field) throws IOException {
@@ -279,6 +297,12 @@ public final class ModStateStore {
                 generator.writeStringField("id", entry.id());
                 generator.writeBooleanField("enabled", entry.enabled());
                 generator.writeNumberField("order", entry.order());
+                generator.writeBooleanField("trusted", entry.trusted());
+                if (entry.trustedJarSha256() == null) {
+                    generator.writeNullField("trustedJarSha256");
+                } else {
+                    generator.writeStringField("trustedJarSha256", entry.trustedJarSha256());
+                }
                 generator.writeEndObject();
             }
             generator.writeEndArray();

@@ -43,13 +43,15 @@ class TestEffectiveCatalogBuilder {
     }
 
     @Test
-    void phaseTwoActivatesDataFieldsButKeepsStandaloneAndCodeBlocked() {
+    void phaseTwoActivatesDataFieldsAndTrustedCodeButKeepsStandaloneAndUntrustedCodeBlocked() {
         ModDescriptor standalone = descriptor("standalone", ModType.STANDALONE, null, "1.0.0", "*",
                 List.of(), false, null, Map.of(), null, OptionalInt.empty(), List.of());
         ModDescriptor codeEntry = descriptor("code-entry", "s1", "1.0.0", "*",
                 List.of(), false, "example.Mod", Map.of(), null, OptionalInt.empty(), List.of());
         ModDescriptor codeFile = descriptor("code-file", "s1", "1.0.0", "*",
                 List.of(), true, null, Map.of(), null, OptionalInt.empty(), List.of());
+        ModDescriptor trustedCode = descriptor("trusted-code", "s1", "1.0.0", "*",
+                List.of(), true, "example.Mod", Map.of(), null, OptionalInt.empty(), List.of());
         ModDescriptor art = descriptor("art", "s1", "1.0.0", "*",
                 List.of(), false, null, Map.of("stock", "art/file.bin"), null, OptionalInt.empty(), List.of());
         ModDescriptor insert = descriptor("insert", "s2", "1.0.0", "*",
@@ -58,13 +60,33 @@ class TestEffectiveCatalogBuilder {
                 List.of(), false, null, Map.of(), null, OptionalInt.of(1), List.of());
 
         ModCatalog result = new EffectiveCatalogBuilder().build(
-                List.of(standalone, codeEntry, codeFile, art, insert, windows),
-                enabledState("standalone", "code-entry", "code-file", "art", "insert", "windows"));
+                List.of(standalone, codeEntry, codeFile, trustedCode, art, insert, windows),
+                state(entry("standalone", true, 0), entry("code-entry", true, 1),
+                        entry("code-file", true, 2),
+                        new ModState.Entry("trusted-code", true, 3, true, trustedCode.sha256()),
+                        entry("art", true, 4), entry("insert", true, 5), entry("windows", true, 6)));
 
         assertReason(result, "standalone", "PHASE1_STANDALONE_UNSUPPORTED");
-        assertReason(result, "code-entry", "PHASE1_CODE_UNSUPPORTED");
-        assertReason(result, "code-file", "PHASE1_CODE_UNSUPPORTED");
-        assertEquals(List.of("art", "insert", "windows"), effectiveIds(result));
+        assertEquals(ModEligibility.Status.EFFECTIVE, result.eligibility().get("code-entry").status());
+        assertReason(result, "code-file", "CODE_TRUST_REQUIRED");
+        assertEquals("contains code — trust required (press accept twice)",
+                reason(result, "code-file", "CODE_TRUST_REQUIRED").message());
+        assertEquals(List.of("code-entry", "trusted-code", "art", "insert", "windows"),
+                effectiveIds(result));
+    }
+
+    @Test
+    void changedJarHashRevokesCodeEligibilityWithoutAffectingDataOnlyMods() {
+        ModDescriptor code = descriptor("code", "s1", "1.0.0", "*", List.of(), true,
+                "example.Code", Map.of(), null, OptionalInt.empty(), List.of());
+        ModDescriptor data = patch("data", "s1", "1.0.0", "*");
+        ModState startup = state(new ModState.Entry("code", true, 0, true, "f".repeat(64)),
+                new ModState.Entry("data", true, 1, false, null));
+
+        ModCatalog result = new EffectiveCatalogBuilder().build(List.of(code, data), startup);
+
+        assertReason(result, "code", "CODE_TRUST_REQUIRED");
+        assertEquals(List.of("data"), effectiveIds(result));
     }
 
     @Test

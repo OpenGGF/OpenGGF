@@ -75,7 +75,8 @@ public final class EffectiveCatalogBuilder {
                                     Map<String, ModEligibility> resolved,
                                     int[] allocatedPatternWindows) {
         String id = descriptor.manifest().id();
-        ModEligibility ownBlock = ownBlock(descriptor);
+        ModState.Entry state = stateById.get(id);
+        ModEligibility ownBlock = ownBlock(descriptor, state);
         if (ownBlock != null) return ownBlock;
         for (ModDependency dependency : descriptor.manifest().dependencies()) {
             ModDescriptor target = descriptors.get(dependency.id());
@@ -115,7 +116,6 @@ public final class EffectiveCatalogBuilder {
                         List.of(dependency.id()));
             }
         }
-        ModState.Entry state = stateById.get(id);
         if (state == null || !state.enabled()) {
             return new ModEligibility(id, ModEligibility.Status.DISABLED, List.of(
                     reason("DISABLED", "Mod is disabled in startup state", List.of())));
@@ -129,7 +129,7 @@ public final class EffectiveCatalogBuilder {
         return new ModEligibility(id, ModEligibility.Status.EFFECTIVE, List.of());
     }
 
-    private ModEligibility ownBlock(ModDescriptor descriptor) {
+    private ModEligibility ownBlock(ModDescriptor descriptor, ModState.Entry state) {
         String id = descriptor.manifest().id();
         if (descriptor.hasErrors()) return blocked(id, "DESCRIPTOR_INVALID",
                 "Discovery or static validation reported an error", List.of(id));
@@ -141,8 +141,11 @@ public final class EffectiveCatalogBuilder {
         }
         if (manifest.type() == ModType.STANDALONE) return blocked(id, "PHASE1_STANDALONE_UNSUPPORTED",
                 "Standalone mods are not supported in Phase 1", List.of());
-        if (descriptor.containsCode() || manifest.entrypoint() != null) return blocked(id, "PHASE1_CODE_UNSUPPORTED",
-                "Mod code is not supported in Phase 1", List.of());
+        if (descriptor.containsCode()
+                && (state == null || !state.trustsSha256(descriptor.sha256()))) {
+            return blocked(id, "CODE_TRUST_REQUIRED",
+                    "contains code — trust required (press accept twice)", List.of());
+        }
         if (manifest.insertAfter() != null
                 && !StockProgressionAnchors.contains(manifest.baseGame(), manifest.insertAfter())) {
             return blocked(id, "INSERT_AFTER_STOCK_ANCHOR_INVALID",

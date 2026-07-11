@@ -248,6 +248,188 @@ class TestModManagerScreen {
     }
 
     @Test
+    void codeTrustRequiresTwoAcceptsAndOnlyChangesPendingState() {
+        ModDescriptor code = codeDescriptor("code-mod", "Code Mod", "c".repeat(64));
+        ModCatalog catalog = new ModCatalog(List.of(code), EffectiveModCatalog.EMPTY, Map.of(
+                "code-mod", new ModEligibility("code-mod", ModEligibility.Status.BLOCKED, List.of(
+                        new ModEligibility.Reason("CODE_TRUST_REQUIRED",
+                                "contains code — trust required (press accept twice)", List.of())))));
+        ModManagerScreen screen = screen(catalog, state(false, "code-mod"),
+                new ModRuntimeFindingStore(), null, temp.resolve("trust"));
+
+        assertTrue(screen.rows().getFirst().badges().contains("TRUST REQUIRED"));
+        press(screen, Action.ACCEPT);
+        assertFalse(enabled(screen, "code-mod"));
+        assertFalse(screen.pendingState().entries().getFirst().trusted());
+        assertTrue(screen.statusMessage().contains(
+                "This mod contains code and runs with full permissions"));
+
+        press(screen, Action.ACCEPT);
+        ModState.Entry pending = screen.pendingState().entries().getFirst();
+        assertTrue(pending.enabled());
+        assertTrue(pending.trusted());
+        assertEquals(code.sha256(), pending.trustedJarSha256());
+        assertTrue(screen.restartRequired());
+        assertTrue(catalog.effective().orderedEnabled().isEmpty());
+
+        press(screen, Action.BACK);
+        assertTrue(screen.closeRequested());
+        ModState persisted = new ModStateStore(temp.resolve("trust").toAbsolutePath().normalize())
+                .load().state();
+        assertTrue(persisted.entries().getFirst().trustsSha256(code.sha256()));
+    }
+
+    @Test
+    void trustArmCancelsOnNavigationAndCascadeNeverTrustsACodeDependency() {
+        ModDescriptor code = codeDescriptor("code-core", "Code Core", "d".repeat(64));
+        ModDescriptor addon = descriptor("data-addon", "Data Addon",
+                List.of(new ModDependency("code-core", VersionRange.parse("*"))), List.of());
+        ModCatalog catalog = new ModCatalog(List.of(code, addon), EffectiveModCatalog.EMPTY, Map.of(
+                "code-core", new ModEligibility("code-core", ModEligibility.Status.BLOCKED, List.of(
+                        new ModEligibility.Reason("CODE_TRUST_REQUIRED",
+                                "contains code — trust required (press accept twice)", List.of()))),
+                "data-addon", new ModEligibility("data-addon", ModEligibility.Status.DISABLED, List.of(
+                        new ModEligibility.Reason("DISABLED", "Disabled", List.of())))));
+        ModManagerScreen screen = screen(catalog,
+                state(false, false, "code-core", "data-addon"),
+                new ModRuntimeFindingStore(), null, temp.resolve("cascade-trust"));
+
+        press(screen, Action.ACCEPT);
+        assertTrue(screen.trustArmed());
+        press(screen, Action.BACK);
+        assertFalse(screen.trustArmed());
+        assertFalse(screen.closeRequested());
+        assertFalse(screen.pendingState().entries().getFirst().trusted());
+
+        press(screen, Action.ACCEPT);
+        assertTrue(screen.trustArmed());
+        press(screen, Action.DOWN);
+        assertFalse(screen.trustArmed());
+        assertFalse(screen.pendingState().entries().getFirst().trusted());
+
+        press(screen, Action.ACCEPT);
+        assertFalse(enabled(screen, "data-addon"));
+        assertFalse(screen.pendingState().entries().getFirst().trusted());
+        assertTrue(screen.statusMessage().contains("trust required"));
+    }
+
+    @Test
+    void codeModWithDataDependencyTrustsAndEnablesTheWholeCascadeOnSecondAccept() {
+        ModDescriptor data = descriptor("data-core", "Data Core", List.of(), List.of());
+        ModDescriptor code = codeDescriptor("code-addon", "Code Addon", "e".repeat(64),
+                List.of(new ModDependency("data-core", VersionRange.parse("*"))));
+        ModCatalog catalog = new ModCatalog(List.of(data, code), EffectiveModCatalog.EMPTY, Map.of(
+                "data-core", new ModEligibility("data-core", ModEligibility.Status.DISABLED, List.of(
+                        new ModEligibility.Reason("DISABLED", "Disabled", List.of()))),
+                "code-addon", new ModEligibility("code-addon", ModEligibility.Status.BLOCKED, List.of(
+                        new ModEligibility.Reason("CODE_TRUST_REQUIRED",
+                                "contains code — trust required (press accept twice)", List.of())))));
+        ModManagerScreen screen = screen(catalog,
+                state(false, false, "data-core", "code-addon"),
+                new ModRuntimeFindingStore(), null, temp.resolve("combined-trust"));
+        screen.select(1);
+
+        press(screen, Action.ACCEPT);
+        assertTrue(screen.trustArmed());
+        assertFalse(enabled(screen, "data-core"));
+        assertFalse(enabled(screen, "code-addon"));
+
+        press(screen, Action.ACCEPT);
+        assertFalse(screen.trustArmed());
+        assertTrue(enabled(screen, "data-core"));
+        assertTrue(enabled(screen, "code-addon"));
+        assertTrue(screen.pendingState().entries().stream()
+                .filter(entry -> entry.id().equals("code-addon"))
+                .findFirst().orElseThrow().trustsSha256(code.sha256()));
+    }
+
+    @Test
+    void dataOnlyModTogglesOnceWithoutAcquiringTrust() {
+        ModDescriptor data = descriptor("data-only", "Data Only", List.of(), List.of());
+        ModManagerScreen screen = screen(catalog(List.of(data)), state(false, "data-only"),
+                new ModRuntimeFindingStore(), null, temp.resolve("data-only"));
+
+        press(screen, Action.ACCEPT);
+
+        ModState.Entry pending = screen.pendingState().entries().getFirst();
+        assertTrue(pending.enabled());
+        assertFalse(pending.trusted());
+        assertFalse(screen.trustArmed());
+    }
+
+    @Test
+    void pendingTrustReevaluatesDependencyBlockersWithoutASecondRestart() {
+        ModDescriptor code = codeDescriptor("code-core", "Code Core", "f".repeat(64));
+        ModDescriptor addon = descriptor("data-addon", "Data Addon",
+                List.of(new ModDependency("code-core", VersionRange.parse("*"))), List.of());
+        ModState startup = state(false, false, "code-core", "data-addon");
+        ModCatalog frozen = new com.openggf.mods.EffectiveCatalogBuilder()
+                .build(List.of(code, addon), startup);
+        assertTrue(frozen.eligibility().get("data-addon").reasons().stream()
+                .anyMatch(reason -> reason.code().equals("DEPENDENCY_BLOCKED")));
+        ModManagerScreen screen = screen(frozen, startup, new ModRuntimeFindingStore(), null,
+                temp.resolve("pending-eligibility"));
+
+        press(screen, Action.ACCEPT);
+        press(screen, Action.ACCEPT);
+        assertTrue(enabled(screen, "code-core"));
+        press(screen, Action.DOWN);
+        press(screen, Action.ACCEPT);
+
+        assertTrue(enabled(screen, "data-addon"));
+        assertTrue(screen.restartRequired());
+        assertTrue(frozen.effective().orderedEnabled().isEmpty());
+    }
+
+    @Test
+    void trustedDisabledCodeDependencyParticipatesInProposedEnableCascade() {
+        ModDescriptor code = codeDescriptor("code-core", "Code Core", "1".repeat(64));
+        ModDescriptor addon = descriptor("data-addon", "Data Addon",
+                List.of(new ModDependency("code-core", VersionRange.parse("*"))), List.of());
+        ModState startup = new ModState(1, List.of(
+                new ModState.Entry("code-core", false, 0, true, code.sha256()),
+                new ModState.Entry("data-addon", false, 1)));
+        ModCatalog frozen = new com.openggf.mods.EffectiveCatalogBuilder()
+                .build(List.of(code, addon), startup);
+        ModManagerScreen screen = screen(frozen, startup, new ModRuntimeFindingStore(), null,
+                temp.resolve("trusted-cascade"));
+        screen.select(1);
+
+        press(screen, Action.ACCEPT);
+        assertTrue(screen.cascadeArmed());
+        press(screen, Action.ACCEPT);
+
+        assertTrue(enabled(screen, "code-core"));
+        assertTrue(enabled(screen, "data-addon"));
+        assertTrue(screen.pendingState().entries().getFirst().trustsSha256(code.sha256()));
+    }
+
+    @Test
+    void trustPromptDoesNotMaskStructuralBlockerBehindTrustGate() {
+        ModManifest manifest = new ModManifest(1, "invalid-code", "Invalid Code",
+                SemanticVersion.parse("1.2.3"), List.of("Alice"), "Compiled mod",
+                VersionRange.parse(">=1.0.0 <2.0.0"), ModType.PATCH, "s2", "example.Code",
+                List.of(), Map.of(), Map.of(), "not-a-stock-anchor", OptionalInt.empty());
+        ModDescriptor code = new ModDescriptor(Path.of("invalid-code.jar"), manifest,
+                "2".repeat(64), true, List.of());
+        ModState startup = state(false, "invalid-code");
+        ModCatalog frozen = new com.openggf.mods.EffectiveCatalogBuilder()
+                .build(List.of(code), startup);
+        assertTrue(frozen.eligibility().get("invalid-code").reasons().stream()
+                .anyMatch(reason -> reason.code().equals("CODE_TRUST_REQUIRED")));
+        ModManagerScreen screen = screen(frozen, startup, new ModRuntimeFindingStore(), null,
+                temp.resolve("masked-blocker"));
+
+        press(screen, Action.ACCEPT);
+
+        assertFalse(screen.trustArmed());
+        assertFalse(enabled(screen, "invalid-code"));
+        assertFalse(screen.pendingState().entries().getFirst().trusted());
+        assertTrue(screen.statusMessage().contains("cannot be enabled"));
+        assertTrue(screen.statusMessage().contains("insertAfter"));
+    }
+
+    @Test
     void reorderHonorsDependencyTopologyButAllowsIndependentMoves() {
         ModDescriptor core = descriptor("pack-core", "Core", List.of(), List.of());
         ModDescriptor addon = descriptor("pack-addon", "Addon",
@@ -442,6 +624,19 @@ class TestModManagerScreen {
                 List.of("Alice", "Bob"), "A detailed music pack", VersionRange.parse(">=1.0.0 <2.0.0"),
                 ModType.PATCH, "s2", null, dependencies, Map.of(), Map.of(), null, OptionalInt.empty());
         return new ModDescriptor(path, manifest, "a".repeat(64), false, findings);
+    }
+
+    private static ModDescriptor codeDescriptor(String id, String name, String hash) {
+        return codeDescriptor(id, name, hash, List.of());
+    }
+
+    private static ModDescriptor codeDescriptor(String id, String name, String hash,
+                                                List<ModDependency> dependencies) {
+        ModManifest manifest = new ModManifest(1, id, name, SemanticVersion.parse("1.2.3"),
+                List.of("Alice"), "Compiled mod", VersionRange.parse(">=1.0.0 <2.0.0"),
+                ModType.PATCH, "s2", "example.Code", dependencies, Map.of(), Map.of(), null,
+                OptionalInt.empty());
+        return new ModDescriptor(Path.of(id + ".jar"), manifest, hash, true, List.of());
     }
 
     private static ModFinding finding(ModFindingSeverity severity, String code, String message) {

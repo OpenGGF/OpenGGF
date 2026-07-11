@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.Set;
 
@@ -11,6 +13,7 @@ import java.util.Set;
 public final class PendingModStateEditor {
     private final ModState startup;
     private final Set<String> editableIds;
+    private final Map<String, ModDescriptor> descriptorsById;
     private final ModStateStore store;
     private ModState pending;
 
@@ -22,12 +25,15 @@ public final class PendingModStateEditor {
         this.startup = startup.normalize(scanned);
         this.pending = this.startup;
         Set<String> ids = new HashSet<>();
+        Map<String, ModDescriptor> descriptors = new LinkedHashMap<>();
         for (ModCatalogEntry entry : scanned) {
             if (entry instanceof ModDescriptor descriptor) {
                 ids.add(descriptor.manifest().id());
+                descriptors.putIfAbsent(descriptor.manifest().id(), descriptor);
             }
         }
         editableIds = Set.copyOf(ids);
+        descriptorsById = Map.copyOf(descriptors);
     }
 
     public ModState pendingState() {
@@ -57,6 +63,21 @@ public final class PendingModStateEditor {
         replaceEnabled(requested, enabled);
     }
 
+    public void trust(String id) {
+        requireEditable(id);
+        ModDescriptor descriptor = descriptorsById.get(id);
+        if (descriptor == null || !descriptor.containsCode()) {
+            throw new IllegalArgumentException("Trust grants require a scanned code mod: " + id);
+        }
+        List<ModState.Entry> entries = new ArrayList<>(pending.entries().size());
+        for (ModState.Entry entry : pending.entries()) {
+            entries.add(entry.id().equals(id)
+                    ? new ModState.Entry(entry.id(), entry.enabled(), entry.order(), true,
+                    descriptor.sha256()) : entry);
+        }
+        pending = new ModState(ModState.CURRENT_FORMAT_VERSION, entries);
+    }
+
     public void move(String id, int targetIndex) {
         requireEditable(id);
         List<ModState.Entry> entries = new ArrayList<>(pending.entries());
@@ -82,7 +103,8 @@ public final class PendingModStateEditor {
         List<ModState.Entry> entries = new ArrayList<>(pending.entries().size());
         for (ModState.Entry entry : pending.entries()) {
             entries.add(ids.contains(entry.id())
-                    ? new ModState.Entry(entry.id(), enabled, entry.order()) : entry);
+                    ? new ModState.Entry(entry.id(), enabled, entry.order(),
+                    entry.trusted(), entry.trustedJarSha256()) : entry);
         }
         pending = new ModState(ModState.CURRENT_FORMAT_VERSION, entries);
     }
@@ -91,7 +113,8 @@ public final class PendingModStateEditor {
         List<ModState.Entry> ordered = new ArrayList<>(entries.size());
         for (int index = 0; index < entries.size(); index++) {
             ModState.Entry entry = entries.get(index);
-            ordered.add(new ModState.Entry(entry.id(), entry.enabled(), index));
+            ordered.add(new ModState.Entry(entry.id(), entry.enabled(), index,
+                    entry.trusted(), entry.trustedJarSha256()));
         }
         return new ModState(ModState.CURRENT_FORMAT_VERSION, ordered);
     }

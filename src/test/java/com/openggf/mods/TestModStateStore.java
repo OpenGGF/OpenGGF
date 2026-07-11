@@ -61,6 +61,30 @@ class TestModStateStore {
     }
 
     @Test
+    void trustGrantRoundTripsWhileLegacyV1EntriesDefaultToUntrusted() throws Exception {
+        Path root = temp.toAbsolutePath().normalize();
+        String hash = "a".repeat(64);
+        ModStateStore store = new ModStateStore(root);
+        ModState trusted = new ModState(1, List.of(
+                new ModState.Entry("code-mod", true, 0, true, hash)));
+
+        assertInstanceOf(ModStateSaveResult.Saved.class, store.save(trusted));
+        assertEquals(trusted, store.load().state());
+        String encoded = Files.readString(root.resolve("modstate.json"));
+        assertTrue(encoded.contains("\"trusted\":true"));
+        assertTrue(encoded.contains("\"trustedJarSha256\":\"" + hash + "\""));
+
+        Files.writeString(root.resolve("modstate.json"),
+                "{\"formatVersion\":1,\"entries\":[{\"id\":\"legacy\","
+                        + "\"enabled\":true,\"order\":0}]}");
+        ModState.Entry legacy = store.load().state().entries().getFirst();
+        assertFalse(legacy.trusted());
+        assertEquals(null, legacy.trustedJarSha256());
+        assertThrows(IllegalArgumentException.class, () -> new ModState.Entry(
+                "bad-hash", true, 0, true, "not-a-sha256"));
+    }
+
+    @Test
     void malformedOrUnsafeJsonIsQuarantinedToAUniqueSiblingAndNeverTrusted() throws Exception {
         List<String> invalidDocuments = List.of(
                 "not json",

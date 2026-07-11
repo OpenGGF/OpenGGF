@@ -2,6 +2,9 @@ package com.openggf;
 
 import com.openggf.mods.EffectiveModCatalog;
 import com.openggf.mods.ModCatalog;
+import com.openggf.mods.ModCatalogEntry;
+import com.openggf.mods.ModFinding;
+import com.openggf.mods.ModFindingSeverity;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModAudioPreparer;
 import com.openggf.mods.ModTrackRegistry;
@@ -12,6 +15,8 @@ import com.openggf.mods.DefaultModRepositoryScanner;
 import com.openggf.mods.EffectiveCatalogBuilder;
 import com.openggf.mods.ModCatalogValidator;
 import com.openggf.mods.ModStateStore;
+import com.openggf.mods.ModState;
+import com.openggf.mods.ModStateSaveResult;
 import com.openggf.graphics.PixelFont;
 import com.openggf.mods.ui.ModManagerScreen;
 import com.openggf.audio.AudioManager;
@@ -25,6 +30,8 @@ import java.util.Set;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.function.Function;
+import java.util.LinkedHashMap;
 
 /**
  * Process-lifetime mod catalog owner and the sole atomic owner of the session view.
@@ -38,6 +45,7 @@ public final class ModSubsystem implements AutoCloseable {
     private final ModRuntimeFindingStore runtimeFindings;
     private final SessionViewFactory sessionFactory;
     private final PendingModStateEditor pendingEditor;
+    private final Set<String> trustedCodeOwners;
     private final SessionAudioBoundary audioBoundary;
     private ExternalContentPolicy policy;
     private SessionExternalContentView sessionView = SessionExternalContentView.EMPTY;
@@ -47,13 +55,13 @@ public final class ModSubsystem implements AutoCloseable {
                         SessionViewFactory sessionFactory) {
         this(processCatalog, null, runtimeFindings, sessionFactory,
                 new DirectSessionAudioBoundary(),
-                new ExternalContentPolicy(ExternalContentMode.NORMAL));
+                new ExternalContentPolicy(ExternalContentMode.NORMAL), Set.of());
     }
 
     public ModSubsystem(ModCatalog processCatalog, ModRuntimeFindingStore runtimeFindings,
                         SessionViewFactory sessionFactory, SessionAudioBoundary audioBoundary) {
         this(processCatalog, null, runtimeFindings, sessionFactory, audioBoundary,
-                new ExternalContentPolicy(ExternalContentMode.NORMAL));
+                new ExternalContentPolicy(ExternalContentMode.NORMAL), Set.of());
     }
 
     public ModSubsystem(ModCatalog processCatalog, PendingModStateEditor pendingEditor,
@@ -61,7 +69,7 @@ public final class ModSubsystem implements AutoCloseable {
                         SessionViewFactory sessionFactory) {
         this(processCatalog, Objects.requireNonNull(pendingEditor, "pendingEditor"),
                 runtimeFindings, sessionFactory, new DirectSessionAudioBoundary(),
-                new ExternalContentPolicy(ExternalContentMode.NORMAL));
+                new ExternalContentPolicy(ExternalContentMode.NORMAL), Set.of());
     }
 
     public ModSubsystem(ModCatalog processCatalog, PendingModStateEditor pendingEditor,
@@ -69,19 +77,21 @@ public final class ModSubsystem implements AutoCloseable {
                         SessionViewFactory sessionFactory, SessionAudioBoundary audioBoundary) {
         this(processCatalog, Objects.requireNonNull(pendingEditor, "pendingEditor"),
                 runtimeFindings, sessionFactory, audioBoundary,
-                new ExternalContentPolicy(ExternalContentMode.NORMAL));
+                new ExternalContentPolicy(ExternalContentMode.NORMAL), Set.of());
     }
 
     private ModSubsystem(ModCatalog processCatalog, PendingModStateEditor pendingEditor,
                          ModRuntimeFindingStore runtimeFindings,
                          SessionViewFactory sessionFactory, SessionAudioBoundary audioBoundary,
-                         ExternalContentPolicy policy) {
+                         ExternalContentPolicy policy, Set<String> trustedCodeOwners) {
         this.processCatalog = Objects.requireNonNull(processCatalog, "processCatalog");
         this.runtimeFindings = Objects.requireNonNull(runtimeFindings, "runtimeFindings");
         this.sessionFactory = Objects.requireNonNull(sessionFactory, "sessionFactory");
         this.pendingEditor = pendingEditor;
         this.audioBoundary = Objects.requireNonNull(audioBoundary, "audioBoundary");
         this.policy = Objects.requireNonNull(policy, "policy");
+        this.trustedCodeOwners = Set.copyOf(Objects.requireNonNull(
+                trustedCodeOwners, "trustedCodeOwners"));
     }
 
     public static ModSubsystem current() { return PROCESS.get(); }
@@ -115,6 +125,8 @@ public final class ModSubsystem implements AutoCloseable {
     public synchronized ExternalContentPolicy policy() { return policy; }
 
     public ModCatalog processCatalog() { return processCatalog; }
+
+    public Set<String> trustedCodeOwners() { return trustedCodeOwners; }
 
     public ModRuntimeFindingStore runtimeFindings() { return runtimeFindings; }
 
@@ -249,7 +261,7 @@ public final class ModSubsystem implements AutoCloseable {
                 null, new ModRuntimeFindingStore(),
                 (rate, game) -> SessionExternalContentView.EMPTY,
                 new DirectSessionAudioBoundary(),
-                policy);
+                policy, Set.of());
     }
 
     /** Production preparation path: decode, build immutable indexes, then transfer the lease. */
@@ -295,17 +307,64 @@ public final class ModSubsystem implements AutoCloseable {
             ModCatalogValidator.ValidationResult validated = new ModCatalogValidator(
                     root, limits, stockMusicDomain).validate(scanned);
             ModStateStore stateStore = new ModStateStore(root, limits);
-            var startup = stateStore.load().state();
+            var loadedState = stateStore.load().state();
+            BootTrustReconciliation trust = reconcileBootTrust(
+                    loadedState, validated.entries(), stateStore::save);
+            var startup = trust.state();
             ModCatalog catalog = new EffectiveCatalogBuilder().build(validated.entries(), startup);
             PendingModStateEditor editor = new PendingModStateEditor(
                     startup, catalog.scanned(), stateStore);
             ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
+            trust.findings().forEach(findings::replaceOwner);
             ModAudioPreparer preparer = new ModAudioPreparer(root, limits, findings,
                     ModAudioPreparer.FailureStateSink.pending(editor));
             return new ModSubsystem(catalog, editor, findings,
                     preparedAudioFactory(preparer, catalog.effective(), validated.registry()),
-                    audioBoundary);
+                    audioBoundary, new ExternalContentPolicy(ExternalContentMode.NORMAL),
+                    trust.trustedCodeOwners());
         };
+    }
+
+    static BootTrustReconciliation reconcileBootTrust(
+            ModState loaded, List<? extends ModCatalogEntry> scanned,
+            Function<ModState, ModStateSaveResult> saver) {
+        Objects.requireNonNull(loaded, "loaded");
+        Objects.requireNonNull(scanned, "scanned");
+        Objects.requireNonNull(saver, "saver");
+        ModState reconciled = loaded.revokeMismatchedTrust(scanned);
+        Map<String, List<ModFinding>> findings = new LinkedHashMap<>();
+        if (!reconciled.equals(loaded)) {
+            ModStateSaveResult saveResult = Objects.requireNonNull(
+                    saver.apply(reconciled), "trust revocation save result");
+            if (saveResult instanceof ModStateSaveResult.Failed failed) {
+                Map<String, ModState.Entry> reconciledById = new LinkedHashMap<>();
+                reconciled.entries().forEach(entry -> reconciledById.put(entry.id(), entry));
+                for (ModState.Entry previous : loaded.entries()) {
+                    ModState.Entry current = reconciledById.get(previous.id());
+                    if (previous.trusted() && current != null && !current.trusted()) {
+                        findings.put(previous.id(), List.of(new ModFinding(
+                                ModFindingSeverity.WARNING, "TRUST_REVOCATION_SAVE_FAILED",
+                                "Jar hash changed; trust was revoked in memory but modstate.json "
+                                        + "could not be updated: " + failed.message(), null)));
+                    }
+                }
+            }
+        }
+        return new BootTrustReconciliation(reconciled,
+                reconciled.trustedCodeOwners(scanned), findings);
+    }
+
+    record BootTrustReconciliation(ModState state, Set<String> trustedCodeOwners,
+                                   Map<String, List<ModFinding>> findings) {
+        BootTrustReconciliation {
+            state = Objects.requireNonNull(state, "state");
+            trustedCodeOwners = Set.copyOf(Objects.requireNonNull(
+                    trustedCodeOwners, "trustedCodeOwners"));
+            Map<String, List<ModFinding>> copied = new LinkedHashMap<>();
+            Objects.requireNonNull(findings, "findings")
+                    .forEach((owner, ownerFindings) -> copied.put(owner, List.copyOf(ownerFindings)));
+            findings = Map.copyOf(copied);
+        }
     }
 
     @FunctionalInterface

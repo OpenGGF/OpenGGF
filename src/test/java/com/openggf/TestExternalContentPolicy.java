@@ -10,8 +10,13 @@ import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModAudioPreparer;
 import com.openggf.mods.ModState;
 import com.openggf.mods.ModStateStore;
+import com.openggf.mods.ModStateSaveResult;
 import com.openggf.mods.ModTrackRegistry;
 import com.openggf.mods.PendingModStateEditor;
+import com.openggf.mods.DefaultModRepositoryScanner;
+import com.openggf.mods.ModDescriptor;
+import com.openggf.mods.code.GgfMod;
+import com.openggf.mods.code.ModContext;
 import com.openggf.mods.PreparedAudioSession;
 import com.openggf.mods.PreparedModMusic;
 import com.openggf.io.ModInputLimits;
@@ -22,6 +27,10 @@ import java.nio.file.Path;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.CountDownLatch;
@@ -378,6 +387,57 @@ class TestExternalContentPolicy {
     }
 
     @Test
+    void normalBootFreezesMatchingTrustedOwnersAndPersistsHashMismatchRevocation()
+            throws Exception {
+        Path root = Files.createDirectories(temp.resolve("trust-mods")).toAbsolutePath().normalize();
+        Path jar = root.resolve("code.jar");
+        writeCodeModJar(jar, "payload-one");
+        ModDescriptor scanned = (ModDescriptor) new DefaultModRepositoryScanner(
+                ModInputLimits.production()).scan(root).getFirst();
+        ModStateStore store = new ModStateStore(root);
+        store.save(new ModState(1, List.of(new ModState.Entry(
+                "boot-code", true, 0, true, scanned.sha256()))));
+
+        ModSubsystem accepted = ModSubsystem.normalBootLoader(() -> root,
+                ModInputLimits.production(), (game, id) -> true, noOpBoundary()).get();
+        assertTrue(accepted.processCatalog().effective().orderedEnabled().stream()
+                .anyMatch(descriptor -> descriptor.manifest().id().equals("boot-code")));
+        assertTrue(accepted.trustedCodeOwners().contains("boot-code"));
+        accepted.close();
+
+        writeCodeModJar(jar, "payload-two");
+        ModSubsystem revoked = ModSubsystem.normalBootLoader(() -> root,
+                ModInputLimits.production(), (game, id) -> true, noOpBoundary()).get();
+        assertTrue(revoked.processCatalog().effective().orderedEnabled().isEmpty());
+        assertTrue(revoked.trustedCodeOwners().isEmpty());
+        ModState.Entry persisted = store.load().state().entries().getFirst();
+        assertFalse(persisted.trusted());
+        assertTrue(persisted.trustedJarSha256() == null);
+        revoked.close();
+    }
+
+    @Test
+    void bootRevocationSaveFailureIsSurfacedWhileTrustRemainsFailClosed() throws Exception {
+        Path root = Files.createDirectories(temp.resolve("failed-revocation"))
+                .toAbsolutePath().normalize();
+        writeCodeModJar(root.resolve("code.jar"), "changed");
+        ModDescriptor descriptor = (ModDescriptor) new DefaultModRepositoryScanner(
+                ModInputLimits.production()).scan(root).getFirst();
+        ModState loaded = new ModState(1, List.of(new ModState.Entry(
+                "boot-code", true, 0, true, "0".repeat(64))));
+
+        ModSubsystem.BootTrustReconciliation result = ModSubsystem.reconcileBootTrust(
+                loaded, List.of(descriptor), ignored ->
+                        new ModStateSaveResult.Failed("injected disk failure"));
+
+        assertFalse(result.state().entries().getFirst().trusted());
+        assertTrue(result.trustedCodeOwners().isEmpty());
+        assertTrue(result.findings().get("boot-code").stream()
+                .anyMatch(finding -> finding.code().equals("TRUST_REVOCATION_SAVE_FAILED")
+                        && finding.message().contains("injected disk failure")));
+    }
+
+    @Test
     void normalSessionWithNoValidatedTracksInstallsCanonicalEmptyView() {
         ModAudioPreparer preparer = new ModAudioPreparer(
                 temp.toAbsolutePath().normalize(), ModInputLimits.production(),
@@ -412,6 +472,43 @@ class TestExternalContentPolicy {
             @Override public boolean restoreState(State state) { return false; }
             @Override public void close() { closed.set(true); }
         };
+    }
+
+    private static void writeCodeModJar(Path jar, String payload) throws Exception {
+        String manifest = """
+                formatVersion: 1
+                id: boot-code
+                name: Boot Code
+                version: 1.0.0
+                authors: [Test]
+                description: Boot trust test.
+                engineApiRange: "*"
+                type: patch
+                baseGame: s1
+                entrypoint: com.openggf.TestExternalContentPolicy$BootCodeMod
+                dependencies: []
+                audioOverrides: {}
+                artOverrides: {}
+                """;
+        String classEntry = BootCodeMod.class.getName().replace('.', '/') + ".class";
+        byte[] classBytes;
+        try (var input = BootCodeMod.class.getClassLoader().getResourceAsStream(classEntry)) {
+            classBytes = java.util.Objects.requireNonNull(input).readAllBytes();
+        }
+        try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(jar))) {
+            for (Map.Entry<String, byte[]> entry : Map.of(
+                    "META-INF/openggf-mod.yaml", manifest.getBytes(StandardCharsets.UTF_8),
+                    classEntry, classBytes,
+                    "assets/payload.txt", payload.getBytes(StandardCharsets.UTF_8)).entrySet()) {
+                output.putNextEntry(new JarEntry(entry.getKey()));
+                output.write(entry.getValue());
+                output.closeEntry();
+            }
+        }
+    }
+
+    public static final class BootCodeMod implements GgfMod {
+        @Override public void register(ModContext context) { }
     }
 
     private static StreamedMusicPort countingPort(AtomicInteger closes) {

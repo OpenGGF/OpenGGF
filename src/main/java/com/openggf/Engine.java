@@ -1158,7 +1158,7 @@ public class Engine {
 			var effectiveMods = ModSubsystem.current().processCatalog().effective();
 			modRuntime = replaceModRuntime(modRuntime,
 					new ModClassLoaderFactory(Engine.class.getClassLoader())
-							.create(effectiveMods));
+							.create(effectiveMods, ModSubsystem.current().trustedCodeOwners()));
 			moduleResolutionService.installModPlanSource(
 					new EffectiveCatalogPatchEnablement(effectiveMods), enablement -> {
 						var plan = modRuntime.newRegistrationPlan();

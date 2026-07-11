@@ -3,6 +3,7 @@ package com.openggf.mods.ui;
 import com.openggf.mods.InvalidModEntry;
 import com.openggf.mods.ModCatalog;
 import com.openggf.mods.ModCatalogEntry;
+import com.openggf.mods.EffectiveCatalogBuilder;
 import com.openggf.mods.ModDependency;
 import com.openggf.mods.ModDescriptor;
 import com.openggf.mods.ModEligibility;
@@ -57,6 +58,7 @@ public final class ModManagerScreen {
     private boolean previousEscape;
     private boolean suppressInputUntilNeutral;
     private ArmedCascade armedCascade;
+    private ArmedTrust armedTrust;
     private String statusMessage = "";
     private String saveFailure;
     private boolean closeRequested;
@@ -115,12 +117,12 @@ public final class ModManagerScreen {
             return;
         }
         if (input.startHeld() && (up || down)) {
-            if (armedCascade != null) cancelCascade();
+            cancelArmedConfirmation();
             scrollDetails(down ? 1 : -1);
             return;
         }
         if (up || down || left || right) {
-            if (armedCascade != null) cancelCascade();
+            cancelArmedConfirmation();
             if (up) moveSelection(-1);
             else if (down) moveSelection(1);
             else if (left) reorderSelected(-1);
@@ -216,6 +218,8 @@ public final class ModManagerScreen {
 
     public boolean cascadeArmed() { return armedCascade != null; }
 
+    public boolean trustArmed() { return armedTrust != null; }
+
     public boolean restartRequired() { return editor.restartRequired(); }
 
     public ModState pendingState() { return editor.pendingState(); }
@@ -245,6 +249,7 @@ public final class ModManagerScreen {
         keepSelectionVisible();
         detailScrollOffset = 0;
         armedCascade = null;
+        armedTrust = null;
     }
 
     private void toggleSelected() {
@@ -260,11 +265,33 @@ public final class ModManagerScreen {
                 ? enabledDependentClosure(id) : disabledDependencyClosure(id);
         cascade.add(id);
         if (!enabled) {
-            String refusal = enableRefusal(cascade);
+            String refusal = enableRefusal(cascade, id);
             if (refusal != null) {
                 statusMessage = id + " cannot be enabled: " + refusal;
                 armedCascade = null;
+                armedTrust = null;
                 return;
+            }
+            if (row.descriptor().containsCode() && !isTrusted(row.descriptor())) {
+                if (armedTrust != null && armedTrust.id().equals(id)
+                        && armedTrust.sha256().equals(row.descriptor().sha256())
+                        && armedTrust.enableIds().equals(Set.copyOf(cascade))) {
+                    editor.trust(id);
+                    editor.setEnabledCascade(cascade, true);
+                    armedTrust = null;
+                    statusMessage = cascade.size() == 1 ? "Trusted and enabled " + id
+                            : "Trusted and enabled dependency cascade";
+                    saveFailure = null;
+                    rebuildRows(id);
+                    return;
+                } else {
+                    armedCascade = null;
+                    armedTrust = new ArmedTrust(id, row.descriptor().sha256(), Set.copyOf(cascade));
+                    statusMessage = "This mod contains code and runs with full permissions. "
+                            + "Press accept again to trust and enable: "
+                            + String.join(", ", cascade);
+                    return;
+                }
             }
         }
         if (cascade.size() > 1) {
@@ -274,22 +301,27 @@ public final class ModManagerScreen {
                 statusMessage = armedCascade.enable() ? "Enabled dependency cascade"
                         : "Disabled dependent cascade";
                 armedCascade = null;
+                armedTrust = null;
                 saveFailure = null;
                 rebuildRows(id);
             } else {
                 armedCascade = new ArmedCascade(id, Set.copyOf(cascade), !enabled);
+                armedTrust = null;
                 statusMessage = "Press accept again to " + (enabled ? "disable " : "enable ")
                         + String.join(", ", cascade);
             }
             return;
         }
         editor.setEnabled(id, !enabled);
+        armedTrust = null;
         statusMessage = !enabled ? "Enabled " + id : "Disabled " + id;
         saveFailure = null;
         rebuildRows(id);
     }
 
-    private String enableRefusal(Collection<String> ids) {
+    private String enableRefusal(Collection<String> ids, String trustPromptId) {
+        Map<String, ModEligibility> pendingEligibility = new EffectiveCatalogBuilder()
+                .build(catalog.scanned(), proposedEnabledState(ids, trustPromptId)).eligibility();
         for (String id : ids) {
             ModDescriptor descriptor = descriptorsById.get(id);
             if (descriptor == null) return "missing dependency " + id;
@@ -297,13 +329,42 @@ public final class ModManagerScreen {
                     .filter(finding -> finding.severity() == ModFindingSeverity.ERROR)
                     .findFirst().orElse(null);
             if (error != null) return error.message();
-            ModEligibility eligibility = catalog.eligibility().get(id);
+            ModEligibility frozen = catalog.eligibility().get(id);
+            if (frozen != null && frozen.status() == ModEligibility.Status.BLOCKED) {
+                String fixedReason = frozen.reasons().stream()
+                        .filter(reason -> !Set.of("CODE_TRUST_REQUIRED", "DEPENDENCY_BLOCKED",
+                                "DEPENDENCY_DISABLED").contains(reason.code()))
+                        .map(ModEligibility.Reason::message).findFirst().orElse(null);
+                if (fixedReason != null) return fixedReason;
+            }
+            ModEligibility eligibility = pendingEligibility.get(id);
             if (eligibility != null && eligibility.status() == ModEligibility.Status.BLOCKED) {
-                return eligibility.reasons().stream().map(ModEligibility.Reason::message)
-                        .findFirst().orElse("blocked");
+                String blockingReason = eligibility.reasons().stream()
+                        .filter(reason -> !reason.code().equals("CODE_TRUST_REQUIRED")
+                                || (!id.equals(trustPromptId)
+                                && !isTrusted(descriptorsById.get(id))))
+                        .map(ModEligibility.Reason::message)
+                        .findFirst().orElse(null);
+                if (blockingReason != null) return blockingReason;
             }
         }
         return null;
+    }
+
+    private ModState proposedEnabledState(Collection<String> ids, String trustPromptId) {
+        Set<String> enabledIds = Set.copyOf(ids);
+        List<ModState.Entry> entries = editor.pendingState().entries().stream()
+                .map(entry -> {
+                    if (!enabledIds.contains(entry.id())) return entry;
+                    ModDescriptor descriptor = descriptorsById.get(entry.id());
+                    boolean proposedTrust = entry.id().equals(trustPromptId)
+                            && descriptor != null && descriptor.containsCode();
+                    return new ModState.Entry(entry.id(), true, entry.order(),
+                            proposedTrust || entry.trusted(), proposedTrust
+                            ? descriptor.sha256() : entry.trustedJarSha256());
+                })
+                .toList();
+        return new ModState(ModState.CURRENT_FORMAT_VERSION, entries);
     }
 
     private LinkedHashSet<String> disabledDependencyClosure(String root) {
@@ -351,6 +412,15 @@ public final class ModManagerScreen {
     private void cancelCascade() {
         armedCascade = null;
         statusMessage = "Cascade cancelled";
+    }
+
+    private void cancelArmedConfirmation() {
+        if (armedTrust != null) {
+            armedTrust = null;
+            statusMessage = "Trust confirmation cancelled";
+        } else if (armedCascade != null) {
+            cancelCascade();
+        }
     }
 
     private void reorderSelected(int delta) {
@@ -412,7 +482,7 @@ public final class ModManagerScreen {
     }
 
     private void handleBack() {
-        if (armedCascade != null) cancelCascade();
+        if (armedTrust != null || armedCascade != null) cancelArmedConfirmation();
         else saveAndRequestClose();
     }
 
@@ -489,6 +559,7 @@ public final class ModManagerScreen {
         LinkedHashSet<String> badges = new LinkedHashSet<>();
         ModEligibility eligibility = catalog.eligibility().get(id);
         if (eligibility != null && eligibility.status() == ModEligibility.Status.BLOCKED) badges.add("BLOCKED");
+        if (descriptor.containsCode() && !isTrusted(descriptor)) badges.add("TRUST REQUIRED");
         addFindingBadges(badges, descriptor.findings(), false);
         addFindingBadges(badges, runtimeFindings.findingsFor(id), true);
         String label = descriptorCounts.getOrDefault(id, 0) > 1
@@ -549,6 +620,12 @@ public final class ModManagerScreen {
                 .anyMatch(entry -> entry.id().equals(id) && entry.enabled());
     }
 
+    private boolean isTrusted(ModDescriptor descriptor) {
+        return editor.pendingState().entries().stream()
+                .filter(entry -> entry.id().equals(descriptor.manifest().id()))
+                .findFirst().map(entry -> entry.trustsSha256(descriptor.sha256())).orElse(false);
+    }
+
     private static int indexOf(List<ModState.Entry> entries, String id) {
         for (int index = 0; index < entries.size(); index++) {
             if (entries.get(index).id().equals(id)) return index;
@@ -585,6 +662,8 @@ public final class ModManagerScreen {
     private record Row(ModDescriptor descriptor, InvalidModEntry invalid, String identity) { }
 
     private record ArmedCascade(String id, Set<String> ids, boolean enable) { }
+
+    private record ArmedTrust(String id, String sha256, Set<String> enableIds) { }
 
     private static boolean isMenuNeutral(MenuInput input) {
         return !input.menuUp() && !input.menuDown() && !input.menuLeft() && !input.menuRight()

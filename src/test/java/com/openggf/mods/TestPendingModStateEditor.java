@@ -23,14 +23,14 @@ class TestPendingModStateEditor {
     void normalizationRetainsUnknownIdsAndAppendsNewDescriptorsDisabledInStableOrder() {
         ModState persisted = new ModState(1, List.of(
                 new ModState.Entry("known-b", true, 4),
-                new ModState.Entry("temporarily-missing", true, 8)));
+                new ModState.Entry("temporarily-missing", true, 8, true, "a".repeat(64))));
         List<ModCatalogEntry> scanned = List.of(descriptor("known-a"), descriptor("known-b"));
 
         ModState normalized = persisted.normalize(scanned);
 
         assertEquals(List.of(
                 new ModState.Entry("known-b", true, 0),
-                new ModState.Entry("temporarily-missing", true, 1),
+                new ModState.Entry("temporarily-missing", true, 1, true, "a".repeat(64)),
                 new ModState.Entry("known-a", false, 2)), normalized.entries());
     }
 
@@ -100,11 +100,44 @@ class TestPendingModStateEditor {
         assertTrue(Files.exists(root.resolve("modstate.json")));
     }
 
+    @Test
+    void staleJarTrustIsClearedInPendingStateAndFreshGrantUsesScannedHash() {
+        Path root = temp.toAbsolutePath().normalize();
+        ModDescriptor descriptor = codeDescriptor("code", "b".repeat(64));
+        ModState startup = new ModState(1, List.of(
+                new ModState.Entry("code", true, 0, true, "a".repeat(64))));
+        PendingModStateEditor editor = new PendingModStateEditor(
+                startup, List.of(descriptor), new ModStateStore(root));
+
+        ModState.Entry revoked = editor.pendingState().entries().getFirst();
+        assertFalse(revoked.trusted());
+        assertEquals(null, revoked.trustedJarSha256());
+        assertFalse(editor.restartRequired(), "revocation is part of boot normalization");
+
+        editor.trust("code");
+        ModState.Entry granted = editor.pendingState().entries().getFirst();
+        assertTrue(granted.trusted());
+        assertEquals(descriptor.sha256(), granted.trustedJarSha256());
+
+        editor.disable("code");
+        editor.move("code", 0);
+        ModState.Entry disabled = editor.pendingState().entries().getFirst();
+        assertFalse(disabled.enabled());
+        assertTrue(disabled.trustsSha256(descriptor.sha256()));
+    }
+
     private ModDescriptor descriptor(String id) {
         ModManifest manifest = new ModManifest(1, id, id, new SemanticVersion(1, 0, 0),
                 List.of("Author"), "Description", VersionRange.parse("*"), ModType.PATCH,
                 "s1", null, List.of(), Map.of(), Map.of(), null, OptionalInt.empty());
         return new ModDescriptor(temp.resolve(id + ".jar"), manifest, "0".repeat(64), false, List.of());
+    }
+
+    private ModDescriptor codeDescriptor(String id, String hash) {
+        ModManifest manifest = new ModManifest(1, id, id, new SemanticVersion(1, 0, 0),
+                List.of("Author"), "Description", VersionRange.parse("*"), ModType.PATCH,
+                "s1", "example.Code", List.of(), Map.of(), Map.of(), null, OptionalInt.empty());
+        return new ModDescriptor(temp.resolve(id + ".jar"), manifest, hash, true, List.of());
     }
 
     private static ModFinding error(String code) {

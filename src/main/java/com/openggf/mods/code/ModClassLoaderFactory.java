@@ -50,7 +50,8 @@ public final class ModClassLoaderFactory {
         return create(catalog, Set.of());
     }
 
-    ModRuntime create(EffectiveModCatalog catalog, Set<String> trustedCodeOwners) throws IOException {
+    public ModRuntime create(EffectiveModCatalog catalog, Set<String> trustedCodeOwners)
+            throws IOException {
         Objects.requireNonNull(catalog, "catalog");
         Set<String> trusted = Set.copyOf(Objects.requireNonNull(trustedCodeOwners,
                 "trustedCodeOwners"));
