@@ -448,7 +448,10 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
             facingLeft = parent.badnikFacingLeft();
             currentX = parent.getX() + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
             currentY = parent.getY();
-            xVelocity = facingLeft ? -SHELL_LAUNCH_SPEED_X : SHELL_LAUNCH_SPEED_X;
+            // Child loc_87D72 inherits the parent's post-retreat render bit.
+            // The parent moves in that facing direction, while the detached
+            // shell tests the same bit and launches in the opposite direction.
+            xVelocity = facingLeft ? SHELL_LAUNCH_SPEED_X : -SHELL_LAUNCH_SPEED_X;
             yVelocity = SHELL_LAUNCH_SPEED_Y;
             trailEmitter = spawnChild(() -> new TurboSpikerTrailEmitter(this));
             services().playSfx(Sonic3kSfx.FLOOR_LAUNCHER.id);

@@ -79,6 +79,12 @@ public class TestTurboSpikerBadnikInstance {
             assertEquals("SHELLLESS_RUN", readState(turboSpiker));
             assertTrue(services.playedSfx.contains(Sonic3kSfx.FLOOR_LAUNCHER.id), "Expected shell launch SFX");
             assertTrue(services.spawnedChildren.size() >= 2, "Expected shell trail child after launch");
+
+            ObjectInstance shell = services.spawnedChildren.get(0);
+            int shellXBeforeMove = shell.getX();
+            shell.update(20, player);
+            assertEquals(shellXBeforeMove - 1, shell.getX(),
+                    "Detached shell launches opposite the parent's rightward retreat");
         }
     }
 

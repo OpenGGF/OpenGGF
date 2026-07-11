@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **HCZ TurboSpiker shells now launch opposite the parent's retreat:** the detached child interprets the inherited post-retreat render bit with its native opposite `$100` velocity, preventing the badnik and shell from traveling together (`docs/skdisasm/sonic3k.asm:183973-184070`).
 - **S3K tension bridges now bend from the prior solid-contact segment:** the current player segment is published only after the frame's bend/slope data is built, matching `$3F` consumption followed by `sub_38A88` instead of reshaping the bridge one object pass early (`docs/skdisasm/sonic3k.asm:75555-75635,75879-75946,76164-76240`).
 - **S3K CPU Tails now preserves the shared flight/respawn timer across recovery landing:** routine 4's accumulated `Tails_CPU_flight_timer` carries into routine 6's off-screen check exactly as the single ROM word does, instead of restarting from a separate engine counter (`docs/skdisasm/sonic3k.asm:26534-26648,26816-26837`).
 - **HCZ2 slide terrain and water skimming now execute at their native post-player boundary:** the live layout byte selects the ten ROM slide chunks and publishes infinite inertia for the following movement tick, while the water-splash owner observes same-frame terrain contact before refreshing facing, pinning the surface, and applying airborne skim friction (`docs/skdisasm/sonic3k.asm:8960-9100,75314-75491`).
