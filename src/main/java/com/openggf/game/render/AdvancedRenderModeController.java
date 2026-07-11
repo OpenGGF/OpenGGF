@@ -73,21 +73,28 @@ public final class AdvancedRenderModeController
 
     @Override
     public AdvancedRenderModeSnapshot capture() {
+        if (modes.isEmpty()) {
+            return AdvancedRenderModeSnapshot.empty();
+        }
         return new AdvancedRenderModeSnapshot(modes, captureModeStates());
     }
 
     @Override
     public void restore(AdvancedRenderModeSnapshot s) {
+        Objects.requireNonNull(s, "s");
         modes.clear();
         modes.addAll(s.modes());
         restoreModeStates(s);
     }
 
     private List<AdvancedRenderModeSnapshot.ModeState> captureModeStates() {
-        List<AdvancedRenderModeSnapshot.ModeState> states = new ArrayList<>();
+        List<AdvancedRenderModeSnapshot.ModeState> states = null;
         for (int i = 0; i < modes.size(); i++) {
             AdvancedRenderMode mode = modes.get(i);
             if (mode instanceof RewindSnapshottable<?> snapshottable) {
+                if (states == null) {
+                    states = new ArrayList<>();
+                }
                 states.add(new AdvancedRenderModeSnapshot.ModeState(
                         i,
                         snapshottable.key(),
@@ -96,7 +103,7 @@ public final class AdvancedRenderModeController
                                         + snapshottable.key())));
             }
         }
-        return states;
+        return states != null ? states : List.of();
     }
 
     private void restoreModeStates(AdvancedRenderModeSnapshot snapshot) {

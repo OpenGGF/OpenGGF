@@ -2610,6 +2610,13 @@ public class Sonic2SpecialStageManager {
         skydomeScrollTable = null;
         palettes = null;
 
+        // Detach renderer-owned ordering scratch before the authoritative
+        // collections below are cleared or discarded.
+        if (renderer != null) {
+            renderer.setPlayers(null);
+            renderer.setObjectManager(null);
+        }
+
         sonicPlayer = null;
         tailsPlayer = null;
         players.clear();
