@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f10386 / 2393 errors (2 errors under `frontierOnly`).
+f3318 / 4234 errors to f10390 / 2383 errors (8 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -133,6 +133,19 @@ This closes f9976 and advances HCZ to f10386 / 2393 full-run errors (2 under
 `frontierOnly`). The fresh S3K sweep keeps both AIZ traces green and every
 non-HCZ frontier unchanged; 11 invariant guards, 27 dynamic-water tests, the
 miniboss cleanup guard, and all 21 S3K keep-green tests pass.
+
+Milestone 5 keeps live camera bounds through HCZ/MGZ's in-level Act 1 results
+handoff. ROM `Obj_LevelResults` mutates into `Obj_TitleCard` without restoring
+level-size words; the HCZ bounds offset to `$0080/$0638` therefore remain locked
+until the title-card/event chain changes them (`sonic3k.asm:62686-62720`). The
+shared results policy now expresses that native handoff alongside the existing
+AIZ1 and LBZ2 exclusions, with a pure policy guard that avoids the repository's
+unrelated Mockito/JDK 26 retransformation limitation.
+
+HCZ advances from f10386 to f10390 / 2383 full-run errors (8 under
+`frontierOnly`). Both AIZ traces remain green and every non-HCZ S3K frontier is
+unchanged in the fresh sweep; the 11 invariant guards, 2 camera-policy tests,
+and 21 S3K keep-green tests pass.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

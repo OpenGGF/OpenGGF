@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K in-level Act 1 results handoffs now preserve their live camera bounds:** HCZ/MGZ, like AIZ, mutate `Obj_LevelResults` into `Obj_TitleCard` without restoring full-level bounds, so transition-era camera locks remain active until the native title-card/event chain changes them (`docs/skdisasm/sonic3k.asm:62686-62720`).
 - **HCZ miniboss results now preserve the ROM dynamic-water lock across the Act 2 reload:** `loc_6A22A` sets `_unkFAA2`, the per-act water-state bridge carries it onto HCZ2, and `DynamicWaterHeight_HCZ2` therefore cannot replace the transition's `$06A0` level while the players remain frozen (`docs/skdisasm/sonic3k.asm:8721-8737,140574-140575`).
 - **HCZ1 now reloads Act 2 on its native queued-resource boundary:** `HCZ1BGE_DoTransition` waits for the incremental 17,568-byte secondary KosM workload instead of results completion, then reloads in the same background-event dispatch while preserving rings/time, offsetting both players and live camera bounds by `-$3600`, and installing the transition water height `$06A0` (`docs/skdisasm/sonic3k.asm:2668-2791,2823-2953,105702-105780`).
 - **S3K signpost results now separate the native Player 1 and Tails ending-pose dispatches:** `Obj_EndSignResults` freezes only Player 1 while locking Ctrl-2; Tails retains CPU movement until the later `Check_TailsEndPose` dispatch clears that lock and applies his victory pose (`docs/skdisasm/sonic3k.asm:176198-176272,181919-181940`).

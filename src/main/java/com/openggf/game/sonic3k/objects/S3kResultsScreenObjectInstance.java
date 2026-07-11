@@ -574,8 +574,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         if (!lbzAct2PostBossHandoff) {
             cam.setFrozen(false);
         }
-        if (!aizAct1MinibossTitleHandoff
-                && !lbzAct2PostBossHandoff
+        if (shouldRestoreLevelCameraBoundsOnExit(zone, act)
                 && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
             if (level != null) {
@@ -652,6 +651,13 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         ObjectLifetimeOps.deleteNoRespawn(this);
         LOG.fine(() -> String.format("S3K results exit: zone=%X act=%d isAct2OrSpecial=%b",
                 zone, act, isAct2OrSpecial));
+    }
+
+    static boolean shouldRestoreLevelCameraBoundsOnExit(int zone, int act) {
+        boolean actOneInLevelTitleHandoff = act == 0
+                && (zone == 0x00 || zone == 0x01 || zone == 0x02);
+        boolean lbzActTwoPostBossHandoff = zone == 0x06 && act == 1;
+        return !actOneInLevelTitleHandoff && !lbzActTwoPostBossHandoff;
     }
 
     protected boolean shouldRestorePlayerControlsOnExit() {
