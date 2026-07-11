@@ -43,7 +43,8 @@ branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 ## 2026-07-11 - Mod-support Phase 0 A6 launch-wiring spot sweep
 
 Phase 0 A6 ran the required comparison-only launch-wiring spot sweep from
-`next` at base `7f5d92dce` with the uncommitted A6 changes using:
+the reviewed `next` candidate `30ad73194` (implementation `fb3bf3c35` plus
+integration-test follow-up) using:
 `mvn "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test`.
 
 - The S1 GHZ1 and S2 EHZ1 trace spots and the S3K must-keep-green tests passed.
