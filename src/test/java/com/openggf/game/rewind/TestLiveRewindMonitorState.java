@@ -36,17 +36,22 @@ import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 @RequiresRom(SonicGame.SONIC_2)
 class TestLiveRewindMonitorState {
     private SonicConfigurationService config;
+    private boolean originalLiveRewindEnabled;
+    private boolean originalTapeCoastEnabled;
 
     @BeforeEach
     void setUp() {
         config = SonicConfigurationService.getInstance();
+        originalLiveRewindEnabled = config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED);
+        originalTapeCoastEnabled = config.getBoolean(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, false);
     }
 
     @AfterEach
     void tearDown() {
-        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, originalLiveRewindEnabled);
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, originalTapeCoastEnabled);
         SessionManager.clear();
     }
 
@@ -134,21 +139,26 @@ class TestLiveRewindMonitorState {
             assertNotNull(restoredMonitor, "rewind must restore the intact monitor shell");
             assertIntact(objects, restoredMonitor);
         } finally {
-            rewindInput.handleKeyEvent(rewindKey, GLFW_RELEASE);
-            assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput),
-                    "release must leave live rewind inactive");
-            if (heldIntensity > 0.0f) {
-                assertTrue(manager.effectIntensity() < heldIntensity,
-                        "release must begin decaying the rewind presentation envelope");
+            try {
+                rewindInput.handleKeyEvent(rewindKey, GLFW_RELEASE);
+                assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput),
+                        "release must leave live rewind inactive");
+                if (heldIntensity > 0.0f) {
+                    assertTrue(manager.effectIntensity() < heldIntensity,
+                            "release must begin decaying the rewind presentation envelope");
+                }
+                assertFalse(GameServices.audio().isReverseAudioPresentationActive(),
+                        "release must end global reverse audio presentation before session teardown");
+                assertFalse(gameplayMode.getFadeManager().isReversePresentationActive(),
+                        "release must end reverse fade presentation before session teardown");
+                config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+                assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput));
+                assertEquals(0.0f, manager.effectIntensity(),
+                        "disabling live rewind must clear the presentation envelope");
+            } finally {
+                config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, originalLiveRewindEnabled);
+                config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, originalTapeCoastEnabled);
             }
-            assertFalse(GameServices.audio().isReverseAudioPresentationActive(),
-                    "release must end global reverse audio presentation before session teardown");
-            assertFalse(gameplayMode.getFadeManager().isReversePresentationActive(),
-                    "release must end reverse fade presentation before session teardown");
-            config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
-            assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput));
-            assertEquals(0.0f, manager.effectIntensity(),
-                    "disabling live rewind must clear the presentation envelope");
         }
     }
 
