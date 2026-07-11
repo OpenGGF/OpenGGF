@@ -725,8 +725,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             // built by the ring's PREVIOUS-frame Add_SpriteToCollisionResponseList,
             // so the give uses the pre-move position. Test here (pre-move) to defer
             // one frame to match ROM (S3K MGZ rings f539).
-            if (attractedRingOverlapsPlayerTouchBox(ar, player)) {
-                player.addRings(1);
+            AbstractPlayableSprite collector = attractedRingCollector(ar, player);
+            if (collector != null) {
+                collector.addRings(1);
                 audioManager.playSfx(GameSound.RING);
                 ar.collected = true;
                 ar.sparkleStartFrame = frameCounter;
@@ -776,6 +777,25 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             ar.ySub = yLong & 0xFFFF;
             // give-ring tested pre-move at top of loop (ROM list timing)
         }
+    }
+
+    private AbstractPlayableSprite attractedRingCollector(AttractedRing ar,
+                                                            AbstractPlayableSprite mainPlayer) {
+        if (!cannotCollectRings(mainPlayer)
+                && attractedRingOverlapsPlayerTouchBox(ar, mainPlayer)) {
+            return mainPlayer;
+        }
+        var sprites = GameServices.spritesOrNull();
+        if (sprites == null) {
+            return null;
+        }
+        for (AbstractPlayableSprite sidekick : sprites.getSidekicks()) {
+            if (!cannotCollectRings(sidekick)
+                    && attractedRingOverlapsPlayerTouchBox(ar, sidekick)) {
+                return sidekick;
+            }
+        }
+        return null;
     }
 
     private boolean attractedRingOverlapsPlayerTouchBox(AttractedRing ar, AbstractPlayableSprite player) {

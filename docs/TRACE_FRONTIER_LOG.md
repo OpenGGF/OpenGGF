@@ -681,7 +681,7 @@ tests `Status_Roll`; this matters when an earlier routine cleared only the
 status bit while leaving rolling radii live. The engine's `setRolling(false)`
 was a no-op in that state, so CPU Tails approached the f17130 terrain landing
 with a 7x14 sensor box instead of ROM's recorded 9x15 box and snapped one pixel
-low. `applyHurt` now restores standing radii independently of the flag, with a
+low. `applyHurt` now restores standing radii independently of the flag, while
 focused regression guards pin both S3K's restore and S2's distinct preservation
 of the split status/radius state
 (`sonic3k.asm:21065-21093,24335-24369,29133-29170`). Under the temporary
@@ -692,6 +692,22 @@ until the earlier spill-owner allocation permutation is modeled. The focused
 AIZ replay remains green. Full exact-tree S1 (29) and S2 (48) trace fleets
 both pass; the S2-specific preservation guard and HTZ2 replay also pass. The
 AIZ stage is not green yet.
+
+Round 50 restores native player participation for attracted-ring collection.
+`Obj_Attracted_Ring` publishes itself through the collision-response list after
+motion, and both player slots run `TouchResponse`; the ring's attraction owner
+controls motion but does not make collection P1-only. The engine now checks the
+main player followed by live sidekicks against the prior ring position before
+moving it, so the ring crossing CPU Tails at f17545 is collected on the ROM
+frame instead of one frame later. A focused guard pins sidekick collection while
+the existing near-miss guard preserves `$47` touch bounds
+(`sonic3k.asm:18444-18531,20612-20640,35760-35837`). Under the temporary
+comparison-only spill-phase diagnostic, the downstream frontier moves from
+f17545 to f17845 / 2 errors (`tails_y`, expected `$03FF`, actual `$03F8`). The
+diagnostic remains unstaged; the committed complete-run frontier remains
+f16755 / 657 until the spill-owner slot permutation is resolved. The AIZ stage
+focused replay remains green, and full exact-tree S1 (29) and S2 (48) fleets
+both pass. The AIZ stage is not green yet.
 
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
