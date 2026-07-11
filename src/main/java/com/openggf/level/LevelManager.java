@@ -3105,6 +3105,16 @@ public class LevelManager {
     /** @see LevelTransitionCoordinator#requestInLevelTitleCard(int, int) */
     public void requestInLevelTitleCard(int zone, int act) { transitions.requestInLevelTitleCard(zone, act); }
 
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay) {
+        transitions.requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches) {
+        transitions.requestInLevelTitleCard(
+                zone, act, resetLevelGamestateAtDisplay, resetAdditionalDispatches);
+    }
+
     /** @see LevelTransitionCoordinator#isTitleCardRequested() */
     public boolean isTitleCardRequested() { return transitions.isTitleCardRequested(); }
 
@@ -3120,6 +3130,14 @@ public class LevelManager {
 
     /** @see LevelTransitionCoordinator#consumeInLevelTitleCardRequest() */
     public boolean consumeInLevelTitleCardRequest() { return transitions.consumeInLevelTitleCardRequest(); }
+
+    public boolean consumeInLevelTitleCardLevelGamestateResetRequest() {
+        return transitions.consumeInLevelTitleCardLevelGamestateResetRequest();
+    }
+
+    public int consumeInLevelTitleCardResetAdditionalDispatches() {
+        return transitions.consumeInLevelTitleCardResetAdditionalDispatches();
+    }
 
     /** @see LevelTransitionCoordinator#getTitleCardZone() */
     public int getTitleCardZone() { return transitions.getTitleCardZone(); }

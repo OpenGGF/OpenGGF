@@ -18,6 +18,8 @@ public final class SeamlessLevelTransitionRequest {
     private final boolean preserveLevelGamestate;
     private final boolean preserveEndOfLevelState;
     private final boolean showInLevelTitleCard;
+    private final boolean resetLevelGamestateAtInLevelTitleCardDisplay;
+    private final int inLevelTitleCardResetAdditionalDispatches;
     private final boolean forceAirOnStaleObjectSupportLoss;
     private final boolean preserveOffsetCameraPosition;
     private final Integer postTransitionMinX;
@@ -41,6 +43,10 @@ public final class SeamlessLevelTransitionRequest {
         this.preserveLevelGamestate = builder.preserveLevelGamestate;
         this.preserveEndOfLevelState = builder.preserveEndOfLevelState;
         this.showInLevelTitleCard = builder.showInLevelTitleCard;
+        this.resetLevelGamestateAtInLevelTitleCardDisplay =
+                builder.resetLevelGamestateAtInLevelTitleCardDisplay;
+        this.inLevelTitleCardResetAdditionalDispatches =
+                builder.inLevelTitleCardResetAdditionalDispatches;
         this.forceAirOnStaleObjectSupportLoss = builder.forceAirOnStaleObjectSupportLoss;
         this.preserveOffsetCameraPosition = builder.preserveOffsetCameraPosition;
         this.postTransitionMinX = builder.postTransitionMinX;
@@ -86,6 +92,14 @@ public final class SeamlessLevelTransitionRequest {
 
     public boolean showInLevelTitleCard() {
         return showInLevelTitleCard;
+    }
+
+    public boolean resetLevelGamestateAtInLevelTitleCardDisplay() {
+        return resetLevelGamestateAtInLevelTitleCardDisplay;
+    }
+
+    public int inLevelTitleCardResetAdditionalDispatches() {
+        return inLevelTitleCardResetAdditionalDispatches;
     }
 
     public boolean forceAirOnStaleObjectSupportLoss() {
@@ -153,6 +167,8 @@ public final class SeamlessLevelTransitionRequest {
         private boolean preserveLevelGamestate;
         private boolean preserveEndOfLevelState;
         private boolean showInLevelTitleCard;
+        private boolean resetLevelGamestateAtInLevelTitleCardDisplay;
+        private int inLevelTitleCardResetAdditionalDispatches;
         private boolean forceAirOnStaleObjectSupportLoss;
         private boolean preserveOffsetCameraPosition;
         private Integer postTransitionMinX;
@@ -204,6 +220,16 @@ public final class SeamlessLevelTransitionRequest {
 
         public Builder showInLevelTitleCard(boolean showInLevelTitleCard) {
             this.showInLevelTitleCard = showInLevelTitleCard;
+            return this;
+        }
+
+        public Builder resetLevelGamestateAtInLevelTitleCardDisplay(boolean reset) {
+            this.resetLevelGamestateAtInLevelTitleCardDisplay = reset;
+            return this;
+        }
+
+        public Builder inLevelTitleCardResetAdditionalDispatches(int dispatches) {
+            this.inLevelTitleCardResetAdditionalDispatches = Math.max(0, dispatches);
             return this;
         }
 

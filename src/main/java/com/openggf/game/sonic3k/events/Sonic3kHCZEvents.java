@@ -559,6 +559,13 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                         .preserveEndOfLevelState(true)
                         // Show act 2 title card after the level reloads
                         .showInLevelTitleCard(true)
+                        .resetLevelGamestateAtInLevelTitleCardDisplay(true)
+                        // The carried Obj_LevelResults parent becomes
+                        // Obj_TitleCard before its four children receive their
+                        // native create/render dispatches. The slotless overlay
+                        // starts after that parent handoff, so retain the seven
+                        // intervening child dispatches before Obj_TitleCardWait.
+                        .inLevelTitleCardResetAdditionalDispatches(7)
                         // ROM subtracts $3600 from the live camera and its
                         // bounds; it does not recenter from Player_1 afterward.
                         .preserveOffsetCameraPosition(true)

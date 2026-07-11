@@ -132,6 +132,9 @@ public final class RecordingFrameDriver {
     }
 
     private void startPendingInLevelTitleCardIfRequested() {
+        if (GameServices.gameState().isEndOfLevelActive()) {
+            return;
+        }
         if (!levelManager.consumeInLevelTitleCardRequest()) {
             return;
         }
@@ -140,6 +143,10 @@ public final class RecordingFrameDriver {
             titleCardProvider.initializeInLevel(
                     levelManager.getInLevelTitleCardZone(),
                     levelManager.getInLevelTitleCardAct());
+            if (levelManager.consumeInLevelTitleCardLevelGamestateResetRequest()) {
+                titleCardProvider.requestLevelGamestateResetAtInLevelDisplay(
+                        levelManager.consumeInLevelTitleCardResetAdditionalDispatches());
+            }
         }
     }
 

@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f10429 / 3138 errors (1 error under `frontierOnly`).
+f3318 / 4234 errors to f10464 / 3117 errors (4 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -170,6 +170,22 @@ sweep: CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f866 /
 1, MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 The 11 trace invariants plus the focused control/transition guards and 21 S3K
 keep-green tests pass (60 selected tests total).
+
+Milestone 7 moves the HCZ Act 2 timer/ring reset onto the title-card display
+boundary. In-level title-card requests now remain pending while the ROM
+`_unkFAA8` equivalent says level results are active, rather than starting at
+the earlier `Load_Level` resource swap. The transition request carries an
+explicit fresh-level-state intent into `TitleCardProvider`; HCZ retains the
+seven native parent-to-child create/render dispatches before
+`Obj_TitleCardWait` makes the reset visible. This resets rings from 149 to zero
+at f10429 without hydrating trace state or branching shared runtime code on a
+zone or frame (`sonic3k.asm:62214-62235,62686-62720`).
+
+HCZ advances to f10464 / 3117 full-run errors (4 under `frontierOnly`). Both
+AIZ routes remain green, and the fresh all-S3K sweep reproduces the unchanged
+non-HCZ frontiers from milestone 6. The 11 trace invariants, 21 S3K keep-green
+tests, the full 11-test act-transition integration class, and the new pure
+title-card request/reset-intent guard pass (69 selected tests total).
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

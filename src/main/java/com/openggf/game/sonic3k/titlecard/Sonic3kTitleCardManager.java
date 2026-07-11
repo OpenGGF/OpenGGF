@@ -173,6 +173,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
      * native Obj_TitleCardWait reset becomes visible when the engine's title
      * card children finish sliding to their display positions.
      */
+    @Override
     public void requestLevelGamestateResetAtInLevelDisplay() {
         if (inLevelMode) {
             resetLevelGamestateOnInLevelDisplay = true;
@@ -187,6 +188,14 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
             // five updates after the slotless manager would otherwise predict
             // completion when initialization precedes phase 0.
             inLevelExitDelayFrames = modulePhase == 1 ? 5 : 0;
+        }
+    }
+
+    @Override
+    public void requestLevelGamestateResetAtInLevelDisplay(int additionalDispatches) {
+        requestLevelGamestateResetAtInLevelDisplay();
+        if (resetLevelGamestateOnInLevelDisplay) {
+            resetLevelGamestateCountdown += Math.max(0, additionalDispatches);
         }
     }
 

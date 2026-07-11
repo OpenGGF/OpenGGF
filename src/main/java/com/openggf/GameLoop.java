@@ -1288,7 +1288,8 @@ public class GameLoop {
         if (seamlessRequest != null) {
             userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
             levelManager.applySeamlessTransition(seamlessRequest);
-            if (levelManager.consumeInLevelTitleCardRequest()) {
+            if (!GameServices.gameState().isEndOfLevelActive()
+                    && levelManager.consumeInLevelTitleCardRequest()) {
                 enterInLevelTitleCard(levelManager.getInLevelTitleCardZone(), levelManager.getInLevelTitleCardAct());
             }
             updateNonGameplayAudio(doFrameStep);
@@ -1310,7 +1311,8 @@ public class GameLoop {
         }
 
         // Trigger transparent in-level title card overlays (no mode switch).
-        if (levelManager.consumeInLevelTitleCardRequest()) {
+        if (!GameServices.gameState().isEndOfLevelActive()
+                && levelManager.consumeInLevelTitleCardRequest()) {
             enterInLevelTitleCard(levelManager.getInLevelTitleCardZone(), levelManager.getInLevelTitleCardAct());
         }
 
@@ -2899,6 +2901,10 @@ public class GameLoop {
             return;
         }
         provider.initializeInLevel(zoneIndex, actIndex);
+        if (levelManager.consumeInLevelTitleCardLevelGamestateResetRequest()) {
+            provider.requestLevelGamestateResetAtInLevelDisplay(
+                    levelManager.consumeInLevelTitleCardResetAdditionalDispatches());
+        }
         LOGGER.info("Entered in-level Title Card for zone " + zoneIndex + " act " + actIndex);
     }
 

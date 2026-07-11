@@ -23,6 +23,18 @@ public interface TitleCardProvider {
     }
 
     /**
+     * Defers a fresh level-gamestate install to the native in-level title-card
+     * display boundary. Games without that handoff can ignore the request.
+     */
+    default void requestLevelGamestateResetAtInLevelDisplay() {
+        // No-op for games without S3K's in-level act-title handoff.
+    }
+
+    default void requestLevelGamestateResetAtInLevelDisplay(int additionalDispatches) {
+        requestLevelGamestateResetAtInLevelDisplay();
+    }
+
+    /**
      * Initializes the title card for a bonus stage entry.
      * S3K shows "BONUS STAGE" text; S1/S2 have no bonus stages so this is a no-op.
      */

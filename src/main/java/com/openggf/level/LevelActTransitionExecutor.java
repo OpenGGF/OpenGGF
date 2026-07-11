@@ -103,8 +103,12 @@ final class LevelActTransitionExecutor {
             levelManager.audioManager.playMusic(request.musicOverrideId());
         }
 
-        if (request.showInLevelTitleCard() && !levelManager.graphicsManager.isHeadlessMode()) {
-            levelManager.requestInLevelTitleCard(levelManager.currentZone, levelManager.currentAct);
+        if (request.showInLevelTitleCard()) {
+            levelManager.requestInLevelTitleCard(
+                    levelManager.currentZone,
+                    levelManager.currentAct,
+                    request.resetLevelGamestateAtInLevelTitleCardDisplay(),
+                    request.inLevelTitleCardResetAdditionalDispatches());
         }
     }
 

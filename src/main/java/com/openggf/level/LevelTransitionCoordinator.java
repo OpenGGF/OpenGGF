@@ -30,6 +30,8 @@ public class LevelTransitionCoordinator {
     private boolean inLevelTitleCardRequested;
     private int inLevelTitleCardZone = -1;
     private int inLevelTitleCardAct = -1;
+    private boolean inLevelTitleCardLevelGamestateResetRequested;
+    private int inLevelTitleCardResetAdditionalDispatches;
 
     // ── Transition request flags (for fade-coordinated transitions) ────
     private boolean respawnRequested;
@@ -200,9 +202,20 @@ public class LevelTransitionCoordinator {
      * Requests an in-level (transparent) title card overlay.
      */
     public void requestInLevelTitleCard(int zone, int act) {
+        requestInLevelTitleCard(zone, act, false);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay) {
+        requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay, 0);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches) {
         this.inLevelTitleCardRequested = true;
         this.inLevelTitleCardZone = zone;
         this.inLevelTitleCardAct = act;
+        this.inLevelTitleCardLevelGamestateResetRequested = resetLevelGamestateAtDisplay;
+        this.inLevelTitleCardResetAdditionalDispatches = Math.max(0, resetAdditionalDispatches);
     }
 
     /**
@@ -232,6 +245,18 @@ public class LevelTransitionCoordinator {
         boolean requested = inLevelTitleCardRequested;
         inLevelTitleCardRequested = false;
         return requested;
+    }
+
+    public boolean consumeInLevelTitleCardLevelGamestateResetRequest() {
+        boolean requested = inLevelTitleCardLevelGamestateResetRequested;
+        inLevelTitleCardLevelGamestateResetRequested = false;
+        return requested;
+    }
+
+    public int consumeInLevelTitleCardResetAdditionalDispatches() {
+        int dispatches = inLevelTitleCardResetAdditionalDispatches;
+        inLevelTitleCardResetAdditionalDispatches = 0;
+        return dispatches;
     }
 
     /**
@@ -503,6 +528,8 @@ public class LevelTransitionCoordinator {
         inLevelTitleCardRequested = false;
         inLevelTitleCardZone = -1;
         inLevelTitleCardAct = -1;
+        inLevelTitleCardLevelGamestateResetRequested = false;
+        inLevelTitleCardResetAdditionalDispatches = 0;
         respawnRequested = false;
         nextActRequested = false;
         nextZoneRequested = false;
