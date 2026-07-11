@@ -16,6 +16,19 @@ public class LaunchProfileApplier {
     public void apply(LaunchProfile profile, MasterTitleScreen.GameEntry entry) {
         Objects.requireNonNull(profile, "profile");
         LaunchProfile sanitized = profile.sanitizedFor(Objects.requireNonNull(entry, "entry"));
+        applySanitized(sanitized);
+    }
+
+    public void apply(LaunchProfile profile, MasterTitleScreen.GameEntry entry,
+            LaunchProfileStore profileStore) {
+        Objects.requireNonNull(profileStore, "profileStore");
+        LaunchProfile sanitized = profileStore.sanitize(
+                Objects.requireNonNull(profile, "profile"),
+                Objects.requireNonNull(entry, "entry"));
+        applySanitized(sanitized);
+    }
+
+    private void applySanitized(LaunchProfile sanitized) {
         configService.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, sanitized.rewind());
         if ("off".equals(sanitized.crossGameSource())) {
             configService.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);

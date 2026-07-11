@@ -28,13 +28,29 @@ public class LaunchProfileStore {
         this.configService = Objects.requireNonNull(configService, "configService");
         Objects.requireNonNull(resolutionService, "resolutionService");
         Objects.requireNonNull(resolutionContext, "resolutionContext");
+        this.patchMainCharacters = snapshotAvailability(resolutionService, resolutionContext);
+    }
+
+    private static Map<MasterTitleScreen.GameEntry, List<String>> snapshotAvailability(
+            ModuleResolutionService resolutionService, ResolutionContext resolutionContext) {
+        Map<MasterTitleScreen.GameEntry, List<String>> snapshot;
+        int failuresBefore;
+        do {
+            failuresBefore = resolutionContext.failedOwners().size();
+            snapshot = queryAvailability(resolutionService, resolutionContext);
+        } while (resolutionContext.failedOwners().size() != failuresBefore);
+        return snapshot;
+    }
+
+    private static Map<MasterTitleScreen.GameEntry, List<String>> queryAvailability(
+            ModuleResolutionService resolutionService, ResolutionContext resolutionContext) {
         EnumMap<MasterTitleScreen.GameEntry, List<String>> availability =
                 new EnumMap<>(MasterTitleScreen.GameEntry.class);
         for (MasterTitleScreen.GameEntry entry : MasterTitleScreen.GameEntry.values()) {
             availability.put(entry, List.copyOf(resolutionService.availableMainCharacters(
                     resolutionContext, LaunchProfile.gameId(entry))));
         }
-        this.patchMainCharacters = Map.copyOf(availability);
+        return Map.copyOf(availability);
     }
 
     public LaunchProfile load(MasterTitleScreen.GameEntry entry) {

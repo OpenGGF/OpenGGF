@@ -33,7 +33,7 @@ public class MasterTitleLaunchCoordinator {
         configService.clearSessionOverrides();
         MasterTitleScreen.GameEntry entry = MasterTitleScreen.GameEntry.fromGameId(selectedGameId);
         if (!programmaticSelection) {
-            profileApplier.apply(profileStore.load(entry), entry);
+            profileApplier.apply(profileStore.load(entry), entry, profileStore);
         }
         configService.resolveDisplayAspect();
     }

@@ -102,6 +102,41 @@ class TestLaunchProfilePatchAvailability {
                 new LaunchProfile(false, "off", false, "global", "knuckles", "none"), SONIC_2));
     }
 
+    @Test
+    void masterTitleApplicationPreservesPatchBackedSelection() {
+        SonicConfigurationService config = configWithS2Main("knuckles");
+        LaunchProfileStore store = patchAwareStore(config, PatchEnablement.ALL_ENABLED, true);
+        MasterTitleLaunchCoordinator coordinator = new MasterTitleLaunchCoordinator(
+                config, store, new LaunchProfileApplier(config));
+
+        coordinator.prepareExit("s2", false);
+
+        assertEquals("knuckles", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+    }
+
+    @Test
+    void lateMetadataFailureRemovesEarlierContributionFromFrozenUnion() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.LAUNCH_S1_MAIN_CHARACTER, "amy");
+        config.setConfigValue(SonicConfiguration.LAUNCH_S1_SIDEKICK, "none");
+        PatchOwner owner = new PatchOwner.Mod("multi-game");
+        ModuleResolutionService service = new ModuleResolutionService(
+                List.of(), PatchEnablement.ALL_ENABLED,
+                new LogicalRomResolver(() -> null), config);
+        ResolutionContext context = service.newContext(List.of(
+                new RegisteredPatch(owner, "multi-game:s1",
+                        characterPatch("s1", "amy"), 0),
+                new RegisteredPatch(owner, "multi-game:s2-broken",
+                        throwingCharacterPatch(), 1)), Map.of());
+
+        LaunchProfileStore store = new LaunchProfileStore(config, service, context);
+
+        assertEquals("sonic", store.load(
+                com.openggf.game.MasterTitleScreen.GameEntry.SONIC_1).mainCharacter());
+        assertEquals(Set.of(owner), context.failedOwners());
+    }
+
     private SonicConfigurationService configWithS2Main(String character) {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(SonicConfiguration.LAUNCH_S2_CROSS_GAME_SOURCE, "off");
@@ -133,6 +168,32 @@ class TestLaunchProfilePatchAvailability {
             }
             @Override public Set<LogicalRom> romPrerequisites() { return Set.of(LogicalRom.SK); }
             @Override public List<String> providedMainCharacters() { return List.of("knuckles"); }
+            @Override public GameModule apply(GameModule base, PatchContext context) { return base; }
+        };
+    }
+
+    private static GamePatch characterPatch(String gameId, String character) {
+        return new GamePatch() {
+            @Override public String id() { return gameId; }
+            @Override public String displayName() { return character; }
+            @Override public String baseGameId() { return gameId; }
+            @Override public boolean activatesFor(GameplayLaunchRequest request) { return true; }
+            @Override public Set<LogicalRom> romPrerequisites() { return Set.of(); }
+            @Override public List<String> providedMainCharacters() { return List.of(character); }
+            @Override public GameModule apply(GameModule base, PatchContext context) { return base; }
+        };
+    }
+
+    private static GamePatch throwingCharacterPatch() {
+        return new GamePatch() {
+            @Override public String id() { return "broken"; }
+            @Override public String displayName() { return "broken"; }
+            @Override public String baseGameId() { return "s2"; }
+            @Override public boolean activatesFor(GameplayLaunchRequest request) { return true; }
+            @Override public Set<LogicalRom> romPrerequisites() { return Set.of(); }
+            @Override public List<String> providedMainCharacters() {
+                throw new IllegalStateException("broken metadata");
+            }
             @Override public GameModule apply(GameModule base, PatchContext context) { return base; }
         };
     }
