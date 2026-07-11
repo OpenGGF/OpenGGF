@@ -85,6 +85,7 @@ public class TestS3kHczSpinningColumn {
         assertEquals(-1, player.getForcedAnimationId());
         assertEquals(0x55, player.getMappingFrame());
 
+        int centreYBeforeRelease = player.getCentreY();
         player.setJumpInputPressed(true);
         column.onSolidContact(player, new SolidContact(true, false, false, false, false), 1);
         column.update(1, null);
@@ -96,6 +97,8 @@ public class TestS3kHczSpinningColumn {
         assertTrue(player.isJumping());
         assertTrue(player.getRolling());
         assertEquals(Sonic3kAnimationIds.ROLL.id(), player.getAnimationId());
+        assertEquals(centreYBeforeRelease, player.getCentreY(),
+                "column release changes radii without moving native y_pos");
         assertEquals(0, player.getXSpeed());
         assertEquals(-0x680, player.getYSpeed());
     }

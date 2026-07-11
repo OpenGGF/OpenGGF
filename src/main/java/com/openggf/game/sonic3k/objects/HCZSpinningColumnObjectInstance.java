@@ -68,7 +68,6 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
     private int motionStep;
     private int currentX;
     private int currentY;
-    private int currentYVelocity;
     private int mappingFrame;
     private int animFrameTimer;
 
@@ -95,7 +94,6 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        int previousY = currentY;
         switch (motionMode) {
             case MOTION_STATIONARY -> {
                 currentX = baseX;
@@ -108,8 +106,6 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
                 currentY = baseY;
             }
         }
-        currentYVelocity = (currentY - previousY) << 8;
-
         for (RiderState rider : riders) {
             updateRider(rider, frameCounter);
             rider.standingLastFrame = false;
@@ -209,10 +205,18 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         if (jumpedOff) {
             player.setAir(true);
             player.setJumping(true);
+            int releaseY = player.getCentreY();
             player.applyRollingRadii(false);
             player.setRolling(true);
+            // setRolling changes the engine sprite height around its top-left
+            // anchor; ROM writes the radii/status bytes in place and never
+            // adjusts y_pos, so restore the native centre after that box change.
+            player.setCentreYPreserveSubpixel((short) releaseY);
             player.setAnimationId(Sonic3kAnimationIds.ROLL);
-            player.setYSpeed((short) (currentYVelocity + RELEASE_Y_SPEED));
+            // sub_32784 copies y_vel(a0), not the column's direct oscillation
+            // delta. Obj_HCZSpinningColumn never writes its y_vel field, so the
+            // native launch is the literal -$680 even while its y_pos is moving.
+            player.setYSpeed((short) RELEASE_Y_SPEED);
             player.setXSpeed((short) 0);
             player.setGSpeed((short) 0);
             // Prevent the same held button from re-triggering the normal jump path,
