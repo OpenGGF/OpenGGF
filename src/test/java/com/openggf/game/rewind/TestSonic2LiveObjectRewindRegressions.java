@@ -174,6 +174,12 @@ class TestSonic2LiveObjectRewindRegressions {
         for (int i = 0; i < 8; i++) {
             restored.update(frame + i, null);
             control.update(frame + i, null);
+            PerObjectRewindSnapshot restoredFrame = restored.captureRewindState();
+            PerObjectRewindSnapshot controlFrame = control.captureRewindState();
+            assertEquals(controlFrame.badnikExtra(), restoredFrame.badnikExtra(),
+                    "resumed base state at frame " + i);
+            assertEquals(controlFrame.badnikSubclassExtra(), restoredFrame.badnikSubclassExtra(),
+                    "resumed fixed-point state at frame " + i);
             assertEquals(control.getX(), restored.getX(), "resumed X at frame " + i);
             assertEquals(control.getY(), restored.getY(), "resumed Y at frame " + i);
         }
@@ -188,6 +194,9 @@ class TestSonic2LiveObjectRewindRegressions {
         setField(control, "currentY", base.currentY());
         setField(control, "xVelocity", base.xVelocity());
         setField(control, "yVelocity", base.yVelocity());
+        setField(control, "animTimer", base.animTimer());
+        setField(control, "animFrame", base.animFrame());
+        setBooleanField(control, "facingLeft", base.facingLeft());
         setField(control, "initialYPos", motion.initialYPos());
         Object state = field(control, "motionState");
         setField(state, "x", motion.motionX());
@@ -205,6 +214,22 @@ class TestSonic2LiveObjectRewindRegressions {
                 Field field = type.getDeclaredField(name);
                 field.setAccessible(true);
                 return field.get(target);
+            } catch (NoSuchFieldException ignored) {
+                // Continue through inherited rewind state.
+            } catch (IllegalAccessException exception) {
+                throw new RuntimeException(exception);
+            }
+        }
+        throw new IllegalArgumentException("Missing field " + name);
+    }
+
+    private static void setBooleanField(Object target, String name, boolean value) {
+        for (Class<?> type = target.getClass(); type != null; type = type.getSuperclass()) {
+            try {
+                Field field = type.getDeclaredField(name);
+                field.setAccessible(true);
+                field.setBoolean(target, value);
+                return;
             } catch (NoSuchFieldException ignored) {
                 // Continue through inherited rewind state.
             } catch (IllegalAccessException exception) {
