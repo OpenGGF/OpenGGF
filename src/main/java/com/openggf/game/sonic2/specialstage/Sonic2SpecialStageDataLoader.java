@@ -45,6 +45,7 @@ public class Sonic2SpecialStageDataLoader {
     private Pattern[] shadowDiagPatterns;
     private Pattern[] shadowVertPatterns;
     private Pattern[] hudArtPatterns;
+    private Pattern[] tailsTextArtPatterns;
     private Pattern[] startArtPatterns;
     private Pattern[] messagesArtPatterns;
     private Pattern[] explosionArtPatterns;
@@ -393,6 +394,17 @@ public class Sonic2SpecialStageDataLoader {
         return hudArtPatterns;
     }
 
+    /** Loads the five dedicated overseas TAILS HUD patterns. */
+    public Pattern[] getTailsTextArtPatterns() throws IOException {
+        if (tailsTextArtPatterns == null) {
+            byte[] compressed = rom.readBytes(Sonic2SpecialStageConstants.TAILS_TEXT_ART_OFFSET,
+                    Sonic2SpecialStageConstants.TAILS_TEXT_ART_SIZE);
+            tailsTextArtPatterns = decompressNemesisToPatterns(compressed);
+            LOGGER.fine("Loaded TAILS text art: " + tailsTextArtPatterns.length + " patterns");
+        }
+        return tailsTextArtPatterns;
+    }
+
     /**
      * Loads START banner art patterns (Nemesis compressed).
      * Contains the "START" text and checkered flag graphics.
@@ -519,4 +531,3 @@ public class Sonic2SpecialStageDataLoader {
         return patterns;
     }
 }
-

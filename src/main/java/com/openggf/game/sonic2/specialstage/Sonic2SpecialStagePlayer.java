@@ -79,6 +79,20 @@ public class Sonic2SpecialStagePlayer {
     private int animFrameDuration;
     private int mappingFrame;
 
+    // Obj88 is an independent object in the ROM and therefore owns animation state
+    // separate from the Obj10 body animation.
+    private int tailsTailsAnim;
+    private int tailsTailsPrevAnim;
+    private int tailsTailsAnimFrame;
+    private int tailsTailsFrameDuration;
+    private int tailsTailsMappingFrame;
+
+    private static final int[][] TAILS_TAILS_ANIM_SCRIPTS = {
+            {0, 1, 2, 3, 4, 5, 6},
+            {7, 8, 9, 10, 11, 12, 13},
+            {14, 15, 16, 17, 18, 19, 20}
+    };
+
     private int yRadius = 0x0E;
     private int xRadius = 0x07;
     private int priority = 3;
@@ -189,6 +203,11 @@ public class Sonic2SpecialStagePlayer {
         animFrame = 0;
         animFrameDuration = 0;
         mappingFrame = 0;
+        tailsTailsAnim = 0;
+        tailsTailsPrevAnim = -1;
+        tailsTailsAnimFrame = 0;
+        tailsTailsFrameDuration = 0;
+        tailsTailsMappingFrame = 0;
 
         yRadius = 0;
         xRadius = 0;
@@ -253,6 +272,11 @@ public class Sonic2SpecialStagePlayer {
         animFrame = 0;
         animFrameDuration = 0;
         mappingFrame = 0;
+        tailsTailsAnim = 0;
+        tailsTailsPrevAnim = -1;
+        tailsTailsAnimFrame = 0;
+        tailsTailsFrameDuration = 0;
+        tailsTailsMappingFrame = 0;
 
         yRadius = 0x0E;
         xRadius = 0x07;
@@ -297,6 +321,29 @@ public class Sonic2SpecialStagePlayer {
             default:
                 break;
         }
+
+        if (playerType == PlayerType.TAILS && routine != RoutineState.INIT) {
+            updateTailsTailsAnimation();
+        }
+    }
+
+    private void updateTailsTailsAnimation() {
+        tailsTailsAnim = anim;
+        if (tailsTailsAnim >= TAILS_TAILS_ANIM_SCRIPTS.length) {
+            return;
+        }
+        if (tailsTailsAnim != tailsTailsPrevAnim) {
+            tailsTailsPrevAnim = tailsTailsAnim;
+            tailsTailsAnimFrame = 0;
+            tailsTailsFrameDuration = 0;
+        }
+        if (--tailsTailsFrameDuration >= 0) {
+            return;
+        }
+        tailsTailsFrameDuration = 3;
+        int[] script = TAILS_TAILS_ANIM_SCRIPTS[tailsTailsAnim];
+        tailsTailsMappingFrame = script[tailsTailsAnimFrame];
+        tailsTailsAnimFrame = (tailsTailsAnimFrame + 1) % script.length;
     }
 
     private void updateControlRecord(int buttons) {
@@ -847,6 +894,10 @@ public class Sonic2SpecialStagePlayer {
     public int getMappingFrame() { return mappingFrame; }
     public int getAnim() { return anim; }
     public int getAnimFrame() { return animFrame; }
+    public int getTailsTailsMappingFrame() { return tailsTailsMappingFrame; }
+    public boolean shouldRenderTailsTails() {
+        return playerType == PlayerType.TAILS && anim < TAILS_TAILS_ANIM_SCRIPTS.length;
+    }
     public boolean isRenderXFlip() { return renderXFlip; }
     public boolean isRenderYFlip() { return renderYFlip; }
     public boolean isJumping() { return statusJumping; }
@@ -956,6 +1007,11 @@ public class Sonic2SpecialStagePlayer {
                 animFrame,
                 animFrameDuration,
                 mappingFrame,
+                tailsTailsAnim,
+                tailsTailsPrevAnim,
+                tailsTailsAnimFrame,
+                tailsTailsFrameDuration,
+                tailsTailsMappingFrame,
                 yRadius,
                 xRadius,
                 priority,
@@ -1002,6 +1058,11 @@ public class Sonic2SpecialStagePlayer {
         animFrame = snapshot.animFrame();
         animFrameDuration = snapshot.animFrameDuration();
         mappingFrame = snapshot.mappingFrame();
+        tailsTailsAnim = snapshot.tailsTailsAnim();
+        tailsTailsPrevAnim = snapshot.tailsTailsPrevAnim();
+        tailsTailsAnimFrame = snapshot.tailsTailsAnimFrame();
+        tailsTailsFrameDuration = snapshot.tailsTailsFrameDuration();
+        tailsTailsMappingFrame = snapshot.tailsTailsMappingFrame();
         yRadius = snapshot.yRadius();
         xRadius = snapshot.xRadius();
         priority = snapshot.priority();
