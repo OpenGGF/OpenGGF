@@ -322,6 +322,15 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        // loc_326B6 moves the column before loading its updated x_pos into d4
+        // for SolidObjectFull. MvSonicOnPtfm then subtracts that same current
+        // x_pos, producing a zero horizontal carry delta
+        // (sonic3k.asm:68132-68157,41016-41042,41642-41679).
+        return false;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         if (!contact.standing() || !(playerEntity instanceof AbstractPlayableSprite player)) {
             return;

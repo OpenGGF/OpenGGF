@@ -51,6 +51,8 @@ public class TestS3kHczSpinningColumn {
         assertEquals(0x1B, params.halfWidth());
         assertEquals(0x20, params.airHalfHeight());
         assertEquals(0x21, params.groundHalfHeight());
+        assertFalse(column.carriesRiderOnHorizontalMove(null),
+                "Obj68 passes post-movement x_pos through d4, producing zero horizontal carry");
     }
 
     @Test
