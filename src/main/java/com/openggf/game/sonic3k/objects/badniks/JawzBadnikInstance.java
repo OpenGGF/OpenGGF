@@ -32,6 +32,7 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance implemen
     private static final int ANIM_RESET_DELAY = 0;
 
     private boolean initialized;
+    private boolean waitingForOnscreen = true;
     private int animTimer = ANIM_RESET_DELAY;
 
     public JawzBadnikInstance(ObjectSpawn spawn) {
@@ -42,7 +43,18 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance implemen
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
+            return;
+        }
+
+        // Obj_WaitOffscreen installs a $20-by-$20 placeholder and returns on
+        // the dispatch that first sees it rendered. The saved Obj_Jawz entry
+        // point resumes on the following dispatch.
+        if (waitingForOnscreen) {
+            if (!isOnScreen(0x20)) {
+                return;
+            }
+            waitingForOnscreen = false;
             return;
         }
 

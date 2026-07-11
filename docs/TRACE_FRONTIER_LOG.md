@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f13929 / 1872 errors (4 errors under `frontierOnly`).
+f3318 / 4234 errors to f14859 / 1908 errors (1 error under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -453,6 +453,21 @@ position/subpixel guards pass. The isolated granular replay matrix keeps both
 AIZ routes green and preserves every non-HCZ frontier and count exactly: CNZ
 complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f866 / 1, MGZ
 level-select f894 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 24 restores Jawz's native `Obj_WaitOffscreen` activation. Its parked
+slot now waits for the `$20`-pixel placeholder's full X/Y render bounds, consumes
+the operation-pointer restore dispatch, and initializes `-$200` tracking
+velocity on the following dispatch. This gives the badnik its ROM movement
+distance before `Touch_EnemyNormal` and restores Sonic's upward kill bounce
+(`sonic3k.asm:180266-180298,183518-183570`).
+
+This closes f13929-f14858 and advances HCZ to f14859 / 1908 full-run errors (1
+under `frontierOnly`). The higher full total exposes 36 later-route groups with
+no pre-frontier mismatch. Both focused Jawz direction/dispatch tests pass. The
+isolated granular replay matrix keeps both AIZ routes green and preserves every
+non-HCZ frontier and count exactly: CNZ complete f1846 / 5, CNZ level-select
+f291 / 7, MGZ complete f866 / 1, MGZ level-select f894 / 1, ICZ f3174 / 1,
+MHZ f2920 / 1, and LBZ f2270 / 5.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

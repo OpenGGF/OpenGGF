@@ -4,14 +4,11 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.badniks.JawzBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class TestS3kJawzBadnik {
 
@@ -21,14 +18,16 @@ public class TestS3kJawzBadnik {
 
         JawzBadnikInstance jawz = new JawzBadnikInstance(
                 new ObjectSpawn(160, 100, Sonic3kObjectIds.JAWZ, 0, 0, false, 0));
-        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
-        when(player.getCentreX()).thenReturn(Short.valueOf((short) 80));
-        when(player.getDead()).thenReturn(false);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 80);
 
-        jawz.update(0, player);
+        jawz.update(0, player); // Obj_WaitOffscreen restores the saved entry point
         assertEquals(160, jawz.getX(), "Jawz should not move on the initialization frame");
 
-        jawz.update(1, player);
+        jawz.update(1, player); // Obj_Jawz initializes velocity
+        assertEquals(160, jawz.getX(), "Jawz initialization should not move the object");
+
+        jawz.update(2, player);
         assertEquals(158, jawz.getX(), "Jawz should move toward the player on the next frame");
         assertEquals(1, readMappingFrame(jawz), "Jawz should advance to the second animation frame after moving");
     }
@@ -39,12 +38,12 @@ public class TestS3kJawzBadnik {
 
         JawzBadnikInstance jawz = new JawzBadnikInstance(
                 new ObjectSpawn(160, 100, Sonic3kObjectIds.JAWZ, 0, 0, false, 0));
-        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
-        when(player.getCentreX()).thenReturn(Short.valueOf((short) 240));
-        when(player.getDead()).thenReturn(false);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 240);
 
         jawz.update(0, player);
         jawz.update(1, player);
+        jawz.update(2, player);
 
         assertEquals(162, jawz.getX(), "Jawz should move right when the player is on the right");
     }
@@ -59,5 +58,3 @@ public class TestS3kJawzBadnik {
         }
     }
 }
-
-
