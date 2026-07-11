@@ -13,7 +13,6 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.Palette;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
@@ -160,6 +159,11 @@ public class AizEndBossInstance extends AbstractBossInstance
     private boolean eggCapsuleSignal;
 
     private boolean collisionEnabled;
+    /**
+     * The ROM restores {@code collision_flags} from the boss object's update,
+     * after that frame's engine touch-response pass has already run.
+     */
+    private boolean collisionEnablePending;
     private boolean highPriorityArt;
     private int mappingFrame;
 
@@ -174,6 +178,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     private S3kBossExplosionController defeatExplosionController;
     private boolean defeatRenderComplete;
     private int defeatPhaseTimer;
+    private int defeatExplosionWaitTimer;
 
     // Children references
     private AizEndBossShipChild shipChild;
@@ -196,12 +201,14 @@ public class AizEndBossInstance extends AbstractBossInstance
         cameraScrollBoundsPending = false;
         cameraScrollMaxCatchUpPending = false;
         defeatPhaseTimer = 0;
+        defeatExplosionWaitTimer = 0;
         defeatRenderComplete = false;
         defeatExplosionController = null;
         fireSignalActive = false;
         defeatSignal = false;
         eggCapsuleSignal = false;
         collisionEnabled = false;
+        collisionEnablePending = false;
         highPriorityArt = false;
         mappingFrame = 0;
         renderActivated = false;
@@ -304,6 +311,10 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+        if (collisionEnablePending) {
+            collisionEnabled = true;
+            collisionEnablePending = false;
+        }
         if (cameraScrollMaxCatchUpPending && state.routine != ROUTINE_CAMERA_SCROLL) {
             int camMaxX = (services().camera().getMaxX() & 0xFFFF) + 2;
             services().camera().setMaxX((short) camMaxX);
@@ -320,12 +331,6 @@ public class AizEndBossInstance extends AbstractBossInstance
                     collisionEnabled = true;
                 }
             }
-        }
-
-        // Defeat explosion controller
-        if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
-            defeatExplosionController.tick();
-            spawnPendingExplosions();
         }
 
         switch (state.routine) {
@@ -417,6 +422,7 @@ public class AizEndBossInstance extends AbstractBossInstance
 
         // Clear collision during emergence (ROM: clr.b collision_flags)
         collisionEnabled = false;
+        collisionEnablePending = false;
 
         // Restore normal palette (ROM: bsr.w sub_69C94)
         restoreNormalPalette();
@@ -478,7 +484,7 @@ public class AizEndBossInstance extends AbstractBossInstance
         highPriorityArt = true;
 
         // ROM: move.b #$16,collision_flags — becomes hittable
-        collisionEnabled = true;
+        collisionEnablePending = true;
 
         // Spawn flame column child (ROM: ChildObjDat_69D36, offset 0,-$30)
         spawnFlameColumnChild();
@@ -595,6 +601,7 @@ public class AizEndBossInstance extends AbstractBossInstance
 
         // Clear collision while submerged
         collisionEnabled = false;
+        collisionEnablePending = false;
         restoreNormalPalette();
 
         // Spawn waterfall splash with subtype 2
@@ -699,32 +706,25 @@ public class AizEndBossInstance extends AbstractBossInstance
         flags38 |= FLAG_HIDDEN;
         highPriorityArt = true;
         collisionEnabled = false;
+        collisionEnablePending = false;
         mappingFrame = 0;
 
-        // Signal combat children (arms, propellers, flames, column) to self-destruct.
-        // The ship child checks boss.getState().defeated instead and handles its own
-        // multi-phase defeat animation (ROM: Obj_RobotnikShip routines 2-6).
         defeatSignal = true;
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(false);
 
         // ROM: BossDefeated_StopTimer — timer stop handled by gameState
 
-        services().fadeOutMusic();
-
         // ROM: The ship child (Obj_RobotnikShip) creates its own explosion controller
         // via Child6_CreateBossExplosion subtype 4 at loc_460DC. In the engine we keep
         // this on the boss for simplicity — subtype 0 produces the same visual effect.
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
-
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
+        services().fadeOutMusic();
+        if (services().objectManager() != null) {
             spawnDebris();
         }
-
-        // Existing AIZ handoff wait; updateDefeated applies Obj_Wait's
-        // pre-decrement callback semantics so $2E=$7F expires after the
-        // negative transition, not when it first reaches zero
-        // (sonic3k.asm:177944-177952).
+        // The ship/explosion handoff remains in Wait_Draw before loc_47360's
+        // independent $7F wait begins.
+        defeatExplosionWaitTimer = 0x37;
         defeatPhaseTimer = 0x7F;
     }
 
@@ -732,6 +732,11 @@ public class AizEndBossInstance extends AbstractBossInstance
         if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
             defeatExplosionController.tick();
             spawnPendingExplosions();
+        }
+
+        if (defeatExplosionWaitTimer >= 0) {
+            defeatExplosionWaitTimer--;
+            return;
         }
 
         if (defeatPhaseTimer >= 0) {

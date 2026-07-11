@@ -839,6 +839,22 @@ run's global RNG sequence now matches through the AIZ end-boss selection. The
 focused AIZ replay remains green; the complete-run frontier moves to the boss
 contact/defeat handoff. The AIZ stage is not green yet.
 
+Round 60 restores two AIZ end-boss object-pass boundaries. The emerge
+animation callback now publishes a pending collision restore which becomes
+touch-visible on the following boss entry, matching the ROM object's
+`collision_flags` write after that frame's player/touch work. On defeat, the
+ship/explosion `Wait_Draw` interval completes before the independent `$7F`
+capsule-handoff wait runs (`sonic3k.asm:177558-177610,177944-177952`). Measured
+in the composed local investigation worktree, these changes move the strict
+complete-run frontier beyond the final boss rebound and into the post-capsule
+sequence. This snapshot includes later uncommitted capsule/bridge investigation
+and is therefore not a clean-commit frontier claim; that composed worktree also
+regresses the focused AIZ replay at f19397 / 86 errors (`y`, expected `$01FC`,
+actual `$01FD`), which remains an active blocker rather than being hidden. The
+exact 29-class S1 plus 19-class S2 replay fleet passed immediately before this
+commit (with only the ROM-optional special-stage skip). The AIZ stage is not
+green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch
