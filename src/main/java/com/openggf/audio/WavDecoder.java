@@ -2,16 +2,15 @@ package com.openggf.audio;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
+import java.util.Objects;
 
-/**
- * Pure-Java WAV file decoder. Parses standard RIFF/WAVE PCM files
- * without requiring javax.sound.sampled, making it compatible with
- * GraalVM native-image builds.
- */
-public class WavDecoder {
-
+/** Pure-Java RIFF/WAVE PCM facade used by the legacy OpenAL loading path. */
+public final class WavDecoder {
+    private static final int DEFAULT_MAX_WAV_BYTES = 64 << 20;
     public final int channels;
     public final int sampleRate;
     public final int bitsPerSample;
@@ -24,75 +23,81 @@ public class WavDecoder {
         this.data = data;
     }
 
-    /**
-     * Decodes a WAV file from the given input stream.
-     *
-     * @param is the input stream containing WAV data
-     * @return a WavDecoder with parsed audio parameters and PCM data
-     * @throws IOException if the stream is not a valid WAV file or cannot be read
-     */
-    public static WavDecoder decode(InputStream is) throws IOException {
-        byte[] all = is.readAllBytes();
-        ByteBuffer buf = ByteBuffer.wrap(all).order(ByteOrder.LITTLE_ENDIAN);
+    public static WavDecoder decode(InputStream input) throws IOException {
+        return decode(input, DEFAULT_MAX_WAV_BYTES);
+    }
 
-        // RIFF header
-        if (buf.remaining() < 12) {
-            throw new IOException("WAV file too short for RIFF header");
+    public static WavDecoder decode(InputStream input, int maxBytes) throws IOException {
+        Objects.requireNonNull(input, "input");
+        if (maxBytes <= 0) throw new IllegalArgumentException("maxBytes must be positive");
+        try (ByteArrayOutputStream bytes = new ByteArrayOutputStream(Math.min(maxBytes, 8192))) {
+            byte[] chunk = new byte[8192];
+            int read;
+            while ((read = input.read(chunk)) != -1) {
+                if (read == 0) {
+                    int single = input.read();
+                    if (single == -1) break;
+                    if (bytes.size() >= maxBytes) throw new IOException("WAV input exceeds byte limit");
+                    bytes.write(single);
+                    continue;
+                }
+                if (bytes.size() > maxBytes - read) throw new IOException("WAV input exceeds byte limit");
+                bytes.write(chunk, 0, read);
+            }
+            return decodeBytes(bytes.toByteArray());
         }
-        int riffTag = buf.getInt();
-        if (riffTag != 0x46464952) { // "RIFF" in little-endian
-            throw new IOException("Not a RIFF file");
-        }
-        buf.getInt(); // file size - 8
-        int waveTag = buf.getInt();
-        if (waveTag != 0x45564157) { // "WAVE"
-            throw new IOException("Not a WAVE file");
-        }
+    }
 
+    private static WavDecoder decodeBytes(byte[] encoded) throws IOException {
+        ByteBuffer input = ByteBuffer.wrap(encoded).order(ByteOrder.LITTLE_ENDIAN);
+        if (input.remaining() < 12 || input.getInt() != 0x46464952) throw new IOException("Not a RIFF file");
+        long riffBytes = Integer.toUnsignedLong(input.getInt());
+        if (riffBytes != encoded.length - 8L || input.getInt() != 0x45564157) {
+            throw new IOException("Invalid RIFF/WAVE header");
+        }
         int channels = 0;
         int sampleRate = 0;
         int bitsPerSample = 0;
-        byte[] pcmData = null;
-
-        // Parse chunks
-        while (buf.remaining() >= 8) {
-            int chunkId = buf.getInt();
-            int chunkSize = buf.getInt();
-
-            if (chunkId == 0x20746D66) { // "fmt "
-                if (chunkSize < 16) {
-                    throw new IOException("fmt chunk too small");
+        int blockAlign = 0;
+        byte[] data = null;
+        while (input.hasRemaining()) {
+            if (input.remaining() < 8) throw new IOException("Truncated WAV chunk header");
+            int id = input.getInt();
+            long unsignedSize = Integer.toUnsignedLong(input.getInt());
+            if (unsignedSize > input.remaining() || unsignedSize > Integer.MAX_VALUE) {
+                throw new IOException("WAV chunk exceeds remaining input");
+            }
+            int size = (int) unsignedSize;
+            int start = input.position();
+            if (id == 0x20746d66) {
+                if (channels != 0 || size < 16) throw new IOException("Invalid or duplicate fmt chunk");
+                if (Short.toUnsignedInt(input.getShort()) != 1) throw new IOException("Only PCM format 1 is supported");
+                channels = Short.toUnsignedInt(input.getShort());
+                sampleRate = input.getInt();
+                long byteRate = Integer.toUnsignedLong(input.getInt());
+                blockAlign = Short.toUnsignedInt(input.getShort());
+                bitsPerSample = Short.toUnsignedInt(input.getShort());
+                if (channels < 1 || channels > 2 || sampleRate < 8_000 || sampleRate > 192_000
+                        || (bitsPerSample != 8 && bitsPerSample != 16)) {
+                    throw new IOException("Unsupported WAV PCM format");
                 }
-                int audioFormat = buf.getShort() & 0xFFFF;
-                if (audioFormat != 1) {
-                    throw new IOException("Only PCM format (1) is supported, got: " + audioFormat);
+                int expectedAlign = channels * (bitsPerSample / 8);
+                if (blockAlign != expectedAlign || byteRate != (long) sampleRate * expectedAlign) {
+                    throw new IOException("Inconsistent WAV format rates");
                 }
-                channels = buf.getShort() & 0xFFFF;
-                sampleRate = buf.getInt();
-                buf.getInt();  // byte rate
-                buf.getShort(); // block align
-                bitsPerSample = buf.getShort() & 0xFFFF;
-                // Skip any extra fmt bytes
-                int extra = chunkSize - 16;
-                if (extra > 0) {
-                    buf.position(buf.position() + extra);
+            } else if (id == 0x61746164) {
+                if (channels == 0 || data != null || size == 0 || size % blockAlign != 0) {
+                    throw new IOException("Invalid WAV data chunk");
                 }
-            } else if (chunkId == 0x61746164) { // "data"
-                pcmData = new byte[chunkSize];
-                buf.get(pcmData);
-            } else {
-                // Skip unknown chunk
-                buf.position(buf.position() + chunkSize);
+                data = Arrays.copyOfRange(encoded, start, start + size);
+            }
+            input.position(start + size);
+            if ((size & 1) != 0) {
+                if (!input.hasRemaining()) throw new IOException("Missing WAV chunk padding");
+                input.get();
             }
         }
-
-        if (pcmData == null) {
-            throw new IOException("No data chunk found in WAV file");
-        }
-        if (channels == 0) {
-            throw new IOException("No fmt chunk found in WAV file");
-        }
-
-        return new WavDecoder(channels, sampleRate, bitsPerSample, pcmData);
+        if (channels == 0 || data == null) throw new IOException("WAV fmt or data chunk missing");
+        return new WavDecoder(channels, sampleRate, bitsPerSample, data);
     }
 }

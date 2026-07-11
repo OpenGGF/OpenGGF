@@ -56,6 +56,14 @@ public final class ModInputLimits {
 
     public static ModInputLimits production() { return PRODUCTION; }
     public static Builder loweringBuilder() { return new Builder(); }
+    public ModInputLimits withMaxAudioCacheBytes(long maxBytes) {
+        if (maxBytes <= 0 || maxBytes > maxAudioCacheBytes()) {
+            throw new IllegalArgumentException("maxAudioCacheBytes must lower the current limit");
+        }
+        Builder lowered = new Builder(values);
+        lowered.maxAudioCacheBytes = maxBytes;
+        return new ModInputLimits(lowered);
+    }
 
     public long maxMetadataBytes() { return values.maxMetadataBytes; }
     public long maxJarBytes() { return values.maxJarBytes; }
