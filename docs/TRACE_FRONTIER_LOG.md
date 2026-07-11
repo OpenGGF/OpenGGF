@@ -462,6 +462,21 @@ claim is made yet. Fresh full sweeps on this exact tree pass all 29 S1 and all
 48 S2 trace replays; the focused level-select route also retains its unbanked
 f5435 transition frontier.
 
+Round 32 replaces the transition floor's single zero-distance retry count with
+the fixed-point carry state that differs between the two AIZ recordings. ROM
+`Obj_AIZTransitionFloor` calls `SolidObjectTop` every object pass; the engine's
+split player/object scheduler holds integer `y_pos` on the exact surface while
+retaining the native 16.16 fraction. The focused route reaches that bridge with
+`y_sub=$F700` and ROM records 20 `first_reject` passes before the f5435 first
+landing, while the complete route reaches it with `y_sub=$0100` and needs the
+low-phase carry one pass later (`sonic3k.asm:104777-104790,41642-41679,
+41793-42015`). The object now consumes 20 high-phase or 21 low-phase passes,
+driven solely by captured player state. Focused unit tests cover both phases.
+`TestS3kAizTraceReplay#replayMatchesTrace` advances from f5435 / 2 to f5496 /
+14 (the act-reload request is one gameplay dispatch late); the complete-run
+frontier remains the f16755-f16757 ring-count cluster. The stage is not green
+yet.
+
 ## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green
 
 Worktree `.worktrees/ai-s2-mtz3-round96-orbinit`, branch
