@@ -46,6 +46,7 @@ import com.openggf.physics.Sensor;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.managers.SpriteMovementManager;
 import com.openggf.sprites.managers.TailsTailsController;
+import com.openggf.sprites.managers.TailsFlightController;
 import com.openggf.sprites.AbstractSprite;
 import com.openggf.sprites.SensorConfiguration;
 import com.openggf.sprites.managers.PlayableSpriteAnimation;
@@ -767,12 +768,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 // Clear Super state
                 this.superSonic = false;
-                if (controller != null && controller.getSuperState() != null) {
-                        controller.getSuperState().reset();
-                }
+                controller.resetSuperState();
         }
 
         public void resetState() {
+                controller.clearCarryAndReleaseMain();
                 this.shield = false;
                 this.shieldType = null;
                 if (this.shieldObject != null) {
@@ -875,9 +875,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.waterSkimActive = false;
                 this.preventTailsRespawn = false;
                 this.superSonic = false;
-                if (controller != null && controller.getSuperState() != null) {
-                        controller.getSuperState().reset();
-                }
+                controller.resetSuperState();
                 // Reset collision path to Path 0 (primary collision).
                 // Without this, if player was on Path 1 in previous level,
                 // solidity bits would remain 0x0E/0x0F causing collision checks
@@ -979,16 +977,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         animationFrameIndex,
                         animationTick,
                         debugMode,
-                        controller.getMovement().captureRewindState(),
-                        controller.getSpindashDust() != null
-                                ? controller.getSpindashDust().captureRewindState()
-                                : null,
-                        controller.getAnimation() != null
-                                ? controller.getAnimation().captureRewindState()
-                                : null,
-                        controller.getDrowning() != null
-                                ? controller.getDrowning().captureRewindState()
-                                : null,
+                        controller.captureRewindState(),
                         sidekickCpuExtra,
                         includeFollowHistory ? xHistory : null,
                         includeFollowHistory ? yHistory : null,
@@ -1163,16 +1152,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.animationFrameIndex = extra.animationFrameIndex();
                 this.animationTick = extra.animationTick();
                 this.debugMode = extra.debugMode();
-                controller.getMovement().restoreRewindState(extra.movementState());
-                if (controller.getSpindashDust() != null) {
-                        controller.getSpindashDust().restoreRewindState(extra.spindashDustState());
-                }
-                if (controller.getAnimation() != null) {
-                        controller.getAnimation().restoreRewindState(extra.animationState());
-                }
-                if (controller.getDrowning() != null) {
-                        controller.getDrowning().restoreRewindState(extra.drowningState());
-                }
+                // Carry is shared player state. Restore it before CPU sequencing,
+                // whose restored routine may consume the carry context immediately.
+                controller.restoreRewindState(extra.controllerState());
                 if (extra.sidekickCpuExtra() != null) {
                         if (cpuController == null) {
                                 throw new IllegalStateException(
@@ -1552,7 +1534,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public final com.openggf.game.GameRng currentRngOrNull() { return PlayableSpriteRuntimeServices.rngOrNull(); }
 
         public final DrowningController getDrowningController() { return controller != null ? controller.getDrowning() : null; }
+        public final TailsFlightController getTailsFlightController() {
+                return controller != null ? controller.getTailsFlight() : null;
+        }
+        public final TailsCarryController getTailsCarryController() {
+                return controller != null ? controller.getTailsCarry() : null;
+        }
         public final WaterSystem currentWaterSystem() { return PlayableSpriteRuntimeServices.water(); }
+        public final com.openggf.sprites.managers.SpriteManager currentSpriteManagerOrNull() {
+                return PlayableSpriteRuntimeServices.spritesOrNull();
+        }
+        public final int currentGameplayFrameCounter() { return PlayableSpriteRuntimeServices.gameplayFrameCounter(); }
 
         /**
          * Returns this character's secondary (double-jump) ability.
@@ -2385,6 +2377,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setDead(boolean dead) {
                 this.dead = dead;
+                controller.clearTailsFlightIf(dead && getSecondaryAbility() == SecondaryAbility.FLY);
         }
 
         /**
@@ -2987,6 +2980,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void setObjectControlled(boolean objectControlled) {
                 this.objectControlled = objectControlled;
                 if (objectControlled) {
+                        controller.clearTailsFlightIf(getSecondaryAbility() == SecondaryAbility.FLY);
                         this.deferredObjectControlRelease = false;
                         this.objectControlSuppressesMovement = true;
                 } else {

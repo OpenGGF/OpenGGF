@@ -645,6 +645,7 @@ public class TestRingManager {
                 capability.spindashSpeedTable(),
                 capability.elementalShieldsEnabled(),
                 capability.instaShieldEnabled(),
+                capability.tailsFlightEnabled(),
                 capability.jumpRepressClearsRollJumpBeforeAbility(),
                 enabled,
                 capability.superSpindashSpeedTable());
