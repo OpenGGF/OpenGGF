@@ -75,7 +75,7 @@ public class Sonic1RingPlacement {
         for (ObjectSpawn spawn : allObjects) {
             if (spawn.objectId() == RING_OBJECT_ID) {
                 List<RingSpawn> expanded = new ArrayList<>();
-                expandRing(spawn, expanded);
+                expandRing(spawn, expanded, rings.size());
                 rings.addAll(expanded);
                 mapping.put(spawn, List.copyOf(expanded));
             }
@@ -99,7 +99,7 @@ public class Sonic1RingPlacement {
         return RING_POS_DATA[patternIndex];
     }
 
-    private void expandRing(ObjectSpawn spawn, List<RingSpawn> out) {
+    private void expandRing(ObjectSpawn spawn, List<RingSpawn> out, int firstPlacementId) {
         int subtype = spawn.subtype();
         int countMinusOne = subtype & 0x07;
         if (countMinusOne > 6) {
@@ -115,7 +115,7 @@ public class Sonic1RingPlacement {
         int y = spawn.y();
 
         for (int i = 0; i < ringCount; i++) {
-            out.add(new RingSpawn(x, y));
+            out.add(new RingSpawn(x, y, firstPlacementId + i));
             x += dx;
             y += dy;
         }

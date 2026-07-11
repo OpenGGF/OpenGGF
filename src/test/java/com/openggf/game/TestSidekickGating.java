@@ -96,6 +96,9 @@ class TestSidekickGating {
             public String getIdentifier() { return "test"; }
             public Game createGame(Rom rom) { return null; }
             public ObjectRegistry createObjectRegistry() { return null; }
+            public com.openggf.level.objects.ObjectPlacementEncoding getObjectPlacementEncoding() {
+                return new com.openggf.game.common.CommonObjectPlacementEncoding();
+            }
             public GameAudioProfile getAudioProfile() { return null; }
             public TouchResponseTable createTouchResponseTable(
                     RomByteReader r) { return null; }
@@ -119,5 +122,4 @@ class TestSidekickGating {
                 "Default supportsSidekick() should be false");
     }
 }
-
 

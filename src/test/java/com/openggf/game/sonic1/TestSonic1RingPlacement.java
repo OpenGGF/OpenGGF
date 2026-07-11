@@ -25,8 +25,8 @@ class TestSonic1RingPlacement {
 
         assertNotNull(expanded);
         assertEquals(List.of(
-                new RingSpawn(0x0200, 0x0300),
-                new RingSpawn(0x0210, 0x0300),
-                new RingSpawn(0x0220, 0x0300)), expanded);
+                new RingSpawn(0x0200, 0x0300, 0),
+                new RingSpawn(0x0210, 0x0300, 1),
+                new RingSpawn(0x0220, 0x0300, 2)), expanded);
     }
 }

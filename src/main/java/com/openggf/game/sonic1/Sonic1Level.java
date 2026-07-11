@@ -36,7 +36,7 @@ import java.util.logging.Logger;
  *   <li>Block word format differs: 0SSY X0II IIII IIII</li>
  * </ul>
  */
-public class Sonic1Level extends AbstractLevel {
+public class Sonic1Level extends AbstractLevel implements com.openggf.level.objects.RingObjectPlacementMapping {
     private static final int V_PALETTE_RAM_ADDR = 0xFB00;
     private static final int S1_CHUNKS_PER_BLOCK = 256; // 16x16 grid
     private static final int S1_BLOCK_SIZE_IN_ROM = S1_CHUNKS_PER_BLOCK * LevelConstants.BYTES_PER_CHUNK; // 512 bytes
@@ -158,6 +158,11 @@ public class Sonic1Level extends AbstractLevel {
      * Returns the ring spawn mapping, or an empty map if none was set.
      */
     public java.util.Map<ObjectSpawn, List<RingSpawn>> getRingSpawnMapping() {
+        return ringSpawnMapping;
+    }
+
+    @Override
+    public java.util.Map<ObjectSpawn, List<RingSpawn>> ringObjectPlacementMapping() {
         return ringSpawnMapping;
     }
 

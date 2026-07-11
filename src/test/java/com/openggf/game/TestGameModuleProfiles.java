@@ -81,6 +81,10 @@ public class TestGameModuleProfiles {
             @Override
             public com.openggf.level.objects.ObjectRegistry createObjectRegistry() { return null; }
             @Override
+            public com.openggf.level.objects.ObjectPlacementEncoding getObjectPlacementEncoding() {
+                return new com.openggf.game.common.CommonObjectPlacementEncoding();
+            }
+            @Override
             public com.openggf.audio.GameAudioProfile getAudioProfile() { return null; }
             @Override
             public com.openggf.level.objects.TouchResponseTable createTouchResponseTable(
@@ -124,5 +128,4 @@ public class TestGameModuleProfiles {
         assertTrue(profile.postTeardownFixups().isEmpty());
     }
 }
-
 

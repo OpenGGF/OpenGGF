@@ -65,12 +65,12 @@ public final class CommonPlacementParser {
             for (int i = 0; i < total; i++) {
                 int ringX = x + (vertical ? 0 : i * RING_SPACING);
                 int ringY = y + (vertical ? i * RING_SPACING : 0);
-                spawns.add(new RingSpawn(ringX, ringY));
+                spawns.add(new RingSpawn(ringX, ringY, spawns.size()));
             }
             cursor += RING_RECORD_SIZE;
         }
 
-        spawns.sort(Comparator.comparingInt(RingSpawn::x));
+        spawns.sort(Comparator.comparingInt(spawn -> spawn.x() & 0xFF80));
         return List.copyOf(spawns);
     }
 
@@ -114,7 +114,7 @@ public final class CommonPlacementParser {
             cursor += OBJECT_RECORD_SIZE;
         }
 
-        spawns.sort(Comparator.comparingInt(ObjectSpawn::x));
+        spawns.sort(Comparator.comparingInt(spawn -> spawn.x() & 0xFF80));
         return List.copyOf(spawns);
     }
 }

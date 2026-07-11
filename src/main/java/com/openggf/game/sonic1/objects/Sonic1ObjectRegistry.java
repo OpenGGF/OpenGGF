@@ -53,8 +53,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
      * mapping (e.g. for tests that construct the registry without a live level).
      */
     private Map<ObjectSpawn, List<RingSpawn>> currentRingSpawnMapping() {
-        if (currentLevel() instanceof Sonic1Level s1Level) {
-            return s1Level.getRingSpawnMapping();
+        if (currentLevel() instanceof com.openggf.level.objects.RingObjectPlacementMapping provider) {
+            return provider.ringObjectPlacementMapping();
         }
         return ringSpawnMapping;
     }
@@ -69,7 +69,10 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     List<RingSpawn> ringSpawns = currentRingSpawnMapping().get(spawn);
                     if (ringSpawns == null || ringSpawns.isEmpty()) {
                         // Fallback: single ring at spawn position
-                        ringSpawns = List.of(new RingSpawn(spawn.x(), spawn.y()));
+                        RingSpawn currentRing = currentLevel() == null ? null : currentLevel().getRings().stream()
+                                .filter(ring -> ring.x() == spawn.x() && ring.y() == spawn.y())
+                                .findFirst().orElse(null);
+                        ringSpawns = List.of(currentRing != null ? currentRing : new RingSpawn(spawn.x(), spawn.y()));
                     }
                     return new Sonic1RingInstance(spawn, ringSpawns);
                 });

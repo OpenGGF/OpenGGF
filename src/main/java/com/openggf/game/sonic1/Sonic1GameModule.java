@@ -71,6 +71,9 @@ import static java.security.MessageDigest.getInstance;
  * GameModule implementation for Sonic the Hedgehog 1 (Mega Drive/Genesis).
  */
 public class Sonic1GameModule implements GameModule {
+
+    private static final Sonic1ObjectPlacementEncoding OBJECT_PLACEMENT_ENCODING =
+            new Sonic1ObjectPlacementEncoding();
     private final GameAudioProfile audioProfile = new Sonic1AudioProfile();
     private final SpecialStageProvider specialStageProvider = new Sonic1SpecialStageProvider();
     private final Sonic1LevelEventManager levelEventManager = new Sonic1LevelEventManager();
@@ -121,6 +124,11 @@ public class Sonic1GameModule implements GameModule {
             objectRegistry = new Sonic1ObjectRegistry();
         }
         return objectRegistry;
+    }
+
+    @Override
+    public com.openggf.level.objects.ObjectPlacementEncoding getObjectPlacementEncoding() {
+        return OBJECT_PLACEMENT_ENCODING;
     }
 
     @Override

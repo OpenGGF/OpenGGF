@@ -1799,6 +1799,9 @@ public class Engine {
 			levelManager.setLevel(mutableLevel);
 		}
 		levelEditorController.attachLevel(mutableLevel);
+		GameModule editorModule = GameServices.module();
+		levelEditorController.configureSpawnEditing(
+				editorModule.createObjectRegistry(), editorModule.getObjectPlacementEncoding());
 	}
 
 	private void primeEditorSelection(int playerX, int playerY) {

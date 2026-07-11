@@ -9,6 +9,7 @@ import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectPlacementEncoding;
 import com.openggf.level.objects.PlaneSwitcherConfig;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.sprites.art.SpriteArtSet;
@@ -23,6 +24,9 @@ public interface GameModule {
     Game createGame(Rom rom);
 
     ObjectRegistry createObjectRegistry();
+
+    /** Returns the lossless native object-placement encoder used by the editor. */
+    ObjectPlacementEncoding getObjectPlacementEncoding();
 
     GameAudioProfile getAudioProfile();
 

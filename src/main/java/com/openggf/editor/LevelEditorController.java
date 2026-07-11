@@ -3,11 +3,21 @@ package com.openggf.editor;
 import com.openggf.editor.commands.DeriveBlockFromChunksCommand;
 import com.openggf.editor.commands.DeriveChunkFromPatternsCommand;
 import com.openggf.editor.commands.PlaceBlockCommand;
+import com.openggf.editor.commands.DeleteObjectSpawnCommand;
+import com.openggf.editor.commands.DeleteRingSpawnCommand;
+import com.openggf.editor.commands.MoveObjectSpawnCommand;
+import com.openggf.editor.commands.MoveRingSpawnCommand;
+import com.openggf.editor.commands.PlaceObjectSpawnCommand;
+import com.openggf.editor.commands.PlaceRingSpawnCommand;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.MutableLevel;
 import com.openggf.level.PatternDesc;
+import com.openggf.level.objects.ObjectPlacementEncoding;
+import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.rings.RingSpawn;
 import com.openggf.game.session.EditorCursorState;
 
 import java.util.Objects;
@@ -29,6 +39,12 @@ public final class LevelEditorController {
     private Integer selectedPatternRaw;
     private int activeLayer;
     private MutableLevel level;
+    private EditorSpawnEditMode spawnEditMode = EditorSpawnEditMode.TILES;
+    private EditorStockObjectPalette objectPalette;
+    private EditorSpawnFactory spawnFactory;
+    private ObjectSpawn selectedObjectSpawn;
+    private RingSpawn selectedRingSpawn;
+    private ObjectSpawn selectedRingBackingObject;
 
     public void attachLevel(MutableLevel level) {
         this.level = Objects.requireNonNull(level, "level");
@@ -45,6 +61,139 @@ public final class LevelEditorController {
         selectedChunkDescriptorRaw = null;
         selectedPatternRaw = null;
         activeLayer = 0;
+        spawnEditMode = EditorSpawnEditMode.TILES;
+        objectPalette = null;
+        spawnFactory = null;
+        selectedObjectSpawn = null;
+        selectedRingSpawn = null;
+        selectedRingBackingObject = null;
+    }
+
+    public void configureSpawnEditing(ObjectRegistry registry, ObjectPlacementEncoding encoding) {
+        MutableLevel attachedLevel = requireLevel();
+        objectPalette = new EditorStockObjectPalette(registry);
+        spawnFactory = new EditorSpawnFactory(encoding, new EditorPlacementIdAllocator(attachedLevel));
+    }
+
+    public void setSpawnEditMode(EditorSpawnEditMode mode) {
+        spawnEditMode = Objects.requireNonNull(mode, "mode");
+        selectedObjectSpawn = null;
+        selectedRingSpawn = null;
+        selectedRingBackingObject = null;
+    }
+
+    public EditorSpawnEditMode spawnEditMode() { return spawnEditMode; }
+    public boolean isSpawnEditing() { return spawnEditMode != EditorSpawnEditMode.TILES; }
+    public EditorStockObjectPalette objectPalette() {
+        if (objectPalette == null) throw new IllegalStateException("Spawn editing is not configured");
+        return objectPalette;
+    }
+
+    public void cycleSpawnEditMode() {
+        setSpawnEditMode(switch (spawnEditMode) {
+            case TILES -> EditorSpawnEditMode.OBJECTS;
+            case OBJECTS -> EditorSpawnEditMode.RINGS;
+            case RINGS -> EditorSpawnEditMode.TILES;
+        });
+    }
+
+    public void placeObjectSpawnAtCursor() {
+        requireSpawnMode(EditorSpawnEditMode.OBJECTS);
+        if (!requireSpawnFactory().canCreateObject(objectPalette().selectedObjectId())) {
+            return;
+        }
+        ObjectSpawn spawn = requireSpawnFactory().createObjectSpawn(worldCursor.x(), worldCursor.y(),
+                objectPalette().selectedObjectId(), objectPalette().selectedSubtype(), 0, true);
+        history.execute(new PlaceObjectSpawnCommand(requireLevel(), spawn));
+        selectedObjectSpawn = spawn;
+    }
+
+    public void placeRingSpawnAtCursor() {
+        requireSpawnMode(EditorSpawnEditMode.RINGS);
+        RingSpawn spawn = requireSpawnFactory().createRingSpawn(worldCursor.x(), worldCursor.y());
+        ObjectSpawn backingObject = requireSpawnFactory().createRingBackingObject(spawn);
+        history.execute(new PlaceRingSpawnCommand(requireLevel(), spawn, backingObject));
+        selectedRingSpawn = spawn;
+        selectedRingBackingObject = backingObject;
+    }
+
+    public void placeSpawnAtCursor() {
+        if (spawnEditMode == EditorSpawnEditMode.OBJECTS) placeObjectSpawnAtCursor();
+        else if (spawnEditMode == EditorSpawnEditMode.RINGS) placeRingSpawnAtCursor();
+    }
+
+    public void deleteSpawnAtCursor() {
+        MutableLevel attachedLevel = requireLevel();
+        if (spawnEditMode == EditorSpawnEditMode.OBJECTS) {
+            ObjectSpawn spawn = findObjectAtCursor();
+            if (spawn != null) {
+                history.execute(new DeleteObjectSpawnCommand(attachedLevel, spawn));
+                if (selectedObjectSpawn != null && selectedObjectSpawn.layoutIndex() == spawn.layoutIndex()) selectedObjectSpawn = null;
+            }
+        } else if (spawnEditMode == EditorSpawnEditMode.RINGS) {
+            RingSpawn spawn = findRingAtCursor();
+            if (spawn != null) {
+                ObjectSpawn backingObject = attachedLevel.ringBackingObject(spawn);
+                history.execute(new DeleteRingSpawnCommand(attachedLevel, spawn, backingObject));
+                if (selectedRingSpawn != null && selectedRingSpawn.placementId() == spawn.placementId()) selectedRingSpawn = null;
+                selectedRingBackingObject = null;
+            }
+        }
+    }
+
+    public void moveSelectedSpawn(int x, int y) {
+        MutableLevel attachedLevel = requireLevel();
+        if (spawnEditMode == EditorSpawnEditMode.OBJECTS && selectedObjectSpawn != null) {
+            ObjectSpawn moved = requireSpawnFactory().moveObjectSpawn(selectedObjectSpawn, x, y);
+            history.execute(new MoveObjectSpawnCommand(attachedLevel, selectedObjectSpawn, moved));
+            selectedObjectSpawn = moved;
+        } else if (spawnEditMode == EditorSpawnEditMode.RINGS && selectedRingSpawn != null) {
+            RingSpawn moved = requireSpawnFactory().moveRingSpawn(selectedRingSpawn, x, y);
+            int dx = x - selectedRingSpawn.x();
+            int dy = y - selectedRingSpawn.y();
+            ObjectSpawn movedBackingObject = selectedRingBackingObject == null ? null
+                    : requireSpawnFactory().moveRingBackingObject(selectedRingBackingObject,
+                            selectedRingBackingObject.x() + dx,
+                            selectedRingBackingObject.y() + dy);
+            history.execute(new MoveRingSpawnCommand(attachedLevel, selectedRingSpawn, moved,
+                    selectedRingBackingObject, movedBackingObject));
+            selectedRingSpawn = moved;
+            selectedRingBackingObject = movedBackingObject;
+        }
+    }
+
+    public void eyedropSpawnAtCursor() {
+        if (spawnEditMode == EditorSpawnEditMode.OBJECTS) {
+            selectedObjectSpawn = findObjectAtCursor();
+            if (selectedObjectSpawn != null) objectPalette().eyedrop(selectedObjectSpawn);
+        } else if (spawnEditMode == EditorSpawnEditMode.RINGS) {
+            selectedRingSpawn = findRingAtCursor();
+            selectedRingBackingObject = selectedRingSpawn == null ? null : requireLevel().ringBackingObject(selectedRingSpawn);
+        }
+    }
+
+    private ObjectSpawn findObjectAtCursor() {
+        if (level == null) return null;
+        return level.getObjects().stream()
+                .filter(s -> s.x() == worldCursor.x() && s.y() == worldCursor.y())
+                .filter(s -> !level.ringObjectPlacementMapping().containsKey(s))
+                .findFirst().orElse(null);
+    }
+
+    private RingSpawn findRingAtCursor() {
+        if (level == null) return null;
+        return level.getRings().stream()
+                .filter(s -> s.x() == worldCursor.x() && s.y() == worldCursor.y())
+                .findFirst().orElse(null);
+    }
+
+    private EditorSpawnFactory requireSpawnFactory() {
+        if (spawnFactory == null) throw new IllegalStateException("Spawn editing is not configured");
+        return spawnFactory;
+    }
+
+    private void requireSpawnMode(EditorSpawnEditMode expected) {
+        if (spawnEditMode != expected) throw new IllegalStateException("Editor is not in " + expected + " mode");
     }
 
     public void placeBlock(int layer, int x, int y, int blockIndex) {
@@ -65,13 +214,38 @@ public final class LevelEditorController {
     public void undo() {
         if (history.undo()) {
             refreshSelectionFromActiveTarget();
+            reconcileSpawnSelection();
         }
     }
 
     public void redo() {
         if (history.redo()) {
             refreshSelectionFromActiveTarget();
+            reconcileSpawnSelection();
         }
+    }
+
+    private void reconcileSpawnSelection() {
+        if (level == null) {
+            selectedObjectSpawn = null;
+            selectedRingSpawn = null;
+            selectedRingBackingObject = null;
+            return;
+        }
+        if (selectedObjectSpawn != null) {
+            int placementId = selectedObjectSpawn.layoutIndex();
+            selectedObjectSpawn = level.getObjects().stream()
+                    .filter(spawn -> spawn.layoutIndex() == placementId)
+                    .findFirst().orElse(null);
+        }
+        if (selectedRingSpawn != null) {
+            int placementId = selectedRingSpawn.placementId();
+            selectedRingSpawn = level.getRings().stream()
+                    .filter(spawn -> spawn.placementId() == placementId)
+                    .findFirst().orElse(null);
+        }
+        selectedRingBackingObject = selectedRingSpawn == null
+                ? null : level.ringBackingObject(selectedRingSpawn);
     }
 
     public int activeLayer() {
@@ -210,6 +384,10 @@ public final class LevelEditorController {
     }
 
     public void applyPrimaryAction() {
+        if (isSpawnEditing()) {
+            placeSpawnAtCursor();
+            return;
+        }
         if (depth == EditorHierarchyDepth.BLOCK) {
             applyBlockPrimaryAction();
             return;
@@ -354,6 +532,10 @@ public final class LevelEditorController {
     }
 
     public void performEyedrop() {
+        if (isSpawnEditing()) {
+            eyedropSpawnAtCursor();
+            return;
+        }
         if (depth == EditorHierarchyDepth.CHUNK) {
             performChunkEyedrop();
             return;
@@ -530,6 +712,14 @@ public final class LevelEditorController {
     }
 
     private EditorFocusRegion[] activeFocusCycle() {
+        if (depth == EditorHierarchyDepth.WORLD && isSpawnEditing()) {
+            return new EditorFocusRegion[] {
+                    EditorFocusRegion.WORLD_CANVAS,
+                    EditorFocusRegion.SPAWN_PALETTE,
+                    EditorFocusRegion.COMMAND_STRIP,
+                    EditorFocusRegion.TOOLBAR
+            };
+        }
         return switch (depth) {
             case WORLD -> new EditorFocusRegion[] {
                     EditorFocusRegion.WORLD_CANVAS,

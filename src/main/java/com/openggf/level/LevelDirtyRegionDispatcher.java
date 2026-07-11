@@ -37,13 +37,17 @@ final class LevelDirtyRegionDispatcher {
             // The consume keeps MutableLevel's frame-visible dirty state in sync.
         }
 
-        if (ml.consumeObjectsDirty()) {
-            levelManager.resyncObjectSpawnListFromLevel();
-        }
+        boolean objectsDirty = ml.consumeObjectsDirty();
+        boolean ringsDirty = ml.consumeRingsDirty();
+        resyncDirtySpawnLists(objectsDirty, ringsDirty,
+                levelManager::resyncRingSpawnListFromLevel,
+                levelManager::resyncObjectSpawnListFromLevel);
+    }
 
-        if (ml.consumeRingsDirty()) {
-            levelManager.resyncRingSpawnListFromLevel();
-        }
+    static void resyncDirtySpawnLists(boolean objectsDirty, boolean ringsDirty,
+                                      Runnable ringResync, Runnable objectResync) {
+        if (ringsDirty) ringResync.run();
+        if (objectsDirty) objectResync.run();
     }
 
     void reuploadDirtyPatterns(BitSet dirtyPatterns) {

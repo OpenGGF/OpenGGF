@@ -13,7 +13,7 @@ import java.util.*;
  * collision, object placements, and ring placements. Subsystems consume
  * dirty regions each frame via {@code LevelManager.processDirtyRegions()}.
  */
-public class MutableLevel extends AbstractLevel {
+public class MutableLevel extends AbstractLevel implements com.openggf.level.objects.RingObjectPlacementMapping {
 
     // Dirty tracking
     private final BitSet dirtyPatterns;
@@ -41,6 +41,7 @@ public class MutableLevel extends AbstractLevel {
     // Mutable spawn lists (override the immutable ones from AbstractLevel)
     private final ArrayList<ObjectSpawn> mutableObjects;
     private final ArrayList<RingSpawn> mutableRings;
+    private final LinkedHashMap<ObjectSpawn, List<RingSpawn>> ringObjectPlacementMapping;
 
     // Game-specific overrides captured from source level
     private final int blockPixelSize;
@@ -56,6 +57,7 @@ public class MutableLevel extends AbstractLevel {
                          Palette[] palettes,
                          ArrayList<ObjectSpawn> mutableObjects,
                          ArrayList<RingSpawn> mutableRings,
+                         LinkedHashMap<ObjectSpawn, List<RingSpawn>> ringObjectPlacementMapping,
                          int minX, int maxX, int minY, int maxY,
                          java.util.Map<Integer, Set<Integer>> chunkToBlocks,
                          java.util.Map<Integer, Set<Integer>> blockToMapCells) {
@@ -76,6 +78,7 @@ public class MutableLevel extends AbstractLevel {
         this.palettes = palettes;
         this.mutableObjects = mutableObjects;
         this.mutableRings = mutableRings;
+        this.ringObjectPlacementMapping = ringObjectPlacementMapping;
         this.objects = mutableObjects;
         this.rings = mutableRings;
         this.minX = minX;
@@ -161,6 +164,11 @@ public class MutableLevel extends AbstractLevel {
         // Mutable spawn lists
         ArrayList<ObjectSpawn> mutableObjects = new ArrayList<>(source.getObjects());
         ArrayList<RingSpawn> mutableRings = new ArrayList<>(source.getRings());
+        LinkedHashMap<ObjectSpawn, List<RingSpawn>> ringObjectPlacementMapping = new LinkedHashMap<>();
+        if (source instanceof com.openggf.level.objects.RingObjectPlacementMapping provider) {
+            provider.ringObjectPlacementMapping().forEach((object, rings) ->
+                    ringObjectPlacementMapping.put(object, List.copyOf(rings)));
+        }
 
         // Build reverse lookups
         java.util.Map<Integer, Set<Integer>> chunkToBlocks = buildChunkToBlocksMap(blocks);
@@ -173,7 +181,7 @@ public class MutableLevel extends AbstractLevel {
                 blocks, blkCount,
                 solidTiles, stCount,
                 map, palettes,
-                mutableObjects, mutableRings,
+                mutableObjects, mutableRings, ringObjectPlacementMapping,
                 source.getMinX(), source.getMaxX(),
                 source.getMinY(), source.getMaxY(),
                 chunkToBlocks, blockToMapCells);
@@ -322,30 +330,249 @@ public class MutableLevel extends AbstractLevel {
     }
 
     public void addObjectSpawn(ObjectSpawn spawn) {
-        mutableObjects.add(spawn);
-        objectsDirty = true;
+        requireStablePlacementId(spawn.layoutIndex(), "object");
+        requireUniqueObjectPlacementId(spawn.layoutIndex(), -1);
+        insertByPlacementColumn(mutableObjects, spawn);
+        markObjectsUserModified();
     }
 
     public void removeObjectSpawn(ObjectSpawn spawn) {
-        mutableObjects.remove(spawn);
-        objectsDirty = true;
+        requireStablePlacementId(spawn.layoutIndex(), "object");
+        rejectMappedRingBackingObject(spawn);
+        int index = objectIndex(spawn);
+        if (index < 0) throw new IllegalArgumentException("Unknown object placement id " + spawn.layoutIndex());
+        mutableObjects.remove(index);
+        markObjectsUserModified();
     }
 
     public void moveObjectSpawn(ObjectSpawn oldSpawn, ObjectSpawn newSpawn) {
-        int idx = mutableObjects.indexOf(oldSpawn);
-        if (idx >= 0) {
-            mutableObjects.set(idx, newSpawn);
-            objectsDirty = true;
+        requireStablePlacementId(oldSpawn.layoutIndex(), "object");
+        requireStablePlacementId(newSpawn.layoutIndex(), "object");
+        rejectMappedRingBackingObject(oldSpawn);
+        if (oldSpawn.layoutIndex() != newSpawn.layoutIndex()) {
+            throw new IllegalArgumentException("Move must preserve object placement id");
         }
+        int idx = objectIndex(oldSpawn);
+        if (idx < 0) throw new IllegalArgumentException("Unknown object placement id " + oldSpawn.layoutIndex());
+        boolean sameColumn = placementColumn(oldSpawn) == placementColumn(newSpawn);
+        mutableObjects.remove(idx);
+        if (sameColumn) mutableObjects.add(idx, newSpawn);
+        else insertByPlacementColumn(mutableObjects, newSpawn);
+        markObjectsUserModified();
+    }
+
+    public int objectPlacementIndex(int placementId) { return objectIndexByPlacementId(placementId); }
+
+    public void restoreObjectSpawnAt(ObjectSpawn spawn, int index) {
+        requireStablePlacementId(spawn.layoutIndex(), "object");
+        requireUniqueObjectPlacementId(spawn.layoutIndex(), -1);
+        requireInsertionIndex(index, mutableObjects.size());
+        mutableObjects.add(index, spawn);
+        markObjectsUserModified();
+    }
+
+    public void restoreMovedObjectSpawn(ObjectSpawn current, ObjectSpawn restored, int index) {
+        if (current.layoutIndex() != restored.layoutIndex()) throw new IllegalArgumentException("Restore must preserve object placement id");
+        int currentIndex = objectIndexByPlacementId(current.layoutIndex());
+        if (currentIndex < 0) throw new IllegalArgumentException("Unknown object placement id " + current.layoutIndex());
+        requireInsertionIndex(index, mutableObjects.size() - 1);
+        mutableObjects.remove(currentIndex);
+        mutableObjects.add(index, restored);
+        markObjectsUserModified();
     }
 
     public void addRingSpawn(RingSpawn spawn) {
-        mutableRings.add(spawn);
-        ringsDirty = true;
+        requireStablePlacementId(spawn.placementId(), "ring");
+        requireUniqueRingPlacementId(spawn.placementId(), -1);
+        insertByPlacementColumn(mutableRings, spawn);
+        markRingsUserModified();
     }
 
     public void removeRingSpawn(RingSpawn spawn) {
-        mutableRings.remove(spawn);
+        requireStablePlacementId(spawn.placementId(), "ring");
+        int index = ringIndex(spawn);
+        if (index < 0) throw new IllegalArgumentException("Unknown ring placement id " + spawn.placementId());
+        mutableRings.remove(index);
+        markRingsUserModified();
+    }
+
+    public void moveRingSpawn(RingSpawn oldSpawn, RingSpawn newSpawn) {
+        requireStablePlacementId(oldSpawn.placementId(), "ring");
+        requireStablePlacementId(newSpawn.placementId(), "ring");
+        if (oldSpawn.placementId() != newSpawn.placementId()) {
+            throw new IllegalArgumentException("Move must preserve ring placement id");
+        }
+        int index = ringIndex(oldSpawn);
+        if (index < 0) throw new IllegalArgumentException("Unknown ring placement id " + oldSpawn.placementId());
+        boolean sameColumn = placementColumn(oldSpawn) == placementColumn(newSpawn);
+        mutableRings.remove(index);
+        if (sameColumn) mutableRings.add(index, newSpawn);
+        else insertByPlacementColumn(mutableRings, newSpawn);
+        markRingsUserModified();
+    }
+
+    public void addObjectBackedRingSpawn(RingSpawn ring, ObjectSpawn backingObject) {
+        requireStablePlacementId(ring.placementId(), "ring");
+        requireStablePlacementId(backingObject.layoutIndex(), "object");
+        requireUniqueRingPlacementId(ring.placementId(), -1);
+        requireUniqueObjectPlacementId(backingObject.layoutIndex(), -1);
+        insertByPlacementColumn(mutableRings, ring);
+        insertByPlacementColumn(mutableObjects, backingObject);
+        ringObjectPlacementMapping.put(backingObject, List.of(ring));
+        markRingsUserModified();
+        markObjectsUserModified();
+    }
+
+    public void removeObjectBackedRingSpawn(RingSpawn ring, ObjectSpawn backingObject) {
+        List<RingSpawn> mapped = ringObjectPlacementMapping.get(backingObject);
+        if (mapped == null || mapped.size() != 1 || mapped.get(0).placementId() != ring.placementId()) {
+            throw new IllegalArgumentException("Unknown object-backed ring placement");
+        }
+        removeObjectBackedRingGroup(backingObject);
+    }
+
+    public void removeObjectBackedRingGroup(ObjectSpawn backingObject) {
+        int objectIndex = objectIndexByPlacementId(backingObject.layoutIndex());
+        List<RingSpawn> mapped = ringObjectPlacementMapping.get(backingObject);
+        if (objectIndex < 0 || mapped == null || mapped.isEmpty()) {
+            throw new IllegalArgumentException("Unknown object-backed ring group");
+        }
+        int[] ringIndices = mapped.stream().mapToInt(ring -> ringIndexByPlacementId(ring.placementId())).toArray();
+        if (java.util.Arrays.stream(ringIndices).anyMatch(index -> index < 0)) {
+            throw new IllegalArgumentException("Object-backed ring group is incomplete");
+        }
+        java.util.Arrays.sort(ringIndices);
+        mutableObjects.remove(objectIndex);
+        for (int i = ringIndices.length - 1; i >= 0; i--) mutableRings.remove(ringIndices[i]);
+        ringObjectPlacementMapping.remove(backingObject);
+        markRingsUserModified();
+        markObjectsUserModified();
+    }
+
+    public void moveObjectBackedRingGroup(ObjectSpawn oldBackingObject, ObjectSpawn newBackingObject,
+                                          List<RingSpawn> oldRings, List<RingSpawn> newRings) {
+        if (oldBackingObject.layoutIndex() != newBackingObject.layoutIndex()
+                || oldRings.size() != newRings.size() || oldRings.isEmpty()) {
+            throw new IllegalArgumentException("Object-backed ring move must preserve group identity");
+        }
+        for (int i = 0; i < oldRings.size(); i++) {
+            if (oldRings.get(i).placementId() != newRings.get(i).placementId()) {
+                throw new IllegalArgumentException("Object-backed ring move must preserve ring placement ids");
+            }
+        }
+        List<RingSpawn> mapped = ringObjectPlacementMapping.get(oldBackingObject);
+        if (mapped == null || !sameRingIds(mapped, oldRings)
+                || objectIndexByPlacementId(oldBackingObject.layoutIndex()) < 0
+                || oldRings.stream().anyMatch(ring -> ringIndexByPlacementId(ring.placementId()) < 0)) {
+            throw new IllegalArgumentException("Unknown object-backed ring group");
+        }
+        removeObjectBackedRingGroup(oldBackingObject);
+        for (RingSpawn ring : newRings) insertByPlacementColumn(mutableRings, ring);
+        insertByPlacementColumn(mutableObjects, newBackingObject);
+        ringObjectPlacementMapping.put(newBackingObject, List.copyOf(newRings));
+    }
+
+    public ObjectBackedRingState snapshotObjectBackedRingState() {
+        return new ObjectBackedRingState(List.copyOf(mutableObjects), List.copyOf(mutableRings),
+                copyRingObjectPlacementMapping(ringObjectPlacementMapping));
+    }
+
+    public void restoreObjectBackedRingState(ObjectBackedRingState state) {
+        List<ObjectSpawn> objects = List.copyOf(state.objects());
+        List<RingSpawn> rings = List.copyOf(state.rings());
+        validateUniqueObjectPlacementIds(objects);
+        validateUniqueRingPlacementIds(rings);
+        LinkedHashMap<ObjectSpawn, List<RingSpawn>> mapping = copyRingObjectPlacementMapping(state.mapping());
+        mutableObjects.clear(); mutableObjects.addAll(objects);
+        mutableRings.clear(); mutableRings.addAll(rings);
+        ringObjectPlacementMapping.clear(); ringObjectPlacementMapping.putAll(mapping);
+        markRingsUserModified();
+        markObjectsUserModified();
+    }
+
+    public record ObjectBackedRingState(List<ObjectSpawn> objects, List<RingSpawn> rings,
+                                        java.util.Map<ObjectSpawn, List<RingSpawn>> mapping) { }
+
+    public ObjectSpawn ringBackingObject(RingSpawn ring) {
+        for (var entry : ringObjectPlacementMapping.entrySet()) {
+            if (entry.getValue().stream().anyMatch(candidate -> candidate.placementId() == ring.placementId())) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public java.util.Map<ObjectSpawn, List<RingSpawn>> ringObjectPlacementMapping() {
+        return java.util.Collections.unmodifiableMap(ringObjectPlacementMapping);
+    }
+
+    private static boolean sameRingIds(List<RingSpawn> left, List<RingSpawn> right) {
+        if (left.size() != right.size()) return false;
+        for (int i = 0; i < left.size(); i++) if (left.get(i).placementId() != right.get(i).placementId()) return false;
+        return true;
+    }
+
+    private static LinkedHashMap<ObjectSpawn, List<RingSpawn>> copyRingObjectPlacementMapping(
+            java.util.Map<ObjectSpawn, List<RingSpawn>> source) {
+        LinkedHashMap<ObjectSpawn, List<RingSpawn>> copy = new LinkedHashMap<>();
+        source.forEach((object, rings) -> copy.put(object, List.copyOf(rings)));
+        return copy;
+    }
+
+    public int ringPlacementIndex(int placementId) { return ringIndexByPlacementId(placementId); }
+
+    public void restoreRingSpawnAt(RingSpawn spawn, int index) {
+        requireStablePlacementId(spawn.placementId(), "ring");
+        requireUniqueRingPlacementId(spawn.placementId(), -1);
+        requireInsertionIndex(index, mutableRings.size());
+        mutableRings.add(index, spawn);
+        markRingsUserModified();
+    }
+
+    public void restoreMovedRingSpawn(RingSpawn current, RingSpawn restored, int index) {
+        if (current.placementId() != restored.placementId()) throw new IllegalArgumentException("Restore must preserve ring placement id");
+        int currentIndex = ringIndexByPlacementId(current.placementId());
+        if (currentIndex < 0) throw new IllegalArgumentException("Unknown ring placement id " + current.placementId());
+        requireInsertionIndex(index, mutableRings.size() - 1);
+        mutableRings.remove(currentIndex);
+        mutableRings.add(index, restored);
+        markRingsUserModified();
+    }
+
+    /** Replaces persisted objects and requests runtime resync without creating a user edit. */
+    public void replaceObjectSpawnsPersisted(List<ObjectSpawn> spawns) {
+        List<ObjectSpawn> replacement = List.copyOf(spawns);
+        validateUniqueObjectPlacementIds(replacement);
+        mutableObjects.clear();
+        mutableObjects.addAll(replacement);
+        retainValidRingObjectMappings();
+        objectsDirty = true;
+    }
+
+    /** Replaces persisted rings and requests runtime resync without creating a user edit. */
+    public void replaceRingSpawnsPersisted(List<RingSpawn> spawns) {
+        List<RingSpawn> replacement = List.copyOf(spawns);
+        validateUniqueRingPlacementIds(replacement);
+        mutableRings.clear();
+        mutableRings.addAll(replacement);
+        retainValidRingObjectMappings();
+        ringsDirty = true;
+    }
+
+    /** Atomically replaces both persisted spawn tables and their object-backed ring grouping. */
+    public void replaceSpawnsPersisted(List<ObjectSpawn> objects, List<RingSpawn> rings,
+                                       java.util.Map<ObjectSpawn, List<RingSpawn>> mapping) {
+        List<ObjectSpawn> objectReplacement = List.copyOf(objects);
+        List<RingSpawn> ringReplacement = List.copyOf(rings);
+        validateUniqueObjectPlacementIds(objectReplacement);
+        validateUniqueRingPlacementIds(ringReplacement);
+        LinkedHashMap<ObjectSpawn, List<RingSpawn>> rebound = rebindRingObjectMappings(
+                mapping, objectReplacement, ringReplacement);
+        mutableObjects.clear(); mutableObjects.addAll(objectReplacement);
+        mutableRings.clear(); mutableRings.addAll(ringReplacement);
+        ringObjectPlacementMapping.clear(); ringObjectPlacementMapping.putAll(rebound);
+        objectsDirty = true;
         ringsDirty = true;
     }
 
@@ -432,6 +659,137 @@ public class MutableLevel extends AbstractLevel {
 
     public void markModifiedSinceLastSave() {
         modifiedSinceLastSave = true;
+    }
+
+    private void markObjectsUserModified() {
+        objectsDirty = true;
+        modifiedSinceLastSave = true;
+    }
+
+    private void markRingsUserModified() {
+        ringsDirty = true;
+        modifiedSinceLastSave = true;
+    }
+
+    private int objectIndexByPlacementId(int placementId) {
+        for (int i = 0; i < mutableObjects.size(); i++) {
+            if (mutableObjects.get(i).layoutIndex() == placementId) return i;
+        }
+        return -1;
+    }
+
+    private int objectIndex(ObjectSpawn spawn) {
+        return spawn.layoutIndex() >= 0
+                ? objectIndexByPlacementId(spawn.layoutIndex())
+                : mutableObjects.indexOf(spawn);
+    }
+
+    private int ringIndexByPlacementId(int placementId) {
+        for (int i = 0; i < mutableRings.size(); i++) {
+            if (mutableRings.get(i).placementId() == placementId) return i;
+        }
+        return -1;
+    }
+
+    private int ringIndex(RingSpawn spawn) {
+        return spawn.placementId() >= 0
+                ? ringIndexByPlacementId(spawn.placementId())
+                : mutableRings.indexOf(spawn);
+    }
+
+    private void requireUniqueObjectPlacementId(int placementId, int ignoredIndex) {
+        if (placementId < 0) return;
+        for (int i = 0; i < mutableObjects.size(); i++) {
+            if (i != ignoredIndex && mutableObjects.get(i).layoutIndex() == placementId) {
+                throw new IllegalArgumentException("Duplicate object placement id " + placementId);
+            }
+        }
+    }
+
+    private void requireUniqueRingPlacementId(int placementId, int ignoredIndex) {
+        if (placementId < 0) return;
+        for (int i = 0; i < mutableRings.size(); i++) {
+            if (i != ignoredIndex && mutableRings.get(i).placementId() == placementId) {
+                throw new IllegalArgumentException("Duplicate ring placement id " + placementId);
+            }
+        }
+    }
+
+    private static void validateUniqueObjectPlacementIds(List<ObjectSpawn> spawns) {
+        Set<Integer> ids = new HashSet<>();
+        for (ObjectSpawn spawn : spawns) {
+            requireStablePlacementId(spawn.layoutIndex(), "object");
+            if (!ids.add(spawn.layoutIndex())) throw new IllegalArgumentException("Duplicate object placement id " + spawn.layoutIndex());
+        }
+    }
+
+    private static void validateUniqueRingPlacementIds(List<RingSpawn> spawns) {
+        Set<Integer> ids = new HashSet<>();
+        for (RingSpawn spawn : spawns) {
+            requireStablePlacementId(spawn.placementId(), "ring");
+            if (!ids.add(spawn.placementId())) throw new IllegalArgumentException("Duplicate ring placement id " + spawn.placementId());
+        }
+    }
+
+    private static <T extends com.openggf.level.spawn.SpawnPoint> void insertByPlacementColumn(List<T> spawns, T spawn) {
+        int column = placementColumn(spawn);
+        int index = 0;
+        while (index < spawns.size() && (spawns.get(index).x() & 0xFF80) <= column) index++;
+        spawns.add(index, spawn);
+    }
+
+    private static int placementColumn(com.openggf.level.spawn.SpawnPoint spawn) { return spawn.x() & 0xFF80; }
+
+    private static void requireInsertionIndex(int index, int size) {
+        if (index < 0 || index > size) throw new IllegalArgumentException("Invalid placement insertion index " + index);
+    }
+
+    private static void requireStablePlacementId(int placementId, String kind) {
+        if (placementId < 0) throw new IllegalArgumentException(kind + " placement id must be nonnegative");
+    }
+
+    private void rejectMappedRingBackingObject(ObjectSpawn spawn) {
+        boolean mapped = ringObjectPlacementMapping.keySet().stream()
+                .anyMatch(candidate -> candidate.layoutIndex() == spawn.layoutIndex());
+        if (mapped) {
+            throw new IllegalArgumentException("Object-backed ring groups must use ring mutation APIs");
+        }
+    }
+
+    private void retainValidRingObjectMappings() {
+        LinkedHashMap<ObjectSpawn, List<RingSpawn>> rebound = rebindRingObjectMappings(
+                ringObjectPlacementMapping, mutableObjects, mutableRings);
+        ringObjectPlacementMapping.clear();
+        ringObjectPlacementMapping.putAll(rebound);
+    }
+
+    private static LinkedHashMap<ObjectSpawn, List<RingSpawn>> rebindRingObjectMappings(
+            java.util.Map<ObjectSpawn, List<RingSpawn>> source,
+            List<ObjectSpawn> objects,
+            List<RingSpawn> rings) {
+        java.util.Map<Integer, ObjectSpawn> objectsById = objects.stream()
+                .collect(java.util.stream.Collectors.toMap(ObjectSpawn::layoutIndex,
+                        java.util.function.Function.identity()));
+        java.util.Map<Integer, RingSpawn> ringsById = rings.stream()
+                .collect(java.util.stream.Collectors.toMap(RingSpawn::placementId,
+                        java.util.function.Function.identity()));
+        LinkedHashMap<ObjectSpawn, List<RingSpawn>> rebound = new LinkedHashMap<>();
+        for (var entry : source.entrySet()) {
+            ObjectSpawn canonicalObject = objectsById.get(entry.getKey().layoutIndex());
+            if (canonicalObject == null || entry.getValue().isEmpty()) continue;
+            ArrayList<RingSpawn> canonicalRings = new ArrayList<>(entry.getValue().size());
+            boolean complete = true;
+            for (RingSpawn mappedRing : entry.getValue()) {
+                RingSpawn canonicalRing = ringsById.get(mappedRing.placementId());
+                if (canonicalRing == null) {
+                    complete = false;
+                    break;
+                }
+                canonicalRings.add(canonicalRing);
+            }
+            if (complete) rebound.put(canonicalObject, List.copyOf(canonicalRings));
+        }
+        return rebound;
     }
 
     // ===== Helpers =====

@@ -94,12 +94,12 @@ class TestMutableLevel {
 
             // Object spawns
             objects = List.of(
-                    new ObjectSpawn(100, 200, 0x01, 0, 0, false, 0)
+                    new ObjectSpawn(100, 200, 0x01, 0, 0, false, 0, 0)
             );
 
             // Ring spawns
             rings = List.of(
-                    new RingSpawn(150, 250)
+                    new RingSpawn(150, 250, 0)
             );
 
             // Boundaries
@@ -197,7 +197,7 @@ class TestMutableLevel {
         assertEquals(1, ml.getObjects().size());
 
         // Add to the copy
-        ml.addObjectSpawn(new ObjectSpawn(300, 400, 0x02, 0, 0, false, 0));
+        ml.addObjectSpawn(new ObjectSpawn(300, 400, 0x02, 0, 0, false, 0, 1));
 
         // Source should be unaffected
         assertEquals(1, source.getObjects().size());
@@ -211,7 +211,7 @@ class TestMutableLevel {
 
         assertEquals(1, ml.getRings().size());
 
-        ml.addRingSpawn(new RingSpawn(500, 600));
+        ml.addRingSpawn(new RingSpawn(500, 600, 1));
 
         assertEquals(1, source.getRings().size());
         assertEquals(2, ml.getRings().size());
@@ -345,7 +345,7 @@ class TestMutableLevel {
     void addObjectSpawn_setsObjectsDirtyFlag() {
         MutableLevel ml = MutableLevel.snapshot(createSyntheticLevel());
 
-        ml.addObjectSpawn(new ObjectSpawn(10, 20, 0x05, 0, 0, false, 0));
+        ml.addObjectSpawn(new ObjectSpawn(10, 20, 0x05, 0, 0, false, 0, 1));
 
         assertTrue(ml.consumeObjectsDirty());
     }
@@ -368,7 +368,7 @@ class TestMutableLevel {
         ObjectSpawn oldSpawn = ml.getObjects().get(0);
         ObjectSpawn newSpawn = new ObjectSpawn(999, 888, oldSpawn.objectId(),
                 oldSpawn.subtype(), oldSpawn.renderFlags(), oldSpawn.respawnTracked(),
-                oldSpawn.rawYWord());
+                oldSpawn.rawYWord(), oldSpawn.layoutIndex());
         ml.moveObjectSpawn(oldSpawn, newSpawn);
 
         assertTrue(ml.consumeObjectsDirty());
@@ -379,7 +379,7 @@ class TestMutableLevel {
     void addRingSpawn_setsRingsDirtyFlag() {
         MutableLevel ml = MutableLevel.snapshot(createSyntheticLevel());
 
-        ml.addRingSpawn(new RingSpawn(10, 20));
+        ml.addRingSpawn(new RingSpawn(10, 20, 1));
 
         assertTrue(ml.consumeRingsDirty());
     }
@@ -413,7 +413,7 @@ class TestMutableLevel {
     void consumeObjectsDirty_returnsAndClears() {
         MutableLevel ml = MutableLevel.snapshot(createSyntheticLevel());
 
-        ml.addObjectSpawn(new ObjectSpawn(1, 2, 3, 0, 0, false, 0));
+        ml.addObjectSpawn(new ObjectSpawn(1, 2, 3, 0, 0, false, 0, 1));
         assertTrue(ml.consumeObjectsDirty());
         assertFalse(ml.consumeObjectsDirty(), "Second consume should be false (read-once)");
     }
@@ -422,7 +422,7 @@ class TestMutableLevel {
     void consumeRingsDirty_returnsAndClears() {
         MutableLevel ml = MutableLevel.snapshot(createSyntheticLevel());
 
-        ml.addRingSpawn(new RingSpawn(1, 2));
+        ml.addRingSpawn(new RingSpawn(1, 2, 1));
         assertTrue(ml.consumeRingsDirty());
         assertFalse(ml.consumeRingsDirty(), "Second consume should be false (read-once)");
     }
@@ -502,7 +502,7 @@ class TestMutableLevel {
 
         // Mutate ml1
         ml1.getPattern(0).setPixel(0, 0, (byte) 77);
-        ml1.addObjectSpawn(new ObjectSpawn(1, 2, 3, 0, 0, false, 0));
+        ml1.addObjectSpawn(new ObjectSpawn(1, 2, 3, 0, 0, false, 0, 1));
 
         // ml2 and source should be unaffected
         assertNotEquals(77, ml2.getPattern(0).getPixel(0, 0));
@@ -580,5 +580,4 @@ class TestMutableLevel {
         assertFalse(level.getRings().isEmpty());
     }
 }
-
 

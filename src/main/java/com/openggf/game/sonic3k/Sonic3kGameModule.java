@@ -79,6 +79,9 @@ import java.util.logging.Logger;
  * data select, special/bonus-stage providers, and level initialization hooks.
  */
 public class Sonic3kGameModule implements GameModule {
+
+    private static final com.openggf.game.common.CommonObjectPlacementEncoding OBJECT_PLACEMENT_ENCODING =
+            new com.openggf.game.common.CommonObjectPlacementEncoding();
     private static final Logger LOGGER = Logger.getLogger(Sonic3kGameModule.class.getName());
 
     static {
@@ -137,6 +140,11 @@ public class Sonic3kGameModule implements GameModule {
             objectRegistry = new Sonic3kObjectRegistry();
         }
         return objectRegistry;
+    }
+
+    @Override
+    public com.openggf.level.objects.ObjectPlacementEncoding getObjectPlacementEncoding() {
+        return OBJECT_PLACEMENT_ENCODING;
     }
 
     @Override

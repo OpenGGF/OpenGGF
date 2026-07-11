@@ -63,7 +63,7 @@ public class Sonic3kRingPlacement {
                 break;
             }
 
-            spawns.add(new RingSpawn(x, rom.readU16BE(cursor + 2)));
+            spawns.add(new RingSpawn(x, rom.readU16BE(cursor + 2), spawns.size()));
             cursor += RING_RECORD_SIZE;
         }
 

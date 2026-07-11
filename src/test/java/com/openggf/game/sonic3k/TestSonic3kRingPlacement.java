@@ -22,8 +22,8 @@ class TestSonic3kRingPlacement {
         List<RingSpawn> rings = Sonic3kRingPlacement.parseRawRingRecords(new RomByteReader(rom), 0);
 
         assertEquals(List.of(
-                new RingSpawn(0x0100, 0xA260),
-                new RingSpawn(0x0120, 0x3240)
+                new RingSpawn(0x0100, 0xA260, 1),
+                new RingSpawn(0x0120, 0x3240, 0)
         ), rings);
     }
 

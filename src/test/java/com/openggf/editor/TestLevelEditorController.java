@@ -641,7 +641,14 @@ class TestLevelEditorController {
                         EditorInputHandler.Action.TOGGLE_LAYER,
                         EditorInputHandler.Action.SAVE,
                         EditorInputHandler.Action.UNDO,
-                        EditorInputHandler.Action.REDO
+                        EditorInputHandler.Action.REDO,
+                        EditorInputHandler.Action.CYCLE_SPAWN_EDIT_MODE,
+                        EditorInputHandler.Action.NEXT_OBJECT,
+                        EditorInputHandler.Action.PREVIOUS_OBJECT,
+                        EditorInputHandler.Action.INCREMENT_SUBTYPE,
+                        EditorInputHandler.Action.DECREMENT_SUBTYPE,
+                        EditorInputHandler.Action.DELETE_SPAWN,
+                        EditorInputHandler.Action.MOVE_SELECTED_SPAWN_TO_CURSOR
                 },
                 EditorInputHandler.Action.values());
     }

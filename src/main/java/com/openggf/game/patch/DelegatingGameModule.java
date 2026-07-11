@@ -12,6 +12,7 @@ import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectPlacementEncoding;
 import com.openggf.level.objects.PlaneSwitcherConfig;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.sprites.art.SpriteArtSet;
@@ -58,6 +59,11 @@ public class DelegatingGameModule implements GameModule {
     @Override
     public ObjectRegistry createObjectRegistry() {
         return base.createObjectRegistry();
+    }
+
+    @Override
+    public ObjectPlacementEncoding getObjectPlacementEncoding() {
+        return base.getObjectPlacementEncoding();
     }
 
     @Override

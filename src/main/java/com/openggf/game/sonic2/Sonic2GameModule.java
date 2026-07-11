@@ -76,6 +76,9 @@ import java.util.Optional;
 import static java.security.MessageDigest.getInstance;
 
 public class Sonic2GameModule implements GameModule {
+
+    private static final com.openggf.game.common.CommonObjectPlacementEncoding OBJECT_PLACEMENT_ENCODING =
+            new com.openggf.game.common.CommonObjectPlacementEncoding();
     private final GameAudioProfile audioProfile = new Sonic2AudioProfile();
     private final Sonic2LevelEventManager levelEventManager = new Sonic2LevelEventManager();
     private final Sonic2ZoneRegistry zoneRegistry = new Sonic2ZoneRegistry();
@@ -125,6 +128,11 @@ public class Sonic2GameModule implements GameModule {
             objectRegistry = new Sonic2ObjectRegistry();
         }
         return objectRegistry;
+    }
+
+    @Override
+    public com.openggf.level.objects.ObjectPlacementEncoding getObjectPlacementEncoding() {
+        return OBJECT_PLACEMENT_ENCODING;
     }
 
     @Override
