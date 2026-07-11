@@ -17,6 +17,7 @@ import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.AizBattleshipInstance;
 import com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance;
 import com.openggf.game.sonic3k.objects.AizBombExplosionInstance;
@@ -1659,6 +1660,9 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             return;
         }
         battleshipSpawned = true;
+        // AIZ2SE_ShipRefresh clears Water_flag on the redraw pass that owns
+        // the battleship allocation (sonic3k.asm:104911-104934).
+        waterSystem().setWaterEnabled(Sonic3kZoneIds.ZONE_AIZ, 1, false);
         int cameraX = camera().getX();
         int baseSecondaryY = (camera().getY() + 0x08F0) & 0x0FF0;
         ObjectSpawn shipSpawn = new ObjectSpawn(cameraX, baseSecondaryY, 0, 0, 0, false, 0);

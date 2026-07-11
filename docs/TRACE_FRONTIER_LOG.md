@@ -881,6 +881,18 @@ complete-run frontier from f25965 / 21 errors to f26064 / 8 errors, all owned by
 the still-live AIZ water flag. The focused AIZ regression remains f19397 / 86.
 The AIZ stage is not green yet.
 
+Round 63 models the mutable ROM `Water_flag` separately from the immutable fact
+that a level has water. The new runtime enable bit retains the loaded mean,
+target, palette, and dynamic-handler state and participates in the shared water
+rewind snapshot. AIZ2's `AIZ2SE_ShipRefresh` owner clears it on the redraw pass
+that allocates `Obj_AIZBattleship`, matching the ROM instead of leaving the old
+`$0618` plane active through the end cutscene (`sonic3k.asm:104911-104934`).
+This removes the final eight complete-run errors at f26064 (Tails incorrectly
+entering water and quartering `$1570` Y velocity):
+`TestS3kAizCompleteRunTraceReplay` is fully green in the composed worktree.
+The focused AIZ replay remains red at f19397 / 86 and therefore the stage is
+not yet fully green.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

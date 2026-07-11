@@ -29,6 +29,7 @@ public record WaterSystemSnapshot(
             int meanLevel,
             boolean rising,
             int speed,
+            boolean enabled,
             boolean locked,
             int shakeTimer
     ) {}

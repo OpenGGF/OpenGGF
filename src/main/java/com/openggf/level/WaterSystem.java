@@ -112,6 +112,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
         private boolean rising;    // True if water is actively moving
         private int speed;         // Pixels per frame toward target (ROM: Water_speed, default 1)
         private DynamicWaterHandler handler; // Per-frame update logic, nullable
+        private boolean enabled; // ROM Water_flag: level can disable water at runtime
         private boolean locked;    // ROM _unkFAA2: when true, dynamic handler is skipped (boss/cutscene)
         private int shakeTimer;    // Screen shake countdown frames (0 = inactive)
 
@@ -122,6 +123,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
             this.rising = false;
             this.speed = 1;
             this.handler = null;
+            this.enabled = true;
             this.locked = false;
             this.shakeTimer = 0;
         }
@@ -146,6 +148,9 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
         public int getCurrentLevel() { return currentLevel; }
         public int getTargetLevel() { return targetLevel; }
         public int getMeanLevel() { return meanLevel; }
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
         /** ROM _unkFAA2: when true, the dynamic handler is skipped (boss/cutscene lock). */
         public boolean isLocked() { return locked; }
@@ -469,8 +474,11 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
      * Check if a level has water.
      */
     public boolean hasWater(int zoneId, int actId) {
-        WaterConfig config = waterConfigs.get(makeKey(zoneId, actId));
-        return config != null && config.hasWater();
+        String key = makeKey(zoneId, actId);
+        WaterConfig config = waterConfigs.get(key);
+        DynamicWaterState state = dynamicWaterStates.get(key);
+        return config != null && config.hasWater()
+                && (state == null || state.isEnabled());
     }
 
     /**
@@ -642,6 +650,20 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
     }
 
     /**
+     * Enables or disables the level's runtime water flag without discarding its
+     * loaded height, target, palette, or dynamic handler state.
+     *
+     * <p>Mirrors writes to a game's mutable {@code Water_flag}. This is distinct
+     * from the immutable provider decision that the level supports water.
+     */
+    public void setWaterEnabled(int zoneId, int actId, boolean enabled) {
+        DynamicWaterState state = dynamicWaterStates.get(makeKey(zoneId, actId));
+        if (state != null) {
+            state.setEnabled(enabled);
+        }
+    }
+
+    /**
      * Returns the dynamic water handler for a level, if one is active.
      *
      * <p>This is used by object/event bridges that need to set handler-owned ROM
@@ -735,6 +757,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
                     s.getMeanLevel(),
                     s.rising,
                     s.speed,
+                    s.isEnabled(),
                     s.isLocked(),
                     s.getShakeTimer()
             ));
@@ -757,6 +780,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
             state.meanLevel = entry.meanLevel();
             state.rising = entry.rising();
             state.speed = entry.speed();
+            state.setEnabled(entry.enabled());
             state.setLocked(entry.locked());
             state.setShakeTimer(entry.shakeTimer());
         }
