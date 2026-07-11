@@ -24,7 +24,10 @@ public interface GamePatch {
 
     Set<LogicalRom> romPrerequisites();
 
-    /** Main-character codes contributed to launch UI; each is lowercase and nonblank. */
+    /**
+     * Main-character codes contributed to launch UI; each is lowercase, nonblank,
+     * and contains no leading or trailing whitespace.
+     */
     List<String> providedMainCharacters();
 
     /** Decorates the module produced by all earlier eligible patches. */
