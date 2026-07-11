@@ -18,8 +18,10 @@ reaction deferral, orb break tail + Ani_obj53 animation, boss persistence, and
 the S2 impatient-wait blink input gate), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now EMPTY: the full S2 level-select suite passes (MSE:OK passed=48).
-The full S1 sweep remains 29/29 green, and the S3K guard subset remains 66/68
-with only the known AIZ expected-red frontiers. OOZ2 greened in round 54 and
+The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
+20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
+therefore closed as the first-red stage; HCZ is the next unstarted stage in the
+requested level order. OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
 round 96 landed the ROM-backed later-orb refresh predicate. Rounds 90-94 used Lua PC-execute probes to rule out shared
@@ -892,6 +894,48 @@ entering water and quartering `$1570` Y velocity):
 `TestS3kAizCompleteRunTraceReplay` is fully green in the composed worktree.
 The focused AIZ replay remains red at f19397 / 86 and therefore the stage is
 not yet fully green.
+
+Round 64 closes the AIZ stage across both route shapes. The focused route first
+advanced from f19397 through the capsule same-entry `Check_TailsEndPose` clear,
+the already-settled bridge replacement, Knuckles' setup-only first dispatch,
+the four-entry non-riding results-control wait, and the final forced-UP logical
+word consumed before the button clears `Ctrl_1_locked`. Its last strict error
+was f20726 (`camera_y`, expected `$015A`, actual `$015C`); preserving that final
+logical word through the next player pass retained `Distance_from_top=$92` for
+the ROM camera decision and made the focused route fully green.
+
+The complete-run route then exposed two independently owned phases. First,
+`cpu_state` records Tails' controller word at the CPU decision point before the
+later capsule slot clears the live latch. The read-only engine comparison view
+now retains both samples and selects an exact matching CPU-decision sample when
+the recorder supplies `tails_cpu_normal_step`; it never writes trace state into
+the engine and adds no tolerance. Second, the consolidated cutscene bridge can
+occupy a later SST slot than the native bridge still named by Player 1's live
+`interact` pointer. The button now initializes the replacement bridge collapse
+on its own dispatch only when that native interact owner precedes the allocated
+replacement; focused slot-8 ordering remains on the ordinary next entry, while
+complete-run's earlier owner receives the same-pass `$34=$0E` initialization.
+The still-riding P2 status likewise owns the two additional results-control
+entries before forced walking begins. These are object slot/status conditions,
+not zone, route, frame, or trace exceptions.
+
+`origin/develop` at `c2a709288` was merged into the campaign branch as
+`470959328` before the final commits. The closing commits are `90ad614c4`
+(`fix(trace): compare sidekick input at CPU decision phase`), `37cd30797`
+(`fix(trace): preserve AIZ cutscene SST ordering`), and `ad9c41977`
+(`fix(trace): derive AIZ bridge phase from interact slot`). Final verification
+after those commits and the merge:
+
+- `TestTraceBinder`, `TestS3kAizTraceReplay#replayMatchesTrace`, and
+  `TestS3kAizCompleteRunTraceReplay#replayMatchesTrace` passed together with
+  MSE disabled and the S3K ROM supplied.
+- The exact S1/S2 replay fleet command selected every `*TraceReplay.java` under
+  `trace/s1` and `trace/s2`; all 29 S1 plus 20 S2 classes passed with one fork,
+  including the newly merged S2 special-stage coverage. Output contained only
+  the known S1 mapping-table warnings.
+
+The first-red AIZ stage is now completely green. Per the requested stopping
+condition, HCZ has not been advanced in this campaign.
 
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
