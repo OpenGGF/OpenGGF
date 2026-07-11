@@ -22,9 +22,15 @@ public final class SessionManager {
 
     public static synchronized GameplayModeContext openGameplaySession(GameModule module,
                                                                        SaveSessionContext saveSessionContext) {
-        Objects.requireNonNull(module, "module");
+        return openGameplaySession(module, module, saveSessionContext);
+    }
+
+    public static synchronized GameplayModeContext openGameplaySession(GameModule rootModule,
+            GameModule resolvedModule, SaveSessionContext saveSessionContext) {
+        Objects.requireNonNull(rootModule, "rootModule");
+        Objects.requireNonNull(resolvedModule, "resolvedModule");
         destroyCurrentMode();
-        currentWorldSession = new WorldSession(module, saveSessionContext);
+        currentWorldSession = new WorldSession(rootModule, resolvedModule, saveSessionContext);
         currentGameplayMode = new GameplayModeContext(currentWorldSession);
         return currentGameplayMode;
     }

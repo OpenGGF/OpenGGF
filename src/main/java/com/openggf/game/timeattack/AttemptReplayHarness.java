@@ -13,6 +13,8 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.patch.GameplayLaunchRequest;
+import com.openggf.game.patch.ModuleResolutionService;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.RecordingFrameDriver;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
@@ -50,14 +52,21 @@ public final class AttemptReplayHarness {
 
             EngineContext services = EngineServices.current();
             services.roms().setRom(rom);
-            GameModule module = services.romDetection().detectAndCreateModule(rom)
+            GameModule rootModule = services.romDetection().detectAndCreateModule(rom)
                     .orElseThrow(() -> new IllegalArgumentException("unsupported ROM"));
-            if (!module.getGameId().code().equals(recording.start().gameId())) {
+            if (!rootModule.getGameId().code().equals(recording.start().gameId())) {
                 return failure("track mismatch");
             }
 
+            ModuleResolutionService moduleResolutionService = services.moduleResolutionService();
+            GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
+                    new GameplayLaunchRequest(recording.start().gameId(),
+                            recording.start().character(), java.util.List.of()),
+                    ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+
             SessionManager.clear();
-            GameplayModeContext mode = SessionManager.openGameplaySession(module);
+            GameplayModeContext mode = SessionManager.openGameplaySession(
+                    rootModule, module, null);
             GameplaySessionFactory.attachManagers(mode, services);
             services.graphics().initHeadless();
             TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();

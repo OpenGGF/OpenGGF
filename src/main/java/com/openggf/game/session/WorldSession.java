@@ -7,6 +7,7 @@ import com.openggf.level.Level;
 import java.util.Objects;
 
 public final class WorldSession {
+    private final GameModule rootGameModule;
     private final GameModule gameModule;
     private final SaveSessionContext saveSessionContext;
 
@@ -30,8 +31,22 @@ public final class WorldSession {
     }
 
     public WorldSession(GameModule gameModule, SaveSessionContext saveSessionContext) {
-        this.gameModule = Objects.requireNonNull(gameModule, "gameModule");
+        this(gameModule, gameModule, saveSessionContext);
+    }
+
+    public WorldSession(GameModule rootGameModule, GameModule resolvedGameModule,
+            SaveSessionContext saveSessionContext) {
+        this.rootGameModule = Objects.requireNonNull(rootGameModule, "rootGameModule");
+        this.gameModule = Objects.requireNonNull(resolvedGameModule, "resolvedGameModule");
         this.saveSessionContext = saveSessionContext;
+    }
+
+    public GameModule rootGameModule() {
+        return rootGameModule;
+    }
+
+    public GameModule resolvedGameModule() {
+        return gameModule;
     }
 
     /**

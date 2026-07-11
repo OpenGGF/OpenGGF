@@ -75,6 +75,8 @@ import com.openggf.integration.presence.RuntimePresenceSnapshotProvider;
 import com.openggf.integration.presence.discord.DiscordIpcPresenceClient;
 import com.openggf.integration.presence.discord.DiscordIpcTransports;
 import com.openggf.game.recording.RecordingLaunchContext;
+import com.openggf.game.patch.GameplayLaunchRequest;
+import com.openggf.game.patch.ModuleResolutionService;
 import com.openggf.game.recording.UserRecordingHudState;
 import com.openggf.game.recording.UserRecordingRuntimeControls;
 import com.openggf.game.recording.UserRecordingSessionLauncher;
@@ -145,6 +147,7 @@ public class GameLoop {
     private WaterSystem waterSystem;
     private final PerformanceProfiler profiler;
     private final PlaybackDebugManager playbackDebugManager;
+    private final ModuleResolutionService moduleResolutionService;
     private final LiveRewindManager liveRewindManager;
     private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
     private final BootScreenModeController bootScreenModeController = new BootScreenModeController();
@@ -348,6 +351,7 @@ public class GameLoop {
         this.debugOverlayManager = this.engineServices.debugOverlay();
         this.profiler = this.engineServices.profiler();
         this.playbackDebugManager = this.engineServices.playbackDebug();
+        this.moduleResolutionService = this.engineServices.moduleResolutionService();
         this.liveRewindManager = new LiveRewindManager(
                 configService,
                 () -> currentGameMode,
@@ -3419,16 +3423,21 @@ public class GameLoop {
         try {
             romManager.close();
             Rom rom = romManager.getRom();
-            GameModule module = engineServices.romDetection()
+            GameModule rootModule = engineServices.romDetection()
                     .detectAndCreateModule(rom)
                     .orElseThrow(() -> new IOException(
                             "ROM not recognized for recording launch context: " + context.gameId()));
 
+            GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
+                    new GameplayLaunchRequest(context.gameId(), context.mainCharacter(),
+                            context.sidekickCharacters()),
+                    ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
             audioManager.setAudioProfile(module.getAudioProfile());
             audioManager.setRom(rom);
             resetModuleScopedProviders();
 
-            GameplayModeContext freshGameplayMode = SessionManager.openGameplaySession(module);
+            GameplayModeContext freshGameplayMode = SessionManager.openGameplaySession(
+                    rootModule, module, null);
             GameplaySessionFactory.attachManagers(freshGameplayMode, engineServices);
             setGameplayMode(freshGameplayMode);
 

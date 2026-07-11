@@ -48,6 +48,9 @@ import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.patch.GameplayLaunchRequest;
+import com.openggf.game.patch.GameplayTeamAvailability;
+import com.openggf.game.patch.ModuleResolutionService;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
 import com.openggf.game.timeattack.TimeAttackRuntime;
@@ -129,6 +132,7 @@ public class Engine {
 	private final CrossGameFeatureProvider crossGameFeatureProvider;
 	private final DebugOverlayManager debugOverlayManager;
 	private final PlaybackDebugManager playbackDebugManager;
+	private final ModuleResolutionService moduleResolutionService;
 
 	private Camera camera;
 	private DebugRenderer debugRenderer;
@@ -272,6 +276,7 @@ public class Engine {
 		this.crossGameFeatureProvider = engineServices.crossGameFeatures();
 		this.debugOverlayManager = engineServices.debugOverlay();
 		this.playbackDebugManager = engineServices.playbackDebug();
+		this.moduleResolutionService = engineServices.moduleResolutionService();
 		this.profiler = engineServices.profiler();
 		this.graphicsManager.setPerformanceProfiler(profiler);
 		this.editorOverlayRenderer = new EditorOverlayRenderer(levelEditorController, graphicsManager);
@@ -758,7 +763,7 @@ public class Engine {
 	 * exitMasterTitleScreen() after game selection.
 	 */
 	public void initializeGame() {
-		GameModule module;
+		GameModule rootModule;
 		try {
 			Rom rom = romManager.getRom();
 			var detectedModule = romDetectionService.detectAndCreateModule(rom);
@@ -766,12 +771,19 @@ public class Engine {
 				showStartupRomError("ROM not recognized or corrupt. OpenGGF requires a supported Sonic 1, Sonic 2, or Sonic 3&K ROM.");
 				return;
 			}
-			module = detectedModule.orElseThrow();
+			rootModule = detectedModule.orElseThrow();
 		} catch (IOException e) {
 			showStartupRomError("Failed to load ROM during game initialization: " + e.getMessage());
 			return;
 		}
-		GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
+		ModuleResolutionService.LaunchPolicy launchPolicy =
+				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+						? ModuleResolutionService.LaunchPolicy.DETERMINISTIC
+						: ModuleResolutionService.LaunchPolicy.STANDARD;
+		GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
+				GameplayLaunchRequest.fromConfig(configService, rootModule.getGameId().code()),
+				launchPolicy);
+		GameplayModeContext gameplayMode = SessionManager.openGameplaySession(rootModule, module, null);
 		initializeGameplayRuntime(gameplayMode, true);
 		boolean generationRan = maybeGenerateDonatedDataSelectImagesBeforeStartupMode(module);
 		if (generationRan) {
@@ -781,7 +793,7 @@ public class Engine {
 			// Reset GPU state (pattern atlas + palette textures) and rebuild
 			// the gameplay mode so everything starts from a clean slate.
 			graphicsManager.resetPatternAndPaletteState();
-			gameplayMode = SessionManager.openGameplaySession(module);
+			gameplayMode = SessionManager.openGameplaySession(rootModule, module, null);
 			initializeGameplayRuntime(gameplayMode, false);
 		} else {
 			graphicsManager.runPendingRenderThreadTasks();
@@ -1092,11 +1104,26 @@ public class Engine {
 
 	private void launchGameplayFromDataSelect(com.openggf.game.dataselect.DataSelectAction action) {
 		GameModule module = SessionManager.requireCurrentGameModule();
+		GameModule rootModule = SessionManager.getCurrentWorldSession().rootGameModule();
 		SaveManager saveManager = new SaveManager(Path.of("saves"));
 		Map<String, Object> loadedPayload = loadDataSelectPayload(module, action, saveManager);
 		com.openggf.game.save.SaveSessionContext saveContext = createDataSelectSaveContext(module, action, saveManager);
+		String gameId = rootModule.getGameId().code();
+		List<String> availableCharacters = new ArrayList<>(stockCharacters(gameId));
+		availableCharacters.addAll(moduleResolutionService.availableMainCharactersForLaunch(
+				gameId, ModuleResolutionService.LaunchPolicy.STANDARD));
+		if (CrossGameFeatureProvider.isActive()) {
+			availableCharacters.addAll(stockCharacters(crossGameFeatureProvider.getDonorGameId()));
+		}
+		saveContext = GameplayTeamAvailability.sanitizeForLaunch(
+				saveContext, gameId, availableCharacters);
+		SelectedTeam selectedTeam = saveContext.selectedTeam();
+		GameModule resolvedModule = moduleResolutionService.resolveForLaunch(rootModule,
+				new GameplayLaunchRequest(gameId, selectedTeam.mainCharacter(), selectedTeam.sidekicks()),
+				ModuleResolutionService.LaunchPolicy.STANDARD);
 
-		GameplayModeContext gameplay = SessionManager.openGameplaySession(module, saveContext);
+		GameplayModeContext gameplay = SessionManager.openGameplaySession(
+				rootModule, resolvedModule, saveContext);
 		initializeGameplayRuntime(gameplay, false);
 		loadLevelFromDataSelect(action.zone(), action.act());
 		restoreGameplayModeFromDataSelectPayload(gameplayMode, loadedPayload);
@@ -1130,7 +1157,7 @@ public class Engine {
 		}
 		resetForGameplayFromMasterTitle();
 
-		GameModule module;
+		GameModule rootModule;
 		try {
 			Rom rom = romManager.getRom();
 			var detectedModule = romDetectionService.detectAndCreateModule(rom);
@@ -1138,7 +1165,7 @@ public class Engine {
 				showStartupRomError("ROM not recognized or corrupt for time attack: " + request.gameId());
 				return;
 			}
-			module = detectedModule.orElseThrow();
+			rootModule = detectedModule.orElseThrow();
 		} catch (IOException e) {
 			showStartupRomError("Failed to load ROM for time attack launch: " + e.getMessage());
 			return;
@@ -1148,7 +1175,11 @@ public class Engine {
 		com.openggf.game.save.SaveSessionContext saveContext = com.openggf.game.save.SaveSessionContext.noSave(
 				request.gameId(), team, request.zone(), request.act());
 
-		GameplayModeContext gameplay = SessionManager.openGameplaySession(module, saveContext);
+		GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
+				new GameplayLaunchRequest(request.gameId(), request.character(), List.of()),
+				ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+		GameplayModeContext gameplay = SessionManager.openGameplaySession(
+				rootModule, module, saveContext);
 		initializeGameplayRuntime(gameplay, false);
 		loadLevelFromDataSelect(request.zone(), request.act());
 		gameLoop.setGameMode(GameMode.LEVEL);
@@ -1162,6 +1193,15 @@ public class Engine {
 		if (timeAttackRuntime.isActive()) {
 			timeAttackRuntime.onLevelReady();
 		}
+	}
+
+	private static List<String> stockCharacters(String gameId) {
+		return switch (gameId) {
+			case "s1" -> List.of("sonic");
+			case "s2" -> List.of("sonic", "tails");
+			case "s3k" -> List.of("sonic", "tails", "knuckles");
+			default -> List.of("sonic");
+		};
 	}
 
 	private void hostTimeAttackRoom(TimeAttackLaunchRequest request, String policy,

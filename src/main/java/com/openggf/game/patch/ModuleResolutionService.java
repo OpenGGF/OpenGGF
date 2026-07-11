@@ -19,26 +19,62 @@ import java.util.function.Predicate;
  */
 public final class ModuleResolutionService {
 
+    public enum LaunchPolicy {
+        STANDARD,
+        DETERMINISTIC
+    }
+
+    /** Supplies a frozen mod contribution plan for one launch. */
+    @FunctionalInterface
+    public interface PatchPlanSource {
+        PatchPlan scan(PatchEnablement enablement);
+    }
+
+    public record PatchPlan(List<RegisteredPatch> registrations,
+            Map<PatchOwner, ? extends Set<PatchOwner>> ownerDependencies) {
+        public PatchPlan {
+            registrations = List.copyOf(Objects.requireNonNull(registrations, "registrations"));
+            Map<PatchOwner, Set<PatchOwner>> frozenDependencies = new java.util.LinkedHashMap<>();
+            Objects.requireNonNull(ownerDependencies, "ownerDependencies")
+                    .forEach((owner, dependencies) -> frozenDependencies.put(
+                            Objects.requireNonNull(owner, "dependency owner"),
+                            Set.copyOf(Objects.requireNonNull(dependencies, "owner dependencies"))));
+            ownerDependencies = Map.copyOf(frozenDependencies);
+        }
+
+        public static PatchPlan empty() {
+            return new PatchPlan(List.of(), Map.of());
+        }
+    }
+
     private final List<RegisteredPatch> builtIns;
     private final PatchEnablement enablement;
     private final Predicate<LogicalRom> prerequisiteAvailable;
     private final PatchContext patchContext;
+    private final PatchPlanSource patchPlanSource;
 
     public ModuleResolutionService(List<RegisteredPatch> builtIns,
             PatchEnablement enablement, LogicalRomResolver logicalRoms,
             SonicConfigurationService configService) {
+        this(builtIns, enablement, logicalRoms, configService, ignored -> PatchPlan.empty());
+    }
+
+    public ModuleResolutionService(List<RegisteredPatch> builtIns,
+            PatchEnablement enablement, LogicalRomResolver logicalRoms,
+            SonicConfigurationService configService, PatchPlanSource patchPlanSource) {
         this(builtIns, enablement, logicalRoms::isAvailable,
-                new PatchContext(logicalRoms::openOrThrow, configService));
+                new PatchContext(logicalRoms::openOrThrow, configService), patchPlanSource);
     }
 
     private ModuleResolutionService(List<RegisteredPatch> builtIns,
             PatchEnablement enablement, Predicate<LogicalRom> prerequisiteAvailable,
-            PatchContext patchContext) {
+            PatchContext patchContext, PatchPlanSource patchPlanSource) {
         this.builtIns = List.copyOf(Objects.requireNonNull(builtIns, "builtIns"));
         this.enablement = Objects.requireNonNull(enablement, "enablement");
         this.prerequisiteAvailable = Objects.requireNonNull(
                 prerequisiteAvailable, "prerequisiteAvailable");
         this.patchContext = Objects.requireNonNull(patchContext, "patchContext");
+        this.patchPlanSource = Objects.requireNonNull(patchPlanSource, "patchPlanSource");
         ResolutionContext.create(enablement, this.builtIns, Map.of());
         for (RegisteredPatch registration : this.builtIns) {
             if (!(registration.owner() instanceof PatchOwner.BuiltIn)) {
@@ -58,11 +94,32 @@ public final class ModuleResolutionService {
             throw new java.io.IOException("Logical ROM bytes unavailable in test resolver");
         }, SonicConfigurationService.createStandalone());
         return new ModuleResolutionService(List.of(), enablement,
-                prerequisiteAvailable, context);
+                prerequisiteAvailable, context, ignored -> PatchPlan.empty());
+    }
+
+    static ModuleResolutionService forTests(List<RegisteredPatch> registrations,
+            PatchEnablement enablement) {
+        List<RegisteredPatch> builtIns = registrations.stream()
+                .filter(registration -> registration.owner() instanceof PatchOwner.BuiltIn)
+                .toList();
+        List<RegisteredPatch> mods = registrations.stream()
+                .filter(registration -> registration.owner() instanceof PatchOwner.Mod)
+                .toList();
+        PatchContext context = new PatchContext(rom -> {
+            throw new java.io.IOException("Logical ROM bytes unavailable in test resolver");
+        }, SonicConfigurationService.createStandalone());
+        return new ModuleResolutionService(builtIns, enablement, rom -> true, context,
+                ignored -> new PatchPlan(mods, Map.of()));
     }
 
     /** Creates the fresh per-launch context; mod registrations are never retained. */
     public ResolutionContext newContext(List<RegisteredPatch> frozenModPlan,
+            Map<PatchOwner, ? extends Set<PatchOwner>> ownerDependencies) {
+        return newContext(enablement, frozenModPlan, ownerDependencies);
+    }
+
+    private ResolutionContext newContext(PatchEnablement launchEnablement,
+            List<RegisteredPatch> frozenModPlan,
             Map<PatchOwner, ? extends Set<PatchOwner>> ownerDependencies) {
         Objects.requireNonNull(frozenModPlan, "frozenModPlan");
         List<RegisteredPatch> combined = new ArrayList<>(builtIns.size() + frozenModPlan.size());
@@ -74,7 +131,51 @@ public final class ModuleResolutionService {
             }
             combined.add(registration);
         }
-        return ResolutionContext.create(enablement, combined, ownerDependencies);
+        return ResolutionContext.create(launchEnablement, combined, ownerDependencies);
+    }
+
+    /** Resolves one launch from the undecorated root module. */
+    public GameModule resolveForLaunch(GameModule root, GameplayLaunchRequest request,
+            LaunchPolicy policy) {
+        Objects.requireNonNull(policy, "policy");
+        PatchEnablement launchEnablement = policy == LaunchPolicy.DETERMINISTIC
+                ? builtInsOnly(enablement) : enablement;
+        // The policy is selected before asking the source to scan. Phase 2's mod
+        // catalog therefore cannot even contribute disabled deterministic owners.
+        PatchPlan plan = Objects.requireNonNull(
+                patchPlanSource.scan(launchEnablement), "patch plan");
+        ResolutionResult result = resolve(newContext(launchEnablement,
+                plan.registrations(), plan.ownerDependencies()), root, request);
+        if (result instanceof ResolutionResult.Resolved resolved) {
+            return resolved.module();
+        }
+        ResolutionResult.LaunchAborted aborted = (ResolutionResult.LaunchAborted) result;
+        throw new IllegalStateException("Patch resolution aborted at " + aborted.patchId(),
+                aborted.cause());
+    }
+
+    public List<String> availableMainCharactersForLaunch(String gameId, LaunchPolicy policy) {
+        Objects.requireNonNull(policy, "policy");
+        PatchEnablement launchEnablement = policy == LaunchPolicy.DETERMINISTIC
+                ? builtInsOnly(enablement) : enablement;
+        PatchPlan plan = Objects.requireNonNull(
+                patchPlanSource.scan(launchEnablement), "patch plan");
+        return availableMainCharacters(newContext(launchEnablement,
+                plan.registrations(), plan.ownerDependencies()), gameId);
+    }
+
+    private static PatchEnablement builtInsOnly(PatchEnablement delegate) {
+        return new PatchEnablement() {
+            @Override
+            public boolean isEnabled(PatchOwner owner) {
+                return owner instanceof PatchOwner.BuiltIn && delegate.isEnabled(owner);
+            }
+
+            @Override
+            public int orderOf(PatchOwner owner) {
+                return delegate.orderOf(owner);
+            }
+        };
     }
 
     public ResolutionResult resolve(ResolutionContext context, GameModule base,

@@ -17,6 +17,8 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.patch.GameplayLaunchRequest;
+import com.openggf.game.patch.ModuleResolutionService;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
@@ -76,6 +78,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
     private final int width;
     private final int height;
+    private final EngineContext engineServices;
 
     private long window = NULL;
 
@@ -90,8 +93,13 @@ public final class HeadlessGameBoot implements AutoCloseable {
      * graphics manager at the given framebuffer dimensions.
      */
     public HeadlessGameBoot(int width, int height) {
+        this(width, height, EngineContext.fromLegacySingletonsForBootstrap());
+    }
+
+    public HeadlessGameBoot(int width, int height, EngineContext engineServices) {
         this.width = width;
         this.height = height;
+        this.engineServices = java.util.Objects.requireNonNull(engineServices, "engineServices");
         initGl();
     }
 
@@ -103,7 +111,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
     private void initGl() {
         // Process-wide engine services must be configured before any
         // gameplay session is opened.
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(engineServices);
 
         GLFWErrorCallback.createPrint(System.err).set();
 
@@ -163,7 +171,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
     public GameLoop boot(Path romPath, int zone, int act) throws IOException {
         // Process-wide services were configured in initGl(); resolve them via
         // the EngineServices locator rather than raw singletons.
-        EngineContext services = EngineServices.current();
+        EngineContext services = engineServices;
 
         // --- ROM + module ------------------------------------------------
         rom = new Rom();
@@ -174,11 +182,16 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
         Optional<GameModule> detected =
                 services.romDetection().detectAndCreateModule(rom);
-        GameModule module = detected.orElseThrow(() ->
+        GameModule rootModule = detected.orElseThrow(() ->
                 new IOException("No game module detected for ROM: " + romPath));
+        ModuleResolutionService moduleResolutionService = services.moduleResolutionService();
+        GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
+                GameplayLaunchRequest.fromConfig(
+                        services.configuration(), rootModule.getGameId().code()),
+                ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
 
         // --- gameplay session + managers --------------------------------
-        GameplayModeContext mode = SessionManager.openGameplaySession(module);
+        GameplayModeContext mode = SessionManager.openGameplaySession(rootModule, module, null);
         GameplaySessionFactory.attachManagers(mode, services);
         if (!mode.isGameplayRuntimeReady()) {
             throw new IllegalStateException(

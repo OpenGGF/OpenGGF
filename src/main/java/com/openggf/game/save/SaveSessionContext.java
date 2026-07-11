@@ -59,6 +59,13 @@ public final class SaveSessionContext {
         this.clear = true;
     }
 
+    public SaveSessionContext withSelectedTeam(SelectedTeam replacement) {
+        SaveSessionContext copy = new SaveSessionContext(gameCode, activeSlot,
+                Objects.requireNonNull(replacement, "replacement"), startZone, startAct);
+        copy.clear = clear;
+        return copy;
+    }
+
     public void requestSave(SaveReason reason,
                             RuntimeSaveContext context,
                             SaveSnapshotProvider snapshotProvider,

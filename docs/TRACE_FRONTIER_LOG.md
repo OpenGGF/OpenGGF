@@ -40,6 +40,23 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-11 - Mod-support Phase 0 A6 launch-wiring spot sweep
+
+Phase 0 A6 ran the required comparison-only launch-wiring spot sweep from
+`next` at base `7f5d92dce` with the uncommitted A6 changes using:
+`mvn "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test`.
+
+- The S1 GHZ1 and S2 EHZ1 trace spots and the S3K must-keep-green tests passed.
+- `TestS3kAizTraceReplay` remained at the known AIZ expected-red frontier:
+  1,160 errors, first divergence frame 8,941 (`camera_y`, expected `0x02C1`,
+  actual `0x02B9`).
+- A clean detached worktree at the exact pre-A6 base `7f5d92dce` reproduced the
+  identical 1,160-error report and first divergence with
+  `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test`.
+  The A6 launch wiring therefore did not move or regress the frontier; no trace
+  data, comparator tolerance, route/frame carve-out, or engine behavior was
+  changed.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

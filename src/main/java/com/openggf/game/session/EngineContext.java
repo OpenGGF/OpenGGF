@@ -8,6 +8,9 @@ import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.RomDetectionService;
+import com.openggf.game.patch.LogicalRomResolver;
+import com.openggf.game.patch.ModuleResolutionService;
+import com.openggf.game.patch.PatchEnablement;
 import com.openggf.graphics.GraphicsManager;
 
 import java.util.Objects;
@@ -22,11 +25,23 @@ public final class EngineContext {
     private final PlaybackDebugManager playbackDebug;
     private final RomDetectionService romDetection;
     private final CrossGameFeatureProvider crossGameFeatures;
+    private final ModuleResolutionService moduleResolutionService;
 
     public EngineContext(SonicConfigurationService configuration, GraphicsManager graphics,
                           AudioManager audio, RomManager roms, PerformanceProfiler profiler,
                           DebugOverlayManager debugOverlay, PlaybackDebugManager playbackDebug,
                           RomDetectionService romDetection, CrossGameFeatureProvider crossGameFeatures) {
+        this(configuration, graphics, audio, roms, profiler, debugOverlay, playbackDebug,
+                romDetection, crossGameFeatures, new ModuleResolutionService(java.util.List.of(),
+                        PatchEnablement.ALL_ENABLED, LogicalRomResolver.fromRomManager(roms),
+                        configuration));
+    }
+
+    public EngineContext(SonicConfigurationService configuration, GraphicsManager graphics,
+                          AudioManager audio, RomManager roms, PerformanceProfiler profiler,
+                          DebugOverlayManager debugOverlay, PlaybackDebugManager playbackDebug,
+                          RomDetectionService romDetection, CrossGameFeatureProvider crossGameFeatures,
+                          ModuleResolutionService moduleResolutionService) {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
         this.graphics = Objects.requireNonNull(graphics, "graphics");
         this.audio = Objects.requireNonNull(audio, "audio");
@@ -36,6 +51,8 @@ public final class EngineContext {
         this.playbackDebug = Objects.requireNonNull(playbackDebug, "playbackDebug");
         this.romDetection = Objects.requireNonNull(romDetection, "romDetection");
         this.crossGameFeatures = Objects.requireNonNull(crossGameFeatures, "crossGameFeatures");
+        this.moduleResolutionService = Objects.requireNonNull(
+                moduleResolutionService, "moduleResolutionService");
     }
 
     public static EngineContext fromLegacySingletonsForBootstrap() {
@@ -54,4 +71,5 @@ public final class EngineContext {
     public PlaybackDebugManager playbackDebug() { return playbackDebug; }
     public RomDetectionService romDetection() { return romDetection; }
     public CrossGameFeatureProvider crossGameFeatures() { return crossGameFeatures; }
+    public ModuleResolutionService moduleResolutionService() { return moduleResolutionService; }
 }
