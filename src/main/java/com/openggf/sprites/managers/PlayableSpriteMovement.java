@@ -983,7 +983,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		int duckAnimId = getDuckAnimId();
-		if (duckAnimId < 0 || sprite.getAnimationId() != duckAnimId) {
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		// S3K SonicKnux_Roll/Tails_Roll writes Duck after the move_lock-gated
+		// Move routine, so the following frame's CheckSpindash sees Duck before
+		// Sonic_Jump (sonic3k.asm:22434,23223-23240). The engine deliberately
+		// preserves the visible animation byte during move_lock, but its prior-frame
+		// crouch state records that ROM-owned write and is the native gate here.
+		boolean nativeMovingCrouch = movementRules != null
+				&& movementRules.movingCrouchThreshold() > 0
+				&& wasCrouching
+				&& inputDown;
+		if (duckAnimId < 0
+				|| (sprite.getAnimationId() != duckAnimId && !nativeMovingCrouch)) {
 			return false;
 		}
 		if (!inputJumpPress) {

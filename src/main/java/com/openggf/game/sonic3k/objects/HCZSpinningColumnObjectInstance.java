@@ -16,7 +16,6 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -170,10 +169,18 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         if (rider.horizontalDistance > 0) {
             rider.horizontalDistance--;
         }
+        // ROM keeps the shrinking integer radius in byte 2(a2), but reads it
+        // together with byte 3(a2), a sine-derived fractional component, as one
+        // 8.8 word before the cosine multiply (sub_32784 loc_327FC-3283E).
+        // Dropping that low byte rounds a negative left-side offset one pixel
+        // toward zero during the column capture.
+        int sineFraction = ((TrigLookupTable.sinHex(rider.swingAngle) + 0x100) >> 2) & 0xFF;
+        int fixedRadius = (rider.horizontalDistance << 8) | sineFraction;
+        int xOffset = (TrigLookupTable.cosHex(rider.swingAngle) * fixedRadius) >> 16;
         rider.swingAngle = (rider.swingAngle + CAPTURE_SWING_STEP) & 0xFF;
-        int xOffset = (TrigLookupTable.cosHex(rider.swingAngle) * rider.horizontalDistance) >> 8;
 
-        player.setCentreX((short) (currentX + xOffset));
+        // ROM move.w writes x_pos only; the low subpixel word remains intact.
+        player.setCentreXPreserveSubpixel((short) (currentX + xOffset));
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
@@ -222,12 +229,11 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
             frameIndex = 0;
         }
         player.setMappingFrame(PLAYER_TWIST_FRAMES[frameIndex]);
-        // ROM directly writes render_flags (andi.b #$FC / or.b flip), so we must
-        // update both the logical direction AND the render flip in the same frame.
-        // setDirection alone defers the visual flip to the next animation update,
-        // causing a one-frame glitch at the two front-facing transition points.
+        // ROM directly writes render_flags (andi.b #$FC / or.b flip) without
+        // touching Status_Facing (sub_32610, sonic3k.asm:68077-68091). The twist
+        // frame may therefore flip visually while the player's logical facing
+        // remains unchanged for the post-column movement path.
         boolean flipLeft = PLAYER_TWIST_FLIPS[frameIndex];
-        player.setDirection(flipLeft ? Direction.LEFT : Direction.RIGHT);
         player.setRenderFlips(flipLeft, false);
     }
 

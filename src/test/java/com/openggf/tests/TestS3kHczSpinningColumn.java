@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.objects.HCZSpinningColumnObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.physics.Direction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -99,6 +100,32 @@ public class TestS3kHczSpinningColumn {
         assertEquals(-0x680, player.getYSpeed());
     }
 
+    @Test
+    public void twistRenderFlipDoesNotOverwriteLogicalFacing() {
+        HCZSpinningColumnObjectInstance column = new HCZSpinningColumnObjectInstance(
+                new ObjectSpawn(0x1000, 0x0800, 0x68, 0x00, 0x00, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x0FF8, (short) 0x07C0);
+        player.defineSpeeds();
+        player.setDirection(Direction.RIGHT);
+
+        column.onSolidContact(player,
+                new SolidContact(true, false, false, false, false), 0);
+        column.update(0, null);
+
+        assertEquals(Direction.RIGHT, player.getDirection(),
+                "sub_32610 changes render_flags only, never Status_Facing");
+        assertTrue(player.getRenderHFlip(),
+                "the initial left-side twist frame still applies its visual flip");
+
+        column.onSolidContact(player,
+                new SolidContact(true, false, false, false, false), 1);
+        column.update(1, null);
+
+        assertEquals(0x0FF8, player.getCentreX(),
+                "the ROM 8.8 radius word keeps the first left-side hold at x-8");
+    }
+
     private int getMappingFrame(HCZSpinningColumnObjectInstance column) {
         try {
             var field = HCZSpinningColumnObjectInstance.class.getDeclaredField("mappingFrame");
@@ -109,5 +136,3 @@ public class TestS3kHczSpinningColumn {
         }
     }
 }
-
-

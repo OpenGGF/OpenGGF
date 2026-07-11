@@ -362,6 +362,22 @@ contract tests pass. Granular isolated replay checks keep both AIZ routes green
 and preserve every non-HCZ frontier: CNZ complete f1846, CNZ level-select f291,
 MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ f2920, and LBZ f2270.
 
+Milestone 18 restores the move-locked S3K duck-to-spindash handoff and the HCZ
+spinning column's packed rider state. `SonicKnux_Roll` runs after the
+move-lock-gated `Sonic_Move`, so its prior-frame crouch state now supplies the
+native Duck predicate to `CheckSpindash` before `Sonic_Jump`. On column capture,
+the twist table changes `render_flags` without changing `Status_Facing`; rider X
+uses the combined distance/fraction bytes as the ROM's 8.8 word and its
+word-sized `x_pos` write preserves the existing subpixel word
+(`sonic3k.asm:22434,23223-23240,68077-68091,68183-68244`).
+
+This closes f12738-f12974 and advances HCZ to f12975 / 2130 full-run errors (2
+under `frontierOnly`), reducing the full report by 104 groups. The six spinning
+column contract tests pass. Granular isolated replay checks keep both AIZ routes
+green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ level-select
+f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ f2920, and LBZ
+f2270.
+
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
 The AIZ2 battleship-to-waterfall-boss capture reproduced a render-only regression
