@@ -20,6 +20,7 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.SwingMotion;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -778,13 +779,18 @@ public class AizEndBossInstance extends AbstractBossInstance
             spawnChild(() -> Aiz2EndEggCapsuleInstance.createForCamera(
                     services().camera().getX(), services().camera().getY()));
             Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
-            S3kCutsceneButtonObjectInstance layoutButton = services().objectManager()
-                    .activeObjectsOfType(S3kCutsceneButtonObjectInstance.class).stream()
-                    .filter(button -> !button.isDestroyed())
-                    .findFirst().orElse(null);
+            PlayableEntity mainPlayer = services().playerQuery().mainPlayerOrNull();
+            // The consolidated replacement normally occupies slot 8. Preserve
+            // the earlier native bridge dispatch when Player_1's live interact
+            // pointer identifies an owner below the replacement's allocated
+            // slot; an interact owner at or after it already matches the
+            // replacement's ordinary pass.
+            AizDrawBridgeObjectInstance cutsceneBridge = spawnFreeChild(
+                    AizDrawBridgeObjectInstance::createCutsceneOverride);
             Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(
-                    layoutButton != null && layoutButton.getSlotIndex() < getSlotIndex());
-            spawnFreeChild(AizDrawBridgeObjectInstance::createCutsceneOverride);
+                    mainPlayer instanceof AbstractPlayableSprite sprite
+                            && sprite.getInteractSlotIndex() >= 0
+                            && sprite.getInteractSlotIndex() < cutsceneBridge.getSlotIndex());
             spawnFreeChild(S3kCutsceneButtonObjectInstance::createCutsceneOverride);
             spawnFreeChild(() -> new Aiz2BossEndSequenceController(targetMaxX, yBase));
         } else {
