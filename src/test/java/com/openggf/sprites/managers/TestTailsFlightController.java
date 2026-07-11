@@ -4,6 +4,10 @@ import com.openggf.audio.GameSound;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
+import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
@@ -11,6 +15,8 @@ import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -55,6 +61,57 @@ class TestTailsFlightController {
         assertEquals(99, tails.getCentreY(),
                 "ROM adds old y_radius-default_y_radius to y_pos");
         assertEquals(0x20, tails.getAnimationId());
+    }
+
+    @Test
+    void manualFlightAnimationSurvivesTheGenericAirAnimationPass() {
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(
+                0, List.of(0x01), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(0x20, new SpriteAnimationScript(
+                0x1F, List.of(0xA0), SpriteAnimationEndAction.LOOP, 0));
+        tails.setAnimationSet(animations);
+        tails.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                .setAirAnimId(0)
+                .setWalkAnimId(0)
+                .setRunAnimId(0)
+                .setRollAnimId(0));
+        tails.setAir(true);
+        tails.setJumping(true);
+
+        flight.activate();
+        tails.getAnimationManager().update(0);
+
+        assertEquals(0x20, tails.getAnimationId(),
+                "Tails_Set_Flying_Animation owns the ROM anim byte during active flight");
+        assertEquals(0xA0, tails.getMappingFrame(),
+                "AniTails20 must render the flying body frame after the normal animation phase");
+    }
+
+    @Test
+    void manualSwimmingAnimationSurvivesTheGenericAirAnimationPass() {
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(
+                0, List.of(0x01), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(0x25, new SpriteAnimationScript(
+                7, List.of(0xBD), SpriteAnimationEndAction.LOOP, 0));
+        tails.setAnimationSet(animations);
+        tails.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                .setAirAnimId(0)
+                .setWalkAnimId(0)
+                .setRunAnimId(0)
+                .setRollAnimId(0));
+        tails.setAir(true);
+        tails.setJumping(true);
+        tails.setInWater(true);
+
+        flight.activate();
+        tails.getAnimationManager().update(0);
+
+        assertEquals(0x25, tails.getAnimationId(),
+                "the underwater Tails_Set_Flying_Animation branch owns the ROM anim byte");
+        assertEquals(0xBD, tails.getMappingFrame(),
+                "AniTails25 must render the swimming body frame after the normal animation phase");
     }
 
     @Test
