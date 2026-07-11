@@ -165,6 +165,8 @@ public class SidekickCpuController {
     private int despawnCounter;
     private int frameCounter;
     private int controlCounter;
+    @RewindTransient(reason = "frame-local ownership marker is cleared before every CPU tick and on restore")
+    private boolean manualInputAppliedThisTick;
     // Engine-internal approach/spawn frame counter for the multi-sidekick respawn
     // cadence. Kept SEPARATE from controlCounter, which models ROM
     // Tails_control_counter ($F702) — the manual-control timer set to 600 on P2
@@ -376,6 +378,7 @@ public class SidekickCpuController {
     public void update(int frameCount) {
         this.frameCounter = resolveCpuFrameCounter(frameCount);
         deferredDespawnDeadFallContinuingThisFrame = false;
+        manualInputAppliedThisTick = false;
 
         if (controller2SignedLocked) {
             carryParentagePending = false;
@@ -580,6 +583,11 @@ public class SidekickCpuController {
      */
     public int getDiagnosticControlCounter() {
         return controlCounter;
+    }
+
+    /** Returns whether Player 2 currently owns this sidekick's existing manual-control window. */
+    public boolean isUnderManualControl() {
+        return controlCounter != 0 || manualInputAppliedThisTick;
     }
 
     public int getDiagnosticRespawnCounter() {
@@ -4117,6 +4125,7 @@ public class SidekickCpuController {
     }
 
     private void applyManualControl() {
+        manualInputAppliedThisTick = true;
         inputUp = (controller2Held & AbstractPlayableSprite.INPUT_UP) != 0;
         inputDown = (controller2Held & AbstractPlayableSprite.INPUT_DOWN) != 0;
         inputLeft = (controller2Held & AbstractPlayableSprite.INPUT_LEFT) != 0;
@@ -5139,6 +5148,7 @@ public class SidekickCpuController {
         skipPhysicsThisFrame = false;
         lastNormalAutoJumpPressFrameCounter = -1;
         this.controlCounter = Math.max(0, controlCounter);
+        this.manualInputAppliedThisTick = false;
         this.despawnCounter = Math.max(0, respawnCounter);
         this.lastInteractObjectId = interactId & 0xFF;
         this.diagnosticS3kInteractWord = usesS3kPointerInteract() ? interactId & 0xFFFF : 0;
@@ -5453,6 +5463,7 @@ public class SidekickCpuController {
     }
 
     public void restoreRewindState(SidekickCpuRewindExtra snapshot) {
+        manualInputAppliedThisTick = false;
         state = snapshot.state();
         deadFallingRomCpuRoutine = snapshot.deadFallingRomCpuRoutine();
         despawnCounter = snapshot.despawnCounter();
@@ -5533,6 +5544,7 @@ public class SidekickCpuController {
         deadFallingRomCpuRoutine = -1;
         despawnCounter = 0;
         controlCounter = 0;
+        manualInputAppliedThisTick = false;
         approachFrameCount = 0;
         controller2Held = 0;
         controller2Logical = 0;

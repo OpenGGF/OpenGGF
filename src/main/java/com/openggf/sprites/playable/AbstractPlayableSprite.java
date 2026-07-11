@@ -2389,6 +2389,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setDead(boolean dead) {
                 this.dead = dead;
+                if (dead && getSecondaryAbility() == SecondaryAbility.FLY
+                                && controller != null && controller.getTailsFlight() != null) {
+                        controller.getTailsFlight().clear();
+                }
         }
 
         /**
@@ -2991,6 +2995,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void setObjectControlled(boolean objectControlled) {
                 this.objectControlled = objectControlled;
                 if (objectControlled) {
+                        if (getSecondaryAbility() == SecondaryAbility.FLY
+                                        && controller != null && controller.getTailsFlight() != null) {
+                                controller.getTailsFlight().clear();
+                        }
                         this.deferredObjectControlRelease = false;
                         this.objectControlSuppressesMovement = true;
                 } else {

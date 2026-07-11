@@ -1,6 +1,7 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.game.GameModule;
+import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.rules.CollisionRules;
@@ -100,6 +101,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean inputUp, inputDown, inputLeft, inputRight;
 	private boolean inputJump, inputJumpPress;
 	private boolean inputRawLeft, inputRawRight;
+	private boolean manualTailsFlightUpdatedThisFrame;
 	private boolean slopeResistAppliedThisFrame;
 	private boolean facingFlipForcesPushClearAfterGroundWall;
 	private boolean wasCrouching;
@@ -435,6 +437,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// distinguish "fresh slip honour the air state" from "stale move_lock
 		// from an earlier slip".
 		sprite.setSlopeRepelJustSlipped(false);
+		manualTailsFlightUpdatedThisFrame = false;
 
 		// Invalidate the pre-friction inertia snapshot at frame start; doGroundMove
 		// repopulates it before updateCrouchState consumes it (see field comment).
@@ -858,6 +861,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean hurt = sprite.isHurt();
 		if (!hurt) {
 			doJumpHeight();
+			updateManualTailsFlight();
 			doChgJumpDir();
 			doLevelBoundary();
 		}
@@ -1163,6 +1167,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 			// Shield ability: re-press jump after release while airborne (docs/skdisasm/sonic3k.asm:23397).
 			if (jumpReleasedSinceJump && inputJumpPress && sprite.getDoubleJumpFlag() == 0) {
+				if (tryActivateTailsFlight()) {
+					jumpReleasedSinceJump = false;
+					inputJumpPress = false;
+					return;
+				}
 				PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
 				if (capabilityRules != null && capabilityRules.jumpRepressClearsRollJumpBeforeAbility()
 						&& sprite.getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD) {
@@ -1185,6 +1194,54 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		} else {
 			applyUpwardVelocityCap();
 		}
+	}
+
+	private boolean tryActivateTailsFlight() {
+		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
+		if (capabilityRules == null
+				|| !capabilityRules.tailsFlightEnabled()
+				|| sprite.getSecondaryAbility() != SecondaryAbility.FLY
+				|| sprite.getTailsFlightController() == null
+				|| sprite.getTailsFlightController().isActive()) {
+			return false;
+		}
+		SidekickCpuController cpu = sprite.getCpuController();
+		if (sprite.isCpuControlled() && (cpu == null || !cpu.isUnderManualControl())) {
+			return false;
+		}
+		sprite.getTailsFlightController().activate();
+		return true;
+	}
+
+	private void updateManualTailsFlight() {
+		if (!isManualTailsFlightActive()) {
+			return;
+		}
+		sprite.getTailsFlightController().updateVertical(
+				inputJumpPress, false, romVisibleLevelFrameCounter());
+		manualTailsFlightUpdatedThisFrame = true;
+	}
+
+	private boolean isManualTailsFlightActive() {
+		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
+		if (capabilityRules == null
+				|| !capabilityRules.tailsFlightEnabled()
+				|| sprite.getSecondaryAbility() != SecondaryAbility.FLY
+				|| sprite.getTailsFlightController() == null
+				|| !sprite.getTailsFlightController().isActive()) {
+			return false;
+		}
+		SidekickCpuController cpu = sprite.getCpuController();
+		return !sprite.isCpuControlled() || (cpu != null && cpu.isUnderManualControl());
+	}
+
+	private int romVisibleLevelFrameCounter() {
+		var sprites = GameServices.spritesOrNull();
+		if (sprites != null) {
+			return sprites.getFrameCounter();
+		}
+		LevelManager level = levelManager();
+		return level != null ? level.getFrameCounter() : 0;
 	}
 
 	/**
@@ -2556,7 +2613,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// apply +$38 air gravity (that's MoveSprite_TestGravity's job), and
 			// since Tails_Move_FlySwim already advanced y_vel by +0x08, the
 			// movement step uses the post-gravity y_vel.
-			applyGravity();
+			if (!manualTailsFlightUpdatedThisFrame) {
+				applyGravity();
+			}
 			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
 			return;
 		}
