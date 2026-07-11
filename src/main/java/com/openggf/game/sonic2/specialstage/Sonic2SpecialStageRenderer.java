@@ -46,6 +46,7 @@ public class Sonic2SpecialStageRenderer {
     private int hudPatternBase;
     private int startPatternBase;
     private int messagesPatternBase;
+    private int tailsTextPatternBase;
 
     private List<Sonic2SpecialStagePlayer> players = new ArrayList<>();
     private Sonic2SpecialStagePlayer[] playerOrderPrimary = new Sonic2SpecialStagePlayer[0];
@@ -188,6 +189,10 @@ public class Sonic2SpecialStageRenderer {
         this.hudPatternBase = hudBase;
         this.startPatternBase = startBase;
         this.messagesPatternBase = messagesBase;
+    }
+
+    public void setTailsTextPatternBase(int tailsTextPatternBase) {
+        this.tailsTextPatternBase = tailsTextPatternBase;
     }
 
     public void setObjectPatternBases(int ringBase, int bombBase) {
@@ -1445,6 +1450,11 @@ public class Sonic2SpecialStageRenderer {
     private static final int HUD_TILE_SONIC_END = 0x04;   // " SONIC" last tile
     private static final int HUD_TILE_RING = 0x0A;        // "RING" - 4x2 tiles
     private static final int HUD_TILE_S = 0x3C;           // "S" suffix - 1x2 tiles
+    private static final int HUD_TILE_TOTAL = 0x26;
+
+    /** Character composition and ROM-owned per-player ring counters for Obj5E/Obj87. */
+    public record RingHudState(boolean sonicActive, boolean tailsActive,
+                               int sonicRings, int tailsRings, int totalRings) { }
 
     /**
      * Renders the ring counter HUD during gameplay.
@@ -1460,63 +1470,68 @@ public class Sonic2SpecialStageRenderer {
      * @param ringCount Current number of rings collected
      */
     public void renderRingCounter(int ringCount) {
+        renderRingCounter(new RingHudState(true, false, ringCount, 0, ringCount));
+    }
+
+    public void renderRingCounter(RingHudState state) {
         graphicsManager.beginPatternBatch();
 
-        final int H32_WIDTH = 256;
-        final int SCREEN_CENTER_OFFSET = (320 - H32_WIDTH) / 2;
-
-        // For single-player Sonic, from SSHUDLayout SSHUD_Sonic: X = $D4 (212)
-        // From obj5E mapping, pieces are offset from this center
-        // Adjusted by -6 for better centering in our viewport
-        final int objectCenterX = SCREEN_CENTER_OFFSET + 0xD4 - 6;  // 32 + 212 - 6 = 238
-
-        // Y positions from obj5E mapping (relative to object, which is at y=0 for HUD)
-        final int sonicY = 0x10;   // 16 - top row for " SONIC"
-        final int ringsY = 0x18;   // 24 - bottom row for "RINGS"
-
-        // Palette assignments from spritePiece definitions
-        final int sonicPalette = 1;  // " SONIC" uses palette 1 (blue)
-        final int ringsPalette = 2;  // "RINGS" and digits use palette 2
-
-        // ===== Render " SONIC" label (palette 1) =====
-        // From mapping: 4x1 at x=-$60 (-96) + 1x1 at x=-$40 (-64)
-        int sonicX1 = objectCenterX - 0x60;  // First 4 tiles at -96 offset
-        int sonicX2 = objectCenterX - 0x40;  // Last tile at -64 offset
-        renderHudLabel(sonicX1, sonicY, HUD_TILE_SONIC, 4, 1, sonicPalette);
-        renderHudLabel(sonicX2, sonicY, HUD_TILE_SONIC_END, 1, 1, sonicPalette);
-
-        // ===== Render "RINGS" label (palette 2) =====
-        // From mapping: "RING" 4x2 at x=-$68 (-104) + "S" 1x2 at x=-$48 (-72)
-        int ringX = objectCenterX - 0x68;    // "RING" at -104 offset
-        int sX = objectCenterX - 0x48;       // "S" at -72 offset
-        renderHudLabel(ringX, ringsY, HUD_TILE_RING, 4, 2, ringsPalette);
-        renderHudLabel(sX, ringsY, HUD_TILE_S, 1, 2, ringsPalette);
-
-        // ===== Render ring count digits (palette 2) =====
-        // Position digits after "RINGS" label with 4px spacer
-        // "S" ends at sX + 8, then add 4px gap
-        int digitX = sX + 8 + 4;  // 4px spacer after "S"
-        int digitY = 0x20;  // 32 - from Obj87
-
-        // Hundreds digit
-        if (ringCount >= 100) {
-            int hundreds = (ringCount / 100) % 10;
-            renderHudDigit(digitX, digitY, hundreds, ringsPalette);
-            digitX += 8;
+        final int viewportX = (320 - H32_TILES_X * TILE_SIZE) / 2;
+        boolean team = state.sonicActive() && state.tailsActive();
+        if (team) {
+            renderSonicHudFrame(viewportX + 0x80);
+            renderTailsHudFrame(viewportX + 0x80);
+            renderTotalHudFrame(viewportX + 0x80);
+            renderLeftAlignedDigits(state.sonicRings(), viewportX + 0x48);
+            renderLeftAlignedDigits(state.tailsRings(), viewportX + 0xE0);
+            renderCenteredTotalDigits(state.totalRings(), viewportX);
+        } else if (state.tailsActive()) {
+            renderTailsHudFrame(viewportX + 0x38);
+            renderLeftAlignedDigits(state.tailsRings(), viewportX + 0x9C);
+        } else {
+            renderSonicHudFrame(viewportX + 0xD4);
+            renderLeftAlignedDigits(state.sonicRings(), viewportX + 0x9C);
         }
-
-        // Tens digit (show if >= 10)
-        if (ringCount >= 10) {
-            int tens = (ringCount / 10) % 10;
-            renderHudDigit(digitX, digitY, tens, ringsPalette);
-            digitX += 8;
-        }
-
-        // Ones digit (always shown)
-        int ones = ringCount % 10;
-        renderHudDigit(digitX, digitY, ones, ringsPalette);
 
         graphicsManager.flushPatternBatch();
+    }
+
+    private void renderSonicHudFrame(int objectX) {
+        renderHudLabel(objectX - 0x60, 0x10, HUD_TILE_SONIC, 4, 1, 1);
+        renderHudLabel(objectX - 0x40, 0x10, HUD_TILE_SONIC_END, 1, 1, 1);
+        renderHudLabel(objectX - 0x68, 0x18, HUD_TILE_RING, 4, 2, 2);
+        renderHudLabel(objectX - 0x48, 0x18, HUD_TILE_S, 1, 2, 2);
+    }
+
+    private void renderTailsHudFrame(int objectX) {
+        renderLabel(tailsTextPatternBase, objectX + 0x38, 0x10, 0, 4, 1, 2);
+        renderLabel(tailsTextPatternBase, objectX + 0x58, 0x10, 4, 1, 1, 2);
+        renderHudLabel(objectX + 0x30, 0x18, HUD_TILE_RING, 4, 2, 2);
+        renderHudLabel(objectX + 0x50, 0x18, HUD_TILE_S, 1, 2, 2);
+    }
+
+    private void renderTotalHudFrame(int objectX) {
+        renderHudLabel(objectX - 0x14, 0x10, HUD_TILE_TOTAL, 4, 4, 2);
+        renderHudLabel(objectX + 0x0C, 0x10, HUD_TILE_TOTAL + 0x10, 1, 4, 2);
+    }
+
+    private void renderLeftAlignedDigits(int count, int x) {
+        int value = Math.max(0, count);
+        if (value >= 100) {
+            renderHudDigit(x, 0x20, (value / 100) % 10, 2);
+            x += 8;
+        }
+        if (value >= 10) {
+            renderHudDigit(x, 0x20, (value / 10) % 10, 2);
+            x += 8;
+        }
+        renderHudDigit(x, 0x20, value % 10, 2);
+    }
+
+    private void renderCenteredTotalDigits(int count, int viewportX) {
+        int value = Math.max(0, count);
+        int x = viewportX + (value >= 100 ? 0x78 : value >= 10 ? 0x7C : 0x80);
+        renderLeftAlignedDigits(value, x);
     }
 
     /**
@@ -1531,11 +1546,16 @@ public class Sonic2SpecialStageRenderer {
      * @param paletteIndex Palette to use
      */
     private void renderHudLabel(int x, int y, int tileOffset, int widthTiles, int heightTiles, int paletteIndex) {
+        renderLabel(hudPatternBase, x, y, tileOffset, widthTiles, heightTiles, paletteIndex);
+    }
+
+    private void renderLabel(int patternBase, int x, int y, int tileOffset,
+                             int widthTiles, int heightTiles, int paletteIndex) {
         // VDP uses column-major tile ordering
         for (int tx = 0; tx < widthTiles; tx++) {
             for (int ty = 0; ty < heightTiles; ty++) {
                 int localTileIndex = tx * heightTiles + ty;
-                int patternId = hudPatternBase + tileOffset + localTileIndex;
+                int patternId = patternBase + tileOffset + localTileIndex;
 
                 reusableDesc.set(0);
                     PatternDesc desc = reusableDesc;

@@ -74,6 +74,10 @@ public final class Sonic2SpecialStageConstants {
     public static final long HUD_ART_OFFSET = 0x0DD48A;
     public static final int HUD_ART_SIZE = 774;
 
+    /** Overseas TAILS label for the special-stage ring HUD - ArtNem_SpecialTailsText. */
+    public static final long TAILS_TEXT_ART_OFFSET = 0x0E247E;
+    public static final int TAILS_TEXT_ART_SIZE = 128;
+
     /** START banner art - Nemesis compressed (includes checkered flag) */
     public static final long START_ART_OFFSET = 0x0DD790;
     public static final int START_ART_SIZE = 318;  // 0xDD8CE - 0xDD790
