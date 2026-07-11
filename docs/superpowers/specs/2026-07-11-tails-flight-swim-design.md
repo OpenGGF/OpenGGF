@@ -43,7 +43,7 @@ The active character source owns character-specific capabilities. Donation repla
 ### Acceptance Criteria
 
 1. Native S3K and S3K-donated Tails can activate manual flight/swimming; native or donated S2 Tails cannot.
-2. Activation, timer, flap, gravity, camera clamp, animation, sound, landing, and control-takeover behavior match the cited S3K routines.
+2. Activation, timer, flap, gravity, camera clamp, animation, sound, and landing behavior match the cited S3K routines; control-takeover cleanup satisfies the engine integration contract.
 3. Only the main character can grab Tails, with ROM contact, cooldown, carried-position, collision, and release behavior.
 4. Underwater carrying prevents new flap thrust but does not immediately exhaust Tails; remaining flight time continues to decrement.
 5. CPU recovery and CNZ/MGZ scripted carries continue to use their existing decision logic while delegating shared movement/carry mechanics.
@@ -88,14 +88,14 @@ The active character source owns character-specific capabilities. Donation repla
 
 - Activation initializes `double_jump_flag` to `1` and `double_jump_property` to `(8*60)/2`, or `$F0`.
 - The timer decrements on alternate level frames, producing eight seconds at 60 Hz.
-- A flap begins at state `2`; states advance while subtracting `$20` from vertical velocity until velocity is above the `-$100` threshold or state reaches `$20`, then return to state `1`.
-- Flight adds `$08` vertical velocity each frame and clamps upward velocity to zero within `$10` of the camera minimum Y.
+- A flap begins at state `2`; flap states subtract `$20` from vertical velocity and advance until pre-subtraction velocity is less than `-$100` or state reaches `$20`, then return to state `1`. Flap states bypass the ready-state gravity addition.
+- Ready state `1` adds `$08` vertical velocity. All states clamp upward velocity to zero within `$10` of the camera minimum Y.
 - Air animations are `$20-$24`; swim animations are `$25-$28`.
 - Airborne flight/tired sounds play only while on screen at the ROM 16-frame cadence. Swimming is silent.
 - While carrying the main character underwater, new flap activation is blocked. The timer is not cleared, so grabbing Tails underwater does not immediately exhaust him.
-- Successful carry contact uses fixed ROM bounds and eligibility gates, then locks and positions the main character beneath Tails.
+- Successful carry contact uses fixed ROM bounds and eligibility gates, then locks and positions the main character on Tails' gravity-relative carry side (below normally, above under reverse gravity). The routine first clears participant velocity, ground velocity, and angle, then seeds participant X/Y velocity from Tails before returning.
 - The carried main character releases by pressing jump. Release applies `-$380` vertical velocity and optional `-$200`/`$200` horizontal velocity from held direction.
-- Floor contact clears flight. Object-control takeover also clears flight and releases the carried player.
+- `Tails_TouchFloor` clears flight; the subsequent grounded path releases the carried player. Object-control takeover cleanup remains an engine integration requirement rather than a claim sourced from these cited flight/carry ranges.
 
 ### Recommendation
 
@@ -136,17 +136,17 @@ Landing, player reset, death/reset paths, and object-control takeover clear flig
 
 1. Jump-height handling observes the routed logical controller input.
 2. An eligible airborne jump re-press activates flight when both `SecondaryAbility.FLY` and the typed source capability are present.
-3. Active flight runs timer/flap/gravity updates.
-4. Existing horizontal air control and boundary checks run.
-5. Movement and Tails terrain collision run.
-6. Carry contact/update runs after Tails collision, matching `Tails_FlyingSwimming`.
-7. Animation and sound resolve from final velocity, timer, underwater state, and carry state.
+3. Active flight runs timer/flap/ready-gravity updates and the camera clamp.
+4. Animation and sound resolve immediately from that vertical result, the timer, underwater state, and carry state inherited from the prior frame.
+5. Existing horizontal air control and boundary checks run.
+6. Movement and Tails terrain collision run.
+7. Carry contact/update runs after Tails collision, matching `Tails_FlyingSwimming`. A newly acquired carry therefore changes Tails' carry animation on the following frame, while participant attachment is immediate.
 
 The exact integration point must preserve the current post-gravity ordering used by `PlayableSpriteMovement`; tests will guard against double gravity or a one-frame collision shift.
 
 ### Animation and Audio Contracts
 
-Canonical animation vocabulary will represent level/descending flight, ascending flight, carried flight, tired flight, level/descending swim, ascending swim, carried swim, and tired swim. Native/donated profiles map those meanings to game-specific animation scripts.
+Canonical animation vocabulary will represent level/descending flight, ascending flight, carried level/descending flight, carried ascending flight, tired flight, level/descending swim, ascending swim, carried swim, and tired swim. Native/donated profiles map those meanings to game-specific animation scripts.
 
 Audio adds canonical flying and tired-flight sounds mapped by S3K. The flight component requests them only for airborne, on-screen Tails at the disassembly cadence. An enabled flight capability without its required animation contracts is a provider/configuration error, not a silent fallback to an incorrect animation.
 
@@ -160,17 +160,17 @@ Migration proceeds by first characterizing existing CPU/MGZ behavior with tests,
 
 Tails jumps normally. After the jump button has been released, a new press while airborne invokes the S3K flight test. Activation is allowed for solo/main Tails and for a sidekick during the existing manual-control window. It is rejected when the active source capability is disabled, flight is already active, or the corresponding ROM control/state gate rejects it.
 
-If rolling, activation clears roll, restores default radii, adjusts center Y by the radius delta with reverse-gravity handling, clears rolling-jump state, sets flight state `1`, initializes `$F0` time, and immediately resolves the flight/swim animation.
+If rolling, activation clears roll, restores default radii, and adds the old-minus-default Y-radius delta to center Y. The locked-on ROM checks reverse gravity and executes `neg.w d0`, but the applied delta is held in `d1`; ROM bytes at `s3k.gen:$15182` confirm opcode `44 40` (`neg.w d0`). The implementation therefore preserves the ROM's unchanged `d1` adjustment instead of assuming a reversed delta. Activation then clears rolling-jump state, sets flight state `1`, initializes `$F0` time, and immediately resolves the flight/swim animation.
 
 ### Flight and Swimming
 
-The timer decrements on odd ROM-visible level-frame parity while nonzero. State `1` is ready/descending. A valid new jump press with sufficient remaining time and `y_vel >= -$100` moves to state `2`. Flap states subtract `$20` per frame and advance until the ROM completion condition returns them to `1`. Every flight frame adds `$08` to vertical velocity.
+The timer decrements on odd ROM-visible level-frame parity while nonzero. State `1` is ready/descending. A valid new jump press with sufficient remaining time and `y_vel >= -$100` moves to state `2`, but that frame still executes the state-1 `$08` addition. On later frames, flap states subtract `$20` and advance without also adding `$08`; a flap state resets to `1` when its pre-subtraction velocity is less than `-$100` or when it increments to `$20`.
 
 Underwater uses the same timer and movement. It changes animation selection and suppresses a new flap only while Tails is carrying the main character. It does not immediately exhaust Tails. Exhaustion occurs only when the timer reaches zero; it prevents new flap activation until floor contact resets flight.
 
 ### Carry
 
-Only the main character is a carry participant. Other sidekicks are excluded even if they are Sonic characters. Carry contact uses the ROM relative bounds, routine/control/debug/spindash eligibility, and re-grab cooldown. A successful grab zeroes participant motion, locks control, positions the main character below Tails using center coordinates, selects the carried animation, mirrors facing/priority, and plays the grab sound.
+Only the main character is a carry participant. Other sidekicks are excluded even if they are Sonic characters. Carry contact uses the ROM routine/control/debug/spindash eligibility, re-grab cooldown, and unsigned relative bounds: X is `-$10..+$0F`; under normal gravity the main-character center is `$20..$2F` below Tails; under reverse gravity it is `$21..$30` above Tails. A successful grab clears participant X/Y/ground velocity and angle, locks control, positions the main character on Tails' gravity-relative carry side using center coordinates, selects the carried animation, mirrors facing, then seeds participant X/Y velocity from Tails and plays the grab sound.
 
 While carried, the main character follows Tails and receives Tails velocity before its collision check. External displacement or invalid participant state releases the carry through the ROM cleanup path. A main-character jump press performs the intentional release: it clears control/carry, applies the directional cooldown rule, sets optional horizontal velocity, applies `-$380` vertical velocity, and restores jumping/rolling state and dimensions per the disassembly.
 
@@ -182,8 +182,8 @@ CNZ/MGZ sequences may pre-latch or force carry through explicit scripted context
 - Entering water during flight preserves the timer and switches to swim animation.
 - Leaving water preserves the active timer and switches back to flight animation.
 - Carrying underwater blocks new flap thrust without clearing time.
-- Floor contact clears flight and releases a carried main character through normal landing state.
-- Object-control takeover clears manual flight and carry before the controlling object proceeds.
+- `Tails_TouchFloor` clears flight on floor contact; the following grounded path releases a carried main character.
+- Object-control takeover clears manual flight and carry as an engine cleanup contract. This is required for safe integration but is not claimed as validated by the cited flight/carry ranges.
 - Rewind across grab/release re-resolves only the main character and restores scalar carry state.
 - A donor capability mismatch is surfaced during provider/art validation.
 
@@ -201,7 +201,7 @@ CNZ/MGZ sequences may pre-latch or force carry through explicit scripted context
 ### Movement, Animation, and Audio
 
 - `$F0` timer uses alternate-frame decrement and expires after eight seconds.
-- Flap states, `-$100` threshold, `$20` impulse, `$08` gravity, and camera clamp match the ROM.
+- Flap states, `-$100` threshold, `$20` impulse without simultaneous gravity, state-1 `$08` gravity, and camera clamp match the ROM.
 - Air animation selection covers `$20-$24`; swim selection covers `$25-$28`.
 - Air flying/tired SFX follows on-screen 16-frame cadence; swimming emits neither sound.
 - Landing and object-control takeover clear flight.
@@ -209,7 +209,7 @@ CNZ/MGZ sequences may pre-latch or force carry through explicit scripted context
 ### Carry
 
 - Only the main character passes the carry participant query.
-- Contact bounds, cooldown, eligibility, attachment offset, velocity mirroring, facing, render priority, and collision match the ROM.
+- Exact contact intervals, cooldown, eligibility, attachment offset, velocity seeding/mirroring, facing, and collision match the ROM.
 - Main-character jump release produces `-$380` Y velocity and directional X velocity/cooldown.
 - Underwater carry blocks flapping, preserves remaining time, and does not immediately select tired swim.
 - Other sidekicks cannot initiate or receive this carry interaction.
