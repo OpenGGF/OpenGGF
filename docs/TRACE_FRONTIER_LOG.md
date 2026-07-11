@@ -827,6 +827,18 @@ selection now match the recording; the next remaining owner is fixed-slot air
 countdown state across the seamless act handoff. The AIZ stage is not green
 yet.
 
+Round 59 preserves the two fixed `Obj_AirCountdown` SST owners across a
+same-zone adjacent-act handoff. The ROM's fixed object RAM is not cleared by
+AIZ's seamless Act 1 to Act 2 transition, so resetting the manager during the
+engine's act reinitialization restarted both countdown timers and displaced all
+later random calls. `Sonic3kLevelEventManager` now resets those slots for a
+fresh zone/non-adjacent load but retains them for `same zone && next act`, a
+generic load-state condition rather than an AIZ carve-out
+(`sonic3k.asm:22221-22224,27436-27439`). Together with Round 58, the complete
+run's global RNG sequence now matches through the AIZ end-boss selection. The
+focused AIZ replay remains green; the complete-run frontier moves to the boss
+contact/defeat handoff. The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

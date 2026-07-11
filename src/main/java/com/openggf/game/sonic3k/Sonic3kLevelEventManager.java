@@ -105,6 +105,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kMHZEvents mhzEvents;
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
             new S3kFixedAirCountdownManager();
+    private int fixedAirCountdownZone = -1;
+    private int fixedAirCountdownAct = -1;
 
     // Tracks whether the intro-fall forced animation is active on each player.
     // Cleared per-player when they land (air → ground transition).
@@ -166,7 +168,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         bootstrap = Sonic3kBootstrapResolver.resolve(zone, act);
         introFallActiveOnPlayer = false;
         introFallActiveOnSidekick = false;
-        fixedAirCountdownManager.reset();
+        boolean seamlessActAdvance = fixedAirCountdownZone == zone
+                && fixedAirCountdownAct + 1 == act;
+        if (!seamlessActAdvance) {
+            fixedAirCountdownManager.reset();
+        }
+        fixedAirCountdownZone = zone;
+        fixedAirCountdownAct = act;
 
         // ROM: Level_FromSavedGame skips intro when Last_star_post_hit != 0.
         // This covers both special stage return (big ring) and bonus stage return.
