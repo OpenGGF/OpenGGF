@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f16697 / 1663 errors (2 errors under `frontierOnly`).
+f3318 / 4234 errors to f16831 / 1651 errors (10 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -552,6 +552,21 @@ follow. The isolated granular replay matrix keeps both AIZ routes green and
 preserves every non-HCZ frontier/count exactly: CNZ complete f1846 / 5, CNZ
 level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ
 f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 30 restores tension-bridge segment publication order. The bridge's
+bend routine consumes the prior contact's `$3F` segment byte, then the later
+`sub_38A88` solid pass stores the player's current segment for the following
+object dispatch. The engine now defers that current-segment publication until
+after building the frame's slope data instead of reshaping the bridge one pass
+early (`sonic3k.asm:75555-75635,75879-75946,76164-76240`).
+
+This closes f16697-f16830 and advances HCZ to f16831 / 1651 full-run errors (10
+under `frontierOnly`), reducing the full report by 12 groups. A focused bridge
+test covers the prior-segment bend followed by next-dispatch consumption. The
+isolated granular replay matrix keeps both AIZ routes green and preserves every
+non-HCZ frontier/count exactly, including the bridge-sensitive ICZ route: CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

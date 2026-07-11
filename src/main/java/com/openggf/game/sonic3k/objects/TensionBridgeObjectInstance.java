@@ -261,8 +261,10 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
 
         // --- Depression angle update ---
         ObjectManager objectManager = services().objectManager();
+        boolean wasPlayerOnBridge = playerOnBridge;
         playerOnBridge = playerEntity != null && objectManager != null
                 && objectManager.isAnyPlayerRiding(this);
+        int nextPlayerSegmentIndex = playerSegmentIndex;
 
         if (playerOnBridge) {
             // Track which segment the player is on
@@ -271,7 +273,12 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
             int logIdx = relX >> 4;
             if (logIdx < 0) logIdx = 0;
             if (logIdx >= segmentCount) logIdx = segmentCount - 1;
-            playerSegmentIndex = logIdx;
+            nextPlayerSegmentIndex = logIdx;
+            if (!wasPlayerOnBridge) {
+                // The preceding SolidObject pass has already populated ROM
+                // byte $3F before the first riding update.
+                playerSegmentIndex = logIdx;
+            }
 
             // addq.b #4,$3E(a0); cmpi.b #$40,$3E(a0)
             if (depressionAngle < MAX_DEPRESSION_ANGLE) {
@@ -299,6 +306,11 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
 
         // Update slope data for collision
         updateSlopeData();
+        if (playerOnBridge) {
+            // ROM loc_387E0 bends from the prior $3F value, then sub_38A88
+            // stores the player's current segment for the following dispatch.
+            playerSegmentIndex = nextPlayerSegmentIndex;
+        }
     }
 
     // --- Bend calculation (sub_38CC2 / sub_38D74) ---
