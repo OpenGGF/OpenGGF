@@ -554,6 +554,20 @@ exact through f8943, and the strict frontier advances from f8831 to f9509
 (`y_speed` expected `$03A8`, actual `$0000`; 1470 errors). The complete-run
 frontier remains f16755 / 1056 errors. The AIZ stage is not green yet.
 
+Round 39 applies `SolidObjectTop`'s exact-boundary rule to the normal AIZ
+collapsing log bridge as well as its fire subtype. Both `loc_2AE98` and
+`loc_2AF06` enter `loc_1E42E`, whose unsigned `cmpi.w #-$10,d0 / blo` accepts
+only negative overlap from -16 through -1. At focused f9509 Sonic's bottom plus
+the helper's four-pixel bias is exactly level with the bridge surface, so the
+ROM keeps him airborne and lands him on the next frame; the engine had treated
+that zero-distance contact as a landing. A focused object guard now covers both
+subtypes. Frontier results are recorded after replay verification below.
+The focused replay advances from f9509 / 1470 errors (airborne bridge-boundary
+state) to f16324 / 1159 errors (camera X expected `$4160`, actual `$4164`). The
+complete-run replay is unchanged at f16755 / 1056 errors (rings expected 2,
+actual 3), confirming that its earlier fast-overlap bridge landing remains
+accepted. The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

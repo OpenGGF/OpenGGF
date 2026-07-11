@@ -149,12 +149,11 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean rejectsZeroDistanceTopSolidLanding(PlayableEntity player) {
-        // The AIZ2 fire drawbridge trace reaches loc_2AF06 -> SolidObjectTop
-        // with Tails exactly on the top boundary for two frames. ROM
-        // loc_1E42E accepts only negative overlap d0 in [-16,-1]; cmpi.w
-        // #-$10,d0 / blo rejects d0 == 0, so the p2 standing bit is not set
-        // until the later frame with actual overlap (sonic3k.asm:42048-42068).
-        return isFireBridge;
+        // Both the normal bridge at loc_2AE98 and the fire bridge at loc_2AF06
+        // call the same SolidObjectTop -> loc_1E42E entry. It accepts only
+        // negative overlap d0 in [-16,-1]; cmpi.w #-$10,d0 / blo rejects
+        // d0 == 0 for either subtype (sonic3k.asm:42048-42068).
+        return true;
     }
 
     @Override
