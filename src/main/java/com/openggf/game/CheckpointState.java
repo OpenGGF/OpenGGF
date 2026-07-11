@@ -33,6 +33,7 @@ public class CheckpointState implements RespawnState {
     private byte savedLrbSolidBit = 0x0D;
     private boolean hasSolidBits;
 
+    @com.openggf.game.ModApi
     public record RewindState(
             int lastCheckpointIndex,
             int savedX,

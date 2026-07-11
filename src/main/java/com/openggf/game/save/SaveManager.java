@@ -19,6 +19,7 @@ import java.util.logging.Logger;
 
 import static java.security.MessageDigest.getInstance;
 
+@com.openggf.game.ModApi
 public final class SaveManager {
 
     private static final Logger LOG = Logger.getLogger(SaveManager.class.getName());

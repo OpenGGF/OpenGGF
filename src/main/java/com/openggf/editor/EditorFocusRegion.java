@@ -1,5 +1,6 @@
 package com.openggf.editor;
 
+@com.openggf.game.ModApi
 public enum EditorFocusRegion {
     TOOLBAR,
     COMMAND_STRIP,

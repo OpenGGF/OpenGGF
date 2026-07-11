@@ -29,10 +29,12 @@ import java.util.logging.Logger;
  * in TimeAttackAttempt; this class samples live state, feeds the attempt,
  * captures the ghost, plays back opponents, and persists new bests.
  */
+@com.openggf.game.ModApi
 public final class TimeAttackRuntime {
     private static final Logger LOGGER = Logger.getLogger(TimeAttackRuntime.class.getName());
 
     /** Multiplayer bridge for spawn-anchored attempt lifecycle and frame streaming. */
+    @com.openggf.game.ModApi
     public interface AttemptListener {
         void onAttemptBegan(int attemptOrdinal);
 

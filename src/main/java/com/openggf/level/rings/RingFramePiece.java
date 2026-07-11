@@ -5,6 +5,7 @@ import com.openggf.level.render.SpriteFramePiece;
 /**
  * One sprite piece in a ring animation frame.
  */
+@com.openggf.game.ModApi
 public record RingFramePiece(
         int xOffset,
         int yOffset,

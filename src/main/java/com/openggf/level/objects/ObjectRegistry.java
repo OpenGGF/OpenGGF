@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import java.util.List;
 
+@com.openggf.game.ModApi
 public interface ObjectRegistry {
     ObjectInstance create(ObjectSpawn spawn);
 

@@ -7,5 +7,6 @@ package com.openggf.audio;
  * @param length byte length of the PCM blob
  * @param sampleRate source sample rate in Hz
  */
+@com.openggf.game.ModApi
 public record SegaPcmSpec(int address, int length, int sampleRate) {
 }

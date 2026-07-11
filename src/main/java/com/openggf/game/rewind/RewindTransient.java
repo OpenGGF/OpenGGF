@@ -7,6 +7,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
+@com.openggf.game.ModApi
 public @interface RewindTransient {
     String reason();
 }

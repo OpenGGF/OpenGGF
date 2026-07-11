@@ -8,6 +8,7 @@ import java.util.Objects;
 /**
  * Shared overlay text helper backed by the pixel font texture.
  */
+@com.openggf.game.ModApi
 public class PixelFontTextRenderer {
 
     private final PixelFont font;

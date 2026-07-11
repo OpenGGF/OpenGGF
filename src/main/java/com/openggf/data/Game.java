@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+@com.openggf.game.ModApi
 public abstract class Game {
 
     public abstract boolean isCompatible();

@@ -11,6 +11,7 @@ import java.util.Map;
  * <p>Dynamic handler references are not captured — they are stateless lambdas
  * set at zone load and do not change during gameplay.
  */
+@com.openggf.game.ModApi
 public record WaterSystemSnapshot(
         int waterEnteredCounter,
         Map<String, DynamicWaterEntry> dynamicStates
@@ -23,6 +24,7 @@ public record WaterSystemSnapshot(
      * Numeric fields of one {@link com.openggf.level.WaterSystem.DynamicWaterState}
      * entry. The {@code handler} reference is excluded (stateless, set at zone load).
      */
+    @com.openggf.game.ModApi
     public record DynamicWaterEntry(
             int currentLevel,
             int targetLevel,

@@ -1,5 +1,6 @@
 package com.openggf.game.profiles.touchresponse;
 
+@com.openggf.game.ModApi
 public enum TouchCategoryDecodeMode {
     NORMAL,
     S1_SPECIAL_PROPERTY,

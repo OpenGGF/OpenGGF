@@ -9,6 +9,7 @@ import com.openggf.game.PlayableEntity;
  * (SFX, animal spawn, respawn tracking, points popup factory) while the
  * core sequence (explosion, score chain, SFX) stays in one place.
  */
+@com.openggf.game.ModApi
 public final class DestructionEffects {
 
     private DestructionEffects() {
@@ -21,6 +22,7 @@ public final class DestructionEffects {
      * S3K passes {@code null} (no popup).
      */
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface PointsFactory {
         ObjectInstance create(ObjectSpawn spawn, ObjectServices services, int pointsValue);
     }
@@ -31,6 +33,7 @@ public final class DestructionEffects {
      * Sonic 2 and S3K use the shared generic animal object.
      */
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface AnimalFactory {
         ObjectInstance create(ObjectSpawn spawn, ObjectServices services);
     }
@@ -40,6 +43,7 @@ public final class DestructionEffects {
      * Sonic 1 uses a custom ExplosionItem object that later spawns the animal.
      */
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface ExplosionFactory {
         ObjectInstance create(int x, int y, ObjectServices services, int pointsValue);
     }
@@ -55,6 +59,7 @@ public final class DestructionEffects {
      * @param explosionFactory   factory for a custom replacement explosion object, or {@code null}
      * @param pointsAllocatedBeforeAnimal if true, allocate the points popup before the animal object
      */
+    @com.openggf.game.ModApi
     public record DestructionConfig(
             int sfxId,
             AnimalFactory animalFactory,

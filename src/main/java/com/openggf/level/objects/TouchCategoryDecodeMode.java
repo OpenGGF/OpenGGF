@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+@com.openggf.game.ModApi
 public enum TouchCategoryDecodeMode {
     NORMAL,
     FORCE_ENEMY,

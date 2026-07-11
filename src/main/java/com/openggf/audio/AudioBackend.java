@@ -8,6 +8,7 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 
+@com.openggf.game.ModApi
 public interface AudioBackend {
     void init();
 

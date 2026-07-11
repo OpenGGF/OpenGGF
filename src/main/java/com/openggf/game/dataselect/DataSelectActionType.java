@@ -3,6 +3,7 @@ package com.openggf.game.dataselect;
 /**
  * Types of actions that can result from data select screen interaction.
  */
+@com.openggf.game.ModApi
 public enum DataSelectActionType {
     /** No action pending. */
     NONE,

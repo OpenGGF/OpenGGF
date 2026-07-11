@@ -11,6 +11,7 @@ package com.openggf.game;
  *       fields that plane switchers and springs can swap at runtime.</li>
  * </ul>
  */
+@com.openggf.game.ModApi
 public enum CollisionModel {
     UNIFIED,
     DUAL_PATH

@@ -64,6 +64,7 @@ import com.openggf.timer.timers.SpeedShoesTimer;
  * @author james
  * 
  */
+@com.openggf.game.ModApi
 public abstract class AbstractPlayableSprite extends AbstractSprite implements com.openggf.game.PlayableEntity {
         private static final Logger LOGGER = Logger.getLogger(AbstractPlayableSprite.class.getName());
 

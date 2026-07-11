@@ -5,6 +5,7 @@ import com.openggf.sprites.managers.PlayableSpriteMovement;
 import com.openggf.sprites.managers.SpindashDustController;
 import com.openggf.sprites.managers.TailsTailsController;
 
+@com.openggf.game.ModApi
 public class PlayableSpriteController {
     private final PlayableSpriteMovement movement;
     private final PlayableSpriteAnimation animation;

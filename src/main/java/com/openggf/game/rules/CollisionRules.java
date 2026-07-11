@@ -2,6 +2,7 @@ package com.openggf.game.rules;
 
 import com.openggf.game.CollisionModel;
 
+@com.openggf.game.ModApi
 public record CollisionRules(
         CollisionModel collisionModel,
         boolean groundWallCollisionEnabled,

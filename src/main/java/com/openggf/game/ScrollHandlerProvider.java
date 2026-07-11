@@ -12,6 +12,7 @@ import java.io.IOException;
  * <p>Scroll handlers control horizontal and vertical scrolling for background
  * planes, implementing per-line parallax effects specific to each zone.
  */
+@com.openggf.game.ModApi
 public interface ScrollHandlerProvider {
     /**
      * Loads any required data for scroll handlers from the ROM.
@@ -125,6 +126,7 @@ public interface ScrollHandlerProvider {
     /**
      * Interface containing zone index constants.
      */
+    @com.openggf.game.ModApi
     interface ZoneConstants {
         int getZoneCount();
         String getZoneName(int index);

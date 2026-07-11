@@ -8,6 +8,7 @@ import java.util.Optional;
  * live in the mod runtime; the audio layer never depends on mod-domain types.
  * Calls are confined to the presentation thread.
  */
+@com.openggf.game.ModApi
 public interface StreamedMusicPort extends AutoCloseable {
     int PAUSE_JINGLE = 1;
     int PAUSE_APP = 2;
@@ -44,6 +45,7 @@ public interface StreamedMusicPort extends AutoCloseable {
         @Override public void close() { }
     };
 
+    @com.openggf.game.ModApi
     record TrackRef(String owner, String name) {
         public TrackRef {
             if (owner == null || owner.isBlank()) throw new IllegalArgumentException("Track owner is required");
@@ -51,6 +53,7 @@ public interface StreamedMusicPort extends AutoCloseable {
         }
     }
 
+    @com.openggf.game.ModApi
     record FadeState(float gain, int remainingSteps, int stepDelay,
                      int delayCounter, float stepAmount) {
         public FadeState {
@@ -83,6 +86,7 @@ public interface StreamedMusicPort extends AutoCloseable {
         }
     }
 
+    @com.openggf.game.ModApi
     record State(TrackRef track, int logicalMusicId, double sourceFramePosition,
                  int pauseMask, FadeState fade, double rate) {
         public State {

@@ -12,6 +12,7 @@ import java.util.Map;
  * claims the owner thread; later calls from any other thread fail fast instead
  * of corrupting section maps or reusable snapshots.
  */
+@com.openggf.game.ModApi
 public class PerformanceProfiler implements SectionProfiler {
     private static PerformanceProfiler instance;
 

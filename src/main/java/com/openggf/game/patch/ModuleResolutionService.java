@@ -17,8 +17,10 @@ import java.util.function.Predicate;
  * Engine-owned patch registry and resolver. Built-ins are immutable; each launch
  * supplies a frozen mod plan through a fresh {@link ResolutionContext}.
  */
+@com.openggf.game.ModApi
 public final class ModuleResolutionService {
 
+    @com.openggf.game.ModApi
     public enum LaunchPolicy {
         STANDARD,
         DETERMINISTIC
@@ -26,10 +28,12 @@ public final class ModuleResolutionService {
 
     /** Supplies a frozen mod contribution plan for one launch. */
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface PatchPlanSource {
         PatchPlan scan(PatchEnablement enablement);
     }
 
+    @com.openggf.game.ModApi
     public record PatchPlan(List<RegisteredPatch> registrations,
             Map<PatchOwner, ? extends Set<PatchOwner>> ownerDependencies) {
         public PatchPlan {
@@ -48,6 +52,7 @@ public final class ModuleResolutionService {
     }
 
     /** One immutable plan/context shared by every decision in a single launch. */
+    @com.openggf.game.ModApi
     public static final class PreparedLaunch {
         private final ModuleResolutionService owner;
         private final ResolutionContext context;

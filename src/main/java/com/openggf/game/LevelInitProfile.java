@@ -17,6 +17,7 @@ import java.util.List;
  * The engine executes steps in declared order — no topological sorting,
  * no dependency resolution. The disassembly IS the dependency graph.
  */
+@com.openggf.game.ModApi
 public interface LevelInitProfile {
     /**
      * Offset used to place already-registered sidekicks relative to the main

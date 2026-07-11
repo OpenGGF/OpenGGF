@@ -11,6 +11,7 @@ package com.openggf.audio.smps;
  * <p>The handler receives a {@link CoordFlagContext} that exposes sequencer
  * internals for manipulating track state.
  */
+@com.openggf.game.ModApi
 public interface CoordFlagHandler {
 
     /**

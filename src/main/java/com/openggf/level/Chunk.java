@@ -13,6 +13,7 @@ import java.util.Arrays;
  * if needed. This protects snapshot-captured chunk references from
  * being clobbered by subsequent mutations.
  */
+@com.openggf.game.ModApi
 public class Chunk {
     public static final int CHUNK_HEIGHT = 16;
     public static final int CHUNK_WIDTH = 16;

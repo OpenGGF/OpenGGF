@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Client for master browsing plus direct/relay room join orchestration. */
+@com.openggf.game.ModApi
 public final class MasterClient implements AutoCloseable {
     public static final long MASTER_REPLY_TIMEOUT_MILLIS = 5_000;
 

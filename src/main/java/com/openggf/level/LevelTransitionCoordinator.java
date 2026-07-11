@@ -10,6 +10,7 @@ import com.openggf.game.BonusStageType;
  * This is a pure state holder — it never calls back into LevelManager or
  * any other singleton.
  */
+@com.openggf.game.ModApi
 public class LevelTransitionCoordinator {
 
     // ── Special stage ──────────────────────────────────────────────────

@@ -2,6 +2,7 @@ package com.openggf.graphics.color;
 
 import java.util.Locale;
 
+@com.openggf.game.ModApi
 public enum DisplayColorProfile {
     RAW_RGB("Raw RGB"),
     MD_ANALOG("MD Analog"),

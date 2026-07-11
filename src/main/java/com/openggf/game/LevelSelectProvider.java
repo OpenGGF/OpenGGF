@@ -7,8 +7,10 @@ import com.openggf.control.InputHandler;
  * Each game (Sonic 1, Sonic 2, etc.) provides its own implementation
  * with game-accurate menu layout, text, and navigation.
  */
+@com.openggf.game.ModApi
 public interface LevelSelectProvider {
 
+    @com.openggf.game.ModApi
     enum State {
         /** Screen is not active */
         INACTIVE,

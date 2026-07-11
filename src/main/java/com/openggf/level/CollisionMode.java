@@ -5,6 +5,7 @@ import com.openggf.physics.Direction;
 /**
  *
  */
+@com.openggf.game.ModApi
 public enum CollisionMode {
     NO_COLLISION(0),
     TOP_SOLID(1),

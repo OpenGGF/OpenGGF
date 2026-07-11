@@ -18,6 +18,7 @@ import java.util.Objects;
  * retaining the same in-memory primary/sidekick representation. Non-compared diagnostic
  * fields still appear in divergence report context windows for debugging.
  */
+@com.openggf.game.ModApi
 public record TraceFrame(
     int frame,
     int input,

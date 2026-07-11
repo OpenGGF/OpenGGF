@@ -17,6 +17,7 @@ import java.util.Map;
 public final class TimeAttackTrackCatalog {
 
     /** One selectable Time Attack track. */
+    @com.openggf.game.ModApi
     public record Track(String gameId, int zone, int act, String label, List<String> characters) {
         public Track {
             characters = List.copyOf(characters);

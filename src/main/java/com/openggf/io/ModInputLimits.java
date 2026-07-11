@@ -4,6 +4,7 @@ package com.openggf.io;
  * Immutable hostile-input limits shared by mod readers and converters.
  * Production values are fixed; tests may only lower them through {@link #loweringBuilder()}.
  */
+@com.openggf.game.ModApi
 public final class ModInputLimits {
     public static final long DEFAULT_MAX_METADATA_BYTES = 1L << 20;
     public static final long DEFAULT_MAX_JAR_BYTES = 1L << 30;
@@ -106,6 +107,7 @@ public final class ModInputLimits {
     public int maxStringChars() { return values.maxStringChars; }
     public int maxNumericDigits() { return values.maxNumericDigits; }
 
+    @com.openggf.game.ModApi
     public static final class Builder {
         private long maxMetadataBytes = DEFAULT_MAX_METADATA_BYTES;
         private long maxJarBytes = DEFAULT_MAX_JAR_BYTES;

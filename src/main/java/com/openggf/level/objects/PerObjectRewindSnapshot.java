@@ -22,6 +22,7 @@ import com.openggf.game.rewind.schema.RewindObjectStateBlob;
  * (e.g. Turtloid, Spiker), and any object that accumulates a timer beyond
  * {@code animTimer} (e.g. CNZ bumper reload, HTZ earthquake object).
  */
+@com.openggf.game.ModApi
 public record PerObjectRewindSnapshot(
         // Lifecycle / destruction flags
         boolean destroyed,
@@ -144,9 +145,11 @@ public record PerObjectRewindSnapshot(
         );
     }
 
+    @com.openggf.game.ModApi
     public interface BadnikSubclassRewindExtra {
     }
 
+    @com.openggf.game.ModApi
     public interface ObjectSubclassRewindExtra {
     }
 
@@ -154,6 +157,7 @@ public record PerObjectRewindSnapshot(
      * Immutable capture of {@link AbstractBadnikInstance} movement-state fields
      * (currentX, currentY, xVelocity, yVelocity, animTimer, animFrame, facingLeft).
      */
+    @com.openggf.game.ModApi
     public static record BadnikRewindExtra(
             int currentX,
             int currentY,
@@ -164,6 +168,7 @@ public record PerObjectRewindSnapshot(
             boolean facingLeft
     ) {}
 
+    @com.openggf.game.ModApi
     public record MasherRewindExtra(
             int motionX,
             int motionY,
@@ -174,6 +179,7 @@ public record PerObjectRewindSnapshot(
             int initialYPos
     ) implements BadnikSubclassRewindExtra {}
 
+    @com.openggf.game.ModApi
     public record BuzzerRewindExtra(
             int stateOrdinal,
             int moveTimer,
@@ -183,6 +189,7 @@ public record PerObjectRewindSnapshot(
             boolean initPending
     ) implements BadnikSubclassRewindExtra {}
 
+    @com.openggf.game.ModApi
     public record CoconutsRewindExtra(
             int stateOrdinal,
             int throwStateOrdinal,
@@ -192,6 +199,7 @@ public record PerObjectRewindSnapshot(
             int yVelocity
     ) implements BadnikSubclassRewindExtra {}
 
+    @com.openggf.game.ModApi
     public record ArzPlatformRewindExtra(
             int x,
             int y,
@@ -209,6 +217,7 @@ public record PerObjectRewindSnapshot(
             int yRadius
     ) implements ObjectSubclassRewindExtra {}
 
+    @com.openggf.game.ModApi
     public record BadnikProjectileRewindExtra(
             String projectileType,
             int currentX,
@@ -232,6 +241,7 @@ public record PerObjectRewindSnapshot(
             boolean loadSubObjectInitPending
     ) implements ObjectSubclassRewindExtra {}
 
+    @com.openggf.game.ModApi
     public record BuzzerFlameRewindExtra(
             int parentSlotIndex,
             int currentX,
@@ -257,6 +267,7 @@ public record PerObjectRewindSnapshot(
      * a missing or unmatched code by leaving {@code effectTarget} null, which
      * matches the live behavior of an inactive monitor.
      */
+    @com.openggf.game.ModApi
     public record MonitorRewindExtra(
             String effectTargetSpriteCode
     ) implements ObjectSubclassRewindExtra {}
@@ -266,6 +277,7 @@ public record PerObjectRewindSnapshot(
      * runtime wiring (leader, respawn strategy, carry trigger, owning sidekick)
      * is intentionally excluded and restored from the live controller graph.
      */
+    @com.openggf.game.ModApi
     public record SidekickCpuRewindExtra(
             com.openggf.sprites.playable.SidekickCpuController.State state,
             int deadFallingRomCpuRoutine,
@@ -335,6 +347,7 @@ public record PerObjectRewindSnapshot(
      * restore, before any forward frame can regenerate mapping_frame from the
      * animation scripts.
      */
+    @com.openggf.game.ModApi
     public record PlayerRewindExtra(
             // AbstractSprite base position fields (not in AbstractObjectInstance hierarchy)
             short xPixel, short yPixel,

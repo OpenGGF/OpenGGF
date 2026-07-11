@@ -9,6 +9,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public final class RewindIdentityTable {
     private final IdentityHashMap<PlayableEntity, PlayerRefId> playerToId = new IdentityHashMap<>();
     private final Map<PlayerRefId, PlayableEntity> idToPlayer = new HashMap<>();

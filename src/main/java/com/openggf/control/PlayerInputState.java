@@ -2,6 +2,7 @@ package com.openggf.control;
 
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+@com.openggf.game.ModApi
 public record PlayerInputState(
         int heldMask,
         int pressedMask,

@@ -10,6 +10,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * Restored on return so the player resumes at the ring location with
  * correct collision path, camera boundaries, and water height.
  */
+@com.openggf.game.ModApi
 public record BigRingReturnState(
         int playerX,
         int playerY,

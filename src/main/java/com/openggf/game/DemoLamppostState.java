@@ -17,6 +17,7 @@ package com.openggf.game;
  * @param waterHeight  water surface height
  * @param waterRoutine water routine index
  */
+@com.openggf.game.ModApi
 public record DemoLamppostState(
         int playerX,
         int playerY,

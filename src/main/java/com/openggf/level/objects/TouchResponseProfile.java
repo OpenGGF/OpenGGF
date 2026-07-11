@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public record TouchResponseProfile(
         TouchCategoryDecodeMode categoryDecodeMode,
         boolean continuousCallbacks,

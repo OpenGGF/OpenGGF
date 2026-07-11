@@ -268,6 +268,26 @@ Target direction:
   contracts or a dedicated composition root.
   Keep shared object helpers independent of concrete Sonic object classes.
 
+### Mod API Compatibility Metadata And Release Tooling
+
+Two count-neutral dependency exceptions support the compiled-mod compatibility
+contract without redefining runtime ownership:
+
+- Dependencies whose target is exactly `com.openggf.game.ModApi` are ignored by
+  the top-level cycle, low-level-layer, and network-isolation rules. The type-only annotation is
+  compatibility metadata; it does not let the annotated class call into the game
+  runtime.
+- Exactly `ModApiJavadocTool` and `ModApiSdkPackager` may depend on
+  `ModApiSurfaceInventory`. These package-phase release tools must consume the
+  canonical inventory to produce exact Javadoc and SDK classifier jars; no other
+  class in `com.openggf.tools.modsdk` inherits the exception.
+
+Neither exception raises a frozen violation count or adds a ratchet edge. The
+exceptions should decay if the marker moves to an architecture-neutral metadata
+module or Maven packaging can consume the canonical inventory without a
+production-class dependency. They must not be broadened to packages, arbitrary
+annotations, or additional tooling classes.
+
 ## Maintenance
 
 When a frozen violation is removed:

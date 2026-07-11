@@ -14,6 +14,7 @@ import com.openggf.level.LevelData;
  * <p>
  * The context is created fresh for each level load and discarded afterward.
  */
+@com.openggf.game.ModApi
 public class LevelLoadContext {
     private Rom rom;
     private int levelIndex = -1;

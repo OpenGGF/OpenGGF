@@ -24,6 +24,7 @@ import java.util.logging.Logger;
  * </pre>
  */
 @CompositionRoot
+@com.openggf.game.ModApi
 public class RomDetectionService {
     private static final Logger LOGGER = Logger.getLogger(RomDetectionService.class.getName());
     private static RomDetectionService instance;

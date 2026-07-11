@@ -13,12 +13,14 @@ import java.util.Objects;
  * The S&amp;K cart occupies {@code 0x000000-0x1FFFFF} in a combined S3K image,
  * so the returned window rejects every read into the S3 half.
  */
+@com.openggf.game.ModApi
 public final class LogicalRomResolver {
 
     static final int SK_CART_SIZE = 0x200000;
 
     /** Supplies combined-ROM bytes, or {@code null} when none are available. */
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface CombinedRomBytesSource {
         byte[] get();
     }

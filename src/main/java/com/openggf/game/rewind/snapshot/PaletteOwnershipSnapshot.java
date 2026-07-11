@@ -12,6 +12,7 @@ package com.openggf.game.rewind.snapshot;
  * queries ownership before the next {@code beginFrame}). Owner strings are
  * stored once in {@code ownerTable}; each palette cell stores a compact id.
  */
+@com.openggf.game.ModApi
 public record PaletteOwnershipSnapshot(byte[] ownerIds, String[] ownerTable, boolean paletteRotationDisabled) {
     public PaletteOwnershipSnapshot {
         ownerIds = ownerIds.clone();

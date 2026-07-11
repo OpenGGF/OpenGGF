@@ -1,5 +1,6 @@
 package com.openggf.game.recording;
 
+@com.openggf.game.ModApi
 public record UserRecordingPlaybackOptions(
         int targetFrame,
         boolean pauseOnDesync,

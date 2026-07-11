@@ -7,6 +7,7 @@ package com.openggf.sprites.playable;
  * Knuckles (2) uses glide. These are mutually exclusive — each character
  * has exactly one secondary ability.
  */
+@com.openggf.game.ModApi
 public enum SecondaryAbility {
     /** Sonic's insta-shield: momentary hitbox expansion (sonic3k.asm:23473). S3K feature only. */
     INSTA_SHIELD,

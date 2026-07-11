@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 /**
  * Created by James on 26/03/15.
  */
+@com.openggf.game.ModApi
 public class TimerManager implements RewindSnapshottable<TimerManagerSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(TimerManager.class.getName());
 

@@ -9,9 +9,11 @@ import java.util.Objects;
  * Captures the map of registered timers' code-to-state mappings.
  * Each timer's state includes its code and remaining tick count.
  */
+@com.openggf.game.ModApi
 public record TimerManagerSnapshot(
         Map<String, TimerState> timerStates) {
 
+    @com.openggf.game.ModApi
     public record TimerState(String code, int ticks) {
     }
 

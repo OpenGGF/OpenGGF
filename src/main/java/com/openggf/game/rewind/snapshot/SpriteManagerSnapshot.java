@@ -18,6 +18,7 @@ import java.util.Map;
  * cumulative-counter pattern as {@code LevelManager.frameCounter}, which
  * is already snapshotted via {@link LevelSnapshot}.
  */
+@com.openggf.game.ModApi
 public record SpriteManagerSnapshot(
         int frameCounter,
         SpriteEntry[] sprites) {
@@ -32,5 +33,6 @@ public record SpriteManagerSnapshot(
                 .toArray(SpriteEntry[]::new));
     }
 
+    @com.openggf.game.ModApi
     public record SpriteEntry(String code, PerObjectRewindSnapshot state) {}
 }

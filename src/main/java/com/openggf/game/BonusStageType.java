@@ -14,6 +14,7 @@ package com.openggf.game;
  *   <li>remainder 2 (50-64, 95-109, ...): Gumball Machine</li>
  * </ul>
  */
+@com.openggf.game.ModApi
 public enum BonusStageType {
     /**
      * No bonus stage available.

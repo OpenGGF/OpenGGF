@@ -18,6 +18,7 @@ import java.util.logging.Logger;
 /**
  * Runtime controller for in-engine BizHawk playback debugging.
  */
+@com.openggf.game.ModApi
 public final class PlaybackDebugManager {
     private static final Logger LOGGER = Logger.getLogger(PlaybackDebugManager.class.getName());
     private static final PlaybackDebugManager INSTANCE = new PlaybackDebugManager();
@@ -48,6 +49,7 @@ public final class PlaybackDebugManager {
      * A null observer means no gating and no callbacks (normal BK2
      * playback).
      */
+    @com.openggf.game.ModApi
     public interface PlaybackFrameObserver {
         boolean shouldSkipGameplayTick(Bk2FrameInput frame);
 

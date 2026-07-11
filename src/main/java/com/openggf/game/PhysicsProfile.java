@@ -7,6 +7,7 @@ package com.openggf.game;
  * <p>Replaces the role of {@code defineSpeeds()} as the authoritative source
  * for character physics when a GameModule is active.
  */
+@ModApi
 public record PhysicsProfile(
         short runAccel,
         short runDecel,

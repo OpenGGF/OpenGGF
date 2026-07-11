@@ -19,6 +19,7 @@ import java.util.Arrays;
  * <p>Excluded: spawn list, sprite-sheet/pattern references, and any rendering-only
  * data — all are invariant after level load.
  */
+@com.openggf.game.ModApi
 public record RingSnapshot(
         // --- RingPlacement ---
         long[] collectedWords,
@@ -147,6 +148,7 @@ public record RingSnapshot(
     /**
      * Sparse snapshot of one active placed-ring sparkle timer.
      */
+    @com.openggf.game.ModApi
     public record SparkleEntry(
             int ringIndex,
             int startFrame
@@ -155,6 +157,7 @@ public record RingSnapshot(
     /**
      * Snapshot of a single active {@link com.openggf.level.rings.LostRing} pool slot.
      */
+    @com.openggf.game.ModApi
     public record LostRingEntry(
             boolean active,
             int xSubpixel,
@@ -188,6 +191,7 @@ public record RingSnapshot(
     /**
      * Snapshot of one active attracted-ring slot in the attractor array.
      */
+    @com.openggf.game.ModApi
     public record AttractedRingEntry(
             boolean active,
             int sourceIndex,

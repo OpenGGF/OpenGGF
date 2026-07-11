@@ -18,6 +18,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * This consolidates FadeManager and HudRenderManager into a single
  * orchestration point to prevent render order bugs.
  */
+@com.openggf.game.ModApi
 public class UiRenderPipeline {
     private final GraphicsManager graphicsManager;
     private RenderOrderRecorder renderOrderRecorder = new RenderOrderRecorder();

@@ -5,6 +5,7 @@ package com.openggf.game;
  * Title cards appear when a level first loads, after player respawns,
  * and when returning from special stages.
  */
+@com.openggf.game.ModApi
 public interface TitleCardProvider {
     /**
      * Initializes the title card for a zone/act.

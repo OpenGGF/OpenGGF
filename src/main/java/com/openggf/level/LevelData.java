@@ -1,5 +1,6 @@
 package com.openggf.level;
 
+@com.openggf.game.ModApi
 public enum LevelData {
     EMERALD_HILL_1(0x00, 0x0060, 0x028F),
     EMERALD_HILL_2(0x01, 0x0060, 0x02AF),

@@ -10,6 +10,7 @@ import java.util.Map;
 /**
  * Game-agnostic object art data exposed by object art providers.
  */
+@com.openggf.game.ModApi
 public record ObjectArtBundle(
         Map<String, ObjectSpriteSheet> sheets,
         Map<String, SpriteAnimationSet> animations,
@@ -46,6 +47,7 @@ public record ObjectArtBundle(
         return zoneData.getOrDefault(key, -1);
     }
 
+    @com.openggf.game.ModApi
     public static final class Builder {
         private final Map<String, ObjectSpriteSheet> sheets = new LinkedHashMap<>();
         private final Map<String, SpriteAnimationSet> animations = new LinkedHashMap<>();

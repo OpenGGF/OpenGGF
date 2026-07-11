@@ -4,6 +4,7 @@ import com.openggf.version.BuildIdentity;
 
 import java.time.Instant;
 
+@com.openggf.game.ModApi
 public record UserRecordingManifest(
         int schemaVersion,
         String movieName,

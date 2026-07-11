@@ -6,6 +6,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
  * Per-frame input source. v1 reads from a recorded trace; v2 will swap
  * in a live recorder that captures user inputs each frame.
  */
+@com.openggf.game.ModApi
 public interface InputSource {
 
     /** Total number of available frames. */

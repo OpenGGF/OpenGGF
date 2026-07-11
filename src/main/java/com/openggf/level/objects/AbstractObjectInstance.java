@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 
+@com.openggf.game.ModApi
 public abstract class AbstractObjectInstance implements ObjectInstance {
     private static final Logger LOG = Logger.getLogger(AbstractObjectInstance.class.getName());
 

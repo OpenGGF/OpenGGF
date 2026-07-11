@@ -5,6 +5,7 @@ import com.openggf.audio.GameSound;
 import java.util.Objects;
 import java.util.Set;
 
+@com.openggf.game.ModApi
 public record AudioLogicalSnapshot(
         boolean ringLeft,
         long commandTimelineFrame,
@@ -20,6 +21,7 @@ public record AudioLogicalSnapshot(
         donorBindings = Set.copyOf(Objects.requireNonNull(donorBindings, "donorBindings"));
     }
 
+    @com.openggf.game.ModApi
     public record DonorSfxBindingSnapshot(GameSound sound, String donorGameId, int sfxId) {
         public DonorSfxBindingSnapshot {
             Objects.requireNonNull(sound, "sound");

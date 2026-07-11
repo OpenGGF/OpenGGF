@@ -12,6 +12,7 @@ import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Tails;
 
+@com.openggf.game.ModApi
 public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private short x = 0;
 	private short y = 0;

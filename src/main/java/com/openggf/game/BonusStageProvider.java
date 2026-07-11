@@ -7,6 +7,7 @@ package com.openggf.game;
  * not frame updates or rendering.
  * Accessed via {@link GameServices#bonusStage()}.
  */
+@com.openggf.game.ModApi
 public interface BonusStageProvider {
     boolean hasBonusStages();
 
@@ -46,6 +47,7 @@ public interface BonusStageProvider {
     /** Record shield awarded during bonus stage. */
     default void setAwardedShield(ShieldType type) {}
 
+    @com.openggf.game.ModApi
     record BonusStageRewards(
             int rings, int lives,
             boolean shield, boolean fireShield,

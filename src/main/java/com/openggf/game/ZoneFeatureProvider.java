@@ -24,6 +24,7 @@ import java.io.IOException;
  * <p>Zone features are separate from scroll handlers and object registries.
  * They provide collision systems and gameplay mechanics specific to certain zones.
  */
+@com.openggf.game.ModApi
 public interface ZoneFeatureProvider {
     /**
      * Called when entering a zone to initialize zone-specific features.

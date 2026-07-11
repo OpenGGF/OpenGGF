@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
 
+@com.openggf.game.ModApi
 public interface TouchResponseProvider {
     int getCollisionFlags();
     int getCollisionProperty();
@@ -108,6 +109,7 @@ public interface TouchResponseProvider {
     /**
      * A single touch collision region with its own position and collision type.
      */
+    @com.openggf.game.ModApi
     record TouchRegion(int x, int y, int collisionFlags, int shieldReactionFlags) {
         public TouchRegion(int x, int y, int collisionFlags) {
             this(x, y, collisionFlags, 0);

@@ -16,6 +16,7 @@ import java.util.Optional;
  * credits text screen requests zone loads and feeds recorded input. Games
  * that do not interleave demos (e.g., S2) can ignore these defaults.
  */
+@com.openggf.game.ModApi
 public interface EndingProvider {
     /**
      * Returns a save request to issue when the engine starts the ending

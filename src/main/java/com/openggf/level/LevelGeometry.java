@@ -4,6 +4,7 @@ package com.openggf.level;
  * Immutable snapshot of level geometry dimensions, shared between
  * LevelManager and LevelTilemapManager to avoid back-references.
  */
+@com.openggf.game.ModApi
 public record LevelGeometry(
     Level level,
     int fgWidthPx, int fgHeightPx,

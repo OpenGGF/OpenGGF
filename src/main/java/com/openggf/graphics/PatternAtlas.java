@@ -21,6 +21,7 @@ import static org.lwjgl.opengl.GL30.GL_RED;
  * Texture atlas for 8x8 indexed patterns.
  * Stores patterns across one or more GL textures to avoid per-tile texture binds.
  */
+@com.openggf.game.ModApi
 public class PatternAtlas {
     private static final Logger LOGGER = Logger.getLogger(PatternAtlas.class.getName());
 
@@ -125,6 +126,7 @@ public class PatternAtlas {
     }
 
     /** Describes a registered virtual pattern ID range for collision detection. */
+    @com.openggf.game.ModApi
     public record PatternRange(int base, int size, String category) {}
 
     public void registerRange(PatternAtlasRange range) {
@@ -882,6 +884,7 @@ public class PatternAtlas {
         }
     }
 
+    @com.openggf.game.ModApi
     public record Entry(int patternId, int atlasIndex, int slot, int tileX, int tileY,
             float u0, float v0, float u1, float v1) {
     }

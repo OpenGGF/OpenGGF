@@ -7,6 +7,7 @@ package com.openggf.game.animation;
  * {@link AnimatedTileCachePolicy#ON_PHASE_CHANGE} to skip redundant writes.
  */
 @FunctionalInterface
+@com.openggf.game.ModApi
 public interface PhaseSource {
     /** Resolves the current phase for the supplied channel context. */
     int resolve(ChannelContext context);

@@ -2,6 +2,7 @@ package com.openggf.debug;
 
 import static org.lwjgl.glfw.GLFW.*;
 
+@com.openggf.game.ModApi
 public enum DebugOverlayToggle {
     OVERLAY("Overlay", GLFW_KEY_F1, false),
     SHORTCUTS("Shortcuts", GLFW_KEY_F2, false),

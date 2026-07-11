@@ -3,12 +3,14 @@ package com.openggf.audio.rewind;
 import java.util.EnumSet;
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public record AudioSourceDescriptor(
         Route route,
         Integer id,
         String name,
         String donorGameId) {
 
+    @com.openggf.game.ModApi
     public enum Route {
         BASE_MUSIC_ID,
         BASE_SFX_ID,

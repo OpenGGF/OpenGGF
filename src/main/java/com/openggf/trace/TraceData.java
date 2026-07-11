@@ -27,6 +27,7 @@ import java.util.zip.GZIPInputStream;
  * The primary CSV is loaded entirely into memory (small: ~100 bytes/frame).
  * Auxiliary events are lazy-loaded and indexed by frame number.
  */
+@com.openggf.game.ModApi
 public class TraceData {
 
     private static final Logger LOGGER = Logger.getLogger(TraceData.class.getName());

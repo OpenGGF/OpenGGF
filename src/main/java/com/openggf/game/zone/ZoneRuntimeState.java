@@ -1,5 +1,6 @@
 package com.openggf.game.zone;
 
+@com.openggf.game.ModApi
 public interface ZoneRuntimeState {
     String gameId();
     int zoneIndex();

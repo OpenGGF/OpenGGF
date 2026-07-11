@@ -9,6 +9,7 @@ import java.util.BitSet;
  * to make those changes visible, such as dirty pattern uploads, redraws, or
  * object/ring spawn resync.
  */
+@com.openggf.game.ModApi
 public record MutationEffects(
         BitSet dirtyPatterns,
         boolean dirtyRegionProcessingRequired,

@@ -16,13 +16,16 @@ import static org.lwjgl.opengl.GL30.*;
  * OpenGL command for drawing primitives (rectangles, lines) using modern OpenGL.
  * Uses VAO/VBO with the debug color shader for core profile compatibility.
  */
+@com.openggf.game.ModApi
 public class GLCommand implements GLCommandable {
 	private static boolean inGroup = false;
 
+	@com.openggf.game.ModApi
 	public enum CommandType {
 		RECTI, VERTEX2I, USE_PROGRAM, ENABLE, DISABLE, CUSTOM;
 	}
 
+	@com.openggf.game.ModApi
 	public enum BlendType {
 		SOLID, ONE_MINUS_SRC_ALPHA, SUBTRACTIVE
 	}

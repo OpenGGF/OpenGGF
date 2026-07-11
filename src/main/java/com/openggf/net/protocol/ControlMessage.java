@@ -1,63 +1,16 @@
 package com.openggf.net.protocol;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 import java.util.List;
 
 /** Versioned JSON control-channel messages. */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes({
-        @JsonSubTypes.Type(value = ControlMessage.Hello.class, name = "Hello"),
-        @JsonSubTypes.Type(value = ControlMessage.Welcome.class, name = "Welcome"),
-        @JsonSubTypes.Type(value = ControlMessage.AuthProof.class, name = "AuthProof"),
-        @JsonSubTypes.Type(value = ControlMessage.JoinAccepted.class, name = "JoinAccepted"),
-        @JsonSubTypes.Type(value = ControlMessage.JoinRejected.class, name = "JoinRejected"),
-        @JsonSubTypes.Type(value = ControlMessage.Kick.class, name = "Kick"),
-        @JsonSubTypes.Type(value = ControlMessage.RoomState.class, name = "RoomState"),
-        @JsonSubTypes.Type(value = ControlMessage.SelectCharacter.class, name = "SelectCharacter"),
-        @JsonSubTypes.Type(value = ControlMessage.Chat.class, name = "Chat"),
-        @JsonSubTypes.Type(value = ControlMessage.ChatBroadcast.class, name = "ChatBroadcast"),
-        @JsonSubTypes.Type(value = ControlMessage.Ping.class, name = "Ping"),
-        @JsonSubTypes.Type(value = ControlMessage.Pong.class, name = "Pong"),
-        @JsonSubTypes.Type(value = ControlMessage.RoundConfigure.class, name = "RoundConfigure"),
-        @JsonSubTypes.Type(value = ControlMessage.RoundStart.class, name = "RoundStart"),
-        @JsonSubTypes.Type(value = ControlMessage.RoundEnd.class, name = "RoundEnd"),
-        @JsonSubTypes.Type(value = ControlMessage.StandingsDelta.class, name = "StandingsDelta"),
-        @JsonSubTypes.Type(value = ControlMessage.AttemptStart.class, name = "AttemptStart"),
-        @JsonSubTypes.Type(value = ControlMessage.AttemptFinish.class, name = "AttemptFinish"),
-        @JsonSubTypes.Type(value = ControlMessage.AttemptReset.class, name = "AttemptReset"),
-        @JsonSubTypes.Type(value = ControlMessage.TrackVote.class, name = "TrackVote"),
-        @JsonSubTypes.Type(value = ControlMessage.TrackVoteOffer.class, name = "TrackVoteOffer"),
-        @JsonSubTypes.Type(value = ControlMessage.TrackVoteTally.class, name = "TrackVoteTally"),
-        @JsonSubTypes.Type(value = ControlMessage.TrackVoteResult.class, name = "TrackVoteResult"),
-        @JsonSubTypes.Type(value = ControlMessage.RecordingRequest.class, name = "RecordingRequest"),
-        @JsonSubTypes.Type(value = ControlMessage.RoomCreate.class, name = "RoomCreate"),
-        @JsonSubTypes.Type(value = ControlMessage.RoomCreated.class, name = "RoomCreated"),
-        @JsonSubTypes.Type(value = ControlMessage.RoomCreateRejected.class, name = "RoomCreateRejected"),
-        @JsonSubTypes.Type(value = ControlMessage.RoomListRequest.class, name = "RoomListRequest"),
-        @JsonSubTypes.Type(value = ControlMessage.RoomListResult.class, name = "RoomListResult"),
-        @JsonSubTypes.Type(value = ControlMessage.RoomJoinRequest.class, name = "RoomJoinRequest"),
-        @JsonSubTypes.Type(value = ControlMessage.RoomJoinResult.class, name = "RoomJoinResult"),
-        @JsonSubTypes.Type(value = ControlMessage.RoomJoinRejected.class, name = "RoomJoinRejected"),
-        @JsonSubTypes.Type(value = ControlMessage.RoomLeave.class, name = "RoomLeave"),
-        @JsonSubTypes.Type(value = ControlMessage.Heartbeat.class, name = "Heartbeat"),
-        @JsonSubTypes.Type(value = ControlMessage.PowChallenge.class, name = "PowChallenge"),
-        @JsonSubTypes.Type(value = ControlMessage.PowSolution.class, name = "PowSolution"),
-        @JsonSubTypes.Type(value = ControlMessage.RelayAttach.class, name = "RelayAttach"),
-        @JsonSubTypes.Type(value = ControlMessage.RelayGuestOpen.class, name = "RelayGuestOpen"),
-        @JsonSubTypes.Type(value = ControlMessage.RelayGuestClose.class, name = "RelayGuestClose"),
-        @JsonSubTypes.Type(value = ControlMessage.RelayGuestText.class, name = "RelayGuestText"),
-        @JsonSubTypes.Type(value = ControlMessage.StandingsPageRequest.class, name = "StandingsPageRequest"),
-        @JsonSubTypes.Type(value = ControlMessage.StandingsPage.class, name = "StandingsPage"),
-        @JsonSubTypes.Type(value = ControlMessage.RankUpdate.class, name = "RankUpdate"),
-        @JsonSubTypes.Type(value = ControlMessage.RoomTrackUpdate.class, name = "RoomTrackUpdate")
-})
+@com.openggf.game.ModApi
 public sealed interface ControlMessage {
+    @com.openggf.game.ModApi
     record RoomDescriptor(String name, String gameId, int zone, int act, String characterPolicy,
                           String lockedCharacter, int maxPlayers, boolean verified) {
     }
 
+    @com.openggf.game.ModApi
     record PlayerInfo(int slot, String fingerprint, String displayName, String character,
                       boolean newPlayer) {
         public PlayerInfo(int slot, String fingerprint, String displayName, String character) {
@@ -65,89 +18,114 @@ public sealed interface ControlMessage {
         }
     }
 
+    @com.openggf.game.ModApi
     record RoundConfig(String gameId, int zone, int act, int windowSeconds,
                        String characterPolicy, String lockedCharacter) {
     }
 
+    @com.openggf.game.ModApi
     record RoundSnapshot(String phase, RoundConfig config, long countdownEndsAtHubMillis,
                          long deadlineHubMillis, List<StandingsRow> standings) {
     }
 
+    @com.openggf.game.ModApi
     record StandingsRow(int slot, String displayName, String character,
                         int bestTimeFrames, int rank, String verifyState) {
     }
 
+    @com.openggf.game.ModApi
     record RoomSummary(String roomId, String name, String gameId, int zone, int act,
                        String characterPolicy, int playerCount, int maxPlayers,
                        String routing, boolean verified) {
     }
 
+    @com.openggf.game.ModApi
     record Hello(int protocolVersion, String pubKeyBase64, String displayName,
                  String determinismFingerprint) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record Welcome(int protocolVersion, String nonceBase64, String serverId)
             implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record AuthProof(String signatureBase64) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record JoinAccepted(String sessionToken, int playerSlot, RoomDescriptor room,
                         RoundSnapshot round) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record JoinRejected(String reason) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record Kick(String reason) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RoomState(List<PlayerInfo> players) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record SelectCharacter(String character) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record Chat(String text) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record ChatBroadcast(int slot, String displayName, String text) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record Ping(long t0ClientMillis) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record Pong(long t0ClientMillis, long hubMillis) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RoundConfigure(RoundConfig config) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RoundStart(RoundConfig config, long countdownEndsAtHubMillis,
                       long deadlineHubMillis) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RoundEnd(List<StandingsRow> finalStandings) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record StandingsDelta(List<StandingsRow> rows) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record AttemptStart(int attemptId) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record AttemptFinish(int attemptId, int timeFrames, int firstInputFrame, int finishFrame,
                          String inputRecordingHashHex, String ghostStreamHashHex,
                          String inputRecordingRef) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record AttemptReset(int attemptId) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record TrackVote(String trackKey) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record TrackVoteOffer(List<String> trackKeys, long voteEndsAtHubMillis)
             implements ControlMessage {
         public TrackVoteOffer {
@@ -155,6 +133,7 @@ public sealed interface ControlMessage {
         }
     }
 
+    @com.openggf.game.ModApi
     record VoteCount(String trackKey, int votes) {
         public VoteCount {
             validatedTrackKey(trackKey);
@@ -164,6 +143,7 @@ public sealed interface ControlMessage {
         }
     }
 
+    @com.openggf.game.ModApi
     record TrackVoteTally(List<VoteCount> counts) implements ControlMessage {
         public TrackVoteTally {
             counts = List.copyOf(counts == null ? List.of() : counts);
@@ -173,16 +153,19 @@ public sealed interface ControlMessage {
         }
     }
 
+    @com.openggf.game.ModApi
     record TrackVoteResult(String trackKey) implements ControlMessage {
         public TrackVoteResult {
             validatedTrackKey(trackKey);
         }
     }
 
+    @com.openggf.game.ModApi
     record RecordingRequest(int attemptId, String expectedHashHex, String uploadUrl)
             implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RoomCreate(RoomDescriptor room, String routing, int directPort,
                       String determinismFingerprint, List<String> voteTrackKeys)
             implements ControlMessage {
@@ -196,15 +179,19 @@ public sealed interface ControlMessage {
         }
     }
 
+    @com.openggf.game.ModApi
     record RoomCreated(String roomId) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RoomCreateRejected(String reason) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RoomListRequest(String gameFilter, int page) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RoomListResult(List<RoomSummary> rooms, int page, int totalPages)
             implements ControlMessage {
         public RoomListResult {
@@ -212,45 +199,58 @@ public sealed interface ControlMessage {
         }
     }
 
+    @com.openggf.game.ModApi
     record RoomJoinRequest(String roomId) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RoomJoinResult(String roomId, String routing, String directHost,
                           int directPort, String hostServerId,
                           String determinismFingerprint) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RoomJoinRejected(String reason) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RoomLeave(String roomId) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record Heartbeat(String roomId, int playerCount) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record PowChallenge(String kind, String prefixBase64, int difficultyBits)
             implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record PowSolution(String kind, long nonce) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RelayAttach(String roomId) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RelayGuestOpen(int guestId) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RelayGuestClose(int guestId, String reason) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RelayGuestText(int guestId, String text) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record StandingsPageRequest(int page) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record StandingsPage(List<StandingsRow> rows, int page, int totalPages)
             implements ControlMessage {
         public StandingsPage {
@@ -258,9 +258,11 @@ public sealed interface ControlMessage {
         }
     }
 
+    @com.openggf.game.ModApi
     record RankUpdate(int rank, int bestTimeFrames) implements ControlMessage {
     }
 
+    @com.openggf.game.ModApi
     record RoomTrackUpdate(String roomId, int zone, int act) implements ControlMessage {
         public RoomTrackUpdate {
             if (roomId == null || roomId.isBlank() || zone < 0 || zone > 999

@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.function.LongSupplier;
 
 /** Single-threaded room protocol driver and owner of its hub and round state. */
+@com.openggf.game.ModApi
 public final class RoomHost {
     public static final long ADMISSION_TIMEOUT_MILLIS = 5000;
     public static final long STANDINGS_PAGE_INTERVAL_MILLIS = 2000;

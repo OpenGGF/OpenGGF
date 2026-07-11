@@ -12,6 +12,7 @@ import java.util.List;
  * <p>The zone registry is queried by LevelManager to determine
  * what levels are available and how to load them.
  */
+@com.openggf.game.ModApi
 public interface ZoneRegistry {
     /**
      * Returns the total number of zones in this game.

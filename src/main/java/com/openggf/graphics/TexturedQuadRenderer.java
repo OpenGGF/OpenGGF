@@ -15,6 +15,7 @@ import static org.lwjgl.opengl.GL30.*;
  * Renders textured quads using the RGBA texture shader.
  * Used for PNG-based rendering (master title screen, sprite font).
  */
+@com.openggf.game.ModApi
 public class TexturedQuadRenderer {
 
     static final int QUAD_FLOATS = 6 * 4;

@@ -14,12 +14,14 @@ import java.util.List;
  * terrain attachment or air landing, so the current named factories leave
  * {@link Phase#POST_RESOLUTION_GROUND_MODE} disabled.</p>
  */
+@com.openggf.game.ModApi
 public record FrameCollisionPlan(
         boolean runsTerrainProbes,
         boolean runsSolidObjectResolution,
         boolean runsPostResolutionGroundMode,
         boolean recordsTrace) {
 
+    @com.openggf.game.ModApi
     public enum Phase {
         TERRAIN_PROBES,
         SOLID_OBJECT_RESOLUTION,

@@ -3,6 +3,7 @@ package com.openggf.game.dataselect;
 /**
  * Mutable UI state for the basic Data Select screen.
  */
+@com.openggf.game.ModApi
 public class DataSelectMenuModel {
     private int selectedRow;
     private int selectedTeamIndex;

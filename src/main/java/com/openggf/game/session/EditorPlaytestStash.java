@@ -6,6 +6,7 @@ package com.openggf.game.session;
  * This stays intentionally narrow for the first editor slice: just the player-centric
  * data needed to resume play-test from the editor cursor without a full rebuild.
  */
+@com.openggf.game.ModApi
 public record EditorPlaytestStash(
         int playerX,
         int playerY,

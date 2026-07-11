@@ -1,5 +1,6 @@
 package com.openggf.level;
 
+@com.openggf.game.ModApi
 public class SolidTile {
 	public static final int TILE_SIZE_IN_ROM = 16;
 

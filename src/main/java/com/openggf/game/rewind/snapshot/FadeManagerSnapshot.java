@@ -11,6 +11,7 @@ import com.openggf.graphics.FadeManager;
  * (e.g. a permanently-held fade whose callback already ran) apart from one
  * whose callback was orphaned by the restore. See {@link #isPoisoned()}.
  */
+@com.openggf.game.ModApi
 public record FadeManagerSnapshot(
         FadeManager.FadeState state,
         int frameCount,

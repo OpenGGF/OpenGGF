@@ -1,5 +1,6 @@
 package com.openggf.level.rings;
 
+@com.openggf.game.ModApi
 public class LostRing {
     private int xSubpixel;
     private int ySubpixel;

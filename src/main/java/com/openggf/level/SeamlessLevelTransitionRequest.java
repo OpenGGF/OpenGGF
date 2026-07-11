@@ -3,7 +3,9 @@ package com.openggf.level;
 /**
  * In-place transition request for seamless level events.
  */
+@com.openggf.game.ModApi
 public final class SeamlessLevelTransitionRequest {
+    @com.openggf.game.ModApi
     public enum TransitionType {
         MUTATE_ONLY,
         RELOAD_SAME_LEVEL,
@@ -138,6 +140,7 @@ public final class SeamlessLevelTransitionRequest {
         return new Builder(type);
     }
 
+    @com.openggf.game.ModApi
     public static final class Builder {
         private final TransitionType type;
         private int targetZone = -1;

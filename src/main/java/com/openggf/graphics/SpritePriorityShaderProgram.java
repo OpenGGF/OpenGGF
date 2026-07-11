@@ -15,6 +15,7 @@ import static org.lwjgl.opengl.GL20.*;
  * This allows sprite-to-sprite ordering (via buckets 0-7) to work independently
  * of sprite-to-tile layering (via isHighPriority flag).
  */
+@com.openggf.game.ModApi
 public class SpritePriorityShaderProgram extends ShaderProgram {
 
     // Uniform locations for priority compositing

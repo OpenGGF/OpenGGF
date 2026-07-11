@@ -27,6 +27,7 @@ import java.util.logging.Logger;
  * <p>The legacy method {@link #loadForLevel(Rom, int, int, List)} (S2) is deprecated and
  * retained only for backward compatibility with existing tests.
  */
+@com.openggf.game.ModApi
 public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(WaterSystem.class.getName());
     private static final int WATER_SURFACE_OBJECT_ID = 0x04;
@@ -68,6 +69,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
     /**
      * Water configuration for a specific zone/act.
      */
+    @com.openggf.game.ModApi
     public static class WaterConfig {
         private final boolean hasWater;
         private final int waterLevelY; // Y position in world space (pixels)
@@ -104,6 +106,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
      * toward its target (ROM: {@code Water_speed}, default 1). S3K AIZ2 uses
      * speed=2 for faster water drops.
      */
+    @com.openggf.game.ModApi
     public static class DynamicWaterState {
         private int currentLevel;  // Current water Y position
         private int targetLevel;   // Target water Y position (water moves toward this)

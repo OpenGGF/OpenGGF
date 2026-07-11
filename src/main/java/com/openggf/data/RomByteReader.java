@@ -8,6 +8,7 @@ import java.util.Objects;
  * Read-only byte/word access helper for Sega ROM data.
  * All multi-byte reads are big-endian and unsigned unless stated otherwise.
  */
+@com.openggf.game.ModApi
 public class RomByteReader {
 
     private final byte[] data;

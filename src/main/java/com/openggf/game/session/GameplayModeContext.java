@@ -50,6 +50,7 @@ import com.openggf.timer.TimerManager;
 import java.util.Optional;
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public final class GameplayModeContext implements ModeContext {
     private static final String PATTERN_ANIMATOR_REWIND_KEY = "pattern-animator";
     private static final String[] PLC_ART_REWIND_KEYS = {

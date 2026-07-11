@@ -6,6 +6,7 @@ package com.openggf.game.animation;
  * <p>Some channels upload to a single contiguous tile range, while others split
  * their output across two destinations.
  */
+@com.openggf.game.ModApi
 public record DestinationPlan(int primaryTile, Integer secondaryTile) {
 
     /** Convenience factory for channels that target one destination range. */

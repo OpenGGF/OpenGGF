@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+@com.openggf.game.ModApi
 public record SolidContact(boolean standing, boolean touchSide, boolean touchBottom, boolean touchTop,
                            boolean pushing, int sideDistX, boolean movingInto) {
     /** Convenience constructor for contacts without side displacement. */

@@ -8,6 +8,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * Implementations store checkpoint data (position, camera state)
  * and restore it when the player respawns.
  */
+@com.openggf.game.ModApi
 public interface RespawnState {
     /**
      * Clear checkpoint state (called on level start/change).

@@ -1,5 +1,6 @@
 package com.openggf.audio.runtime;
 
+@com.openggf.game.ModApi
 public enum FrameAudioMode {
     NORMAL,
     SILENT_STEP,

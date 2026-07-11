@@ -30,6 +30,7 @@ import java.util.logging.Logger;
  * 2. Compatibility solid-object resolution when the active frame path still uses a
  *    batched solid pass
  */
+@com.openggf.game.ModApi
 public class CollisionSystem {
     private static final Logger LOGGER = Logger.getLogger(CollisionSystem.class.getName());
 

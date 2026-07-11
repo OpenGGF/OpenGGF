@@ -6,9 +6,11 @@ import com.openggf.control.InputHandler;
  * Provider interface for the Data Select screen (S3K save file selection).
  * Games that support save slots implement this to manage the data select UI.
  */
+@com.openggf.game.ModApi
 public interface DataSelectProvider {
 
     /** Lifecycle state of the data select screen. */
+    @com.openggf.game.ModApi
     enum State { INACTIVE, FADE_IN, ACTIVE, EXITING }
 
     /** Initialize the data select screen (load art, palettes, layout). */

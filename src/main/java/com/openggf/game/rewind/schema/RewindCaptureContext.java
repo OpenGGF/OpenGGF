@@ -5,6 +5,7 @@ import com.openggf.game.rewind.identity.RewindIdentityTable;
 import java.util.Objects;
 import java.util.Optional;
 
+@com.openggf.game.ModApi
 public final class RewindCaptureContext {
     private static final RewindCaptureContext NONE = new RewindCaptureContext(null);
 

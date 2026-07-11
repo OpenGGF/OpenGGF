@@ -4,6 +4,7 @@ package com.openggf.physics;
  * Aggregates sensor results for terrain collision detection.
  * Delegates individual scans to Sensor implementations.
  */
+@com.openggf.game.ModApi
 public class TerrainCollisionManager {
 	// Pre-allocated result arrays to avoid per-frame allocations.
 	// Max sensor count is 6 for player sprites (2 ground, 2 ceiling, 2 push).

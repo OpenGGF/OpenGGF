@@ -15,6 +15,7 @@ import java.util.Objects;
 /**
  * Renders playable sprites using mapping frames and DPLC-driven tile updates.
  */
+@com.openggf.game.ModApi
 public class PlayerSpriteRenderer {
     private final SpriteArtSet artSet;
     private final DynamicPatternBank patternBank;

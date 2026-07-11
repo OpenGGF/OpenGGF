@@ -12,13 +12,16 @@ import java.util.Map;
  * An event from the auxiliary trace file (aux_state.jsonl).
  * Events are frame-keyed and only written for notable moments.
  */
+@com.openggf.game.ModApi
 public sealed interface TraceEvent {
 
     int frame();
 
+    @com.openggf.game.ModApi
     record ObjectAppeared(int frame, int slot, String objectType, short x, short y)
         implements TraceEvent {}
 
+    @com.openggf.game.ModApi
     record ObjectRemoved(int frame, int slot, String objectType)
         implements TraceEvent {}
 
@@ -36,6 +39,7 @@ public sealed interface TraceEvent {
      * v3.12+ optional field. Older traces omit them; the parser supplies {@code ""}
      * so legacy traces parse unchanged.
      */
+    @com.openggf.game.ModApi
     record ObjectNear(int frame, String character, int slot, String objectType, short x, short y,
                       String routine, String status, String objFrame,
                       String routine2, String objoff3c,
@@ -49,32 +53,40 @@ public sealed interface TraceEvent {
      * bubble production timing. Diagnostic only: replay must never hydrate
      * engine object state from these values.
      */
+    @com.openggf.game.ModApi
     record S1Obj64State(int frame, int slot, short x, short y,
                         int routine, int status, int renderFlags, int subtype,
                         int anim, int objoff32, int objoff33, int objoff34,
                         int objoff36, int objoff38, long objoff3c)
         implements TraceEvent {}
 
+    @com.openggf.game.ModApi
     record StateSnapshot(int frame, Map<String, Object> fields)
         implements TraceEvent {}
 
+    @com.openggf.game.ModApi
     record CollisionEvent(int frame, String type, String objectType, short x, short y)
         implements TraceEvent {}
 
+    @com.openggf.game.ModApi
     record ModeChange(int frame, String character, String field, int from, int to)
         implements TraceEvent {}
 
+    @com.openggf.game.ModApi
     record RoutineChange(int frame, String character, String from, String to, short x, short y)
         implements TraceEvent {}
 
+    @com.openggf.game.ModApi
     record Checkpoint(int frame, String name, Integer actualZoneId, Integer actualAct,
                       Integer apparentAct, Integer gameMode, String notes)
         implements TraceEvent {}
 
+    @com.openggf.game.ModApi
     record ZoneActState(int frame, Integer actualZoneId, Integer actualAct,
                         Integer apparentAct, Integer gameMode)
         implements TraceEvent {}
 
+    @com.openggf.game.ModApi
     record PlayerHistorySnapshot(int frame, int historyPos, short[] xHistory,
                                  short[] yHistory, short[] inputHistory, byte[] statusHistory)
         implements TraceEvent {}
@@ -83,6 +95,7 @@ public sealed interface TraceEvent {
      * Pre-trace snapshot of CPU-side sidekick globals emitted by the Lua recorder
      * at the instant gameplay begins (before trace frame 0 is written).
      */
+    @com.openggf.game.ModApi
     record CpuStateSnapshot(int frame, String character, int controlCounter,
                             int respawnCounter, int cpuRoutine, short targetX,
                             short targetY, int interactId, boolean jumping)
@@ -108,6 +121,7 @@ public sealed interface TraceEvent {
      * <li>{@code posTableIndex}/{@code delayedIndex} - follower history ring cursors, when recorded</li>
      * </ul>
      */
+    @com.openggf.game.ModApi
     record CpuState(int frame, String character, int interact,
                     int idleTimer, int flightTimer, int cpuRoutine,
                     short targetX, short targetY, int autoFlyTimer,
@@ -130,6 +144,7 @@ public sealed interface TraceEvent {
      * produce the correct oscillator phase natively from the same inputs as
      * the ROM. Older traces (recorder &lt; 6.1) never emit this event.
      */
+    @com.openggf.game.ModApi
     record OscillationState(int frame, int levelFrameCounter, byte[] oscTable)
         implements TraceEvent {}
 
@@ -145,6 +160,7 @@ public sealed interface TraceEvent {
      * respawn bit is clear (respawn) vs the engine's set (skip). Older traces
      * (recorder &lt; 3.7) never emit this event.
      */
+    @com.openggf.game.ModApi
     record VObjState(int frame, byte[] bytes)
         implements TraceEvent {}
 
@@ -160,6 +176,7 @@ public sealed interface TraceEvent {
      * frame to disambiguate an osc-phase-seed offset from a ride-exit seat. Older
      * traces (recorder &lt; 3.10) never emit this event.
      */
+    @com.openggf.game.ModApi
     record VOscillate(int frame, byte[] bytes)
         implements TraceEvent {}
 
@@ -174,6 +191,7 @@ public sealed interface TraceEvent {
      * change engine stepping from these values; any lag-handling fix is a separate,
      * user-gated decision. Older traces (recorder &lt; 3.11) never emit this event.
      */
+    @com.openggf.game.ModApi
     record LagState(int frame, boolean lagged, int lagcount)
         implements TraceEvent {}
 
@@ -187,6 +205,7 @@ public sealed interface TraceEvent {
      * =f_bgscrollvert ($FFF75C). <strong>Diagnostic only:</strong> comparison
      * context, never engine write-back. Older traces never emit this event.
      */
+    @com.openggf.game.ModApi
     record CameraBoundary(int frame, int limitBtm1, int limitBtm2,
                           int lookShift, int bgScrollVert)
         implements TraceEvent {}
@@ -197,6 +216,7 @@ public sealed interface TraceEvent {
      * The {@link #frame()} is -1 to keep it out of the frame-0 event bucket,
      * and {@link #slot()} is the ROM SST slot index (not the engine slot).
      */
+    @com.openggf.game.ModApi
     record ObjectStateSnapshot(int frame, int slot, int objectType,
                                RomObjectSnapshot fields)
         implements TraceEvent {}
@@ -223,6 +243,7 @@ public sealed interface TraceEvent {
      * cage state in the divergence report; engine state must NEVER be hydrated
      * from these values.
      */
+    @com.openggf.game.ModApi
     record CageState(int frame, int slot, short x, short y, int subtype,
                      int status, int p1Phase, int p1State, int p2Phase, int p2State)
         implements TraceEvent {}
@@ -243,12 +264,14 @@ public sealed interface TraceEvent {
      *
      * <p><strong>Diagnostic only:</strong> never hydrated into engine state.
      */
+    @com.openggf.game.ModApi
     record CageExecution(int frame, java.util.List<Hit> hits)
         implements TraceEvent {
 
         /**
          * Single execution-hook hit at one of the cage's branch entry points.
          */
+        @com.openggf.game.ModApi
         public record Hit(String branch, int pc, int cageAddr, int playerAddr,
                           int stateAddr, int d5, int d6, int stateByte,
                           int playerStatus, int playerObjCtrl, int cageStatus) {}
@@ -276,6 +299,7 @@ public sealed interface TraceEvent {
      *
      * <p><strong>Diagnostic only:</strong> never hydrated into engine state.
      */
+    @com.openggf.game.ModApi
     record InteractState(int frame, String character, int interact,
                          int interactSlot, int status, int statusSecondary,
                          int objectControl)
@@ -296,6 +320,7 @@ public sealed interface TraceEvent {
      *
      * <p><strong>Diagnostic only:</strong> never hydrated into engine state.
      */
+    @com.openggf.game.ModApi
     record VelocityWrite(int frame, String character,
                          java.util.List<Hit> xVelWrites,
                          java.util.List<Hit> yVelWrites)
@@ -306,6 +331,7 @@ public sealed interface TraceEvent {
          * at the writing instruction (post-fetch); {@code value} is the full
          * 16-bit word value of the velocity field after the write.
          */
+        @com.openggf.game.ModApi
         public record Hit(int pc, int value) {}
     }
 
@@ -324,6 +350,7 @@ public sealed interface TraceEvent {
      *
      * <p><strong>Diagnostic only:</strong> never hydrated into engine state.
      */
+    @com.openggf.game.ModApi
     record PositionWrite(int frame, String character,
                          java.util.List<Hit> xPosWrites,
                          java.util.List<Hit> yPosWrites)
@@ -338,6 +365,7 @@ public sealed interface TraceEvent {
          * pre-v6.11 fixtures the registers default to 0; consumers should
          * treat 0 as "unknown" rather than "address 0x00000000".
          */
+        @com.openggf.game.ModApi
         public record Hit(int pc, int value, int a1, int a0) {
             /** Backwards-compatible constructor for pre-v6.11 callers. */
             public Hit(int pc, int value) { this(pc, value, 0, 0); }
@@ -351,9 +379,11 @@ public sealed interface TraceEvent {
      * execution/register context only; replay code must never hydrate engine
      * state from this event.
      */
+    @com.openggf.game.ModApi
     record AizShipLoop(int frame, java.util.List<Hit> hits)
         implements TraceEvent {
 
+        @com.openggf.game.ModApi
         public record Hit(String label, int pc, String character, int a1,
                           int d0, int d1, int cameraX, int cameraMinX,
                           int cameraMaxX, int eventsBg2, int playerX,
@@ -368,9 +398,11 @@ public sealed interface TraceEvent {
      * (docs/skdisasm/sonic3k.asm:22124-22136, 26683-26700). Diagnostic only:
      * never hydrated into engine state.
      */
+    @com.openggf.game.ModApi
     record SonicRecordPos(int frame, java.util.List<Hit> hits)
         implements TraceEvent {
 
+        @com.openggf.game.ModApi
         public record Hit(int pc, int posTableIndex, int ctrl1Logical,
                           int ctrl1Locked, int ctrl1Raw, int objectControl,
                           int status, int statusSecondary, int x, int y) {}
@@ -384,6 +416,7 @@ public sealed interface TraceEvent {
      * 28103-28122, 27957-28017). Diagnostic only: never hydrated into engine
      * state.
      */
+    @com.openggf.game.ModApi
     record TailsCpuNormalStep(int frame, String character, int status,
                               int objectControl, int groundVel, int xVel,
                               int delayedStat, int delayedInput,
@@ -404,6 +437,7 @@ public sealed interface TraceEvent {
      * 46602-46631, 46709-46743, 46749-46789, 46929-46950). Diagnostic only:
      * never hydrated into engine state.
      */
+    @com.openggf.game.ModApi
     record SidekickInteractObjectState(int frame, String character, int interact,
                                        int interactSlot, int tailsRenderFlags,
                                        int tailsObjectControl, int tailsStatus,
@@ -428,6 +462,7 @@ public sealed interface TraceEvent {
      * $32-$35 for P1 and $36-$39 for P2 (docs/skdisasm/sonic3k.asm:67656-67667,
      * 67985-68012). Diagnostic only: never hydrated into engine state.
      */
+    @com.openggf.game.ModApi
     record CnzCylinderState(int frame, int slot, short x, short y, int subtype,
                             int status, int routine, int renderFlags,
                             int p1State, int p1Angle, int p1Distance,
@@ -443,9 +478,11 @@ public sealed interface TraceEvent {
      * (docs/skdisasm/sonic3k.asm:67985-68012, 68019-68038, 41667-41679).
      * Diagnostic only: never hydrated into engine state.
      */
+    @com.openggf.game.ModApi
     record CnzCylinderExecution(int frame, java.util.List<Hit> hits)
         implements TraceEvent {
 
+        @com.openggf.game.ModApi
         public record Hit(String branch, int pc, int cylinderAddr,
                           int playerAddr, int stateAddr, int d2, int d4,
                           int d5, int d6, int cylinderStatus,
@@ -464,6 +501,7 @@ public sealed interface TraceEvent {
      *
      * <p><strong>Diagnostic only:</strong> never hydrated into engine state.
      */
+    @com.openggf.game.ModApi
     record CnzEventRamState(
             int frame,
             int eventsBg00Word,
@@ -481,6 +519,7 @@ public sealed interface TraceEvent {
             java.util.List<ScrollControlSlot> scrollSlots)
         implements TraceEvent {
 
+        @com.openggf.game.ModApi
         public record ScrollControlSlot(
                 int slot, int addr, int objectCode, int routine,
                 int routineSecondary, int x, int y, int status,
@@ -502,6 +541,7 @@ public sealed interface TraceEvent {
      * child lifetime for reports; replay code must never hydrate engine state
      * from it.
      */
+    @com.openggf.game.ModApi
     record AirCountdownState(
             int frame, String owner, int fixedSlot, int objectCode,
             int routine, int subtype, int obj30, int obj36, int obj37,
@@ -511,6 +551,7 @@ public sealed interface TraceEvent {
             boolean ownerUnderwater, int rngSeed, List<VisibleChild> visibleChildren)
         implements TraceEvent {
 
+        @com.openggf.game.ModApi
         public record VisibleChild(
                 int slot, int objectCode, int routine, int subtype,
                 int x, int y, int xSub, int ySub, int yVel,
@@ -527,12 +568,15 @@ public sealed interface TraceEvent {
      * RNG consumption order; replay code must never hydrate engine RNG state
      * from it.
      */
+    @com.openggf.game.ModApi
     record RngCall(int frame, List<Hit> hits) implements TraceEvent {
 
+        @com.openggf.game.ModApi
         public record ObjectContext(
                 int ptr, int slot, int objectCode, int routine,
                 int subtype, int x, int y) {}
 
+        @com.openggf.game.ModApi
         public record Hit(
                 int pc, int callerPc, String source,
                 int seedBefore, int seedAfter, int result, int resultByte,
@@ -551,6 +595,7 @@ public sealed interface TraceEvent {
      * (docs/skdisasm/sonic3k.asm:28407-28451). Diagnostic only: never
      * hydrated into engine state.
      */
+    @com.openggf.game.ModApi
     record AizBoundaryState(int frame, String character,
                             int cameraMinX, int cameraMaxX,
                             int cameraMinY, int cameraMaxY,
@@ -582,6 +627,7 @@ public sealed interface TraceEvent {
      * fire-transition start trigger; {@code eventsRoutineBg} is the BG event
      * phase. Diagnostic only: never hydrated into engine state.
      */
+    @com.openggf.game.ModApi
     record AizFireTransition(
             int frame,
             int cameraYBgCopy,
@@ -607,6 +653,7 @@ public sealed interface TraceEvent {
      * or the first-landing check (docs/skdisasm/sonic3k.asm:41793-41818,
      * 41982-42015). Diagnostic only: never hydrated into engine state.
      */
+    @com.openggf.game.ModApi
     record AizTransitionFloorSolidState(
             int frame, int slot, int objectStatus, int objectX, int objectY,
             boolean p1Standing, boolean p2Standing,
@@ -627,6 +674,7 @@ public sealed interface TraceEvent {
      * (docs/skdisasm/sonic3k.asm:19839-19891, 41982-42015). Diagnostic only:
      * never hydrated into replay state.
      */
+    @com.openggf.game.ModApi
     record AizHandoffTerrainState(
             int frame, int eventsBg, int drawPos, int drawRows,
             int kosModulesLeft, int currentZoneAct,
@@ -641,7 +689,8 @@ public sealed interface TraceEvent {
      * Parse a single JSONL line into the appropriate TraceEvent subtype.
      * Unknown event types are returned as StateSnapshot with all fields preserved.
      */
-    static TraceEvent parseJsonLine(String jsonLine, ObjectMapper mapper) {
+    static TraceEvent parseJsonLine(String jsonLine, Object jsonMapper) {
+        ObjectMapper mapper = (ObjectMapper) jsonMapper;
         try {
             JsonNode node = mapper.readTree(jsonLine);
             int frame = node.get("frame").asInt();
@@ -1412,5 +1461,3 @@ public sealed interface TraceEvent {
         return out;
     }
 }
-
-

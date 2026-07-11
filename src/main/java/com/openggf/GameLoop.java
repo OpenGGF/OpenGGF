@@ -122,6 +122,7 @@ import java.util.logging.Logger;
  * For headless testing, create a GameLoop with a mock InputHandler
  * and call {@link #step()} to advance one frame.
  */
+@com.openggf.game.ModApi
 public class GameLoop {
     static final int STATUS_FIRE_SHIELD_BIT = 4;
     static final int STATUS_LIGHTNING_SHIELD_BIT = 5;
@@ -331,6 +332,7 @@ public class GameLoop {
 
     /** @deprecated use {@link com.openggf.GameModeChangeListener}. */
     @Deprecated
+    @com.openggf.game.ModApi
     public interface GameModeChangeListener extends com.openggf.GameModeChangeListener {
     }
 

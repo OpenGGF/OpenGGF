@@ -19,11 +19,13 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
 
 /** Master-title room browser backed by an admitted master-server connection. */
+@com.openggf.game.ModApi
 public final class ServerBrowserScreen {
     private static final float SCALE = 0.5f;
     private static final int LINE_HEIGHT = 12;
     private static final long REFRESH_INTERVAL_MILLIS = 2000;
 
+    @com.openggf.game.ModApi
     public interface Actions {
         void join(ControlMessage.RoomSummary room);
         void create(String routing);

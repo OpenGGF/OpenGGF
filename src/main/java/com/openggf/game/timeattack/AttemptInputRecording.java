@@ -14,6 +14,7 @@ import java.security.NoSuchAlgorithmException;
  * SPAWN frame onward (idle = 0). Bits 0-4 = AbstractPlayableSprite INPUT_* held
  * mask, bit 5 = start held. Deliberately contains NO sidecar/physics data.
  */
+@com.openggf.game.ModApi
 public final class AttemptInputRecording {
     public static final int START_HELD_BIT = 0x20;
     /** Ten minutes at 60fps — matches GhostFileCodec.MAX_FRAMES and the ROM time-over cap. */

@@ -467,6 +467,7 @@ public class PsgChip {
         System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
     }
 
+    @com.openggf.game.ModApi
     public record Snapshot(
             int[] regs,
             int[] freqInc,

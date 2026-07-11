@@ -2,6 +2,7 @@ package com.openggf.game.rewind.identity;
 
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public record ObjectRefId(int slotIndex, int generation, int spawnId, int dynamicId, ObjectRefKind kind) {
     public ObjectRefId {
         Objects.requireNonNull(kind, "kind");

@@ -10,6 +10,7 @@ import java.util.function.Consumer;
  * resulting {@link MutationEffects} so the caller can trigger redraws,
  * resyncs, and pattern uploads after each intent runs.
  */
+@com.openggf.game.ModApi
 public final class LayoutMutationContext {
 
     private final LevelMutationSurface surface;

@@ -5,6 +5,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.GameServices;
+import com.openggf.game.ModApi;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
 import com.openggf.game.dataselect.CrossGameDataSelectPresentations;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
@@ -306,6 +307,35 @@ class TestArchUnitRules {
         };
     }
 
+    private static DescribedPredicate<JavaClass> modApiMarkerType() {
+        return new DescribedPredicate<>("the @ModApi compatibility marker") {
+            @Override
+            public boolean test(JavaClass input) {
+                return input.getName().equals(ModApi.class.getName());
+            }
+        };
+    }
+
+    private static DescribedPredicate<JavaClass> modApiDocumentationTool() {
+        return new DescribedPredicate<>("the two release-only Mod API tools") {
+            @Override
+            public boolean test(JavaClass input) {
+                return Set.of(
+                        "com.openggf.tools.modsdk.ModApiJavadocTool",
+                        "com.openggf.tools.modsdk.ModApiSdkPackager").contains(input.getName());
+            }
+        };
+    }
+
+    private static DescribedPredicate<JavaClass> modApiInventoryType() {
+        return new DescribedPredicate<>("the canonical Mod API inventory") {
+            @Override
+            public boolean test(JavaClass input) {
+                return input.getName().equals("com.openggf.mods.code.ModApiSurfaceInventory");
+            }
+        };
+    }
+
     private static DescribedPredicate<JavaConstructorCall> targetIsConcreteSonicProvider() {
         return new DescribedPredicate<>(
                 "target is a concrete Sonic module, detector, profile, art, or object provider class") {
@@ -506,6 +536,10 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("game"))
                             .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("level"))
                             .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("tools"))
+                            // @ModApi is compatibility metadata, not runtime collaboration.
+                            .ignoreDependency(DescribedPredicate.alwaysTrue(), modApiMarkerType())
+                            // Release tooling reads the inventory but is not runtime orchestration.
+                            .ignoreDependency(modApiDocumentationTool(), modApiInventoryType())
                             .as("top-level com.openggf package slices should be free of cycles"))
                     .because("package cycles make ownership boundaries and migration work hard to reason about; cycle:core-runtime freezes 16 existing top-level slices so new slices cannot join cycles");
 
@@ -538,6 +572,8 @@ class TestArchUnitRules {
                             .whereLayer("Audio").mayNotAccessAnyLayer()
                             .whereLayer("Graphics").mayNotAccessAnyLayer()
                             .whereLayer("Data").mayNotAccessAnyLayer()
+                            // @ModApi marks a supported type without coupling its runtime layer.
+                            .ignoreDependency(DescribedPredicate.alwaysTrue(), modApiMarkerType())
                             .as("audio, graphics, and data layers should not depend on runtime gameplay layers"))
                     .because("lower-level services should stay reusable and should not know about level/sprite/game orchestration; frozen baseline: 209 violations (2026-07-02: +2 ROM-backed SEGA-boot PCM edges in AudioManager, solved edges pruned)");
 
@@ -801,6 +837,16 @@ class TestArchUnitRules {
                 continue;
             }
             for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
+                if (dependency.getTargetClass().getName().equals(ModApi.class.getName())) {
+                    continue;
+                }
+                if (Set.of(
+                        "com.openggf.tools.modsdk.ModApiJavadocTool",
+                        "com.openggf.tools.modsdk.ModApiSdkPackager").contains(origin.getName())
+                        && dependency.getTargetClass().getName()
+                        .equals("com.openggf.mods.code.ModApiSurfaceInventory")) {
+                    continue;
+                }
                 String targetSlice = topLevelSlice(dependency.getTargetClass());
                 if (targetSlice == null || originSlice.equals(targetSlice)) {
                     continue;

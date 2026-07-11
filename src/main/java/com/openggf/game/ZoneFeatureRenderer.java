@@ -4,6 +4,7 @@ package com.openggf.game;
  * Optional zone-specific renderer for custom visual effects.
  * Returned by {@link ZoneFeatureProvider#getFeatureRenderer()}.
  */
+@com.openggf.game.ModApi
 public interface ZoneFeatureRenderer {
     void cleanup();
 

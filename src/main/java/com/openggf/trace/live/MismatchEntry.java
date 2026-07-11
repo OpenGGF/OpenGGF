@@ -7,6 +7,7 @@ import com.openggf.trace.Severity;
  * runs of identical mismatches so a single stuck field does not flood
  * the ring buffer.
  */
+@com.openggf.game.ModApi
 public record MismatchEntry(
         int frame,
         String field,

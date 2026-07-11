@@ -21,6 +21,7 @@ import java.util.Optional;
  * <li>Sonic 3&K: Giant rings (Blue Sphere stages)</li>
  * </ul>
  */
+@com.openggf.game.ModApi
 public interface SpecialStageProvider extends MiniGameProvider {
     String SPECIAL_STAGE_REWIND_KEY = "special-stage-runtime";
 

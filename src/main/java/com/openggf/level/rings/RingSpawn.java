@@ -5,6 +5,7 @@ import com.openggf.level.spawn.SpawnPoint;
 /**
  * Immutable ring placement record expanded to individual ring positions.
  */
+@com.openggf.game.ModApi
 public record RingSpawn(int x, int y, int placementId) implements SpawnPoint {
 
     public RingSpawn {

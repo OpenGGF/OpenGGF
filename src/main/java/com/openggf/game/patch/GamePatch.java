@@ -11,6 +11,7 @@ import java.util.Set;
  * <p>The future engine-owned {@code ModuleResolutionService} orders eligible
  * registrations by owner and applies each patch over the previous result.
  */
+@com.openggf.game.ModApi
 public interface GamePatch {
 
     /** Stable namespaced patch identifier. */

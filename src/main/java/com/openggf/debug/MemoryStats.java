@@ -16,6 +16,7 @@ import java.util.Map;
  * Provides heap usage, GC stats, allocation rate estimation,
  * and per-section allocation tracking.
  */
+@com.openggf.game.ModApi
 public class MemoryStats {
 
     private static final MemoryStats INSTANCE = new MemoryStats();
@@ -208,6 +209,7 @@ public class MemoryStats {
         return topAllocatorsCache;
     }
 
+    @com.openggf.game.ModApi
     public record SectionAllocation(String name, long bytesPerFrame) {
         public double kbPerFrame() {
             return bytesPerFrame / 1024.0;
@@ -282,6 +284,7 @@ public class MemoryStats {
         return reusableSnapshot;
     }
 
+    @com.openggf.game.ModApi
     public static class Snapshot {
         double heapUsedMB;
         double heapMaxMB;

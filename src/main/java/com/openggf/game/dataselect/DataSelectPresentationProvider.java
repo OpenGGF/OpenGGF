@@ -9,6 +9,7 @@ import java.util.Objects;
 /**
  * Thin presentation seam around a concrete data-select renderer/provider.
  */
+@com.openggf.game.ModApi
 public final class DataSelectPresentationProvider extends AbstractDataSelectProvider {
     private final Function<DataSelectSessionController, ? extends DataSelectProvider> delegateFactory;
     private final DataSelectSessionController controller;

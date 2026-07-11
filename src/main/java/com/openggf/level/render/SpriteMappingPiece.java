@@ -3,6 +3,7 @@ package com.openggf.level.render;
 /**
  * One sprite piece from a mapping frame.
  */
+@com.openggf.game.ModApi
 public record SpriteMappingPiece(
         int xOffset,
         int yOffset,

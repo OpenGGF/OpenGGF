@@ -8,8 +8,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * this during the layered sprite pass; the trace-only TraceGhostHook global is
  * a separate, unchanged path. Renderers draw visuals only — never gameplay state.
  */
+@com.openggf.game.ModApi
 public final class GhostRenderRegistry {
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface GhostLayerRenderer {
         void renderGhostsForLayer(int bucket, boolean highPriority);
     }

@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public record GenericObjectSnapshot(Class<?> type, List<FieldKey> keys, Object[] values) {
     public GenericObjectSnapshot {
         Objects.requireNonNull(type, "type");

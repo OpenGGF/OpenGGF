@@ -13,6 +13,7 @@ import com.openggf.level.spawn.SpawnPoint;
  * as a separate object slot.  Dynamically spawned objects use index
  * {@code -1} (via the 7-parameter convenience constructor).
  */
+@com.openggf.game.ModApi
 public record ObjectSpawn(
         int x,
         int y,

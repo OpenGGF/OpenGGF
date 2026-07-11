@@ -11,6 +11,7 @@ import java.util.Map;
  * The profiler populates this in-place via {@link #populate} each frame,
  * and the renderer reads from it synchronously on the same thread.
  */
+@com.openggf.game.ModApi
 public class ProfileSnapshot {
 
     private static final Comparator<SectionStats> BY_TIME_DESC =

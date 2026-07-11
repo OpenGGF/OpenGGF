@@ -18,6 +18,7 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 
+@com.openggf.game.ModApi
 public class DisplayShaderPipeline {
     private static final Logger LOG = Logger.getLogger(DisplayShaderPipeline.class.getName());
     private static final float[] IDENTITY_MATRIX = {

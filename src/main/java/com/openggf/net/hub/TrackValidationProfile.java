@@ -1,6 +1,7 @@
 package com.openggf.net.hub;
 
 /** ROM-free numeric metadata for hub-side stream sanity checks. */
+@com.openggf.game.ModApi
 public record TrackValidationProfile(int levelWidthPx, int levelHeightPx,
                                      int maxSpeedPxPerFrame, int maxFramesPerSecond) {
     public static final int GLOBAL_SPEED_CEILING_PX_PER_FRAME = 32;

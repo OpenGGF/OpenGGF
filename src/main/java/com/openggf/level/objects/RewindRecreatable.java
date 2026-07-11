@@ -30,6 +30,7 @@ package com.openggf.level.objects;
  * reference game-specific types in their {@code recreateForRewind} body —
  * the dependency flows game→shared, which is permitted.
  */
+@com.openggf.game.ModApi
 public interface RewindRecreatable {
 
     /**

@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@com.openggf.game.ModApi
 public class AudioManager {
     private static final Logger LOGGER = Logger.getLogger(AudioManager.class.getName());
     private static final int PCM_HISTORY_SECONDS = 60;

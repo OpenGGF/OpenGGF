@@ -12,6 +12,7 @@ import java.util.Map;
 /**
  * Presentation-independent controller for data-select state and actions.
  */
+@com.openggf.game.ModApi
 public class DataSelectSessionController {
     private final DataSelectHostProfile hostProfile;
     private final DataSelectMenuModel model = new DataSelectMenuModel();

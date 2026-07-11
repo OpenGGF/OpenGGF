@@ -16,6 +16,7 @@ package com.openggf.game;
  *   <li>Sprite mappings</li>
  * </ul>
  */
+@com.openggf.game.ModApi
 public interface RomOffsetProvider {
     /**
      * Gets an offset by category and name.

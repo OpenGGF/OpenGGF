@@ -11,6 +11,7 @@ import static org.lwjgl.glfw.GLFW.*;
  * Handles keyboard input from GLFW.
  * Key codes are GLFW key codes (GLFW_KEY_*).
  */
+@com.openggf.game.ModApi
 public class InputHandler {
 	// GLFW key codes can range from 0 to GLFW_KEY_LAST (348)
 	private static final int MAX_KEYS = 512;

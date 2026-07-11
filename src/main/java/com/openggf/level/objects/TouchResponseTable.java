@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import com.openggf.data.RomByteReader;
 
+@com.openggf.game.ModApi
 public class TouchResponseTable {
     private final int[] widths;
     private final int[] heights;

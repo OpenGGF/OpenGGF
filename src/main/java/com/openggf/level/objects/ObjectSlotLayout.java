@@ -6,6 +6,7 @@ package com.openggf.level.objects;
  * <p>Only the allocatable dynamic slot window is modeled here. Fixed player/UI/support
  * slots that live outside the manager remain owned by their respective systems.
  */
+@com.openggf.game.ModApi
 public record ObjectSlotLayout(
         int firstDynamicSlot,
         int dynamicSlotCount,

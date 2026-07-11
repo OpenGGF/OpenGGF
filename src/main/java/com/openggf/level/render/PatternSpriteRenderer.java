@@ -13,6 +13,7 @@ import java.util.logging.Logger;
 /**
  * Renders sprite sheets built from level patterns and caches frame bounds.
  */
+@com.openggf.game.ModApi
 public class PatternSpriteRenderer {
     private static final Logger LOG = Logger.getLogger(PatternSpriteRenderer.class.getName());
     private static final int MAX_FRAME_PIECES = 80;
@@ -662,6 +663,7 @@ public class PatternSpriteRenderer {
         return bounds;
     }
 
+    @com.openggf.game.ModApi
     public record FrameBounds(int minX, int minY, int maxX, int maxY) {
         public int width() {
             return maxX - minX + 1;

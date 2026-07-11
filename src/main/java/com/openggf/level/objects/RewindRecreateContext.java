@@ -14,6 +14,7 @@ import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
  * structural relinks that are constructor-required, but must not attempt to decode
  * compact object-reference fields from this context.
  */
+@com.openggf.game.ModApi
 public record RewindRecreateContext(
         ObjectSpawn spawn,
         PerObjectRewindSnapshot state,

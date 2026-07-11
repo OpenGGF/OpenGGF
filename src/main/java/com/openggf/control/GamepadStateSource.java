@@ -2,6 +2,7 @@ package com.openggf.control;
 
 import java.util.List;
 
+@com.openggf.game.ModApi
 public interface GamepadStateSource {
     List<DeviceState> pollDevices();
 
@@ -9,6 +10,7 @@ public interface GamepadStateSource {
         return List::of;
     }
 
+    @com.openggf.game.ModApi
     record DeviceState(
             int joystickId,
             String name,

@@ -20,6 +20,7 @@ import java.util.Objects;
  * since); such entries are skipped. The reverse — registered subsystems
  * with no entry in the snapshot — leaves them at their current state.
  */
+@com.openggf.game.ModApi
 public final class RewindRegistry {
     private static final String GAME_RNG_KEY = "gamerng";
 

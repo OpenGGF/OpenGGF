@@ -4,6 +4,7 @@ package com.openggf.game;
  * Represents the current game mode/scene type.
  * Used to switch between normal level gameplay and special stages.
  */
+@com.openggf.game.ModApi
 public enum GameMode {
     /** Normal level gameplay (Emerald Hill, Chemical Plant, etc.) */
     LEVEL,

@@ -29,6 +29,7 @@ import java.util.logging.Logger;
  * <p>
  * Small breathing bubbles are also spawned during each air event.
  */
+@com.openggf.game.ModApi
 public class DrowningController {
     private static final Logger LOGGER = Logger.getLogger(DrowningController.class.getName());
 
@@ -108,6 +109,7 @@ public class DrowningController {
     /** Whether bubble config has been resolved */
     private boolean bubbleConfigResolved;
 
+    @com.openggf.game.ModApi
     public record FixedCountdownAirEvent(int airBefore, int airAfter, int countdownNumber, boolean drowned) {
     }
 
@@ -493,6 +495,7 @@ public class DrowningController {
         numberBubbleFrequency = state.numberBubbleFrequency();
     }
 
+    @com.openggf.game.ModApi
     public record RewindState(
             int remainingAir,
             int frameTimer,

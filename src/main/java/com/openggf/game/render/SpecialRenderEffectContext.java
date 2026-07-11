@@ -9,6 +9,7 @@ import java.util.Objects;
 /**
  * Frame-local render context for special effects.
  */
+@com.openggf.game.ModApi
 public record SpecialRenderEffectContext(Camera camera,
                                          int frameCounter,
                                          LevelManager levelManager,

@@ -3,6 +3,7 @@ package com.openggf.physics;
 /**
  * Immutable record of a collision event for trace comparison.
  */
+@com.openggf.game.ModApi
 public record CollisionEvent(
     EventType type,
     String description,
@@ -13,6 +14,7 @@ public record CollisionEvent(
     boolean flag1,  // Context-specific (e.g., standing, inAir)
     boolean flag2   // Context-specific (e.g., pushing, contacted)
 ) {
+    @com.openggf.game.ModApi
     public enum EventType {
         TERRAIN_PROBES_START,
         TERRAIN_PROBE_RESULT,

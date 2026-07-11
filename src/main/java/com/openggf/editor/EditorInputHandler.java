@@ -41,7 +41,9 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_Z;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT;
 
+@com.openggf.game.ModApi
 public final class EditorInputHandler {
+    @com.openggf.game.ModApi
     public enum Action {
         DESCEND,
         ASCEND,

@@ -7,8 +7,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+@com.openggf.game.ModApi
 public final class SmpsSequencerConfig {
 
+    @com.openggf.game.ModApi
     public enum TempoMode {
         /** S3K: accumulator overflow → skip (delay). Tick on non-overflow. Higher tempo = slower. */
         OVERFLOW,
@@ -19,6 +21,7 @@ public final class SmpsSequencerConfig {
     }
 
     /** How carrier operators are determined for volume scaling. */
+    @com.openggf.game.ModApi
     public enum VolMode {
         /** S1/S2: carrier mask derived from algorithm number via ALGO_OUT_MASK table. */
         ALGO,
@@ -27,6 +30,7 @@ public final class SmpsSequencerConfig {
     }
 
     /** Behavior of PSG envelope command byte 0x80. */
+    @com.openggf.game.ModApi
     public enum PsgEnvCmd80 {
         /** S1/S2: hold the envelope at current level (stop advancing). */
         HOLD,
@@ -35,6 +39,7 @@ public final class SmpsSequencerConfig {
     }
 
     /** How note-on is prevented during ties/holds. */
+    @com.openggf.game.ModApi
     public enum NoteOnPrevent {
         /** S1/S2: prevented when note is REST (0x80). */
         REST,
@@ -43,6 +48,7 @@ public final class SmpsSequencerConfig {
     }
 
     /** What happens to frequency during rests/delays. */
+    @com.openggf.game.ModApi
     public enum DelayFreq {
         /** S1/S2: frequency is reset on rest. */
         RESET,
@@ -51,6 +57,7 @@ public final class SmpsSequencerConfig {
     }
 
     /** Modulation stepping algorithm. */
+    @com.openggf.game.ModApi
     public enum ModAlgo {
         /** S1/S2 (MODALGO_68K): pre-check step counter, then decrement. Reload from raw data. */
         MOD_68K,
@@ -255,6 +262,7 @@ public final class SmpsSequencerConfig {
      * Builder for SmpsSequencerConfig with S2-compatible defaults.
      * Use this for S3K and other configs that need the new fields.
      */
+    @com.openggf.game.ModApi
     public static final class Builder {
         // Required (defaults reference shared constants)
         private Map<Integer, Integer> speedUpTempos = Collections.emptyMap();

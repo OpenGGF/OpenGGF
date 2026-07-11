@@ -10,6 +10,7 @@ import com.openggf.data.Rom;
  * <p>Multiple detectors can be registered with {@link RomDetectionService},
  * which will query each in priority order to determine the correct game module.
  */
+@com.openggf.game.ModApi
 public interface RomDetector {
     /**
      * Checks if this detector can handle the given ROM.

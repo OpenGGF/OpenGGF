@@ -14,9 +14,11 @@ import java.util.logging.Logger;
  * Manages object art rendering by delegating to a game-specific ObjectArtProvider.
  * Provides both key-based lookups and typed convenience methods for backward compatibility.
  */
+@com.openggf.game.ModApi
 public class ObjectRenderManager {
     private static final Logger LOGGER = Logger.getLogger(ObjectRenderManager.class.getName());
 
+    @com.openggf.game.ModApi
     public enum SpringVariant {
         VERTICAL,
         HORIZONTAL,

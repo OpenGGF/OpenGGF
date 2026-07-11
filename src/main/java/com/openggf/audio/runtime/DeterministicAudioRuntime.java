@@ -7,6 +7,7 @@ import com.openggf.audio.rewind.AudioTimelineEntry;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
+@com.openggf.game.ModApi
 public interface DeterministicAudioRuntime {
     /**
      * Advances deterministic audio state for one frame. This method must not

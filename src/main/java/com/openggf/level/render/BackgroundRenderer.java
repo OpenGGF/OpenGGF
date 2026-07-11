@@ -31,6 +31,7 @@ import static org.lwjgl.opengl.GL30.*;
  * This allows true per-scanline horizontal scrolling rather than the per-tile
  * approximation used in the CPU-based approach.
  */
+@com.openggf.game.ModApi
 public class BackgroundRenderer {
 
     private static final Logger LOGGER = Logger.getLogger(BackgroundRenderer.class.getName());

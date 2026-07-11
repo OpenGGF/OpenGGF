@@ -18,6 +18,7 @@ import static org.lwjgl.opengl.GL30.*;
  * - R = 0.0: No high-priority tile at this pixel
  * - R = 1.0: High-priority tile present at this pixel
  */
+@com.openggf.game.ModApi
 public class TilePriorityFBO {
 
     private static final Logger LOGGER = Logger.getLogger(TilePriorityFBO.class.getName());

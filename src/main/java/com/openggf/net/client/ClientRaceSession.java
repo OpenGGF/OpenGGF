@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.function.LongSupplier;
 
 /** Client-side room/round mirror with an NTP-lite hub-clock estimate. */
+@com.openggf.game.ModApi
 public final class ClientRaceSession {
+    @com.openggf.game.ModApi
     public enum Phase { LOBBY, COUNTDOWN, RUNNING, ROUND_END, VOTE }
 
     public static final int CLOCK_SAMPLES_TARGET = 5;

@@ -18,6 +18,7 @@ import com.openggf.sprites.playable.SuperStateController;
 
 import java.util.Optional;
 
+@ModApi
 public interface GameModule {
     String getIdentifier();
 

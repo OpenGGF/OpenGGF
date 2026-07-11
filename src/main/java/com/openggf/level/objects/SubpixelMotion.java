@@ -15,6 +15,7 @@ package com.openggf.level.objects;
  * Callers create a {@link State} object to hold position, velocity,
  * and sub-pixel accumulators, then call the appropriate static method.
  */
+@com.openggf.game.ModApi
 public final class SubpixelMotion {
 
     /** Standard S3K gravity in subpixels per frame. */
@@ -26,6 +27,7 @@ public final class SubpixelMotion {
      * Mutable state holder for subpixel position tracking.
      * Fields are public for direct access from callers.
      */
+    @com.openggf.game.ModApi
     public static final class State {
         public int x, y, xSub, ySub, xVel, yVel;
 

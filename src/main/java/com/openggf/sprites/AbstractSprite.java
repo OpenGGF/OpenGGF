@@ -7,6 +7,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.physics.Direction;
 import com.openggf.physics.Sensor;
 
+@com.openggf.game.ModApi
 public abstract class AbstractSprite implements Sprite {
 	protected final SonicConfigurationService configService = EngineServices.current().configuration();
 	protected final GraphicsManager graphicsManager = EngineServices.current().graphics();

@@ -7,5 +7,6 @@ package com.openggf.debug;
  * @param timeMs Average time spent in this section per frame, in milliseconds
  * @param percentage Percentage of total frame time spent in this section
  */
+@com.openggf.game.ModApi
 public record SectionStats(String name, double timeMs, double percentage) {
 }

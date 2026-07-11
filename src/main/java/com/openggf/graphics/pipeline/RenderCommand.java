@@ -3,6 +3,7 @@ package com.openggf.graphics.pipeline;
 /**
  * Record of a render command for order verification.
  */
+@com.openggf.game.ModApi
 public record RenderCommand(
     RenderPhase phase,
     String component,

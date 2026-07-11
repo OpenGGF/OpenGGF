@@ -14,6 +14,7 @@ import java.util.logging.Logger;
  * - Emerald_count: number of emeralds collected (0-7)
  * - Got_Emeralds_array: which specific emeralds have been obtained
  */
+@com.openggf.game.ModApi
 public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(GameStateManager.class.getName());
     private static final int DEFAULT_SPECIAL_STAGE_COUNT = 7;

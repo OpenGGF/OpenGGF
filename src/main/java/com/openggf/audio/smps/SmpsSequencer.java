@@ -31,6 +31,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private final int tempoModBase;
     private final List<Track> tracks = new ArrayList<>();
 
+    @com.openggf.game.ModApi
     public enum Region {
         NTSC(60.0), PAL(50.0);
 
@@ -203,10 +204,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return out;
     }
 
+    @com.openggf.game.ModApi
     public enum TrackType {
         FM, PSG, DAC
     }
 
+    @com.openggf.game.ModApi
     public static class Track {
         public int pos;
         public TrackType type;

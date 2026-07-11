@@ -9,6 +9,7 @@ import java.util.List;
 /**
  * Simple sprite sheet for static object art (patterns + mapping frames).
  */
+@com.openggf.game.ModApi
 public class ObjectSpriteSheet implements SpriteSheet<SpriteMappingFrame> {
     private final Pattern[] patterns;
     private final List<SpriteMappingFrame> frames;

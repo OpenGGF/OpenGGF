@@ -1,5 +1,6 @@
 package com.openggf.game.solid;
 
+@com.openggf.game.ModApi
 public record PlayerStandingState(
         ContactKind kind,
         boolean standing,

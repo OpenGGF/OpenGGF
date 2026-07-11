@@ -4,6 +4,7 @@ package com.openggf.game;
  * Interface for managing transient level state such as rings and time.
  * This state is typically reset when a level is loaded or restarted.
  */
+@com.openggf.game.ModApi
 public interface LevelState {
     /**
      * Update the level state (called once per frame).

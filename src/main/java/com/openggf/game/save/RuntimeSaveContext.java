@@ -7,6 +7,7 @@ import com.openggf.level.LevelManager;
 /**
  * Snapshot input for save providers.
  */
+@com.openggf.game.ModApi
 public final class RuntimeSaveContext {
     private final GameplayModeContext gameplayMode;
     private final SaveSessionContext saveSessionContext;

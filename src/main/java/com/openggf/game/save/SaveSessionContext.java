@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.OptionalInt;
 
+@com.openggf.game.ModApi
 public final class SaveSessionContext {
     private final String gameCode;
     private final Integer activeSlot;

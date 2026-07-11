@@ -5,9 +5,11 @@ import com.openggf.level.objects.ObjectInstance;
 
 import java.util.Map;
 
+@com.openggf.game.ModApi
 public final class ObjectSolidExecutionContext {
 
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface Resolver {
         SolidCheckpointBatch resolveNow();
     }

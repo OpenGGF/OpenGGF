@@ -39,6 +39,7 @@ import java.util.logging.Logger;
  * The donor ROM is opened as a secondary ROM (no module detection side-effect).
  */
 @CompositionRoot
+@com.openggf.game.ModApi
 public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, SpindashDustArtProvider {
     private static final Logger LOGGER = Logger.getLogger(CrossGameFeatureProvider.class.getName());
 

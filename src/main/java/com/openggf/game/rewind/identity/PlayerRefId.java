@@ -1,5 +1,6 @@
 package com.openggf.game.rewind.identity;
 
+@com.openggf.game.ModApi
 public record PlayerRefId(int encoded) {
     public static PlayerRefId nullRef() {
         return new PlayerRefId(0);

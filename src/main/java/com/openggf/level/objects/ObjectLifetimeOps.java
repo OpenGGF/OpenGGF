@@ -7,6 +7,7 @@ import java.util.Objects;
 /**
  * Named lifecycle operations for object destruction, respawn, and slot transfer.
  */
+@com.openggf.game.ModApi
 public final class ObjectLifetimeOps {
     private ObjectLifetimeOps() {
     }

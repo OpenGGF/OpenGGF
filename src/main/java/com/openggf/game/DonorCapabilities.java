@@ -21,6 +21,7 @@ import java.util.Set;
  * returns it from {@link GameModule#getDonorCapabilities()}. Games that
  * cannot act as donors return {@code null} from that method.</p>
  */
+@com.openggf.game.ModApi
 public interface DonorCapabilities {
 
     /**

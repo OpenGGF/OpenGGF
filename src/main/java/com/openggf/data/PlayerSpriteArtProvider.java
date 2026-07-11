@@ -8,6 +8,7 @@ import java.io.IOException;
 /**
  * Optional interface for games that can provide player sprite art from ROM.
  */
+@com.openggf.game.ModApi
 public interface PlayerSpriteArtProvider {
     SpriteArtSet loadPlayerSpriteArt(String characterCode) throws IOException;
 

@@ -5,6 +5,7 @@ import java.util.Objects;
 /**
  * Typed pixel font resource selection for overlay text renderers.
  */
+@com.openggf.game.ModApi
 public enum PixelFontVariant {
     PIXEL_FONT("pixel-font.png", true),
     PIXEL_FONT_NO_SHADOW("pixel-font-ns.png", false);

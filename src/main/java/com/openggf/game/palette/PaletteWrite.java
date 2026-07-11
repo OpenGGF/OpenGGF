@@ -3,6 +3,7 @@ package com.openggf.game.palette;
 import java.util.Arrays;
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public final class PaletteWrite {
     private final PaletteSurface surface;
     private final String ownerId;

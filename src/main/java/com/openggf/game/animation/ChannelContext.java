@@ -9,6 +9,7 @@ import com.openggf.level.Level;
  * {@link AnimatedTileChannelGraph#update(ChannelContext)}, the specific channel
  * currently being evaluated.
  */
+@com.openggf.game.ModApi
 public record ChannelContext(
         AnimatedTileChannelGraph graph,
         AnimatedTileChannel channel,

@@ -47,6 +47,7 @@ import java.util.function.Consumer;
  * - Obj01_MdRoll: ground rolling (air=false, rolling=true)
  * - Obj01_MdAir/MdJump: airborne (air=true)
  */
+@com.openggf.game.ModApi
 public class PlayableSpriteMovement extends AbstractSpriteMovementManager<AbstractPlayableSprite> {
 
 	// ROM spindash speed table (s2.asm:37294) - indexed by spindash_counter >> 8
@@ -253,6 +254,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		staleHorizontalInputPreviousHorizontal = state.staleHorizontalInputPreviousHorizontal();
 	}
 
+	@com.openggf.game.ModApi
 	public record RewindState(
 			boolean jumpPressed,
 			boolean jumpPrevious,

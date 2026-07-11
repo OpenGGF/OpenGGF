@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@com.openggf.game.ModApi
 public class GraphicsManager {
 	private static final Logger LOGGER = Logger.getLogger(GraphicsManager.class.getName());
 

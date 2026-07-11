@@ -6,6 +6,7 @@ import com.openggf.game.save.SelectedTeam;
  * Represents a user action from the data select screen.
  * Consumed by the game loop to trigger level loading, slot deletion, etc.
  */
+@com.openggf.game.ModApi
 public record DataSelectAction(DataSelectActionType type, int slot, int zone, int act, SelectedTeam team) {
 
     /** Returns a no-op action indicating no selection has been made. */

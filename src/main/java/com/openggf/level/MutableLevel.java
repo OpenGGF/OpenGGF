@@ -13,6 +13,7 @@ import java.util.*;
  * collision, object placements, and ring placements. Subsystems consume
  * dirty regions each frame via {@code LevelManager.processDirtyRegions()}.
  */
+@com.openggf.game.ModApi
 public class MutableLevel extends AbstractLevel implements com.openggf.level.objects.RingObjectPlacementMapping {
 
     // Dirty tracking
@@ -490,6 +491,7 @@ public class MutableLevel extends AbstractLevel implements com.openggf.level.obj
         markObjectsUserModified();
     }
 
+    @com.openggf.game.ModApi
     public record ObjectBackedRingState(List<ObjectSpawn> objects, List<RingSpawn> rings,
                                         java.util.Map<ObjectSpawn, List<RingSpawn>> mapping) { }
 

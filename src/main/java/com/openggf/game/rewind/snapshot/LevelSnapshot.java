@@ -22,6 +22,7 @@ import com.openggf.game.CheckpointState;
  * into divergent badnik / ring / oscillation state on the very first
  * post-restore step.
  */
+@com.openggf.game.ModApi
 public record LevelSnapshot(
         long epochAtCapture,
         Block[] blocks,

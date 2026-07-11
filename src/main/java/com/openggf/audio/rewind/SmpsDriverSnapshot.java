@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public record SmpsDriverSnapshot(
         SmpsSequencer.Region region,
         SmpsDriver.ReadMode readMode,
@@ -62,6 +63,7 @@ public record SmpsDriverSnapshot(
         return Arrays.copyOf(psgLockSequencerIds, psgLockSequencerIds.length);
     }
 
+    @com.openggf.game.ModApi
     public interface DependencyResolver {
         AbstractSmpsData resolveSmpsData(SequencerEntry entry);
 
@@ -96,6 +98,7 @@ public record SmpsDriverSnapshot(
         };
     }
 
+    @com.openggf.game.ModApi
     public record SequencerEntry(
             boolean sfx,
             SmpsSourceDescriptor source,

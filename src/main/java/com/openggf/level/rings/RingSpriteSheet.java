@@ -9,6 +9,7 @@ import java.util.List;
 /**
  * Holds ring patterns and frame mappings.
  */
+@com.openggf.game.ModApi
 public class RingSpriteSheet implements SpriteSheet<RingFrame> {
     private final Pattern[] patterns;
     private final List<RingFrame> frames;

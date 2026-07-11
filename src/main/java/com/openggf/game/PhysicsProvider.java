@@ -9,6 +9,7 @@ import com.openggf.game.rules.GameRules;
  * <p>Implementations are game-specific (S1, S2, S3K) and accessed via
  * {@link GameModule#getPhysicsProvider()}.
  */
+@com.openggf.game.ModApi
 public interface PhysicsProvider {
 
     /**

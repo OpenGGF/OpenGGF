@@ -15,6 +15,7 @@ import java.io.IOException;
  * Module-owned provider for assets and behavior a game can donate to a
  * cross-game host.
  */
+@com.openggf.game.ModApi
 public interface CrossGameDonorProvider {
     DonorCapabilities getDonorCapabilities();
 

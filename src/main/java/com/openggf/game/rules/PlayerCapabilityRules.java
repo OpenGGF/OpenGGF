@@ -2,6 +2,7 @@ package com.openggf.game.rules;
 
 import java.util.Arrays;
 
+@com.openggf.game.ModApi
 public record PlayerCapabilityRules(
         boolean spindashEnabled,
         short[] spindashSpeedTable,

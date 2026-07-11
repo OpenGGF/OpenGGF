@@ -25,6 +25,7 @@ import java.util.logging.Logger;
  * byte[] data = rom.readBytes(offset, length);
  * </pre>
  */
+@com.openggf.game.ModApi
 public class RomManager implements AutoCloseable {
     private static final Logger LOGGER = Logger.getLogger(RomManager.class.getName());
     private static final String MISSING_ROM_PREFIX = "ROM file does not exist: ";

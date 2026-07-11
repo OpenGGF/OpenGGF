@@ -7,6 +7,7 @@ package com.openggf.game;
  * <p>Water jump is an absolute override (0x380) rather than a multiplier,
  * matching ROM behavior where the jump force is replaced entirely underwater.
  */
+@com.openggf.game.ModApi
 public record PhysicsModifiers(
         float waterAccelMul,
         float waterDecelMul,

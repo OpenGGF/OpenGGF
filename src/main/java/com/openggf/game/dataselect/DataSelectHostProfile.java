@@ -10,6 +10,7 @@ import java.util.Map;
 /**
  * Host-owned data select semantics for a game.
  */
+@com.openggf.game.ModApi
 public interface DataSelectHostProfile {
     String gameCode();
 

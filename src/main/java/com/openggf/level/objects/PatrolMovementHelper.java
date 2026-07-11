@@ -17,6 +17,7 @@ import com.openggf.physics.TerrainCheckResult;
  * Callers handle the reversal action themselves (state transition, velocity negate, etc.)
  * since each badnik responds differently to reaching an edge.
  */
+@com.openggf.game.ModApi
 public final class PatrolMovementHelper {
 
     private PatrolMovementHelper() {}
@@ -29,6 +30,7 @@ public final class PatrolMovementHelper {
      * @param newY     updated Y position (snapped to floor, or unchanged if reversed)
      * @param reversed true if an edge was detected (no valid floor within thresholds)
      */
+    @com.openggf.game.ModApi
     public record PatrolResult(int newX, int newXSub, int newY, boolean reversed) {}
 
     /**

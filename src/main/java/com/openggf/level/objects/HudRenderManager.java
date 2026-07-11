@@ -12,6 +12,7 @@ import com.openggf.level.render.SpritePieceRenderer;
 
 import java.util.function.Supplier;
 
+@com.openggf.game.ModApi
 public class HudRenderManager {
 
     private static final java.util.logging.Logger LOGGER =

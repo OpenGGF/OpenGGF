@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 /** The base game and team requested at a gameplay launch choke point. */
+@com.openggf.game.ModApi
 public record GameplayLaunchRequest(String gameId, String mainCharacter, List<String> sidekicks) {
 
     public GameplayLaunchRequest {

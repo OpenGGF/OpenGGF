@@ -11,6 +11,7 @@ import com.openggf.physics.Direction;
  * the existing public API on {@code AbstractPlayableSprite} (or its
  * parent {@code AbstractSprite}).
  */
+@com.openggf.game.ModApi
 public interface PlayableEntity {
 
     // ── Position ────────────────────────────────────────────────────

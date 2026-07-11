@@ -31,6 +31,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_P;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
 
+@com.openggf.game.ModApi
 public final class UserRecordingMenuState {
     private static final int TARGET_FRAME_STEP = 60;
 
@@ -330,6 +331,7 @@ public final class UserRecordingMenuState {
         return context.mainCharacter() + "+" + sidekicks;
     }
 
+    @com.openggf.game.ModApi
     public record PlaybackRequest(UserRecordingEntry entry, UserRecordingPlaybackOptions options) {
         public PlaybackRequest {
             Objects.requireNonNull(entry, "entry");

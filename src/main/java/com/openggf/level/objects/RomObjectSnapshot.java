@@ -35,6 +35,7 @@ import java.util.Map;
  * unsigned (0..0xFFFF); callers that need signed interpretation use
  * {@link #signedWordAt(int)}.
  */
+@com.openggf.game.ModApi
 public final class RomObjectSnapshot {
 
     private final Map<Integer, Integer> byteFields;
@@ -145,7 +146,8 @@ public final class RomObjectSnapshot {
      * Unknown keys are silently ignored so new semantic aliases can be added
      * without breaking legacy traces.
      */
-    public static RomObjectSnapshot fromJsonNode(JsonNode fieldsNode) {
+    public static RomObjectSnapshot fromJsonNode(Object fields) {
+        JsonNode fieldsNode = (JsonNode) fields;
         Map<Integer, Integer> bytes = new LinkedHashMap<>();
         Map<Integer, Integer> words = new LinkedHashMap<>();
         if (fieldsNode == null || !fieldsNode.isObject()) {

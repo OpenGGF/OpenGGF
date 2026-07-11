@@ -5,6 +5,7 @@ package com.openggf.game;
  * Used by the level event system for character-specific branching
  * (e.g., S3K Knuckles takes different level paths than Sonic/Tails).
  */
+@com.openggf.game.ModApi
 public enum PlayerCharacter {
     /** Player_mode 0: Sonic as main player, Tails follows as CPU. */
     SONIC_AND_TAILS,

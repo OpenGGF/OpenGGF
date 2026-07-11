@@ -12,6 +12,7 @@ public final class SpritePieceRenderer {
     private SpritePieceRenderer() {
     }
 
+    @com.openggf.game.ModApi
     public record PreparedPiece(
             int x,
             int y,
@@ -352,6 +353,7 @@ public final class SpritePieceRenderer {
         return new FrameBounds(minX, minY, maxX, maxY);
     }
 
+    @com.openggf.game.ModApi
     public record FrameBounds(int minX, int minY, int maxX, int maxY) {
         public int width() {
             return maxX >= minX ? maxX - minX + 1 : 0;

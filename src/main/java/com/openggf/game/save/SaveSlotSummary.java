@@ -2,6 +2,7 @@ package com.openggf.game.save;
 
 import java.util.Map;
 
+@com.openggf.game.ModApi
 public record SaveSlotSummary(int slot, SaveSlotState state, Map<String, Object> payload) {
 
     public static SaveSlotSummary empty(int slot) {

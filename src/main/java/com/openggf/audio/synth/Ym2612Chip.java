@@ -474,6 +474,7 @@ public class Ym2612Chip {
 
     private boolean channel3SpecialMode;
 
+    @com.openggf.game.ModApi
     private enum EnvState {
         ATTACK, DECAY1, DECAY2, RELEASE, IDLE
     }
@@ -2397,6 +2398,7 @@ public class Ym2612Chip {
         System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
     }
 
+    @com.openggf.game.ModApi
     public record Snapshot(
             int currentDacSampleId,
             int dacLatchedValue,
@@ -2452,6 +2454,7 @@ public class Ym2612Chip {
         public boolean[] mutes() { return Arrays.copyOf(mutes, mutes.length); }
     }
 
+    @com.openggf.game.ModApi
     public record ChannelSnapshot(
             int fNum,
             int block,
@@ -2505,6 +2508,7 @@ public class Ym2612Chip {
         public OperatorSnapshot[] ops() { return Arrays.copyOf(ops, ops.length); }
     }
 
+    @com.openggf.game.ModApi
     public record OperatorSnapshot(
             int dt1,
             int mul,

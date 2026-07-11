@@ -7,6 +7,7 @@ import java.util.List;
  * Interface for recording collision events during processing.
  * Used for testing and debugging collision pipeline behavior.
  */
+@com.openggf.game.ModApi
 public interface CollisionTrace {
     /** Called before terrain sensor probes begin */
     void onTerrainProbesStart(int playerX, int playerY, boolean inAir);

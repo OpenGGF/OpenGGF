@@ -11,6 +11,7 @@ package com.openggf.configuration;
  * @author james
  * 
  */
+@com.openggf.game.ModApi
 public enum SonicConfiguration {
 	/**
 	 * Current Version number.

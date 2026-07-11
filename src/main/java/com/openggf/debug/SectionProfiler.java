@@ -6,6 +6,7 @@ package com.openggf.debug;
  * {@link #endSection(String)} calls; sections do not nest (a new
  * {@code beginSection} implicitly ends the active one).
  */
+@com.openggf.game.ModApi
 public interface SectionProfiler {
 
     /** Opens a section. Implicitly ends any currently-active section. */

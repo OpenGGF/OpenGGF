@@ -4,6 +4,7 @@ package com.openggf.debug;
  * Lightweight color class for debug rendering that doesn't depend on AWT.
  * This avoids AWT native library loading issues in GraalVM native images.
  */
+@com.openggf.game.ModApi
 public final class DebugColor {
     private final int r, g, b, a;
 

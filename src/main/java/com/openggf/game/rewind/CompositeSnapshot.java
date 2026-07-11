@@ -17,6 +17,7 @@ import java.util.Objects;
  * wraps without copying and is package-private so the ownership transfer
  * is contained to {@link RewindRegistry#capture()}.
  */
+@com.openggf.game.ModApi
 public final class CompositeSnapshot {
 
     private final Map<String, Object> entries;

@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+@com.openggf.game.ModApi
 public class DacData {
     public final Map<Integer, byte[]> samples;
     public final Map<Integer, DacEntry> mapping; // NoteID -> Entry
@@ -19,6 +20,7 @@ public class DacData {
         this.baseCycles = baseCycles;
     }
 
+    @com.openggf.game.ModApi
     public static class DacEntry {
         public final int sampleId;
         public final int rate;

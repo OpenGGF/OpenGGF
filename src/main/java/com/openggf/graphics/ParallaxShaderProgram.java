@@ -9,6 +9,7 @@ import static org.lwjgl.opengl.GL20.*;
  * Extends the base shader functionality with uniforms for per-scanline
  * scrolling.
  */
+@com.openggf.game.ModApi
 public class ParallaxShaderProgram extends ShaderProgram {
 
     // Texture sampler locations

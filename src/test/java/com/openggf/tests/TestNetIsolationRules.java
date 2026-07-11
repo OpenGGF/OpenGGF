@@ -21,6 +21,9 @@ public class TestNetIsolationRules {
                                     "are engine classes outside net and the ghost frame codec",
                                     javaClass -> javaClass.getPackageName().startsWith("com.openggf")
                                             && !javaClass.getPackageName().startsWith("com.openggf.net")
+                                            // Type-only compatibility metadata is not a runtime engine edge.
+                                            && !javaClass.getName().equals(
+                                            "com.openggf.game.ModApi")
                                             && !javaClass.getName().equals(
                                             "com.openggf.ghost.GhostFrame")
                                             && !javaClass.getName().equals(

@@ -7,6 +7,7 @@ import java.util.Map;
 /**
  * Parsed BK2 movie container with metadata and frame inputs.
  */
+@com.openggf.game.ModApi
 public final class Bk2Movie {
     private final Path sourcePath;
     private final String logKey;

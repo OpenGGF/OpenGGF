@@ -6,11 +6,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /** Envelope codec for control messages: {@code {"v":1,"token":...,"msg":{...}}}. */
 public final class ControlCodec {
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+    private static final Map<String, Class<? extends ControlMessage>> MESSAGE_TYPES =
+            Arrays.stream(ControlMessage.class.getPermittedSubclasses())
+                    .map(type -> type.asSubclass(ControlMessage.class))
+                    .collect(Collectors.toUnmodifiableMap(Class::getSimpleName, Function.identity()));
 
     public record DecodedControl(String token, ControlMessage message) {
     }
@@ -27,7 +35,9 @@ public final class ControlCodec {
             } else {
                 envelope.put("token", tokenOrNull);
             }
-            envelope.set("msg", MAPPER.valueToTree(message));
+            ObjectNode body = MAPPER.valueToTree(message);
+            body.put("type", message.getClass().getSimpleName());
+            envelope.set("msg", body);
             return MAPPER.writeValueAsString(envelope);
         } catch (Exception e) {
             throw new ProtocolViolationException(
@@ -67,7 +77,13 @@ public final class ControlCodec {
             }
             JsonNode token = root.get("token");
             String tokenValue = token == null || token.isNull() ? null : token.asText();
-            ControlMessage message = MAPPER.treeToValue(msg, ControlMessage.class);
+            JsonNode typeNode = msg.get("type");
+            Class<? extends ControlMessage> messageType =
+                    typeNode == null ? null : MESSAGE_TYPES.get(typeNode.asText());
+            if (messageType == null) {
+                throw new ProtocolViolationException("unsupported control message type " + typeNode);
+            }
+            ControlMessage message = MAPPER.treeToValue(msg, messageType);
             if (message instanceof ControlMessage.RelayGuestText relay
                     && relay.text().getBytes(StandardCharsets.UTF_8).length
                     > Protocol.MAX_CONTROL_BYTES) {

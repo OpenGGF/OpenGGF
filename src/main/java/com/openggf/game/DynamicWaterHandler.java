@@ -7,6 +7,7 @@ import com.openggf.level.WaterSystem;
  * (rising/falling based on camera position) provides an implementation.
  * Called once per frame from {@link WaterSystem#update()}.
  */
+@com.openggf.game.ModApi
 public interface DynamicWaterHandler {
     /**
      * Update water target/mean based on current camera position.

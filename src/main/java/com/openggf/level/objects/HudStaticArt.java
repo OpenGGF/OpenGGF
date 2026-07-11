@@ -11,6 +11,7 @@ import com.openggf.level.render.SpriteMappingFrame;
  * relative tile index, so a caller can cache the patterns once and then render each
  * frame by adding the base index to the frame's tile references.
  */
+@com.openggf.game.ModApi
 public record HudStaticArt(
         Pattern[] patterns,
         SpriteMappingFrame scoreFrame,

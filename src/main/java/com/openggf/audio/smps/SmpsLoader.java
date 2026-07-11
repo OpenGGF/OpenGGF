@@ -1,5 +1,6 @@
 package com.openggf.audio.smps;
 
+@com.openggf.game.ModApi
 public interface SmpsLoader {
     AbstractSmpsData loadMusic(int musicId);
 

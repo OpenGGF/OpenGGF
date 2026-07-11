@@ -17,9 +17,11 @@ import static org.lwjgl.opengl.GL30.GL_R32F;
 /**
  * GPU renderer that draws a tilemap texture into the current framebuffer.
  */
+@com.openggf.game.ModApi
 public class TilemapGpuRenderer {
     private static final Logger LOGGER = Logger.getLogger(TilemapGpuRenderer.class.getName());
 
+    @com.openggf.game.ModApi
     public enum Layer {
         BACKGROUND,
         FOREGROUND

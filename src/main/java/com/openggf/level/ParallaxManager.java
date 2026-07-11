@@ -23,6 +23,7 @@ import java.util.logging.Logger;
  * {@link ScrollHandlerProvider} obtained from the active {@link GameModule}.
  * ParallaxManager itself contains no game-specific imports or constants.
  */
+@com.openggf.game.ModApi
 public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(ParallaxManager.class.getName());
 

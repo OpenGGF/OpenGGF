@@ -1,5 +1,6 @@
 package com.openggf.version;
 
+@com.openggf.game.ModApi
 public record BuildIdentity(String baseVersion, String commit, boolean dirty) {
     public String displayVersion() {
         if (!isPrerelease()) {

@@ -10,6 +10,7 @@ import java.util.Map;
  * Grid spec: 26 columns x 5 rows, 16x16 cells (9px glyph + 7px padding wide, 10px glyph + 6px padding tall).
  * Padding includes outer edges, so first glyph starts at pixel (7, 5) in the image.
  */
+@com.openggf.game.ModApi
 public class PixelFont {
 
     private static final int COLS = 26;

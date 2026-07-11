@@ -16,6 +16,7 @@ import java.util.List;
  * <p>Each game-specific subclass (Sonic1Level, Sonic2Level, Sonic3kLevel)
  * extends this class and adds its own loading logic and game-specific methods.
  */
+@com.openggf.game.ModApi
 public abstract class AbstractLevel implements Level {
 
     protected static final int PALETTE_COUNT = 4;

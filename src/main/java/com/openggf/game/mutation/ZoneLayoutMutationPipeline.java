@@ -14,6 +14,7 @@ import java.util.Objects;
  * controlled point in the frame. If a batched mutation throws, the remaining
  * queued work is preserved so the caller can recover or retry.
  */
+@com.openggf.game.ModApi
 public final class ZoneLayoutMutationPipeline
         implements RewindSnapshottable<MutationPipelineSnapshot> {
 

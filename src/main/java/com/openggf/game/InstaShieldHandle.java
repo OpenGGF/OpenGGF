@@ -7,6 +7,7 @@ package com.openggf.game;
  * has an attack trigger, DPLC cache management (needed after seamless level
  * transitions), and a per-frame update callback.
  */
+@com.openggf.game.ModApi
 public interface InstaShieldHandle extends PowerUpObject {
 
     /** Triggers the insta-shield attack animation. */

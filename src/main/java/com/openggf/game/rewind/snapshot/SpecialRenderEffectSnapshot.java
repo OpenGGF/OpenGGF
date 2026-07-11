@@ -17,10 +17,12 @@ import java.util.Map;
  * stateful effect snapshots are captured alongside the identity list and
  * restored into the same registered effect instance.
  */
+@com.openggf.game.ModApi
 public record SpecialRenderEffectSnapshot(
         Map<SpecialRenderEffectStage, List<SpecialRenderEffect>> effectsByStage,
         Map<SpecialRenderEffectStage, List<EffectState>> effectStatesByStage
 ) {
+    @com.openggf.game.ModApi
     public record EffectState(int index, String key, Object snapshot) {
     }
 

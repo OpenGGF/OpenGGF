@@ -8,6 +8,7 @@ package com.openggf.audio.smps;
  * this interface so they can manipulate track state, load voices/envelopes,
  * read pointers, manage tempo, and write directly to the synth when needed.
  */
+@com.openggf.game.ModApi
 public interface CoordFlagContext {
 
     // -----------------------------------------------------------------------

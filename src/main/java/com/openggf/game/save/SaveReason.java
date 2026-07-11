@@ -1,5 +1,6 @@
 package com.openggf.game.save;
 
+@com.openggf.game.ModApi
 public enum SaveReason {
     NEW_SLOT_START,
     EXISTING_SLOT_LOAD,

@@ -10,6 +10,7 @@ import java.util.List;
  *
  * <p>Used for both special stage results and level completion results.
  */
+@com.openggf.game.ModApi
 public interface ResultsScreen {
     /**
      * Updates the results screen state by one frame.

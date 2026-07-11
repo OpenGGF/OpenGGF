@@ -18,6 +18,7 @@ import java.util.Map;
  * <p>Combines instance state (one game's palette context) with a static
  * registry that manages all active donor contexts.
  */
+@com.openggf.game.ModApi
 public class RenderContext {
 
     // --- Static registry ---

@@ -12,6 +12,7 @@ package com.openggf.game;
  *   <li>Adjust runtime parameters for testing</li>
  * </ul>
  */
+@com.openggf.game.ModApi
 public interface DebugModeProvider {
     /**
      * Checks if this game has special stage debug modes.
@@ -37,6 +38,7 @@ public interface DebugModeProvider {
     /**
      * Interface for special stage-specific debug controls.
      */
+    @com.openggf.game.ModApi
     interface SpecialStageDebugController {
         /**
          * Toggles alignment test mode (shows frame timing overlay).

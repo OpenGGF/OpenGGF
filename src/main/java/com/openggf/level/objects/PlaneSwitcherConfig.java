@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+@com.openggf.game.ModApi
 public final class PlaneSwitcherConfig {
     private final byte path0TopSolidBit;
     private final byte path0LrbSolidBit;

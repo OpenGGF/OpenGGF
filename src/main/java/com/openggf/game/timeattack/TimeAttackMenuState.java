@@ -21,13 +21,16 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
  * &rarr; character columns, a ghost summary for the current selection, and
  * GO/BACK. Kept GL-free so it is unit testable with a stub {@link GhostStore}.
  */
+@com.openggf.game.ModApi
 public final class TimeAttackMenuState {
     private static final Logger LOGGER = Logger.getLogger(TimeAttackMenuState.class.getName());
 
     /** Ghosts raced alongside the player, in addition to the auto-loaded best. */
     static final int MAX_GHOSTS_RACED = 7;
 
+    @com.openggf.game.ModApi
     public enum Row { GAME, TRACK, CHARACTER, MODE, POLICY, WINDOW }
+    @com.openggf.game.ModApi
     public enum Mode { SOLO, HOST_LAN, JOIN_LAN, BROWSE }
 
     private static final int[] WINDOW_MINUTES = {1, 2, 5, 10};

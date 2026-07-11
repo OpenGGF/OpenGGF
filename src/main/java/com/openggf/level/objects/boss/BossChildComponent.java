@@ -9,6 +9,7 @@ import java.util.List;
  * Interface for boss child components (propellers, weapons, decorative parts).
  * Children update their state based on the parent boss state.
  */
+@com.openggf.game.ModApi
 public interface BossChildComponent {
     /**
      * Update the component's state.

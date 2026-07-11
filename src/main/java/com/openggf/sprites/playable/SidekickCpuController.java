@@ -30,6 +30,7 @@ import com.openggf.sprites.managers.SpriteManager;
 /**
  * CPU-controlled sidekick follower with daisy-chain support.
  */
+@com.openggf.game.ModApi
 public class SidekickCpuController {
     // ROM subtracts $44 bytes from Sonic_Pos_Record_Index in TailsCPU_Normal/Flying.
     // That index points at the next free 4-byte slot, while engine historyPos points
@@ -114,6 +115,7 @@ public class SidekickCpuController {
             | AbstractPlayableSprite.INPUT_JUMP;
     private static final int RESPAWN_BYPASS_MASK = AbstractPlayableSprite.INPUT_JUMP | INPUT_START;
 
+    @com.openggf.game.ModApi
     public enum State {
         INIT,
         SPAWNING,
@@ -145,6 +147,7 @@ public class SidekickCpuController {
      * marker, and the simpler immediate-warp paths used by off-screen
      * timeout, S2 object-id-mismatch, and explicit cleanup callers.
      */
+    @com.openggf.game.ModApi
     public enum DespawnCause {
         LEVEL_BOUNDARY,
         OFF_SCREEN_TIMEOUT,
@@ -885,6 +888,7 @@ public class SidekickCpuController {
         return objectControl;
     }
 
+    @com.openggf.game.ModApi
     public record NormalStepDiagnostics(
             int frameCounter,
             State state,

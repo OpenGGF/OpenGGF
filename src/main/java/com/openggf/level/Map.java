@@ -10,6 +10,7 @@ import java.util.Arrays;
  * if needed. This protects snapshot-captured map data from
  * being clobbered by subsequent mutations.
  */
+@com.openggf.game.ModApi
 public class Map {
     private final int layers;
     private final int height;

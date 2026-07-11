@@ -13,12 +13,14 @@ import java.util.Arrays;
  * Once loaded, colors are stored in memory in RGB format, suitable for display
  * and manipulation on a PC.
  */
+@com.openggf.game.ModApi
 public class Palette {
     public static final int BYTES_PER_COLOR = 2;
     public static final int PALETTE_SIZE = 16;
     public static final int PALETTE_SIZE_IN_ROM = BYTES_PER_COLOR * PALETTE_SIZE;
 
     // Inner Color class representing RGB values
+    @com.openggf.game.ModApi
     public static class Color {
         public byte r;
         public byte g;

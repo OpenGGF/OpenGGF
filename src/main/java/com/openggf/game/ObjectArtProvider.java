@@ -21,6 +21,7 @@ import java.util.List;
  * Implementations wrap game-specific art loaders and expose renderers/sheets via
  * string keys for flexible lookup.
  */
+@com.openggf.game.ModApi
 public interface ObjectArtProvider {
 
     /**

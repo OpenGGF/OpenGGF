@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@com.openggf.game.ModApi
 public class TouchResponseDebugState {
     private int playerX;
     private int playerY;

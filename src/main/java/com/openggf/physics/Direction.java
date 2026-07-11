@@ -1,5 +1,6 @@
 package com.openggf.physics;
 
+@com.openggf.game.ModApi
 public enum Direction {
     UP,
     DOWN,

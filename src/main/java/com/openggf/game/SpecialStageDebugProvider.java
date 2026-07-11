@@ -6,6 +6,7 @@ package com.openggf.game;
  *
  * <p>Implementations handle their own rendering and navigation controls.
  */
+@com.openggf.game.ModApi
 public interface SpecialStageDebugProvider {
     /**
      * Renders the debug view to the screen.

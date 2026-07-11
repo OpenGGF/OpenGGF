@@ -20,6 +20,7 @@ import com.openggf.physics.TrigLookupTable;
  *   <li>S3K: sonic3k.asm line 50190 — Platform_Stationary</li>
  * </ul>
  */
+@com.openggf.game.ModApi
 public final class PlatformBobHelper {
 
     /** Default angle step per frame (addq.b #4 / subq.b #4). */

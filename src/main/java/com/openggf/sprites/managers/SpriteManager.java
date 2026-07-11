@@ -48,6 +48,7 @@ import java.util.Set;
  * @author james
  * 
  */
+@com.openggf.game.ModApi
 public class SpriteManager {
 	private final SonicConfigurationService configService;
 
@@ -1027,6 +1028,7 @@ public class SpriteManager {
 	 * Callback interface for unified sprite drawing.
 	 * Called before each sprite is drawn to allow setting up shader uniforms.
 	 */
+	@com.openggf.game.ModApi
 	public interface SpriteDrawCallback {
 		/**
 		 * Called before drawing a sprite.

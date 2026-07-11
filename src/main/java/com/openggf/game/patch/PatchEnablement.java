@@ -7,6 +7,7 @@ import java.util.Objects;
  *
  * <p>Enablement is based on explicit owner provenance, never patch-id inference.</p>
  */
+@com.openggf.game.ModApi
 public interface PatchEnablement {
 
     int BUILTIN_ORDER = -1;

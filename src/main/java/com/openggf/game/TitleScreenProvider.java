@@ -7,8 +7,10 @@ import com.openggf.control.InputHandler;
  * Each game (Sonic 1, Sonic 2, etc.) provides its own implementation
  * with game-accurate art, palettes, and scrolling.
  */
+@com.openggf.game.ModApi
 public interface TitleScreenProvider {
 
+    @com.openggf.game.ModApi
     enum TitleScreenAction {
         ONE_PLAYER,
         TWO_PLAYER,
@@ -16,6 +18,7 @@ public interface TitleScreenProvider {
         OTHER
     }
 
+    @com.openggf.game.ModApi
     enum State {
         /** Screen is not active */
         INACTIVE,

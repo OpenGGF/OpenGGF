@@ -13,7 +13,9 @@ import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 
 /** Authoritative lobby, countdown, race-window, round-end, and standings state. */
+@com.openggf.game.ModApi
 public final class HostRoundEngine {
+    @com.openggf.game.ModApi
     public enum Phase { LOBBY, COUNTDOWN, RUNNING, ROUND_END, VOTE }
 
     public static final long COUNTDOWN_MILLIS = 3000;
@@ -23,6 +25,7 @@ public final class HostRoundEngine {
     public static final long VOTE_WINDOW_MILLIS = 15_000;
     public static final int VOTE_OPTION_COUNT = 3;
 
+    @com.openggf.game.ModApi
     public record FinishOutcome(int slot, int rank, boolean outsideBroadcastCap,
                                 int attemptId) {
     }

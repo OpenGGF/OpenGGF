@@ -1815,6 +1815,8 @@ class TestArchitecturalSourceGuard {
         int effectiveSourceLineCount() {
             return (int) stripComments(text).lines()
                     .filter(line -> !line.isBlank())
+                    // Compatibility metadata does not grow runtime implementation complexity.
+                    .filter(line -> !line.trim().matches("@(?:com\\.openggf\\.game\\.)?ModApi"))
                     .count();
         }
 

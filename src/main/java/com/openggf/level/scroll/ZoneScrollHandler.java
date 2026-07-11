@@ -6,6 +6,7 @@ package com.openggf.level.scroll;
  * 
  * Reference: s2.asm DeformBgLayer -> SwScrl_Index dispatch
  */
+@com.openggf.game.ModApi
 public interface ZoneScrollHandler {
 
     /**

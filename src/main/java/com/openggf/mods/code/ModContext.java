@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /** Creator-facing, owner-scoped transaction. Nothing is visible until {@link #freeze()}. */
+@com.openggf.game.ModApi
 public final class ModContext {
     private final String owner;
     private final String baseGame;

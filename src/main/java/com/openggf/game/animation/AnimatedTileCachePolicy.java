@@ -1,6 +1,7 @@
 package com.openggf.game.animation;
 
 /** Cache policy controlling when a channel reapplies its tile output. */
+@com.openggf.game.ModApi
 public enum AnimatedTileCachePolicy {
     /** Apply on every graph update, even if the resolved phase is unchanged. */
     ALWAYS,

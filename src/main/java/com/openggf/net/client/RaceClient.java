@@ -32,27 +32,32 @@ public final class RaceClient implements RaceConnection {
         }
     }
 
+    @com.openggf.game.ModApi
     public sealed interface InboundEvent permits Control, GhostData, Roster, Disconnected {
     }
 
+    @com.openggf.game.ModApi
     public record Control(ControlMessage message) implements InboundEvent {
         public Control {
             Objects.requireNonNull(message, "message");
         }
     }
 
+    @com.openggf.game.ModApi
     public record GhostData(GhostPackets.Aggregate aggregate) implements InboundEvent {
         public GhostData {
             Objects.requireNonNull(aggregate, "aggregate");
         }
     }
 
+    @com.openggf.game.ModApi
     public record Roster(List<GhostPackets.RosterEntry> entries) implements InboundEvent {
         public Roster {
             entries = List.copyOf(entries);
         }
     }
 
+    @com.openggf.game.ModApi
     public record Disconnected(String reason) implements InboundEvent {
     }
 

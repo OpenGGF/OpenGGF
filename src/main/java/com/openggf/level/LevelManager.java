@@ -79,6 +79,7 @@ import static org.lwjgl.opengl.GL11.glClearColor;
 /**
  * Manages the loading and rendering of game levels.
  */
+@com.openggf.game.ModApi
 public class LevelManager {
     static final Logger LOGGER = Logger.getLogger(LevelManager.class.getName());
     static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
@@ -1326,6 +1327,7 @@ public class LevelManager {
         drawWithSpritePriority(null, true);
     }
 
+    @com.openggf.game.ModApi
     public record LevelRenderOptions(boolean includePlayerSprites,
                                      boolean includeObjectSprites,
                                      boolean includeRings,

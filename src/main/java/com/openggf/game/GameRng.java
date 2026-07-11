@@ -9,10 +9,12 @@ import com.openggf.game.rewind.snapshot.GameRngSnapshot;
  * Implements the Mega Drive Sonic {@code RandomNumber} / {@code Random_Number}
  * subroutine: 32-bit multiply-by-41 with the original word-fold step.
  */
+@com.openggf.game.ModApi
 public final class GameRng implements RewindSnapshottable<GameRngSnapshot> {
     private static final long MASK32 = 0xFFFFFFFFL;
     private static final long MASK16 = 0xFFFFL;
 
+    @com.openggf.game.ModApi
     public enum Flavour {
         S1_S2(0x2A6D365AL, false),
         S3K(0x2A6D365BL, true);

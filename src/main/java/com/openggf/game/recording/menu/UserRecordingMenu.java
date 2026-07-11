@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@com.openggf.game.ModApi
 public final class UserRecordingMenu {
     private static final Logger LOGGER = Logger.getLogger(UserRecordingMenu.class.getName());
     private static final float SCALE = 0.5f;
@@ -138,6 +139,7 @@ public final class UserRecordingMenu {
     }
 
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface PlaybackStarter {
         void start(UserRecordingEntry entry, UserRecordingPlaybackOptions options) throws Exception;
     }

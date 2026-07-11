@@ -3,6 +3,7 @@ package com.openggf.game.patch;
 import java.util.Objects;
 
 /** Immutable owner-tagged patch contribution in a frozen launch plan. */
+@com.openggf.game.ModApi
 public final class RegisteredPatch {
 
     private final PatchOwner owner;

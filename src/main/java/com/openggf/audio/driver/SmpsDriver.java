@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.Set;
 
 public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
+    @com.openggf.game.ModApi
     public enum ReadMode {
         SAMPLE_ACCURATE,
         HYBRID

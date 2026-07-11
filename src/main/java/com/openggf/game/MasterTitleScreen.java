@@ -51,6 +51,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
  * centered on the viewport midpoint so they remain visually centered at any width.
  * At native width 320 every value collapses to the original literals — byte-identical.
  */
+@com.openggf.game.ModApi
 public class MasterTitleScreen {
 
     private static final Logger LOGGER = Logger.getLogger(MasterTitleScreen.class.getName());
@@ -75,6 +76,7 @@ public class MasterTitleScreen {
     // Short labels for the menu (fit within 320px when laid out horizontally)
     private static final String[] MENU_LABELS = { "Sonic 1", "Sonic 2", "Sonic 3K" };
 
+    @com.openggf.game.ModApi
     public enum GameEntry {
         SONIC_1("Sonic The Hedgehog", "s1", SonicConfiguration.SONIC_1_ROM,
                 "s1.gen"),
@@ -108,6 +110,7 @@ public class MasterTitleScreen {
         }
     }
 
+    @com.openggf.game.ModApi
     public enum State {
         INACTIVE, FADE_IN, ACTIVE, ERROR_DISPLAY, CONFIRMING, EXITING
     }
@@ -1224,20 +1227,24 @@ public class MasterTitleScreen {
     }
 
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface UserRecordingMenuFactory {
         UserRecordingMenu create(String gameId, PixelFont font) throws IOException;
     }
 
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface TimeAttackMenuFactory {
         TimeAttackMenu create(List<String> availableGameIds, String initialGameId, PixelFont font);
     }
 
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface ModManagerScreenFactory {
         ModManagerView create(PixelFont font);
     }
 
+    @com.openggf.game.ModApi
     public interface ModManagerView {
         void update(InputHandler input);
         void render();

@@ -10,6 +10,7 @@ import java.util.Set;
  * Records render commands in order for testing.
  * Use in tests to verify render order compliance.
  */
+@com.openggf.game.ModApi
 public class RenderOrderRecorder {
     private static RenderOrderRecorder instance;
     private final List<RenderCommand> commands = new ArrayList<>();

@@ -3,6 +3,7 @@ package com.openggf.timer;
 /**
  * Created by Jamesjohnstone on 26/03/15.
  */
+@com.openggf.game.ModApi
 public interface Timer {
 
     public String getCode();

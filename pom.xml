@@ -629,6 +629,58 @@
                 </configuration>
             </plugin>
 
+            <!-- Prepare and attach the exact @ModApi binary/Javadoc SDK surface. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>prepare-openggf-mod-sdk</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <executable>java</executable>
+                            <arguments>
+                                <argument>-cp</argument>
+                                <classpath/>
+                                <argument>com.openggf.tools.modsdk.ModApiSdkPackager</argument>
+                                <argument>${project.build.outputDirectory}</argument>
+                                <argument>${project.basedir}/src/main/java</argument>
+                                <argument>${project.build.directory}/mod-sdk/classes</argument>
+                                <argument>${project.build.directory}/mod-sdk/javadocs</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <executions>
+                    <execution>
+                        <id>attach-openggf-mod-sdk</id>
+                        <phase>package</phase>
+                        <goals><goal>jar</goal></goals>
+                        <configuration>
+                            <classesDirectory>${project.build.directory}/mod-sdk/classes</classesDirectory>
+                            <classifier>openggf-mod-sdk</classifier>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>attach-openggf-mod-sdk-javadoc</id>
+                        <phase>package</phase>
+                        <goals><goal>jar</goal></goals>
+                        <configuration>
+                            <classesDirectory>${project.build.directory}/mod-sdk/javadocs</classesDirectory>
+                            <classifier>openggf-mod-sdk-javadoc</classifier>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

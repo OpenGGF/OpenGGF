@@ -3,6 +3,7 @@ package com.openggf.game.rewind;
 import java.lang.reflect.Field;
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public record FieldKey(String declaringClassName, String fieldName) {
     public FieldKey {
         Objects.requireNonNull(declaringClassName, "declaringClassName");

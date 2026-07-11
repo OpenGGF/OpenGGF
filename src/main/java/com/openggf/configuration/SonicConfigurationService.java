@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 
 import static org.lwjgl.glfw.GLFW.*;
 
+@com.openggf.game.ModApi
 public class SonicConfigurationService {
 	private static final Logger LOGGER = Logger.getLogger(SonicConfigurationService.class.getName());
 	private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};

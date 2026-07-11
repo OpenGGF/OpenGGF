@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Direct-connect WebSocket transport for one player-hosted race room. */
+@com.openggf.game.ModApi
 public final class RaceHostServer implements AutoCloseable {
     private static final long TICK_MILLIS = 50;
     private static final int MAX_CONNECTIONS_PER_IP = 4;

@@ -13,6 +13,7 @@ package com.openggf.game.rewind.snapshot;
  * {@code null} for the overwhelming majority of handlers, which are fully
  * derived from the camera/frame.
  */
+@com.openggf.game.ModApi
 public record ParallaxSnapshot(Object handlerRewindState) {
     public ParallaxSnapshot() {
         this((Object) null);

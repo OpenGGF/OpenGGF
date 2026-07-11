@@ -33,6 +33,7 @@ import java.util.List;
 /**
  * Handles ring collection state, sparkle animation, rendering, and lost-ring behavior.
  */
+@com.openggf.game.ModApi
 public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private static final System.Logger LOG = System.getLogger(RingManager.class.getName());
     private static final int MAX_ATTRACTED_RINGS = 32;

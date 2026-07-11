@@ -24,11 +24,13 @@ import static org.lwjgl.opengl.GL20.*;
  * Standard fade-to-black where all RGB channels decrement together.
  * Uses alpha blending with a black overlay quad.
  */
+@com.openggf.game.ModApi
 public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
 
     /**
      * Fade state enumeration.
      */
+    @com.openggf.game.ModApi
     public enum FadeState {
         /** No fade active */
         NONE,
@@ -49,6 +51,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
     /**
      * Type of fade effect (determines blending mode).
      */
+    @com.openggf.game.ModApi
     public enum FadeType {
         /** White fade using additive blending */
         WHITE,

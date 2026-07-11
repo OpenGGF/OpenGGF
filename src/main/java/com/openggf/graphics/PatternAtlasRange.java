@@ -4,6 +4,7 @@ package com.openggf.graphics;
  * Central registry of virtual pattern ID ranges used above the Mega Drive
  * VDP's native 11-bit tile index space.
  */
+@com.openggf.game.ModApi
 public enum PatternAtlasRange {
     LEVEL_TILES(0x00000, 0x02000, "Level tiles"),
     SPECIAL_STAGE_PLAYFIELD(0x03000, 0x0D000, "Special stage playfield"),

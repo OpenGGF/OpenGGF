@@ -6,6 +6,7 @@ import com.openggf.net.client.RemoteGhostRegistry;
 import java.util.List;
 
 /** Immutable in-round multiplayer HUD snapshot. */
+@com.openggf.game.ModApi
 public record MultiplayerHudState(
         boolean active,
         String phase,

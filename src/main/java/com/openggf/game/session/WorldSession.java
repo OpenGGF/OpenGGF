@@ -6,6 +6,7 @@ import com.openggf.level.Level;
 
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public final class WorldSession {
     private final GameModule rootGameModule;
     private final GameModule gameModule;

@@ -19,6 +19,7 @@ package com.openggf.level;
  * 0xC000 Secondary Collision layer mode (S) - for horizontal collision
  *
  */
+@com.openggf.game.ModApi
 public final class ChunkDesc {
     private int index; // 16-bit stored as an int to handle bitmask operations
 

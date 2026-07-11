@@ -39,6 +39,7 @@ import static org.lwjgl.opengl.GL11.glTexParameteri;
  * screen. Renders a white-text-on-black layout, gates dismissal for 5 s,
  * and chains entry/exit fades through {@link FadeManager}.
  */
+@com.openggf.game.ModApi
 public class LegalDisclaimerScreen {
 
     private static final Logger LOGGER = Logger.getLogger(LegalDisclaimerScreen.class.getName());

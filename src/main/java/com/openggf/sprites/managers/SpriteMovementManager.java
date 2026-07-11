@@ -1,5 +1,6 @@
 package com.openggf.sprites.managers;
 
+@com.openggf.game.ModApi
 public interface SpriteMovementManager {
 
 	public void handleMovement(boolean up, boolean down, boolean left, boolean right, boolean space,

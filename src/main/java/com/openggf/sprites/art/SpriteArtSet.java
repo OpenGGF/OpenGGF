@@ -11,6 +11,7 @@ import java.util.List;
 /**
  * Game-agnostic sprite art bundle (tile art + mappings + DPLCs).
  */
+@com.openggf.game.ModApi
 public record SpriteArtSet(
         Pattern[] artTiles,
         List<SpriteMappingFrame> mappingFrames,

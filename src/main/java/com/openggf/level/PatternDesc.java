@@ -15,6 +15,7 @@ package com.openggf.level;
  *     H    - horizontal flip flag  [0..1]
  *     I... - pattern index         [0..2047]
  */
+@com.openggf.game.ModApi
 public final class PatternDesc {
     private int index;  // Stored as int for bitwise operations, representing 16-bit value
 

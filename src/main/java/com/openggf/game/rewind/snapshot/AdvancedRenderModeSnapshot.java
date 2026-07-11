@@ -13,7 +13,9 @@ import java.util.List;
  * stateful contributor snapshots are captured alongside the identity list and
  * restored into the same registered contributor instance.
  */
+@com.openggf.game.ModApi
 public record AdvancedRenderModeSnapshot(List<AdvancedRenderMode> modes, List<ModeState> modeStates) {
+    @com.openggf.game.ModApi
     public record ModeState(int index, String key, Object snapshot) {
     }
 

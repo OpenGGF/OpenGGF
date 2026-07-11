@@ -7,6 +7,7 @@ package com.openggf.game;
  * power-up objects without importing concrete types from {@code level.objects}.
  * Implementations live in {@code level.objects} and {@code game.sonic3k.objects}.
  */
+@com.openggf.game.ModApi
 public interface PowerUpObject {
 
     /** Marks this object as destroyed (removes it from rendering/updates). */

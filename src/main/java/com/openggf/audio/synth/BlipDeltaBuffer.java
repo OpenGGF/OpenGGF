@@ -362,6 +362,7 @@ public class BlipDeltaBuffer {
         this.integR = snapshot.integR();
     }
 
+    @com.openggf.game.ModApi
     public record Snapshot(
             long factorFp,
             long offsetFp,

@@ -8,6 +8,7 @@ import com.openggf.level.Palette;
 import java.util.ArrayList;
 import java.util.List;
 
+@com.openggf.game.ModApi
 public final class PaletteOwnershipRegistry implements RewindSnapshottable<PaletteOwnershipSnapshot> {
     private static final String NO_OWNER = "none";
 

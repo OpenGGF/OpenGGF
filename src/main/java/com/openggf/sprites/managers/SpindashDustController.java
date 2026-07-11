@@ -8,6 +8,7 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
 /**
  * Handles spindash dust animation and drawing.
  */
+@com.openggf.game.ModApi
 public class SpindashDustController {
     private static final int[] DASH_FRAMES = { 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10 };
     private static final int FRAME_DELAY = 1;
@@ -263,6 +264,7 @@ public class SpindashDustController {
         activeLastTick = state.activeLastTick();
     }
 
+    @com.openggf.game.ModApi
     public record RewindState(
             int frameIndex,
             int frameTick,

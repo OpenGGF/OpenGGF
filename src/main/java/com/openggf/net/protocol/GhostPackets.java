@@ -37,6 +37,7 @@ public final class GhostPackets {
         }
     }
 
+    @com.openggf.game.ModApi
     public record AggregateEntry(int playerSlot, int attemptId, int startFrameIndex,
                                  int frameCount, byte[] frameData) {
         public AggregateEntry {
@@ -49,12 +50,14 @@ public final class GhostPackets {
         }
     }
 
+    @com.openggf.game.ModApi
     public record Aggregate(int hubTick, List<AggregateEntry> entries) {
         public Aggregate {
             entries = List.copyOf(entries);
         }
     }
 
+    @com.openggf.game.ModApi
     public record RosterEntry(int playerSlot, int cellX, int cellY, int status) {
     }
 

@@ -7,6 +7,7 @@ package com.openggf.graphics;
  * replayed immediately before an active sprite-mask helper so front shell/glass
  * layers can remain visible while later interior content is masked.</p>
  */
+@com.openggf.game.ModApi
 public enum SpriteMaskReplayRole {
     NORMAL,
     PRE_MASK_FRONT

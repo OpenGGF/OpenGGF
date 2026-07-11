@@ -16,6 +16,7 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
  *
  * ROM reference: s2.asm Obj05 (lines 41278-41414)
  */
+@com.openggf.game.ModApi
 public class TailsTailsController {
     // Obj05 animation indices
     private static final int ANIM_BLANK = 0;

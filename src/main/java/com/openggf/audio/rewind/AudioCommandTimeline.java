@@ -16,6 +16,7 @@ import java.util.Objects;
  * keep their meaning after old history is pruned via {@link #pruneBefore(int)},
  * which only advances {@link #firstRetainedEntryIndex()}.
  */
+@com.openggf.game.ModApi
 public final class AudioCommandTimeline {
     private final ArrayList<AudioTimelineEntry> entries = new ArrayList<>();
     private int prunedEntryCount;

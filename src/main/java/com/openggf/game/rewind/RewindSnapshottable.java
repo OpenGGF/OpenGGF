@@ -12,6 +12,7 @@ package com.openggf.game.rewind;
  * <p>{@link #key()} must be stable across captures of the same
  * subsystem — it is used as the key into {@link CompositeSnapshot}.
  */
+@com.openggf.game.ModApi
 public interface RewindSnapshottable<S> {
     String key();
     S capture();

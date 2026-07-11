@@ -14,6 +14,7 @@ import com.openggf.game.PlayableEntity;
  * Provides common collision handling, destruction behavior, and helper methods
  * for AI.
  */
+@com.openggf.game.ModApi
 public abstract class AbstractBadnikInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable {
 

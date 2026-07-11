@@ -8,6 +8,7 @@ package com.openggf.game;
  *   <li>{@link #STARPOST} - Sonic 2: Star post/checkpoint with 50+ rings</li>
  * </ul>
  */
+@com.openggf.game.ModApi
 public enum SpecialStageAccessType {
     /**
      * Special stage is accessed via hidden giant rings in levels.

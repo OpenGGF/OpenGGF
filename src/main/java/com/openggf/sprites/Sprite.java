@@ -8,6 +8,7 @@ import com.openggf.physics.Direction;
  * @author james
  * 
  */
+@com.openggf.game.ModApi
 public interface Sprite {
 
 	public String getCode();

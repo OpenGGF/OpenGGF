@@ -20,6 +20,7 @@ package com.openggf.debug.playback;
  * @param debugControlDown whether a debug-movement slow modifier was held
  * @param rawLine        original input-log line for diagnostics
  */
+@com.openggf.game.ModApi
 public record Bk2FrameInput(
         int frameIndex,
         int p1InputMask,

@@ -3,6 +3,7 @@ package com.openggf.level.objects;
 /**
  * Declares which playable actors an object should consider.
  */
+@com.openggf.game.ModApi
 public enum ObjectPlayerParticipationPolicy {
     MAIN_ONLY_NATIVE,
     NATIVE_P1_P2,

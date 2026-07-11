@@ -7,9 +7,11 @@ import java.io.IOException;
 import java.util.Objects;
 
 /** Explicit dependencies supplied while a patch decorates a module. */
+@com.openggf.game.ModApi
 public final class PatchContext {
 
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface LogicalRomSource {
         RomByteReader open(LogicalRom rom) throws IOException;
     }

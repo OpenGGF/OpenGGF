@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 /** A validated pointer to one baked-sheet entry in the owning mod jar. */
+@com.openggf.game.ModApi
 public record BakedSheetRef(String entryPath) {
     public BakedSheetRef {
         entryPath = ModAssetRoot.requireNormalizedEntry(

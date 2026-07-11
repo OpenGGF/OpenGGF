@@ -7,6 +7,7 @@ import java.util.Objects;
  * Captures all gameplay-meaningful counters and flags including score, lives,
  * continues, emeralds, and zone-specific state flags.
  */
+@com.openggf.game.ModApi
 public record GameStateSnapshot(
         int score,
         int lives,

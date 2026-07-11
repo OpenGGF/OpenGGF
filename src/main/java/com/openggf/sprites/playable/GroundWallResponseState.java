@@ -28,6 +28,7 @@ package com.openggf.sprites.playable;
  * <p>All fields are recomputed/cleared each frame, so this holder is rewind-transient:
  * {@code AbstractPlayableSprite}'s explicit rewind snapshot does not persist it.
  */
+@com.openggf.game.ModApi
 final class GroundWallResponseState {
 
     private boolean deferred;

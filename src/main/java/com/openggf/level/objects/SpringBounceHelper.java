@@ -14,6 +14,7 @@ package com.openggf.level.objects;
  * S3K reverse gravity, S2 diagonal position nudges, etc.) remain in each game's
  * spring implementation.
  */
+@com.openggf.game.ModApi
 public final class SpringBounceHelper {
 
     private SpringBounceHelper() {

@@ -11,6 +11,7 @@ import java.util.List;
  * geometry phase. LevelManager renders geometry immediately; text entries
  * are stored on DebugOverlayManager for DebugRenderer to pick up.
  */
+@com.openggf.game.ModApi
 public class DebugRenderContext {
 
     private final List<GLCommand> geometryCommands = new ArrayList<>();
@@ -73,6 +74,7 @@ public class DebugRenderContext {
     /**
      * A text label positioned in world coordinates.
      */
+    @com.openggf.game.ModApi
     public record DebugTextEntry(int worldX, int worldY, int lineOffset, String text, DebugColor color) {}
 
     // ---- Geometry helpers (world coordinates) ----

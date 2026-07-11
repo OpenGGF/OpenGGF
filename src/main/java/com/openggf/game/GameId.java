@@ -4,6 +4,7 @@ package com.openggf.game;
  * Identifies a specific Sonic game for cross-game resource isolation
  * (e.g., palette contexts, art providers).
  */
+@com.openggf.game.ModApi
 public enum GameId {
     S1("s1"),
     S2("s2"),

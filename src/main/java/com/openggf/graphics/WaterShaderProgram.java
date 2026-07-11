@@ -8,6 +8,7 @@ import static org.lwjgl.opengl.GL20.*;
  * Shader program for underwater distortion effects.
  * Extends ShaderProgram to be compatible with PatternRenderCommand.
  */
+@com.openggf.game.ModApi
 public class WaterShaderProgram extends ShaderProgram {
 
     // Uniform locations for water effect

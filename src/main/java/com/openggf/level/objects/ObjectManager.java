@@ -59,6 +59,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
+@com.openggf.game.ModApi
 public class ObjectManager {
     private static final int BUCKET_COUNT = RenderPriority.MAX - RenderPriority.MIN + 1;
     static final int ANIM_ROLL = 0x02;
@@ -1316,6 +1317,7 @@ public class ObjectManager {
      * Callback interface for unified object drawing.
      * Called before each object is drawn to allow setting up shader uniforms.
      */
+    @com.openggf.game.ModApi
     public interface ObjectDrawCallback {
         /**
          * Called before drawing an object.

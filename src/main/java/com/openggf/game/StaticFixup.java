@@ -7,6 +7,7 @@ package com.openggf.game;
  * @param reason why this fixup is needed
  * @param action the fixup operation
  */
+@com.openggf.game.ModApi
 public record StaticFixup(
     String name,
     String reason,

@@ -1,6 +1,7 @@
 package com.openggf.game.ghost;
 
 /** .ggfghost header (main spec §3). No ROM asset/content bytes — metadata only. */
+@com.openggf.game.ModApi
 public record GhostHeader(int formatVersion, String gameId, int zone, int act, String character,
                           String displayName, int firstInputFrame, int finishFrame,
                           int[] splitFrames, byte[] inputRecordingHash) {

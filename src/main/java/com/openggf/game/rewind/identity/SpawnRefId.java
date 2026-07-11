@@ -4,6 +4,7 @@ import com.openggf.level.objects.ObjectSpawn;
 
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public record SpawnRefId(int layoutIndex) {
     public static SpawnRefId fromSpawn(ObjectSpawn spawn) {
         Objects.requireNonNull(spawn, "spawn");

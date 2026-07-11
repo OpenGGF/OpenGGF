@@ -8,6 +8,7 @@ package com.openggf.game.rewind.snapshot;
  * The state identity fields prevent restoring bytes into the wrong zone runtime
  * implementation after a session transition.
  */
+@com.openggf.game.ModApi
 public record ZoneRuntimeSnapshot(
         String stateType,
         String gameId,

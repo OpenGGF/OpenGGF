@@ -4,6 +4,7 @@ package com.openggf.graphics.pipeline;
  * Enumeration of render phases in order of execution.
  * Used for testing render order compliance.
  */
+@com.openggf.game.ModApi
 public enum RenderPhase {
     SCENE,      // Level, sprites, objects
     OVERLAY,    // HUD, debug overlay

@@ -6,6 +6,7 @@ package com.openggf.game.render;
  * <p>Effects are registered by zone feature providers and dispatched by stage
  * from {@link com.openggf.level.LevelManager}.
  */
+@com.openggf.game.ModApi
 public interface SpecialRenderEffect {
 
     /**

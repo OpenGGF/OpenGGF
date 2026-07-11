@@ -17,6 +17,7 @@ import static org.lwjgl.glfw.GLFW.*;
 /**
  * Debug viewer for object art frames.
  */
+@com.openggf.game.ModApi
 public class DebugObjectArtViewer {
     private enum ArtTarget {
         SIGNPOST("Signpost"),
@@ -408,4 +409,3 @@ public class DebugObjectArtViewer {
         }
     }
 }
-

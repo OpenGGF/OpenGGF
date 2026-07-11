@@ -32,6 +32,7 @@ import java.util.logging.Logger;
 
 import static java.security.MessageDigest.getInstance;
 
+@com.openggf.game.ModApi
 public final class EditorSaveManager {
     private static final Logger LOG = Logger.getLogger(EditorSaveManager.class.getName());
     private static final int VERSION = 2;
@@ -369,6 +370,7 @@ public final class EditorSaveManager {
         }
     }
 
+    @com.openggf.game.ModApi
     public record SaveResult(boolean ok, Path file, String hash, ApplyResult persistenceStatus) {
     }
 
@@ -377,6 +379,7 @@ public final class EditorSaveManager {
                                     Map<ObjectSpawn, List<RingSpawn>> mapping) {
     }
 
+    @com.openggf.game.ModApi
     public enum ApplyResult {
         NONE,
         APPLIED,

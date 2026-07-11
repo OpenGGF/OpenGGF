@@ -11,6 +11,7 @@ package com.openggf.game;
  * Lives in {@code com.openggf.game} so it can be referenced from any layer
  * without introducing circular dependencies.
  */
+@com.openggf.game.ModApi
 public interface PowerUpSpawner {
 
     /**

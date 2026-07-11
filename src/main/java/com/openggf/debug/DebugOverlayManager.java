@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 
 import static org.lwjgl.glfw.GLFW.*;
 
+@com.openggf.game.ModApi
 public class DebugOverlayManager {
     private static final Logger LOGGER = Logger.getLogger(DebugOverlayManager.class.getName());
     private static DebugOverlayManager debugOverlayManager;

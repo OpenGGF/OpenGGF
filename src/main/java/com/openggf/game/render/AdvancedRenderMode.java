@@ -7,6 +7,7 @@ package com.openggf.game.render;
  * per-frame overrides that {@link com.openggf.level.LevelManager} consumes when
  * drawing the standard scene passes.
  */
+@com.openggf.game.ModApi
 public interface AdvancedRenderMode {
     /**
      * Stable identifier for debugging and tests.

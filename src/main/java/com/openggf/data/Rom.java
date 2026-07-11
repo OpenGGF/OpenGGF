@@ -13,6 +13,7 @@ import java.util.logging.Logger;
  * Represents a ROM file for reading and writing.
  * Implements AutoCloseable for proper resource management.
  */
+@com.openggf.game.ModApi
 public class Rom implements AutoCloseable {
     private static final Logger LOGGER = Logger.getLogger(Rom.class.getName());
 

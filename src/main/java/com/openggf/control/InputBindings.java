@@ -1,5 +1,6 @@
 package com.openggf.control;
 
+@com.openggf.game.ModApi
 public record InputBindings(
         int p1Up,
         int p1Down,

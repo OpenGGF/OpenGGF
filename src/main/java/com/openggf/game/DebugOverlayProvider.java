@@ -15,6 +15,7 @@ import java.util.List;
  * <p>This interface allows each game to provide its own debug content
  * without modifying the core debug rendering system.
  */
+@com.openggf.game.ModApi
 public interface DebugOverlayProvider {
     /**
      * Gets object debug labels for display.
@@ -42,6 +43,7 @@ public interface DebugOverlayProvider {
     /**
      * Record for an object debug label.
      */
+    @com.openggf.game.ModApi
     record ObjectDebugLabel(
             int x,
             int y,
@@ -58,6 +60,7 @@ public interface DebugOverlayProvider {
     /**
      * Record for an art viewer target.
      */
+    @com.openggf.game.ModApi
     record ArtViewerTarget(
             String name,
             String description,
@@ -68,6 +71,7 @@ public interface DebugOverlayProvider {
     /**
      * Interface for touch response debug information.
      */
+    @com.openggf.game.ModApi
     interface TouchResponseDebugInfo {
         int getPlayerX();
         int getPlayerY();

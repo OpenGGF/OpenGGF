@@ -13,6 +13,7 @@ import java.util.Objects;
  * <p>The graph owns sequencing and phase caching; the channel itself is just
  * configuration for one independent animation stream.
  */
+@com.openggf.game.ModApi
 public final class AnimatedTileChannel {
 
     private final String channelId;

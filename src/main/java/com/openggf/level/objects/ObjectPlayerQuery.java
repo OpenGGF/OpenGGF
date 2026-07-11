@@ -19,10 +19,12 @@ import java.util.function.Supplier;
 /**
  * Transitional player-participation query layer for object code.
  */
+@com.openggf.game.ModApi
 public final class ObjectPlayerQuery {
     private final Supplier<? extends PlayableEntity> mainPlayerSource;
     private final Supplier<? extends List<? extends PlayableEntity>> sidekickSource;
 
+    @com.openggf.game.ModApi
     public record NearestPlayerX(PlayableEntity player, int distance) {
     }
 

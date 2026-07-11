@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+@com.openggf.game.ModApi
 public class SpriteAnimationSet {
     private final Map<Integer, SpriteAnimationScript> scripts = new HashMap<>();
 

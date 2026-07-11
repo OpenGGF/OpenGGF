@@ -27,6 +27,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /** Bridges a room connection to one attached time-attack runtime per round. */
+@com.openggf.game.ModApi
 public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.AttemptListener {
     private static final Logger LOGGER = Logger.getLogger(
             MultiplayerRaceCoordinator.class.getName());

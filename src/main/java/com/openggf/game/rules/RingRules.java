@@ -1,5 +1,6 @@
 package com.openggf.game.rules;
 
+@com.openggf.game.ModApi
 public record RingRules(
         int ringFloorCheckMask,
         boolean ringFloorProbeRequiresRenderFlag,

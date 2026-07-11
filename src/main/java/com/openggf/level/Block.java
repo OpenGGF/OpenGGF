@@ -14,6 +14,7 @@ import java.util.Arrays;
  * if needed. This protects snapshot-captured block references from
  * being clobbered by subsequent mutations.
  */
+@com.openggf.game.ModApi
 public class Block {
 
     private final int gridSide;

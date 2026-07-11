@@ -6,6 +6,7 @@ package com.openggf.game;
  * event routine state, camera position, collision path, and water height.
  * Mirrors ROM Saved_* variables plus the BigRingReturnState pattern.
  */
+@com.openggf.game.ModApi
 public record BonusStageState(
         int savedZoneAndAct,
         int savedApparentZoneAndAct,

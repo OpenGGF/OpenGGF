@@ -6,9 +6,11 @@ import java.util.Objects;
 import java.util.Set;
 
 /** Typed result of composing a frozen patch plan for one gameplay launch. */
+@com.openggf.game.ModApi
 public sealed interface ResolutionResult permits ResolutionResult.Resolved,
         ResolutionResult.LaunchAborted {
 
+    @com.openggf.game.ModApi
     record Resolved(GameModule module, java.util.Map<PatchOwner, Throwable> ownerFailures)
             implements ResolutionResult {
         public Resolved {
@@ -23,6 +25,7 @@ public sealed interface ResolutionResult permits ResolutionResult.Resolved,
     }
 
     /** Creator apply failures abort because the input module may have been mutated. */
+    @com.openggf.game.ModApi
     record LaunchAborted(PatchOwner failedOwner, String patchId, Throwable cause,
                          Set<PatchOwner> failedOwners)
             implements ResolutionResult {

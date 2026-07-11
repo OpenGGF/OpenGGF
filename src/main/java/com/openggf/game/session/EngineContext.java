@@ -15,6 +15,7 @@ import com.openggf.graphics.GraphicsManager;
 
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public final class EngineContext {
     private final SonicConfigurationService configuration;
     private final GraphicsManager graphics;

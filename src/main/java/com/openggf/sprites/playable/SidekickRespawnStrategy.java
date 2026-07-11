@@ -4,6 +4,7 @@ package com.openggf.sprites.playable;
  * Strategy for per-character respawn behavior during the APPROACHING state.
  * Implementations define how a sidekick visually re-enters the game after despawning.
  */
+@com.openggf.game.ModApi
 public interface SidekickRespawnStrategy {
     /**
      * Called each frame while in APPROACHING state.

@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
+@com.openggf.game.ModApi
 public record SolidCheckpointBatch(
         ObjectInstance object,
         Map<PlayableEntity, PlayerSolidContactResult> perPlayer) {

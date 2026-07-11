@@ -3,6 +3,7 @@ package com.openggf.game.rewind.schema;
 import java.util.Arrays;
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public final class RewindObjectStateBlob {
     private final int schemaId;
     private final Class<?> type;

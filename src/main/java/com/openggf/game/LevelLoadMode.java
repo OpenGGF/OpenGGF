@@ -3,6 +3,7 @@ package com.openggf.game;
 /**
  * Mode for level-load profile execution.
  */
+@com.openggf.game.ModApi
 public enum LevelLoadMode {
     /**
      * Full level load path (default).

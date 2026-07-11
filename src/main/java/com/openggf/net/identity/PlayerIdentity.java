@@ -20,6 +20,7 @@ import java.util.HexFormat;
  * Pseudonymous Ed25519 player identity (security spec §3). Phase 1 only
  * generates/persists the keypair and exposes sign/verify + fingerprint.
  */
+@com.openggf.game.ModApi
 public final class PlayerIdentity {
     private static final String ALGORITHM = "Ed25519";
     private static final String KEY_FILE = "player-identity.key";

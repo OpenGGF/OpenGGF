@@ -25,6 +25,7 @@ import com.openggf.game.session.EditorCursorState;
 
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public final class LevelEditorController {
     private static final int CHUNK_INDEX_MASK = 0x03FF;
 

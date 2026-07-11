@@ -10,6 +10,7 @@ import java.util.Arrays;
  * <p>Controller-resolved instances are double-buffered. Their column storage is
  * private and exposed to render consumers only through a read-only indexed view.
  */
+@com.openggf.game.ModApi
 public final class AdvancedRenderFrameState {
     private static final AdvancedRenderFrameState DISABLED =
             new AdvancedRenderFrameState(false, false, null);
@@ -77,6 +78,7 @@ public final class AdvancedRenderFrameState {
         return new Builder();
     }
 
+    @com.openggf.game.ModApi
     public static final class Builder {
         private boolean enableForegroundHeatHaze;
         private boolean enablePerLineForegroundScroll;

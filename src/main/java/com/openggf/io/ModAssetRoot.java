@@ -17,6 +17,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 /** A validated, bounded source of files owned by one mod. */
+@com.openggf.game.ModApi
 public sealed interface ModAssetRoot extends AutoCloseable
         permits AbstractModAssetRoot, PackedModAssetRoot {
     byte[] readBounded(String normalizedEntry, long maxBytes) throws IOException;
@@ -80,6 +81,7 @@ public sealed interface ModAssetRoot extends AutoCloseable
     }
 }
 
+@com.openggf.game.ModApi
 abstract sealed class AbstractModAssetRoot implements ModAssetRoot
         permits JarModAssetRoot, DirectoryModAssetRoot, InMemoryModAssetRoot,
         NonClosingModAssetRoot {
@@ -220,6 +222,7 @@ abstract sealed class AbstractModAssetRoot implements ModAssetRoot
     }
 }
 
+@com.openggf.game.ModApi
 final class NonClosingModAssetRoot extends AbstractModAssetRoot {
     private final ModAssetRoot delegate;
 
@@ -239,6 +242,7 @@ final class NonClosingModAssetRoot extends AbstractModAssetRoot {
     @Override public void close() { markClosed(); }
 }
 
+@com.openggf.game.ModApi
 final class JarModAssetRoot extends AbstractModAssetRoot implements PackedModAssetRoot {
     private final String sourceDescription;
     private final ModAssetSnapshot snapshot;
@@ -416,6 +420,7 @@ final class JarModAssetRoot extends AbstractModAssetRoot implements PackedModAss
 }
 
 /** Immutable snapshot root for explicitly trusted development and test directories only. */
+@com.openggf.game.ModApi
 final class DirectoryModAssetRoot extends AbstractModAssetRoot {
     private final String sourceDescription;
     private final ModAssetSnapshot snapshot;
@@ -545,6 +550,7 @@ final class DirectoryModAssetRoot extends AbstractModAssetRoot {
     }
 }
 
+@com.openggf.game.ModApi
 final class InMemoryModAssetRoot extends AbstractModAssetRoot {
     private final String description;
 

@@ -12,6 +12,7 @@ import java.util.List;
  * Each game implementation provides its own ZoneArtProvider that knows
  * which art assets to load for each zone and object type.
  */
+@com.openggf.game.ModApi
 public interface ZoneArtProvider {
 
     /**
@@ -40,6 +41,7 @@ public interface ZoneArtProvider {
      * @param palette palette line to use (0-3)
      * @param compression compression type used
      */
+    @com.openggf.game.ModApi
     record ObjectArtConfig(int artAddress, int palette, CompressionType compression) {
         /**
          * Creates a Nemesis-compressed art config.
@@ -64,6 +66,7 @@ public interface ZoneArtProvider {
      * @param palette palette line to use
      * @param compression compression type
      */
+    @com.openggf.game.ModApi
     record ArtLoadRequest(String name, int artAddress, int palette, CompressionType compression) {
         public static ArtLoadRequest nemesis(String name, int artAddress, int palette) {
             return new ArtLoadRequest(name, artAddress, palette, CompressionType.NEMESIS);

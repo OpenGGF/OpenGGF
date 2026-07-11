@@ -125,6 +125,7 @@ import static org.lwjgl.system.MemoryUtil.*;
  * @author james
  */
 @CompositionRoot
+@com.openggf.game.ModApi
 public class Engine {
 	private static final Logger LOGGER = Logger.getLogger(Engine.class.getName());
 	public static final String RESOURCES_SHADERS_PIXEL_SHADER_GLSL = "shaders/shader_the_hedgehog.glsl";
@@ -3320,7 +3321,7 @@ public class Engine {
 	 * Gets the current projection matrix for use in shaders.
 	 * @return the projection matrix
 	 */
-	public org.joml.Matrix4f getProjectionMatrix() {
+	org.joml.Matrix4f getProjectionMatrix() {
 		return projectionMatrix;
 	}
 

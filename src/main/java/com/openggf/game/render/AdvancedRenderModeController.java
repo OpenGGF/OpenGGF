@@ -13,6 +13,7 @@ import java.util.Objects;
  * <p>The controller collects active contributors for the current zone/runtime
  * and resolves them into one {@link AdvancedRenderFrameState} per frame.
  */
+@com.openggf.game.ModApi
 public final class AdvancedRenderModeController
         implements RewindSnapshottable<AdvancedRenderModeSnapshot> {
 

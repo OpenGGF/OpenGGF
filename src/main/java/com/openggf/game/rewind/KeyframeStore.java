@@ -6,6 +6,7 @@ import java.util.Optional;
  * Frame-keyed snapshot store. v1 keeps captures in memory; v2 will swap
  * in a bounded ring + disk spill backing.
  */
+@com.openggf.game.ModApi
 public interface KeyframeStore {
 
     /** Stores a snapshot at the given frame, replacing any existing one. */
@@ -30,5 +31,6 @@ public interface KeyframeStore {
     void discardBefore(int frame);
 
     /** Stored entry record. */
+    @com.openggf.game.ModApi
     record Entry(int frame, CompositeSnapshot snapshot) {}
 }

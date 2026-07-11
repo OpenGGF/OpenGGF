@@ -17,6 +17,7 @@ import java.util.Set;
  * remembers the last resolved phase for each channel id. That lets channels use
  * phase-based caching without keeping their own mutable frame state.
  */
+@com.openggf.game.ModApi
 public final class AnimatedTileChannelGraph implements RewindSnapshottable<AnimatedTileChannelSnapshot> {
 
     private List<AnimatedTileChannel> channels = List.of();

@@ -5,6 +5,7 @@ package com.openggf.game;
  * Used by {@link EndingProvider} implementations to track progression
  * through cutscenes, credits text, demo playback, and post-credits screens.
  */
+@com.openggf.game.ModApi
 public enum EndingPhase {
     /** Initial cutscene (e.g., Tornado flyby in S2, island sequence in S1) */
     CUTSCENE,

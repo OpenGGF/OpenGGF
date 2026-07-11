@@ -5,6 +5,7 @@ import com.openggf.level.objects.ObjectInstance;
 
 import java.util.List;
 
+@com.openggf.game.ModApi
 public interface SolidExecutionRegistry {
     /**
      * Begins a new solid-execution frame.

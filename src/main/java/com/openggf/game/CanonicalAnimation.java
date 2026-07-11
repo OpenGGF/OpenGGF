@@ -20,6 +20,7 @@ package com.openggf.game;
  *   <li><b>Super</b> - Super Sonic transformation</li>
  * </ul>
  */
+@com.openggf.game.ModApi
 public enum CanonicalAnimation {
 
     // -------------------------------------------------------------------------

@@ -6,7 +6,9 @@ import com.openggf.level.objects.ObjectSpawn;
 import java.util.Objects;
 
 /** Logical stock-object palette shared by keyboard and gamepad input. */
+@com.openggf.game.ModApi
 public final class EditorStockObjectPalette {
+    @com.openggf.game.ModApi
     public enum Navigation { NEXT_OBJECT, PREVIOUS_OBJECT, INCREMENT_SUBTYPE, DECREMENT_SUBTYPE }
 
     private final ObjectRegistry registry;

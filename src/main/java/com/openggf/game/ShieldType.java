@@ -6,6 +6,7 @@ package com.openggf.game;
  * S1/S2 only use {@link #BASIC}. S3K adds three elemental shields
  * (Fire, Lightning, Bubble) that each grant special abilities.
  */
+@com.openggf.game.ModApi
 public enum ShieldType {
     BASIC,
     FIRE,

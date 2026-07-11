@@ -10,6 +10,7 @@ import com.openggf.level.Palette;
  * Each game implements this to supply zone/act-specific water heights,
  * underwater palettes, and dynamic water handlers from its ROM data.
  */
+@com.openggf.game.ModApi
 public interface WaterDataProvider {
     boolean hasWater(int zoneId, int actId, PlayerCharacter character);
 

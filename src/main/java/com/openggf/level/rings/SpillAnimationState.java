@@ -6,6 +6,7 @@ package com.openggf.level.rings;
  * decelerating-spin speed input. Ported from RingManager.LostRingPool.updatePhysics
  * (s2.asm ChangeRingFrame). One instance per gameplay session; tick once per frame.
  */
+@com.openggf.game.ModApi
 public final class SpillAnimationState {
     static final int INITIAL_COUNTER = 0xFF;
     private int counter;

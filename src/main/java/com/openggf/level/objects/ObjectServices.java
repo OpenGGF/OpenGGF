@@ -52,6 +52,7 @@ import java.util.List;
  * Injected by {@link ObjectManager} via
  * {@link AbstractObjectInstance#setServices(ObjectServices)}.
  */
+@com.openggf.game.ModApi
 public interface ObjectServices {
     // Object management
     ObjectManager objectManager();

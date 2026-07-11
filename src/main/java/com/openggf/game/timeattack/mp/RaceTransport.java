@@ -7,6 +7,7 @@ import com.openggf.net.protocol.ControlMessage;
 import java.util.List;
 
 /** Engine-side view of a room connection; network code remains engine-free. */
+@com.openggf.game.ModApi
 public interface RaceTransport {
     static RaceTransport from(RaceConnection connection) {
         return new RaceTransport() {

@@ -1,5 +1,6 @@
 package com.openggf.audio.smps;
 
+@com.openggf.game.ModApi
 public abstract class AbstractSmpsData {
     protected final byte[] data;
     protected int voicePtr;

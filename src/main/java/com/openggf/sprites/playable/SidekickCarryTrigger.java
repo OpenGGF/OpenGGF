@@ -17,6 +17,7 @@ import com.openggf.game.PlayerCharacter;
  * <p>Interface uses primitives + {@link PlayerCharacter} + types already in
  * {@code com.openggf.sprites.playable} — no new dependency types are introduced.
  */
+@com.openggf.game.ModApi
 public interface SidekickCarryTrigger {
 
     /**

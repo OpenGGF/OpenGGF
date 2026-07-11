@@ -34,6 +34,7 @@ import java.util.List;
  *   <li>Placement cursor/window state needed by the next replayed frame.</li>
  * </ul>
  */
+@com.openggf.game.ModApi
 public record ObjectManagerSnapshot(
         long[] usedSlotsBits,
         List<PerSlotEntry> slots,
@@ -159,6 +160,7 @@ public record ObjectManagerSnapshot(
      *                  captured here so the restore path can register it in the identity table.
      *                  {@code null} for legacy snapshot entries captured before Task 2.
      */
+    @com.openggf.game.ModApi
     public record PerSlotEntry(
             int slotIndex,
             ObjectSpawn spawn,
@@ -187,6 +189,7 @@ public record ObjectManagerSnapshot(
      * @param parentSpawn  the parent object's spawn (live ref, stable in-memory)
      * @param reservedSlots the slot indices that were pre-allocated for this parent
      */
+    @com.openggf.game.ModApi
     public record ChildSpawnEntry(
             ObjectSpawn parentSpawn,
             int[] reservedSlots
@@ -196,6 +199,7 @@ public record ObjectManagerSnapshot(
         }
     }
 
+    @com.openggf.game.ModApi
     public record DynamicObjectEntry(
             String className,
             ObjectSpawn spawn,
@@ -231,6 +235,7 @@ public record ObjectManagerSnapshot(
         }
     }
 
+    @com.openggf.game.ModApi
     public record SolidContactRidingEntry(
             PlayableEntity player,
             ObjectSpawn objectSpawn,
@@ -246,6 +251,7 @@ public record ObjectManagerSnapshot(
      * rewind: per-player support latches, cached headroom, and the collaborator
      * frame counter affect the next replayed contact pass.
      */
+    @com.openggf.game.ModApi
     public record SolidContactState(
             int frameCounter,
             List<SolidContactRidingEntry> riding,
@@ -287,6 +293,7 @@ public record ObjectManagerSnapshot(
         }
     }
 
+    @com.openggf.game.ModApi
     public record SolidContactStandingSnapshotEntry(
             PlayableEntity player,
             ContactKind kind,
@@ -294,12 +301,14 @@ public record ObjectManagerSnapshot(
             boolean pushing
     ) {}
 
+    @com.openggf.game.ModApi
     public record SolidContactHeadroomSnapshotEntry(
             PlayableEntity player,
             int hexAngle,
             int distance
     ) {}
 
+    @com.openggf.game.ModApi
     public record SolidContactLatchEntry(
             PlayableEntity player,
             List<SolidContactLatchKey> keys
@@ -309,6 +318,7 @@ public record ObjectManagerSnapshot(
         }
     }
 
+    @com.openggf.game.ModApi
     public record SolidContactLatchKey(
             ObjectSpawn spawn,
             int slotIndex,
@@ -323,6 +333,7 @@ public record ObjectManagerSnapshot(
      * dormant/remembered latches, and active spawn membership. Leaving those at
      * the later live frame makes seek+replay diverge immediately.
      */
+    @com.openggf.game.ModApi
     public record PlacementSnapshot(
             int[] activeSpawnIndices,
             long[] rememberedBits,
@@ -426,6 +437,7 @@ public record ObjectManagerSnapshot(
         }
     }
 
+    @com.openggf.game.ModApi
     public record SpawnCounterEntry(int spawnIndex, int counter) {}
 
     /**
@@ -434,6 +446,7 @@ public record ObjectManagerSnapshot(
      * restoring player layer/top/lrb bits is not enough; the hidden previous
      * side controls whether the next frame crosses or only seeds the latch.
      */
+    @com.openggf.game.ModApi
     public record PlaneSwitcherSnapshot(
             List<PlaneSwitcherEntry> entries
     ) {
@@ -446,6 +459,7 @@ public record ObjectManagerSnapshot(
         }
     }
 
+    @com.openggf.game.ModApi
     public record PlaneSwitcherEntry(
             ObjectSpawn spawn,
             int lastSideState,
@@ -457,6 +471,7 @@ public record ObjectManagerSnapshot(
         }
     }
 
+    @com.openggf.game.ModApi
     public record PlaneSwitcherPlayerSideEntry(
             PlayableEntity player,
             int sideState
@@ -488,6 +503,7 @@ public record ObjectManagerSnapshot(
      *                                    (after odd number of swaps)
      * @param sidekickEntries             per-sidekick overlap state
      */
+    @com.openggf.game.ModApi
     public record TouchResponseOverlapState(
             int[] mainOverlappingSlotIndices,
             int[] mainBuildingSlotIndices,
@@ -515,6 +531,7 @@ public record ObjectManagerSnapshot(
      * {@code Sprite#getCode} so the entry round-trips even though
      * sidekick {@code PlayableEntity} refs may be re-bound after restore.
      */
+    @com.openggf.game.ModApi
     public record SidekickOverlapEntry(
             String sidekickCode,
             int[] overlappingSlotIndices,

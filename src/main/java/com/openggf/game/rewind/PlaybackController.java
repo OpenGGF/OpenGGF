@@ -3,8 +3,10 @@ package com.openggf.game.rewind;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+@com.openggf.game.ModApi
 public final class PlaybackController {
 
+    @com.openggf.game.ModApi
     public enum State { PLAYING, PAUSED, REWINDING }
 
     private final RewindController rc;

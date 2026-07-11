@@ -2,5 +2,6 @@ package com.openggf.sprites;
 
 import com.openggf.physics.Direction;
 
+@com.openggf.game.ModApi
 public record SensorConfiguration(byte xIncrement, byte yIncrement, boolean vertical, Direction direction) {
 }

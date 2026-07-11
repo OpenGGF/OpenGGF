@@ -19,6 +19,7 @@ import java.util.Set;
  * Per-launch frozen registrations and owner graph, plus failures local to that launch.
  * No state is shared with another resolution attempt.
  */
+@com.openggf.game.ModApi
 public final class ResolutionContext {
 
     private final PatchEnablement enablement;

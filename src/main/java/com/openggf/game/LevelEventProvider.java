@@ -12,6 +12,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  *
  * Implementations are game-specific (e.g., Sonic 2's RunDynamicLevelEvents).
  */
+@com.openggf.game.ModApi
 public interface LevelEventProvider {
 
     /**

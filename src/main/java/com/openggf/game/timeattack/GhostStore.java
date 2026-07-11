@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 /** Best-run persistence: ghosts/<gameId>/<zone>-<act>-<character>.ggfghost, keep last 3 (spec §3). */
+@com.openggf.game.ModApi
 public final class GhostStore {
     private final Path root;
 

@@ -3,6 +3,7 @@ package com.openggf.sprites.playable;
 /**
  * States for the Super Sonic transformation lifecycle.
  */
+@com.openggf.game.ModApi
 public enum SuperState {
     /** Normal gameplay. Checks transformation trigger each frame. */
     NORMAL,

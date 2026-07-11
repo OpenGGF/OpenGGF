@@ -2,6 +2,7 @@ package com.openggf.graphics.shaderlib;
 
 import java.util.Map;
 
+@com.openggf.game.ModApi
 public record DisplayShaderPass(
         String vertexSource,
         String fragmentSource,

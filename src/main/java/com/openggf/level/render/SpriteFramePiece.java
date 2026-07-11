@@ -3,6 +3,7 @@ package com.openggf.level.render;
 /**
  * Common sprite frame piece contract for pattern-based renderers.
  */
+@com.openggf.game.ModApi
 public interface SpriteFramePiece {
     int xOffset();
     int yOffset();

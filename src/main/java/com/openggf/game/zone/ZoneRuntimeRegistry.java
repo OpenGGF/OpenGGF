@@ -6,6 +6,7 @@ import com.openggf.game.rewind.snapshot.ZoneRuntimeSnapshot;
 import java.util.Objects;
 import java.util.Optional;
 
+@com.openggf.game.ModApi
 public final class ZoneRuntimeRegistry implements RewindSnapshottable<ZoneRuntimeSnapshot> {
     private ZoneRuntimeState current = NoOpZoneRuntimeState.INSTANCE;
 

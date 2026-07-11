@@ -1,5 +1,6 @@
 package com.openggf.game.solid;
 
+@com.openggf.game.ModApi
 public record PreContactState(
         short xSpeed,
         short ySpeed,

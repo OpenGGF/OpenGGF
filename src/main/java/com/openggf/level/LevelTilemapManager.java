@@ -27,6 +27,7 @@ import java.util.logging.Logger;
  * rebuilt over the same surviving {@code Level}, so no tilemap state needs
  * to persist outside the gameplay mode context.
  */
+@com.openggf.game.ModApi
 public class LevelTilemapManager {
     private static final Logger LOGGER = Logger.getLogger(LevelTilemapManager.class.getName());
 
@@ -125,6 +126,7 @@ public class LevelTilemapManager {
      * Functional interface for block lookups, bridging to LevelManager's getBlockAtPosition.
      */
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface BlockLookup {
         Block lookup(byte layer, int x, int y);
     }

@@ -6,6 +6,7 @@ import java.util.Objects;
  * Named object-control flag combinations used by ROM object scripts and
  * engine-only scripted handoffs.
  */
+@com.openggf.game.ModApi
 public enum ObjectControlState {
     NONE(false, false, false, true),
     NATIVE_BIT_7_FULL_CONTROL(true, false, true, true),

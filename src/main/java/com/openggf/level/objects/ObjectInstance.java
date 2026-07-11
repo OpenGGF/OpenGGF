@@ -7,6 +7,7 @@ import com.openggf.game.PlayableEntity;
 
 import java.util.List;
 
+@com.openggf.game.ModApi
 public interface ObjectInstance {
     ObjectSpawn getSpawn();
 

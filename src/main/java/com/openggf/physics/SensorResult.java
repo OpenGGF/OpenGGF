@@ -1,5 +1,6 @@
 package com.openggf.physics;
 
+@com.openggf.game.ModApi
 public final class SensorResult {
     private byte angle;
     private byte distance;

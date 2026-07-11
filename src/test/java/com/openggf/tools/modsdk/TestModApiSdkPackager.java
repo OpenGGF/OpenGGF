@@ -1,0 +1,113 @@
+package com.openggf.tools.modsdk;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TestModApiSdkPackager {
+    @TempDir Path temp;
+
+    @Test
+    void copiesOnlyExactAnnotatedClassfilesAndGeneratesTheirJavadocs() throws Exception {
+        Class<?> packagePrivate = Class.forName("com.openggf.io.AbstractModAssetRoot");
+        Path compiled = temp.resolve("build/classes");
+        copyCompiledFixture(compiled, com.openggf.mods.code.GgfMod.class);
+        copyCompiledFixture(compiled, packagePrivate);
+        Path classes = temp.resolve("build/sdk-classes");
+        Path docs = temp.resolve("build/sdk-javadocs");
+
+        ModApiSdkPackager.prepare(compiled, Path.of("src/main/java"),
+                classes, docs, List.of(com.openggf.mods.code.GgfMod.class, packagePrivate));
+
+        Set<String> copied;
+        try (var paths = Files.walk(classes)) {
+            copied = paths.filter(Files::isRegularFile)
+                    .map(classes::relativize).map(Path::toString)
+                    .map(value -> value.replace('\\', '/')).collect(Collectors.toSet());
+        }
+        assertTrue(copied.equals(Set.of(
+                "com/openggf/mods/code/GgfMod.class",
+                "com/openggf/io/AbstractModAssetRoot.class")), copied::toString);
+        assertFalse(Files.exists(classes.resolve(
+                "com/openggf/level/objects/BootstrapObjectServices.class")));
+        assertTrue(Files.isRegularFile(docs.resolve("index.html")));
+        assertTrue(Files.isRegularFile(
+                docs.resolve("com/openggf/io/AbstractModAssetRoot.html")));
+        Set<String> typePages;
+        try (var paths = Files.walk(docs.resolve("com/openggf"))) {
+            typePages = paths.filter(Files::isRegularFile)
+                    .map(docs::relativize).map(Path::toString)
+                    .map(value -> value.replace('\\', '/'))
+                    .filter(value -> value.endsWith(".html"))
+                    .filter(value -> !value.endsWith("/package-summary.html"))
+                    .filter(value -> !value.endsWith("/package-tree.html"))
+                    .collect(Collectors.toSet());
+        }
+        assertEquals(Set.of(
+                "com/openggf/mods/code/GgfMod.html",
+                "com/openggf/io/AbstractModAssetRoot.html"), typePages);
+    }
+
+    @Test
+    void rejectsAnyRecursiveDeleteTargetOutsideTheCompiledClassesBuildRoot() throws Exception {
+        Path compiled = temp.resolve("build/classes");
+        copyCompiledFixture(compiled, com.openggf.mods.code.GgfMod.class);
+
+        assertThrows(IllegalArgumentException.class, () -> ModApiSdkPackager.prepare(
+                compiled, Path.of("src/main/java"), temp.resolve("outside-sdk"),
+                temp.resolve("build/docs"), List.of(com.openggf.mods.code.GgfMod.class)));
+        assertFalse(Files.exists(temp.resolve("outside-sdk")));
+    }
+
+    @Test
+    void rejectsCompilerOrSourceDescendantsBeforeDeletingAnything() throws Exception {
+        Path compiled = temp.resolve("build/classes");
+        copyCompiledFixture(compiled, com.openggf.mods.code.GgfMod.class);
+        Path sourceRoot = temp.resolve("build/sources");
+        Files.createDirectories(sourceRoot);
+        Path compiledMarker = compiled.resolve("sdk/keep.txt");
+        Path sourceMarker = sourceRoot.resolve("generated/keep.txt");
+        Files.createDirectories(compiledMarker.getParent());
+        Files.createDirectories(sourceMarker.getParent());
+        Files.writeString(compiledMarker, "keep");
+        Files.writeString(sourceMarker, "keep");
+
+        assertThrows(IllegalArgumentException.class, () -> ModApiSdkPackager.prepare(
+                compiled, sourceRoot, compiled.resolve("sdk"), temp.resolve("build/docs"),
+                List.of(com.openggf.mods.code.GgfMod.class)));
+        assertTrue(Files.isRegularFile(compiledMarker));
+
+        assertThrows(IllegalArgumentException.class, () -> ModApiSdkPackager.prepare(
+                compiled, sourceRoot, temp.resolve("build/sdk"), sourceRoot.resolve("generated"),
+                List.of(com.openggf.mods.code.GgfMod.class)));
+        assertTrue(Files.isRegularFile(sourceMarker));
+    }
+
+    @Test
+    void pomAttachesSdkBinaryAndJavadocClassifiersFromPreparedExactDirectories()
+            throws Exception {
+        String pom = Files.readString(Path.of("pom.xml"));
+        assertTrue(pom.contains("com.openggf.tools.modsdk.ModApiSdkPackager"));
+        assertTrue(pom.contains("<classifier>openggf-mod-sdk</classifier>"));
+        assertTrue(pom.contains("<classifier>openggf-mod-sdk-javadoc</classifier>"));
+        assertTrue(pom.contains("${project.build.directory}/mod-sdk/classes"));
+        assertTrue(pom.contains("${project.build.directory}/mod-sdk/javadocs"));
+    }
+
+    private static void copyCompiledFixture(Path compiledRoot, Class<?> type) throws Exception {
+        Path relative = Path.of(type.getName().replace('.', '/') + ".class");
+        Path destination = compiledRoot.resolve(relative);
+        Files.createDirectories(destination.getParent());
+        Files.copy(Path.of("target/classes").resolve(relative), destination);
+    }
+}

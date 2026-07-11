@@ -14,6 +14,7 @@ import java.util.Arrays;
  *
  * Once loaded into memory, pixels are stored 1-per-byte (i.e. as a byte index into a palette).
  */
+@com.openggf.game.ModApi
 public class Pattern {
     public static final int PATTERN_WIDTH = 8;
     public static final int PATTERN_HEIGHT = 8;

@@ -3,6 +3,7 @@ package com.openggf.physics;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.GroundMode;
 
+@com.openggf.game.ModApi
 public abstract class Sensor {
     protected AbstractPlayableSprite sprite;
     protected Direction direction;

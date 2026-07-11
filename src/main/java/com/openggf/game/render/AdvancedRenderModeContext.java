@@ -11,6 +11,7 @@ import java.util.Objects;
  * <p>This record exposes only the state needed to decide frame render
  * overrides, keeping contributors independent from broader engine globals.
  */
+@com.openggf.game.ModApi
 public record AdvancedRenderModeContext(Camera camera,
                                         int frameCounter,
                                         LevelManager levelManager,

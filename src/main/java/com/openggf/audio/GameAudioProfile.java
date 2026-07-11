@@ -6,9 +6,11 @@ import com.openggf.data.Rom;
 
 import java.util.Map;
 
+@com.openggf.game.ModApi
 public interface GameAudioProfile {
 
     /** How speed shoes affect music playback. */
+    @com.openggf.game.ModApi
     enum SpeedMode {
         /** S1/S2: swap to a faster tempo value from the speed-up table. */
         TEMPO_SWAP,

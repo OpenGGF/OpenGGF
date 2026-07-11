@@ -14,6 +14,7 @@ import java.util.List;
  * The snapshot captures the queue state so rewind correctly restores any
  * pending-but-unflushed intents.
  */
+@com.openggf.game.ModApi
 public record MutationPipelineSnapshot(List<LayoutMutationIntent> queued) {
     public MutationPipelineSnapshot {
         queued = List.copyOf(queued);

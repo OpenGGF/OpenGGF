@@ -2,6 +2,7 @@ package com.openggf.control;
 
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+@com.openggf.game.ModApi
 public record LogicalInputSnapshot(
         PlayerInputState player1,
         PlayerInputState player2,

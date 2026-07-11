@@ -1,5 +1,6 @@
 package com.openggf.tools.disasm;
 
+@com.openggf.game.ModApi
 public enum CompressionType {
     NEMESIS(".nem", "Nemesis"),
     KOSINSKI(".kos", "Kosinski"),
@@ -66,4 +67,3 @@ public enum CompressionType {
         return fromExt;
     }
 }
-

@@ -7,6 +7,7 @@ package com.openggf.game;
  * @param romRoutine  disassembly reference, e.g. "s2.asm:Level, line 4934"
  * @param action      the operation to execute
  */
+@com.openggf.game.ModApi
 public record InitStep(
     String name,
     String romRoutine,

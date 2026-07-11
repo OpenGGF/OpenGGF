@@ -6,6 +6,7 @@ import com.openggf.game.DataSelectProvider;
  * Base class for data select providers with shared state management.
  * Tracks lifecycle state and a pending action to be consumed by the game loop.
  */
+@com.openggf.game.ModApi
 public abstract class AbstractDataSelectProvider implements DataSelectProvider {
 
     protected State state = State.INACTIVE;

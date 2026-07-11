@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectSpawn;
 /**
  * Abstract class representing a Level, containing palettes, patterns, chunks, and blocks.
  */
+@com.openggf.game.ModApi
 public interface Level {
 
     // Destructor equivalent is not needed, as Java has automatic garbage collection.

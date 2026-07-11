@@ -13,6 +13,7 @@ import java.util.Objects;
  * dirty-region tracking or a direct level structure that requires explicit
  * redraw/reupload effects.
  */
+@com.openggf.game.ModApi
 public interface LevelMutationSurface {
 
     /** Adapts the supplied level to the appropriate mutation surface implementation. */

@@ -5,6 +5,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 /**
  * Resolves the mapping frame index for a sprite on a given tick.
  */
+@com.openggf.game.ModApi
 public interface SpriteAnimationProfile {
     default Integer resolveAnimationId(AbstractPlayableSprite sprite, int frameCounter, int scriptCount) {
         return null;

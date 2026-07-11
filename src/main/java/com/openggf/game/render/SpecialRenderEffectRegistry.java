@@ -16,6 +16,7 @@ import java.util.Objects;
  * the standard scene pipeline at fixed points between background, foreground,
  * and sprite rendering.
  */
+@com.openggf.game.ModApi
 public final class SpecialRenderEffectRegistry
         implements RewindSnapshottable<SpecialRenderEffectSnapshot> {
 

@@ -1,5 +1,6 @@
 package com.openggf.audio.rewind;
 
+@com.openggf.game.ModApi
 public enum AudioPresentationPolicy {
     SUPPRESSED_INTERNAL_RESTORE,
     /**

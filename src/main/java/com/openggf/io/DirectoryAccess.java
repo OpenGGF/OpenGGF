@@ -1,6 +1,7 @@
 package com.openggf.io;
 
 /** Explicit trust boundary for unpacked mod asset directories. */
+@com.openggf.game.ModApi
 public enum DirectoryAccess {
     /** Packed jars are required in production; directory roots are refused. */
     PRODUCTION,

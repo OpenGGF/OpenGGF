@@ -18,6 +18,7 @@ package com.openggf.level.objects;
  * the S1 {@code out_of_range} macro for the off-screen unload decision. S1 and
  * S3K use {@link #LEGACY} this stage.
  */
+@com.openggf.game.ModApi
 public interface ObjectWindowingStrategy {
 
     /**

@@ -161,6 +161,7 @@ public class VirtualSynthesizer implements Synthesizer {
         ym.forceSilenceChannel(channelId);
     }
 
+    @com.openggf.game.ModApi
     public record Snapshot(
             double outputSampleRate,
             Ym2612Chip.Snapshot ym,

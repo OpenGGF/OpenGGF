@@ -18,6 +18,7 @@ import java.util.logging.Logger;
  * out-of-snapshot state, the audit may perturb live play; therefore callers
  * disarm after the first divergence.
  */
+@com.openggf.game.ModApi
 public final class RewindDeterminismAuditor {
 
     private static final Logger LOGGER =

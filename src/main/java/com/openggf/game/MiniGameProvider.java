@@ -8,6 +8,7 @@ import java.io.IOException;
  *
  * <p>Implementations handle their own initialization, update loops, and rendering.
  */
+@com.openggf.game.ModApi
 public interface MiniGameProvider {
     /**
      * Initializes the mini-game. Called before the first update.

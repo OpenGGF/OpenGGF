@@ -312,6 +312,7 @@ public class BlipResampler {
      * hold the newest samples, ordered oldest-to-newest, ending at input index
      * {@code inputIndex - 1}.
      */
+    @com.openggf.game.ModApi
     public record Snapshot(
             double ratio,
             int[] historyTailL,

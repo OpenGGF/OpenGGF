@@ -12,6 +12,7 @@ import com.openggf.sprites.animation.SpriteAnimationProfile;
 
 import java.util.logging.Logger;
 
+@com.openggf.game.ModApi
 public abstract class SuperStateController {
     private static final Logger LOGGER = Logger.getLogger(SuperStateController.class.getName());
 
@@ -108,6 +109,7 @@ public abstract class SuperStateController {
 
     // --- Palette target resolution for cross-game support ---
 
+    @com.openggf.game.ModApi
     protected record PaletteTarget(Palette palette, int gpuLine) {}
 
     /**

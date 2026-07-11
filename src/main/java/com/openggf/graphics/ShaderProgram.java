@@ -5,6 +5,7 @@ import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL20.*;
 
+@com.openggf.game.ModApi
 public class ShaderProgram {
     private static final Logger LOGGER = Logger.getLogger(ShaderProgram.class.getName());
     /** Fullscreen vertex shader path shared by tilemap, parallax, fade, and slot shaders. */

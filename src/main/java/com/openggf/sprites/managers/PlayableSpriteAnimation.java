@@ -11,6 +11,7 @@ import com.openggf.sprites.animation.SpriteAnimationScript;
 /**
  * Updates a playable sprite's mapping frame based on its animation profile.
  */
+@com.openggf.game.ModApi
 public class PlayableSpriteAnimation {
     private static final int DEFAULT_RUN_SPEED_THRESHOLD = 0x600;
     private final AbstractPlayableSprite sprite;
@@ -70,6 +71,7 @@ public class PlayableSpriteAnimation {
         lastGroundMovementAnimId = state.lastGroundMovementAnimId();
     }
 
+    @com.openggf.game.ModApi
     public record RewindState(int lastAnimationId, int lastGroundMovementAnimId) {}
 
     public void captureGroundMovementAnimSpeed(short speed) {

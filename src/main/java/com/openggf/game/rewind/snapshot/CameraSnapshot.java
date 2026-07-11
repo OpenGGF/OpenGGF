@@ -8,6 +8,7 @@ import java.util.Objects;
  * scroll delays, freeze state, and wrap tracking. Target sprite references are
  * rebindable via SpriteManager lookups on restore.
  */
+@com.openggf.game.ModApi
 public record CameraSnapshot(
         short x,
         short y,
