@@ -15,6 +15,7 @@ import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.Sensor;
@@ -116,6 +117,117 @@ class TestSonic2LiveObjectRewindRegressions {
                 return false;
             }
         }));
+    }
+
+    @Test
+    void masherForcedReconstructionRestoresAuthoritativeSubpixelMovement() {
+        RewindRoundTripHarness harness = RewindRoundTripHarness.build(GameId.S2);
+        var adapter = harness.objectManager().rewindSnapshottable();
+        ObjectSpawn spawn = new ObjectSpawn(160, 240, Sonic2ObjectIds.MASHER,
+                0, 0, false, 0);
+        MasherBadnikInstance masher = new MasherBadnikInstance(spawn);
+        masher.setServices(new TestObjectServices());
+        harness.objectManager().addDynamicObject(masher);
+
+        PerObjectRewindSnapshot.MasherRewindExtra capturedMotion;
+        int frame = 0;
+        do {
+            masher.update(frame++, null);
+            capturedMotion = assertInstanceOf(PerObjectRewindSnapshot.MasherRewindExtra.class,
+                    masher.captureRewindState().badnikSubclassExtra());
+        } while (capturedMotion.motionYSub() == 0 && frame < 32);
+        assertTrue(capturedMotion.motionYSub() != 0, "precondition: capture a fractional Y phase");
+
+        PerObjectRewindSnapshot authoritative = masher.captureRewindState();
+        PerObjectRewindSnapshot contextual = masher.captureRewindState(harness.captureContext());
+        assertEquals(authoritative.badnikExtra(), contextual.badnikExtra());
+        assertEquals(authoritative.badnikSubclassExtra(), contextual.badnikSubclassExtra());
+        ObjectManagerSnapshot capturedManager = adapter.capture();
+        ObjectManagerSnapshot.DynamicObjectEntry capturedEntry = capturedManager.dynamicObjects()
+                .stream().filter(entry -> entry.className().equals(MasherBadnikInstance.class.getName()))
+                .findFirst().orElseThrow();
+        PerObjectRewindSnapshot captured = capturedEntry.state();
+        assertEquals(authoritative.badnikExtra(), captured.badnikExtra());
+        assertEquals(authoritative.badnikSubclassExtra(), captured.badnikSubclassExtra());
+        var capturedBase = authoritative.badnikExtra();
+        capturedMotion = assertInstanceOf(PerObjectRewindSnapshot.MasherRewindExtra.class,
+                authoritative.badnikSubclassExtra());
+        MasherBadnikInstance control = controlFromCaptured(spawn, capturedBase, capturedMotion);
+
+        for (int i = 0; i < 7; i++) {
+            masher.update(frame++, null);
+        }
+        harness.objectManager().setRewindInPlaceRestoreEnabledForTest(false);
+        adapter.restore(capturedManager);
+        MasherBadnikInstance restored = harness.objectManager().getActiveObjects().stream()
+                .filter(MasherBadnikInstance.class::isInstance)
+                .map(MasherBadnikInstance.class::cast)
+                .findFirst().orElseThrow();
+        assertNotSame(masher, restored);
+
+        PerObjectRewindSnapshot immediate = restored.captureRewindState();
+        assertEquals(authoritative.badnikExtra(), immediate.badnikExtra());
+        assertEquals(authoritative.badnikSubclassExtra(), immediate.badnikSubclassExtra());
+        assertEquals(capturedBase.currentX(), restored.getX());
+        assertEquals(capturedBase.currentY(), restored.getY());
+
+        for (int i = 0; i < 8; i++) {
+            restored.update(frame + i, null);
+            control.update(frame + i, null);
+            assertEquals(control.getX(), restored.getX(), "resumed X at frame " + i);
+            assertEquals(control.getY(), restored.getY(), "resumed Y at frame " + i);
+        }
+    }
+
+    private static MasherBadnikInstance controlFromCaptured(ObjectSpawn spawn,
+            PerObjectRewindSnapshot.BadnikRewindExtra base,
+            PerObjectRewindSnapshot.MasherRewindExtra motion) {
+        MasherBadnikInstance control = new MasherBadnikInstance(spawn);
+        control.setServices(new TestObjectServices());
+        setField(control, "currentX", base.currentX());
+        setField(control, "currentY", base.currentY());
+        setField(control, "xVelocity", base.xVelocity());
+        setField(control, "yVelocity", base.yVelocity());
+        setField(control, "initialYPos", motion.initialYPos());
+        Object state = field(control, "motionState");
+        setField(state, "x", motion.motionX());
+        setField(state, "y", motion.motionY());
+        setField(state, "xSub", motion.motionXSub());
+        setField(state, "ySub", motion.motionYSub());
+        setField(state, "xVel", motion.motionXVel());
+        setField(state, "yVel", motion.motionYVel());
+        return control;
+    }
+
+    private static Object field(Object target, String name) {
+        for (Class<?> type = target.getClass(); type != null; type = type.getSuperclass()) {
+            try {
+                Field field = type.getDeclaredField(name);
+                field.setAccessible(true);
+                return field.get(target);
+            } catch (NoSuchFieldException ignored) {
+                // Continue through inherited rewind state.
+            } catch (IllegalAccessException exception) {
+                throw new RuntimeException(exception);
+            }
+        }
+        throw new IllegalArgumentException("Missing field " + name);
+    }
+
+    private static void setField(Object target, String name, int value) {
+        for (Class<?> type = target.getClass(); type != null; type = type.getSuperclass()) {
+            try {
+                Field field = type.getDeclaredField(name);
+                field.setAccessible(true);
+                field.setInt(target, value);
+                return;
+            } catch (NoSuchFieldException ignored) {
+                // Continue through inherited rewind state.
+            } catch (IllegalAccessException exception) {
+                throw new RuntimeException(exception);
+            }
+        }
+        throw new IllegalArgumentException("Missing field " + name);
     }
 
     private static void verifyMonitorBreakRoundTrip(boolean warmedReuse) {
