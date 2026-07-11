@@ -1104,26 +1104,18 @@ public class Engine {
 
 	private void launchGameplayFromDataSelect(com.openggf.game.dataselect.DataSelectAction action) {
 		GameModule module = SessionManager.requireCurrentGameModule();
-		GameModule rootModule = SessionManager.getCurrentWorldSession().rootGameModule();
 		SaveManager saveManager = new SaveManager(Path.of("saves"));
 		Map<String, Object> loadedPayload = loadDataSelectPayload(module, action, saveManager);
 		com.openggf.game.save.SaveSessionContext saveContext = createDataSelectSaveContext(module, action, saveManager);
-		String gameId = rootModule.getGameId().code();
+		String gameId = SessionManager.getCurrentWorldSession().rootGameModule().getGameId().code();
 		List<String> availableCharacters = new ArrayList<>(stockCharacters(gameId));
 		availableCharacters.addAll(moduleResolutionService.availableMainCharactersForLaunch(
 				gameId, ModuleResolutionService.LaunchPolicy.STANDARD));
 		if (CrossGameFeatureProvider.isActive()) {
 			availableCharacters.addAll(stockCharacters(crossGameFeatureProvider.getDonorGameId()));
 		}
-		saveContext = GameplayTeamAvailability.sanitizeForLaunch(
-				saveContext, gameId, availableCharacters);
-		SelectedTeam selectedTeam = saveContext.selectedTeam();
-		GameModule resolvedModule = moduleResolutionService.resolveForLaunch(rootModule,
-				new GameplayLaunchRequest(gameId, selectedTeam.mainCharacter(), selectedTeam.sidekicks()),
-				ModuleResolutionService.LaunchPolicy.STANDARD);
-
-		GameplayModeContext gameplay = SessionManager.openGameplaySession(
-				rootModule, resolvedModule, saveContext);
+		GameplayModeContext gameplay = openDataSelectPatchSession(
+				saveContext, availableCharacters);
 		initializeGameplayRuntime(gameplay, false);
 		loadLevelFromDataSelect(action.zone(), action.act());
 		restoreGameplayModeFromDataSelectPayload(gameplayMode, loadedPayload);
@@ -1131,6 +1123,22 @@ public class Engine {
 
 		dataSelectLaunchSaveReason(action.type())
 				.ifPresent(gameLoop::requestSaveForCurrentSession);
+	}
+
+	/** Package-visible no-render seam for data-select patch relaunch integration tests. */
+	GameplayModeContext openDataSelectPatchSession(
+			com.openggf.game.save.SaveSessionContext saveContext,
+			List<String> availableCharacters) {
+		GameModule rootModule = SessionManager.getCurrentWorldSession().rootGameModule();
+		String gameId = rootModule.getGameId().code();
+		com.openggf.game.save.SaveSessionContext sanitized =
+				GameplayTeamAvailability.sanitizeForLaunch(
+						saveContext, gameId, availableCharacters);
+		SelectedTeam selectedTeam = sanitized.selectedTeam();
+		GameModule resolvedModule = moduleResolutionService.resolveForLaunch(rootModule,
+				new GameplayLaunchRequest(gameId, selectedTeam.mainCharacter(), selectedTeam.sidekicks()),
+				ModuleResolutionService.LaunchPolicy.STANDARD);
+		return SessionManager.openGameplaySession(rootModule, resolvedModule, sanitized);
 	}
 
 	/**

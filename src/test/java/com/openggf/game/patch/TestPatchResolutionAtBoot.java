@@ -3,6 +3,11 @@ package com.openggf.game.patch;
 import com.openggf.game.GameModule;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.tools.HeadlessGameBoot;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -53,9 +58,41 @@ class TestPatchResolutionAtBoot {
         GameModule secondResolution = service.resolveForLaunch(
                 SessionManager.getCurrentWorldSession().rootGameModule(), request,
                 ModuleResolutionService.LaunchPolicy.STANDARD);
+        GameModule changedTeamResolution = service.resolveForLaunch(
+                SessionManager.getCurrentWorldSession().rootGameModule(),
+                new GameplayLaunchRequest("s2", "sonic", List.of("tails")),
+                ModuleResolutionService.LaunchPolicy.STANDARD);
+        GameModule thirdResolution = service.resolveForLaunch(
+                SessionManager.getCurrentWorldSession().rootGameModule(), request,
+                ModuleResolutionService.LaunchPolicy.STANDARD);
 
         assertEquals(List.of("one", "two"), ((PatchTrail) firstResolution).appliedPatchIds());
         assertEquals(List.of("one", "two"), ((PatchTrail) secondResolution).appliedPatchIds());
+        assertSame(root, changedTeamResolution);
+        assertEquals(List.of("one", "two"), ((PatchTrail) thirdResolution).appliedPatchIds());
+    }
+
+    @Test
+    void headlessBootSeamUsesInjectedResolverAndConfigRequest() {
+        ModuleResolutionService service = ModuleResolutionService.forTests(
+                List.of(new RegisteredPatch(new PatchOwner.BuiltIn("fake"),
+                        "fake", trailPatch("fake"), 0)), PatchEnablement.ALL_ENABLED);
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+
+        EngineContext legacy = EngineContext.fromLegacySingletonsForBootstrap();
+        EngineContext injected = new EngineContext(config, legacy.graphics(), legacy.audio(),
+                legacy.roms(), legacy.profiler(), legacy.debugOverlay(), legacy.playbackDebug(),
+                legacy.romDetection(), legacy.crossGameFeatures(), service);
+        EngineServices.configure(injected);
+        GameModule root = new Sonic2GameModule();
+
+        HeadlessGameBoot.openResolvedSessionForBoot(injected, root);
+
+        assertSame(root, SessionManager.getCurrentWorldSession().rootGameModule());
+        assertEquals(List.of("fake"), ((PatchTrail) SessionManager.requireCurrentGameModule())
+                .appliedPatchIds());
     }
 
     @Test

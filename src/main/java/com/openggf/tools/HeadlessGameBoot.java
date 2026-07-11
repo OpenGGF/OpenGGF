@@ -184,14 +184,9 @@ public final class HeadlessGameBoot implements AutoCloseable {
                 services.romDetection().detectAndCreateModule(rom);
         GameModule rootModule = detected.orElseThrow(() ->
                 new IOException("No game module detected for ROM: " + romPath));
-        ModuleResolutionService moduleResolutionService = services.moduleResolutionService();
-        GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
-                GameplayLaunchRequest.fromConfig(
-                        services.configuration(), rootModule.getGameId().code()),
-                ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
-
         // --- gameplay session + managers --------------------------------
-        GameplayModeContext mode = SessionManager.openGameplaySession(rootModule, module, null);
+        GameplayModeContext mode = openResolvedSessionForBoot(services, rootModule);
+        GameModule module = mode.getWorldSession().resolvedGameModule();
         GameplaySessionFactory.attachManagers(mode, services);
         if (!mode.isGameplayRuntimeReady()) {
             throw new IllegalStateException(
@@ -250,6 +245,22 @@ public final class HeadlessGameBoot implements AutoCloseable {
         GameServices.camera().updatePosition(true);
 
         return loop;
+    }
+
+    /**
+     * The no-graphics portion of headless boot, exposed so launch-resolution
+     * integration can be verified without creating a native GLFW context.
+     */
+    public static GameplayModeContext openResolvedSessionForBoot(
+            EngineContext services, GameModule rootModule) {
+        java.util.Objects.requireNonNull(services, "services");
+        java.util.Objects.requireNonNull(rootModule, "rootModule");
+        ModuleResolutionService moduleResolutionService = services.moduleResolutionService();
+        GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
+                GameplayLaunchRequest.fromConfig(
+                        services.configuration(), rootModule.getGameId().code()),
+                ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+        return SessionManager.openGameplaySession(rootModule, module, null);
     }
 
     @Override
