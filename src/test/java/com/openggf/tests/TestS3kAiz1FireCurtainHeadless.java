@@ -259,6 +259,35 @@ public class TestS3kAiz1FireCurtainHeadless {
     }
 
     @Test
+    public void finishQueueCompletesAtMinimumWhenVblankPhaseIsReady() {
+        Sonic3kAIZEvents events = getAizEvents();
+        events.setFireSequencePhaseOrdinal(3);
+        events.setFirePhaseFrames(63);
+        GameServices.level().getObjectManager().initVblaCounter(2);
+
+        fixture.stepIdleFrames(1);
+
+        assertTrue(events.isAct2TransitionRequested(),
+                "the 64th finish tick should hand off immediately on VBlank queue phase 3");
+    }
+
+    @Test
+    public void finishQueueWaitsForNextReadyVblankPhase() {
+        Sonic3kAIZEvents events = getAizEvents();
+        events.setFireSequencePhaseOrdinal(3);
+        events.setFirePhaseFrames(63);
+        GameServices.level().getObjectManager().initVblaCounter(0);
+
+        fixture.stepIdleFrames(1);
+        assertTrue(!events.isAct2TransitionRequested(),
+                "minimum work alone must not bypass the module DMA phase");
+        fixture.stepIdleFrames(2);
+
+        assertTrue(events.isAct2TransitionRequested(),
+                "the queue should hand off at tick 66 when phase 3 is next reached");
+    }
+
+    @Test
     public void fireCurtainRise_waveOffsetsArePopulated() {
         teleportToMinibossArea();
         runRightUntilCameraSettles(3 * FPS);
@@ -533,5 +562,4 @@ public class TestS3kAiz1FireCurtainHeadless {
         return ((b3 & 0x7) << 9) | ((g3 & 0x7) << 5) | ((r3 & 0x7) << 1);
     }
 }
-
 

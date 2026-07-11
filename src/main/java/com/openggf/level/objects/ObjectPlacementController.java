@@ -229,10 +229,13 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     @Override
     protected int getLoadAhead() {
-        if (counterBasedRespawn) {
-            // S1 ObjPosLoad uses a fixed native right edge:
+        if (counterBasedRespawn || twoAxisCursorPlacement) {
+            // S1 and S3K ObjPosLoad use a fixed native right edge:
             // d6 = (v_opl_screen & $FF80) + $280
-            // (docs/s1disasm/s1disasm/_inc/ObjPosLoad.asm, OPL_MovedRight).
+            // (docs/s1disasm/s1disasm/_inc/ObjPosLoad.asm, OPL_MovedRight;
+            // docs/skdisasm/sonic3k.asm:37545-37628). S3K's Y-camera pass
+            // filters candidates inside that fixed X cursor range; it does not
+            // widen object allocation for a widescreen renderer.
             return S1_COUNTER_LOAD_AHEAD;
         }
         return super.getLoadAhead();

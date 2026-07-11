@@ -2,6 +2,7 @@ package com.openggf.game.rules;
 
 public record RingRules(
         int ringFloorCheckMask,
+        int ringFloorCheckCounterPhase,
         boolean ringFloorProbeRequiresRenderFlag,
         int ringCollisionWidth,
         int ringCollisionHeight,

@@ -483,8 +483,19 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     public void spawnLostRingsWithInitialObjectStep(AbstractPlayableSprite player, int ringCount,
                                                     int frameCounter, int x, int y,
                                                     int preallocatedFirstSlot) {
-        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y, preallocatedFirstSlot,
-                true);
+        int[] slots = preallocatedFirstSlot >= 0
+                ? new int[] {preallocatedFirstSlot}
+                : new int[0];
+        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y, slots,
+                false, true);
+    }
+
+    public void spawnLostRingsWithInitialObjectStep(AbstractPlayableSprite player, int ringCount,
+                                                    int frameCounter, int x, int y,
+                                                    int[] preallocatedSlots,
+                                                    boolean slotsFullyReserved) {
+        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y,
+                preallocatedSlots, slotsFullyReserved, true);
     }
 
     /** Shared spilled-ring spin owner feeding the LostRingObjectInstance object path. */
@@ -714,8 +725,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             // built by the ring's PREVIOUS-frame Add_SpriteToCollisionResponseList,
             // so the give uses the pre-move position. Test here (pre-move) to defer
             // one frame to match ROM (S3K MGZ rings f539).
-            if (attractedRingOverlapsPlayerTouchBox(ar, player)) {
-                player.addRings(1);
+            AbstractPlayableSprite collector = attractedRingCollector(ar, player);
+            if (collector != null) {
+                collector.addRings(1);
                 audioManager.playSfx(GameSound.RING);
                 ar.collected = true;
                 ar.sparkleStartFrame = frameCounter;
@@ -765,6 +777,25 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             ar.ySub = yLong & 0xFFFF;
             // give-ring tested pre-move at top of loop (ROM list timing)
         }
+    }
+
+    private AbstractPlayableSprite attractedRingCollector(AttractedRing ar,
+                                                            AbstractPlayableSprite mainPlayer) {
+        if (!cannotCollectRings(mainPlayer)
+                && attractedRingOverlapsPlayerTouchBox(ar, mainPlayer)) {
+            return mainPlayer;
+        }
+        var sprites = GameServices.spritesOrNull();
+        if (sprites == null) {
+            return null;
+        }
+        for (AbstractPlayableSprite sidekick : sprites.getSidekicks()) {
+            if (!cannotCollectRings(sidekick)
+                    && attractedRingOverlapsPlayerTouchBox(ar, sidekick)) {
+                return sidekick;
+            }
+        }
+        return null;
     }
 
     private boolean attractedRingOverlapsPlayerTouchBox(AttractedRing ar, AbstractPlayableSprite player) {
@@ -1377,6 +1408,17 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
                                     int x, int y, int preallocatedFirstSlot,
                                     boolean applyInitialObjectStep) {
+            int[] slots = preallocatedFirstSlot >= 0
+                    ? new int[] {preallocatedFirstSlot}
+                    : new int[0];
+            spawnLostRings(player, ringCount, frameCounter, x, y, slots,
+                    false, applyInitialObjectStep);
+        }
+
+        private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
+                                    int x, int y, int[] preallocatedSlots,
+                                    boolean slotsFullyReserved,
+                                    boolean applyInitialObjectStep) {
             if (player == null || renderer == null) {
                 return;
             }
@@ -1393,7 +1435,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             // Reset the shared spin owner that feeds every live ring's render frame.
             spillAnimation.reset();
             ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
-
             // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25143-25144:
             // `bsr.w AllocateObject; bne.w +++` — a failed AllocateObject branches PAST the
             // spill loop, truncating the spill). S1 allocates every Obj37 from the loop. S2
@@ -1404,7 +1445,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             boolean preallocateOwnerSlot = objectManager != null && objectManager.preallocatesLostRingOwnerSlot();
             boolean allocateRemainderAfterOwner = objectManager != null
                     && objectManager.lostRingRemainderAllocatesAfterOwnerSlot();
-            int firstReservedSlot = preallocatedFirstSlot;
+            int firstReservedSlot = preallocatedSlots.length > 0 ? preallocatedSlots[0] : -1;
             if (preallocateOwnerSlot && firstReservedSlot < 0) {
                 firstReservedSlot = objectManager.allocateDynamicSlot();
             }
@@ -1432,7 +1473,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 }
 
                 int slotIndex = -1;
-                if (i == 0 && preallocateOwnerSlot) {
+                if (i < preallocatedSlots.length) {
+                    slotIndex = preallocatedSlots[i];
+                } else if (slotsFullyReserved) {
+                    break;
+                } else if (i == 0 && preallocateOwnerSlot) {
                     slotIndex = firstReservedSlot;
                 } else if (objectManager != null) {
                     slotIndex = allocateRemainderAfterOwner
@@ -1485,12 +1530,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         private static int phaseOffsetForSlot(ObjectManager objectManager, int slotIndex) {
-            // Obj37 floor probes use the ring's dynamic-object execution countdown.
-            // In the engine this countdown is tied to the managed dynamic slot window;
-            // using the broader S3K process table shifts the spill cadence and makes
-            // rings bounce hundreds of pixels before the ROM trace.
+            // Obj37 adds Process_Sprites' live d7 countdown to V_int_run_count.
+            // S3K walks all 110 Object_RAM slots, including the fixed tail after
+            // Dynamic_object_RAM (sonic3k.asm:35965-35980).
             int lastSlotExclusive = objectManager != null
-                    ? objectManager.getLastDynamicSlotExclusive()
+                    ? objectManager.getLastProcessSlotExclusive()
                     : 128;
             return lastSlotExclusive - 1 - slotIndex;
         }

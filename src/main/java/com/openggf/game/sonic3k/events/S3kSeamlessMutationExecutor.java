@@ -34,11 +34,16 @@ public final class S3kSeamlessMutationExecutor {
     private static final Logger LOG = Logger.getLogger(S3kSeamlessMutationExecutor.class.getName());
 
     public static final String MUTATION_AIZ1_FIRE_TRANSITION_STAGE = "s3k.aiz1.fire_transition_stage";
+    public static final String MUTATION_AIZ1_FIRE_TERRAIN_READY = "s3k.aiz1.fire_terrain_ready";
     public static final String MUTATION_AIZ1_POST_RELOAD_ACT2 = "s3k.aiz1.post_reload_act2";
     private static final int LLB_PRIMARY_ART = 0;
     private static final int LLB_SECONDARY_ART = 4;
+    private static final int LLB_PRIMARY_CHUNKS = 8;
+    private static final int LLB_SECONDARY_CHUNKS = 12;
+    private static final int LLB_PRIMARY_BLOCKS = 16;
     private static final int AIZ2_LEVEL_LOAD_BLOCK_INDEX = 1;
     private static final int AIZ_SECONDARY_ART_DEST_TILE = 0x01FC;
+    private static final int AIZ_SECONDARY_CHUNK_DEST_BYTES = 0x0AB8;
     private static final int PAL_POINTER_AIZ_FIRE_INDEX = 0x0B;
     private static final int PLC_SPIKES_SPRINGS = 0x4E;
 
@@ -57,8 +62,43 @@ public final class S3kSeamlessMutationExecutor {
         }
         switch (mutationKey) {
             case MUTATION_AIZ1_FIRE_TRANSITION_STAGE -> applyAiz1FireTransitionStage(levelManager);
+            case MUTATION_AIZ1_FIRE_TERRAIN_READY -> applyAiz1FireTerrainReady(levelManager);
             case MUTATION_AIZ1_POST_RELOAD_ACT2 -> applyAiz1PostReloadAct2(levelManager);
             default -> LOG.warning("Unknown S3K seamless mutation key: " + mutationKey);
+        }
+    }
+
+    private static void applyAiz1FireTerrainReady(LevelManager levelManager) {
+        Level level = levelManager.getCurrentLevel();
+        if (!(level instanceof Sonic3kLevel sonic3kLevel)) {
+            return;
+        }
+
+        try {
+            Rom rom = rom();
+            if (rom == null) {
+                return;
+            }
+            AizFireOverlayData overlay = loadAizFireOverlayData(rom);
+            if (overlay == null) {
+                return;
+            }
+
+            applyImmediateMutation(levelManager, context -> {
+                // AIZ1BGE_FireTransition queues these Kosinski streams into
+                // RAM_start and Block_table before the module-art wait
+                // (sonic3k.asm:104664-104681). Once that queue has drained,
+                // collision observes the AIZ2 128x128/16x16 definitions even
+                // though Current_act and the live layout are still AIZ1.
+                sonic3kLevel.applyBlockOverlay(overlay.blocks128x128(), 0, false);
+                sonic3kLevel.applyChunkOverlay(overlay.primaryChunks16x16(), 0, false);
+                sonic3kLevel.applyChunkOverlay(
+                        overlay.secondaryChunks16x16(), AIZ_SECONDARY_CHUNK_DEST_BYTES, false);
+                return MutationEffects.NONE;
+            });
+            LOG.info("Applied decompressed AIZ2 block/chunk tables during AIZ1 fire handoff");
+        } catch (Exception e) {
+            LOG.warning("Failed to apply AIZ1 fire terrain tables: " + e.getMessage());
         }
     }
 
@@ -208,20 +248,32 @@ public final class S3kSeamlessMutationExecutor {
                 + AIZ2_LEVEL_LOAD_BLOCK_INDEX * Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
         int primaryArtAddr = rom.read32BitAddr(entryAddr + LLB_PRIMARY_ART) & 0x00FFFFFF;
         int secondaryArtAddr = rom.read32BitAddr(entryAddr + LLB_SECONDARY_ART) & 0x00FFFFFF;
+        int primaryChunksAddr = rom.read32BitAddr(entryAddr + LLB_PRIMARY_CHUNKS) & 0x00FFFFFF;
+        int secondaryChunksAddr = rom.read32BitAddr(entryAddr + LLB_SECONDARY_CHUNKS) & 0x00FFFFFF;
+        int blocksAddr = rom.read32BitAddr(entryAddr + LLB_PRIMARY_BLOCKS) & 0x00FFFFFF;
 
         ResourceLoader loader = new ResourceLoader(rom);
         byte[] primaryTiles8x8 = loader.loadSingle(LoadOp.kosinskiMBase(primaryArtAddr));
         byte[] secondaryTiles8x8 = loader.loadSingle(LoadOp.kosinskiMBase(secondaryArtAddr));
+        byte[] primaryChunks16x16 = loader.loadSingle(LoadOp.kosinskiBase(primaryChunksAddr));
+        byte[] secondaryChunks16x16 = loader.loadSingle(LoadOp.kosinskiBase(secondaryChunksAddr));
+        byte[] blocks128x128 = loader.loadSingle(LoadOp.kosinskiBase(blocksAddr));
 
         cachedAizFireOverlay = new AizFireOverlayData(
                 primaryTiles8x8,
-                secondaryTiles8x8);
+                secondaryTiles8x8,
+                primaryChunks16x16,
+                secondaryChunks16x16,
+                blocks128x128);
         return cachedAizFireOverlay;
     }
 
     private record AizFireOverlayData(
             byte[] primaryTiles8x8,
-            byte[] secondaryTiles8x8) {
+            byte[] secondaryTiles8x8,
+            byte[] primaryChunks16x16,
+            byte[] secondaryChunks16x16,
+            byte[] blocks128x128) {
     }
 
     private static final class AizAct2LayoutAdjuster {

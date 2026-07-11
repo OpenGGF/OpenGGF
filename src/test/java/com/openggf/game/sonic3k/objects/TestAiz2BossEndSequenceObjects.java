@@ -170,6 +170,8 @@ class TestAiz2BossEndSequenceObjects {
                 "ROM Obj_AIZDrawBridge calls SolidObjectFull2, so new landings narrow d1=$6B "
                         + "back to width_pixels=$60 instead of using a top-only full-width landing");
         assertTrue(bridge.bypassesOffscreenSolidGate());
+        assertTrue(bridge.suppressesObjectEdgeBalance(),
+                "ROM bridge status bit 7 skips Sonic_Move's object-edge balance branch");
         assertEquals(0x6B, params.halfWidth());
         assertEquals(8, params.airHalfHeight());
         assertEquals(8, params.groundHalfHeight());
@@ -922,6 +924,10 @@ class TestAiz2BossEndSequenceObjects {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setCentreX((short) 0x4900);
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        SidekickCpuController tailsCpu = new SidekickCpuController(tails, player);
+        tails.setCpuController(tailsCpu);
+        setField(tailsCpu, "diagnosticCtrl2HeldLatch", AbstractPlayableSprite.INPUT_UP);
+        setField(tailsCpu, "diagnosticCtrl2PressedLatch", AbstractPlayableSprite.INPUT_UP);
         tails.setObjectControlled(true);
         tails.setObjectControlAllowsCpu(false);
         tails.setObjectControlSuppressesMovement(true);
@@ -941,6 +947,9 @@ class TestAiz2BossEndSequenceObjects {
         assertTrue(tails.isControlLocked(),
                 "The AIZ2 controller still holds Player 2 input during Sonic's "
                         + "walk-right sequence.");
+        assertEquals(0, tailsCpu.getDiagnosticGeneratedHeldInput(),
+                "loc_863C0's positive Ctrl_2 lock clears the post-CPU logical word");
+        assertEquals(0, tailsCpu.getDiagnosticGeneratedPressedInput());
     }
 
     @Test
@@ -1006,6 +1015,38 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void hydrocityTransitionKeepsPrePhysicsCameraTargetForHandoffFrame() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setX((short) 0x4A38);
+        camera.setY((short) 0x029F);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 0x4AD8);
+        player.setCentreY((short) 0x0336);
+        player.capturePrePhysicsSnapshot();
+        player.setCentreY((short) 0x0342);
+
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x015A);
+        controller.setServices(services);
+        setField(controller, "postResultsControlRestoreDelay", 0);
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+        Aiz2BossEndSequenceState.pressButton();
+
+        controller.update(100, player);
+
+        assertEquals(0x02B6, camera.getY() & 0xFFFF,
+                "StartNewLevel preserves the camera target from the pre-physics player position");
+        assertTrue(camera.getFrozen(),
+                "the ordinary post-object camera pass must not overwrite the handoff sample");
+        assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.requestedZone);
+    }
+
+    @Test
     void controllerButtonStartsGradualLevelEndYChild() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
@@ -1016,7 +1057,7 @@ class TestAiz2BossEndSequenceObjects {
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setCentreX((short) 0x4A80);
-        player.setCentreY((short) 0x0200);
+        player.setCentreY((short) 0x01D0);
 
         Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
         controller.setServices(new RecordingServices()

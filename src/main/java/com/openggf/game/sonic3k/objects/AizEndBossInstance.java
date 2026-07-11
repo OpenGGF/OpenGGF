@@ -13,7 +13,6 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.Palette;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
@@ -21,6 +20,7 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.SwingMotion;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -119,6 +119,10 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     private int waitTimer = -1;
     private WaitCallback waitCallback = WaitCallback.NONE;
+    /** Defers the first camera-bound write until the camera pass after routine $C is installed. */
+    private boolean cameraScrollBoundsPending;
+    /** Restores the skipped right-bound increment once it can no longer move the camera early. */
+    private boolean cameraScrollMaxCatchUpPending;
 
     private enum WaitCallback {
         NONE,
@@ -156,6 +160,11 @@ public class AizEndBossInstance extends AbstractBossInstance
     private boolean eggCapsuleSignal;
 
     private boolean collisionEnabled;
+    /**
+     * The ROM restores {@code collision_flags} from the boss object's update,
+     * after that frame's engine touch-response pass has already run.
+     */
+    private boolean collisionEnablePending;
     private boolean highPriorityArt;
     private int mappingFrame;
 
@@ -170,6 +179,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     private S3kBossExplosionController defeatExplosionController;
     private boolean defeatRenderComplete;
     private int defeatPhaseTimer;
+    private int defeatExplosionWaitTimer;
 
     // Children references
     private AizEndBossShipChild shipChild;
@@ -189,13 +199,17 @@ public class AizEndBossInstance extends AbstractBossInstance
         state.hitCount = HIT_COUNT;
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
+        cameraScrollBoundsPending = false;
+        cameraScrollMaxCatchUpPending = false;
         defeatPhaseTimer = 0;
+        defeatExplosionWaitTimer = 0;
         defeatRenderComplete = false;
         defeatExplosionController = null;
         fireSignalActive = false;
         defeatSignal = false;
         eggCapsuleSignal = false;
         collisionEnabled = false;
+        collisionEnablePending = false;
         highPriorityArt = false;
         mappingFrame = 0;
         renderActivated = false;
@@ -298,6 +312,15 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+        if (collisionEnablePending) {
+            collisionEnabled = true;
+            collisionEnablePending = false;
+        }
+        if (cameraScrollMaxCatchUpPending && state.routine != ROUTINE_CAMERA_SCROLL) {
+            int camMaxX = (services().camera().getMaxX() & 0xFFFF) + 2;
+            services().camera().setMaxX((short) camMaxX);
+            cameraScrollMaxCatchUpPending = false;
+        }
         // Custom palette flash on hit
         if (state.invulnerable) {
             updateCustomFlash();
@@ -309,12 +332,6 @@ public class AizEndBossInstance extends AbstractBossInstance
                     collisionEnabled = true;
                 }
             }
-        }
-
-        // Defeat explosion controller
-        if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
-            defeatExplosionController.tick();
-            spawnPendingExplosions();
         }
 
         switch (state.routine) {
@@ -406,6 +423,7 @@ public class AizEndBossInstance extends AbstractBossInstance
 
         // Clear collision during emergence (ROM: clr.b collision_flags)
         collisionEnabled = false;
+        collisionEnablePending = false;
 
         // Restore normal palette (ROM: bsr.w sub_69C94)
         restoreNormalPalette();
@@ -467,7 +485,7 @@ public class AizEndBossInstance extends AbstractBossInstance
         highPriorityArt = true;
 
         // ROM: move.b #$16,collision_flags — becomes hittable
-        collisionEnabled = true;
+        collisionEnablePending = true;
 
         // Spawn flame column child (ROM: ChildObjDat_69D36, offset 0,-$30)
         spawnFlameColumnChild();
@@ -481,10 +499,10 @@ public class AizEndBossInstance extends AbstractBossInstance
     // ROM byte_69DB3 is consumed by Animate_RawNoSSTMultiDelay: $1B/$00,
     // $1B/$04, $1C/$05, $1D/$06, $00/$00, then $F4 callback
     // (docs/skdisasm/sonic3k.asm:138120-138122,139104-139110,177558-177587).
-    private static final int REVEALED_FRAME_1B_END = 6;
-    private static final int REVEALED_FRAME_1C_END = 12;
-    private static final int REVEALED_FRAME_1D_END = 19;
-    private static final int REVEALED_FRAME_VISIBLE_END = 20;
+    private static final int REVEALED_FRAME_1B_END = 5;
+    private static final int REVEALED_FRAME_1C_END = 11;
+    private static final int REVEALED_FRAME_1D_END = 18;
+    private static final int REVEALED_FRAME_VISIBLE_END = 19;
 
     /** ROM: loc_6932C — Revealed animation. */
     private void updateRevealed() {
@@ -584,6 +602,7 @@ public class AizEndBossInstance extends AbstractBossInstance
 
         // Clear collision while submerged
         collisionEnabled = false;
+        collisionEnablePending = false;
         restoreNormalPalette();
 
         // Spawn waterfall splash with subtype 2
@@ -601,6 +620,7 @@ public class AizEndBossInstance extends AbstractBossInstance
             // First time: scroll camera, set second cycle flag
             state.routine = ROUTINE_CAMERA_SCROLL;
             flags38 |= FLAG_SECOND_CYCLE;
+            cameraScrollBoundsPending = true;
         } else {
             // Second time: move to new position directly
             state.routine = ROUTINE_MOVE_WAIT;
@@ -618,17 +638,26 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     /** ROM: loc_69456 — Incrementally scroll camera right during reposition. */
     private void updateCameraScroll() {
-        // ROM: addq.w #2,(Camera_min_X_pos) until >= _unkFA84
-        int camMinX = services().camera().getMinX() & 0xFFFF;
-        if (camMinX < targetMaxX) {
-            camMinX += 2;
-            if (camMinX > targetMaxX) {
-                camMinX = targetMaxX;
+        if (cameraScrollBoundsPending) {
+            // loc_6942A installs routine $C during the boss object's pass. The
+            // camera has already consumed this frame's bounds, so loc_69456's
+            // first +2 becomes camera-visible on the following pass. Boss
+            // movement still begins now through loc_6946A/MoveSprite2.
+            cameraScrollBoundsPending = false;
+            cameraScrollMaxCatchUpPending = true;
+        } else {
+            // ROM: addq.w #2,(Camera_min_X_pos) until >= _unkFA84
+            int camMinX = services().camera().getMinX() & 0xFFFF;
+            if (camMinX < targetMaxX) {
+                camMinX += 2;
+                if (camMinX > targetMaxX) {
+                    camMinX = targetMaxX;
+                }
+                services().camera().setMinX((short) camMinX);
             }
-            services().camera().setMinX((short) camMinX);
+            int camMaxX = (services().camera().getMaxX() & 0xFFFF) + 2;
+            services().camera().setMaxX((short) camMaxX);
         }
-        int camMaxX = (services().camera().getMaxX() & 0xFFFF) + 2;
-        services().camera().setMaxX((short) camMaxX);
 
         // Also do move+wait
         updateMoveWait();
@@ -678,32 +707,25 @@ public class AizEndBossInstance extends AbstractBossInstance
         flags38 |= FLAG_HIDDEN;
         highPriorityArt = true;
         collisionEnabled = false;
+        collisionEnablePending = false;
         mappingFrame = 0;
 
-        // Signal combat children (arms, propellers, flames, column) to self-destruct.
-        // The ship child checks boss.getState().defeated instead and handles its own
-        // multi-phase defeat animation (ROM: Obj_RobotnikShip routines 2-6).
         defeatSignal = true;
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(false);
 
         // ROM: BossDefeated_StopTimer — timer stop handled by gameState
 
-        services().fadeOutMusic();
-
         // ROM: The ship child (Obj_RobotnikShip) creates its own explosion controller
         // via Child6_CreateBossExplosion subtype 4 at loc_460DC. In the engine we keep
         // this on the boss for simplicity — subtype 0 produces the same visual effect.
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
-
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
+        services().fadeOutMusic();
+        if (services().objectManager() != null) {
             spawnDebris();
         }
-
-        // Existing AIZ handoff wait; updateDefeated applies Obj_Wait's
-        // pre-decrement callback semantics so $2E=$7F expires after the
-        // negative transition, not when it first reaches zero
-        // (sonic3k.asm:177944-177952).
+        // The ship/explosion handoff remains in Wait_Draw before loc_47360's
+        // independent $7F wait begins.
+        defeatExplosionWaitTimer = 0x37;
         defeatPhaseTimer = 0x7F;
     }
 
@@ -711,6 +733,11 @@ public class AizEndBossInstance extends AbstractBossInstance
         if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
             defeatExplosionController.tick();
             spawnPendingExplosions();
+        }
+
+        if (defeatExplosionWaitTimer >= 0) {
+            defeatExplosionWaitTimer--;
+            return;
         }
 
         if (defeatPhaseTimer >= 0) {
@@ -746,13 +773,24 @@ public class AizEndBossInstance extends AbstractBossInstance
 
         if (getPlayerCharacter() != PlayerCharacter.KNUCKLES) {
             Aiz2BossEndSequenceState.reset();
-            Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
             // ROM loc_694AA creates the route-8 capsule through
             // CreateChild6_Simple, which allocates after the current boss
             // slot (sonic3k.asm:138247-138255, 177114-177129).
             spawnChild(() -> Aiz2EndEggCapsuleInstance.createForCamera(
                     services().camera().getX(), services().camera().getY()));
-            spawnFreeChild(AizDrawBridgeObjectInstance::createCutsceneOverride);
+            Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
+            PlayableEntity mainPlayer = services().playerQuery().mainPlayerOrNull();
+            // The consolidated replacement normally occupies slot 8. Preserve
+            // the earlier native bridge dispatch when Player_1's live interact
+            // pointer identifies an owner below the replacement's allocated
+            // slot; an interact owner at or after it already matches the
+            // replacement's ordinary pass.
+            AizDrawBridgeObjectInstance cutsceneBridge = spawnFreeChild(
+                    AizDrawBridgeObjectInstance::createCutsceneOverride);
+            Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(
+                    mainPlayer instanceof AbstractPlayableSprite sprite
+                            && sprite.getInteractSlotIndex() >= 0
+                            && sprite.getInteractSlotIndex() < cutsceneBridge.getSlotIndex());
             spawnFreeChild(S3kCutsceneButtonObjectInstance::createCutsceneOverride);
             spawnFreeChild(() -> new Aiz2BossEndSequenceController(targetMaxX, yBase));
         } else {

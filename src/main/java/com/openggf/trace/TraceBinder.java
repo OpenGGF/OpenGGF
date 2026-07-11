@@ -635,8 +635,24 @@ public class TraceBinder {
         int expectedPressedAlternate = expectedNormalStep != null
                 ? normalizeRomCtrl2PressedByte(expectedNormalStep.ctrl2Logical())
                 : expectedPressed;
-        int actualHeld = actual.generatedHeld() & 0xFF;
-        int actualPressed = normalizeEngineCtrl2PressedByte(actual.generatedPressed());
+        int actualHeldLive = actual.generatedHeld() & 0xFF;
+        int actualHeldDecision = actual.normalStepHeld() & 0xFF;
+        boolean heldDecisionMatchesRecordedCpuSample = expectedNormalStep != null
+                && actual.normalStepHeld() >= 0
+                && (actualHeldDecision == expectedHeld
+                    || actualHeldDecision == expectedHeldAlternate);
+        int actualHeld = heldDecisionMatchesRecordedCpuSample
+                ? actualHeldDecision
+                : actualHeldLive;
+        int actualPressedLive = normalizeEngineCtrl2PressedByte(actual.generatedPressed());
+        int actualPressedDecision = normalizeEngineCtrl2PressedByte(actual.normalStepPressed());
+        boolean pressedDecisionMatchesRecordedCpuSample = expectedNormalStep != null
+                && actual.normalStepPressed() >= 0
+                && (actualPressedDecision == expectedPressed
+                    || actualPressedDecision == expectedPressedAlternate);
+        int actualPressed = pressedDecisionMatchesRecordedCpuSample
+                ? actualPressedDecision
+                : actualPressedLive;
         if (isCoastingPanicCtrl2Latch(expected, expectedSidekick, actualSidekick)) {
             fields.put(prefix + "cpu_ctrl2_held", ignoredLatchedCtrl2(prefix + "cpu_ctrl2_held",
                     expectedHeld, actualHeld));

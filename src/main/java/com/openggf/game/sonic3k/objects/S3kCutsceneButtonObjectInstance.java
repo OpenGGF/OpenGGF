@@ -27,9 +27,9 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
     private static final int INIT_Y_OFFSET = 4;
     private static final int PRIORITY = 4;
     private static final int RANGE_LEFT = -0x18;
-    private static final int RANGE_RIGHT = 0x30;
+    private static final int RANGE_RIGHT = RANGE_LEFT + 0x30;
     private static final int RANGE_TOP = -0x18;
-    private static final int RANGE_BOTTOM = 0x30;
+    private static final int RANGE_BOTTOM = RANGE_TOP + 0x30;
 
     private int x;
     private int y;
@@ -90,19 +90,18 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         if (knuckles == null) {
             return;
         }
-        // ROM: The button is pressed when Knuckles lands ON it during the first
-        // arc of his jump (loc_620EA uses SolidObjectFull2). This is before
-        // the bounce back — NOT during his initial run-in or after the full
-        // jump sequence. Gate on hasLandedOnButton() which becomes true at the
-        // first bounce (when Knuckles physically touches down on the button).
-        if (!knuckles.hasLandedOnButton()) {
-            return;
-        }
+        // Obj_CutsceneButton reads the object pointer in _unkFAA4 and calls
+        // Check_InMyRange directly; it does not require a landing/bounce flag
+        // (sonic3k.asm:133931-133943).
         int dx = knuckles.getX() - x;
         int dy = knuckles.getY() - y;
         if (dx >= RANGE_LEFT && dx < RANGE_RIGHT && dy >= RANGE_TOP && dy < RANGE_BOTTOM) {
             pressed = true;
             Aiz2BossEndSequenceState.pressButton();
+            if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
+                services().objectManager().activeObjectsOfType(AizDrawBridgeObjectInstance.class)
+                        .forEach(AizDrawBridgeObjectInstance::beginCollapseFromEarlierButtonSlot);
+            }
             services().playSfx(Sonic3kSfx.SWITCH.id);
         }
     }

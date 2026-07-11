@@ -67,15 +67,15 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
         // Obj_WaitOffscreen parity: ROM Obj_CaterKillerJr (sonic3k.asm:183317-183323)
         // begins with `jsr (Obj_WaitOffscreen).l`. Obj_WaitOffscreen
         // (sonic3k.asm:180266-180297) suppresses all logic every frame until
-        // render_flags bit 7 (on-screen X) is set; until then it draws the
-        // offscreen indicator and returns. The cursor advance allocates the
+        // render_flags bit 7 is set; until then it draws the 0x20-by-0x20
+        // offscreen placeholder and returns. The cursor advance allocates the
         // slot at the chunk transition (~0x40 frames before camera reaches
         // the spawn x), but the active state is gated by on-screen visibility.
         // Without this guard the engine activates the caterkiller as soon as
         // it enters the spawn window, which causes its position to drift
         // ~41 px further left than ROM by the time Sonic encounters it
         // (AIZ trace F6066 hurt-Sonic divergence).
-        if (!isOnScreenX()) return;
+        if (!isOnScreen(0x20)) return;
 
         if (!bodySpawned) spawnBodySegments();
 
@@ -89,10 +89,20 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
         }
     }
 
+    @Override
+    public int getCollisionFlags() {
+        // Obj_WaitOffscreen replaces the operation before SetUp_ObjAttributes
+        // writes collision_flags. The parked placeholder therefore cannot hurt
+        // a player that reaches its coordinates while it is vertically hidden.
+        return bodySpawned ? super.getCollisionFlags() : 0;
+    }
+
     private void spawnBodySegments() {
         for (int i = 0; i < BODY_SEGMENT_COUNT; i++) {
             int segmentIndex = i;
-            CaterkillerJrBodyInstance segment = spawnFreeChild(
+            // CreateChild3_NormalRepeated allocates each child with
+            // AllocateObjectAfterCurrent, preserving head-before-body touch order.
+            CaterkillerJrBodyInstance segment = spawnChild(
                     () -> new CaterkillerJrBodyInstance(
                             spawn, segmentIndex, SEGMENT_WAIT_DELAYS[segmentIndex]));
             if (!segment.isDestroyed() && segment.getSlotIndex() >= 0) {

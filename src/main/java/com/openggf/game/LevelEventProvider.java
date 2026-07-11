@@ -53,6 +53,18 @@ public interface LevelEventProvider {
     }
 
     /**
+     * Advances hardware-owned work on an emulator VBlank-only row where the
+     * level loop itself did not execute.
+     *
+     * <p>Most level-event state is CPU-owned and must remain frozen. The
+     * default is therefore a no-op; providers may advance only explicitly
+     * VBlank/DMA-owned queues such as a delayed plane redraw.
+     */
+    default void advanceVblankOnlyState() {
+        // Default no-op
+    }
+
+    /**
      * Updates fixed in-level object RAM that executes before dynamic level
      * object slots.
      * <p>

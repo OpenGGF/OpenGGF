@@ -428,10 +428,9 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
 
         routine = 4;
 
-        // Compensate for pendingDynamicAdditions 1-frame spawn delay:
-        // ROM processes Knuckles' first fall movement in the same frame as
-        // trigger detection. Execute first fall frame immediately.
-        routine4Fall();
+        // loc_61E02 ends by jumping to PalLoad_Line1. It does not fall through
+        // to loc_61E24, so the first MoveSprite call belongs to the next object
+        // dispatch (docs/skdisasm/sonic3k.asm:128644-128665).
     }
 
     // -----------------------------------------------------------------------
@@ -613,13 +612,13 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
         SubpixelMotion.moveX(motionState);
         currentX = motionState.x; xSub = motionState.xSub;
         exitRenderFlagOnScreen = isVisibleForExitRenderFlag();
-        if (!exitRenderFlagOnScreen) {
-            // The ROM uses render_flags bit 7 as the gate for the intro->gameplay handoff.
-            // In this port that flag is recomputed locally inside the object instead of by a
-            // later BuildSprites pass, so complete the handoff as soon as the post-move state
-            // flips offscreen rather than waiting an extra update frame.
-            completeIntroExitHandoff();
-        }
+        // ROM loc_61F10 tests the render_flags byte written by the PREVIOUS
+        // frame's Draw_Sprite before Animate_Raw/MoveSprite2 run. Draw_Sprite
+        // then recomputes bit 7 from this post-move position after the routine
+        // returns, so crossing the render boundary only triggers the handoff on
+        // the next object dispatch (docs/skdisasm/sonic3k.asm:128608-128614,
+        // 128731-128749). Preserve that stale-flag cadence here: the next call's
+        // leading check consumes exitRenderFlagOnScreen=false.
     }
 
     // -----------------------------------------------------------------------

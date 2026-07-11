@@ -46,7 +46,6 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     // Display hold duration (frames). ROM: Level routine overwrites $2E to $16 (22)
     // at line 7878, synchronizing the hold with Palette_fade_timer.
     private static final int DISPLAY_HOLD_FRAMES = 90;
-    private static final int IN_LEVEL_WAIT_FRAMES_BEFORE_HUD_RESET = 4;
 
     // ROM palette fade duration: 22 frames (sonic3k.asm line 7877, Palette_fade_timer = $16).
     // In the ROM, the title card is already visible for many frames during level loading
@@ -104,13 +103,21 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private static final int[] TARGET_Y = {64, 96, 128, 160};
     private static final boolean[] IS_VERTICAL = {true, false, false, false};
     private static final int[] EXIT_PRIORITY = {1, 3, 5, 7};
+    // Render_Sprites bounds consumed by the following object pass. The red
+    // banner overwrites height_pixels with $70; the remaining values are the
+    // width_pixels bytes in ObjArray_TtlCard.
+    private static final int BANNER_RENDER_HEIGHT = 0x70;
+    private static final int[] ELEMENT_RENDER_WIDTH = {0, 0x80, 0x24, 0x1C};
 
     // ---- State ----
     private Sonic3kTitleCardState state = Sonic3kTitleCardState.COMPLETE;
     private int stateTimer;
     private int phaseCounter;  // Exit phase counter for staggered exit
+    private boolean exitChildrenGone;
     private boolean inLevelMode;  // No black background, control released immediately
-    private boolean resetLevelGamestateOnInLevelComplete;
+    private boolean resetLevelGamestateOnInLevelDisplay;
+    private int resetLevelGamestateCountdown;
+    private int inLevelExitDelayFrames;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
     private float bonusFadeProgress; // 0.0→1.0 over BONUS_DISPLAY_HOLD_FRAMES during DISPLAY
 
@@ -133,6 +140,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private final int[] elemFrame = new int[ELEMENT_COUNT];
     private final boolean[] elemAtTarget = new boolean[ELEMENT_COUNT];
     private final boolean[] elemExiting = new boolean[ELEMENT_COUNT];
+    private final boolean[] elemOutsideViewport = new boolean[ELEMENT_COUNT];
     private final boolean[] elemExited = new boolean[ELEMENT_COUNT];
     private boolean actNumberVisible;  // False for single-act zones
 
@@ -161,14 +169,24 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     }
 
     /**
-     * S3K Act 1 results mutate into an in-level title card. The ROM clears
-     * {@code Ring_count}/timer when {@code Obj_TitleCardWait} starts the
-     * in-level wait, not when Obj_LevelResults first switches
-     * {@code Apparent_act} (sonic3k.asm:62708-62720, 62214-62235).
+     * Carries the Act 1 results HUD reset into the in-level title card. The
+     * native Obj_TitleCardWait reset becomes visible when the engine's title
+     * card children finish sliding to their display positions.
      */
-    public void requestLevelGamestateResetOnInLevelComplete() {
+    public void requestLevelGamestateResetAtInLevelDisplay() {
         if (inLevelMode) {
-            resetLevelGamestateOnInLevelComplete = true;
+            resetLevelGamestateOnInLevelDisplay = true;
+            int modulePhase = GameServices.level().getObjectManager().getVblaCounter() & 3;
+            // The slotless manager reaches its predicted display point after
+            // 26 updates. At module phase 1 the native children are not live
+            // until the next phase-0 handoff, followed by their object/render
+            // visibility pass; preserve those six additional updates. Phase 3
+            // has already crossed that handoff and needs no compensation.
+            resetLevelGamestateCountdown = 26 + (modulePhase == 1 ? 6 : 0);
+            // The same child-visibility handoff reaches the later Wait2 poll
+            // five updates after the slotless manager would otherwise predict
+            // completion when initialization precedes phase 0.
+            inLevelExitDelayFrames = modulePhase == 1 ? 5 : 0;
         }
     }
 
@@ -187,6 +205,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.phaseCounter = 0;
+        this.exitChildrenGone = false;
 
         // Set up 2 bonus elements — reuse the first 2 slots of the 4-element arrays
         elemFrame[0] = Sonic3kTitleCardMappings.FRAME_BONUS;
@@ -197,6 +216,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
             elemY[i] = BONUS_Y;
             elemAtTarget[i] = false;
             elemExiting[i] = false;
+            elemOutsideViewport[i] = false;
             elemExited[i] = false;
         }
 
@@ -214,10 +234,13 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.currentAct = actIndex;
         this.bonusMode = false;
         this.inLevelMode = inLevel;
-        this.resetLevelGamestateOnInLevelComplete = false;
+        this.resetLevelGamestateOnInLevelDisplay = false;
+        this.resetLevelGamestateCountdown = 0;
+        this.inLevelExitDelayFrames = 0;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.phaseCounter = 0;
+        this.exitChildrenGone = false;
 
         // Load art if needed
         if (!artLoaded || lastLoadedZone != zoneIndex || lastLoadedAct != actIndex) {
@@ -238,6 +261,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
             elemY[i] = START_Y[i];
             elemAtTarget[i] = false;
             elemExiting[i] = false;
+            elemOutsideViewport[i] = false;
             elemExited[i] = false;
         }
 
@@ -248,6 +272,10 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
     @Override
     public void update() {
+        if (resetLevelGamestateOnInLevelDisplay && resetLevelGamestateCountdown > 0
+                && --resetLevelGamestateCountdown == 0) {
+            consumeLevelGamestateResetRequest();
+        }
         switch (state) {
             case SLIDE_IN -> updateSlideIn();
             case DISPLAY -> updateDisplay();
@@ -291,15 +319,18 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         }
         // Engine ordering: Sonic3kTitleCardManager advances before object
         // updates, while the ROM title-card wait object and end-sign
-        // controller run in the same object pass. Predict one title-card
-        // manager tick ahead so AIZ's level-size proxy can start on the ROM
-        // frame where Obj_TitleCardWait2 raises End_of_level_flag.
+        // controller run in the same object pass. Once every child consumed
+        // its preceding off-screen render flag, predict the parent wait's next
+        // dispatch so AIZ's level-size proxy starts on the native frame.
+        if (!exitChildrenGone || inLevelExitDelayFrames > 1) {
+            return false;
+        }
         int count = bonusMode ? BONUS_ELEMENT_COUNT : ELEMENT_COUNT;
         for (int i = 0; i < count; i++) {
             if (!bonusMode && !actNumberVisible && i == ELEM_ACT_NUM) {
                 continue;
             }
-            if (!willElementBeExitedWithinUpdates(i, 2)) {
+            if (!elemExited[i]) {
                 return false;
             }
         }
@@ -384,10 +415,13 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         state = Sonic3kTitleCardState.COMPLETE;
         stateTimer = 0;
         phaseCounter = 0;
+        exitChildrenGone = false;
         inLevelMode = false;
+        resetLevelGamestateOnInLevelDisplay = false;
+        resetLevelGamestateCountdown = 0;
+        inLevelExitDelayFrames = 0;
         bonusMode = false;
         bonusFadeProgress = 0f;
-        resetLevelGamestateOnInLevelComplete = false;
         currentZone = 0;
         currentAct = 0;
         actNumberVisible = false;
@@ -401,6 +435,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         Arrays.fill(elemFrame, 0);
         Arrays.fill(elemAtTarget, false);
         Arrays.fill(elemExiting, false);
+        Arrays.fill(elemOutsideViewport, false);
         Arrays.fill(elemExited, false);
     }
 
@@ -433,12 +468,19 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         }
     }
 
+    private void consumeLevelGamestateResetRequest() {
+        if (!resetLevelGamestateOnInLevelDisplay) {
+            return;
+        }
+        resetLevelGamestateOnInLevelDisplay = false;
+        var levelManager = GameServices.levelOrNull();
+        if (levelManager != null) {
+            levelManager.resetLevelGamestate(GameServices.module().createLevelState());
+        }
+    }
+
     private void updateDisplay() {
         stateTimer++;
-        if (inLevelMode && stateTimer >= IN_LEVEL_WAIT_FRAMES_BEFORE_HUD_RESET) {
-            consumeLevelGamestateResetRequest();
-        }
-
         // In bonus mode, run the per-channel fade during the last 22 frames of the hold.
         // ROM: Palette_fade_timer runs after level loading completes, but the title card
         // has already been visible for many frames. Our level loads synchronously, so we
@@ -468,6 +510,15 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
             if (!bonusMode && !actNumberVisible && i == ELEM_ACT_NUM) continue;
             if (elemExited[i]) continue;
 
+            // Obj_TitleCardElement consumes render bit 7 from the preceding
+            // Render_Sprites pass. Keep the child alive for that one stale
+            // render-flag tick after it first moves wholly off-screen.
+            allExited = false;
+            if (elemOutsideViewport[i]) {
+                elemExited[i] = true;
+                continue;
+            }
+
             // Start exiting when phase counter reaches element's priority
             if (phaseCounter >= priorities[i]) {
                 elemExiting[i] = true;
@@ -475,14 +526,21 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
             if (elemExiting[i]) {
                 slideElement(i, false);
-            }
-
-            if (!elemExited[i]) {
-                allExited = false;
+                elemOutsideViewport[i] = isOutsideNativeViewport(i);
             }
         }
 
         if (allExited) {
+            // Obj_TitleCardWait2 runs before its children. It observes the
+            // final child's deletion on its following object dispatch.
+            if (!exitChildrenGone) {
+                exitChildrenGone = true;
+                return;
+            }
+            if (inLevelMode && inLevelExitDelayFrames > 0) {
+                inLevelExitDelayFrames--;
+                return;
+            }
             state = Sonic3kTitleCardState.COMPLETE;
             if (inLevelMode) {
                 // ROM Obj_TitleCardWait2 sets End_of_level_flag only after the
@@ -494,101 +552,75 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         }
     }
 
-    private void consumeLevelGamestateResetRequest() {
-        if (!resetLevelGamestateOnInLevelComplete) {
-            return;
+    private boolean isOutsideNativeViewport(int idx) {
+        if (!bonusMode && IS_VERTICAL[idx]) {
+            return elemY[idx] + BANNER_RENDER_HEIGHT < 0;
         }
-        resetLevelGamestateOnInLevelComplete = false;
-        var levelManager = GameServices.levelOrNull();
-        if (levelManager != null) {
-            levelManager.resetLevelGamestate(GameServices.module().createLevelState());
-        }
-    }
-
-    private boolean willElementBeExitedWithinUpdates(int idx, int updates) {
-        if (elemExited[idx]) {
-            return true;
-        }
-        int[] priorities = bonusMode ? BONUS_EXIT_PRIORITY : EXIT_PRIORITY;
-        if (phaseCounter + updates < priorities[idx]) {
-            return false;
-        }
-        int speed = SLIDE_SPEED_OUT;
-        int start = isElementVertical(idx) ? elementStartY(idx) : elementStartX(idx);
-        int current = isElementVertical(idx) ? elemY[idx] : elemX[idx];
-        int dir = Integer.compare(start, current);
-        if (dir == 0) {
-            return true;
-        }
-        int next = current + dir * speed * updates;
-        return (dir > 0 && next >= start) || (dir < 0 && next <= start);
+        int renderWidth = bonusMode ? 0x80 : ELEMENT_RENDER_WIDTH[idx];
+        return elemX[idx] - renderWidth >= SCREEN_WIDTH;
     }
 
     private boolean isElementVertical(int idx) {
         return !bonusMode && IS_VERTICAL[idx];
     }
 
-    private int elementStartX(int idx) {
-        return bonusMode ? BONUS_START_X[idx] : START_X[idx];
-    }
-
-    private int elementStartY(int idx) {
-        return bonusMode ? BONUS_Y : START_Y[idx];
-    }
-
-    /**
-     * Slides an element toward its target (slideIn=true) or back to start (slideIn=false).
-     */
+    /** Slides an element toward its target or outward until its render bounds leave the screen. */
     private void slideElement(int idx, boolean slideIn) {
         int speed = slideIn ? SLIDE_SPEED_IN : SLIDE_SPEED_OUT;
 
         if (bonusMode) {
             // Bonus mode: all elements are horizontal
-            int goalX = slideIn ? BONUS_TARGET_X[idx] : BONUS_START_X[idx];
+            if (!slideIn) {
+                elemX[idx] += speed;
+                return;
+            }
+            int goalX = BONUS_TARGET_X[idx];
             int dir = Integer.compare(goalX, elemX[idx]);
             if (dir == 0) {
-                if (slideIn) elemAtTarget[idx] = true;
-                else elemExited[idx] = true;
+                elemAtTarget[idx] = true;
                 return;
             }
             elemX[idx] += dir * speed;
             if ((dir > 0 && elemX[idx] >= goalX) || (dir < 0 && elemX[idx] <= goalX)) {
                 elemX[idx] = goalX;
-                if (slideIn) elemAtTarget[idx] = true;
-                else elemExited[idx] = true;
+                elemAtTarget[idx] = true;
             }
             return;
         }
 
         // Normal mode
-        int goalX = slideIn ? TARGET_X[idx] : START_X[idx];
-        int goalY = slideIn ? TARGET_Y[idx] : START_Y[idx];
+        if (!slideIn) {
+            if (IS_VERTICAL[idx]) {
+                elemY[idx] -= speed;
+            } else {
+                elemX[idx] += speed;
+            }
+            return;
+        }
+        int goalX = TARGET_X[idx];
+        int goalY = TARGET_Y[idx];
 
         if (IS_VERTICAL[idx]) {
             int dir = Integer.compare(goalY, elemY[idx]);
             if (dir == 0) {
-                if (slideIn) elemAtTarget[idx] = true;
-                else elemExited[idx] = true;
+                elemAtTarget[idx] = true;
                 return;
             }
             elemY[idx] += dir * speed;
             if ((dir > 0 && elemY[idx] >= goalY) || (dir < 0 && elemY[idx] <= goalY)) {
                 elemY[idx] = goalY;
-                if (slideIn) elemAtTarget[idx] = true;
-                else elemExited[idx] = true;
+                elemAtTarget[idx] = true;
             }
         } else {
             int dir = Integer.compare(goalX, elemX[idx]);
             if (dir == 0) {
-                if (slideIn) elemAtTarget[idx] = true;
-                else elemExited[idx] = true;
+                elemAtTarget[idx] = true;
                 return;
             }
             elemX[idx] += dir * speed;
             if ((dir > 0 && elemX[idx] >= goalX) || (dir < 0 && elemX[idx] <= goalX)) {
                 elemX[idx] = goalX;
-                if (slideIn) elemAtTarget[idx] = true;
-                else elemExited[idx] = true;
+                elemAtTarget[idx] = true;
             }
         }
     }

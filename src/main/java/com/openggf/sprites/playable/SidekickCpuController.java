@@ -276,6 +276,9 @@ public class SidekickCpuController {
     private NormalStepDiagnostics latestNormalStepDiagnostics;
     private int diagnosticCtrl2HeldLatch;
     private int diagnosticCtrl2PressedLatch;
+    private int diagnosticPreObjectCtrl2Frame = -1;
+    private int diagnosticPreObjectCtrl2Held;
+    private int diagnosticPreObjectCtrl2Pressed;
 
     // =====================================================================
     // Tails-carry-Sonic support (S3K-only; null trigger = feature disabled)
@@ -375,7 +378,6 @@ public class SidekickCpuController {
         deferredDespawnDeadFallContinuingThisFrame = false;
 
         if (controller2SignedLocked) {
-            clearInputs();
             carryParentagePending = false;
             if (sidekick.isObjectControlled() && !sidekick.isObjectControlAllowsCpu()) {
                 mirrorRawController2LogicalForEndingPose();
@@ -552,6 +554,9 @@ public class SidekickCpuController {
         // Tails_Control pass copies raw Ctrl_2 into Ctrl_2_logical before
         // Set_PlayerEndingPose's object_control=$81 freezes movement
         // (docs/skdisasm/sonic3k.asm:26196-26203,181919-181988).
+        diagnosticPreObjectCtrl2Frame = frameCounter;
+        diagnosticPreObjectCtrl2Held = diagnosticCtrl2HeldLatch & 0xFF;
+        diagnosticPreObjectCtrl2Pressed = diagnosticCtrl2PressedLatch & 0xFF;
         diagnosticCtrl2HeldLatch = controller2Held & MANUAL_HELD_MASK;
         diagnosticCtrl2PressedLatch = controller2Logical & MANUAL_HELD_MASK;
     }
@@ -625,25 +630,37 @@ public class SidekickCpuController {
     }
 
     public int getDiagnosticGeneratedHeldInput() {
-        NormalStepDiagnostics d = latestNormalStepDiagnostics;
-        if (state == State.NORMAL
-                && d != null
-                && d.frameCounter() == frameCounter
-                && d.hasCpuResult()) {
-            return d.generatedInput() & 0xFF;
-        }
+        // Return the live Ctrl_2_logical latch, not the earlier NORMAL-step
+        // sample. Later object slots can overwrite/clear the global after the
+        // CPU pass (for example AIZ loc_863C0), while the detailed normal-step
+        // diagnostic intentionally retains the value generated inside CPU code.
         return diagnosticCtrl2HeldLatch & 0xFF;
     }
 
     public int getDiagnosticGeneratedPressedInput() {
-        NormalStepDiagnostics d = latestNormalStepDiagnostics;
-        if (state == State.NORMAL
-                && d != null
-                && d.frameCounter() == frameCounter
-                && d.hasCpuResult()) {
-            return d.generatedPressedInput() & 0xFF;
-        }
         return diagnosticCtrl2PressedLatch & 0xFF;
+    }
+
+    public int getDiagnosticNormalStepHeldInput() {
+        if (diagnosticPreObjectCtrl2Frame >= 0) {
+            return diagnosticPreObjectCtrl2Held;
+        }
+        NormalStepDiagnostics diagnostics = latestNormalStepDiagnostics;
+        if (diagnostics != null && diagnostics.frameCounter() == frameCounter) {
+            return diagnostics.generatedInput() & 0xFF;
+        }
+        return -1;
+    }
+
+    public int getDiagnosticNormalStepPressedInput() {
+        if (diagnosticPreObjectCtrl2Frame >= 0) {
+            return diagnosticPreObjectCtrl2Pressed;
+        }
+        NormalStepDiagnostics diagnostics = latestNormalStepDiagnostics;
+        if (diagnostics != null && diagnostics.frameCounter() == frameCounter) {
+            return diagnostics.generatedPressedInput() & 0xFF;
+        }
+        return -1;
     }
 
     public int getDiagnosticFollowHistorySlot() {
@@ -2084,7 +2101,15 @@ public class SidekickCpuController {
                         && collisionRules.sidekickPushBypassUsesGraceStatus()
                         && !sidekick.getAir()
                         && sidekick.getRolling()
-                        && sidekick.getGSpeed() != 0;
+                        && sidekick.getGSpeed() != 0
+                        // A terrain wall push normally zeroes ground_vel before
+                        // setting Status_Push, but SolidObjectFull can own the
+                        // same native bit while rolling inertia remains nonzero.
+                        // Preserve that concrete object latch for loc_13DD0;
+                        // only an unowned player-only bit is stale
+                        // (sonic3k.asm:26702-26705,43916-43935).
+                        && !sidekick.isPushFromGroundWallCollision()
+                        && !hasLiveObjectPushingLatch();
         boolean romVisibleCurrentStatusPush =
                 currentStatusPush && !rollingNonzeroGroundSpeedStalePush;
         boolean frameStartStatusPush = sidekick.getPushingAtFrameStart();
@@ -2115,11 +2140,20 @@ public class SidekickCpuController {
                 && (!sidekick.isInWater()
                 || !restrictUnderwaterPushBypassToContactPulses
                 || delayedObjectOrPushContext
+                || sidekick.isPushFromGroundWallCollision()
                 || isUnderwaterCurrentPushPulse()))
                 || frameStartPushBypass;
         boolean clearReleasedUnderwaterPushAfterCpu = currentPushBypass
                 && releasedUnderwaterZeroSpeedPush
-                && !releasedUnderwaterPushConsumed;
+                && !releasedUnderwaterPushConsumed
+                // A released interact slot is only evidence that an old
+                // object-owned bit may be stale. A terrain CalcRoomInFront
+                // response can set the same native Status_Push bit after that
+                // release; ROM loc_13DD0 consumes it and a zero-distance next
+                // probe leaves it intact (sonic3k.asm:26702-26705,
+                // 27974-28018). Do not classify that fresh terrain source as
+                // the released object's one-shot clear.
+                && !sidekick.isPushFromGroundWallCollision();
         boolean pushBypassGraceEnabled = collisionRules != null && collisionRules.sidekickPushBypassUsesGraceStatus();
         boolean gracePushBypass = !sidekick.getAir()
                 && pushBypassGraceEnabled
@@ -2234,6 +2268,12 @@ public class SidekickCpuController {
                         && collisionRules.sidekickSuppressesFastLeaderTinyFollowNudge()
                         && effectiveLeader.getGSpeed() >= 0x400
                         && !leaderStatusOnObject
+                        // This is an engine object-order bridge for the live
+                        // spring/wall support case, not a ROM-wide fast-leader
+                        // rule. With no latched support, loc_13E0A/loc_13E34
+                        // still applies its native +/-1 x_pos nudge
+                        // (sonic3k.asm:26707-26741).
+                        && hasLiveInteractSlotObject(currentInteractSlotObject())
                         && Math.abs(sidekick.getGSpeed()) < 0x100
                         && localGraceAbsDx < followSnapThreshold
                         && dy < -JUMP_HEIGHT_THRESHOLD
@@ -2781,6 +2821,13 @@ public class SidekickCpuController {
             return levelManager.getObjectManager().getRidingObject(sidekick);
         }
         return sidekick.getLatchedSolidObjectInstance();
+    }
+
+    private boolean hasLiveObjectPushingLatch() {
+        LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
+        return levelManager != null
+                && levelManager.getObjectManager() != null
+                && levelManager.getObjectManager().hasObjectPushingBit(sidekick);
     }
 
     private ObjectInstance currentInteractSlotObject() {

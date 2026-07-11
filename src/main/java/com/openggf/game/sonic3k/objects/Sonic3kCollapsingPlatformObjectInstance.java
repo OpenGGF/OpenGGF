@@ -275,10 +275,23 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Solid during normal, collapsing, AND solid-stay states.
         // ROM: loc_205DE still calls SolidObjectTopSloped2 after fragments spawn.
-        return state < 3;
+        boolean alreadyRiding = playerEntity != null
+                && services().objectManager().isRidingObject(playerEntity, this);
+        return solidForTransitionState(alreadyRiding);
+    }
+
+    boolean solidForTransitionState(boolean alreadyRiding) {
+        if (state >= 3) {
+            return false;
+        }
+        // ObjPlatformCollapse_CreateFragments jumps to Play_SFX instead of
+        // calling sub_205B6/SolidObjectTopSloped2 on the transition dispatch.
+        // Existing riders retain their standing bits across that skipped pass,
+        // but a second player cannot establish a fresh contact until loc_205DE
+        // resumes the solid helper on the following dispatch.
+        return !(transitionFrameSlopeSkip || pendingTransitionSkip) || alreadyRiding;
     }
 
     /**
@@ -579,7 +592,8 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         for (int i = 1; i < maxFragments; i++) {
             int delay = config.collapseDelays[i];
             CollapsingPlatformFragment fragment = new CollapsingPlatformFragment(
-                    x, y, fragmentFrameIndex, i, delay, config.artKey, hFlip);
+                    x, y, fragmentFrameIndex, i, delay, config.artKey, hFlip,
+                    config.halfWidth, config.halfHeight);
             spawnDynamicObject(fragment);
         }
 
@@ -670,16 +684,29 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         private int pieceIndex;
         private String artKey;
         private boolean hFlip;
+        private int renderHalfWidth;
+        private int renderHalfHeight;
+        private boolean romRenderFlag = true;
 
         public CollapsingPlatformFragment(int parentX, int parentY,
                                           int fragmentFrameIndex, int pieceIndex,
                                           int delay, String artKey, boolean hFlip) {
+            this(parentX, parentY, fragmentFrameIndex, pieceIndex, delay, artKey,
+                    hFlip, AIZ1_CONFIG.halfWidth, AIZ1_CONFIG.halfHeight);
+        }
+
+        private CollapsingPlatformFragment(int parentX, int parentY,
+                                           int fragmentFrameIndex, int pieceIndex,
+                                           int delay, String artKey, boolean hFlip,
+                                           int renderHalfWidth, int renderHalfHeight) {
             super(new ObjectSpawn(parentX, parentY, Sonic3kObjectIds.COLLAPSING_PLATFORM,
                     0, hFlip ? 1 : 0, false, 0), "PlatformFragment", delay, PRIORITY);
             this.fragmentFrameIndex = fragmentFrameIndex;
             this.pieceIndex = pieceIndex;
             this.artKey = artKey;
             this.hFlip = hFlip;
+            this.renderHalfWidth = renderHalfWidth;
+            this.renderHalfHeight = renderHalfHeight;
         }
 
         private CollapsingPlatformFragment() {
@@ -710,6 +737,37 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
             }
 
             renderer.drawFramePieceByIndex(fragmentFrameIndex, pieceIndex, getX(), getY(), hFlip, false);
+        }
+
+        @Override
+        public int getOnScreenHalfWidth() {
+            return renderHalfWidth;
+        }
+
+        @Override
+        public int getOnScreenHalfHeight() {
+            return renderHalfHeight;
+        }
+
+        @Override
+        protected boolean shouldDeleteBeforeFall() {
+            // loc_20620 consumes bit 7 from the preceding Draw_Sprite pass
+            // before calling MoveSprite. A fragment whose prior render box was
+            // off-screen deletes without receiving another gravity step.
+            return !romRenderFlag;
+        }
+
+        @Override
+        protected boolean shouldDeleteAfterFall() {
+            return false;
+        }
+
+        @Override
+        public void refreshPostCameraRenderState() {
+            // Draw_Sprite queues the static fragment during Process_Sprites;
+            // Render_Sprites publishes bit 7 only after DeformBgLayer has
+            // updated the copied camera used for the actual bounds test.
+            romRenderFlag = isWithinRenderSpriteBounds(renderHalfWidth, renderHalfHeight);
         }
     }
 }

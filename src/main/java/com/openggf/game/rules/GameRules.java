@@ -37,7 +37,8 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    false
+                    false,
+                    true
             ),
             new PlayerCapabilityRules(
                     false,
@@ -67,7 +68,8 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    true
+                    true,
+                    0x07FF
             ),
             new PlayerAnimationRules(
                     false,
@@ -84,6 +86,7 @@ public record GameRules(
             ),
             new RingRules(
                     3,
+                    0,
                     false,
                     6,
                     6,
@@ -166,7 +169,8 @@ public record GameRules(
                     false,
                     false,
                     false,
-                    true
+                    true,
+                    false
             ),
             new PlayerCapabilityRules(
                     true,
@@ -196,7 +200,8 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    true
+                    true,
+                    0x07FF
             ),
             new PlayerAnimationRules(
                     true,
@@ -213,6 +218,7 @@ public record GameRules(
             ),
             new RingRules(
                     7,
+                    0,
                     true,
                     6,
                     6,
@@ -295,7 +301,8 @@ public record GameRules(
                     true,
                     true,
                     false,
-                    false
+                    false,
+                    true
             ),
             new PlayerCapabilityRules(
                     true,
@@ -325,7 +332,8 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    false
+                    false,
+                    0x0FFF
             ),
             new PlayerAnimationRules(
                     true,
@@ -342,6 +350,7 @@ public record GameRules(
             ),
             new RingRules(
                     7,
+                    4,
                     true,
                     6,
                     6,

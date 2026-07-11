@@ -95,7 +95,10 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
 
     protected final void spawnProjectile(S3kBadnikProjectileInstance projectile) {
         if (tryServices() != null && services().objectManager() != null) {
-            spawnFreeChild(() -> projectile);
+            // CreateChild2_Complex uses AllocateObjectAfterCurrent, so a free
+            // higher SST slot executes the projectile callback later in the
+            // same object pass.
+            spawnChild(() -> projectile);
         }
     }
 
