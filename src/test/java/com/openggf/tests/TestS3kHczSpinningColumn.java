@@ -80,7 +80,8 @@ public class TestS3kHczSpinningColumn {
         assertTrue(player.isObjectControlled());
         assertTrue(player.isObjectControlAllowsCpu());
         assertTrue(player.isObjectControlSuppressesMovement());
-        assertTrue(player.isControlLocked());
+        assertFalse(player.isControlLocked(),
+                "Obj68 writes object_control=3 but never Ctrl_1_locked");
         assertTrue(player.isObjectMappingFrameControl());
         assertFalse(player.getAir());
         assertEquals(Sonic3kAnimationIds.WALK.id(), player.getAnimationId());

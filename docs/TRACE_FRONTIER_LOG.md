@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f19190 / 1482 errors (1 error under `frontierOnly`).
+f3318 / 4234 errors to f20508 / 1531 errors (10 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -621,6 +621,20 @@ the new held-without-press guard. The granular S3K replay matrix remains exact:
 both AIZ routes green; CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ
 complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1,
 and LBZ f2270 / 5.
+
+Milestone 38 removes the spinning column's engine-only controller lock. Obj68
+writes `object_control=3` to suppress ordinary player movement, but it never
+writes `Ctrl_1_locked` / `Ctrl_2_locked`. Keeping the logical-pad publisher
+live lets `Sonic_RecordPos` store held-button releases while the column owns
+positioning, so CPU Tails receives the newer right-only delayed word instead of
+a stale held B (`sonic3k.asm:22119-22136,68136-68148,68220-68290`).
+
+This closes f19190-f20507 and advances HCZ to f20508 / 1531 full-run errors (10
+under `frontierOnly`). The larger total exposes later route groups with no
+earlier mismatch. The focused spinning-column suite remains 6/6 green. The
+granular S3K replay matrix remains exact: both AIZ routes green; CNZ complete
+f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select
+f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout

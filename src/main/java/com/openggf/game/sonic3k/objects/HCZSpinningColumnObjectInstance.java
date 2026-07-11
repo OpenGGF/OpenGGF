@@ -148,7 +148,10 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         // ROM writes object_control=3: CPU input generation remains active,
         // while the ordinary player movement slot is suppressed until release.
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
-        player.setControlLocked(true);
+        // Obj68 does not write Ctrl_1_locked/Ctrl_2_locked. Keeping the logical
+        // pad publisher live lets Sonic_RecordPos store held-button changes for
+        // CPU Tails even while object_control suppresses movement.
+        player.setControlLocked(false);
         player.setObjectMappingFrameControl(true);
         player.restoreDefaultRadii();
         player.setRolling(false);
