@@ -106,7 +106,7 @@ Editor entry/exit uses teardown+rebuild (no parking): the mode context is destro
 
 ### Level Editor (`com.openggf.editor` + `GameMode.EDITOR`)
 
-The in-engine level editor MVP lives in the `com.openggf.editor` package: `LevelEditorController`, `EditorInputHandler`, `EditorMouseTransform`, `EditorHistory` (+ `commands.*` undoable strokes), `persistence.EditorSaveManager` / `EditorSaveEnvelope` / `EditorSavePayload`, and `render.EditorToolbarRenderer`. A `GameMode.EDITOR` is integrated into `Engine` and `SessionManager`. With `debug.flags.editor` enabled in `config.yaml`, toggle into edit mode mid-play, paint chunks with the mouse, undo/redo strokes via `Block.saveState()`/`restoreState()`, and persist edits through the editor save envelope. Editor enter/exit rides the teardown+rebuild session path above (`WorldSession` survives, `MutableLevel` edits re-applied on resume). The editor's in-mode key/mouse bindings are hardcoded in `EditorInputHandler` — see [CONFIGURATION.md](CONFIGURATION.md).
+The in-engine level editor lives in the `com.openggf.editor` package: `LevelEditorController`, `EditorInputHandler`, `EditorMouseTransform`, `EditorHistory` (+ `commands.*` undoable strokes), `persistence.EditorSaveManager` / `EditorSaveEnvelope` / per-version payload DTOs, and the `render` overlays. With `debug.flags.editor` enabled, it paints chunks; places, moves, and deletes stock object/ring spawns; edits block-cell collision modes and chunk solid-tile indices; and persists v2 sidecars with historical v1 terrain-only migration. Keep edits on tracked `MutableLevel` APIs so undo/redo, rewind isolation, redraw dirtiness, and runtime spawn resync stay coherent. S3K sidecars save but do not runtime-apply yet, and trace-owned sessions refuse editor entry. Editor enter/exit rides the teardown+rebuild session path above. See [CONFIGURATION.md](CONFIGURATION.md) and `docs/superpowers/specs/2026-07-09-mod-support-phase0-design.md`.
 
 ### Runtime-Shared Framework Stack
 
@@ -270,6 +270,8 @@ UI adapters belong in `com.openggf.game.timeattack.mp`.
 ## Multi-Game Support Architecture
 
 Game-specific behavior is isolated behind the `GameModule` interface. `GameModuleRegistry` holds the current module, `RomDetectionService` auto-detects ROM type.
+
+`com.openggf.game.patch` adds owner-tagged additive `GamePatch` decorators. The engine-owned `ModuleResolutionService` resolves enabled owners and prerequisites at every gameplay launch choke point while `WorldSession` keeps both the root and resolved module, preventing repeated-resolution double wrapping. Metadata failures disable an owner plus dependents; arbitrary creator-apply failures abort launch. Creator assets must enter through bounded `ModAssetRoot` and source-typed `LoadOp` paths. See `docs/superpowers/specs/2026-07-09-mod-support-phase0-design.md` and `docs/superpowers/specs/2026-07-10-mod-support-format-security-contracts.md`.
 
 Each `GameModule` exposes per-game providers for zones, objects, audio, physics, level events, art, data select, save snapshots, etc. — see `GameModule.java` for the authoritative list.
 

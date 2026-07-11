@@ -387,15 +387,25 @@ press `Shift+Tab` to toggle gameplay (playtest) ↔ editor.
 | Input | Action |
 |-------|--------|
 | `Shift+Tab` | Toggle editor / playtest mode |
-| Arrows | Move world cursor / nudge selection |
+| `F5` | Leave the editor and restart the playtest from the level start (does not save the sidecar) |
+| Arrows / gamepad menu directions | Move world cursor / nudge hierarchy selection; in the object palette, left/right chooses the previous/next object and up/down increments/decrements its subtype |
 | `Tab` | Cycle focused region |
-| `Space` | Apply primary action (place selected block) |
-| `E` | Eyedrop block under cursor |
+| `O` / gamepad Start | Cycle spawn editing mode: terrain → objects → rings |
+| `Space` | Apply the primary action: place the selected block, object, or ring for the active mode |
+| Gamepad A | Place the selected object or ring while spawn editing is active |
+| `E` | Eyedrop the block or spawn under the cursor |
+| Gamepad B | Eyedrop the spawn under the cursor while spawn editing is active |
+| `Delete` / gamepad C | Delete the spawn at the cursor while editing objects or rings |
+| `M` | Move the selected object/ring spawn to the world cursor |
 | `L` | Toggle active layer (FG / BG) |
 | `Enter` / `Escape` | Descend / ascend the hierarchy |
 | `Ctrl+Z` / `Ctrl+Y` / `Ctrl+S` | Undo / Redo / Save |
-| Left mouse (drag) | Paint selected block (one undoable stroke) |
-| Right mouse | Eyedrop hovered tile |
+| `C` | Toggle the collision overlay |
+| `P` | Toggle the collision path (primary / secondary) |
+| `V` | Cycle the selected block cell's collision mode |
+| `[` / `]` | Decrement / increment the selected chunk's solid-tile index |
+| Left mouse (drag) | Paint the selected block as one undoable stroke; in object/ring mode, place a spawn at the cursor |
+| Right mouse | Eyedrop the hovered block or spawn |
 
 Bindings live in `EditorInputHandler` and are not affected by the Key Bindings entries above.
 

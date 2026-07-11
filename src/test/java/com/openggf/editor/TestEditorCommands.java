@@ -2,6 +2,7 @@ package com.openggf.editor;
 
 import com.openggf.editor.commands.DeriveBlockFromChunksCommand;
 import com.openggf.editor.commands.DeriveChunkFromPatternsCommand;
+import com.openggf.editor.commands.CycleCellCollisionModeCommand;
 import com.openggf.editor.commands.PlaceBlockCommand;
 import com.openggf.editor.commands.DeleteObjectSpawnCommand;
 import com.openggf.editor.commands.DeleteRingSpawnCommand;
@@ -9,6 +10,9 @@ import com.openggf.editor.commands.MoveObjectSpawnCommand;
 import com.openggf.editor.commands.MoveRingSpawnCommand;
 import com.openggf.editor.commands.PlaceObjectSpawnCommand;
 import com.openggf.editor.commands.PlaceRingSpawnCommand;
+import com.openggf.editor.commands.SetChunkSolidTileIndexCommand;
+import com.openggf.editor.persistence.EditorSaveManager;
+import com.openggf.game.GameId;
 import com.openggf.game.common.CommonObjectPlacementEncoding;
 import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
@@ -29,7 +33,9 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.rings.RingSpawn;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Path;
 import java.util.BitSet;
 import java.util.List;
 
@@ -74,6 +80,49 @@ class TestEditorCommands {
         assertEquals(List.of(spawn), level.getObjects());
         place.undo();
         assertEquals(List.of(), level.getObjects());
+    }
+
+    @Test
+    void phase0HeadlessAuthoringSmokePersistsAndRaisesPlayResyncSignals(@TempDir Path saves) throws Exception {
+        CommonObjectPlacementEncoding encoding = new CommonObjectPlacementEncoding();
+        MutableLevel authored = MutableLevel.snapshot(new SyntheticLevel());
+
+        ObjectSpawn badnik = encoding.create(0x180, 0x100, 0x1C, 3, 0, false, 41);
+        new PlaceObjectSpawnCommand(authored, badnik).apply();
+        ObjectSpawn movedBadnik = encoding.move(badnik, 0x1C0, 0x120);
+        new MoveObjectSpawnCommand(authored, badnik, movedBadnik).apply();
+
+        RingSpawn ring = new RingSpawn(0x200, 0x100, 51);
+        new PlaceRingSpawnCommand(authored, ring).apply();
+        RingSpawn movedRing = new RingSpawn(0x240, 0x120, ring.placementId());
+        new MoveRingSpawnCommand(authored, ring, movedRing).apply();
+        new DeleteRingSpawnCommand(authored, movedRing).apply();
+
+        int baselineCell = authored.getBlock(0).getChunkDesc(0, 0).get();
+        new CycleCellCollisionModeCommand(authored, 0, 0, EditorCollisionPath.PRIMARY).apply();
+        new SetChunkSolidTileIndexCommand(authored, 0, EditorCollisionPath.PRIMARY, 1).apply();
+
+        EditorSaveManager savesManager = new EditorSaveManager(saves);
+        savesManager.save(GameId.S2, encoding, 0, 0, authored);
+        MutableLevel reloaded = MutableLevel.snapshot(new SyntheticLevel());
+        assertEquals(EditorSaveManager.ApplyResult.APPLIED,
+                savesManager.tryApplyEdits(GameId.S2, encoding, 0, 0, reloaded));
+
+        assertEquals(List.of(movedBadnik), reloaded.getObjects());
+        assertEquals(List.of(), reloaded.getRings());
+        assertEquals((baselineCell & ~0x3000) | 0x1000,
+                reloaded.getBlock(0).getChunkDesc(0, 0).get());
+        assertEquals(1, reloaded.getChunk(0).getSolidTileIndex());
+        assertEquals(true, reloaded.consumeObjectsDirty(),
+                "persisted object apply must request runtime placement resync");
+        assertEquals(true, reloaded.consumeRingsDirty(),
+                "persisted empty ring table must request runtime ring resync");
+        assertEquals(true, reloaded.consumeDirtyBlocks().get(0),
+                "persisted collision-mode apply must request tilemap redraw");
+        assertEquals(true, reloaded.consumeDirtyChunks().get(0),
+                "persisted collision-index apply must request collision/tilemap refresh");
+        assertFalse(reloaded.isModifiedSinceLastSave(),
+                "reloaded sidecar state is saved baseline, not an unsaved user edit");
     }
 
     @Test
@@ -791,9 +840,10 @@ class TestEditorCommands {
                 blocks[i].setChunkDesc(1, 1, new ChunkDesc((i + 3) % 4));
             }
 
-            solidTileCount = 1;
+            solidTileCount = 2;
             solidTiles = new SolidTile[] {
-                    new SolidTile(0, new byte[SolidTile.TILE_SIZE_IN_ROM], new byte[SolidTile.TILE_SIZE_IN_ROM], (byte) 0)
+                    new SolidTile(0, new byte[SolidTile.TILE_SIZE_IN_ROM], new byte[SolidTile.TILE_SIZE_IN_ROM], (byte) 0),
+                    new SolidTile(1, new byte[SolidTile.TILE_SIZE_IN_ROM], new byte[SolidTile.TILE_SIZE_IN_ROM], (byte) 0)
             };
 
             map = new Map(1, 2, 2);

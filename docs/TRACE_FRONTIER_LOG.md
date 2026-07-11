@@ -40,6 +40,47 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-11 - Mod-support Phase 0 final verification
+
+Final Phase-0 verification ran from `next` commit
+`b49eb424e59fe7eaa432e2b1a51839efa84b4445` plus the C6 documentation and
+headless-smoke working-tree change.
+
+- The prescribed live EHZ authoring smoke could not be performed honestly in this
+  shell-only session: `s2.gen` was present, but no controllable desktop/input surface
+  was available. The remaining manual gate is therefore visual confirmation that the
+  persisted badnik appears in play and the edited collision shape physically blocks
+  the player, followed by editor re-entry and a process restart. No pass is claimed.
+- Closest headless end-to-end authoring smoke:
+  `mvn "-Dtest=com.openggf.editor.TestEditorCommands#phase0HeadlessAuthoringSmokePersistsAndRaisesPlayResyncSignals" test`.
+  It passed after placing/moving a badnik, placing/moving/deleting a ring, changing a
+  cell collision mode and solid-tile index, saving v2, loading into a fresh level,
+  and observing object/ring resync-request flags plus block/chunk redraw dirty
+  signals without an unsaved-user-edit flag.
+- Full default suite: `mvn test` exited 0 under the repository's relaxed MSE
+  extension with 12,153 reported tests, 12,115 passes, 11 failures, 0 errors, and
+  27 skips. The 11 reported failures are the pre-existing baseline trace/debug reds;
+  the C6 smoke passed and no Phase-0 test failed.
+- Full package gate: the first `mvn package` invocation exited 1 when the known
+  order-sensitive
+  `TestCheckpointStarpostGraphRewind#sonic1LamppostTwirlEndsAsOneCenteredBallNotADuplicate`
+  observed zero live parents. The immediate isolated command
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.rewind.TestCheckpointStarpostGraphRewind#sonic1LamppostTwirlEndsAsOneCenteredBallNotADuplicate" test`
+  passed 1/1, and a second unchanged `mvn package` exited 0, produced the assembly
+  JAR, and returned to the same 11 baseline failures. No lamppost/rewind production
+  code was changed. Both package invocations regenerated `docs/rewind/real-gaps.md`;
+  it was restored byte-for-byte to the tracked report.
+- S3K must-keep-green command:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test`.
+  It passed 51 tests with 0 failures/errors/skips.
+- Mods-off/no-patch trace spot command:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=false" "-Dmaven.test.failure.ignore=true" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" test`.
+  S1 GHZ1 and S2 EHZ1 passed. S3K AIZ remained baseline-identical at 1,160
+  errors / 0 warnings, first divergence f8,941 `camera_y` (expected `0x02C1`,
+  actual `0x02B9`), exactly matching the A6 pre/post baseline recorded below.
+  Phase 0 therefore moved no spot frontier and introduced no trace tolerance,
+  hydration, route/frame carve-out, or trace-data change.
+
 ## 2026-07-11 - Mod-support Phase 0 A6 launch-wiring spot sweep
 
 Phase 0 A6 ran the required comparison-only launch-wiring spot sweep from

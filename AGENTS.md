@@ -137,7 +137,7 @@ Editor entry/exit tears down and rebuilds the mode context while `WorldSession` 
 
 ### Level Editor (`com.openggf.editor` + `GameMode.EDITOR`)
 
-The in-engine level editor MVP lives in `com.openggf.editor`: `LevelEditorController`, `EditorInputHandler`, `EditorMouseTransform`, `EditorHistory` (+ `commands.*` for undoable strokes), `persistence.EditorSaveManager` / `EditorSaveEnvelope` / `EditorSavePayload`, and `render.EditorToolbarRenderer`. A `GameMode.EDITOR` is integrated into `Engine` and `SessionManager`. While playing with `debug.flags.editor` enabled in `config.yaml`, toggle into edit mode mid-play, paint chunks with the mouse, undo/redo strokes via `Block.saveState()` / `restoreState()`, and persist edits through the editor save envelope. Editor enter/exit rides the teardown+rebuild session path above (the `WorldSession` survives and `MutableLevel` edits are re-applied on resume). The editor's in-mode key/mouse bindings are hardcoded in `EditorInputHandler` — see `CONFIGURATION.md`.
+The in-engine level editor lives in `com.openggf.editor`: `LevelEditorController`, `EditorInputHandler`, `EditorMouseTransform`, `EditorHistory` (+ `commands.*` for undoable strokes), `persistence.EditorSaveManager` / `EditorSaveEnvelope` / per-version payload DTOs, and the `render` overlays. A `GameMode.EDITOR` is integrated into `Engine` and `SessionManager`. While playing with `debug.flags.editor` enabled in `config.yaml`, toggle into edit mode mid-play; paint chunks; place, move, or delete stock objects and rings; edit block-cell collision modes and chunk solid-tile indices; and persist edits through the v2 editor sidecar (historical v1 terrain-only saves migrate on read). Spawn/collision mutations use tracked `MutableLevel` APIs so undo/redo, rewind snapshots, renderer dirtiness, and runtime object/ring resync remain coherent. S3K sidecars are saved but runtime re-apply is explicitly unsupported pending mutable overlay work. Editor enter/exit rides the teardown+rebuild session path above (the `WorldSession` survives and `MutableLevel` edits are re-applied on resume). Trace-owned sessions refuse editor entry. See `CONFIGURATION.md` for bindings and `docs/superpowers/specs/2026-07-09-mod-support-phase0-design.md` for the Phase-0 contracts.
 
 ### Runtime-Shared Framework Stack
 
@@ -238,6 +238,10 @@ Duplicate characters (e.g. multiple Sonics) need separate DPLC pattern banks to 
 ## Multi-Game Support Architecture
 
 The engine supports multiple Sonic games (Sonic 1, Sonic 2, Sonic 3&K) through a provider-based abstraction layer.
+
+### Additive GamePatch composition
+
+`com.openggf.game.patch` provides additive, owner-tagged `GamePatch` decorators over a root `GameModule`. `ModuleResolutionService` is engine-owned and resolves enabled built-in/mod owners in dependency order at gameplay launch choke points; `WorldSession` retains both root and resolved modules so repeated resolution never double-wraps. Patch metadata/prerequisite failures disable the owner and its dependents while independent owners continue; arbitrary creator `apply` failures abort launch because partial input mutation is not rollback-safe. Asset-backed patches use the sealed, bounded `ModAssetRoot` + source-typed `LoadOp` path rather than treating creator files as ROM fallback. See `docs/superpowers/specs/2026-07-09-mod-support-phase0-design.md` and `docs/superpowers/specs/2026-07-10-mod-support-format-security-contracts.md`.
 
 ### Core Components
 | Class/Interface | Purpose |

@@ -221,6 +221,7 @@ The `next` branch is where post-0.6 work is staged before it graduates into the 
 Highlights:
 
 - **Time Attack:** solo Time Attack is available from the master title menu with curated S1/S2/S3K signpost tracks, best-ghost racing, split deltas, instant retry, hash-bound input files, and local Ed25519 player identity; multiplayer Time Attack is planned as the next extension of this system.
+- **Mod-support foundations:** launch-time `GamePatch` composition, bounded JAR/development asset loading, and version-safe editor authoring foundations are now in place. The editor can place, move, and delete stock objects/rings, edit collision modes and solid-tile indices, and persist those changes in v2 sidecars while retaining historical v1 compatibility.
 
 ### v0.6.prerelease (Current development snapshot)
 
