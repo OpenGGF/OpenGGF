@@ -15,8 +15,9 @@ import java.util.logging.Logger;
  *
  * <p>Overlay loading works by:
  * <ol>
- *   <li>Allocating a destination buffer large enough for all operations</li>
- *   <li>Decompressing/copying each LoadOp's data into the buffer at its destOffset</li>
+ *   <li>Pre-reading bounded mod assets and validating their source/output budgets</li>
+ *   <li>Allocating a destination buffer, then decoding ROM sources sequentially</li>
+ *   <li>Copying each result at its destOffset</li>
  *   <li>Operations are applied in order, so overlays overwrite base data</li>
  * </ol>
  *
@@ -55,21 +56,37 @@ public class ResourceLoader {
      *                       The first op should be the base (destOffset=0).
      * @param initialBufferSize Initial buffer size hint.
      * @return The composed byte array with all operations applied
-     * @throws IOException if decompression or ROM reading fails
+     * @throws IOException if decompression or source reading fails
      */
     public byte[] loadWithOverlays(List<LoadOp> ops, int initialBufferSize) throws IOException {
         if (ops == null || ops.isEmpty()) {
             throw new IllegalArgumentException("At least one LoadOp is required");
         }
 
-        // Start with the initial buffer size
+        long outputCap = modOutputCap(ops);
+        byte[][] cachedModData = null;
+        if (outputCap != Long.MAX_VALUE) {
+            if (initialBufferSize < 0) {
+                throw new IllegalArgumentException("Initial buffer size must not be negative");
+            }
+            if (initialBufferSize > outputCap) {
+                throw new IllegalArgumentException(
+                        "Initial buffer size exceeds mod composed-output limit " + outputCap);
+            }
+            cachedModData = readModAssets(ops);
+            preflightKnownModExtents(ops, cachedModData, outputCap);
+        }
+
         byte[] buffer = new byte[initialBufferSize];
         int usedLength = 0;
 
-        for (LoadOp op : ops) {
-            byte[] decompressed = decompress(op);
+        for (int i = 0; i < ops.size(); i++) {
+            LoadOp op = ops.get(i);
+            byte[] decompressed = cachedModData != null && cachedModData[i] != null
+                    ? cachedModData[i]
+                    : decompress(op);
             int destOffset = op.appendsToPrevious() ? usedLength : op.destOffsetBytes();
-            int requiredSize = destOffset + decompressed.length;
+            int requiredSize = checkedComposedSize(destOffset, decompressed.length, outputCap);
 
             // Expand buffer if needed to accommodate this operation
             if (requiredSize > buffer.length) {
@@ -83,14 +100,14 @@ public class ResourceLoader {
             usedLength = Math.max(usedLength, requiredSize);
 
             if (op.appendsToPrevious()) {
-                LOG.fine(String.format("Applied append: ROM 0x%06X -> offset 0x%04X (%d bytes)",
-                        op.romAddr(), destOffset, decompressed.length));
+                LOG.fine(String.format("Applied append: %s -> offset 0x%04X (%d bytes)",
+                        describeSource(op), destOffset, decompressed.length));
             } else if (op.destOffsetBytes() > 0) {
-                LOG.fine(String.format("Applied overlay: ROM 0x%06X -> offset 0x%04X (%d bytes)",
-                        op.romAddr(), op.destOffsetBytes(), decompressed.length));
+                LOG.fine(String.format("Applied overlay: %s -> offset 0x%04X (%d bytes)",
+                        describeSource(op), op.destOffsetBytes(), decompressed.length));
             } else {
-                LOG.fine(String.format("Loaded base: ROM 0x%06X (%d bytes)",
-                        op.romAddr(), decompressed.length));
+                LOG.fine(String.format("Loaded base: %s (%d bytes)",
+                        describeSource(op), decompressed.length));
             }
         }
 
@@ -120,7 +137,8 @@ public class ResourceLoader {
         // Round up to alignment boundary
         int remainder = buffer.length % alignment;
         if (remainder != 0) {
-            int alignedSize = buffer.length + (alignment - remainder);
+            int alignedSize = checkedComposedSize(
+                    buffer.length, alignment - remainder, modOutputCap(ops));
             buffer = Arrays.copyOf(buffer, alignedSize);
         }
 
@@ -136,16 +154,86 @@ public class ResourceLoader {
     }
 
     /**
-     * Decompresses data from ROM based on the compression type.
+     * Reads an operation from its source, decompressing ROM data when required.
      */
     private byte[] decompress(LoadOp op) throws IOException {
+        if (op.source() instanceof LoadSource.ModAsset asset) {
+            return asset.root().readBounded(
+                    asset.entryPath(), asset.root().limits().maxAssetBytes());
+        }
+
+        int romAddr = op.romAddr();
         return switch (op.compressionType()) {
-            case KOSINSKI -> decompressKosinski(op.romAddr());
-            case KOSINSKI_MODULED -> decompressKosinskiModuled(op.romAddr());
-            case NEMESIS -> decompressNemesis(op.romAddr());
+            case KOSINSKI -> decompressKosinski(romAddr);
+            case KOSINSKI_MODULED -> decompressKosinskiModuled(romAddr);
+            case NEMESIS -> decompressNemesis(romAddr);
             case UNCOMPRESSED -> throw new UnsupportedOperationException(
                     "Uncompressed loading requires a size parameter. Use loadUncompressed() instead.");
         };
+    }
+
+    private static String describeSource(LoadOp op) {
+        if (op.source() instanceof LoadSource.RomAddress source) {
+            return String.format("ROM 0x%06X", source.addr());
+        }
+        LoadSource.ModAsset asset = (LoadSource.ModAsset) op.source();
+        return asset.root().describe() + "!" + asset.entryPath();
+    }
+
+    private static long modOutputCap(List<LoadOp> ops) {
+        long cap = Long.MAX_VALUE;
+        for (LoadOp op : ops) {
+            if (op.source() instanceof LoadSource.ModAsset asset) {
+                cap = Math.min(cap, asset.root().limits().maxModValidationBytes());
+            }
+        }
+        return cap;
+    }
+
+    private static byte[][] readModAssets(List<LoadOp> ops) throws IOException {
+        byte[][] data = new byte[ops.size()][];
+        for (int i = 0; i < ops.size(); i++) {
+            if (ops.get(i).source() instanceof LoadSource.ModAsset asset) {
+                data[i] = asset.root().readBounded(
+                        asset.entryPath(), asset.root().limits().maxAssetBytes());
+            }
+        }
+        return data;
+    }
+
+    private static void preflightKnownModExtents(
+            List<LoadOp> ops, byte[][] cachedModData, long outputCap) throws IOException {
+        int knownUsedLength = 0;
+        boolean extentKnown = true;
+        for (int i = 0; i < ops.size(); i++) {
+            byte[] data = cachedModData[i];
+            if (data == null) {
+                extentKnown = false;
+                continue;
+            }
+            LoadOp op = ops.get(i);
+            if (op.appendsToPrevious() && !extentKnown) {
+                continue;
+            }
+            int destOffset = op.appendsToPrevious() ? knownUsedLength : op.destOffsetBytes();
+            int requiredSize = checkedComposedSize(destOffset, data.length, outputCap);
+            if (extentKnown) {
+                knownUsedLength = Math.max(knownUsedLength, requiredSize);
+            }
+        }
+    }
+
+    private static int checkedComposedSize(int destOffset, int dataLength, long outputCap)
+            throws IOException {
+        long requiredSize = (long) destOffset + dataLength;
+        if (requiredSize > Integer.MAX_VALUE) {
+            throw new IOException("Composed resource size exceeds Java array limit: " + requiredSize);
+        }
+        if (requiredSize > outputCap) {
+            throw new IOException("Composed resource size " + requiredSize
+                    + " exceeds mod output limit " + outputCap);
+        }
+        return (int) requiredSize;
     }
 
     /**
