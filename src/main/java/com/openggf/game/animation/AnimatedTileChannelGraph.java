@@ -2,10 +2,10 @@ package com.openggf.game.animation;
 
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot;
+import com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot.Layout;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -20,11 +20,10 @@ import java.util.Objects;
 public final class AnimatedTileChannelGraph implements RewindSnapshottable<AnimatedTileChannelSnapshot> {
 
     private List<AnimatedTileChannel> channels = List.of();
-    private Map<String, Integer> channelIndexById = Map.of();
+    private Layout snapshotLayout = Layout.fromKeys(List.of());
     private int[] installedPhases = new int[0];
     private boolean[] installedPhasePresent = new boolean[0];
     private int recordedInstalledPhaseCount;
-    private final Map<String, Integer> diagnosticPhases = new LinkedHashMap<>();
 
     /**
      * Replaces the current channel set and clears any cached per-channel phase.
@@ -38,12 +37,13 @@ public final class AnimatedTileChannelGraph implements RewindSnapshottable<Anima
                 throw new IllegalArgumentException("Duplicate animated tile channelId: " + channel.channelId());
             }
         }
+        Layout installedLayout = Layout.fromKeys(installed.stream()
+                .map(AnimatedTileChannel::channelId).toList());
         this.channels = installed;
-        channelIndexById = Map.copyOf(installedIndexes);
+        snapshotLayout = installedLayout;
         installedPhases = new int[installed.size()];
         installedPhasePresent = new boolean[installed.size()];
         recordedInstalledPhaseCount = 0;
-        diagnosticPhases.clear();
     }
 
     /** Returns the currently installed channel definitions. */
@@ -54,11 +54,10 @@ public final class AnimatedTileChannelGraph implements RewindSnapshottable<Anima
     /** Removes all channels and any cached phase history. */
     public void clear() {
         channels = List.of();
-        channelIndexById = Map.of();
+        snapshotLayout = Layout.fromKeys(List.of());
         installedPhases = new int[0];
         installedPhasePresent = new boolean[0];
         recordedInstalledPhaseCount = 0;
-        diagnosticPhases.clear();
     }
 
     /**
@@ -110,27 +109,26 @@ public final class AnimatedTileChannelGraph implements RewindSnapshottable<Anima
     }
 
     private boolean hasRecordedPhase(String channelId) {
-        Integer channelIndex = channelId != null ? channelIndexById.get(channelId) : null;
-        return channelIndex != null
-                ? installedPhasePresent[channelIndex]
-                : diagnosticPhases.containsKey(channelId);
+        int channelIndex = snapshotLayout.indexOf(channelId);
+        return channelIndex >= 0 && installedPhasePresent[channelIndex];
     }
 
     /**
      * Records the last resolved phase for a channel. Package-private for testing.
      */
     void recordPhase(String channelId, int phase) {
-        Integer channelIndex = channelId != null ? channelIndexById.get(channelId) : null;
-        if (channelIndex == null) {
-            diagnosticPhases.put(channelId, phase);
-            return;
+        int channelIndex = snapshotLayout.indexOf(channelId);
+        if (channelIndex < 0) {
+            snapshotLayout = snapshotLayout.append(channelId);
+            channelIndex = snapshotLayout.size() - 1;
+            installedPhases = Arrays.copyOf(installedPhases, snapshotLayout.size());
+            installedPhasePresent = Arrays.copyOf(installedPhasePresent, snapshotLayout.size());
         }
-        int index = channelIndex;
-        if (!installedPhasePresent[index]) {
-            installedPhasePresent[index] = true;
+        if (!installedPhasePresent[channelIndex]) {
+            installedPhasePresent[channelIndex] = true;
             recordedInstalledPhaseCount++;
         }
-        installedPhases[index] = phase;
+        installedPhases[channelIndex] = phase;
     }
 
     /**
@@ -138,18 +136,15 @@ public final class AnimatedTileChannelGraph implements RewindSnapshottable<Anima
      * Package-private for testing.
      */
     int getLastPhase(String channelId) {
-        Integer channelIndex = channelId != null ? channelIndexById.get(channelId) : null;
-        if (channelIndex != null) {
-            int index = channelIndex;
-            return installedPhasePresent[index] ? installedPhases[index] : -1;
-        }
-        Integer phase = diagnosticPhases.get(channelId);
-        return phase != null ? phase : -1;
+        int channelIndex = snapshotLayout.indexOf(channelId);
+        return channelIndex >= 0 && installedPhasePresent[channelIndex]
+                ? installedPhases[channelIndex]
+                : -1;
     }
 
     /** Returns the number of installed and diagnostic channels with recorded phases. */
     public int recordedPhaseCount() {
-        return recordedInstalledPhaseCount + diagnosticPhases.size();
+        return recordedInstalledPhaseCount;
     }
 
     // ── RewindSnapshottable ───────────────────────────────────────────────
@@ -161,23 +156,33 @@ public final class AnimatedTileChannelGraph implements RewindSnapshottable<Anima
 
     @Override
     public AnimatedTileChannelSnapshot capture() {
-        Map<String, Integer> phases = new LinkedHashMap<>(recordedPhaseCount());
-        for (int index = 0; index < channels.size(); index++) {
-            if (installedPhasePresent[index]) {
-                phases.put(channels.get(index).channelId(), installedPhases[index]);
-            }
-        }
-        phases.putAll(diagnosticPhases);
-        return new AnimatedTileChannelSnapshot(phases);
+        return AnimatedTileChannelSnapshot.compact(
+                snapshotLayout, installedPhases, installedPhasePresent, recordedInstalledPhaseCount);
     }
 
     @Override
     public void restore(AnimatedTileChannelSnapshot s) {
-        Arrays.fill(installedPhasePresent, false);
-        recordedInstalledPhaseCount = 0;
-        diagnosticPhases.clear();
+        if (s == null) {
+            resetPhaseStateToInstalledLayout();
+            throw new NullPointerException("snapshot");
+        }
+        int compactPresentCount = s.copyCompactState(
+                snapshotLayout, installedPhases, installedPhasePresent);
+        if (compactPresentCount >= 0) {
+            recordedInstalledPhaseCount = compactPresentCount;
+            return;
+        }
+        resetPhaseStateToInstalledLayout();
         for (Map.Entry<String, Integer> phase : s.lastPhaseByChannel().entrySet()) {
             recordPhase(phase.getKey(), phase.getValue());
         }
+    }
+
+    private void resetPhaseStateToInstalledLayout() {
+        snapshotLayout = Layout.fromKeys(channels.stream()
+                .map(AnimatedTileChannel::channelId).toList());
+        installedPhases = new int[channels.size()];
+        installedPhasePresent = new boolean[channels.size()];
+        recordedInstalledPhaseCount = 0;
     }
 }

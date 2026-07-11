@@ -1,6 +1,7 @@
 package com.openggf.game.animation;
 
 import com.sun.management.ThreadMXBean;
+import com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
@@ -8,9 +9,12 @@ import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAnimatedTileChannelGraphAllocation {
@@ -25,6 +29,7 @@ class TestAnimatedTileChannelGraphAllocation {
     private static long optimizedCallbackCount;
     private static volatile ChannelContext legacyEscapedContext;
     private static volatile ChannelContext optimizedEscapedContext;
+    private static volatile AnimatedTileChannelSnapshot escapedSnapshot;
 
     @Test
     void primitiveInstalledPhaseStoreRemovesHotLoopIntegerBoxing() {
@@ -67,6 +72,90 @@ class TestAnimatedTileChannelGraphAllocation {
                         + legacyMedian + " optimized=" + optimizedMedian);
         assertTrue(legacyEscapedContext != null, "legacy derived contexts must escape through the callback");
         assertTrue(optimizedEscapedContext != null, "optimized derived contexts must escape through the callback");
+    }
+
+    @Test
+    void compactCaptureRemovesMapNodesAndBoxedPhaseValues() {
+        ThreadMXBean bean = allocationBeanOrSkip();
+        AnimatedTileChannelGraph graph = new AnimatedTileChannelGraph();
+        graph.install(channels());
+        for (int index = 0; index < CHANNEL_COUNT; index++) {
+            graph.recordPhase("allocation." + index, 211 + index);
+        }
+        LinkedHashMap<String, Integer> expectedEntries = new LinkedHashMap<>();
+        for (int index = 0; index < CHANNEL_COUNT; index++) {
+            expectedEntries.put("allocation." + index, 211 + index);
+        }
+        Map<String, Integer> expected = Map.copyOf(expectedEntries);
+
+        for (int i = 0; i < 10_000; i++) {
+            escapedSnapshot = legacyCapture(graph);
+            escapedSnapshot = graph.capture();
+        }
+
+        long[] legacyBytesPerCapture = new long[5];
+        long[] compactBytesPerCapture = new long[5];
+        long expectedWork = (long) CHANNEL_COUNT * MEASURED_UPDATES;
+        for (int repetition = 0; repetition < legacyBytesPerCapture.length; repetition++) {
+            CaptureRun legacy;
+            CaptureRun compact;
+            if ((repetition & 1) == 0) {
+                legacy = measureCapture(bean, () -> legacyCapture(graph));
+                validateCaptureRun(legacy, expected, expectedWork,
+                        "legacy repetition " + repetition);
+                compact = measureCapture(bean, graph::capture);
+                validateCaptureRun(compact, expected, expectedWork,
+                        "compact repetition " + repetition);
+            } else {
+                compact = measureCapture(bean, graph::capture);
+                validateCaptureRun(compact, expected, expectedWork,
+                        "compact repetition " + repetition);
+                legacy = measureCapture(bean, () -> legacyCapture(graph));
+                validateCaptureRun(legacy, expected, expectedWork,
+                        "legacy repetition " + repetition);
+            }
+            legacyBytesPerCapture[repetition] = legacy.bytesPerCapture;
+            compactBytesPerCapture[repetition] = compact.bytesPerCapture;
+        }
+
+        long legacyMedian = median(legacyBytesPerCapture);
+        long compactMedian = median(compactBytesPerCapture);
+        System.out.printf("animated-channel capture bytes/capture legacy=%s compact=%s medians=%d/%d%n",
+                Arrays.toString(legacyBytesPerCapture), Arrays.toString(compactBytesPerCapture),
+                legacyMedian, compactMedian);
+        assertTrue(compactMedian + 1_000 <= legacyMedian,
+                () -> "compact capture should remove map nodes and boxed values: legacy="
+                        + legacyMedian + " compact=" + compactMedian);
+        assertTrue(compactMedian * 2 < legacyMedian,
+                () -> "compact capture should allocate less than half the legacy path: legacy="
+                        + legacyMedian + " compact=" + compactMedian);
+        assertTrue(escapedSnapshot != null, "each measured snapshot must escape");
+    }
+
+    @Test
+    void sameLayoutRestoreCopiesPrimitivePayloadWithoutAllocation() {
+        ThreadMXBean bean = allocationBeanOrSkip();
+        AnimatedTileChannelGraph graph = new AnimatedTileChannelGraph();
+        graph.install(channels());
+        for (int index = 0; index < CHANNEL_COUNT; index++) {
+            graph.recordPhase("allocation." + index, 211 + index);
+        }
+        AnimatedTileChannelSnapshot snapshot = graph.capture();
+        for (int i = 0; i < WARM_UPDATES; i++) {
+            graph.restore(snapshot);
+        }
+
+        long[] bytesPerRestore = new long[5];
+        for (int repetition = 0; repetition < bytesPerRestore.length; repetition++) {
+            bytesPerRestore[repetition] = measure(bean, () -> graph.restore(snapshot));
+        }
+
+        System.out.printf("animated-channel same-layout restore bytes/restore=%s%n",
+                Arrays.toString(bytesPerRestore));
+        assertTrue(median(bytesPerRestore) == 0L,
+                () -> "same-layout restore should copy primitive slots without allocation: "
+                        + Arrays.toString(bytesPerRestore));
+        assertEquals(CHANNEL_COUNT, graph.recordedPhaseCount());
     }
 
     private static List<AnimatedTileChannel> channels() {
@@ -123,6 +212,39 @@ class TestAnimatedTileChannelGraphAllocation {
         return (after - before) / MEASURED_UPDATES;
     }
 
+    private static CaptureRun measureCapture(ThreadMXBean bean,
+                                             Supplier<AnimatedTileChannelSnapshot> capture) {
+        long threadId = Thread.currentThread().threadId();
+        long before = bean.getThreadAllocatedBytes(threadId);
+        assertTrue(before >= 0, "current-thread allocation read must be available before capture");
+        long workCount = 0;
+        for (int i = 0; i < MEASURED_UPDATES; i++) {
+            AnimatedTileChannelSnapshot snapshot = capture.get();
+            workCount += snapshot.lastPhaseByChannel().size();
+            escapedSnapshot = snapshot;
+        }
+        long after = bean.getThreadAllocatedBytes(threadId);
+        assertTrue(after >= 0, "current-thread allocation read must be available after capture");
+        return new CaptureRun((after - before) / MEASURED_UPDATES, workCount, escapedSnapshot);
+    }
+
+    private static void validateCaptureRun(CaptureRun run,
+                                           Map<String, Integer> expected,
+                                           long expectedWork,
+                                           String label) {
+        assertEquals(expectedWork, run.workCount, label + " must visit every phase");
+        assertEquals(expected, run.lastSnapshot.lastPhaseByChannel(),
+                label + " escaped snapshot must preserve every key and phase");
+    }
+
+    private static AnimatedTileChannelSnapshot legacyCapture(AnimatedTileChannelGraph graph) {
+        Map<String, Integer> phases = new LinkedHashMap<>(graph.recordedPhaseCount());
+        for (AnimatedTileChannel channel : graph.channels()) {
+            phases.put(channel.channelId(), graph.getLastPhase(channel.channelId()));
+        }
+        return new AnimatedTileChannelSnapshot(phases);
+    }
+
     private static long median(long[] values) {
         long[] sorted = values.clone();
         Arrays.sort(sorted);
@@ -144,7 +266,7 @@ class TestAnimatedTileChannelGraphAllocation {
         return bean;
     }
 
-    /** Frozen pre-optimization algorithm for an allocation-identical differential baseline. */
+    /** Frozen pre-primitive live-phase algorithm; callback counts prove equivalent measured work. */
     private static final class LegacyGraph {
         private final List<AnimatedTileChannel> channels;
         private final AnimatedTileChannelGraph contextGraph;
@@ -174,5 +296,10 @@ class TestAnimatedTileChannelGraphAllocation {
                 channel.applyStrategy().apply(channelContext);
             }
         }
+    }
+
+    private record CaptureRun(long bytesPerCapture,
+                              long workCount,
+                              AnimatedTileChannelSnapshot lastSnapshot) {
     }
 }

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -107,6 +108,88 @@ class TestAnimatedTileChannelRewindSnapshot {
         assertEquals(17, graph.getLastPhase(null));
         assertEquals(1, graph.recordedPhaseCount());
         assertThrows(NullPointerException.class, graph::capture);
+    }
+
+    @Test
+    void nullRestoreDestructivelyClearsPhasesAndDiagnosticsBeforeThrowing() {
+        AnimatedTileChannelGraph graph = new AnimatedTileChannelGraph();
+        graph.install(List.of(channel("A")));
+        graph.recordPhase("A", 1);
+        graph.recordPhase("diagnostic", 2);
+
+        assertThrows(NullPointerException.class, () -> graph.restore(null));
+
+        AnimatedTileChannelSnapshot cleared = graph.capture();
+        assertEquals(List.of("A"), graph.channels().stream()
+                .map(AnimatedTileChannel::channelId).toList());
+        assertTrue(cleared.lastPhaseByChannel().isEmpty());
+        assertEquals(1, cleared.compactPayloadLength(),
+                "destructive null restore must also drop the diagnostic layout suffix");
+    }
+
+    @Test
+    void capturedMapPreservesEveryIntAndStandardImmutableMapBehavior() {
+        AnimatedTileChannelGraph graph = new AnimatedTileChannelGraph();
+        graph.install(List.of(channel("minus-one"), channel("minimum"),
+                channel("maximum"), channel("zero")));
+        graph.recordPhase("minus-one", -1);
+        graph.recordPhase("minimum", Integer.MIN_VALUE);
+        graph.recordPhase("maximum", Integer.MAX_VALUE);
+        graph.recordPhase("zero", 0);
+
+        Map<String, Integer> actual = graph.capture().lastPhaseByChannel();
+        Map<String, Integer> expected = Map.of(
+                "minus-one", -1,
+                "minimum", Integer.MIN_VALUE,
+                "maximum", Integer.MAX_VALUE,
+                "zero", 0);
+
+        assertEquals(expected, actual);
+        assertEquals(expected.hashCode(), actual.hashCode());
+        assertEquals(new AnimatedTileChannelSnapshot(expected), graph.capture());
+        assertEquals(new AnimatedTileChannelSnapshot(expected).hashCode(), graph.capture().hashCode());
+        assertEquals(Integer.MIN_VALUE, actual.get("minimum"));
+        assertTrue(actual.containsKey("maximum"));
+        assertFalse(actual.containsKey("missing"));
+        assertNull(actual.get("missing"));
+        assertThrows(UnsupportedOperationException.class, () -> actual.put("x", 1));
+        assertThrows(UnsupportedOperationException.class, () -> actual.remove("zero"));
+        assertThrows(UnsupportedOperationException.class,
+                () -> actual.entrySet().removeAll(java.util.Set.of()));
+        assertThrows(UnsupportedOperationException.class,
+                () -> actual.keySet().remove("missing"));
+        assertThrows(NullPointerException.class, () -> actual.get(null));
+        assertThrows(NullPointerException.class, () -> actual.containsKey(null));
+        assertThrows(NullPointerException.class, () -> actual.containsValue(null));
+        var iterator = actual.entrySet().iterator();
+        while (iterator.hasNext()) {
+            iterator.next();
+        }
+        assertThrows(NoSuchElementException.class, iterator::next);
+    }
+
+    @Test
+    void externalSnapshotRetainsMapCopyOfIsolationNullRulesAndIteratorExhaustion() {
+        LinkedHashMap<String, Integer> source = new LinkedHashMap<>();
+        source.put("A", 1);
+        AnimatedTileChannelSnapshot snapshot = new AnimatedTileChannelSnapshot(source);
+        source.put("A", 2);
+        source.put("B", 3);
+
+        assertEquals(Map.of("A", 1), snapshot.lastPhaseByChannel());
+        var iterator = snapshot.lastPhaseByChannel().entrySet().iterator();
+        assertEquals(Map.entry("A", 1), iterator.next());
+        assertThrows(NoSuchElementException.class, iterator::next);
+        assertThrows(NullPointerException.class,
+                () -> new AnimatedTileChannelSnapshot(null));
+        LinkedHashMap<String, Integer> nullKey = new LinkedHashMap<>();
+        nullKey.put(null, 1);
+        assertThrows(NullPointerException.class,
+                () -> new AnimatedTileChannelSnapshot(nullKey));
+        LinkedHashMap<String, Integer> nullValue = new LinkedHashMap<>();
+        nullValue.put("A", null);
+        assertThrows(NullPointerException.class,
+                () -> new AnimatedTileChannelSnapshot(nullValue));
     }
 
     private static AnimatedTileChannel channel(String id) {
