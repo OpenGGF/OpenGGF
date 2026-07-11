@@ -597,6 +597,19 @@ new bomb explosion) to f19089 / 208 errors (`g_speed` sign at a later terrain
 turn). The complete-run frontier remains f16755 while its errors fall from 687
 to 668. The AIZ stage is not green yet.
 
+Round 42 corrects the AIZ end boss's revealed raw-animation and camera-bound
+visibility phases. `Animate_RawNoSSTMultiDelay` enters `byte_69DB3` at its
+second `$1B` pair, so the visible holds are five/six/seven/one frames and the
+`$F4` callback installs hover on update 20. The prior extra `$1B` frame left
+the hover oscillator one frame behind and put the boss collision centre one
+pixel too low at focused f19089, causing an early full velocity rebound. The
+shorter raw animation also installs routine `$C` one engine frame earlier;
+the boss now preserves ROM camera-pass visibility by deferring the first
+camera-minimum/right-bound write, then restores the skipped right-bound `$+2`
+after the 128-pass move loop exits. The focused replay advances from f19089 /
+208 errors to f19410 / 3 errors (a two-frame bridge-rider facing bit followed
+by two isolated late-run diagnostics). The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

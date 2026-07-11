@@ -119,6 +119,10 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     private int waitTimer = -1;
     private WaitCallback waitCallback = WaitCallback.NONE;
+    /** Defers the first camera-bound write until the camera pass after routine $C is installed. */
+    private boolean cameraScrollBoundsPending;
+    /** Restores the skipped right-bound increment once it can no longer move the camera early. */
+    private boolean cameraScrollMaxCatchUpPending;
 
     private enum WaitCallback {
         NONE,
@@ -189,6 +193,8 @@ public class AizEndBossInstance extends AbstractBossInstance
         state.hitCount = HIT_COUNT;
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
+        cameraScrollBoundsPending = false;
+        cameraScrollMaxCatchUpPending = false;
         defeatPhaseTimer = 0;
         defeatRenderComplete = false;
         defeatExplosionController = null;
@@ -298,6 +304,11 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+        if (cameraScrollMaxCatchUpPending && state.routine != ROUTINE_CAMERA_SCROLL) {
+            int camMaxX = (services().camera().getMaxX() & 0xFFFF) + 2;
+            services().camera().setMaxX((short) camMaxX);
+            cameraScrollMaxCatchUpPending = false;
+        }
         // Custom palette flash on hit
         if (state.invulnerable) {
             updateCustomFlash();
@@ -481,10 +492,10 @@ public class AizEndBossInstance extends AbstractBossInstance
     // ROM byte_69DB3 is consumed by Animate_RawNoSSTMultiDelay: $1B/$00,
     // $1B/$04, $1C/$05, $1D/$06, $00/$00, then $F4 callback
     // (docs/skdisasm/sonic3k.asm:138120-138122,139104-139110,177558-177587).
-    private static final int REVEALED_FRAME_1B_END = 6;
-    private static final int REVEALED_FRAME_1C_END = 12;
-    private static final int REVEALED_FRAME_1D_END = 19;
-    private static final int REVEALED_FRAME_VISIBLE_END = 20;
+    private static final int REVEALED_FRAME_1B_END = 5;
+    private static final int REVEALED_FRAME_1C_END = 11;
+    private static final int REVEALED_FRAME_1D_END = 18;
+    private static final int REVEALED_FRAME_VISIBLE_END = 19;
 
     /** ROM: loc_6932C — Revealed animation. */
     private void updateRevealed() {
@@ -601,6 +612,7 @@ public class AizEndBossInstance extends AbstractBossInstance
             // First time: scroll camera, set second cycle flag
             state.routine = ROUTINE_CAMERA_SCROLL;
             flags38 |= FLAG_SECOND_CYCLE;
+            cameraScrollBoundsPending = true;
         } else {
             // Second time: move to new position directly
             state.routine = ROUTINE_MOVE_WAIT;
@@ -618,17 +630,26 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     /** ROM: loc_69456 — Incrementally scroll camera right during reposition. */
     private void updateCameraScroll() {
-        // ROM: addq.w #2,(Camera_min_X_pos) until >= _unkFA84
-        int camMinX = services().camera().getMinX() & 0xFFFF;
-        if (camMinX < targetMaxX) {
-            camMinX += 2;
-            if (camMinX > targetMaxX) {
-                camMinX = targetMaxX;
+        if (cameraScrollBoundsPending) {
+            // loc_6942A installs routine $C during the boss object's pass. The
+            // camera has already consumed this frame's bounds, so loc_69456's
+            // first +2 becomes camera-visible on the following pass. Boss
+            // movement still begins now through loc_6946A/MoveSprite2.
+            cameraScrollBoundsPending = false;
+            cameraScrollMaxCatchUpPending = true;
+        } else {
+            // ROM: addq.w #2,(Camera_min_X_pos) until >= _unkFA84
+            int camMinX = services().camera().getMinX() & 0xFFFF;
+            if (camMinX < targetMaxX) {
+                camMinX += 2;
+                if (camMinX > targetMaxX) {
+                    camMinX = targetMaxX;
+                }
+                services().camera().setMinX((short) camMinX);
             }
-            services().camera().setMinX((short) camMinX);
+            int camMaxX = (services().camera().getMaxX() & 0xFFFF) + 2;
+            services().camera().setMaxX((short) camMaxX);
         }
-        int camMaxX = (services().camera().getMaxX() & 0xFFFF) + 2;
-        services().camera().setMaxX((short) camMaxX);
 
         // Also do move+wait
         updateMoveWait();
