@@ -724,6 +724,22 @@ f20714 / 3 errors (`tails_y`, expected `$0009`, actual `$000E`). The diagnostic
 is unstaged; the committed complete-run frontier remains f16755 / 657 pending
 the spill-owner slot fix. The AIZ stage is not green yet.
 
+Round 52 restores the per-game collision-layout Y mask for negative ceiling
+lookups. `Sonic_CheckCeiling` transforms the probe with `eori.w #$F`, then
+S3K `Find_Tile_FG` applies the runtime `Layout_row_index_mask`; the default
+`$7C` mask represents a 4096-pixel window, not S1/S2's 2048-pixel window. The
+engine's shared hardcoded `$07FF` mask wrapped CPU Tails' above-top probe into
+solid row `$07F4` at f20714, shifted him down five pixels, and zeroed his upward
+velocity. Typed collision rules now supply S1/S2 `$07FF` and S3K `$0FFF`, so
+the same ROM state addresses `$0FF4` and returns blank as recorded
+(`sonic3k.asm:19141-19163,20242-20282,102181-102204`). A focused unit guard
+pins both windows. Under the temporary comparison-only spill-phase diagnostic,
+the downstream frontier moves from f20714 / 3 errors to f22819 / 1 error
+(`camera_x`, expected `$460C`, actual `$4612`). The diagnostic is unstaged; the
+committed complete-run frontier remains f16755 / 657 pending the spill-owner
+slot fix. The focused AIZ replay and full exact-tree S1 (29) / S2 (48) fleets
+pass. The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

@@ -21,5 +21,6 @@ public record CollisionRules(
         boolean rightWallDeepProbePreservesPenetration,
         boolean solidObjectBarelyPokingResolvesAsSide,
         boolean solidObjectKeepsOnObjWhenJumpedOffSameFrame,
-        boolean advanceWaterLevelBeforePlayerPhysics) {
+        boolean advanceWaterLevelBeforePlayerPhysics,
+        int defaultCollisionLayoutYMask) {
 }
