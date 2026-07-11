@@ -493,6 +493,18 @@ f16755-f16757 (rings expected 2, actual 3); this commit corrects the underlying
 SST owner without claiming a frontier move. Fresh full sweeps pass all 29 S1
 and all 48 S2 trace replays. The AIZ stage is not green yet.
 
+Round 34 restores the two SST children created with the AIZ intro plane. ROM
+`CreateChild1_Normal` allocates `loc_677CE`, `loc_6784A`, and `loc_67888` into
+three consecutive slots from `ChildObjDat_67A5A/67A62`
+(`sonic3k.asm:135702-135819,136001-136012`). The engine allocated only the plane
+and retained the latter two animated pieces as non-SST render helpers. They now
+run as real dynamic objects with ROM offsets/animation variants and generic
+rewind recreation linked to the live plane. The comparison-only occupancy probe
+therefore changes focused frame 354 from ROM slots 5-8 versus engine 5-6 to an
+exact 5-8 match; it remains exact through frame 717. Strict physics frontiers
+remain focused f5496 / 14 with the baseline transition timing and complete-run
+f16755-f16757. No stage-green claim is made yet.
+
 ## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green
 
 Worktree `.worktrees/ai-s2-mtz3-round96-orbinit`, branch
