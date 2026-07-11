@@ -13,6 +13,7 @@ import java.util.Objects;
 
 public class EditorTextRenderer {
     public record TextCommand(String text, int x, int y, int lineHeight, DebugColor color, FontSize fontSize) {}
+    public record PositionedLine(String text, int x, int y) {}
 
     private static final int DEFAULT_LINE_HEIGHT = 10;
     private static final DebugColor DEFAULT_COLOR = DebugColor.WHITE;
@@ -36,6 +37,22 @@ public class EditorTextRenderer {
 
     public void renderLines(List<String> lines, int x, int y) {
         List<TextCommand> commands = buildTextCommands(lines, x, y);
+        if (!commands.isEmpty()) {
+            graphicsManager.registerCommand(buildTextBatchCommand(commands));
+        }
+    }
+
+    public void renderPositionedLines(List<PositionedLine> lines) {
+        if (lines == null || lines.isEmpty()) {
+            return;
+        }
+        List<TextCommand> commands = new ArrayList<>(lines.size());
+        for (PositionedLine line : lines) {
+            if (line != null && line.text() != null && !line.text().isBlank()) {
+                commands.add(new TextCommand(line.text(), line.x(), line.y(), DEFAULT_LINE_HEIGHT,
+                        DEFAULT_COLOR, DEFAULT_FONT_SIZE));
+            }
+        }
         if (!commands.isEmpty()) {
             graphicsManager.registerCommand(buildTextBatchCommand(commands));
         }

@@ -28,7 +28,7 @@ public final class EditorOverlayRenderer {
     public EditorOverlayRenderer(LevelEditorController controller, GraphicsManager graphicsManager) {
         this(controller, new EditorToolbarRenderer(controller, graphicsManager),
                 new EditorCommandStripRenderer(controller, graphicsManager),
-                new EditorWorldOverlayRenderer(graphicsManager),
+                new EditorWorldOverlayRenderer(controller, graphicsManager),
                 new FocusedEditorPaneRenderer(controller, graphicsManager),
                 new EditorLibraryPaneRenderer(controller, graphicsManager));
     }

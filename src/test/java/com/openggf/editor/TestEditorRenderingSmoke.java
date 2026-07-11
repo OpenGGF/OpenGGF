@@ -453,6 +453,98 @@ class TestEditorRenderingSmoke {
         assertTrue(worldCommands.size() - cursorOnly.size() >= 16);
     }
 
+    @Test
+    void worldOverlayRenderer_buildsVisibleSpawnMarkersAndObjectLabelsInSpawnModes() {
+        PreviewLevel source = new PreviewLevel();
+        source.setSpawns(List.of(
+                new ObjectSpawn(120, 80, 0x2A, 0x0F, 0, true, 0, 7),
+                new ObjectSpawn(500, 500, 0x01, 0x02, 0, true, 0, 8)),
+                List.of(new RingSpawn(160, 96, 9), new RingSpawn(600, 600, 10)));
+        MutableLevel level = MutableLevel.snapshot(source);
+        InspectableWorldOverlayRenderer renderer = new InspectableWorldOverlayRenderer();
+
+        EditorWorldOverlayRenderer.SpawnOverlay overlay = renderer.buildSpawnOverlay(
+                level, EditorSpawnEditMode.OBJECTS, 100, 64, 320, 224);
+
+        assertFalse(overlay.markerCommands().isEmpty());
+        assertTrue(commandSignature(overlay.markerCommands()).contains("114,144"));
+        assertTrue(commandSignature(overlay.markerCommands()).contains("160,132"));
+        assertFalse(commandSignature(overlay.markerCommands()).contains("500,500"));
+        assertEquals(List.of(new EditorWorldOverlayRenderer.SpawnLabel("2A:0F", 120, 80)),
+                overlay.labels());
+
+        EditorWorldOverlayRenderer.SpawnOverlay ringModeOverlay = renderer.buildSpawnOverlay(
+                level, EditorSpawnEditMode.RINGS, 100, 64, 320, 224);
+        assertEquals(commandSignature(overlay.markerCommands()),
+                commandSignature(ringModeOverlay.markerCommands()));
+        assertEquals(overlay.labels(), ringModeOverlay.labels());
+    }
+
+    @Test
+    void worldOverlayRenderer_hidesSpawnMarkersOutsideSpawnEditModes() {
+        PreviewLevel source = new PreviewLevel();
+        source.setSpawns(List.of(new ObjectSpawn(120, 80, 0x2A, 0x0F, 0, true, 0, 7)),
+                List.of(new RingSpawn(160, 96, 9)));
+        MutableLevel level = MutableLevel.snapshot(source);
+        InspectableWorldOverlayRenderer renderer = new InspectableWorldOverlayRenderer();
+
+        EditorWorldOverlayRenderer.SpawnOverlay overlay = renderer.buildSpawnOverlay(
+                level, EditorSpawnEditMode.TILES, 0, 0, 320, 224);
+
+        assertTrue(overlay.markerCommands().isEmpty());
+        assertTrue(overlay.labels().isEmpty());
+    }
+
+    @Test
+    void worldOverlayRenderer_usesWrapped16BitDeltasPastSignedCameraBoundary() {
+        PreviewLevel source = new PreviewLevel();
+        source.setSpawns(List.of(new ObjectSpawn(0x8010, 0x8010, 0x7E, 0xA5, 0, true, 0, 7)),
+                List.of(new RingSpawn(0x8180, 0x8140, 9)));
+        MutableLevel level = MutableLevel.snapshot(source);
+        InspectableWorldOverlayRenderer renderer = new InspectableWorldOverlayRenderer();
+
+        EditorWorldOverlayRenderer.SpawnOverlay overlay = renderer.buildSpawnOverlay(
+                level, EditorSpawnEditMode.OBJECTS, (short) 0x7FF0, (short) 0x7FF0, 512, 224);
+
+        assertFalse(overlay.markerCommands().isEmpty());
+        assertEquals(List.of(new EditorWorldOverlayRenderer.SpawnLabel("7E:A5", 0x8010, 0x8010)),
+                overlay.labels());
+        assertTrue(commandSignature(overlay.markerCommands()).contains("32778,-32560"),
+                commandSignature(overlay.markerCommands()));
+    }
+
+    @Test
+    void worldOverlayRenderer_queuesOnePositionedLabelBatchFromControllerBackedSession() throws Exception {
+        PreviewLevel source = new PreviewLevel();
+        source.setSpawns(List.of(
+                        new ObjectSpawn(120, 80, 0x2A, 0x0F, 0, true, 0, 7),
+                        new ObjectSpawn(160, 96, 0x04, 0xB0, 0, true, 0, 8)),
+                List.of(new RingSpawn(192, 112, 9)));
+        MutableLevel level = MutableLevel.snapshot(source);
+        SessionManager.openGameplaySession(new Sonic2GameModule());
+        SessionManager.getCurrentWorldSession().setCurrentLevel(level);
+        SessionManager.enterEditorMode(new EditorCursorState(120, 80));
+        SessionManager.getCurrentEditorMode().getCamera().setX((short) 32);
+        SessionManager.getCurrentEditorMode().getCamera().setY((short) 16);
+
+        LevelEditorController controller = new LevelEditorController();
+        controller.attachLevel(level);
+        controller.setSpawnEditMode(EditorSpawnEditMode.OBJECTS);
+        RecordingPixelFontTextRenderer pixelFont = new RecordingPixelFontTextRenderer();
+        EditorTextRenderer textRenderer = new EditorTextRenderer(TEST_GRAPHICS, pixelFont);
+        EditorWorldOverlayRenderer renderer = new EditorWorldOverlayRenderer(controller, TEST_GRAPHICS, textRenderer);
+        TEST_GRAPHICS.resetState();
+
+        renderer.render();
+
+        assertEquals(2, graphicsCommandQueueSize(), "one line group plus one label batch");
+        queuedGraphicsCommand(1).execute(32, 16, 320, 224);
+        assertEquals(List.of(
+                        new DrawCall("2A:0F", 96, 59, DebugColor.WHITE),
+                        new DrawCall("04:B0", 136, 75, DebugColor.WHITE)),
+                pixelFont.calls);
+    }
+
     private static final class TrackingToolbarRenderer extends EditorToolbarRenderer {
         private int renderCalls;
 
@@ -662,6 +754,15 @@ class TestEditorRenderingSmoke {
             appendWorldCommands(commands, cursor);
             return commands;
         }
+
+        private SpawnOverlay buildSpawnOverlay(MutableLevel level,
+                                               EditorSpawnEditMode mode,
+                                               int left,
+                                               int top,
+                                               int right,
+                                               int bottom) {
+            return super.buildSpawnOverlay(level, mode, left, top, right, bottom);
+        }
     }
 
     private static final class CapturingWorldOverlayRenderer extends EditorWorldOverlayRenderer {
@@ -717,9 +818,14 @@ class TestEditorRenderingSmoke {
 
     @SuppressWarnings("unchecked")
     private static GLCommandable queuedGraphicsCommand() throws Exception {
+        return queuedGraphicsCommand(0);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static GLCommandable queuedGraphicsCommand(int index) throws Exception {
         Field commands = GraphicsManager.class.getDeclaredField("commands");
         commands.setAccessible(true);
-        return ((List<GLCommandable>) commands.get(GraphicsManager.getInstance())).get(0);
+        return ((List<GLCommandable>) commands.get(GraphicsManager.getInstance())).get(index);
     }
 
     private static void assertTextCommandsInsideChrome(List<EditorTextRenderer.TextCommand> commands,
@@ -771,11 +877,15 @@ class TestEditorRenderingSmoke {
 
             solidTileCount = 0;
             solidTiles = new com.openggf.level.SolidTile[0];
-            map = new com.openggf.level.Map(1, 2, 2);
+            map = new com.openggf.level.Map(2, 2, 2);
             map.setValue(0, 0, 0, (byte) 0);
             map.setValue(0, 1, 0, (byte) 1);
             map.setValue(0, 0, 1, (byte) 2);
             map.setValue(0, 1, 1, (byte) 0);
+            map.setValue(1, 0, 0, (byte) 0);
+            map.setValue(1, 1, 0, (byte) 1);
+            map.setValue(1, 0, 1, (byte) 2);
+            map.setValue(1, 1, 1, (byte) 0);
             palettes = new com.openggf.level.Palette[] {
                     new com.openggf.level.Palette(),
                     new com.openggf.level.Palette(),
@@ -788,6 +898,11 @@ class TestEditorRenderingSmoke {
             maxX = 255;
             minY = 0;
             maxY = 191;
+        }
+
+        void setSpawns(List<ObjectSpawn> objects, List<RingSpawn> rings) {
+            this.objects = List.copyOf(objects);
+            this.rings = List.copyOf(rings);
         }
 
         @Override
@@ -891,5 +1006,3 @@ class TestEditorRenderingSmoke {
         }
     }
 }
-
-
