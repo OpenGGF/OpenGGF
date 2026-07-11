@@ -16,6 +16,7 @@ import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.managers.PlayableSpriteMovement;
+import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.sprites.managers.SpindashDustController;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -719,12 +720,7 @@ class TestAbstractPlayableSpriteRewindCapture {
 
             PerObjectRewindSnapshot snapshot = tails.captureRewindState();
             PlayerRewindExtra extra = snapshot.playerExtra();
-            assertEquals(latchX, extra.tailsCarryLatchX());
-            assertEquals(latchY, extra.tailsCarryLatchY());
-            assertTrue(extra.tailsCarrying());
-            assertTrue(extra.tailsCarryParentagePending());
-            assertEquals(cooldown, extra.tailsCarryCooldown());
-            assertEquals(contexts[i], extra.tailsCarryContext());
+            assertEquals(expectedCarry, extra.controllerState().tailsCarryState());
 
             tails.getTailsCarryController().clearState();
             tails.setDoubleJumpFlag(0);
@@ -742,6 +738,38 @@ class TestAbstractPlayableSpriteRewindCapture {
         }
 
         assertNoRawParticipantReference(PlayerRewindExtra.class);
+    }
+
+    @Test
+    void aggregateControllerStateRoundTripsWithoutRawPlayerReferences() {
+        Sonic sonic = new Sonic("sonic", (short) 0x180, (short) 0x240);
+        PlayableSpriteMovement.RewindState movement = new PlayableSpriteMovement.RewindState(
+                true, false, true, true,
+                true, false, true, false, true, true, true, false,
+                true, true, 7, 8, 9, true,
+                true, 3, Direction.LEFT, 0x22, 0x33);
+        PlayableSpriteAnimation.RewindState animation =
+                new PlayableSpriteAnimation.RewindState(0x12, 0x34);
+        DrowningController.RewindState drowning = new DrowningController.RewindState(
+                17, 23, true, 5, 4, 3, 2, 1);
+        TailsCarryController.Snapshot carry = new TailsCarryController.Snapshot(
+                (short) 0x1234, (short) -0x2345, true, true, 19,
+                TailsCarryController.CarryContext.CNZ);
+        sonic.setSpindashDustController(new SpindashDustController(sonic, null));
+        SpindashDustController.RewindState spindash =
+                new SpindashDustController.RewindState(2, 3, 4, true);
+        PlayableSpriteController.RewindState expected = new PlayableSpriteController.RewindState(
+                movement, spindash, animation, drowning, carry);
+        sonic.controller.restoreRewindState(expected);
+
+        PerObjectRewindSnapshot snapshot = sonic.captureRewindState();
+        assertEquals(expected, snapshot.playerExtra().controllerState());
+
+        sonic.controller.restoreRewindState(null);
+        sonic.restoreRewindState(snapshot);
+
+        assertEquals(expected, sonic.captureRewindState().playerExtra().controllerState());
+        assertNoRawParticipantReference(PlayableSpriteController.RewindState.class);
     }
 
     @Test
@@ -799,6 +827,9 @@ class TestAbstractPlayableSpriteRewindCapture {
             assertFalse(AbstractPlayableSprite.class.isAssignableFrom(component.getType()),
                     "rewind records must resolve participants through the sprite registry: "
                             + component.getName());
+            if (component.getType().isRecord()) {
+                assertNoRawParticipantReference(component.getType());
+            }
         }
     }
 

@@ -423,16 +423,7 @@ public record PerObjectRewindSnapshot(
             int animationFrameIndex,
             int animationTick,
             boolean debugMode,
-            com.openggf.sprites.managers.PlayableSpriteMovement.RewindState movementState,
-            com.openggf.sprites.managers.SpindashDustController.RewindState spindashDustState,
-            com.openggf.sprites.managers.PlayableSpriteAnimation.RewindState animationState,
-            com.openggf.sprites.playable.DrowningController.RewindState drowningState,
-            short tailsCarryLatchX,
-            short tailsCarryLatchY,
-            boolean tailsCarrying,
-            boolean tailsCarryParentagePending,
-            int tailsCarryCooldown,
-            com.openggf.sprites.playable.TailsCarryController.CarryContext tailsCarryContext,
+            com.openggf.sprites.playable.PlayableSpriteController.RewindState controllerState,
             SidekickCpuRewindExtra sidekickCpuExtra,
             // Sidekick follow-history circular buffers (read by SidekickCpuController
             // each frame to position the follower; the leader writes new entries every

@@ -768,15 +768,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 // Clear Super state
                 this.superSonic = false;
-                if (controller != null && controller.getSuperState() != null) {
-                        controller.getSuperState().reset();
-                }
+                controller.resetSuperState();
         }
 
         public void resetState() {
-                if (controller != null && controller.getTailsCarry() != null) {
-                        controller.getTailsCarry().clearAndReleaseMain();
-                }
+                controller.clearCarryAndReleaseMain();
                 this.shield = false;
                 this.shieldType = null;
                 if (this.shieldObject != null) {
@@ -879,9 +875,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.waterSkimActive = false;
                 this.preventTailsRespawn = false;
                 this.superSonic = false;
-                if (controller != null && controller.getSuperState() != null) {
-                        controller.getSuperState().reset();
-                }
+                controller.resetSuperState();
                 // Reset collision path to Path 0 (primary collision).
                 // Without this, if player was on Path 1 in previous level,
                 // solidity bits would remain 0x0E/0x0F causing collision checks
@@ -910,8 +904,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public PerObjectRewindSnapshot captureRewindState(boolean includeFollowHistory) {
-                TailsCarryController.Snapshot tailsCarrySnapshot =
-                        getTailsCarryController().capture();
                 SidekickCpuRewindExtra sidekickCpuExtra =
                         cpuController != null ? cpuController.captureRewindState() : null;
                 PlayerRewindExtra extra = new PlayerRewindExtra(
@@ -985,22 +977,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         animationFrameIndex,
                         animationTick,
                         debugMode,
-                        controller.getMovement().captureRewindState(),
-                        controller.getSpindashDust() != null
-                                ? controller.getSpindashDust().captureRewindState()
-                                : null,
-                        controller.getAnimation() != null
-                                ? controller.getAnimation().captureRewindState()
-                                : null,
-                        controller.getDrowning() != null
-                                ? controller.getDrowning().captureRewindState()
-                                : null,
-                        tailsCarrySnapshot.latchX(),
-                        tailsCarrySnapshot.latchY(),
-                        tailsCarrySnapshot.carrying(),
-                        tailsCarrySnapshot.parentagePending(),
-                        tailsCarrySnapshot.cooldown(),
-                        tailsCarrySnapshot.context(),
+                        controller.captureRewindState(),
                         sidekickCpuExtra,
                         includeFollowHistory ? xHistory : null,
                         includeFollowHistory ? yHistory : null,
@@ -1175,25 +1152,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.animationFrameIndex = extra.animationFrameIndex();
                 this.animationTick = extra.animationTick();
                 this.debugMode = extra.debugMode();
-                controller.getMovement().restoreRewindState(extra.movementState());
-                if (controller.getSpindashDust() != null) {
-                        controller.getSpindashDust().restoreRewindState(extra.spindashDustState());
-                }
-                if (controller.getAnimation() != null) {
-                        controller.getAnimation().restoreRewindState(extra.animationState());
-                }
-                if (controller.getDrowning() != null) {
-                        controller.getDrowning().restoreRewindState(extra.drowningState());
-                }
                 // Carry is shared player state. Restore it before CPU sequencing,
                 // whose restored routine may consume the carry context immediately.
-                getTailsCarryController().restore(new TailsCarryController.Snapshot(
-                        extra.tailsCarryLatchX(),
-                        extra.tailsCarryLatchY(),
-                        extra.tailsCarrying(),
-                        extra.tailsCarryParentagePending(),
-                        extra.tailsCarryCooldown(),
-                        extra.tailsCarryContext()));
+                controller.restoreRewindState(extra.controllerState());
                 if (extra.sidekickCpuExtra() != null) {
                         if (cpuController == null) {
                                 throw new IllegalStateException(
@@ -2416,10 +2377,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setDead(boolean dead) {
                 this.dead = dead;
-                if (dead && getSecondaryAbility() == SecondaryAbility.FLY
-                                && controller != null && controller.getTailsFlight() != null) {
-                        controller.getTailsFlight().clear();
-                }
+                controller.clearTailsFlightIf(dead && getSecondaryAbility() == SecondaryAbility.FLY);
         }
 
         /**
@@ -3022,10 +2980,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void setObjectControlled(boolean objectControlled) {
                 this.objectControlled = objectControlled;
                 if (objectControlled) {
-                        if (getSecondaryAbility() == SecondaryAbility.FLY
-                                        && controller != null && controller.getTailsFlight() != null) {
-                                controller.getTailsFlight().clear();
-                        }
+                        controller.clearTailsFlightIf(getSecondaryAbility() == SecondaryAbility.FLY);
                         this.deferredObjectControlRelease = false;
                         this.objectControlSuppressesMovement = true;
                 } else {
