@@ -1,0 +1,10 @@
+formatVersion: 1
+tracks:
+  - id: gallery-theme
+    assetPath: audio/gallery-theme.wav
+    loop: true
+    loopStartFrame: 0
+    loopEndFrame: 16000
+    gain: 0.2
+    tempoEffects: true
+sfx: []

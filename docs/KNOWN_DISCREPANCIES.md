@@ -33,6 +33,20 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 20. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
 21. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
 22. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
+23. [Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS](#mod-music-uses-pcm-presentation-rather-than-mega-drive-smps)
+
+---
+
+## Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS
+
+When a user-enabled Phase 1 music pack overrides a stock music ID, OpenGGF
+presents the author-supplied WAV/OGG as decoded 16-bit PCM rather than
+synthesizing that track through the original SMPS/YM2612/PSG path. Speed-shoes
+tempo is approximated as a fixed 1.25x rate-and-pitch shift for tracks that opt
+into tempo effects. Rewind restores logical stream state from keyframes, but
+streamed PCM is excluded from deterministic audio capture and command replay.
+This divergence applies only to external mod music; with no effective override,
+the stock ROM-backed SMPS path remains unchanged.
 
 ---
 
