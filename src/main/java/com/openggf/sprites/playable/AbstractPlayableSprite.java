@@ -774,6 +774,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void resetState() {
+                if (controller != null && controller.getTailsCarry() != null) {
+                        controller.getTailsCarry().clearAndReleaseMain();
+                }
                 this.shield = false;
                 this.shieldType = null;
                 if (this.shieldObject != null) {
@@ -1555,6 +1558,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public final DrowningController getDrowningController() { return controller != null ? controller.getDrowning() : null; }
         public final TailsFlightController getTailsFlightController() {
                 return controller != null ? controller.getTailsFlight() : null;
+        }
+        public final TailsCarryController getTailsCarryController() {
+                return controller != null ? controller.getTailsCarry() : null;
         }
         public final WaterSystem currentWaterSystem() { return PlayableSpriteRuntimeServices.water(); }
 

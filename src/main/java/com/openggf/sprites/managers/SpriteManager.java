@@ -362,6 +362,21 @@ public class SpriteManager {
 		return frameCounter;
 	}
 
+	/** Returns the sole registered human-controlled playable participant. */
+	public AbstractPlayableSprite getMainPlayable() {
+		AbstractPlayableSprite main = null;
+		for (Sprite sprite : sprites.values()) {
+			if (!(sprite instanceof AbstractPlayableSprite playable) || playable.isCpuControlled()) {
+				continue;
+			}
+			if (main != null && main != playable) {
+				throw new IllegalStateException("Expected one main playable, but multiple non-CPU playable sprites are registered");
+			}
+			main = playable;
+		}
+		return main;
+	}
+
 	/**
 	 * Sets the gameplay frame counter. Used by trace-replay setup to align the
 	 * engine's counter with the ROM's {@code Level_frame_counter} at the start
@@ -1397,6 +1412,20 @@ public class SpriteManager {
 		SidekickCpuController cpuController = playable.getCpuController();
 		if (cpuController != null) {
 			cpuController.finishCarryAfterCarrierMovement();
+		}
+		if (cpuController == null
+				|| (cpuController.getState() != SidekickCpuController.State.CARRYING
+				&& cpuController.getState() != SidekickCpuController.State.CARRY_INIT)) {
+			AbstractPlayableSprite main = GameServices.sprites().getMainPlayable();
+			int mainCarryInput = 0;
+			if (main != null) {
+				if (main.isUpPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_UP;
+				if (main.isDownPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_DOWN;
+				if (main.isLeftPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_LEFT;
+				if (main.isRightPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_RIGHT;
+				if (main.isJumpJustPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_JUMP;
+			}
+			playable.getTailsCarryController().updateAfterTailsCollision(mainCarryInput);
 		}
 		playable.recordFollowerHistoryForTick();
 		// ROM Obj01_Control runs Sonic_Display before Sonic_Animate and

@@ -11,6 +11,7 @@ public class PlayableSpriteController {
     private final PlayableSpriteAnimation animation;
     private final DrowningController drowning;
     private final TailsFlightController tailsFlight;
+    private final TailsCarryController tailsCarry;
     private SpindashDustController spindashDust;
     private TailsTailsController tailsTails;
     private SuperStateController superState;
@@ -20,6 +21,7 @@ public class PlayableSpriteController {
         this.animation = new PlayableSpriteAnimation(sprite);
         this.drowning = new DrowningController(sprite);
         this.tailsFlight = new TailsFlightController(sprite);
+        this.tailsCarry = new TailsCarryController(sprite);
     }
 
     public PlayableSpriteMovement getMovement() {
@@ -36,6 +38,10 @@ public class PlayableSpriteController {
 
     public TailsFlightController getTailsFlight() {
         return tailsFlight;
+    }
+
+    public TailsCarryController getTailsCarry() {
+        return tailsCarry;
     }
 
     public SpindashDustController getSpindashDust() {
