@@ -630,6 +630,17 @@ latch to trace diagnostics. The focused replay advances from f20715 / 2 errors
 to f20769 / 1 error (a single camera-Y sample during the final fall). The AIZ
 stage is not green yet.
 
+Round 45 closes the focused AIZ replay at the HCZ `StartNewLevel` handoff.
+The ROM transition is entered from the later boss-controller slot before the
+ordinary camera pass can consume the player's just-moved position; the final
+visible camera target therefore comes from the player's pre-physics Y. The
+engine now writes that airborne `$80`-offset target and temporarily freezes the
+camera before requesting the full zone transition. The focused replay passes
+all 20,443 frames with zero errors. The complete-run replay remains red at
+f16755, with 657 errors (`rings`, expected 2 / actual 3), so the AIZ stage is
+not green yet. Full S1 (29) and S2 (48) trace fleets passed at the immediately
+preceding shared-sidekick commit boundary.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

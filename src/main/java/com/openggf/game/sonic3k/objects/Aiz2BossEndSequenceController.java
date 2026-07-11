@@ -49,6 +49,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private static final short POST_RESULTS_INITIAL_WALK_SPEED = 0x000C;
     private static final int POST_BUTTON_CAMERA_MAX_Y_TARGET = 0x1000;
     private static final int INC_LEVEL_END_Y_GRADUAL_STEP = 0x8000;
+    private static final int AIRBORNE_CAMERA_TARGET_OFFSET = 0x80;
 
     // Non-final so the generic rewind field capturer reapplies them after a
     // generic recreate. The captured spawn x/y make these correct before reapply.
@@ -166,17 +167,29 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             postButtonMaxYReleaseActive = true;
             postButtonMaxYAccumulator = 0;
         }
-        updatePostButtonCameraMaxYRelease();
-
         // Phase: Wait for player to fall past Y threshold, then transition
         if (buttonHandled && !transitionRequested) {
             int transitionY = arenaBaseY + NEXT_LEVEL_Y_OFFSET;
             if ((player.getCentreY() & 0xFFFF) >= transitionY) {
                 transitionRequested = true;
+                // StartNewLevel is entered from this later object slot after
+                // the player moved, but before the normal DeformLayers camera
+                // pass. Preserve the camera target derived from the position
+                // visible at the start of player physics; the transition load
+                // will clear the temporary freeze with the fresh level state.
+                Camera camera = services().camera();
+                camera.setY((short) ((player.getPrePhysicsCentreY() & 0xFFFF)
+                        - AIRBORNE_CAMERA_TARGET_OFFSET));
+                camera.setFrozen(true);
                 services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
                 services().requestZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0, true);
+                // StartNewLevel stops the current object pass. The separately
+                // allocated Obj_IncLevEndYGradual child is in a later slot, so
+                // it cannot add its accumulator high word on the handoff frame.
+                return;
             }
         }
+        updatePostButtonCameraMaxYRelease();
     }
 
     private void initialize(AbstractPlayableSprite player) {
