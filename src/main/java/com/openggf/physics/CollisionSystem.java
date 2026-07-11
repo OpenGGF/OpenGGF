@@ -8,6 +8,7 @@ import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
@@ -413,6 +414,40 @@ public class CollisionSystem {
         int distance = sprite.getDeferredGroundWallVelocityDistance();
         sprite.clearDeferredGroundWallVelocityResponse();
         applyGroundWallVelocityResponse(sprite, mode, distance);
+    }
+
+    /**
+     * Apply S3K's post-AnglePos background-collision wall clamps.
+     *
+     * <p>When {@code Background_collision_flag} is set, the grounded stand and
+     * roll paths call {@code CheckLeftWallDist} and {@code CheckRightWallDist}
+     * after movement, AnglePos, and SlopeRepel. These checks adjust native
+     * {@code x_pos} only; unlike CalcRoomInFront they do not alter velocity or
+     * Status_Push (sonic3k.asm:27529-27548,27741-27760).
+     */
+    public void resolvePostMovementBackgroundWallClamp(
+            FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
+        requireTerrainOnlyPlan(plan, "resolvePostMovementBackgroundWallClamp");
+        var gameState = GameServices.gameStateOrNull();
+        if (sprite == null || gameState == null || !gameState.isBackgroundCollisionFlag()) {
+            return;
+        }
+
+        calcRoomProbe.sprite = sprite;
+        int solidityBit = sprite.getLrbSolidBit();
+        SensorResult left = calcRoomProbe.scanWorld(
+                Direction.LEFT, (short) -10, (short) 0,
+                (short) 0, (short) 0, solidityBit);
+        if (left != null && left.distance() < 0) {
+            NativePositionOps.addXPosPreserveSubpixel(sprite, -left.distance());
+        }
+
+        SensorResult right = calcRoomProbe.scanWorld(
+                Direction.RIGHT, (short) 10, (short) 0,
+                (short) 0, (short) 0, solidityBit);
+        if (right != null && right.distance() < 0) {
+            NativePositionOps.addXPosPreserveSubpixel(sprite, right.distance());
+        }
     }
 
     private static void applyGroundWallVelocityResponse(AbstractPlayableSprite sprite, int mode, int distance) {

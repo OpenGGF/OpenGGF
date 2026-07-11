@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f12048 / 2388 errors (1 error under `frontierOnly`).
+f3318 / 4234 errors to f12149 / 2362 errors (3 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -291,6 +291,22 @@ The granular S3K preservation sweep keeps both AIZ routes green and reproduces
 every non-HCZ frontier exactly: CNZ complete f1846 / 5, CNZ level-select f291 /
 7, MGZ complete f866 / 1, MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 /
 1, and LBZ f2270 / 5; the pre-existing CNZ auxiliary failures/NPE are unchanged.
+
+Milestone 14 restores the grounded S3K post-movement background wall clamp.
+After `SpeedToPos`, `AnglePos`, and `SlopeRepel`, the standing and rolling paths
+run `CheckLeftWallDist` then `CheckRightWallDist` while
+`Background_collision_flag` is set. These checks adjust native `x_pos` while
+preserving subpixels, velocity, and `Status_Push`, independently of the earlier
+`CalcRoomInFront` velocity response (`sonic3k.asm:27529-27548,27741-27760`).
+
+This closes f12048-f12148 and advances HCZ to f12149 / 2362 full-run errors (3
+under `frontierOnly`), reducing the full report by 26 groups. Both AIZ routes
+remain green and the granular preservation sweep again reproduces every
+non-HCZ frontier exactly: CNZ complete f1846 / 5, CNZ level-select f291 / 7,
+MGZ complete f866 / 1, MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1,
+and LBZ f2270 / 5. The focused sensor/service tests pass 24/24; the wider
+collision selection passes 79/80 with only its pre-existing stale reflective
+lookup for the old two-argument `verticalTileLookupY` signature.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

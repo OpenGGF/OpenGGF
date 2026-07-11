@@ -747,6 +747,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		applyMissedDetachSlopeResist();
 		doSlopeRepel();
+		collisionSystem().resolvePostMovementBackgroundWallClamp(
+				FrameCollisionPlan.terrainOnly(), sprite);
 		updateCrouchState();
 	}
 
@@ -770,6 +772,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		doSlopeRepel();
+		collisionSystem().resolvePostMovementBackgroundWallClamp(
+				FrameCollisionPlan.terrainOnly(), sprite);
 	}
 
 	private boolean romPinballModeBlocksRollingJump() {
