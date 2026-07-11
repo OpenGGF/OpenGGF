@@ -379,6 +379,12 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         }
         cutsceneActive = carrierP1Active || carrierP2Active;
         carrierMovementPending = cutsceneActive;
+        if (cutsceneActive) {
+            // loc_6A7C4 clears _unkFAA2 as soon as a retained underwater
+            // carrier initializes. DynamicWaterHeight_HCZ2 can then resume its
+            // ordinary camera-X threshold target while the players descend.
+            waterSystem().setDynamicWaterLocked(Sonic3kZoneIds.ZONE_HCZ, 1, false);
+        }
     }
 
     private void updateCutscene() {

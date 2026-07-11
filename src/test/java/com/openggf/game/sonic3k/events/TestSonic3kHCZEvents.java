@@ -164,9 +164,12 @@ class TestSonic3kHCZEvents {
 
         Sonic3kHCZEvents events = new Sonic3kHCZEvents();
         events.init(1);
+        GameServices.water().setDynamicWaterLocked(Sonic3kZoneIds.ZONE_HCZ, 1, true);
 
         events.startPostTransitionCutscene();
 
+        assertFalse(GameServices.water().isDynamicWaterLocked(Sonic3kZoneIds.ZONE_HCZ, 1),
+                "loc_6A7C4 clears the miniboss water lock when a carrier initializes");
         assertCarrierControl(player);
         assertCarrierControl(sidekick);
         assertFalse(secondSidekick.isObjectControlled(),

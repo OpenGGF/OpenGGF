@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f10986 / 2144 errors (5 errors under `frontierOnly`).
+f3318 / 4234 errors to f11300 / 2516 errors (5 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -241,6 +241,20 @@ new focused two-player title-card guard passes 2/2. Both AIZ traces remain
 green, and the two MGZ routes reproduce their unchanged f866 / 1 and f894 / 1
 frontiers; the immediately preceding full S3K sweep already held every other
 route at its documented frontier.
+
+Milestone 11 restores the miniboss water lock's native lifetime. The retained
+`loc_6A7C4` carrier initialization clears `_unkFAA2`; HCZ2's ordinary dynamic
+water handler can then move from the transition-only `$06A0` level toward its
+camera-threshold `$0700` target while the players descend
+(`sonic3k.asm:8721-8737,139998-140008`).
+
+This closes the P1/P2 water-exit and underwater-velocity cascade and advances
+HCZ from f10986 / 2144 to f11300 / 2516 full-run errors (5 under
+`frontierOnly`). The higher total is a newly exposed later cascade, with no
+pre-frontier mismatch. Both AIZ traces remain green; focused HCZ water-lock and
+comparison-only selections pass 22/22. The change is confined to HCZ's retained
+carrier state, after the prior granular all-S3K and targeted MGZ checks held all
+other route frontiers.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
