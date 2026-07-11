@@ -332,6 +332,13 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     private void capturePlayer(AbstractPlayableSprite player, PlayerState state) {
         state.phase = 2;  // ROM: addq.b #2,(a4)
 
+        // The native routine changes status/radius fields without writing x_pos
+        // or y_pos. Engine rolling setup can move the centre while it swaps the
+        // collision box, so retain the native position words (and their packed
+        // subpixels) across that representation change.
+        short captureX = player.getCentreX();
+        short captureY = player.getCentreY();
+
         // ROM: move.b #1,object_control(a1) — bits 0-6, movement suppressed but CPU/touch remain allowed.
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
@@ -355,6 +362,8 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         player.setAngle(CAPTURE_ANGLE);
         player.setGroundMode(GroundMode.GROUND);
         player.setAir(false);
+        player.setCentreXPreserveSubpixel(captureX);
+        player.setCentreYPreserveSubpixel(captureY);
 
         // Initial vertical progress = player Y - topY
         // ROM: move.w d1,2(a4) — stores as word in upper half of the 16.16 long
@@ -495,8 +504,8 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         int y = loopDef.topY + progress;
 
         // ROM: move.w d0,x_pos(a1); move.w d0,y_pos(a1) — center coordinates
-        player.setCentreX((short) x);
-        player.setCentreY((short) y);
+        player.setCentreXPreserveSubpixel((short) x);
+        player.setCentreYPreserveSubpixel((short) y);
 
         advanceProgress(player, state);
     }
@@ -526,8 +535,8 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         int y = loopDef.topY + state.getProgressPixels();
 
         // ROM: move.w d0,x_pos(a1); move.w d0,y_pos(a1) — center coordinates
-        player.setCentreX((short) x);
-        player.setCentreY((short) y);
+        player.setCentreXPreserveSubpixel((short) x);
+        player.setCentreYPreserveSubpixel((short) y);
 
         advanceProgress(player, state);
     }

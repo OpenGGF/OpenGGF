@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f12738 / 2234 errors (11 errors under `frontierOnly`).
+f3318 / 4234 errors to f13929 / 1872 errors (4 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -439,6 +439,20 @@ hand-launcher contract tests pass. Granular isolated replay checks keep both AIZ
 routes green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ
 level-select f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ
 f2920, and LBZ f2270.
+
+Milestone 23 restores the HCZ twisting loop's native position-word writes.
+Capture changes object control, rolling radii, status, and angle without writing
+the player's `x_pos` or `y_pos`; the engine now retains both centre words while
+changing its rolling representation. Active loop phases likewise use native
+centre-coordinate word writes that preserve the packed X/Y subpixel words
+(`sonic3k.asm:76496-76534,76603-76744`).
+
+This closes f13650-f13928 and advances HCZ to f13929 / 1872 full-run errors (4
+under `frontierOnly`), reducing the full report by 56 groups. Both focused loop
+position/subpixel guards pass. The isolated granular replay matrix keeps both
+AIZ routes green and preserves every non-HCZ frontier and count exactly: CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f866 / 1, MGZ
+level-select f894 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
