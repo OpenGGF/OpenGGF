@@ -1,7 +1,7 @@
 package com.openggf.sprites.playable;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.CanonicalAnimation;
+import com.openggf.game.GameStateManager;
 import com.openggf.audio.GameSound;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.physics.CollisionSystem;
@@ -32,7 +32,7 @@ public final class TailsCarryController {
     public boolean isCarryingMainCharacter() { return carrying; }
 
     public boolean tryGrabMainCharacter() {
-        AbstractPlayableSprite main = GameServices.sprites().getMainPlayable();
+        AbstractPlayableSprite main = resolveMain();
         GameRules rules = carrier.getGameRules();
         SidekickCpuController cpu = carrier.getCpuController();
         boolean playerTwoOwnsCarrier = carrier.isCpuControlled()
@@ -60,8 +60,8 @@ public final class TailsCarryController {
     }
 
     private boolean isReverseGravity() {
-        return GameServices.gameStateOrNull() != null
-                && GameServices.gameStateOrNull().isReverseGravityActive();
+        GameStateManager gameState = carrier.currentGameStateOrNull();
+        return gameState != null && gameState.isReverseGravityActive();
     }
 
     private void attach(AbstractPlayableSprite main, CarryContext newContext, boolean playSfx) {
@@ -207,7 +207,8 @@ public final class TailsCarryController {
     }
 
     private AbstractPlayableSprite resolveMain() {
-        AbstractPlayableSprite main = GameServices.sprites().getMainPlayable();
+        var sprites = carrier.currentSpriteManagerOrNull();
+        AbstractPlayableSprite main = sprites != null ? sprites.getMainPlayable() : null;
         return main == carrier ? null : main;
     }
 

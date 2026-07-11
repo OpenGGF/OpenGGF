@@ -1580,6 +1580,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return controller != null ? controller.getTailsCarry() : null;
         }
         public final WaterSystem currentWaterSystem() { return PlayableSpriteRuntimeServices.water(); }
+        public final com.openggf.sprites.managers.SpriteManager currentSpriteManagerOrNull() {
+                return PlayableSpriteRuntimeServices.spritesOrNull();
+        }
+        public final int currentGameplayFrameCounter() { return PlayableSpriteRuntimeServices.gameplayFrameCounter(); }
 
         /**
          * Returns this character's secondary (double-jump) ability.

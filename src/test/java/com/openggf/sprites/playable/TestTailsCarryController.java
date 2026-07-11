@@ -1,6 +1,11 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.game.GameServices;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.save.SaveSessionContext;
+import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
@@ -11,6 +16,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -50,12 +57,29 @@ class TestTailsCarryController {
     }
 
     @Test
-    void spriteManagerRejectsAmbiguousHumanParticipants() {
+    void spriteManagerPrefersConfiguredMainOverManualPlayerTwo() {
         SpriteManager sprites = GameServices.sprites();
-        sprites.addSprite(new TestablePlayableSprite("second-human", (short) 0, (short) 0));
+        AbstractPlayableSprite configuredMain = fixture.sprite();
+        TestablePlayableSprite playerTwo = new TestablePlayableSprite("second-human", (short) 0, (short) 0);
+        playerTwo.setCpuControlled(false);
+        sprites.addSprite(playerTwo);
 
-        IllegalStateException error = assertThrows(IllegalStateException.class, sprites::getMainPlayable);
-        assertTrue(error.getMessage().contains("multiple non-CPU playable"));
+        assertSame(configuredMain, sprites.getMainPlayable());
+    }
+
+    @Test
+    void spriteManagerPrefersSessionMainOverConfiguredMain() {
+        SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        var module = SessionManager.getCurrentWorldSession().getGameModule();
+        SessionManager.openGameplaySession(module,
+                SaveSessionContext.noSave("s3k", new SelectedTeam("knuckles", List.of()), 0, 0));
+        SpriteManager sprites = new SpriteManager(SonicConfigurationService.getInstance());
+        AbstractPlayableSprite configuredMain = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        AbstractPlayableSprite sessionMain = new TestablePlayableSprite("knuckles", (short) 0, (short) 0);
+        sprites.addSprite(configuredMain);
+        sprites.addSprite(sessionMain);
+
+        assertSame(sessionMain, sprites.getMainPlayable());
     }
 
     @Test

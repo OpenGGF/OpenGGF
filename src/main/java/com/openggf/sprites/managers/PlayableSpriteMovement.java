@@ -1,7 +1,6 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.game.GameModule;
-import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.rules.CollisionRules;
@@ -1236,9 +1235,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private int romVisibleLevelFrameCounter() {
-		var sprites = GameServices.spritesOrNull();
-		if (sprites != null) {
-			return sprites.getFrameCounter();
+		if (sprite.currentSpriteManagerOrNull() != null) {
+			return sprite.currentGameplayFrameCounter();
 		}
 		LevelManager level = levelManager();
 		return level != null ? level.getFrameCounter() : 0;

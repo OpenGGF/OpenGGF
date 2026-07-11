@@ -15,6 +15,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.camera.Camera;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
@@ -362,15 +363,24 @@ public class SpriteManager {
 		return frameCounter;
 	}
 
-	/** Returns the sole registered human-controlled playable participant. */
+	/** Returns the active session/configured main playable participant. */
 	public AbstractPlayableSprite getMainPlayable() {
+		String mainCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
+		Sprite namedMain = sprites.get(mainCode);
+		if (namedMain instanceof AbstractPlayableSprite playable && !playable.isCpuControlled()) {
+			return playable;
+		}
+
+		// Compatibility for synthetic tests/tools whose sole playable uses a
+		// non-character code. A second human makes the fallback intentionally
+		// unresolved rather than dependent on HashMap iteration order.
 		AbstractPlayableSprite main = null;
 		for (Sprite sprite : sprites.values()) {
 			if (!(sprite instanceof AbstractPlayableSprite playable) || playable.isCpuControlled()) {
 				continue;
 			}
 			if (main != null && main != playable) {
-				throw new IllegalStateException("Expected one main playable, but multiple non-CPU playable sprites are registered");
+				return null;
 			}
 			main = playable;
 		}
@@ -1416,7 +1426,8 @@ public class SpriteManager {
 		if (cpuController == null
 				|| (cpuController.getState() != SidekickCpuController.State.CARRYING
 				&& cpuController.getState() != SidekickCpuController.State.CARRY_INIT)) {
-			AbstractPlayableSprite main = GameServices.sprites().getMainPlayable();
+			SpriteManager sprites = playable.currentSpriteManagerOrNull();
+			AbstractPlayableSprite main = sprites != null ? sprites.getMainPlayable() : null;
 			int mainCarryInput = 0;
 			if (main != null) {
 				if (main.isUpPressed()) mainCarryInput |= AbstractPlayableSprite.INPUT_UP;
