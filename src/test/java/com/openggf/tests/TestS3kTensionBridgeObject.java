@@ -102,6 +102,8 @@ class TestS3kTensionBridgeObject {
                 "sub_13EFC must sample loc_387E0's ROM bank from a stood-on bridge");
         assertFalse(bridge.usesSlopeForNewLanding(),
                 "sub_38AA2 first contact uses flat sub_1E410 before bent-segment ride seating");
+        assertTrue(bridge.rejectsZeroDistanceTopSolidLanding(),
+                "sub_1E410 rejects d0=0 and accepts only negative top overlap");
     }
 
     private static LevelArtEntry findLevelEntry(List<LevelArtEntry> entries, String key) {

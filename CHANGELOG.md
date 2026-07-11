@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K tension bridges now reject exact-boundary first contacts:** their flat `sub_1E410` entry accepts only negative overlap from `-$10` through `-1`, keeping an exact-zero airborne contact detached until it enters the native landing band (`docs/skdisasm/sonic3k.asm:75871-75946,41982-42068`).
 - **HCZ spinning-column capture now leaves the logical controller unlocked:** native `object_control=3` still suppresses movement while `Sonic_RecordPos` continues recording held-button changes for CPU Tails, matching Obj68's omission of `Ctrl_1_locked` / `Ctrl_2_locked` writes (`docs/skdisasm/sonic3k.asm:22119-22136,68136-68148,68220-68290`).
 - **HCZ spinning columns now release only on a newly pressed action button:** Obj68 masks the low pressed byte of `Ctrl_1_logical` / `Ctrl_2_logical`, so a held B button no longer causes a repeated engine-only `-$680` launch (`docs/skdisasm/sonic3k.asm:68136-68148,68220-68290`).
 - **HCZ snake blocks now use their post-movement X as the continued-ride reference:** Obj67 passes its updated `x_pos` through `d4` to `MvSonicOnPtfm`, producing zero horizontal platform carry while preserving the rider's own ground motion (`docs/skdisasm/sonic3k.asm:50893-50910,41016-41042,41642-41679`).

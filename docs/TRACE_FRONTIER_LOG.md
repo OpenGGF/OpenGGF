@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f20508 / 1531 errors (10 errors under `frontierOnly`).
+f3318 / 4234 errors to f21084 / 1212 errors (2 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -635,6 +635,18 @@ earlier mismatch. The focused spinning-column suite remains 6/6 green. The
 granular S3K replay matrix remains exact: both AIZ routes green; CNZ complete
 f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select
 f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 39 applies `sub_1E410`'s exact-boundary rule to tension-bridge first
+contacts. `sub_38AA2` routes a non-standing player through the flat helper with
+`d3=8`; its unsigned `cmpi.w #-$10,d0 / blo` accepts negative overlap from
+`-$10` through `-1` but rejects `d0 == 0`. The engine had landed CPU Tails
+three pixels early at that boundary (`sonic3k.asm:75871-75946,41982-42068`).
+
+This closes f20508-f21083 and advances HCZ to f21084 / 1212 full-run errors (2
+under `frontierOnly`). The focused tension-bridge contract suite passes 6/6.
+The granular S3K replay matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout

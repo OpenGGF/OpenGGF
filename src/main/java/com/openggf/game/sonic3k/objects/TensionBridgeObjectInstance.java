@@ -219,6 +219,15 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // sub_38AA2 sends fresh contacts to sub_1E410. Its unsigned
+        // cmpi.w #-$10,d0 / blo accepts only negative overlap [-$10,-1]
+        // and rejects the exact d0=0 boundary (sonic3k.asm:75871-75946,
+        // 41982-42068).
+        return true;
+    }
+
+    @Override
     public byte[] getSlopeData() {
         return slopeData;
     }
