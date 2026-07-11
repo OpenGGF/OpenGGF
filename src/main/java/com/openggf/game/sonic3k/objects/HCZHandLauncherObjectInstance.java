@@ -417,6 +417,14 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // SolidObjectTop reaches loc_1E45A for a fresh launcher landing. Its
+        // unsigned cmpi.w #-$10,d0 / blo rejects d0 == 0 and accepts only the
+        // negative overlap band [-$10,-1] (sonic3k.asm:42048-42068).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         return solidActive && (!player.isObjectControlled()
                 || (player instanceof AbstractPlayableSprite sprite

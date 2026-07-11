@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f17399 / 1963 errors (10 errors under `frontierOnly`).
+f3318 / 4234 errors to f18717 / 1636 errors (2 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -579,6 +579,20 @@ CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
 ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5. A full selected S1/S2 fleet
 ran 50 tests with only the already-baselined S2 OOZ f447 mismatch; all other
 selected cross-game replays stayed clean.
+
+Milestone 35 restores the hand launcher's exact-boundary landing gate. A fresh
+`SolidObjectTop` contact computes `d0` from the launcher surface and the
+player's native `y_pos/y_radius`; its unsigned `cmpi.w #-$10,d0 / blo` rejects
+`d0 == 0` and accepts only negative overlap from `-$10` through `-1`. The
+engine had treated the exact boundary as a landing and attached Sonic one frame
+early on the later HCZ2 launcher (`sonic3k.asm:41779-41820,41982-42068,
+65763-65827`).
+
+This closes f17399-f18716 and advances HCZ to f18717 / 1636 full-run errors (2
+under `frontierOnly`). The focused hand-launcher suite passes. The granular
+S3K replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5,
+CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout

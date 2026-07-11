@@ -47,6 +47,8 @@ class TestHCZHandLauncherObjectInstance {
 
         assertEquals(0x11, launcher.getSolidParams().airHalfHeight());
         assertEquals(0x11, launcher.getSolidParams().groundHalfHeight());
+        assertTrue(launcher.rejectsZeroDistanceTopSolidLanding(),
+                "SolidObjectTop accepts negative overlap but rejects the exact d0=0 boundary");
     }
 
     @Test
