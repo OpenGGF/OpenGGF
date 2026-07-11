@@ -235,11 +235,14 @@ class TestModuleResolutionService {
                 new RegisteredPatch(independent, "independent:p", stubPatch("independent", "s2", true), 3)),
                 Map.of(dependent, Set.of(dependency), transitive, Set.of(dependent)));
 
-        GameModule resolved = ((ResolutionResult.Resolved) ModuleResolutionService
-                .forTests(PatchEnablement.ALL_ENABLED).resolve(context, new Sonic2GameModule(), anyRequest())).module();
+        ResolutionResult.Resolved result = (ResolutionResult.Resolved) ModuleResolutionService
+                .forTests(PatchEnablement.ALL_ENABLED).resolve(
+                        context, new Sonic2GameModule(), anyRequest());
+        GameModule resolved = result.module();
 
         assertEquals(List.of("independent"), ((PatchTrail) resolved).appliedPatchIds());
         assertEquals(Set.of(dependency, dependent, transitive), context.failedOwners());
+        assertEquals(Set.of(dependency, dependent, transitive), result.ownerFailures().keySet());
         assertInstanceOf(IllegalStateException.class, context.failures().get(dependency));
     }
 
@@ -323,6 +326,7 @@ class TestModuleResolutionService {
         assertEquals("failing:bad", aborted.patchId());
         assertInstanceOf(IllegalStateException.class, aborted.cause());
         assertEquals(Set.of(failing, dependent), context.failedOwners());
+        assertEquals(Set.of(failing, dependent), aborted.failedOwners());
     }
 
     @Test

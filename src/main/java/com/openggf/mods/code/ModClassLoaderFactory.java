@@ -55,7 +55,8 @@ public final class ModClassLoaderFactory {
         Set<String> trusted = Set.copyOf(Objects.requireNonNull(trustedCodeOwners,
                 "trustedCodeOwners"));
         Map<String, ModDependencyClassLoader> loaders = new LinkedHashMap<>();
-        java.util.ArrayList<PackedModAssetRoot> snapshots = new java.util.ArrayList<>();
+        Map<String, PackedModAssetRoot> snapshots = new LinkedHashMap<>();
+        Map<String, ModDescriptor> loadedDescriptors = new LinkedHashMap<>();
         Map<String, ModRuntime.Rejection> rejections = new LinkedHashMap<>();
         long inspectedBytes = 0;
         try {
@@ -96,7 +97,7 @@ public final class ModClassLoaderFactory {
                             "immutable snapshot unavailable"));
                     continue;
                 }
-                snapshots.add(snapshot);
+                snapshots.put(owner, snapshot);
                 final String snapshotHash;
                 final java.nio.file.Path snapshotPath;
                 try {
@@ -106,14 +107,14 @@ public final class ModClassLoaderFactory {
                     rejections.put(owner, rejection(ModRuntime.RejectionReason.SNAPSHOT_FAILED,
                             "immutable snapshot unavailable"));
                     closeRejected(snapshot);
-                    snapshots.remove(snapshot);
+                    snapshots.remove(owner);
                     continue;
                 }
                 if (!descriptor.sha256().equals(snapshotHash)) {
                     rejections.put(owner, rejection(ModRuntime.RejectionReason.HASH_MISMATCH,
                             "catalog SHA-256 differs from immutable snapshot"));
                     closeRejected(snapshot);
-                    snapshots.remove(snapshot);
+                    snapshots.remove(owner);
                     continue;
                 }
                 ModValidationReport validation = validator.apply(descriptor, snapshotPath);
@@ -121,7 +122,7 @@ public final class ModClassLoaderFactory {
                     rejections.put(owner, rejection(ModRuntime.RejectionReason.VALIDATION_FAILED,
                             validationSummary(validation)));
                     closeRejected(snapshot);
-                    snapshots.remove(snapshot);
+                    snapshots.remove(owner);
                     continue;
                 }
                 URL jarUrl = snapshotPath.toUri().toURL();
@@ -131,8 +132,9 @@ public final class ModClassLoaderFactory {
                     loader.close();
                     throw new IOException("Duplicate compiled-mod owner: " + owner);
                 }
+                loadedDescriptors.put(owner, descriptor);
             }
-            return new ModRuntime(loaders, snapshots, rejections);
+            return new ModRuntime(loaders, snapshots, loadedDescriptors, rejections);
         } catch (IOException | RuntimeException failure) {
             closeAll(loaders, snapshots, rejections);
             throw failure;
@@ -166,10 +168,10 @@ public final class ModClassLoaderFactory {
     }
 
     private static void closeAll(Map<String, ModDependencyClassLoader> loaders,
-                                 List<PackedModAssetRoot> snapshots,
+                                 Map<String, PackedModAssetRoot> snapshots,
                                  Map<String, ModRuntime.Rejection> rejections) {
         try {
-            new ModRuntime(loaders, snapshots, rejections).close();
+            new ModRuntime(loaders, snapshots, Map.of(), rejections).close();
         } catch (IOException ignored) {
             // Preserve the construction failure; no runtime escaped.
         }

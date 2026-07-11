@@ -54,6 +54,11 @@ public sealed interface ModAssetRoot extends AutoCloseable
         return forTests(description, ModInputLimits.production());
     }
 
+    /** Non-owning creator view; closing it cannot close the runtime-owned snapshot. */
+    static ModAssetRoot nonClosingView(ModAssetRoot delegate) {
+        return new NonClosingModAssetRoot(delegate);
+    }
+
     static String requireNormalizedEntry(String entry) {
         Objects.requireNonNull(entry, "entry");
         if (entry.isEmpty() || entry.indexOf('\0') >= 0 || entry.indexOf('\\') >= 0
@@ -76,7 +81,8 @@ public sealed interface ModAssetRoot extends AutoCloseable
 }
 
 abstract sealed class AbstractModAssetRoot implements ModAssetRoot
-        permits JarModAssetRoot, DirectoryModAssetRoot, InMemoryModAssetRoot {
+        permits JarModAssetRoot, DirectoryModAssetRoot, InMemoryModAssetRoot,
+        NonClosingModAssetRoot {
     private final ModInputLimits limits;
     private final AtomicLong cumulativeReadBytes = new AtomicLong();
     private boolean closed;
@@ -212,6 +218,25 @@ abstract sealed class AbstractModAssetRoot implements ModAssetRoot
             throw new IOException("Case-folding entry collision: " + budgetedName);
         }
     }
+}
+
+final class NonClosingModAssetRoot extends AbstractModAssetRoot {
+    private final ModAssetRoot delegate;
+
+    NonClosingModAssetRoot(ModAssetRoot delegate) {
+        super(Objects.requireNonNull(delegate, "delegate").limits());
+        this.delegate = delegate;
+    }
+
+    @Override public byte[] readBounded(String normalizedEntry, long maxBytes) throws IOException {
+        ensureOpen();
+        return delegate.readBounded(normalizedEntry, maxBytes);
+    }
+
+    @Override public String describe() { return delegate.describe(); }
+
+    /** Closes only this view; the boot runtime retains ownership of the snapshot. */
+    @Override public void close() { markClosed(); }
 }
 
 final class JarModAssetRoot extends AbstractModAssetRoot implements PackedModAssetRoot {

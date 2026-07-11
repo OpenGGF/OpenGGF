@@ -147,6 +147,8 @@ public class MasterTitleScreen {
     private int selectedIndex = 1; // Default to Sonic 2
     private int frameCounter = 0;
     private int errorFrameCounter = 0;
+    private String launchErrorTitle;
+    private String launchErrorDetail;
     private static final int ERROR_DISPLAY_FRAMES = 180; // 3 seconds at 60fps
 
     private final boolean[] romAvailable = new boolean[GameEntry.values().length];
@@ -611,16 +613,21 @@ public class MasterTitleScreen {
             // Error text - second batch (overlay texture sits between the two batches).
             font.beginMegaBatch();
             GameEntry entry = GameEntry.values()[selectedIndex];
-            font.drawTextCentered("ROM NOT FOUND", viewportWidth, 90, 1f, 0.3f, 0.3f, 1f);
-            font.drawTextCentered(entry.displayName, viewportWidth, 105, 0.8f, 0.8f, 0.8f, 1f);
-
-            String romFile = configService.getString(entry.romConfigKey);
-            if (romFile == null || romFile.isEmpty()) {
-                romFile = "(not configured)";
-            } else if (romFile.length() > 35) {
-                romFile = "..." + romFile.substring(romFile.length() - 32);
+            if (launchErrorTitle != null) {
+                font.drawTextCentered(launchErrorTitle, viewportWidth, 90, 1f, 0.3f, 0.3f, 1f);
+                font.drawTextCentered(entry.displayName, viewportWidth, 105, 0.8f, 0.8f, 0.8f, 1f);
+                font.drawTextCentered(launchErrorDetail, viewportWidth, 125, 0.5f, 0.5f, 0.5f, 0.8f);
+            } else {
+                font.drawTextCentered("ROM NOT FOUND", viewportWidth, 90, 1f, 0.3f, 0.3f, 1f);
+                font.drawTextCentered(entry.displayName, viewportWidth, 105, 0.8f, 0.8f, 0.8f, 1f);
+                String romFile = configService.getString(entry.romConfigKey);
+                if (romFile == null || romFile.isEmpty()) {
+                    romFile = "(not configured)";
+                } else if (romFile.length() > 35) {
+                    romFile = "..." + romFile.substring(romFile.length() - 32);
+                }
+                font.drawTextCentered(romFile, viewportWidth, 125, 0.5f, 0.5f, 0.5f, 0.8f);
             }
-            font.drawTextCentered(romFile, viewportWidth, 125, 0.5f, 0.5f, 0.5f, 0.8f);
             font.endMegaBatch();
         }
     }
@@ -763,6 +770,18 @@ public class MasterTitleScreen {
     }
 
     public void showRomLoadError(String gameId) {
+        launchErrorTitle = null;
+        launchErrorDetail = null;
+        selectErrorGame(gameId);
+    }
+
+    public void showModLaunchError(String gameId) {
+        launchErrorTitle = "MOD LAUNCH FAILED";
+        launchErrorDetail = "DISABLED FOR NEXT LAUNCH";
+        selectErrorGame(gameId);
+    }
+
+    private void selectErrorGame(String gameId) {
         if (gameId != null) {
             for (GameEntry entry : GameEntry.values()) {
                 if (entry.gameId.equalsIgnoreCase(gameId)) {

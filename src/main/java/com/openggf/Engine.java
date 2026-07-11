@@ -5,6 +5,8 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.mods.code.ModClassLoaderFactory;
 import com.openggf.mods.code.ModRuntime;
+import com.openggf.mods.code.ModFaultBoundary;
+import com.openggf.mods.code.EffectiveCatalogPatchEnablement;
 import com.openggf.game.*;
 import com.openggf.graphics.*;
 import com.openggf.graphics.pipeline.RenderOrderRecorder;
@@ -251,6 +253,8 @@ public class Engine {
 	// Static instance for singleton access
 	private static Engine instance;
 	private ModRuntime modRuntime = ModRuntime.empty();
+	private java.util.function.BiConsumer<com.openggf.game.patch.ResolutionResult.LaunchAborted, Boolean>
+			patchLaunchAbortHandler = this::handlePatchLaunchAbort;
 
 	// Frame timing
 	private int targetFps;
@@ -782,6 +786,9 @@ public class Engine {
 			return;
 		}
 		GameModule module = resolveInitialModuleForLaunch(rootModule);
+		if (module == null) {
+			return;
+		}
 		if (!preparePresentationForLaunch(module)) {
 			return;
 		}
@@ -808,9 +815,82 @@ public class Engine {
 				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
 						? ModuleResolutionService.LaunchPolicy.DETERMINISTIC
 						: ModuleResolutionService.LaunchPolicy.STANDARD;
-		return moduleResolutionService.resolveForLaunch(rootModule,
-				GameplayLaunchRequest.fromConfig(configService, rootModule.getGameId().code()),
-				launchPolicy);
+		ModuleResolutionService.PreparedLaunch launch = moduleResolutionService.prepareLaunch(launchPolicy);
+		return consumePatchResolution(moduleResolutionService.resolveForLaunchResult(launch, rootModule,
+				GameplayLaunchRequest.fromConfig(configService, rootModule.getGameId().code())), false);
+	}
+
+	void setPatchLaunchAbortHandlerForTests(
+			java.util.function.Consumer<com.openggf.game.patch.ResolutionResult.LaunchAborted> handler) {
+		Objects.requireNonNull(handler, "handler");
+		patchLaunchAbortHandler = (aborted, activeSession) -> handler.accept(aborted);
+	}
+
+	private GameModule consumePatchResolution(com.openggf.game.patch.ResolutionResult result,
+			boolean activeSession) {
+		if (result instanceof com.openggf.game.patch.ResolutionResult.Resolved resolved) {
+			recordResolvedOwnerFailures(resolved.ownerFailures());
+			return resolved.module();
+		}
+		var aborted = (com.openggf.game.patch.ResolutionResult.LaunchAborted) result;
+		if (!(aborted.failedOwner() instanceof com.openggf.game.patch.PatchOwner.Mod)) {
+			throw new IllegalStateException("Built-in patch launch failed at " + aborted.patchId(),
+					aborted.cause());
+		}
+		patchLaunchAbortHandler.accept(aborted, activeSession);
+		return null;
+	}
+
+	private void recordResolvedOwnerFailures(
+			java.util.Map<com.openggf.game.patch.PatchOwner, Throwable> failures) {
+		java.util.IdentityHashMap<Throwable, java.util.Set<String>> grouped =
+				new java.util.IdentityHashMap<>();
+		for (var entry : failures.entrySet()) {
+			if (entry.getKey() instanceof com.openggf.game.patch.PatchOwner.Mod mod) {
+				grouped.computeIfAbsent(entry.getValue(), ignored -> new java.util.LinkedHashSet<>())
+						.add(mod.modId());
+			}
+		}
+		grouped.forEach((failure, owners) -> {
+			modRuntime.disableOwnersForProcess(owners);
+			ModSubsystem.current().recordOwnerFailures(
+					owners, failure, "MOD_PATCH_METADATA_FAILED");
+		});
+	}
+
+	private void handlePatchLaunchAbort(
+			com.openggf.game.patch.ResolutionResult.LaunchAborted aborted,
+			boolean activeSession) {
+		LOGGER.log(java.util.logging.Level.SEVERE,
+				"Mod patch launch aborted at " + aborted.patchId(), aborted.cause());
+		java.util.Set<String> failedMods = aborted.failedOwners().stream()
+				.filter(com.openggf.game.patch.PatchOwner.Mod.class::isInstance)
+				.map(com.openggf.game.patch.PatchOwner.Mod.class::cast)
+				.map(com.openggf.game.patch.PatchOwner.Mod::modId)
+				.collect(java.util.stream.Collectors.toUnmodifiableSet());
+		modRuntime.disableOwnersForProcess(failedMods);
+		ModSubsystem.current().recordOwnerFailures(failedMods, aborted.cause(),
+				"MOD_PATCH_APPLY_FAILED");
+		if (activeSession) {
+			returnToMasterTitleScreen();
+		} else {
+			showModLaunchError();
+		}
+	}
+
+	private void showModLaunchError() {
+		gameplayMode = null;
+		gameLoop.setGameplayMode(null);
+		if (masterTitleScreen != null) {
+			masterTitleScreen.cleanup();
+		}
+		masterTitleScreen = createMasterTitleScreen();
+		if (graphicsManager.isGlInitialized()) {
+			masterTitleScreen.initialize();
+		}
+		masterTitleScreen.showModLaunchError(
+				configService.getString(SonicConfiguration.DEFAULT_ROM));
+		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 	}
 
 	private void showStartupRomError(String message) {
@@ -1074,9 +1154,17 @@ public class Engine {
 				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)));
 		modRuntime = replaceModRuntime(modRuntime, ModRuntime.empty());
 		try {
+			var effectiveMods = ModSubsystem.current().processCatalog().effective();
 			modRuntime = replaceModRuntime(modRuntime,
 					new ModClassLoaderFactory(Engine.class.getClassLoader())
-							.create(ModSubsystem.current().processCatalog().effective()));
+							.create(effectiveMods));
+			moduleResolutionService.installModPlanSource(
+					new EffectiveCatalogPatchEnablement(effectiveMods), enablement -> {
+						var plan = modRuntime.newRegistrationPlan();
+						ModSubsystem.current().recordRegistrationFailures(
+								modRuntime.registrationFailures());
+						return plan;
+					});
 		} catch (IOException error) {
 			LOGGER.log(java.util.logging.Level.WARNING, "Compiled-mod runtime initialization failed", error);
 		}
@@ -1178,6 +1266,9 @@ public class Engine {
 		}
 		GameplayModeContext gameplay = openDataSelectPatchSession(
 				saveContext, availableCharacters, preparedLaunch);
+		if (gameplay == null) {
+			return;
+		}
 		initializeGameplayRuntime(gameplay, true);
 		loadLevelFromDataSelect(action.zone(), action.act());
 		restoreGameplayModeFromDataSelectPayload(gameplayMode, loadedPayload);
@@ -1198,8 +1289,13 @@ public class Engine {
 				GameplayTeamAvailability.sanitizeForLaunch(
 						saveContext, gameId, availableCharacters);
 		SelectedTeam selectedTeam = sanitized.selectedTeam();
-		GameModule resolvedModule = moduleResolutionService.resolveForLaunch(preparedLaunch, rootModule,
-				new GameplayLaunchRequest(gameId, selectedTeam.mainCharacter(), selectedTeam.sidekicks()));
+		GameModule resolvedModule = consumePatchResolution(
+				moduleResolutionService.resolveForLaunchResult(preparedLaunch, rootModule,
+						new GameplayLaunchRequest(gameId, selectedTeam.mainCharacter(), selectedTeam.sidekicks())),
+				true);
+		if (resolvedModule == null) {
+			return null;
+		}
 		return SessionManager.openGameplaySession(rootModule, resolvedModule, sanitized);
 	}
 
@@ -2083,8 +2179,7 @@ public class Engine {
 
 				// Process exactly one frame per target interval
 				if (accumulator >= frameTimeNanos) {
-					display();
-					glfwSwapBuffers(window);
+					displayAndSwap(this::display, () -> glfwSwapBuffers(window));
 					// Preserve remainder to prevent timing drift
 					accumulator -= frameTimeNanos;
 
@@ -2144,7 +2239,12 @@ public class Engine {
 	/**
 	 * Called each frame to render the game.
 	 */
-	private void display() {
+	private boolean display() {
+		return runFrameWithModAbort(this::displayFrame,
+				graphicsManager::discardQueuedCommands, this::returnToMasterTitleScreen);
+	}
+
+	private void displayFrame() {
 		boolean performanceOverlayEnabled =
 				debugOverlayManager.isEnabled(DebugOverlayToggle.PERFORMANCE);
 		profiler.setEnabled(shouldEnablePerformanceProfiler(
@@ -2352,6 +2452,66 @@ public class Engine {
 
 		profiler.endFrame();
 		overlayStateReady = false;
+	}
+
+	static boolean runFrameWithModAbort(Runnable frame, Runnable returnToTitle) {
+		return runFrameWithModAbort(frame, () -> {}, returnToTitle);
+	}
+
+	static boolean runFrameWithModAbort(Runnable frame, Runnable discardFailedFrame,
+			Runnable returnToTitle) {
+		Objects.requireNonNull(frame, "frame");
+		Objects.requireNonNull(discardFailedFrame, "discardFailedFrame");
+		Objects.requireNonNull(returnToTitle, "returnToTitle");
+		try {
+			frame.run();
+			return true;
+		} catch (ModFaultBoundary.CallbackAborted aborted) {
+			Throwable fatalCleanup = null;
+			try {
+				discardFailedFrame.run();
+			} catch (Throwable failure) {
+				if (failure instanceof VirtualMachineError || failure instanceof ThreadDeath) {
+					fatalCleanup = failure;
+				} else {
+					aborted.addSuppressed(failure);
+				}
+			}
+			try {
+				returnToTitle.run();
+			} catch (Throwable failure) {
+				if (failure instanceof VirtualMachineError || failure instanceof ThreadDeath) {
+					if (fatalCleanup == null) {
+						fatalCleanup = failure;
+					} else {
+						fatalCleanup.addSuppressed(failure);
+					}
+				} else {
+					aborted.addSuppressed(failure);
+				}
+			}
+			if (fatalCleanup != null) {
+				fatalCleanup.addSuppressed(aborted);
+				if (fatalCleanup instanceof VirtualMachineError vmFailure) {
+					throw vmFailure;
+				}
+				throw (ThreadDeath) fatalCleanup;
+			}
+			if (aborted.getSuppressed().length != 0) {
+				throw aborted;
+			}
+			return false;
+		}
+	}
+
+	static boolean displayAndSwap(java.util.function.BooleanSupplier display, Runnable swap) {
+		Objects.requireNonNull(display, "display");
+		Objects.requireNonNull(swap, "swap");
+		if (!display.getAsBoolean()) {
+			return false;
+		}
+		swap.run();
+		return true;
 	}
 
 	private void applySpecialStageClearColor() {

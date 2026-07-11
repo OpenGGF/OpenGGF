@@ -528,6 +528,12 @@ public class GraphicsManager {
 		flushWithCamera(cam.getXWithShake(), cam.getYWithShake(), cam.getWidth(), cam.getHeight());
 	}
 
+	/** Discards queued draw commands after an aborted frame without executing them. */
+	public void discardQueuedCommands() {
+		discardCommands(commands, 0);
+		commands.clear();
+	}
+
 	/**
 	 * Flush all registered commands with a specific camera position.
 	 * Use this for screen-space rendering by passing (0, 0) for camera position.

@@ -185,6 +185,14 @@ class TestArchUnitRules {
             "level -> tools",
             "level -> trace",
             "level -> util",
+            // Phase 2's creator-facing ModContext intentionally accepts GamePatch;
+            // the engine-owned ModRuntime then freezes PatchOwner/RegisteredPatch
+            // plans for ModuleResolutionService without exposing mutable state.
+            "mods -> game",
+            // Phase 2 explicitly chooses mods -> level: creator registrations retain
+            // the canonical ObjectFactory vocabulary instead of defining a parallel
+            // mod-only object abstraction that would drift from engine behavior.
+            "mods -> level",
             "physics -> camera",
             "physics -> game",
             "physics -> level",

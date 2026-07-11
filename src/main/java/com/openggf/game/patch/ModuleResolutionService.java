@@ -63,6 +63,8 @@ public final class ModuleResolutionService {
     private final Predicate<LogicalRom> prerequisiteAvailable;
     private final PatchContext patchContext;
     private final PatchPlanSource patchPlanSource;
+    private volatile PatchEnablement installedEnablement;
+    private volatile PatchPlanSource installedPatchPlanSource;
 
     public ModuleResolutionService(List<RegisteredPatch> builtIns,
             PatchEnablement enablement, LogicalRomResolver logicalRoms,
@@ -86,6 +88,8 @@ public final class ModuleResolutionService {
                 prerequisiteAvailable, "prerequisiteAvailable");
         this.patchContext = Objects.requireNonNull(patchContext, "patchContext");
         this.patchPlanSource = Objects.requireNonNull(patchPlanSource, "patchPlanSource");
+        this.installedEnablement = this.enablement;
+        this.installedPatchPlanSource = this.patchPlanSource;
         ResolutionContext.create(enablement, this.builtIns, Map.of());
         for (RegisteredPatch registration : this.builtIns) {
             if (!(registration.owner() instanceof PatchOwner.BuiltIn)) {
@@ -93,6 +97,12 @@ public final class ModuleResolutionService {
                         "Built-in registry contains mod-owned patch " + registration.namespacedId());
             }
         }
+    }
+    /** Installs the boot-frozen mod policy and fresh-per-launch registration source. */
+    public synchronized void installModPlanSource(PatchEnablement enablement,
+                                                   PatchPlanSource source) {
+        installedEnablement = Objects.requireNonNull(enablement, "enablement");
+        installedPatchPlanSource = Objects.requireNonNull(source, "source");
     }
 
     public static ModuleResolutionService forTests(PatchEnablement enablement) {
@@ -153,27 +163,35 @@ public final class ModuleResolutionService {
 
     public PreparedLaunch prepareLaunch(LaunchPolicy policy) {
         Objects.requireNonNull(policy, "policy");
+        PatchEnablement configuredEnablement = installedEnablement;
+        PatchPlanSource configuredSource = installedPatchPlanSource;
         PatchEnablement launchEnablement = policy == LaunchPolicy.DETERMINISTIC
-                ? builtInsOnly(enablement) : enablement;
+                ? builtInsOnly(configuredEnablement) : configuredEnablement;
         // Deterministic surfaces must not touch external mod storage at all.
         PatchPlan plan = policy == LaunchPolicy.DETERMINISTIC
                 ? PatchPlan.empty()
-                : Objects.requireNonNull(patchPlanSource.scan(launchEnablement), "patch plan");
+                : Objects.requireNonNull(configuredSource.scan(launchEnablement), "patch plan");
         return new PreparedLaunch(this, newContext(launchEnablement,
                 plan.registrations(), plan.ownerDependencies()));
     }
 
     public GameModule resolveForLaunch(PreparedLaunch launch, GameModule root,
             GameplayLaunchRequest request) {
-        Objects.requireNonNull(launch, "launch");
-        requireOwnedLaunch(launch);
-        ResolutionResult result = resolve(launch.context, root, request);
+        ResolutionResult result = resolveForLaunchResult(launch, root, request);
         if (result instanceof ResolutionResult.Resolved resolved) {
             return resolved.module();
         }
         ResolutionResult.LaunchAborted aborted = (ResolutionResult.LaunchAborted) result;
         throw new IllegalStateException("Patch resolution aborted at " + aborted.patchId(),
                 aborted.cause());
+    }
+
+    /** Returns the typed result so host launch code can abort without opening a session. */
+    public ResolutionResult resolveForLaunchResult(PreparedLaunch launch, GameModule root,
+            GameplayLaunchRequest request) {
+        Objects.requireNonNull(launch, "launch");
+        requireOwnedLaunch(launch);
+        return resolve(launch.context, root, request);
     }
 
     public List<String> availableMainCharactersForLaunch(String gameId, LaunchPolicy policy) {
@@ -255,11 +273,11 @@ public final class ModuleResolutionService {
                 context.failOwnerAndDependents(registration.owner(), failure);
                 if (!registration.engineGeneratedDecoratorOnly()) {
                     return new ResolutionResult.LaunchAborted(registration.owner(),
-                            registration.namespacedId(), failure);
+                            registration.namespacedId(), failure, context.failedOwners());
                 }
             }
         }
-        return new ResolutionResult.Resolved(module);
+        return new ResolutionResult.Resolved(module, context.failures());
     }
 
     /** Patch-backed extra main characters whose owner and ROM metadata are usable. */

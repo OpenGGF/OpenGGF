@@ -20,6 +20,8 @@ import com.openggf.io.ModInputLimits;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -115,6 +117,65 @@ public final class ModSubsystem implements AutoCloseable {
     public ModCatalog processCatalog() { return processCatalog; }
 
     public ModRuntimeFindingStore runtimeFindings() { return runtimeFindings; }
+
+    /** Engine-owned callback boundary factory used by later object/provider registration wrappers. */
+    public synchronized com.openggf.mods.code.ModFaultBoundary createFaultBoundary(
+            com.openggf.mods.code.ModRuntime runtime) {
+        Objects.requireNonNull(runtime, "runtime");
+        com.openggf.mods.ModAudioPreparer.FailureStateSink sink = owners -> {
+            if (pendingEditor == null) return new com.openggf.mods.ModStateSaveResult.Saved();
+            pendingEditor.setEnabledCascade(owners, false);
+            return pendingEditor.save();
+        };
+        return new com.openggf.mods.code.ModFaultBoundary(runtime.ownerDependencies(),
+                runtimeFindings, sink, runtime::disableOwnersForProcess);
+    }
+
+    /** Publishes one launch-preparation failure batch and pending-disables its owners. */
+    public synchronized void recordRegistrationFailures(Map<String, Throwable> failures) {
+        Objects.requireNonNull(failures, "failures");
+        failures.forEach((owner, failure) -> {
+            java.util.logging.Logger.getLogger(ModSubsystem.class.getName()).log(
+                    java.util.logging.Level.SEVERE, "Compiled-mod registration failed for " + owner,
+                    failure);
+            runtimeFindings.replaceOwner(owner, List.of(new com.openggf.mods.ModFinding(
+                    com.openggf.mods.ModFindingSeverity.ERROR, "MOD_REGISTRATION_FAILED",
+                    "Compiled-mod registration failed", null)));
+        });
+        if (failures.isEmpty() || pendingEditor == null) return;
+        pendingEditor.setEnabledCascade(failures.keySet(), false);
+        com.openggf.mods.ModStateSaveResult saved = pendingEditor.save();
+        if (saved instanceof com.openggf.mods.ModStateSaveResult.Failed failed) {
+            failures.keySet().forEach(owner -> runtimeFindings.replaceOwner(owner, List.of(
+                    new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
+                            "MOD_REGISTRATION_FAILED", "Compiled-mod registration failed", null),
+                    new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
+                            "MOD_REGISTRATION_DISABLE_SAVE_FAILED", failed.message(), null))));
+        }
+    }
+
+    /** Publishes a patch/runtime failure closure and pending-disables every affected mod owner. */
+    public synchronized void recordOwnerFailures(Set<String> owners, Throwable failure,
+                                                   String findingCode) {
+        Set<String> affected = Set.copyOf(Objects.requireNonNull(owners, "owners"));
+        Objects.requireNonNull(failure, "failure");
+        Objects.requireNonNull(findingCode, "findingCode");
+        java.util.logging.Logger.getLogger(ModSubsystem.class.getName()).log(
+                java.util.logging.Level.SEVERE, "Compiled-mod owner failure: " + affected, failure);
+        affected.forEach(owner -> runtimeFindings.replaceOwner(owner, List.of(
+                new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
+                        findingCode, "Compiled-mod owner failed; restart required", null))));
+        if (affected.isEmpty() || pendingEditor == null) return;
+        pendingEditor.setEnabledCascade(affected, false);
+        com.openggf.mods.ModStateSaveResult saved = pendingEditor.save();
+        if (saved instanceof com.openggf.mods.ModStateSaveResult.Failed failed) {
+            affected.forEach(owner -> runtimeFindings.replaceOwner(owner, List.of(
+                    new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
+                            findingCode, "Compiled-mod owner failed; restart required", null),
+                    new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
+                            "MOD_DISABLE_SAVE_FAILED", failed.message(), null))));
+        }
+    }
 
     public ModManagerScreenHost createManager(PixelFont font) {
         if (pendingEditor == null) {

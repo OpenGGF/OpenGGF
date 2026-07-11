@@ -37,6 +37,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
 import com.openggf.game.patch.DeterministicPatchLaunches;
@@ -131,7 +133,78 @@ class TestEngineDataSelectPatchResolution {
                 "deterministic Engine/recording/time-attack seams must not scan mod plans");
     }
 
+    @Test
+    void initialAndDataSelectCreatorApplyAbortsAreConsumedBeforeSessionReplacement() {
+        previousEngineContext = EngineServices.current();
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE,
+                "knuckles");
+        GamePatch throwing = patch("throwing", true);
+        ModuleResolutionService resolver = new ModuleResolutionService(List.of(),
+                PatchEnablement.ALL_ENABLED, new LogicalRomResolver(() -> null), config,
+                enablement -> new ModuleResolutionService.PatchPlan(List.of(
+                        new RegisteredPatch(new PatchOwner.Mod("throwing"), "throwing:patch",
+                                throwing, 0)), java.util.Map.of()));
+        Engine engine = new Engine(new EngineContext(config, mock(GraphicsManager.class),
+                mock(AudioManager.class), mock(RomManager.class), mock(PerformanceProfiler.class),
+                mock(DebugOverlayManager.class), mock(PlaybackDebugManager.class),
+                mock(RomDetectionService.class), mock(CrossGameFeatureProvider.class), resolver));
+        AtomicInteger aborted = new AtomicInteger();
+        engine.setPatchLaunchAbortHandlerForTests(ignored -> aborted.incrementAndGet());
+        GameModule root = new Sonic2GameModule();
+
+        assertNull(engine.resolveInitialModuleForLaunch(root));
+        assertEquals(1, aborted.get());
+        SessionManager.openGameplaySession(root, root, null);
+        var before = SessionManager.getCurrentGameplayMode();
+        assertNull(engine.openDataSelectPatchSession(SaveSessionContext.noSave("s2",
+                        new SelectedTeam("knuckles", List.of()), 0, 0), List.of("sonic", "knuckles"),
+                resolver.prepareLaunch(ModuleResolutionService.LaunchPolicy.STANDARD)));
+        assertSame(before, SessionManager.getCurrentGameplayMode(),
+                "aborted data-select resolution must not replace the live session");
+        assertEquals(2, aborted.get());
+    }
+
+    @Test
+    void builtInApplyFailuresRemainProgrammerErrorsAndNeverReplaceDataSelectSession() {
+        previousEngineContext = EngineServices.current();
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE,
+                "knuckles");
+        ModuleResolutionService resolver = new ModuleResolutionService(List.of(
+                new RegisteredPatch(new PatchOwner.BuiltIn("throwing"), "throwing",
+                        patch("throwing", true), 0)), PatchEnablement.ALL_ENABLED,
+                new LogicalRomResolver(() -> null), config);
+        Engine engine = new Engine(new EngineContext(config, mock(GraphicsManager.class),
+                mock(AudioManager.class), mock(RomManager.class), mock(PerformanceProfiler.class),
+                mock(DebugOverlayManager.class), mock(PlaybackDebugManager.class),
+                mock(RomDetectionService.class), mock(CrossGameFeatureProvider.class), resolver));
+        AtomicInteger consumed = new AtomicInteger();
+        engine.setPatchLaunchAbortHandlerForTests(ignored -> consumed.incrementAndGet());
+        GameModule root = new Sonic2GameModule();
+
+        IllegalStateException initial = assertThrows(IllegalStateException.class,
+                () -> engine.resolveInitialModuleForLaunch(root));
+        assertEquals("creator mutated then failed", initial.getCause().getMessage());
+        assertEquals(0, consumed.get());
+
+        SessionManager.openGameplaySession(root, root, null);
+        var before = SessionManager.getCurrentGameplayMode();
+        IllegalStateException dataSelect = assertThrows(IllegalStateException.class,
+                () -> engine.openDataSelectPatchSession(SaveSessionContext.noSave("s2",
+                                new SelectedTeam("knuckles", List.of()), 0, 0),
+                        List.of("sonic", "knuckles"), resolver.prepareLaunch(
+                                ModuleResolutionService.LaunchPolicy.STANDARD)));
+        assertEquals("creator mutated then failed", dataSelect.getCause().getMessage());
+        assertSame(before, SessionManager.getCurrentGameplayMode());
+        assertEquals(0, consumed.get());
+    }
+
     private static GamePatch patch(String id) {
+        return patch(id, false);
+    }
+
+    private static GamePatch patch(String id, boolean throwOnApply) {
         return new GamePatch() {
             @Override public String id() { return id; }
             @Override public String displayName() { return id; }
@@ -142,6 +215,7 @@ class TestEngineDataSelectPatchResolution {
             @Override public Set<LogicalRom> romPrerequisites() { return Set.of(); }
             @Override public List<String> providedMainCharacters() { return List.of("knuckles"); }
             @Override public GameModule apply(GameModule base, PatchContext context) {
+                if (throwOnApply) throw new IllegalStateException("creator mutated then failed");
                 List<String> trail = new ArrayList<>(
                         base instanceof PatchTrail current ? current.ids() : List.of());
                 trail.add(id);
