@@ -425,6 +425,21 @@ routes green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ
 level-select f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ
 f2920, and LBZ f2270.
 
+Milestone 22 completes the hand launcher's release-side support ownership.
+Escape and automatic launch already cleared the ROM `Status_OnObj` and launcher
+standing bits, but left the engine's parallel riding-state owner alive. A later
+manual solid checkpoint could therefore detach Sonic from newly acquired terrain
+and set `Status_InAir` after player physics had correctly grounded him. Release
+now clears that engine ride owner at the same native handoff
+(`sonic3k.asm:65818-65857,65959-66008`).
+
+This closes f13644-f13649 and advances HCZ to f13650 / 1928 full-run errors (4
+under `frontierOnly`), reducing the full report by 171 groups. All nine
+hand-launcher contract tests pass. Granular isolated replay checks keep both AIZ
+routes green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ
+level-select f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ
+f2920, and LBZ f2270.
+
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
 The AIZ2 battleship-to-waterfall-boss capture reproduced a render-only regression

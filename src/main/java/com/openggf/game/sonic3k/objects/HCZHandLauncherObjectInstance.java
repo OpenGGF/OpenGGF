@@ -288,6 +288,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         player.setYSpeed((short) ESCAPE_Y_VEL);
         ObjectControlState.none().applyTo(player);
         player.setOnObject(false);
+        clearEngineRidingObject(player);
         player.setAir(true);
 
         if (!playerGrabbed[0] && !playerGrabbed[1]) {
@@ -323,11 +324,13 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
             player.setAnimationId(0);
             ObjectControlState.none().applyTo(player);
             player.setOnObject(false);
+            clearEngineRidingObject(player);
             return;
         }
 
         if (standingBeforeCurrentSolidPass) {
             player.setOnObject(false);
+            clearEngineRidingObject(player);
             player.setAir(true);
         }
     }
@@ -345,6 +348,13 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
             PlayerSolidContactResult result = candidate != null
                     ? batch.perPlayer().get(candidate) : null;
             playerStandingCheckpoint[pi] = result != null && result.standingNow();
+        }
+    }
+
+    private void clearEngineRidingObject(AbstractPlayableSprite player) {
+        var objectManager = services().objectManager();
+        if (objectManager != null) {
+            objectManager.clearRidingObject(player);
         }
     }
 
