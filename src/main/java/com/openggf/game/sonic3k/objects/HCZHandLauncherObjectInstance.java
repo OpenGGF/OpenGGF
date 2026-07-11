@@ -86,6 +86,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     private int timer;
     private boolean anyGrabbed;
     private final boolean[] playerGrabbed = new boolean[2];
+    private final boolean[] playerStandingCheckpoint = new boolean[2];
     private int currentY;
     private int mappingFrame = FRAME_ARM_EXTENDED;
     private int priority = PRIORITY_NORMAL;
@@ -131,6 +132,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         if (deltaY != 0 && anyGrabbed) {
             repositionGrabbedPlayers(player, deltaY);
         }
+        refreshStandingCheckpoint(player);
     }
 
     private void repositionGrabbedPlayers(AbstractPlayableSprite player, int deltaY) {
@@ -209,12 +211,11 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     }
 
     private void processButtonCheckAllPlayers(AbstractPlayableSprite player) {
-        SolidCheckpointBatch batch = checkpointAll();
         NativePlayerSlots slots = nativePlayerSlots(player);
         for (int pi = 0; pi < playerGrabbed.length; pi++) {
             AbstractPlayableSprite candidate = slots.player(pi);
             if (candidate != null) {
-                processButtonCheckForPlayer(candidate, pi, batch.perPlayer().get(candidate));
+                processButtonCheckForPlayer(candidate, pi, playerStandingCheckpoint[pi]);
             }
         }
     }
@@ -222,7 +223,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     private void processButtonCheckForPlayer(
             AbstractPlayableSprite player,
             int pi,
-            PlayerSolidContactResult result) {
+            boolean standingBeforeCurrentSolidPass) {
         if (pi >= playerGrabbed.length) {
             return;
         }
@@ -234,7 +235,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        if (result == null || !result.standingNow()) {
+        if (!standingBeforeCurrentSolidPass) {
             return;
         }
 
@@ -264,11 +265,14 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
         int yRadius = (player instanceof Tails) ? GRAB_Y_RADIUS_TAILS : GRAB_Y_RADIUS_DEFAULT;
         player.applyCustomRadii(GRAB_X_RADIUS, yRadius);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        // ROM writes object_control=1: movement is suppressed, but the signed
+        // bit-7 gates used by CPU/touch/solid helpers remain clear.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setPushing(false);
 
         int snapX = facingLeft ? baseX + GRAB_X_SNAP_OFFSET : baseX - GRAB_X_SNAP_OFFSET;
-        player.setCentreX((short) snapX);
+        // ROM move.w writes x_pos only and preserves the incoming subpixel word.
+        player.setCentreXPreserveSubpixel((short) snapX);
 
         int gVel = facingLeft ? -GRAB_GROUND_VEL : GRAB_GROUND_VEL;
         player.setGSpeed((short) gVel);
@@ -292,12 +296,11 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     }
 
     private void launchReleaseAllPlayers(AbstractPlayableSprite player) {
-        SolidCheckpointBatch batch = checkpointAll();
         NativePlayerSlots slots = nativePlayerSlots(player);
         for (int pi = 0; pi < playerGrabbed.length; pi++) {
             AbstractPlayableSprite candidate = slots.player(pi);
             if (candidate != null) {
-                launchReleasePlayer(candidate, pi, batch.perPlayer().get(candidate));
+                launchReleasePlayer(candidate, pi, playerStandingCheckpoint[pi]);
             }
         }
     }
@@ -305,7 +308,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     private void launchReleasePlayer(
             AbstractPlayableSprite player,
             int pi,
-            PlayerSolidContactResult result) {
+            boolean standingBeforeCurrentSolidPass) {
         if (pi >= playerGrabbed.length) {
             return;
         }
@@ -323,9 +326,25 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        if (result != null && result.standingNow()) {
+        if (standingBeforeCurrentSolidPass) {
             player.setOnObject(false);
             player.setAir(true);
+        }
+    }
+
+    private void refreshStandingCheckpoint(AbstractPlayableSprite player) {
+        if (!solidActive) {
+            playerStandingCheckpoint[0] = false;
+            playerStandingCheckpoint[1] = false;
+            return;
+        }
+        SolidCheckpointBatch batch = checkpointAll();
+        NativePlayerSlots slots = nativePlayerSlots(player);
+        for (int pi = 0; pi < playerStandingCheckpoint.length; pi++) {
+            AbstractPlayableSprite candidate = slots.player(pi);
+            PlayerSolidContactResult result = candidate != null
+                    ? batch.perPlayer().get(candidate) : null;
+            playerStandingCheckpoint[pi] = result != null && result.standingNow();
         }
     }
 
@@ -376,7 +395,10 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT + 1);
+        // Obj_HCZHandLauncher passes d3=$11 to both the fresh landing and
+        // continued-ride paths; unlike SolidObjectFull callers, it does not
+        // supply a separate +1 ground height (sonic3k.asm:65798-65802).
+        return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
     }
 
     @Override
@@ -386,7 +408,16 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity player) {
-        return solidActive && !player.isObjectControlled();
+        return solidActive && (!player.isObjectControlled()
+                || (player instanceof AbstractPlayableSprite sprite
+                        && sprite.isObjectControlAllowsCpu()));
+    }
+
+    @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // MvSonicOnPtfm rejects only signed bit 7; the launcher's native
+        // object_control=1 capture remains on the ordinary continued-ride path.
+        return true;
     }
 
     @Override

@@ -408,6 +408,23 @@ green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ level-select
 f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ f2920, and LBZ
 f2270.
 
+Milestone 21 restores the HCZ hand launcher's native `sub_30CE0` /
+`SolidObjectTop` order. Button/grab logic now consumes the retained standing
+checkpoint before the current solid pass, so the first landing remains an
+ordinary ride and capture occurs on the following object dispatch. The grab
+writes positive `object_control=1` (CPU allowed, movement suppressed), keeps
+continued `MvSonicOnPtfm` active, uses the literal `d3=$11` surface height, and
+preserves the incoming X subpixel word when snapping to the hand
+(`sonic3k.asm:65763-65802,65889-65950,66010-66033`).
+
+This closes f13549-f13643 and advances HCZ to f13644 / 2099 full-run errors (10
+under `frontierOnly`). The full group total rises by 56 as the corrected launcher
+route exposes later mismatches, while the first-error frontier advances. All nine
+hand-launcher contract tests pass. Granular isolated replay checks keep both AIZ
+routes green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ
+level-select f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ
+f2920, and LBZ f2270.
+
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
 The AIZ2 battleship-to-waterfall-boss capture reproduced a render-only regression
