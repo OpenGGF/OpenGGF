@@ -35,6 +35,7 @@ public final class LaunchConfigPanel {
     }
 
     private final MasterTitleScreen.GameEntry entry;
+    private final LaunchProfileStore store;
     private final SonicConfigurationService configService;
     private final PixelFont font;
     @SuppressWarnings("unused")
@@ -53,8 +54,9 @@ public final class LaunchConfigPanel {
                              PixelFont font,
                              TexturedQuadRenderer renderer) {
         this.entry = Objects.requireNonNull(entry, "entry");
-        this.profile = Objects.requireNonNull(currentProfile, "currentProfile").sanitizedFor(entry);
-        Objects.requireNonNull(store, "store");
+        this.store = Objects.requireNonNull(store, "store");
+        this.profile = this.store.sanitize(
+                Objects.requireNonNull(currentProfile, "currentProfile"), entry);
         this.configService = Objects.requireNonNull(configService, "configService");
         this.font = font;
         this.renderer = renderer;
@@ -82,10 +84,10 @@ public final class LaunchConfigPanel {
         normalizeSelectedRow();
         LaunchProfile.Row row = visibleRows().get(selectedRow);
         if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.LEFT)) || inputHandler.logical().menuLeft()) {
-            profile = profile.withPrevious(row, entry);
+            profile = store.withPrevious(profile, row, entry);
         }
         if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.RIGHT)) || inputHandler.logical().menuRight()) {
-            profile = profile.withNext(row, entry);
+            profile = store.withNext(profile, row, entry);
         }
         normalizeSelectedRow();
     }
@@ -119,7 +121,7 @@ public final class LaunchConfigPanel {
                     LaunchProfile.rowLabel(row),
                     rowValue(row),
                     profile.isStock(row, entry),
-                    profile.isNonStandard(row, entry),
+                    store.isNonStandard(profile, row, entry),
                     profile.isExperimental(row)));
         }
         return List.copyOf(views);

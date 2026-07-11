@@ -3,7 +3,12 @@ package com.openggf.game.launch;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.MasterTitleScreen;
+import com.openggf.game.patch.ModuleResolutionService;
+import com.openggf.game.patch.ResolutionContext;
 
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -11,9 +16,25 @@ public class LaunchProfileStore {
     private static final Logger LOGGER = Logger.getLogger(LaunchProfileStore.class.getName());
 
     private final SonicConfigurationService configService;
+    private final Map<MasterTitleScreen.GameEntry, List<String>> patchMainCharacters;
 
     public LaunchProfileStore(SonicConfigurationService configService) {
         this.configService = Objects.requireNonNull(configService, "configService");
+        this.patchMainCharacters = emptyAvailability();
+    }
+
+    public LaunchProfileStore(SonicConfigurationService configService,
+            ModuleResolutionService resolutionService, ResolutionContext resolutionContext) {
+        this.configService = Objects.requireNonNull(configService, "configService");
+        Objects.requireNonNull(resolutionService, "resolutionService");
+        Objects.requireNonNull(resolutionContext, "resolutionContext");
+        EnumMap<MasterTitleScreen.GameEntry, List<String>> availability =
+                new EnumMap<>(MasterTitleScreen.GameEntry.class);
+        for (MasterTitleScreen.GameEntry entry : MasterTitleScreen.GameEntry.values()) {
+            availability.put(entry, List.copyOf(resolutionService.availableMainCharacters(
+                    resolutionContext, LaunchProfile.gameId(entry))));
+        }
+        this.patchMainCharacters = Map.copyOf(availability);
     }
 
     public LaunchProfile load(MasterTitleScreen.GameEntry entry) {
@@ -31,13 +52,13 @@ public class LaunchProfileStore {
                 configService.getString(keys.aspect()),
                 configService.getString(keys.mainCharacter()),
                 configService.getString(keys.sidekick()))
-                .sanitizedFor(entry);
+                .sanitizedFor(entry, patchMainCharacters(entry));
     }
 
     public void save(MasterTitleScreen.GameEntry entry, LaunchProfile profile) {
         Objects.requireNonNull(profile, "profile");
         Keys keys = keysFor(entry);
-        LaunchProfile sanitized = profile.sanitizedFor(entry);
+        LaunchProfile sanitized = sanitize(profile, entry);
         configService.setConfigValue(keys.rewind(), sanitized.rewind());
         configService.setConfigValue(keys.crossGameSource(), sanitized.crossGameSource());
         configService.setConfigValue(keys.debugTools(), sanitized.debugTools());
@@ -45,6 +66,49 @@ public class LaunchProfileStore {
         configService.setConfigValue(keys.mainCharacter(), sanitized.mainCharacter());
         configService.setConfigValue(keys.sidekick(), sanitized.sidekick());
         configService.saveConfig();
+    }
+
+    public LaunchProfile sanitize(LaunchProfile profile, MasterTitleScreen.GameEntry entry) {
+        return Objects.requireNonNull(profile, "profile")
+                .sanitizedFor(entry, patchMainCharacters(entry));
+    }
+
+    public LaunchProfile withNext(LaunchProfile profile, LaunchProfile.Row row,
+            MasterTitleScreen.GameEntry entry) {
+        return Objects.requireNonNull(profile, "profile")
+                .withNext(row, entry, patchMainCharacters(entry));
+    }
+
+    public LaunchProfile withPrevious(LaunchProfile profile, LaunchProfile.Row row,
+            MasterTitleScreen.GameEntry entry) {
+        return Objects.requireNonNull(profile, "profile")
+                .withPrevious(row, entry, patchMainCharacters(entry));
+    }
+
+    public boolean isNonStandard(LaunchProfile profile, LaunchProfile.Row row,
+            MasterTitleScreen.GameEntry entry) {
+        return Objects.requireNonNull(profile, "profile")
+                .isNonStandard(row, entry, patchMainCharacters(entry));
+    }
+
+    public boolean isCharacterPairStandard(LaunchProfile profile,
+            MasterTitleScreen.GameEntry entry) {
+        return Objects.requireNonNull(profile, "profile")
+                .isCharacterPairStandard(entry, patchMainCharacters(entry));
+    }
+
+    private List<String> patchMainCharacters(MasterTitleScreen.GameEntry entry) {
+        Objects.requireNonNull(entry, "entry");
+        return patchMainCharacters.getOrDefault(entry, List.of());
+    }
+
+    private static Map<MasterTitleScreen.GameEntry, List<String>> emptyAvailability() {
+        EnumMap<MasterTitleScreen.GameEntry, List<String>> availability =
+                new EnumMap<>(MasterTitleScreen.GameEntry.class);
+        for (MasterTitleScreen.GameEntry entry : MasterTitleScreen.GameEntry.values()) {
+            availability.put(entry, List.of());
+        }
+        return Map.copyOf(availability);
     }
 
     private static Keys keysFor(MasterTitleScreen.GameEntry entry) {

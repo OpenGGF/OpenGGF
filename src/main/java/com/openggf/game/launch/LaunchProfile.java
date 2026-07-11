@@ -74,11 +74,21 @@ public record LaunchProfile(
     }
 
     public LaunchProfile withNext(Row row, MasterTitleScreen.GameEntry entry) {
-        return withValue(row, entry, true);
+        return withNext(row, entry, List.of());
+    }
+
+    LaunchProfile withNext(Row row, MasterTitleScreen.GameEntry entry,
+            List<String> patchBackedMainCharacters) {
+        return withValue(row, entry, true, patchBackedMainCharacters);
     }
 
     public LaunchProfile withPrevious(Row row, MasterTitleScreen.GameEntry entry) {
-        return withValue(row, entry, false);
+        return withPrevious(row, entry, List.of());
+    }
+
+    LaunchProfile withPrevious(Row row, MasterTitleScreen.GameEntry entry,
+            List<String> patchBackedMainCharacters) {
+        return withValue(row, entry, false, patchBackedMainCharacters);
     }
 
     public LaunchProfile withStock(MasterTitleScreen.GameEntry entry) {
@@ -86,8 +96,14 @@ public record LaunchProfile(
     }
 
     public LaunchProfile sanitizedFor(MasterTitleScreen.GameEntry entry) {
+        return sanitizedFor(entry, List.of());
+    }
+
+    LaunchProfile sanitizedFor(MasterTitleScreen.GameEntry entry,
+            List<String> patchBackedMainCharacters) {
         Objects.requireNonNull(entry, "entry");
-        String sanitizedMainCharacter = sanitize(mainCharacter, mainCharacterValues(entry), SONIC);
+        String sanitizedMainCharacter = sanitize(mainCharacter,
+                mainCharacterValues(entry, patchBackedMainCharacters), SONIC);
         String sanitizedSidekick = sanitize(sidekick, sidekickValues(entry), stockFor(entry).sidekick());
         if (mainCharacter.equals(sanitizedMainCharacter) && sidekick.equals(sanitizedSidekick)) {
             return this;
@@ -109,12 +125,18 @@ public record LaunchProfile(
     }
 
     public boolean isNonStandard(Row row, MasterTitleScreen.GameEntry entry) {
+        return isNonStandard(row, entry, List.of());
+    }
+
+    boolean isNonStandard(Row row, MasterTitleScreen.GameEntry entry,
+            List<String> patchBackedMainCharacters) {
         return switch (row) {
             case REWIND -> rewind;
             case CROSS_GAME -> !OFF.equals(crossGameSource);
             case DEBUG_TOOLS -> debugTools;
             case WIDESCREEN -> !GLOBAL.equals(aspect) && !WidescreenAspect.NATIVE_4_3.name().equals(aspect);
-            case MAIN_CHARACTER, SIDEKICK -> !isCharacterPairStandard(entry);
+            case MAIN_CHARACTER, SIDEKICK ->
+                    !isCharacterPairStandard(entry, patchBackedMainCharacters);
         };
     }
 
@@ -123,10 +145,18 @@ public record LaunchProfile(
     }
 
     public boolean isCharacterPairStandard(MasterTitleScreen.GameEntry entry) {
+        return isCharacterPairStandard(entry, List.of());
+    }
+
+    boolean isCharacterPairStandard(MasterTitleScreen.GameEntry entry,
+            List<String> patchBackedMainCharacters) {
         Objects.requireNonNull(entry, "entry");
+        List<String> patchCharacters = List.copyOf(
+                Objects.requireNonNull(patchBackedMainCharacters, "patchBackedMainCharacters"));
         return switch (entry) {
             case SONIC_1 -> pair(SONIC, NONE);
-            case SONIC_2 -> pair(SONIC, NONE) || pair(SONIC, TAILS) || pair(TAILS, NONE);
+            case SONIC_2 -> pair(SONIC, NONE) || pair(SONIC, TAILS) || pair(TAILS, NONE)
+                    || (patchCharacters.contains(KNUCKLES) && pair(KNUCKLES, NONE));
             case SONIC_3K -> pair(SONIC, NONE) || pair(SONIC, TAILS)
                     || pair(TAILS, NONE) || pair(KNUCKLES, NONE);
         };
@@ -158,16 +188,19 @@ public record LaunchProfile(
         return Objects.requireNonNull(entry, "entry").gameId;
     }
 
-    private LaunchProfile withValue(Row row, MasterTitleScreen.GameEntry entry, boolean forward) {
+    private LaunchProfile withValue(Row row, MasterTitleScreen.GameEntry entry, boolean forward,
+            List<String> patchBackedMainCharacters) {
+        List<String> patchCharacters = List.copyOf(
+                Objects.requireNonNull(patchBackedMainCharacters, "patchBackedMainCharacters"));
         return switch (row) {
             case REWIND -> new LaunchProfile(!rewind, crossGameSource, debugTools, aspect, mainCharacter, sidekick);
             case CROSS_GAME -> new LaunchProfile(rewind, cycle(crossGameValues(entry), crossGameSource, forward),
-                    debugTools, aspect, mainCharacter, sidekick).sanitizedFor(entry);
+                    debugTools, aspect, mainCharacter, sidekick).sanitizedFor(entry, patchCharacters);
             case DEBUG_TOOLS -> new LaunchProfile(rewind, crossGameSource, !debugTools, aspect, mainCharacter, sidekick);
             case WIDESCREEN -> new LaunchProfile(rewind, crossGameSource, debugTools,
                     cycle(List.of(ASPECT_VALUES), aspect, forward), mainCharacter, sidekick);
             case MAIN_CHARACTER -> new LaunchProfile(rewind, crossGameSource, debugTools, aspect,
-                    cycle(mainCharacterValues(entry), mainCharacter, forward), sidekick);
+                    cycle(mainCharacterValues(entry, patchCharacters), mainCharacter, forward), sidekick);
             case SIDEKICK -> new LaunchProfile(rewind, crossGameSource, debugTools, aspect, mainCharacter,
                     cycle(sidekickValues(entry), sidekick, forward));
         };
@@ -185,12 +218,20 @@ public record LaunchProfile(
         return values;
     }
 
-    private List<String> mainCharacterValues(MasterTitleScreen.GameEntry entry) {
-        return switch (effectiveCharacterDonor(entry)) {
+    private List<String> mainCharacterValues(MasterTitleScreen.GameEntry entry,
+            List<String> patchBackedMainCharacters) {
+        List<String> values = new ArrayList<>(switch (effectiveCharacterDonor(entry)) {
             case "s2" -> List.of(SONIC, TAILS);
             case "s3k" -> List.of(SONIC, TAILS, KNUCKLES);
             default -> List.of(SONIC);
-        };
+        });
+        for (String patchBacked : List.copyOf(
+                Objects.requireNonNull(patchBackedMainCharacters, "patchBackedMainCharacters"))) {
+            if (!values.contains(patchBacked)) {
+                values.add(patchBacked);
+            }
+        }
+        return List.copyOf(values);
     }
 
     private List<String> sidekickValues(MasterTitleScreen.GameEntry entry) {
