@@ -103,6 +103,21 @@ class TestPlayableSpriteMovementTailsFlight {
     }
 
     @Test
+    void activeManualSwimmingWithoutInputGentlySinksAtFlightGravity() {
+        tails.setInWater(true);
+        tails.setYSpeed((short) 0);
+        tails.getTailsFlightController().activate();
+
+        movement.handleMovement(false, false, false, false,
+                false, false, false, false);
+        assertEquals((short) 0x0008, tails.getYSpeed());
+
+        movement.handleMovement(false, false, false, false,
+                false, false, false, false);
+        assertEquals((short) 0x0010, tails.getYSpeed());
+    }
+
+    @Test
     void landingClearsFlight() {
         tails.getTailsFlightController().activate();
         tails.setAir(false);

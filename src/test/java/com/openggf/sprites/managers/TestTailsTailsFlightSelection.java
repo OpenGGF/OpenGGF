@@ -19,17 +19,18 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestTailsTailsFlightSelection {
 
     @Test
-    void everyFlightAndSwimParentAnimationDrawsTailArt() {
+    void flyingParentAnimationsDrawSeparateTailArt() {
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x100, (short) 0x200);
         PlayerSpriteRenderer renderer = mock(PlayerSpriteRenderer.class);
         TailsTailsController controller = new TailsTailsController(tails, renderer, true);
 
-        for (int parentAnimation = 0x20; parentAnimation <= 0x28; parentAnimation++) {
+        for (int parentAnimation = 0x20; parentAnimation <= 0x24; parentAnimation++) {
             clearInvocations(renderer);
             tails.setAnimationId(parentAnimation);
 
@@ -37,6 +38,22 @@ class TestTailsTailsFlightSelection {
             controller.draw();
 
             verify(renderer).drawFrame(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
+        }
+    }
+
+    @Test
+    void swimmingParentAnimationsKeepSeparateTailBlank() {
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x100, (short) 0x200);
+
+        for (int parentAnimation = 0x25; parentAnimation <= 0x28; parentAnimation++) {
+            PlayerSpriteRenderer renderer = mock(PlayerSpriteRenderer.class);
+            TailsTailsController controller = new TailsTailsController(tails, renderer, true);
+            tails.setAnimationId(parentAnimation);
+
+            controller.update();
+            controller.draw();
+
+            verifyNoInteractions(renderer);
         }
     }
 

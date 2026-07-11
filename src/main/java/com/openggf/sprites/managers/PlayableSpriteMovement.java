@@ -3478,7 +3478,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Hurt airborne:   net gravity = 0x30 - 0x20 = 0x10 (s2.asm:41066-41069, s1:01 Sonic.asm:1410)
 		// The ROM hurt routine (Obj01_Hurt) uses a separate code path with $20 reduction,
 		// NOT the $28 used in Obj01_MdAir/MdJump. All three games (S1/S2/S3K) are identical.
-		if (!sprite.isInWater()) {
+		// S3K Tails_FlyingSwimming owns its +$08 flight/swim gravity and skips
+		// this generic underwater subtraction (sonic3k.asm:27570, 27633).
+		if (!sprite.isInWater() || isTailsFlightPhysicsActive(sprite)) {
 			return;
 		}
 		short reduction = 0x28;
