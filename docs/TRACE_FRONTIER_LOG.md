@@ -18,11 +18,14 @@ reaction deferral, orb break tail + Ani_obj53 animation, boss persistence, and
 the S2 impatient-wait blink input gate), and OOZ2 is green after the
 round 54 Obj3E capsule body lifetime fix. The branch-local S2 expected-red set
 is now EMPTY: the full S2 level-select suite passes (MSE:OK passed=48).
-The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
-20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
+The full S1 sweep remains 29/29 green. On this HCZ branch, the selected S2
+TraceReplay fleet has one pre-existing OOZ level-select mismatch at f447; an
+isolated replay at branch commit `92a4703f1` reproduced that exact mismatch,
+so it is not an HCZ campaign regression. The other 19 selected S2 classes and
+both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f17061 / 2217 errors (12 errors under `frontierOnly`).
+f3318 / 4234 errors to f17173 / 2138 errors (2 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -532,6 +535,21 @@ parent retreat. The isolated granular replay matrix keeps both AIZ routes green
 and preserves every non-HCZ frontier/count exactly: CNZ complete f1846 / 5,
 CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
 ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 32 restores S3K airborne terrain probes to world-space orientation.
+The ROM's `SonicKnux_DoLevelCollision` path selects explicit floor, ceiling,
+and wall checks from velocity; it does not rotate those probes through a stale
+grounded loop/wall mode. The S3K collision profile now resets the probe mode
+before the airborne quadrant dispatch, while S1/S2 retain their existing rule.
+
+This closes f17061-f17172 and advances HCZ to f17173 / 2138 full-run errors (2
+under `frontierOnly`). The focused collision-system guard passes. The granular
+S3K replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5,
+CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5. A selected full S1/S2 replay
+check kept all S1 and all but S2 OOZ clean; a detached worktree at pre-change
+commit `92a4703f1` reproduced OOZ's identical f447 mismatch, establishing it as
+pre-existing rather than a regression from the S3K collision rule.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout

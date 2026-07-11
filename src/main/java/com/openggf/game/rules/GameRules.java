@@ -69,6 +69,7 @@ public record GameRules(
                     true,
                     false,
                     true,
+                    false,
                     0x07FF
             ),
             new PlayerAnimationRules(
@@ -200,6 +201,7 @@ public record GameRules(
                     true,
                     false,
                     true,
+                    false,
                     0x07FF
             ),
             new PlayerAnimationRules(
@@ -331,6 +333,7 @@ public record GameRules(
                     false,
                     true,
                     false,
+                    true,
                     0x0FFF
             ),
             new PlayerAnimationRules(

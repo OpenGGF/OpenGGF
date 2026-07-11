@@ -796,6 +796,14 @@ public class CollisionSystem {
                                     Consumer<AbstractPlayableSprite> landingHandler,
                                     boolean forceFloorCheck) {
         requireTerrainOnlyPlan(plan, "resolveAirCollision");
+        // SonicKnux_DoLevelCollision uses explicit world-space floor, ceiling,
+        // and wall checks. The engine's sensor offsets otherwise rotate from a
+        // stale grounded mode retained after leaving a loop or wall, causing an
+        // airborne floor check to scan sideways.
+        CollisionRules collisionRules = collisionRulesOrNull(sprite);
+        if (collisionRules != null && collisionRules.airborneProbesResetStaleGroundMode()) {
+            sprite.setGroundMode(GroundMode.GROUND);
+        }
         int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
         switch (quadrant) {
             case 0x00 -> {

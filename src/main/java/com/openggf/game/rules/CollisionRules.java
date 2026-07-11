@@ -22,5 +22,6 @@ public record CollisionRules(
         boolean solidObjectBarelyPokingResolvesAsSide,
         boolean solidObjectKeepsOnObjWhenJumpedOffSameFrame,
         boolean advanceWaterLevelBeforePlayerPhysics,
+        boolean airborneProbesResetStaleGroundMode,
         int defaultCollisionLayoutYMask) {
 }

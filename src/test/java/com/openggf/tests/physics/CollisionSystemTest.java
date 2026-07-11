@@ -87,6 +87,27 @@ public class CollisionSystemTest {
     }
 
     @Test
+    public void airborneCollisionResetsStaleWallModeBeforeWorldSpaceProbes() {
+        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
+        Mockito.when(player.getAir()).thenReturn(true);
+        Mockito.when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
+        Mockito.when(player.getGroundMode()).thenReturn(GroundMode.LEFTWALL);
+        Mockito.when(player.getXSpeed()).thenReturn((short) 0x0350);
+        Mockito.when(player.getYSpeed()).thenReturn((short) 0x0172);
+        Sensor[] sensors = new Sensor[] {
+                new FixedSensor(player, Direction.DOWN, 5),
+                new FixedSensor(player, Direction.DOWN, 5)
+        };
+        Mockito.when(player.getGroundSensors()).thenReturn(sensors);
+        Mockito.when(player.getCeilingSensors()).thenReturn(sensors);
+        Mockito.when(player.getPushSensors()).thenReturn(sensors);
+
+        collisionSystem.resolveAirCollision(player, ignored -> { });
+
+        Mockito.verify(player).setGroundMode(GroundMode.GROUND);
+    }
+
+    @Test
     public void testHasStandingContactDelegatesToLatestSnapshot() {
         TrackingObjectManager objectManager = new TrackingObjectManager(true, 12);
         collisionSystem.setObjectManager(objectManager);
