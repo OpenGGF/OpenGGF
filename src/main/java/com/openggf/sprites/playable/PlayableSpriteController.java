@@ -3,12 +3,14 @@ package com.openggf.sprites.playable;
 import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.sprites.managers.PlayableSpriteMovement;
 import com.openggf.sprites.managers.SpindashDustController;
+import com.openggf.sprites.managers.TailsFlightController;
 import com.openggf.sprites.managers.TailsTailsController;
 
 public class PlayableSpriteController {
     private final PlayableSpriteMovement movement;
     private final PlayableSpriteAnimation animation;
     private final DrowningController drowning;
+    private final TailsFlightController tailsFlight;
     private SpindashDustController spindashDust;
     private TailsTailsController tailsTails;
     private SuperStateController superState;
@@ -17,6 +19,7 @@ public class PlayableSpriteController {
         this.movement = new PlayableSpriteMovement(sprite);
         this.animation = new PlayableSpriteAnimation(sprite);
         this.drowning = new DrowningController(sprite);
+        this.tailsFlight = new TailsFlightController(sprite);
     }
 
     public PlayableSpriteMovement getMovement() {
@@ -29,6 +32,10 @@ public class PlayableSpriteController {
 
     public DrowningController getDrowning() {
         return drowning;
+    }
+
+    public TailsFlightController getTailsFlight() {
+        return tailsFlight;
     }
 
     public SpindashDustController getSpindashDust() {

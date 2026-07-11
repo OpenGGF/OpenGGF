@@ -46,6 +46,7 @@ import com.openggf.physics.Sensor;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.managers.SpriteMovementManager;
 import com.openggf.sprites.managers.TailsTailsController;
+import com.openggf.sprites.managers.TailsFlightController;
 import com.openggf.sprites.AbstractSprite;
 import com.openggf.sprites.SensorConfiguration;
 import com.openggf.sprites.managers.PlayableSpriteAnimation;
@@ -1552,6 +1553,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public final com.openggf.game.GameRng currentRngOrNull() { return PlayableSpriteRuntimeServices.rngOrNull(); }
 
         public final DrowningController getDrowningController() { return controller != null ? controller.getDrowning() : null; }
+        public final TailsFlightController getTailsFlightController() {
+                return controller != null ? controller.getTailsFlight() : null;
+        }
         public final WaterSystem currentWaterSystem() { return PlayableSpriteRuntimeServices.water(); }
 
         /**

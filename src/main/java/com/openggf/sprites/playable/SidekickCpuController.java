@@ -5517,45 +5517,8 @@ public class SidekickCpuController {
         if (!usesFlyingCarryMovement()) {
             return;
         }
-
-        int flightTimer = sidekick.getDoubleJumpProperty() & 0xFF;
-        // ROM flight-timer decrement keys on Level_frame_counter parity; recover
-        // the post-increment value via romVisibleLevelFrameCounter() so the cadence
-        // matches whether the counter source is the sprite cadence or stored copy.
-        if ((romVisibleLevelFrameCounter() & 1) != 0 && flightTimer != 0) {
-            flightTimer = (flightTimer - 1) & 0xFF;
-            sidekick.setDoubleJumpProperty((byte) flightTimer);
-        }
-
-        int flag = sidekick.getDoubleJumpFlag() & 0xFF;
-        int ySpeed = sidekick.getYSpeed();
-        if (flag != 1) {
-            if (ySpeed >= -0x100) {
-                ySpeed -= 0x20;
-                flag = (flag + 1) & 0xFF;
-                if (flag == 0x20) {
-                    flag = 1;
-                }
-            } else {
-                flag = 1;
-            }
-        } else {
-            if (inputJumpPress && ySpeed >= -0x100 && flightTimer != 0) {
-                flag = 2;
-            }
-            ySpeed += 0x08;
-        }
-
-        Camera camera = sidekick.currentCamera();
-        if (camera != null && ySpeed < 0) {
-            int cameraMinY = camera.getMinY() & 0xFFFF;
-            if ((sidekick.getCentreY() & 0xFFFF) <= cameraMinY + 0x10) {
-                ySpeed = 0;
-            }
-        }
-
-        sidekick.setDoubleJumpFlag(flag);
-        sidekick.setYSpeed((short) ySpeed);
+        sidekick.getTailsFlightController().updateVertical(
+                inputJumpPress, flyingCarryingFlag, romVisibleLevelFrameCounter());
     }
 
     /** Test/debug accessor for the release-cooldown byte (ROM Flying_carrying_Sonic_flag+1). */
