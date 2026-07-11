@@ -28,26 +28,24 @@ class TestCompositeSnapshotOwnership {
     }
 
     @Test
-    void ownedFactoryTransfersOwnershipAndDoesNotCopy() {
-        LinkedHashMap<String, Object> source = new LinkedHashMap<>();
-        source.put("k", "v1");
-        CompositeSnapshot snapshot = CompositeSnapshot.owned(source);
+    void ownedFactoryTransfersValueArrayOwnershipAndDoesNotCopy() {
+        CompositeSnapshotLayout layout = CompositeSnapshotLayout.fromKeys(
+                7L, java.util.List.of("k"));
+        Object[] source = {"v1"};
+        CompositeSnapshot snapshot = CompositeSnapshot.owned(layout, source);
 
         // The contract here is "do not retain a reference and mutate". We mutate
         // anyway to pin the no-copy behaviour: a regression that re-adds a copy
         // would make this assertion fail.
-        source.put("k", "v2");
+        source[0] = "v2";
         assertEquals("v2", snapshot.get("k"),
                 "owned() must NOT copy — the production hot path relies on this");
     }
 
     @Test
     void entriesReturnsTheSameUnmodifiableViewEachCall() {
-        LinkedHashMap<String, Object> source = new LinkedHashMap<>();
-        source.put("a", 1);
-        source.put("b", 2);
-
-        CompositeSnapshot snapshot = CompositeSnapshot.owned(source);
+        CompositeSnapshot snapshot = new CompositeSnapshot(
+                new LinkedHashMap<>(Map.of("a", 1, "b", 2)));
         Map<String, Object> first = snapshot.entries();
         Map<String, Object> second = snapshot.entries();
 

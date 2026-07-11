@@ -6,7 +6,6 @@ import com.openggf.level.PatternDesc;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
 import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.TAILS_PATTERN_OFFSET;
@@ -51,6 +50,10 @@ public class Sonic2SpecialStageRenderer {
     private int messagesPatternBase;
 
     private List<Sonic2SpecialStagePlayer> players = new ArrayList<>();
+    private Sonic2SpecialStagePlayer[] playerOrderPrimary = new Sonic2SpecialStagePlayer[0];
+    private Sonic2SpecialStagePlayer[] playerOrderScratch = new Sonic2SpecialStagePlayer[0];
+    private Sonic2SpecialStagePlayer[] playerOrderSorted = playerOrderPrimary;
+    private int playerOrderCount;
     private Sonic2SpecialStageIntro intro;
 
     // Object rendering (Phase 4)
@@ -60,6 +63,10 @@ public class Sonic2SpecialStageRenderer {
     private int explosionPatternBase;  // For bomb explosion animation (uses separate art)
     private int emeraldPatternBase;    // For chaos emerald
     private Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager objectManager;
+    private Sonic2SpecialStageObject[] objectOrderPrimary = new Sonic2SpecialStageObject[0];
+    private Sonic2SpecialStageObject[] objectOrderScratch = new Sonic2SpecialStageObject[0];
+    private Sonic2SpecialStageObject[] objectOrderSorted = objectOrderPrimary;
+    private int objectOrderCount;
     private Sonic2PerspectiveData perspectiveData;
 
     // Shadow rendering (Phase 5)
@@ -165,6 +172,9 @@ public class Sonic2SpecialStageRenderer {
     }
 
     public void setPlayers(List<Sonic2SpecialStagePlayer> players) {
+        if (this.players != players) {
+            clearPlayerRenderOrder();
+        }
         this.players = players != null ? players : new ArrayList<>();
     }
 
@@ -203,6 +213,9 @@ public class Sonic2SpecialStageRenderer {
     }
 
     public void setObjectManager(Sonic2SpecialStageManager.Sonic2SpecialStageObjectManager objectManager) {
+        if (this.objectManager != objectManager) {
+            clearObjectRenderOrder();
+        }
         this.objectManager = objectManager;
     }
 
@@ -706,22 +719,17 @@ public class Sonic2SpecialStageRenderer {
      * Shadows are rendered first (behind players).
      */
     public void renderPlayers() {
-        List<Sonic2SpecialStagePlayer> sortedPlayers = new ArrayList<>();
-        for (Sonic2SpecialStagePlayer player : players) {
-            if (isPlayerRenderEligible(player)) {
-                sortedPlayers.add(player);
-            }
-        }
-        if (sortedPlayers.isEmpty()) {
+        int playerCount = preparePlayerRenderOrder();
+        if (playerCount == 0) {
             return;
         }
-        sortedPlayers.sort(Comparator.comparingInt(Sonic2SpecialStagePlayer::getPriority));
 
         // Render shadows first using shadow batch (VDP shadow/highlight mode)
         // Shadows must render before players so they appear behind them
         if (shadowFlatPatternBase > 0 || shadowDiagPatternBase > 0 || shadowSidePatternBase > 0) {
             graphicsManager.beginShadowBatch();
-            for (Sonic2SpecialStagePlayer player : sortedPlayers) {
+            for (int i = 0; i < playerCount; i++) {
+                Sonic2SpecialStagePlayer player = playerRenderOrderAt(i);
                 // Don't render shadow when invulnerability flash is active
                 if (isInvulnerabilityFlashHidden(player)) {
                     continue;
@@ -733,7 +741,8 @@ public class Sonic2SpecialStageRenderer {
 
         // Render players on top of shadows using normal pattern batch
         graphicsManager.beginPatternBatch();
-        for (Sonic2SpecialStagePlayer player : sortedPlayers) {
+        for (int i = 0; i < playerCount; i++) {
+            Sonic2SpecialStagePlayer player = playerRenderOrderAt(i);
             if (isInvulnerabilityFlashHidden(player)) {
                 continue;
             }
@@ -915,18 +924,15 @@ public class Sonic2SpecialStageRenderer {
      * Uses distinctive colored patterns to represent each player.
      */
     public void renderPlaceholderPlayers() {
+        int playerCount = preparePlayerRenderOrder();
         if (players.isEmpty()) {
             return;
         }
 
-        List<Sonic2SpecialStagePlayer> sortedPlayers = players.stream()
-                .filter(Sonic2SpecialStageRenderer::isPlayerRenderEligible)
-                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
-        sortedPlayers.sort(Comparator.comparingInt(Sonic2SpecialStagePlayer::getPriority));
-
         graphicsManager.beginPatternBatch();
 
-        for (Sonic2SpecialStagePlayer player : sortedPlayers) {
+        for (int i = 0; i < playerCount; i++) {
+            Sonic2SpecialStagePlayer player = playerRenderOrderAt(i);
             if (isInvulnerabilityFlashHidden(player)) {
                 continue;
             }
@@ -976,6 +982,42 @@ public class Sonic2SpecialStageRenderer {
     private static boolean isPlayerRenderEligible(Sonic2SpecialStagePlayer player) {
         return player.isSpawned()
                 && player.getRoutine() != Sonic2SpecialStagePlayer.RoutineState.INIT;
+    }
+
+    int preparePlayerRenderOrder() {
+        int previousCount = playerOrderCount;
+        int requestedCount = players.size();
+        ensurePlayerOrderCapacity(requestedCount);
+        int writtenCount = 0;
+        try {
+            for (int i = 0; i < requestedCount; i++) {
+                Sonic2SpecialStagePlayer player = players.get(i);
+                if (isPlayerRenderEligible(player)) {
+                    playerOrderPrimary[writtenCount++] = player;
+                }
+            }
+            clearRange(playerOrderPrimary, writtenCount, previousCount);
+            clearRange(playerOrderScratch, 0, previousCount);
+            playerOrderSorted = stableSortPlayers(
+                    playerOrderPrimary, playerOrderScratch, writtenCount);
+            playerOrderCount = writtenCount;
+            return writtenCount;
+        } catch (RuntimeException | Error failure) {
+            int clearThrough = Math.max(previousCount,
+                    Math.max(writtenCount, requestedCount));
+            clearRange(playerOrderPrimary, 0, clearThrough);
+            clearRange(playerOrderScratch, 0, clearThrough);
+            playerOrderSorted = playerOrderPrimary;
+            playerOrderCount = 0;
+            throw failure;
+        }
+    }
+
+    Sonic2SpecialStagePlayer playerRenderOrderAt(int index) {
+        if (index < 0 || index >= playerOrderCount) {
+            throw new IndexOutOfBoundsException(index);
+        }
+        return playerOrderSorted[index];
     }
 
     private boolean isInvulnerabilityFlashHidden(Sonic2SpecialStagePlayer player) {
@@ -1613,12 +1655,11 @@ public class Sonic2SpecialStageRenderer {
 
         List<Sonic2SpecialStageObject> objects = objectManager.getActiveObjects();
         if (objects.isEmpty()) {
+            clearObjectRenderOrder();
             return;
         }
 
-        // Sort by depth (higher depth = further away = draw first)
-        List<Sonic2SpecialStageObject> sortedObjects = new ArrayList<>(objects);
-        sortedObjects.sort((a, b) -> Integer.compare(b.getDepth(), a.getDepth()));
+        int objectCount = prepareObjectRenderOrder(objects);
 
         final int H32_WIDTH = 256;
         final int SCREEN_CENTER_OFFSET = (320 - H32_WIDTH) / 2;
@@ -1627,7 +1668,8 @@ public class Sonic2SpecialStageRenderer {
         // Only render shadows if shadow art is loaded
         if (shadowFlatPatternBase > 0 || shadowDiagPatternBase > 0 || shadowSidePatternBase > 0) {
             graphicsManager.beginShadowBatch();
-            for (Sonic2SpecialStageObject obj : sortedObjects) {
+            for (int i = 0; i < objectCount; i++) {
+                Sonic2SpecialStageObject obj = objectRenderOrderAt(i);
                 if (!obj.isOnScreen()) {
                     continue;
                 }
@@ -1649,7 +1691,8 @@ public class Sonic2SpecialStageRenderer {
 
         // Render objects on top of shadows using normal pattern batch
         graphicsManager.beginPatternBatch();
-        for (Sonic2SpecialStageObject obj : sortedObjects) {
+        for (int i = 0; i < objectCount; i++) {
+            Sonic2SpecialStageObject obj = objectRenderOrderAt(i);
             if (!obj.isOnScreen()) {
                 continue;
             }
@@ -1672,6 +1715,162 @@ public class Sonic2SpecialStageRenderer {
         }
 
         graphicsManager.flushPatternBatch();
+    }
+
+    int prepareObjectRenderOrder(List<Sonic2SpecialStageObject> objects) {
+        int requestedCount = objects.size();
+        int previousCount = objectOrderCount;
+        ensureObjectOrderCapacity(requestedCount);
+        int writtenCount = 0;
+        try {
+            for (; writtenCount < requestedCount; writtenCount++) {
+                objectOrderPrimary[writtenCount] = objects.get(writtenCount);
+            }
+            clearRange(objectOrderPrimary, requestedCount, previousCount);
+            clearRange(objectOrderScratch, 0, previousCount);
+            objectOrderSorted = stableSortObjects(
+                    objectOrderPrimary, objectOrderScratch, requestedCount);
+            objectOrderCount = requestedCount;
+            return requestedCount;
+        } catch (RuntimeException | Error failure) {
+            int clearThrough = Math.max(previousCount,
+                    Math.max(writtenCount, requestedCount));
+            clearRange(objectOrderPrimary, 0, clearThrough);
+            clearRange(objectOrderScratch, 0, clearThrough);
+            objectOrderSorted = objectOrderPrimary;
+            objectOrderCount = 0;
+            throw failure;
+        }
+    }
+
+    Sonic2SpecialStageObject objectRenderOrderAt(int index) {
+        if (index < 0 || index >= objectOrderCount) {
+            throw new IndexOutOfBoundsException(index);
+        }
+        return objectOrderSorted[index];
+    }
+
+    private void ensurePlayerOrderCapacity(int required) {
+        if (playerOrderPrimary.length >= required) {
+            return;
+        }
+        int capacity = growCapacity(playerOrderPrimary.length, required);
+        playerOrderPrimary = Arrays.copyOf(playerOrderPrimary, capacity);
+        playerOrderScratch = Arrays.copyOf(playerOrderScratch, capacity);
+        playerOrderSorted = playerOrderPrimary;
+    }
+
+    private void ensureObjectOrderCapacity(int required) {
+        if (objectOrderPrimary.length >= required) {
+            return;
+        }
+        int capacity = growCapacity(objectOrderPrimary.length, required);
+        objectOrderPrimary = Arrays.copyOf(objectOrderPrimary, capacity);
+        objectOrderScratch = Arrays.copyOf(objectOrderScratch, capacity);
+        objectOrderSorted = objectOrderPrimary;
+    }
+
+    private static int growCapacity(int current, int required) {
+        int doubled = current == 0 ? 4 : current << 1;
+        return Math.max(required, doubled);
+    }
+
+    private void clearPlayerRenderOrder() {
+        clearRange(playerOrderPrimary, 0, playerOrderCount);
+        clearRange(playerOrderScratch, 0, playerOrderCount);
+        playerOrderSorted = playerOrderPrimary;
+        playerOrderCount = 0;
+    }
+
+    private void clearObjectRenderOrder() {
+        clearRange(objectOrderPrimary, 0, objectOrderCount);
+        clearRange(objectOrderScratch, 0, objectOrderCount);
+        objectOrderSorted = objectOrderPrimary;
+        objectOrderCount = 0;
+    }
+
+    private static void clearRange(Object[] values, int from, int previousCount) {
+        if (from < previousCount) {
+            Arrays.fill(values, from, previousCount, null);
+        }
+    }
+
+    private static Sonic2SpecialStagePlayer[] stableSortPlayers(
+            Sonic2SpecialStagePlayer[] primary,
+            Sonic2SpecialStagePlayer[] scratch,
+            int count) {
+        Sonic2SpecialStagePlayer[] source = primary;
+        Sonic2SpecialStagePlayer[] destination = scratch;
+        for (int width = 1; width < count; width = nextMergeWidth(width, count)) {
+            for (int start = 0; start < count; start += width << 1) {
+                int middle = Math.min(start + width, count);
+                int end = Math.min(start + (width << 1), count);
+                mergePlayers(source, destination, start, middle, end);
+            }
+            Sonic2SpecialStagePlayer[] swap = source;
+            source = destination;
+            destination = swap;
+        }
+        return source;
+    }
+
+    private static void mergePlayers(
+            Sonic2SpecialStagePlayer[] source,
+            Sonic2SpecialStagePlayer[] destination,
+            int start,
+            int middle,
+            int end) {
+        int left = start;
+        int right = middle;
+        for (int out = start; out < end; out++) {
+            if (right >= end || (left < middle
+                    && source[left].getPriority() <= source[right].getPriority())) {
+                destination[out] = source[left++];
+            } else {
+                destination[out] = source[right++];
+            }
+        }
+    }
+
+    private static Sonic2SpecialStageObject[] stableSortObjects(
+            Sonic2SpecialStageObject[] primary,
+            Sonic2SpecialStageObject[] scratch,
+            int count) {
+        Sonic2SpecialStageObject[] source = primary;
+        Sonic2SpecialStageObject[] destination = scratch;
+        for (int width = 1; width < count; width = nextMergeWidth(width, count)) {
+            for (int start = 0; start < count; start += width << 1) {
+                int middle = Math.min(start + width, count);
+                int end = Math.min(start + (width << 1), count);
+                mergeObjects(source, destination, start, middle, end);
+            }
+            Sonic2SpecialStageObject[] swap = source;
+            source = destination;
+            destination = swap;
+        }
+        return source;
+    }
+
+    private static void mergeObjects(
+            Sonic2SpecialStageObject[] source,
+            Sonic2SpecialStageObject[] destination,
+            int start,
+            int middle,
+            int end) {
+        int left = start;
+        int right = middle;
+        for (int out = start; out < end; out++) {
+            if (right >= end || (left < middle
+                    && source[left].getDepth() >= source[right].getDepth())) {
+                destination[out] = source[left++];
+            } else {
+                destination[out] = source[right++];
+            }
+        }
+    }
+
+    private static int nextMergeWidth(int width, int count) {
+        return width > count / 2 ? count : width << 1;
     }
 
     /**

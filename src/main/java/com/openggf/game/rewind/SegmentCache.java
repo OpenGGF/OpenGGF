@@ -1,5 +1,7 @@
 package com.openggf.game.rewind;
 
+import java.util.Objects;
+
 /**
  * Strip cache between RewindController and KeyframeStore. Expands one
  * segment of {@code intervalFrames} on demand by stepping forward from
@@ -39,6 +41,30 @@ public final class SegmentCache {
     }
 
     /**
+     * Returns the already-expanded snapshot for {@code frame}, or {@code null}
+     * when the frame is outside the current strip. The returned snapshot is a
+     * borrowed immutable value; this cache and its probe are gameplay-thread
+     * confined.
+     */
+    public CompositeSnapshot cachedSnapshotAtOrNull(int frame) {
+        if (strip == null || currentBaseFrame < 0) {
+            return null;
+        }
+        long offset = (long) frame - currentBaseFrame;
+        if (offset < 0 || offset >= intervalFrames || offset > validUpTo) {
+            return null;
+        }
+        return strip[(int) offset];
+    }
+
+    /**
+     * Base-aware form used by callers that have already resolved a keyframe.
+     */
+    public CompositeSnapshot cachedSnapshotAtOrNull(int frame, int keyframeFrame) {
+        return currentBaseFrame == keyframeFrame ? cachedSnapshotAtOrNull(frame) : null;
+    }
+
+    /**
      * True when {@code frame} (in segment {@code keyframeFrame}) is already
      * expanded in the cached strip, i.e. the next {@link #snapshotAt} call
      * for it will be a pure array read with no {@code restoreKeyframe}/
@@ -47,16 +73,14 @@ public final class SegmentCache {
      * frame) use this to know whether any live-state rollback is needed.
      */
     public boolean containsFrame(int frame, int keyframeFrame) {
-        return currentBaseFrame == keyframeFrame
-                && strip != null
-                && (frame - keyframeFrame) <= validUpTo;
+        return cachedSnapshotAtOrNull(frame, keyframeFrame) != null;
     }
 
     /**
      * Returns the snapshot at frame F, expanding segment [K, K+interval)
-     * (where K = (F / interval) * interval) if necessary. If F lies in a
-     * different segment than the currently-cached one, the cache is
-     * dropped and re-expanded from the new segment's keyframe (using
+     * where K is the caller-supplied keyframe frame. If F lies in a
+     * different segment than the currently cached one, the cache is
+     * dropped and re-expanded from that keyframe (using
      * {@code restoreKeyframe} to bring the engine back to K, then
      * {@code stepper} to advance).
      */
@@ -66,26 +90,39 @@ public final class SegmentCache {
             int keyframeFrame,
             Runnable restoreKeyframe,       // restores engine state from keyframeAt
             Stepper stepper) {
-        if (frame < keyframeFrame) {
+        Objects.requireNonNull(keyframeAt, "keyframeAt");
+        Objects.requireNonNull(restoreKeyframe, "restoreKeyframe");
+        Objects.requireNonNull(stepper, "stepper");
+        if (keyframeFrame < 0) {
+            throw new IllegalArgumentException("keyframeFrame must be >= 0, got " + keyframeFrame);
+        }
+        long requestedOffset = (long) frame - keyframeFrame;
+        if (requestedOffset < 0 || requestedOffset >= intervalFrames) {
             throw new IllegalArgumentException(
-                    "frame " + frame + " < keyframe " + keyframeFrame);
+                    "frame " + frame + " outside keyframe segment [" + keyframeFrame
+                            + ", " + ((long) keyframeFrame + intervalFrames) + ")");
         }
         // If we've cached this segment already, lookup is O(1).
-        if (currentBaseFrame == keyframeFrame
-                && strip != null
-                && (frame - keyframeFrame) <= validUpTo) {
-            return strip[frame - keyframeFrame];
+        CompositeSnapshot cached = cachedSnapshotAtOrNull(frame, keyframeFrame);
+        if (cached != null) {
+            return cached;
         }
         // Otherwise expand the segment.
         currentBaseFrame = keyframeFrame;
         strip = new CompositeSnapshot[intervalFrames];
         strip[0] = keyframeAt;
         validUpTo = 0;
-        restoreKeyframe.run();
-        for (int offset = 1; offset <= (frame - keyframeFrame); offset++) {
-            strip[offset] = stepper.stepAndCapture();
-            validUpTo = offset;
+        try {
+            restoreKeyframe.run();
+            for (int offset = 1; offset <= requestedOffset; offset++) {
+                strip[offset] = Objects.requireNonNull(
+                        stepper.stepAndCapture(), "stepper snapshot");
+                validUpTo = offset;
+            }
+            return strip[(int) requestedOffset];
+        } catch (RuntimeException | Error failure) {
+            invalidate();
+            throw failure;
         }
-        return strip[frame - keyframeFrame];
     }
 }

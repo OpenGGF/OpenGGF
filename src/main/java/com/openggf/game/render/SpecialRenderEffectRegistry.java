@@ -21,6 +21,7 @@ public final class SpecialRenderEffectRegistry
 
     private final EnumMap<SpecialRenderEffectStage, List<SpecialRenderEffect>> effectsByStage =
             new EnumMap<>(SpecialRenderEffectStage.class);
+    private int effectCount;
 
     public SpecialRenderEffectRegistry() {
         for (SpecialRenderEffectStage stage : SpecialRenderEffectStage.values()) {
@@ -32,6 +33,7 @@ public final class SpecialRenderEffectRegistry
     public void register(SpecialRenderEffect effect) {
         Objects.requireNonNull(effect, "effect");
         effectsByStage.get(effect.stage()).add(effect);
+        effectCount++;
     }
 
     /** Removes all staged effects. */
@@ -39,16 +41,12 @@ public final class SpecialRenderEffectRegistry
         for (List<SpecialRenderEffect> effects : effectsByStage.values()) {
             effects.clear();
         }
+        effectCount = 0;
     }
 
     /** Returns {@code true} when no stage contains any registered effects. */
     public boolean isEmpty() {
-        for (List<SpecialRenderEffect> effects : effectsByStage.values()) {
-            if (!effects.isEmpty()) {
-                return false;
-            }
-        }
-        return true;
+        return effectCount == 0;
     }
 
     /** Returns the number of registered effects for one stage. */
@@ -60,11 +58,7 @@ public final class SpecialRenderEffectRegistry
 
     /** Returns the total number of registered effects across all stages. */
     public int activeEffectCount() {
-        int count = 0;
-        for (List<SpecialRenderEffect> effects : effectsByStage.values()) {
-            count += effects.size();
-        }
-        return count;
+        return effectCount;
     }
 
     /**
@@ -93,31 +87,39 @@ public final class SpecialRenderEffectRegistry
 
     @Override
     public SpecialRenderEffectSnapshot capture() {
+        if (effectCount == 0) {
+            return SpecialRenderEffectSnapshot.empty();
+        }
         return new SpecialRenderEffectSnapshot(effectsByStage, captureEffectStates());
     }
 
     @Override
     public void restore(SpecialRenderEffectSnapshot s) {
+        Objects.requireNonNull(s, "s");
+        effectCount = 0;
         for (Map.Entry<SpecialRenderEffectStage, List<SpecialRenderEffect>> e
                 : effectsByStage.entrySet()) {
             e.getValue().clear();
             List<SpecialRenderEffect> saved = s.effectsByStage().get(e.getKey());
             if (saved != null) {
                 e.getValue().addAll(saved);
+                effectCount += saved.size();
             }
         }
         restoreEffectStates(s);
     }
 
     private Map<SpecialRenderEffectStage, List<SpecialRenderEffectSnapshot.EffectState>> captureEffectStates() {
-        EnumMap<SpecialRenderEffectStage, List<SpecialRenderEffectSnapshot.EffectState>> states =
-                new EnumMap<>(SpecialRenderEffectStage.class);
+        EnumMap<SpecialRenderEffectStage, List<SpecialRenderEffectSnapshot.EffectState>> states = null;
         for (Map.Entry<SpecialRenderEffectStage, List<SpecialRenderEffect>> entry : effectsByStage.entrySet()) {
-            List<SpecialRenderEffectSnapshot.EffectState> stageStates = new ArrayList<>();
+            List<SpecialRenderEffectSnapshot.EffectState> stageStates = null;
             List<SpecialRenderEffect> effects = entry.getValue();
             for (int i = 0; i < effects.size(); i++) {
                 SpecialRenderEffect effect = effects.get(i);
                 if (effect instanceof RewindSnapshottable<?> snapshottable) {
+                    if (stageStates == null) {
+                        stageStates = new ArrayList<>();
+                    }
                     stageStates.add(new SpecialRenderEffectSnapshot.EffectState(
                             i,
                             snapshottable.key(),
@@ -126,11 +128,14 @@ public final class SpecialRenderEffectRegistry
                                             + snapshottable.key())));
                 }
             }
-            if (!stageStates.isEmpty()) {
+            if (stageStates != null) {
+                if (states == null) {
+                    states = new EnumMap<>(SpecialRenderEffectStage.class);
+                }
                 states.put(entry.getKey(), stageStates);
             }
         }
-        return states;
+        return states != null ? states : Map.of();
     }
 
     private void restoreEffectStates(SpecialRenderEffectSnapshot snapshot) {
