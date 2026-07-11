@@ -568,6 +568,21 @@ complete-run replay is unchanged at f16755 / 1056 errors (rings expected 2,
 actual 3), confirming that its earlier fast-overlap bridge landing remains
 accepted. The AIZ stage is not green yet.
 
+Round 40 separates the AIZ2 screen-event ship-loop arm from its first completed
+special-event dispatch. ROM `AIZ2SE_Normal` consumes `Events_fg_4` and installs
+`Special_events_routine=4`; it does not execute `AIZ2_DoShipLoop` inside that
+same screen-event handoff. The engine previously set the auto-scroll latch and
+fell through to its `$+4` camera step immediately, exposing camera `$4164` on
+the row where the ROM still records `$4160`. The event pass now snapshots
+whether auto-scroll was active on entry, so a newly armed routine cannot run
+until the following `SpecialEvents` pass; a focused event test covers the arm
+and first movement phases (`sonic3k.asm:104872-104910,105200-105253`). The
+focused replay advances from f16324 / 1159 errors (camera X expected `$4160`,
+actual `$4164`) to fully green. The complete-run frontier stays f16755 while
+its errors fall from 1056 to 687. Full exact-tree
+S1 (29) and S2 (48) trace sweeps passed immediately before this S3K-local event
+delta. The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

@@ -831,6 +831,12 @@ public class TestSonic3kAIZEvents {
         assertEquals(0x10, events.getDynamicResizeRoutine(), "Stage $0E should advance to terminal state");
         assertFalse(events.isEventsFg4(), "AIZ2_ScreenEvent should consume Events_fg_4 in the same frame");
         assertTrue(events.isBattleshipAutoScrollActive(), "AIZ2_ScreenEvent should start the bombing sequence");
+        assertEquals(0x4160, camera.getX() & 0xFFFF,
+                "ScreenEvents should arm SpecialEvents without running the ship loop in the same frame");
+
+        events.updatePrePhysics(1);
+        assertEquals(0x4164, camera.getX() & 0xFFFF,
+                "the following SpecialEvents pass should perform the first +4 ship-loop step");
 
         events.update(1, 4);
         assertFalse(events.isEventsFg4(), "AIZ2_ScreenEvent should consume Events_fg_4");

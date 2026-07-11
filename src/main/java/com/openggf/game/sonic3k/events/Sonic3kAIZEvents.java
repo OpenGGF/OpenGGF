@@ -1203,6 +1203,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     private void updateAct2Continuation(int frameCounter) {
+        boolean battleshipAutoScrollActiveAtEntry = battleshipAutoScrollActive;
         // ROM order inside LevelLoop is DeformBgLayer -> Do_ResizeEvents,
         // then ScreenEvents. The AIZ2 resize stage at camera X >= $4160 sets
         // Events_fg_4, and AIZ2_ScreenEvent consumes it in the same frame to
@@ -1285,7 +1286,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
 
         // Battleship auto-scroll loop
-        if (battleshipAutoScrollActive && !battleshipAutoScrollRanPrePhysics) {
+        if (battleshipAutoScrollActiveAtEntry && !battleshipAutoScrollRanPrePhysics) {
             updateBattleshipAutoScroll(false);
         }
         battleshipAutoScrollRanPrePhysics = false;
