@@ -331,6 +331,15 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj68 calls SolidObjectFull. SolidObject_cont rejects its initial X
+        // window with bhi, so relX == d1*2 remains a valid zero-distance side
+        // contact that sets Status_Push (sonic3k.asm:41394-41403,
+        // 68148-68157).
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         if (!contact.standing() || !(playerEntity instanceof AbstractPlayableSprite player)) {
             return;

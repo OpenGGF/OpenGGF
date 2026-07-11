@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f21138 / 1204 errors (1 error under `frontierOnly`).
+f3318 / 4234 errors to f21618 / 1203 errors (1 error under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -655,6 +655,18 @@ applies zero platform delta. The engine had shifted a newly captured rider one
 pixel with the column (`sonic3k.asm:68132-68157,41016-41042,41642-41679`).
 
 This closes f21084-f21137 and advances HCZ to f21138 / 1204 full-run errors (1
+under `frontierOnly`). The focused spinning-column suite passes 6/6. The
+granular S3K replay matrix remains exact: both AIZ routes green; CNZ complete
+f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select
+f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 41 restores spinning-column exact-edge side contact. Obj68 calls
+`SolidObjectFull`, whose `SolidObject_cont` X-window uses `bhi`; a player at
+`relX == d1*2` therefore remains in the zero-distance side path and receives
+`Status_Push`. The engine's exclusive default dropped that one-frame contact
+(`sonic3k.asm:41394-41403,68148-68157`).
+
+This closes f21138-f21617 and advances HCZ to f21618 / 1203 full-run errors (1
 under `frontierOnly`). The focused spinning-column suite passes 6/6. The
 granular S3K replay matrix remains exact: both AIZ routes green; CNZ complete
 f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **HCZ spinning columns now preserve exact-right-edge side contact:** Obj68's `SolidObjectFull` path keeps `relX == d1*2` in the zero-distance collision window, restoring the native one-frame `Status_Push` contact (`docs/skdisasm/sonic3k.asm:41394-41403,68148-68157`).
 - **HCZ spinning columns now use their post-movement X as the continued-ride reference:** Obj68 passes its updated `x_pos` through `d4`, producing zero horizontal platform carry and preserving the rider position established by the capture routine (`docs/skdisasm/sonic3k.asm:68132-68157,41016-41042,41642-41679`).
 - **S3K tension bridges now reject exact-boundary first contacts:** their flat `sub_1E410` entry accepts only negative overlap from `-$10` through `-1`, keeping an exact-zero airborne contact detached until it enters the native landing band (`docs/skdisasm/sonic3k.asm:75871-75946,41982-42068`).
 - **HCZ spinning-column capture now leaves the logical controller unlocked:** native `object_control=3` still suppresses movement while `Sonic_RecordPos` continues recording held-button changes for CPU Tails, matching Obj68's omission of `Ctrl_1_locked` / `Ctrl_2_locked` writes (`docs/skdisasm/sonic3k.asm:22119-22136,68136-68148,68220-68290`).
