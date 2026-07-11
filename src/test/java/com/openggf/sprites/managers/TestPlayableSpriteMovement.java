@@ -901,6 +901,39 @@ public class TestPlayableSpriteMovement {
                 assertTrue(flatHurt, "Hurt should still be active after a few airborne ticks with no ground contact");
         }
 
+        @Test
+        public void s3kSidekickHurtRestoresStandingRadiiWhenRollStatusWasAlreadyCleared() {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                Tails tails = new Tails("tails_p2", (short) 0x200, (short) 0x300);
+                tails.applyRollingRadii(false);
+                tails.clearRollingFlagPreserveRadii();
+
+                assertFalse(tails.getRolling());
+                assertEquals(7, tails.getXRadius());
+                assertEquals(14, tails.getYRadius());
+
+                assertTrue(tails.applyHurt(tails.getCentreX() - 16));
+
+                assertEquals(9, tails.getXRadius(),
+                                "HurtCharacter Player_TouchFloor must restore default_x_radius");
+                assertEquals(15, tails.getYRadius(),
+                                "HurtCharacter Player_TouchFloor must restore default_y_radius");
+                assertEquals(-9, tails.getGroundSensors()[0].getX());
+                assertEquals(15, tails.getGroundSensors()[0].getY());
+        }
+
+        @Test
+        public void s2SidekickHurtPreservesRadiiWhenRollStatusWasAlreadyCleared() {
+                Tails tails = new Tails("tails_p2", (short) 0x200, (short) 0x300);
+                tails.applyRollingRadii(false);
+                tails.clearRollingFlagPreserveRadii();
+
+                assertTrue(tails.applyHurt(tails.getCentreX() - 16));
+
+                assertEquals(7, tails.getXRadius());
+                assertEquals(14, tails.getYRadius());
+        }
+
         private boolean driveHurtFromAngleAndReturnFinalHurtState(byte startingAngle,
                         CollisionSystem collisionSystem) throws Exception {
                 // A dedicated sprite (not the shared mockSprite) with real, if

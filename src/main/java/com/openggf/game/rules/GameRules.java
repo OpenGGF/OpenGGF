@@ -37,7 +37,8 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    false
+                    false,
+                    true
             ),
             new PlayerCapabilityRules(
                     false,
@@ -167,7 +168,8 @@ public record GameRules(
                     false,
                     false,
                     false,
-                    true
+                    true,
+                    false
             ),
             new PlayerCapabilityRules(
                     true,
@@ -297,7 +299,8 @@ public record GameRules(
                     true,
                     true,
                     false,
-                    false
+                    false,
+                    true
             ),
             new PlayerCapabilityRules(
                     true,

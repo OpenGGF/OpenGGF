@@ -675,6 +675,24 @@ frames; the complete run remains f16755 / 657 errors (`rings`, expected 2 /
 actual 3), now owned by a later placement-slot permutation. Full exact-tree S1
 (29) and S2 (48) trace fleets both pass. The AIZ stage is not green yet.
 
+Round 49 restores S3K `HurtCharacter`'s unconditional collision-radius reset.
+S3K `Player_TouchFloor` writes `default_y_radius/default_x_radius` before it
+tests `Status_Roll`; this matters when an earlier routine cleared only the
+status bit while leaving rolling radii live. The engine's `setRolling(false)`
+was a no-op in that state, so CPU Tails approached the f17130 terrain landing
+with a 7x14 sensor box instead of ROM's recorded 9x15 box and snapped one pixel
+low. `applyHurt` now restores standing radii independently of the flag, with a
+focused regression guards pin both S3K's restore and S2's distinct preservation
+of the split status/radius state
+(`sonic3k.asm:21065-21093,24335-24369,29133-29170`). Under the temporary
+comparison-only lost-ring slot-phase diagnostic, the downstream frontier moves
+from f17130 to f17545 (`rings`, expected 12 / actual 11). The diagnostic is not
+part of this commit; the committed complete-run frontier remains f16755 / 657
+until the earlier spill-owner allocation permutation is modeled. The focused
+AIZ replay remains green. Full exact-tree S1 (29) and S2 (48) trace fleets
+both pass; the S2-specific preservation guard and HTZ2 replay also pass. The
+AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch
