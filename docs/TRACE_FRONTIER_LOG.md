@@ -709,6 +709,21 @@ f16755 / 657 until the spill-owner slot permutation is resolved. The AIZ stage
 focused replay remains green, and full exact-tree S1 (29) and S2 (48) fleets
 both pass. The AIZ stage is not green yet.
 
+Round 51 restores the collapsing platform's fragment-transition solid skip for
+fresh contacts. ROM `ObjPlatformCollapse_CreateFragments` jumps to `Play_SFX`
+without calling `sub_205B6` / `SolidObjectTopSloped2`; existing riders retain
+their standing bits across the skipped object pass, but another player cannot
+establish a new ride until `loc_205DE` resumes the solid helper on the next
+dispatch. The engine now distinguishes those cases using the platform's native
+pending/active transition state. This prevents CPU Tails from attaching at
+f17845 while Sonic remains supported, then permits Tails' ROM landing at f17846
+(`sonic3k.asm:44814-44864,45394-45442`). Two focused guards pin both transition
+and ordinary solid-stay behavior. Under the temporary comparison-only
+spill-phase diagnostic, the downstream frontier moves from f17845 / 2 errors to
+f20714 / 3 errors (`tails_y`, expected `$0009`, actual `$000E`). The diagnostic
+is unstaged; the committed complete-run frontier remains f16755 / 657 pending
+the spill-owner slot fix. The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

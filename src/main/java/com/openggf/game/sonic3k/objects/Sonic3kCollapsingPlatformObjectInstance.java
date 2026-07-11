@@ -275,10 +275,23 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Solid during normal, collapsing, AND solid-stay states.
         // ROM: loc_205DE still calls SolidObjectTopSloped2 after fragments spawn.
-        return state < 3;
+        boolean alreadyRiding = playerEntity != null
+                && services().objectManager().isRidingObject(playerEntity, this);
+        return solidForTransitionState(alreadyRiding);
+    }
+
+    boolean solidForTransitionState(boolean alreadyRiding) {
+        if (state >= 3) {
+            return false;
+        }
+        // ObjPlatformCollapse_CreateFragments jumps to Play_SFX instead of
+        // calling sub_205B6/SolidObjectTopSloped2 on the transition dispatch.
+        // Existing riders retain their standing bits across that skipped pass,
+        // but a second player cannot establish a fresh contact until loc_205DE
+        // resumes the solid helper on the following dispatch.
+        return !(transitionFrameSlopeSkip || pendingTransitionSkip) || alreadyRiding;
     }
 
     /**
