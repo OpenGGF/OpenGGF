@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S2/S3K spindash charges now publish the native animation-change push clear:** each charge mirrors the ROM's combined anim/prev-anim word write, so the later animation transition clears `Status_Push` even when the visible spindash animation id was already active (`docs/skdisasm/sonic3k.asm:28797-28808,29681-29686`; `docs/s2disasm/s2.asm:40548-40559,40879-40884`).
 - **S3K tension bridges now preserve their complete two-player solid contract:** first contact uses flat `sub_1E410`, established riders use the bent child segments, ride exit clears only `Status_OnObj`, Player 2's prior `$3B` segment walks the shared `$3F` bend anchor, and CPU Tails samples the live routine's `$0003` pointer word (`docs/skdisasm/sonic3k.asm:75555-75635,75879-75946`).
 - **S3K airborne terrain probes now discard stale grounded orientation:** `SonicKnux_DoLevelCollision`-equivalent probes reset an airborne player to world-space floor/ceiling/wall sensor orientation before selecting the velocity quadrant, preventing a former loop/wall mode from rotating later floor checks sideways. S1 and S2 retain their established collision rule.
 - **HCZ TurboSpiker shells now launch opposite the parent's retreat:** the detached child interprets the inherited post-retreat render bit with its native opposite `$100` velocity, preventing the badnik and shell from traveling together (`docs/skdisasm/sonic3k.asm:183973-184070`).

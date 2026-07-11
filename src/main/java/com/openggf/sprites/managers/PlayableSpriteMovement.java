@@ -3857,9 +3857,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void setSpindashAnimation() {
 		SpriteAnimationProfile profile = sprite.getAnimationProfile();
 		if (profile instanceof ScriptedVelocityAnimationProfile velocityProfile) {
-			sprite.setAnimationId(velocityProfile.getSpindashAnimId());
+			int spindashAnimationId = velocityProfile.getSpindashAnimId();
+			sprite.setAnimationId(spindashAnimationId);
 			sprite.setAnimationFrameIndex(0);
 			sprite.setAnimationTick(0);
+			PlayerAnimationRules rules = playerAnimationRulesOrNull();
+			if (rules != null && rules.animationChangeClearsPush()) {
+				// Every charge writes anim/prev_anim as the word $0900, forcing
+				// Animate_Tails/Animate_Sonic to observe a change and clear
+				// Status_Push. Trace state is sampled before the engine's later
+				// animation pass, so publish that native clear here.
+				sprite.setPushing(false);
+			}
 		}
 	}
 

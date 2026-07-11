@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f17314 / 1964 errors (1 error under `frontierOnly`).
+f3318 / 4234 errors to f17399 / 1963 errors (10 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -564,6 +564,21 @@ under `frontierOnly`). The focused bridge contract and bend-order tests pass.
 The granular S3K replay matrix remains exact: both AIZ routes green; CNZ
 complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
 level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 34 publishes the ROM animation-side push clear for spindash charges.
+An active S3K Tails charge writes the combined `$0900` anim/prev-anim word, not
+just the visible animation id; the following `Animate_Tails` comparison must
+therefore clear `Status_Push` even when the prior visible id was already 9.
+The shared movement bridge now exposes that same-frame status clear before the
+engine's later animation pass (`sonic3k.asm:28797-28808,29681-29686`).
+
+This closes f17314-f17398 and advances HCZ to f17399 / 1963 full-run errors (10
+under `frontierOnly`). The focused repeated-charge test passes. The granular
+S3K replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5,
+CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
+ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5. A full selected S1/S2 fleet
+ran 50 tests with only the already-baselined S2 OOZ f447 mismatch; all other
+selected cross-game replays stayed clean.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout
