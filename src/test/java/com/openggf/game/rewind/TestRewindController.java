@@ -2,6 +2,7 @@ package com.openggf.game.rewind;
 
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.graphics.FadeManager;
+import com.openggf.game.rewind.snapshot.FadeManagerSnapshot;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -9,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -118,6 +120,60 @@ class TestRewindController {
         // Actually: initial 15 forward steps + 4 steps to expand to offset 4 (steps 11-14)
         assertTrue(stepsAfterBackward < stepsAfterForward + 10,
                 "segment cache should cost O(1) per backward step, not O(n)");
+    }
+
+    @Test
+    void warmStepBackwardHitSkipsKeyframeFloorLookupAndExpansionCallbacks() {
+        RewindRegistry reg = new RewindRegistry();
+        AtomicInteger state = new AtomicInteger();
+        AtomicInteger captures = new AtomicInteger();
+        AtomicInteger restores = new AtomicInteger();
+        reg.register(new RewindSnapshottable<Integer>() {
+            @Override public String key() { return "state"; }
+            @Override public Integer capture() { captures.incrementAndGet(); return state.get(); }
+            @Override public void restore(Integer snapshot) { restores.incrementAndGet(); state.set(snapshot); }
+        });
+        CountingKeyframeStore keyframes = new CountingKeyframeStore();
+        AtomicInteger stepInvocations = new AtomicInteger();
+        EngineStepper stepper = in -> {
+            stepInvocations.incrementAndGet();
+            state.incrementAndGet();
+        };
+        RewindController rc = new RewindController(reg, keyframes, new FakeInputSource(100), stepper, 10);
+        for (int i = 0; i < 15; i++) rc.step();
+
+        assertTrue(rc.stepBackward(), "cold access expands the segment");
+        int floorLookupsAfterExpansion = keyframes.floorLookups.get();
+        captures.set(0);
+        restores.set(0);
+        int stepsAfterExpansion = stepInvocations.get();
+
+        assertTrue(rc.stepBackward(), "next frame is a warm cache hit");
+
+        assertEquals(floorLookupsAfterExpansion, keyframes.floorLookups.get(),
+                "warm hit must not allocate Optional/Entry through the keyframe store");
+        assertEquals(0, captures.get(), "warm hit must not run expansion capture callbacks");
+        assertEquals(1, restores.get(), "warm hit still commits exactly one target restore");
+        assertEquals(stepsAfterExpansion, stepInvocations.get(), "warm hit must not replay a tick");
+        assertEquals(13, rc.currentFrame());
+        assertEquals(13, state.get(), "restored state fingerprint must match the target frame");
+    }
+
+    @Test
+    void forwardResumeInvalidatesWarmBackwardCache() {
+        CountingKeyframeStore keyframes = new CountingKeyframeStore();
+        RewindController rc = new RewindController(
+                new RewindRegistry(), keyframes, new FakeInputSource(100), in -> {}, 10);
+        for (int i = 0; i < 15; i++) rc.step();
+        assertTrue(rc.stepBackward());
+        assertTrue(rc.stepBackward());
+        int warmLookupCount = keyframes.floorLookups.get();
+
+        rc.step();
+        assertTrue(rc.stepBackward());
+
+        assertEquals(warmLookupCount + 1, keyframes.floorLookups.get(),
+                "normal forward resume must invalidate snapshots from the abandoned future");
     }
 
     @Test
@@ -247,6 +303,50 @@ class TestRewindController {
     }
 
     @Test
+    void cachedPoisonedTargetDoesNotRepeatFloorCaptureRestoreOrReplay() {
+        AtomicInteger state = new AtomicInteger();
+        AtomicInteger captures = new AtomicInteger();
+        AtomicInteger restores = new AtomicInteger();
+        AtomicInteger steps = new AtomicInteger();
+        RewindRegistry reg = new RewindRegistry();
+        reg.register(new RewindSnapshottable<FadeManagerSnapshot>() {
+            @Override public String key() { return "fademanager"; }
+            @Override public FadeManagerSnapshot capture() {
+                captures.incrementAndGet();
+                return fadeSnapshot(state.get(), state.get() == 6);
+            }
+            @Override public void restore(FadeManagerSnapshot snapshot) {
+                restores.incrementAndGet();
+                state.set(snapshot.frameCount());
+            }
+        });
+        CountingKeyframeStore keyframes = new CountingKeyframeStore();
+        RewindController rc = new RewindController(
+                reg, keyframes, new FakeInputSource(30), in -> {
+                    steps.incrementAndGet();
+                    state.incrementAndGet();
+                }, 5);
+        for (int i = 0; i < 7; i++) rc.step();
+
+        assertFalse(rc.stepBackward(), "cold expansion discovers and rejects poisoned frame 6");
+        assertEquals(7, rc.currentFrame());
+        assertEquals(7, state.get(), "cold rejection rolls live state back");
+        int floorCount = keyframes.floorLookups.get();
+        captures.set(0);
+        restores.set(0);
+        int stepCount = steps.get();
+
+        assertFalse(rc.stepBackward(), "cached poisoned target remains a clamp");
+
+        assertEquals(floorCount, keyframes.floorLookups.get());
+        assertEquals(0, captures.get());
+        assertEquals(0, restores.get());
+        assertEquals(stepCount, steps.get());
+        assertEquals(7, rc.currentFrame());
+        assertEquals(7, state.get());
+    }
+
+    @Test
     void resetBufferAtBoundaryMakesCurrentFrameEarliestAvailable() {
         RewindRegistry reg = new RewindRegistry();
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
@@ -373,5 +473,27 @@ class TestRewindController {
         public void step(Bk2FrameInput inputs) {
             steppedFrames.add(inputs.frameIndex());
         }
+    }
+
+    private static final class CountingKeyframeStore implements KeyframeStore {
+        private final InMemoryKeyframeStore delegate = new InMemoryKeyframeStore();
+        private final AtomicInteger floorLookups = new AtomicInteger();
+
+        @Override public void put(int frame, CompositeSnapshot snapshot) { delegate.put(frame, snapshot); }
+        @Override public Optional<Entry> latestAtOrBefore(int frame) {
+            floorLookups.incrementAndGet();
+            return delegate.latestAtOrBefore(frame);
+        }
+        @Override public int earliestFrame() { return delegate.earliestFrame(); }
+        @Override public void clear() { delegate.clear(); }
+        @Override public void discardAfter(int frame) { delegate.discardAfter(frame); }
+        @Override public void discardBefore(int frame) { delegate.discardBefore(frame); }
+    }
+
+    private static FadeManagerSnapshot fadeSnapshot(int frame, boolean poisoned) {
+        return new FadeManagerSnapshot(
+                poisoned ? FadeManager.FadeState.FADING_TO_BLACK : FadeManager.FadeState.NONE,
+                frame, 0, 0, 0, 0, FadeManager.FadeType.BLACK,
+                0, 0, 1, 1, 1, poisoned);
     }
 }

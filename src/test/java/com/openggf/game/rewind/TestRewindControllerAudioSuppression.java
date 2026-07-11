@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindControllerAudioSuppression {
@@ -65,6 +66,27 @@ class TestRewindControllerAudioSuppression {
         assertTrue(controller.stepBackward());
 
         assertEquals(0, backend.totalCalls(), "segment expansion must not emit live audio");
+        assertEquals(7, controller.currentFrame());
+    }
+
+    @Test
+    void failedSegmentExpansionClosesAudioReplayScope() {
+        RewindRegistry registry = new RewindRegistry();
+        AtomicInteger failExpansion = new AtomicInteger();
+        RewindController controller = new RewindController(
+                registry, new InMemoryKeyframeStore(), new FakeInputSource(20), in -> {
+                    if (failExpansion.get() != 0 && in.frameIndex() == 6) {
+                        throw new RuntimeException("failed expansion");
+                    }
+                }, 5, audio);
+        for (int i = 0; i < 7; i++) controller.step();
+        failExpansion.set(1);
+        backend.clear();
+
+        assertThrows(RuntimeException.class, controller::stepBackward);
+        audio.playSfx("LIVE");
+
+        assertEquals(1, backend.totalCalls(), "failed rewind must close suppression before returning");
         assertEquals(7, controller.currentFrame());
     }
 

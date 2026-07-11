@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -72,6 +73,31 @@ class TestRewindProfilerAttribution {
                 "rewind.step must open before rewind.tick: " + beginsInOrder);
         assertNull(prof.activeSection(),
                 "No section should be active after stepBackward: transcript=" + prof.transcript());
+    }
+
+    @Test
+    void warmStepBackwardHitHasNoReplayTickOrCaptureSection() {
+        RecordingSectionProfiler prof = new RecordingSectionProfiler();
+        RewindRegistry reg = new RewindRegistry(prof);
+        AtomicInteger state = new AtomicInteger();
+        reg.register(new RewindSnapshottable<Integer>() {
+            @Override public String key() { return "k"; }
+            @Override public Integer capture() { return state.get(); }
+            @Override public void restore(Integer snapshot) { state.set(snapshot); }
+        });
+        RewindController rc = new RewindController(
+                reg, new InMemoryKeyframeStore(), new FakeInputSource(120),
+                in -> state.incrementAndGet(), 5, null, prof);
+        for (int i = 0; i < 7; i++) rc.step();
+        rc.stepBackward();
+        prof.clearTranscript();
+
+        assertTrue(rc.stepBackward());
+
+        List<String> begins = prof.beginNames();
+        assertEquals(List.of("rewind.step", "rewind.restore"), begins,
+                "warm hit should only bracket the step and committed target restore");
+        assertNull(prof.activeSection());
     }
 
     @Test
@@ -144,6 +170,8 @@ class TestRewindProfilerAttribution {
 
         assertThrows(RuntimeException.class, rc::stepBackward,
                 "Expected stepBackward to propagate the stepper's exception");
+        assertEquals(12, rc.currentFrame(), "failed expansion must preserve the rewind cursor");
+        assertEquals(12, state.get(), "failed expansion must roll live registry state back");
         List<String> transcript = prof.transcript();
         // Guard: assert the instrumentation actually opened rewind.tick before the
         // throw. Without this, the test would pass trivially before Task 5 wires the
@@ -154,6 +182,87 @@ class TestRewindProfilerAttribution {
         assertNull(prof.activeSection(),
                 "Profiler must have no dangling active section after exception: transcript="
                         + transcript);
+
+        poisoned[0] = false;
+        prof.clearTranscript();
+        assertTrue(rc.stepBackward(), "invalidated partial cache must retry from the keyframe");
+        assertEquals(11, rc.currentFrame());
+        assertEquals(11, state.get());
+        assertNull(prof.activeSection(), "retry must also leave profiler sections balanced");
+    }
+
+    @Test
+    void expansionFailureKeepsOriginalExceptionWhenRollbackAlsoFails() {
+        RecordingSectionProfiler prof = new RecordingSectionProfiler();
+        RewindRegistry reg = new RewindRegistry(prof);
+        AtomicInteger state = new AtomicInteger();
+        AtomicInteger restores = new AtomicInteger();
+        AtomicBoolean failExpansion = new AtomicBoolean();
+        reg.register(new RewindSnapshottable<Integer>() {
+            @Override public String key() { return "k"; }
+            @Override public Integer capture() { return state.get(); }
+            @Override public void restore(Integer snapshot) {
+                if (restores.incrementAndGet() == 2) {
+                    throw new IllegalStateException("rollback failed");
+                }
+                state.set(snapshot);
+            }
+        });
+        RewindController rc = new RewindController(
+                reg, new InMemoryKeyframeStore(), new FakeInputSource(120), in -> {
+                    if (failExpansion.get() && in.frameIndex() == 11) {
+                        throw new RuntimeException("expansion failed");
+                    }
+                    state.incrementAndGet();
+                }, 5, null, prof);
+        for (int i = 0; i < 12; i++) rc.step();
+        failExpansion.set(true);
+        prof.clearTranscript();
+
+        RuntimeException failure = assertThrows(RuntimeException.class, rc::stepBackward);
+
+        assertEquals("expansion failed", failure.getMessage());
+        assertEquals(1, failure.getSuppressed().length);
+        assertEquals("rollback failed", failure.getSuppressed()[0].getMessage());
+        assertEquals(12, rc.currentFrame());
+        assertNull(prof.activeSection());
+    }
+
+    @Test
+    void expansionFailureReprimesSeekAwareStepperAtOriginalFrame() {
+        RecordingSectionProfiler prof = new RecordingSectionProfiler();
+        RewindRegistry reg = new RewindRegistry(prof);
+        AtomicInteger state = new AtomicInteger();
+        AtomicBoolean failExpansion = new AtomicBoolean();
+        List<Integer> primedFrames = new java.util.ArrayList<>();
+        RewindSeekAwareEngineStepper stepper = new RewindSeekAwareEngineStepper() {
+            @Override public void restoreToFrame(int frame, Bk2FrameInput inputAtFrame) {
+                primedFrames.add(frame);
+            }
+
+            @Override public void step(Bk2FrameInput inputs) {
+                if (failExpansion.get()) throw new RuntimeException("expansion failed");
+                state.incrementAndGet();
+            }
+        };
+        reg.register(new RewindSnapshottable<Integer>() {
+            @Override public String key() { return "k"; }
+            @Override public Integer capture() { return state.get(); }
+            @Override public void restore(Integer snapshot) { state.set(snapshot); }
+        });
+        RewindController rc = new RewindController(
+                reg, new InMemoryKeyframeStore(), new FakeInputSource(120), stepper, 5, null, prof);
+        for (int i = 0; i < 12; i++) rc.step();
+        failExpansion.set(true);
+        primedFrames.clear();
+
+        assertThrows(RuntimeException.class, rc::stepBackward);
+
+        assertEquals(List.of(10, 12), primedFrames,
+                "failed replay primes its keyframe first, then restores the original cursor");
+        assertEquals(12, state.get());
+        assertEquals(12, rc.currentFrame());
+        assertNull(prof.activeSection());
     }
 
     @Test

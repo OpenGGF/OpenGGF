@@ -56,6 +56,7 @@ public class LevelTilemapManager {
     // X offset (in pixels, 512-aligned) for BG tilemap building.
     // Wide BG maps (> 512px) need tiles from the correct region, not always from position 0.
     private int bgTilemapBaseX = 0;
+    private int bgLastIncrementalShiftTiles = 0;
     // Base Y (in BG-layout pixels) for a fixed-height BG loop band, or -1 when the
     // full BG height is built. S3K CNZ's miniboss (CNZ1BGE_Boss) sets this to $200
     // so the boss-room BG loops only the 256px carnival band and never reaches the
@@ -205,7 +206,14 @@ public class LevelTilemapManager {
             // Tilemap data already up to date — but still push VDP wrap height
             // to the renderer in case it was null during the initial build.
             TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
-            if (renderer != null && backgroundVdpWrapHeightTiles > 0) {
+            if (renderer != null) {
+                if (!renderer.hasBackgroundBaseline(backgroundTilemapData,
+                        backgroundTilemapWidthTiles, backgroundTilemapHeightTiles)) {
+                    renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND,
+                            backgroundTilemapData, backgroundTilemapWidthTiles,
+                            backgroundTilemapHeightTiles);
+                    renderer.setPatternLookupData(patternLookupData, patternLookupSize);
+                }
                 renderer.setBgVdpWrapHeight(backgroundVdpWrapHeightTiles);
             }
             return;
@@ -218,15 +226,13 @@ public class LevelTilemapManager {
         // Pure base-X window step: shift the retained bytes one chunk column and
         // rebuild only the entering column on the CPU, skipping the full
         // block/chunk/pattern rebuild loop. Any unproven precondition falls back
-        // to the full rebuild below. The GPU upload is always the FULL array:
-        // the renderer/shader address the texture relative to the current base X
-        // (local column c samples world column c*8 + xQueryOffset), so a base
-        // step re-addresses every texture column — a column-only upload would
-        // leave the other columns holding the previous window's content.
+        // to the full rebuild below. The CPU array stays canonical; the GPU may
+        // retain physical columns as a ring and upload only the entering tiles.
         boolean shifted = bgWindowShiftCandidate
                 && tryIncrementalBgWindowShift(blockLookup, zoneFeatureProvider, currentZone);
         bgWindowShiftCandidate = false;
         if (!shifted) {
+            bgLastIncrementalShiftTiles = 0;
             buildBackgroundTilemapData(blockLookup, zoneFeatureProvider, currentZone,
                     parallaxManager, verticalWrapEnabled);
         }
@@ -236,8 +242,14 @@ public class LevelTilemapManager {
         ensurePatternLookupData();
         TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
         if (renderer != null) {
-            renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, backgroundTilemapData,
-                    backgroundTilemapWidthTiles, backgroundTilemapHeightTiles);
+            if (shifted) {
+                renderer.setBackgroundTilemapDataIncremental(backgroundTilemapData,
+                        backgroundTilemapWidthTiles, backgroundTilemapHeightTiles,
+                        bgLastIncrementalShiftTiles);
+            } else {
+                renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, backgroundTilemapData,
+                        backgroundTilemapWidthTiles, backgroundTilemapHeightTiles);
+            }
             renderer.setBgVdpWrapHeight(backgroundVdpWrapHeightTiles);
             renderer.setPatternLookupData(patternLookupData, patternLookupSize);
         }
@@ -461,6 +473,7 @@ public class LevelTilemapManager {
         fillChunkColumn(data, widthTiles, heightTiles, (byte) 1, enteringLocalX, params,
                 blockLookup, level, geometry.blockPixelSize());
         bgLastBuildParams = params;
+        bgLastIncrementalShiftTiles = step / Pattern.PATTERN_WIDTH;
         bgIncrementalShiftCount++;
         recomputeBgVdpWrapHeight();
         return true;
@@ -1306,6 +1319,7 @@ public class LevelTilemapManager {
         bgLastBuildValid = false;
         bgLastBuildLevel = null;
         bgLastBuildParams = null;
+        bgLastIncrementalShiftTiles = 0;
     }
 
     // -----------------------------------------------------------------------
