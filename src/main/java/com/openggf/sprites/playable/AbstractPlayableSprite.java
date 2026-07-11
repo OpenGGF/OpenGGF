@@ -910,6 +910,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public PerObjectRewindSnapshot captureRewindState(boolean includeFollowHistory) {
+                TailsCarryController.Snapshot tailsCarrySnapshot =
+                        getTailsCarryController().capture();
                 SidekickCpuRewindExtra sidekickCpuExtra =
                         cpuController != null ? cpuController.captureRewindState() : null;
                 PlayerRewindExtra extra = new PlayerRewindExtra(
@@ -993,6 +995,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         controller.getDrowning() != null
                                 ? controller.getDrowning().captureRewindState()
                                 : null,
+                        tailsCarrySnapshot.latchX(),
+                        tailsCarrySnapshot.latchY(),
+                        tailsCarrySnapshot.carrying(),
+                        tailsCarrySnapshot.parentagePending(),
+                        tailsCarrySnapshot.cooldown(),
+                        tailsCarrySnapshot.context(),
                         sidekickCpuExtra,
                         includeFollowHistory ? xHistory : null,
                         includeFollowHistory ? yHistory : null,
@@ -1177,6 +1185,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (controller.getDrowning() != null) {
                         controller.getDrowning().restoreRewindState(extra.drowningState());
                 }
+                // Carry is shared player state. Restore it before CPU sequencing,
+                // whose restored routine may consume the carry context immediately.
+                getTailsCarryController().restore(new TailsCarryController.Snapshot(
+                        extra.tailsCarryLatchX(),
+                        extra.tailsCarryLatchY(),
+                        extra.tailsCarrying(),
+                        extra.tailsCarryParentagePending(),
+                        extra.tailsCarryCooldown(),
+                        extra.tailsCarryContext()));
                 if (extra.sidekickCpuExtra() != null) {
                         if (cpuController == null) {
                                 throw new IllegalStateException(

@@ -763,7 +763,7 @@ class TestSidekickCpuControllerCarry {
     }
 
     @Test
-    void carryRewindRoundTripPreservesParentageLatchAndMgzControlScalars() {
+    void cpuRewindRoundTripPreservesOnlyMgzControlSequencingScalars() {
         AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
         AbstractPlayableSprite tails = pair[1];
         fixture.camera().setY((short) 0);
@@ -771,29 +771,20 @@ class TestSidekickCpuControllerCarry {
         controller.update(1);
         controller.update(2);
 
-        SidekickCpuRewindExtra carrying = withCarryScalars(
+        SidekickCpuRewindExtra carrying = withMgzControlScalars(
                 controller.captureRewindState(),
-                (short) 0x1234, (short) 0x2345,
-                true, true, 0x35,
                 true, 0x46,
                 true, (short) 0x0057, (short) 0x0068);
         controller.restoreRewindState(carrying);
 
-        assertTrue(carrying.flyingCarryingFlag());
-        assertTrue(carrying.carryParentagePending());
-        assertEquals((short) 0x1234, carrying.carryLatchX());
-        assertEquals((short) 0x2345, carrying.carryLatchY());
-        assertEquals(0x35, carrying.releaseCooldown());
         assertTrue(carrying.mgzCarryIntroAscend());
         assertEquals(0x46, carrying.mgzCarryFlapTimer());
         assertTrue(carrying.mgzReleasedChaseLatched());
         assertEquals((short) 0x0057, carrying.mgzReleasedChaseXAccel());
         assertEquals((short) 0x0068, carrying.mgzReleasedChaseYAccel());
 
-        SidekickCpuRewindExtra mutated = withCarryScalars(
+        SidekickCpuRewindExtra mutated = withMgzControlScalars(
                 carrying,
-                (short) 0x3456, (short) 0x4567,
-                false, false, 0x12,
                 false, 0x23,
                 false, (short) 0x0034, (short) 0x0045);
         controller.restoreRewindState(mutated);
@@ -803,27 +794,17 @@ class TestSidekickCpuControllerCarry {
         controller.restoreRewindState(carrying);
 
         SidekickCpuRewindExtra restored = controller.captureRewindState();
-        assertEquals((short) 0x1234, restored.carryLatchX());
-        assertEquals((short) 0x2345, restored.carryLatchY());
-        assertTrue(restored.flyingCarryingFlag());
-        assertTrue(restored.carryParentagePending());
-        assertEquals(0x35, restored.releaseCooldown());
         assertTrue(restored.mgzCarryIntroAscend());
         assertEquals(0x46, restored.mgzCarryFlapTimer());
         assertTrue(restored.mgzReleasedChaseLatched());
         assertEquals((short) 0x0057, restored.mgzReleasedChaseXAccel());
         assertEquals((short) 0x0068, restored.mgzReleasedChaseYAccel());
         assertEquals(carrying, restored,
-                "Rewind restores the full public carry snapshot, including MGZ intro/flap/chase scalars");
+                "CPU rewind restores its MGZ intro/flap/chase sequencing scalars");
     }
 
-    private static SidekickCpuRewindExtra withCarryScalars(
+    private static SidekickCpuRewindExtra withMgzControlScalars(
             SidekickCpuRewindExtra source,
-            short carryLatchX,
-            short carryLatchY,
-            boolean flyingCarryingFlag,
-            boolean carryParentagePending,
-            int releaseCooldown,
             boolean mgzCarryIntroAscend,
             int mgzCarryFlapTimer,
             boolean mgzReleasedChaseLatched,
@@ -875,11 +856,6 @@ class TestSidekickCpuControllerCarry {
                 source.lastNormalAutoJumpPressFrameCounter(),
                 source.controller2SignedLocked(),
                 source.latestNormalStepDiagnostics(),
-                carryLatchX,
-                carryLatchY,
-                flyingCarryingFlag,
-                carryParentagePending,
-                releaseCooldown,
                 mgzCarryIntroAscend,
                 mgzCarryFlapTimer,
                 mgzReleasedChaseLatched,

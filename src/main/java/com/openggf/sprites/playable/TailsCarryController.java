@@ -100,7 +100,14 @@ public final class TailsCarryController {
             if (cooldown == 0) tryGrabMainCharacter();
             return;
         }
-        if (main == null || carrier.isHurt() || carrier.getDead() || carrier.isObjectControlled()
+        if (main == null) {
+            if (parentagePending) {
+                return;
+            }
+            release(0x3C);
+            return;
+        }
+        if (carrier.isHurt() || carrier.getDead() || carrier.isObjectControlled()
                 || main.isHurt() || main.getDead()
                 || !main.isObjectControlled() || main.isObjectControlAllowsCpu()) {
             release(0x3C);
