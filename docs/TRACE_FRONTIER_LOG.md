@@ -515,6 +515,21 @@ with a focused unit guard. The occupancy probe's former repeating first mismatch
 at f718 and every six frames is removed; later independent lifetime differences
 remain. Strict frontiers remain focused f5496 / 14 at baseline timing and
 complete-run f16755-f16757. The AIZ stage is not green yet.
+
+Round 36 replaces the remaining fixed AIZ fire-handoff timing with the ROM
+state that owns it. The queued AIZ2 128x128/16x16 tables become collision-live
+after 20 finish ticks while module art is still pending; VBlank-only rows drain
+only the delayed post-reload plane redraw; and `AIZ1BGE_Finish` now waits at
+least 64 ticks before exposing completion on module/DMA VBlank phase 3
+(`sonic3k.asm:2726-2789,7884-7910,104664-104774,105049-105096`). The two
+recordings reach that same ready phase differently: the focused route is ready
+at tick 64, while the complete run reaches it at tick 66. Focused phase guards
+cover both cases without a route or frame branch. After merging current
+`origin/develop`, the strict focused replay advances from f5496 / 3442 errors
+to f8831 / 3418 errors (rings expected 100, actual 0); the complete-run
+frontier remains f16755 / 1056 errors (rings expected 2, actual 3). The AIZ
+stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

@@ -296,6 +296,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private boolean act2TransitionRequested;
     /** True after in-place mutation stage has been requested. */
     private boolean fireTransitionMutationRequested;
+    /** True once the queued AIZ2 block/chunk Kosinski streams are visible. */
+    private boolean fireTerrainTablesLoaded;
     /** True once the post-burn fine haze phase should be active on FG. */
     private boolean postFireHazeActive;
     /** One-shot guard for AIZ1 fire-overlay 8x8 art staging at x >= $2E00. */
@@ -335,21 +337,22 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int FIRE_SOURCE_X_AIZ2 = 0x0200;
     private static final int FIRE_BG_X_PHASE_MASK = 0x0060;
     private static final int FIRE_WAVE_PHASE_STEP = 6;
-    /**
-     * Extra frames to hold fire at full screen before transitioning to act 2.
-     * The ROM's Kos decompression wait in AIZ1BGE_Finish creates a natural
-     * linger where the fire covers the screen while art decompresses.  At 60fps
-     * the same game-frame math produces a visually shorter fire because there
-     * is no decompression overhead.  This constant approximates the ROM's
-     * visual duration by pausing fire advance for the equivalent frames.
-     */
     // ROM: AIZ1BGE_Finish waits for Kos_modules_left == 0 after queuing the
-    // AIZ2 128x128/16x16/8x8 art. The engine applies the decoded art eagerly
-    // and does not expose the module queue, so keep the fire-covered finish
-    // stage alive for the observed drain time of that exact queued workload.
-    private static final int FIRE_LINGER_FRAMES = 64;
+    // AIZ2 128x128/16x16/8x8 art. The engine applies the decoded art eagerly,
+    // but the native module queue exposes completion only on its four-phase
+    // decompression/DMA handoff. Preserve the minimum drain work and wait for
+    // that hardware-visible VBlank phase rather than using one route-wide delay.
+    private static final int FIRE_LINGER_MIN_FRAMES = 64;
+    private static final int KOS_MODULE_DMA_PHASE_MASK = 3;
+    private static final int KOS_MODULE_DMA_READY_PHASE = 3;
     private static final int FIRE_TRANSITION_FALLBACK_FRAMES = 240;
     private static final int FIRE_REDRAW_FRAMES = 16;
+    // ROM queues the AIZ2 128x128 and 16x16 Kosinski streams before entering
+    // AIZ1BGE_FireRefresh, then consumes their decompressed RAM tables while
+    // AIZ1BGE_Finish is still waiting on module art (sonic3k.asm:104664-104738).
+    // The engine has no incremental Kos queue; expose that exact queued terrain
+    // workload after its observed 20 finish ticks instead of at the later act reload.
+    private static final int FIRE_TERRAIN_DECOMPRESS_FRAMES = 20;
     // ROM: after the AIZ1BGE_Finish reload (Events_routine_bg cleared, act 0->1),
     // the AIZ2 background event chain re-draws the fire plane before releasing the
     // post-reload Camera_max_X_pos lock. The release is gated by the
@@ -482,6 +485,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         screenShakeAppliedOffsetY = 0;
         act2TransitionRequested = false;
         fireTransitionMutationRequested = false;
+        fireTerrainTablesLoaded = false;
         postFireHazeActive = false;
         fireOverlayTilesLoaded = false;
         fireBgCopyFixed = FIRE_BG_FIXED_START;
@@ -1306,6 +1310,41 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
         // ROM: AIZ2_Resize — dynamic boundary state machine (sonic3k.asm:39012)
         updateAiz2EndBossSpawn();
+    }
+
+    /**
+     * Advances only the VBlank-owned delayed plane redraw. Player physics,
+     * ScreenEvents, fire-rise CPU state, and all other level state stay frozen.
+     *
+     * <p>ROM lag rows still run the VBlank handler that drains the queued plane
+     * redraw, even though LevelLoop/ScreenEvents does not execute. This matters
+     * to AIZ2BGE_FireRedraw/WaitFire because Camera_max_X_pos is released only
+     * after that redraw has drained (sonic3k.asm:105049-105096).
+     */
+    public void advanceVblankOnlyState() {
+        switch (fireSequencePhase) {
+            case AIZ2_FIRE_REDRAW -> {
+                firePhaseFrames++;
+                if (firePhaseFrames >= AIZ2_FIRE_REDRAW_FRAMES) {
+                    fireSequencePhase = FireSequencePhase.AIZ2_WAIT_FIRE;
+                    act2WaitFireDrawActive = false;
+                    firePhaseFrames = 0;
+                }
+            }
+            case AIZ2_WAIT_FIRE -> {
+                act2WaitFireDrawActive = true;
+                firePhaseFrames++;
+                if (firePhaseFrames >= AIZ2_WAIT_FIRE_REDRAW_FRAMES) {
+                    camera().setMaxX((short) AIZ2_POST_FIRE_CAMERA_MAX_X);
+                    applyPostFireContinuationPaletteLine4(levelManager());
+                    fireSequencePhase = FireSequencePhase.AIZ2_BG_REDRAW;
+                    firePhaseFrames = 0;
+                }
+            }
+            default -> {
+                // CPU-owned phases remain frozen on VBlank-only rows.
+            }
+        }
     }
 
     /**
@@ -2134,7 +2173,18 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 // and scrolls off in act 2 to reveal the new terrain.
                 advanceFireRise(false);
                 firePhaseFrames++;
-                if (firePhaseFrames >= FIRE_LINGER_FRAMES && !act2TransitionRequested) {
+                if (!fireTerrainTablesLoaded
+                        && firePhaseFrames >= FIRE_TERRAIN_DECOMPRESS_FRAMES) {
+                    S3kSeamlessMutationExecutor.apply(
+                            levelManager(),
+                            S3kSeamlessMutationExecutor.MUTATION_AIZ1_FIRE_TERRAIN_READY);
+                    fireTerrainTablesLoaded = true;
+                }
+                int vblankPhase = levelManager().getObjectManager().getVblaCounter()
+                        & KOS_MODULE_DMA_PHASE_MASK;
+                if (firePhaseFrames >= FIRE_LINGER_MIN_FRAMES
+                        && vblankPhase == KOS_MODULE_DMA_READY_PHASE
+                        && !act2TransitionRequested) {
                     requestAct2Transition();
                 }
             }
@@ -2172,6 +2222,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         act2WaitFireDrawActive = false;
 
         fireTransitionMutationRequested = false;
+        fireTerrainTablesLoaded = false;
         act2TransitionRequested = false;
         postFireHazeActive = false;
         // ROM: AIZ1/AIZ2 background fire routines do not write Ctrl_1_locked;

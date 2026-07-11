@@ -365,6 +365,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         syncSidekickBoundsToCamera();
     }
 
+    @Override
+    public void advanceVblankOnlyState() {
+        if (aizEvents != null && currentZone == Sonic3kZoneIds.ZONE_AIZ) {
+            aizEvents.advanceVblankOnlyState();
+        }
+    }
+
     /**
      * Keep CPU sidekick level bounds aligned with S3K's dynamic camera bounds.
      * Unlike S2, S3K currently has no zone-specific sidekick bound overrides, so
