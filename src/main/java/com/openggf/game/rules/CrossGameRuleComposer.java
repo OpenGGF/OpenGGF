@@ -32,6 +32,7 @@ public final class CrossGameRuleComposer {
                 spindashSpeedTable,
                 donorCapabilities.hasElementalShields(),
                 donorCapabilities.hasInstaShield(),
+                donorCapabilities.hasTailsFlight(),
                 hostCapability.jumpRepressClearsRollJumpBeforeAbility(),
                 donorCapabilities.hasElementalShields(),
                 hostCapability.superSpindashSpeedTable());

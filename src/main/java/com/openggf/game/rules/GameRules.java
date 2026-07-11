@@ -47,6 +47,7 @@ public record GameRules(
                     false,
                     false,
                     false,
+                    false,
                     null
             ),
             new CollisionRules(
@@ -179,6 +180,7 @@ public record GameRules(
                     false,
                     false,
                     false,
+                    false,
                     new short[]{0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00}
             ),
             new CollisionRules(
@@ -307,6 +309,7 @@ public record GameRules(
             new PlayerCapabilityRules(
                     true,
                     new short[]{0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00},
+                    true,
                     true,
                     true,
                     true,

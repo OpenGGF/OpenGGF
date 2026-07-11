@@ -162,6 +162,7 @@ class TestCrossGameFeatureProviderRefactor {
         @Override public boolean hasSuperTransform() { return false; }
         @Override public boolean hasHyperTransform() { return false; }
         @Override public boolean hasInstaShield() { return false; }
+        @Override public boolean hasTailsFlight() { return false; }
         @Override public boolean hasElementalShields() { return false; }
         @Override public boolean hasSidekick() { return false; }
         @Override public java.util.Map<CanonicalAnimation, CanonicalAnimation> getAnimationFallbacks() { return java.util.Map.of(); }
