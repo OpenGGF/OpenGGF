@@ -65,6 +65,23 @@ public class TestAizPlaneIntroInstance {
     }
 
     @Test
+    public void introWaveDeleteCallbackKeepsSlotUntilNextDispatch() {
+        AizIntroWaveChild wave = new AizIntroWaveChild(
+                new ObjectSpawn(0x120, 0x48, 0, 0, 0, false, 0), intro);
+
+        for (int frame = 0; frame < 32 && !wave.isDeleteRoutinePending(); frame++) {
+            wave.update(frame, null);
+        }
+
+        assertTrue(wave.isDeleteRoutinePending());
+        assertFalse(wave.isDestroyed(),
+                "Animate_RawMultiDelay $F4 only installs Go_Delete_Sprite on its callback frame");
+        wave.update(33, null);
+        assertTrue(wave.isDestroyed(),
+                "Go_Delete_Sprite releases the SST slot on the following object dispatch");
+    }
+
+    @Test
     public void knucklesSpawnTriggerAt0x918() {
         assertEquals(0x918, AizPlaneIntroInstance.KNUCKLES_SPAWN_X);
     }
@@ -202,5 +219,4 @@ public class TestAizPlaneIntroInstance {
         return ((List<?>) field.get(intro)).size();
     }
 }
-
 

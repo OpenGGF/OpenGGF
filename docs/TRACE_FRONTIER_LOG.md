@@ -505,6 +505,17 @@ exact 5-8 match; it remains exact through frame 717. Strict physics frontiers
 remain focused f5496 / 14 with the baseline transition timing and complete-run
 f16755-f16757. No stage-green claim is made yet.
 
+Round 35 preserves the intro wave's callback operation for its final SST pass.
+ROM `Animate_RawMultiDelay` command `$F4` invokes the `$34` callback, which
+writes `Go_Delete_Sprite`; only the following object dispatch deletes the slot
+(`sonic3k.asm:135820-135841,136013-136020,177558-177613`). The engine deleted
+inside the animation callback, creating a one-frame hole in slots 9-11 on each
+six-frame rotation. A pending-operation bit now keeps that callback frame live,
+with a focused unit guard. The occupancy probe's former repeating first mismatch
+at f718 and every six frames is removed; later independent lifetime differences
+remain. Strict frontiers remain focused f5496 / 14 at baseline timing and
+complete-run f16755-f16757. The AIZ stage is not green yet.
+
 ## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green
 
 Worktree `.worktrees/ai-s2-mtz3-round96-orbinit`, branch
