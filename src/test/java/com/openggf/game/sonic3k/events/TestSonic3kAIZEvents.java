@@ -209,6 +209,7 @@ public class TestSonic3kAIZEvents {
         camera.setMinX((short) 0x4640);
         camera.setMaxX((short) 0x4640);
         camera.setFrozen(false);
+        camera.setHorizScrollDelay(32);
 
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         setPrivateBoolean(events, "battleshipAutoScrollActive", true);
@@ -220,6 +221,8 @@ public class TestSonic3kAIZEvents {
 
         assertFalse(camera.getFrozen(),
                 "Obj_AIZ2BossSmall clears Scroll_lock before writing Camera_max_X_pos=$6000");
+        assertEquals(32, camera.getHorizScrollDelay(),
+                "Scroll_lock must park H_scroll_frame_offset while the ship loop owns the camera");
         assertEquals(0x6000, camera.getMaxX() & 0xFFFF,
                 "Obj_AIZ2BossSmall loc_50720 writes Camera_max_X_pos=$6000 on exit");
     }

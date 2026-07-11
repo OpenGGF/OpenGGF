@@ -559,7 +559,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             battleshipCameraWasFrozen = cam.getFrozen();
             battleshipCameraFrozenForScrollLock = true;
         }
-        cam.setFrozen(true);
+        cam.setScrollLocked(true);
         battleshipAutoScrollRanPrePhysics = true;
     }
 
@@ -1957,7 +1957,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (!battleshipCameraFrozenForScrollLock) {
             return;
         }
-        camera().setFrozen(battleshipCameraWasFrozen);
+        if (battleshipCameraWasFrozen) {
+            camera().setFrozen(true);
+        } else {
+            camera().setScrollLocked(false);
+        }
         battleshipCameraFrozenForScrollLock = false;
         battleshipCameraWasFrozen = false;
     }

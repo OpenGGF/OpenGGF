@@ -740,6 +740,24 @@ committed complete-run frontier remains f16755 / 657 pending the spill-owner
 slot fix. The focused AIZ replay and full exact-tree S1 (29) / S2 (48) fleets
 pass. The AIZ stage is not green yet.
 
+Round 53 separates the AIZ2 battleship's ROM `Scroll_lock` from a full camera
+freeze. While the lock is set, `DeformBgLayer` skips `MoveCameraX` without
+touching `H_scroll_frame_offset`; the engine previously released its temporary
+freeze through `Camera.setFrozen(false)` every frame, which also erased that
+parked position-history delay. The ship loop now uses an explicit scroll-lock
+operation that preserves the delay until `Obj_AIZ2BossSmall` clears the lock
+(`sonic3k.asm:38288-38303,104892-104910,105200-105253,105572-105619`). Focused
+camera and AIZ event guards pin the preserved 32-frame history value. Under the
+temporary comparison-only spill-phase diagnostic, the downstream frontier
+moves from f22819 / 201 errors to f23523 / 200 errors (`y_speed`, expected
+`-$02B0`, actual `$02B0`). The diagnostic remains unstaged; the committed
+complete-run frontier remains f16755 / 657 until the spill-owner slot
+permutation is resolved. The focused AIZ replay remains green. A fresh exact
+`*TraceReplay` sweep passes all 29 S1 replay classes and every S2 replay class
+(20 passed tests plus the ROM-optional special-stage skip); the broader S2
+trace-package `Test*` sweep also passes 70 tests with that one optional skip.
+The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch
