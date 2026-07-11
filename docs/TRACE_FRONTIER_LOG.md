@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f16519 / 1674 errors (1 error under `frontierOnly`).
+f3318 / 4234 errors to f16697 / 1663 errors (2 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -536,6 +536,22 @@ isolated granular replay matrix keeps both AIZ routes green and preserves every
 non-HCZ frontier/count exactly: CNZ complete f1846 / 5, CNZ level-select f291 /
 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ
 f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 29 preserves the ROM's shared Tails CPU timer across the routine-4 to
+routine-6 handoff. `Tails_FlySwim_Unknown` and `TailsCPU_CheckDespawn` both use
+the single `Tails_CPU_flight_timer` word; when flight recovery reaches its
+delayed target and selects normal follow, the ROM deliberately does not clear
+that word. The engine now carries the accumulated flight value into the normal
+off-screen counter instead of starting a second field from zero
+(`sonic3k.asm:26534-26648,26816-26837`).
+
+This closes f16519-f16696 and advances HCZ to f16697 / 1663 full-run errors (2
+under `frontierOnly`), reducing the full report by 11 groups. A focused flight
+recovery guard verifies that the carried word continues incrementing in normal
+follow. The isolated granular replay matrix keeps both AIZ routes green and
+preserves every non-HCZ frontier/count exactly: CNZ complete f1846 / 5, CNZ
+level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ
+f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

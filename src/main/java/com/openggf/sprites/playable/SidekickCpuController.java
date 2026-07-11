@@ -3878,6 +3878,10 @@ public class SidekickCpuController {
             // PlayableSpriteMovement.applyGravity() would keep applying the
             // +0x08 flight gravity to a grounded Tails in NORMAL.
             sidekick.setDoubleJumpFlag(0);
+            // Tails_CPU_flight_timer is one shared ROM word: routine 4 counts
+            // flight recovery in it and routine 6 immediately reuses the same
+            // value in TailsCPU_CheckDespawn. Landing does not clear the word.
+            despawnCounter = flightTimer;
             state = State.NORMAL;
             normalFrameCount = 0;
             if (suppressNextLevelEventNormalMovement) {
