@@ -578,6 +578,7 @@ CF-ANNOTATION TYPE com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewin
 CF-ANNOTATION TYPE com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.PlaneSwitcherConfig visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.PlatformBobHelper visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.RewindClassResolver visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindRecreatable visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindRecreateContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RingObjectPlacementMapping visible @com.openggf.game.ModApi
@@ -1029,6 +1030,7 @@ CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEnt
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity,com.openggf.game.rewind.identity.ObjectRefId)
+CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity,com.openggf.game.rewind.identity.ObjectRefId,java.lang.String)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  <init>(int,com.openggf.level.objects.ObjectSpawn,com.openggf.level.objects.PerObjectRewindSnapshot)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  <init>(int,com.openggf.level.objects.ObjectSpawn,java.lang.String,com.openggf.level.objects.PerObjectRewindSnapshot)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  <init>(int,com.openggf.level.objects.ObjectSpawn,java.lang.String,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.rewind.identity.ObjectRefId)
@@ -2423,6 +2425,7 @@ FIELD com.openggf.level.objects.ObjectWindowingStrategy public,static,final com.
 FIELD com.openggf.level.objects.PlatformBobHelper public,static,final int DEFAULT_AMPLITUDE_SHIFT
 FIELD com.openggf.level.objects.PlatformBobHelper public,static,final int DEFAULT_MAX_ANGLE
 FIELD com.openggf.level.objects.PlatformBobHelper public,static,final int DEFAULT_STEP
+FIELD com.openggf.level.objects.RewindClassResolver public,static,final com.openggf.level.objects.RewindClassResolver ENGINE_ONLY
 FIELD com.openggf.level.objects.SpringBounceHelper public,static,final int CONTROL_LOCK_FRAMES
 FIELD com.openggf.level.objects.SpringBounceHelper public,static,final int STRENGTH_RED
 FIELD com.openggf.level.objects.SpringBounceHelper public,static,final int STRENGTH_YELLOW
@@ -5908,6 +5911,7 @@ METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry
 METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  com.openggf.level.objects.PerObjectRewindSnapshot state()
 METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  int slotIndex()
 METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  java.lang.String className()
+METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  java.lang.String ownerModId()
 METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public,final  int hashCode()
 METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public,final  java.lang.String toString()
@@ -7501,6 +7505,7 @@ METHOD com.openggf.level.LevelManager public  void setEditorSaveManager(com.open
 METHOD com.openggf.level.LevelManager public  void setForceHudSuppressed(boolean)
 METHOD com.openggf.level.LevelManager public  void setFrameCounter(int)
 METHOD com.openggf.level.LevelManager public  void setLevel(com.openggf.level.Level)
+METHOD com.openggf.level.LevelManager public  void setRewindClassResolver(com.openggf.level.objects.RewindClassResolver)
 METHOD com.openggf.level.LevelManager public  void setSuppressNextMusicChange(boolean)
 METHOD com.openggf.level.LevelManager public  void snapshotForegroundTilemapBeforeRuntimeLayoutMutation()
 METHOD com.openggf.level.LevelManager public  void spawnLostRings(com.openggf.sprites.playable.AbstractPlayableSprite,int)
@@ -8161,6 +8166,7 @@ METHOD com.openggf.level.objects.ObjectManager public  void resyncSpawnList(java
 METHOD com.openggf.level.objects.ObjectManager public  void runPostPlayerHooks(com.openggf.game.PlayableEntity,int)
 METHOD com.openggf.level.objects.ObjectManager public  void runTouchResponsesForPlayer(com.openggf.game.PlayableEntity,int)
 METHOD com.openggf.level.objects.ObjectManager public  void runTouchResponsesForPlayer(com.openggf.game.PlayableEntity,int,boolean)
+METHOD com.openggf.level.objects.ObjectManager public  void setRewindClassResolver(com.openggf.level.objects.RewindClassResolver)
 METHOD com.openggf.level.objects.ObjectManager public  void setRewindInPlaceRestoreEnabledForTest(boolean)
 METHOD com.openggf.level.objects.ObjectManager public  void setSpawnStateBit(com.openggf.level.objects.ObjectSpawn,int)
 METHOD com.openggf.level.objects.ObjectManager public  void snapshotTouchResponseState()
@@ -8717,6 +8723,8 @@ METHOD com.openggf.level.objects.PlatformBobHelper public  int getAngle()
 METHOD com.openggf.level.objects.PlatformBobHelper public  int getOffset()
 METHOD com.openggf.level.objects.PlatformBobHelper public  void restoreAngle(int)
 METHOD com.openggf.level.objects.PlatformBobHelper public  void update(boolean)
+METHOD com.openggf.level.objects.RewindClassResolver public,abstract  java.util.Optional<java.lang.Class<?>> resolve(java.lang.String,java.lang.String)
+METHOD com.openggf.level.objects.RewindClassResolver public,abstract  java.util.Optional<java.lang.String> ownerOf(java.lang.Class<?>)
 METHOD com.openggf.level.objects.RewindRecreatable public,abstract  com.openggf.level.objects.AbstractObjectInstance recreateForRewind(com.openggf.level.objects.RewindRecreateContext)
 METHOD com.openggf.level.objects.RewindRecreateContext public  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry dynamicEntry()
 METHOD com.openggf.level.objects.RewindRecreateContext public  com.openggf.level.objects.ObjectManager objectManager()
@@ -12616,6 +12624,7 @@ RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpa
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry reservedSlots int[]
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry className java.lang.String
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry objectId com.openggf.game.rewind.identity.ObjectRefId
+RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry ownerModId java.lang.String
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry playerOwner com.openggf.game.PlayableEntity
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry slotIndex int
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry spawn com.openggf.level.objects.ObjectSpawn
@@ -14686,6 +14695,7 @@ TYPE interface public,abstract com.openggf.level.objects.ObjectPlacementEncoding
 TYPE interface public,abstract com.openggf.level.objects.ObjectRegistry SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.ObjectServices SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.ObjectWindowingStrategy SUPER <none>
+TYPE interface public,abstract com.openggf.level.objects.RewindClassResolver SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.RewindRecreatable SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.RingObjectPlacementMapping SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.TouchResponseAttackable SUPER <none>
@@ -15648,6 +15658,7 @@ TYPE-ANNOTATION com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindEx
 TYPE-ANNOTATION com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.PlaneSwitcherConfig @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.PlatformBobHelper @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.RewindClassResolver @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindRecreatable @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindRecreateContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RingObjectPlacementMapping @com.openggf.game.ModApi

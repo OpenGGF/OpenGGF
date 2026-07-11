@@ -61,9 +61,8 @@ public final class ObjectRewindDynamicCodecs {
             return null;
         }
         Class<?> rawClass;
-        try {
-            rawClass = Class.forName(className);
-        } catch (ClassNotFoundException e) {
+        rawClass = ctx.classResolver().resolve(entry.ownerModId(), className).orElse(null);
+        if (rawClass == null) {
             LOG.fine("genericRecreate: class not found: " + className);
             return null;
         }

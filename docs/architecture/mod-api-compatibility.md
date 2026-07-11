@@ -7,12 +7,19 @@ protected constructors, methods, fields, generic bounds, annotations, nested
 types, supertypes, interfaces, record components, and sealed permits clauses is
 part of the same contract and must also be annotated.
 
-At Mod API 1.1.0 the recursive surface contains **783 engine types** and
-**15,901 canonical signature entries**. The breadth is intentional. In
+At Mod API 1.1.0 the recursive surface contains **784 engine types** and
+**15,912 canonical signature entries**. The breadth is intentional. In
 particular, the legacy-wide signatures of `GameModule`, `ObjectServices`, and
 the object base classes expose substantial runtime infrastructure; silently
 treating those transitive types as unsupported would make creator binaries depend
 on an undocumented, unstable ABI.
+
+The 1.1 surface also includes the additive loader-aware rewind contract:
+`DynamicObjectEntry.ownerModId` identifies the compiled-mod loader that owns a
+captured dynamic class, while `RewindClassResolver` lets the engine preserve
+that ownership across recreation. Legacy `DynamicObjectEntry` constructors are
+retained and produce ownerless engine entries, so existing 1.1 binaries remain
+source- and binary-compatible.
 
 The checked-in baseline is
 `src/test/resources/mods/mod-api-signatures-1.1.txt`. The guard requires the

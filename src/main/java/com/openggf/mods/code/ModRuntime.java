@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Optional;
 
 /** Boot-scoped, immutable ownership registry for enabled compiled-mod loaders. */
 public final class ModRuntime implements AutoCloseable {
@@ -148,6 +149,15 @@ public final class ModRuntime implements AutoCloseable {
         ModDependencyClassLoader loader = loaders.get(ownerModId);
         if (loader == null) throw new ClassNotFoundException("No compiled-mod loader for " + ownerModId);
         return loader.loadClass(binaryName);
+    }
+
+    synchronized Optional<String> ownerOf(Class<?> type) {
+        if (closed) return Optional.empty();
+        ClassLoader definingLoader = type.getClassLoader();
+        return loaders.entrySet().stream()
+                .filter(entry -> entry.getValue() == definingLoader)
+                .map(Map.Entry::getKey)
+                .findFirst();
     }
 
     public List<String> owners() {

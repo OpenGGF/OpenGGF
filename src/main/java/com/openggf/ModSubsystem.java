@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.function.Function;
 import java.util.LinkedHashMap;
+import com.openggf.level.objects.RewindClassResolver;
 
 /**
  * Process-lifetime mod catalog owner and the sole atomic owner of the session view.
@@ -50,6 +51,7 @@ public final class ModSubsystem implements AutoCloseable {
     private ExternalContentPolicy policy;
     private SessionExternalContentView sessionView = SessionExternalContentView.EMPTY;
     private long sessionEpoch;
+    private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
 
     public ModSubsystem(ModCatalog processCatalog, ModRuntimeFindingStore runtimeFindings,
                         SessionViewFactory sessionFactory) {
@@ -127,6 +129,12 @@ public final class ModSubsystem implements AutoCloseable {
     public ModCatalog processCatalog() { return processCatalog; }
 
     public Set<String> trustedCodeOwners() { return trustedCodeOwners; }
+
+    public synchronized RewindClassResolver rewindClassResolver() { return rewindClassResolver; }
+
+    public synchronized void installRewindClassResolver(RewindClassResolver resolver) {
+        rewindClassResolver = Objects.requireNonNull(resolver, "resolver");
+    }
 
     public ModRuntimeFindingStore runtimeFindings() { return runtimeFindings; }
 

@@ -20,6 +20,7 @@ import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
+import com.openggf.ModSubsystem;
 
 import java.util.Objects;
 
@@ -63,6 +64,7 @@ public final class GameplaySessionFactory {
         LevelManager levelManager = new LevelManager(
                 camera, spriteManager, parallaxManager, collisionSystem, waterSystem, gameState, services,
                 gameplayMode.getWorldSession());
+        levelManager.setRewindClassResolver(ModSubsystem.current().rewindClassResolver());
         gameplayMode.attachLevelManagers(waterSystem, parallaxManager, terrainCollisionManager,
                 collisionSystem, spriteManager, levelManager);
 

@@ -158,6 +158,11 @@ public final class RewindSnapshotDiff {
                             + ea.className() + " B=" + eb.className());
                     continue;
                 }
+                if (!java.util.Objects.equals(ea.ownerModId(), eb.ownerModId())) {
+                    diffs.add(path + ".dynamic[" + slotIdx + "].ownerModId: A="
+                            + ea.ownerModId() + " B=" + eb.ownerModId());
+                    continue;
+                }
                 if (!fieldContentEqual(ea.spawn(), eb.spawn())) {
                     collectDiffs(path + ".dynamic[" + slotIdx + "].spawn",
                             ea.spawn(), eb.spawn(), diffs);
@@ -502,6 +507,7 @@ public final class RewindSnapshotDiff {
             var ea = aDyn.get(slot);
             var eb = bDyn.get(slot);
             if (!ea.className().equals(eb.className())) return false;
+            if (!java.util.Objects.equals(ea.ownerModId(), eb.ownerModId())) return false;
             if (!fieldContentEqual(ea.spawn(), eb.spawn())) return false;
             if (!fieldContentEqual(ea.state(), eb.state())) return false;
         }

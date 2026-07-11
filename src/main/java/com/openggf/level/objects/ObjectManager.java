@@ -109,6 +109,8 @@ public class ObjectManager {
     private final boolean skipVerticalSpawnLoadFilterForGame;
 
     private final ObjectServices objectServices;
+    private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
+    public void setRewindClassResolver(RewindClassResolver resolver) { rewindClassResolver = java.util.Objects.requireNonNull(resolver, "resolver"); }
 
     // Pre-bucketed lists for O(n) rendering instead of O(n*buckets)
     @SuppressWarnings("unchecked")
@@ -3473,8 +3475,8 @@ public class ObjectManager {
                                         inst.getSpawn(),
                                         aoi.getSlotIndex(),
                                         captureObjectRewindState(aoi, rewindContext),
-                                        playerBoundOwner(inst),
-                                        rewindObjectIds.get(inst)));
+                                        playerBoundOwner(inst), rewindObjectIds.get(inst),
+                                        rewindClassResolver.ownerOf(inst.getClass()).orElse(null)));
                     }
                 }
 
@@ -4214,11 +4216,11 @@ public class ObjectManager {
 
     private ObjectInstance recreateDynamicObject(
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-        DynamicObjectRecreateContext context = new DynamicObjectRecreateContext(this);
+        DynamicObjectRecreateContext context = new DynamicObjectRecreateContext(this, rewindClassResolver);
         // Phase-2 generic recreate: only classes that explicitly implement
         // RewindRecreatable opt into dynamic restore. Unsupported dynamic classes
         // still drop on restore and remain visible in coverage diagnostics.
-        if (isRewindRecreatableClassName(entry.className())) {
+        if (isRewindRecreatable(entry, context)) {
             return ObjectRewindDynamicCodecs.genericRecreate(entry, context);
         }
         return null;
@@ -4229,15 +4231,11 @@ public class ObjectManager {
      * implements {@link RewindRecreatable}. Used to opt the class into the generic
      * recreate fallback without referencing any concrete game package.
      */
-    private static boolean isRewindRecreatableClassName(String className) {
-        if (className == null) {
-            return false;
-        }
-        try {
-            return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+    private static boolean isRewindRecreatable(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry,
+                                               DynamicObjectRecreateContext context) {
+        if (entry.className() == null) return false;
+        return context.classResolver().resolve(entry.ownerModId(), entry.className())
+                .filter(RewindRecreatable.class::isAssignableFrom).isPresent();
     }
 
     /**
@@ -4295,7 +4293,8 @@ public class ObjectManager {
         int fifoFallbackIndex = -1;
         for (int i = 0; i < rewindReconstructionChildren.size(); i++) {
             AbstractObjectInstance child = rewindReconstructionChildren.get(i);
-            if (!child.getClass().getName().equals(className)) {
+            if (!child.getClass().getName().equals(className) || !java.util.Objects.equals(
+                    entry.ownerModId(), rewindClassResolver.ownerOf(child.getClass()).orElse(null))) {
                 continue;
             }
             if (fifoFallbackIndex < 0) {

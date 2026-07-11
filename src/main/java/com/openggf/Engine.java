@@ -4,6 +4,7 @@ import com.openggf.architecture.CompositionRoot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.mods.code.ModClassLoaderFactory;
+import com.openggf.mods.code.ModClassResolver;
 import com.openggf.mods.code.ModRuntime;
 import com.openggf.mods.code.ModFaultBoundary;
 import com.openggf.mods.code.EffectiveCatalogPatchEnablement;
@@ -1154,11 +1155,15 @@ public class Engine {
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
 				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)));
 		modRuntime = replaceModRuntime(modRuntime, ModRuntime.empty());
+		ModSubsystem.current().installRewindClassResolver(
+				com.openggf.level.objects.RewindClassResolver.ENGINE_ONLY);
 		try {
 			var effectiveMods = ModSubsystem.current().processCatalog().effective();
 			modRuntime = replaceModRuntime(modRuntime,
 					new ModClassLoaderFactory(Engine.class.getClassLoader())
 							.create(effectiveMods, ModSubsystem.current().trustedCodeOwners()));
+			ModSubsystem.current().installRewindClassResolver(
+					new ModClassResolver(modRuntime, Engine.class.getClassLoader()));
 			moduleResolutionService.installModPlanSource(
 					new EffectiveCatalogPatchEnablement(effectiveMods), enablement -> {
 						var plan = modRuntime.newRegistrationPlan();
@@ -3169,6 +3174,8 @@ public class Engine {
 		});
 		cleanupStep("graphics manager", graphicsManager::cleanup);
 		cleanupStep("presence", gameLoop::closePresence);
+		cleanupStep("compiled mod resolver", () -> ModSubsystem.current().installRewindClassResolver(
+				com.openggf.level.objects.RewindClassResolver.ENGINE_ONLY));
 		cleanupStep("compiled mod runtime", () -> closeModRuntime(modRuntime));
 		cleanupStep("mod subsystem", ModSubsystem::clearProcess);
 		cleanupStep("audio manager", audioManager::destroy);

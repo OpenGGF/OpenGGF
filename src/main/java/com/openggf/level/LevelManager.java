@@ -52,6 +52,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindClassResolver;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
@@ -181,6 +182,12 @@ public class LevelManager {
     }
     int frameCounter = 0;
     ObjectManager objectManager;
+    private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
+
+    public void setRewindClassResolver(RewindClassResolver resolver) {
+        rewindClassResolver = java.util.Objects.requireNonNull(resolver, "resolver");
+        if (objectManager != null) objectManager.setRewindClassResolver(resolver);
+    }
     RingManager ringManager;
     ZoneFeatureProvider zoneFeatureProvider;
     private TouchResponseTable touchResponseTable;
@@ -531,6 +538,7 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
+        objectManager.setRewindClassResolver(rewindClassResolver);
 
         // S1 parity: counter-based respawn tracking DISABLED pending fix for
         // load/unload/reload incompatibility. The counter system prevents respawns
@@ -2938,6 +2946,7 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
+        objectManager.setRewindClassResolver(rewindClassResolver);
         GameRules gameRules = gameModule.getRules();
         if (gameRules != null
                 && gameRules.collision() != null

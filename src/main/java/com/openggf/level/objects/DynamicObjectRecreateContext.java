@@ -6,9 +6,15 @@ import java.util.Objects;
  * Narrow restore-time context exposed to dynamic object restore and to
  * {@link ObjectRewindDynamicCodecs#genericRecreate}.
  */
-public record DynamicObjectRecreateContext(ObjectManager objectManager) {
+public record DynamicObjectRecreateContext(ObjectManager objectManager,
+                                           RewindClassResolver classResolver) {
+    public DynamicObjectRecreateContext(ObjectManager objectManager) {
+        this(objectManager, RewindClassResolver.ENGINE_ONLY);
+    }
+
     public DynamicObjectRecreateContext {
         Objects.requireNonNull(objectManager, "objectManager");
+        Objects.requireNonNull(classResolver, "classResolver");
     }
 
     public ObjectServices objectServices() {
