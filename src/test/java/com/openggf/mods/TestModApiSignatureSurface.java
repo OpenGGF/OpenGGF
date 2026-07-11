@@ -47,7 +47,7 @@ class TestModApiSignatureSurface {
         assertTrue(missing.isEmpty(), () -> "Recursive API types lack @ModApi: " + missing);
         assertTrue(ModApiSignatureSurface.externalSignatureTypes().isEmpty(),
                 () -> "Unaudited signature types: " + ModApiSignatureSurface.externalSignatureTypes());
-        assertEquals(47, ModApiSignatureSurface.allowedPlatformTypeNames().size(),
+        assertEquals(48, ModApiSignatureSurface.allowedPlatformTypeNames().size(),
                 "Platform allowlist changes require explicit review");
     }
 

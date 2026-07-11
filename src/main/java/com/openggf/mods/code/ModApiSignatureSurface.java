@@ -13,7 +13,7 @@ public final class ModApiSignatureSurface {
      * No package-prefix exemption is used: a newly leaked platform type fails closed.
      */
     private static final Set<Class<?>> ALLOWED_PLATFORM_TYPES = Set.of(
-            java.io.IOException.class,
+            java.io.IOException.class, java.io.InputStream.class,
             AutoCloseable.class, Boolean.class, Class.class, Deprecated.class, Enum.class,
             Exception.class, Float.class, Integer.class, Long.class, Object.class, Record.class,
             Runnable.class, String.class, StringBuilder.class, Throwable.class,

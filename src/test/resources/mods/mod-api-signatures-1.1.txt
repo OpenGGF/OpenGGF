@@ -533,6 +533,11 @@ CF-ANNOTATION TYPE com.openggf.level.animation.AnimatedPaletteManager visible @c
 CF-ANNOTATION TYPE com.openggf.level.animation.AnimatedPatternManager visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.AbstractBadnikInstance visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.AbstractObjectInstance visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.BakedSheetReader visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.BakedSheetReader$BakedSheet visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.BakedSheetReader$Frame visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.BakedSheetReader$Limits visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.BakedSheetReader$Palette visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.DestructionEffects visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.DestructionEffects$AnimalFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.DestructionEffects$AnimalFactory visible @java.lang.FunctionalInterface
@@ -1191,6 +1196,10 @@ CONSTRUCTOR com.openggf.level.WaterSystem$WaterConfig public  <init>(boolean,int
 CONSTRUCTOR com.openggf.level.objects.AbstractBadnikInstance protected  <init>(com.openggf.level.objects.ObjectSpawn,java.lang.String)
 CONSTRUCTOR com.openggf.level.objects.AbstractBadnikInstance protected  <init>(com.openggf.level.objects.ObjectSpawn,java.lang.String,com.openggf.level.objects.DestructionEffects$DestructionConfig)
 CONSTRUCTOR com.openggf.level.objects.AbstractObjectInstance protected  <init>(com.openggf.level.objects.ObjectSpawn,java.lang.String)
+CONSTRUCTOR com.openggf.level.objects.BakedSheetReader$BakedSheet public  <init>(com.openggf.level.Pattern[],java.util.List<com.openggf.level.objects.BakedSheetReader$Frame>,java.util.Optional<com.openggf.level.objects.BakedSheetReader$Palette>)
+CONSTRUCTOR com.openggf.level.objects.BakedSheetReader$Frame public  <init>(int,com.openggf.level.render.SpriteMappingFrame)
+CONSTRUCTOR com.openggf.level.objects.BakedSheetReader$Limits public  <init>(long,int,int,int)
+CONSTRUCTOR com.openggf.level.objects.BakedSheetReader$Palette public  <init>(int,int[])
 CONSTRUCTOR com.openggf.level.objects.DestructionEffects$DestructionConfig public  <init>(int,com.openggf.level.objects.DestructionEffects$AnimalFactory,boolean,com.openggf.level.objects.DestructionEffects$PointsFactory,com.openggf.level.objects.DestructionEffects$ExplosionFactory,boolean)
 CONSTRUCTOR com.openggf.level.objects.HudRenderManager public  <init>(com.openggf.graphics.GraphicsManager,com.openggf.camera.Camera,com.openggf.game.GameStateManager)
 CONSTRUCTOR com.openggf.level.objects.HudStaticArt public  <init>(com.openggf.level.Pattern[],com.openggf.level.render.SpriteMappingFrame,com.openggf.level.render.SpriteMappingFrame,com.openggf.level.render.SpriteMappingFrame,com.openggf.level.render.SpriteMappingFrame,com.openggf.level.render.SpriteMappingFrame,com.openggf.level.render.SpriteMappingFrame,com.openggf.level.render.SpriteMappingFrame)
@@ -7972,6 +7981,37 @@ METHOD com.openggf.level.objects.AbstractObjectInstance public  void update(int,
 METHOD com.openggf.level.objects.AbstractObjectInstance public,abstract  void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand>)
 METHOD com.openggf.level.objects.AbstractObjectInstance public,static  void resetCameraBoundsForTests()
 METHOD com.openggf.level.objects.AbstractObjectInstance public,static  void updateCameraBounds(int,int,int,int,int)
+METHOD com.openggf.level.objects.BakedSheetReader public,static  com.openggf.level.objects.BakedSheetReader$BakedSheet read(byte[]) THROWS java.io.IOException
+METHOD com.openggf.level.objects.BakedSheetReader public,static  com.openggf.level.objects.BakedSheetReader$BakedSheet read(byte[],com.openggf.io.ModInputLimits) THROWS java.io.IOException
+METHOD com.openggf.level.objects.BakedSheetReader public,static  com.openggf.level.objects.BakedSheetReader$BakedSheet read(java.io.InputStream) THROWS java.io.IOException
+METHOD com.openggf.level.objects.BakedSheetReader public,static  com.openggf.level.objects.BakedSheetReader$BakedSheet read(java.io.InputStream,com.openggf.io.ModInputLimits) THROWS java.io.IOException
+METHOD com.openggf.level.objects.BakedSheetReader public,static  com.openggf.level.objects.BakedSheetReader$BakedSheet read(java.io.InputStream,com.openggf.level.objects.BakedSheetReader$Limits) THROWS java.io.IOException
+METHOD com.openggf.level.objects.BakedSheetReader$BakedSheet public  boolean equals(java.lang.Object)
+METHOD com.openggf.level.objects.BakedSheetReader$BakedSheet public  com.openggf.level.Pattern[] patterns()
+METHOD com.openggf.level.objects.BakedSheetReader$BakedSheet public  com.openggf.level.objects.ObjectSpriteSheet toObjectSpriteSheet()
+METHOD com.openggf.level.objects.BakedSheetReader$BakedSheet public  int hashCode()
+METHOD com.openggf.level.objects.BakedSheetReader$BakedSheet public  java.util.List<com.openggf.level.objects.BakedSheetReader$Frame> frames()
+METHOD com.openggf.level.objects.BakedSheetReader$BakedSheet public  java.util.Optional<com.openggf.level.objects.BakedSheetReader$Palette> palette()
+METHOD com.openggf.level.objects.BakedSheetReader$BakedSheet public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.BakedSheetReader$Frame public  com.openggf.level.render.SpriteMappingFrame mapping()
+METHOD com.openggf.level.objects.BakedSheetReader$Frame public  int delay()
+METHOD com.openggf.level.objects.BakedSheetReader$Frame public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.objects.BakedSheetReader$Frame public,final  int hashCode()
+METHOD com.openggf.level.objects.BakedSheetReader$Frame public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.BakedSheetReader$Limits public  int maxSheetFrames()
+METHOD com.openggf.level.objects.BakedSheetReader$Limits public  int maxSheetPatterns()
+METHOD com.openggf.level.objects.BakedSheetReader$Limits public  int maxSheetPieces()
+METHOD com.openggf.level.objects.BakedSheetReader$Limits public  long maxAssetBytes()
+METHOD com.openggf.level.objects.BakedSheetReader$Limits public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.objects.BakedSheetReader$Limits public,final  int hashCode()
+METHOD com.openggf.level.objects.BakedSheetReader$Limits public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.BakedSheetReader$Limits public,static  com.openggf.level.objects.BakedSheetReader$Limits from(com.openggf.io.ModInputLimits)
+METHOD com.openggf.level.objects.BakedSheetReader$Limits public,static  com.openggf.level.objects.BakedSheetReader$Limits production()
+METHOD com.openggf.level.objects.BakedSheetReader$Palette public  boolean equals(java.lang.Object)
+METHOD com.openggf.level.objects.BakedSheetReader$Palette public  int hashCode()
+METHOD com.openggf.level.objects.BakedSheetReader$Palette public  int line()
+METHOD com.openggf.level.objects.BakedSheetReader$Palette public  int[] colors()
+METHOD com.openggf.level.objects.BakedSheetReader$Palette public,final  java.lang.String toString()
 METHOD com.openggf.level.objects.DestructionEffects public,static  void destroyBadnik(int,int,com.openggf.level.objects.ObjectSpawn,com.openggf.game.PlayableEntity,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.DestructionEffects$DestructionConfig)
 METHOD com.openggf.level.objects.DestructionEffects public,static  void destroyBadnik(int,int,com.openggf.level.objects.ObjectSpawn,int,com.openggf.game.PlayableEntity,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.DestructionEffects$DestructionConfig)
 METHOD com.openggf.level.objects.DestructionEffects$AnimalFactory public,abstract  com.openggf.level.objects.ObjectInstance create(com.openggf.level.objects.ObjectSpawn,com.openggf.level.objects.ObjectServices)
@@ -11653,6 +11693,10 @@ NESTED com.openggf.level.SeamlessLevelTransitionRequest com.openggf.level.Seamle
 NESTED com.openggf.level.SeamlessLevelTransitionRequest com.openggf.level.SeamlessLevelTransitionRequest$TransitionType
 NESTED com.openggf.level.WaterSystem com.openggf.level.WaterSystem$DynamicWaterState
 NESTED com.openggf.level.WaterSystem com.openggf.level.WaterSystem$WaterConfig
+NESTED com.openggf.level.objects.BakedSheetReader com.openggf.level.objects.BakedSheetReader$BakedSheet
+NESTED com.openggf.level.objects.BakedSheetReader com.openggf.level.objects.BakedSheetReader$Frame
+NESTED com.openggf.level.objects.BakedSheetReader com.openggf.level.objects.BakedSheetReader$Limits
+NESTED com.openggf.level.objects.BakedSheetReader com.openggf.level.objects.BakedSheetReader$Palette
 NESTED com.openggf.level.objects.DestructionEffects com.openggf.level.objects.DestructionEffects$AnimalFactory
 NESTED com.openggf.level.objects.DestructionEffects com.openggf.level.objects.DestructionEffects$DestructionConfig
 NESTED com.openggf.level.objects.DestructionEffects com.openggf.level.objects.DestructionEffects$ExplosionFactory
@@ -13031,6 +13075,17 @@ RECORD-COMPONENT com.openggf.level.LevelManager$LevelRenderOptions includeWaterS
 RECORD-COMPONENT com.openggf.level.MutableLevel$ObjectBackedRingState mapping java.util.Map<com.openggf.level.objects.ObjectSpawn,java.util.List<com.openggf.level.rings.RingSpawn>>
 RECORD-COMPONENT com.openggf.level.MutableLevel$ObjectBackedRingState objects java.util.List<com.openggf.level.objects.ObjectSpawn>
 RECORD-COMPONENT com.openggf.level.MutableLevel$ObjectBackedRingState rings java.util.List<com.openggf.level.rings.RingSpawn>
+RECORD-COMPONENT com.openggf.level.objects.BakedSheetReader$BakedSheet frames java.util.List<com.openggf.level.objects.BakedSheetReader$Frame>
+RECORD-COMPONENT com.openggf.level.objects.BakedSheetReader$BakedSheet palette java.util.Optional<com.openggf.level.objects.BakedSheetReader$Palette>
+RECORD-COMPONENT com.openggf.level.objects.BakedSheetReader$BakedSheet patterns com.openggf.level.Pattern[]
+RECORD-COMPONENT com.openggf.level.objects.BakedSheetReader$Frame delay int
+RECORD-COMPONENT com.openggf.level.objects.BakedSheetReader$Frame mapping com.openggf.level.render.SpriteMappingFrame
+RECORD-COMPONENT com.openggf.level.objects.BakedSheetReader$Limits maxAssetBytes long
+RECORD-COMPONENT com.openggf.level.objects.BakedSheetReader$Limits maxSheetFrames int
+RECORD-COMPONENT com.openggf.level.objects.BakedSheetReader$Limits maxSheetPatterns int
+RECORD-COMPONENT com.openggf.level.objects.BakedSheetReader$Limits maxSheetPieces int
+RECORD-COMPONENT com.openggf.level.objects.BakedSheetReader$Palette colors int[]
+RECORD-COMPONENT com.openggf.level.objects.BakedSheetReader$Palette line int
 RECORD-COMPONENT com.openggf.level.objects.DestructionEffects$DestructionConfig animalFactory com.openggf.level.objects.DestructionEffects$AnimalFactory
 RECORD-COMPONENT com.openggf.level.objects.DestructionEffects$DestructionConfig explosionFactory com.openggf.level.objects.DestructionEffects$ExplosionFactory
 RECORD-COMPONENT com.openggf.level.objects.DestructionEffects$DestructionConfig pointsAllocatedBeforeAnimal boolean
@@ -14471,6 +14526,7 @@ TYPE class public,final com.openggf.io.ModInputLimits SUPER java.lang.Object
 TYPE class public,final com.openggf.level.ChunkDesc SUPER java.lang.Object
 TYPE class public,final com.openggf.level.PatternDesc SUPER java.lang.Object
 TYPE class public,final com.openggf.level.SeamlessLevelTransitionRequest SUPER java.lang.Object
+TYPE class public,final com.openggf.level.objects.BakedSheetReader SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.DestructionEffects SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.ObjectLifetimeOps SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.ObjectPlayerQuery SUPER java.lang.Object
@@ -14968,6 +15024,10 @@ TYPE record public,static,final com.openggf.graphics.PatternAtlas$Entry SUPER ja
 TYPE record public,static,final com.openggf.graphics.PatternAtlas$PatternRange SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.LevelManager$LevelRenderOptions SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.MutableLevel$ObjectBackedRingState SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.objects.BakedSheetReader$BakedSheet SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.objects.BakedSheetReader$Frame SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.objects.BakedSheetReader$Limits SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.objects.BakedSheetReader$Palette SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.DestructionEffects$DestructionConfig SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.PatrolMovementHelper$PatrolResult SUPER java.lang.Record
@@ -15623,6 +15683,11 @@ TYPE-ANNOTATION com.openggf.level.animation.AnimatedPaletteManager @com.openggf.
 TYPE-ANNOTATION com.openggf.level.animation.AnimatedPatternManager @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.AbstractBadnikInstance @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.AbstractObjectInstance @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.BakedSheetReader @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.BakedSheetReader$BakedSheet @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.BakedSheetReader$Frame @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.BakedSheetReader$Limits @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.BakedSheetReader$Palette @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.DestructionEffects @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.DestructionEffects$AnimalFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.DestructionEffects$AnimalFactory @java.lang.FunctionalInterface

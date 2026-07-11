@@ -7,8 +7,8 @@ protected constructors, methods, fields, generic bounds, annotations, nested
 types, supertypes, interfaces, record components, and sealed permits clauses is
 part of the same contract and must also be annotated.
 
-At Mod API 1.1.0 the recursive surface contains **784 engine types** and
-**15,912 canonical signature entries**. The breadth is intentional. In
+At Mod API 1.1.0 the recursive surface contains **789 engine types** and
+**15,987 canonical signature entries**. The breadth is intentional. In
 particular, the legacy-wide signatures of `GameModule`, `ObjectServices`, and
 the object base classes expose substantial runtime infrastructure; silently
 treating those transitive types as unsupported would make creator binaries depend
