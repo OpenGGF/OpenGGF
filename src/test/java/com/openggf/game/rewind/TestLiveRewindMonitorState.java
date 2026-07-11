@@ -90,6 +90,7 @@ class TestLiveRewindMonitorState {
         InputHandler rewindInput = new InputHandler();
         LiveRewindManager manager = new LiveRewindManager(config);
         int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
+        float heldIntensity = 0.0f;
         try {
             assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput));
             assertEquals(0, gameplayMode.getRewindController().currentFrame());
@@ -128,17 +129,26 @@ class TestLiveRewindMonitorState {
             }
 
             assertTrue(gameplayMode.getRewindController().currentFrame() < brokenFrame);
-            assertIntact(objects, firstLive(objects, MonitorObjectInstance.class));
+            heldIntensity = manager.effectIntensity();
+            MonitorObjectInstance restoredMonitor = firstLive(objects, MonitorObjectInstance.class);
+            assertNotNull(restoredMonitor, "rewind must restore the intact monitor shell");
+            assertIntact(objects, restoredMonitor);
         } finally {
             rewindInput.handleKeyEvent(rewindKey, GLFW_RELEASE);
             assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput),
                     "release must leave live rewind inactive");
-            assertEquals(0.0f, manager.effectIntensity(),
-                    "release must clear the rewind presentation envelope");
+            if (heldIntensity > 0.0f) {
+                assertTrue(manager.effectIntensity() < heldIntensity,
+                        "release must begin decaying the rewind presentation envelope");
+            }
             assertFalse(GameServices.audio().isReverseAudioPresentationActive(),
                     "release must end global reverse audio presentation before session teardown");
             assertFalse(gameplayMode.getFadeManager().isReversePresentationActive(),
                     "release must end reverse fade presentation before session teardown");
+            config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+            assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput));
+            assertEquals(0.0f, manager.effectIntensity(),
+                    "disabling live rewind must clear the presentation envelope");
         }
     }
 
