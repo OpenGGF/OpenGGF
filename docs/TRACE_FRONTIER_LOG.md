@@ -383,9 +383,25 @@ pass. The complete-run frontier moves from f13469 (`y` expected `$022B`, actual
 complete-run mismatch. The change is S3K-local; the most recent full 29-test S1
 and 48-test S2 sweeps remain green.
 
+Round 28 restores the AIZ results controller's native object-slot handoff.
+`Obj_EndSignControlDoStart` calls `Change_Act2Sizes`, which allocates separate
+`Obj_IncLevEndXGradual` and `Obj_IncLevEndYGradual` workers, then immediately
+deletes the former miniboss/end-sign controller slot (`sonic3k.asm:
+180415-180419,180575-180609,178154-178169,178210-178225`). The engine had kept
+the persistent miniboss itself alive as a combined resize proxy. That surplus
+low-slot occupant shifted subsequent placement and hurt-spill allocations; the
+ring corresponding to ROM slot 12 instead occupied engine slot 13, changing
+Obj37's `(V_int + d7) & 7` floor cadence and letting it bounce back into Sonic.
+The resize work now continues in two independent control objects while the boss
+slot is released. Focused camera-unlock, miniboss rewind-graph, and rewind
+coverage tests pass. The complete-run frontier moves from f13740 (`rings`
+expected `1`, actual `2`) to f16123 (`tails_status_byte` expected `$41`, actual
+`$40`), again leaving one reported mismatch. Fresh full sweeps on this exact
+working tree pass all 29 S1 and all 48 S2 trace replays.
+
 Remaining unbanked transition/event investigation has advanced through the
 later transition-floor contact and AIZ2 terrain-table handoff; together with the
-banked rounds the current stacked working-tree complete-run frontier is f13740.
+banked rounds the current stacked working-tree complete-run frontier is f16123.
 Those causes will be recorded and committed separately as their focused guards
 are completed. The banked level-select AIZ
 baseline remains f8941; the unbanked transition-timing stack currently exposes
