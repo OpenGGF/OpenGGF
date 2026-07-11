@@ -68,6 +68,43 @@ class TestAizGiantRideVineObjectInstance {
     }
 
     @Test
+    void handleGrabDoesNotMakeRootPersistent() throws Exception {
+        AizGiantRideVineObjectInstance vine = newVine();
+        setHandleGrabFlag(vine, "p2", 1);
+
+        assertFalse(vine.isPersistent(),
+                "loc_22442 culls the root without consulting the handle's P1/P2 grab bytes");
+    }
+
+    @Test
+    void unloadReleasesParentSlotWhenExecutionUsesHandleSlot() {
+        ObjectManager[] holder = new ObjectManager[1];
+        StubObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return holder[0];
+            }
+        }.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
+        Camera camera = mock(Camera.class);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        ObjectManager manager = new ObjectManager(
+                List.of(), new Sonic3kObjectRegistry(), 0, null, null,
+                GraphicsManager.getInstance(), camera, services);
+        holder[0] = manager;
+
+        AizGiantRideVineObjectInstance vine = new AizGiantRideVineObjectInstance(
+                new ObjectSpawn(0x2610, 0x0304, 0x0C, 0x01, 0, false, 0));
+        vine.setServices(services);
+        manager.addDynamicObjectAtSlot(vine, 5);
+
+        vine.onUnload();
+
+        assertEquals(5, manager.allocateSlotAfter(4),
+                "Delete_Current_Sprite must free the root slot as well as the reserved child chain");
+    }
+
+    @Test
     void grabLeavesFirstChildOnPassiveGlobalAnglePath() throws Exception {
         AizGiantRideVineObjectInstance vine = newVine();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
@@ -160,6 +197,20 @@ class TestAizGiantRideVineObjectInstance {
         Field modeField = handle.getClass().getDeclaredField("mode");
         modeField.setAccessible(true);
         return modeField.getInt(handle);
+    }
+
+    private static void setHandleGrabFlag(AizGiantRideVineObjectInstance vine,
+                                          String playerFieldName,
+                                          int value) throws Exception {
+        Field handleField = AizGiantRideVineObjectInstance.class.getDeclaredField("handle");
+        handleField.setAccessible(true);
+        Object handle = handleField.get(vine);
+        Field playerField = handle.getClass().getDeclaredField(playerFieldName);
+        playerField.setAccessible(true);
+        Object playerState = playerField.get(handle);
+        Field grabFlagField = playerState.getClass().getDeclaredField("grabFlag");
+        grabFlagField.setAccessible(true);
+        grabFlagField.setInt(playerState, value);
     }
 
     private static final class MarkerObject extends AbstractObjectInstance {

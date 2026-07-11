@@ -443,6 +443,25 @@ round-trip. Fresh full sweeps on this exact working tree pass all 29 S1 and all
 48 S2 trace replays. The focused AIZ level-select route remains red at
 the unbanked f5435 transition frontier, so the stage is not green yet.
 
+Round 31 corrects the AIZ giant ride vine's two-layer SST lifetime. The ROM
+root's `loc_22442` coarse-X test runs regardless of the handle's P1/P2 grab
+bytes, then `loc_2245C` deletes the complete child chain before
+`Delete_Current_Sprite` releases the root (`sonic3k.asm:46749-46831`). The
+consolidated engine object instead returned persistent while either grab byte
+was set; because it executes from the reserved handle slot, ordinary
+execution-slot cleanup also could not release its distinct parent slot. The
+vine now remains cullable while grabbed and explicitly releases that parent on
+unload. Focused lifecycle guards cover both contracts. In the complete-run
+route this restores the later star post from engine slot 6 to ROM slot 5 and
+removes the leaked vine-root occupant before the f16670 hurt spill. The
+remaining reported mismatch is the same three-frame ring-count cluster at
+f16755-f16757 (expected 2, actual 3): the next owner is an older object-slot
+permutation that gives the spill owner engine slot 13 instead of ROM slot 14,
+changing one ring's `(V_int_run_count+d7)&7` floor cadence. No AIZ-stage green
+claim is made yet. Fresh full sweeps on this exact tree pass all 29 S1 and all
+48 S2 trace replays; the focused level-select route also retains its unbanked
+f5435 transition frontier.
+
 ## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green
 
 Worktree `.worktrees/ai-s2-mtz3-round96-orbinit`, branch
