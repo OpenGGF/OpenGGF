@@ -13,6 +13,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.rewind.InputSource;
@@ -264,9 +265,7 @@ public final class TraceSessionLauncher {
             activeSession = this;
             SpecialStageProvider provider = GameServices.module().getSpecialStageProvider();
             Integer index = ssTrace.metadata().specialStageIndex();
-            loop.doEnterSpecialStage(provider, index != null ? index : 0, true);
-            // Trace-paced replay: disable the runtime's own lag compensation.
-            provider.setLagCompensation(0);
+            enterSpecialStageTrace(loop, provider, index != null ? index : 0);
         } catch (Exception e) {
             activeSession = null;
             TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
@@ -274,6 +273,14 @@ public final class TraceSessionLauncher {
                     "Failed to finish SS trace launch for " + entry.dir(), e);
             loop.returnToMasterTitle();
         }
+    }
+
+    static void enterSpecialStageTrace(
+            GameLoop loop, SpecialStageProvider provider, int stageIndex) {
+        loop.doEnterSpecialStage(provider, stageIndex, true,
+                SpecialStageStartupPolicy.TRACE_ACCURATE);
+        // Startup observations and external frame pacing are independent contracts.
+        provider.setLagCompensation(0);
     }
 
     private void finishLaunchAfterGameBootstrap() {

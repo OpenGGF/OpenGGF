@@ -6,6 +6,7 @@ import com.openggf.audio.GameMusic;
 import com.openggf.game.rewind.RewindSnapshottable;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -106,6 +107,20 @@ public interface SpecialStageProvider extends MiniGameProvider {
      * @throws IOException if initialization fails
      */
     void initializeStage(int stageIndex) throws IOException;
+
+    /**
+     * Initializes a stage with an explicit startup pacing policy. Providers
+     * without observable startup phases use their normal initialization path.
+     */
+    default void initializeStage(int stageIndex, SpecialStageStartupPolicy policy) throws IOException {
+        Objects.requireNonNull(policy, "policy");
+        initializeStage(stageIndex);
+    }
+
+    /** Returns whether entry presentation may reveal the initialized stage. */
+    default boolean isEntryPresentationReady() {
+        return true;
+    }
 
     /**
      * Gets the current stage index.

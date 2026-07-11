@@ -5,10 +5,12 @@ import com.openggf.data.Rom;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameMode;
+import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.FadeManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.trace.SpecialStageTraceData;
@@ -24,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.spy;
@@ -103,11 +106,15 @@ class TestSpecialStageVisualTraceSession {
         // Mark active before entering (as finishSpecialStageLaunch does) so
         // GameLoop suppresses SS rewind capture for the session lifetime.
         setStaticActiveSession(session);
-        loop.doEnterSpecialStage(provider, ssIndex, true);
-        provider.setLagCompensation(0);
+        TraceSessionLauncher.enterSpecialStageTrace(loop, provider, ssIndex);
 
         assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode(),
                 "SS trace session must enter SPECIAL_STAGE mode");
+        assertEquals(FadeManager.FadeState.HOLD_BLACK,
+                GameServices.fade().getState(),
+                "trace-accurate startup must stay opaque until the ROM reveal boundary");
+        assertFalse(provider.isEntryPresentationReady(),
+                "trace-accurate startup must retain the PRE_ROLL observation");
 
         Method updateSpecialStageMode =
                 GameLoop.class.getDeclaredMethod("updateSpecialStageMode");
@@ -117,9 +124,16 @@ class TestSpecialStageVisualTraceSession {
         int skipped = 0;
         int safetyCap = trace.frameCount() + 16;
         int iterations = 0;
+        boolean revealObserved = false;
         while (!fadeStarted(session) && iterations < safetyCap) {
             boolean skip = session.shouldSkipCurrentSpecialStageTick();
             updateSpecialStageMode.invoke(loop);
+            if (!revealObserved && provider.isEntryPresentationReady()) {
+                revealObserved = true;
+                assertEquals(FadeManager.FadeState.FADING_FROM_BLACK,
+                        GameServices.fade().getState(),
+                        "music/reveal boundary must replace the opaque trace hold atomically");
+            }
             if (skip) {
                 skipped++;
             } else {
@@ -130,6 +144,7 @@ class TestSpecialStageVisualTraceSession {
 
         assertTrue(fadeStarted(session),
                 "session must arm its fade-out end within the trace length");
+        assertTrue(revealObserved, "trace startup must eventually reach its reveal boundary");
         assertEquals(stageFinished, ssCursor(session),
                 "session must end exactly at the recorded stage-finished frame");
         assertEquals(expectedNonLag, stepped,

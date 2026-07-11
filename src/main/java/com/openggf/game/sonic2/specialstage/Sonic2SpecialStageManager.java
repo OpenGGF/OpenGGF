@@ -2492,6 +2492,37 @@ public class Sonic2SpecialStageManager {
         return initialized;
     }
 
+    /** Returns whether the ROM startup has reached its fade-from-white boundary. */
+    public boolean isEntryPresentationReady() {
+        if (!initialized || intro == null) {
+            return false;
+        }
+        return switch (intro.getCurrentPhase()) {
+            case FADE_FROM_WHITE, DROP, WAIT1, WAIT2, MESSAGE_FLYOUT, GAMEPLAY -> true;
+            case PRE_ROLL, ROM_STARTUP -> false;
+        };
+    }
+
+    /** Compresses hidden startup while preserving the normal manager update path. */
+    public void advanceToEntryPresentation() {
+        advanceToEntryPresentation(256);
+    }
+
+    void advanceToEntryPresentation(int maxUpdates) {
+        Sonic2SpecialStageIntro.Phase phase = intro.getCurrentPhase();
+        if (phase != Sonic2SpecialStageIntro.Phase.PRE_ROLL
+                && phase != Sonic2SpecialStageIntro.Phase.ROM_STARTUP) {
+            throw new IllegalStateException("Cannot fast-forward special-stage startup from " + phase);
+        }
+        for (int update = 0; update < maxUpdates && !isEntryPresentationReady(); update++) {
+            update();
+        }
+        if (!isEntryPresentationReady()) {
+            throw new IllegalStateException("Special-stage startup did not reach reveal boundary from "
+                    + intro.getCurrentPhase() + " within " + maxUpdates + " updates");
+        }
+    }
+
     public boolean isLagCompensationDisplayEnabled() {
         return lagCompensationDisplayEnabled;
     }
