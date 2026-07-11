@@ -1697,7 +1697,11 @@ public class Engine {
 		if (getCurrentGameMode() != GameMode.LEVEL) {
 			return;
 		}
-		if (!isEditorEnabled()) {
+		boolean traceActive = TraceSessionLauncher.active() != null;
+		if (!editorEntryAllowed(isEditorEnabled(), traceActive)) {
+			if (traceActive) {
+				LOGGER.warning("Editor entry is unavailable during an active trace session.");
+			}
 			return;
 		}
 		AbstractPlayableSprite player = resolveMainPlayableSprite();
@@ -1706,6 +1710,10 @@ public class Engine {
 		}
 		EditorPlaytestStash stash = capturePlaytestStash(player);
 		enterEditorFromCurrentPlayer(stash, player.getCentreX(), player.getCentreY());
+	}
+
+	public static boolean editorEntryAllowed(boolean editorEnabled, boolean traceActive) {
+		return editorEnabled && !traceActive;
 	}
 
 	private boolean isEditorEnabled() {
