@@ -326,6 +326,7 @@ public class GameLoop {
             userRecordingSessionLauncher.endPlaybackSession();
             resetLastAppliedUserRecordingPlaybackFrame();
         }
+
     }
 
     /** @deprecated use {@link com.openggf.GameModeChangeListener}. */
@@ -357,7 +358,8 @@ public class GameLoop {
                 () -> currentGameMode,
                 this::getActiveSpecialStageProvider);
         this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
-        this.userRecordingControls = new UserRecordingRuntimeControls(new LiveUserRecordingRuntime());
+        this.userRecordingControls = new UserRecordingRuntimeControls(
+                new LiveUserRecordingRuntime(), this::returnToMasterTitle);
         this.timeAttackRuntime = new TimeAttackRuntime(new GhostStore(java.nio.file.Path.of("ghosts")),
                 java.nio.file.Path.of("identity"),
                 () -> TraceSessionLauncher.active() != null

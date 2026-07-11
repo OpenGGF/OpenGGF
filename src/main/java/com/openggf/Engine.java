@@ -19,6 +19,7 @@ import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.editor.render.EditorOverlayRenderer;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.LWJGLAudioBackend;
+import com.openggf.io.ModInputLimits;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -364,6 +365,7 @@ public class Engine {
 	}
 
 	private void init() {
+		initializeExternalContentAtBoot();
 		// === PHASE 1: Window, GL context, input (always runs) ===
 		// Setup an error callback
 		GLFWErrorCallback.createPrint(System.err).set();
@@ -516,7 +518,7 @@ public class Engine {
 			// master title (if enabled) or Phase 2 init is deferred to
 			// exitLegalDisclaimer once the user dismisses the screen.
 		} else if (masterTitleOnStartup) {
-			masterTitleScreen = new MasterTitleScreen(configService);
+			masterTitleScreen = createMasterTitleScreen();
 			masterTitleScreen.initialize();
 			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 			// Skip Phase 2 entirely - will be called on game selection
@@ -777,6 +779,9 @@ public class Engine {
 			return;
 		}
 		GameModule module = resolveInitialModuleForLaunch(rootModule);
+		if (!preparePresentationForLaunch(module)) {
+			return;
+		}
 		GameplayModeContext gameplayMode = SessionManager.openGameplaySession(rootModule, module, null);
 		initializeGameplayRuntime(gameplayMode, true);
 		boolean generationRan = maybeGenerateDonatedDataSelectImagesBeforeStartupMode(module);
@@ -812,7 +817,7 @@ public class Engine {
 		if (masterTitleScreen != null) {
 			masterTitleScreen.cleanup();
 		}
-		masterTitleScreen = new MasterTitleScreen(configService);
+		masterTitleScreen = createMasterTitleScreen();
 		if (graphicsManager.isGlInitialized()) {
 			masterTitleScreen.initialize();
 		}
@@ -880,7 +885,7 @@ public class Engine {
 
 		boolean masterTitleOnStartup = configService.getBoolean(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
 		if (masterTitleOnStartup) {
-			masterTitleScreen = new MasterTitleScreen(configService);
+			masterTitleScreen = createMasterTitleScreen();
 			masterTitleScreen.initialize();
 			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 		} else {
@@ -898,6 +903,7 @@ public class Engine {
 		SessionManager.clear();
 		romManager.close();
 		GameModuleRegistry.reset();
+		ModSubsystem.current().returnToTitle();
 		audioManager.resetState();
 		crossGameFeatureProvider.resetState();
 		debugOverlayManager.resetState();
@@ -929,7 +935,7 @@ public class Engine {
 		}
 		refreshLaunchSessionCachedConfig();
 		applyResolvedDisplayDimensions();
-		masterTitleScreen = new MasterTitleScreen(configService);
+		masterTitleScreen = createMasterTitleScreen();
 		masterTitleScreen.initialize();
 		if (multiplayerRaceCoordinator != null && multiplayerRaceCoordinator.hudState().active()) {
 			openRaceLobbyOnCurrentTitle();
@@ -1042,10 +1048,6 @@ public class Engine {
 	}
 
 	private void initializeGlobalGameplayServices() {
-		if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
-			audioManager.setBackend(new LWJGLAudioBackend(configService, profiler));
-		}
-
 		if (configService.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED)) {
 			try {
 				String donorGame = configService.getString(SonicConfiguration.CROSS_GAME_SOURCE);
@@ -1055,6 +1057,46 @@ public class Engine {
 						+ "Check that the " + configService.getString(SonicConfiguration.CROSS_GAME_SOURCE)
 						+ " ROM is configured and accessible. Error: " + e.getMessage());
 			}
+		}
+	}
+
+	private void initializeExternalContentAtBoot() {
+		ExternalContentPolicy policy = new ExternalContentPolicy(
+				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+						? ExternalContentMode.STARTUP_DETERMINISTIC
+						: ExternalContentMode.NORMAL);
+		ModSubsystem.installAtBoot(policy, ModSubsystem.normalBootLoader(
+				() -> Path.of("mods").toAbsolutePath().normalize(),
+				ModInputLimits.production(), StockMusicDomains::containsSupported,
+				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)));
+	}
+
+	private MasterTitleScreen createMasterTitleScreen() {
+		MasterTitleScreen screen = new MasterTitleScreen(configService);
+		if (ModSubsystem.current().policy().mayScanAtBoot()) {
+			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
+		}
+		return screen;
+	}
+
+	private boolean preparePresentationForLaunch(GameModule module) {
+		try {
+			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
+				audioManager.setBackendForLaunch(new LWJGLAudioBackend(configService, profiler));
+			}
+			ModSubsystem subsystem = ModSubsystem.current();
+			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)
+					&& subsystem.policy().mayUseInSession()) {
+				subsystem.beginNormalSession(audioManager.outputSampleRate(),
+						module.getGameId().code());
+			}
+			return true;
+		} catch (RuntimeException error) {
+			LOGGER.severe("Failed to prepare external presentation content: " + error.getMessage());
+			ModSubsystem.current().returnToTitle();
+			audioManager.resetState();
+			showStartupRomError("Failed to initialize audio or mod presentation content.");
+			return false;
 		}
 	}
 
@@ -1125,7 +1167,7 @@ public class Engine {
 		}
 		GameplayModeContext gameplay = openDataSelectPatchSession(
 				saveContext, availableCharacters, preparedLaunch);
-		initializeGameplayRuntime(gameplay, false);
+		initializeGameplayRuntime(gameplay, true);
 		loadLevelFromDataSelect(action.zone(), action.act());
 		restoreGameplayModeFromDataSelectPayload(gameplayMode, loadedPayload);
 		gameLoop.setGameMode(GameMode.LEVEL);
@@ -1193,6 +1235,10 @@ public class Engine {
 				request.gameId(), team, request.zone(), request.act());
 
 		GameModule module = resolveTimeAttackModuleForLaunch(rootModule, request);
+		ModSubsystem.disableCurrentSessionForDeterminism();
+		if (!preparePresentationForLaunch(module)) {
+			return;
+		}
 		GameplayModeContext gameplay = SessionManager.openGameplaySession(
 				rootModule, module, saveContext);
 		initializeGameplayRuntime(gameplay, false);
@@ -2951,6 +2997,7 @@ public class Engine {
 		});
 		cleanupStep("graphics manager", graphicsManager::cleanup);
 		cleanupStep("presence", gameLoop::closePresence);
+		cleanupStep("mod subsystem", ModSubsystem::clearProcess);
 		cleanupStep("audio manager", audioManager::destroy);
 		cleanupStep("GLFW window", () -> {
 			if (window != NULL) {

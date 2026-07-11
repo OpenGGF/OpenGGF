@@ -2,6 +2,7 @@ package com.openggf.tools;
 
 import com.openggf.Engine;
 import com.openggf.GameLoop;
+import com.openggf.ModSubsystem;
 import com.openggf.audio.HeadlessSmpsAudioBackend;
 import com.openggf.control.InputHandler;
 import com.openggf.data.Rom;
@@ -253,6 +254,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
      */
     public static GameplayModeContext openResolvedSessionForBoot(
             EngineContext services, GameModule rootModule) {
+        disableExternalContentForDeterminism();
         java.util.Objects.requireNonNull(services, "services");
         java.util.Objects.requireNonNull(rootModule, "rootModule");
         ModuleResolutionService moduleResolutionService = services.moduleResolutionService();
@@ -261,6 +263,10 @@ public final class HeadlessGameBoot implements AutoCloseable {
                         services.configuration(), rootModule.getGameId().code()),
                 ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
         return SessionManager.openGameplaySession(rootModule, module, null);
+    }
+
+    static void disableExternalContentForDeterminism() {
+        ModSubsystem.disableCurrentSessionForDeterminism();
     }
 
     @Override

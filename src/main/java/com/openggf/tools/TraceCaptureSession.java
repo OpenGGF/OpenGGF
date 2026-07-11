@@ -1,6 +1,7 @@
 package com.openggf.tools;
 
 import com.openggf.GameLoop;
+import com.openggf.ModSubsystem;
 import com.openggf.capture.AudioFrameTap;
 import com.openggf.capture.CaptureException;
 import com.openggf.capture.CaptureRecorder;
@@ -90,6 +91,7 @@ public final class TraceCaptureSession {
      * called once before the first {@link #stepAndCapture()}.
      */
     public void start(int width, int height, int sampleRate) throws CaptureException {
+        disableExternalContentForDeterminism();
         if (width != this.width || height != this.height) {
             throw new CaptureException("capture dimensions " + width + "x" + height
                     + " do not match grabber " + this.width + "x" + this.height);
@@ -98,6 +100,10 @@ public final class TraceCaptureSession {
         recorder.start(width, height, fps, sampleRate);
         TraceGhostHook.set(ghostHook);
         started = true;
+    }
+
+    static void disableExternalContentForDeterminism() {
+        ModSubsystem.disableCurrentSessionForDeterminism();
     }
 
     /**

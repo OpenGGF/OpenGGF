@@ -12,11 +12,17 @@ public final class UserRecordingRuntimeControls {
     public static final int RECORD_HOLD_FRAMES = 60;
 
     private final Runtime runtime;
+    private final Runnable returnToMasterTitle;
     private int recordHoldFrames;
     private boolean recordHoldTriggered;
 
     public UserRecordingRuntimeControls(Runtime runtime) {
+        this(runtime, () -> { });
+    }
+
+    public UserRecordingRuntimeControls(Runtime runtime, Runnable returnToMasterTitle) {
         this.runtime = Objects.requireNonNull(runtime, "runtime");
+        this.returnToMasterTitle = Objects.requireNonNull(returnToMasterTitle, "returnToMasterTitle");
     }
 
     public void updateLevelControlInput(InputHandler input) {
@@ -98,6 +104,7 @@ public final class UserRecordingRuntimeControls {
         }
         runtime.endPlaybackDebugSession();
         runtime.updatePlaybackState(UserRecordingPlaybackState.STOPPED);
+        returnToMasterTitle.run();
         return true;
     }
 
@@ -204,5 +211,6 @@ public final class UserRecordingRuntimeControls {
 
         default void endPlaybackDebugSession() {
         }
+
     }
 }

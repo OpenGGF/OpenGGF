@@ -137,6 +137,17 @@ class TestUserRecordingControls {
     }
 
     @Test
+    void playbackTakeoverReturnsThroughMasterTitleBoundary() {
+        Fixture fixture = new Fixture();
+        fixture.playbackState = UserRecordingPlaybackState.PAUSED_AT_COMPLETION;
+
+        assertTrue(fixture.controls.handlePlaybackTakeoverRequest());
+
+        assertEquals(UserRecordingPlaybackState.STOPPED, fixture.playbackState);
+        assertTrue(fixture.returnedToMasterTitle);
+    }
+
+    @Test
     void playbackHudSurfacesVerifierStatusAsNonBlockingWarning() {
         Fixture fixture = new Fixture();
         fixture.playbackOptions = new UserRecordingPlaybackOptions(120, true, true);
@@ -316,7 +327,9 @@ class TestUserRecordingControls {
         int playbackFrameCount;
         boolean desynced;
         boolean enginePausedForPlayback;
-        final UserRecordingRuntimeControls controls = new UserRecordingRuntimeControls(this);
+        boolean returnedToMasterTitle;
+        final UserRecordingRuntimeControls controls = new UserRecordingRuntimeControls(
+                this, () -> returnedToMasterTitle = true);
 
         @Override
         public int recordKey() {
@@ -392,5 +405,6 @@ class TestUserRecordingControls {
         @Override
         public void endPlaybackDebugSession() {
         }
+
     }
 }

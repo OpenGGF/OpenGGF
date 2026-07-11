@@ -1,5 +1,6 @@
 package com.openggf.game.timeattack;
 
+import com.openggf.ModSubsystem;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
@@ -36,6 +37,7 @@ public final class AttemptReplayHarness {
 
     public static synchronized Result replay(AttemptInputRecording recording,
                                              Path romPath) {
+        disableExternalContentForDeterminism();
         Rom rom = new Rom();
         SonicConfigurationService configuration = null;
         Object oldMain = null;
@@ -134,6 +136,10 @@ public final class AttemptReplayHarness {
             SessionManager.clear();
             rom.close();
         }
+    }
+
+    static void disableExternalContentForDeterminism() {
+        ModSubsystem.disableCurrentSessionForDeterminism();
     }
 
     public static String fingerprintForRom(Path romPath) {

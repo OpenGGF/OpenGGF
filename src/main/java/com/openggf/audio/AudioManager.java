@@ -58,6 +58,7 @@ public class AudioManager {
     private boolean audioFrameOwnedExternally;
     private boolean audioFrameAdvanced;
     private boolean reverseAudioPresentationActive;
+    private Runnable streamedMusicSessionInvalidator = () -> { };
 
     // Donor audio overlay: secondary SFX path for cross-game feature donation
     private final Map<String, SmpsLoader> donorLoaders = new HashMap<>();
@@ -88,6 +89,16 @@ public class AudioManager {
     /** Transfers a launch-scoped prepared streamed-music lease to the backend. */
     public void installStreamedMusicPort(StreamedMusicPort port) {
         backend.installStreamedMusicPort(java.util.Objects.requireNonNull(port, "port"));
+    }
+
+    /** Clears the active backend's launch-scoped streamed presentation state. */
+    public void resetStreamedMusicPort() {
+        backend.resetStreamedMusicPort();
+    }
+
+    /** Composition-root hook keeping the external-content view aligned with backend lifetime. */
+    public void setStreamedMusicSessionInvalidator(Runnable invalidator) {
+        streamedMusicSessionInvalidator = java.util.Objects.requireNonNull(invalidator, "invalidator");
     }
 
     /**
@@ -215,6 +226,7 @@ public class AudioManager {
     }
 
     public void setBackend(AudioBackend backend) {
+        streamedMusicSessionInvalidator.run();
         destroyBackendQuietly(this.backend, "previous AudioBackend");
         this.backend = backend;
         try {
@@ -229,6 +241,27 @@ public class AudioManager {
             this.backend.init();
             this.backend.setAudioProfile(audioProfile);
             configureDeterministicRuntimeForBackend();
+        }
+    }
+
+    /** Launch path variant that reports initialization failure instead of silently continuing. */
+    public void setBackendForLaunch(AudioBackend backend) {
+        streamedMusicSessionInvalidator.run();
+        destroyBackendQuietly(this.backend, "previous AudioBackend");
+        this.backend = java.util.Objects.requireNonNull(backend, "backend");
+        try {
+            this.backend.init();
+            this.backend.setAudioProfile(audioProfile);
+            configureDeterministicRuntimeForBackend();
+            LOGGER.info("AudioBackend initialized: " + backend.getClass().getSimpleName());
+        } catch (Exception error) {
+            LOGGER.log(Level.SEVERE, "Failed to initialize AudioBackend", error);
+            destroyBackendQuietly(this.backend, "failed AudioBackend");
+            this.backend = new NullAudioBackend();
+            this.backend.init();
+            this.backend.setAudioProfile(audioProfile);
+            configureDeterministicRuntimeForBackend();
+            throw new IllegalStateException("Audio backend initialization failed", error);
         }
     }
 
@@ -1295,6 +1328,7 @@ public class AudioManager {
      * (e.g. Sonic 1 SMPS loader contaminating Sonic 2 tests).
      */
     public void resetState() {
+        streamedMusicSessionInvalidator.run();
         if (backend != null) {
             backend.resetStreamedMusicPort();
             backend.stopPlayback();
@@ -1331,6 +1365,7 @@ public class AudioManager {
     }
 
     public void destroy() {
+        streamedMusicSessionInvalidator.run();
         if (backend != null) {
             backend.destroy();
         }

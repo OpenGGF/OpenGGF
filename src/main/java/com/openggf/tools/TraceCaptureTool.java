@@ -1,6 +1,7 @@
 package com.openggf.tools;
 
 import com.openggf.GameLoop;
+import com.openggf.ModSubsystem;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
@@ -175,6 +176,7 @@ public final class TraceCaptureTool {
      * it down in {@code finally}.
      */
     private HeadlessGameBoot run(Args args) throws Exception {
+        disableExternalContentForDeterminism();
         // Apply the desync-ghost toggle so the shared LevelRenderer gate
         // (TraceRenderVisibility) honors it during capture. A trace-faithful
         // capture has no desync, so ghosts are off by default.
@@ -271,6 +273,10 @@ public final class TraceCaptureTool {
             }
         }
         return boot;
+    }
+
+    static void disableExternalContentForDeterminism() {
+        ModSubsystem.disableCurrentSessionForDeterminism();
     }
 
     /**

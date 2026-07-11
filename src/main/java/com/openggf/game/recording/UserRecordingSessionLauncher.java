@@ -2,6 +2,7 @@ package com.openggf.game.recording;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.GameLoop;
+import com.openggf.ModSubsystem;
 import com.openggf.TraceSessionLauncher;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
@@ -117,6 +118,7 @@ public final class UserRecordingSessionLauncher {
         Bk2Movie movie = movieLoader.load(entry.path());
         UserRecordingVerifier verifier = createVerifier(entry.path(), manifest);
 
+        disableExternalContentForDeterminism();
         gameLoop.restartFromRecordingLaunchContext(context);
         playback.startSession(movie, 0);
         playback.setFrameObserver(verifier.observer());
@@ -125,6 +127,10 @@ public final class UserRecordingSessionLauncher {
         activePlaybackOptions = options;
         activePlaybackState = UserRecordingPlaybackState.PLAYING;
         return activePlaybackState;
+    }
+
+    static void disableExternalContentForDeterminism() {
+        ModSubsystem.disableCurrentSessionForDeterminism();
     }
 
     Path recordingPathFor(RecordingLaunchContext context) {
