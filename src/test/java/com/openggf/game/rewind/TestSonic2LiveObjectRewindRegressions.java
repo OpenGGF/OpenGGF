@@ -1,5 +1,6 @@
 package com.openggf.game.rewind;
 
+import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameId;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -78,6 +80,61 @@ class TestSonic2LiveObjectRewindRegressions {
     @Test
     void monitorBreakRoundTripWithWarmedReuseEnabledPreservesRequiredReconstruction() {
         verifyMonitorBreakRoundTrip(true);
+    }
+
+    @Test
+    void rewindControllerReplaysMonitorBreakAtFrameBoundary() {
+        RewindRoundTripHarness harness = RewindRoundTripHarness.buildPlaced(GameId.S2, 0x26);
+        monitor(harness).update(0, null);
+        var adapter = harness.objectManager().rewindSnapshottable();
+        ObjectManagerSnapshot intact = adapter.capture();
+        RewindController controller = monitorController(harness, List.of(
+                input(0, 0), input(1, 1), input(2, 0)));
+        assertEquals(0, controller.currentFrame());
+        assertIntactOracle(harness, monitor(harness));
+
+        controller.step();
+        assertEquals(1, controller.currentFrame());
+        assertBrokenOracle(harness);
+        controller.step();
+        assertEquals(2, controller.currentFrame());
+        assertBrokenOracle(harness);
+
+        controller.seekTo(1);
+        assertEquals(1, controller.currentFrame());
+        assertBrokenOracle(harness);
+
+        controller.seekTo(0);
+        assertEquals(0, controller.currentFrame());
+        assertIntactOracle(harness, monitor(harness));
+        ObjectManagerSnapshot restored = adapter.capture();
+        assertTrue(RewindSnapshotDiff.diffKey("object-manager", intact, restored).isEmpty(),
+                () -> RewindSnapshotDiff.diffKey("object-manager", intact, restored).toString());
+    }
+
+    @Test
+    void rewindControllerStepsBackwardAcrossSixtyFrameMonitorBoundary() {
+        RewindRoundTripHarness harness = RewindRoundTripHarness.buildPlaced(GameId.S2, 0x26);
+        monitor(harness).update(0, null);
+        List<Bk2FrameInput> rows = new ArrayList<>();
+        for (int frame = 0; frame <= 62; frame++) {
+            rows.add(input(frame, frame == 61 ? 1 : 0));
+        }
+        RewindController controller = monitorController(harness, rows);
+        assertEquals(0, controller.currentFrame());
+        assertIntactOracle(harness, monitor(harness));
+
+        for (int frame = 1; frame <= 62; frame++) {
+            controller.step();
+        }
+        controller.seekTo(61);
+        assertBrokenOracle(harness);
+        assertTrue(controller.stepBackward());
+        assertEquals(60, controller.currentFrame());
+        assertIntactOracle(harness, monitor(harness));
+        assertTrue(controller.stepBackward());
+        assertEquals(59, controller.currentFrame());
+        assertIntactOracle(harness, monitor(harness));
     }
 
     @Test
@@ -396,6 +453,39 @@ class TestSonic2LiveObjectRewindRegressions {
 
         harness.objectManager().update(0, player, null, 2, false);
         assertIntactOracle(harness, monitor(harness));
+    }
+
+    private static RewindController monitorController(RewindRoundTripHarness harness,
+            List<Bk2FrameInput> rows) {
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(harness.objectManager().rewindSnapshottable());
+        EngineStepper stepper = input -> {
+            if ((input.p1ActionMask() & 1) != 0) {
+                // Restoration reconstructs placed objects, so resolve the live monitor on every tick.
+                monitor(harness).onTouchResponse(rollingPlayer(), MONITOR_TOUCH, input.frameIndex());
+            }
+        };
+        return new RewindController(registry, new InMemoryKeyframeStore(),
+                new ListInputSource(rows), stepper, 60);
+    }
+
+    private static Bk2FrameInput input(int frame, int actionMask) {
+        return new Bk2FrameInput(frame, 0, actionMask, false, "monitor-boundary");
+    }
+
+    private record ListInputSource(List<Bk2FrameInput> rows) implements InputSource {
+        private ListInputSource {
+            rows = List.copyOf(rows);
+        }
+
+        @Override public int frameCount() { return rows.size(); }
+        @Override public Bk2FrameInput read(int frame) { return rows.get(frame); }
+    }
+
+    private static void assertBrokenOracle(RewindRoundTripHarness harness) {
+        assertTrue(isBroken(monitor(harness)));
+        assertHasLive(harness, MonitorContentsObjectInstance.class);
+        assertHasLive(harness, ExplosionObjectInstance.class);
     }
 
     private static DummyPlayer rollingPlayer() {
