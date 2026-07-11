@@ -380,7 +380,10 @@ public class SpriteManager {
 				continue;
 			}
 			if (main != null && main != playable) {
-				return null;
+				throw new IllegalStateException(
+						"Cannot resolve main playable: configured/session participant '"
+								+ mainCode + "' is absent and multiple non-CPU fallback candidates exist ('"
+								+ main.getCode() + "', '" + playable.getCode() + "')");
 			}
 			main = playable;
 		}

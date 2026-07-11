@@ -1216,8 +1216,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (!isManualTailsFlightActive()) {
 			return;
 		}
+		boolean carryingMainCharacter = sprite.getTailsCarryController() != null
+				&& sprite.getTailsCarryController().isCarryingMainCharacter();
 		sprite.getTailsFlightController().updateVertical(
-				inputJumpPress, false, romVisibleLevelFrameCounter());
+				inputJumpPress, carryingMainCharacter, romVisibleLevelFrameCounter());
 		manualTailsFlightUpdatedThisFrame = true;
 	}
 
@@ -2601,7 +2603,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// Tails_FlyingSwimming applies Tails_Move_FlySwim before
 			// MoveSprite_TestGravity2, so the carry controller owns the
 			// carrier's per-frame vertical flight velocity here.
-			cpu.applyFlyingCarryVerticalVelocity();
+			if (!manualTailsFlightUpdatedThisFrame) {
+				cpu.applyFlyingCarryVerticalVelocity();
+			}
 			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
 			return;
 		}

@@ -83,6 +83,18 @@ class TestTailsCarryController {
     }
 
     @Test
+    void spriteManagerRejectsAmbiguousCompatibilityFallbackWhenNamedMainIsAbsent() {
+        SpriteManager sprites = new SpriteManager(SonicConfigurationService.getInstance());
+        sprites.addSprite(new TestablePlayableSprite("synthetic-one", (short) 0, (short) 0));
+        sprites.addSprite(new TestablePlayableSprite("synthetic-two", (short) 0, (short) 0));
+
+        IllegalStateException ambiguity = assertThrows(IllegalStateException.class, sprites::getMainPlayable,
+                "compatibility fallback must not silently choose or discard one of multiple human players");
+        assertTrue(ambiguity.getMessage().contains("synthetic-one"));
+        assertTrue(ambiguity.getMessage().contains("synthetic-two"));
+    }
+
+    @Test
     void carryControllerIsOwnedByPlayableControllerAndNeverCarriesItself() {
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
 
@@ -318,6 +330,63 @@ class TestTailsCarryController {
     }
 
     @Test
+    void manualP2FlightUsesLiveCarryStateForAirAndUnderwaterFlightUpdates() {
+        AbstractPlayableSprite sonic = fixture.sprite();
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+        TailsCarryController carry = tails.getTailsCarryController();
+        tails.setObjectControlled(false);
+        tails.setSuppressAirCollision(true);
+        tails.setAir(true);
+        tails.setJumping(true);
+        tails.setRolling(true);
+        tails.setDoubleJumpFlag(0);
+        tails.setCentreX((short) 0x1000);
+        tails.setCentreY((short) 0x0400);
+        tails.setYSpeed((short) 0);
+        SidekickCpuController cpu = tails.getCpuController();
+        cpu.setInitialState(SidekickCpuController.State.NORMAL);
+
+        dispatchManualP2Movement(tails, AbstractPlayableSprite.INPUT_RIGHT,
+                AbstractPlayableSprite.INPUT_RIGHT);
+        dispatchManualP2Movement(tails,
+                AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
+                AbstractPlayableSprite.INPUT_JUMP);
+        assertTrue(tails.getTailsFlightController().isActive(),
+                "real P2 release/repress dispatch activates flight");
+
+        sonic.setCentreX(tails.getCentreX());
+        sonic.setCentreY((short) (tails.getCentreY() + 0x20));
+        sonic.setAir(true);
+        sonic.setObjectControlled(false);
+        sonic.setHurt(false);
+        sonic.setDead(false);
+        sonic.setDebugMode(false);
+        sonic.setSpindash(false);
+        assertTrue(carry.tryGrabMainCharacter(), "active manually controlled Tails grabs the main player");
+
+        dispatchManualP2Movement(tails, AbstractPlayableSprite.INPUT_RIGHT, 0);
+        assertEquals(0x22, tails.getAnimationId(),
+                "the next manual flight frame selects the live air-carry animation");
+        carry.updateAfterTailsCollision(0);
+
+        tails.setInWater(true);
+        tails.setDoubleJumpFlag(1);
+        tails.setDoubleJumpProperty((byte) 10);
+        tails.setYSpeed((short) 0);
+        GameServices.sprites().setFrameCounter(3);
+        dispatchManualP2Movement(tails,
+                AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
+                AbstractPlayableSprite.INPUT_JUMP);
+
+        assertEquals(1, tails.getDoubleJumpFlag(),
+                "carrying underwater suppresses a new flap from ready state");
+        assertEquals(9, tails.getDoubleJumpProperty() & 0xFF,
+                "the odd-frame flight timer still decrements while the flap is suppressed");
+        assertEquals(0x27, tails.getAnimationId(),
+                "underwater carrying selects the shared swim-carry animation");
+    }
+
+    @Test
     void cpuResetAndCarrierObjectControlTakeoverReleaseMain() {
         AbstractPlayableSprite sonic = prepareManualContact();
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
@@ -385,5 +454,17 @@ class TestTailsCarryController {
             cpu.setController2Input(AbstractPlayableSprite.INPUT_RIGHT, AbstractPlayableSprite.INPUT_RIGHT);
             cpu.update(0);
         }
+    }
+
+    private void dispatchManualP2Movement(AbstractPlayableSprite tails, int held, int logical) {
+        SidekickCpuController cpu = tails.getCpuController();
+        cpu.setController2Input(held, logical);
+        cpu.update(GameServices.sprites().getFrameCounter() + 1);
+        if (cpu.getInputJumpPress()) {
+            tails.setForcedJumpPress(true);
+        }
+        tails.getMovementManager().handleMovement(
+                cpu.getInputUp(), cpu.getInputDown(), cpu.getInputLeft(), cpu.getInputRight(),
+                cpu.getInputJump(), false, false, false);
     }
 }
