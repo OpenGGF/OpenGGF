@@ -1884,12 +1884,38 @@ public class Sonic2SpecialStageRenderer {
         int right = middle;
         for (int out = start; out < end; out++) {
             if (right >= end || (left < middle
-                    && source[left].getPriority() <= source[right].getPriority())) {
+                    && playerOrdersBeforeOrTiesWith(source[left], source[right]))) {
                 destination[out] = source[left++];
             } else {
                 destination[out] = source[right++];
             }
         }
+    }
+
+    /**
+     * Sonic's Obj09 is always MainCharacter and Tails' Obj09 instance is always
+     * Sidekick, the first and second objects respectively (s2.constants.asm:1101-1103),
+     * so Sonic's sprite always reaches {@code Sprite_Table} first each frame
+     * (s2.asm:30523-30594). Same-priority VDP sprites earlier in the table occlude
+     * later ones, so when both players' depth-derived priority ties
+     * (s2.asm:69505-69544), the sidekick must sort first here (rendered first,
+     * ends up underneath) and the main character last (rendered last, stays on
+     * top), matching ROM instead of the incidental original-order stability used
+     * for every other tie.
+     */
+    private static boolean playerOrdersBeforeOrTiesWith(
+            Sonic2SpecialStagePlayer left, Sonic2SpecialStagePlayer right) {
+        int leftPriority = left.getPriority();
+        int rightPriority = right.getPriority();
+        if (leftPriority != rightPriority) {
+            return leftPriority < rightPriority;
+        }
+        boolean leftIsSidekick = !left.isMainCharacter();
+        boolean rightIsSidekick = !right.isMainCharacter();
+        if (leftIsSidekick != rightIsSidekick) {
+            return leftIsSidekick;
+        }
+        return true;
     }
 
     private static Sonic2SpecialStageObject[] stableSortObjects(
