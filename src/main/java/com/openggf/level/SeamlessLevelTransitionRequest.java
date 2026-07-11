@@ -20,6 +20,8 @@ public final class SeamlessLevelTransitionRequest {
     private final boolean showInLevelTitleCard;
     private final boolean resetLevelGamestateAtInLevelTitleCardDisplay;
     private final int inLevelTitleCardResetAdditionalDispatches;
+    private final boolean lockPlayerControlForInLevelTitleCard;
+    private final int inLevelTitleCardExitAdditionalDispatches;
     private final boolean forceAirOnStaleObjectSupportLoss;
     private final boolean preserveOffsetCameraPosition;
     private final Integer postTransitionMinX;
@@ -47,6 +49,9 @@ public final class SeamlessLevelTransitionRequest {
                 builder.resetLevelGamestateAtInLevelTitleCardDisplay;
         this.inLevelTitleCardResetAdditionalDispatches =
                 builder.inLevelTitleCardResetAdditionalDispatches;
+        this.lockPlayerControlForInLevelTitleCard = builder.lockPlayerControlForInLevelTitleCard;
+        this.inLevelTitleCardExitAdditionalDispatches =
+                builder.inLevelTitleCardExitAdditionalDispatches;
         this.forceAirOnStaleObjectSupportLoss = builder.forceAirOnStaleObjectSupportLoss;
         this.preserveOffsetCameraPosition = builder.preserveOffsetCameraPosition;
         this.postTransitionMinX = builder.postTransitionMinX;
@@ -100,6 +105,14 @@ public final class SeamlessLevelTransitionRequest {
 
     public int inLevelTitleCardResetAdditionalDispatches() {
         return inLevelTitleCardResetAdditionalDispatches;
+    }
+
+    public boolean lockPlayerControlForInLevelTitleCard() {
+        return lockPlayerControlForInLevelTitleCard;
+    }
+
+    public int inLevelTitleCardExitAdditionalDispatches() {
+        return inLevelTitleCardExitAdditionalDispatches;
     }
 
     public boolean forceAirOnStaleObjectSupportLoss() {
@@ -169,6 +182,8 @@ public final class SeamlessLevelTransitionRequest {
         private boolean showInLevelTitleCard;
         private boolean resetLevelGamestateAtInLevelTitleCardDisplay;
         private int inLevelTitleCardResetAdditionalDispatches;
+        private boolean lockPlayerControlForInLevelTitleCard;
+        private int inLevelTitleCardExitAdditionalDispatches;
         private boolean forceAirOnStaleObjectSupportLoss;
         private boolean preserveOffsetCameraPosition;
         private Integer postTransitionMinX;
@@ -230,6 +245,16 @@ public final class SeamlessLevelTransitionRequest {
 
         public Builder inLevelTitleCardResetAdditionalDispatches(int dispatches) {
             this.inLevelTitleCardResetAdditionalDispatches = Math.max(0, dispatches);
+            return this;
+        }
+
+        public Builder lockPlayerControlForInLevelTitleCard(boolean lock) {
+            this.lockPlayerControlForInLevelTitleCard = lock;
+            return this;
+        }
+
+        public Builder inLevelTitleCardExitAdditionalDispatches(int dispatches) {
+            this.inLevelTitleCardExitAdditionalDispatches = Math.max(0, dispatches);
             return this;
         }
 

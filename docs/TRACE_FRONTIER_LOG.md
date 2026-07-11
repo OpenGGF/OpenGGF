@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f10464 / 3117 errors (4 errors under `frontierOnly`).
+f3318 / 4234 errors to f10694 / 3218 errors (9 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -186,6 +186,26 @@ AIZ routes remain green, and the fresh all-S3K sweep reproduces the unchanged
 non-HCZ frontiers from milestone 6. The 11 trace invariants, 21 S3K keep-green
 tests, the full 11-test act-transition integration class, and the new pure
 title-card request/reset-intent guard pass (69 selected tests total).
+
+Milestone 8 replaces the engine-invented post-transition whirlpool with the
+retained HCZ miniboss carrier children. The in-level title card now owns the
+P1/P2 control locks through the player-slot history writes; the later
+`loc_6A7C4` child dispatches clear those locks, write native
+`object_control=1`, install FLOAT2, and carry only the native P1/P2 slots. Each
+carrier uses its own 8.8 X/Y position and velocity, accelerates toward
+`Camera_X_pos+$A0` with the ROM side-crossing double step, descends at `$0200`,
+and publishes its movement after player physics but before the camera pass
+(`sonic3k.asm:139998-140077`). `Change_Act2Sizes` also exposes HCZ2's loaded
+bottom boundary as the camera target while retaining the live results lock.
+
+This closes the complete title-card and carrier descent and advances HCZ from
+f10464 to f10694; the full report is 3218 errors and `frontierOnly` reports the
+9-field P1/P2 carrier-release cluster. Both AIZ traces remain green, and the
+fresh granular S3K sweep reproduces every other established first frontier:
+CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f866 / 1,
+MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+The 11 comparison-only invariants, 21 S3K keep-green tests, focused HCZ carrier
+tests, transition request guard, and 36 level-event rewind tests pass.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

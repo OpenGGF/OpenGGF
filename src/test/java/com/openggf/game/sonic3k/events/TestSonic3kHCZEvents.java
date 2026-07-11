@@ -35,6 +35,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -145,16 +146,20 @@ class TestSonic3kHCZEvents {
     }
 
     @Test
-    void postTransitionCutsceneUsesAllEnginePlayersOnceThenPlainRelease() {
+    void postTransitionCarrierUsesNativePlayersAndFollowsRomArc() {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x07F0);
         GameServices.camera().setFocusedSprite(player);
-        player.setCpuControlled(true);
+        GameServices.camera().setX((short) 0x0080);
+        player.setCpuControlled(false);
+        player.setInWater(true);
         GameServices.sprites().addSprite(player, "sonic");
         TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x07F8);
         sidekick.setCpuControlled(true);
+        sidekick.setInWater(true);
         GameServices.sprites().addSprite(sidekick, "tails");
         TestablePlayableSprite secondSidekick = new TestablePlayableSprite("knuckles", (short) 0x0100, (short) 0x07F8);
         secondSidekick.setCpuControlled(true);
+        secondSidekick.setInWater(true);
         GameServices.sprites().addSprite(secondSidekick, "knuckles");
 
         Sonic3kHCZEvents events = new Sonic3kHCZEvents();
@@ -162,24 +167,29 @@ class TestSonic3kHCZEvents {
 
         events.startPostTransitionCutscene();
 
-        assertFullObjectControlCutsceneLock(player);
-        assertFullObjectControlCutsceneLock(sidekick);
-        assertFullObjectControlCutsceneLock(secondSidekick);
+        assertCarrierControl(player);
+        assertCarrierControl(sidekick);
+        assertFalse(secondSidekick.isObjectControlled(),
+                "ROM creates carriers only for the native P1/P2 slots");
 
+        int playerStartX = player.getCentreX();
+        int playerStartY = player.getCentreY();
         events.update(1, 0);
+        assertEquals(playerStartX, player.getCentreX(),
+                "loc_6A7C4 installs loc_6A872 without moving on its init dispatch");
+        assertEquals(playerStartY, player.getCentreY());
 
-        assertEquals((short) 0x07F4, player.getY(),
-                "focused player should not be mutated again through duplicate sidekick traversal");
-        assertEquals((short) 0x0804, sidekick.getY());
-        assertEquals((short) 0x0804, secondSidekick.getY());
+        events.updateRetainedCarrierObjectPass(1);
+        assertNotEquals(playerStartX, player.getCentreX());
+        assertEquals(playerStartY + 2, player.getCentreY());
 
-        events.update(1, 1);
-        events.update(1, 2);
-        events.update(1, 3);
-
-        assertPlainCutsceneRelease(player);
-        assertPlainCutsceneRelease(sidekick);
-        assertPlainCutsceneRelease(secondSidekick);
+        for (int i = 0; i < 64 && events.isCutsceneActive(); i++) {
+            events.updateRetainedCarrierObjectPass(1);
+        }
+        assertFalse(events.isCutsceneActive());
+        assertPlainCarrierRelease(player);
+        assertPlainCarrierRelease(sidekick);
+        assertFalse(secondSidekick.isObjectControlled());
     }
 
     private static void tickAct2(Sonic3kHCZEvents events, int frame) {
@@ -193,11 +203,11 @@ class TestSonic3kHCZEvents {
         return player;
     }
 
-    private static void assertFullObjectControlCutsceneLock(AbstractPlayableSprite sprite) {
+    private static void assertCarrierControl(AbstractPlayableSprite sprite) {
         assertTrue(sprite.isObjectControlled());
-        assertFalse(sprite.isObjectControlAllowsCpu());
+        assertTrue(sprite.isObjectControlAllowsCpu());
         assertTrue(sprite.isObjectControlSuppressesMovement());
-        assertTrue(sprite.isControlLocked());
+        assertFalse(sprite.isControlLocked());
         assertTrue(sprite.getAir());
         assertEquals(Sonic3kAnimationIds.FLOAT2.id(), sprite.getForcedAnimationId());
         assertEquals((short) 0, sprite.getXSpeed());
@@ -205,7 +215,7 @@ class TestSonic3kHCZEvents {
         assertEquals((short) 0, sprite.getGSpeed());
     }
 
-    private static void assertPlainCutsceneRelease(AbstractPlayableSprite sprite) {
+    private static void assertPlainCarrierRelease(AbstractPlayableSprite sprite) {
         assertFalse(sprite.isObjectControlled());
         assertFalse(sprite.isObjectControlAllowsCpu());
         assertFalse(sprite.isObjectControlSuppressesMovement());

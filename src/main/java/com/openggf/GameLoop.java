@@ -1281,6 +1281,9 @@ public class GameLoop {
         TitleCardProvider tcp = getTitleCardProviderLazy();
         if (tcp != null && tcp.isOverlayActive()) {
             tcp.update();
+            if (tcp.ownsInLevelPlayerControlLock()) {
+                applyTitleCardControlLock(tcp.shouldLockPlayerControlForInLevelOverlay());
+            }
         }
 
         // Handle in-place seamless transitions before fade-based routes.
@@ -2905,6 +2908,12 @@ public class GameLoop {
             provider.requestLevelGamestateResetAtInLevelDisplay(
                     levelManager.consumeInLevelTitleCardResetAdditionalDispatches());
         }
+        if (levelManager.consumeInLevelTitleCardPlayerControlLockRequest()) {
+            provider.requestInLevelPlayerControlLock();
+            applyTitleCardControlLock(true);
+        }
+        provider.requestInLevelExitAdditionalDispatches(
+                levelManager.consumeInLevelTitleCardExitAdditionalDispatches());
         LOGGER.info("Entered in-level Title Card for zone " + zoneIndex + " act " + actIndex);
     }
 

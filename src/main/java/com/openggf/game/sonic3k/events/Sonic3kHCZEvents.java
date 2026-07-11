@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
-import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -16,10 +15,7 @@ import com.openggf.game.sonic3k.scroll.SwScrlHcz;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
-import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
-import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.scroll.ZoneScrollHandler;
-import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -216,34 +212,33 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     private boolean wallChaseBgOverlayActive;
 
     // =========================================================================
-    // Post-transition whirlpool descent cutscene
+    // Post-transition HCZ miniboss carrier children
     // =========================================================================
 
-    /** Whether the whirlpool descent cutscene is currently playing. */
+    /** Whether either retained loc_6A7C4 carrier child is active. */
     private boolean cutsceneActive;
+    /** The init dispatch installs loc_6A872; movement begins on the next object pass. */
+    private boolean carrierMovementPending;
+    /** Prevents the later dynamic-event pass from dispatching a carrier twice. */
+    private boolean carrierUpdatedBeforeDynamicObjects;
+    private boolean carrierP1Active;
+    private boolean carrierP2Active;
+    private int carrierP1XFixed;
+    private int carrierP1YFixed;
+    private int carrierP1XVelocity;
+    private int carrierP2XFixed;
+    private int carrierP2YFixed;
+    private int carrierP2XVelocity;
+    private boolean carrierP1TargetSide;
+    private boolean carrierP2TargetSide;
+    private int carrierP1BoundsYOffset;
+    private int carrierP2BoundsYOffset;
 
-    /** Frame counter for the cutscene (drives sine oscillation). */
-    private int cutsceneFrame;
-
-    /** Fixed center X for the whirlpool spiral (player's X at cutscene start). */
-    private int cutsceneCenterX;
-
-    /** Current Y position in the descent (top-left coords, updated each frame). */
-    private int cutsceneCurrentY;
-
-    /** Target Y position where the cutscene ends and player is released.
-     *  Act 2 floor at the starting area (X~$80) is at Y~$820 based on
-     *  object placements (breakable walls, platforms at Y=$0820). */
-    private static final int CUTSCENE_TARGET_Y = 0x0800;
-
-    /** Descent speed in pixels per frame. */
-    private static final int CUTSCENE_DESCENT_SPEED = 4;
-
-    /** Horizontal oscillation amplitude in pixels (side-to-side whirlpool). */
-    private static final int CUTSCENE_X_AMPLITUDE = 24;
-
-    /** Oscillation speed — higher = faster side-to-side motion. */
-    private static final int CUTSCENE_OSCILLATION_SPEED = 8;
+    /** ROM loc_6A80C/loc_6A872: target is Camera_X_pos+$A0; release at y_pos $828. */
+    private static final int CARRIER_TARGET_CAMERA_OFFSET = 0xA0;
+    private static final int CARRIER_RELEASE_Y = 0x828;
+    private static final int CARRIER_Y_VELOCITY = 0x200;
+    private static final int CARRIER_X_ACCELERATION = 0x100;
 
     public Sonic3kHCZEvents() {
         super();
@@ -259,7 +254,10 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         transitionKosDrainFrames = 0;
         bossFlag = false;
         cutsceneActive = false;
-        cutsceneFrame = 0;
+        carrierMovementPending = false;
+        carrierUpdatedBeforeDynamicObjects = false;
+        carrierP1Active = false;
+        carrierP2Active = false;
 
         // Act 2 BG wall-chase state
         act2BgRoutine = BG_WALL_INIT;
@@ -275,9 +273,16 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
-        // Whirlpool descent cutscene runs independently of act-specific logic
+        // Retained miniboss carrier children run independently of act-specific logic.
         if (cutsceneActive) {
-            updateCutscene();
+            if (!carrierUpdatedBeforeDynamicObjects) {
+                updateCutscene();
+            }
+            carrierUpdatedBeforeDynamicObjects = false;
+            return;
+        }
+        if (carrierUpdatedBeforeDynamicObjects) {
+            carrierUpdatedBeforeDynamicObjects = false;
             return;
         }
 
@@ -313,116 +318,169 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         act2BgUpdatedPrePhysics = true;
     }
 
+    /**
+     * Dispatches retained miniboss carrier children after the P1/P2 slots and
+     * before later object slots, matching RunObjects slot order. The camera pass
+     * follows this hook, so it observes the carrier's current y_pos.
+     */
+    public void updateRetainedCarrierObjectPass(int act) {
+        if (act != 1 || !cutsceneActive) {
+            return;
+        }
+        updateCutscene();
+        carrierUpdatedBeforeDynamicObjects = true;
+    }
+
     // =========================================================================
-    // Post-transition whirlpool descent cutscene
-    //
-    // After the seamless transition reloads Act 2, this cutscene takes control
-    // of Sonic and spirals him downward into the Act 2 starting area.
-    // The player oscillates side-to-side while descending — matching the
-    // whirlpool visual style used throughout HCZ.
+    // Post-transition miniboss carrier children
     // =========================================================================
 
     /**
-     * Called by Sonic3kLevelEventManager on the first update after the seamless
-     * transition to Act 2 completes. Starts the whirlpool descent cutscene.
+     * Starts the two retained {@code loc_6A7C4} children created by the HCZ
+     * miniboss's end-sign controller. In the ROM they survive {@code Load_Level},
+     * then receive their first active dispatch when the in-level title card
+     * finishes. Each child owns one native player slot, writes
+     * {@code object_control=1}, and carries that player on its own fixed-point
+     * arc (sonic3k.asm:139998-140077).
+     *
+     * <p>The bridge method keeps its historical name because transition event
+     * providers already expose that signal; the behavior is an object-routine
+     * port, not a synthetic cutscene.
      */
     public void startPostTransitionCutscene() {
-        AbstractPlayableSprite player = camera().getFocusedSprite();
-        if (player == null) {
-            LOG.warning("HCZ: cannot start cutscene, no player");
-            return;
+        module().getTitleCardProvider().releaseInLevelPlayerControlLockOwnership();
+        Level currentLevel = levelManager().getCurrentLevel();
+        if (currentLevel != null) {
+            // Change_Act2Sizes writes HCZ2's LevelSizes yend to
+            // Camera_target_max_Y_pos but deliberately leaves the live bottom
+            // boundary locked for the retained carrier sequence.
+            camera().setMaxYTarget((short) currentLevel.getMaxY());
         }
-
-        cutsceneActive = true;
-        cutsceneFrame = 0;
-        // Use getY() (top-left) consistently — avoid getCentreY()/setY() mismatch
-        cutsceneCenterX = player.getX();
-        cutsceneCurrentY = player.getY();
-
-        for (AbstractPlayableSprite participant : cutsceneParticipants()) {
-            ObjectControlState.nativeBit7FullControl().applyTo(participant);
-            participant.setControlLocked(true);
-            participant.setAir(true);
-            participant.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
-            participant.setXSpeed((short) 0);
-            participant.setYSpeed((short) 0);
-            participant.setGSpeed((short) 0);
+        List<AbstractPlayableSprite> participants = nativeCarrierParticipants();
+        if (!participants.isEmpty()) {
+            carrierP1Active = captureCarrier(participants.get(0), true);
         }
-
-        LOG.info("HCZ: started whirlpool descent cutscene from Y=" + cutsceneCurrentY
-                + " to Y=" + CUTSCENE_TARGET_Y);
+        if (participants.size() > 1) {
+            carrierP2Active = captureCarrier(participants.get(1), false);
+        }
+        cutsceneActive = carrierP1Active || carrierP2Active;
+        carrierMovementPending = cutsceneActive;
     }
 
-    /**
-     * Per-frame update for the whirlpool descent cutscene.
-     * Oscillates the player side-to-side while moving them downward.
-     * All coordinates use top-left (getY/setY) to avoid centre/top-left mismatch.
-     */
     private void updateCutscene() {
-        AbstractPlayableSprite player = camera().getFocusedSprite();
-        if (player == null) {
-            cutsceneActive = false;
+        if (carrierMovementPending) {
+            carrierMovementPending = false;
             return;
         }
-
-        cutsceneFrame++;
-
-        // Descend
-        cutsceneCurrentY += CUTSCENE_DESCENT_SPEED;
-
-        // Side-to-side oscillation using sine wave
-        int sineAngle = (cutsceneFrame * CUTSCENE_OSCILLATION_SPEED) & 0xFF;
-        int xOffset = (TrigLookupTable.sinHex(sineAngle) * CUTSCENE_X_AMPLITUDE) >> 8;
-
-        for (AbstractPlayableSprite participant : cutsceneParticipants()) {
-            if (participant == player) {
-                participant.setX((short) (cutsceneCenterX + xOffset));
-                participant.setY((short) cutsceneCurrentY);
-            } else {
-                int sidekickAngle = ((cutsceneFrame - 8) * CUTSCENE_OSCILLATION_SPEED) & 0xFF;
-                int sidekickXOffset = (TrigLookupTable.sinHex(sidekickAngle) * CUTSCENE_X_AMPLITUDE) >> 8;
-                participant.setX((short) (cutsceneCenterX + sidekickXOffset));
-                participant.setY((short) (cutsceneCurrentY + 16));
-            }
-            // Zero velocities so physics don't interfere
-            participant.setXSpeed((short) 0);
-            participant.setYSpeed((short) 0);
-        }
-
-        // Check if we've reached the target depth
-        if (cutsceneCurrentY >= CUTSCENE_TARGET_Y) {
-            endCutscene(player);
-        }
+        List<AbstractPlayableSprite> participants = nativeCarrierParticipants();
+        carrierP1Active = carrierP1Active && !participants.isEmpty()
+                && updateCarrier(participants.get(0), true);
+        carrierP2Active = carrierP2Active && participants.size() > 1
+                && updateCarrier(participants.get(1), false);
+        cutsceneActive = carrierP1Active || carrierP2Active;
     }
 
-    /**
-     * Ends the whirlpool descent cutscene and releases the player.
-     */
-    private void endCutscene(AbstractPlayableSprite player) {
-        cutsceneActive = false;
-
-        for (AbstractPlayableSprite participant : cutsceneParticipants()) {
-            participant.setControlLocked(false);
-            ObjectControlState.none().applyTo(participant);
-            participant.setForcedAnimationId(-1);
-            participant.setAir(true);
-            participant.setXSpeed((short) 0);
-            participant.setYSpeed((short) 0);
+    private boolean captureCarrier(AbstractPlayableSprite player, boolean p1) {
+        // ROM loc_6A7C4 deletes a carrier whose assigned player is absent or
+        // not underwater. The title-card dispatch has already refreshed this
+        // status mirror before the retained child starts.
+        if (!player.isInWater()) {
+            return false;
         }
-
-        LOG.info("HCZ: whirlpool descent cutscene ended at Y=" + player.getCentreY());
+        int x = player.getCentreX();
+        int y = player.getCentreY();
+        int boundsYOffset = Math.max(0, player.getStandYRadius() - player.getYRadius());
+        int targetX = (camera().getX() & 0xFFFF) + CARRIER_TARGET_CAMERA_OFFSET;
+        boolean targetSide = x < targetX;
+        int velocity = initialCarrierXVelocity(x - targetX);
+        if (p1) {
+            carrierP1XFixed = x << 8;
+            carrierP1YFixed = y << 8;
+            carrierP1XVelocity = velocity;
+            carrierP1TargetSide = targetSide;
+            carrierP1BoundsYOffset = boundsYOffset;
+        } else {
+            carrierP2XFixed = x << 8;
+            carrierP2YFixed = y << 8;
+            carrierP2XVelocity = velocity;
+            carrierP2TargetSide = targetSide;
+            carrierP2BoundsYOffset = boundsYOffset;
+        }
+        player.setControlLocked(false);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        player.setAir(true);
+        player.setRolling(false);
+        player.setSpindash(false);
+        player.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2.id());
+        // Engine sprites store top-left bounds while the ROM stores x_pos/y_pos.
+        // FLOAT2 changes the rendered bounds immediately; preserve the native
+        // centre words around that animation write just as move.b anim does.
+        player.setCentreXPreserveSubpixel((short) x);
+        player.setCentreYPreserveSubpixel((short) (y - carrierBoundsYOffset(p1)));
+        player.setXSpeed((short) 0);
+        player.setYSpeed((short) 0);
+        player.setGSpeed((short) 0);
+        return true;
     }
 
-    private List<AbstractPlayableSprite> cutsceneParticipants() {
-        List<AbstractPlayableSprite> sidekicks = List.copyOf(spriteManager().getSidekicks());
-        ObjectPlayerQuery query = new ObjectPlayerQuery(
-                () -> camera().getFocusedSprite(),
-                () -> sidekicks);
-        List<AbstractPlayableSprite> participants = new ArrayList<>();
-        for (PlayableEntity player : query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
-            if (player instanceof AbstractPlayableSprite playable) {
-                participants.add(playable);
-            }
+    private boolean updateCarrier(AbstractPlayableSprite player, boolean p1) {
+        int xFixed = p1 ? carrierP1XFixed : carrierP2XFixed;
+        int yFixed = p1 ? carrierP1YFixed : carrierP2YFixed;
+        int xVelocity = p1 ? carrierP1XVelocity : carrierP2XVelocity;
+        boolean previousSide = p1 ? carrierP1TargetSide : carrierP2TargetSide;
+        int targetX = (camera().getX() & 0xFFFF) + CARRIER_TARGET_CAMERA_OFFSET;
+        int x = xFixed >> 8;
+        boolean currentSide = x < targetX;
+        int acceleration = currentSide ? CARRIER_X_ACCELERATION : -CARRIER_X_ACCELERATION;
+        xVelocity += acceleration;
+        if (currentSide != previousSide) {
+            xVelocity += acceleration;
+        }
+        xFixed += xVelocity;
+        yFixed += CARRIER_Y_VELOCITY;
+        int y = yFixed >> 8;
+        player.setCentreXPreserveSubpixel((short) (xFixed >> 8));
+        player.setCentreYPreserveSubpixel((short) (y - carrierBoundsYOffset(p1)));
+        player.setXSpeed((short) 0);
+        player.setYSpeed((short) 0);
+
+        if (p1) {
+            carrierP1XFixed = xFixed;
+            carrierP1YFixed = yFixed;
+            carrierP1XVelocity = xVelocity;
+            carrierP1TargetSide = currentSide;
+        } else {
+            carrierP2XFixed = xFixed;
+            carrierP2YFixed = yFixed;
+            carrierP2XVelocity = xVelocity;
+            carrierP2TargetSide = currentSide;
+        }
+        if (y < CARRIER_RELEASE_Y) {
+            return true;
+        }
+        ObjectControlState.none().applyTo(player);
+        player.setForcedAnimationId(-1);
+        return false;
+    }
+
+    private static int initialCarrierXVelocity(int targetDelta) {
+        int doubledDistance = Math.abs(targetDelta * 2);
+        int magnitude = Math.max(0, 0x100 - doubledDistance) << 4;
+        return targetDelta < 0 ? -magnitude : magnitude;
+    }
+
+    private int carrierBoundsYOffset(boolean p1) {
+        return p1 ? carrierP1BoundsYOffset : carrierP2BoundsYOffset;
+    }
+
+    private List<AbstractPlayableSprite> nativeCarrierParticipants() {
+        List<AbstractPlayableSprite> participants = new ArrayList<>(2);
+        if (camera().getFocusedSprite() != null) {
+            participants.add(camera().getFocusedSprite());
+        }
+        var nativeP2 = spriteManager().getRegisteredSidekicks().stream().findFirst().orElse(null);
+        if (nativeP2 != null && nativeP2 != camera().getFocusedSprite()) {
+            participants.add(nativeP2);
         }
         return participants;
     }
@@ -536,6 +594,11 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     private void requestHcz2Transition() {
         transitionRequested = true;
 
+        // The surviving Obj_EndSignControl starts HCZ's post-title-card
+        // carrier children only after Obj_TitleCardWait2 finishes.
+        S3kTransitionWriteSupport.requestHczPostTransitionCutscene(
+                module().getLevelEventProvider());
+
         LevelManager lm = levelManager();
         int postTransitionMinX = offsetWord(camera().getMinX(), TRANSITION_OFFSET_X);
         int postTransitionMaxX = offsetWord(camera().getMaxX(), TRANSITION_OFFSET_X);
@@ -566,6 +629,8 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                         // starts after that parent handoff, so retain the seven
                         // intervening child dispatches before Obj_TitleCardWait.
                         .inLevelTitleCardResetAdditionalDispatches(7)
+                        .lockPlayerControlForInLevelTitleCard(true)
+                        .inLevelTitleCardExitAdditionalDispatches(5)
                         // ROM subtracts $3600 from the live camera and its
                         // bounds; it does not recenter from Player_1 afterward.
                         .preserveOffsetCameraPosition(true)
@@ -1003,11 +1068,31 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     public void    setShakeTimer(int v)            { shakeTimer = v; }
     public boolean isCutsceneActive()              { return cutsceneActive; }
     public void    setCutsceneActive(boolean v)    { cutsceneActive = v; }
-    public int     getCutsceneFrame()              { return cutsceneFrame; }
-    public void    setCutsceneFrame(int v)         { cutsceneFrame = v; }
-    public int     getCutsceneCenterX()            { return cutsceneCenterX; }
-    public void    setCutsceneCenterX(int v)       { cutsceneCenterX = v; }
-    public int     getCutsceneCurrentY()           { return cutsceneCurrentY; }
-    public void    setCutsceneCurrentY(int v)      { cutsceneCurrentY = v; }
+    public boolean isCarrierP1Active()              { return carrierP1Active; }
+    public void    setCarrierP1Active(boolean v)    { carrierP1Active = v; }
+    public boolean isCarrierP2Active()              { return carrierP2Active; }
+    public void    setCarrierP2Active(boolean v)    { carrierP2Active = v; }
+    public int     getCarrierP1XFixed()             { return carrierP1XFixed; }
+    public void    setCarrierP1XFixed(int v)        { carrierP1XFixed = v; }
+    public int     getCarrierP1YFixed()             { return carrierP1YFixed; }
+    public void    setCarrierP1YFixed(int v)        { carrierP1YFixed = v; }
+    public int     getCarrierP1XVelocity()          { return carrierP1XVelocity; }
+    public void    setCarrierP1XVelocity(int v)     { carrierP1XVelocity = v; }
+    public int     getCarrierP2XFixed()             { return carrierP2XFixed; }
+    public void    setCarrierP2XFixed(int v)        { carrierP2XFixed = v; }
+    public int     getCarrierP2YFixed()             { return carrierP2YFixed; }
+    public void    setCarrierP2YFixed(int v)        { carrierP2YFixed = v; }
+    public int     getCarrierP2XVelocity()          { return carrierP2XVelocity; }
+    public void    setCarrierP2XVelocity(int v)     { carrierP2XVelocity = v; }
+    public boolean isCarrierP1TargetSide()          { return carrierP1TargetSide; }
+    public void    setCarrierP1TargetSide(boolean v){ carrierP1TargetSide = v; }
+    public boolean isCarrierP2TargetSide()          { return carrierP2TargetSide; }
+    public void    setCarrierP2TargetSide(boolean v){ carrierP2TargetSide = v; }
+    public boolean isCarrierMovementPending()       { return carrierMovementPending; }
+    public void    setCarrierMovementPending(boolean v){ carrierMovementPending = v; }
+    public int     getCarrierP1BoundsYOffset()      { return carrierP1BoundsYOffset; }
+    public void    setCarrierP1BoundsYOffset(int v) { carrierP1BoundsYOffset = v; }
+    public int     getCarrierP2BoundsYOffset()      { return carrierP2BoundsYOffset; }
+    public void    setCarrierP2BoundsYOffset(int v) { carrierP2BoundsYOffset = v; }
     public void    setWallChaseBgOverlayActiveRaw(boolean v){ wallChaseBgOverlayActive = v; }
 }

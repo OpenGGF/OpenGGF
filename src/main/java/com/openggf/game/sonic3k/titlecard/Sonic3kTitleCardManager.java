@@ -117,6 +117,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private boolean inLevelMode;  // No black background, control released immediately
     private boolean resetLevelGamestateOnInLevelDisplay;
     private int resetLevelGamestateCountdown;
+    private boolean inLevelPlayerControlLockOwned;
     private int inLevelExitDelayFrames;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
     private float bonusFadeProgress; // 0.0→1.0 over BONUS_DISPLAY_HOLD_FRAMES during DISPLAY
@@ -199,6 +200,35 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         }
     }
 
+    @Override
+    public void requestInLevelPlayerControlLock() {
+        if (inLevelMode) {
+            inLevelPlayerControlLockOwned = true;
+        }
+    }
+
+    @Override
+    public boolean ownsInLevelPlayerControlLock() {
+        return inLevelPlayerControlLockOwned;
+    }
+
+    @Override
+    public boolean shouldLockPlayerControlForInLevelOverlay() {
+        return inLevelPlayerControlLockOwned && inLevelMode;
+    }
+
+    @Override
+    public void releaseInLevelPlayerControlLockOwnership() {
+        inLevelPlayerControlLockOwned = false;
+    }
+
+    @Override
+    public void requestInLevelExitAdditionalDispatches(int dispatches) {
+        if (inLevelMode) {
+            inLevelExitDelayFrames += Math.max(0, dispatches);
+        }
+    }
+
     /**
      * Initializes for bonus stage mode — shows "BONUS STAGE" text.
      * Uses 2 horizontal elements (frames 19/20) instead of the normal 4-element layout.
@@ -245,6 +275,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.inLevelMode = inLevel;
         this.resetLevelGamestateOnInLevelDisplay = false;
         this.resetLevelGamestateCountdown = 0;
+        this.inLevelPlayerControlLockOwned = false;
         this.inLevelExitDelayFrames = 0;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
@@ -429,6 +460,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         resetLevelGamestateOnInLevelDisplay = false;
         resetLevelGamestateCountdown = 0;
         inLevelExitDelayFrames = 0;
+        inLevelPlayerControlLockOwned = false;
         bonusMode = false;
         bonusFadeProgress = 0f;
         currentZone = 0;

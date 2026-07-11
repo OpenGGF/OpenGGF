@@ -118,6 +118,10 @@ public final class RecordingFrameDriver {
         TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
         if (titleCardProvider != null && titleCardProvider.isOverlayActive()) {
             titleCardProvider.update();
+            if (titleCardProvider.ownsInLevelPlayerControlLock()) {
+                applyInLevelTitleCardControlLock(
+                        titleCardProvider.shouldLockPlayerControlForInLevelOverlay());
+            }
         }
     }
 
@@ -146,6 +150,20 @@ public final class RecordingFrameDriver {
             if (levelManager.consumeInLevelTitleCardLevelGamestateResetRequest()) {
                 titleCardProvider.requestLevelGamestateResetAtInLevelDisplay(
                         levelManager.consumeInLevelTitleCardResetAdditionalDispatches());
+            }
+            if (levelManager.consumeInLevelTitleCardPlayerControlLockRequest()) {
+                titleCardProvider.requestInLevelPlayerControlLock();
+                applyInLevelTitleCardControlLock(true);
+            }
+            titleCardProvider.requestInLevelExitAdditionalDispatches(
+                    levelManager.consumeInLevelTitleCardExitAdditionalDispatches());
+        }
+    }
+
+    private void applyInLevelTitleCardControlLock(boolean locked) {
+        for (var sprite : GameServices.sprites().getAllSprites()) {
+            if (sprite instanceof AbstractPlayableSprite playable) {
+                playable.setControlLocked(locked);
             }
         }
     }
