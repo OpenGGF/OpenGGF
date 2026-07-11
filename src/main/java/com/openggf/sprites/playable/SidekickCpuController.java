@@ -276,6 +276,9 @@ public class SidekickCpuController {
     private NormalStepDiagnostics latestNormalStepDiagnostics;
     private int diagnosticCtrl2HeldLatch;
     private int diagnosticCtrl2PressedLatch;
+    private int diagnosticPreObjectCtrl2Frame = -1;
+    private int diagnosticPreObjectCtrl2Held;
+    private int diagnosticPreObjectCtrl2Pressed;
 
     // =====================================================================
     // Tails-carry-Sonic support (S3K-only; null trigger = feature disabled)
@@ -551,6 +554,9 @@ public class SidekickCpuController {
         // Tails_Control pass copies raw Ctrl_2 into Ctrl_2_logical before
         // Set_PlayerEndingPose's object_control=$81 freezes movement
         // (docs/skdisasm/sonic3k.asm:26196-26203,181919-181988).
+        diagnosticPreObjectCtrl2Frame = frameCounter;
+        diagnosticPreObjectCtrl2Held = diagnosticCtrl2HeldLatch & 0xFF;
+        diagnosticPreObjectCtrl2Pressed = diagnosticCtrl2PressedLatch & 0xFF;
         diagnosticCtrl2HeldLatch = controller2Held & MANUAL_HELD_MASK;
         diagnosticCtrl2PressedLatch = controller2Logical & MANUAL_HELD_MASK;
     }
@@ -633,6 +639,28 @@ public class SidekickCpuController {
 
     public int getDiagnosticGeneratedPressedInput() {
         return diagnosticCtrl2PressedLatch & 0xFF;
+    }
+
+    public int getDiagnosticNormalStepHeldInput() {
+        if (diagnosticPreObjectCtrl2Frame >= 0) {
+            return diagnosticPreObjectCtrl2Held;
+        }
+        NormalStepDiagnostics diagnostics = latestNormalStepDiagnostics;
+        if (diagnostics != null && diagnostics.frameCounter() == frameCounter) {
+            return diagnostics.generatedInput() & 0xFF;
+        }
+        return -1;
+    }
+
+    public int getDiagnosticNormalStepPressedInput() {
+        if (diagnosticPreObjectCtrl2Frame >= 0) {
+            return diagnosticPreObjectCtrl2Pressed;
+        }
+        NormalStepDiagnostics diagnostics = latestNormalStepDiagnostics;
+        if (diagnostics != null && diagnostics.frameCounter() == frameCounter) {
+            return diagnostics.generatedPressedInput() & 0xFF;
+        }
+        return -1;
     }
 
     public int getDiagnosticFollowHistorySlot() {

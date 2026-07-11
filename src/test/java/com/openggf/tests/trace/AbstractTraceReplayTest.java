@@ -749,6 +749,8 @@ public abstract class AbstractTraceReplayTest {
                 controller.targetY(),
                 controller.getDiagnosticGeneratedHeldInput(),
                 controller.getDiagnosticGeneratedPressedInput(),
+                controller.getDiagnosticNormalStepHeldInput(),
+                controller.getDiagnosticNormalStepPressedInput(),
                 controller.getDiagnosticFollowHistorySlot(),
                 controller.getDiagnosticJumpingFlag());
     }
