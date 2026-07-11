@@ -13,6 +13,7 @@ import java.util.Objects;
 import static org.lwjgl.opengl.GL11.GL_LINES;
 
 public class EditorToolbarRenderer {
+    private static final String UNSUPPORTED_PERSISTENCE_PREFIX = "S3K SAVE UNSUPPORTED | ";
     private static final float CHROME_R = 0.95f;
     private static final float CHROME_G = 0.82f;
     private static final float CHROME_B = 0.24f;
@@ -64,7 +65,10 @@ public class EditorToolbarRenderer {
             return List.of("World | Focus - | Block - Chunk -");
         }
 
-        return List.of(controller.breadcrumb()
+        String persistenceWarning = controller.persistenceStatus()
+                == com.openggf.editor.persistence.EditorSaveManager.ApplyResult.UNSUPPORTED
+                ? UNSUPPORTED_PERSISTENCE_PREFIX : "";
+        return List.of(persistenceWarning + controller.breadcrumb()
                 + " | Focus " + controller.focusRegion()
                 + " | Layer " + (controller.activeLayer() == 0 ? "FG" : "BG")
                 + " | " + (controller.currentLevel() != null && controller.currentLevel().isModifiedSinceLastSave()

@@ -2685,13 +2685,15 @@ public class LevelManager {
         if (level == null || gameModule == null) {
             return;
         }
-        if (editorSaveManager == null || !editorSaveManager.supportsRuntimeEditApply(gameModule.getGameId())) {
+        if (editorSaveManager == null) {
             return;
         }
         MutableLevel mutableLevel = level instanceof MutableLevel existing
                 ? existing
                 : MutableLevel.snapshot(level);
-        EditorSaveManager.ApplyResult result = editorSaveManager.tryApplyEdits(gameModule.getGameId(), currentZone, currentAct, mutableLevel);
+        EditorSaveManager.ApplyResult result = editorSaveManager.tryApplyEdits(
+                gameModule.getGameId(), gameModule.getObjectPlacementEncoding(),
+                currentZone, currentAct, mutableLevel);
         if (result == EditorSaveManager.ApplyResult.APPLIED && mutableLevel != level) {
             setLevel(mutableLevel);
         }

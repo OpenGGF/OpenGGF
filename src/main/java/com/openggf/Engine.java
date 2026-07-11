@@ -1005,7 +1005,10 @@ public class Engine {
 		}
 		GameModule module = worldSession.getGameModule();
 		try {
-			editorSaveManager.save(module.getGameId(), worldSession.getCurrentZone(), worldSession.getCurrentAct(), mutableLevel);
+			EditorSaveManager.SaveResult save = editorSaveManager.save(
+					module.getGameId(), module.getObjectPlacementEncoding(),
+					worldSession.getCurrentZone(), worldSession.getCurrentAct(), mutableLevel);
+			levelEditorController.setPersistenceStatus(save.persistenceStatus());
 			return true;
 		} catch (IOException e) {
 			LOGGER.warning("Failed to save editor edits: " + e.getMessage());
@@ -1799,6 +1802,7 @@ public class Engine {
 			levelManager.setLevel(mutableLevel);
 		}
 		levelEditorController.attachLevel(mutableLevel);
+		levelEditorController.setPersistenceStatus(editorSaveManager.lastApplyResult());
 		GameModule editorModule = GameServices.module();
 		levelEditorController.configureSpawnEditing(
 				editorModule.createObjectRegistry(), editorModule.getObjectPlacementEncoding());

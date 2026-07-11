@@ -1,11 +1,15 @@
 package com.openggf.editor.persistence;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.GameId;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.MutableLevel;
+import com.openggf.level.objects.ObjectPlacementEncoding;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.rings.RingSpawn;
 
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -19,21 +23,27 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import static java.security.MessageDigest.getInstance;
 
 public final class EditorSaveManager {
     private static final Logger LOG = Logger.getLogger(EditorSaveManager.class.getName());
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
 
     private final Path root;
     private final ObjectMapper mapper = new ObjectMapper();
     private final EditorSaveReader reader;
+    private ApplyResult lastApplyResult = ApplyResult.NONE;
 
     public EditorSaveManager(Path root) {
         this.root = root;
-        this.reader = file -> mapper.readValue(file.toFile(), EditorSaveEnvelope.class);
+        this.reader = file -> mapper.readTree(file.toFile());
     }
 
     EditorSaveManager(Path root, EditorSaveReader reader) {
@@ -41,10 +51,12 @@ public final class EditorSaveManager {
         this.reader = reader;
     }
 
-    public SaveResult save(GameId gameId, int zone, int act, MutableLevel level) throws IOException {
+    public SaveResult save(GameId gameId, ObjectPlacementEncoding placementEncoding,
+                           int zone, int act, MutableLevel level) throws IOException {
         Path file = editPath(gameId, zone, act);
         Files.createDirectories(file.getParent());
-        EditorSavePayload payload = buildPayload(level);
+        EditorSavePayload payload = buildPayload(gameId, level);
+        decodeSpawns(payload, placementEncoding);
         String payloadJson = mapper.writeValueAsString(payload);
         EditorSaveEnvelope envelope = new EditorSaveEnvelope(
                 VERSION,
@@ -68,48 +80,69 @@ public final class EditorSaveManager {
             throw ex;
         }
         level.markSaved();
-        return new SaveResult(true, file, envelope.hash());
+        ApplyResult persistenceStatus = supportsRuntimeEditApply(gameId)
+                ? ApplyResult.APPLIED
+                : ApplyResult.UNSUPPORTED;
+        return new SaveResult(true, file, envelope.hash(), persistenceStatus);
     }
 
-    public ApplyResult tryApplyEdits(GameId gameId, int zone, int act, MutableLevel level) {
+    public ApplyResult tryApplyEdits(GameId gameId, ObjectPlacementEncoding placementEncoding,
+                                     int zone, int act, MutableLevel level) {
         Path file = editPath(gameId, zone, act);
         if (!Files.exists(file)) {
-            return ApplyResult.NONE;
-        }
-        if (!supportsRuntimeEditApply(gameId)) {
-            LOG.fine("Skipping persisted " + gameId + " editor edits until runtime overlays support MutableLevel");
-            return ApplyResult.UNSUPPORTED;
+            return remember(ApplyResult.NONE);
         }
         try {
-            EditorSaveEnvelope envelope = reader.read(file);
-            if (envelope.version() != VERSION) {
-                quarantine(file, "unsupported editor save version " + envelope.version());
-                return ApplyResult.QUARANTINED;
+            JsonNode envelope = reader.read(file);
+            int version = requiredInt(envelope, "version");
+            if (version < 1 || version > VERSION) {
+                quarantine(file, "unsupported editor save version " + version);
+                return remember(ApplyResult.QUARANTINED);
             }
-            if (!gameId.code().equals(envelope.gameCode()) || envelope.zone() != zone || envelope.act() != act) {
-                return ApplyResult.MISMATCH;
+            if (!gameId.code().equals(requiredText(envelope, "gameCode"))
+                    || requiredInt(envelope, "zone") != zone || requiredInt(envelope, "act") != act) {
+                return remember(ApplyResult.MISMATCH);
             }
-            EditorSavePayload payload = envelope.payload();
-            String actual = sha256(mapper.writeValueAsString(payload));
-            if (!actual.equals(envelope.hash())) {
+            if (!supportsRuntimeEditApply(gameId)) {
+                LOG.fine("Skipping persisted " + gameId
+                        + " editor edits until runtime overlays support MutableLevel");
+                return remember(ApplyResult.UNSUPPORTED);
+            }
+            JsonNode rawPayload = envelope.get("payload");
+            if (rawPayload == null || !rawPayload.isObject()) {
+                throw new IllegalArgumentException("Missing editor payload object");
+            }
+            String actual = sha256(mapper.writeValueAsString(rawPayload));
+            if (!actual.equals(requiredText(envelope, "hash"))) {
                 quarantine(file, "hash mismatch");
-                return ApplyResult.QUARANTINED;
+                return remember(ApplyResult.QUARANTINED);
             }
-            applyPayload(payload, level);
+            if (version == 1) {
+                EditorSavePayloadV1 payload = mapper.treeToValue(rawPayload, EditorSavePayloadV1.class);
+                applyPayload(new EditorSavePayload(payload.blocks(), payload.chunks(), payload.mapCells()),
+                        level, placementEncoding, false);
+            } else {
+                EditorSavePayload payload = mapper.treeToValue(rawPayload, EditorSavePayload.class);
+                applyPayload(payload, level, placementEncoding, true);
+            }
             level.markSaved();
-            return ApplyResult.APPLIED;
+            return remember(ApplyResult.APPLIED);
         } catch (JsonProcessingException | RuntimeException ex) {
             try {
                 quarantine(file, ex.getMessage());
             } catch (IOException quarantineError) {
                 LOG.warning("Failed to quarantine editor save " + file + ": " + quarantineError.getMessage());
             }
-            return ApplyResult.QUARANTINED;
+            return remember(ApplyResult.QUARANTINED);
         } catch (IOException ex) {
             LOG.warning("Transient I/O while reading editor save " + file + "; leaving it in place: "
                     + ex.getMessage());
-            return ApplyResult.TRANSIENT_FAILURE;
+            return remember(ApplyResult.TRANSIENT_FAILURE);
         }
+    }
+
+    public ApplyResult lastApplyResult() {
+        return lastApplyResult;
     }
 
     public Path editPath(GameId gameId, int zone, int act) {
@@ -120,7 +153,7 @@ public final class EditorSaveManager {
         return gameId != GameId.S3K;
     }
 
-    private EditorSavePayload buildPayload(MutableLevel level) {
+    private EditorSavePayload buildPayload(GameId gameId, MutableLevel level) {
         List<EditorSavePayload.BlockState> blocks = new ArrayList<>();
         BitSet modifiedBlocks = level.modifiedBlocksSinceBaseline();
         for (int index = modifiedBlocks.nextSetBit(0); index >= 0; index = modifiedBlocks.nextSetBit(index + 1)) {
@@ -147,14 +180,26 @@ public final class EditorSaveManager {
             mapCells.add(new EditorSavePayload.MapCell(
                     layer, x, y, level.editorSaveMapCellValue(index)));
         }
-        return new EditorSavePayload(blocks, chunks, mapCells);
+        List<EditorSavePayload.ObjectState> objects = level.getObjects().stream()
+                .map(spawn -> new EditorSavePayload.ObjectState(spawn.layoutIndex(), spawn.x(), spawn.y(),
+                        spawn.objectId(), spawn.subtype(), spawn.renderFlags(), spawn.respawnTracked(),
+                        spawn.rawYWord()))
+                .toList();
+        Map<Integer, Integer> ringBackingIds = ringBackingIds(level);
+        List<EditorSavePayload.RingState> rings = level.getRings().stream()
+                .map(ring -> new EditorSavePayload.RingState(ring.placementId(), ring.x(), ring.y(),
+                        ringBackingIds.get(ring.placementId())))
+                .toList();
+        return new EditorSavePayload(blocks, chunks, mapCells, objects, rings);
     }
 
-    private void applyPayload(EditorSavePayload payload, MutableLevel level) {
+    private void applyPayload(EditorSavePayload payload, MutableLevel level,
+                              ObjectPlacementEncoding placementEncoding, boolean replaceSpawns) {
         if (payload == null) {
             return;
         }
         validatePayload(payload, level);
+        SpawnReplacement spawnReplacement = replaceSpawns ? decodeSpawns(payload, placementEncoding) : null;
         for (EditorSavePayload.ChunkState chunkState : payload.chunks()) {
             if (chunkState.index() >= 0 && chunkState.index() < level.getChunkCount()) {
                 level.restoreChunkState(chunkState.index(), chunkState.state());
@@ -177,6 +222,10 @@ public final class EditorSaveManager {
                 }
                 level.setBlockInMap(mapCell.layer(), mapCell.x(), mapCell.y(), mapCell.blockIndex());
             }
+        }
+        if (spawnReplacement != null) {
+            level.replaceSpawnsPersisted(spawnReplacement.objects(), spawnReplacement.rings(),
+                    spawnReplacement.mapping());
         }
     }
 
@@ -217,6 +266,81 @@ public final class EditorSaveManager {
         }
     }
 
+    private SpawnReplacement decodeSpawns(EditorSavePayload payload, ObjectPlacementEncoding encoding) {
+        List<ObjectSpawn> objects = new ArrayList<>(payload.objects().size());
+        Map<Integer, ObjectSpawn> objectsById = new HashMap<>();
+        for (EditorSavePayload.ObjectState state : payload.objects()) {
+            ObjectSpawn spawn = encoding.create(state.x(), state.y(), state.objectId(), state.subtype(),
+                    state.renderFlags(), state.respawnTracked(), state.placementId());
+            if (spawn.rawYWord() != state.rawYWord()) {
+                throw new IllegalArgumentException("Object placement raw word does not match encoded fields for id "
+                        + state.placementId());
+            }
+            if (objectsById.put(spawn.layoutIndex(), spawn) != null) {
+                throw new IllegalArgumentException("Duplicate object placement id " + spawn.layoutIndex());
+            }
+            objects.add(spawn);
+        }
+
+        List<RingSpawn> rings = new ArrayList<>(payload.rings().size());
+        Set<Integer> ringIds = new HashSet<>();
+        Map<ObjectSpawn, List<RingSpawn>> mapping = new LinkedHashMap<>();
+        for (EditorSavePayload.RingState state : payload.rings()) {
+            if (state.x() < 0 || state.x() > 0xFFFF || state.y() < 0 || state.y() > 0xFFFF
+                    || state.placementId() < 0 || !ringIds.add(state.placementId())) {
+                throw new IllegalArgumentException("Invalid or duplicate ring placement " + state.placementId());
+            }
+            RingSpawn ring = new RingSpawn(state.x(), state.y(), state.placementId());
+            rings.add(ring);
+            if (state.backingObjectPlacementId() != null) {
+                ObjectSpawn backing = objectsById.get(state.backingObjectPlacementId());
+                if (backing == null) {
+                    throw new IllegalArgumentException("Unknown ring backing object placement id "
+                            + state.backingObjectPlacementId());
+                }
+                mapping.computeIfAbsent(backing, ignored -> new ArrayList<>()).add(ring);
+            }
+        }
+        Map<ObjectSpawn, List<RingSpawn>> immutableMapping = new LinkedHashMap<>();
+        mapping.forEach((object, groupedRings) -> immutableMapping.put(object, List.copyOf(groupedRings)));
+        return new SpawnReplacement(List.copyOf(objects), List.copyOf(rings), Map.copyOf(immutableMapping));
+    }
+
+    private static Map<Integer, Integer> ringBackingIds(MutableLevel level) {
+        Map<Integer, Integer> backingIds = new HashMap<>();
+        level.ringObjectPlacementMapping().forEach((object, rings) -> {
+            for (RingSpawn ring : rings) {
+                Integer previous = backingIds.put(ring.placementId(), object.layoutIndex());
+                if (previous != null && previous != object.layoutIndex()) {
+                    throw new IllegalArgumentException("Ring placement has multiple backing objects: "
+                            + ring.placementId());
+                }
+            }
+        });
+        return backingIds;
+    }
+
+    private static int requiredInt(JsonNode object, String field) {
+        JsonNode value = object == null ? null : object.get(field);
+        if (value == null || !value.isIntegralNumber() || !value.canConvertToInt()) {
+            throw new IllegalArgumentException("Missing or invalid editor envelope field " + field);
+        }
+        return value.intValue();
+    }
+
+    private static String requiredText(JsonNode object, String field) {
+        JsonNode value = object == null ? null : object.get(field);
+        if (value == null || !value.isTextual()) {
+            throw new IllegalArgumentException("Missing or invalid editor envelope field " + field);
+        }
+        return value.textValue();
+    }
+
+    private ApplyResult remember(ApplyResult result) {
+        lastApplyResult = result;
+        return result;
+    }
+
     private void quarantine(Path file, String reason) throws IOException {
         LOG.warning("Quarantining corrupt editor save " + file + ": " + reason);
         Files.move(file, uniqueCorruptSibling(file));
@@ -245,7 +369,12 @@ public final class EditorSaveManager {
         }
     }
 
-    public record SaveResult(boolean ok, Path file, String hash) {
+    public record SaveResult(boolean ok, Path file, String hash, ApplyResult persistenceStatus) {
+    }
+
+    private record SpawnReplacement(List<ObjectSpawn> objects,
+                                    List<RingSpawn> rings,
+                                    Map<ObjectSpawn, List<RingSpawn>> mapping) {
     }
 
     public enum ApplyResult {

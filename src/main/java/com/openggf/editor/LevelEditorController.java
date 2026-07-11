@@ -11,6 +11,7 @@ import com.openggf.editor.commands.MoveRingSpawnCommand;
 import com.openggf.editor.commands.PlaceObjectSpawnCommand;
 import com.openggf.editor.commands.PlaceRingSpawnCommand;
 import com.openggf.editor.commands.SetChunkSolidTileIndexCommand;
+import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.ChunkDesc;
@@ -49,6 +50,7 @@ public final class LevelEditorController {
     private ObjectSpawn selectedRingBackingObject;
     private boolean collisionOverlayEnabled;
     private EditorCollisionPath collisionPath = EditorCollisionPath.PRIMARY;
+    private EditorSaveManager.ApplyResult persistenceStatus = EditorSaveManager.ApplyResult.NONE;
 
     public void attachLevel(MutableLevel level) {
         this.level = Objects.requireNonNull(level, "level");
@@ -215,6 +217,14 @@ public final class LevelEditorController {
 
     public MutableLevel currentLevel() {
         return level;
+    }
+
+    public EditorSaveManager.ApplyResult persistenceStatus() {
+        return persistenceStatus;
+    }
+
+    public void setPersistenceStatus(EditorSaveManager.ApplyResult persistenceStatus) {
+        this.persistenceStatus = Objects.requireNonNull(persistenceStatus, "persistenceStatus");
     }
 
     public boolean isCollisionOverlayEnabled() {

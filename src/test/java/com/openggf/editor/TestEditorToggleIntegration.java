@@ -18,6 +18,7 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.AbstractLevel;
 import com.openggf.level.Block;
@@ -278,8 +279,30 @@ class TestEditorToggleIntegration {
                 "editor resume should save the MutableLevel attached to LevelEditorController");
         MutableLevel fresh = MutableLevel.snapshot(new SyntheticLevel());
         assertEquals(EditorSaveManager.ApplyResult.APPLIED,
-                saveManager.tryApplyEdits(gameplayMode.getWorldSession().getGameModule().getGameId(), zone, act, fresh));
+                saveManager.tryApplyEdits(gameplayMode.getWorldSession().getGameModule().getGameId(),
+                        gameplayMode.getWorldSession().getGameModule().getObjectPlacementEncoding(),
+                        zone, act, fresh));
         assertEquals(1, Byte.toUnsignedInt(fresh.getMap().getValue(0, 1, 1)));
+    }
+
+    @Test
+    void engineSaveKeepsUnsupportedS3kPersistenceStatusVisibleToEditor() throws Exception {
+        Engine engine = new Engine();
+        EditorSaveManager saveManager = new EditorSaveManager(tempSaves);
+        setPrivateField(engine, "editorSaveManager", saveManager);
+        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(new Sonic3kGameModule());
+        gameplayMode.getWorldSession().setCurrentZone(1);
+        gameplayMode.getWorldSession().setCurrentAct(0);
+        engine.getLevelEditorController().attachLevel(MutableLevel.snapshot(new SyntheticLevel()));
+
+        Method saveCurrentEditorLevel = Engine.class.getDeclaredMethod("saveCurrentEditorLevel");
+        saveCurrentEditorLevel.setAccessible(true);
+        assertEquals(true, saveCurrentEditorLevel.invoke(engine));
+
+        assertEquals(EditorSaveManager.ApplyResult.UNSUPPORTED,
+                engine.getLevelEditorController().persistenceStatus());
+        assertTrue(Files.exists(saveManager.editPath(
+                gameplayMode.getWorldSession().getGameModule().getGameId(), 1, 0)));
     }
 
     @Test
@@ -911,8 +934,8 @@ class TestEditorToggleIntegration {
         String levelManager = Files.readString(Path.of("src/main/java/com/openggf/level/LevelManager.java"));
         String saveManager = Files.readString(Path.of("src/main/java/com/openggf/editor/persistence/EditorSaveManager.java"));
 
-        assertTrue(levelManager.contains("supportsRuntimeEditApply(gameModule.getGameId())"),
-                "LevelManager must ask the editor save manager before wrapping the loaded level in MutableLevel");
+        assertTrue(levelManager.contains("editorSaveManager.tryApplyEdits("),
+                "LevelManager must let the editor save manager validate persisted S3K envelope versions");
         assertTrue(saveManager.contains("return gameId != GameId.S3K;"),
                 "S3K persisted editor saves must be gated while S3K events require Sonic3kLevel runtime overlay support");
     }
