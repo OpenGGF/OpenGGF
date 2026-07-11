@@ -553,6 +553,10 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                         // Load_Level swaps HCZ resources without clearing the
                         // running act-results ring/time globals.
                         .preserveLevelGamestate(true)
+                        // _unkFAA8 / End_of_level_flag are global RAM, and the
+                        // carried results/end-sign objects continue to own them
+                        // after HCZ1BGE_DoTransition calls Load_Level.
+                        .preserveEndOfLevelState(true)
                         // Show act 2 title card after the level reloads
                         .showInLevelTitleCard(true)
                         // ROM subtracts $3600 from the live camera and its

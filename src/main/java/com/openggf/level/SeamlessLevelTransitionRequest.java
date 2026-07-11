@@ -16,6 +16,7 @@ public final class SeamlessLevelTransitionRequest {
     private final boolean deactivateLevelNow;
     private final boolean preserveMusic;
     private final boolean preserveLevelGamestate;
+    private final boolean preserveEndOfLevelState;
     private final boolean showInLevelTitleCard;
     private final boolean forceAirOnStaleObjectSupportLoss;
     private final boolean preserveOffsetCameraPosition;
@@ -38,6 +39,7 @@ public final class SeamlessLevelTransitionRequest {
         this.deactivateLevelNow = builder.deactivateLevelNow;
         this.preserveMusic = builder.preserveMusic;
         this.preserveLevelGamestate = builder.preserveLevelGamestate;
+        this.preserveEndOfLevelState = builder.preserveEndOfLevelState;
         this.showInLevelTitleCard = builder.showInLevelTitleCard;
         this.forceAirOnStaleObjectSupportLoss = builder.forceAirOnStaleObjectSupportLoss;
         this.preserveOffsetCameraPosition = builder.preserveOffsetCameraPosition;
@@ -76,6 +78,10 @@ public final class SeamlessLevelTransitionRequest {
 
     public boolean preserveLevelGamestate() {
         return preserveLevelGamestate;
+    }
+
+    public boolean preserveEndOfLevelState() {
+        return preserveEndOfLevelState;
     }
 
     public boolean showInLevelTitleCard() {
@@ -145,6 +151,7 @@ public final class SeamlessLevelTransitionRequest {
         private boolean deactivateLevelNow;
         private boolean preserveMusic = true;
         private boolean preserveLevelGamestate;
+        private boolean preserveEndOfLevelState;
         private boolean showInLevelTitleCard;
         private boolean forceAirOnStaleObjectSupportLoss;
         private boolean preserveOffsetCameraPosition;
@@ -182,6 +189,16 @@ public final class SeamlessLevelTransitionRequest {
 
         public Builder preserveLevelGamestate(boolean preserveLevelGamestate) {
             this.preserveLevelGamestate = preserveLevelGamestate;
+            return this;
+        }
+
+        /**
+         * Keeps the ROM end-of-level globals alive across an in-place
+         * {@code Load_Level}. Use this when the results/end-sign objects span
+         * the resource reload and still own those globals afterward.
+         */
+        public Builder preserveEndOfLevelState(boolean preserveEndOfLevelState) {
+            this.preserveEndOfLevelState = preserveEndOfLevelState;
             return this;
         }
 

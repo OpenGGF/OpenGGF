@@ -461,7 +461,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             return;
         }
         // Set_PlayerEndingPose writes object_control=$81, victory animation,
-        // and zero velocities, but does not set Ctrl_1_locked
+        // clears spin_dash_flag / Status_Push, and zeroes velocities, but does
+        // not set Ctrl_1_locked
         // (docs/skdisasm/sonic3k.asm:181977-181988). Obj_EndSignLanded only
         // locks Ctrl_2 (docs/skdisasm/sonic3k.asm:176198-176218), so Sonic
         // keeps copying raw Ctrl_1 into Ctrl_1_logical while object_control
@@ -469,6 +470,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         // Tails' delayed follow history (docs/skdisasm/sonic3k.asm:21541-21545,
         // 22119-22136).
         ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+        sprite.setSpindash(false);
+        sprite.setPushing(false);
         sprite.setXSpeed((short) 0);
         sprite.setYSpeed((short) 0);
         sprite.setGSpeed((short) 0);

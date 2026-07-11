@@ -108,6 +108,8 @@ class TestS3kSignpostInstance {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setGameRulesForTest(GameRules.SONIC_3K);
         player.setControlLocked(false);
+        player.setSpindash(true);
+        player.setPushing(true);
         player.setLogicalInputState(false, false, false, false, false);
         player.endOfTick();
 
@@ -119,6 +121,10 @@ class TestS3kSignpostInstance {
         assertFalse(player.isControlLocked(),
                 "Set_PlayerEndingPose does not set Ctrl_1_locked; Obj_EndSignLanded only sets Ctrl_2_locked "
                         + "(docs/skdisasm/sonic3k.asm:176198-176218, 181977-181988)");
+        assertFalse(player.getSpindash(),
+                "Set_PlayerEndingPose clears spin_dash_flag before control is eventually restored");
+        assertFalse(player.getPushing(),
+                "Set_PlayerEndingPose clears Status_Push");
 
         player.setLogicalInputState(false, false, false, true, false);
         player.endOfTick();

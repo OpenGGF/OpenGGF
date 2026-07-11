@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f10390 / 2383 errors (8 errors under `frontierOnly`).
+f3318 / 4234 errors to f10429 / 3138 errors (1 error under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -146,6 +146,30 @@ HCZ advances from f10386 to f10390 / 2383 full-run errors (8 under
 `frontierOnly`). Both AIZ traces remain green and every non-HCZ S3K frontier is
 unchanged in the fresh sweep; the 11 invariant guards, 2 camera-policy tests,
 and 21 S3K keep-green tests pass.
+
+Milestone 6 restores the native end-sign/results control handoff. HCZ's
+in-place `Load_Level` now preserves the global `_unkFAA8` /
+`End_of_level_flag` state while the carried `Obj_LevelResults` and
+`Obj_EndSignControl` objects remain alive. The carried results parent also
+retains the final three child-SST retirement dispatches that the engine's
+embedded results elements do not otherwise represent. When `_unkFAA8` really
+clears, `Obj_EndSignControlAwaitStart` clears P1/P2 `object_control` and
+`interact` without clearing the independently owned title-card controller
+locks (`sonic3k.asm:62586-62616,62686-62720,62817-62855,
+180356-180367,180406-180413`).
+
+`Set_PlayerEndingPose` now also clears `spin_dash_flag` and `Status_Push` as
+the ROM does. This prevents a stale pre-signpost charge from becoming an
+engine-only `$0800` roll on the first restored-control dispatch and lets the
+native `$FFF9/$0002` slope motion resume instead
+(`sonic3k.asm:181977-181990`). HCZ advances from f10390 to f10429; the full
+report is 3138 errors and `frontierOnly` is one ring-reset error. Both isolated
+AIZ replays remain green after rejecting a broader results-timing experiment.
+Every other established S3K first frontier reproduced unchanged in the fresh
+sweep: CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f866 /
+1, MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+The 11 trace invariants plus the focused control/transition guards and 21 S3K
+keep-green tests pass (60 selected tests total).
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
