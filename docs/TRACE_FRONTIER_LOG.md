@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f10813 / 2171 errors (4 errors under `frontierOnly`).
+f3318 / 4234 errors to f10986 / 2144 errors (5 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -228,6 +228,19 @@ level-select f291 / 7, MGZ complete f866 / 1, MGZ level-select f894 / 1, ICZ
 f3139 / 1, MHZ f2920 / 1, and LBZ f2270 / 5. The pre-existing CNZ auxiliary
 failures/NPE also reproduce unchanged. Focused HCZ, rewind, trace-invariant,
 and S3K keep-green selection passes 87/87.
+
+Milestone 10 completes the in-level `Obj_TitleCardWait` fresh-act reset. In
+addition to rings and timers, the ROM writes `air_left=30` to both native
+player slots. The title-card owner now replenishes the existing P1/P2 drowning
+controllers at that same reset boundary; the retained fixed countdown objects
+continue from their own independent cadence (`sonic3k.asm:62214-62235`).
+
+This removes the engine-only Tails drowning sequence and advances HCZ from
+f10813 / 2171 to f10986 / 2144 full-run errors (5 under `frontierOnly`). The
+new focused two-player title-card guard passes 2/2. Both AIZ traces remain
+green, and the two MGZ routes reproduce their unchanged f866 / 1 and f894 / 1
+frontiers; the immediately preceding full S3K sweep already held every other
+route at its documented frontier.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

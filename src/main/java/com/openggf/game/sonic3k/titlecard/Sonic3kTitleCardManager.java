@@ -518,6 +518,22 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         if (levelManager != null) {
             levelManager.resetLevelGamestate(GameServices.module().createLevelState());
         }
+        // Obj_TitleCardWait's in-level branch resets both native player slots'
+        // air_left bytes alongside rings and timers (sonic3k.asm:62214-62235).
+        // The fixed countdown objects survive HCZ's in-place Load_Level, so this
+        // must update their existing DrowningController owners rather than
+        // recreating the countdown state.
+        var player = GameServices.camera().getFocusedSprite();
+        if (player != null && player.getDrowningController() != null) {
+            player.getDrowningController().replenishAir();
+        }
+        var nativeP2 = GameServices.sprites().getRegisteredSidekicks().stream()
+                .findFirst()
+                .orElse(null);
+        if (nativeP2 != null && nativeP2 != player
+                && nativeP2.getDrowningController() != null) {
+            nativeP2.getDrowningController().replenishAir();
+        }
     }
 
     private void updateDisplay() {
