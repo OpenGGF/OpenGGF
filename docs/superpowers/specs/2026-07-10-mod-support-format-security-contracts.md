@@ -14,8 +14,11 @@ names, and case-fold collisions are rejected. Directory roots resolve real paths
 must remain under the declared project root after symlink resolution. Jar roots never
 extract entries to disk. Limit-bearing factories are
 `jar(Path declaredRoot, Path jar, ModInputLimits limits)` and
-`directory(Path declaredRoot, Path directory, ModInputLimits limits)`; two-argument
-convenience overloads delegate with `ModInputLimits.production()`. Both resolve the
+`directory(Path declaredRoot, Path directory, ModInputLimits limits, DirectoryAccess access)`.
+The jar two-argument convenience overload delegates with `ModInputLimits.production()`;
+there is no unrestricted directory convenience overload. `DirectoryAccess.PRODUCTION`
+is rejected, while only explicit `DEVELOPMENT` and `TEST` access may construct a
+directory root. Both root types resolve the
 target real path beneath the declared root before opening. Each root retains its
 limits, rejects a `readBounded` request above `limits.maxAssetBytes()`, and enforces
 the lower of the requested and injected caps. The factory caller owns `close()`.
@@ -31,6 +34,12 @@ during snapshot construction is outside the threat model; mutation after constru
 cannot affect the session. `close()` closes archives and removes only the verified
 engine-created snapshot tree/file. This preserves Windows dev mode without pretending
 portable Java offers handle-relative race-proof traversal on every provider.
+
+Directory snapshot construction enforces entry count, per-name UTF-8 bytes, aggregate
+entry-name bytes, per-file bytes, and actual aggregate validation bytes incrementally
+inside the copy loop. Each limit is checked before the corresponding temporary-file
+write or additional snapshot growth; validation is not deferred until after the source
+tree has already been copied.
 
 Manifest ids match `[a-z0-9][a-z0-9-]{0,63}`. Registry-local object/art/track/SFX/
 animation names match `[a-z0-9][a-z0-9._/-]{0,127}`, with no empty, `.`, or `..`

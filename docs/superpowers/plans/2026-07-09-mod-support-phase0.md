@@ -534,11 +534,12 @@ public sealed interface ModAssetRoot extends AutoCloseable
     static ModAssetRoot jar(Path declaredRoot, Path jar) throws IOException {
         return jar(declaredRoot, jar, ModInputLimits.production());
     }
-    static ModAssetRoot directory(Path declaredRoot, Path directory, ModInputLimits limits) throws IOException {
-        return new DirectoryModAssetRoot(declaredRoot, directory, limits);
-    }
-    static ModAssetRoot directory(Path declaredRoot, Path directory) throws IOException {
-        return directory(declaredRoot, directory, ModInputLimits.production());
+    static ModAssetRoot directory(Path declaredRoot, Path directory, ModInputLimits limits,
+                                  DirectoryAccess access) throws IOException {
+        if (access == DirectoryAccess.PRODUCTION) {
+            throw new IllegalArgumentException("directory mod roots are development/test only");
+        }
+        return new DirectoryModAssetRoot(declaredRoot, directory, limits, access);
     }
     static ModAssetRoot forTests(String description, ModInputLimits limits) {
         return new InMemoryModAssetRoot(description, limits);
@@ -573,7 +574,14 @@ collisions, declared and streaming overflow, and close behavior. Production jar 
 and trusted-dev directory roots copy into private temp-disk snapshots at construction
 and serve every later read from the snapshot; verify source mutation after construction
 is invisible and close deletes only the owned snapshot. Directory roots are rejected
-outside explicit dev/test composition. Charge thread-safe actual cumulative read bytes
+outside explicit dev/test composition through a required `DirectoryAccess` argument;
+there is no unrestricted convenience factory. During directory copying, enforce entry
+count, per-name and aggregate UTF-8 name bytes, per-file bytes, and actual aggregate
+validation bytes incrementally before each corresponding temp-file write, so an invalid
+tree cannot consume unbounded snapshot disk before rejection. Add RED/GREEN tests proving
+production access is refused, development/test access works, lowered limits fail during
+copy without exceeding the applicable snapshot cap, and failure cleanup removes the
+owned snapshot. Charge thread-safe actual cumulative read bytes
 against `maxModValidationBytes` (successful repeated reads charge again; failed reads
 roll back their reservation).
 
