@@ -166,7 +166,9 @@ public final class ModuleResolutionService {
         List<String> characters = List.copyOf(Objects.requireNonNull(
                 patch.providedMainCharacters(), "providedMainCharacters"));
         for (String character : characters) {
-            if (character.isBlank() || !character.equals(character.toLowerCase(Locale.ROOT))) {
+            if (character.isBlank()
+                    || !character.equals(character.trim())
+                    || !character.equals(character.toLowerCase(Locale.ROOT))) {
                 throw new IllegalArgumentException("Patch " + registration.namespacedId()
                         + " provided invalid main-character code: '" + character + "'");
             }

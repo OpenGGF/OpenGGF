@@ -147,6 +147,11 @@ class TestLaunchProfilePatchAvailability {
         assertMalformedCharacterMetadataFailsOwner(" ");
     }
 
+    @Test
+    void whitespacePaddedPatchCharacterCodeFailsItsOwner() {
+        assertMalformedCharacterMetadataFailsOwner("amy ");
+    }
+
     private SonicConfigurationService configWithS2Main(String character) {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(SonicConfiguration.LAUNCH_S2_CROSS_GAME_SOURCE, "off");
