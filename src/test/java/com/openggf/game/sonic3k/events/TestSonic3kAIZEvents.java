@@ -39,6 +39,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.io.IOException;
@@ -163,6 +164,23 @@ public class TestSonic3kAIZEvents {
         Camera camera = GameServices.camera();
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         assertFalse(events.shouldSpawnIntro(1));
+    }
+
+    @Test
+    public void shakeSetupPublishesPriorOffsetBeforePreparingNextFrame() throws Exception {
+        var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        events.setScreenShakeOffsetYRaw(3);
+        events.setScreenShakeAppliedOffsetYRaw(0);
+        events.setScreenShakeTimer(0);
+
+        Method tick = Sonic3kAIZEvents.class.getDeclaredMethod("tickScreenShake");
+        tick.setAccessible(true);
+        tick.invoke(events);
+
+        assertEquals(3, events.getScreenShakeOffsetY(),
+                "AIZ2_ScreenEvent consumes the offset prepared by the prior background event");
+        assertEquals(0, events.getScreenShakeOffsetYRaw(),
+                "ShakeScreen_Setup prepares the following frame after ScreenEvents consumes the old value");
     }
 
     @Test

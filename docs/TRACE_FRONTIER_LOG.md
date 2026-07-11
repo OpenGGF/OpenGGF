@@ -424,6 +424,25 @@ baseline remains f8941; the unbanked transition-timing stack currently exposes
 an earlier f5435 mismatch and must restore/advance that route before the stage
 can turn green. No AIZ-stage green claim is made yet.
 
+Round 30 restores AIZ2's two-register screen-shake phase. `AIZ2_ScreenEvent`
+adds the offset prepared by the preceding background pass to
+`Camera_Y_pos_copy`; only afterward does `AIZ2_BackgroundEvent` call
+`ShakeScreen_Setup` to publish the next offset. The engine previously computed
+and applied the new sample together, and indexed it with the zone-event
+manager's local counter instead of the ROM-visible level counter. At f16484
+that moved Tails just inside `Render_Sprites`' vertical window one pass early,
+so f16485 `sub_13EFC` cleared `Tails_CPU_flight_timer` instead of incrementing
+it to `$00EB` (`sonic3k.asm:104183-104206,104870-104875,105132-105165,
+36345-36387,26816-26833`). A separate applied-offset register now feeds the
+current scroll pass while the next offset is indexed from the stored level
+counter plus its ROM-visible pre-ScreenEvents increment. The complete-run
+frontier moves from f16485 (`tails_cpu_respawn_counter` expected `$00EB`, actual
+`$0000`) to f16756 (`rings` expected `2`, actual `3`). Focused AIZ event and
+level-event rewind tests cover the register phase and both fields' snapshot
+round-trip. Fresh full sweeps on this exact working tree pass all 29 S1 and all
+48 S2 trace replays. The focused AIZ level-select route remains red at
+the unbanked f5435 transition frontier, so the stage is not green yet.
+
 ## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green
 
 Worktree `.worktrees/ai-s2-mtz3-round96-orbinit`, branch

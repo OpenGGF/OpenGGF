@@ -290,6 +290,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private int battleshipPostScrollCameraX;
     /** Current vertical shake offset produced by {@link #screenShakeTimer}. */
     private int screenShakeOffsetY;
+    /** Offset consumed by the current ScreenEvents pass before the next value is prepared. */
+    private int screenShakeAppliedOffsetY;
     /** True after the act switch request has been sent to LevelManager. */
     private boolean act2TransitionRequested;
     /** True after in-place mutation stage has been requested. */
@@ -474,6 +476,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         battleshipPostScrollCameraX = -1;
         screenShakeTimer = 0;
         screenShakeOffsetY = 0;
+        screenShakeAppliedOffsetY = 0;
         act2TransitionRequested = false;
         fireTransitionMutationRequested = false;
         postFireHazeActive = false;
@@ -1294,7 +1297,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
 
         // ROM: ShakeScreen_Setup — timed (bomb) and constant (water trigger) modes
-        tickScreenShake(frameCounter);
+        tickScreenShake();
 
         // ROM: AIZ2_Resize — dynamic boundary state machine (sonic3k.asm:39012)
         updateAiz2EndBossSpawn();
@@ -1952,7 +1955,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     public int getScreenShakeOffsetY() {
-        return screenShakeOffsetY;
+        return screenShakeAppliedOffsetY;
     }
 
     /**
@@ -1967,15 +1970,24 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * The water system's shake timer drives the constant mode; the local
      * {@link #screenShakeTimer} drives the timed mode.
      *
-     * @param frameCounter current Level_frame_counter for constant-mode indexing
      */
-    private void tickScreenShake(int frameCounter) {
+    private void tickScreenShake() {
+        // AIZ2_ScreenEvent consumes Screen_shake_offset before the background
+        // event calls ShakeScreen_Setup to prepare the value for the next frame
+        // (sonic3k.asm:104870-104875,105132-105165). Preserve both registers:
+        // the scroll handler applies the old value while this method computes
+        // the new one.
+        screenShakeAppliedOffsetY = screenShakeOffsetY;
         // Constant-mode shake: driven by WaterSystem's shake timer (ROM: Screen_shake_flag = -1).
         // DynamicWaterHeight_AIZ2 sets it to 180; WaterSystem decrements it each frame.
         // ROM: ShakeScreen_Setup loc_4F3FA — uses ScreenShakeArray2[(Level_frame_counter & $3F)]
         WaterSystem ws = waterSystem();
         if (ws != null && ws.getShakeTimer(0, 1) > 0) { // AIZ act 2
-            screenShakeOffsetY = SCREEN_SHAKE_ARRAY_CONSTANT[frameCounter & 0x3F];
+            // LevelManager stores the previous completed frame until its later
+            // level-update phase. At ScreenEvents the ROM counter has already
+            // advanced, so +1 recovers the value ShakeScreen_Setup reads.
+            int romFrameCounter = levelManager().getFrameCounter() + 1;
+            screenShakeOffsetY = SCREEN_SHAKE_ARRAY_CONSTANT[romFrameCounter & 0x3F];
             return;
         }
 
@@ -2469,6 +2481,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     public void    setBattleshipPostScrollCameraX(int v)    { battleshipPostScrollCameraX = v; }
     public int     getScreenShakeOffsetYRaw()               { return screenShakeOffsetY; }
     public void    setScreenShakeOffsetYRaw(int v)          { screenShakeOffsetY = v; }
+    public int     getScreenShakeAppliedOffsetYRaw()        { return screenShakeAppliedOffsetY; }
+    public void    setScreenShakeAppliedOffsetYRaw(int v)   { screenShakeAppliedOffsetY = v; }
     public boolean isAct2TransitionRequestedRaw()           { return act2TransitionRequested; }
     public void    setAct2TransitionRequestedRaw(boolean v) { act2TransitionRequested = v; }
     public boolean isFireTransitionMutationRequested()      { return fireTransitionMutationRequested; }
