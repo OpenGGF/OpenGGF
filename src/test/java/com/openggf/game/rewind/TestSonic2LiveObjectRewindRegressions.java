@@ -185,6 +185,92 @@ class TestSonic2LiveObjectRewindRegressions {
         }
     }
 
+    @Test
+    void buzzerForcedReconstructionMatchesIndependentlyAdvancedControl() {
+        RewindRoundTripHarness harness = RewindRoundTripHarness.build(GameId.S2);
+        var adapter = harness.objectManager().rewindSnapshottable();
+        ObjectSpawn spawn = new ObjectSpawn(160, 240, Sonic2ObjectIds.BUZZER,
+                0, 0, false, 0);
+        BuzzerBadnikInstance buzzer = new BuzzerBadnikInstance(spawn);
+        buzzer.setServices(new TestObjectServices());
+        harness.objectManager().addDynamicObject(buzzer);
+
+        BuzzerBadnikInstance control = new BuzzerBadnikInstance(spawn);
+        control.setServices(new TestObjectServices());
+        DummyPlayer player = rollingPlayer();
+        int frame = 0;
+        for (; frame < 5; frame++) {
+            buzzer.update(0, player);
+            control.update(0, player);
+        }
+
+        PerObjectRewindSnapshot authoritative = buzzer.captureRewindState();
+        PerObjectRewindSnapshot.BuzzerRewindExtra capturedSubclass = assertInstanceOf(
+                PerObjectRewindSnapshot.BuzzerRewindExtra.class,
+                authoritative.badnikSubclassExtra());
+        assertFalse(capturedSubclass.initPending(), "precondition: init routine ran");
+        assertTrue(capturedSubclass.moveTimer() < 0x100, "precondition: roaming timer advanced");
+        assertTrue(authoritative.badnikExtra().xVelocity() != 0,
+                "precondition: inherited movement state is non-default");
+
+        ObjectManagerSnapshot capturedManager = adapter.capture();
+        ObjectManagerSnapshot.DynamicObjectEntry capturedEntry = capturedManager.dynamicObjects()
+                .stream().filter(entry -> entry.className().equals(BuzzerBadnikInstance.class.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(authoritative.badnikExtra(), capturedEntry.state().badnikExtra());
+        assertEquals(authoritative.badnikSubclassExtra(),
+                capturedEntry.state().badnikSubclassExtra());
+        List<String> capturedDynamicClasses = capturedManager.dynamicObjects().stream()
+                .map(ObjectManagerSnapshot.DynamicObjectEntry::className).toList();
+        List<String> capturedActiveClasses = harness.objectManager().getActiveObjects().stream()
+                .map(object -> object.getClass().getName()).toList();
+
+        for (int i = 0; i < 7; i++) {
+            buzzer.update(0, player);
+            frame++;
+        }
+        harness.objectManager().setRewindInPlaceRestoreEnabledForTest(false);
+        adapter.restore(capturedManager);
+        BuzzerBadnikInstance restored = harness.objectManager().getActiveObjects().stream()
+                .filter(BuzzerBadnikInstance.class::isInstance)
+                .map(BuzzerBadnikInstance.class::cast)
+                .findFirst().orElseThrow();
+        assertNotSame(buzzer, restored);
+
+        ObjectManagerSnapshot recapturedManager = adapter.capture();
+        PerObjectRewindSnapshot immediate = restored.captureRewindState();
+        assertEquals(authoritative.badnikExtra(), immediate.badnikExtra());
+        assertEquals(authoritative.badnikSubclassExtra(), immediate.badnikSubclassExtra());
+        assertArrayEquals(capturedManager.usedSlotsBits(), recapturedManager.usedSlotsBits());
+        assertEquals(capturedDynamicClasses, recapturedManager.dynamicObjects().stream()
+                .map(ObjectManagerSnapshot.DynamicObjectEntry::className).toList());
+        assertEquals(capturedActiveClasses, harness.objectManager().getActiveObjects().stream()
+                .map(object -> object.getClass().getName()).toList());
+
+        for (int i = 0; i < 8; i++) {
+            restored.update(0, player);
+            control.update(0, player);
+            PerObjectRewindSnapshot restoredFrame = restored.captureRewindState();
+            PerObjectRewindSnapshot controlFrame = control.captureRewindState();
+            assertEquals(controlFrame.badnikExtra(), restoredFrame.badnikExtra(),
+                    "complete base state at resumed frame " + i);
+            assertEquals(controlFrame.badnikSubclassExtra(), restoredFrame.badnikSubclassExtra(),
+                    "complete subclass state at resumed frame " + i);
+            assertEquals(control.getX(), restored.getX(),
+                    "position X at resumed frame " + i);
+            assertEquals(control.getY(), restored.getY(),
+                    "position Y at resumed frame " + i);
+            assertEquals(controlFrame.badnikExtra().xVelocity(),
+                    restoredFrame.badnikExtra().xVelocity(), "velocity X at resumed frame " + i);
+            assertEquals(controlFrame.badnikExtra().yVelocity(),
+                    restoredFrame.badnikExtra().yVelocity(), "velocity Y at resumed frame " + i);
+            assertEquals(controlFrame.badnikExtra().animFrame(),
+                    restoredFrame.badnikExtra().animFrame(), "animation at resumed frame " + i);
+            assertEquals(controlFrame.badnikExtra().facingLeft(),
+                    restoredFrame.badnikExtra().facingLeft(), "facing at resumed frame " + i);
+        }
+    }
+
     private static MasherBadnikInstance controlFromCaptured(ObjectSpawn spawn,
             PerObjectRewindSnapshot.BadnikRewindExtra base,
             PerObjectRewindSnapshot.MasherRewindExtra motion) {
