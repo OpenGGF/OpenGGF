@@ -33,10 +33,12 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.mock;
+import com.openggf.game.timeattack.TimeAttackLaunchRequest;
 
 class TestEngineDataSelectPatchResolution {
 
@@ -98,9 +100,17 @@ class TestEngineDataSelectPatchResolution {
                 "knuckles");
         config.setConfigValue(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE,
                 "tails");
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.TEST_MODE_ENABLED, true);
+        AtomicInteger scans = new AtomicInteger();
         ModuleResolutionService resolver = new ModuleResolutionService(List.of(
                 new RegisteredPatch(new PatchOwner.BuiltIn("one"), "one", patch("one"), 0)),
-                PatchEnablement.ALL_ENABLED, new LogicalRomResolver(() -> null), config);
+                PatchEnablement.ALL_ENABLED, new LogicalRomResolver(() -> null), config,
+                enablement -> {
+                    scans.incrementAndGet();
+                    return new ModuleResolutionService.PatchPlan(List.of(
+                            new RegisteredPatch(new PatchOwner.Mod("probe"),
+                                    "probe:mod", patch("mod"), 0)), java.util.Map.of());
+                });
         Engine engine = new Engine(new EngineContext(config, mock(GraphicsManager.class),
                 mock(AudioManager.class), mock(RomManager.class), mock(PerformanceProfiler.class),
                 mock(DebugOverlayManager.class), mock(PlaybackDebugManager.class),
@@ -113,6 +123,11 @@ class TestEngineDataSelectPatchResolution {
                 new RecordingLaunchContext("s2", 0, 0, "knuckles", List.of("tails"),
                         false, "test"));
         assertEquals(List.of("one"), ((PatchTrail) recordingModule).ids());
+        GameModule timeAttackModule = engine.resolveTimeAttackModuleForLaunch(root,
+                new TimeAttackLaunchRequest("s2", 0, 0, "knuckles", List.of()));
+        assertEquals(List.of("one"), ((PatchTrail) timeAttackModule).ids());
+        assertEquals(0, scans.get(),
+                "deterministic Engine/recording/time-attack seams must not scan mod plans");
     }
 
     private static GamePatch patch(String id) {

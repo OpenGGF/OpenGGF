@@ -1189,9 +1189,7 @@ public class Engine {
 		com.openggf.game.save.SaveSessionContext saveContext = com.openggf.game.save.SaveSessionContext.noSave(
 				request.gameId(), team, request.zone(), request.act());
 
-		GameModule module = moduleResolutionService.resolveForLaunch(rootModule,
-				new GameplayLaunchRequest(request.gameId(), request.character(), List.of()),
-				ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+		GameModule module = resolveTimeAttackModuleForLaunch(rootModule, request);
 		GameplayModeContext gameplay = SessionManager.openGameplaySession(
 				rootModule, module, saveContext);
 		initializeGameplayRuntime(gameplay, false);
@@ -1207,6 +1205,13 @@ public class Engine {
 		if (timeAttackRuntime.isActive()) {
 			timeAttackRuntime.onLevelReady();
 		}
+	}
+
+	GameModule resolveTimeAttackModuleForLaunch(
+			GameModule rootModule, TimeAttackLaunchRequest request) {
+		return moduleResolutionService.resolveForLaunch(rootModule,
+				new GameplayLaunchRequest(request.gameId(), request.character(), List.of()),
+				ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
 	}
 
 	private static List<String> stockCharacters(String gameId) {

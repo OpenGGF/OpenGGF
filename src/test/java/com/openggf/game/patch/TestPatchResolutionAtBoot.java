@@ -81,14 +81,21 @@ class TestPatchResolutionAtBoot {
 
     @Test
     void headlessBootSeamUsesInjectedResolverAndConfigRequest() {
-        ModuleResolutionService service = ModuleResolutionService.forTests(
+        AtomicInteger scans = new AtomicInteger();
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        ModuleResolutionService service = new ModuleResolutionService(
                 List.of(
                         new RegisteredPatch(new PatchOwner.BuiltIn("one"),
                                 "one", trailPatch("one"), 0),
                         new RegisteredPatch(new PatchOwner.BuiltIn("two"),
                                 "two", trailPatch("two"), 1)),
-                PatchEnablement.ALL_ENABLED);
-        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+                PatchEnablement.ALL_ENABLED, new LogicalRomResolver(() -> null), config,
+                enablement -> {
+                    scans.incrementAndGet();
+                    return new ModuleResolutionService.PatchPlan(List.of(
+                            new RegisteredPatch(new PatchOwner.Mod("probe"),
+                                    "probe:mod", trailPatch("mod"), 0)), Map.of());
+                });
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
 
@@ -105,6 +112,7 @@ class TestPatchResolutionAtBoot {
         assertSame(root, SessionManager.getCurrentWorldSession().rootGameModule());
         assertEquals(List.of("one", "two"), ((PatchTrail) SessionManager.requireCurrentGameModule())
                 .appliedPatchIds());
+        assertEquals(0, scans.get(), "headless boot must not scan mod plans");
 
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         HeadlessGameBoot.openResolvedSessionForBoot(injected, root);

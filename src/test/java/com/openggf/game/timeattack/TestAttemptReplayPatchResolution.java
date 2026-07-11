@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -36,10 +37,16 @@ class TestAttemptReplayPatchResolution {
     @Test
     void attemptMetadataDrivesInjectedDeterministicResolver() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        AtomicInteger scans = new AtomicInteger();
         ModuleResolutionService resolver = new ModuleResolutionService(List.of(
                 new RegisteredPatch(new PatchOwner.BuiltIn("attempt"), "attempt",
                         knucklesPatch(), 0)), PatchEnablement.ALL_ENABLED,
-                new LogicalRomResolver(() -> null), config);
+                new LogicalRomResolver(() -> null), config, enablement -> {
+                    scans.incrementAndGet();
+                    return new ModuleResolutionService.PatchPlan(List.of(
+                            new RegisteredPatch(new PatchOwner.Mod("probe"), "probe:mod",
+                                    knucklesPatch(), 0)), java.util.Map.of());
+                });
         EngineContext services = new EngineContext(config, mock(GraphicsManager.class),
                 mock(AudioManager.class), mock(RomManager.class), mock(PerformanceProfiler.class),
                 mock(DebugOverlayManager.class), mock(PlaybackDebugManager.class),
@@ -51,6 +58,7 @@ class TestAttemptReplayPatchResolution {
 
         assertInstanceOf(DelegatingGameModule.class, resolved);
         assertEquals("attempt", ((DelegatingGameModule) resolved).patchId());
+        assertEquals(0, scans.get(), "attempt replay must not scan mod plans");
     }
 
     private static GamePatch knucklesPatch() {
