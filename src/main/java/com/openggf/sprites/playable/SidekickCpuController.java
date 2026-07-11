@@ -375,7 +375,6 @@ public class SidekickCpuController {
         deferredDespawnDeadFallContinuingThisFrame = false;
 
         if (controller2SignedLocked) {
-            clearInputs();
             carryParentagePending = false;
             if (sidekick.isObjectControlled() && !sidekick.isObjectControlAllowsCpu()) {
                 mirrorRawController2LogicalForEndingPose();

@@ -9,17 +9,21 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 /**
  * Floating upside-down egg prison used by the AIZ2 post-boss cutscene.
  */
 public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleInstance
         implements SpawnCoordinateRewindRecreatable {
-    private static final int RESULTS_OWNER_TAILS_ENDING_POSE_ENTRY = 6;
+    private static final int RESULTS_OWNER_TAILS_ENDING_POSE_ENTRY = 1;
 
     private boolean tailsEndingPoseApplied;
     private boolean tailsEndingPoseControllerReleasePending;
+    private boolean tailsEndingPoseObjectControlLocked;
+    private int tailsOpenControllerLockDelay;
     private int resultsActiveWaitEntries;
+    private boolean resultsStartEligibilityObserved;
 
     public Aiz2EndEggCapsuleInstance(int initialX, int initialY) {
         super(initialX, initialY, "AIZ2EndEggCapsule");
@@ -44,9 +48,23 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
 
     @Override
     protected void onParentOpen() {
-        // ROM sub_865DE sets Ctrl_2_locked negative when the capsule parent
-        // consumes the button child's trigger bit, not when the child is first
-        // touched (sonic3k.asm:181556-181570,181739-181767).
+        // sub_865DE runs from the parent slot after the current player/CPU
+        // dispatch. Publish its signed Ctrl_2 lock on the next capsule entry.
+        tailsOpenControllerLockDelay = 1;
+    }
+
+    @Override
+    protected void onBeforeCapsuleUpdate() {
+        if (Aiz2BossEndSequenceState.tickTailsControlRelease()) {
+            releaseTailsControlNow();
+        }
+        if (tailsOpenControllerLockDelay <= 0) {
+            return;
+        }
+        tailsOpenControllerLockDelay--;
+        if (tailsOpenControllerLockDelay > 0) {
+            return;
+        }
         if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
                 && sidekick.getCpuController() != null) {
             sidekick.getCpuController().setController2SignedLocked(true);
@@ -67,6 +85,17 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
         // results start; Player_2 is handled later by Check_TailsEndPose after
         // its own eligibility gate (sonic3k.asm:181900-181939).
         return ObjectPlayerParticipationPolicy.MAIN_ONLY_NATIVE;
+    }
+
+    @Override
+    protected boolean shouldStartResults(AbstractPlayableSprite player) {
+        // sub_868F8 only rejects a dead/airborne/non-playable routine. It then
+        // calls Set_PlayerEndingPose, which owns the velocity clears itself.
+        if (!resultsStartEligibilityObserved) {
+            resultsStartEligibilityObserved = true;
+            return false;
+        }
+        return !player.getAir() && !player.getDead();
     }
 
     @Override
@@ -110,7 +139,12 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
             }
             tailsEndingPoseApplied = true;
             tailsEndingPoseControllerReleasePending = true;
+            tailsEndingPoseObjectControlLocked = true;
+            boolean wasAir = sidekick.getAir();
+            boolean wasOnObject = sidekick.isOnObject();
             lockForResults(sidekick);
+            sidekick.setAir(wasAir);
+            sidekick.setOnObject(wasOnObject);
         }
     }
 
@@ -130,6 +164,18 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
             return true;
         }
         return false;
+    }
+
+    private void releaseTailsControlNow() {
+        if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
+            if (sidekick.getCpuController() != null) {
+                sidekick.getCpuController().setController2SignedLocked(false);
+                sidekick.getCpuController().mirrorRawController2LogicalForEndingPose();
+            }
+            ObjectControlState.none().applyTo(sidekick);
+            sidekick.setControlLocked(false);
+        }
+        tailsEndingPoseObjectControlLocked = false;
     }
 
     private static final class HighPriorityAnimal extends EggPrisonAnimalInstance {
@@ -169,6 +215,15 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
             // Restore_PlayerControl/2 after Check_TailsEndPose observes that
             // flag clear (sonic3k.asm:166696-166703).
             return false;
+        }
+
+        @Override
+        protected void onExitReady() {
+            super.onExitReady();
+            // This later results slot clears _unkFAA8 after the capsule owner
+            // has already run. Publish Restore_PlayerControl2 here so the next
+            // Player_2 CPU pass sees the released state.
+            Aiz2BossEndSequenceState.scheduleTailsControlRelease(4);
         }
     }
 }

@@ -855,6 +855,19 @@ exact 29-class S1 plus 19-class S2 replay fleet passed immediately before this
 commit (with only the ROM-optional special-stage skip). The AIZ stage is not
 green yet.
 
+Round 61 restores the AIZ capsule/results P1/P2 control handoff. The capsule
+parent now publishes its signed `Ctrl_2_locked` state on its following object
+entry, and the shared CPU controller preserves the existing logical word while
+that signed lock short-circuits CPU dispatch. The results owner applies Tails'
+ending pose at its native eligibility entry, retains the standing/air bits that
+the ROM routine does not rewrite, then schedules `Restore_PlayerControl2` from
+the later results slot through rewind-captured sequence state
+(`sonic3k.asm:166696-166703,181556-181570,181900-181918`). The exact 29-class
+S1 plus 19-class S2 replay fleet passed with these shared-controller changes.
+In the composed investigation worktree, the complete run proceeds through this
+handoff; the focused AIZ regression at f19397 remains explicitly red. The AIZ
+stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

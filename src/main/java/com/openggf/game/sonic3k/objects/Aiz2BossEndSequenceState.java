@@ -13,6 +13,7 @@ public final class Aiz2BossEndSequenceState {
     private static volatile boolean buttonPressed;
     private static volatile boolean eggCapsuleReleased;
     private static volatile boolean cutsceneOverrideObjectsActive;
+    private static volatile int tailsControlReleaseDelay = -1;
     private static volatile CutsceneKnucklesAiz2Instance activeKnuckles;
 
     private Aiz2BossEndSequenceState() {
@@ -23,6 +24,7 @@ public final class Aiz2BossEndSequenceState {
         buttonPressed = false;
         eggCapsuleReleased = false;
         cutsceneOverrideObjectsActive = false;
+        tailsControlReleaseDelay = -1;
         activeKnuckles = null;
     }
 
@@ -58,6 +60,24 @@ public final class Aiz2BossEndSequenceState {
         cutsceneOverrideObjectsActive = true;
     }
 
+    public static void scheduleTailsControlRelease(int delay) {
+        if (tailsControlReleaseDelay < 0) {
+            tailsControlReleaseDelay = delay;
+        }
+    }
+
+    public static boolean tickTailsControlRelease() {
+        if (tailsControlReleaseDelay < 0) {
+            return false;
+        }
+        if (tailsControlReleaseDelay == 0) {
+            tailsControlReleaseDelay = -1;
+            return true;
+        }
+        tailsControlReleaseDelay--;
+        return false;
+    }
+
     public static CutsceneKnucklesAiz2Instance getActiveKnuckles() {
         return activeKnuckles;
     }
@@ -80,12 +100,13 @@ public final class Aiz2BossEndSequenceState {
                            boolean buttonPressed,
                            boolean eggCapsuleReleased,
                            boolean cutsceneOverrideObjectsActive,
+                           int tailsControlReleaseDelay,
                            boolean drawBridgeBurnActive) {
     }
 
     public static Snapshot snapshot() {
         return new Snapshot(bridgeDropTriggered, buttonPressed, eggCapsuleReleased,
-                cutsceneOverrideObjectsActive,
+                cutsceneOverrideObjectsActive, tailsControlReleaseDelay,
                 AizCollapsingLogBridgeObjectInstance.isDrawBridgeBurnActive());
     }
 
@@ -94,6 +115,7 @@ public final class Aiz2BossEndSequenceState {
         buttonPressed = snapshot.buttonPressed();
         eggCapsuleReleased = snapshot.eggCapsuleReleased();
         cutsceneOverrideObjectsActive = snapshot.cutsceneOverrideObjectsActive();
+        tailsControlReleaseDelay = snapshot.tailsControlReleaseDelay();
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(
                 snapshot.drawBridgeBurnActive());
         // Drop any stale live pointer; rebound from the restored object set by
