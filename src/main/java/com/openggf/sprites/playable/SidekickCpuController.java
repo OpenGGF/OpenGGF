@@ -377,6 +377,26 @@ public class SidekickCpuController {
         this.frameCounter = resolveCpuFrameCounter(frameCount);
         deferredDespawnDeadFallContinuingThisFrame = false;
 
+        // Kill_Character can be reached outside Tails_Check_Screen_Boundaries
+        // (for example Obj_InvisibleHurtBlockVertical's sub_1F734). In that
+        // case the playable sprite has already entered object routine 6, but
+        // the CPU controller did not originate the kill and still holds its
+        // prior state. Adopt the native dead-object dispatch on the following
+        // CPU tick so Obj02_Dead/sub_123C2 owns the fall/marker transition just
+        // as it does for a boundary kill (sonic3k.asm:21136-21159,26091-26096,
+        // 29277-29285; s2.asm:40736-40759).
+        if (sidekick.getDead() && state != State.DEAD_FALLING) {
+            int romCpuRoutine = romCpuRoutineForState(state);
+            deadFallingRomCpuRoutine = romCpuRoutine >= 0 ? romCpuRoutine : 0x06;
+            state = State.DEAD_FALLING;
+            normalFrameCount = 0;
+        }
+        if (state == State.DEAD_FALLING) {
+            clearInputs();
+            updateDeadFalling();
+            return;
+        }
+
         if (controller2SignedLocked) {
             carryParentagePending = false;
             if (sidekick.isObjectControlled() && !sidekick.isObjectControlAllowsCpu()) {

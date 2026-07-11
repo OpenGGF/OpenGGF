@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f12154 / 2318 errors (10 errors under `frontierOnly`).
+f3318 / 4234 errors to f12514 / 2253 errors (1 error under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -328,6 +328,26 @@ replays retain their pre-existing end-of-recording input-alignment failures;
 the combined shared-JVM invocation remains unsuitable for frontier comparison
 because those long classes contaminate one another, so each replay method was
 also run in its own Maven process.
+
+Milestone 16 restores the HCZ2 wall-to-hazard death and native CPU-sidekick
+death handoff. S3K invisible blocks now declare their direct
+`SolidObjectFull2` inclusive-edge/off-screen collision contract. When engine
+placement loading gives the moving wall a later Java slot than a vertical hurt
+block, a successful wall side separation rechecks only those earlier engine-slot
+vertical hurt blocks, reproducing the ROM's wall-slot-11 then hurt-block-slot-15
+order without a zone, route, or frame predicate. A generic `Kill_Character`
+that did not originate in the CPU controller now adopts the sidekick's native
+routine-6 dispatch on the following CPU tick, letting `sub_123C2` write the
+S3K `$7F00` catch-up marker (`sonic3k.asm:41065-41067,43507-43535,
+106226-106244,21136-21159,24538-24578,26800-26809`).
+
+This closes f12154-f12513 and advances HCZ to f12514 / 2253 full-run errors (1
+under `frontierOnly`), reducing the full report by 65 groups. Focused invisible
+block, wall-order, and sidekick-death tests pass. Granular isolated replay
+checks keep both AIZ routes green and preserve CNZ complete f1846, CNZ
+level-select f291, MGZ complete f866, MGZ level-select f894, MHZ f2920, and LBZ
+f2270. The shared generic-death correction also advances ICZ from f3139 / 3207
+to f3174 / 3205; no non-HCZ frontier moved backward.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

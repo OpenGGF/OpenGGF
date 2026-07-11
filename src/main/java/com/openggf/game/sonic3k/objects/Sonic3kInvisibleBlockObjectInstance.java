@@ -72,6 +72,23 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Every S3K invisible-block variant calls SolidObjectFull2. Its X
+        // entry gate rejects with bhi, so relX == width * 2 is still a valid
+        // contact (sonic3k.asm:41065-41067,43268-43574).
+        return true;
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj_InvisibleBlock and both hurt variants jump directly through
+        // SolidObjectFull2. Unlike SolidObjectFull_1P, that entry never tests
+        // render_flags bit 7 before falling into SolidObject_cont
+        // (sonic3k.asm:41065-41067,43268-43574).
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity,
                                SolidContact contact, int frameCounter) {
         // No special behavior - standard collision handled by ObjectManager.

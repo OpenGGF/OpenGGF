@@ -755,6 +755,32 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s3kGenericKillAdoptsDeadRoutineAndAppliesNextFrameMarker() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0A7D);
+        tails.setCentreY((short) 0x0780);
+        tails.setAir(true);
+        tails.setYSpeed((short) -0x0700);
+        tails.setDead(true);
+        GameServices.camera().setY((short) 0x066C);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+
+        controller.update(0x2F7B);
+
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState());
+        assertEquals((short) 0x7F00, tails.getCentreX());
+        assertEquals((short) -0x0007, tails.getCentreY());
+        assertEquals((short) -0x06C8, tails.getYSpeed());
+        assertEquals(0x0002, controller.getDiagnosticRomCpuRoutine(),
+                "sub_13ECA replaces the prior CPU routine after generic Kill_Character");
+    }
+
+    @Test
     void s3kOffscreenDestroyedRideSlotDespawnsEvenWhenInteractIdIsUnchanged() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
