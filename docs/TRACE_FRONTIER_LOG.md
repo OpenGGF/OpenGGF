@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f17173 / 2138 errors (2 errors under `frontierOnly`).
+f3318 / 4234 errors to f17314 / 1964 errors (1 error under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -550,6 +550,20 @@ ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5. A selected full S1/S2 replay
 check kept all S1 and all but S2 OOZ clean; a detached worktree at pre-change
 commit `92a4703f1` reproduced OOZ's identical f447 mismatch, establishing it as
 pre-existing rather than a regression from the S3K collision rule.
+
+Milestone 33 completes the two-player tension-bridge solid contract. New riders
+enter through flat `sub_1E410` with `d3=8`; only established riders consume the
+bent child-segment Y table. `loc_38AC2` clears `Status_OnObj` without forcing
+`Status_InAir`, allowing a terrain landing earlier in the frame to survive the
+bridge exit. Player 2's prior `$3B` segment walks the shared `$3F` bend anchor
+before `sub_38CC2`, and the bridge exposes `loc_387E0`'s `$0003` pointer word to
+`Tails_CPU_interact` (`sonic3k.asm:75555-75635,75879-75946`).
+
+This closes f17173-f17313 and advances HCZ to f17314 / 1964 full-run errors (1
+under `frontierOnly`). The focused bridge contract and bend-order tests pass.
+The granular S3K replay matrix remains exact: both AIZ routes green; CNZ
+complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout

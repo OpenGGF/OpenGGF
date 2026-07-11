@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -41,7 +42,8 @@ import java.util.List;
  * <p>ROM reference: Obj_TensionBridge (sonic3k.asm:75496+)
  */
 public class TensionBridgeObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SlopedSolidProvider, SolidObjectListener, RomObjectCodePointerProvider,
+        SpawnRewindRecreatable {
 
     private enum Variant { NORMAL, TRIGGER_COLLAPSE, ICZ_ROPE }
 
@@ -129,6 +131,7 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
 
     private int depressionAngle;    // $3E: 0 to MAX_DEPRESSION_ANGLE
     private int playerSegmentIndex; // $3F: which segment the player is on
+    private int sidekickSegmentIndex; // $3B: which segment Player 2 is on
     private boolean playerOnBridge;
     private int[] segmentYOffsets;
     private byte[] slopeData;
@@ -193,6 +196,29 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean forceAirOnRideExit() {
+        // sub_38AA2 loc_38AC2 clears Status_OnObj and the bridge's standing
+        // bit, but deliberately leaves Status_InAir unchanged. This permits a
+        // same-frame bridge-to-terrain handoff at the end of the slope.
+        return false;
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // The live routine at loc_387E0 is in ROM bank $0003. sub_13EFC
+        // copies this word from the stood-on bridge SST into Tails_CPU_interact.
+        return 0x0003;
+    }
+
+    @Override
+    public boolean usesSlopeForNewLanding() {
+        // sub_38AA2 sends a non-standing player through sub_1E410 with d3=8,
+        // so first contact uses the flat bridge origin. Only an established
+        // rider is re-seated from the bent child-segment Y table at loc_38AE8.
+        return false;
+    }
+
+    @Override
     public byte[] getSlopeData() {
         return slopeData;
     }
@@ -211,7 +237,19 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
-        // Standing detection handled in update() via isAnyPlayerRiding
+        if (player == null || contact == null || !contact.standing()) {
+            return;
+        }
+        int segment = segmentIndexFor(player);
+        List<PlayableEntity> sidekicks = services().sidekicks();
+        if (!sidekicks.isEmpty() && sidekicks.getFirst() == player) {
+            // sub_38AA2 stores Player 2's current segment in $3B after the
+            // bend calculation, for the following object dispatch.
+            sidekickSegmentIndex = segment;
+        } else {
+            // The second sub_38AA2 call similarly publishes P1's $3F value.
+            playerSegmentIndex = segment;
+        }
     }
 
     // --- Priority & lifecycle ---
@@ -265,19 +303,29 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
         playerOnBridge = playerEntity != null && objectManager != null
                 && objectManager.isAnyPlayerRiding(this);
         int nextPlayerSegmentIndex = playerSegmentIndex;
+        List<PlayableEntity> sidekicks = services().sidekicks();
+        PlayableEntity nativeSidekick = sidekicks.isEmpty() ? null : sidekicks.getFirst();
+        boolean sidekickOnBridge = nativeSidekick != null
+                && objectManager != null
+                && objectManager.isRidingObject(nativeSidekick, this);
 
         if (playerOnBridge) {
-            // Track which segment the player is on
-            // ROM: d0 = (playerX - bridgeX + segCount*8 + 8) >> 4
-            int relX = playerEntity.getCentreX() - spawn.x() + segmentCount * 8 + 8;
-            int logIdx = relX >> 4;
-            if (logIdx < 0) logIdx = 0;
-            if (logIdx >= segmentCount) logIdx = segmentCount - 1;
-            nextPlayerSegmentIndex = logIdx;
-            if (!wasPlayerOnBridge) {
-                // The preceding SolidObject pass has already populated ROM
-                // byte $3F before the first riding update.
-                playerSegmentIndex = logIdx;
+            if (sidekickOnBridge) {
+                // loc_387F6 consumes P2's prior $3B and walks P1's $3F one
+                // segment toward it before calculating the shared bend.
+                if (playerSegmentIndex < sidekickSegmentIndex) {
+                    playerSegmentIndex++;
+                } else if (playerSegmentIndex > sidekickSegmentIndex) {
+                    playerSegmentIndex--;
+                }
+                nextPlayerSegmentIndex = playerSegmentIndex;
+            } else {
+                nextPlayerSegmentIndex = segmentIndexFor(playerEntity);
+                if (!wasPlayerOnBridge) {
+                    // The preceding SolidObject pass has already populated ROM
+                    // byte $3F before the first riding update.
+                    playerSegmentIndex = nextPlayerSegmentIndex;
+                }
             }
 
             // addq.b #4,$3E(a0); cmpi.b #$40,$3E(a0)
@@ -306,11 +354,16 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
 
         // Update slope data for collision
         updateSlopeData();
-        if (playerOnBridge) {
+        if (playerOnBridge && !sidekickOnBridge) {
             // ROM loc_387E0 bends from the prior $3F value, then sub_38A88
             // stores the player's current segment for the following dispatch.
             playerSegmentIndex = nextPlayerSegmentIndex;
         }
+    }
+
+    private int segmentIndexFor(PlayableEntity player) {
+        int relX = player.getCentreX() - spawn.x() + segmentCount * 8 + 8;
+        return Math.max(0, Math.min(segmentCount - 1, relX >> 4));
     }
 
     // --- Bend calculation (sub_38CC2 / sub_38D74) ---

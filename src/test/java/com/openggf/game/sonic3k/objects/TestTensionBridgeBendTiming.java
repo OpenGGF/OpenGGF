@@ -9,6 +9,7 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -43,6 +44,32 @@ class TestTensionBridgeBendTiming {
 
         assertEquals(-4, bridge.getSlopeData()[6 * 8],
                 "following dispatch consumes the segment 6 value published by the prior contact pass");
+    }
+
+    @Test
+    void playerTwoSegmentWalksSharedBendAnchorBeforeCalculation() throws Exception {
+        TensionBridgeObjectInstance bridge = new TensionBridgeObjectInstance(new ObjectSpawn(
+                0x1000, 0x0788, Sonic3kObjectIds.TENSION_BRIDGE, 0x08, 0, false, 0x0788));
+        ObjectManager objectManager = mock(ObjectManager.class);
+        TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        bridge.setServices(new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return objectManager; }
+            @Override public List<com.openggf.game.PlayableEntity> sidekicks() { return List.of(sidekick); }
+            @Override public int romZoneId() { return Sonic3kZoneIds.ZONE_HCZ; }
+            @Override public int featureZoneId() { return Sonic3kZoneIds.ZONE_HCZ; }
+        });
+        when(objectManager.isAnyPlayerRiding(bridge)).thenReturn(true);
+        when(objectManager.isRidingObject(sidekick, bridge)).thenReturn(true);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        setField(bridge, "playerSegmentIndex", 7);
+        setField(bridge, "sidekickSegmentIndex", 6);
+        setField(bridge, "depressionAngle", 0x20);
+
+        bridge.update(0, player);
+
+        assertEquals(-3, bridge.getSlopeData()[6 * 8],
+                "loc_387F6 must walk $3F toward Player 2's prior $3B before sub_38CC2");
     }
 
     private static void setField(Object target, String name, Object value) throws Exception {

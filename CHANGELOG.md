@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **S3K tension bridges now preserve their complete two-player solid contract:** first contact uses flat `sub_1E410`, established riders use the bent child segments, ride exit clears only `Status_OnObj`, Player 2's prior `$3B` segment walks the shared `$3F` bend anchor, and CPU Tails samples the live routine's `$0003` pointer word (`docs/skdisasm/sonic3k.asm:75555-75635,75879-75946`).
 - **S3K airborne terrain probes now discard stale grounded orientation:** `SonicKnux_DoLevelCollision`-equivalent probes reset an airborne player to world-space floor/ceiling/wall sensor orientation before selecting the velocity quadrant, preventing a former loop/wall mode from rotating later floor checks sideways. S1 and S2 retain their established collision rule.
 - **HCZ TurboSpiker shells now launch opposite the parent's retreat:** the detached child interprets the inherited post-retreat render bit with its native opposite `$100` velocity, preventing the badnik and shell from traveling together (`docs/skdisasm/sonic3k.asm:183973-184070`).
 - **S3K tension bridges now bend from the prior solid-contact segment:** the current player segment is published only after the frame's bend/slope data is built, matching `$3F` consumption followed by `sub_38A88` instead of reshaping the bridge one object pass early (`docs/skdisasm/sonic3k.asm:75555-75635,75879-75946,76164-76240`).
