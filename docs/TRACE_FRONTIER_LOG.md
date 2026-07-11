@@ -42,6 +42,41 @@ Conductor cleanup policy: after a worker returns and its evidence has been
 summarized, remove any no-commit diagnostic/failure worktree and delete its local
 branch when it has no commits outside `bugfix/ai-s2-trace-next`.
 
+## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
+
+The AIZ2 battleship-to-waterfall-boss capture reproduced a render-only regression
+at capture frame 1751: the native camera step from just below `$46C0` back to
+`$44C0` retained the correct ROM camera/player coordinates, but the persistent
+foreground ring interpreted its chunk-aligned `-$1E0` delta as a rewind/teleport
+and re-seeded from the flat layout. That exposed the sparse forest entrance again
+on each lap, making Sonic appear to enter the forest repeatedly.
+
+The ring now consumes the ROM-visible per-frame `Level_repeat_offset`. On the
+native `$200` repeat frame it translates the prior world-coordinate reconciliation
+baseline by the same amount, retaining Plane A cells while continuing to refill
+only newly entering columns. Arbitrary large camera jumps without that event
+signal retain the existing re-seed behavior; no zone, route, or frame exception
+was added. A before/after `TraceCaptureTool --clip aiz-battleship-to-boss` check
+showed the first formerly-bad frame changing from four sparse entrance trunks to
+the already-established dense canopy, which then remained continuous through the
+remaining wraps.
+
+Verification:
+
+- `TestS3kAizTraceReplay`: all 16 checks green.
+- `TestS3kAizCompleteRunTraceReplay`: green.
+- `TestLevelTilemapManagerRewindReset`: 7/7 green, including a native
+  `$4FC + 4 - $200 = $300` ring-retention regression guard.
+- S1 `*TraceReplay` fleet: 29/29 classes green.
+- S2 `*TraceReplay` fleet: 20/20 classes green (the optional special-stage method
+  remains skipped as before).
+
+The broad trace-package invocation also selects
+`TestS1Mz1SlotLayoutRegression`; its existing 8/15 failures reproduce unchanged
+in a detached clean worktree at pre-fix `develop` commit `62d67d5b0`, so they are
+not a regression from this render fix. Both AIZ routes remain fully green and the
+frontier stays closed at AIZ, with HCZ still the next unstarted S3K stage.
+
 ## 2026-07-10 - S3K AIZ frontier campaign (in progress)
 
 Branch `bugfix/ai-s3k-trace-frontier` from `develop` `ff60ac28d`. The first red

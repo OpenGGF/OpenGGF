@@ -98,6 +98,9 @@ public class LevelTilemapManager {
     // ring fills the leading-edge column at the camera's current position.
     private int foregroundRingCameraX;
     private int foregroundRingScreenWidthPx;
+    // Non-zero only on a native level-repeat frame. Distinguishes the intentional
+    // -$200 AIZ2 camera wrap from a rewind seek/teleport of similar magnitude.
+    private int foregroundRingWorldWrapOffset;
     // Last reconciled visible window (chunk-aligned WORLD coordinates, valid while
     // foregroundRingSeeded). World coords — not mod-$200 cell indices — so a
     // full-lap camera jump reads as disjoint windows, not a spurious match.
@@ -700,8 +703,13 @@ public class LevelTilemapManager {
      * the AIZ2 forest loop is active, mirroring the BG window base-X push.
      */
     public void setForegroundRingCamera(int cameraX, int screenWidthPx) {
+        setForegroundRingCamera(cameraX, screenWidthPx, 0);
+    }
+
+    public void setForegroundRingCamera(int cameraX, int screenWidthPx, int worldWrapOffset) {
         this.foregroundRingCameraX = cameraX;
         this.foregroundRingScreenWidthPx = screenWidthPx;
+        this.foregroundRingWorldWrapOffset = Math.max(0, worldWrapOffset);
     }
 
     /**
@@ -763,8 +771,19 @@ public class LevelTilemapManager {
         int lead = foregroundRingCameraX + foregroundRingScreenWidthPx;
         int rightCol = Math.floorDiv(lead, chunkWidth) * chunkWidth;
         int leftCol = Math.floorDiv(foregroundRingCameraX, chunkWidth) * chunkWidth;
+        // AIZ2_DoShipLoop subtracts exactly one Plane A width from Camera_X_pos.
+        // Plane A itself does not get redrawn or cleared, so translate the prior
+        // WORLD-coordinate baseline by the same native Level_repeat_offset before
+        // measuring newly-entered columns. Without this, chunk alignment turns the
+        // normal $46BC->$44C0 step into a -$1E0 "large jump" and the fallback below
+        // re-seeds the forest entrance on every lap.
+        if (foregroundRingWorldWrapOffset > 0) {
+            foregroundRingLastLeftCol -= foregroundRingWorldWrapOffset;
+            foregroundRingLastRightCol -= foregroundRingWorldWrapOffset;
+        }
         int rightDelta = rightCol - foregroundRingLastRightCol;
         int leftDelta = leftCol - foregroundRingLastLeftCol;
+        foregroundRingWorldWrapOffset = 0;
         if (rightDelta == 0 && leftDelta == 0) {
             return false;
         }

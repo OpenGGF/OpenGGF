@@ -36,6 +36,7 @@ public final class AizZoneRuntimeState implements S3kZoneRuntimeState {
     }
     public boolean isBattleshipAutoScrollActive() { return events.isBattleshipAutoScrollActive(); }
     public boolean isBattleshipForestLoopActive() { return events.isBattleshipForestLoopActive(); }
+    public int getLevelRepeatOffset() { return events.getLevelRepeatOffset(); }
     public int getBattleshipBgYOffset() { return events.getBattleshipBgYOffset(); }
     public int getBattleshipSmoothScrollX() { return events.getBattleshipSmoothScrollX(); }
     public int getScreenShakeOffsetY() { return events.getScreenShakeOffsetY(); }

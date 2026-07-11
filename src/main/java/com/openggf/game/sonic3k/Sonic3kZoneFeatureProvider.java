@@ -154,6 +154,15 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         return isAizBattleshipForestLoopActive();
     }
 
+    @Override
+    public int foregroundWorldWrapOffset() {
+        if (!isAizBattleshipForestLoopActive()) {
+            return 0;
+        }
+        AizZoneRuntimeState aizState = getAizState();
+        return aizState != null ? aizState.getLevelRepeatOffset() : 0;
+    }
+
     /**
      * AIZ2 {@code AIZ2_DoShipLoop} post-bombing forest loop active (ROM state only:
      * the auto-scroll loop is running with the post-bombing $46C0 wrap boundary).

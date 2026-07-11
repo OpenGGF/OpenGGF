@@ -995,7 +995,8 @@ public final class LevelRenderer {
         profiler.beginSection("render.fg");
         if (lm.tilemapManager != null && lm.zoneFeatureProvider != null
                 && lm.zoneFeatureProvider.foregroundWrapsHorizontally()) {
-            lm.tilemapManager.setForegroundRingCamera((int) camera.getXWithShake(), lm.cachedScreenWidth);
+            lm.tilemapManager.setForegroundRingCamera((int) camera.getXWithShake(), lm.cachedScreenWidth,
+                    lm.zoneFeatureProvider.foregroundWorldWrapOffset());
         }
         lm.ensureForegroundTilemapData();
         enqueueForegroundTilemapPass(camera, 0);
