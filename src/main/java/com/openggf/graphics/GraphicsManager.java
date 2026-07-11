@@ -26,6 +26,7 @@ import static org.lwjgl.opengl.GL20.*;
 import java.util.Queue;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -39,6 +40,38 @@ import java.util.logging.Logger;
 
 public class GraphicsManager {
 	private static final Logger LOGGER = Logger.getLogger(GraphicsManager.class.getName());
+
+	interface UnderwaterPaletteUploadOps {
+		int createTexture();
+
+		void configureTexture(int textureId);
+
+		void uploadTexture(int textureId, int totalLines, ByteBuffer rgbaBytes);
+	}
+
+	private static final UnderwaterPaletteUploadOps OPEN_GL_UNDERWATER_PALETTE_UPLOAD_OPS =
+			new UnderwaterPaletteUploadOps() {
+				@Override
+				public int createTexture() {
+					return glGenTextures();
+				}
+
+				@Override
+				public void configureTexture(int textureId) {
+					glBindTexture(GL_TEXTURE_2D, textureId);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				}
+
+				@Override
+				public void uploadTexture(int textureId, int totalLines, ByteBuffer rgbaBytes) {
+					glBindTexture(GL_TEXTURE_2D, textureId);
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 16, totalLines, 0,
+							GL_RGBA, GL_UNSIGNED_BYTE, rgbaBytes);
+				}
+			};
 
 	private static GraphicsManager graphicsManager;
 	List<GLCommandable> commands = new ArrayList<>();
@@ -57,6 +90,24 @@ public class GraphicsManager {
 	// Lazily allocated to avoid LWJGL native library loading in headless tests
 	private ByteBuffer paletteUploadBuffer;
 	private ByteBuffer underwaterPaletteUploadBuffer;
+	private byte[] underwaterPaletteContentKey;
+	private int underwaterPaletteContentKeyLength;
+	private int pendingUnderwaterPaletteContentKeyLength;
+	private int underwaterPaletteContentKeyWriteIndex;
+	private boolean underwaterPaletteContentKeyChanged;
+	private boolean underwaterPaletteContentKeyValid;
+	private Object[] underwaterPaletteRowSources;
+	private byte[] underwaterPaletteRowCases;
+	private byte[] underwaterPaletteSourceRgb;
+	private byte[][] underwaterDerivedRowKeys;
+	private int[][] underwaterDerivedRowRgba;
+	private int underwaterDerivedRowRecomputeCount;
+	private UnderwaterPaletteUploadOps underwaterPaletteUploadOps = OPEN_GL_UNDERWATER_PALETTE_UPLOAD_OPS;
+	private static final byte UNDERWATER_ROW_ABSENT = 0;
+	private static final byte UNDERWATER_ROW_DIRECT = 1;
+	private static final byte UNDERWATER_ROW_DERIVED = 2;
+	private static final byte UNDERWATER_BASE_NORMAL = 3;
+	private static final byte UNDERWATER_BASE_SHIFTED = 4;
 
 	private static final int ATLAS_WIDTH = 1024;
 	private static final int ATLAS_HEIGHT = 1024;
@@ -203,21 +254,37 @@ public class GraphicsManager {
 			capturedCommands = new ArrayList<>();
 		}
 		commandCaptureTarget = capturedCommands;
+		int nextUnexecuted = 0;
+		boolean frameStateActive = false;
 		try {
 			producer.run();
 			if (headlessMode || capturedCommands.isEmpty() || !glInitialized) {
 				return;
 			}
 			PatternRenderCommand.resetFrameState();
+			frameStateActive = true;
 			for (int i = 0, n = capturedCommands.size(); i < n; i++) {
 				capturedCommands.get(i).execute(cameraX, cameraY, cameraWidth, cameraHeight);
+				nextUnexecuted = i + 1;
 			}
-			PatternRenderCommand.cleanupFrameState(this);
+		} catch (RuntimeException | Error failure) {
+			unwindCommands(capturedCommands, nextUnexecuted,
+					cameraX, cameraY, cameraWidth, cameraHeight, failure);
+			nextUnexecuted = capturedCommands.size();
+			throw failure;
 		} finally {
+			if (frameStateActive) {
+				cleanupPatternFrameState();
+			}
+			discardCommands(capturedCommands, nextUnexecuted);
 			commandCaptureTarget = previousCaptureTarget;
 			capturedCommands.clear();
 			captureListPool.addLast(capturedCommands);
 		}
+	}
+
+	void cleanupPatternFrameState() {
+		PatternRenderCommand.cleanupFrameState(this);
 	}
 
 	public <T> CompletableFuture<T> submitRenderThreadTask(Callable<T> callable) {
@@ -248,19 +315,20 @@ public class GraphicsManager {
 		ensurePatternAtlas();
 		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
 
-		Integer paletteTextureId;
-		if (useUnderwaterPaletteForBackground && underwaterPaletteTextureId != null) {
-			paletteTextureId = underwaterPaletteTextureId;
-		} else {
-			paletteTextureId = combinedPaletteTextureId;
-		}
+		Integer paletteTextureId = resolveEffectivePatternPaletteTextureId();
 
 		if (entry == null || paletteTextureId == null) {
 			return;
 		}
+		boolean restartInstanced = instancedBatchActive && instancedPatternRenderer != null;
+		boolean restartBatched = !restartInstanced && batchedRenderer != null && batchedRenderer.isBatchActive();
+		if (restartInstanced || restartBatched) {
+			flushPatternBatch();
+		}
 
 		PatternRenderCommand command = PatternRenderCommand.obtain(entry, paletteTextureId, desc, x, y, width, height, this);
 		registerCommand(command);
+		restartPatternBatch(restartInstanced, restartBatched, 0);
 	}
 
 	/**
@@ -417,9 +485,11 @@ public class GraphicsManager {
 	 * Lazily allocate the underwater palette upload buffer.
 	 * This avoids triggering LWJGL native library loading during GraphicsManager construction.
 	 */
-	private ByteBuffer ensureUnderwaterPaletteUploadBuffer() {
+	private ByteBuffer ensureUnderwaterPaletteUploadBuffer(int requiredCapacity) {
 		if (underwaterPaletteUploadBuffer == null) {
-			underwaterPaletteUploadBuffer = MemoryUtil.memAlloc(64 * 4);
+			underwaterPaletteUploadBuffer = MemoryUtil.memAlloc(requiredCapacity);
+		} else if (underwaterPaletteUploadBuffer.capacity() < requiredCapacity) {
+			underwaterPaletteUploadBuffer = MemoryUtil.memRealloc(underwaterPaletteUploadBuffer, requiredCapacity);
 		}
 		return underwaterPaletteUploadBuffer;
 	}
@@ -433,10 +503,7 @@ public class GraphicsManager {
 	}
 
 	void writePaletteColor(ByteBuffer buffer, int r, int g, int b, int colorIndex) {
-		int[] rgb = DisplayColorConverter.toRgbBytes(r, g, b, displayColorProfile);
-		buffer.put((byte) rgb[0]);
-		buffer.put((byte) rgb[1]);
-		buffer.put((byte) rgb[2]);
+		DisplayColorConverter.writeRgbBytes(r, g, b, displayColorProfile, buffer);
 		buffer.put((byte) (colorIndex == 0 ? 0 : 255));
 	}
 
@@ -467,20 +534,47 @@ public class GraphicsManager {
 	 */
 	public void flushWithCamera(short cameraX, short cameraY, short cameraWidth, short cameraHeight) {
 		if (headlessMode || commands.isEmpty() || !glInitialized) {
+			discardCommands(commands, 0);
 			commands.clear();
 			return;
 		}
 
 		// Reset pattern render state for new batch of commands
 		PatternRenderCommand.resetFrameState();
-		for (GLCommandable command : commands) {
-			command.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+		int nextUnexecuted = 0;
+		try {
+			for (int i = 0, n = commands.size(); i < n; i++) {
+				commands.get(i).execute(cameraX, cameraY, cameraWidth, cameraHeight);
+				nextUnexecuted = i + 1;
+			}
+		} catch (RuntimeException | Error failure) {
+			unwindCommands(commands, nextUnexecuted,
+					cameraX, cameraY, cameraWidth, cameraHeight, failure);
+			nextUnexecuted = commands.size();
+			throw failure;
+		} finally {
+			// Cleanup pattern render state even if a custom command throws.
+			PatternRenderCommand.cleanupFrameState(this);
+			discardCommands(commands, nextUnexecuted);
+			commands.clear();
 		}
+	}
 
-		// Cleanup pattern render state after all commands
-		PatternRenderCommand.cleanupFrameState(this);
+	private static void discardCommands(List<? extends GLCommandable> queued, int fromIndex) {
+		for (int i = Math.max(0, fromIndex), n = queued.size(); i < n; i++) {
+			queued.get(i).discard();
+		}
+	}
 
-		commands.clear();
+	private static void unwindCommands(List<? extends GLCommandable> queued, int fromIndex,
+			int cameraX, int cameraY, int cameraWidth, int cameraHeight, Throwable failure) {
+		for (int i = Math.max(0, fromIndex), n = queued.size(); i < n; i++) {
+			try {
+				queued.get(i).unwindAfterFailure(cameraX, cameraY, cameraWidth, cameraHeight);
+			} catch (RuntimeException | Error cleanupFailure) {
+				failure.addSuppressed(cleanupFailure);
+			}
+		}
 	}
 
 	/**
@@ -706,12 +800,7 @@ public class GraphicsManager {
 		ensurePatternAtlas();
 		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
 
-		Integer paletteTextureId;
-		if (useUnderwaterPaletteForBackground && underwaterPaletteTextureId != null) {
-			paletteTextureId = underwaterPaletteTextureId;
-		} else {
-			paletteTextureId = combinedPaletteTextureId;
-		}
+		Integer paletteTextureId = resolveEffectivePatternPaletteTextureId();
 
 		if (entry == null) {
 			return;
@@ -722,11 +811,23 @@ public class GraphicsManager {
 		// Try batched rendering for better performance
 		// Only use batching if enabled, batch is active, and pattern was successfully added
 		boolean usedBatch = false;
-		if (entry.atlasIndex() == 0) {
-			if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
+		boolean restartBatchedAfterFallback = false;
+		int paletteIndex = desc.getPaletteIndex();
+		if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
+			usedBatch = instancedPatternRenderer.addPattern(entry, paletteIndex, desc, x, y);
+			if (!usedBatch) {
+				flushPatternBatch();
+				restartPatternBatch(true, false, entry.atlasIndex());
 				usedBatch = instancedPatternRenderer.addPattern(entry, desc.getPaletteIndex(), desc, x, y);
-			} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
-				usedBatch = batchedRenderer.addPattern(entry, desc.getPaletteIndex(), desc, x, y);
+			}
+		} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
+			if (entry.atlasIndex() == 0) {
+				usedBatch = batchedRenderer.addPattern(entry, paletteIndex, desc, x, y);
+			}
+			if (!usedBatch) {
+				// A direct fallback must be ordered after already staged page-0 geometry.
+				restartBatchedAfterFallback = true;
+				flushPatternBatch();
 			}
 		}
 
@@ -734,6 +835,9 @@ public class GraphicsManager {
 			// Fallback to individual commands (use pooled allocation)
 			PatternRenderCommand command = PatternRenderCommand.obtain(entry, paletteTextureId, desc, x, y, this);
 			registerCommand(command);
+			if (restartBatchedAfterFallback) {
+				restartPatternBatch(false, true, 0);
+			}
 		}
 	}
 
@@ -775,17 +879,64 @@ public class GraphicsManager {
 		}
 		ensurePatternAtlas();
 		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
-		if (entry == null || combinedPaletteTextureId == null) {
+		Integer paletteTextureId = resolveEffectivePatternPaletteTextureId();
+		if (entry == null || paletteTextureId == null) {
 			return;
 		}
 
-		// Only use batched rendering for strip patterns
-		if (entry.atlasIndex() == 0) {
-			if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
-				instancedPatternRenderer.addStripPattern(entry, desc.getPaletteIndex(), desc, x, y, stripIndex);
-			} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
-				batchedRenderer.addStripPattern(entry, desc.getPaletteIndex(), desc, x, y, stripIndex);
+		// Only use batched rendering for strip patterns.
+		int paletteIndex = desc.getPaletteIndex();
+		boolean restartInstancedAfterDirect = false;
+		boolean restartBatchedAfterDirect = false;
+		if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
+			boolean added = instancedPatternRenderer.addStripPattern(entry, paletteIndex, desc, x, y, stripIndex);
+			if (!added) {
+				flushPatternBatch();
+				restartPatternBatch(true, false, entry.atlasIndex());
+				added = instancedPatternRenderer.addStripPattern(entry, desc.getPaletteIndex(), desc, x, y, stripIndex);
 			}
+			if (!added) {
+				flushPatternBatch();
+				restartInstancedAfterDirect = true;
+			} else {
+				return;
+			}
+		} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
+			boolean added = entry.atlasIndex() == 0
+					&& batchedRenderer.addStripPattern(entry, paletteIndex, desc, x, y, stripIndex);
+			if (added) {
+				return;
+			}
+			flushPatternBatch();
+			if (entry.atlasIndex() == 0) {
+				restartPatternBatch(false, true, 0);
+				if (batchedRenderer.addStripPattern(entry, paletteIndex, desc, x, y, stripIndex)) {
+					return;
+				}
+				flushPatternBatch();
+			}
+			restartBatchedAfterDirect = true;
+		}
+		PatternRenderCommand command = PatternRenderCommand.obtain(entry, paletteTextureId,
+				desc, x, y, 8f, 2f, this);
+		command.resolveStripTextureCoordinates(entry, stripIndex);
+		registerCommand(command);
+		restartPatternBatch(restartInstancedAfterDirect, restartBatchedAfterDirect, entry.atlasIndex());
+	}
+
+	private Integer resolveEffectivePatternPaletteTextureId() {
+		if (useUnderwaterPaletteForBackground && underwaterPaletteTextureId != null) {
+			return underwaterPaletteTextureId;
+		}
+		return combinedPaletteTextureId;
+	}
+
+	private void restartPatternBatch(boolean instanced, boolean batched, int atlasIndex) {
+		if (instanced && instancedPatternRenderer != null) {
+			instancedPatternRenderer.beginBatch(atlasIndex);
+			instancedBatchActive = true;
+		} else if (batched && batchedRenderer != null) {
+			batchedRenderer.beginBatch();
 		}
 	}
 
@@ -862,7 +1013,13 @@ public class GraphicsManager {
 			return;
 		}
 		if (batchedRenderer != null && batchedRenderer.isShadowBatchActive()) {
-			batchedRenderer.addShadowPattern(entry, desc, x, y);
+			if (!batchedRenderer.addShadowPattern(entry, desc, x, y)) {
+				flushShadowBatch();
+				batchedRenderer.beginShadowBatch(entry.atlasIndex());
+				if (!batchedRenderer.addShadowPattern(entry, desc, x, y)) {
+					throw new IllegalStateException("Unable to add shadow pattern to a fresh batch");
+				}
+			}
 		}
 	}
 
@@ -1125,75 +1282,252 @@ public class GraphicsManager {
 			MemoryUtil.memFree(underwaterPaletteUploadBuffer);
 			underwaterPaletteUploadBuffer = null;
 		}
+		underwaterPaletteContentKey = null;
+		underwaterPaletteContentKeyLength = 0;
+		underwaterPaletteContentKeyValid = false;
+		underwaterPaletteRowSources = null;
+		underwaterPaletteRowCases = null;
+		underwaterPaletteSourceRgb = null;
+		underwaterDerivedRowKeys = null;
+		underwaterDerivedRowRgba = null;
+		underwaterDerivedRowRecomputeCount = 0;
 	}
 
-	public void cacheUnderwaterPaletteTexture(Palette[] palettes, Palette normalLine0) {
-		if (headlessMode)
-			return;
+	void setUnderwaterPaletteUploadOps(UnderwaterPaletteUploadOps uploadOps) {
+		underwaterPaletteUploadOps = Objects.requireNonNull(uploadOps);
+	}
 
-		int totalLines = RenderContext.getTotalPaletteLines();
-
-		if (underwaterPaletteTextureId == null) {
-			underwaterPaletteTextureId = glGenTextures();
-			glBindTexture(GL_TEXTURE_2D, underwaterPaletteTextureId);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	public Integer cacheUnderwaterPaletteTexture(Palette[] palettes, Palette normalLine0) {
+		if (headlessMode && underwaterPaletteUploadOps == OPEN_GL_UNDERWATER_PALETTE_UPLOAD_OPS) {
+			return null;
 		}
-
-		// Pre-compute underwater base line 0 for donor palette derivation
+		int totalLines = RenderContext.getTotalPaletteLines();
 		Palette underwaterLine0 = (palettes != null && palettes.length > 0) ? palettes[0] : null;
-
-		// Upload 16 * totalLines colors
-		int bufferSize = 16 * totalLines * 4;
-		ByteBuffer paletteBuffer = MemoryUtil.memAlloc(bufferSize);
-		try {
-			paletteBuffer.clear();
-
-			for (int pIndex = 0; pIndex < totalLines; pIndex++) {
-				Palette p = (palettes != null && pIndex < palettes.length) ? palettes[pIndex] : null;
-
-				// For donor palette rows, derive underwater palette from base game's color shift
-				if (p == null && normalLine0 != null && underwaterLine0 != null) {
+		ensureUnderwaterPaletteSourceScratch(totalLines);
+		boolean hasDerivedDonorRow = false;
+		for (int row = 0; row < totalLines; row++) {
+			Palette source = palettes != null && row < palettes.length ? palettes[row] : null;
+			byte rowCase = UNDERWATER_ROW_DIRECT;
+			if (source == null) {
+				rowCase = UNDERWATER_ROW_ABSENT;
+				if (normalLine0 != null && underwaterLine0 != null) {
 					for (RenderContext ctx : RenderContext.getDonorContexts()) {
 						int base = ctx.getPaletteLineBase();
-						if (pIndex >= base && pIndex < base + RenderContext.LINES_PER_CONTEXT) {
-							Palette donorNormal = ctx.getPalette(pIndex - base);
-							if (donorNormal != null) {
-								p = RenderContext.deriveUnderwaterPalette(donorNormal, normalLine0, underwaterLine0);
+						if (row >= base && row < base + RenderContext.LINES_PER_CONTEXT) {
+							source = ctx.getPalette(row - base);
+							if (source != null) {
+								rowCase = UNDERWATER_ROW_DERIVED;
+								hasDerivedDonorRow = true;
 							}
 							break;
 						}
 					}
 				}
+			}
+			underwaterPaletteRowSources[row] = source;
+			underwaterPaletteRowCases[row] = rowCase;
+		}
+		underwaterPaletteRowSources[totalLines] = hasDerivedDonorRow ? normalLine0 : null;
+		underwaterPaletteRowSources[totalLines + 1] = hasDerivedDonorRow ? underwaterLine0 : null;
 
-				for (int i = 0; i < 16; i++) {
-					try {
-						if (p != null) {
-							Palette.Color color = p.getColor(i);
-							writePaletteColor(paletteBuffer,
-									Byte.toUnsignedInt(color.r),
-									Byte.toUnsignedInt(color.g),
-									Byte.toUnsignedInt(color.b),
-									i);
-						} else {
-							// Empty/Black for missing palette lines
-							paletteBuffer.put((byte) 0).put((byte) 0).put((byte) 0).put((byte) 0);
-						}
-					} catch (Exception e) {
-						// Fallback
-						paletteBuffer.put((byte) 0).put((byte) 0).put((byte) 0).put((byte) 0);
-					}
+		underwaterPaletteContentKeyWriteIndex = 0;
+		underwaterPaletteContentKeyChanged = !underwaterPaletteContentKeyValid;
+		writeUnderwaterContentKeyInt(totalLines);
+		writeUnderwaterContentKeyInt(displayColorProfile.ordinal());
+		int sourceCount = totalLines + (hasDerivedDonorRow ? 2 : 0);
+		for (int sourceIndex = 0; sourceIndex < sourceCount; sourceIndex++) {
+			byte sourceTag = sourceIndex < totalLines
+					? underwaterPaletteRowCases[sourceIndex]
+					: (sourceIndex == totalLines ? UNDERWATER_BASE_NORMAL : UNDERWATER_BASE_SHIFTED);
+			writeUnderwaterContentKeyByte(sourceTag);
+			Palette source = (Palette) underwaterPaletteRowSources[sourceIndex];
+			if (source == null) {
+				continue;
+			}
+			int rgbOffset = sourceIndex * 16 * 3;
+			for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
+				Palette.Color color = source.getColor(colorIndex);
+				byte r = color.r;
+				byte g = color.g;
+				byte b = color.b;
+				underwaterPaletteSourceRgb[rgbOffset++] = r;
+				underwaterPaletteSourceRgb[rgbOffset++] = g;
+				underwaterPaletteSourceRgb[rgbOffset++] = b;
+				writeUnderwaterContentKeyByte(r);
+				writeUnderwaterContentKeyByte(g);
+				writeUnderwaterContentKeyByte(b);
+			}
+		}
+		pendingUnderwaterPaletteContentKeyLength = underwaterPaletteContentKeyWriteIndex;
+		underwaterPaletteContentKeyChanged |= underwaterPaletteContentKeyLength
+				!= pendingUnderwaterPaletteContentKeyLength;
+		if (!underwaterPaletteContentKeyChanged) {
+			return underwaterPaletteTextureId;
+		}
+		underwaterPaletteContentKeyValid = false;
+
+		int ratioR = 256;
+		int ratioG = 256;
+		int ratioB = 256;
+		if (hasDerivedDonorRow) {
+			int normalOffset = totalLines * 16 * 3;
+			int shiftedOffset = (totalLines + 1) * 16 * 3;
+			long sumNR = 0;
+			long sumNG = 0;
+			long sumNB = 0;
+			long sumUR = 0;
+			long sumUG = 0;
+			long sumUB = 0;
+			int count = 0;
+			for (int colorIndex = 1; colorIndex < 16; colorIndex++) {
+				int colorOffset = colorIndex * 3;
+				int nr = Byte.toUnsignedInt(underwaterPaletteSourceRgb[normalOffset + colorOffset]);
+				int ng = Byte.toUnsignedInt(underwaterPaletteSourceRgb[normalOffset + colorOffset + 1]);
+				int nb = Byte.toUnsignedInt(underwaterPaletteSourceRgb[normalOffset + colorOffset + 2]);
+				if (nr + ng + nb > 0) {
+					sumNR += nr;
+					sumNG += ng;
+					sumNB += nb;
+					sumUR += Byte.toUnsignedInt(underwaterPaletteSourceRgb[shiftedOffset + colorOffset]);
+					sumUG += Byte.toUnsignedInt(underwaterPaletteSourceRgb[shiftedOffset + colorOffset + 1]);
+					sumUB += Byte.toUnsignedInt(underwaterPaletteSourceRgb[shiftedOffset + colorOffset + 2]);
+					count++;
 				}
 			}
-			paletteBuffer.flip();
-
-			glBindTexture(GL_TEXTURE_2D, underwaterPaletteTextureId);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 16, totalLines, 0, GL_RGBA, GL_UNSIGNED_BYTE, paletteBuffer);
-		} finally {
-			MemoryUtil.memFree(paletteBuffer);
+			if (count > 0) {
+				if (sumNR > 0) ratioR = (int) (sumUR * 256 / sumNR);
+				if (sumNG > 0) ratioG = (int) (sumUG * 256 / sumNG);
+				if (sumNB > 0) ratioB = (int) (sumUB * 256 / sumNB);
+			}
 		}
+
+		int bufferSize = 16 * totalLines * 4;
+		ByteBuffer paletteBuffer = ensureUnderwaterPaletteUploadBuffer(bufferSize);
+		paletteBuffer.clear();
+		paletteBuffer.limit(bufferSize);
+		for (int row = 0; row < totalLines; row++) {
+			byte rowCase = underwaterPaletteRowCases[row];
+			int rgbOffset = row * 16 * 3;
+			if (rowCase == UNDERWATER_ROW_DERIVED) {
+				int normalOffset = totalLines * 16 * 3;
+				int shiftedOffset = (totalLines + 1) * 16 * 3;
+				if (!underwaterDerivedRowKeyMatches(row, rgbOffset, normalOffset, shiftedOffset)) {
+					updateUnderwaterDerivedRow(row, rgbOffset, normalOffset, shiftedOffset,
+							ratioR, ratioG, ratioB);
+				}
+				for (int value : underwaterDerivedRowRgba[row]) {
+					paletteBuffer.put((byte) value);
+				}
+				continue;
+			}
+			for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
+				if (rowCase == UNDERWATER_ROW_ABSENT) {
+					paletteBuffer.putInt(0);
+					continue;
+				}
+				int r = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
+				int g = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
+				int b = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
+				writePaletteColor(paletteBuffer, r, g, b, colorIndex);
+			}
+		}
+		paletteBuffer.flip();
+
+		if (underwaterPaletteTextureId == null) {
+			underwaterPaletteTextureId = underwaterPaletteUploadOps.createTexture();
+			underwaterPaletteUploadOps.configureTexture(underwaterPaletteTextureId);
+		}
+		underwaterPaletteUploadOps.uploadTexture(underwaterPaletteTextureId, totalLines, paletteBuffer);
+		underwaterPaletteContentKeyLength = pendingUnderwaterPaletteContentKeyLength;
+		underwaterPaletteContentKeyValid = true;
+		return underwaterPaletteTextureId;
+	}
+
+	private void ensureUnderwaterPaletteSourceScratch(int totalLines) {
+		int sourceSlots = totalLines + 2;
+		if (underwaterPaletteRowSources == null || underwaterPaletteRowSources.length < sourceSlots) {
+			underwaterPaletteRowSources = new Object[sourceSlots];
+			underwaterPaletteRowCases = new byte[totalLines];
+			underwaterPaletteSourceRgb = new byte[sourceSlots * 16 * 3];
+		}
+		if (underwaterDerivedRowKeys == null) {
+			underwaterDerivedRowKeys = new byte[totalLines][];
+			underwaterDerivedRowRgba = new int[totalLines][];
+		} else if (underwaterDerivedRowKeys.length < totalLines) {
+			underwaterDerivedRowKeys = Arrays.copyOf(underwaterDerivedRowKeys, totalLines);
+			underwaterDerivedRowRgba = Arrays.copyOf(underwaterDerivedRowRgba, totalLines);
+		}
+	}
+
+	private boolean underwaterDerivedRowKeyMatches(int row, int donorOffset,
+			int normalOffset, int shiftedOffset) {
+		byte[] key = underwaterDerivedRowKeys[row];
+		if (key == null || key[0] != (byte) displayColorProfile.ordinal()) {
+			return false;
+		}
+		return underwaterDerivedRowKeyRangeMatches(key, 1, donorOffset)
+				&& underwaterDerivedRowKeyRangeMatches(key, 1 + 16 * 3, normalOffset)
+				&& underwaterDerivedRowKeyRangeMatches(key, 1 + 2 * 16 * 3, shiftedOffset);
+	}
+
+	private boolean underwaterDerivedRowKeyRangeMatches(byte[] key, int keyOffset, int sourceOffset) {
+		for (int i = 0; i < 16 * 3; i++) {
+			if (key[keyOffset + i] != underwaterPaletteSourceRgb[sourceOffset + i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private void updateUnderwaterDerivedRow(int row, int donorOffset,
+			int normalOffset, int shiftedOffset, int ratioR, int ratioG, int ratioB) {
+		byte[] key = underwaterDerivedRowKeys[row];
+		if (key == null) {
+			key = new byte[1 + 3 * 16 * 3];
+			underwaterDerivedRowKeys[row] = key;
+			underwaterDerivedRowRgba[row] = new int[16 * 4];
+		}
+		key[0] = (byte) displayColorProfile.ordinal();
+		System.arraycopy(underwaterPaletteSourceRgb, donorOffset, key, 1, 16 * 3);
+		System.arraycopy(underwaterPaletteSourceRgb, normalOffset, key, 1 + 16 * 3, 16 * 3);
+		System.arraycopy(underwaterPaletteSourceRgb, shiftedOffset, key, 1 + 2 * 16 * 3, 16 * 3);
+
+		int[] rgba = underwaterDerivedRowRgba[row];
+		for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
+			int colorOffset = donorOffset + colorIndex * 3;
+			int r = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset]) * ratioR / 256);
+			int g = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 1]) * ratioG / 256);
+			int b = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 2]) * ratioB / 256);
+			int rgbaOffset = colorIndex * 4;
+			DisplayColorConverter.writeRgbBytes(r, g, b, displayColorProfile, rgba, rgbaOffset);
+			rgba[rgbaOffset + 3] = colorIndex == 0 ? 0 : 255;
+		}
+		underwaterDerivedRowRecomputeCount++;
+	}
+
+	int getUnderwaterDerivedRowRecomputeCount() {
+		return underwaterDerivedRowRecomputeCount;
+	}
+
+	private void writeUnderwaterContentKeyInt(int value) {
+		writeUnderwaterContentKeyByte((byte) (value >>> 24));
+		writeUnderwaterContentKeyByte((byte) (value >>> 16));
+		writeUnderwaterContentKeyByte((byte) (value >>> 8));
+		writeUnderwaterContentKeyByte((byte) value);
+	}
+
+	private void writeUnderwaterContentKeyByte(byte value) {
+		if (underwaterPaletteContentKey == null) {
+			underwaterPaletteContentKey = new byte[256];
+		} else if (underwaterPaletteContentKeyWriteIndex == underwaterPaletteContentKey.length) {
+			underwaterPaletteContentKey = Arrays.copyOf(underwaterPaletteContentKey,
+					underwaterPaletteContentKey.length * 2);
+		}
+		if (underwaterPaletteContentKeyWriteIndex >= underwaterPaletteContentKeyLength
+				|| underwaterPaletteContentKey[underwaterPaletteContentKeyWriteIndex] != value) {
+			underwaterPaletteContentKeyChanged = true;
+		}
+		underwaterPaletteContentKey[underwaterPaletteContentKeyWriteIndex++] = value;
 	}
 
 	/**
@@ -1235,6 +1569,7 @@ public class GraphicsManager {
 		}
 		// Reset palette textures so they're rebuilt from scratch
 		clearPaletteTextures();
+		discardCommands(commands, 0);
 		commands.clear();
 	}
 
@@ -1243,6 +1578,8 @@ public class GraphicsManager {
 	 */
 	public void cleanup() {
 		clearPendingRenderThreadTasks();
+		discardCommands(commands, 0);
+		commands.clear();
 		if (headlessMode || !glInitialized) {
 			// In headless mode, just clear the tracking maps
 			if (patternAtlas != null) {
@@ -1254,9 +1591,10 @@ public class GraphicsManager {
 			if (instancedPatternRenderer != null) {
 				instancedPatternRenderer.cleanupHeadless();
 			}
-			paletteTextureMap.clear();
-			combinedPaletteTextureId = null;
-			currentPaletteTextureHeight = 0;
+			clearPaletteTextures();
+			PatternRenderCommand.cleanupHeadless();
+			GLCommand.cleanupHeadless();
+			GLCommandGroup.cleanup();
 			return;
 		}
 		// Delete pattern atlas texture
@@ -1301,6 +1639,9 @@ public class GraphicsManager {
 		}
 		// Release renderers, palette textures, native buffers
 		releasePerLevelResources();
+		PatternRenderCommand.cleanup();
+		GLCommand.cleanup();
+		GLCommandGroup.cleanup();
 		glInitialized = false;
 	}
 
@@ -1329,6 +1670,7 @@ public class GraphicsManager {
 	 * Clears render command queues and palette caches.
 	 */
 	public void resetState() {
+		discardCommands(commands, 0);
 		commands.clear();
 		clearPendingRenderThreadTasks();
 		releasePerLevelResources();
@@ -1528,12 +1870,12 @@ public class GraphicsManager {
 
 		boolean applyMask = spriteMaskRequested;
 
-		// SpriteSatMaskPostProcessor.process(...) never retains the input reference:
-		// with masking on it builds a fresh list; with masking off it returns
+		// processReusable(...) never retains the input reference: with masking on it
+		// reuses thread-owned scratch; with masking off it returns
 		// `spriteSatEntries` itself (no defensive copy). The replay below consumes
 		// the processed list synchronously, so the live buffer is cleared in the
 		// finally block only after the replay finished with it.
-		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.process(spriteSatEntries, applyMask);
+		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processReusable(spriteSatEntries, applyMask);
 
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
@@ -1613,6 +1955,7 @@ public class GraphicsManager {
 		} finally {
 			useSpritePriorityShader = savedUseSpritePriorityShader;
 			// An exception mid-replay must not strand an open instanced batch.
+			instancedPatternRenderer.cancelBatch();
 			satReplayBatchOpen = false;
 		}
 	}
@@ -1625,12 +1968,10 @@ public class GraphicsManager {
 						return;
 					}
 					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-					if (atlasEntry.atlasIndex() == 0
-							&& addToSatReplayBatch(atlasEntry, paletteIndex, drawX, drawY)) {
+					if (addToSatReplayBatch(atlasEntry, paletteIndex, drawX, drawY)) {
 						return;
 					}
-					// Overflow-atlas tile (the instanced renderer only binds atlas 0):
-					// flush the open batch first so draw order is preserved, then draw direct.
+					// Unsupported state: flush first so draw order is preserved, then draw direct.
 					flushSatReplayBatch();
 					registerCommand(PatternRenderCommand.obtain(atlasEntry, paletteTextureId,
 							reusableReplayDesc, drawX, drawY, this));
@@ -1639,7 +1980,7 @@ public class GraphicsManager {
 
 	private boolean addToSatReplayBatch(PatternAtlas.Entry atlasEntry, int paletteIndex, int drawX, int drawY) {
 		if (!satReplayBatchOpen) {
-			instancedPatternRenderer.beginBatch();
+			instancedPatternRenderer.beginBatch(atlasEntry.atlasIndex());
 			satReplayBatchOpen = true;
 		}
 		if (instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY)) {
@@ -1647,7 +1988,7 @@ public class GraphicsManager {
 		}
 		// Batch full: flush and retry once in a fresh batch.
 		flushSatReplayBatch();
-		instancedPatternRenderer.beginBatch();
+		instancedPatternRenderer.beginBatch(atlasEntry.atlasIndex());
 		satReplayBatchOpen = true;
 		return instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY);
 	}

@@ -64,6 +64,7 @@ public class BatchedPatternRenderer {
 
     // Track whether a shadow batch is active (uses different shader and blend mode)
     private boolean shadowBatchActive = false;
+    private int shadowAtlasIndex;
 
     public static synchronized BatchedPatternRenderer getInstance() {
         if (instance == null) {
@@ -373,8 +374,13 @@ public class BatchedPatternRenderer {
      * where shadow pixels are rendered (VDP shadow/highlight mode).
      */
     public void beginShadowBatch() {
+        beginShadowBatch(0);
+    }
+
+    public void beginShadowBatch(int atlasIndex) {
         patternCount = 0;
         batchDisplayHeight = resolveDisplayHeight();
+        shadowAtlasIndex = atlasIndex;
         shadowBatchActive = true;
         batchActive = false; // Ensure normal batch is not active
     }
@@ -391,7 +397,8 @@ public class BatchedPatternRenderer {
      * Uses the same buffer management as normal batches.
      */
     public boolean addShadowPattern(PatternAtlas.Entry entry, PatternDesc desc, int x, int y) {
-        if (!shadowBatchActive || patternCount >= MAX_PATTERNS_PER_BATCH) {
+        if (!shadowBatchActive || patternCount >= MAX_PATTERNS_PER_BATCH
+                || entry.atlasIndex() != shadowAtlasIndex) {
             return false;
         }
 
@@ -440,7 +447,7 @@ public class BatchedPatternRenderer {
         }
 
         ShadowBatchRenderCommand command = obtainShadowCommand();
-        command.load(vertexData, texCoordData, patternCount);
+        command.load(vertexData, texCoordData, patternCount, shadowAtlasIndex);
 
         // Reset for next batch
         patternCount = 0;
@@ -454,6 +461,7 @@ public class BatchedPatternRenderer {
         if (command == null) {
             command = new BatchRenderCommand();
         }
+        command.leased = true;
         return command;
     }
 
@@ -462,6 +470,7 @@ public class BatchedPatternRenderer {
         if (command == null) {
             command = new ShadowBatchRenderCommand();
         }
+        command.leased = true;
         return command;
     }
 
@@ -497,6 +506,12 @@ public class BatchedPatternRenderer {
      * Clears internal state without making GL calls.
      */
     public void cleanupHeadless() {
+        for (BatchRenderCommand command : batchCommandPool) {
+            command.releaseNativeBuffers();
+        }
+        for (ShadowBatchRenderCommand command : shadowCommandPool) {
+            command.releaseNativeBuffers();
+        }
         batchCommandPool.clear();
         shadowCommandPool.clear();
         patternCount = 0;
@@ -520,6 +535,7 @@ public class BatchedPatternRenderer {
         private FloatBuffer vertexBuffer;
         private FloatBuffer texCoordBuffer;
         private FloatBuffer paletteCoordBuffer;
+        private boolean leased;
 
         private int vaoId;
         private int vertexVboId;
@@ -566,6 +582,14 @@ public class BatchedPatternRenderer {
 
         @Override
         public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            try {
+                executeLeased(cameraX, cameraY, cameraWidth, cameraHeight);
+            } finally {
+                discard();
+            }
+        }
+
+        private void executeLeased(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
             if (patternCount == 0) {
                 return;
             }
@@ -736,6 +760,14 @@ public class BatchedPatternRenderer {
             // will properly reinitialize GL state (since we just disabled everything)
             PatternRenderCommand.resetFrameState();
 
+        }
+
+        @Override
+        public void discard() {
+            if (!leased) {
+                return;
+            }
+            leased = false;
             recycleBatchCommand(this);
         }
 
@@ -766,6 +798,21 @@ public class BatchedPatternRenderer {
             return buffer;
         }
 
+        private void releaseNativeBuffers() {
+            if (vertexBuffer != null) {
+                MemoryUtil.memFree(vertexBuffer);
+                vertexBuffer = null;
+            }
+            if (texCoordBuffer != null) {
+                MemoryUtil.memFree(texCoordBuffer);
+                texCoordBuffer = null;
+            }
+            if (paletteCoordBuffer != null) {
+                MemoryUtil.memFree(paletteCoordBuffer);
+                paletteCoordBuffer = null;
+            }
+        }
+
         private void dispose() {
             if (vaoId != 0) {
                 glDeleteVertexArrays(vaoId);
@@ -783,18 +830,7 @@ public class BatchedPatternRenderer {
                 glDeleteBuffers(paletteVboId);
                 paletteVboId = 0;
             }
-            if (vertexBuffer != null) {
-                MemoryUtil.memFree(vertexBuffer);
-                vertexBuffer = null;
-            }
-            if (texCoordBuffer != null) {
-                MemoryUtil.memFree(texCoordBuffer);
-                texCoordBuffer = null;
-            }
-            if (paletteCoordBuffer != null) {
-                MemoryUtil.memFree(paletteCoordBuffer);
-                paletteCoordBuffer = null;
-            }
+            releaseNativeBuffers();
         }
     }
 
@@ -808,9 +844,11 @@ public class BatchedPatternRenderer {
         private int patternCount;
         private int vertexFloatCount;
         private int texCoordFloatCount;
+        private int atlasIndex;
 
         private FloatBuffer vertexBuffer;
         private FloatBuffer texCoordBuffer;
+        private boolean leased;
 
         private int vaoId;
         private int vertexVboId;
@@ -825,8 +863,9 @@ public class BatchedPatternRenderer {
         private int cachedCameraOffsetLoc = -2;
         private int cachedShaderProgramId = -1;
 
-        private void load(float[] vertexData, float[] texCoordData, int patternCount) {
+        private void load(float[] vertexData, float[] texCoordData, int patternCount, int atlasIndex) {
             this.patternCount = patternCount;
+            this.atlasIndex = atlasIndex;
             this.vertexFloatCount = patternCount * FLOATS_PER_PATTERN_VERTS;
             this.texCoordFloatCount = patternCount * FLOATS_PER_PATTERN_TEXCOORDS;
 
@@ -844,6 +883,14 @@ public class BatchedPatternRenderer {
 
         @Override
         public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            try {
+                executeLeased(cameraX, cameraY, cameraWidth, cameraHeight);
+            } finally {
+                discard();
+            }
+        }
+
+        private void executeLeased(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
             if (patternCount == 0) {
                 return;
             }
@@ -894,7 +941,7 @@ public class BatchedPatternRenderer {
             // Bind VAO (required for core profile)
             glBindVertexArray(vaoId);
 
-            Integer atlasTextureId = gm.getPatternAtlasTextureId();
+            Integer atlasTextureId = resolveAtlasTextureId();
             if (atlasTextureId != null) {
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, atlasTextureId);
@@ -927,6 +974,18 @@ public class BatchedPatternRenderer {
 
             PatternRenderCommand.resetFrameState();
 
+        }
+
+        private Integer resolveAtlasTextureId() {
+            return graphicsManager.getPatternAtlasTextureId(atlasIndex);
+        }
+
+        @Override
+        public void discard() {
+            if (!leased) {
+                return;
+            }
+            leased = false;
             recycleShadowCommand(this);
         }
 
@@ -956,6 +1015,17 @@ public class BatchedPatternRenderer {
             return buffer;
         }
 
+        private void releaseNativeBuffers() {
+            if (vertexBuffer != null) {
+                MemoryUtil.memFree(vertexBuffer);
+                vertexBuffer = null;
+            }
+            if (texCoordBuffer != null) {
+                MemoryUtil.memFree(texCoordBuffer);
+                texCoordBuffer = null;
+            }
+        }
+
         private void dispose() {
             if (vaoId != 0) {
                 glDeleteVertexArrays(vaoId);
@@ -969,14 +1039,7 @@ public class BatchedPatternRenderer {
                 glDeleteBuffers(texCoordVboId);
                 texCoordVboId = 0;
             }
-            if (vertexBuffer != null) {
-                MemoryUtil.memFree(vertexBuffer);
-                vertexBuffer = null;
-            }
-            if (texCoordBuffer != null) {
-                MemoryUtil.memFree(texCoordBuffer);
-                texCoordBuffer = null;
-            }
+            releaseNativeBuffers();
         }
     }
 }

@@ -49,7 +49,7 @@ public final class S3kSlotBonusStageRuntime {
     private final List<S3kSlotRingRewardObjectInstance> slotRingRewards = new ArrayList<>();
     private final List<S3kSlotSpikeRewardObjectInstance> slotSpikeRewards = new ArrayList<>();
     private short[] pointGrid;
-    private List<S3kSlotLayoutRenderer.VisibleCell> visibleCells = List.of();
+    private S3kSlotRenderBuffers.VisibleCells visibleCells = S3kSlotRenderBuffers.VisibleCells.empty();
     private int lastFrameCounter = -1;
     private final List<SuppressedSidekick> suppressedSidekicks = new ArrayList<>();
 
@@ -63,7 +63,7 @@ public final class S3kSlotBonusStageRuntime {
         slotRingRewards.clear();
         slotSpikeRewards.clear();
         pointGrid = null;
-        visibleCells = List.of();
+        visibleCells = S3kSlotRenderBuffers.VisibleCells.empty();
         lastFrameCounter = -1;
         suppressedSidekicks.clear();
         slotStageState = S3kSlotStageState.bootstrap();
@@ -211,7 +211,7 @@ public final class S3kSlotBonusStageRuntime {
         slotRingRewards.clear();
         slotSpikeRewards.clear();
         pointGrid = null;
-        visibleCells = List.of();
+        visibleCells = S3kSlotRenderBuffers.VisibleCells.empty();
         lastFrameCounter = -1;
         slotStageState = null;
         slotRenderBuffers = null;
@@ -287,7 +287,7 @@ public final class S3kSlotBonusStageRuntime {
         return slotRenderBuffers != null ? slotRenderBuffers.layout() : null;
     }
 
-    public List<S3kSlotLayoutRenderer.VisibleCell> activeVisibleCellsForTest() {
+    S3kSlotRenderBuffers.VisibleCells activeVisibleCellsForTest() {
         return visibleCells;
     }
 
@@ -534,7 +534,7 @@ public final class S3kSlotBonusStageRuntime {
                 slotRenderBuffers.stagePointGrid(pointGrid);
                 visibleCells = slotLayoutRenderer.buildVisibleCells(slotRenderBuffers);
             } else {
-                visibleCells = List.of();
+                visibleCells = S3kSlotRenderBuffers.VisibleCells.empty();
             }
         }
     }

@@ -249,10 +249,18 @@ class TestLiveRewindManagerAudioCleanup {
 
     private static void installTestController(LiveRewindManager manager, RewindController controller) throws Exception {
         setField(manager, "installedGameplayMode", TestEnvironment.activeGameplayMode());
+        setInstalledStepperKind(manager, "LEVEL_FRAME");
         setField(manager, "inputSource", new LiveRewindInputSource());
         setField(manager, "rewindController", controller);
         setField(manager, "speedController",
                 RewindSpeedController.fromConfig(SonicConfigurationService.getInstance()));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void setInstalledStepperKind(LiveRewindManager manager, String kindName) throws Exception {
+        Class<?> kindClass = Class.forName("com.openggf.game.rewind.LiveRewindManager$StepperKind");
+        Object kind = Enum.valueOf((Class<? extends Enum>) kindClass.asSubclass(Enum.class), kindName);
+        setField(manager, "installedStepperKind", kind);
     }
 
     private static final class TestControllerBuilder {

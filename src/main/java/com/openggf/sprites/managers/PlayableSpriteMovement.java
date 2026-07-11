@@ -3536,6 +3536,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 	}
 
+	public int captureLastFixedSkidDustTickFrame() {
+		return lastFixedSkidDustTickFrame;
+	}
+
+	public void restoreLastFixedSkidDustTickFrame(int frameCounter) {
+		lastFixedSkidDustTickFrame = frameCounter;
+	}
+
 	private void advanceSkidDustTimer() {
 		// ROM Obj08_CheckSkid keeps ticking the fixed Sonic_Dust/Tails_Dust
 		// object while the parent remains in the Stop animation; entering

@@ -191,8 +191,8 @@ public final class TestModeTracePicker {
         font.drawText("SELECTED: " + e.gameId() + "/" + e.dir().getFileName(),
                 4, y, SCALE, 1f, 1f, 1f, 1f);
         y += LINE_HEIGHT;
-        font.drawText(String.format("Zone: %02X  Act: %d   Frames: %d   BK2 offset: %d",
-                        e.zone(), e.act(), e.frameCount(), e.bk2StartOffset()),
+        font.drawText(String.format("%s   Frames: %d   BK2 offset: %d",
+                        e.displayLabel(), e.frameCount(), e.bk2StartOffset()),
                 4, y, SCALE, 0.9f, 0.9f, 0.9f, 1f);
         y += LINE_HEIGHT;
         font.drawText("Team: " + formatTeam(e) + "   Pre-osc: " + e.preTraceOscFrames(),

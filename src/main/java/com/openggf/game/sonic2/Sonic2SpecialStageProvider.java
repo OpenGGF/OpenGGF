@@ -4,17 +4,22 @@ package com.openggf.game.sonic2;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.ResultsScreen;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRewindAdapter;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.DefaultObjectServices;
 
 import java.io.IOException;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Sonic 2 special stage provider implementation.
@@ -58,14 +63,38 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
+    public boolean supportsRewind() {
+        return true;
+    }
+
+    @Override
+    public Optional<RewindSnapshottable<?>> rewindAdapter() {
+        return Optional.of(new Sonic2SpecialStageRewindAdapter(manager));
+    }
+
+    @Override
     public SpecialStageAccessType getAccessType() {
         return SpecialStageAccessType.STARPOST;
     }
 
     @Override
     public void initializeStage(int stageIndex) throws IOException {
+        initializeStage(stageIndex, SpecialStageStartupPolicy.FAST);
+    }
+
+    @Override
+    public void initializeStage(int stageIndex, SpecialStageStartupPolicy policy) throws IOException {
+        Objects.requireNonNull(policy, "policy");
         manager.reset();
         manager.initialize(stageIndex);
+        if (policy == SpecialStageStartupPolicy.FAST) {
+            manager.advanceToEntryPresentation();
+        }
+    }
+
+    @Override
+    public boolean isEntryPresentationReady() {
+        return manager.isEntryPresentationReady();
     }
 
     @Override
@@ -184,16 +213,6 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
-    public boolean adjustLagCompensationIfDisplayEnabled(double delta) {
-        return manager.adjustLagCompensationIfDisplayEnabled(delta);
-    }
-
-    @Override
-    public double getLagCompensation() {
-        return manager.getLagCompensation();
-    }
-
-    @Override
     public void setLagCompensation(double factor) {
         manager.setLagCompensation(factor);
     }
@@ -238,6 +257,12 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     @Override
     public void handlePlayer2Input(int heldButtons, int logicalButtons) {
         manager.handlePlayer2Input(heldButtons, logicalButtons);
+    }
+
+    /** Binds physical input to the recurring pass that the next update executes. */
+    public void bindPendingRecurringPassInput(
+            int p1Held, int p1Pressed, int p2Held, int p2Logical) {
+        manager.bindPendingRecurringPassInput(p1Held, p1Pressed, p2Held, p2Logical);
     }
 
     @Override

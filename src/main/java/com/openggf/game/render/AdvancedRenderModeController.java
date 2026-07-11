@@ -17,6 +17,12 @@ public final class AdvancedRenderModeController
         implements RewindSnapshottable<AdvancedRenderModeSnapshot> {
 
     private final List<AdvancedRenderMode> modes = new ArrayList<>();
+    private final AdvancedRenderFrameState.Builder frameBuilder = AdvancedRenderFrameState.builder();
+    private final AdvancedRenderFrameState[] frameStates = {
+            new AdvancedRenderFrameState(false, false, null),
+            new AdvancedRenderFrameState(false, false, null)
+    };
+    private int nextFrameState;
 
     /** Registers one render-mode contributor for subsequent frame resolution. */
     public void register(AdvancedRenderMode mode) {
@@ -47,11 +53,15 @@ public final class AdvancedRenderModeController
         if (context == null || modes.isEmpty()) {
             return AdvancedRenderFrameState.disabled();
         }
-        AdvancedRenderFrameState.Builder builder = AdvancedRenderFrameState.builder();
+        frameBuilder.reset();
         for (AdvancedRenderMode mode : modes) {
-            mode.contribute(context, builder);
+            mode.contribute(context, frameBuilder);
         }
-        return builder.build();
+        AdvancedRenderFrameState resolved = frameBuilder.buildInto(frameStates[nextFrameState]);
+        if (resolved != AdvancedRenderFrameState.disabled()) {
+            nextFrameState ^= 1;
+        }
+        return resolved;
     }
 
     // ── RewindSnapshottable ───────────────────────────────────────────────

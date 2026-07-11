@@ -1,7 +1,5 @@
 package com.openggf.audio;
 
-import com.openggf.audio.runtime.PcmHistoryRing;
-import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.PerformanceProfiler;
 
@@ -17,8 +15,9 @@ import com.openggf.debug.PerformanceProfiler;
  * upload hooks must do nothing — pumping here would steal samples from the
  * capture tap.
  *
- * <p>The synthesis sample rate is fixed at a deterministic 48000 Hz, with no
- * OpenAL device negotiation.
+ * <p>The device-facing fallback rate is a deterministic 48000 Hz, with no
+ * OpenAL negotiation. Internal-rate output still uses the synthesizer's
+ * effective rate.
  */
 public final class HeadlessSmpsAudioBackend extends AbstractSmpsAudioBackend {
 
@@ -34,20 +33,9 @@ public final class HeadlessSmpsAudioBackend extends AbstractSmpsAudioBackend {
     }
 
     @Override
-    public int outputSampleRate() {
-        return HEADLESS_SAMPLE_RATE;
-    }
-
-    @Override
     protected void hookInitDevice() {
-        // No device. Fix the synthesis sample rate and initialise any
-        // non-device state the base needs (the PCM history rewind ring).
-        pcmHistory = new PcmHistoryRing(Math.max(STREAM_BUFFER_SIZE,
-                PcmHistoryRing.capacityFramesFor(
-                        HEADLESS_SAMPLE_RATE,
-                        configService.getString(SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE),
-                        configService.getInt(SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS),
-                        configService.getInt(SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB))));
+        // No device. The fallback sample rate is fixed by getDeviceSampleRate();
+        // the base allocates rewind history lazily only while it owns history.
     }
 
     @Override

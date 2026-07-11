@@ -554,8 +554,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * without any frame counter dependency.
      */
     public boolean isRingCollected(int x, int y) {
-        RingSpawn probe = new RingSpawn(x, y);
-        int index = placement.getSpawnIndex(probe);
+        int index = placement.findSpawnIndex(x, y);
         return index >= 0 && placement.isCollected(index);
     }
 
@@ -582,8 +581,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * @return true if the ring was collected and sparkle has finished
      */
     public boolean isCollectedAndSparkleDone(int x, int y, int frameCounter) {
-        RingSpawn probe = new RingSpawn(x, y);
-        int index = placement.getSpawnIndex(probe);
+        int index = placement.findSpawnIndex(x, y);
         return isCollectedAndSparkleDone(index, frameCounter);
     }
 
@@ -675,12 +673,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * (logging a warning on every lookup for the rest of the ring's lifetime).
      */
     public RingSpawn resolveCanonicalSpawn(int x, int y) {
-        for (RingSpawn candidate : placement.getAllSpawns()) {
-            if (candidate.x() == x && candidate.y() == y) {
-                return candidate;
-            }
-        }
-        return null;
+        int index = placement.findSpawnIndex(x, y);
+        return index >= 0 ? placement.getAllSpawns().get(index) : null;
     }
 
     private boolean addAttractedRing(int sourceIndex, int x, int y) {
@@ -1001,6 +995,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         private int[] sparkleStartFrames;
         private int cursorIndex = 0;
         private int lastCameraX = Integer.MIN_VALUE;
+        private long[] coordinateKeys;
+        private int[] coordinateIndices;
+        private boolean[] coordinateOccupied;
 
         private RingPlacement(List<RingSpawn> spawns, boolean useRawCameraWindow) {
             super(spawns, EXTRA_AHEAD, UNLOAD_BEHIND,
@@ -1008,6 +1005,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             this.useRawCameraWindow = useRawCameraWindow;
             this.sparkleStartFrames = new int[this.spawns.size()];
             Arrays.fill(this.sparkleStartFrames, NO_SPARKLE);
+            rebuildCoordinateIndex();
         }
 
         /** Replaces spawns and resets all collection/sparkle state. */
@@ -1016,8 +1014,54 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             collected.clear();
             sparkleStartFrames = new int[this.spawns.size()];
             Arrays.fill(sparkleStartFrames, NO_SPARKLE);
+            rebuildCoordinateIndex();
             cursorIndex = 0;
             lastCameraX = Integer.MIN_VALUE;
+        }
+
+        private void rebuildCoordinateIndex() {
+            int capacity = 8;
+            while (capacity < spawns.size() * 2) capacity <<= 1;
+            coordinateKeys = new long[capacity];
+            coordinateIndices = new int[capacity];
+            coordinateOccupied = new boolean[capacity];
+            int mask = capacity - 1;
+            for (int index = 0; index < spawns.size(); index++) {
+                RingSpawn spawn = spawns.get(index);
+                long key = coordinateKey(spawn.x(), spawn.y());
+                int slot = hashCoordinate(key) & mask;
+                while (coordinateOccupied[slot]) {
+                    if (coordinateKeys[slot] == key) break; // first duplicate is canonical
+                    slot = (slot + 1) & mask;
+                }
+                if (!coordinateOccupied[slot]) {
+                    coordinateOccupied[slot] = true;
+                    coordinateKeys[slot] = key;
+                    coordinateIndices[slot] = index;
+                }
+            }
+        }
+
+        private int findSpawnIndex(int x, int y) {
+            long key = coordinateKey(x, y);
+            int mask = coordinateKeys.length - 1;
+            int slot = hashCoordinate(key) & mask;
+            while (coordinateOccupied[slot]) {
+                if (coordinateKeys[slot] == key) return coordinateIndices[slot];
+                slot = (slot + 1) & mask;
+            }
+            return -1;
+        }
+
+        private static long coordinateKey(int x, int y) {
+            return ((long) x << 32) ^ (y & 0xFFFF_FFFFL);
+        }
+
+        private static int hashCoordinate(long key) {
+            key ^= key >>> 33;
+            key *= 0xff51afd7ed558ccdl;
+            key ^= key >>> 33;
+            return (int) key;
         }
 
         private void reset(int cameraX) {

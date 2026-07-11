@@ -515,6 +515,976 @@ with a focused unit guard. The occupancy probe's former repeating first mismatch
 at f718 and every six frames is removed; later independent lifetime differences
 remain. Strict frontiers remain focused f5496 / 14 at baseline timing and
 complete-run f16755-f16757. The AIZ stage is not green yet.
+## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean Task-10 commit `495e4cf08`.
+
+- Full comparator audit found three final WARNING declarations:
+  `track_drawing_index`, mapped `track_duration_timer`, and
+  `tails_control_counter`. A focused mismatch test first failed with expected
+  ERROR / actual WARNING, then passed after all three were promoted. `rg` now
+  finds no `Severity.WARNING` in the special-stage abstract replay; every
+  manager/player comparison, control-state adjudication, timer, per-player ring,
+  shared swap, animation timer, and refresh-gated rings-to-go field is
+  ERROR-severity. No tolerance or comparison mapping changed.
+- The actual keep-green mechanism is the scheduled/self-hosted
+  `develop-trace-replay` job in `.github/workflows/ci.yml`, which runs Maven's
+  `trace-replay` profile and derives its expected execution set from every
+  tracked `Test*TraceReplay.java` source. The guard now names
+  `TestS2SpecialStageTraceReplay` as a required keep-green report, proves it is
+  inside that derived replay set, requires its Surefire execution report, and
+  independently requires `target/trace-reports/s2_special_stage_0_report.json`
+  to exist with zero errors and zero warnings. This turns the prior implicit
+  wildcard inclusion into an explicit scheduled gate.
+- Full default sweep: `mvn test` completed in 121.2 seconds and returned exit 0
+  under the repository's relaxed Maven output extension. Its streamed result
+  exposed one nondeterministic failure in 11,494 reported tests / 1 failure /
+  0 errors / 12 skipped: the unrelated S1-only
+  `TestCheckpointStarpostGraphRewind#sonic1LamppostTwirlEndsAsOneCenteredBallNotADuplicate`
+  observed zero live parents. The campaign diff against current `develop`
+  touches no S1 lamppost/checkpoint code or that test, and the exact test passed
+  immediately on a fresh focused rerun (1 / 0 / 0 / 0); no unrelated change was
+  made. The rerun left the final Surefire aggregate at 11,487 tests / 0 failures /
+  0 errors / 12 skipped. The sweep-generated `docs/rewind/real-gaps.md` rewrite
+  was restored to its tracked contents.
+- Three existing S2 level-select spot routes passed together with no
+  `frontierOnly` or failure-ignore switch:
+  `TestS2CpzLevelSelectTraceReplay#replayMatchesTrace` (route `cpz`, CPZ1),
+  `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` (route `cnz2`, CNZ2),
+  and `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace` (route `mtz3`, MTZ3):
+  3 tests / 0 failures / 0 errors / 0 skipped.
+- Final gate command, executed in two independent fresh Maven invocations:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`.
+  Each invocation passed 3 tests / 0 failures / 0 errors / 0 skipped and
+  regenerated the same 3,228-frame, 0-error, 0-warning report SHA-256
+  `ACEBE257DC220FE54C7E989B2D3AF77BD95A8E180EFBF222375B83D9B1E6F36C`.
+
+The campaign closes with comparison-only replay, no trace-to-engine hydration,
+no route/zone/frame carve-out, and no WARNING-tier comparator left. README
+remains a merge-time obligation and is intentionally not changed on this branch.
+
+## 2026-07-10 - S2 special-stage animation timer and refresh-gated rings-to-go ratchets
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `aec89f733`. Task 9 implements
+the two remaining recorded manager fields and resolves Task 8's flip-phase
+warning without changing the flip counter itself.
+
+- `SSRun_Animation_Timers` compares the current/new speed factor, clears
+  `SSTrack_duration_timer` on a change, and still executes that tick's byte
+  decrement. Expiry reloads `SSAnim_Base_Duration[(speedFactor>>1)&7]` into
+  both timer bytes, then decrements only `SS_player_anim_frame_timer`; the
+  non-expiry path returns the stored player byte plus one in `d1` without
+  storing it (`docs/s2disasm/s2.asm:960-982`). `Sonic2TrackAnimator` now stores
+  that RAM byte, including `$00 -> $FF` underflow for table entry 7, while its
+  existing elapsed counter remains the inverse track-byte view. Rewind captures
+  the new byte and comparison state publishes it.
+- Timer REDs were observed before production changes. The focused timer suite
+  initially reported expected speed-12 player timer 4 / actual constant-path
+  behavior, missing snapshot field reflection, and later expected `$FF` /
+  actual 0 for the zero-duration entry. The committed tests cover initial 0,
+  speed-12 duration-5 reload/cadence, speed-change reset to duration 6, byte
+  underflow, and snapshot roundtrip.
+- Rings-to-go uses `max(0, currentRingRequirement - combinedRings)`, matching
+  Obj5A's subtract/negate/floor calculation before BCD conversion
+  (`docs/s2disasm/s2.asm:71535-71582`). Comparison decodes the packed BCD word
+  only at proven refresh observations. Committed aux shows the
+  `SS_TriggerRingsToGo` `$FF -> $00` transition at f1324 while pass 567 still
+  stores BCD 0; the first strictly following completed pass, sequence 568 at
+  f1327, stores BCD 7 and matches the live subtraction. Persistent comparison
+  is invalid: sequence 570 at f1331 still stores 7 while later-slot ring
+  collection makes the pass-end live subtraction 6; sequence 571 refreshes 6.
+  The comparator therefore selects only the first completed pass after a trigger
+  clear (plus an exact rising `SS_Check_Rings_flag` observation), never every
+  subsequent frame. Focused tests prove before-gate absence, f1327 selection,
+  f1331 exclusion, BCD decoding, and floored engine mapping.
+- With player timer and rings-to-go initially at WARNING, replay was 0 errors /
+  360 warnings: 103 rings-to-go warnings from the rejected persistent gate and
+  the existing 257 flip warnings. The corrected refresh selection returned the
+  report to 0 / 257, with player timer and rings-to-go green and only flip left.
+  Mismatch-severity REDs then observed WARNING instead of expected ERROR before
+  both green fields were ratcheted.
+- A temporary comparison-only animation timeline proved the first flip mismatch
+  was the whole animation phase: ROM completed pass sequence 2 with
+  `anim_frame=2, flip_timer=3`, while engine still had frame 1 / flip 4 and
+  caught up on sequence 3; the pattern repeated every three passes. The raw
+  boundary showed engine `anim_frame_duration=0` after f423, while ROM's f424
+  lag-labelled observation already exposed Obj5F's terminal pre-start pass and
+  frame 1 / flip 4. Recorder recurring sequence 0 starts with the following
+  VInt sample, so replay had omitted exactly that pending native object pass.
+  Promoting flip to ERROR produced the expected RED: 257 errors / 0 warnings,
+  first f429 Sonic flip expected 3 / actual 4. Completing the already-pending
+  pass at the semantic `SpecialStage_Started` transition, without ticking a new
+  VInt, aligns `anim_frame_duration` and both flip bytes while preserving all
+  track/physics state. No trace field is copied into engine state.
+- Post-fix replay is 3,227 compared frames, 0 errors / 0 warnings. Focused timer/
+  snapshot/comparison verification passed 20 tests across four selected reports;
+  the full S2 special-stage package passed 99 tests across 20 reports; recorder/
+  binder/expected-state/frame/mapping contracts passed 44 tests across seven
+  reports; rewind coverage passed 15 tests across six reports; all had 0
+  failures / 0 errors / 0 skipped. `S2SpecialStageReplayDeterminismTest` passed
+  its one test. Two independent ratcheted replay invocations each passed two
+  tests and regenerated the same 3,227-frame 0/0 report SHA-256
+  `3E7F0A06E012C519C9913056633CD58A65781CBC8CA7871FB52412B0978186D7`.
+- Review follow-up found that the selected final rings-to-go refresh at raw
+  f5181 was stepped only in the finish block, after the ordinary comparison
+  loop stopped at logical f5180. The comparator now captures the engine after
+  terminal pass 2990 and emits one ERROR-severity `rings_togo_bcd` comparison
+  at semantic raw frame f5181 using that pass's atomic BCD snapshot. A focused
+  finish-boundary test proves the field is present in report context; the
+  existing deliberate mismatch test proves it remains release-blocking.
+- The terminal pre-start completion helper previously treated an absent pending
+  pass as a no-op and then scheduled a fresh slot. It now throws before any
+  mutation unless a recurring pass is already pending. Regression coverage
+  proves the rejected path preserves VInt/draw/track/pass state, while the valid
+  path executes exactly one active-object pass, advances no VInt-owned track
+  state, and leaves the next slot available for exact replay input binding.
+- Follow-up verification passed 286 tests across the combined engine and trace
+  S2 special-stage packages (64 reports), plus 12 focused rewind capability/
+  adapter/snapshot tests, with 0 failures / 0 errors / 0 skipped. Two independent
+  ratcheted replay invocations each regenerated the same 3,228-frame, 0-error,
+  0-warning report SHA-256
+  `ACEBE257DC220FE54C7E989B2D3AF77BD95A8E180EFBF222375B83D9B1E6F36C`.
+- A second quality pass tightened the no-VInt boundary from "some pending pass"
+  to Obj5F's exact native transition state: recurring pass pending, intro WAIT2
+  at `INTRO_WAIT2_FRAMES-1`, and `SpecialStage_Started` still clear. The public
+  provider mutator was removed; only a package-owned manager operation remains,
+  reached by replay through a test-source bridge. Wrong-phase gameplay and a
+  repeated post-transition call both throw before mutation. The valid regression
+  advances to that native boundary, executes exactly one active-object pass,
+  advances no VInt/draw/track state, publishes MESSAGE_FLYOUT/Started, schedules
+  the following input-bindable slot, and then becomes permanently ineligible.
+- Pinning that guard exposed the intro at WAIT2 timer 9 on the recorded terminal
+  observation. Obj5F creates its banner-letter children, changes to routine 10,
+  installs `$1E`, and returns; the children fly independently while routine 10
+  decrements (`docs/s2disasm/s2.asm:9700-9739`). The engine instead waited for
+  the children to leave the screen before beginning WAIT2, double-counting 21
+  passes. WAIT2 now begins at child creation and continues their visual movement
+  concurrently. The creation pass stores `$1E` with elapsed timer zero; 30
+  following passes leave the counter active through zero and the 31st publishes
+  MESSAGE_FLYOUT/Started. The remaining one-pass alignment came from Obj5F_Init's
+  ROM fallthrough into Obj5F_Main and its first `+$100` movement before the fade,
+  now modeled object-locally instead of falsifying the countdown timer.
+- Presentation remains owned by the same ROM lifecycle. The full banner switches
+  to seven child pieces at allocation. Because RunObjects continues its ascending
+  live-slot scan, all seven newly allocated later-slot children execute their
+  first routine-6 movement in that same pass while the parent timer remains zero.
+  Their render predicate spans the initial WAIT2 countdown and their positions
+  continue moving there. The initial GET-rings
+  message remains hidden until the terminal pass creates it, at which point the
+  banner render gate closes. Later checkpoint `showRingRequirementMessage` reuse
+  is distinguished by the already-latched `SpecialStage_Started` state and keeps
+  its intended immediate message visibility. Focused assertions cover allocation,
+  allocation-pass progress/position, mid-countdown, timer 30, terminal pass, and
+  checkpoint reuse.
+- Rings refresh discovery now fails closed over artifact semantics. It accepts
+  any number of complete `$FF->$00` cycles separated by a `0->$FF` re-arm and
+  maps each clear to a unique first following completed pass. Missing initial or
+  clear samples, unfinished re-arms, duplicate same-frame samples, non-boolean/
+  ambiguous transitions, missing following passes, clears mapping to the same
+  pass, and a selected observation owning multiple completed-pass identities
+  throw. Independently, exactly one `SS_Check_Rings_flag` rise and one
+  `stage_finished.observed_frame` are required and must be equal. Synthetic tests
+  cover missing/duplicate/mismatch artifacts plus a legitimate two-cycle trace.
+  Packed BCD decoding now rejects bits above bit 11 and any digit A-F; 000, 007,
+  and 123 remain valid.
+- Final quality verification passed 295 tests across the combined engine and
+  trace S2 special-stage packages (64 reports), plus the focused determinism and
+  rewind capability/adapter/snapshot selection, all with 0 failures / 0 errors /
+  0 skipped. Two independent ratcheted replays regenerated 3,228 frames at
+  0 errors / 0 warnings with identical SHA-256
+  `ACEBE257DC220FE54C7E989B2D3AF77BD95A8E180EFBF222375B83D9B1E6F36C`.
+
+No tolerance, hydration, or route/zone/frame runtime carve-out was introduced.
+Player timer, refresh-gated rings-to-go, and flip mismatches are all ERROR.
+
+## 2026-07-10 - S2 special-stage shared swap byte and timer ratchets
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `d713e303d`. Task 8 replaces
+the two player-local swap booleans with the ROM's single manager-owned byte and
+starts exact comparison of the existing player timers.
+
+- ROM Obj09 clears the one `SS_Swap_Positions_Flag` byte during initialization;
+  either player's accepted jump applies `not.b`; a Sonic hit sets it and a Tails
+  hit clears it; both players' `SSPlayerSwapPositions` calls read that same byte
+  (`docs/s2disasm/s2.asm:69040-69062,69222-69260,69475-69518`). The engine now
+  stores `0/$FF` once on `Sonic2SpecialStageManager`; every player read/toggle/
+  hit write delegates to the manager. Rewind moves the byte from each
+  `PlayerSnapshot` to the ordered manager snapshot section and reattaches the
+  structural owner while restoring the unchanged player topology.
+- Focused shared-owner RED:
+  `mvn "-Dtest=Sonic2SpecialStageSwapFlagTest" test` failed test compilation
+  because the player toggle and manager getter did not exist. The two-test
+  suite then passed and proves either player's toggle is observed by both depth
+  routines, toggle parity is global, and rewind restores `$FF` without changing
+  the two player identities or links.
+- Comparison state now publishes the manager byte plus each player's unsigned
+  ROM-byte `ss_hurt_timer`, `ss_slide_timer`, and `ss_flip_timer`. Swap and
+  hurt/slide are ERROR; flip begins as WARNING. Focused comparison RED failed
+  compilation on the missing record components, then a boundary RED proved raw
+  VBlank timer fields must not be treated as an atomic pass: the committed CSV
+  f160 has Sonic slide 29 beside Tails slide 0, and f183 has Sonic slide 13
+  beside Tails slide 14 because VBlank interrupted the ascending Obj09→Obj10
+  scan. The comparator therefore uses player timers only from the recorder's
+  atomic `run_objects_end` snapshot. This is a sampling-boundary mapping, not a
+  tolerance; all atomic pass-end hurt/slide comparisons remain release-gated.
+- The first ratcheted replay initially failed with 24 errors / 365 warnings at
+  f160 `sonic_slide_timer` (expected 29 / actual 0). After the atomic-boundary
+  correction, a fresh 3,227-frame replay is 0 errors / 257 warnings: the shared
+  swap byte and every atomic hurt/slide comparison are green under the existing
+  ratchet. No trace value is applied to engine state.
+- Flip remains WARNING for the next timer/animation task. The first mismatch is
+  f429, expected 3 / actual 4. Atomic pass evidence pins a one-pass animation
+  phase offset: ROM decrements the flip timer on completed pass sequences
+  2,5,8,11,14, while the engine first reaches each corresponding value on
+  sequences 3,6,9,12,15 (the warnings clear on those following pass snapshots).
+  This is not a swap/timer-storage defect; `SSPlayer_Animate` decrements the flip
+  byte only when its animation-frame duration expires
+  (`docs/s2disasm/s2.asm:69596-69619`). Task 9 owns the live
+  `SS_player_anim_frame_timer`/animation cadence work, so flip is intentionally
+  not promoted in Task 8 and the exact warning frontier stays visible.
+- The special-stage package command
+  `mvn "-Dtest=com.openggf.game.sonic2.specialstage.*Test,com.openggf.game.sonic2.specialstage.Test*,com.openggf.game.sonic2.specialstage.Sonic2SpecialStage*Test" test`
+  passed 95 tests / 0 failures / 0 errors / 0 skipped, counted from the 19
+  selected Surefire XML reports. The explicit recorder/binder/mapping/replay/
+  determinism/rewind/swap command passed 55 tests / 0 / 0 / 0 across its 12
+  selected reports. Two further fresh replay invocations both passed their two
+  JUnit tests and regenerated byte-identical report SHA-256
+  `54BBDF16C6A589EB8C9E6DE01498EE09B2716A7A0D508A670948AC9CB2E890C2`.
+- Quality review removed the ownerless public player constructor. Its focused
+  RED expected no two-argument constructor but reflection found one; the new
+  construction guard and required-owner getter/setter test pass after every
+  production and test caller supplies a manager (paired topology fixtures share
+  one). `getSwapPositionsFlag`, setter, toggle, and bomb-hit writes now all use
+  the non-null owner consistently instead of the getter silently returning false
+  while mutation paths threw. The post-review replay remains 0 errors / 257
+  warnings with the same f429 flip frontier and identical report hash above.
+
+No trace hydration, tolerance, comparator relaxation, or route/frame/zone
+runtime predicate was introduced. The Tier-1 ratchet remains active.
+
+## 2026-07-10 - S2 special-stage per-player ring ownership ratcheted
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `7dd0506ee`. Task 7 promotes
+the recorded Sonic/Tails ring digits from diagnostic Tier 2 to ERROR severity
+without changing the already-green combined-ring contract.
+
+- ROM Obj60 increments the touching object's decimal digit cells and the
+  corresponding Sonic/Tails total (`docs/s2disasm/s2.asm:70771-70789`). Obj5B
+  later spills ten rings when that same player has a tens/hundreds digit;
+  otherwise it clears and spills all remaining units, subtracting only from
+  that player's total (`docs/s2disasm/s2.asm:71233-71272`). The engine now owns
+  that count on each `Sonic2SpecialStagePlayer`; collision routing passes the
+  touching player to collection/spill, and the existing combined counter is
+  updated by the same mutation so its invariant is `sonic + tails`.
+- Player rewind snapshots include the owned count. The comparison snapshot's
+  trailing `PlayerState.rings` value is compared with the trace character's
+  decoded `ringsBinary()` as ERROR; no other severity or tolerance changed.
+- Focused RED for ownership/snapshot APIs:
+  `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePerPlayerRingsTest" test`.
+  Test compilation failed because `getRings()`, player-aware `collectRing`, and
+  player-aware bomb spill did not exist. Focused RED for the comparison seam:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.S2SpecialStageExpectedComparisonTest#perPlayerRingMismatchIsAnError" test`.
+  JUnit failed because `sonic_rings` was absent from the comparison map.
+- After implementation, the focused per-player/comparison tests pass. A fresh
+  `TestS2SpecialStageTraceReplay` run passes both JUnit tests and writes a
+  3,227-frame report with 0 errors / 0 warnings, proving the stricter field is
+  natively green without trace hydration or a route/frame/zone carve-out.
+
+## 2026-07-10 - S2 special-stage Tier-1 ratchet enabled
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `f1413d4f8`. The Stage-2
+frontier was first rechecked before enabling the gate with:
+`mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`.
+Both selected classes passed (two JUnit tests in the replay class and one in
+the determinism class), the generated report contained 0 errors / 0 warnings
+over 3,227 compared frames, and the determinism test confirmed byte-identical
+replay output.
+
+- The formerly empty `assertNoReleaseBlockingDivergences()` hook now executes
+  the campaign-prescribed Tier-1 gate:
+  `assertFalse(report.hasErrors(), report.toAssertionSummary());`. Tier-1
+  comparisons use ERROR severity, so a future release-blocking divergence now
+  fails the concrete replay instead of remaining report-only. Comparator
+  severities, mappings, tolerances, and engine mechanics are unchanged.
+- Focused RED before the hook change:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay#releaseRatchetRejectsTierOneError" test`.
+  The new synthetic ERROR report was accepted and JUnit failed because no
+  `AssertionFailedError` was thrown. The same command passed after the exact
+  one-line ratchet was installed.
+- Ratchet-on replay command, executed twice from fresh Maven invocations:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`.
+  Both invocations passed the class's two JUnit tests and independently wrote
+  a 0-error / 0-warning, 3,227-frame report with SHA-256
+  `3E7F0A06E012C519C9913056633CD58A65781CBC8CA7871FB52412B0978186D7`.
+- The focused recorder/binder/finish-boundary/determinism/rewind/special-stage
+  neighborhood command then exited successfully with every selected class
+  passing:
+  `mvn "-Dtest=com.openggf.trace.SpecialStageRunObjectsPassBinderTest,com.openggf.trace.SpecialStageExpectedStateTest,com.openggf.trace.SpecialStageTraceFrameTest,com.openggf.game.sonic2.specialstage.*Test,com.openggf.game.sonic2.specialstage.Test*,com.openggf.tests.trace.s2.S2SpecialStageRecorderContractTest,com.openggf.tests.trace.s2.S2SpecialStageExpectedComparisonTest,com.openggf.tests.trace.s2.S2SpecialStageFinishBoundaryMappingTest,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`.
+
+No trace hydration, tolerance, comparison relaxation, or route/frame/zone
+predicate was introduced. The Tier-1 green frontier is now enforced; the next
+campaign step is Task 7's per-player-ring Tier-2 enabler.
+
+## 2026-07-10 - S2 special-stage Obj59 init/award pass order (Tier-1 green)
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `21a65e158`. The only remaining
+Tier-1 divergence was f5180 `finished_transition_frame`, expected 5180 / actual
+`never`; every per-frame gameplay field was already green.
+
+- The canonical boundary is the ROM's final `SS_Check_Rings_flag` rise, not the
+  later Obj6F results-screen start. This is also the real gameplay-loop exit:
+  after `RunObjects`, the recurring loop branches out as soon as the flag is
+  nonzero (`docs/s2disasm/s2.asm:6721-6729`). The event's logical f5180 label
+  is therefore the comparison contract; its raw observation/pass binding is
+  adjudicated separately below.
+- A temporary read-only engine diagnostic (removed before commit) replayed the
+  exact committed pass schedule through logical f5180 and found Obj59 still in
+  `COLLECTED` with timer 1 and `isFinished()==false`. ROM `Obj59_Init`
+  decrements `objoff_2A` on each routine-zero execution; when it reaches
+  `-$3C`, the routine writes routine 2 and falls directly through to
+  `loc_36022`, performing the first approach/depth step in that same
+  `RunObjects` pass (`docs/s2disasm/s2.asm:72279-72306`). The engine changed
+  phase at that boundary but returned.
+- Review of the first green patch exposed two compensating errors later in the
+  same routine. ROM `loc_36022` calls `loc_360F0` before `loc_3512A`, so Obj59
+  tests the animation published by the preceding pass before advancing depth.
+  When that pre-movement animation is 9, `loc_360F0` writes routine 8 and timer
+  `$63` and plays the emerald music immediately; the outer routine then
+  continues through movement in the same pass
+  (`docs/s2disasm/s2.asm:72306-72312,72390-72414`). The engine instead moved before testing (selecting collection
+  one pass early), then spent the next pass in a separate `COLLECTING` phase
+  before awarding/resetting `$63` (one pass late). The two errors hid each
+  other after the init-only change, so both were removed rather than accepted
+  as a trace-shaped compensation.
+- Focused RED commands:
+  `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest#emeraldFinalInitializationPassFallsThroughToApproachMotion" test`.
+  Before the fix, Obj59's 60th init update entered `APPROACHING` but retained
+  depth 54 (expected 53 after the drawing-index-4 `$CCCC` step). The focused
+  test passes after the init transition dispatches the approach tail once.
+  A second RED,
+  `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest#emeraldChecksAnimationBeforeMovementAndAwardsOnTheFollowingPass" test`,
+  crossed depth 3→2 and found the engine already in `COLLECTING` (expected the
+  pre-movement animation-8 check to keep `APPROACHING`). It now proves that the
+  following pass awards/music-latches immediately at animation 9 with timer
+  `$63`, and that routine 8 first decrements it to `$62` one pass later.
+- Quality review then pinned both terminal routines. ROM routine 8 and routine
+  6 use `subi.w #1` followed by `bpl`: timer zero remains active and only the
+  following decrement to `-1` raises `SS_Check_Rings_flag`. The insufficient-
+  rings branch also seeds `$4F` before selecting routine 6
+  (`docs/s2disasm/s2.asm:72411-72431`). Focused REDs
+  `emeraldSuccessCountdownCompletesOnlyAfterZero` and
+  `emeraldFailureSeedsFourFAndCompletesOnlyAfterZero` respectively found the
+  engine completing at zero and seeding failure with zero. Both now walk the
+  full `$63`/`$4F` countdown, assert zero is still active, and assert native
+  completion/removal only at `-1`. The unreachable engine-only `COLLECTING`
+  enum/switch/update path was removed.
+- Spec review found a second failure-path ordering detail: `loc_36142` writes
+  `SS_New_Speed_Factor=0`, routine 6, and `$4F`, then returns through
+  `loc_36022` so `loc_3512A` movement and the projection/display tail still run
+  in that same pass (`docs/s2disasm/s2.asm:72306-72312,72417-72423`). The
+  focused RED `emeraldFailureMovesAndProjectsBeforeZeroSpeedPromotionAtNextVint`
+  entered failure at depth 7 / animation 6 but remained at depth 7 because the
+  Java branch returned early. It now reaches depth 6 / animation 7 in the
+  transition pass, leaves current speed 12 during `RunObjects`, and promotes
+  the requested zero only at the following modeled VInt. The pending target
+  and latch are rewind-captured; restoring between the object pass and VInt
+  reproduces the zero promotion.
+- Correcting the success terminal edge initially reopened the report to 1 error
+  / 0 warnings at f5180, which exposed a comparison mapping issue rather than
+  an engine offset. Published `run_objects_end` sequence 2989 is keyed to
+  logical non-lag f5180 and still has `check_rings_flag=0`; the raw CSV first
+  observes `$FF` at lag-labelled f5181. Recorder v1.4 now hooks the instruction
+  after the recurring loop's `jsr RunObjects` at REV01 `$52B2`, rather than the
+  generic `RunObjects_End` RTS at `$15FE4`: Obj59's success tail pops the
+  `RunObject` return and returns directly through the outer frame, bypassing
+  that generic RTS (`docs/s2disasm/s2.asm:6694-6729,72427-72445`). This captures
+  the actual terminal pass as sequence 2990 at raw f5181 with
+  `check_rings_flag=$FF`, exact ReadJoypads sample f5179 / BK2 7933, and the
+  preceding identity f5177 / BK2 7931. The finish event retains canonical
+  `frame=5180, observed_frame=5181`.
+- `S2SpecialStageFinishBoundaryMappingTest` was run with the observation-pass
+  mapping removed and failed with the exact original result: 1 error / 0
+  warnings, f5180 expected 5180 / actual `never`. The mapping now requires
+  exactly one captured `CompletedPass` at the raw observation and consumes it
+  through the ordinary BK2-identity binder, applies no recorded engine state,
+  and retains logical label f5180. A synthetic differing-input test uses a
+  preceding RIGHT sample and a terminal JUMP sample and proves the terminal
+  pass owns the later identity rather than reusing its neighbor. The obsolete
+  custom pending-pass helper and its guessed preceding-input contract were
+  removed.
+- Quality review caught a false-green guard in that mapping: terminal retrieval
+  was conditional on the engine not already being finished after logical
+  sequence 2989. A forced-early-finish RED therefore reported no errors and
+  skipped sequence 2990 entirely. The finish mapper now always requires and
+  executes the single raw-observation pass, records
+  `before-terminal-pass@5180` when the engine was already finished, accepts
+  f5180 only when the terminal pass causes the transition, and asserts the
+  binder has no remaining passes. Both the normal and forced-early integration
+  cases assert terminal sequence 2990 executes exactly once through its BK2
+  identity.
+- The regenerated v1.4 artifact contains 2,991 contiguous recurring passes,
+  595 multi-pass observations, and 1,259 delayed bindings. Its decompressed
+  `physics.csv` is byte-identical to v1.3 (SHA-256
+  `418033A193690BE9DDD8BD7CA5EBAEEA48EFCE08C13B807883A318D6E415777B`).
+  Moving capture from the generic RTS to the exact call-site return also
+  corrected two earlier VBlank-straddling completion cursors (sequences 1146
+  and 1740); those were the only existing events whose published frame,
+  completion cursor, input-sample frame, or check-rings state changed.
+- Replay command:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`.
+  Before: 1 error / 0 warnings, first f5180
+  `finished_transition_frame` expected 5180 / actual `never`. After: 0 errors /
+  0 warnings over 3,227 compared frames; the engine now raises its native
+  completed state in the finish-causing ROM pass mapped to logical f5180.
+- The complete focused cadence class passed after the review correction:
+  `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest" test`.
+  The combined trace plus determinism command also passed, preserving both the
+  zero-divergence report and byte-identical replay output:
+  `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`.
+  The broader focused recorder/binder/mapping/replay/cadence/rewind command ran
+  67 checks with 67 passed, 0 failed, 0 errors, and 0 skipped; the generated
+  report remained 0 errors / 0 warnings over 3,227 compared frames.
+  Rewind coverage for the manager, concrete object snapshot, and adapter also
+  passed after removing `COLLECTING`:
+  `mvn "-Dtest=com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageRewindSnapshot,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageObjectSnapshot,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageRewindAdapter" test`.
+
+No comparator relaxation, trace hydration, tolerance, recorded-state input,
+or frame/route/zone predicate was introduced. This closes the Stage-2 Tier-1
+frontier; the ratchet remains the next separate campaign step.
+
+## 2026-07-10 - S2 special-stage emerald pause-only control gate
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `a8f7eaa10`. The f4845 Obj09
+position mismatch was the first visible consequence of feeding a physical RIGHT
+sample to a ROM pass whose emerald sequence had already restricted logical
+controls to Start.
+
+- A bounded read-only BizHawk probe over absolute movie frames 7588-7605
+  (trace f4834-f4851) captured Obj09 at `$FFFFB000` together with raw and
+  logical controls. At f7598 the ROM had inertia -447, angle 65, X -3, and
+  logical/raw RIGHT. At f7599 raw RIGHT remained `$08`, but logical held was
+  zero; Obj09 took its neutral-friction path to inertia -391, angle 64, X 0,
+  Y 110, `Status_Slowing`, and slide timer 29. Output
+  `C:\tmp\s2ss-f4845.txt` has SHA-256
+  `FB3497C5A6D33D8E98F42A6FEE5AAA3D65960F9722BBB0B6E48391135B1E7887`;
+  the temporary Lua and engine diagnostics were removed before commit.
+- The recurring main loop masks both controller words with Start-only when
+  `SS_Pause_Only_flag` is set (`docs/s2disasm/s2.asm:6706-6721`). Obj59 sets
+  that flag at the start of routine zero, before advancing its 60-pass delay
+  (`:72279-72291`). Because `SSObjectsManager` allocates Obj59 before the same
+  pass's `RunObjects`, routine zero executes on the allocation-associated pass;
+  the following pass is the first whose logical control copy is masked.
+- RED commands separately proved both missing contracts. The bootstrap cadence
+  test first expected Start-only `$80` but observed raw `$98` after replay input
+  binding. The streamed-object cadence test then found the newly allocated
+  emerald still had delay 0 and had not activated the gate:
+  `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest#emeraldInitMasksPendingLogicalControlsToStartOnly" test`
+  and
+  `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest#streamedEmeraldRunsRoutineZeroOnItsAllocationAssociatedPass" test`.
+  Both pass after Obj59 contributes exactly one allocation-associated init pass
+  and the owning main-loop input seam applies the semantic mask to live and
+  replay-bound raw samples.
+- Replay command:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`
+  passes its red-allowed pipeline assertion. Before: 606 errors / 0 warnings,
+  first f4845 `sonic_ss_x` expected 0 / actual 2. After: 1 / 0, first f5180
+  `finished_transition_frame` expected 5180 / actual `never`; all per-frame
+  player, object-count, and track comparisons through the compared gameplay
+  tail are green.
+- A 34-test neighborhood covering bootstrap cadence, streamed objects, player
+  initialization, rewind snapshots, replay, and replay determinism completed
+  with 0 failures.
+
+No trace tolerance, state hydration, frame/route predicate, or recorded logical
+input was introduced. The next Stage-2 owner is the final-checkpoint completion
+boundary at f5180.
+
+## 2026-07-10 - S2 special-stage object-specific half-open collision windows
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `82b2a1f10`. The f1331
+`combined_rings` mismatch (`34` expected / `35` actual) was one paired ring
+being collected one completed `RunObjects` pass early.
+
+- Atomic ROM snapshots show pass 569 ending with 33 combined rings, pass 570
+  with 34, and pass 571 with 35. An engine-only active-object dump showed pass
+  570 collecting both depth `$0004CCCE`, animation-8 rings at angles `$48` and
+  `$38` while Sonic was at angle `$42`; the temporary diagnostic was removed
+  before commit.
+- `Obj61_TestCollision` constructs an upper angle bound in `d1` and lower bound
+  in `d2`. On the ordinary no-wrap path it rejects `player >= object+d6`, then
+  accepts `player >= object-d6`, so its interval is lower-inclusive and
+  upper-exclusive (`docs/s2disasm/s2.asm:70846-70877`). For Obj60, `d6=$A`
+  (`:70767-70773`): Sonic at `$42` must collect the `$48` ring but reject the
+  `$38` ring because `$42 == $38+$A`. On pass 571 Sonic reaches `$41`, placing
+  that second ring inside the interval. Obj61 uses the same helper with `d6=8`
+  (`:70674-70681`), so the shared predicate must select the width by object
+  type rather than applying Obj60's `$A` to bombs.
+- RED command:
+  `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest" test`
+  first failed `ringCollisionExcludesThePositiveAngleThresholdBoundary` with
+  ring count expected `0`, actual `1`. Review coverage then proved the remaining
+  hardcoded-width defect: bomb `+8` and `-9` both exploded under the `$A` window.
+  The nine-test class now covers ring/bomb positive exclusion, negative
+  inclusion, negative outside, and wrapped endpoints, and passes after selecting
+  Obj60 `$A` versus Obj61 `8` before the shared half-open comparison.
+- Replay command:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`
+  passes its red-allowed pipeline assertion. Before: 1,311 errors / 0 warnings,
+  first f1331 `combined_rings` expected 34 / actual 35. After: 606 / 0, first
+  f4845 `sonic_ss_x` expected 0 / actual 2 (with same-frame Y/angle mismatches).
+- Neighborhood command covering the collision regression, startup cadence,
+  player initialization, replay, and determinism ran 28 tests with 0 failures;
+  a standalone determinism rerun also passed cleanly:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`.
+
+No trace tolerance, comparator masking, hydration, route/frame predicate, or
+object-specific offset was added. The next Stage-2 owner is the late f4845
+Obj09 movement/input transition.
+
+## 2026-07-10 - S2 special-stage signed track-coordinate comparison
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `0d26aca5d`. The f1019
+`sonic_ss_x` mismatch (`65530` expected / `-6` actual) was a comparison
+representation defect: the recorder faithfully emits the raw `$FFFA` RAM word,
+while the engine exposes the same value as a signed Java integer.
+
+- `ss_x_pos` and `ss_y_pos` are the integer words of 16.16 track-space
+  positions (`ss_x_sub` / `ss_y_sub` are the following fractional words). ROM
+  movement loads and stores the pairs as longs, then reads the integer words
+  with sign branches and signed multiplies for angle, collision, and screen
+  projection (`s2.asm:69290-69303,69324-69374,69450-69458,69718-69750`). The
+  comparison now sign-extends only those two raw 16-bit expected values.
+- `ss_z_pos` is not folded into that rule. ROM keeps it in the positive
+  `$6E..$80` depth range and uses unsigned depth division/comparison alongside
+  signed coordinate multiplication (`s2.asm:69414-69429,69507-69534,
+  69734-69739`). A focused negative test proves a raw `$FFFA` depth does not
+  compare equal to engine `-6`.
+- RED command:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.S2SpecialStageExpectedComparisonTest" test`
+  failed `signedRomTrackCoordinatesMatchEngineSignedIntegers` because
+  `sonic_ss_x` remained `ERROR`. The same command passes all four mapping tests
+  after the comparison-only correction.
+- Replay/determinism command:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`
+  passes. Before: 3,694 errors / 0 warnings, first f1019 `sonic_ss_x`
+  expected 65530 / actual -6. After: 1,311 / 0, first f1331
+  `combined_rings` expected 34 / actual 35.
+
+No tolerance, runtime behavior, trace hydration, route/frame exception, or
+`ss_z_pos` reinterpretation was added. The f1331 extra-ring divergence is the
+next independent frontier.
+
+## 2026-07-10 - S2 special-stage completed-pass pacing clears the Stage-1 gate
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on `ef72ba101` with this implementation
+uncommitted. The f916 player mismatch was caused by stepping one engine update
+for every non-lag VBlank observation even though the 68K completed zero, one, or
+multiple `RunObjects` passes between observations.
+
+- Recorder v1.3 uses exactly two execute callbacks. `ReadJoypads`' shared RTS at
+  `$1156` fires once after each player read, so the input hook accepts only
+  `A0=$F608` and stack return PC `$88E`, proving both pads were stored for the
+  `Vint_S2SS` call at `$88A` (`s2.asm:837-840,1361-1387`). `$88C` is the BSR
+  displacement word and is not executable. `RunObjects_End` remains `$15FE4`
+  (`:29805-29849`). The latter attaches the exact current and previous poll
+  identities plus raw P1/P2 diagnostic bytes, then queues the atomic snapshot
+  to the first forward non-lag observation. Replay loads both identified BK2
+  rows and derives held/pressed state through `RecordedInputSnapshots` and
+  `SpecialStageInputMapper`; no auxiliary held value drives the engine. The
+  workflow, Java artifact contract, and binder reject identity or mask tampering.
+- The capture excludes the pass whose preceding VInt sample still saw
+  `SpecialStage_Started=0` but whose end set it to 1. Startup VBlank pacing already
+  owns that transition pass; replaying it again caused the rejected f429 track
+  phase regression. Capture also ends at `stage_finished`, because results-tail
+  `RunObjects` calls are outside the compared runtime.
+- Pass-count reconciliation is exact. v1.2 contained 2,929 recurring passes plus
+  the Started transition pass through `stage_finished`, then 79 results-tail
+  events (3,009 total). The corrected hook
+  observes 2,990 recurring passes through that same boundary and zero after it:
+  61 gameplay passes previously hidden by backward/last-nonlag association are
+  recovered while all 79 irrelevant tail events and the one startup transition
+  pass are removed. The artifact pins 596 multi-pass observation frames and
+  1,257 delayed bindings.
+- Record/validation command:
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/bizhawk/record_s2_level_select_traces.ps1 -RomPath s2.gen -Only special_stage`
+  passed. The 5,299-row physics CSV is byte-identical to v1.2 (compressed SHA-256
+  `DE6174B8DE48F4AA1541E654D9E334C0442183778CF1FBD42C4E749F499A43DF`);
+  aux SHA-256 is
+  `6144DCD81B4DC11E11CB4226DDC94E257B435F4161D5C76D11D80677196B1A80`.
+- Replay command:
+  `mvn -q "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`
+  completed and regenerated the report. Review then found that calling
+  `handleInput(N)` before `update()` still executed the already-pending N-1 pass.
+  The provider now exposes a narrow input-only bind that replaces that pending
+  pass's four controller fields before update; a same-pass jump-edge test proves
+  sample N changes pass N, without copying any gameplay state. Before the campaign: 15,313 errors /
+  1,877 warnings, first f0. Before pass pacing (`ef72ba101`): 11,001 / 10,
+  first f916 `sonic_ss_x` 58/61. After: 3,694 / 0, first f1019
+  `sonic_ss_x` expected 65530, actual -6 (a separate signed-coordinate mapping).
+  This is a 75.88% error reduction from the
+  campaign baseline and satisfies Task 4's required >=50% Stage-1 gate.
+- The canonical finish boundary is the final `SS_Check_Rings_flag` 0→`$FF`
+  resolution: it is observed on raw f5181 and owned by the preceding logical
+  non-lag observation f5180, which also owns recurring pass sequence 2989.
+  Obj6F is not the finish contract; its later sighting is recorded separately
+  as `results_started` at f5219, with the remaining results tail retained but
+  excluded from comparison. The report now expects
+  `finished_transition_frame=5180`; engine actual remains `never`, a distinct
+  finish-flow parity root rather than recorder pacing loss.
+
+The f1019 signed-coordinate comparison is the next independent frontier; there is no
+frame/route carve-out, comparator fallback, or trace-to-engine state writeback.
+
+## 2026-07-10 - S2 special-stage ordered RunObjects observation identity
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `1b9272029`. The f896 player
+position mismatch was a recorder/comparator association defect, not another
+Obj09 movement or input rule.
+
+- PC-execute evidence: `C:\tmp\s2ss-input-cadence.txt`, SHA-256
+  `79013220E442CEC845D187ADABA24823B44194980C8825B18D8BE11183C9902E`;
+  trace f870-f910 / BizHawk f3624-f3664. At raw f894 the pass ends x=`$0005`.
+  A second valid pass runs across lag-labelled f895 and ends x=`$0007`, but the
+  v1.1 recorder discarded it because f894 already owned an event. The following
+  pass ends x=`$000D` across f897 and was consequently mis-keyed to f896, where
+  the engine correctly exposed x=`$0007`. This directly disproves the old
+  one-event-per-last-nonlag-frame assumption.
+- Recorder/model correction: v1.2 hooks `RunObjects` entry `$15F9C` and return
+  `$15FE4` (`s2.asm:29805-29849`). Each atomic snapshot carries contiguous
+  `pass_sequence` and `first_eligible_frame`; the comparison-only binder selects
+  the latest completed result visible at an executed observation. The workflow
+  validates sequence continuity, eligibility, complete fields, and non-lag
+  binding while allowing multiple ordered passes on one observation. No aux
+  field paces or mutates the engine.
+- Re-record command:
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/bizhawk/record_s2_level_select_traces.ps1 -RomPath s2.gen -MoviesDir C:\Users\farre\IdeaProjects\sonic-engine\docs\BizHawk-2.11-win-x64\Movies -OutputRoot src/test/resources/traces/s2 -Only special_stage`
+  passed P1/P2 alignment and aux validation with 3,009 contiguous pass-end
+  snapshots across 2,911 observation frames (98 frames carry two passes). The
+  decompressed physics CSV remains byte-identical at 612,518 bytes, SHA-256
+  `418033A193690BE9DDD8BD7CA5EBAEEA48EFCE08C13B807883A318D6E415777B`.
+- RED commands: the recorder contract failed on v1.1/missing pass identity;
+  `SpecialStageRunObjectsPassBinderTest` then failed expected latest sequence 1
+  / actual 0 for two completed passes sharing one observation. A rejected
+  intermediate one-pass-per-update binder produced 11,112 errors and moved the
+  frontier backward to f791 rings, proving that sequential consumption was not
+  the observation contract.
+- GREEN focused command:
+  `mvn -Dmse=off "-Dtest=com.openggf.trace.SpecialStageRunObjectsPassBinderTest,com.openggf.tests.trace.s2.S2SpecialStageRecorderContractTest,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`
+  passed 9/9 after review hardening. The artifact contract pins 3,009 passes,
+  98 multi-pass frames, and 172 delayed bindings; malformed sequence gaps and
+  pre-eligibility bindings are rejected by focused binder tests. f791 remains
+  one ring, f799 remains three, and f896 player state is
+  exact.
+- Neighborhood/determinism command:
+  `mvn -Dmse=off "-Dtest=com.openggf.trace.SpecialStageRunObjectsPassBinderTest,com.openggf.trace.SpecialStageExpectedStateTest,com.openggf.game.sonic2.specialstage.*Test,com.openggf.game.sonic2.specialstage.Test*,com.openggf.tests.trace.s2.S2SpecialStageRecorderContractTest,com.openggf.tests.trace.s2.S2SpecialStageExpectedComparisonTest,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`
+  passed 92/92.
+- Before (`1b9272029`): 11,049 errors / 10 warnings, first error f896
+  `sonic_ss_x` expected 13, actual 7 (angle 59/61).
+- After (uncommitted implementation measurement): 11,001 errors / 10 warnings,
+  first error f916 `sonic_ss_x` expected 58, actual 61 (y 92/91, angle 41/40).
+  This is 28.16% below the original 15,313-error Stage-1 baseline, still below
+  the required 50% gate. f916 player/pass cadence is the next independent root.
+
+## 2026-07-10 - S2 special-stage Obj09 recurring input and signed inertia step
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `5a15e0a4a`. The atomic
+pass-end trace first diverged at f890 because two engine errors partly cancelled:
+the recurring loop fed Obj09 the preceding VInt's input word, while its negative
+fractional inertia conversion moved one pass too early.
+
+- PC-execute evidence: `C:\tmp\s2ss-input-cadence.txt`, SHA-256
+  `79013220E442CEC845D187ADABA24823B44194980C8825B18D8BE11183C9902E`;
+  trace f870-f910 / BizHawk f3624-f3664. Hooks covered `ReadJoypads`
+  (`$111C`/`$1156`), the recurring logical copy (`$52A0-$52AC`), Obj09
+  (`$338EC`), and `RunObjects_End` (`$15FE4`). At trace f888 / BizHawk f3642,
+  Vint_S2SS changed raw Ctrl_1 from `$00/$00` to RIGHT `$08/$08`, the recurring
+  main loop copied logical `$08/$08` before Obj09, yet pass end remained
+  x=`$0000`, y=`$006E`, angle=`$40`. The next RIGHT pass also remained centered;
+  the third reached x=`$0002`, y=`$006D`, angle=`$3F`.
+- ROM mechanism: the recurring gameplay path copies freshly read Ctrl_1/2
+  after `WaitForVint`, immediately before `RunObjects` (`s2.asm:6694-6721`),
+  unlike the earlier pre-start loop's copy position. `SSObjectMove` branches on
+  the inertia sign, negates a negative word, logically shifts its magnitude by
+  eight, then subtracts it (`s2.asm:69718-69735`). Thus `-$60` and `-$C0`
+  truncate to zero and `-$120` first moves one angle unit; Java's signed `>> 8`
+  had rounded `-$60` to `-1`.
+- RED commands:
+  `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePlayerInitializationTest#negativeFractionalInertiaTruncatesTowardZeroBeforeChangingAngle" test`
+  failed expected angle 64 / actual 63; after the arithmetic correction,
+  `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest#currentVintRightInputIsCopiedAfterWaitIntoSameRunObjectsPass" test`
+  failed expected pending held 8 / actual 0.
+- GREEN/neighborhood command:
+  `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.specialstage.*Test,com.openggf.game.sonic2.specialstage.Test*,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`
+  passed 76/76. The fade/lag tests preserve the distinct pre-start rule: a press
+  sampled by the last fade VInt feeds exactly one pass through the prior-word
+  copy and is not repeated. A boundary assertion advances WAIT2 through Obj5F
+  message creation and proves MESSAGE_FLYOUT already uses current-VInt input,
+  matching the latched `SpecialStage_Started` flag. Rewind captures both that
+  latch and the selected pending held/pressed words. A gameplay lag regression
+  holds RIGHT across executed VInts, hides a release in a skipped update, then
+  supplies a mapper re-press edge; the pending ROM press remains zero because
+  `ReadJoypads` compares held state against the last VInt it actually executed.
+  The paired pre-start regression executes one additional prior-word copy and
+  proves the same false edge is not retained in `previousPhysicalPressedButtons`.
+- Before (`5a15e0a4a`): 12,271 errors / 10 warnings, first error f890
+  `sonic_ss_x` expected 0, actual 2 (y 110/109, angle 64/63).
+- After (uncommitted implementation measurement): 11,049 errors / 10 warnings,
+  first error f896 `sonic_ss_x` expected 13, actual 7 (angle 59/61). This removes
+  1,222 errors (9.96%) from the immediate baseline and leaves 27.85% reduction
+  from the original 15,313-error Stage-1 baseline, below the required 50% gate.
+  The next f896 root is a separate RunObjects observation/cadence question around
+  lag-labelled VBlank rows; the probe shows later catch-up, so no lag/frame
+  predicate or further player-math compensation is included here.
+
+## 2026-07-10 - S2 special-stage atomic RunObjects-end comparison capture
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on clean `b76ecb2c1`. PC-execute evidence
+showed that a VBlank CSV row can bisect the recurring
+`SSObjectsManager -> RunObjects` pass: f799 recorded combined rings 1 at
+VBlank, but the ROM had collected the paired rings and reached 3 by the exact
+end of that same logical object pass. The existing comparator therefore treated
+mid-pass observations as completed-frame expectations.
+
+- Recorder/model correction: v1.1-s2ss registers a bounded S2 REV01 execute
+  hook at `RunObjects_End` ROM `$15FE4` (`docs/s2disasm/s2.asm:29805-29849`),
+  captures the full manager/player surface only while the ROM's semantic
+  `SpecialStage_Started` flag is nonzero, and associates at most one snapshot
+  with the last non-lag logical trace frame. `SpecialStageExpectedState` uses
+  this atomic snapshot for player state, ring digits/combined rings, and Tails's
+  control counter only. Track/drawing/finish/results fields remain on their CSV
+  observation, and frames without an event fall back to CSV. The mapping is
+  comparison-only and never writes trace values into engine state.
+- Task-5 capture landed in the same required regeneration: `control_state`
+  records `SpecialStage_Started` initially locked at f0 and its unlock
+  transition at f424. Required legacy families remain present: 1 checkpoint,
+  1 stage-finished event, and 1,583 message-state transitions.
+- Re-record command:
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/bizhawk/record_s2_level_select_traces.ps1 -RomPath s2.gen -MoviesDir C:\Users\farre\IdeaProjects\sonic-engine\docs\BizHawk-2.11-win-x64\Movies -OutputRoot src/test/resources/traces/s2 -Only special_stage`
+  passed the workflow's P1+P2 BK2 alignment check and validated 2,474 complete,
+  unique-frame `run_objects_end` snapshots, all keyed to non-lag rows. The workflow now
+  passes an absolute `OGGF_TRACE_OUTPUT_DIR`; EmuHawk child CWD is not stable
+  across launcher/config variants.
+- Determinism gate: old and regenerated decompressed `physics.csv` are exactly
+  byte-identical, 612,518 bytes, SHA-256
+  `418033A193690BE9DDD8BD7CA5EBAEEA48EFCE08C13B807883A318D6E415777B`.
+  CSV schema/version remains unchanged.
+- Focused RED: the new expected-state/control/recorder tests initially failed
+  for the absent mapping, control transitions, hook/version, workflow aux
+  validation, and stale v1.0 artifact.
+- Focused GREEN command:
+  `mvn -Dmse=off "-Dtest=com.openggf.trace.SpecialStageExpectedStateTest,com.openggf.trace.SpecialStageControlStateTest,com.openggf.tests.trace.s2.S2SpecialStageExpectedComparisonTest,com.openggf.tests.trace.s2.S2SpecialStageRecorderContractTest" test`
+  passed 9/9. It explicitly proves f799 engine count 3 matches pass-end 3,
+  f791 remains exact at 1, missing-event startup falls back to CSV, and the
+  artifact carries the initial/unlock control transitions plus required event
+  families.
+- Replay/neighborhood command:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest,com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest" test`
+  passed 11/11.
+- Before (`b76ecb2c1`): 12,283 errors / 10 warnings, first error f799
+  `combined_rings` expected 1, actual 3.
+- After (uncommitted implementation measurement): 12,271 errors / 10 warnings,
+  first error f890 `sonic_ss_x` expected 0, actual 2 (paired `ss_y` 110 vs 109
+  and angle 64 vs 63). The f799 ring mismatch is gone; the first combined-ring
+  mismatch is now f920 (8 vs 9). Startup/fade observations retain CSV fallback
+  because the recorder emits no pass-end snapshot until ROM
+  `SpecialStage_Started` is nonzero; this is a semantic gate, not a frame
+  carve-out. The next root is the f890 player movement/angle boundary; adjudicate
+  it against the newly recorded control transition and pass-end player state
+  before changing player math.
+
+## 2026-07-10 - S2 special-stage Stage 1: streamed Obj60/Obj61 init fallthrough
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on `c663163f69`. The f791 ring frontier
+had two independent causes. First, recurring `SSObjectsManager` added Obj60/Obj61
+to the engine list without the routine-0 fallthrough that the same ROM loop's
+later `RunObjects` scan performs. Second, the engine continued scanning both
+players after `ring.collect()` and incremented the shared counter even when the
+second call did not transition the ring. The ROM allocates before `RunObjects`,
+Obj60/Obj61 init falls through through depth/projection/animation/collision, and
+`Obj61_TestCollision` clears `collision_flags` on its first successful player
+(`s2.asm:6679-6688,6935-6967,70631-70665,70720-70752,70807-70877,70880-70923`).
+
+- PC-execute evidence: `C:\tmp\s2ss-ring-probe.txt`, SHA-256
+  `CFF5570952D0D4319E6EB0086EFBBC2F00D6392F7999B618D61CDE90B53D6DD8`.
+  At trace f674 / BizHawk f3428, streamed slot `$14` entered Obj60 init at
+  depth `$00400000`, changed routine 0→2, and fell through to drawing-index-4
+  depth `$003F3334`, projection/animation, and collision in the same object
+  scan. At trace f790 / BizHawk f3544, the ring moved `$0005999A`→`$0004CCCD`,
+  animation 7→8, cleared collision once, and incremented Sonic's ring count once;
+  the first compared observation was f791 with combined count 1. These values
+  verify the cited ROM flow; they are not engine predicates or timing constants.
+- RED command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest" test`
+- RED status: 2 failures / 0 errors. A streamed depth-$40 ring remained
+  `$00400000` instead of reaching `$003F3334`, and one anim-8 ring overlapping
+  initialized Sonic and Tails incremented the combined count to 2 instead of 1.
+- Review RED command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest" test`
+- Review RED status: 1 failure / 0 errors. With unsigned Sonic/Tails Z both
+  `$0080`, list-order collision hurt Sonic; ROM's `cmp.w`/`blo` ordering
+  requires Tails to be tested first and consume the bomb. The focused suite
+  passed after collision candidates were ordered by `ss_z_pos`, including the
+  ROM's Tails-first tie case (`s2.asm:70813-70836`).
+- GREEN/neighborhood command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageStreamedObjectCadenceTest,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageObjectSnapshot,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageRewindSnapshot,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageRewindAdapter,com.openggf.game.sonic2.specialstage.Sonic2SpecialStageSpawnGateTest,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" "-DfailIfNoTests=false" test`
+- GREEN status: PASS (focused cadence/collision, object snapshots, manager rewind,
+  spawn/bootstrap, determinism, and comparison-only target replay). No new mutable
+  latch or rewind field was introduced.
+- Before: 11,087 errors / 10 warnings; first error f791,
+  `combined_rings` expected `1`, actual `0`.
+- After (measured with the implementation and documentation uncommitted): 12,283
+  errors / 10 warnings; first error f799, `combined_rings` expected `1`, actual
+  `3`. The original Stage-1 15,313-error baseline is reduced by 19.79%, below the
+  >=50% Task-4 gate; this root-specific step increases total downstream errors by
+  10.79% while advancing the first trustworthy frontier eight frames.
+- Exact next root: paired-ring collision cadence at f799. The engine reaches
+  combined count 3 at f799 before the ROM's next compared f801 observation,
+  where the counts resynchronize; another pair is early at f808 (`expected=3`,
+  `actual=5`). This is a
+  transient timing mismatch rather than the former persistent two-player
+  double-count. Determine the later pair's allocation/update/collision timeline
+  before changing publication cadence; no lag, frame, route, or trace-data
+  predicate belongs in the fix.
+
+## 2026-07-10 - S2 special-stage Stage 1: startup fade and pre-start RunObjects cadence
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on `16422d35e`. The engine previously
+entered the START-banner `DROP` phase immediately after PRE_ROLL, advanced track
+and scroll throughout the ROM's fade from white, coupled the VInt duration timer
+to `SSTrack_Draw` animation advancement, retained press edges through frozen
+waits, and published the first recurring `RunObjects` pass in the f160 VInt
+observation. ROM instead freezes runtime work for the 22 `Pal_FadeFromWhite`
+waits, owns duration countdown/reload in VInt, advances animation only from
+`SSTrack_Draw`, and exposes the first recurring main-loop work after the f160
+observation (`s2.asm:837-876,960-982,3460-3483,6665-6690,7026-7091`).
+
+- RED command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest,com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePreRollTest" test`
+- Initial RED status: 5 assertion failures / 0 errors. PRE_ROLL reached `DROP`
+  instead of `ROM_STARTUP`; the post-step-32 state remained `DROP` instead of
+  entering a frozen fade.
+- Review RED command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest,com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePreRollTest,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageTrackAnimatorSnapshot" test`
+- Review RED status: 4 assertion failures / 0 errors. Speed promotion produced
+  elapsed timer 1 instead of 0; f136/fade held elapsed 0 instead of 4; and a
+  fade-only jump edge leaked into DROP (`JUMPING` instead of `NORMAL`).
+- Input re-review RED command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest" test`
+- Input re-review RED status: 1 assertion failure / 0 errors. RIGHT introduced
+  on the current f160-style VInt reached the next pending player pass immediately
+  (Sonic inertia expected 0, actual -96) instead of waiting for the following
+  control-copy/WaitForVint cycle; Tails history shared the same early source.
+- Lag-edge RED command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBootstrapCadenceTest" test`
+- Lag-edge RED/GREEN: the released-tap case first produced one assertion failure /
+  zero errors (`pressedButtons` expected 0, actual 16 after a skipped fade update),
+  then passed once the lag early-return discarded only the transient P1 press edge,
+  preserved held and P2 level state, and left the prior executed VInt's sampled word
+  unchanged. The paired held-through-lag case then failed with one assertion / zero
+  errors (`previousPhysicalPressedButtons` expected 16, actual 0) before the executed
+  VInt began deriving P1 edges from current held state versus the last executed held
+  sample. A held button now produces exactly one edge at that VInt with no repeat;
+  a released skipped tap remains gone. P2 remains level-only.
+- GREEN/neighborhood command: `mvn "-Dtest=com.openggf.game.sonic2.specialstage.*,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest,com.openggf.tests.trace.s2.S2SpecialStageTrackDurationMappingTest" test`
+- GREEN status: PASS (comparison-only target replay, determinism, and focused
+  special-stage tests); the target report remains intentionally red-allowed.
+- Before: 15,303 errors / 3,719 warnings; first error f142,
+  `track_anim_frame` expected `2`, actual `3`.
+- Final after review: 11,087 errors / 10 warnings; first error f791,
+  `combined_rings` expected `1`, actual `0`. This is a 27.55% error reduction
+  from the branch-local 15,303 baseline (27.60% from original Stage-1 15,313),
+  so the >=50% Stage-1 gate is **not met**. The quality-review changes remove the
+  f160 player and f166 track-draw errors and nearly all timer/drawing warnings;
+  no follow-on ring collision tuning is included here.
+- Frontier movement: `ROM_STARTUP` owns only the two existing semantic track
+  waits. The final startup `RunObjects` pass transitions the intro into a public
+  ROM-counted 22-update `FADE_FROM_WHITE`; each fade update preserves track
+  frame/duration (elapsed 4), drawing index, skydome/vscroll, initialized player
+  fields, active-object state, and banner position. The f160 first-DROP update
+  ticks VInt to drawing index 1 / elapsed timer 0 but its pre-start loop schedules
+  the preceding raw word sampled by the final fade VInt before the wait; the next
+  executed logical update first publishes that deferred player/Tails-buffer, fixed banner,
+  and later dynamic-object/collision work, then runs its current VInt. Current
+  `SSTrack_Draw`, decode/perspective, streaming, and scroll
+  remain synchronous, matching the recurring-loop order at `s2.asm:6679-6688`;
+  an index-zero f166 draw therefore advances frame 2 to 3 in that same observation.
+  Frozen phases continually replace the previous physical sample, so a tap that
+  is released before DROP stays gone. Rewind captures timer speed-change state,
+  previous P1/P2 samples, and pending main-pass inputs. Fixed object execution is
+  Sonic/Tails → banner → later dynamic objects, matching slot order.
+- Exact next root: ring collection/object cadence. ROM first has one Sonic ring
+  at f791 and remains at one through f799, then reaches three on lag f800 / next
+  compared f801. The engine is still zero at f791, then has two at f793-f799 and
+  six at f801. This is a distinct active-object/collision timeline after the
+  startup/fade pipeline aligns through the first compared frontier. Downstream
+  input-onset questions (including the later f888 movement window) were left
+  unadjudicated at this point; the later f890 PC probe entry above resolves them
+  through the recurring copy position plus signed-magnitude movement semantics.
+
+## 2026-07-10 - S2 special-stage Stage 1: defer Obj09/Obj10 init to first RunObjects
+
+Worktree `.worktrees/ai-s2-ss-trace-green`, branch
+`feature/ai-s2-ss-trace-green`, based on `a9a721631`. The engine previously
+constructed Obj09/Obj10 with their routine-0 initialization already applied,
+although the ROM merely writes their ids before two startup waits and does not
+run either object until `RunObjects` at `s2.asm:6660-6663`.
+
+- Command: `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`
+- Status: PASS (comparison-only replay pipeline and determinism); report remains
+  intentionally red-allowed.
+- Before: 15,311 errors / 3,720 warnings; first error f127,
+  `sonic_ss_y` expected `0`, actual `128`.
+- After: 15,303 errors / 3,719 warnings; first error f142,
+  `track_anim_frame` expected `2`, actual `3`.
+- Frontier movement: f127-f135 now preserve present-but-routine-0 players with
+  zeroed SS/player position, depth, and angle fields. The second drawing-index
+  wait alone performs `SSObjectsManager`-equivalent streaming: the first wait
+  leaves the segment unprocessed, while the second drawing-index-4 tick allocates
+  segment 0. The final wrap follows that second-loop streaming pass by
+  initializing the player scalar subset in Sonic-then-Tails slot order, then
+  executing/projecting/colliding later-slot active objects at f136. No normal
+  player movement or duplicate object pass runs on that bootstrap tick.
+- Next independent root: the fade-from-white/object cadence beginning around
+  f142. The Stage-1 >=50% error-reduction gate remains pending; this correction
+  removes the first bootstrap mismatch but intentionally does not address that
+  later cadence.
+
+## 2026-07-09 - S2 special-stage headless replay harness established (red-allowed MVP)
+
+Branch `feature/ai-s2-ss-trace` (commit `de6f3b95c`). First headless replay of a
+Sonic 2 half-pipe special-stage trace against the production
+`Sonic2SpecialStageProvider`.
+
+- Command: `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test`
+- Trace: `src/test/resources/traces/s2/special_stage` (Special Stage 1, Sonic+Tails,
+  5299 frames, 1971 lag rows, `bk2_frame_offset` 2754, `stage_finished` frame 5219).
+- Status: PASS (pipeline green; determinism green). Divergences are recorded in
+  the report, NOT asserted -- this is the intentional red-allowed MVP. The
+  `assertNoReleaseBlockingDivergences()` ratchet is left disabled until parity.
+- Report: `target/trace-reports/s2_special_stage_0_report.json` -- 15313 errors,
+  1877 warnings across 3250 compared (non-lag) frames.
+- First error: frame 0, `sonic_ss_y` (trace `absent` vs engine `128`). Root: the
+  recorded trace opens in the ~69-frame SS load/intro (no SS player object spawned
+  until trace frame 69), while the engine's `initializeStage` spawns players
+  immediately. This is the known intro-timing frontier (not a harness misalignment;
+  frame 0 = bk2 row 2754 is correctly aligned). Top diverging fields:
+  `sonic_ss_y`, `tails_ss_y`, `sonic_ss_x`, `tails_ss_x`, `sonic_routine`,
+  `tails_routine`.
+- Next frontier: SS intro/player-spawn timing (engine skips the intro), then
+  in-gameplay control-lock timing and Tails CPU behaviour.
+
+Engine change: `SpecialStageBackgroundRenderer.init()`/`cleanup()` now short-circuit
+in headless mode (mirrors `Sonic1SpecialStageManager`'s headless renderer skip), so
+the S2 SS runtime can boot without a GL context. Display-only; no gameplay behaviour
+change.
 
 ## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green
 

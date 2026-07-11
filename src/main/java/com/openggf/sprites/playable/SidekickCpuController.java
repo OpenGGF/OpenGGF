@@ -2478,26 +2478,24 @@ public class SidekickCpuController {
                     | AbstractPlayableSprite.INPUT_DOWN
                     | AbstractPlayableSprite.INPUT_LEFT
                     | AbstractPlayableSprite.INPUT_RIGHT)) == 0;
-            // S2 stores the real low-byte press in Sonic_Stat_Record_Buf; do not
-            // clear it when the delayed sample is a plain airborne roll jump.
-            boolean delayedLeaderJumpTakeoff = recordedJumpPress
-                    && (recordedStatus & AbstractPlayableSprite.STATUS_IN_AIR) != 0
-                    && (recordedStatus & AbstractPlayableSprite.STATUS_ROLLING) != 0
-                    && (recordedStatus & AbstractPlayableSprite.STATUS_ON_OBJECT) == 0
-                    && (sidekickRules == null || !sidekickRules.sidekickDelayedJumpPressUsesHistoryEdge());
+            // S2 stores the real low-byte press in Sonic_Stat_Record_Buf, while
+            // S3K reconstructs the press from history edges. Preserve the sampled
+            // byte only for the S2-style rule; loc_13E64 itself contributes held
+            // high-byte bits and must not repeat an S3K low-byte press.
+            boolean preservesRecordedJumpPress = recordedJumpPress
+                    && (sidekickRules == null
+                            || !sidekickRules.sidekickDelayedJumpPressUsesHistoryEdge());
             if (sidekick.getAir()
                     && delayedJumpOnly
                     && normalPushingGraceFrames <= 2
-                    && !recordedJumpPress) {
+                    && !preservesRecordedJumpPress) {
                 // ROM loc_13E64 carries Tails_CPU_auto_jump_flag by ORing the
                 // high-byte A/B/C held bits into Ctrl_2_Logical, then branches
                 // directly to the final write while airborne. It does not
                 // manufacture another low-byte press for the engine's jump-only
                 // held-history shape after the fresh push-grace handoff has
-                // decayed, until loc_13E9C's cadence gate runs again. If the
-                // delayed history already carries a real low-byte press, the
-                // ROM keeps it in d1; the auto-jump carry only ORs high-byte
-                // held bits.
+                // decayed, until loc_13E9C's cadence gate runs again. S2 keeps a
+                // real recorded press in d1; S3K's edge-derived press is cleared.
                 inputJumpPress = false;
                 diagnosticGeneratedPressedInput &= ~AbstractPlayableSprite.INPUT_JUMP;
             }

@@ -207,6 +207,21 @@ class TestEngine {
     }
 
     @Test
+    void performanceProfilerEligibilityFollowsPerformanceToggleWithoutDebugOverlayGate() {
+        assertTrue(Engine.shouldEnablePerformanceProfiler(true, false));
+        assertFalse(Engine.shouldEnablePerformanceProfiler(false, false));
+        assertFalse(Engine.shouldEnablePerformanceProfiler(true, true));
+    }
+
+    @Test
+    void performanceOverlayCanRenderInSpecialStagesWithoutDebugOverlayGate() {
+        assertTrue(Engine.shouldRenderPerformanceOverlay(GameMode.SPECIAL_STAGE, true, false));
+        assertTrue(Engine.shouldRenderPerformanceOverlay(GameMode.LEVEL, true, false));
+        assertFalse(Engine.shouldRenderPerformanceOverlay(GameMode.SPECIAL_STAGE, false, false));
+        assertFalse(Engine.shouldRenderPerformanceOverlay(GameMode.SPECIAL_STAGE, true, true));
+    }
+
+    @Test
     void applyResolvedDisplayDimensionsPreservesCurrentWindowDuringModeTransitions() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         GraphicsManager graphics = new GraphicsManager();

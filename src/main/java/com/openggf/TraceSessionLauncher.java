@@ -5,12 +5,15 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.debug.playback.PlaybackDebugManager;
+import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.control.InputHandler;
 import com.openggf.configuration.GlfwKeyNameResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.MasterTitleScreen;
+import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.rewind.InputSource;
@@ -22,9 +25,11 @@ import com.openggf.sprites.ghost.GhostTraceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.testmode.TraceCameraFocusController;
 import com.openggf.testmode.TraceHudOverlay;
+import com.openggf.trace.SpecialStageTraceData;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
+import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.catalog.TraceEntry;
 import com.openggf.trace.live.LiveTraceComparator;
@@ -61,9 +66,26 @@ public final class TraceSessionLauncher {
 
     private static TraceSessionLauncher activeSession;
 
+    private static final String SPECIAL_STAGE_PROFILE = "s2_special_stage";
+
     private final TraceEntry entry;
+    /** Null for special-stage sessions (which use {@link #ssTrace} instead). */
     private final TraceData trace;
     private final Bk2Movie movie;
+    /**
+     * Special-stage trace payload; non-null only for an SS visual session
+     * (parallel branch). Level sessions leave this null and drive the runtime
+     * through the {@link TraceReplayDriver}/{@link LiveTraceComparator} stack
+     * above. An SS session has no comparator/rewind machinery, so every
+     * level-path method here is already null-guarded on {@link #comparator}.
+     */
+    private final SpecialStageTraceData ssTrace;
+    /** Absolute BK2 input-log row backing SS trace frame 0 (metadata offset). */
+    private final int ssBk2FrameOffset;
+    /** Last SS trace frame to play; the session fades out after it. */
+    private final int ssStageFinishedFrame;
+    /** Cursor into the SS trace; advances one row per engine frame (lag or not). */
+    private int ssCursor;
     /**
      * Snapshot of the user's gameplay-altering config taken before
      * {@link TraceReplaySessionBootstrap#prepareConfiguration} ran.
@@ -94,6 +116,30 @@ public final class TraceSessionLauncher {
         this.trace = trace;
         this.movie = movie;
         this.configSnapshot = configSnapshot;
+        this.ssTrace = null;
+        this.ssBk2FrameOffset = 0;
+        this.ssStageFinishedFrame = 0;
+        this.ssCursor = 0;
+    }
+
+    /**
+     * Special-stage visual session constructor (parallel to the level
+     * constructor). Package-private so the skip-gate test can build a session
+     * from the committed MVP trace without a live engine. The stage-finished
+     * boundary comes from the trace's {@code stage_finished} aux event (or the
+     * final frame if absent).
+     */
+    TraceSessionLauncher(TraceEntry entry, Bk2Movie movie, SpecialStageTraceData ssTrace,
+                         TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot) {
+        this.entry = entry;
+        this.trace = null;
+        this.movie = movie;
+        this.configSnapshot = configSnapshot;
+        this.ssTrace = ssTrace;
+        this.ssBk2FrameOffset = entry.metadata().bk2FrameOffset();
+        this.ssStageFinishedFrame =
+                ssTrace.stageFinishedFrame().orElse(ssTrace.frameCount() - 1);
+        this.ssCursor = 0;
     }
 
     public static TraceSessionLauncher active() {
@@ -130,6 +176,12 @@ public final class TraceSessionLauncher {
         clearLaunchSessionOverridesBeforeTraceSnapshot(GameServices.configuration());
         TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot =
                 TraceReplaySessionBootstrap.snapshotGameplayConfig();
+        // Special-stage traces (no meaningful zone/act) take a parallel branch:
+        // they skip the level driver stack entirely and drive the SS runtime
+        // directly through GameLoop's SPECIAL_STAGE update.
+        if (SPECIAL_STAGE_PROFILE.equals(entry.metadata().traceProfile())) {
+            return launchSpecialStage(entry, loop, configSnapshot);
+        }
         boolean configMutated = false;
         try {
             TraceData trace = TraceData.load(entry.dir());
@@ -153,6 +205,82 @@ public final class TraceSessionLauncher {
             }
             return false;
         }
+    }
+
+    /**
+     * Parallel launch path for a Sonic 2 special-stage visual session. Boots
+     * the game module the same way the level path does (so sprites / gameplay
+     * mode / ROM are wired), then enters SPECIAL_STAGE mode directly from the
+     * callback instead of loading a zone/act.
+     */
+    private static boolean launchSpecialStage(TraceEntry entry, GameLoop loop,
+            TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot) {
+        boolean configMutated = false;
+        try {
+            SpecialStageTraceData ssTrace = SpecialStageTraceData.load(entry.dir());
+            Bk2Movie movie = new Bk2MovieLoader().load(entry.bk2Path());
+            TraceSessionLauncher session =
+                    new TraceSessionLauncher(entry, movie, ssTrace, configSnapshot);
+            prepareSpecialStageConfiguration(entry.metadata());
+            configMutated = true;
+            loop.launchGameByEntry(
+                    resolveGameEntry(entry.gameId()),
+                    session::finishSpecialStageLaunch);
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(java.util.logging.Level.SEVERE,
+                    "Failed to launch SS trace " + entry.dir(), e);
+            if (configMutated) {
+                TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Applies the recorded team + cross-game config for an SS session. Mirrors
+     * the team half of {@link TraceReplaySessionBootstrap#prepareConfiguration}
+     * without its level-only S3K fresh-load branch (SS traces are S2-only).
+     */
+    private static void prepareSpecialStageConfiguration(TraceMetadata meta) {
+        SonicConfigurationService config = GameServices.configuration();
+        String main = meta.recordedMainCharacter();
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
+                main == null || main.isBlank() ? "sonic" : main);
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
+                String.join(",", meta.recordedSidekicks()));
+        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+    }
+
+    private void finishSpecialStageLaunch() {
+        GameLoop loop = Engine.currentGameLoop();
+        if (loop == null) {
+            LOGGER.severe("SS trace launch callback fired after engine teardown; "
+                    + "aborting for " + entry.dir());
+            return;
+        }
+        try {
+            // Mark active before entering so any entry-time rewind recording is
+            // suppressed (GameLoop gates SS capture on active() == null).
+            activeSession = this;
+            SpecialStageProvider provider = GameServices.module().getSpecialStageProvider();
+            Integer index = ssTrace.metadata().specialStageIndex();
+            enterSpecialStageTrace(loop, provider, index != null ? index : 0);
+        } catch (Exception e) {
+            activeSession = null;
+            TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
+            LOGGER.log(java.util.logging.Level.SEVERE,
+                    "Failed to finish SS trace launch for " + entry.dir(), e);
+            loop.returnToMasterTitle();
+        }
+    }
+
+    static void enterSpecialStageTrace(
+            GameLoop loop, SpecialStageProvider provider, int stageIndex) {
+        loop.doEnterSpecialStage(provider, stageIndex, true,
+                SpecialStageStartupPolicy.TRACE_ACCURATE);
+        // Startup observations and external frame pacing are independent contracts.
+        provider.setLagCompensation(0);
     }
 
     private void finishLaunchAfterGameBootstrap() {
@@ -217,6 +345,65 @@ public final class TraceSessionLauncher {
             // top of the method when it was null.
             loop.returnToMasterTitle();
         }
+    }
+
+    /** True for a special-stage visual session (parallel branch). */
+    public boolean isSpecialStageSession() {
+        return ssTrace != null;
+    }
+
+    /**
+     * True when the current SS trace row is a lag frame, so GameLoop must not
+     * run {@code updateSpecialStageInput()} / {@code ssProvider.update()} this
+     * engine frame (the recorded input replaces live input; a lag row advances
+     * nothing engine-side). Always false for level sessions.
+     */
+    public boolean shouldSkipCurrentSpecialStageTick() {
+        return ssTrace != null && !fadeStarted
+                && ssCursor >= 0 && ssCursor < ssTrace.frameCount()
+                && ssTrace.getFrame(ssCursor).lag();
+    }
+
+    /**
+     * Installs the recorded BK2 input for the current SS trace row as the
+     * logical override, so GameLoop's {@code updateSpecialStageInput()} forwards
+     * recorded input to the provider. Press-edge detection diffs against the
+     * immediately preceding <em>physical</em> BK2 row (never the last stepped
+     * row), matching the headless harness. No-op for level sessions.
+     */
+    public void applySpecialStageTraceInputIfActive(InputHandler input) {
+        if (ssTrace == null || fadeStarted || input == null) {
+            return;
+        }
+        Bk2FrameInput current = movie.getFrame(ssBk2FrameOffset + ssCursor);
+        int prevIndex = ssBk2FrameOffset + ssCursor - 1;
+        Bk2FrameInput previous = prevIndex >= 0 && prevIndex < movie.getFrameCount()
+                ? movie.getFrame(prevIndex)
+                : null; // fromBk2 synthesises a neutral prior row when null
+        input.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
+    }
+
+    /**
+     * Clears the per-frame input override and advances the SS trace cursor by
+     * one row (lag or not). Ends the session via the normal fade/teardown path
+     * once the recorded stage-finished frame has played. No-op for level
+     * sessions.
+     */
+    public void advanceSpecialStageTraceCursorIfActive(InputHandler input) {
+        if (ssTrace == null) {
+            return;
+        }
+        if (input != null) {
+            input.clearLogicalOverride();
+        }
+        if (fadeStarted) {
+            return;
+        }
+        if (ssCursor >= ssStageFinishedFrame) {
+            startFadeOut();
+            return;
+        }
+        ssCursor++;
     }
 
     /** Called from {@link GameLoop} each LEVEL tick while active. */

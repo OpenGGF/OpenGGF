@@ -8,9 +8,7 @@ import com.openggf.debug.DebugColor;
 import com.openggf.editor.EditorInputHandler;
 import com.openggf.game.*;
 
-import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
-import com.openggf.control.PlayerInputState;
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -185,6 +183,9 @@ public class GameLoop {
 
     // Flag to freeze level updates during special stage entry transition
     private boolean specialStageTransitionPending = false;
+    private boolean specialStageRewindBoundaryThisFrame;
+    private final SpecialStageEntryPresentationController specialStageEntryPresentation =
+            new SpecialStageEntryPresentationController();
 
     // Bonus stage entry/exit state
     private boolean bonusStageTransitionPending;
@@ -331,7 +332,10 @@ public class GameLoop {
         this.debugOverlayManager = this.engineServices.debugOverlay();
         this.profiler = this.engineServices.profiler();
         this.playbackDebugManager = this.engineServices.playbackDebug();
-        this.liveRewindManager = new LiveRewindManager(configService);
+        this.liveRewindManager = new LiveRewindManager(
+                configService,
+                () -> currentGameMode,
+                this::getActiveSpecialStageProvider);
         this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
         this.userRecordingControls = new UserRecordingRuntimeControls(new LiveUserRecordingRuntime());
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
@@ -573,6 +577,9 @@ public class GameLoop {
     GameMode changeGameModeForBoundary(GameMode nextMode) {
         GameMode oldMode = currentGameMode;
         if (oldMode != nextMode) {
+            if (oldMode == GameMode.SPECIAL_STAGE) {
+                specialStageEntryPresentation.clear();
+            }
             currentGameMode = nextMode;
             reportRewindModeBoundary(oldMode, nextMode);
         }
@@ -581,6 +588,9 @@ public class GameLoop {
 
     GameMode changeGameModeWithoutRewindBoundary(GameMode nextMode) {
         GameMode oldMode = currentGameMode;
+        if (oldMode == GameMode.SPECIAL_STAGE && oldMode != nextMode) {
+            specialStageEntryPresentation.clear();
+        }
         currentGameMode = nextMode;
         return oldMode;
     }
@@ -592,8 +602,25 @@ public class GameLoop {
         }
         if (oldMode == GameMode.LEVEL && newMode != GameMode.LEVEL) {
             context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
-        } else if (oldMode != GameMode.LEVEL && newMode == GameMode.LEVEL) {
+        }
+        if (oldMode == GameMode.SPECIAL_STAGE && isActiveSpecialStageProviderRewindable()) {
+            deregisterSpecialStageAdapter();
+            if (!specialStageRewindBoundaryThisFrame) {
+                context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
+            }
+        }
+        if (newMode == GameMode.SPECIAL_STAGE && isActiveSpecialStageProviderRewindable()) {
             context.markRewindBoundary(RewindBoundary.MODE_ENTER_REWINDABLE);
+        }
+        if (oldMode != GameMode.LEVEL && newMode == GameMode.LEVEL) {
+            context.markRewindBoundary(RewindBoundary.MODE_ENTER_REWINDABLE);
+        }
+    }
+
+    private void deregisterSpecialStageAdapter() {
+        GameplayModeContext context = resolveGameplayModeContext();
+        if (context != null) {
+            context.deregisterSpecialStageAdapter();
         }
     }
 
@@ -760,6 +787,28 @@ public class GameLoop {
                 && activeBonusStageProvider.supportsRewind();
     }
 
+    private boolean isSpecialStageRewindable() {
+        return currentGameMode == GameMode.SPECIAL_STAGE
+                && !specialStageRewindBoundaryThisFrame
+                && isActiveSpecialStageProviderRewindable();
+    }
+
+    private boolean isActiveSpecialStageProviderRewindable() {
+        return activeSpecialStageProvider != null
+                && activeSpecialStageProvider.supportsRewind();
+    }
+
+    private void severSpecialStageRewindForLiveOnlyShortcut() {
+        if (currentGameMode != GameMode.SPECIAL_STAGE || specialStageRewindBoundaryThisFrame) {
+            return;
+        }
+        specialStageRewindBoundaryThisFrame = true;
+        GameplayModeContext context = resolveGameplayModeContext();
+        if (context != null) {
+            context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
+        }
+    }
+
     private void stepInternal() {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
@@ -767,6 +816,12 @@ public class GameLoop {
         inputHandler.refreshLogicalSnapshot();
         audioUpdatedThisStep = false;
         refreshRuntimeBindings();
+        if (currentGameMode == GameMode.SPECIAL_STAGE) {
+            specialStageRewindBoundaryThisFrame = false;
+            detectSpecialStageLiveOnlyShortcutBoundary();
+        } else {
+            specialStageRewindBoundaryThisFrame = false;
+        }
         PaletteOwnershipRegistry paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
@@ -782,7 +837,7 @@ public class GameLoop {
             inputHandler.update();
             return;
         }
-        if ((currentGameMode == GameMode.LEVEL || isBonusStageRewindable())
+        if ((currentGameMode == GameMode.LEVEL || isBonusStageRewindable() || isSpecialStageRewindable())
                 && TraceSessionLauncher.active() == null
                 && liveRewindManager.handleRealtimeRewindInput(
                         currentGameMode, rewindBlocked, inputHandler)) {
@@ -905,6 +960,9 @@ public class GameLoop {
         }
 
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))) {
+            if (currentGameMode == GameMode.SPECIAL_STAGE) {
+                severSpecialStageRewindForLiveOnlyShortcut();
+            }
             handleSpecialStageDebugKey();
         }
 
@@ -1049,11 +1107,36 @@ public class GameLoop {
             }
         }
 
-        updateSpecialStageInput();
-        ssProvider.update();
+        // Visual SS trace session: feed the recorded row's input and skip the
+        // engine tick on a lag row (mirrors the LEVEL-mode playback skip gate).
+        // The trace cursor advances one row per engine frame regardless of lag,
+        // so lag rows render as authentic no-motion frames.
+        TraceSessionLauncher ssSession = TraceSessionLauncher.active();
+        if (ssSession != null) {
+            ssSession.applySpecialStageTraceInputIfActive(inputHandler);
+        }
+        boolean skipSsTick = ssSession != null
+                && ssSession.shouldSkipCurrentSpecialStageTick();
+        if (!skipSsTick) {
+            updateSpecialStageInput();
+            ssProvider.update();
+        }
+        specialStageEntryPresentation.update(ssProvider, fadeManager,
+                () -> playSpecialStageStageMusic(ssProvider));
+        if (ssSession != null) {
+            ssSession.advanceSpecialStageTraceCursorIfActive(inputHandler);
+        }
 
-        // Check for special stage completion or failure
-        if (ssProvider.isFinished()) {
+        if (isSpecialStageRewindable() && ssSession == null) {
+            liveRewindManager.recordExternalFrame(currentGameMode, false, inputHandler);
+        }
+
+        // Check for special stage completion or failure. A visual SS trace
+        // session owns its own end (fade-out at the recorded stage-finished
+        // frame), so an early engine isFinished() must not hijack it into the
+        // results screen.
+        if (ssProvider.isFinished()
+                && (ssSession == null || !ssSession.isSpecialStageSession())) {
             boolean gotEmerald = ssProvider.isEmeraldCollected();
             enterResultsScreen(gotEmerald);
         }
@@ -1591,6 +1674,51 @@ public class GameLoop {
         }
     }
 
+    private void detectSpecialStageLiveOnlyShortcutBoundary() {
+        if (currentGameMode != GameMode.SPECIAL_STAGE || !debugShortcutsEnabled()) {
+            return;
+        }
+
+        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
+        int leftKey = configService.getInt(SonicConfiguration.LEFT);
+        int rightKey = configService.getInt(SonicConfiguration.RIGHT);
+        int upKey = configService.getInt(SonicConfiguration.UP);
+        int downKey = configService.getInt(SonicConfiguration.DOWN);
+
+        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_X)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_Z)
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY))
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_FAIL_KEY))
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY))
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))
+                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DEBUG_MODE_KEY))
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F4)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)) {
+            severSpecialStageRewindForLiveOnlyShortcut();
+            return;
+        }
+
+        if (ssProvider.isSpriteDebugMode()
+                && ssProvider.getDebugProvider() != null
+                && (isUnmodifiedDebugKeyPressed(leftKey)
+                || isUnmodifiedDebugKeyPressed(rightKey)
+                || isUnmodifiedDebugKeyPressed(upKey)
+                || isUnmodifiedDebugKeyPressed(downKey))) {
+            severSpecialStageRewindForLiveOnlyShortcut();
+            return;
+        }
+
+        if (ssProvider.isAlignmentTestMode()
+                && (isUnmodifiedDebugKeyPressed(leftKey)
+                || isUnmodifiedDebugKeyPressed(rightKey)
+                || isUnmodifiedDebugKeyPressed(upKey)
+                || isUnmodifiedDebugKeyPressed(downKey)
+                || isUnmodifiedDebugKeyPressed(GLFW_KEY_SPACE))) {
+            severSpecialStageRewindForLiveOnlyShortcut();
+        }
+    }
+
     private boolean isUnmodifiedDebugKeyPressed(int keyCode) {
         return debugShortcutsEnabled() && inputHandler.isKeyPressedWithoutModifiers(keyCode);
     }
@@ -1891,39 +2019,51 @@ public class GameLoop {
      * @param fadeFromBlack true if the screen is already black and should fade from black;
      *                      false for the normal fade-from-white reveal
      */
-    private void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
+    void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                                      boolean fadeFromBlack) {
+        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack,
+                SpecialStageStartupPolicy.FAST);
+    }
+
+    void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
+                             boolean fadeFromBlack, SpecialStageStartupPolicy startupPolicy) {
         // Clear the transition freeze flag (now we're in special stage mode)
         specialStageTransitionPending = false;
 
         try {
             ssProvider.reset();
-            ssProvider.initializeStage(stageIndex);
+            ssProvider.initializeStage(stageIndex, startupPolicy);
             activeSpecialStageProvider = ssProvider;
-
-            GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE);
+            GameplayModeContext context = resolveGameplayModeContext();
+            if (context != null) {
+                context.registerSpecialStageAdapter(ssProvider);
+            }
 
             // Set camera to origin for special stage rendering (uses screen coordinates)
             camera.setX((short) 0);
             camera.setY((short) 0);
 
-            playSpecialStageStageMusic(ssProvider);
+            specialStageEntryPresentation.begin(ssProvider, fadeFromBlack, fadeManager,
+                    () -> playSpecialStageStageMusic(ssProvider));
+
+            GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE);
 
             // Notify listener of mode change
             if (gameModeChangeListener != null) {
                 gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
             }
 
-            // Reveal the special stage
-            if (fadeFromBlack) {
-                fadeManager.startFadeFromBlack(null);
-            } else {
-                fadeManager.startFadeFromWhite(null);
-            }
-
             LOGGER.info("Entered Special Stage " + (stageIndex + 1) + " (H32 mode: 256x224)");
         } catch (IOException e) {
+            specialStageEntryPresentation.clear();
+            deregisterSpecialStageAdapter();
+            activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
             throw new RuntimeException("Failed to initialize Special Stage " + (stageIndex + 1), e);
+        } catch (RuntimeException e) {
+            specialStageEntryPresentation.clear();
+            deregisterSpecialStageAdapter();
+            activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
+            throw e;
         }
     }
 
@@ -2552,6 +2692,7 @@ public class GameLoop {
     private void doExitResultsScreen() {
         // Clean up results screen
         resultsScreen = null;
+        deregisterSpecialStageAdapter();
         activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
 
         if (levelManager.getCurrentLevel() == null) {
@@ -3811,14 +3952,6 @@ public class GameLoop {
             ssProvider.toggleLagCompensationDisplay();
         }
 
-        // Lag compensation adjustment (F6 decrease, F7 increase)
-        if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F6)) {
-            adjustLagCompensation(-0.05);
-        }
-        if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F7)) {
-            adjustLagCompensation(0.05);
-        }
-
         if (ssProvider.isAlignmentTestMode()) {
             if (isUnmodifiedDebugKeyPressed(leftKey)) {
                 ssProvider.adjustAlignmentOffset(-1);
@@ -3838,77 +3971,10 @@ public class GameLoop {
             return;
         }
 
-        int heldButtons = 0;
-        int pressedButtons = 0;
-        int p2HeldButtons = 0;
-        int p2LogicalButtons = 0;
-
-        PlayerInputState p1 = inputHandler.logical().player1();
-        PlayerInputState p2 = inputHandler.logical().player2();
-
-        heldButtons |= directionBits(p1.heldMask());
-        pressedButtons |= directionBits(p1.pressedMask());
-        heldButtons |= InputActionMasks.toMegaDriveButtonBits(p1.actionHeldMask());
-        pressedButtons |= InputActionMasks.toMegaDriveButtonBits(p1.actionPressedMask());
-        if (p1.startHeld()) {
-            heldButtons |= 0x80;
-        }
-        if (p1.startPressed()) {
-            pressedButtons |= 0x80;
-        }
-
-        p2HeldButtons |= directionBits(p2.heldMask());
-        p2LogicalButtons = p2HeldButtons;
-        int p2ActionHeld = InputActionMasks.toMegaDriveButtonBits(p2.actionHeldMask());
-        p2HeldButtons |= p2ActionHeld;
-        p2LogicalButtons |= p2ActionHeld;
-        if (p2.startHeld()) {
-            p2HeldButtons |= 0x80;
-            p2LogicalButtons |= 0x80;
-        }
-
-        ssProvider.handleInput(heldButtons, pressedButtons);
-        ssProvider.handlePlayer2Input(p2HeldButtons, p2LogicalButtons);
-    }
-
-    private static int directionBits(int logicalMask) {
-        int bits = 0;
-        if ((logicalMask & AbstractPlayableSprite.INPUT_UP) != 0) {
-            bits |= 0x01;
-        }
-        if ((logicalMask & AbstractPlayableSprite.INPUT_DOWN) != 0) {
-            bits |= 0x02;
-        }
-        if ((logicalMask & AbstractPlayableSprite.INPUT_LEFT) != 0) {
-            bits |= 0x04;
-        }
-        if ((logicalMask & AbstractPlayableSprite.INPUT_RIGHT) != 0) {
-            bits |= 0x08;
-        }
-        return bits;
-    }
-
-    /**
-     * Adjusts the lag compensation factor for the entire special stage simulation.
-     * The lag compensation simulates original Mega Drive hardware lag frames,
-     * affecting track animation, player movement, object speed, and all other
-     * timing.
-     *
-     * @param delta Amount to adjust (positive = more lag compensation = slower
-     *              simulation)
-     */
-    private void adjustLagCompensation(double delta) {
-        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-        if (!ssProvider.isInitialized() || !ssProvider.adjustLagCompensationIfDisplayEnabled(delta)) {
-            return;
-        }
-
-        // Calculate effective simulation rate for display
-        // Base is 60 fps. With lag compensation, effective = 60 * (1 - lagComp)
-        double effectiveUpdates = 60.0 * (1.0 - ssProvider.getLagCompensation());
-
-        LOGGER.info(String.format("Lag compensation: %.0f%% (effective ~%.1f updates/sec)",
-                ssProvider.getLagCompensation() * 100, effectiveUpdates));
+        SpecialStageInputMapper.MappedInput mapped =
+                SpecialStageInputMapper.map(inputHandler.logical());
+        ssProvider.handleInput(mapped.p1Held(), mapped.p1Pressed());
+        ssProvider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
     }
 
     // ==================== Ending / Credits Sequence Methods ====================

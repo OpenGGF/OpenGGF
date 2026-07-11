@@ -88,7 +88,8 @@ public class TestDonorCapabilities {
         assertTrue(caps.hasSidekick());
         var fallbacks = caps.getAnimationFallbacks();
         assertEquals(CanonicalAnimation.ROLL, fallbacks.get(CanonicalAnimation.WARP1));
-        assertEquals(CanonicalAnimation.WAIT, fallbacks.get(CanonicalAnimation.BLINK));
+        assertEquals(CanonicalAnimation.BLINK, fallbacks.get(CanonicalAnimation.BLINK));
+        assertEquals(CanonicalAnimation.GET_UP, fallbacks.get(CanonicalAnimation.GET_UP));
         assertEquals(CanonicalAnimation.BUBBLE, fallbacks.get(CanonicalAnimation.GET_AIR));
     }
 
@@ -123,5 +124,3 @@ public class TestDonorCapabilities {
         assertEquals(-1, s2Caps.resolveNativeId(CanonicalAnimation.WARP1)); // Not in S2
     }
 }
-
-

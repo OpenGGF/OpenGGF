@@ -4,11 +4,19 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.game.GameMode;
+import com.openggf.game.GameStateManager;
+import com.openggf.game.NoOpResultsScreen;
+import com.openggf.game.ResultsScreen;
+import com.openggf.game.SpecialStageAccessType;
+import com.openggf.game.SpecialStageDebugProvider;
+import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.rewind.InMemoryKeyframeStore;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.LiveRewindManager;
 import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.graphics.FadeManager;
@@ -17,8 +25,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -198,6 +208,28 @@ class TestGameLoopSpecialStageRewindGate {
                         + "callback, via the separate rewind-only superset predicate");
     }
 
+    @Test
+    void heldRewindEngagesWhileSupportedSpecialStageIsActive() throws Exception {
+        setField(loop, "activeSpecialStageProvider", new RewindableSpecialStageProvider());
+        loop.changeGameModeWithoutRewindBoundary(GameMode.SPECIAL_STAGE);
+
+        LiveRewindManager liveRewindManager = (LiveRewindManager) getField(loop, "liveRewindManager");
+        RewindController controller = new RewindController(
+                new RewindRegistry(), new InMemoryKeyframeStore(), new FakeInputSource(20), in -> { }, 2);
+        for (int i = 0; i < 5; i++) {
+            controller.recordExternalStep();
+        }
+        installTestController(liveRewindManager, controller, "SPECIAL_STAGE");
+
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+
+        loop.step();
+
+        assertEquals(4, controller.currentFrame(),
+                "top-level live rewind engagement should run while a rewind-supported special stage is active");
+        assertTrue((boolean) getField(liveRewindManager, "rewinding"));
+    }
+
     private static Object invokeNoArg(Object target, String methodName) throws Exception {
         Method m = target.getClass().getDeclaredMethod(methodName);
         m.setAccessible(true);
@@ -239,7 +271,13 @@ class TestGameLoopSpecialStageRewindGate {
     }
 
     private static void installTestController(LiveRewindManager manager, RewindController controller) throws Exception {
+        installTestController(manager, controller, "LEVEL_FRAME");
+    }
+
+    private static void installTestController(LiveRewindManager manager, RewindController controller,
+                                              String stepperKind) throws Exception {
         setField(manager, "installedGameplayMode", SessionManager.getCurrentGameplayMode());
+        setInstalledStepperKind(manager, stepperKind);
         setField(manager, "inputSource", new com.openggf.game.rewind.LiveRewindInputSource());
         setField(manager, "rewindController", controller);
         // RewindSpeedController is package-private (com.openggf.game.rewind); reach its
@@ -248,6 +286,13 @@ class TestGameLoopSpecialStageRewindGate {
         Method fromConfig = speedControllerClass.getDeclaredMethod("fromConfig", SonicConfigurationService.class);
         fromConfig.setAccessible(true);
         setField(manager, "speedController", fromConfig.invoke(null, SonicConfigurationService.getInstance()));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void setInstalledStepperKind(LiveRewindManager manager, String kindName) throws Exception {
+        Class<?> kindClass = Class.forName("com.openggf.game.rewind.LiveRewindManager$StepperKind");
+        Object kind = Enum.valueOf((Class<? extends Enum>) kindClass.asSubclass(Enum.class), kindName);
+        setField(manager, "installedStepperKind", kind);
     }
 
     private static Object getField(Object target, String fieldName) throws Exception {
@@ -277,6 +322,148 @@ class TestGameLoopSpecialStageRewindGate {
         @Override
         public Bk2FrameInput read(int frame) {
             return new Bk2FrameInput(frame, 0, 0, false, "fake");
+        }
+    }
+
+    private static final class RewindableSpecialStageProvider implements SpecialStageProvider {
+        @Override
+        public boolean supportsRewind() {
+            return true;
+        }
+
+        @Override
+        public Optional<RewindSnapshottable<?>> rewindAdapter() {
+            return Optional.empty();
+        }
+
+        @Override
+        public boolean hasSpecialStages() {
+            return true;
+        }
+
+        @Override
+        public SpecialStageAccessType getAccessType() {
+            return SpecialStageAccessType.GIANT_RING;
+        }
+
+        @Override
+        public void initializeStage(int stageIndex) throws IOException {
+        }
+
+        @Override
+        public int getCurrentStage() {
+            return 0;
+        }
+
+        @Override
+        public boolean isEmeraldCollected() {
+            return false;
+        }
+
+        @Override
+        public int getEmeraldIndex() {
+            return -1;
+        }
+
+        @Override
+        public int getRingsCollected() {
+            return 0;
+        }
+
+        @Override
+        public void setEmeraldCollected(boolean collected) {
+        }
+
+        @Override
+        public boolean isSpriteDebugMode() {
+            return false;
+        }
+
+        @Override
+        public void toggleSpriteDebugMode() {
+        }
+
+        @Override
+        public void cyclePlaneDebugMode() {
+        }
+
+        @Override
+        public SpecialStageDebugProvider getDebugProvider() {
+            return null;
+        }
+
+        @Override
+        public boolean isAlignmentTestMode() {
+            return false;
+        }
+
+        @Override
+        public void toggleAlignmentTestMode() {
+        }
+
+        @Override
+        public void adjustAlignmentOffset(int delta) {
+        }
+
+        @Override
+        public void adjustAlignmentSpeed(double delta) {
+        }
+
+        @Override
+        public void toggleAlignmentStepMode() {
+        }
+
+        @Override
+        public void renderAlignmentOverlay(int viewportWidth, int viewportHeight) {
+        }
+
+        @Override
+        public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) {
+        }
+
+        @Override
+        public void setLagCompensation(double factor) {
+        }
+
+        @Override
+        public ResultsScreen createResultsScreen(int ringsCollected, boolean gotEmerald,
+                                                 int stageIndex, int totalEmeraldCount) {
+            return NoOpResultsScreen.INSTANCE;
+        }
+
+        @Override
+        public void initialize() throws IOException {
+        }
+
+        @Override
+        public void update() {
+        }
+
+        @Override
+        public void draw() {
+        }
+
+        @Override
+        public void handleInput(int heldButtons, int pressedButtons) {
+        }
+
+        @Override
+        public boolean isFinished() {
+            return false;
+        }
+
+        @Override
+        public void reset() {
+        }
+
+        @Override
+        public boolean isInitialized() {
+            return true;
+        }
+
+        @Override
+        public int consumeStageIndexForEntry(GameStateManager gameState) {
+            return 0;
         }
     }
 }

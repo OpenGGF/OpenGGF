@@ -60,6 +60,7 @@ public class DisplayShaderPipeline {
     private ShaderPhase phase = ShaderPhase.FINAL;
     private boolean active;
     private String lastActivationFailure = "";
+    private final FrameStatePool frameStatePool = new FrameStatePool();
 
     public boolean activate(DisplayShaderPreset preset) {
         ShaderPhase requestedPhase = preset == null || preset.phase() == null ? ShaderPhase.FINAL : preset.phase();
@@ -163,7 +164,8 @@ public class DisplayShaderPipeline {
             return;
         }
 
-        GlStateSnapshot state = GlStateSnapshot.capture();
+        FrameState state = frameStatePool.obtain();
+        state.capture();
         boolean disableAfterRestore = false;
         try {
             if (vpW != viewportWidth || vpH != viewportHeight) {
@@ -612,36 +614,52 @@ public class DisplayShaderPipeline {
     private record CombinedQuadResources(int vaoId, int vboId) {
     }
 
-    private record GlStateSnapshot(
-            int[] viewport,
-            int readFramebuffer,
-            int drawFramebuffer,
-            int program,
-            int vertexArray,
-            int activeTexture,
-            int activeTextureBinding,
-            int texture0Binding,
-            boolean blendEnabled,
-            boolean depthEnabled) {
+    static final class FrameStatePool {
+        private final FrameState[] states = {new FrameState(), new FrameState()};
+        private int next;
 
-        private static GlStateSnapshot capture() {
+        FrameState obtain() {
+            FrameState state = states[next];
+            next ^= 1;
+            return state;
+        }
+
+        FrameState obtainForTesting(int x, int y, int width, int height) {
+            FrameState state = obtain();
+            state.setViewport(x, y, width, height);
+            return state;
+        }
+    }
+
+    static final class FrameState {
+        private final int[] viewport = new int[4];
+        private int readFramebuffer;
+        private int drawFramebuffer;
+        private int program;
+        private int vertexArray;
+        private int activeTexture;
+        private int activeTextureBinding;
+        private int texture0Binding;
+        private boolean blendEnabled;
+        private boolean depthEnabled;
+
+        private void capture() {
             int activeTexture = glGetInteger(GL_ACTIVE_TEXTURE);
             int activeTextureBinding = glGetInteger(GL_TEXTURE_BINDING_2D);
             glActiveTexture(GL_TEXTURE0);
             int texture0Binding = glGetInteger(GL_TEXTURE_BINDING_2D);
             glActiveTexture(activeTexture);
 
-            return new GlStateSnapshot(
-                    FboHelper.saveViewport(),
-                    glGetInteger(GL_READ_FRAMEBUFFER_BINDING),
-                    glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING),
-                    glGetInteger(GL_CURRENT_PROGRAM),
-                    glGetInteger(GL_VERTEX_ARRAY_BINDING),
-                    activeTexture,
-                    activeTextureBinding,
-                    texture0Binding,
-                    glIsEnabled(GL_BLEND),
-                    glIsEnabled(GL_DEPTH_TEST));
+            glGetIntegerv(GL_VIEWPORT, viewport);
+            readFramebuffer = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
+            drawFramebuffer = glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING);
+            program = glGetInteger(GL_CURRENT_PROGRAM);
+            vertexArray = glGetInteger(GL_VERTEX_ARRAY_BINDING);
+            this.activeTexture = activeTexture;
+            this.activeTextureBinding = activeTextureBinding;
+            this.texture0Binding = texture0Binding;
+            blendEnabled = glIsEnabled(GL_BLEND);
+            depthEnabled = glIsEnabled(GL_DEPTH_TEST);
         }
 
         private void restore() {
@@ -670,6 +688,21 @@ public class DisplayShaderPipeline {
             } else {
                 glDisable(capability);
             }
+        }
+
+        private void setViewport(int x, int y, int width, int height) {
+            viewport[0] = x;
+            viewport[1] = y;
+            viewport[2] = width;
+            viewport[3] = height;
+        }
+
+        int viewportAt(int index) {
+            return viewport[index];
+        }
+
+        Object viewportBackingIdentity() {
+            return viewport;
         }
     }
 }

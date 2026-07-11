@@ -9,9 +9,11 @@ import com.openggf.graphics.QuadRenderer;
 import com.openggf.graphics.ShaderProgram;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GLCommandable;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
+import java.util.ArrayDeque;
 import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.*;
@@ -33,6 +35,8 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
  * linked PointPokey (subtype 0x01).
  */
 public class CNZSlotMachineRenderer implements ZoneFeatureRenderer {
+    private final int[] viewportScratch = new int[4];
+    private final ArrayDeque<SlotRenderCommand> renderCommandPool = new ArrayDeque<>();
     private static final Logger LOGGER = Logger.getLogger(CNZSlotMachineRenderer.class.getName());
 
     // Texture dimensions: 32 wide × 192 tall (6 faces × 32 pixels/face)
@@ -284,7 +288,7 @@ public class CNZSlotMachineRenderer implements ZoneFeatureRenderer {
      * @param displayOffsetY   Y offset from cage center to slot display (or null for default)
      * @return A GLCommand that renders the slot display, or null if not ready
      */
-    public GLCommand createRenderCommand(CNZSlotMachineManager manager, int cageScreenX, int cageScreenY,
+    public GLCommandable createRenderCommand(CNZSlotMachineManager manager, int cageScreenX, int cageScreenY,
                                          int paletteTextureId, Integer displayOffsetX, Integer displayOffsetY) {
         if (!initialized || shader == null) {
             return null;
@@ -309,12 +313,48 @@ public class CNZSlotMachineRenderer implements ZoneFeatureRenderer {
         float offset1 = manager.getSlotOffset(1) / 256.0f;
         float offset2 = manager.getSlotOffset(2) / 256.0f;
 
-        // Return a custom command that does the actual rendering
-        return new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
-            executeRender(screenX, screenY, paletteTextureId,
-                    face0, face1, face2, nextFace0, nextFace1, nextFace2,
-                    offset0, offset1, offset2);
-        });
+        SlotRenderCommand command = renderCommandPool.pollFirst();
+        if (command == null) command = new SlotRenderCommand();
+        return command.configure(screenX, screenY, paletteTextureId,
+                face0, face1, face2, nextFace0, nextFace1, nextFace2,
+                offset0, offset1, offset2);
+    }
+
+    private final class SlotRenderCommand implements GLCommandable {
+        private int screenX, screenY, paletteTextureId;
+        private int face0, face1, face2, nextFace0, nextFace1, nextFace2;
+        private float offset0, offset1, offset2;
+        private boolean leased;
+
+        private SlotRenderCommand configure(int screenX, int screenY, int paletteTextureId,
+                int face0, int face1, int face2, int nextFace0, int nextFace1, int nextFace2,
+                float offset0, float offset1, float offset2) {
+            this.screenX = screenX; this.screenY = screenY; this.paletteTextureId = paletteTextureId;
+            this.face0 = face0; this.face1 = face1; this.face2 = face2;
+            this.nextFace0 = nextFace0; this.nextFace1 = nextFace1; this.nextFace2 = nextFace2;
+            this.offset0 = offset0; this.offset1 = offset1; this.offset2 = offset2;
+            leased = true;
+            return this;
+        }
+
+        @Override
+        public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            try {
+                executeRender(screenX, screenY, paletteTextureId,
+                        face0, face1, face2, nextFace0, nextFace1, nextFace2,
+                        offset0, offset1, offset2);
+            } finally {
+                release();
+            }
+        }
+
+        @Override public void discard() { release(); }
+
+        private void release() {
+            if (!leased) return;
+            leased = false;
+            renderCommandPool.addFirst(this);
+        }
     }
 
     /**
@@ -326,10 +366,9 @@ public class CNZSlotMachineRenderer implements ZoneFeatureRenderer {
                                int nextFace0, int nextFace1, int nextFace2,
                                float offset0, float offset1, float offset2) {
         // Get viewport dimensions to handle scaling
-        int[] viewport = new int[4];
-        glGetIntegerv(GL_VIEWPORT, viewport);
-        int viewportWidth = viewport[2];
-        int viewportHeight = viewport[3];
+        glGetIntegerv(GL_VIEWPORT, viewportScratch);
+        int viewportWidth = viewportScratch[2];
+        int viewportHeight = viewportScratch[3];
 
         // Save OpenGL state
         boolean blendWasEnabled = glIsEnabled(GL_BLEND);

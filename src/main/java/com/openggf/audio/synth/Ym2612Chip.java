@@ -1491,8 +1491,9 @@ public class Ym2612Chip {
                 }
 
                 // Get the band-limited interpolated output
-                leftBuf[outIdx] += blipResampler.getOutputLeft();
-                rightBuf[outIdx] += blipResampler.getOutputRight();
+                long packedOutput = blipResampler.getOutputStereoPacked();
+                leftBuf[outIdx] += (int) (packedOutput >> 32);
+                rightBuf[outIdx] += (int) packedOutput;
                 blipResampler.advanceOutput();
             }
         } else {

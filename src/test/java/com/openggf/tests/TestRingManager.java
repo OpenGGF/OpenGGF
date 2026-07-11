@@ -37,6 +37,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestRingManager {
     @BeforeEach
@@ -176,6 +178,47 @@ public class TestRingManager {
 
         assertTrue(ringManager.isCollected(spawn));
         assertEquals(1, player.getRingCount());
+    }
+
+    @Test
+    public void testCanonicalCoordinateLookupKeepsFirstDuplicateAcrossReplacement() {
+        RingSpawn first = new RingSpawn(100, 100);
+        RingSpawn second = new RingSpawn(100, 100);
+        RingManager ringManager = buildRingManager(List.of(first, second));
+
+        assertSame(first, ringManager.resolveCanonicalSpawn(100, 100));
+
+        RingSpawn replacement = new RingSpawn(100, 100);
+        ringManager.resyncSpawnList(List.of(replacement));
+
+        assertSame(replacement, ringManager.resolveCanonicalSpawn(100, 100));
+        assertNull(ringManager.resolveCanonicalSpawn(200, 200));
+    }
+
+    @Test
+    public void testCanonicalCoordinateIndexResolvesDistinctKeysAcrossNearCapacityCollisionChain() {
+        List<RingSpawn> collisions = new ArrayList<>();
+        int targetBucket = -1;
+        for (int x = 1; collisions.size() < 4; x++) {
+            int y = x * 17;
+            int bucket = coordinateHash(x, y) & 7;
+            if (targetBucket < 0) targetBucket = bucket;
+            if (bucket == targetBucket) collisions.add(new RingSpawn(x, y));
+        }
+        RingManager ringManager = buildRingManager(collisions);
+
+        for (RingSpawn spawn : collisions) {
+            assertSame(spawn, ringManager.resolveCanonicalSpawn(spawn.x(), spawn.y()));
+        }
+        assertNull(ringManager.resolveCanonicalSpawn(0x7FFF, 0x7FFE));
+    }
+
+    private static int coordinateHash(int x, int y) {
+        long key = ((long) x << 32) ^ (y & 0xFFFF_FFFFL);
+        key ^= key >>> 33;
+        key *= 0xff51afd7ed558ccdl;
+        key ^= key >>> 33;
+        return (int) key;
     }
 
     @Test

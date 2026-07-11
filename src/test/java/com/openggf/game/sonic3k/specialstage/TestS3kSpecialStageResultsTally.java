@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * Tests for the real {@link S3kSpecialStageResultsScreen} tally mechanics.
@@ -32,6 +33,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @ExtendWith(SingletonResetExtension.class)
 class TestS3kSpecialStageResultsTally {
+
+    @Test
+    void mappingTilesReuseOneMutableDescriptor() {
+        S3kSpecialStageResultsScreen screen = new S3kSpecialStageResultsScreen(
+                0, false, 0, 0, PlayerCharacter.SONIC_AND_TAILS);
+
+        var first = screen.configureReusablePatternDesc(0xA123);
+        var second = screen.configureReusablePatternDesc(0x4ABC);
+
+        assertSame(first, second);
+        assertEquals(0x4ABC & 0x7FF, second.getPatternIndex());
+        assertEquals((0x4ABC >>> 13) & 3, second.getPaletteIndex());
+    }
 
     @BeforeEach
     void setUp() {
