@@ -8,6 +8,7 @@ import com.openggf.game.WaterDataProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.WaterSystemSnapshot;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ScreenShakeTimerSlotObjectInstance;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -288,8 +289,20 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
         }
         // ROM _unkFAA2: skip handler when locked (boss/cutscene)
         DynamicWaterHandler handler = state.getHandler();
+        int shakeTimerBeforeHandler = state.shakeTimer;
         if (handler != null && !state.isLocked()) {
             handler.update(state, cameraX, cameraY);
+        }
+        if (handler != null
+                && handler.shakeTimerOccupiesObjectSlot()
+                && shakeTimerBeforeHandler <= 0
+                && state.shakeTimer > 0) {
+            LevelManager levelManager = GameServices.levelOrNull();
+            if (levelManager != null && levelManager.getObjectManager() != null) {
+                int duration = state.shakeTimer;
+                levelManager.getObjectManager().createDynamicObject(
+                        () -> new ScreenShakeTimerSlotObjectInstance(duration));
+            }
         }
         // Note: state.update() (mean->target movement) is called by WaterSystem.update(),
         // not here, to avoid double-movement per frame.

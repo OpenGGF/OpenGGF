@@ -758,6 +758,22 @@ permutation is resolved. The focused AIZ replay remains green. A fresh exact
 trace-package `Test*` sweep also passes 70 tests with that one optional skip.
 The AIZ stage is not green yet.
 
+Round 54 restores the invisible SST timer allocated by AIZ2's dynamic-water
+rise. ROM `DynamicWaterHeight_AIZ2` sets `Screen_shake_flag=-1`, calls
+`AllocateObject`, writes `Obj_6E6E`, and seeds its `anim_frame_timer` to 180;
+that object clears the shake and deletes itself when the byte countdown expires
+(`sonic3k.asm:8648-8713`). The engine already modeled the water target and
+global shake countdown but allocated no object, leaving native slot 7 empty and
+shifting the later AnimatedStill/Caterkiller allocation landscape. Dynamic-water
+profiles can now declare that their shake timer owns an SST entry, materialized
+as a persistent, invisible countdown object through the ordinary allocator.
+Focused water-handler and 180-frame lifetime tests pass. On its own this
+correction preserves the strict complete-run frontier at f16755 / 204 errors;
+the remaining owner is the separately consolidated AIZ flipping-bridge child
+slot. The focused AIZ replay remains fully green, and a fresh exact replay
+sweep passes all 29 S1 classes plus every S2 replay (20 passed tests and the
+ROM-optional special-stage skip). No stage-green claim is made yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch
