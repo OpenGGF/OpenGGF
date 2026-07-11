@@ -1,5 +1,6 @@
 package com.openggf.game.rewind;
 
+import com.openggf.control.InputActionMasks;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameId;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
@@ -90,7 +91,7 @@ class TestSonic2LiveObjectRewindRegressions {
         var adapter = harness.objectManager().rewindSnapshottable();
         ObjectManagerSnapshot intact = adapter.capture();
         MonitorFixture fixture = monitorController(harness, List.of(
-                input(0, 0), input(1, 1), input(2, 0)));
+                input(0, 0), input(1, InputActionMasks.ACTION_A), input(2, 0)));
         RewindController controller = fixture.controller();
         assertEquals(0, controller.currentFrame());
         assertIntactOracle(harness, monitor(harness));
@@ -121,7 +122,7 @@ class TestSonic2LiveObjectRewindRegressions {
         monitor(harness).update(0, null);
         List<Bk2FrameInput> rows = new ArrayList<>();
         for (int frame = 0; frame <= 62; frame++) {
-            rows.add(input(frame, frame == 61 ? 1 : 0));
+            rows.add(input(frame, frame == 61 ? InputActionMasks.ACTION_A : 0));
         }
         MonitorFixture fixture = monitorController(harness, rows);
         RewindController controller = fixture.controller();
@@ -480,7 +481,8 @@ class TestSonic2LiveObjectRewindRegressions {
         });
         registry.register(harness.objectManager().rewindSnapshottable());
         EngineStepper stepper = input -> {
-            if ((input.p1ActionMask() & 1) != 0) {
+            harness.objectManager().update(0, player, List.of(), input.frameIndex(), false);
+            if ((input.p1ActionMask() & InputActionMasks.ACTION_A) != 0) {
                 // Restoration reconstructs placed objects, so resolve the live monitor on every tick.
                 monitor(harness).onTouchResponse(player, MONITOR_TOUCH, input.frameIndex());
             }
