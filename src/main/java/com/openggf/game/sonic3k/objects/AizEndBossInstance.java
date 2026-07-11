@@ -772,12 +772,18 @@ public class AizEndBossInstance extends AbstractBossInstance
 
         if (getPlayerCharacter() != PlayerCharacter.KNUCKLES) {
             Aiz2BossEndSequenceState.reset();
-            Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
             // ROM loc_694AA creates the route-8 capsule through
             // CreateChild6_Simple, which allocates after the current boss
             // slot (sonic3k.asm:138247-138255, 177114-177129).
             spawnChild(() -> Aiz2EndEggCapsuleInstance.createForCamera(
                     services().camera().getX(), services().camera().getY()));
+            Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
+            S3kCutsceneButtonObjectInstance layoutButton = services().objectManager()
+                    .activeObjectsOfType(S3kCutsceneButtonObjectInstance.class).stream()
+                    .filter(button -> !button.isDestroyed())
+                    .findFirst().orElse(null);
+            Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(
+                    layoutButton != null && layoutButton.getSlotIndex() < getSlotIndex());
             spawnFreeChild(AizDrawBridgeObjectInstance::createCutsceneOverride);
             spawnFreeChild(S3kCutsceneButtonObjectInstance::createCutsceneOverride);
             spawnFreeChild(() -> new Aiz2BossEndSequenceController(targetMaxX, yBase));

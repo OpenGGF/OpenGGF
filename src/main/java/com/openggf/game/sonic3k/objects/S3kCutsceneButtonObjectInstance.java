@@ -98,6 +98,10 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         if (dx >= RANGE_LEFT && dx < RANGE_RIGHT && dy >= RANGE_TOP && dy < RANGE_BOTTOM) {
             pressed = true;
             Aiz2BossEndSequenceState.pressButton();
+            if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
+                services().objectManager().activeObjectsOfType(AizDrawBridgeObjectInstance.class)
+                        .forEach(AizDrawBridgeObjectInstance::beginCollapseFromEarlierButtonSlot);
+            }
             services().playSfx(Sonic3kSfx.SWITCH.id);
         }
     }

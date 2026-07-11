@@ -42,10 +42,11 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private static final int PLAYER_STOP_X_OFFSET = 0x1F8;
     // ROM: loc_695A8 — transition when y_pos >= _unkFA86 + $1E6
     private static final int NEXT_LEVEL_Y_OFFSET = 0x1E6;
-    // Obj_LevelResults clears _unkFAA8 shortly after End_of_level_flag becomes
-    // visible to this engine's collapsed object pass. Hold the ending pose for
-    // that ROM wait before loc_694D4 restores control and loc_69526 forces right.
+    // Restore_PlayerControl2 reaches a still-riding native P2 through the later
+    // solid-support path before loc_69526 can expose P1's forced walk. Preserve
+    // those two extra object entries from the live Status_OnObj state.
     private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 4;
+    private static final int RIDING_SIDEKICK_CONTROL_RESTORE_DELAY = 6;
     private static final short POST_RESULTS_INITIAL_WALK_SPEED = 0x000C;
     private static final int POST_BUTTON_CAMERA_MAX_Y_TARGET = 0x1000;
     private static final int INC_LEVEL_END_Y_GRADUAL_STEP = 0x8000;
@@ -112,7 +113,9 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         }
 
         if (postResultsControlRestoreDelay < 0) {
-            postResultsControlRestoreDelay = POST_RESULTS_CONTROL_RESTORE_DELAY;
+            postResultsControlRestoreDelay = hasRidingSidekick(player)
+                    ? RIDING_SIDEKICK_CONTROL_RESTORE_DELAY
+                    : POST_RESULTS_CONTROL_RESTORE_DELAY;
         }
         if (postResultsControlRestoreDelay > 0) {
             postResultsControlRestoreDelay--;
@@ -225,6 +228,16 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
+    }
+
+    private boolean hasRidingSidekick(AbstractPlayableSprite player) {
+        for (PlayableEntity sidekick : services().playerQuery().sidekicks()) {
+            if (sidekick != player && sidekick instanceof AbstractPlayableSprite sprite
+                    && sprite.isOnObject()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void startPostCapsuleSequence(AbstractPlayableSprite player) {

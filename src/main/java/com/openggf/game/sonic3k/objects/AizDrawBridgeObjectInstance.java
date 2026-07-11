@@ -100,6 +100,16 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         return bridge;
     }
 
+    public void beginCollapseFromEarlierButtonSlot() {
+        if (!settled || collapseStarted) {
+            return;
+        }
+        collapseStarted = true;
+        collapseTimer = COLLAPSE_DELAY;
+        spawnFallingSegments();
+        services().playSfx(Sonic3kSfx.BRIDGE_COLLAPSE.id);
+    }
+
     @Override
     public int getX() {
         return currentX;
