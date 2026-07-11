@@ -392,6 +392,22 @@ green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ level-select
 f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ f2920, and LBZ
 f2270.
 
+Milestone 20 restores the spinning-column release frame's global logical-pad
+sample. The engine's object-control latch had skipped its ordinary input
+publication before `Sonic_RecordPos`, so the later column slot could consume the
+live jump while CPU Tails' delayed history missed it. On release the column now
+rebuilds the native held word from live controller state and updates the already
+written current history slot, preserving the same delayed jump that ROM copies
+from `Stat_table` into `Ctrl_2_logical`
+(`sonic3k.asm:22119-22136,26683-26700,26775-26782`).
+
+This closes f12991-f13548 and advances HCZ to f13549 / 2043 full-run errors (9
+under `frontierOnly`), reducing the full report by 55 groups. The six spinning
+column contract tests pass. Granular isolated replay checks keep both AIZ routes
+green and preserve every non-HCZ frontier: CNZ complete f1846, CNZ level-select
+f291, MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ f2920, and LBZ
+f2270.
+
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
 The AIZ2 battleship-to-waterfall-boss capture reproduced a render-only regression

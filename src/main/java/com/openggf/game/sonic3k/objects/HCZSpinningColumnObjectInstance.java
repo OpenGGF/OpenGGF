@@ -219,12 +219,29 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
             player.setYSpeed((short) RELEASE_Y_SPEED);
             player.setXSpeed((short) 0);
             player.setGSpeed((short) 0);
+            publishReleasedLogicalInput(player);
             // Prevent the same held button from re-triggering the normal jump path,
             // which would add the generic jump sound on the release frame.
             player.suppressNextJumpPress();
         } else {
             player.setAnimationId(Sonic3kAnimationIds.WALK);
         }
+    }
+
+    private void publishReleasedLogicalInput(AbstractPlayableSprite player) {
+        int inputMask = 0;
+        if (player.isUpPressed()) inputMask |= AbstractPlayableSprite.INPUT_UP;
+        if (player.isDownPressed()) inputMask |= AbstractPlayableSprite.INPUT_DOWN;
+        if (player.isLeftPressed()) inputMask |= AbstractPlayableSprite.INPUT_LEFT;
+        if (player.isRightPressed()) inputMask |= AbstractPlayableSprite.INPUT_RIGHT;
+        if (player.isJumpPressed()) inputMask |= AbstractPlayableSprite.INPUT_JUMP;
+        // The engine's object-control latch skipped the earlier logical-pad
+        // publication, but ROM Ctrl_1_logical is global and Sonic_RecordPos has
+        // already stored this frame's word before the column slot executes.
+        // Repair that same current history entry when the column consumes the
+        // live jump press and releases control, so CPU Tails sees the press at
+        // the native delayed Stat_table index.
+        player.writeLogicalInputAndCurrentFollowerHistory(inputMask, player.isJumpJustPressed());
     }
 
     private void applyTwistAnimation(AbstractPlayableSprite player, int swingAngle) {

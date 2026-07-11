@@ -101,6 +101,9 @@ public class TestS3kHczSpinningColumn {
                 "column release changes radii without moving native y_pos");
         assertEquals(0, player.getXSpeed());
         assertEquals(-0x680, player.getYSpeed());
+        assertEquals(TestablePlayableSprite.INPUT_JUMP, player.getLogicalInputState());
+        assertTrue(player.getJumpPressHistory(0),
+                "column release republishes the live press into Sonic_RecordPos history");
     }
 
     @Test
