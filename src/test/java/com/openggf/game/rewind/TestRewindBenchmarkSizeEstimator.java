@@ -112,7 +112,20 @@ class TestRewindBenchmarkSizeEstimator {
         long secondBytes = RewindBenchmark.estimateStructuralSizeShared(second, seen);
 
         assertTrue(firstBytes > secondBytes,
-                "second retained keyframe should charge repeated shared payloads as references");
+                "second retained keyframe should not charge the shared payload again");
+    }
+
+    @Test
+    void retainedEstimatorDoesNotDoubleCountAlreadySeenReferents() {
+        byte[] sharedPayload = new byte[64 * 1024];
+        IdentityHashMap<Object, Boolean> seen = new IdentityHashMap<>();
+
+        long firstBytes = RewindBenchmark.estimateStructuralSizeShared(sharedPayload, seen);
+        long repeatedBytes = RewindBenchmark.estimateStructuralSizeShared(sharedPayload, seen);
+
+        assertTrue(firstBytes > 0L);
+        assertEquals(0L, repeatedBytes,
+                "the owning container already accounts for the repeated reference slot");
     }
 
     @Test
