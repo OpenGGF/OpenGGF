@@ -2515,13 +2515,10 @@ public class SidekickCpuController {
                     | AbstractPlayableSprite.INPUT_DOWN
                     | AbstractPlayableSprite.INPUT_LEFT
                     | AbstractPlayableSprite.INPUT_RIGHT)) == 0;
-            // S2 stores the real low-byte press in Sonic_Stat_Record_Buf, while
-            // S3K reconstructs the press from history edges. Preserve the sampled
-            // byte only for the S2-style rule; loc_13E64 itself contributes held
-            // high-byte bits and must not repeat an S3K low-byte press.
-            boolean preservesRecordedJumpPress = recordedJumpPress
-                    && (sidekickRules == null
-                            || !sidekickRules.sidekickDelayedJumpPressUsesHistoryEdge());
+            // The Stat table stores the real low-byte logical press alongside
+            // the held byte. Preserve that sampled byte; loc_13E64 itself only
+            // contributes held high-byte bits.
+            boolean preservesRecordedJumpPress = recordedJumpPress;
             if (sidekick.getAir()
                     && delayedJumpOnly
                     && normalPushingGraceFrames <= 2
@@ -2700,10 +2697,6 @@ public class SidekickCpuController {
         if ((recordedInput & AbstractPlayableSprite.INPUT_JUMP) == 0
                 || !effectiveLeader.getJumpPressHistory(delayFrames)) {
             return false;
-        }
-        SidekickCpuRules rules = sidekickCpuRulesOrNull();
-        if (rules != null && rules.sidekickDelayedJumpPressUsesHistoryEdge()) {
-            return !effectiveLeader.getJumpPressHistory(delayFrames + 1);
         }
         return true;
     }

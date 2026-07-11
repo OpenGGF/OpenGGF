@@ -77,7 +77,9 @@ public class TestS3kHczSpinningColumn {
         column.onSolidContact(player, new SolidContact(true, false, false, false, false), 0);
         column.update(0, null);
 
-        assertFalse(player.isObjectControlled());
+        assertTrue(player.isObjectControlled());
+        assertTrue(player.isObjectControlAllowsCpu());
+        assertTrue(player.isObjectControlSuppressesMovement());
         assertTrue(player.isControlLocked());
         assertTrue(player.isObjectMappingFrameControl());
         assertFalse(player.getAir());

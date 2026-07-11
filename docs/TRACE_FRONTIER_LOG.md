@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f15377 / 2781 errors (7 errors under `frontierOnly`).
+f3318 / 4234 errors to f16133 / 2584 errors (5 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -500,6 +500,23 @@ matrix keeps both AIZ routes green and holds all other current frontiers and
 counts exactly: CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete
 f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ
 f2270 / 5.
+
+Milestone 27 preserves the real low-byte action press stored in S3K's follower
+`Stat_table`. The trace driver already publishes each newly pressed A/B/C bit,
+including a new button pressed while another remains held; the CPU controller
+now copies that recorded press directly instead of reconstructing one edge from
+the aggregate jump-held state. Consecutive B/C/A presses can therefore add the
+native successive spindash charges (`sonic3k.asm:22119-22136,26683-26782`). The
+spinning column also writes its native positive `object_control=3` while holding
+a rider, retains `SolidObjectFull` contacts under that control state, and clears
+the byte on release (`sonic3k.asm:68183-68244`).
+
+This closes f15377-f16132 and advances HCZ to f16133 / 2584 full-run errors (5
+under `frontierOnly`), reducing the full report by 197 groups. The focused
+column and consecutive follower-history guards pass. The isolated replay matrix
+keeps both AIZ routes green and preserves every non-HCZ frontier/count exactly:
+CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
+level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

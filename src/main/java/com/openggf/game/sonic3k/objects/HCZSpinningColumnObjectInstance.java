@@ -18,6 +18,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -144,6 +145,9 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
+        // ROM writes object_control=3: CPU input generation remains active,
+        // while the ordinary player movement slot is suppressed until release.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setControlLocked(true);
         player.setObjectMappingFrameControl(true);
         player.restoreDefaultRadii();
@@ -196,6 +200,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
 
         rider.active = false;
         player.setControlLocked(false);
+        ObjectControlState.none().applyTo(player);
         player.setObjectMappingFrameControl(false);
         player.setForcedAnimationId(-1);
         player.setOnObject(false);
@@ -300,6 +305,14 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return new SolidObjectParams(HALF_WIDTH + 0x0B, HALF_HEIGHT, HALF_HEIGHT + 1);
+    }
+
+    @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // The native routine writes object_control=3 before calling
+        // SolidObjectFull, so the captured rider remains on its normal
+        // continued-ride contact path while movement is suppressed.
+        return true;
     }
 
     @Override
