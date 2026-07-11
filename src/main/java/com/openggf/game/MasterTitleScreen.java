@@ -38,6 +38,7 @@ import java.util.Random;
 import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_M;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
 
 /**
@@ -189,6 +190,11 @@ public class MasterTitleScreen {
     private final LaunchProfileStore launchProfileStore;
     private LaunchConfigPanel launchConfigPanel;
     private boolean programmaticSelection;
+    private final MasterTitleSecondaryActions secondaryActions = new MasterTitleSecondaryActions();
+    private Runnable modManagerOpenHandler =
+            () -> LOGGER.info("Mod manager open callback not configured.");
+    private ModManagerScreenFactory modManagerScreenFactory;
+    private ModManagerView modManagerScreen;
 
     /**
      * Projection width supplied by Engine each frame. Defaults to SCREEN_W (320)
@@ -329,6 +335,14 @@ public class MasterTitleScreen {
             return;
         }
 
+        if (modManagerScreen != null) {
+            modManagerScreen.update(inputHandler);
+            if (modManagerScreen.consumeCloseRequested()) {
+                modManagerScreen = null;
+            }
+            return;
+        }
+
         if (configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             userRecordingMenu = null;
             timeAttackMenu = null;
@@ -411,6 +425,17 @@ public class MasterTitleScreen {
                 || inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER)
                 || inputHandler.logical().menuAccept();
 
+        MasterTitleSecondaryActions.Result secondaryResult = secondaryActions.update(
+                inputHandler.logical(),
+                inputHandler.isKeyPressedWithoutModifiers(GLFW_KEY_M));
+        if (secondaryResult == MasterTitleSecondaryActions.Result.OPEN_MODS) {
+            openModManager();
+            return;
+        }
+        if (secondaryResult == MasterTitleSecondaryActions.Result.CONSUMED) {
+            return;
+        }
+
         int recordKey = configService.getInt(SonicConfiguration.RECORDING_RECORD_KEY);
         boolean recordingMenuRequested = inputHandler.isKeyPressed(recordKey) && inputHandler.isShiftDown();
         if (handleUserRecordingMenuRequest(recordingMenuRequested) || recordingMenuRequested) {
@@ -466,6 +491,14 @@ public class MasterTitleScreen {
      * Draws the title screen. Called once per frame from Engine.draw().
      */
     public void draw() {
+        if (modManagerScreen != null) {
+            if (renderer != null) {
+                renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
+                        0f, 0f, 0f, 1f);
+            }
+            modManagerScreen.render();
+            return;
+        }
         if (renderer == null) return;
 
         glEnable(GL_BLEND);
@@ -553,9 +586,10 @@ public class MasterTitleScreen {
 
         // 7. Game selection menu at bottom — centered on viewportWidth.
         drawGameMenu();
+        drawSecondaryActions();
 
         // 8. Navigation hints — centered on viewportWidth.
-        font.drawTextCentered("< >  Select    Enter  Confirm", viewportWidth, 210,
+        font.drawTextCentered("< >  Select    Enter  Confirm", viewportWidth, 214,
             0.6f, 0.6f, 0.7f, 0.8f);
 
         font.endMegaBatch();
@@ -615,6 +649,11 @@ public class MasterTitleScreen {
             font.drawText(MENU_LABELS[i], cursorX, menuY, color[0], color[1], color[2], color[3]);
             cursorX += widths[i] + spacing;
         }
+    }
+
+    private void drawSecondaryActions() {
+        float[] color = secondaryActionTextColor(secondaryActions.isModsFocused(), frameCounter);
+        drawScaledCenteredText("MODS", 202, 0.7f, color[0], color[1], color[2], color[3]);
     }
 
     private void loadRomPreviews() {
@@ -837,6 +876,14 @@ public class MasterTitleScreen {
         return new float[] { 0.8f, 0.8f, 0.8f, 1.0f };
     }
 
+    static float[] secondaryActionTextColor(boolean focused, int frameCounter) {
+        if (!focused) {
+            return new float[] { 0.55f, 0.55f, 0.65f, 0.9f };
+        }
+        float pulse = 0.85f + 0.15f * (float) Math.sin(frameCounter * 0.08f);
+        return new float[] { pulse, 0.75f * pulse, 0.25f * pulse, 1.0f };
+    }
+
     boolean setSelectedIndex(int newIndex) {
         int clamped = Math.max(0, Math.min(GameEntry.values().length - 1, newIndex));
         if (clamped == selectedIndex) {
@@ -878,6 +925,32 @@ public class MasterTitleScreen {
 
     public void setRomAvailableForTest(GameEntry entry, boolean available) {
         romAvailable[entry.ordinal()] = available;
+    }
+
+    public void setModManagerOpenHandler(Runnable handler) {
+        modManagerOpenHandler = Objects.requireNonNull(handler, "handler");
+    }
+
+    public void setModManagerScreenFactory(ModManagerScreenFactory factory) {
+        modManagerScreenFactory = Objects.requireNonNull(factory, "factory");
+    }
+
+    private void openModManager() {
+        if (modManagerScreenFactory != null) {
+            modManagerScreen = Objects.requireNonNull(
+                    modManagerScreenFactory.create(font), "mod manager screen");
+            modManagerScreen.suppressInputUntilNeutral();
+        } else {
+            modManagerOpenHandler.run();
+        }
+    }
+
+    boolean isModsFocusedForTest() {
+        return secondaryActions.isModsFocused();
+    }
+
+    boolean isModManagerOpenForTest() {
+        return modManagerScreen != null;
     }
 
     public void setUserRecordingMenuFactoryForTest(UserRecordingMenuFactory userRecordingMenuFactory) {
@@ -1126,6 +1199,7 @@ public class MasterTitleScreen {
         userRecordingMenu = null;
         timeAttackMenu = null;
         raceLobbyScreen = null;
+        modManagerScreen = null;
         state = State.INACTIVE;
         LOGGER.info("Master title screen cleaned up");
     }
@@ -1138,5 +1212,17 @@ public class MasterTitleScreen {
     @FunctionalInterface
     public interface TimeAttackMenuFactory {
         TimeAttackMenu create(List<String> availableGameIds, String initialGameId, PixelFont font);
+    }
+
+    @FunctionalInterface
+    public interface ModManagerScreenFactory {
+        ModManagerView create(PixelFont font);
+    }
+
+    public interface ModManagerView {
+        void update(InputHandler input);
+        void render();
+        boolean consumeCloseRequested();
+        void suppressInputUntilNeutral();
     }
 }
