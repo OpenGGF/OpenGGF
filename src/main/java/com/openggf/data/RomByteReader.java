@@ -2,6 +2,7 @@ package com.openggf.data;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Read-only byte/word access helper for Sega ROM data.
@@ -15,8 +16,23 @@ public class RomByteReader {
         this.data = Arrays.copyOf(data, data.length);
     }
 
+    private RomByteReader(byte[] data, boolean owned) {
+        this.data = data;
+    }
+
     public static RomByteReader fromRom(Rom rom) throws IOException {
         return new RomByteReader(rom.readAllBytes());
+    }
+
+    /** Builds a reader over the given bytes (used for logical-ROM windows and tests). */
+    public static RomByteReader fromBytes(byte[] data) {
+        return new RomByteReader(data);
+    }
+
+    /** Builds a reader over a defensively copied byte range. */
+    public static RomByteReader fromBytes(byte[] data, int from, int to) {
+        Objects.checkFromToIndex(from, to, data.length);
+        return new RomByteReader(Arrays.copyOfRange(data, from, to), true);
     }
 
     public int size() {
