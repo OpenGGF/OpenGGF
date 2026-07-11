@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.ModKeySyntax;
 import com.openggf.level.spawn.SpawnPoint;
 
 /**
@@ -22,7 +23,9 @@ public record ObjectSpawn(
         int renderFlags,
         boolean respawnTracked,
         int rawYWord,
-        int layoutIndex) implements SpawnPoint {
+        int layoutIndex,
+        String ownerModId,
+        String objectKey) implements SpawnPoint {
 
     /** Canonical constructor – normalises fields to unsigned widths. */
     public ObjectSpawn {
@@ -32,6 +35,22 @@ public record ObjectSpawn(
         subtype = subtype & 0xFF;
         renderFlags = renderFlags & 0x3;
         rawYWord = rawYWord & 0xFFFF;
+        if ((ownerModId == null) != (objectKey == null)) {
+            throw new IllegalArgumentException("Object owner and key must either both be present or both be absent");
+        }
+        if (objectKey != null) {
+            ownerModId = ModKeySyntax.requireManifestId(ownerModId);
+            objectKey = ModKeySyntax.requireDisplayKey(objectKey);
+            if (!objectKey.startsWith(ownerModId + ":")) {
+                throw new IllegalArgumentException("Object key owner does not match spawn owner");
+            }
+        }
+    }
+
+    /** Backward-compatible stock placement constructor. */
+    public ObjectSpawn(int x, int y, int objectId, int subtype, int renderFlags,
+                       boolean respawnTracked, int rawYWord, int layoutIndex) {
+        this(x, y, objectId, subtype, renderFlags, respawnTracked, rawYWord, layoutIndex, null, null);
     }
 
     /**
@@ -41,7 +60,7 @@ public record ObjectSpawn(
      */
     public ObjectSpawn(int x, int y, int objectId, int subtype,
                        int renderFlags, boolean respawnTracked, int rawYWord) {
-        this(x, y, objectId, subtype, renderFlags, respawnTracked, rawYWord, -1);
+        this(x, y, objectId, subtype, renderFlags, respawnTracked, rawYWord, -1, null, null);
     }
 
     public int rawFlags() {

@@ -2,7 +2,7 @@ package com.openggf.mods.code;
 
 import com.openggf.game.patch.GamePatch;
 import com.openggf.io.ModAssetRoot;
-import com.openggf.io.ModKeySyntax;
+import com.openggf.game.ModKeySyntax;
 import com.openggf.level.objects.ObjectFactory;
 
 import java.util.ArrayList;

@@ -1,11 +1,10 @@
-package com.openggf.io;
+package com.openggf.game;
 
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestModKeySyntax {
-
     @Test
     void acceptsCanonicalIdsAndOwnedKeys() {
         assertEquals("mod-1", ModKeySyntax.requireManifestId("mod-1"));

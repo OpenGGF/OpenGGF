@@ -7,8 +7,11 @@ public interface ObjectPlacementEncoding {
                        boolean respawnTracked, int placementId);
 
     default ObjectSpawn move(ObjectSpawn spawn, int x, int y) {
-        return create(x, y, spawn.objectId(), spawn.subtype(), spawn.renderFlags(),
+        ObjectSpawn moved = create(x, y, spawn.objectId(), spawn.subtype(), spawn.renderFlags(),
                 spawn.respawnTracked(), spawn.layoutIndex());
+        return new ObjectSpawn(moved.x(), moved.y(), moved.objectId(), moved.subtype(),
+                moved.renderFlags(), moved.respawnTracked(), moved.rawYWord(), moved.layoutIndex(),
+                spawn.ownerModId(), spawn.objectKey());
     }
 
     /** Returns an object backing for a newly-authored stage ring, or {@code null}. */

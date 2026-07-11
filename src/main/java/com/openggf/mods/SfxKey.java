@@ -1,6 +1,6 @@
 package com.openggf.mods;
 
-import com.openggf.io.ModKeySyntax;
+import com.openggf.game.ModKeySyntax;
 
 public record SfxKey(String modId, String localName) {
     public SfxKey {

@@ -6,6 +6,7 @@ import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.PatchContext;
 import com.openggf.game.patch.DelegatingGameModule;
+import com.openggf.level.objects.ObjectRegistry;
 
 import java.util.List;
 import java.util.Objects;
@@ -30,6 +31,19 @@ public final class ModBackedGamePatch implements GamePatch {
     @Override public Set<LogicalRom> romPrerequisites() { return Set.of(); }
     @Override public List<String> providedMainCharacters() { return List.of(); }
     @Override public GameModule apply(GameModule base, PatchContext context) {
-        return new DelegatingGameModule(base, id()) { };
+        List<ModObjectKeyRegistry.Registration> registrations = plan.objectFactories().entrySet().stream()
+                .map(entry -> new ModObjectKeyRegistry.Registration(
+                        plan.ownerModId(), entry.getKey(), entry.getValue()))
+                .toList();
+        ModObjectKeyRegistry objectKeys = new ModObjectKeyRegistry(registrations);
+        return new DelegatingGameModule(base, id()) {
+            @Override
+            public ObjectRegistry createObjectRegistry() {
+                ObjectRegistry stockOrDecorated = super.createObjectRegistry();
+                return registrations.isEmpty()
+                        ? stockOrDecorated
+                        : new ModDecoratedObjectRegistry(stockOrDecorated, objectKeys);
+            }
+        };
     }
 }

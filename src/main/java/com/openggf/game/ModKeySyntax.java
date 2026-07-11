@@ -1,4 +1,4 @@
-package com.openggf.io;
+package com.openggf.game;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;

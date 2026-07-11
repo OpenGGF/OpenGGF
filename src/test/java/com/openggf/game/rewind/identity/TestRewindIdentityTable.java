@@ -10,6 +10,7 @@ import java.lang.reflect.Proxy;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -59,6 +60,34 @@ class TestRewindIdentityTable {
         ObjectSpawn spawn = new ObjectSpawn(0x1234, 0x5678, 0x42, 0x9, 0x2, true, 0x5678, 17);
 
         assertEquals(new SpawnRefId(17), SpawnRefId.fromSpawn(spawn));
+    }
+
+    @Test
+    void spawnRefIdPersistsNamespacedObjectOwnerAndKey() {
+        ObjectSpawn spawn = new ObjectSpawn(0x1234, 0x5678, 0xFE, 0x9, 0x2, true,
+                0x5678, 17, "example", "example:objects/buzzer");
+
+        SpawnRefId encoded = SpawnRefId.fromSpawn(spawn);
+
+        assertEquals(17, encoded.layoutIndex());
+        assertEquals("example", encoded.ownerModId());
+        assertEquals("example:objects/buzzer", encoded.objectKey());
+    }
+
+    @Test
+    void spawnRefIdCanonicalConstructorRejectsMalformedOrMismatchedOwnerKeys() {
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new SpawnRefId(1, "Example", "Example:objects/a")),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new SpawnRefId(1, "example", "example:Objects/a")),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new SpawnRefId(1, "example", "example:objects/../a")),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new SpawnRefId(1, "example", "example:" + "a".repeat(129))),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new SpawnRefId(1, "example", "other:objects/a"))
+        );
     }
 
     @Test

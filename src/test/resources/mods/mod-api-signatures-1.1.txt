@@ -1008,6 +1008,7 @@ CONSTRUCTOR com.openggf.game.rewind.identity.ObjectRefId public  <init>(int,int,
 CONSTRUCTOR com.openggf.game.rewind.identity.PlayerRefId public  <init>(int)
 CONSTRUCTOR com.openggf.game.rewind.identity.RewindIdentityTable public  <init>()
 CONSTRUCTOR com.openggf.game.rewind.identity.SpawnRefId public  <init>(int)
+CONSTRUCTOR com.openggf.game.rewind.identity.SpawnRefId public  <init>(int,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.game.rewind.schema.RewindObjectStateBlob public  <init>(int,java.lang.Class<?>,byte[],java.lang.Object[])
 CONSTRUCTOR com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot public  <init>(java.util.List<com.openggf.game.render.AdvancedRenderMode>)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot public  <init>(java.util.List<com.openggf.game.render.AdvancedRenderMode>,java.util.List<com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot$ModeState>)
@@ -1204,6 +1205,7 @@ CONSTRUCTOR com.openggf.level.objects.ObjectSlotLayout public  <init>(int,int,bo
 CONSTRUCTOR com.openggf.level.objects.ObjectSlotLayout public  <init>(int,int,int,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.level.objects.ObjectSpawn public  <init>(int,int,int,int,int,boolean,int)
 CONSTRUCTOR com.openggf.level.objects.ObjectSpawn public  <init>(int,int,int,int,int,boolean,int,int)
+CONSTRUCTOR com.openggf.level.objects.ObjectSpawn public  <init>(int,int,int,int,int,boolean,int,int,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.level.objects.ObjectSpriteSheet public  <init>(com.openggf.level.Pattern[],java.util.List<com.openggf.level.render.SpriteMappingFrame>,int,int)
 CONSTRUCTOR com.openggf.level.objects.PatrolMovementHelper$PatrolResult public  <init>(int,int,int,boolean)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot public  <init>(boolean,boolean,boolean,int,int,int,int,boolean,int,boolean,boolean,int,int,com.openggf.level.objects.PerObjectRewindSnapshot$BadnikRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$BadnikSubclassRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$ObjectSubclassRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra,com.openggf.game.rewind.snapshot.GenericObjectSnapshot)
@@ -5754,6 +5756,8 @@ METHOD com.openggf.game.rewind.identity.RewindIdentityTable public  void registe
 METHOD com.openggf.game.rewind.identity.RewindIdentityTable public  void registerPlayer(com.openggf.game.PlayableEntity,com.openggf.game.rewind.identity.PlayerRefId)
 METHOD com.openggf.game.rewind.identity.RewindIdentityTable public  void registerSpawn(com.openggf.level.objects.ObjectSpawn)
 METHOD com.openggf.game.rewind.identity.SpawnRefId public  int layoutIndex()
+METHOD com.openggf.game.rewind.identity.SpawnRefId public  java.lang.String objectKey()
+METHOD com.openggf.game.rewind.identity.SpawnRefId public  java.lang.String ownerModId()
 METHOD com.openggf.game.rewind.identity.SpawnRefId public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rewind.identity.SpawnRefId public,final  int hashCode()
 METHOD com.openggf.game.rewind.identity.SpawnRefId public,final  java.lang.String toString()
@@ -8360,6 +8364,8 @@ METHOD com.openggf.level.objects.ObjectSpawn public  int renderFlags()
 METHOD com.openggf.level.objects.ObjectSpawn public  int subtype()
 METHOD com.openggf.level.objects.ObjectSpawn public  int x()
 METHOD com.openggf.level.objects.ObjectSpawn public  int y()
+METHOD com.openggf.level.objects.ObjectSpawn public  java.lang.String objectKey()
+METHOD com.openggf.level.objects.ObjectSpawn public  java.lang.String ownerModId()
 METHOD com.openggf.level.objects.ObjectSpawn public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.level.objects.ObjectSpawn public,final  int hashCode()
 METHOD com.openggf.level.objects.ObjectSpawn public,final  java.lang.String toString()
@@ -12523,6 +12529,8 @@ RECORD-COMPONENT com.openggf.game.rewind.identity.ObjectRefId slotIndex int
 RECORD-COMPONENT com.openggf.game.rewind.identity.ObjectRefId spawnId int
 RECORD-COMPONENT com.openggf.game.rewind.identity.PlayerRefId encoded int
 RECORD-COMPONENT com.openggf.game.rewind.identity.SpawnRefId layoutIndex int
+RECORD-COMPONENT com.openggf.game.rewind.identity.SpawnRefId objectKey java.lang.String
+RECORD-COMPONENT com.openggf.game.rewind.identity.SpawnRefId ownerModId java.lang.String
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot modeStates java.util.List<com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot$ModeState>
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot modes java.util.List<com.openggf.game.render.AdvancedRenderMode>
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot$ModeState index int
@@ -13047,6 +13055,8 @@ RECORD-COMPONENT com.openggf.level.objects.ObjectSlotLayout processSlotCount int
 RECORD-COMPONENT com.openggf.level.objects.ObjectSlotLayout twoAxisCursorPlacement boolean
 RECORD-COMPONENT com.openggf.level.objects.ObjectSpawn layoutIndex int
 RECORD-COMPONENT com.openggf.level.objects.ObjectSpawn objectId int
+RECORD-COMPONENT com.openggf.level.objects.ObjectSpawn objectKey java.lang.String
+RECORD-COMPONENT com.openggf.level.objects.ObjectSpawn ownerModId java.lang.String
 RECORD-COMPONENT com.openggf.level.objects.ObjectSpawn rawYWord int
 RECORD-COMPONENT com.openggf.level.objects.ObjectSpawn renderFlags int
 RECORD-COMPONENT com.openggf.level.objects.ObjectSpawn respawnTracked boolean

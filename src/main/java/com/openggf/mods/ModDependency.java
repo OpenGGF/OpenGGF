@@ -1,6 +1,6 @@
 package com.openggf.mods;
 
-import com.openggf.io.ModKeySyntax;
+import com.openggf.game.ModKeySyntax;
 
 import java.util.Objects;
 

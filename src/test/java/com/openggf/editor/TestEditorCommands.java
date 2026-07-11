@@ -306,6 +306,21 @@ class TestEditorCommands {
     }
 
     @Test
+    void editorMoveCodecPreservesNamespacedObjectOwnerAndKey() {
+        ObjectSpawn tagged = new ObjectSpawn(16, 32, 0xFE, 3, 1, false, 0x2020, 9,
+                "example", "example:objects/buzzer");
+        EditorSpawnFactory factory = new EditorSpawnFactory(
+                new CommonObjectPlacementEncoding(),
+                new EditorPlacementIdAllocator(MutableLevel.snapshot(new SyntheticLevel())));
+
+        ObjectSpawn moved = factory.moveObjectSpawn(tagged, 48, 64);
+
+        assertEquals("example", moved.ownerModId());
+        assertEquals("example:objects/buzzer", moved.objectKey());
+        assertEquals(tagged.layoutIndex(), moved.layoutIndex());
+    }
+
+    @Test
     void multiRingSonic1GroupDeleteAndMoveUndoRestoreExactObjectAndRingOrder() {
         SyntheticLevel source = new SyntheticLevel();
         var encoding = new com.openggf.game.sonic1.Sonic1ObjectPlacementEncoding();
