@@ -147,6 +147,15 @@ public class DoorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Both door variants call SolidObjectFull. SolidObject_cont rejects
+        // the initial X window with bhi, so relX == d1 * 2 remains a valid
+        // zero-distance side contact and retains Status_Push
+        // (sonic3k.asm:41394-41403,66136-66137,66249-66258).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         return true;
     }

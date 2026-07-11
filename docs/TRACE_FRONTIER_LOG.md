@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f12514 / 2253 errors (1 error under `frontierOnly`).
+f3318 / 4234 errors to f12738 / 2234 errors (11 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -348,6 +348,19 @@ checks keep both AIZ routes green and preserve CNZ complete f1846, CNZ
 level-select f291, MGZ complete f866, MGZ level-select f894, MHZ f2920, and LBZ
 f2270. The shared generic-death correction also advances ICZ from f3139 / 3207
 to f3174 / 3205; no non-HCZ frontier moved backward.
+
+Milestone 17 restores `Obj_Door`'s exact right-edge `SolidObjectFull` contact.
+Both vertical and horizontal door variants now expose the native inclusive
+initial X window: `relX == d1*2` remains a zero-distance side contact because
+`SolidObject_cont` rejects only with unsigned `bhi`. This preserves the live
+object/player pushing bits when a rolling player unrolls at the door boundary
+(`sonic3k.asm:41394-41403,66136-66137,66249-66258`).
+
+This closes f12514-f12737 and advances HCZ to f12738 / 2234 full-run errors (11
+under `frontierOnly`), reducing the full report by another 19 groups. The door
+contract tests pass. Granular isolated replay checks keep both AIZ routes green
+and preserve every non-HCZ frontier: CNZ complete f1846, CNZ level-select f291,
+MGZ complete f866, MGZ level-select f894, ICZ f3174, MHZ f2920, and LBZ f2270.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
