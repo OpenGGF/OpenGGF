@@ -120,10 +120,26 @@ public class GroundSensor extends Sensor {
         LevelManager levelManager = getLevelManager();
         short originalX = (short) (sprite.getCentreX() + worldOffsetX + dx);
         short originalY = (short) (sprite.getCentreY() + worldOffsetY + dy);
-        if (globalDirection == Direction.UP || globalDirection == Direction.DOWN) {
-            return scanVertical(levelManager, originalX, originalY, solidityBit, globalDirection, false);
+        boolean vertical = globalDirection == Direction.UP || globalDirection == Direction.DOWN;
+        SensorResult fgResult;
+        if (vertical) {
+            fgResult = scanVertical(levelManager, originalX, originalY, solidityBit, globalDirection, false);
+        } else {
+            fgResult = scanHorizontal(levelManager, originalX, originalY, solidityBit, globalDirection);
         }
-        return scanHorizontal(levelManager, originalX, originalY, solidityBit, globalDirection);
+
+        // scanWorld is the explicit-coordinate entry point for ROM helpers such as
+        // CalcRoomInFront. Those helpers still call FindFloor/FindWall, so they must
+        // honor Background_collision_flag just like the ordinary sensor path.
+        if (isBackgroundCollisionEnabled()) {
+            SensorResult bgResult = scanBackgroundCollision(
+                    levelManager, originalX, originalY, solidityBit, globalDirection, vertical);
+            if (bgResult != null && (fgResult == null || bgResult.distance() <= fgResult.distance())) {
+                return bgResult;
+            }
+        }
+
+        return fgResult;
     }
 
     // ========================================

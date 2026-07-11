@@ -801,7 +801,14 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         }
 
         switch (act2BgRoutine) {
-            case BG_WALL_INIT -> act2BgInit();
+            case BG_WALL_INIT -> {
+                act2BgInit();
+                // ROM HCZ2BGE_WallMoveInit adds four to the routine and falls
+                // straight through into HCZ2BGE_WallMove on the same dispatch.
+                if (act2BgRoutine == BG_WALL_MOVE) {
+                    act2BgWallMove(frameCounter);
+                }
+            }
             case BG_WALL_MOVE -> act2BgWallMove(frameCounter);
             case BG_WALL_TRANSITION -> act2BgTransition();
             case BG_WALL_REFRESH -> act2BgRefresh();
@@ -938,12 +945,14 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         if (!wallMoving) {
             // ROM: Wall only starts moving when player X >= $680
             AbstractPlayableSprite player = camera().getFocusedSprite();
-            if (player != null && player.getCentreX() >= WALL_TRIGGER_PLAYER_X) {
-                wallMoving = true;
-                LOG.info("HCZ2: wall started moving (player X >= 0x"
-                        + Integer.toHexString(WALL_TRIGGER_PLAYER_X) + ")");
+            if (player == null || player.getCentreX() < WALL_TRIGGER_PLAYER_X) {
+                return;
             }
-            return;
+            wallMoving = true;
+            LOG.info("HCZ2: wall started moving (player X >= 0x"
+                    + Integer.toHexString(WALL_TRIGGER_PLAYER_X) + ")");
+            // ROM loc_5102E sets Screen_shake_flag and falls through to
+            // loc_5103A, subtracting the first wall step immediately.
         }
 
         // Check if wall has reached its stop position
@@ -965,7 +974,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         // Calculate speed — ROM: base $E000, fast $14000 when player X > $A88
         int speed = WALL_BASE_SPEED;
         AbstractPlayableSprite player = camera().getFocusedSprite();
-        if (player != null && player.getCentreX() > WALL_SPEED_UP_PLAYER_X) {
+        if (player != null && player.getCentreX() >= WALL_SPEED_UP_PLAYER_X) {
             speed = WALL_FAST_SPEED;
         }
 

@@ -102,19 +102,19 @@ class TestSonic3kHCZEvents {
 
         tickAct2(events, 0);
         assertEquals(SwScrlHcz.Hcz2BgPhase.WALL_CHASE, handler.getHcz2BgPhase());
-        assertEquals(0x0600, handler.getBgCameraX(),
-                "init should expose Camera_X_pos_BG_copy = cameraX - $200");
+        assertEquals(0x05FE, handler.getBgCameraX(),
+                "wall init should fall through and subtract its first fast movement step");
 
         tickAct2(events, 1);
         assertTrue(GameServices.gameState().isBackgroundCollisionFlag(),
                 "state 4 should gate Background_collision_flag on before physics");
-        assertEquals(0x0600, handler.getBgCameraX(),
-                "the first moving-state frame arms the chase before the offset advances");
+        assertEquals(0x05FD, handler.getBgCameraX(),
+                "the armed wall should continue its 16.16 movement on the next dispatch");
 
         player.setCentreX((short) 0x0B20);
         tickAct2(events, 2);
-        assertEquals(0x05FE, handler.getBgCameraX(),
-                "after one fast-speed advance, BG camera X should be cameraX - $200 + Events_bg+$00");
+        assertEquals(0x05FC, handler.getBgCameraX(),
+                "BG camera X should publish the current Events_bg+$00 high word");
         assertEquals((short) 0x0100, handler.getVscrollFactorBG(),
                 "HCZ2 wall-chase BG camera Y should stay at cameraY - $500");
     }
@@ -143,6 +143,23 @@ class TestSonic3kHCZEvents {
         assertTrue(events.isEventsFg5(), "FG end signal should be raised at Camera X >= $C00");
         assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
                 "BG should consume Events_fg_5 in the same frame and clear background collision");
+    }
+
+    @Test
+    void act2WallChaseUsesFastSpeedAtNativeThreshold() throws Exception {
+        SwScrlHcz handler = new SwScrlHcz();
+        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
+
+        placePlayer(0x0A88, 0x0700);
+        GameServices.camera().setX((short) 0x0800);
+        GameServices.camera().setY((short) 0x0600);
+
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        events.init(1);
+        tickAct2(events, 0);
+
+        assertEquals(-0x14000, events.getWallOffsetFixed(),
+                "ROM cmpi/blo selects the fast wall speed when Player_1 x_pos equals $A88");
     }
 
     @Test

@@ -643,6 +643,34 @@ public class TestGroundSensor {
     }
 
     @Test
+    public void explicitWorldScanHonorsBackgroundCollisionForCalcRoomInFront() throws Exception {
+        setTileAt((byte) 0, 100, 100, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 0, 116, 100, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 1, 100, 100, 0, CollisionMode.NO_COLLISION);
+        setTileAt((byte) 1, 116, 100, 1);
+
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 100);
+
+        GameServices.gameState().setBackgroundCollisionFlag(true);
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setY((short) 0);
+        setParallaxField("cachedBgCameraX", Integer.MIN_VALUE);
+        setParallaxField("vscrollFactorBG", (short) 0);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.RIGHT, (byte) 0, (byte) 0, true);
+        SensorResult result = sensor.scanWorld(
+                Direction.RIGHT, (short) 0, (short) 0, (short) 0, (short) 0,
+                mockSprite.getLrbSolidBit());
+
+        assertNotNull(result, "CalcRoomInFront's world-space scan should consult BG collision");
+        assertEquals(11, result.distance(),
+                "world-space scan should return the extended BG wall result");
+        assertEquals(1, result.tileId(),
+                "world-space scan result should come from the background collision layer");
+    }
+
+    @Test
     public void backgroundCollisionDoesNotOverwriteCloserForegroundLeftWallHit() {
         setTileAt((byte) 0, 100, 100, 1);
 
