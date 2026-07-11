@@ -32,6 +32,11 @@ class TestSonic2SpecialStagePlayerSnapshot {
         set(player, "ssFlipTimer", 99);
         set(player, "ssLastAngleIndex", 99);
         set(player, "invulnerabilityCountdown", 0);
+        set(player, "tailsTailsAnim", 99);
+        set(player, "tailsTailsPrevAnim", 99);
+        set(player, "tailsTailsAnimFrame", 99);
+        set(player, "tailsTailsFrameDuration", 99);
+        set(player, "tailsTailsMappingFrame", 99);
 
         player.restoreRewindSnapshot(snapshot);
 
@@ -48,8 +53,36 @@ class TestSonic2SpecialStagePlayerSnapshot {
         assertEquals(5, get(player, "ssFlipTimer"));
         assertEquals(6, get(player, "ssLastAngleIndex"));
         assertEquals(30, get(player, "invulnerabilityCountdown"));
+        assertEquals(2, get(player, "tailsTailsAnim"));
+        assertEquals(1, get(player, "tailsTailsPrevAnim"));
+        assertEquals(3, get(player, "tailsTailsAnimFrame"));
+        assertEquals(4, get(player, "tailsTailsFrameDuration"));
+        assertEquals(19, get(player, "tailsTailsMappingFrame"));
         assertEquals(0xAAAA, player.getControlRecordEntry(0));
         assertNotSame(snapshot.ctrlRecordBuf(), get(player, "ctrlRecordBuf"));
+    }
+
+    @Test
+    void tailsTailsUsesIndependentSevenFrameScriptsAndSuppressesParentAnimationsThreeAndAbove()
+            throws Exception {
+        Sonic2SpecialStagePlayer tails = new Sonic2SpecialStagePlayer(
+                Sonic2SpecialStagePlayer.PlayerType.TAILS, false,
+                new Sonic2SpecialStageManager());
+        tails.initializeScalarStateFromRomObjectRoutine();
+
+        tails.update(0, 0);
+        assertEquals(0, tails.getTailsTailsMappingFrame());
+        for (int i = 0; i < 4; i++) {
+            tails.update(0, 0);
+        }
+        assertEquals(1, tails.getTailsTailsMappingFrame(), "duration 3 advances on the fifth Obj88 call");
+
+        set(tails, "angle", 0x20);
+        tails.update(0, 0);
+        assertEquals(7, tails.getTailsTailsMappingFrame(), "parent animation changes reset to the next Obj88 script");
+
+        tails.update(0, 0x10);
+        assertTrue(!tails.shouldRenderTailsTails(), "Obj88 returns without display for parent animations 3+");
     }
 
     @Test
@@ -189,6 +222,11 @@ class TestSonic2SpecialStagePlayerSnapshot {
         set(player, "globalAnimFrameTimer", 12);
         set(player, "collisionProperty", 13);
         set(player, "invulnerabilityCountdown", 30);
+        set(player, "tailsTailsAnim", 2);
+        set(player, "tailsTailsPrevAnim", 1);
+        set(player, "tailsTailsAnimFrame", 3);
+        set(player, "tailsTailsFrameDuration", 4);
+        set(player, "tailsTailsMappingFrame", 19);
         int[] ctrl = (int[]) get(player, "ctrlRecordBuf");
         ctrl[0] = 0xAAAA;
         set(player, "ctrlRecordIndex", 3);

@@ -8,8 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.TAILS_PATTERN_OFFSET;
-
 /**
  * Handles rendering for Sonic 2 Special Stage.
  *
@@ -741,13 +739,25 @@ public class Sonic2SpecialStageRenderer {
 
         // Render players on top of shadows using normal pattern batch
         graphicsManager.beginPatternBatch();
-        for (int i = 0; i < playerCount; i++) {
-            Sonic2SpecialStagePlayer player = playerRenderOrderAt(i);
-            if (isInvulnerabilityFlashHidden(player)) {
-                continue;
+        int minPriority = playerRenderOrderAt(0).getPriority() - 1;
+        int maxPriority = playerRenderOrderAt(playerCount - 1).getPriority();
+        for (int priority = minPriority; priority <= maxPriority; priority++) {
+            // Later submissions draw on top in this renderer. Obj88 occupies a
+            // later ROM object slot than either player body, so submit it first
+            // when they share a priority bucket and retain stable body ordering.
+            for (int i = 0; i < playerCount; i++) {
+                Sonic2SpecialStagePlayer player = playerRenderOrderAt(i);
+                if (player.getPriority() - 1 == priority && !isInvulnerabilityFlashHidden(player)
+                        && player.shouldRenderTailsTails()) {
+                    renderTailsTails(player);
+                }
             }
-
-            renderPlayer(player);
+            for (int i = 0; i < playerCount; i++) {
+                Sonic2SpecialStagePlayer player = playerRenderOrderAt(i);
+                if (player.getPriority() == priority && !isInvulnerabilityFlashHidden(player)) {
+                    renderPlayer(player);
+                }
+            }
         }
 
         graphicsManager.flushPatternBatch();
@@ -773,15 +783,12 @@ public class Sonic2SpecialStageRenderer {
         // No need to invert since SSAnglePos already adds SS_Offset_Y
         int screenY = player.getYPos();
 
-        int basePattern = playerPatternBase;
-        if (player.getPlayerType() == Sonic2SpecialStagePlayer.PlayerType.TAILS) {
-            basePattern += TAILS_PATTERN_OFFSET;
-        }
-
         // Get the mapping frame for current animation
         int mappingFrame = player.getMappingFrame();
         Sonic2SpecialStageSpriteMappings.SpriteFrame frame =
-            Sonic2SpecialStageSpriteMappings.getSonicFrame(mappingFrame);
+                player.getPlayerType() == Sonic2SpecialStagePlayer.PlayerType.TAILS
+                        ? Sonic2SpecialStageSpriteMappings.getTailsFrame(mappingFrame)
+                        : Sonic2SpecialStageSpriteMappings.getSonicFrame(mappingFrame);
 
         boolean playerXFlip = player.isRenderXFlip();
         boolean playerYFlip = player.isRenderYFlip();
@@ -815,7 +822,7 @@ public class Sonic2SpecialStageRenderer {
                     int srcRow = finalVFlip ? (piece.heightTiles - 1 - ty) : ty;
                     // Column-major index: column * height + row
                     int tileIndexInPiece = srcCol * piece.heightTiles + srcRow;
-                    int patternId = basePattern + piece.tileIndex + tileIndexInPiece;
+                    int patternId = playerPatternBase + piece.tileIndex + tileIndexInPiece;
 
                     reusableDesc.set(0);
                     PatternDesc desc = reusableDesc;
@@ -833,6 +840,39 @@ public class Sonic2SpecialStageRenderer {
                     int tileScreenY = screenY + pieceY + tileOffsetY;
 
                     graphicsManager.renderPatternWithId(patternId, desc, tileScreenX, tileScreenY);
+                }
+            }
+        }
+    }
+
+    private void renderTailsTails(Sonic2SpecialStagePlayer player) {
+        final int screenCenterOffset = (320 - 256) / 2;
+        int screenX = screenCenterOffset + player.getXPos();
+        int screenY = player.getYPos();
+        boolean playerXFlip = player.isRenderXFlip();
+        boolean playerYFlip = player.isRenderYFlip();
+        Sonic2SpecialStageSpriteMappings.SpriteFrame frame =
+                Sonic2SpecialStageSpriteMappings.getTailsTailsFrame(player.getTailsTailsMappingFrame());
+
+        for (Sonic2SpecialStageSpriteMappings.SpritePiece piece : frame.pieces) {
+            int pieceX = playerXFlip ? -piece.xOffset - piece.widthTiles * TILE_SIZE : piece.xOffset;
+            int pieceY = playerYFlip ? -piece.yOffset - piece.heightTiles * TILE_SIZE : piece.yOffset;
+            boolean finalHFlip = piece.hFlip ^ playerXFlip;
+            boolean finalVFlip = piece.vFlip ^ playerYFlip;
+            for (int tx = 0; tx < piece.widthTiles; tx++) {
+                for (int ty = 0; ty < piece.heightTiles; ty++) {
+                    int srcCol = finalHFlip ? piece.widthTiles - 1 - tx : tx;
+                    int srcRow = finalVFlip ? piece.heightTiles - 1 - ty : ty;
+                    int patternId = playerPatternBase + piece.tileIndex + srcCol * piece.heightTiles + srcRow;
+                    reusableDesc.set(0);
+                    reusableDesc.setPriority(true);
+                    reusableDesc.setPaletteIndex(2);
+                    reusableDesc.setHFlip(finalHFlip);
+                    reusableDesc.setVFlip(finalVFlip);
+                    reusableDesc.setPatternIndex(patternId & 0x7FF);
+                    graphicsManager.renderPatternWithId(patternId, reusableDesc,
+                            screenX + pieceX + tx * TILE_SIZE,
+                            screenY + pieceY + ty * TILE_SIZE);
                 }
             }
         }
