@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.GameRng;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -249,7 +250,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         sparkleCounter++;
         if (sparkleCounter >= SPARKLE_INTERVAL) {
             sparkleCounter = 0;
-            spawnDynamicObject(new S3kSignpostSparkleChild(worldX, worldY));
+            spawnDynamicObject(new S3kSignpostSparkleChild(
+                    worldX, worldY + romSparkleYOffset(services().rng())));
         }
 
         // Check bump from below
@@ -286,6 +288,14 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             state = State.LANDED;
             LOG.fine("S3K Signpost FALLING -> LANDED at Y=" + worldY);
         }
+    }
+
+    /**
+     * ROM {@code loc_839B8}: every signpost sparkle consumes one random word
+     * and applies {@code (d0 & $1F) - $10} to its initial Y position.
+     */
+    static int romSparkleYOffset(GameRng rng) {
+        return rng.nextBits(0x1F) - 0x10;
     }
 
     /**

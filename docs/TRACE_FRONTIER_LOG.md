@@ -790,6 +790,21 @@ green. A second exact boundary sweep passes all 29 S1 replay classes and every
 S2 replay (20 passed tests plus the ROM-optional special-stage skip). The AIZ
 stage is not green yet.
 
+Round 56 restores `Obj_SignpostSparkle`'s RNG ownership. ROM creates one
+sparkle every four falling-signpost frames; each sparkle calls
+`Random_Number`, masks the returned word with `$1F`, subtracts `$10`, and adds
+that signed offset to its initial Y position (`sonic3k.asm:176294-176300`). The
+engine already created the sparkle children but neither consumed the random
+word nor applied the offset. A focused seed/offset guard now pins both effects.
+The complete-run route observes 65 corrected signpost calls before the AIZ end
+boss; this removes the largest pre-boss RNG-cadence gap and exposes the
+remaining five calls as `Obj_MonkeyDude` root-arm timer ownership. The strict
+frontier remains f23523 (`y_speed`, expected `-$02B0`, actual `$02B0`), with
+210 downstream errors while the now-earlier ROM random sequence changes later
+boss choices. The focused AIZ replay remains fully green. A fresh explicit
+48-class sweep (29 S1 and 19 S2 `*TraceReplay` classes) passes with the one
+ROM-optional special-stage skip. The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch
