@@ -540,6 +540,20 @@ queue as the strict replay. Both focused camera guards pass. This is test
 bootstrap parity only; strict frontiers remain focused f8831 and complete-run
 f16755, and the AIZ stage is not green yet.
 
+Round 38 anchors the AIZ Act 2 in-level title handoff to the module-visible
+child phase. ROM title children become live on phase 0 of the four-phase
+module/DMA pipeline; the slotless manager can enter three ticks before or after
+that boundary in the two recordings. The pending HUD reset and later
+`Obj_TitleCardWait2` completion now retain that phase without shifting the title
+animation itself. When the title releases while Sonic is airborne, the two
+`Change_Act2Sizes` workers also defer their first fixed-point carry until the
+following camera pass, matching the ROM object/camera order
+(`sonic3k.asm:62214-62279,178154-178225,2726-2789`). The focused route's ring
+reset now occurs at f8837 in both ROM and engine, its X/Y boundary release is
+exact through f8943, and the strict frontier advances from f8831 to f9509
+(`y_speed` expected `$03A8`, actual `$0000`; 1470 errors). The complete-run
+frontier remains f16755 / 1056 errors. The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

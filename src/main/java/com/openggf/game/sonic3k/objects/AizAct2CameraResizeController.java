@@ -59,18 +59,21 @@ final class AizAct2CameraResizeController extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (boundary == MAX_X) {
-            updateMaxX();
+            updateMaxX(playerEntity);
         } else {
             updateMaxY(playerEntity);
         }
         firstUpdate = false;
     }
 
-    private void updateMaxX() {
+    private void updateMaxX(PlayableEntity playerEntity) {
         var camera = services().camera();
         var level = services().currentLevel();
         int storedMax = level != null ? level.getMaxX() : (camera.getMaxX() & 0xFFFF);
 
+        if (firstUpdate && playerEntity != null && playerEntity.getAir()) {
+            return;
+        }
         accumulator += 0x4000;
         int delta = accumulator >>> 16;
         int currentMax = camera.getMaxX() & 0xFFFF;
@@ -94,9 +97,17 @@ final class AizAct2CameraResizeController extends AbstractObjectInstance
         var level = services().currentLevel();
         int storedMax = level != null ? level.getMaxY() : (camera.getMaxYTarget() & 0xFFFF);
 
+        if (firstUpdate && playerEntity != null && playerEntity.getAir()) {
+            // Change_Act2Sizes runs after this frame's camera scroll. Preserve
+            // the worker's first fixed-point carry for its next object pass;
+            // boundary easing may still prepare the native +8 airborne step
+            // for the following camera update.
+            camera.setMaxYTarget((short) storedMax);
+            return;
+        }
         accumulator += 0x8000;
         int delta = accumulator >>> 16;
-        if (firstUpdate && playerEntity != null && !playerEntity.getAir()) {
+        if (firstUpdate && playerEntity != null) {
             // DeformBgLayer moves the camera before Do_ResizeEvents. Preserve
             // the creation-frame carry that the old in-parent implementation
             // already verified against the trace.

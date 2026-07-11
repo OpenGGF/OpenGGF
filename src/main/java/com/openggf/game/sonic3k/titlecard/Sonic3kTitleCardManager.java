@@ -116,6 +116,8 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private boolean exitChildrenGone;
     private boolean inLevelMode;  // No black background, control released immediately
     private boolean resetLevelGamestateOnInLevelDisplay;
+    private int resetLevelGamestateCountdown;
+    private int inLevelExitDelayFrames;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
     private float bonusFadeProgress; // 0.0→1.0 over BONUS_DISPLAY_HOLD_FRAMES during DISPLAY
 
@@ -174,6 +176,17 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     public void requestLevelGamestateResetAtInLevelDisplay() {
         if (inLevelMode) {
             resetLevelGamestateOnInLevelDisplay = true;
+            int modulePhase = GameServices.level().getObjectManager().getVblaCounter() & 3;
+            // The slotless manager reaches its predicted display point after
+            // 26 updates. At module phase 1 the native children are not live
+            // until the next phase-0 handoff, followed by their object/render
+            // visibility pass; preserve those six additional updates. Phase 3
+            // has already crossed that handoff and needs no compensation.
+            resetLevelGamestateCountdown = 26 + (modulePhase == 1 ? 6 : 0);
+            // The same child-visibility handoff reaches the later Wait2 poll
+            // five updates after the slotless manager would otherwise predict
+            // completion when initialization precedes phase 0.
+            inLevelExitDelayFrames = modulePhase == 1 ? 5 : 0;
         }
     }
 
@@ -222,6 +235,8 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.bonusMode = false;
         this.inLevelMode = inLevel;
         this.resetLevelGamestateOnInLevelDisplay = false;
+        this.resetLevelGamestateCountdown = 0;
+        this.inLevelExitDelayFrames = 0;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.phaseCounter = 0;
@@ -257,6 +272,10 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
     @Override
     public void update() {
+        if (resetLevelGamestateOnInLevelDisplay && resetLevelGamestateCountdown > 0
+                && --resetLevelGamestateCountdown == 0) {
+            consumeLevelGamestateResetRequest();
+        }
         switch (state) {
             case SLIDE_IN -> updateSlideIn();
             case DISPLAY -> updateDisplay();
@@ -303,7 +322,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         // controller run in the same object pass. Once every child consumed
         // its preceding off-screen render flag, predict the parent wait's next
         // dispatch so AIZ's level-size proxy starts on the native frame.
-        if (!exitChildrenGone) {
+        if (!exitChildrenGone || inLevelExitDelayFrames > 1) {
             return false;
         }
         int count = bonusMode ? BONUS_ELEMENT_COUNT : ELEMENT_COUNT;
@@ -399,6 +418,8 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         exitChildrenGone = false;
         inLevelMode = false;
         resetLevelGamestateOnInLevelDisplay = false;
+        resetLevelGamestateCountdown = 0;
+        inLevelExitDelayFrames = 0;
         bonusMode = false;
         bonusFadeProgress = 0f;
         currentZone = 0;
@@ -443,34 +464,8 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         if (allAtTarget) {
             state = Sonic3kTitleCardState.DISPLAY;
             stateTimer = 0;
-            consumeLevelGamestateResetRequest();
             LOG.fine("S3K title card: DISPLAY");
-        } else if (willFinishSlideInWithinUpdates(2)) {
-            // The manager advances before the object-owned title-card wait
-            // phase represented by the trace row. Publish the HUD reset one
-            // manager tick ahead, matching the existing exit-phase prediction.
-            consumeLevelGamestateResetRequest();
         }
-    }
-
-    private boolean willFinishSlideInWithinUpdates(int updates) {
-        int count = bonusMode ? BONUS_ELEMENT_COUNT : ELEMENT_COUNT;
-        for (int i = 0; i < count; i++) {
-            if (!bonusMode && !actNumberVisible && i == ELEM_ACT_NUM) {
-                continue;
-            }
-            if (elemAtTarget[i]) {
-                continue;
-            }
-            int goal = bonusMode
-                    ? BONUS_TARGET_X[i]
-                    : isElementVertical(i) ? TARGET_Y[i] : TARGET_X[i];
-            int current = isElementVertical(i) ? elemY[i] : elemX[i];
-            if (Math.abs(goal - current) > SLIDE_SPEED_IN * updates) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private void consumeLevelGamestateResetRequest() {
@@ -540,6 +535,10 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
             // final child's deletion on its following object dispatch.
             if (!exitChildrenGone) {
                 exitChildrenGone = true;
+                return;
+            }
+            if (inLevelMode && inLevelExitDelayFrames > 0) {
+                inLevelExitDelayFrames--;
                 return;
             }
             state = Sonic3kTitleCardState.COMPLETE;
