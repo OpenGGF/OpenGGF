@@ -6,6 +6,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.ZeroArgRewindRecreatable;
 
 import java.util.List;
@@ -104,6 +105,23 @@ public class HCZ2WallObjectInstance extends AbstractObjectInstance
     public boolean isTopSolidOnly() {
         // SolidObjectFull2: full solidity on all sides
         return false;
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj_HCZ2Wall jumps directly to SolidObjectFull2, whose _1P entry
+        // bypasses loc_1DF88's render_flags bit-7 gate. Its $4B collision box
+        // can therefore push a player before the smaller $40 render bounds
+        // enter the viewport (sonic3k.asm:106226-106244,41065-41067).
+        return true;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fullSolid(
+                usesStickyContactBuffer(),
+                usesInclusiveRightEdge(),
+                bypassesOffscreenSolidGate());
     }
 
     @Override

@@ -308,6 +308,31 @@ public class TestGroundSensor {
     }
 
     @Test
+    public void backgroundVerticalScanUsesNativeFullTileRegression() throws Exception {
+        // FindFloor selects Find_Tile_BG but otherwise keeps the same full-height
+        // regression state machine as the foreground path. A full BG tile at the
+        // probe regresses into the half-height tile above, returning -9 rather
+        // than the simplified current-tile result -1.
+        setTileAt((byte) 1, 100, 112, 1);
+        setTileAt((byte) 1, 100, 96, 2);
+
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 112);
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setY((short) 0);
+        setParallaxField("cachedBgCameraX", Integer.MIN_VALUE);
+        setParallaxField("vscrollFactorBG", (short) 0);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.DOWN, (byte) 0, (byte) 0, true);
+        SensorResult result = invokeBackgroundScan(sensor, (short) 100, (short) 112,
+                mockSprite.getTopSolidBit(), Direction.DOWN, true);
+
+        assertNotNull(result, "background scan should find the regressed tile");
+        assertEquals(-9, result.distance());
+        assertEquals(2, result.tileId());
+    }
+
+    @Test
     public void testRightWallSensorRotation() {
         // Mode: RIGHTWALL.
         // Sensor: (x=0, y=10) [Relative to Sprite in GROUND mode].

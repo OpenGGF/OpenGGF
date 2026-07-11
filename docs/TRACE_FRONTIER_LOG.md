@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f12149 / 2362 errors (3 errors under `frontierOnly`).
+f3318 / 4234 errors to f12154 / 2318 errors (10 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -307,6 +307,27 @@ MGZ complete f866 / 1, MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1,
 and LBZ f2270 / 5. The focused sensor/service tests pass 24/24; the wider
 collision selection passes 79/80 with only its pre-existing stale reflective
 lookup for the old two-argument `verticalTileLookupY` signature.
+
+Milestone 15 restores both remaining `SolidObjectFull2`/background-ceiling
+owners at the HCZ2 moving wall. The invisible wall now declares the direct
+`SolidObjectFull2_1P` visibility contract, so its `$4B` collision box stays live
+without `render_flags` bit 7. Background vertical probes now use the same native
+negative/full-height regression and extension state machine as foreground
+`FindFloor`/`FindCeiling`, differing only in the selected layout layer. This
+fixes the 16-pixel underside error at a full-height BG tile boundary without a
+zone, route, or frame exception (`sonic3k.asm:19189-19205,41065-41067,
+106226-106244`).
+
+This closes f12149-f12153 and advances HCZ to f12154 / 2318 full-run errors (10
+under `frontierOnly`), where Tails' next native jump launch is the first
+mismatch. Focused wall/sensor/service tests pass 26/26, including a BG-layer
+full-tile regression guard. The granular isolated replay sweep keeps both AIZ
+routes green and reproduces every non-HCZ complete-run frontier exactly: CNZ
+f1846, MGZ f866, ICZ f3139, MHZ f2920, and LBZ f2270. The CNZ/MGZ level-select
+replays retain their pre-existing end-of-recording input-alignment failures;
+the combined shared-JVM invocation remains unsuitable for frontier comparison
+because those long classes contaminate one another, so each replay method was
+also run in its own Maven process.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
