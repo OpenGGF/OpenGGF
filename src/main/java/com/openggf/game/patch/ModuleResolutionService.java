@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -145,8 +146,7 @@ public final class ModuleResolutionService {
                 GamePatch patch = registration.patch();
                 if (patch.baseGameId().equals(gameId) && prerequisitesMet(patch)) {
                     contributions.add(new CharacterContribution(registration.owner(),
-                            List.copyOf(Objects.requireNonNull(patch.providedMainCharacters(),
-                                    "providedMainCharacters"))));
+                            validatedMainCharacters(registration, patch)));
                 }
             } catch (Throwable failure) {
                 rethrowIfFatal(failure);
@@ -159,6 +159,19 @@ public final class ModuleResolutionService {
                 .flatMap(contribution -> contribution.characters().stream())
                 .forEach(result::add);
         return List.copyOf(result);
+    }
+
+    private static List<String> validatedMainCharacters(
+            RegisteredPatch registration, GamePatch patch) {
+        List<String> characters = List.copyOf(Objects.requireNonNull(
+                patch.providedMainCharacters(), "providedMainCharacters"));
+        for (String character : characters) {
+            if (character.isBlank() || !character.equals(character.toLowerCase(Locale.ROOT))) {
+                throw new IllegalArgumentException("Patch " + registration.namespacedId()
+                        + " provided invalid main-character code: '" + character + "'");
+            }
+        }
+        return characters;
     }
 
     private boolean prerequisitesMet(GamePatch patch) {

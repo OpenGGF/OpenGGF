@@ -137,12 +137,39 @@ class TestLaunchProfilePatchAvailability {
         assertEquals(Set.of(owner), context.failedOwners());
     }
 
+    @Test
+    void mixedCasePatchCharacterCodeFailsItsOwner() {
+        assertMalformedCharacterMetadataFailsOwner("Amy");
+    }
+
+    @Test
+    void blankPatchCharacterCodeFailsItsOwner() {
+        assertMalformedCharacterMetadataFailsOwner(" ");
+    }
+
     private SonicConfigurationService configWithS2Main(String character) {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(SonicConfiguration.LAUNCH_S2_CROSS_GAME_SOURCE, "off");
         config.setConfigValue(SonicConfiguration.LAUNCH_S2_MAIN_CHARACTER, character);
         config.setConfigValue(SonicConfiguration.LAUNCH_S2_SIDEKICK, "none");
         return config;
+    }
+
+    private void assertMalformedCharacterMetadataFailsOwner(String malformedCode) {
+        SonicConfigurationService config = configWithS2Main("amy");
+        PatchOwner owner = new PatchOwner.Mod("characters");
+        ModuleResolutionService service = new ModuleResolutionService(
+                List.of(), PatchEnablement.ALL_ENABLED,
+                new LogicalRomResolver(() -> null), config);
+        ResolutionContext context = service.newContext(List.of(
+                new RegisteredPatch(owner, "characters:main",
+                        characterPatch("s2", malformedCode), 0)), Map.of());
+
+        LaunchProfile loaded = new LaunchProfileStore(config, service, context).load(SONIC_2);
+
+        assertEquals("sonic", loaded.mainCharacter());
+        assertEquals(Set.of(owner), context.failedOwners());
+        assertTrue(context.failures().get(owner) instanceof IllegalArgumentException);
     }
 
     private static LaunchProfileStore patchAwareStore(SonicConfigurationService config,
@@ -173,13 +200,18 @@ class TestLaunchProfilePatchAvailability {
     }
 
     private static GamePatch characterPatch(String gameId, String character) {
+        return characterPatch(gameId, new String[] { character });
+    }
+
+    private static GamePatch characterPatch(String gameId, String... characters) {
+        List<String> provided = List.of(characters);
         return new GamePatch() {
             @Override public String id() { return gameId; }
-            @Override public String displayName() { return character; }
+            @Override public String displayName() { return provided.toString(); }
             @Override public String baseGameId() { return gameId; }
             @Override public boolean activatesFor(GameplayLaunchRequest request) { return true; }
             @Override public Set<LogicalRom> romPrerequisites() { return Set.of(); }
-            @Override public List<String> providedMainCharacters() { return List.of(character); }
+            @Override public List<String> providedMainCharacters() { return provided; }
             @Override public GameModule apply(GameModule base, PatchContext context) { return base; }
         };
     }
