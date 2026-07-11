@@ -530,6 +530,16 @@ to f8831 / 3418 errors (rings expected 100, actual 0); the complete-run
 frontier remains f16755 / 1056 errors (rings expected 2, actual 3). The AIZ
 stage is not green yet.
 
+Round 37 aligns the focused AIZ checkpoint helpers with the canonical replay
+bootstrap's preceding-row VBlank seed. Those helpers used the historical
+`initialVblankCounterForTraceReplay()-1` expression, which is one phase later
+than `TraceReplaySessionBootstrap.applyBootstrap()` after that API acquired its
+explicit next-row semantics. They now seed `trace.initialVblankCounter()-1`, so
+the reload-lock and fire-reveal assertions exercise the same four-phase module
+queue as the strict replay. Both focused camera guards pass. This is test
+bootstrap parity only; strict frontiers remain focused f8831 and complete-run
+f16755, and the AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch
