@@ -868,6 +868,19 @@ In the composed investigation worktree, the complete run proceeds through this
 handoff; the focused AIZ regression at f19397 remains explicitly red. The AIZ
 stage is not green yet.
 
+Round 62 restores the post-results gradual camera, cutscene-button range, and
+drawbridge collapse cadence. `Child6_IncLevX` now publishes the high word of
+its `$4000` accumulator on each later controller entry. `Check_InMyRange`'s
+`word_65C48` operands are modeled as a lower offset plus a span, producing the
+native `[-$18,+$18)` window without an added bounce/landing gate. When that
+state reaches the bridge, its trigger entry initializes `$34=$0E`, creates the
+falling pieces, and returns; only subsequent `loc_2B452` entries decrement and
+eventually clear both standing bits (`sonic3k.asm:133931-133943,138282-138326,
+59614-59623,59764-59791`). In the composed worktree this advances the strict
+complete-run frontier from f25965 / 21 errors to f26064 / 8 errors, all owned by
+the still-live AIZ water flag. The focused AIZ regression remains f19397 / 86.
+The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

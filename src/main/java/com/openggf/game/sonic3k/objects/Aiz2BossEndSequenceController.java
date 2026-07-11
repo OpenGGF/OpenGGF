@@ -45,7 +45,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     // Obj_LevelResults clears _unkFAA8 shortly after End_of_level_flag becomes
     // visible to this engine's collapsed object pass. Hold the ending pose for
     // that ROM wait before loc_694D4 restores control and loc_69526 forces right.
-    private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 10;
+    private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 6;
     private static final short POST_RESULTS_INITIAL_WALK_SPEED = 0x000C;
     private static final int POST_BUTTON_CAMERA_MAX_Y_TARGET = 0x1000;
     private static final int INC_LEVEL_END_Y_GRADUAL_STEP = 0x8000;
@@ -64,6 +64,8 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private boolean postButtonMaxYReleaseActive;
     private int postButtonMaxYAccumulator;
     private int postResultsControlRestoreDelay = -1;
+    private boolean postResultsMaxXActive;
+    private int postResultsMaxXAccumulator;
 
     public Aiz2BossEndSequenceController(int arenaMaxX, int arenaBaseY) {
         super(new ObjectSpawn(arenaMaxX, arenaBaseY, Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0),
@@ -118,8 +120,12 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         }
 
         // Start post-capsule sequence (music + walk right)
-        if (!postCapsuleSequenceStarted) {
+        boolean startedPostCapsuleSequenceNow = !postCapsuleSequenceStarted;
+        if (startedPostCapsuleSequenceNow) {
             startPostCapsuleSequence(player);
+        }
+        if (!startedPostCapsuleSequenceNow) {
+            updatePostResultsCameraMaxX();
         }
         clearPositiveLockedSidekickLogicalWord(player);
         if (pendingLookUpInputAfterStop) {
@@ -207,18 +213,37 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        holdSidekickEndingPose(player);
     }
 
     private void startPostCapsuleSequence(AbstractPlayableSprite player) {
         postCapsuleSequenceStarted = true;
-        services().camera().setMaxXTarget((short) (arenaMaxX + MAX_X_TARGET_OFFSET));
+        postResultsMaxXActive = true;
+        // Child6_IncLevX has already reached the last fractional step before
+        // the controller exposes forced-right movement.
+        postResultsMaxXAccumulator = 0xC000;
         ObjectControlState.none().applyTo(player);
         player.setControlLocked(true);
         forceRightLogicalInput(player);
         applyFirstForcedRightWalkTick(player);
         restoreSidekickPostResultsControl(player);
         setSidekickControlLocked(player, true);
+    }
+
+    private void updatePostResultsCameraMaxX() {
+        if (!postResultsMaxXActive) {
+            return;
+        }
+        Camera camera = services().camera();
+        postResultsMaxXAccumulator += 0x4000;
+        int delta = (postResultsMaxXAccumulator >>> 16) & 0xFFFF;
+        int target = arenaMaxX + MAX_X_TARGET_OFFSET;
+        int next = (camera.getMaxX() & 0xFFFF) + delta;
+        if (next >= target) {
+            next = target;
+            postResultsMaxXActive = false;
+        }
+        camera.setMaxX((short) next);
+        camera.setMaxXTarget((short) next);
     }
 
     private void forceRightLogicalInput(AbstractPlayableSprite player) {
@@ -301,25 +326,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
                 // Ctrl_2_locked byte: CPU control still executes, then this
                 // object clears Ctrl_2_logical before the frame is observed.
                 sprite.getCpuController().clearController2LogicalLatch();
-            }
-        }
-    }
-
-    private void holdSidekickEndingPose(AbstractPlayableSprite player) {
-        ObjectPlayerQuery query = new ObjectPlayerQuery(
-                () -> player,
-                () -> services().playerQuery().sidekicks());
-        for (PlayableEntity sidekick : query.playersFor(
-                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
-            if (sidekick == player) {
-                continue;
-            }
-            if (sidekick instanceof AbstractPlayableSprite sprite) {
-                sprite.setControlLocked(true);
-                sprite.setXSpeed((short) 0);
-                sprite.setYSpeed((short) 0);
-                sprite.setGSpeed((short) 0);
-                ObjectControlState.nativeBit7FullControl().applyTo(sprite);
             }
         }
     }

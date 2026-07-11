@@ -140,6 +140,18 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        return cutsceneOverride;
+    }
+
+    @Override
+    public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
+        // Set_PlayerEndingPose runs after the bridge's ROM solid pass and does
+        // not clear the standing bits it just observed.
+        return !cutsceneOverride;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         // ROM loc_2B2E8 still falls through to SolidObjectFull2 while the
         // collapse delay counts down. Player support ends only when loc_2B45E
@@ -190,11 +202,20 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
             collapseTimer = COLLAPSE_DELAY;
             spawnFallingSegments();
             services().playSfx(Sonic3kSfx.BRIDGE_COLLAPSE.id);
+            // loc_2B2E8 initializes $34, creates the falling pieces through
+            // loc_2B498, and returns. loc_2B452 first decrements on the next
+            // object entry (sonic3k.asm:59614-59623,59764-59791).
+            return;
         }
 
         if (collapseStarted) {
             if (collapseTimer > 0) {
                 collapseTimer--;
+                // ROM keeps the standing bits alongside the newly-set air/roll
+                // state until the delayed parent deletion ejects both players.
+                for (PlayableEntity standingPlayer : standingPlayers) {
+                    standingPlayer.setOnObject(true);
+                }
             } else {
                 ejectStandingPlayers();
                 ObjectLifetimeOps.deleteNoRespawn(this);
