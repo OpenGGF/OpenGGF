@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **HCZ snake blocks now use their post-movement X as the continued-ride reference:** Obj67 passes its updated `x_pos` through `d4` to `MvSonicOnPtfm`, producing zero horizontal platform carry while preserving the rider's own ground motion (`docs/skdisasm/sonic3k.asm:50893-50910,41016-41042,41642-41679`).
 - **HCZ hand launchers now reject exact-boundary fresh landings:** their `SolidObjectTop` contact accepts only the native negative overlap band from `-$10` through `-1`, preventing a zero-distance contact from attaching Sonic one frame early (`docs/skdisasm/sonic3k.asm:41779-41820,41982-42068,65763-65827`).
 - **S2/S3K spindash charges now publish the native animation-change push clear:** each charge mirrors the ROM's combined anim/prev-anim word write, so the later animation transition clears `Status_Push` even when the visible spindash animation id was already active (`docs/skdisasm/sonic3k.asm:28797-28808,29681-29686`; `docs/s2disasm/s2.asm:40548-40559,40879-40884`).
 - **S3K tension bridges now preserve their complete two-player solid contract:** first contact uses flat `sub_1E410`, established riders use the bent child segments, ride exit clears only `Status_OnObj`, Player 2's prior `$3B` segment walks the shared `$3F` bend anchor, and CPU Tails samples the live routine's `$0003` pointer word (`docs/skdisasm/sonic3k.asm:75555-75635,75879-75946`).

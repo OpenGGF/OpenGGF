@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f18717 / 1636 errors (2 errors under `frontierOnly`).
+f3318 / 4234 errors to f19165 / 2173 errors (11 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -593,6 +593,21 @@ under `frontierOnly`). The focused hand-launcher suite passes. The granular
 S3K replay matrix remains exact: both AIZ routes green; CNZ complete f1846 / 5,
 CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1,
 ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 36 removes an engine-only horizontal carry from HCZ snake blocks.
+Obj67 computes its new position, then loads the updated `x_pos` into `d4`
+immediately before `SolidObjectFull`. The continued-ride path copies that value
+to `d2`, and `MvSonicOnPtfm` subtracts the same current object X, producing a
+zero carry delta; the rider's own ground motion remains independent
+(`sonic3k.asm:50893-50910,41016-41042,41642-41679`).
+
+This closes f18717-f19164 and advances HCZ to f19165 / 2173 full-run errors (11
+under `frontierOnly`). The larger total exposes a later route cascade after the
+removed extra pixel; there is no mismatch before the new frontier. All 12
+focused snake-block tests pass. The granular S3K replay matrix remains exact:
+both AIZ routes green; CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ
+complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1,
+and LBZ f2270 / 5.
 
 Milestone 28 restores the two ROM-owned HCZ2 surface handlers around the first
 large water loop. `sub_714E -> sub_717C` now samples the live foreground layout
