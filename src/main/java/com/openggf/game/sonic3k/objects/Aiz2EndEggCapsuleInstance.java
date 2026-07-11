@@ -19,7 +19,6 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     private static final int RESULTS_OWNER_TAILS_ENDING_POSE_ENTRY = 1;
 
     private boolean tailsEndingPoseApplied;
-    private boolean tailsEndingPoseControllerReleasePending;
     private boolean tailsEndingPoseObjectControlLocked;
     private int tailsOpenControllerLockDelay;
     private int resultsActiveWaitEntries;
@@ -112,13 +111,9 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     @Override
     protected void onEndingPoseLockClear() {
         advanceTailsEndingPoseCheck(true);
-        releasePendingTailsEndingPoseControllerLock();
     }
 
     private void advanceTailsEndingPoseCheck(boolean force) {
-        if (releasePendingTailsEndingPoseControllerLock()) {
-            return;
-        }
         if (tailsEndingPoseApplied) {
             return;
         }
@@ -138,32 +133,15 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
                 return;
             }
             tailsEndingPoseApplied = true;
-            tailsEndingPoseControllerReleasePending = true;
             tailsEndingPoseObjectControlLocked = true;
             boolean wasAir = sidekick.getAir();
             boolean wasOnObject = sidekick.isOnObject();
+            sidekick.getCpuController().setController2SignedLocked(false);
+            sidekick.getCpuController().mirrorRawController2LogicalForEndingPose();
             lockForResults(sidekick);
             sidekick.setAir(wasAir);
             sidekick.setOnObject(wasOnObject);
         }
-    }
-
-    private boolean releasePendingTailsEndingPoseControllerLock() {
-        if (!tailsEndingPoseControllerReleasePending) {
-            return false;
-        }
-        if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
-                && sidekick.getCpuController() != null) {
-            // The engine's capsule owner runs before the sidekick CPU sample in
-            // this collapsed object path. Keep the Set_PlayerEndingPose object
-            // control visible first, then expose the Ctrl_2_locked clear on the
-            // next owner routine entry to match ROM Check_TailsEndPose ordering.
-            sidekick.getCpuController().setController2SignedLocked(false);
-            sidekick.getCpuController().mirrorRawController2LogicalForEndingPose();
-            tailsEndingPoseControllerReleasePending = false;
-            return true;
-        }
-        return false;
     }
 
     private void releaseTailsControlNow() {

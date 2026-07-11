@@ -74,7 +74,9 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         this.reverseVertical = (spawn.renderFlags() & 0x02) != 0;
         this.cutsceneOverride = cutsceneOverride;
         this.angle = reverseVertical ? 0x40 : -0x40;
-        this.settledAngle = reverseVertical ? 0x80 : 0;
+        // $38 starts at +/-$40 and $34 advances toward either $00 or $80.
+        // Which endpoint is reached depends on both status direction bits.
+        this.settledAngle = reverseVertical ^ xFlip ? 0x80 : 0;
         this.angleStep = xFlip ? -2 : 2;
         this.currentX = pivotX;
         this.currentY = pivotY + (reverseVertical ? DROP_DISTANCE : -DROP_DISTANCE);
@@ -82,8 +84,20 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     }
 
     public static AizDrawBridgeObjectInstance createCutsceneOverride() {
-        return new AizDrawBridgeObjectInstance(
-                new ObjectSpawn(0x4B48, 0x0218, 0x32, 0, 2, false, 0), true);
+        AizDrawBridgeObjectInstance bridge = new AizDrawBridgeObjectInstance(
+                new ObjectSpawn(0x4B48, 0x0218, 0x32, 0, 1, false, 0), true);
+        // This replacement stands in for the layout object that has already
+        // consumed _unkFAA3 and completed its rotation before loc_694AA creates
+        // the capsule. Preserve that live ROM routine state instead of replaying
+        // the drop from object init.
+        bridge.dropStarted = true;
+        bridge.settled = true;
+        bridge.settledAngleReached = true;
+        bridge.angle = bridge.settledAngle;
+        bridge.currentX = bridge.pivotX - DROP_DISTANCE;
+        bridge.currentY = bridge.pivotY;
+        bridge.updateBridgePieces();
+        return bridge;
     }
 
     @Override
@@ -231,8 +245,6 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
             pieceX[i] = pivotX + (int) Math.round(stepX * i);
             pieceY[i] = pivotY + (int) Math.round(stepY * i);
         }
-        currentX = (pieceX[0] + pieceX[SEGMENT_COUNT - 1]) / 2;
-        currentY = (pieceY[0] + pieceY[SEGMENT_COUNT - 1]) / 2;
     }
 
     private void spawnFallingSegments() {
