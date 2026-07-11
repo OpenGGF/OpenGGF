@@ -30,6 +30,23 @@ class TestModAssetRoot {
     Path temp;
 
     @Test
+    void packedIdentityIsPresentOnlyForJarRoots() throws Exception {
+        assertTrue(PackedModAssetRoot.class.isSealed());
+        assertEquals(List.of("com.openggf.io.JarModAssetRoot"), java.util.Arrays.stream(
+                PackedModAssetRoot.class.getPermittedSubclasses()).map(Class::getName).toList());
+        Path rootDir = Files.createDirectory(temp.resolve("packed-identity"));
+        Path jar = writeJar(rootDir.resolve("mod.jar"), Map.of("a.bin", new byte[] {1}));
+        try (PackedModAssetRoot jarRoot = ModAssetRoot.jar(rootDir, jar);
+             ModAssetRoot directoryRoot = ModAssetRoot.directory(
+                     rootDir, rootDir, ModInputLimits.production(), DirectoryAccess.TEST);
+             ModAssetRoot memoryRoot = ModAssetRoot.forTests("memory")) {
+            assertEquals(64, jarRoot.immutableSha256().length());
+            assertFalse(directoryRoot instanceof PackedModAssetRoot);
+            assertFalse(memoryRoot instanceof PackedModAssetRoot);
+        }
+    }
+
+    @Test
     void directoryReadsOnlyNormalizedContainedEntriesWithinLowerCap() throws Exception {
         Path rootDir = Files.createDirectory(temp.resolve("project"));
         Files.write(rootDir.resolve("asset.bin"), new byte[]{1, 2, 3, 4});
@@ -217,9 +234,7 @@ class TestModAssetRoot {
         Files.write(jar, bytes, StandardOpenOption.TRUNCATE_EXISTING);
 
         ModInputLimits limits = ModInputLimits.loweringBuilder().maxAssetBytes(4).build();
-        try (ModAssetRoot root = ModAssetRoot.jar(rootDir, jar, limits)) {
-            assertThrows(IOException.class, () -> root.readBounded("a.bin", 4));
-        }
+        assertThrows(IOException.class, () -> ModAssetRoot.jar(rootDir, jar, limits));
     }
 
     @Test
@@ -233,14 +248,15 @@ class TestModAssetRoot {
         patchAllCentralDirectorySizes(jar, 1);
         ModInputLimits limits = ModInputLimits.loweringBuilder()
                 .maxAssetBytes(3)
-                .maxModValidationBytes(5)
+                .maxModValidationBytes(12)
                 .build();
 
         try (ModAssetRoot root = ModAssetRoot.jar(rootDir, jar, limits)) {
             assertArrayEquals(new byte[]{1, 2, 3}, root.readBounded("a.bin", 3));
             assertThrows(IOException.class, () -> root.readBounded("b.bin", 1));
             assertArrayEquals(new byte[]{4, 5}, root.readBounded("b.bin", 2));
-            assertThrows(IOException.class, () -> root.readBounded("c.bin", 1));
+            assertThrows(IOException.class, () -> root.readBounded("a.bin", 3));
+            assertArrayEquals(new byte[]{6}, root.readBounded("c.bin", 1));
         }
     }
 
@@ -254,19 +270,28 @@ class TestModAssetRoot {
         patchAllCentralDirectorySizes(jar, 1);
         ModInputLimits limits = ModInputLimits.loweringBuilder()
                 .maxAssetBytes(3)
-                .maxModValidationBytes(5)
+                .maxModValidationBytes(12)
                 .build();
 
         try (ModAssetRoot root = ModAssetRoot.jar(rootDir, jar, limits)) {
-            ExecutorService executor = Executors.newFixedThreadPool(2);
-            CountDownLatch ready = new CountDownLatch(2);
+            ExecutorService executor = Executors.newFixedThreadPool(3);
+            CountDownLatch ready = new CountDownLatch(3);
             CountDownLatch start = new CountDownLatch(1);
             try {
                 Future<Boolean> first = executor.submit(() -> readAfterBarrier(root, "a.bin", ready, start));
                 Future<Boolean> second = executor.submit(() -> readAfterBarrier(root, "b.bin", ready, start));
+                Future<Boolean> third = executor.submit(() -> readAfterBarrier(root, "a.bin", ready, start));
                 assertTrue(ready.await(5, TimeUnit.SECONDS));
                 start.countDown();
-                assertNotEquals(first.get(), second.get(), "exactly one three-byte read must fit the five-byte budget");
+                long successes = java.util.stream.Stream.of(first, second, third)
+                        .filter(future -> {
+                            try {
+                                return future.get();
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                        }).count();
+                assertEquals(2, successes, "exactly two three-byte reads must fit the six-byte budget");
             } finally {
                 executor.shutdownNow();
             }

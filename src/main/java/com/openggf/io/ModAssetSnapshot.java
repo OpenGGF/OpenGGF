@@ -10,15 +10,20 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+
+import static java.security.MessageDigest.getInstance;
 
 @FunctionalInterface
 interface SnapshotHook {
@@ -100,6 +105,23 @@ final class ModAssetSnapshot implements AutoCloseable {
 
     Path content() {
         return content;
+    }
+
+    String sha256() throws IOException {
+        MessageDigest digest;
+        try {
+            digest = getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("Required SHA-256 digest is unavailable", e);
+        }
+        try (var input = Files.newInputStream(content)) {
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                digest.update(buffer, 0, read);
+            }
+        }
+        return HexFormat.of().formatHex(digest.digest());
     }
 
     private static Path createPrivateTempDirectory() throws IOException {

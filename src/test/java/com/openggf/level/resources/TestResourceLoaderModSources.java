@@ -96,10 +96,8 @@ class TestResourceLoaderModSources {
         Path streamingJar = writeJar(streamingDir.resolve("m.jar"),
                 Map.of("dishonest.bin", new byte[]{1, 2, 3, 4, 5}));
         patchAllCentralDirectorySizes(streamingJar, 1);
-        try (ModAssetRoot root = ModAssetRoot.jar(streamingDir, streamingJar, fourBytes)) {
-            assertThrows(IOException.class, () -> new ResourceLoader(null)
-                    .loadSingle(LoadOp.modAssetBase(root, "dishonest.bin")));
-        }
+        assertThrows(IOException.class,
+                () -> ModAssetRoot.jar(streamingDir, streamingJar, fourBytes));
     }
 
     @Test
@@ -111,7 +109,7 @@ class TestResourceLoaderModSources {
         patchAllCentralDirectorySizes(jar, 1);
         ModInputLimits limits = ModInputLimits.loweringBuilder()
                 .maxAssetBytes(2)
-                .maxModValidationBytes(3)
+                .maxModValidationBytes(7)
                 .build();
         try (ModAssetRoot root = ModAssetRoot.jar(tmp, jar, limits)) {
             assertThrows(IOException.class, () -> new ResourceLoader(null).loadWithOverlays(List.of(
@@ -191,7 +189,7 @@ class TestResourceLoaderModSources {
         patchAllCentralDirectorySizes(jar, 1);
         ModInputLimits limits = ModInputLimits.loweringBuilder()
                 .maxAssetBytes(2)
-                .maxModValidationBytes(3)
+                .maxModValidationBytes(7)
                 .build();
         try (ModAssetRoot root = ModAssetRoot.jar(tmp, jar, limits)) {
             IOException failure = assertThrows(IOException.class,
