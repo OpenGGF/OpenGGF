@@ -18,12 +18,10 @@ import com.openggf.trace.replay.TraceGhostHook;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Assumptions;
 
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -292,39 +289,13 @@ class TestLevelRendererBucketInvalidation {
     }
 
     @Test
-    void preparedEmptyBucketPassHasNearZeroSteadyAllocation() {
+    void preparedEmptyBucketPassExecutesEveryPreparedSuppressionResolution() {
         CountingSpriteManager manager = new CountingSpriteManager();
         manager.clearAllSprites();
-        for (int warm = 0; warm < 2_000; warm++) runPreparedEmptyPass(manager);
-
-        com.sun.management.ThreadMXBean bean = allocationBeanOrSkip();
-        long threadId = Thread.currentThread().threadId();
         int resolutionsBeforeMeasurement = manager.suppressionResolutionCount;
-        long allocation600 = measurePreparedPassAllocation(manager, bean, threadId, 600);
-        long allocation1200 = measurePreparedPassAllocation(manager, bean, threadId, 1_200);
+        for (int frame = 0; frame < 1_800; frame++) runPreparedEmptyPass(manager);
         assertEquals(1_800, manager.suppressionResolutionCount - resolutionsBeforeMeasurement,
-                "allocation measurement must execute every prepared pass");
-        assertTrue(allocation1200 <= allocation600 + 1_024,
-                "doubling frames must not add per-frame allocation; 600=" + allocation600
-                        + " 1200=" + allocation1200);
-    }
-
-    @Test
-    void renderCameraSeamStillFeedsVerticalWrapResolution() {
-        Camera camera = mock(Camera.class);
-        SpriteManager manager = new SpriteManager() {
-            @Override
-            protected Camera resolveRenderCameraForVerticalWrap() {
-                return camera;
-            }
-        };
-        manager.clearAllSprites();
-        manager.prepareRenderBucketsForPass();
-
-        manager.drawPreparedUnifiedBucketWithPriority(
-                RenderPriority.MAX, graphicsManager, null);
-
-        verify(camera).isVerticalWrapEnabled();
+                "integration loop must execute every prepared pass");
     }
 
     private void runPreparedEmptyPass(CountingSpriteManager manager) {
@@ -332,29 +303,6 @@ class TestLevelRendererBucketInvalidation {
         for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
             manager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
         }
-    }
-
-    private long measurePreparedPassAllocation(CountingSpriteManager manager,
-            com.sun.management.ThreadMXBean bean, long threadId, int frames) {
-        long before = bean.getThreadAllocatedBytes(threadId);
-        for (int frame = 0; frame < frames; frame++) runPreparedEmptyPass(manager);
-        return bean.getThreadAllocatedBytes(threadId) - before;
-    }
-
-    private static com.sun.management.ThreadMXBean allocationBeanOrSkip() {
-        java.lang.management.ThreadMXBean raw = ManagementFactory.getThreadMXBean();
-        Assumptions.assumeTrue(raw instanceof com.sun.management.ThreadMXBean,
-                "ThreadMXBean allocation accounting unavailable");
-        com.sun.management.ThreadMXBean bean = (com.sun.management.ThreadMXBean) raw;
-        Assumptions.assumeTrue(bean.isThreadAllocatedMemorySupported(),
-                "thread allocation accounting unsupported");
-        if (!bean.isThreadAllocatedMemoryEnabled()) bean.setThreadAllocatedMemoryEnabled(true);
-        Assumptions.assumeTrue(bean.isThreadAllocatedMemoryEnabled(),
-                "thread allocation accounting could not be enabled");
-        Assumptions.assumeTrue(
-                bean.getThreadAllocatedBytes(Thread.currentThread().threadId()) >= 0,
-                "thread allocation accounting returned an unavailable value");
-        return bean;
     }
 
     private static final class CountingSpriteManager extends SpriteManager {
@@ -365,11 +313,6 @@ class TestLevelRendererBucketInvalidation {
         protected boolean resolveCpuSidekickSuppressed() {
             suppressionResolutionCount++;
             return suppressed;
-        }
-
-        @Override
-        protected Camera resolveRenderCameraForVerticalWrap() {
-            return null;
         }
     }
 

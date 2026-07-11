@@ -289,19 +289,8 @@ public class SpriteManager {
 	}
 
 	private boolean renderBucketInputsChanged() {
-		// Membership mutations mark bucketsDirty at their source. When this method
-		// runs, the retained snapshot therefore contains the same identities; scan
-		// it directly to avoid allocating a HashMap values iterator every frame.
-		if (sprites.size() != bucketSnapshotCount) {
-			return true;
-		}
-		for (int position = 0; position < bucketSnapshotCount; position++) {
-			Sprite sprite = bucketSnapshotSprites[position];
-			if (sprite == null || bucketSnapshotKeys[position] != renderBucketKey(sprite)) {
-				return true;
-			}
-		}
-		return false;
+		return SpriteRenderBucketInputGate.inputsChanged(
+				sprites, bucketSnapshotSprites, bucketSnapshotKeys, bucketSnapshotCount);
 	}
 
 	private void captureRenderBucketSnapshot() {
@@ -314,7 +303,7 @@ public class SpriteManager {
 		int position = 0;
 		for (Sprite sprite : getAllSprites()) {
 			bucketSnapshotSprites[position] = sprite;
-			bucketSnapshotKeys[position] = renderBucketKey(sprite);
+			bucketSnapshotKeys[position] = SpriteRenderBucketInputGate.inputKey(sprite);
 			position++;
 		}
 		// Release stale references beyond the live range so removed sprites
@@ -323,20 +312,6 @@ public class SpriteManager {
 			bucketSnapshotSprites[i] = null;
 		}
 		bucketSnapshotCount = position;
-	}
-
-	// Packed-key layout: bit 0 = highPriority, bit 1 = cpuControlled, bits 2+
-	// = bucket index. The bucket index is the top field, so it cannot bleed
-	// into another field; -1 is reserved as the non-playable sentinel (a real
-	// key is always non-negative because the bucket index is clamped >= 0).
-	private static int renderBucketKey(Sprite sprite) {
-		if (!(sprite instanceof AbstractPlayableSprite playable)) {
-			return -1;
-		}
-		int bucket = RenderPriority.clamp(playable.getPriorityBucket()) - RenderPriority.MIN;
-		return (bucket << 2)
-				| (playable.isHighPriority() ? 1 : 0)
-				| (playable.isCpuControlled() ? 2 : 0);
 	}
 
 	public Collection<Sprite> getAllSprites() {
@@ -1104,22 +1079,13 @@ public class SpriteManager {
 	 * caller must disable it after drawing).
 	 */
 	private boolean enableVerticalWrapIfNeeded() {
-		Camera camera = resolveRenderCameraForVerticalWrap();
+		Camera camera = GameServices.cameraOrNull();
 		if (camera != null && camera.isVerticalWrapEnabled()) {
 			GameServices.graphics().enableVerticalWrapAdjust(
 					camera.getVerticalWrapRange(), camera.getY());
 			return true;
 		}
 		return false;
-	}
-
-	/**
-	 * Resolves the render camera used only for vertical-wrap adjustment.
-	 * Kept as a protected seam so headless allocation tests can isolate the
-	 * prepared-bucket core from ambient gameplay-session test doubles.
-	 */
-	protected Camera resolveRenderCameraForVerticalWrap() {
-		return GameServices.cameraOrNull();
 	}
 
 	private void disableVerticalWrap() {
