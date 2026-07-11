@@ -16,6 +16,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -433,18 +434,35 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         int fragmentCount = positions.length;
         int debrisStartFrame = variant.debrisBaseFrame;
 
-        for (int i = 0; i < fragmentCount; i++) {
-            int xPos = currentX + positions[i][0];
-            int yPos = currentY + positions[i][1];
-            int xVel = velocities[i][0];
-            int yVel = velocities[i][1];
-            int debrisFrame = debrisStartFrame + (i % 4);
+        int firstFragment = 0;
+        var objectManager = services().objectManager();
+        if (fragmentCount > 0 && objectManager != null && getSlotIndex() >= 0) {
+            RockDebrisChild debris = createDebrisFragment(
+                    positions, velocities, debrisStartFrame, 0);
+            int transferredSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+            ObjectLifetimeOps.addReplacementAtTransferredSlot(
+                    objectManager, debris, transferredSlot);
+            firstFragment = 1;
+        }
 
-            ObjectSpawn debrisSpawn = new ObjectSpawn(xPos, yPos, 0, 0, 0, false, 0);
-            RockDebrisChild debris = new RockDebrisChild(
-                    debrisSpawn, xVel, yVel, debrisFrame, variant.artKey);
+        for (int i = firstFragment; i < fragmentCount; i++) {
+            RockDebrisChild debris = createDebrisFragment(
+                    positions, velocities, debrisStartFrame, i);
             spawnDynamicObject(debris);
         }
+    }
+
+    private RockDebrisChild createDebrisFragment(int[][] positions, int[][] velocities,
+                                                  int debrisStartFrame, int index) {
+        int xPos = currentX + positions[index][0];
+        int yPos = currentY + positions[index][1];
+        int xVel = velocities[index][0];
+        int yVel = velocities[index][1];
+        int debrisFrame = debrisStartFrame + (index % 4);
+
+        ObjectSpawn debrisSpawn = new ObjectSpawn(xPos, yPos, 0, 0, 0, false, 0);
+        return new RockDebrisChild(
+                debrisSpawn, xVel, yVel, debrisFrame, variant.artKey);
     }
 
     private void handlePush(AbstractPlayableSprite player, PlayerSolidContactResult result) {

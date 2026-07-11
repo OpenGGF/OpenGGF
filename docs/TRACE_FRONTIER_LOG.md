@@ -652,6 +652,16 @@ errors (`rings`, expected 2 / actual 3), proving this earlier vine's released
 children are not the live allocation mismatch at the later ring spill. The
 focused vine unit suite passes. The AIZ stage is not green yet.
 
+Round 47 restores AIZ/LRZ rock's in-place first-debris conversion. ROM
+`sub_2013A` rewrites the parent `a0` entry as fragment zero and calls
+`AllocateObjectAfterCurrent` only for the remaining table rows. The engine now
+transfers the rock's existing SST slot to fragment zero before allocating the
+rest, rather than destroying the parent after allocating every fragment and
+leaving its low slot empty. Focused rock suites pass and the focused AIZ replay
+remains green through 20,443 frames. The complete-run replay remains f16755 /
+657 errors (`rings`, expected 2 / actual 3), so this corrected conversion is
+not the final live spill-owner mismatch. The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

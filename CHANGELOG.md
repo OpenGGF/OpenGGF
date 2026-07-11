@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **AIZ/LRZ rock debris now retains the parent SST slot:** breaking a rock converts its existing object entry into the first debris fragment and allocates only the remaining fragments after it, matching the ROM's in-place `a0` conversion instead of freeing a low slot beneath the debris set (`docs/skdisasm/sonic3k.asm:44502-44578`).
 - **Ordinary AIZ ride vines now reserve their native child SST entries:** the consolidated Java object retains its root slot while reserving the four link objects and final handle allocated by `AllocateObjectAfterCurrent`, preserving ROM object-table pressure during the vine's lifetime (`docs/skdisasm/sonic3k.asm:46115-46142`).
 - **AIZ's HCZ handoff now preserves the ROM camera sample:** when the falling player reaches the `StartNewLevel` threshold, the post-boss controller freezes the camera at the pre-physics airborne target before requesting the full zone transition, so the ordinary later camera pass cannot advance it from `$02B6` to `$02C2` (`docs/skdisasm/sonic3k.asm:138318-138326,178210-178229`).
 - **AIZ's post-boss sidekick lock now clears the late logical controller word:** the `loc_863C0` replacement preserves CPU movement generation, then clears the live `Ctrl_2_logical` latch from its later object slot while the positive lock is active; detailed CPU-step diagnostics retain the pre-clear sample (`docs/skdisasm/sonic3k.asm:181346-181365`).
