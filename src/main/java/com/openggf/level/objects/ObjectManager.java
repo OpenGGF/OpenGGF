@@ -1636,6 +1636,42 @@ public class ObjectManager {
     }
 
     /**
+     * Constructs an object in a ROM-selected dynamic SST slot.
+     *
+     * <p>This is for fixed-slot setup paths, not ordinary {@code AllocateObject}
+     * calls. For example, S3K's {@code SpawnLevelMainSprites} writes the AIZ
+     * intro controller directly to dynamic object slot 2 (absolute SST slot 6)
+     * instead of scanning for the first free slot.
+     */
+    public <T extends ObjectInstance> T createDynamicObjectAtSlot(
+            Supplier<T> factory, int slotIndex) {
+        if (!isManagedDynamicSlot(slotIndex) || !slotAllocator.reserve(slotIndex)) {
+            return null;
+        }
+        return ObjectConstructionContext.construct(objectServices, () -> {
+            T object;
+            try {
+                object = factory.get();
+            } catch (RuntimeException | Error ex) {
+                releaseSlot(slotIndex);
+                throw ex;
+            }
+            if (object == null) {
+                releaseSlot(slotIndex);
+                return null;
+            }
+            if (!(object instanceof AbstractObjectInstance aoi)) {
+                releaseSlot(slotIndex);
+                throw new IllegalArgumentException(
+                        "Fixed-slot dynamic objects must extend AbstractObjectInstance");
+            }
+            aoi.setSlotIndex(slotIndex);
+            addDynamicObject(object);
+            return object;
+        });
+    }
+
+    /**
      * Constructs a dynamic object after reserving its SST slot.
      * <p>
      * Use only for ROM paths where the parent object already occupies {@code a0}

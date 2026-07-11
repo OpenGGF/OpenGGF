@@ -368,6 +368,9 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int AIZ2_FIRE_REDRAW_FRAMES = 8;
     private static final int AIZ2_WAIT_FIRE_REDRAW_FRAMES = 38;
     private static final int FIRE_OVERLAY_STAGE_X = 0x2E00;
+    // SpawnLevelMainSprites writes Obj_AIZPlaneIntro to
+    // Dynamic_object_RAM+(object_size*2): absolute S3K SST slot 3+2 = 5.
+    private static final int AIZ_PLANE_INTRO_SST_SLOT = 5;
     private static final int FIRE_OVERLAY_TILE_DEST = 0x500;
     private static final int FIRE_OVERLAY_PLC = 0x0C;
     public static final int FIRE_WAVE_COLUMN_COUNT = 0x14;
@@ -827,7 +830,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // The event fallback may run through a separate AIZ event instance during bootstrap,
         // so reuse the existing parent instead of allocating a second scroll controller.
         ObjectSpawn spawn = new ObjectSpawn(0x60, 0x30, 0, 0, 0, false, 0);
-        AizPlaneIntroInstance intro = spawnObject(() -> new AizPlaneIntroInstance(spawn));
+        AizPlaneIntroInstance intro = lm.getObjectManager().createDynamicObjectAtSlot(
+                () -> new AizPlaneIntroInstance(spawn), AIZ_PLANE_INTRO_SST_SLOT);
         if (intro == null) {
             return false;
         }
@@ -872,7 +876,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             return;
         }
         ObjectSpawn spawn = new ObjectSpawn(0x60, 0x30, 0, 0, 0, false, 0);
-        AizPlaneIntroInstance intro = spawnObject(() -> new AizPlaneIntroInstance(spawn));
+        AizPlaneIntroInstance intro = lm.getObjectManager().createDynamicObjectAtSlot(
+                () -> new AizPlaneIntroInstance(spawn), AIZ_PLANE_INTRO_SST_SLOT);
         introSpawned = intro != null;
         if (introSpawned) {
             LOG.info("AIZ1 intro: restored plane intro object for setup prelude");

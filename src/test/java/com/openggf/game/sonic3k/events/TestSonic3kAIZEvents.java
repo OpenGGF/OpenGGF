@@ -303,6 +303,13 @@ public class TestSonic3kAIZEvents {
     public void updateFallbackDoesNotDuplicateExistingIntroObject() {
         assertEquals(1, countActiveIntroObjects(),
                 "ROM SpawnLevelMainSprites installs exactly one Obj_AIZPlaneIntro object");
+        AizPlaneIntroInstance intro = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(AizPlaneIntroInstance.class::isInstance)
+                .map(AizPlaneIntroInstance.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertEquals(5, intro.getSlotIndex(),
+                "SpawnLevelMainSprites writes the intro parent to Dynamic_object_RAM+2 (SST slot 5)");
 
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         events.update(0, 0);

@@ -477,6 +477,22 @@ driven solely by captured player state. Focused unit tests cover both phases.
 frontier remains the f16755-f16757 ring-count cluster. The stage is not green
 yet.
 
+Round 33 restores the AIZ intro controller's fixed object-RAM ownership.
+`SpawnLevelMainSprites` writes `Obj_AIZPlaneIntro` directly to
+`Dynamic_object_RAM+(object_size*2)`, which both AIZ ROM traces expose as
+absolute S3K SST slot 5; it does
+not use `AllocateObject` (`sonic3k.asm:8111-8126`). The engine event fallback
+previously inserted the controller through first-free allocation, placing it in
+slot 4 and perturbing the allocation history behind the later hollow-tree,
+miniboss, transition-floor, and hurt-spill objects. `ObjectManager` now exposes
+a guarded fixed-slot construction path and both normal intro creation and the
+prelude restore use slot 5. A focused integration assertion covers the authored
+slot and duplicate-intro fallback. With the transition timing stack held at its
+prior value, the strict frontiers remain focused f5496 / 14 and complete-run
+f16755-f16757 (rings expected 2, actual 3); this commit corrects the underlying
+SST owner without claiming a frontier move. Fresh full sweeps pass all 29 S1
+and all 48 S2 trace replays. The AIZ stage is not green yet.
+
 ## 2026-07-04 - S2 round 97: MTZ3 GREEN -- full S2 level-select suite green
 
 Worktree `.worktrees/ai-s2-mtz3-round96-orbinit`, branch
