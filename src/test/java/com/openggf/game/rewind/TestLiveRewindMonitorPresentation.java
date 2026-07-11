@@ -50,18 +50,29 @@ import static org.mockito.Mockito.spy;
 @RequiresRom(SonicGame.SONIC_2)
 class TestLiveRewindMonitorPresentation {
     private SonicConfigurationService config;
+    private boolean originalLiveRewindEnabled;
+    private boolean originalTapeCoastEnabled;
+    private GameModule originalModule;
 
     @BeforeEach
     void setUp() {
         config = SonicConfigurationService.getInstance();
+        originalLiveRewindEnabled = config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED);
+        originalTapeCoastEnabled = config.getBoolean(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED);
+        originalModule = GameModuleRegistry.getCurrent();
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, false);
     }
 
     @AfterEach
     void tearDown() {
-        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
-        SessionManager.clear();
+        try {
+            SessionManager.clear();
+            GameModuleRegistry.setCurrent(originalModule);
+        } finally {
+            config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, originalLiveRewindEnabled);
+            config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, originalTapeCoastEnabled);
+        }
     }
 
     @Test
@@ -69,7 +80,7 @@ class TestLiveRewindMonitorPresentation {
         GraphicsManager graphics = GraphicsManager.getInstance();
         graphics.initHeadless();
 
-        GameModule productionModule = GameModuleRegistry.getCurrent();
+        GameModule productionModule = originalModule;
         Sonic2ObjectArtProvider provider = spy((Sonic2ObjectArtProvider) productionModule.getObjectArtProvider());
         RecordingRenderer monitorRenderer = new RecordingRenderer();
         RecordingRenderer explosionRenderer = new RecordingRenderer();
@@ -125,6 +136,10 @@ class TestLiveRewindMonitorPresentation {
             assertTrue(brokenFrame > 0);
             runner.stepFrame(false, false, false, false, false);
             manager.recordExternalFrame(GameMode.LEVEL, false, rewindInput);
+            assertNotNull(firstLive(objects, MonitorContentsObjectInstance.class),
+                    "broken row must retain live monitor contents in the production object graph");
+            assertNotNull(firstLive(objects, ExplosionObjectInstance.class),
+                    "broken row must retain a live explosion in the production object graph");
 
             renderAll(objects, graphics, monitorRenderer, explosionRenderer);
             assertTrue(monitorRenderer.frames.stream().anyMatch(call -> call.frame() == 0x0B
@@ -136,6 +151,10 @@ class TestLiveRewindMonitorPresentation {
             while (gameplayMode.getRewindController().currentFrame() >= brokenFrame) {
                 assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput));
             }
+            assertNull(firstLive(objects, MonitorContentsObjectInstance.class),
+                    "held rewind must remove monitor contents from the restored live graph");
+            assertNull(firstLive(objects, ExplosionObjectInstance.class),
+                    "held rewind must remove the explosion from the restored live graph");
 
             renderAll(objects, graphics, monitorRenderer, explosionRenderer);
             assertTrue(monitorRenderer.frames.stream().anyMatch(call -> call.frame() != 0x0B
