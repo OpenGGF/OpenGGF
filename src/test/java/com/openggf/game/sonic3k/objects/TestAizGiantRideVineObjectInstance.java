@@ -85,6 +85,26 @@ class TestAizGiantRideVineObjectInstance {
     }
 
     @Test
+    void ordinaryVineHandleGrabDoesNotMakeRootPersistent() throws Exception {
+        AizRideVineObjectInstance vine = new AizRideVineObjectInstance(
+                new ObjectSpawn(0x1E00, 0x0300, 0x06, 0x01, 0, false, 0));
+        setHandleGrabFlag(vine, "p1", 1);
+
+        assertFalse(vine.isPersistent(),
+                "loc_21F38 culls the ordinary vine root without consulting handle grab bytes");
+    }
+
+    @Test
+    void ordinaryVineUsesFixedNativeCoarseCullWindow() {
+        AizRideVineObjectInstance vine = new AizRideVineObjectInstance(
+                new ObjectSpawn(0x1FF8, 0x0300, 0x06, 0x00, 0, false, 0));
+
+        assertFalse(vine.isCustomOutOfRange(0x1D80));
+        assertTrue(vine.isCustomOutOfRange(0x2280),
+                "a vine more than $280 behind Camera_X_pos_coarse_back must cull even in widescreen");
+    }
+
+    @Test
     void unloadReleasesParentSlotWhenExecutionUsesHandleSlot() {
         ObjectManager[] holder = new ObjectManager[1];
         StubObjectServices services = new StubObjectServices() {
@@ -210,7 +230,19 @@ class TestAizGiantRideVineObjectInstance {
     private static void setHandleGrabFlag(AizGiantRideVineObjectInstance vine,
                                           String playerFieldName,
                                           int value) throws Exception {
-        Field handleField = AizGiantRideVineObjectInstance.class.getDeclaredField("handle");
+        setHandleGrabFlag((Object) vine, playerFieldName, value);
+    }
+
+    private static void setHandleGrabFlag(AizRideVineObjectInstance vine,
+                                          String playerFieldName,
+                                          int value) throws Exception {
+        setHandleGrabFlag((Object) vine, playerFieldName, value);
+    }
+
+    private static void setHandleGrabFlag(Object vine,
+                                          String playerFieldName,
+                                          int value) throws Exception {
+        Field handleField = vine.getClass().getDeclaredField("handle");
         handleField.setAccessible(true);
         Object handle = handleField.get(vine);
         Field playerField = handle.getClass().getDeclaredField(playerFieldName);

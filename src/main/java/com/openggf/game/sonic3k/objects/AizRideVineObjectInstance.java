@@ -128,7 +128,24 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        return AizVineHandleLogic.anyGrabbed(handle);
+        // loc_21F38 always applies the root's coarse-X cull, then deletes the
+        // complete child chain before Delete_Current_Sprite. The handle grab
+        // bytes do not participate in the root lifetime decision.
+        return false;
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // loc_21F38 uses the fixed native $280 threshold, not the engine's
+        // viewport-scaled legacy window.
+        int coarseBack = (cameraX - 0x80) & 0xFF80;
+        int distance = ((currentX & 0xFF80) - coarseBack) & 0xFFFF;
+        return distance > 0x280;
     }
 
     @Override
@@ -330,6 +347,13 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
     private void updateStillSprite() {
         currentX += stillXVel >> 8;
         currentY += stillYVel >> 8;
+        // loc_21DF2 tests the render_flags bit produced by the preceding
+        // Render_Sprites pass after MoveSprite. Once the 8x12 still-sprite
+        // bounds were wholly off-screen, it writes x_pos=$7FF0 so loc_21F38
+        // deletes the root and its child chain in this same object pass.
+        if (!wasStillSpriteRenderedOnScreen()) {
+            currentX = 0x7FF0;
+        }
 
         stillAnimTimer++;
         if (stillAnimTimer < STILL_ANIM_STEP_FRAMES) {
@@ -346,6 +370,21 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
         if (stillFrame > STILL_ANIM_LAST_LOOP_FRAME) {
             stillFrame = STILL_ANIM_FIRST_LOOP_FRAME;
         }
+    }
+
+    private boolean wasStillSpriteRenderedOnScreen() {
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.camera() == null) {
+            return true;
+        }
+        // Object execution sees the camera position completed by the preceding
+        // frame, the same position whose copy Render_Sprites used to produce
+        // this frame's incoming render_flags bit. Keep the ROM's fixed 320x224
+        // viewport here; the $7FF0 self-delete gate is not widescreen-scaled.
+        int relativeX = currentX - svc.camera().getX();
+        int relativeY = currentY - svc.camera().getY();
+        return relativeX + 8 >= 0 && relativeX - 8 < 320
+                && relativeY + 12 >= 0 && relativeY - 12 < 224;
     }
 
     private void clearGrabbedPlayers() {

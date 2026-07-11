@@ -662,6 +662,19 @@ remains green through 20,443 frames. The complete-run replay remains f16755 /
 657 errors (`rings`, expected 2 / actual 3), so this corrected conversion is
 not the final live spill-owner mismatch. The AIZ stage is not green yet.
 
+Round 48 restores the ordinary ride vine's still-sprite deletion boundary and
+S3K's native X-cursor width. ROM `loc_21DF2` consumes the preceding
+`Render_Sprites` bit after movement, writes `x_pos=$7FF0` once its 8x12 bounds
+leave the fixed 320x224 viewport, then `loc_21F38` deletes the root and all five
+children with the fixed `$280` coarse check regardless of grab bytes. The S3K
+two-axis placement cursor now also retains its native `$280` right edge instead
+of widening SST allocation timing with the renderer. This moves the later
+`x=$1EB0` spring from engine slot 26 to its ROM slot 8 and leaves no vine root
+alive at that allocation. The focused AIZ replay remains green through 20,443
+frames; the complete run remains f16755 / 657 errors (`rings`, expected 2 /
+actual 3), now owned by a later placement-slot permutation. Full exact-tree S1
+(29) and S2 (48) trace fleets both pass. The AIZ stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch
