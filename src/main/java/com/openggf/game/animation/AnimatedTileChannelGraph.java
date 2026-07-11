@@ -3,12 +3,12 @@ package com.openggf.game.animation;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot;
 
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * Runtime-owned coordinator for animated tile channels.
@@ -20,21 +20,30 @@ import java.util.Set;
 public final class AnimatedTileChannelGraph implements RewindSnapshottable<AnimatedTileChannelSnapshot> {
 
     private List<AnimatedTileChannel> channels = List.of();
-    private final Map<String, Integer> lastPhaseByChannel = new HashMap<>();
+    private Map<String, Integer> channelIndexById = Map.of();
+    private int[] installedPhases = new int[0];
+    private boolean[] installedPhasePresent = new boolean[0];
+    private int recordedInstalledPhaseCount;
+    private final Map<String, Integer> diagnosticPhases = new LinkedHashMap<>();
 
     /**
      * Replaces the current channel set and clears any cached per-channel phase.
      */
     public void install(List<AnimatedTileChannel> channels) {
         List<AnimatedTileChannel> installed = List.copyOf(Objects.requireNonNull(channels, "channels"));
-        Set<String> seenChannelIds = new HashSet<>();
-        for (AnimatedTileChannel channel : installed) {
-            if (!seenChannelIds.add(channel.channelId())) {
+        Map<String, Integer> installedIndexes = new HashMap<>();
+        for (int index = 0; index < installed.size(); index++) {
+            AnimatedTileChannel channel = installed.get(index);
+            if (installedIndexes.put(channel.channelId(), index) != null) {
                 throw new IllegalArgumentException("Duplicate animated tile channelId: " + channel.channelId());
             }
         }
         this.channels = installed;
-        lastPhaseByChannel.clear();
+        channelIndexById = Map.copyOf(installedIndexes);
+        installedPhases = new int[installed.size()];
+        installedPhasePresent = new boolean[installed.size()];
+        recordedInstalledPhaseCount = 0;
+        diagnosticPhases.clear();
     }
 
     /** Returns the currently installed channel definitions. */
@@ -45,7 +54,11 @@ public final class AnimatedTileChannelGraph implements RewindSnapshottable<Anima
     /** Removes all channels and any cached phase history. */
     public void clear() {
         channels = List.of();
-        lastPhaseByChannel.clear();
+        channelIndexById = Map.of();
+        installedPhases = new int[0];
+        installedPhasePresent = new boolean[0];
+        recordedInstalledPhaseCount = 0;
+        diagnosticPhases.clear();
     }
 
     /**
@@ -56,7 +69,11 @@ public final class AnimatedTileChannelGraph implements RewindSnapshottable<Anima
      */
     public void update(ChannelContext baseContext) {
         Objects.requireNonNull(baseContext, "baseContext");
-        for (AnimatedTileChannel channel : channels) {
+        List<AnimatedTileChannel> activeChannels = channels;
+        int[] activePhases = installedPhases;
+        boolean[] activePhasePresent = installedPhasePresent;
+        for (int channelIndex = 0; channelIndex < activeChannels.size(); channelIndex++) {
+            AnimatedTileChannel channel = activeChannels.get(channelIndex);
             if (!channel.guard().allows()) {
                 continue;
             }
@@ -69,22 +86,51 @@ public final class AnimatedTileChannelGraph implements RewindSnapshottable<Anima
                     baseContext.actIndex(),
                     baseContext.frameCounter());
             int phase = channel.phaseSource().resolve(channelContext);
-            Integer previousPhase = lastPhaseByChannel.get(channel.channelId());
-            if (channel.cachePolicy() == AnimatedTileCachePolicy.ON_PHASE_CHANGE
-                    && previousPhase != null
-                    && previousPhase.intValue() == phase) {
-                continue;
+            if (installedPhases == activePhases && installedPhasePresent == activePhasePresent) {
+                if (channel.cachePolicy() == AnimatedTileCachePolicy.ON_PHASE_CHANGE
+                        && activePhasePresent[channelIndex]
+                        && activePhases[channelIndex] == phase) {
+                    continue;
+                }
+                if (!activePhasePresent[channelIndex]) {
+                    activePhasePresent[channelIndex] = true;
+                    recordedInstalledPhaseCount++;
+                }
+                activePhases[channelIndex] = phase;
+            } else {
+                if (channel.cachePolicy() == AnimatedTileCachePolicy.ON_PHASE_CHANGE
+                        && hasRecordedPhase(channel.channelId())
+                        && getLastPhase(channel.channelId()) == phase) {
+                    continue;
+                }
+                recordPhase(channel.channelId(), phase);
             }
-            lastPhaseByChannel.put(channel.channelId(), phase);
             channel.applyStrategy().apply(channelContext);
         }
+    }
+
+    private boolean hasRecordedPhase(String channelId) {
+        Integer channelIndex = channelId != null ? channelIndexById.get(channelId) : null;
+        return channelIndex != null
+                ? installedPhasePresent[channelIndex]
+                : diagnosticPhases.containsKey(channelId);
     }
 
     /**
      * Records the last resolved phase for a channel. Package-private for testing.
      */
     void recordPhase(String channelId, int phase) {
-        lastPhaseByChannel.put(channelId, phase);
+        Integer channelIndex = channelId != null ? channelIndexById.get(channelId) : null;
+        if (channelIndex == null) {
+            diagnosticPhases.put(channelId, phase);
+            return;
+        }
+        int index = channelIndex;
+        if (!installedPhasePresent[index]) {
+            installedPhasePresent[index] = true;
+            recordedInstalledPhaseCount++;
+        }
+        installedPhases[index] = phase;
     }
 
     /**
@@ -92,8 +138,18 @@ public final class AnimatedTileChannelGraph implements RewindSnapshottable<Anima
      * Package-private for testing.
      */
     int getLastPhase(String channelId) {
-        Integer phase = lastPhaseByChannel.get(channelId);
+        Integer channelIndex = channelId != null ? channelIndexById.get(channelId) : null;
+        if (channelIndex != null) {
+            int index = channelIndex;
+            return installedPhasePresent[index] ? installedPhases[index] : -1;
+        }
+        Integer phase = diagnosticPhases.get(channelId);
         return phase != null ? phase : -1;
+    }
+
+    /** Returns the number of installed and diagnostic channels with recorded phases. */
+    public int recordedPhaseCount() {
+        return recordedInstalledPhaseCount + diagnosticPhases.size();
     }
 
     // ── RewindSnapshottable ───────────────────────────────────────────────
@@ -105,12 +161,23 @@ public final class AnimatedTileChannelGraph implements RewindSnapshottable<Anima
 
     @Override
     public AnimatedTileChannelSnapshot capture() {
-        return new AnimatedTileChannelSnapshot(lastPhaseByChannel);
+        Map<String, Integer> phases = new LinkedHashMap<>(recordedPhaseCount());
+        for (int index = 0; index < channels.size(); index++) {
+            if (installedPhasePresent[index]) {
+                phases.put(channels.get(index).channelId(), installedPhases[index]);
+            }
+        }
+        phases.putAll(diagnosticPhases);
+        return new AnimatedTileChannelSnapshot(phases);
     }
 
     @Override
     public void restore(AnimatedTileChannelSnapshot s) {
-        lastPhaseByChannel.clear();
-        lastPhaseByChannel.putAll(s.lastPhaseByChannel());
+        Arrays.fill(installedPhasePresent, false);
+        recordedInstalledPhaseCount = 0;
+        diagnosticPhases.clear();
+        for (Map.Entry<String, Integer> phase : s.lastPhaseByChannel().entrySet()) {
+            recordPhase(phase.getKey(), phase.getValue());
+        }
     }
 }
