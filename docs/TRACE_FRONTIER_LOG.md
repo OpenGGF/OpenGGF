@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f9760 / 3217 errors (5 errors under `frontierOnly`).
+f3318 / 4234 errors to f9900 / 3227 errors (6 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -85,6 +85,22 @@ Commands used (MSE disabled, one fork, ROM paths supplied explicitly): focused
 HCZ + invariant + keep-green Maven selection; full HCZ replay; and
 `mvn -Dtest=*TraceReplay -Dtrace.frontierOnly=true
 -Dmaven.test.failure.ignore=true -DfailIfNoTests=false test`.
+
+Milestone 2 separates the native P1 and P2 ending-pose owners. Signpost
+`Obj_EndSignResults` calls `Set_PlayerEndingPose` only for Player 1; Tails keeps
+his CPU-produced velocity while `Ctrl_2_locked` is set. The later routine-8
+dispatch calls `Check_TailsEndPose`, clears the P2 lock, and only then applies
+the zero-velocity victory pose (`sonic3k.asm:176198-176238,176245-176272,
+181919-181940`). This closes f9760-f9762 and advances HCZ to f9900 / 3227
+errors (6 under `frontierOnly`), where the act-transition coordinate offset is
+now the first mismatch.
+
+The fresh all-S3K frontier sweep keeps both AIZ traces green and reproduces every
+non-HCZ S3K frontier from milestone 1 exactly. The 11 invariant guards, 21 S3K
+keep-green tests, two focused signpost guards, and the signpost-containing
+`selfContainedTransientChildrenRestoreThroughSessionSnapshot` rewind test pass.
+The unrelated AIZ2 capsule method in the broader rewind class remains
+independently red and was not changed by this signpost milestone.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 

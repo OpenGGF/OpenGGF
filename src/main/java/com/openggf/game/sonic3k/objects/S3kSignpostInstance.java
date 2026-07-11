@@ -107,6 +107,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
      * (the signpost's spawn is null, so the recreate hook uses a placeholder).
      */
     private int apparentAct;
+    private boolean sidekickEndingPoseApplied;
+    private boolean sidekickEndingPoseCheckArmed;
 
     /**
      * Creates the signpost at the given X position.
@@ -190,7 +192,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             case FALLING -> updateFalling(frameCounter, player);
             case LANDED -> updateLanded();
             case RESULTS -> updateResults(player);
-            case AFTER -> updateAfter();
+            case AFTER -> updateAfter(player);
         }
     }
 
@@ -411,15 +413,17 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
 
         applyMainPlayerEndingPose(player);
 
-        // ROM line 176215: st (Ctrl_2_locked).w — lock sidekick input
-        // Also apply Set_PlayerEndingPose equivalent so Tails does a victory pose
+        // ROM Obj_EndSignLanded writes only Ctrl_2_locked before this routine;
+        // Obj_EndSignResults calls Set_PlayerEndingPose with a1=Player_1 only
+        // (sonic3k.asm:176198-176218,176229-176238). Tails keeps executing his
+        // CPU movement until Obj_LevelResults' later Check_TailsEndPose path.
         for (PlayableEntity candidate : playerQuery(player)
                 .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
             if (candidate instanceof AbstractPlayableSprite sprite) {
                 if (sprite == player) {
                     continue;
                 }
-                applyEndingPose(sprite);
+                applySidekickInputLock(sprite);
             }
         }
 
@@ -435,13 +439,21 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         state = State.AFTER;
     }
 
-    private void applyEndingPose(AbstractPlayableSprite sprite) {
-        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+    static void applySidekickInputLock(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return;
+        }
         sprite.setControlLocked(true);
-        sprite.setXSpeed((short) 0);
-        sprite.setYSpeed((short) 0);
-        sprite.setGSpeed((short) 0);
-        sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
+    }
+
+    static void applySidekickEndingPose(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return;
+        }
+        // Check_TailsEndPose clears Ctrl_2_locked immediately before tail-calling
+        // Set_PlayerEndingPose (sonic3k.asm:181919-181940).
+        sprite.setControlLocked(false);
+        applyMainPlayerEndingPose(sprite);
     }
 
     static void applyMainPlayerEndingPose(AbstractPlayableSprite sprite) {
@@ -480,7 +492,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     // AFTER
     // =========================================================================
 
-    private void updateAfter() {
+    private void updateAfter(AbstractPlayableSprite player) {
+        applyNativeSidekickEndingPose(player);
         if (isResultsScreenActive()) {
             return;
         }
@@ -489,6 +502,27 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         if (camera != null && !isWithinRomAfterRange(worldX, worldY, camera.getX(), camera.getY())) {
             setDestroyed(true);
             LOG.fine("S3K Signpost destroyed (off-screen)");
+        }
+    }
+
+    private void applyNativeSidekickEndingPose(AbstractPlayableSprite player) {
+        if (sidekickEndingPoseApplied) {
+            return;
+        }
+        if (!sidekickEndingPoseCheckArmed) {
+            // The ROM's routine-6 dispatch allocates Obj_LevelResults and returns;
+            // Check_TailsEndPose belongs to the later routine-8 dispatch. Keep
+            // that distinct entry boundary even though the engine models the
+            // results allocation as a free child (sonic3k.asm:176229-176272).
+            sidekickEndingPoseCheckArmed = true;
+            return;
+        }
+        PlayableEntity candidate = playerQuery(player).nativeP2OrNull();
+        if (candidate instanceof AbstractPlayableSprite sidekick
+                && !sidekick.getDead()
+                && !sidekick.getAir()) {
+            sidekickEndingPoseApplied = true;
+            applySidekickEndingPose(sidekick);
         }
     }
 
