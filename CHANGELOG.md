@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **HCZ TurboSpiker now waits for its native offscreen placeholder:** the badnik requires the `$20×$20` placeholder's full render bounds, consumes its operation-pointer restore dispatch, and initializes tracking and child state only on the following frame, preventing vertically hidden patrol drift (`docs/skdisasm/sonic3k.asm:180266-180298,183861-183921`).
 - **S3K CPU Tails now distinguishes direct off-screen timeout markers from routine-8 interact failures:** `TailsCPU_CheckDespawn` retains `sub_13ECA`'s right-facing `Status_InAir`, while only `sub_13EFC` returns into the panic routine's post-warp facing block (`docs/skdisasm/sonic3k.asm:26374-26446,26800-26865`).
 - **HCZ Jawz now activates through its native offscreen placeholder:** the badnik waits for the `$20×$20` placeholder render bounds, consumes the operation-pointer restore dispatch, and only then initializes its player-tracking velocity, restoring its pre-collision movement distance and enemy-kill bounce (`docs/skdisasm/sonic3k.asm:180266-180298,183518-183570`).
 - **HCZ twisting loops now retain native position words through capture and traversal:** rolling-state setup no longer shifts the player centre, and every loop phase writes only the ROM `x_pos`/`y_pos` words while preserving both subpixel fractions (`docs/skdisasm/sonic3k.asm:76496-76534,76603-76744`).

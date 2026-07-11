@@ -64,12 +64,15 @@ public class TestTurboSpikerBadnikInstance {
 
             turboSpiker.update(0, player);
             assertEquals("PATROL", readState(turboSpiker));
-            assertEquals(1, services.spawnedChildren.size());
+            assertEquals(0, services.spawnedChildren.size());
 
             turboSpiker.update(1, player);
+            assertEquals(1, services.spawnedChildren.size());
+
+            turboSpiker.update(2, player);
             assertEquals("LAUNCH_PREP", readState(turboSpiker));
 
-            for (int frame = 2; frame <= 18; frame++) {
+            for (int frame = 3; frame <= 19; frame++) {
                 turboSpiker.update(frame, player);
             }
 
@@ -91,21 +94,24 @@ public class TestTurboSpikerBadnikInstance {
 
             turboSpiker.update(0, player);
             assertEquals("HIDDEN_WAIT", readState(turboSpiker));
-            assertEquals(2, services.spawnedChildren.size());
+            assertEquals(0, services.spawnedChildren.size());
 
             turboSpiker.update(1, player);
+            assertEquals(2, services.spawnedChildren.size());
+
+            turboSpiker.update(2, player);
             assertEquals("EMERGE_DELAY", readState(turboSpiker));
             assertEquals(7, services.spawnedChildren.size());
             assertTrue(services.playedSfx.contains(Sonic3kSfx.SPLASH.id), "Expected splash SFX");
 
-            for (int frame = 2; frame <= 5; frame++) {
+            for (int frame = 3; frame <= 6; frame++) {
                 turboSpiker.update(frame, player);
             }
             assertEquals("EMERGE_WATERFALL", readState(turboSpiker));
             assertEquals(3, turboSpiker.getPriorityBucket());
 
             player.setCentreX((short) 0x40);
-            for (int frame = 6; frame <= 22; frame++) {
+            for (int frame = 7; frame <= 23; frame++) {
                 turboSpiker.update(frame, player);
             }
             assertEquals("PATROL", readState(turboSpiker));
@@ -130,6 +136,9 @@ public class TestTurboSpikerBadnikInstance {
             assertEquals("PATROL", readState(turboSpiker));
 
             turboSpiker.update(1, player);
+            assertEquals("PATROL", readState(turboSpiker));
+
+            turboSpiker.update(2, player);
             assertEquals("LAUNCH_PREP", readState(turboSpiker));
         }
     }
@@ -152,6 +161,9 @@ public class TestTurboSpikerBadnikInstance {
             assertEquals("PATROL", readState(turboSpiker));
 
             turboSpiker.update(1, player);
+            assertEquals("PATROL", readState(turboSpiker));
+
+            turboSpiker.update(2, player);
             assertEquals("PATROL", readState(turboSpiker));
         }
     }

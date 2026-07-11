@@ -98,6 +98,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
     private int currentPriorityBucket = PRIORITY_BUCKET_NORMAL;
 
     private boolean initialized;
+    private boolean waitingForOnscreen = true;
     private boolean waterfallOverlayVisible;
     private int animIndex;
     private int animTimer;
@@ -116,7 +117,18 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
+            return;
+        }
+
+        // Obj_WaitOffscreen owns a $20-by-$20 placeholder and restores the
+        // saved Obj_TurboSpiker operation only after that placeholder has been
+        // rendered. The real initializer runs on the following dispatch.
+        if (waitingForOnscreen) {
+            if (!isOnScreen(0x20)) {
+                return;
+            }
+            waitingForOnscreen = false;
             return;
         }
 

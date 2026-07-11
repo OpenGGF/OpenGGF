@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f15161 / 1907 errors (2 errors under `frontierOnly`).
+f3318 / 4234 errors to f15377 / 2781 errors (7 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -484,6 +484,22 @@ f2270 / 5 remain exact. The shared correction also advances MGZ complete from
 f866 / 1 to f1072 / 1 and MGZ level-select from f894 / 1 to f1030 / 1; both new
 frontiers are later ring-count mismatches, with no earlier or additional
 frontier-only failure.
+
+Milestone 26 restores TurboSpiker's native `Obj_WaitOffscreen` placeholder.
+The parked badnik now requires the `$20`-pixel placeholder's full X/Y render
+bounds, consumes the saved-operation restore dispatch, and initializes its
+tracking velocity and shell child on the following dispatch. This prevents the
+engine from patrolling while the slot is still vertically hidden and restores
+the ROM collision position (`sonic3k.asm:180266-180298,183861-183921`).
+
+This closes f15161-f15376 and advances HCZ to f15377 / 2781 full-run errors (7
+under `frontierOnly`). The larger full total exposes 874 later-route groups
+after the corrected badnik encounter; there is no mismatch before the new
+frontier. All four focused TurboSpiker sequence tests pass. The isolated route
+matrix keeps both AIZ routes green and holds all other current frontiers and
+counts exactly: CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete
+f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ
+f2270 / 5.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
