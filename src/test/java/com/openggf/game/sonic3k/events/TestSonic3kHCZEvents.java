@@ -220,8 +220,11 @@ class TestSonic3kHCZEvents {
         assertFalse(sprite.isObjectControlAllowsCpu());
         assertFalse(sprite.isObjectControlSuppressesMovement());
         assertFalse(sprite.isControlLocked());
-        assertTrue(sprite.getAir());
+        assertFalse(sprite.getAir());
         assertEquals(-1, sprite.getForcedAnimationId());
+        assertEquals(5, sprite.getAnimationId());
+        assertEquals(0, sprite.getAnimationFrameIndex());
+        assertEquals(0, sprite.getAnimationTick());
         assertEquals((short) 0, sprite.getXSpeed());
         assertEquals((short) 0, sprite.getYSpeed());
     }

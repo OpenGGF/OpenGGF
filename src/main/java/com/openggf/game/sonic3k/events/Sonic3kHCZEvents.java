@@ -233,6 +233,11 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     private boolean carrierP2TargetSide;
     private int carrierP1BoundsYOffset;
     private int carrierP2BoundsYOffset;
+    /** Child1_Act2LevelSize objects created when Player 1's carrier releases. */
+    private boolean levelSizeTransitionActive;
+    private int levelSizeMaxXGradient;
+    private int levelSizeMinYGradient;
+    private int levelSizeMaxYGradient;
 
     /** ROM loc_6A80C/loc_6A872: target is Camera_X_pos+$A0; release at y_pos $828. */
     private static final int CARRIER_TARGET_CAMERA_OFFSET = 0xA0;
@@ -258,6 +263,10 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         carrierUpdatedBeforeDynamicObjects = false;
         carrierP1Active = false;
         carrierP2Active = false;
+        levelSizeTransitionActive = false;
+        levelSizeMaxXGradient = 0;
+        levelSizeMinYGradient = 0;
+        levelSizeMaxYGradient = 0;
 
         // Act 2 BG wall-chase state
         act2BgRoutine = BG_WALL_INIT;
@@ -324,11 +333,16 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
      * follows this hook, so it observes the carrier's current y_pos.
      */
     public void updateRetainedCarrierObjectPass(int act) {
-        if (act != 1 || !cutsceneActive) {
+        if (act != 1 || (!cutsceneActive && !levelSizeTransitionActive)) {
             return;
         }
-        updateCutscene();
-        carrierUpdatedBeforeDynamicObjects = true;
+        if (cutsceneActive) {
+            updateCutscene();
+            carrierUpdatedBeforeDynamicObjects = true;
+        }
+        if (levelSizeTransitionActive) {
+            updateAct2LevelSizeChildren();
+        }
     }
 
     // =========================================================================
@@ -458,9 +472,79 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         if (y < CARRIER_RELEASE_Y) {
             return true;
         }
+        // Restore_PlayerControl/Restore_PlayerControl2: the carrier itself
+        // clears Status_InAir and installs the standing animation before its
+        // slot is deleted. This happens after the native player/CPU slots, so
+        // their normal movement does not resume until the following frame.
         ObjectControlState.none().applyTo(player);
+        player.setAir(false);
         player.setForcedAnimationId(-1);
+        player.setAnimationId(5);
+        player.setAnimationFrameIndex(0);
+        player.setAnimationTick(0);
+        player.forceAnimationRestart();
+        if (p1) {
+            // loc_6A8AE clears Camera_stored_min_Y_pos and creates the three
+            // Child1_Act2LevelSize gradient objects after restoring Player 1.
+            levelSizeTransitionActive = true;
+            levelSizeMaxXGradient = 0;
+            levelSizeMinYGradient = 0;
+            levelSizeMaxYGradient = 0;
+        }
         return false;
+    }
+
+    /**
+     * Ports Child1_Act2LevelSize: Obj_IncLevEndXGradual,
+     * Obj_DecLevStartYGradual, and Obj_IncLevEndYGradual. The child slots are
+     * later than the retained carrier, so their first dispatch occurs on the
+     * same RunObjects pass that releases Player 1.
+     */
+    private void updateAct2LevelSizeChildren() {
+        Level level = levelManager().getCurrentLevel();
+        if (level == null) {
+            levelSizeTransitionActive = false;
+            return;
+        }
+
+        levelSizeMaxXGradient += 0x4000;
+        int maxXStep = levelSizeMaxXGradient >> 16;
+        int maxX = camera().getMaxX() & 0xFFFF;
+        int targetMaxX = level.getMaxX();
+        boolean maxXDone = maxX >= targetMaxX;
+        if (!maxXDone && maxXStep != 0) {
+            int next = maxX + maxXStep;
+            maxXDone = next >= targetMaxX;
+            camera().setMaxX((short) Math.min(next, targetMaxX));
+        }
+
+        levelSizeMinYGradient += 0x4000;
+        int minYStep = levelSizeMinYGradient >> 16;
+        int minY = camera().getMinY() & 0xFFFF;
+        boolean minYDone = minY == 0;
+        if (!minYDone && minYStep != 0) {
+            int next = minY - minYStep;
+            minYDone = next <= 0;
+            camera().setMinY((short) Math.max(next, 0));
+        }
+
+        levelSizeMaxYGradient += 0x8000;
+        int maxYStep = levelSizeMaxYGradient >> 16;
+        int maxY = camera().getMaxY() & 0xFFFF;
+        int targetMaxY = level.getMaxY();
+        boolean maxYDone = maxY >= targetMaxY;
+        if (!maxYDone && maxYStep != 0) {
+            int next = maxY + maxYStep;
+            maxYDone = next > targetMaxY;
+            // Obj_IncLevEndYGradual writes Camera_max_Y_pos only. Preserve the
+            // Change_Act2Sizes target so the DynamicLevelEvents tail applies its
+            // independent +2 step after this object pass.
+            short dynamicTarget = camera().getMaxYTarget();
+            camera().setMaxY((short) Math.min(next, targetMaxY));
+            camera().setMaxYTarget(dynamicTarget);
+        }
+
+        levelSizeTransitionActive = !(maxXDone && minYDone && maxYDone);
     }
 
     private static int initialCarrierXVelocity(int targetDelta) {
@@ -1094,5 +1178,13 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     public void    setCarrierP1BoundsYOffset(int v) { carrierP1BoundsYOffset = v; }
     public int     getCarrierP2BoundsYOffset()      { return carrierP2BoundsYOffset; }
     public void    setCarrierP2BoundsYOffset(int v) { carrierP2BoundsYOffset = v; }
+    public boolean isLevelSizeTransitionActive()    { return levelSizeTransitionActive; }
+    public void    setLevelSizeTransitionActive(boolean v){ levelSizeTransitionActive = v; }
+    public int     getLevelSizeMaxXGradient()        { return levelSizeMaxXGradient; }
+    public void    setLevelSizeMaxXGradient(int v)   { levelSizeMaxXGradient = v; }
+    public int     getLevelSizeMinYGradient()        { return levelSizeMinYGradient; }
+    public void    setLevelSizeMinYGradient(int v)   { levelSizeMinYGradient = v; }
+    public int     getLevelSizeMaxYGradient()        { return levelSizeMaxYGradient; }
+    public void    setLevelSizeMaxYGradient(int v)   { levelSizeMaxYGradient = v; }
     public void    setWallChaseBgOverlayActiveRaw(boolean v){ wallChaseBgOverlayActive = v; }
 }

@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f10694 / 3218 errors (9 errors under `frontierOnly`).
+f3318 / 4234 errors to f10813 / 2171 errors (4 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -206,6 +206,28 @@ CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f866 / 1,
 MGZ level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
 The 11 comparison-only invariants, 21 S3K keep-green tests, focused HCZ carrier
 tests, transition request guard, and 36 level-event rewind tests pass.
+
+Milestone 9 ports the retained carriers' native release routines and their
+three level-size children. At each assigned player's `$0828` threshold,
+`Restore_PlayerControl` / `Restore_PlayerControl2` clear `Status_InAir`, remove
+object control, and install standing animation 5 with reset frame/timer state.
+Player 1's release also creates `Child1_Act2LevelSize`: independent 16.16
+gradients expand max X, lower min Y, and expand max Y while preserving
+`Camera_target_max_Y_pos` for the later DynamicLevelEvents tail
+(`sonic3k.asm:140049-140077,178154-178225,180356-180365,180575-180609`).
+
+This closes the nine-field release/camera cluster and advances HCZ from f10694 /
+3218 to f10813 / 2171 full-run errors, where native Tails CPU ground-state
+handling is the next owner (4 errors under `frontierOnly`). No trace data is
+hydrated and the implementation is driven solely by retained object state and
+camera-bound targets.
+
+The fresh granular all-S3K frontier sweep keeps both AIZ routes green and
+reproduces every non-HCZ first frontier unchanged: CNZ complete f1846 / 5, CNZ
+level-select f291 / 7, MGZ complete f866 / 1, MGZ level-select f894 / 1, ICZ
+f3139 / 1, MHZ f2920 / 1, and LBZ f2270 / 5. The pre-existing CNZ auxiliary
+failures/NPE also reproduce unchanged. Focused HCZ, rewind, trace-invariant,
+and S3K keep-green selection passes 87/87.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
