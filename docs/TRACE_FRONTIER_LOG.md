@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f11300 / 2516 errors (5 errors under `frontierOnly`).
+f3318 / 4234 errors to f12046 / 2382 errors (7 errors under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -255,6 +255,24 @@ pre-frontier mismatch. Both AIZ traces remain green; focused HCZ water-lock and
 comparison-only selections pass 22/22. The change is confined to HCZ's retained
 carrier state, after the prior granular all-S3K and targeted MGZ checks held all
 other route frontiers.
+
+Milestone 12 restores ROM monitor-break slot ordering and HCZ block solid state.
+`Touch_Monitor` now selects the broken state during the player slot, while the
+later monitor SST dispatch consumes its standing/pushing bits and releases every
+touching native player. HCZ Block's `SolidObjectFull2_1P` then consumes a retained
+airborne standing bit through `loc_1DCF0` without re-landing the player, and the
+block publishes `loc_1F3CA`'s routine-pointer high word to Tails' interact latch
+(`sonic3k.asm:40624-40638,41065-41091,43233-43257`).
+
+This closes the monitor/block/Tails cascade and advances HCZ from f11300 / 2516
+to f12046 / 2382 full-run errors (7 under `frontierOnly`). The granular all-S3K
+sweep keeps both AIZ routes green and reproduces every non-HCZ frontier exactly:
+CNZ complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f866 / 1, MGZ
+level-select f894 / 1, ICZ f3139 / 1, MHZ f2920 / 1, and LBZ f2270 / 5; the
+pre-existing CNZ auxiliary failures/NPE are unchanged. Ten focused block/monitor
+release tests pass. Trace invariants, hydration, and static-state rewind guards
+pass 12/12; the broad rewind coverage guard still reports only the unrelated,
+pre-existing AIZ intro emerald final-scalar gaps.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
