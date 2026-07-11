@@ -42,7 +42,7 @@ class TestEffectiveCatalogBuilder {
     }
 
     @Test
-    void phaseOneRefusesEveryParsedFutureCapabilityWithSpecificReasons() {
+    void phaseTwoActivatesDataFieldsButKeepsStandaloneAndCodeBlocked() {
         ModDescriptor standalone = descriptor("standalone", ModType.STANDALONE, null, "1.0.0", "*",
                 List.of(), false, null, Map.of(), null, OptionalInt.empty(), List.of());
         ModDescriptor codeEntry = descriptor("code-entry", "s1", "1.0.0", "*",
@@ -51,7 +51,7 @@ class TestEffectiveCatalogBuilder {
                 List.of(), true, null, Map.of(), null, OptionalInt.empty(), List.of());
         ModDescriptor art = descriptor("art", "s1", "1.0.0", "*",
                 List.of(), false, null, Map.of("stock", "art/file.bin"), null, OptionalInt.empty(), List.of());
-        ModDescriptor insert = descriptor("insert", "s1", "1.0.0", "*",
+        ModDescriptor insert = descriptor("insert", "s2", "1.0.0", "*",
                 List.of(), false, null, Map.of(), "cpz2", OptionalInt.empty(), List.of());
         ModDescriptor windows = descriptor("windows", "s1", "1.0.0", "*",
                 List.of(), false, null, Map.of(), null, OptionalInt.of(1), List.of());
@@ -63,10 +63,81 @@ class TestEffectiveCatalogBuilder {
         assertReason(result, "standalone", "PHASE1_STANDALONE_UNSUPPORTED");
         assertReason(result, "code-entry", "PHASE1_CODE_UNSUPPORTED");
         assertReason(result, "code-file", "PHASE1_CODE_UNSUPPORTED");
-        assertReason(result, "art", "PHASE1_ART_OVERRIDES_UNSUPPORTED");
-        assertReason(result, "insert", "PHASE1_INSERT_AFTER_UNSUPPORTED");
-        assertReason(result, "windows", "PHASE1_PATTERN_WINDOWS_UNSUPPORTED");
-        assertTrue(result.effective().orderedEnabled().isEmpty());
+        assertEquals(List.of("art", "insert", "windows"), effectiveIds(result));
+    }
+
+    @Test
+    void insertAfterAcceptsOnlyCanonicalResultsDrivenAnchorsForTheTargetGame() {
+        ModDescriptor accepted = descriptor("accepted", "s2", "1.0.0", "*",
+                List.of(), false, null, Map.of(), "cpz2", OptionalInt.empty(), List.of());
+        ModDescriptor wrongGame = descriptor("wrong-game", "s1", "1.0.0", "*",
+                List.of(), false, null, Map.of(), "cpz2", OptionalInt.empty(), List.of());
+        ModDescriptor eventChain = descriptor("event-chain", "s2", "1.0.0", "*",
+                List.of(), false, null, Map.of(), "scz1", OptionalInt.empty(), List.of());
+        ModDescriptor unknown = descriptor("unknown", "s2", "1.0.0", "*",
+                List.of(), false, null, Map.of(), "nope1", OptionalInt.empty(), List.of());
+
+        ModCatalog result = new EffectiveCatalogBuilder().build(
+                List.of(accepted, wrongGame, eventChain, unknown),
+                enabledState("accepted", "wrong-game", "event-chain", "unknown"));
+
+        assertEquals(List.of("accepted"), effectiveIds(result));
+        assertReason(result, "wrong-game", "INSERT_AFTER_STOCK_ANCHOR_INVALID");
+        assertReason(result, "event-chain", "INSERT_AFTER_STOCK_ANCHOR_INVALID");
+        assertReason(result, "unknown", "INSERT_AFTER_STOCK_ANCHOR_INVALID");
+    }
+
+    @Test
+    void patternWindowBudgetUsesFinalEffectiveOrderAndCascadesWithoutBlockingLaterIndependentMods() {
+        List<ModDescriptor> descriptors = new ArrayList<>();
+        ModState.Entry[] entries = new ModState.Entry[11];
+        for (int index = 0; index < 7; index++) {
+            String id = "full-" + index;
+            descriptors.add(descriptor(id, "s1", "1.0.0", "*", List.of(), false, null,
+                    Map.of(), null, OptionalInt.of(16), List.of()));
+            entries[index] = entry(id, true, index);
+        }
+        ModDescriptor tail = descriptor("tail", "s1", "1.0.0", "*", List.of(), false, null,
+                Map.of(), null, OptionalInt.of(15), List.of());
+        ModDescriptor overflow = descriptor("overflow", "s1", "1.0.0", "*", List.of(), false,
+                null, Map.of(), null, OptionalInt.of(2), List.of());
+        ModDescriptor dependent = withDependencies("dependent", "s1", dependency("overflow", "*"));
+        ModDescriptor laterDefault = patch("later-default", "s1", "1.0.0", "*");
+        descriptors.addAll(List.of(tail, overflow, dependent, laterDefault));
+        entries[7] = entry("tail", true, 7);
+        entries[8] = entry("overflow", true, 8);
+        entries[9] = entry("dependent", true, 9);
+        entries[10] = entry("later-default", true, 10);
+
+        ModCatalog result = new EffectiveCatalogBuilder().build(descriptors, state(entries));
+
+        List<String> expected = new ArrayList<>(
+                java.util.stream.IntStream.range(0, 7).mapToObj(i -> "full-" + i).toList());
+        expected.add("tail");
+        expected.add("later-default");
+        assertEquals(expected, effectiveIds(result));
+        assertReason(result, "overflow", "PATTERN_WINDOW_BUDGET_EXCEEDED");
+        assertReason(result, "dependent", "DEPENDENCY_BLOCKED");
+        assertEquals(ModEligibility.Status.EFFECTIVE, result.eligibility().get("later-default").status());
+
+        // Persisted order, not discovery order, decides which competing owner fits.
+        ModDescriptor sixteen = descriptor("sixteen", "s1", "1.0.0", "*", List.of(), false,
+                null, Map.of(), null, OptionalInt.of(16), List.of());
+        ModDescriptor one = patch("one", "s1", "1.0.0", "*");
+        List<ModDescriptor> base = java.util.stream.IntStream.range(0, 7)
+                .mapToObj(i -> descriptor("base-" + i, "s1", "1.0.0", "*", List.of(), false,
+                        null, Map.of(), null, OptionalInt.of(16), List.of())).toList();
+        List<ModDescriptor> reordered = new ArrayList<>(base);
+        reordered.add(sixteen);
+        reordered.add(one);
+        List<ModState.Entry> reorderedState = new ArrayList<>();
+        for (int i = 0; i < 7; i++) reorderedState.add(entry("base-" + i, true, i));
+        reorderedState.add(entry("one", true, 7));
+        reorderedState.add(entry("sixteen", true, 8));
+        ModCatalog ordered = new EffectiveCatalogBuilder().build(reordered,
+                state(reorderedState.toArray(ModState.Entry[]::new)));
+        assertTrue(effectiveIds(ordered).contains("one"));
+        assertReason(ordered, "sixteen", "PATTERN_WINDOW_BUDGET_EXCEEDED");
     }
 
     @Test
@@ -252,9 +323,11 @@ class TestEffectiveCatalogBuilder {
         ModCatalog result = assertTimeoutPreemptively(Duration.ofSeconds(5),
                 () -> new EffectiveCatalogBuilder().build(descriptors, state(entries)));
 
-        assertEquals(count, result.effective().orderedEnabled().size());
+        assertEquals(128, result.effective().orderedEnabled().size());
         assertEquals(chainId(0), effectiveIds(result).get(0));
-        assertEquals(chainId(count - 1), effectiveIds(result).get(count - 1));
+        assertEquals(chainId(127), effectiveIds(result).get(127));
+        assertReason(result, chainId(128), "PATTERN_WINDOW_BUDGET_EXCEEDED");
+        assertReason(result, chainId(count - 1), "DEPENDENCY_BLOCKED");
     }
 
     @Test

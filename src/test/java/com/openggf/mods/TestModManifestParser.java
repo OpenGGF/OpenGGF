@@ -1,6 +1,7 @@
 package com.openggf.mods;
 
 import com.openggf.io.ModInputLimits;
+import com.openggf.mods.code.BakedSheetRef;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -54,7 +55,7 @@ class TestModManifestParser {
     }
 
     @Test
-    void optionalManifestV1FutureFieldsAreParsedForLaterEligibilityRefusal() throws Exception {
+    void optionalManifestV1PhaseTwoFieldsRetainTheirStrictV1Shapes() throws Exception {
         String yaml = canonicalPatch()
                 + "entrypoint: com.example.ExampleMod$Nested\n"
                 + "insertAfter: cpz2\n"
@@ -66,6 +67,9 @@ class TestModManifestParser {
         assertEquals("cpz2", manifest.insertAfter());
         assertEquals(OptionalInt.of(16), manifest.patternWindows());
         assertEquals(Map.of("stock-art", "assets/art.bin"), manifest.artOverrides());
+        assertEquals(Map.of("stock-art", new BakedSheetRef("assets/art.bin")),
+                manifest.artOverrides().entrySet().stream().collect(java.util.stream.Collectors.toMap(
+                        Map.Entry::getKey, entry -> new BakedSheetRef(entry.getValue()))));
 
         rejects(yaml.replace("patternWindows: 16", "patternWindows: 0"));
         rejects(yaml.replace("patternWindows: 16", "patternWindows: 17"));

@@ -46,8 +46,12 @@ public final class EffectiveCatalogBuilder {
                         ignored -> "Dependency cycle: " + String.join(" -> ", participants)), participants)));
         Set<String> acyclic = new LinkedHashSet<>(descriptors.keySet());
         acyclic.removeAll(cycles.keySet());
-        for (String id : graph.stableOrder(acyclic, discoveryOrder, discoveryOrder)) {
-            resolved.put(id, evaluate(descriptors.get(id), descriptors, stateById, resolved));
+        Map<String, Integer> priority = new HashMap<>();
+        stateById.forEach((id, state) -> priority.put(id, state.order()));
+        int[] allocatedPatternWindows = {0};
+        for (String id : graph.stableOrder(acyclic, priority, discoveryOrder)) {
+            resolved.put(id, evaluate(descriptors.get(id), descriptors, stateById, resolved,
+                    allocatedPatternWindows));
         }
 
         List<ModCatalogEntry> staticCatalog = List.copyOf(retained);
@@ -61,8 +65,6 @@ public final class EffectiveCatalogBuilder {
         resolved.forEach((id, eligibility) -> {
             if (eligibility.status() == ModEligibility.Status.EFFECTIVE) effectiveIds.add(id);
         });
-        Map<String, Integer> priority = new HashMap<>();
-        stateById.forEach((id, state) -> priority.put(id, state.order()));
         List<ModDescriptor> ordered = graph.stableOrder(effectiveIds, priority, discoveryOrder).stream()
                 .map(staticById::get).toList();
         return new ModCatalog(staticCatalog, new EffectiveModCatalog(ordered), resolved);
@@ -70,7 +72,8 @@ public final class EffectiveCatalogBuilder {
 
     private ModEligibility evaluate(ModDescriptor descriptor, Map<String, ModDescriptor> descriptors,
                                     Map<String, ModState.Entry> stateById,
-                                    Map<String, ModEligibility> resolved) {
+                                    Map<String, ModEligibility> resolved,
+                                    int[] allocatedPatternWindows) {
         String id = descriptor.manifest().id();
         ModEligibility ownBlock = ownBlock(descriptor);
         if (ownBlock != null) return ownBlock;
@@ -117,6 +120,12 @@ public final class EffectiveCatalogBuilder {
             return new ModEligibility(id, ModEligibility.Status.DISABLED, List.of(
                     reason("DISABLED", "Mod is disabled in startup state", List.of())));
         }
+        int requestedWindows = descriptor.manifest().patternWindows().orElse(1);
+        if (allocatedPatternWindows[0] + requestedWindows > 128) {
+            return blocked(id, "PATTERN_WINDOW_BUDGET_EXCEEDED",
+                    "Pattern-window allocation exceeds the process limit of 128", List.of(id));
+        }
+        allocatedPatternWindows[0] += requestedWindows;
         return new ModEligibility(id, ModEligibility.Status.EFFECTIVE, List.of());
     }
 
@@ -134,12 +143,12 @@ public final class EffectiveCatalogBuilder {
                 "Standalone mods are not supported in Phase 1", List.of());
         if (descriptor.containsCode() || manifest.entrypoint() != null) return blocked(id, "PHASE1_CODE_UNSUPPORTED",
                 "Mod code is not supported in Phase 1", List.of());
-        if (!manifest.artOverrides().isEmpty()) return blocked(id, "PHASE1_ART_OVERRIDES_UNSUPPORTED",
-                "Art overrides are not supported in Phase 1", List.of());
-        if (manifest.insertAfter() != null) return blocked(id, "PHASE1_INSERT_AFTER_UNSUPPORTED",
-                "insertAfter is not supported in Phase 1", List.of());
-        if (manifest.patternWindows().isPresent()) return blocked(id, "PHASE1_PATTERN_WINDOWS_UNSUPPORTED",
-                "patternWindows is not supported in Phase 1", List.of());
+        if (manifest.insertAfter() != null
+                && !StockProgressionAnchors.contains(manifest.baseGame(), manifest.insertAfter())) {
+            return blocked(id, "INSERT_AFTER_STOCK_ANCHOR_INVALID",
+                    "insertAfter is not a results-driven stock boundary for " + manifest.baseGame(),
+                    List.of());
+        }
         return null;
     }
 
