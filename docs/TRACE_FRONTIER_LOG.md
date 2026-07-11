@@ -621,6 +621,15 @@ CPU-Tails logical-held bit and one later camera-Y sample). The full S1 (29)
 and S2 (48) trace fleets passed with the Round 42-43 working tree. The AIZ
 stage is not green yet.
 
+Round 44 restores the late `Ctrl_2_logical` clear owned by the AIZ post-boss
+control helper at ROM `loc_863C0`. The positive controller-2 lock still lets
+Tails CPU generate and consume its delayed follow input, then the helper's
+later object slot clears the live logical word before frame observation. The
+engine now keeps the detailed CPU-step sample while exposing the cleared live
+latch to trace diagnostics. The focused replay advances from f20715 / 2 errors
+to f20769 / 1 error (a single camera-Y sample during the final fall). The AIZ
+stage is not green yet.
+
 ## 2026-07-10 - S2 special-stage campaign closeout: fully ratcheted and keep-green
 
 Worktree `.worktrees/ai-s2-ss-trace-green`, branch

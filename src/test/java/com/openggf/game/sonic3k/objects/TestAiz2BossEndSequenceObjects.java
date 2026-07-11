@@ -924,6 +924,10 @@ class TestAiz2BossEndSequenceObjects {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setCentreX((short) 0x4900);
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        SidekickCpuController tailsCpu = new SidekickCpuController(tails, player);
+        tails.setCpuController(tailsCpu);
+        setField(tailsCpu, "diagnosticCtrl2HeldLatch", AbstractPlayableSprite.INPUT_UP);
+        setField(tailsCpu, "diagnosticCtrl2PressedLatch", AbstractPlayableSprite.INPUT_UP);
         tails.setObjectControlled(true);
         tails.setObjectControlAllowsCpu(false);
         tails.setObjectControlSuppressesMovement(true);
@@ -943,6 +947,9 @@ class TestAiz2BossEndSequenceObjects {
         assertTrue(tails.isControlLocked(),
                 "The AIZ2 controller still holds Player 2 input during Sonic's "
                         + "walk-right sequence.");
+        assertEquals(0, tailsCpu.getDiagnosticGeneratedHeldInput(),
+                "loc_863C0's positive Ctrl_2 lock clears the post-CPU logical word");
+        assertEquals(0, tailsCpu.getDiagnosticGeneratedPressedInput());
     }
 
     @Test

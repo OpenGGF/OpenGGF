@@ -625,24 +625,14 @@ public class SidekickCpuController {
     }
 
     public int getDiagnosticGeneratedHeldInput() {
-        NormalStepDiagnostics d = latestNormalStepDiagnostics;
-        if (state == State.NORMAL
-                && d != null
-                && d.frameCounter() == frameCounter
-                && d.hasCpuResult()) {
-            return d.generatedInput() & 0xFF;
-        }
+        // Return the live Ctrl_2_logical latch, not the earlier NORMAL-step
+        // sample. Later object slots can overwrite/clear the global after the
+        // CPU pass (for example AIZ loc_863C0), while the detailed normal-step
+        // diagnostic intentionally retains the value generated inside CPU code.
         return diagnosticCtrl2HeldLatch & 0xFF;
     }
 
     public int getDiagnosticGeneratedPressedInput() {
-        NormalStepDiagnostics d = latestNormalStepDiagnostics;
-        if (state == State.NORMAL
-                && d != null
-                && d.frameCounter() == frameCounter
-                && d.hasCpuResult()) {
-            return d.generatedPressedInput() & 0xFF;
-        }
         return diagnosticCtrl2PressedLatch & 0xFF;
     }
 

@@ -120,6 +120,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         if (!postCapsuleSequenceStarted) {
             startPostCapsuleSequence(player);
         }
+        clearPositiveLockedSidekickLogicalWord(player);
         if (pendingLookUpInputAfterStop) {
             pendingLookUpInputAfterStop = false;
             player.setForceInputRight(false);
@@ -268,6 +269,25 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
                 if (!locked) {
                     sprite.clearForcedInputMask();
                 }
+            }
+        }
+    }
+
+    private void clearPositiveLockedSidekickLogicalWord(AbstractPlayableSprite player) {
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> player,
+                () -> services().playerQuery().sidekicks());
+        for (PlayableEntity sidekick : query.playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (sidekick == player) {
+                continue;
+            }
+            if (sidekick instanceof AbstractPlayableSprite sprite
+                    && sprite.getCpuController() != null) {
+                // ROM loc_863C0 runs after Player_2 and uses a positive
+                // Ctrl_2_locked byte: CPU control still executes, then this
+                // object clears Ctrl_2_logical before the frame is observed.
+                sprite.getCpuController().clearController2LogicalLatch();
             }
         }
     }
