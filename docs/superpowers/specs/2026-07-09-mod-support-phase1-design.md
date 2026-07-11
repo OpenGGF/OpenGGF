@@ -43,6 +43,10 @@ trace, test, attempt-replay, recording-replay, or capture sessions.
   values, atomic replace-on-save, quarantine for structurally invalid state, and a
   surfaced save result. Newly added fields are ignored by older readers only where
   the old behavior remains safe.
+  On providers without handle-relative directory operations or reliable file identity,
+  the normalized mod root and its parent are trusted against concurrent malicious
+  mutation for the full state load/quarantine/save transaction; the shared security
+  contract defines the defense-in-depth boundary.
 
 All jar paths and resource limits follow
 `2026-07-10-mod-support-format-security-contracts.md`.

@@ -35,6 +35,15 @@ cannot affect the session. `close()` closes archives and removes only the verifi
 engine-created snapshot tree/file. This preserves Windows dev mode without pretending
 portable Java offers handle-relative race-proof traversal on every provider.
 
+For `ModStateStore` on providers without handle-relative `SecureDirectoryStream`
+operations or reliable `fileKey` identity (notably the default Windows provider), the
+configured normalized mod root and its parent are trusted not to undergo concurrent
+malicious replacement or mutation for the duration of each load, quarantine, or save
+transaction. State content remains hostile and bounded; pre/post identity checks,
+`NOFOLLOW_LINKS` opens, private staging, exact post-publication bytes, and
+ownership-checked cleanup are defense in depth, not a claim of portable race-proof
+pathname mutation.
+
 Directory snapshot construction enforces entry count, per-name UTF-8 bytes, aggregate
 entry-name bytes, per-file bytes, and actual aggregate validation bytes incrementally
 inside the copy loop. Each limit is checked before the corresponding temporary-file
