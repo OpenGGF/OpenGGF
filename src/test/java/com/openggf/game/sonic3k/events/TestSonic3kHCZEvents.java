@@ -80,7 +80,9 @@ class TestSonic3kHCZEvents {
         GameServices.gameState().setEndOfLevelFlag(true);
 
         events.update(0, 0);
-        events.update(0, 1);
+        for (int frame = 1; frame <= 131; frame++) {
+            events.update(0, frame);
+        }
 
         assertTrue(Files.exists(saveDir.resolve("slot1.json")));
     }

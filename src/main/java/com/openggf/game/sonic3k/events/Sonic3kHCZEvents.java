@@ -23,6 +23,7 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -139,6 +140,14 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     // =========================================================================
     private static final int TRANSITION_OFFSET_X = -0x3600;
     private static final int TRANSITION_WATER_LEVEL = 0x6A0;
+    /**
+     * ROM incremental drain for HCZ2_8x8_Secondary_KosM. The queued archive
+     * expands to 17,568 bytes (ROM $3BFA6C); Process_Kos_Queue is interruptible
+     * and Process_Kos_Module_Queue exposes completion after 131 level-loop
+     * dispatches for this workload (sonic3k.asm:2668-2791,2823-2953,
+     * 105718-105748).
+     */
+    private static final int HCZ2_SECONDARY_KOS_DRAIN_FRAMES = 131;
 
     // =========================================================================
     // State
@@ -151,6 +160,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
     /** Prevents requesting the transition more than once. */
     private boolean transitionRequested;
+    private int transitionKosDrainFrames;
 
     /**
      * ROM: Boss_flag — set by the boss object when the fight begins.
@@ -246,6 +256,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         bgRoutine = BG_STAGE_NORMAL;
         eventsFg5 = false;
         transitionRequested = false;
+        transitionKosDrainFrames = 0;
         bossFlag = false;
         cutsceneActive = false;
         cutsceneFrame = 0;
@@ -490,20 +501,18 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                 if (eventsFg5) {
                     eventsFg5 = false;
                     bgRoutine = BG_STAGE_DO_TRANSITION;
+                    transitionKosDrainFrames = 0;
                     LOG.info("HCZ1 BG: Events_fg_5 detected, advancing to transition stage");
                 }
                 // Normal scrolling handled by SwScrlHcz
             }
             case BG_STAGE_DO_TRANSITION -> {
-                // ROM: HCZ1BGE_DoTransition waits for Kos_modules_left == 0.
-                // We don't have a Kos queue. Instead, wait until endOfLevelFlag is
-                // set (results screen has exited) before requesting the transition.
-                // This ensures the tally completes first, and critically, the player
-                // is still in the victory pose (objectControlled) during the level
-                // reload so they don't land on the old terrain. When onExitReady()
-                // releases them on the same frame, the terrain is already Act 2's
-                // layout and they fall through the gap naturally.
-                if (!transitionRequested && gameState().isEndOfLevelFlag()) {
+                // ROM waits only for the HCZ2 Kosinski module workload queued by
+                // HCZ1BGE_Normal. Results continue running across the reload; the
+                // later End_of_level_flag is not this transition's owner.
+                transitionKosDrainFrames++;
+                if (!transitionRequested
+                        && transitionKosDrainFrames >= HCZ2_SECONDARY_KOS_DRAIN_FRAMES) {
                     requestHcz2Transition();
                 }
             }
@@ -527,30 +536,62 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     private void requestHcz2Transition() {
         transitionRequested = true;
 
-        // Tell the transition bridge that the next HCZ Act 2 init should release the player.
-        // The player is still in the victory pose (objectControlled) so they don't land
-        // on the old terrain. After the level reloads as Act 2, releasing them lets them
-        // fall through the gap in Act 2's terrain.
-        S3kTransitionWriteSupport.requestHczPostTransitionCutscene(
-                module().getLevelEventProvider());
-
         LevelManager lm = levelManager();
+        int postTransitionMinX = offsetWord(camera().getMinX(), TRANSITION_OFFSET_X);
+        int postTransitionMaxX = offsetWord(camera().getMaxX(), TRANSITION_OFFSET_X);
+        int postTransitionMinY = offsetWord(camera().getMinY(), 0);
+        int postTransitionMaxY = offsetWord(camera().getMaxY(), 0);
+        int postTransitionMaxYTarget = offsetWord(camera().getMaxYTarget(), 0);
         SessionSaveRequests.requestCurrentSessionSave(SaveReason.PROGRESSION_SAVE);
-        lm.requestSeamlessTransition(
+        SeamlessLevelTransitionRequest request =
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                         .targetZoneAct(Sonic3kZoneIds.ZONE_HCZ, 1)
                         .deactivateLevelNow(false)
                         // Results screen already started act 2 music
                         .preserveMusic(true)
+                        // Load_Level swaps HCZ resources without clearing the
+                        // running act-results ring/time globals.
+                        .preserveLevelGamestate(true)
                         // Show act 2 title card after the level reloads
                         .showInLevelTitleCard(true)
+                        // ROM subtracts $3600 from the live camera and its
+                        // bounds; it does not recenter from Player_1 afterward.
+                        .preserveOffsetCameraPosition(true)
+                        .postTransitionMinX(postTransitionMinX)
+                        .postTransitionMaxX(postTransitionMaxX)
+                        .postTransitionMinY(postTransitionMinY)
+                        .postTransitionMaxY(postTransitionMaxY)
+                        .postTransitionMaxYTarget(postTransitionMaxYTarget)
                         .playerOffset(TRANSITION_OFFSET_X, 0)
                         .cameraOffset(TRANSITION_OFFSET_X, 0)
-                        .build());
+                        .build();
+
+        if (lm.getCurrentLevel() == null) {
+            lm.requestSeamlessTransition(request);
+        } else {
+            try {
+                // HCZ1BGE_DoTransition performs Load_Level and every coordinate
+                // subtraction inside this background-event dispatch. Deferring
+                // through the outer game loop leaves one unshifted comparison
+                // frame (sonic3k.asm:105747-105780).
+                lm.executeActTransition(request);
+                waterSystem().setWaterLevelDirect(
+                        Sonic3kZoneIds.ZONE_HCZ, 1, TRANSITION_WATER_LEVEL);
+                waterSystem().setWaterLevelTarget(
+                        Sonic3kZoneIds.ZONE_HCZ, 1, TRANSITION_WATER_LEVEL);
+                lm.updatePlayableWaterStatesForCurrentLevel();
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to apply HCZ act transition", e);
+            }
+        }
 
         LOG.info("HCZ1: requested seamless transition to Act 2 (offset X=" +
                 Integer.toHexString(TRANSITION_OFFSET_X) + ")");
+    }
+
+    private static int offsetWord(short value, int offset) {
+        return ((value & 0xFFFF) + offset) & 0xFFFF;
     }
 
     // =========================================================================

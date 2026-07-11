@@ -22,7 +22,7 @@ The full S1 sweep remains 29/29 green, the full S2 TraceReplay class fleet is
 20/20 green, and both S3K AIZ routes are fully green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f9900 / 3227 errors (6 errors under `frontierOnly`).
+f3318 / 4234 errors to f9976 / 2466 errors (1 error under `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
 Round 79 CNZ2 greened and was banked into `next` as merge `3344c27d3`; MTZ3
@@ -101,6 +101,24 @@ keep-green tests, two focused signpost guards, and the signpost-containing
 `selfContainedTransientChildrenRestoreThroughSessionSnapshot` rewind test pass.
 The unrelated AIZ2 capsule method in the broader rewind class remains
 independently red and was not changed by this signpost milestone.
+
+Milestone 3 replaces HCZ's results-completion approximation with the native
+act-transition owner. `HCZ1BGE_Normal` queues the 17,568-byte
+`HCZ2_8x8_Secondary_KosM` workload; its 131 incremental level-loop drain
+dispatches now gate `HCZ1BGE_DoTransition`, rather than the much later
+`End_of_level_flag` (`sonic3k.asm:2668-2791,2823-2953,105702-105780`, ROM
+resource `$3BFA6C`). When the workload clears, the background event reloads Act
+2 in the same dispatch, subtracts `$3600` from both players and the live camera
+bounds, preserves results-era ring/time state, and applies the transition-only
+water height `$06A0`. The prior engine-only post-reload whirlpool cutscene is no
+longer requested; the ROM keeps both ending poses and the locked camera while
+results continue over the new act.
+
+This closes the f9900 coordinate/camera/ring/water transition cluster and moves
+HCZ to f9976 / 2466 full-run errors (1 under `frontierOnly`). The all-S3K sweep
+again keeps both AIZ routes green and reproduces every non-HCZ frontier exactly.
+The 11 invariant guards, 21 keep-green tests, and all 4 focused HCZ event tests
+pass.
 
 ## 2026-07-11 - AIZ2 post-bombing Plane A loop regression (no frontier move)
 
