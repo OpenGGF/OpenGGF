@@ -648,7 +648,12 @@ class TestLevelEditorController {
                         EditorInputHandler.Action.INCREMENT_SUBTYPE,
                         EditorInputHandler.Action.DECREMENT_SUBTYPE,
                         EditorInputHandler.Action.DELETE_SPAWN,
-                        EditorInputHandler.Action.MOVE_SELECTED_SPAWN_TO_CURSOR
+                        EditorInputHandler.Action.MOVE_SELECTED_SPAWN_TO_CURSOR,
+                        EditorInputHandler.Action.TOGGLE_COLLISION_OVERLAY,
+                        EditorInputHandler.Action.TOGGLE_COLLISION_PATH,
+                        EditorInputHandler.Action.CYCLE_COLLISION_MODE,
+                        EditorInputHandler.Action.INCREMENT_SOLID_TILE_INDEX,
+                        EditorInputHandler.Action.DECREMENT_SOLID_TILE_INDEX
                 },
                 EditorInputHandler.Action.values());
     }

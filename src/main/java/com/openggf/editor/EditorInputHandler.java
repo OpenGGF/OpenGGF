@@ -15,6 +15,7 @@ import java.util.function.Supplier;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_DELETE;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_C;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_E;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
@@ -24,6 +25,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_L;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_M;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_O;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_P;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
@@ -31,6 +33,9 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_S;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_V;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_BRACKET;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_BRACKET;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_Y;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_Z;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
@@ -53,7 +58,12 @@ public final class EditorInputHandler {
         INCREMENT_SUBTYPE,
         DECREMENT_SUBTYPE,
         DELETE_SPAWN,
-        MOVE_SELECTED_SPAWN_TO_CURSOR
+        MOVE_SELECTED_SPAWN_TO_CURSOR,
+        TOGGLE_COLLISION_OVERLAY,
+        TOGGLE_COLLISION_PATH,
+        CYCLE_COLLISION_MODE,
+        INCREMENT_SOLID_TILE_INDEX,
+        DECREMENT_SOLID_TILE_INDEX
     }
 
     private static final int WORLD_MOVE_SPEED = 3;
@@ -137,6 +147,21 @@ public final class EditorInputHandler {
         if (inputHandler.isKeyPressed(GLFW_KEY_M)) {
             handleAction(Action.MOVE_SELECTED_SPAWN_TO_CURSOR);
         }
+        if (inputHandler.isKeyPressed(GLFW_KEY_C)) {
+            handleAction(Action.TOGGLE_COLLISION_OVERLAY);
+        }
+        if (inputHandler.isKeyPressed(GLFW_KEY_P)) {
+            handleAction(Action.TOGGLE_COLLISION_PATH);
+        }
+        if (inputHandler.isKeyPressed(GLFW_KEY_V)) {
+            handleAction(Action.CYCLE_COLLISION_MODE);
+        }
+        if (inputHandler.isKeyPressed(GLFW_KEY_RIGHT_BRACKET)) {
+            handleAction(Action.INCREMENT_SOLID_TILE_INDEX);
+        }
+        if (inputHandler.isKeyPressed(GLFW_KEY_LEFT_BRACKET)) {
+            handleAction(Action.DECREMENT_SOLID_TILE_INDEX);
+        }
         if (controller.isSpawnEditing()) {
             if (rawPrimary || (logicalActions & InputActionMasks.ACTION_A) != 0) {
                 handleAction(Action.APPLY_PRIMARY_ACTION);
@@ -187,6 +212,11 @@ public final class EditorInputHandler {
             case DELETE_SPAWN -> controller.deleteSpawnAtCursor();
             case MOVE_SELECTED_SPAWN_TO_CURSOR -> controller.moveSelectedSpawn(
                     controller.worldCursor().x(), controller.worldCursor().y());
+            case TOGGLE_COLLISION_OVERLAY -> controller.toggleCollisionOverlay();
+            case TOGGLE_COLLISION_PATH -> controller.toggleCollisionPath();
+            case CYCLE_COLLISION_MODE -> controller.cycleSelectedCellCollisionMode();
+            case INCREMENT_SOLID_TILE_INDEX -> controller.adjustSelectedChunkSolidTileIndex(1);
+            case DECREMENT_SOLID_TILE_INDEX -> controller.adjustSelectedChunkSolidTileIndex(-1);
         }
     }
 

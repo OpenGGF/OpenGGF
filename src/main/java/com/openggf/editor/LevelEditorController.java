@@ -5,10 +5,12 @@ import com.openggf.editor.commands.DeriveChunkFromPatternsCommand;
 import com.openggf.editor.commands.PlaceBlockCommand;
 import com.openggf.editor.commands.DeleteObjectSpawnCommand;
 import com.openggf.editor.commands.DeleteRingSpawnCommand;
+import com.openggf.editor.commands.CycleCellCollisionModeCommand;
 import com.openggf.editor.commands.MoveObjectSpawnCommand;
 import com.openggf.editor.commands.MoveRingSpawnCommand;
 import com.openggf.editor.commands.PlaceObjectSpawnCommand;
 import com.openggf.editor.commands.PlaceRingSpawnCommand;
+import com.openggf.editor.commands.SetChunkSolidTileIndexCommand;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.ChunkDesc;
@@ -45,6 +47,8 @@ public final class LevelEditorController {
     private ObjectSpawn selectedObjectSpawn;
     private RingSpawn selectedRingSpawn;
     private ObjectSpawn selectedRingBackingObject;
+    private boolean collisionOverlayEnabled;
+    private EditorCollisionPath collisionPath = EditorCollisionPath.PRIMARY;
 
     public void attachLevel(MutableLevel level) {
         this.level = Objects.requireNonNull(level, "level");
@@ -67,6 +71,8 @@ public final class LevelEditorController {
         selectedObjectSpawn = null;
         selectedRingSpawn = null;
         selectedRingBackingObject = null;
+        collisionOverlayEnabled = false;
+        collisionPath = EditorCollisionPath.PRIMARY;
     }
 
     public void configureSpawnEditing(ObjectRegistry registry, ObjectPlacementEncoding encoding) {
@@ -209,6 +215,70 @@ public final class LevelEditorController {
 
     public MutableLevel currentLevel() {
         return level;
+    }
+
+    public boolean isCollisionOverlayEnabled() {
+        return collisionOverlayEnabled;
+    }
+
+    public void toggleCollisionOverlay() {
+        collisionOverlayEnabled = !collisionOverlayEnabled;
+    }
+
+    public EditorCollisionPath collisionPath() {
+        return collisionPath;
+    }
+
+    public void toggleCollisionPath() {
+        collisionPath = collisionPath.other();
+    }
+
+    public void cycleSelectedCellCollisionMode() {
+        MutableLevel attachedLevel = level;
+        Integer blockIndex = selection.selectedBlock();
+        if (attachedLevel == null || blockIndex == null || depth != EditorHierarchyDepth.BLOCK
+                || !isValidBlockIndex(attachedLevel, blockIndex)) {
+            return;
+        }
+        Block block = attachedLevel.getBlock(blockIndex);
+        int cellIndex = selectedBlockCellY * block.getGridSide() + selectedBlockCellX;
+        executeCommand(new CycleCellCollisionModeCommand(
+                attachedLevel, blockIndex, cellIndex, collisionPath));
+    }
+
+    public void setSelectedChunkSolidTileIndex(int newIndex) {
+        MutableLevel attachedLevel = level;
+        Integer chunkIndex = selection.selectedChunk();
+        if (attachedLevel == null || chunkIndex == null || !isCollisionIndexEditingDepth()
+                || !isValidChunkIndex(attachedLevel, chunkIndex)) {
+            return;
+        }
+        Chunk chunk = attachedLevel.getChunk(chunkIndex);
+        int current = collisionPath == EditorCollisionPath.PRIMARY
+                ? chunk.getSolidTileIndex() : chunk.getSolidTileAltIndex();
+        if (current == newIndex) {
+            return;
+        }
+        executeCommand(new SetChunkSolidTileIndexCommand(
+                attachedLevel, chunkIndex, collisionPath, newIndex));
+    }
+
+    public void adjustSelectedChunkSolidTileIndex(int delta) {
+        MutableLevel attachedLevel = level;
+        Integer chunkIndex = selection.selectedChunk();
+        if (attachedLevel == null || chunkIndex == null || !isCollisionIndexEditingDepth()
+                || !isValidChunkIndex(attachedLevel, chunkIndex)) {
+            return;
+        }
+        Chunk chunk = attachedLevel.getChunk(chunkIndex);
+        int current = collisionPath == EditorCollisionPath.PRIMARY
+                ? chunk.getSolidTileIndex() : chunk.getSolidTileAltIndex();
+        int maxIndex = Math.max(0, attachedLevel.getSolidTileCount() - 1);
+        setSelectedChunkSolidTileIndex(clamp(current + delta, 0, maxIndex));
+    }
+
+    private boolean isCollisionIndexEditingDepth() {
+        return depth == EditorHierarchyDepth.BLOCK || depth == EditorHierarchyDepth.CHUNK;
     }
 
     public void undo() {

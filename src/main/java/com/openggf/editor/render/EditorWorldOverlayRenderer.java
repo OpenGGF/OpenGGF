@@ -48,6 +48,7 @@ public class EditorWorldOverlayRenderer {
     private final GraphicsManager graphicsManager;
     private final LevelEditorController controller;
     private final EditorTextRenderer textRenderer;
+    private final EditorCollisionOverlayBuilder collisionOverlayBuilder;
 
     public EditorWorldOverlayRenderer() {
         this(null, GameServices.graphics());
@@ -64,9 +65,17 @@ public class EditorWorldOverlayRenderer {
     public EditorWorldOverlayRenderer(LevelEditorController controller,
                                       GraphicsManager graphicsManager,
                                       EditorTextRenderer textRenderer) {
+        this(controller, graphicsManager, textRenderer, new EditorCollisionOverlayBuilder());
+    }
+
+    public EditorWorldOverlayRenderer(LevelEditorController controller,
+                                      GraphicsManager graphicsManager,
+                                      EditorTextRenderer textRenderer,
+                                      EditorCollisionOverlayBuilder collisionOverlayBuilder) {
         this.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
         this.controller = controller;
         this.textRenderer = Objects.requireNonNull(textRenderer, "textRenderer");
+        this.collisionOverlayBuilder = Objects.requireNonNull(collisionOverlayBuilder, "collisionOverlayBuilder");
     }
 
     public void render() {
@@ -78,6 +87,7 @@ public class EditorWorldOverlayRenderer {
         appendWorldCommands(commands, editorMode.getCursor());
         SpawnOverlay spawnOverlay = currentSpawnOverlay(editorMode);
         commands.addAll(spawnOverlay.markerCommands());
+        appendCollisionOverlayCommands(commands, currentCollisionOverlay(editorMode));
         if (!commands.isEmpty()) {
             graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, commands));
         }
@@ -159,6 +169,35 @@ public class EditorWorldOverlayRenderer {
         }
         return buildSpawnOverlay(level, controller.spawnEditMode(), camera.getXWithShake(),
                 camera.getYWithShake(), camera.getWidth(), camera.getHeight());
+    }
+
+    private List<EditorCollisionOverlayBuilder.Cell> currentCollisionOverlay(EditorModeContext editorMode) {
+        Camera camera = editorMode.getCamera();
+        Level level = editorMode.getWorldSession().getCurrentLevel();
+        if (controller == null || camera == null || level == null) {
+            return List.of();
+        }
+        return collisionOverlayBuilder.build(level, controller.collisionPath(),
+                camera.getXWithShake(), camera.getYWithShake(), camera.getWidth(), camera.getHeight(),
+                controller.isCollisionOverlayEnabled());
+    }
+
+    protected void appendCollisionOverlayCommands(List<GLCommand> commands,
+                                                  List<EditorCollisionOverlayBuilder.Cell> cells) {
+        for (EditorCollisionOverlayBuilder.Cell cell : cells) {
+            float r;
+            float g;
+            float b;
+            switch (cell.mode()) {
+                case NO_COLLISION -> { r = 0.35f; g = 0.35f; b = 0.35f; }
+                case TOP_SOLID -> { r = 0.20f; g = 0.95f; b = 0.35f; }
+                case LEFT_RIGHT_BOTTOM_SOLID -> { r = 0.25f; g = 0.55f; b = 1.0f; }
+                case ALL_SOLID -> { r = 1.0f; g = 0.25f; b = 0.25f; }
+                default -> throw new IllegalStateException("Unexpected collision mode: " + cell.mode());
+            }
+            appendRectOutline(commands, cell.worldX(), cell.worldY(),
+                    cell.worldX() + 16, cell.worldY() + 16, r, g, b);
+        }
     }
 
     private void renderSpawnLabels(List<SpawnLabel> labels, Camera camera) {
