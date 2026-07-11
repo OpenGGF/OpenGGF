@@ -111,10 +111,10 @@ public class TailsTailsController {
         0xB,   // 0x22 Carry -> Fly1
         0xC,   // 0x23 Ascend -> Fly2
         0xB,   // 0x24 Tired -> Fly1
-        0xB,   // 0x25 Swim -> Fly1
-        0xC,   // 0x26 Swim ascend -> Fly2
-        0xB,   // 0x27 Swim carry -> Fly1
-        0xB,   // 0x28 Swim tired -> Fly1
+        0,     // 0x25 Swim -> Blank (tails included in parent mapping)
+        0,     // 0x26 Swim ascend -> Blank (tails included in parent mapping)
+        0,     // 0x27 Swim carry -> Blank (tails included in parent mapping)
+        0,     // 0x28 Swim tired -> Blank (tails included in parent mapping)
     };
 
     // --- S2 frame data (mapping frame indices from MapUnc_Tails) ---
