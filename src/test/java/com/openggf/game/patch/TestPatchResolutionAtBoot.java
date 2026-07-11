@@ -75,8 +75,12 @@ class TestPatchResolutionAtBoot {
     @Test
     void headlessBootSeamUsesInjectedResolverAndConfigRequest() {
         ModuleResolutionService service = ModuleResolutionService.forTests(
-                List.of(new RegisteredPatch(new PatchOwner.BuiltIn("fake"),
-                        "fake", trailPatch("fake"), 0)), PatchEnablement.ALL_ENABLED);
+                List.of(
+                        new RegisteredPatch(new PatchOwner.BuiltIn("one"),
+                                "one", trailPatch("one"), 0),
+                        new RegisteredPatch(new PatchOwner.BuiltIn("two"),
+                                "two", trailPatch("two"), 1)),
+                PatchEnablement.ALL_ENABLED);
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
@@ -91,8 +95,12 @@ class TestPatchResolutionAtBoot {
         HeadlessGameBoot.openResolvedSessionForBoot(injected, root);
 
         assertSame(root, SessionManager.getCurrentWorldSession().rootGameModule());
-        assertEquals(List.of("fake"), ((PatchTrail) SessionManager.requireCurrentGameModule())
+        assertEquals(List.of("one", "two"), ((PatchTrail) SessionManager.requireCurrentGameModule())
                 .appliedPatchIds());
+
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        HeadlessGameBoot.openResolvedSessionForBoot(injected, root);
+        assertSame(root, SessionManager.requireCurrentGameModule());
     }
 
     @Test
