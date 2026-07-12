@@ -7,10 +7,34 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHczEndBossInstance {
+    @Test
+    void preAttackSetupRetainsTheNativeFullFfCountdown() throws Exception {
+        TestObjectServices services = new TestObjectServices()
+                .withConfiguration(SonicConfigurationService.getInstance());
+        HczEndBossInstance boss = ObjectConstructionContext.construct(
+                services,
+                () -> new HczEndBossInstance(
+                        new ObjectSpawn(0x4050, 0x0738, 0x9A, 0, 0, false, 0x0738)));
+        boss.setServices(services);
+
+        Method callback = HczEndBossInstance.class.getDeclaredMethod("onStRiseComplete");
+        callback.setAccessible(true);
+        callback.invoke(boss);
+
+        Field waitTimer = HczEndBossInstance.class.getDeclaredField("waitTimer");
+        waitTimer.setAccessible(true);
+        assertEquals(0x100, waitTimer.getInt(boss),
+                "the folded callback must retain a setup dispatch before loc_6AFB6 consumes the $FF timer");
+    }
+
     @Test
     void bossPersistsWhileFleeingSoDefeatHandoffCanUnlockCamera() {
         TestObjectServices services = new TestObjectServices()

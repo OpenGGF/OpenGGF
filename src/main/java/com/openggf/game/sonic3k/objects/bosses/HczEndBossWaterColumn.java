@@ -229,6 +229,12 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     // -- Spray animation state (inline — replaces spray child loc_6B3DE) --
     private int sprayAnimIndex;
     private int sprayAnimTimer;
+    /**
+     * ROM's separately allocated loc_6B3DE spray slot runs after the column
+     * parent. When loc_6B34A selects DESCEND, that later slot still completes
+     * its final loc_6B410 suction/grab dispatch before observing parent bit 3.
+     */
+    private boolean pendingSprayTailInteraction;
 
     /** Platform wait counter for ROUTINE_PLATFORM (ROM $2E). */
     private int platformWait;
@@ -421,8 +427,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         solidActive = true;
 
         // Suction (replicated from spray child sub_6B9AC + sub_6B9E2)
-        if (risingAtEntry) {
+        if (risingAtEntry || pendingSprayTailInteraction) {
             applySuction(player);
+            pendingSprayTailInteraction = false;
         }
     }
 
@@ -524,6 +531,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         if (!boss.isPropellerActive()) {
             // loc_6B34A: transition to DESCEND
             routine = ROUTINE_DESCEND;
+            pendingSprayTailInteraction = true;
 
             // ROM: bset #3,$38(a0) — set own flag (not used elsewhere)
             // ROM: y_vel = $80

@@ -479,7 +479,11 @@ public class HczEndBossInstance extends AbstractBossInstance
         state.y = hoverCentreY;
         state.yFixed = hoverCentreY << 16;
         state.yVel = 0;
-        setWait(0xFF, WaitCallback.BEGIN_ATTACK_PHASE);
+        // The consolidated engine reaches this callback inside the preceding
+        // move/wait dispatch. Keep the setup dispatch separate from the ROM
+        // $FF countdown consumed by loc_6AFB6 -> Obj_Wait: the first future
+        // update publishes the setup state, then the native countdown runs.
+        setWait(0x100, WaitCallback.BEGIN_ATTACK_PHASE);
     }
 
     /**

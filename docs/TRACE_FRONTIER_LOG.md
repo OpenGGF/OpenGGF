@@ -25,7 +25,7 @@ so it is not an HCZ campaign regression. The other 19 selected S2 classes and
 both S3K AIZ routes are green after AIZ round 64. AIZ is
 therefore closed as the first-red stage. HCZ is active on branch
 `bugfix/ai-hcz-trace-replays`: its complete-run frontier has advanced from
-f3318 / 4234 errors to f29134 / 301 errors (1 error under
+f3318 / 4234 errors to f29152 / 316 errors (12 errors under
 `frontierOnly`).
 OOZ2 greened in round 54 and
 was banked into `next`; ARZ2 greened in round 71 and was banked into `next`.
@@ -639,6 +639,23 @@ focused twisting-loop tests pass 4/4. The granular nine-route S3K matrix keeps
 both AIZ routes green and preserves every non-HCZ frontier/count exactly: CNZ
 complete f1846 / 5, CNZ level-select f291 / 7, MGZ complete f1072 / 1, MGZ
 level-select f1030 / 1, ICZ f3174 / 1, MHZ f2920 / 1, and LBZ f2270 / 5.
+
+Milestone 58 separates the end-boss attack setup from its native `$FF`
+`Obj_Wait` countdown and retains the later spray slot across the column's
+hold-to-descent handoff. The consolidated boss callback now preserves the
+setup dispatch before `loc_6AFB6` consumes the full countdown. When
+`loc_6B34A` sets the column's descent bit, the separately allocated
+`loc_6B3DE` spray object still completes its later `loc_6B410` suction/grab
+work once before observing that bit (`sonic3k.asm:140934-140973,
+141084-141106,141205-141239,177944-177952`).
+
+This closes the f29134-f29151 Tails suction window and advances HCZ to f29152
+/ 316 full-run errors (12 under `frontierOnly`), where the boss-arena vertical
+player state is the next owner. The focused boss/water-column tests pass 5/5.
+The granular nine-route S3K matrix keeps both AIZ routes green and preserves
+every non-HCZ frontier/count exactly: CNZ complete f1846 / 5, CNZ level-select
+f291 / 7, MGZ complete f1072 / 1, MGZ level-select f1030 / 1, ICZ f3174 / 1,
+MHZ f2920 / 1, and LBZ f2270 / 5.
 
 Milestone 31 restores TurboSpiker's detached-shell direction. The shell child
 inherits the parent's post-retreat render bit, but `loc_87D72` interprets that

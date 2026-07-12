@@ -22,6 +22,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestHczEndBossWaterColumnControlPolicy {
 
     @Test
+    void descentRetainsTheLaterSpraySlotsFinalInteraction() throws Exception {
+        HczEndBossWaterColumn column = newWaterColumn();
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x4000, (short) 0x0738);
+        setIntField(column, "routine", 6);
+
+        invokePrivate(column, "updateHold", player);
+
+        assertEquals(8, getIntField(column, "routine"));
+        assertTrue(getBooleanField(column, "pendingSprayTailInteraction"),
+                "loc_6B3DE runs after loc_6B34A changes the parent to DESCEND");
+
+        invokePrivate(column, "updateRiseDescend", player);
+
+        assertFalse(getBooleanField(column, "pendingSprayTailInteraction"),
+                "the first descent dispatch consumes exactly one retained spray interaction");
+    }
+
+    @Test
     void initialGrabUsesNativeBit0ObjectControlPolicy() throws Exception {
         HczEndBossWaterColumn column = newWaterColumn();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x4000, (short) 0x0738);
@@ -93,6 +111,31 @@ class TestHczEndBossWaterColumnControlPolicy {
                 "releasePlayer", com.openggf.sprites.playable.AbstractPlayableSprite.class, boolean.class);
         method.setAccessible(true);
         method.invoke(column, player, isPlayer1);
+    }
+
+    private static void invokePrivate(HczEndBossWaterColumn column, String name, TestablePlayableSprite player)
+            throws Exception {
+        Method method = HczEndBossWaterColumn.class.getDeclaredMethod(name, com.openggf.game.PlayableEntity.class);
+        method.setAccessible(true);
+        method.invoke(column, player);
+    }
+
+    private static void setIntField(Object target, String name, int value) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setInt(target, value);
+    }
+
+    private static int getIntField(Object target, String name) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getInt(target);
+    }
+
+    private static boolean getBooleanField(Object target, String name) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getBoolean(target);
     }
 
     private static <T> T withConstructionContext(ObjectServices services, ThrowingSupplier<T> supplier) {
