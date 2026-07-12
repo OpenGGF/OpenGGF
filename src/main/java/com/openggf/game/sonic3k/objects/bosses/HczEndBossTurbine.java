@@ -240,6 +240,8 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
         }
         animSpeed = ANIM_SPEED_STOPPING;
         animCounter = 0;
+        accelerationDelay = 0;
+        accelerationLoops = 0;
         routine = ROUTINE_STOPPING;
     }
 
@@ -248,16 +250,27 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
      * Returns to WAIT when animation rate hits zero.
      */
     private void updateStopping() {
-        animSpeed = ANIM_SPEED_STOPPING;
-        tickAnimation();
-
-        // loc_6B244 only selects routine 8 and the slower animation. The
-        // active $A6 collision byte survives until Animate_RawGetSlower fires
-        // loc_6B262 after the final cycle.
-        if (animCounter == 0 && animFrame == 0) {
-            collisionFlags = 0;
-            routine = ROUTINE_WAIT;
+        animCounter--;
+        if (animCounter >= 0) {
+            return;
         }
+
+        animFrame++;
+        if (animFrame >= SPIN_FRAMES.length) {
+            animFrame = 0;
+            accelerationDelay++;
+            if (accelerationDelay >= 7) {
+                accelerationDelay = 7;
+                accelerationLoops++;
+                if (accelerationLoops >= 2) {
+                    collisionFlags = 0;
+                    routine = ROUTINE_WAIT;
+                    accelerationLoops = 0;
+                    return;
+                }
+            }
+        }
+        animCounter = accelerationDelay;
     }
 
     // =========================================================================
@@ -323,7 +336,9 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
         // loc_6B1A8 refreshes this child's position immediately before
         // Child_DrawTouch_Sprite2_FlickerMove adds its pointer to the response
         // list, so the next player pass observes that refreshed coordinate.
-        return true;
+        // Once loc_6B244 selects routine 8, the player-side response pass
+        // observes the frame-start child coordinate before this slot moves.
+        return routine != ROUTINE_STOPPING;
     }
 
     // =========================================================================

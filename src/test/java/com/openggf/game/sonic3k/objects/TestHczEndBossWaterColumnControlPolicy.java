@@ -28,19 +28,26 @@ class TestHczEndBossWaterColumnControlPolicy {
         turbine.setCollisionFlags(0xA6);
         setIntField(turbine, "animFrame", 0);
         setIntField(turbine, "animCounter", 0);
+        assertFalse(turbine.usesCurrentTouchResponseState(),
+                "routine 8 consumes the frame-start response-list coordinate");
 
         invokeNoArgPrivate(turbine, "updateStopping");
 
         assertEquals(0xA6, turbine.getCollisionFlags(),
                 "loc_6B244 does not clear collision_flags while Animate_RawGetSlower is active");
 
-        setIntField(turbine, "animFrame", 3);
-        setIntField(turbine, "animCounter", 7);
-        invokeNoArgPrivate(turbine, "updateStopping");
+        int slowdownTicks = 1;
+        while (turbine.getCollisionFlags() != 0 && slowdownTicks < 256) {
+            invokeNoArgPrivate(turbine, "updateStopping");
+            slowdownTicks++;
+        }
 
         assertEquals(0, turbine.getCollisionFlags(),
                 "loc_6B262 clears collision_flags only after the slowdown callback");
         assertEquals(2, getIntField(turbine, "routine"));
+        assertTrue(slowdownTicks > 32);
+        assertTrue(turbine.usesCurrentTouchResponseState(),
+                "the idle/active child helpers retain refreshed-coordinate touch");
     }
 
     @Test
