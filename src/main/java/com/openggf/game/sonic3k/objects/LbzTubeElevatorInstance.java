@@ -365,7 +365,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
                 if (player != null) {
                     PlayerTubeState tubeState = extensionStates.computeIfAbsent(
                             participant, ignored -> new PlayerTubeState());
-                    processPlayer(player, tubeState, anyOtherStateInPhase(tubeState, 2));
+                    processExtensionPlayer(player, tubeState, anyOtherStateInPhase(tubeState, 2));
                 }
             }
         }
@@ -415,6 +415,24 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
             }
             applyCapturedPlayerFrame(player);
         }
+    }
+
+    private void processExtensionPlayer(
+            AbstractPlayableSprite player,
+            PlayerTubeState tubeState,
+            boolean otherPlayerInside) {
+        if (tubeState.phase == 0 && isUnavailableExtensionEntry(player)) {
+            return;
+        }
+        processPlayer(player, tubeState, otherPlayerInside);
+    }
+
+    private static boolean isUnavailableExtensionEntry(AbstractPlayableSprite player) {
+        return player.getDead()
+                || player.isHurt()
+                || player.isDebugMode()
+                || player.isObjectControlled()
+                || player.isControlLocked();
     }
 
     private boolean canCapture(AbstractPlayableSprite player) {

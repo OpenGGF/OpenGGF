@@ -271,6 +271,26 @@ class TestLbzTubeElevatorInstance {
     }
 
     @Test
+    void deadExtensionJoiningOnSecondUpdateIsNotForcedIntoOccupiedTube() {
+        TestablePlayableSprite main = playerAt(0x1200, 0x0600);
+        TestablePlayableSprite nativeP2 = playerAt(0x1200, 0x0600);
+        AbstractObjectInstance elevator = configuredElevator(main, List.of(nativeP2));
+        elevator.update(0, main);
+        assertTrue(main.isObjectControlled(), "precondition: native rider must occupy the tube first");
+
+        TestablePlayableSprite deadExtension = playerAt(0x1800, 0x0600);
+        deadExtension.setDead(true);
+        elevator.setServices(playerServices(main, List.of(nativeP2, deadExtension)));
+        elevator.update(1, main);
+
+        assertFalse(deadExtension.isObjectControlled(),
+                "forced-follow must not recapture a dead extension rider merely because another player is inside");
+        assertFalse(deadExtension.isControlLocked());
+        assertEquals(0x1800, deadExtension.getCentreX() & 0xFFFF,
+                "an invalid extension must not be snapped into the moving tube");
+    }
+
+    @Test
     void rosterOmissionAndReorderKeepTubeStateWithPlayerIdentity() {
         TestablePlayableSprite main = playerAt(0x1200, 0x0600);
         TestablePlayableSprite originalP2 = playerAt(0x1200, 0x0600);
