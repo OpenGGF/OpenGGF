@@ -154,8 +154,13 @@ public final class HCZWaterTunnelHandler {
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
         hydratePendingExtensionStates(participants);
 
-        if (!player.isDebugMode()) {
+        if (isValidTunnelParticipant(player)) {
             windTunnelFlagP1 = processPlayer(player, tunnels, windTunnelFlagP1, 0);
+        } else {
+            releaseInvalidParticipant(player, windTunnelFlagP1 || exitAnimTimerP1 != 0);
+            windTunnelFlagP1 = false;
+            activeTunnelInfluenceP1 = 0;
+            exitAnimTimerP1 = 0;
         }
         if (exitAnimTimerP1 > 0) {
             if (!player.getAir()) {
@@ -167,8 +172,13 @@ public final class HCZWaterTunnelHandler {
         AbstractPlayableSprite p2 = nativeP2From(query);
         bindNativeP2(p2);
         if (p2 != null) {
-            if (!p2.isDebugMode()) {
+            if (isValidTunnelParticipant(p2)) {
                 windTunnelFlagP2 = processPlayer(p2, tunnels, windTunnelFlagP2, 1);
+            } else {
+                releaseInvalidParticipant(p2, windTunnelFlagP2 || exitAnimTimerP2 != 0);
+                windTunnelFlagP2 = false;
+                activeTunnelInfluenceP2 = 0;
+                exitAnimTimerP2 = 0;
             }
             if (exitAnimTimerP2 > 0) {
                 if (!p2.getAir()) {
@@ -187,8 +197,13 @@ public final class HCZWaterTunnelHandler {
             }
             ExtensionTunnelState state = extensionStates.computeIfAbsent(
                     participant, ignored -> new ExtensionTunnelState());
-            if (!extension.isDebugMode()) {
+            if (isValidTunnelParticipant(extension)) {
                 state.inTunnel = processPlayer(extension, tunnels, state.inTunnel, index, state);
+            } else {
+                releaseInvalidParticipant(extension, state.inTunnel || state.exitAnimTimer != 0);
+                state.inTunnel = false;
+                state.activeInfluence = 0;
+                state.exitAnimTimer = 0;
             }
             if (state.exitAnimTimer > 0 && !extension.getAir()) {
                 state.exitAnimTimer = 0;
@@ -497,13 +512,26 @@ public final class HCZWaterTunnelHandler {
 
     private static void hydratePendingExtensionStates(List<PlayableEntity> participants) {
         if (pendingExtensionStates.isEmpty()) return;
-        for (Map.Entry<PlayerRefId, ExtensionTunnelSnapshot> entry : pendingExtensionStates.entrySet()) {
+        var iterator = pendingExtensionStates.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<PlayerRefId, ExtensionTunnelSnapshot> entry = iterator.next();
             int playerIndex = entry.getKey().encoded() - 1;
             if (playerIndex >= 2 && playerIndex < participants.size()) {
                 extensionStates.put(participants.get(playerIndex), ExtensionTunnelState.from(entry.getValue()));
+                iterator.remove();
             }
         }
-        pendingExtensionStates.clear();
+    }
+
+    private static boolean isValidTunnelParticipant(AbstractPlayableSprite player) {
+        return !player.isDebugMode() && !player.isHurt() && !player.getDead();
+    }
+
+    private static void releaseInvalidParticipant(AbstractPlayableSprite player, boolean ownedState) {
+        if (!ownedState) return;
+        player.setSuppressAirCollision(false);
+        player.setForceFloorCheck(false);
+        player.setForcedAnimationId(-1);
     }
 
     private static final class ExtensionTunnelState {

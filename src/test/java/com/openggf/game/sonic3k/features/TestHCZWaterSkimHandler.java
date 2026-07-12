@@ -119,6 +119,29 @@ class TestHCZWaterSkimHandler {
     }
 
     @Test
+    void restoredThirdPlayerStateSurvivesOmissionAndDoesNotRenderGhostSplash() {
+        AbstractPlayableSprite main = skimmingCandidate();
+        AbstractPlayableSprite nativeP2 = skimmingCandidate();
+        AbstractPlayableSprite third = skimmingCandidate();
+        ObjectPlayerQuery fullRoster = new ObjectPlayerQuery(
+                () -> main, () -> List.of(nativeP2, third));
+        HCZWaterSkimHandler.update(fullRoster, 0x200, 1);
+        assertTrue(HCZWaterSkimHandler.activeExtensionSplashPlayers().contains(third));
+        HCZWaterSkimHandler.Snapshot snapshot = HCZWaterSkimHandler.snapshot();
+
+        HCZWaterSkimHandler.reset();
+        HCZWaterSkimHandler.restore(snapshot);
+        HCZWaterSkimHandler.update(new ObjectPlayerQuery(
+                () -> main, () -> List.of(nativeP2)), 0x200, 2);
+
+        assertFalse(HCZWaterSkimHandler.activeExtensionSplashPlayers().contains(third));
+        assertTrue(HCZWaterSkimHandler.snapshot().extensionStates().stream()
+                .anyMatch(state -> state.playerRef().equals(PlayerRefId.sidekick(1))));
+        HCZWaterSkimHandler.update(fullRoster, 0x200, 3);
+        assertTrue(HCZWaterSkimHandler.isSkimActive(2));
+    }
+
+    @Test
     void airborneSustainSuppressesSameFrameGravityBecauseRomObjectRunsAfterPlayer() {
         AbstractPlayableSprite main = skimmingCandidate();
         when(main.getAir()).thenReturn(true);

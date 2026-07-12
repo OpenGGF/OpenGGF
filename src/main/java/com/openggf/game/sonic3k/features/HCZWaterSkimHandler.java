@@ -446,9 +446,9 @@ public final class HCZWaterSkimHandler {
             }
         }
 
-        for (Map.Entry<PlayableEntity, ExtensionSkimState> entry : extensionStates.entrySet()) {
-            ExtensionSkimState state = entry.getValue();
-            AbstractPlayableSprite extension = asPlayableSprite(entry.getKey());
+        for (PlayableEntity participant : activeExtensionSplashPlayers()) {
+            ExtensionSkimState state = extensionStates.get(participant);
+            AbstractPlayableSprite extension = asPlayableSprite(participant);
             if (extension != null && state.active && state.splashFrame < SPLASH_EXIT_FRAME) {
                 boolean hFlip = extension.getDirection() == Direction.LEFT;
                 splashRenderer.drawFrameIndex(state.splashFrame,
@@ -667,13 +667,25 @@ public final class HCZWaterSkimHandler {
 
     private static void hydratePendingExtensionStates(List<PlayableEntity> participants) {
         if (pendingExtensionStates.isEmpty()) return;
-        for (Map.Entry<PlayerRefId, ExtensionSkimSnapshot> entry : pendingExtensionStates.entrySet()) {
+        var iterator = pendingExtensionStates.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<PlayerRefId, ExtensionSkimSnapshot> entry = iterator.next();
             int playerIndex = entry.getKey().encoded() - 1;
             if (playerIndex >= 2 && playerIndex < participants.size()) {
                 extensionStates.put(participants.get(playerIndex), ExtensionSkimState.from(entry.getValue()));
+                iterator.remove();
             }
         }
-        pendingExtensionStates.clear();
+    }
+
+    static List<PlayableEntity> activeExtensionSplashPlayers() {
+        List<PlayableEntity> active = new ArrayList<>();
+        for (Map.Entry<PlayableEntity, ExtensionSkimState> entry : extensionStates.entrySet()) {
+            if (entry.getValue().active && containsIdentity(lastParticipants, entry.getKey())) {
+                active.add(entry.getKey());
+            }
+        }
+        return active;
     }
 
     private static final class ExtensionSkimState {

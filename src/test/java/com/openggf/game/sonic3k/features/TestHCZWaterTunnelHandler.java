@@ -17,6 +17,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyShort;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -140,6 +141,43 @@ class TestHCZWaterTunnelHandler {
 
         assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(2));
         assertFalse(snapshot.extensionStates().isEmpty());
+    }
+
+    @Test
+    void restoredThirdPlayerStateSurvivesOneOmittedRosterUpdate() {
+        AbstractPlayableSprite main = playerOutsideTunnels();
+        AbstractPlayableSprite nativeP2 = playerOutsideTunnels();
+        AbstractPlayableSprite third = playerInsideFirstHcz1Tunnel();
+        ObjectPlayerQuery fullRoster = query(main, nativeP2, third);
+        HCZWaterTunnelHandler.update(fullRoster, 0);
+        HCZWaterTunnelHandler.Snapshot snapshot = HCZWaterTunnelHandler.snapshot();
+
+        HCZWaterTunnelHandler.reset();
+        HCZWaterTunnelHandler.restore(snapshot);
+        HCZWaterTunnelHandler.update(query(main, nativeP2), 0);
+
+        assertTrue(HCZWaterTunnelHandler.snapshot().extensionStates().stream()
+                .anyMatch(state -> state.playerRef().equals(PlayerRefId.sidekick(1))));
+        HCZWaterTunnelHandler.update(fullRoster, 0);
+        assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(2));
+    }
+
+    @Test
+    void invalidThirdPlayerReleasesTunnelCollisionAndAnimationState() {
+        AbstractPlayableSprite main = playerOutsideTunnels();
+        AbstractPlayableSprite nativeP2 = playerOutsideTunnels();
+        AbstractPlayableSprite third = playerInsideFirstHcz1Tunnel();
+        ObjectPlayerQuery query = query(main, nativeP2, third);
+        HCZWaterTunnelHandler.update(query, 0);
+        clearInvocations(third);
+        when(third.isDebugMode()).thenReturn(true);
+
+        HCZWaterTunnelHandler.update(query, 0);
+
+        assertFalse(HCZWaterTunnelHandler.isPlayerInTunnel(2));
+        verify(third).setSuppressAirCollision(false);
+        verify(third).setForceFloorCheck(false);
+        verify(third).setForcedAnimationId(-1);
     }
 
     @Test
