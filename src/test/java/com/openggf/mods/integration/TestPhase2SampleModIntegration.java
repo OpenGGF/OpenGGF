@@ -242,6 +242,8 @@ class TestPhase2SampleModIntegration {
         ModState state=new ModState(1,List.of(new ModState.Entry(descriptor.manifest().id(),true,0,code,code?descriptor.sha256():null)));
         ModCatalog catalog=new EffectiveCatalogBuilder().build(validated.entries(),state);assertEquals(1,catalog.effective().orderedEnabled().size());
         ModRuntime runtime=new ModClassLoaderFactory(getClass().getClassLoader()).create(catalog.effective(),code?Set.of(descriptor.manifest().id()):Set.of());
+        runtime.installFaultBoundary(new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                owners -> new ModStateSaveResult.Saved(), owners -> {}));
         return new CatalogFixture(runtime,catalog.effective(),runtime.newRegistrationPlan());
     }
 

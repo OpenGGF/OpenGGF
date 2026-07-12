@@ -148,6 +148,30 @@ class TestModContextAndFaultBoundary {
     }
 
     @Test
+    void callbackAndSaveFailureFindingsUpsertByStableCodeWithoutClobberingDiagnostics() {
+        for (boolean throwFromSave : List.of(false, true)) {
+            ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
+            findings.replaceOwner("owner", List.of(new com.openggf.mods.ModFinding(
+                    com.openggf.mods.ModFindingSeverity.WARNING, "EXISTING", "keep", null)));
+            ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), findings,
+                    owners -> {
+                        if (throwFromSave) throw new IllegalStateException("disk exception");
+                        return new ModStateSaveResult.Failed("disk full");
+                    }, owners -> { });
+
+            assertThrows(ModFaultBoundary.CallbackAborted.class,
+                    () -> boundary.run("owner", () -> { throw new IllegalStateException("first"); }));
+            assertThrows(ModFaultBoundary.CallbackAborted.class,
+                    () -> boundary.run("owner", () -> { throw new IllegalStateException("second"); }));
+
+            assertEquals(List.of("EXISTING", "MOD_CALLBACK_FAILED", "MOD_DISABLE_SAVE_FAILED"),
+                    findings.findingsFor("owner").stream()
+                            .map(com.openggf.mods.ModFinding::code).toList());
+            assertEquals(3, findings.findingsFor("owner").size());
+        }
+    }
+
+    @Test
     void runtimeFindingUpsertPreservesUnrelatedOwnerBadges() {
         ModRuntimeFindingStore store = new ModRuntimeFindingStore();
         store.replaceOwner("owner", List.of(new com.openggf.mods.ModFinding(

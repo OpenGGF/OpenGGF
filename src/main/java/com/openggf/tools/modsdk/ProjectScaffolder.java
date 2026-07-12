@@ -48,6 +48,8 @@ public final class ProjectScaffolder {
             String packagePath = javaPackage.replace('.', '/');
             files.put("src/main/java/" + packagePath + "/" + prefix + "Mod.java", "Mod.java.template");
             files.put("src/main/java/" + packagePath + "/SampleBadnik.java", "SampleBadnik.java.template");
+            files.put("src/main/java/" + packagePath + "/SampleCharacter.java",
+                    "SampleCharacter.java.template");
             files.put("src/main/resources/META-INF/openggf-mod.yaml", "openggf-mod.yaml.template");
             files.put("src/main/mod/sample-sheet.yaml", "sample-sheet.yaml.template");
             files.forEach((relative, template) -> {

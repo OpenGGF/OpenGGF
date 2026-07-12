@@ -57,9 +57,24 @@ class TestPhase3SharedFoundation {
         when(base.getPlayableCharacterRegistry()).thenReturn(PlayableCharacterRegistry.empty());
         CharacterDefinition character = definition(CharacterKey.mod("owner-a", "runner"), "Runner");
         ModRegistrationPlan plan = ModRegistrationPlan.characterOnly("owner-a", "s2", Map.of(character.key(), character));
-        GameModule decorated = new ModBackedGamePatch(plan).apply(base, mock(com.openggf.game.patch.PatchContext.class));
+        GameModule decorated = new ModBackedGamePatch(plan, new com.openggf.mods.code.ModFaultBoundary(
+                Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
+                owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> {}))
+                .apply(base, mock(com.openggf.game.patch.PatchContext.class));
+        assertEquals(List.of("owner-a:runner"), new ModBackedGamePatch(plan,
+                new com.openggf.mods.code.ModFaultBoundary(Map.of(),
+                        new com.openggf.mods.ModRuntimeFindingStore(),
+                        owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> {}))
+                .providedMainCharacters());
         assertTrue(base.getPlayableCharacterRegistry().definitions().isEmpty());
-        assertSame(character, decorated.getPlayableCharacterRegistry().find(character.key()).orElseThrow());
+        CharacterDefinition installed = decorated.getPlayableCharacterRegistry()
+                .find(character.key()).orElseThrow();
+        assertEquals(character.key(), installed.key());
+        assertEquals(character.displayName(), installed.displayName());
+        assertEquals(character.behavesLike(), installed.behavesLike());
+        assertEquals(character.secondaryAbility(), installed.secondaryAbility());
+        assertNotSame(character.spriteFactory(), installed.spriteFactory(),
+                "Creator callbacks must be wrapped by the owner fault boundary");
         GameModule forwarding = new DelegatingGameModule(decorated, "test") {};
         assertSame(decorated.getPlayableCharacterRegistry(), forwarding.getPlayableCharacterRegistry());
     }

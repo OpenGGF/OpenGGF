@@ -176,6 +176,7 @@ public class GameLoop {
     private Supplier<LegalDisclaimerScreen> legalDisclaimerSupplier;
     private Runnable legalDisclaimerExitHandler;
     private Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler;
+    private Supplier<CharacterAvailability> characterAvailabilitySupplier;
     private final UserRecordingSessionLauncher userRecordingSessionLauncher;
     private final UserRecordingRuntimeControls userRecordingControls;
     private final TimeAttackRuntime timeAttackRuntime;
@@ -522,6 +523,12 @@ public class GameLoop {
 
     public void setMasterTitleScreenSupplier(Supplier<MasterTitleScreen> masterTitleScreenSupplier) {
         this.masterTitleScreenSupplier = masterTitleScreenSupplier;
+    }
+
+    void setCharacterAvailabilitySupplier(
+            Supplier<CharacterAvailability> characterAvailabilitySupplier) {
+        this.characterAvailabilitySupplier = Objects.requireNonNull(
+                characterAvailabilitySupplier, "characterAvailabilitySupplier");
     }
 
     public void setUserRecordingPlaybackStarter(UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter) {
@@ -3444,8 +3451,17 @@ public class GameLoop {
             setGameplayMode(freshGameplayMode);
 
             var team = ActiveGameplayTeamResolver.resolvePlayerCharacter(configService);
+            PlayableCharacterRegistry pinnedCharacters = freshGameplayMode.getWorldSession()
+                    .getPlayableCharacterRegistry();
+            CharacterAvailability characterAvailability = characterAvailabilitySupplier == null
+                    ? CharacterAvailability.fromRegistry(pinnedCharacters)
+                    : Objects.requireNonNull(characterAvailabilitySupplier.get(),
+                            "characterAvailability");
             var bootstrappedTeam = com.openggf.game.session.GameplayTeamBootstrap.registerActiveTeam(
-                    module, spriteManager, configService);
+                    module, pinnedCharacters, characterAvailability, spriteManager, configService,
+                    com.openggf.game.session.GameplayTeamBootstrap.DEFAULT_MAIN_X,
+                    com.openggf.game.session.GameplayTeamBootstrap.DEFAULT_MAIN_Y,
+                    ModCharacterFallbackFindings.sink(ModSubsystem.current().runtimeFindings()));
             camera.setFocusedSprite(bootstrappedTeam.mainSprite());
             camera.updatePosition(true);
             levelManager.loadZoneAndAct(context.zone(), context.act());

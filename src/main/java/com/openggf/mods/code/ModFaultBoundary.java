@@ -52,9 +52,9 @@ public final class ModFaultBoundary {
                 LOG.log(Level.SEVERE, "Failed to mark owners disabled in process " + disabled,
                         disableFailure);
             }
-            findings.replaceOwner(owner, java.util.List.of(new ModFinding(
+            findings.upsertOwnerFinding(owner, new ModFinding(
                     ModFindingSeverity.ERROR, "MOD_CALLBACK_FAILED",
-                    "Runtime callback failed; owner and dependents are pending-disabled", null)));
+                    "Runtime callback failed; owner and dependents are pending-disabled", null));
             LOG.log(Level.SEVERE, "Mod callback failed for " + owner, failure);
             try {
                 ModStateSaveResult result = stateSink.disableAndSave(disabled);
@@ -99,10 +99,8 @@ public final class ModFaultBoundary {
     }
 
     private void publishSaveFailure(String owner, String message) {
-        findings.replaceOwner(owner, java.util.List.of(
-                new ModFinding(ModFindingSeverity.ERROR, "MOD_CALLBACK_FAILED",
-                        "Runtime callback failed; owner and dependents are pending-disabled", null),
-                new ModFinding(ModFindingSeverity.ERROR, "MOD_DISABLE_SAVE_FAILED", message, null)));
+        findings.upsertOwnerFinding(owner, new ModFinding(ModFindingSeverity.ERROR,
+                "MOD_DISABLE_SAVE_FAILED", message, null));
     }
 
     private Set<String> ownerAndDependents(String owner) {

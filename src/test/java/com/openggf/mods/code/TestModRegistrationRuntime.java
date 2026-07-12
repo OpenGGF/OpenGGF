@@ -41,6 +41,10 @@ class TestModRegistrationRuntime {
 
         try (ModRuntime runtime = factory.create(catalog,
                 Set.of("good", "bad", "dependent", "independent"))) {
+            var availability = runtime.characterAvailability();
+            assertTrue(availability.isKnownOwner("good"));
+            assertTrue(availability.isEnabledOwner("bad"));
+            assertFalse(availability.isKnownOwner("absent"));
             ModuleResolutionService.PatchPlan first = runtime.newRegistrationPlan();
             assertEquals(List.of("good:content", "good:extra", "independent:content",
                             "independent:extra"),
@@ -49,6 +53,9 @@ class TestModRegistrationRuntime {
                     first.registrations().stream().map(r -> r.registrationIndex()).toList());
             assertEquals(Set.of("bad", "dependent"), runtime.registrationFailures().keySet());
             assertTrue(runtime.runtimeDisabledOwners().containsAll(Set.of("bad", "dependent")));
+            assertFalse(availability.isEnabledOwner("bad"));
+            assertFalse(availability.isEnabledOwner("dependent"));
+            assertTrue(availability.isEnabledOwner("good"));
             assertThrows(java.io.IOException.class,
                     () -> GoodEntrypoint.retainedAssets.get(0).readBounded("fixture.bin", 16));
 

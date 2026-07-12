@@ -185,6 +185,20 @@ public final class ModRuntime implements AutoCloseable {
         return Set.copyOf(runtimeDisabledOwners);
     }
 
+    /** Read-only dynamic view used by the engine composition root during team bootstrap. */
+    public com.openggf.game.CharacterAvailability characterAvailability() {
+        return com.openggf.game.CharacterAvailability.dynamic(
+                this::isKnownOwner, this::isOwnerEnabled);
+    }
+
+    private synchronized boolean isKnownOwner(String owner) {
+        return !closed && availableOwners.contains(owner);
+    }
+
+    private synchronized boolean isOwnerEnabled(String owner) {
+        return !closed && availableOwners.contains(owner) && !runtimeDisabledOwners.contains(owner);
+    }
+
     public Map<String, Set<String>> ownerDependencies() {
         LinkedHashMap<String, Set<String>> result = new LinkedHashMap<>();
         for (String owner : owners) {

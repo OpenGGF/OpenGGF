@@ -38,7 +38,7 @@ public interface GameModule {
 
     /** One immutable character-registry view owned by this resolved module. */
     default PlayableCharacterRegistry getPlayableCharacterRegistry() {
-        return PlayableCharacterRegistry.empty();
+        return StockPlayableCharacters.registry();
     }
 
     ObjectRegistry createObjectRegistry();

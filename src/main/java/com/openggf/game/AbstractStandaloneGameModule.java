@@ -18,6 +18,10 @@ import com.openggf.level.objects.TouchResponseTable;
  */
 @ModApi
 public abstract class AbstractStandaloneGameModule implements GameModule {
+    @Override public PlayableCharacterRegistry getPlayableCharacterRegistry() {
+        return PlayableCharacterRegistry.empty();
+    }
+
     @Override public final Game createGame(Rom rom) {
         throw new UnsupportedOperationException("Standalone modules use GameDataSource");
     }

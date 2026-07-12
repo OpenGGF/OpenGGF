@@ -45,6 +45,9 @@ public final class ModBackedGamePatch implements GamePatch {
                 && faultBoundary == null) {
             throw new IllegalArgumentException("Mod zone events require an installed fault boundary");
         }
+        if (!plan.characters().isEmpty() && faultBoundary == null) {
+            throw new IllegalArgumentException("Mod characters require an installed fault boundary");
+        }
     }
 
     public ModRegistrationPlan plan() { return plan; }
@@ -55,7 +58,10 @@ public final class ModBackedGamePatch implements GamePatch {
         return plan.baseGameId().equals(request.gameId());
     }
     @Override public Set<LogicalRom> romPrerequisites() { return Set.of(); }
-    @Override public List<String> providedMainCharacters() { return List.of(); }
+    @Override public List<String> providedMainCharacters() {
+        return plan.characters().keySet().stream()
+                .map(com.openggf.game.CharacterKey::persisted).toList();
+    }
     @Override public GameModule apply(GameModule base, PatchContext context) {
         List<ModObjectKeyRegistry.Registration> registrations = plan.objectFactories().entrySet().stream()
                 .map(entry -> new ModObjectKeyRegistry.Registration(
@@ -76,11 +82,28 @@ public final class ModBackedGamePatch implements GamePatch {
                     com.openggf.game.PlayableCharacterRegistry registry =
                             super.getPlayableCharacterRegistry();
                     for (var entry : plan.characters().entrySet()) {
-                        registry = registry.register(entry.getKey(), entry.getValue());
+                        registry = registry.register(entry.getKey(),
+                                faultBoundCharacter(entry.getKey(), entry.getValue()));
                     }
                     playableCharacters = registry;
                 }
                 return playableCharacters;
+            }
+
+            private com.openggf.game.CharacterDefinition faultBoundCharacter(
+                    com.openggf.game.CharacterKey key,
+                    com.openggf.game.CharacterDefinition definition) {
+                return new com.openggf.game.CharacterDefinition(key, definition.displayName(),
+                        (code, x, y) -> faultBoundary.callCharacter(key,
+                                () -> Objects.requireNonNull(
+                                        definition.spriteFactory().create(code, x, y),
+                                        "Mod sprite factory returned null for " + key.persisted())),
+                        controller -> faultBoundary.callCharacter(key,
+                                () -> Objects.requireNonNull(
+                                        definition.respawnStrategyFactory().create(controller),
+                                        "Mod respawn factory returned null for " + key.persisted())),
+                        definition.behavesLike(), definition.secondaryAbility(),
+                        definition.supportsSuperForm(), definition.artSupplier());
             }
 
             @Override

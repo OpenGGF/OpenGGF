@@ -36726,3 +36726,16 @@ Verification:
   exited 0 with expected-red reports preserved: CNZ2 f9977 / 10
   (`tails_x_speed` expected `-0200`, actual `0x023A`) and MTZ3 f13477 / 4
   (`x_speed` expected `-03FB`, actual `0x03FB`).
+
+### 2026-07-12 -- Phase 3 A1 stock character-registry parity spot sweep
+
+Measured on `next` at `653619482` with the reviewed, uncommitted Phase 3 A1
+registry/bootstrap changes:
+
+- Command:
+  `mvn -Dmse=off "-Dtest=TestS1Ghz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kAizTraceReplay#replayMatchesTrace" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test`
+- S1 GHZ1 passed (1/1) and S2 EHZ1 passed (1/1).
+- S3K AIZ remained baseline-identical at 1,160 errors, first divergence frame
+  8941 on `camera_y` (expected `0x02C1`, actual `0x02B9`).
+- No trace fixture, comparator tolerance, bootstrap hydration, or trace-driven
+  engine state was changed.

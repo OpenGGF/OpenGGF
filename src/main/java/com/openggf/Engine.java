@@ -295,6 +295,7 @@ public class Engine {
 		this.graphicsManager.setPerformanceProfiler(profiler);
 		this.editorOverlayRenderer = new EditorOverlayRenderer(levelEditorController, graphicsManager);
 		this.gameLoop = new GameLoop(engineServices);
+		this.gameLoop.setCharacterAvailabilitySupplier(() -> modRuntime.characterAvailability());
 		this.gameLoop.setEditorStateSyncHandler(this::syncEditorState);
 		this.gameLoop.setMasterTitleScreenSupplier(() -> masterTitleScreen);
 		this.gameLoop.setMasterTitleExitHandler(this::exitMasterTitleScreen);
@@ -1180,7 +1181,10 @@ public class Engine {
 		}
 
 		GameplayTeamBootstrap.BootstrappedTeam team = GameplayTeamBootstrap.registerActiveTeam(
-				module, spriteManager, configService);
+				module, gameplayMode.getWorldSession().getPlayableCharacterRegistry(),
+				modRuntime.characterAvailability(), spriteManager, configService,
+				GameplayTeamBootstrap.DEFAULT_MAIN_X, GameplayTeamBootstrap.DEFAULT_MAIN_Y,
+				ModCharacterFallbackFindings.sink(ModSubsystem.current().runtimeFindings()));
 		camera.setFocusedSprite(team.mainSprite());
 		camera.updatePosition(true);
 	}

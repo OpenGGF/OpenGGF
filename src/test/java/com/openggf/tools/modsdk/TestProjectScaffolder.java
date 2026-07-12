@@ -29,6 +29,7 @@ class TestProjectScaffolder {
         assertEquals(Set.of("pom.xml", "README.md",
                 "src/main/java/example/mods/sample/MySampleMod.java",
                 "src/main/java/example/mods/sample/SampleBadnik.java",
+                "src/main/java/example/mods/sample/SampleCharacter.java",
                 "src/main/resources/META-INF/openggf-mod.yaml",
                 "src/main/mod/sample.png", "src/main/mod/sample-sheet.yaml",
                 "src/main/mod/level-source/level.json",
