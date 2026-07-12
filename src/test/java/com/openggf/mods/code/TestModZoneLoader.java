@@ -226,6 +226,32 @@ class TestModZoneLoader {
                 () -> ModZoneRegistry.decorate(stockRegistry(), List.of(alpha, betaSameLevel)));
     }
 
+    @Test
+    void stackedPatchesRebuildMaterializedDataSelectPresentationAgainstEffectiveRegistry() {
+        GameModule base = new com.openggf.game.sonic2.Sonic2GameModule();
+        var materializedBase = base.getDataSelectPresentationProvider();
+        GameModule alpha = new ModBackedGamePatch(zonePlan("alpha", "a", 0x400, 0x40))
+                .apply(base, patchContext());
+        GameModule beta = new ModBackedGamePatch(zonePlan("beta", "b", 0x401, 0x41))
+                .apply(alpha, patchContext());
+        var effectivePresentation = beta.getDataSelectPresentationProvider();
+        assertNotSame(materializedBase, effectivePresentation);
+        assertSame(beta.getDataSelectHostProfile(), effectivePresentation.controller().hostProfile());
+        assertEquals(12, beta.getZoneRegistry().resolveZoneKey(ZoneKey.mod("beta", "b")).orElseThrow());
+
+        GameModule betaOnly = new ModBackedGamePatch(zonePlan("beta", "b", 0x401, 0x41))
+                .apply(base, patchContext());
+        assertEquals(11, betaOnly.getZoneRegistry().resolveZoneKey(ZoneKey.mod("beta", "b")).orElseThrow());
+        assertEquals(com.openggf.game.dataselect.HostSlotPreview.textOnly("MOD"),
+                betaOnly.getDataSelectHostProfile().resolveSlotPreview(taggedPayload("beta", "b")));
+    }
+
+    private static Map<String, Object> taggedPayload(String owner, String local) {
+        java.util.LinkedHashMap<String, Object> payload = new java.util.LinkedHashMap<>();
+        com.openggf.game.sonic2.dataselect.S2SavedZone.write(payload, ZoneKey.mod(owner, local));
+        return payload;
+    }
+
     private static ModRegistrationPlan zonePlan(String owner, String local, int level, int zone) {
         ModZoneContribution declared = new ModZoneContribution(
                 local, new BakedLevelRef(local + "/level.json"), "mtz3", null);

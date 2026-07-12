@@ -217,6 +217,17 @@ public final class ModManagerScreen {
                 banners.add("Repository error: " + finding.message());
             }
         }
+        java.util.Set<String> catalogOwners = rows.stream()
+                .filter(row -> row.descriptor() != null)
+                .map(row -> row.descriptor().manifest().id())
+                .collect(java.util.stream.Collectors.toSet());
+        runtimeFindings.snapshot().forEach((owner, findings) -> {
+            if (catalogOwners.contains(owner)) return;
+            for (ModFinding finding : findings) {
+                banners.add("Runtime " + finding.severity().name().toLowerCase(java.util.Locale.ROOT)
+                        + " [" + owner + "] " + finding.code() + ": " + finding.message());
+            }
+        });
         if (editor.restartRequired()) banners.add("Restart required");
         if (saveFailure != null) banners.add("Save failed: " + saveFailure);
         return List.copyOf(banners);

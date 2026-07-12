@@ -2,6 +2,9 @@ package com.openggf.game.save;
 
 import com.openggf.game.sonic1.dataselect.S1SaveSnapshotProvider;
 import com.openggf.game.sonic2.dataselect.S2SaveSnapshotProvider;
+import com.openggf.game.sonic2.dataselect.S2SavedZone;
+import com.openggf.game.sonic2.dataselect.S2DataSelectProfile;
+import com.openggf.game.ZoneKey;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -163,5 +166,74 @@ class TestDonatedSaveSession {
         assertEquals(List.of(), payload.get("chaosEmeralds")); // default
         assertFalse(payload.containsKey("emeraldCount"));
         assertEquals(5, payload.get("progressCode")); // zone + 1
+        assertFalse(payload.containsKey(S2SavedZone.FIELD),
+                "stock snapshot shape remains byte-compatible with historical payloads");
+    }
+
+    @Test
+    void taggedModZoneRoundTripsThroughSaveEnvelopeWithoutSyntheticNumericZone() throws Exception {
+        SaveManager manager = new SaveManager(root);
+        Map<String, Object> payload = new java.util.LinkedHashMap<>();
+        S2SavedZone.write(payload, ZoneKey.mod("owner-b", "zone"));
+        payload.put("act", 0);
+        payload.put("mainCharacter", "sonic");
+        payload.put("sidekicks", List.of());
+        payload.put("lives", 3);
+        payload.put("chaosEmeralds", List.of());
+        payload.put("clear", false);
+        payload.put("progressCode", 1);
+        payload.put("clearState", 0);
+        manager.writeSlot("s2", 6, payload);
+
+        SaveSlotSummary summary = manager.readSlotSummary("s2", 6, new S2DataSelectProfile());
+        assertEquals(SaveSlotState.VALID, summary.state());
+        assertFalse(summary.payload().containsKey("zone"));
+        assertEquals(ZoneKey.mod("owner-b", "zone"),
+                S2SavedZone.read(summary.payload()).zoneKey());
+    }
+
+    @Test
+    void missingModAndLegacySyntheticSlotsRemainValidOnDiskButControllerFallsBackToZoneZero()
+            throws Exception {
+        SaveManager manager = new SaveManager(root);
+        java.util.LinkedHashMap<String, Object> missing = baseS2Payload();
+        S2SavedZone.write(missing, ZoneKey.mod("disabled-owner", "zone"));
+        manager.writeSlot("s2", 1, missing);
+        java.util.LinkedHashMap<String, Object> numeric = baseS2Payload();
+        numeric.put("zone", 11);
+        manager.writeSlot("s2", 2, numeric);
+
+        List<com.openggf.game.sonic2.dataselect.S2SaveFinding> findings = new java.util.ArrayList<>();
+        S2DataSelectProfile profile = new S2DataSelectProfile(
+                com.openggf.game.sonic2.Sonic2ZoneRegistry::new, findings::add);
+        SaveSlotSummary missingSummary = manager.readSlotSummary("s2", 1, profile);
+        SaveSlotSummary numericSummary = manager.readSlotSummary("s2", 2, profile);
+        assertEquals(SaveSlotState.VALID, missingSummary.state());
+        assertEquals(SaveSlotState.VALID, numericSummary.state());
+        assertTrue(Files.exists(root.resolve("s2/slot1.json")));
+        assertTrue(Files.exists(root.resolve("s2/slot2.json")));
+
+        var controller = new com.openggf.game.dataselect.DataSelectSessionController(profile);
+        controller.loadAvailableTeams(null);
+        controller.loadSlotSummaries(List.of(missingSummary, numericSummary));
+        controller.menuModel().setSelectedRow(1);
+        assertEquals(0, controller.confirmSelection().zone());
+        controller.menuModel().setSelectedRow(2);
+        assertEquals(0, controller.confirmSelection().zone());
+        assertEquals(List.of("S2_MOD_ZONE_MISSING", "S2_LEGACY_ZONE_OUT_OF_RANGE"),
+                findings.stream().map(com.openggf.game.sonic2.dataselect.S2SaveFinding::code).toList());
+    }
+
+    private static java.util.LinkedHashMap<String, Object> baseS2Payload() {
+        java.util.LinkedHashMap<String, Object> payload = new java.util.LinkedHashMap<>();
+        payload.put("act", 0);
+        payload.put("mainCharacter", "sonic");
+        payload.put("sidekicks", List.of());
+        payload.put("lives", 3);
+        payload.put("chaosEmeralds", List.of());
+        payload.put("clear", false);
+        payload.put("progressCode", 1);
+        payload.put("clearState", 0);
+        return payload;
     }
 }

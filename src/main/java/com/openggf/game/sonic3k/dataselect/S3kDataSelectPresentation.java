@@ -726,6 +726,9 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
                     hostIconIndex,
                     0x17);
         }
+        if (hostProfile.resolveSlotPreview(summary.payload()) != null) {
+            return null;
+        }
         int progressCode = Math.max(1, S3kSaveProgressions.progressCodeForPayload(summary.payload()));
         if (Boolean.TRUE.equals(summary.payload().get("clear"))) {
             int iconIndex = Math.max(0, Math.min(14, sessionController.currentClearRestartIndex()));

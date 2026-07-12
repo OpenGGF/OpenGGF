@@ -109,6 +109,21 @@ class TestModContextAndFaultBoundary {
         assertFalse(disabled.get());
     }
 
+    @Test
+    void runtimeFindingUpsertPreservesUnrelatedOwnerBadges() {
+        ModRuntimeFindingStore store = new ModRuntimeFindingStore();
+        store.replaceOwner("owner", List.of(new com.openggf.mods.ModFinding(
+                com.openggf.mods.ModFindingSeverity.WARNING, "EXISTING", "existing warning", null)));
+        store.upsertOwnerFinding("owner", new com.openggf.mods.ModFinding(
+                com.openggf.mods.ModFindingSeverity.WARNING, "S2_MOD_ZONE_MISSING", "missing", null));
+        store.upsertOwnerFinding("owner", new com.openggf.mods.ModFinding(
+                com.openggf.mods.ModFindingSeverity.WARNING, "S2_MOD_ZONE_MISSING", "updated", null));
+
+        assertEquals(List.of("EXISTING", "S2_MOD_ZONE_MISSING"),
+                store.findingsFor("owner").stream().map(com.openggf.mods.ModFinding::code).toList());
+        assertEquals("updated", store.findingsFor("owner").getLast().message());
+    }
+
     private record Patch(String id, String baseGameId) implements GamePatch {
         @Override public String displayName() { return id; }
         @Override public boolean activatesFor(GameplayLaunchRequest request) { return true; }

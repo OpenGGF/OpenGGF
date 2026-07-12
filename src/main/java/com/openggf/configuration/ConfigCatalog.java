@@ -139,6 +139,10 @@ public final class ConfigCatalog {
         put(SHOW_LEGAL_DISCLAIMER_ON_STARTUP, of("startup", "legalDisclaimer", BOOL,
                 "Show the legal disclaimer screen before the master title screen"));
 
+        // mods
+        put(SKIP_MOD_ZONE_TITLE_CARDS, of("mods", "skipModZoneTitleCards", BOOL,
+                "Skip unsupported title cards when entering additive mod zones"));
+
         // rewind (player-facing live rewind)
         put(LIVE_REWIND_ENABLED, of("rewind", "liveEnabled", BOOL,
                 "Enable held-key rewind during ordinary live play"));

@@ -556,6 +556,39 @@ class TestS3kDataSelectPresentation {
     }
 
     @Test
+    void donatedS2ModPreviewSuppressesSelectedStockZoneImage() throws Exception {
+        SaveManager saveManager = new SaveManager(root);
+        java.util.LinkedHashMap<String, Object> payload = new java.util.LinkedHashMap<>();
+        com.openggf.game.sonic2.dataselect.S2SavedZone.write(payload,
+                com.openggf.game.ZoneKey.mod("owner", "zone"));
+        payload.put("act", 0);
+        payload.put("mainCharacter", "sonic");
+        payload.put("sidekicks", List.of());
+        payload.put("lives", 5);
+        payload.put("chaosEmeralds", List.of());
+        payload.put("clear", false);
+        payload.put("progressCode", 1);
+        payload.put("clearState", 0);
+        saveManager.writeSlot("s2", 1, payload);
+
+        RecordingAssets assets = new RecordingAssets(0x2A);
+        RecordingRenderer renderer = new RecordingRenderer();
+        DataSelectSessionController controller = new DataSelectSessionController(
+                new S2DataSelectProfile());
+        S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
+                controller, saveManager, EngineServices.current().configuration(), assets, renderer, ignored -> {});
+        presentation.initialize();
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT), GLFW_PRESS);
+        presentation.update(input);
+        settleHorizontalMove(presentation);
+        presentation.draw();
+
+        assertNull(renderer.lastObjectState.selectedSlotIcon(),
+                "explicit MOD host preview must not fall through to EHZ/progressCode artwork");
+    }
+
+    @Test
     void donatedS1Host_draw_usesIndividualEmeraldFramesFromChaosList() throws Exception {
         SaveManager saveManager = new SaveManager(root);
         saveManager.writeSlot("s1", 1, java.util.Map.of(

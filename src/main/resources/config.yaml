@@ -71,6 +71,10 @@ startup:
   masterTitleScreen: true   # Show the master (game-selection) title screen on startup
   legalDisclaimer: true   # Show the legal disclaimer screen before the master title screen
 
+# ── Mods ──
+mods:
+  skipModZoneTitleCards: true   # Skip unsupported S2 title cards for additive mod zones
+
 # ── Rewind (live) ──
 rewind:
   liveEnabled: false   # Enable held-key rewind during ordinary live play

@@ -29,6 +29,8 @@ public final class ModRuntime implements AutoCloseable {
     private final Set<String> runtimeDisabledOwners = new java.util.LinkedHashSet<>();
     private boolean closed;
     private ModFaultBoundary faultBoundary;
+    private java.util.function.BiConsumer<String,
+            com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink = (owner, finding) -> {};
 
     ModRuntime(Map<String, ModDependencyClassLoader> loaders,
                Map<String, PackedModAssetRoot> snapshots,
@@ -122,7 +124,7 @@ public final class ModRuntime implements AutoCloseable {
                 }
                 List<RegisteredPatch> ownerRegistrations;
                 if (plan.hasContent()) {
-                    ModBackedGamePatch backing = new ModBackedGamePatch(plan, faultBoundary);
+                    ModBackedGamePatch backing = new ModBackedGamePatch(plan, faultBoundary, saveFindingSink);
                     ownerRegistrations = ModPatchPlanAssembler.backingFirst(patchOwner, backing,
                             plan.explicitPatches());
                 } else {
@@ -166,6 +168,12 @@ public final class ModRuntime implements AutoCloseable {
     public synchronized void installFaultBoundary(ModFaultBoundary boundary) {
         if (closed) throw new IllegalStateException("Mod runtime is closed");
         this.faultBoundary = Objects.requireNonNull(boundary, "boundary");
+    }
+
+    public synchronized void installSaveFindingSink(java.util.function.BiConsumer<String,
+            com.openggf.game.sonic2.dataselect.S2SaveFinding> sink) {
+        if (closed) throw new IllegalStateException("Mod runtime is closed");
+        saveFindingSink = Objects.requireNonNull(sink, "sink");
     }
 
     public synchronized void disableOwnersForProcess(Set<String> owners) {

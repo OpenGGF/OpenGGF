@@ -568,6 +568,7 @@ public class SonicConfigurationService {
 		// Keep the release default off; developers can enable this for debug keys.
 		putDefault(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
 		putDefault(SonicConfiguration.EDITOR_ENABLED, false);
+		putDefault(SonicConfiguration.SKIP_MOD_ZONE_TITLE_CARDS, true);
 		putDefault(SonicConfiguration.DEBUG_COLLISION_VIEW_ENABLED, false);
 		putDefault(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");
 		putDefaultKey(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY, GLFW_KEY_V);

@@ -7,6 +7,7 @@ import com.openggf.game.save.SaveSnapshotProvider;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.openggf.game.ZoneKey;
 
 public final class S2SaveSnapshotProvider implements SaveSnapshotProvider {
     @Override
@@ -25,14 +26,21 @@ public final class S2SaveSnapshotProvider implements SaveSnapshotProvider {
         List<Integer> chaosEmeralds = !hasLiveState ? List.of()
                 : context.gameState().getCollectedChaosEmeraldIndices();
         boolean clear = save.isClear();
-        payload.put("zone", zone);
+        ZoneKey zoneKey = !hasLiveState ? ZoneKey.stock(zone)
+                : context.levelManager().getGameModule().getZoneRegistry().zoneKey(zone);
+        if (zoneKey instanceof ZoneKey.Stock) {
+            // Preserve the historical stock payload shape and serialized hashes exactly.
+            payload.put("zone", zone);
+        } else {
+            S2SavedZone.write(payload, zoneKey);
+        }
         payload.put("act", act);
         payload.put("mainCharacter", save.selectedTeam().mainCharacter());
         payload.put("sidekicks", save.selectedTeam().sidekicks());
         payload.put("lives", lives);
         payload.put("chaosEmeralds", chaosEmeralds);
         payload.put("clear", clear);
-        payload.put("progressCode", zone + 1);
+        payload.put("progressCode", zoneKey instanceof ZoneKey.Stock ? zone + 1 : 1);
         payload.put("clearState", clear ? 1 : 0);
         return payload;
     }

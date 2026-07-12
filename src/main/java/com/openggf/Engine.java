@@ -1166,6 +1166,11 @@ public class Engine {
 					new ModClassLoaderFactory(Engine.class.getClassLoader())
 							.create(effectiveMods, ModSubsystem.current().trustedCodeOwners()));
 			modRuntime.installFaultBoundary(ModSubsystem.current().createFaultBoundary(modRuntime));
+			modRuntime.installSaveFindingSink((owner, finding) ->
+					ModSubsystem.current().runtimeFindings().upsertOwnerFinding(owner,
+							new com.openggf.mods.ModFinding(
+									com.openggf.mods.ModFindingSeverity.WARNING,
+									finding.code(), finding.detail(), null)));
 			ModSubsystem.current().installRewindClassResolver(
 					new ModClassResolver(modRuntime, Engine.class.getClassLoader()));
 			moduleResolutionService.installModPlanSource(

@@ -8,6 +8,9 @@ import com.openggf.game.GameServices;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.TitleCardProvider;
+import com.openggf.game.ZoneKey;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.game.ZoneRegistry;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
@@ -233,7 +236,19 @@ public class TitleCardManager implements TitleCardProvider {
     private boolean artCached = false;
     private int lastLoadedZone = -1;  // Track which zone's letters we've loaded
 
-    public TitleCardManager() {}
+    private final java.util.function.Supplier<ZoneRegistry> zoneRegistry;
+    private final java.util.function.BooleanSupplier skipModCards;
+
+    public TitleCardManager() {
+        this(() -> GameServices.module().getZoneRegistry(),
+                () -> GameServices.configuration().getBoolean(SonicConfiguration.SKIP_MOD_ZONE_TITLE_CARDS));
+    }
+
+    TitleCardManager(java.util.function.Supplier<ZoneRegistry> zoneRegistry,
+                     java.util.function.BooleanSupplier skipModCards) {
+        this.zoneRegistry = java.util.Objects.requireNonNull(zoneRegistry, "zoneRegistry");
+        this.skipModCards = java.util.Objects.requireNonNull(skipModCards, "skipModCards");
+    }
 
     public static synchronized TitleCardManager getInstance() {
         if (instance == null) {
@@ -255,6 +270,13 @@ public class TitleCardManager implements TitleCardProvider {
         this.stateTimer = 0;
         this.frameCounter = 0;
         this.textExitTransitionPending = false;
+
+        if (isSkippedModZone(zoneIndex)) {
+            elements.clear();
+            state = TitleCardState.COMPLETE;
+            LOGGER.info("Skipping unsupported title card for mod zone " + zoneIndex);
+            return;
+        }
 
         // Load base art if needed
         if (!artLoaded) {
@@ -389,8 +411,7 @@ public class TitleCardManager implements TitleCardProvider {
             return;
         }
 
-        String zoneName = (zoneIndex >= 0 && zoneIndex < ZONE_NAMES.length)
-                ? ZONE_NAMES[zoneIndex] : ZONE_NAMES[0];
+        String zoneName = registryZoneName(zoneIndex);
 
         // Track which letters we've already copied (like the original's 'used' bitmap)
         boolean[] usedLetters = new boolean[26];
@@ -444,6 +465,29 @@ public class TitleCardManager implements TitleCardProvider {
 
         LOGGER.info("Loaded " + (vramDest - (VRAM_TITLE_CARD2_START - VRAM_BASE)) +
                    " tiles for zone " + zoneName);
+    }
+
+    private boolean isSkippedModZone(int zoneIndex) {
+        try {
+            ZoneKey key = zoneRegistry.get().zoneKey(zoneIndex);
+            return shouldSkipTitleCard(key, skipModCards.getAsBoolean());
+        } catch (RuntimeException unavailable) {
+            return false;
+        }
+    }
+
+    static boolean shouldSkipTitleCard(ZoneKey key, boolean configuredSkip) {
+        return configuredSkip && key instanceof ZoneKey.Mod;
+    }
+
+    String registryZoneName(int zoneIndex) {
+        try {
+            String name = zoneRegistry.get().getZoneName(zoneIndex);
+            if (name != null && !name.isBlank()) return name.toUpperCase(java.util.Locale.ROOT);
+        } catch (RuntimeException unavailable) {
+            // Bootstrap/tests without an installed module retain the stock fallback below.
+        }
+        return zoneIndex >= 0 && zoneIndex < ZONE_NAMES.length ? ZONE_NAMES[zoneIndex] : ZONE_NAMES[0];
     }
 
 
@@ -929,4 +973,3 @@ public class TitleCardManager implements TitleCardProvider {
         return currentAct;
     }
 }
-

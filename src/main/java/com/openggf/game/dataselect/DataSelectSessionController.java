@@ -212,8 +212,10 @@ public class DataSelectSessionController {
             return DataSelectAction.none();
         }
         boolean clear = Boolean.TRUE.equals(payload.get("clear")) && clearDestination != null;
-        int zone = clear ? clearDestination.zone() : readInt(payload, "zone", 0);
-        int act = clear ? clearDestination.act() : readInt(payload, "act", 0);
+        DataSelectDestination loadDestination = clear ? clearDestination
+                : hostProfile.resolveLoadDestination(payload);
+        int zone = loadDestination.zone();
+        int act = loadDestination.act();
         return new DataSelectAction(
                 clear ? DataSelectActionType.CLEAR_RESTART : DataSelectActionType.LOAD_SLOT,
                 slot,

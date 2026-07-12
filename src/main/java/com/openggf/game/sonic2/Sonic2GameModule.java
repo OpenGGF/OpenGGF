@@ -93,7 +93,7 @@ public class Sonic2GameModule implements GameModule {
     private final TitleCardManager titleCardProvider = new TitleCardManager();
     private final TitleScreenManager titleScreenProvider = new TitleScreenManager();
     private final LevelSelectManager levelSelectProvider = new LevelSelectManager();
-    private final S2DataSelectProfile dataSelectHostProfile = new S2DataSelectProfile();
+    private final S2DataSelectProfile dataSelectHostProfile = new S2DataSelectProfile(this::getZoneRegistry);
     private final CrossGameDonorProvider donorProvider = new Sonic2CrossGameDonorProvider();
     private DataSelectPresentationProvider dataSelectPresentationProvider;
     private S2DataSelectImageCacheManager dataSelectImageCacheManager;

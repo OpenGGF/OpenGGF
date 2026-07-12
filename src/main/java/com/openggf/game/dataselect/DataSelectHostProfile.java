@@ -67,4 +67,12 @@ public interface DataSelectHostProfile {
     default int resolveSelectedSlotIconIndex(Map<String, Object> payload, DataSelectDestination clearDestination) {
         return -1;
     }
+
+    /** Resolves the normal continue destination, including host-specific persisted identities. */
+    default DataSelectDestination resolveLoadDestination(Map<String, Object> payload) {
+        Object zone = payload == null ? null : payload.get("zone");
+        Object act = payload == null ? null : payload.get("act");
+        return new DataSelectDestination(zone instanceof Number z ? z.intValue() : 0,
+                act instanceof Number a ? a.intValue() : 0);
+    }
 }

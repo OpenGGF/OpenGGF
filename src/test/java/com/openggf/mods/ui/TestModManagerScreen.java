@@ -496,6 +496,27 @@ class TestModManagerScreen {
     }
 
     @Test
+    void orphanRuntimeFindingsAppearGloballyWithoutDuplicatingCatalogOwnerRows() {
+        ModDescriptor catalogMod = descriptor("pack-one", "One", List.of(), List.of());
+        ModRuntimeFindingStore runtime = new ModRuntimeFindingStore();
+        runtime.upsertOwnerFinding("pack-one", finding(
+                ModFindingSeverity.WARNING, "ROW_WARNING", "shown on row"));
+        runtime.upsertOwnerFinding("disabled-owner", finding(
+                ModFindingSeverity.WARNING, "S2_MOD_ZONE_MISSING", "saved zone missing"));
+        runtime.upsertOwnerFinding("s2-save", finding(
+                ModFindingSeverity.WARNING, "S2_LEGACY_ZONE_OUT_OF_RANGE", "legacy fallback"));
+        ModManagerScreen screen = screen(catalog(List.of(catalogMod)), state(false, "pack-one"),
+                runtime, null, temp.resolve("orphan-findings"));
+
+        assertTrue(screen.bannerLines().stream().anyMatch(line -> line.contains("[disabled-owner]")
+                && line.contains("S2_MOD_ZONE_MISSING")));
+        assertTrue(screen.bannerLines().stream().anyMatch(line -> line.contains("[s2-save]")
+                && line.contains("S2_LEGACY_ZONE_OUT_OF_RANGE")));
+        assertFalse(screen.bannerLines().stream().anyMatch(line -> line.contains("ROW_WARNING")),
+                "catalog owners retain their row badge/detail path and must not duplicate globally");
+    }
+
+    @Test
     void renderedDetailsAreBoundedAndStartDirectionScrollsAllFindings() {
         List<ModFinding> findings = new ArrayList<>();
         for (int index = 0; index < 30; index++) {

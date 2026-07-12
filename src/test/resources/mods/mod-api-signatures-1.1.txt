@@ -1845,6 +1845,7 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration SCREEN_WIDTH_PIXELS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration SHOW_LEGAL_DISCLAIMER_ON_STARTUP
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration SIDEKICK_CHARACTER_CODE
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration SKIP_MOD_ZONE_TITLE_CARDS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration SONIC_1_ROM
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration SONIC_2_ROM
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration SONIC_3K_ROM
@@ -5289,6 +5290,7 @@ METHOD com.openggf.game.dataselect.DataSelectDestination public,final  int hashC
 METHOD com.openggf.game.dataselect.DataSelectDestination public,final  java.lang.String toString()
 METHOD com.openggf.game.dataselect.DataSelectDestination public,static  com.openggf.game.dataselect.DataSelectDestination of(int,int)
 METHOD com.openggf.game.dataselect.DataSelectHostProfile public  boolean isSummaryValid(com.openggf.game.save.SaveSlotSummary)
+METHOD com.openggf.game.dataselect.DataSelectHostProfile public  com.openggf.game.dataselect.DataSelectDestination resolveLoadDestination(java.util.Map<java.lang.String,java.lang.Object>)
 METHOD com.openggf.game.dataselect.DataSelectHostProfile public  com.openggf.game.dataselect.HostSlotPreview resolveSlotPreview(java.util.Map<java.lang.String,java.lang.Object>)
 METHOD com.openggf.game.dataselect.DataSelectHostProfile public  int clearRestartSelectionCount(java.util.Map<java.lang.String,java.lang.Object>)
 METHOD com.openggf.game.dataselect.DataSelectHostProfile public  int defaultClearRestartIndex(java.util.Map<java.lang.String,java.lang.Object>)

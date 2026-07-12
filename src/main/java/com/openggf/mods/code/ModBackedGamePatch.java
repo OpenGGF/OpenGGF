@@ -16,14 +16,23 @@ import java.util.Set;
 public final class ModBackedGamePatch implements GamePatch {
     private final ModRegistrationPlan plan;
     private final ModFaultBoundary faultBoundary;
+    private final java.util.function.BiConsumer<String,
+            com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink;
 
     public ModBackedGamePatch(ModRegistrationPlan plan) {
-        this(plan, null);
+        this(plan, null, (owner, finding) -> {});
     }
 
     public ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary) {
+        this(plan, faultBoundary, (owner, finding) -> {});
+    }
+
+    public ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
+                              java.util.function.BiConsumer<String,
+                                      com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink) {
         this.plan = Objects.requireNonNull(plan, "plan");
         this.faultBoundary = faultBoundary;
+        this.saveFindingSink = Objects.requireNonNull(saveFindingSink, "saveFindingSink");
         if (!plan.hasContent()) throw new IllegalArgumentException("Backing patch requires content");
         if (!plan.objectArt().isEmpty()
                 && !plan.preparedObjectArt().keySet().equals(plan.objectArt().keySet())) {
@@ -57,6 +66,8 @@ public final class ModBackedGamePatch implements GamePatch {
             private com.openggf.game.ObjectArtProvider objectArtProvider;
             private com.openggf.game.ZoneRegistry zoneRegistry;
             private com.openggf.game.LevelEventProvider levelEvents;
+            private com.openggf.game.dataselect.DataSelectHostProfile dataSelectHost;
+            private com.openggf.game.dataselect.DataSelectPresentationProvider dataSelectPresentation;
 
             @Override
             public ObjectRegistry createObjectRegistry() {
@@ -122,6 +133,34 @@ public final class ModBackedGamePatch implements GamePatch {
                     levelEvents = new ModZoneEventProvider(super.getLevelEventProvider(), mods, faultBoundary);
                 }
                 return levelEvents;
+            }
+
+            @Override
+            public synchronized com.openggf.game.dataselect.DataSelectHostProfile getDataSelectHostProfile() {
+                if (plan.preparedZones().isEmpty()) return super.getDataSelectHostProfile();
+                if (dataSelectHost == null) {
+                    dataSelectHost = new com.openggf.game.sonic2.dataselect.S2DataSelectProfile(
+                            this::getZoneRegistry, finding -> saveFindingSink.accept(
+                                    finding.ownerModId() == null ? "s2-save" : finding.ownerModId(), finding));
+                }
+                return dataSelectHost;
+            }
+
+            @Override
+            public synchronized com.openggf.game.dataselect.DataSelectPresentationProvider
+                    getDataSelectPresentationProvider() {
+                if (plan.preparedZones().isEmpty()) return super.getDataSelectPresentationProvider();
+                if (dataSelectPresentation == null) {
+                    dataSelectPresentation = com.openggf.game.dataselect.CrossGameDataSelectPresentations
+                            .donated(com.openggf.game.dataselect.CrossGameDataSelectPresentations.DONOR_S3K,
+                                    getDataSelectHostProfile());
+                }
+                return dataSelectPresentation;
+            }
+
+            @Override
+            public com.openggf.game.DataSelectProvider getDataSelectProvider() {
+                return getDataSelectPresentationProvider();
             }
         };
     }

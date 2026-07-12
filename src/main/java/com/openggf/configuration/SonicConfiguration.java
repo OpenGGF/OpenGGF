@@ -494,6 +494,9 @@ public enum SonicConfiguration {
 	 */
 	TITLE_SCREEN_ON_STARTUP,
 
+	/** Skip Sonic 2 title cards for mod zones until mod-supplied title art exists. */
+	SKIP_MOD_ZONE_TITLE_CARDS,
+
 	/**
 	 * Whether to show the Level Select screen on startup instead of loading EHZ.
 	 */

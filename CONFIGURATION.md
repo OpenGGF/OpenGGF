@@ -156,6 +156,7 @@ Paths are relative to the working directory (where the JAR is launched).
 | `SHOW_LEGAL_DISCLAIMER_ON_STARTUP` | `startup.legalDisclaimer` | bool | `true` | Show the legal disclaimer screen on engine startup before the master title screen. White text on black, 5-second readability gate, any-key dismiss, fade-in/out transitions. Set `false` for headless tests, trace replay sessions, or CI runs that should not have to drive past this screen. |
 | `MASTER_TITLE_SCREEN_ON_STARTUP` | `startup.masterTitleScreen` | bool | `true` | Show the master title / game-selection screen on launch. When `false`, boots directly into the game set by `DEFAULT_ROM`. |
 | `TITLE_SCREEN_ON_STARTUP` | `startup.titleScreen` | bool | `true` | Show the game-specific title screen (e.g. Sonic 2 title screen) before gameplay. Ignored when `MASTER_TITLE_SCREEN_ON_STARTUP` is true and game selection is pending. |
+| `SKIP_MOD_ZONE_TITLE_CARDS` | `mods.skipModZoneTitleCards` | bool | `true` | Skip Sonic 2 title cards for additive mod zones until mod-supplied title-card art is supported. Stock cards still use the active zone registry name. |
 | `LEVEL_SELECT_ON_STARTUP` | `debug.startup.levelSelectOnStartup` | bool | `false` | Jump straight to the level select screen instead of the title screen. Useful for development. |
 | `S3K_SKIP_INTROS` | `debug.startup.s3kSkipIntros` | bool | `false` | (S3K only) Skip zone intro sequences such as the AIZ biplane cutscene and boot straight into playable gameplay. |
 
